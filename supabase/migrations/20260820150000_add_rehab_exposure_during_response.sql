@@ -11,6 +11,11 @@
 -- ``not_reported`` is the default so an exposure logged without asking is never
 -- stored as "the athlete said nothing was wrong". Absence of an answer and an
 -- answer of "same" must stay distinguishable.
+--
+-- This revision also admits 'unknown' as a demand level, so rehab whose drill
+-- demand has not been clinically reviewed can still be logged as an
+-- observation. Unknown demand is deliberately NOT positive capacity evidence;
+-- progression logic filters on it rather than reading it as a low demand.
 create or replace function public.record_rehab_exposure(p_athlete_id uuid, p_event jsonb)
 returns public.rehab_exposures
 language plpgsql
@@ -47,9 +52,13 @@ begin
     raise exception 'exposure does not match injury episode, region and side' using errcode = '23514';
   end if;
 
-  if coalesce(v_demand->>'load','') not in ('minimal','low','moderate','high')
-     or coalesce(v_demand->>'impact','') not in ('none','low','moderate','high')
-     or coalesce(v_demand->>'velocity','') not in ('low','moderate','high')
+  -- 'unknown' is a valid, recordable demand level: a drill whose physical
+  -- demand has not been reviewed still produces a real observation. It is the
+  -- reader's job never to treat an unknown level as a low one -- see
+  -- RehabExposureEvent.has_unknown_demand.
+  if coalesce(v_demand->>'load','') not in ('unknown','minimal','low','moderate','high')
+     or coalesce(v_demand->>'impact','') not in ('unknown','none','low','moderate','high')
+     or coalesce(v_demand->>'velocity','') not in ('unknown','low','moderate','high')
      or jsonb_typeof(v_demand->'target_regions') <> 'array'
      or not (v_demand->'target_regions' ? v_region) then
     raise exception 'invalid exposure demand' using errcode = '23514';

@@ -56,9 +56,9 @@ Drills never repeat them.
 | --- | --- |
 | `rehab_stage` | `calm`, `restore`, `load`, `dynamic`, `return` |
 | `function` | `activation`, `control`, `isometric_analgesia`, `mobility`, `tendon_loading`, `recovery_downregulation` |
-| `impact` | `none`, `low`, `moderate`, `high` |
-| `load` | `minimal`, `low`, `moderate`, `high` |
-| `velocity` | `low`, `moderate`, `high` |
+| `impact` | `unknown`, `none`, `low`, `moderate`, `high` |
+| `load` | `unknown`, `minimal`, `low`, `moderate`, `high` |
+| `velocity` | `unknown`, `low`, `moderate`, `high` |
 | `allowed_severities` | non-empty subset of `low`, `moderate`, `high` |
 | `pain_ceiling` | `0`–`10`, or `"unrestricted"` |
 | `dose` | `{"sets": …, "reps": …, "duration_seconds": …}`, each slot a positive number or `null` |
@@ -80,7 +80,14 @@ never be mistaken for an intentional one:
 | No equipment needed | `[]` |
 | No progress/regress/stop criteria | `[]` |
 | No impact | `"none"` |
+| Demand reviewed and found unstatable | `"unknown"` |
 | Dose structure declared, values unprescribed | `{"sets": null, "reps": null, "duration_seconds": null}` |
+
+`"unknown"` on `impact`/`load`/`velocity` is not a third spelling of `null`.
+`null` is the bank's own "nobody has looked at this yet". `"unknown"` is what a
+*reader* records when it must state a demand and the bank has not given it one —
+see `api/contracts/rehab_completion._resolve_demand`. Both are excluded from
+positive capacity evidence; only `null` counts as migration debt.
 
 ## Surface (skin) injuries
 

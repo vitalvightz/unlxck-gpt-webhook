@@ -295,6 +295,13 @@ class SessionBlock(BaseModel):
     stop_rules: list[str] = Field(default_factory=list)
     substitutions: list[str] = Field(default_factory=list)
     red_flags: list[RedFlagRule] = Field(default_factory=list)
+    # The canonical rehab-bank drill id, on rehab blocks only. It is what lets a
+    # completed session be attributed to a specific injury without matching on
+    # display_name, which Stage 2 rewrites. Server-verified against the day's own
+    # candidate pool after generation (see reconcile_rehab_drill_ids): an id that
+    # does not appear there is cleared, and a cleared id means the completion
+    # gate refuses the drill rather than guessing which injury it was for.
+    rehab_drill_id: str | None = None
 
 
 class Completion(BaseModel):

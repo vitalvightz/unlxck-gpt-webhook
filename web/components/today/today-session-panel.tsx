@@ -14,6 +14,7 @@ import {
   SessionlessDayCard,
 } from "@/components/structured-plan-renderer";
 import { formatTrainingDay } from "@/components/today/format";
+import { RehabResponsePrompt } from "@/components/today/rehab-response-prompt";
 import { useToast } from "@/components/toast-provider";
 import { submitTodaySessionCompletion } from "@/lib/api";
 import {
@@ -40,6 +41,7 @@ import {
 } from "@/lib/today";
 import type {
   RehabLabelPolicy,
+  RehabResponsePrompt as RehabResponsePromptModel,
   StructuredPlan,
   TodayCommandView,
   TodayCompletionStatus,
@@ -256,6 +258,13 @@ export function TodaySessionPanel({
   const [reviewableSession, setReviewableSession] = useState<
     { planId: string; sessionId: string } | null
   >(null);
+  // The injury-specific rehab questions the server raised for the session just
+  // logged, if any. Captured at write time for the same reason as the review
+  // above: the refresh can advance to tomorrow's card, and this evidence belongs
+  // to the session that was actually completed.
+  const [rehabResponses, setRehabResponses] = useState<
+    { planId: string; sessionId: string; prompts: RehabResponsePromptModel[] } | null
+  >(null);
   const session = state.today.next_session;
   const status = state.today.completion_status;
   const duration = getSessionDuration(session);
@@ -359,7 +368,7 @@ export function TodaySessionPanel({
     }
     setIsSubmitting(true);
     try {
-      await submitTodaySessionCompletion(token, {
+      const completion = await submitTodaySessionCompletion(token, {
         plan_id: state.active_plan.id,
         session_id: session.session_id,
         status: nextStatus,
@@ -369,6 +378,19 @@ export function TodaySessionPanel({
         notes: details.notes ?? "",
       });
       setIntent(null);
+      // Non-empty only when the server established that this session contained
+      // rehab attributable to a known injury, so a normal session never shows
+      // this block.
+      const prompts = completion.rehab_response_prompts ?? [];
+      setRehabResponses(
+        prompts.length > 0
+          ? {
+              planId: state.active_plan.id,
+              sessionId: session.session_id,
+              prompts,
+            }
+          : null,
+      );
       showToast(getCompletionLabel(nextStatus), { tone: "success" });
       // Order matters: the confirmation toast is already up and the refresh
       // below is what surfaces the XP award, so the review prompt is queued
@@ -567,6 +589,20 @@ export function TodaySessionPanel({
               notes: details.notes,
             })
           }
+        />
+      ) : null}
+
+      {/* Above the session review on purpose: an injury observation is the more
+          time-sensitive of the two, and the athlete should not have to get past
+          a programming survey to report that something hurt. */}
+      {rehabResponses ? (
+        <RehabResponsePrompt
+          key={`rehab-${rehabResponses.sessionId}`}
+          token={token}
+          planId={rehabResponses.planId}
+          sessionId={rehabResponses.sessionId}
+          prompts={rehabResponses.prompts}
+          onDismiss={() => setRehabResponses(null)}
         />
       ) : null}
 

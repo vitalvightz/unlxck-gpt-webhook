@@ -1760,6 +1760,98 @@ def _late_fight_stage_label_for_countdown(countdown_start: int | None) -> str | 
     return "Fight-Day Protocol"
 
 
+def _normalized_drill_name(value: Any) -> str:
+    """A display name reduced to comparable form: lowercase alphanumeric words."""
+    return " ".join(re.findall(r"[a-z0-9]+", _coerce_str(value).lower()))
+
+
+def _brief_rehab_drill_ids(planning_brief: Any) -> dict[str, str | None]:
+    """Map each rehab option's display name to its canonical bank id.
+
+    Built from the plan's *own* candidate pools, so it only ever contains drills
+    that were actually offered for this plan. A name claimed by two different
+    bank ids maps to ``None``: that name cannot identify a drill here, and
+    picking one of the two would invent the attribution.
+    """
+    pools = planning_brief.get("candidate_pools") if isinstance(planning_brief, dict) else None
+    if not isinstance(pools, dict):
+        return {}
+    by_name: dict[str, str | None] = {}
+    for pool in pools.values():
+        if not isinstance(pool, dict):
+            continue
+        for slot in _as_list(pool.get("rehab_slots")):
+            if not isinstance(slot, dict):
+                continue
+            options = [slot.get("selected"), *_as_list(slot.get("alternates"))]
+            for option in options:
+                if not isinstance(option, dict):
+                    continue
+                drill_id = _coerce_str(option.get("rehab_drill_id")).strip()
+                name = _normalized_drill_name(option.get("name"))
+                if not drill_id or not name:
+                    continue
+                if name in by_name and by_name[name] != drill_id:
+                    by_name[name] = None
+                else:
+                    by_name.setdefault(name, drill_id)
+    return by_name
+
+
+def reconcile_rehab_drill_ids(
+    structured_plan: Any,
+    planning_brief: Any,
+) -> Any:
+    """Stamp the canonical rehab-bank id onto every rehab block it identifies.
+
+    This is the one place display names are allowed anywhere near rehab
+    identity, and it is deliberately here rather than at completion time. The
+    markdown→JSON conversion never sees ``candidate_pools`` (the prompt drops
+    them), so the model cannot carry the id itself; the server resolves it once,
+    against this plan's own small option set, and stores the result. Everything
+    downstream — the completion gate, the exposure event — reads the stored id
+    and never looks at a name again.
+
+    Anything that does not resolve to exactly one id is left ``None``. The
+    completion gate then reports ``not_rehab_work`` and writes no evidence,
+    which is the correct outcome: an unidentifiable drill is not proof that a
+    particular tissue did particular work.
+    """
+    if not isinstance(structured_plan, dict) or not isinstance(planning_brief, dict):
+        return structured_plan
+    by_name = _brief_rehab_drill_ids(planning_brief)
+    if not by_name:
+        return structured_plan
+
+    repaired = copy.deepcopy(structured_plan)
+    changed = False
+    for week in _as_list(repaired.get("weeks")):
+        if not isinstance(week, dict):
+            continue
+        for day in _as_list(week.get("days")):
+            if not isinstance(day, dict):
+                continue
+            for session in _as_list(day.get("sessions")):
+                if not isinstance(session, dict):
+                    continue
+                for block in _as_list(session.get("blocks")):
+                    if not isinstance(block, dict):
+                        continue
+                    if _coerce_str(block.get("block_type")).strip() != "rehab":
+                        # Only rehab blocks carry rehab identity. A strength
+                        # block is never an injury exposure, whatever it is
+                        # named.
+                        if block.get("rehab_drill_id") is not None:
+                            block["rehab_drill_id"] = None
+                            changed = True
+                        continue
+                    resolved = by_name.get(_normalized_drill_name(block.get("display_name")))
+                    if block.get("rehab_drill_id") != resolved:
+                        block["rehab_drill_id"] = resolved
+                        changed = True
+    return repaired if changed else structured_plan
+
+
 def reconcile_late_fight_week_context(
     structured_plan: Any,
     planning_brief: Any,
@@ -2161,7 +2253,10 @@ def build_structured_plan_outcome(
         return StructuredPlanOutcome(status="not_attempted")
 
     cleaned = _strip_and_normalize(
-        reconcile_late_fight_week_context(raw_data, planning_brief)
+        reconcile_rehab_drill_ids(
+            reconcile_late_fight_week_context(raw_data, planning_brief),
+            planning_brief,
+        )
     )
 
     first = safe_parse_structured_plan(cleaned, raw_markdown=raw_markdown or None)

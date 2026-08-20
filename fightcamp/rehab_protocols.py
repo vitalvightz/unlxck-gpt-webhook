@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 # }
 _REHAB_BANK_CACHE = None
 _REHAB_LOCATIONS_CACHE = None
+_REHAB_DRILLS_BY_ID_CACHE = None
 _EXERCISE_BANK_CACHE = None
 
 
@@ -50,6 +51,33 @@ def get_rehab_locations() -> set[str]:
             entry.get("location") for entry in get_rehab_bank() if entry.get("location")
         }
     return _REHAB_LOCATIONS_CACHE
+
+
+def rehab_drill_by_id(drill_id: str | None) -> dict | None:
+    """Look one rehab-bank drill up by its canonical ``id``.
+
+    This is the only supported way to recover a drill from something an
+    athlete's plan carried: display names are rewritten downstream and are not
+    identity. An id the bank does not contain returns ``None`` — the caller
+    refuses rather than falling back to a name search.
+
+    An id claimed by more than one group is treated as unresolvable for the same
+    reason: two drills answering to one id cannot be told apart, so neither is
+    returned. ``tools/validate_rehab_bank.py`` rejects that state, so this is a
+    guard against a bank that got past it, not an expected path.
+    """
+    global _REHAB_DRILLS_BY_ID_CACHE
+    if _REHAB_DRILLS_BY_ID_CACHE is None:
+        index: dict[str, dict | None] = {}
+        for entry in get_rehab_bank():
+            for drill in entry.get("drills", []) or []:
+                identifier = str((drill or {}).get("id") or "").strip()
+                if not identifier:
+                    continue
+                # Second claim on an id makes it ambiguous; mark it unusable.
+                index[identifier] = None if identifier in index else drill
+        _REHAB_DRILLS_BY_ID_CACHE = index
+    return _REHAB_DRILLS_BY_ID_CACHE.get(str(drill_id or "").strip())
 
 
 def prime_rehab_bank() -> None:

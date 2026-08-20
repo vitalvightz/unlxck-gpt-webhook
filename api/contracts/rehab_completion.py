@@ -21,17 +21,17 @@ with the unknown parts quietly defaulted:
   resolve on the injury, the drill, or both.
 * :data:`REASON_EPISODE_UNKNOWN` — the injury carries no episode identity, so the
   evidence could not be isolated from a previous episode.
-* :data:`REASON_DEMAND_UNKNOWN` — the drill's load/impact/velocity are still
-  unreviewed in the bank, so the exposure's ``demand`` cannot be stated.
 
-That last one currently applies to **every** drill in the bank: PR3 migrated
-``target_regions`` and left the clinical demand fields explicitly unreviewed
-("all more specific clinical fields stay explicitly unknown until reviewed").
-``ExposureDemand`` requires ``load``/``impact``/``velocity``, so until those are
-reviewed no exposure can be written. Inventing them here would be inventing
-clinical classification, which is exactly what this pipeline exists to prevent.
-The gate therefore reports the gap rather than papering over it, and closing it
-is a data question, not a code one.
+Unreviewed demand is not one of those reasons
+---------------------------------------------
+PR3 migrated ``target_regions`` and left the clinical demand fields explicitly
+unreviewed on the whole musculoskeletal bank. That is a gap in *how much* the
+work demanded, not in *whose* tissue did it — so it does not break attribution
+and does not block the exposure. :func:`_resolve_demand` records those levels as
+``"unknown"``, which is a truthful statement and not a substituted default. The
+exposure is then real observational evidence that the work happened and how the
+injury responded, while ``RehabExposureEvent.has_unknown_demand`` marks it as
+something progression logic must never read as evidence of capacity.
 
 Scope note (PR 3.5)
 -------------------
@@ -43,7 +43,9 @@ stage. LOAD / DYNAMIC / RETURN remain unreachable.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Mapping, Sequence
+from uuid import UUID, uuid5
 
 from fightcamp.rehab_schema import (
     CARE_TYPE_WOUND_CARE,
@@ -51,10 +53,14 @@ from fightcamp.rehab_schema import (
 )
 
 from .rehab_exposure import (
+    DEMAND_UNKNOWN,
     DemandLevel,
     ExposureDemand,
     ExposureDose,
+    ExposureProvenance,
+    ExposureResponse,
     ImpactLevel,
+    RehabExposureEvent,
     VelocityLevel,
 )
 
@@ -68,7 +74,6 @@ REASON_ATTRIBUTION_UNKNOWN = "attribution_unknown"
 REASON_MULTIPLE_POSSIBLE_INJURIES = "multiple_possible_injuries"
 REASON_LATERALITY_UNKNOWN = "laterality_unknown"
 REASON_EPISODE_UNKNOWN = "episode_unknown"
-REASON_DEMAND_UNKNOWN = "demand_unknown"
 REASON_SURFACE_PATHWAY = "surface_injury_wound_care_pathway"
 
 #: Injury-flag statuses that describe a live injury rehab work can be logged for.
@@ -180,7 +185,13 @@ def _is_surface_injury(injury: Mapping[str, Any]) -> bool:
     for key in ("injury_type", "rehab_type", "surface_type"):
         if care_type_for_injury_type(injury.get(key)) == CARE_TYPE_WOUND_CARE:
             return True
-    return _lower(injury.get("care_pathway")) == CARE_TYPE_WOUND_CARE
+    # ``rehab_care_pathway`` is the name the resolved stage stamps onto an injury
+    # (api.services.today_service._with_rehab_stage); ``care_pathway`` is the
+    # older bare form. Both mean the same thing and both must gate.
+    return CARE_TYPE_WOUND_CARE in {
+        _lower(injury.get("care_pathway")),
+        _lower(injury.get("rehab_care_pathway")),
+    }
 
 
 def _drill_regions(drill: Mapping[str, Any]) -> tuple[str, ...]:
@@ -190,20 +201,22 @@ def _drill_regions(drill: Mapping[str, Any]) -> tuple[str, ...]:
     return tuple(_lower(region) for region in raw if _clean(region))
 
 
-def _resolve_demand(drill: Mapping[str, Any], body_region: str) -> ExposureDemand | None:
-    """Build the exposure demand, or ``None`` when the bank has not stated it.
+def _resolve_demand(drill: Mapping[str, Any], body_region: str) -> ExposureDemand:
+    """Build the exposure demand, preserving what the bank has not stated.
 
-    Every required level must be a reviewed value from its own enum. A missing
-    or unrecognised level yields ``None`` — the caller turns that into
-    :data:`REASON_DEMAND_UNKNOWN` rather than substituting a default, because a
-    substituted default is a clinical claim nobody made.
+    A level the bank has not reviewed becomes ``"unknown"`` — never a
+    substituted default, because a substituted default is a clinical claim
+    nobody made, and never a refusal, because the exposure itself is still a
+    real observation worth storing.
+
+    An unrecognised value is also read as ``"unknown"`` rather than accepted:
+    garbage in the bank is caught by ``tools/validate_rehab_bank.py``, and this
+    path must not launder it into a demand claim.
     """
     levels: dict[str, str] = {}
     for name in REQUIRED_DEMAND_FIELDS:
         value = _lower(drill.get(name))
-        if value not in _DEMAND_VALUES[name]:
-            return None
-        levels[name] = value
+        levels[name] = value if value in _DEMAND_VALUES[name] else DEMAND_UNKNOWN
 
     regions = list(_drill_regions(drill))
     if body_region not in regions:
@@ -362,14 +375,14 @@ def resolve_rehab_exposure_candidate(
     body_region = _lower(injury.get("body_region"))
     episode_id = _clean(injury.get("episode_id"))
     side = _resolve_side(injury, drill)
+    # Unknown demand never blocks: it is preserved on the event instead, where
+    # ``has_unknown_demand`` keeps it out of progression qualification.
     demand = _resolve_demand(drill, body_region)
 
     if not episode_id:
         reasons.append(REASON_EPISODE_UNKNOWN)
     if side is None:
         reasons.append(REASON_LATERALITY_UNKNOWN)
-    if demand is None:
-        reasons.append(REASON_DEMAND_UNKNOWN)
 
     if reasons:
         return RehabExposureCandidate(
@@ -504,9 +517,12 @@ def exposure_response_from_answers(
     * ``during`` becomes ``during_response`` verbatim. It is NOT converted into
       a ``pain_during`` score — a better/same/worse answer is not a 0-10 reading,
       and manufacturing one would invent precision.
-    * ``worsening_reported`` restates a ``worse`` answer, and is ``False`` only
-      when the athlete positively said better or same. ``not_sure`` leaves it
-      ``None``, because unsure is not "no".
+    * ``worsening_reported`` is deliberately **never** set here. A ``worse``
+      answer is an observation about *this exposure*; ``worsening_reported`` is
+      liable to be read later as a broader injury-status setback, and quietly
+      promoting one to the other would let a single uncomfortable drill read as
+      the injury itself going backwards. ``during_response`` stays the
+      authoritative record of what the athlete actually said.
     * ``stopped_due_to_symptoms`` is ``True`` only for ``stopped``. ``reduced``
       is a real but different thing and is carried on the dose instead
       (see :func:`completed_dose_stopped_early`), so "cut it short" is never
@@ -521,11 +537,6 @@ def exposure_response_from_answers(
     response: dict[str, Any] = {
         "during_response": during_value if during_value in DURING_ANSWERS else "not_reported",
     }
-    if during_value in {"better", "same"}:
-        response["worsening_reported"] = False
-    elif during_value == "worse":
-        response["worsening_reported"] = True
-
     if limit_value in LIMIT_ANSWERS:
         response["stopped_due_to_symptoms"] = limit_value == "stopped"
     return response
@@ -544,11 +555,102 @@ def completed_dose_stopped_early(limit: str | None) -> bool | None:
     return limit_value in {"reduced", "stopped"}
 
 
+# ---------------------------------------------------------------------------
+# Building the event
+# ---------------------------------------------------------------------------
+
+#: Namespace for deterministic exposure ids. Fixed forever: changing it would
+#: make every previously recorded exposure look like a new one.
+EXPOSURE_ID_NAMESPACE = UUID("6f1a9d52-1f7e-5b4c-9c0e-3f6a2d18b7c4")
+
+
+def build_exposure_id(
+    *,
+    athlete_id: str,
+    injury_episode_id: str,
+    drill_id: str,
+    session_id: str,
+    training_day: str,
+) -> UUID:
+    """A stable id for one drill, one injury episode, one session, one day.
+
+    Derived rather than random so a retry, a double tap or a replayed request
+    lands on the same row. PR3's RPC is idempotent for an identical payload
+    under an existing id, so the rest of the event has to be deterministic too —
+    which is why the timestamps below come from the training day and not the
+    clock.
+    """
+    key = "|".join((athlete_id, injury_episode_id, drill_id, session_id, training_day))
+    return uuid5(EXPOSURE_ID_NAMESPACE, key)
+
+
+def _training_day_instant(training_day: str) -> datetime:
+    """Midnight UTC on the training day.
+
+    Used for both ``occurred_at`` and ``provenance.recorded_at`` so the whole
+    event is a pure function of its inputs and a resubmission cannot collide
+    with itself. No provenance is lost: ``rehab_exposures.created_at`` is set by
+    the database and carries the real insert time.
+    """
+    return datetime.fromisoformat(f"{training_day}T00:00:00+00:00")
+
+
+def build_rehab_exposure_event(
+    candidate: RehabExposureCandidate,
+    *,
+    athlete_id: str,
+    session_id: str,
+    training_day: str,
+    completion: Mapping[str, Any] | None = None,
+    during: str | None = None,
+    limit: str | None = None,
+    source: str = "athlete_logged_rehab",
+) -> RehabExposureEvent:
+    """Assemble the canonical event for one eligible candidate.
+
+    Raises ``ValueError`` for an ineligible candidate rather than filling the
+    gaps — the gate decides what may be logged, and this only writes it down.
+    """
+    if not candidate.eligible:
+        raise ValueError(f"candidate is not eligible: {list(candidate.reasons)}")
+
+    dose = completed_dose_from_session(completion)
+    stopped_early = completed_dose_stopped_early(limit)
+    if stopped_early is not None:
+        dose = dose.model_copy(update={"stopped_early": stopped_early})
+        if stopped_early and dose.completed_fraction == 1.0:
+            # The athlete says they cut it short, so the completion marking's
+            # "all of it" no longer holds. Drop the claim rather than invent a
+            # smaller fraction nobody reported.
+            dose = dose.model_copy(update={"completed_fraction": None})
+
+    instant = _training_day_instant(training_day)
+    return RehabExposureEvent(
+        exposure_id=build_exposure_id(
+            athlete_id=athlete_id,
+            injury_episode_id=str(candidate.injury_episode_id),
+            drill_id=candidate.drill_id,
+            session_id=session_id,
+            training_day=training_day,
+        ),
+        injury_id=UUID(str(candidate.injury_id)),
+        injury_episode_id=UUID(str(candidate.injury_episode_id)),
+        drill_id=candidate.drill_id,
+        body_region=str(candidate.body_region),
+        side=str(candidate.side),  # type: ignore[arg-type]
+        demand=candidate.demand,  # type: ignore[arg-type]
+        prescribed_dose=candidate.prescribed_dose,
+        dose_completed=dose,
+        response=ExposureResponse(**exposure_response_from_answers(during, limit)),
+        occurred_at=instant,
+        provenance=ExposureProvenance(source=source, recorded_at=instant),  # type: ignore[arg-type]
+    )
+
+
 __all__ = [
     "ACTIVE_FLAG_STATUSES",
     "COMPLETED_STATUSES",
     "REASON_ATTRIBUTION_UNKNOWN",
-    "REASON_DEMAND_UNKNOWN",
     "REASON_EPISODE_UNKNOWN",
     "REASON_LATERALITY_UNKNOWN",
     "REASON_MULTIPLE_POSSIBLE_INJURIES",
@@ -560,7 +662,10 @@ __all__ = [
     "LIMIT_ANSWERS",
     "RehabCompletionResolution",
     "RehabExposureCandidate",
+    "EXPOSURE_ID_NAMESPACE",
     "RehabResponsePrompt",
+    "build_exposure_id",
+    "build_rehab_exposure_event",
     "build_rehab_response_prompts",
     "completed_dose_from_session",
     "completed_dose_stopped_early",

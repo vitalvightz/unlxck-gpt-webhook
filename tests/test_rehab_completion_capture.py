@@ -20,7 +20,8 @@ from api.contracts.rehab_completion import (
     DURING_ANSWERS,
     LIMIT_ANSWERS,
     REASON_ATTRIBUTION_UNKNOWN,
-    REASON_DEMAND_UNKNOWN,
+    build_exposure_id,
+    build_rehab_exposure_event,
     REASON_EPISODE_UNKNOWN,
     REASON_LATERALITY_UNKNOWN,
     REASON_MULTIPLE_POSSIBLE_INJURIES,
@@ -38,6 +39,8 @@ from fightcamp.config import DATA_DIR
 from fightcamp.rehab_protocols import rehab_drill_options_for_phase
 
 DONE = {"status": "done"}
+ATHLETE = "8f14e45f-ceea-4a1a-9d2b-1c3a5e7b9d01"
+DAY = "2026-08-20"
 
 
 # ---------------------------------------------------------------------------
@@ -75,8 +78,8 @@ def _reviewed_drill(**overrides) -> dict:
 
 def _injury(**overrides) -> dict:
     injury = {
-        "id": "injury-1",
-        "episode_id": "episode-1",
+        "id": "11111111-1111-1111-1111-111111111111",
+        "episode_id": "22222222-2222-2222-2222-222222222222",
         "status": "open",
         "body_region": "ankle",
         "side": "left",
@@ -131,32 +134,61 @@ def test_a_drill_without_target_regions_is_not_rehab_work():
 # ---------------------------------------------------------------------------
 
 
-def test_no_shipped_drill_can_currently_be_logged():
-    """PR3 left load/impact/velocity unreviewed; ExposureDemand requires them."""
+def test_a_shipped_bank_drill_can_be_logged_with_unknown_demand():
+    """An unreviewed demand must not cost us the observation."""
     candidate = resolve_rehab_exposure_candidate(_bank_drill(), [_injury()], completion=DONE)
-    assert candidate.eligible is False
-    assert REASON_DEMAND_UNKNOWN in candidate.reasons
+    assert candidate.eligible is True
+    assert candidate.demand.load == "unknown"
+    assert candidate.demand.impact == "unknown"
+    assert candidate.demand.velocity == "unknown"
 
 
-def test_the_demand_gap_is_reported_not_defaulted():
-    """The missing levels must not be silently filled with a safe-looking value."""
+def test_unknown_demand_is_flagged_as_non_qualifying_evidence():
+    """Recordable, but never positive evidence of capacity."""
     candidate = resolve_rehab_exposure_candidate(_bank_drill(), [_injury()], completion=DONE)
-    assert candidate.demand is None
+    event = build_rehab_exposure_event(
+        candidate, athlete_id=ATHLETE, session_id="s1", training_day=DAY, completion=DONE
+    )
+    assert event.has_unknown_demand is True
+    assert event.demand.has_unknown_level is True
+
+
+def test_a_fully_reviewed_demand_is_not_flagged():
+    candidate = resolve_rehab_exposure_candidate(_reviewed_drill(), [_injury()], completion=DONE)
+    event = build_rehab_exposure_event(
+        candidate, athlete_id=ATHLETE, session_id="s1", training_day=DAY, completion=DONE
+    )
+    assert event.has_unknown_demand is False
 
 
 @pytest.mark.parametrize("missing", ["load", "impact", "velocity"])
-def test_each_required_demand_level_is_individually_required(missing):
+def test_each_unreviewed_level_becomes_unknown_not_a_default(missing):
+    """"Not stated" must never be laundered into a low-demand claim."""
     candidate = resolve_rehab_exposure_candidate(
         _reviewed_drill(**{missing: None}), [_injury()], completion=DONE
     )
-    assert REASON_DEMAND_UNKNOWN in candidate.reasons
+    assert candidate.eligible is True
+    assert getattr(candidate.demand, missing) == "unknown"
+    assert candidate.demand.has_unknown_level is True
 
 
-def test_an_unrecognised_demand_level_is_not_accepted():
+def test_an_unrecognised_demand_level_is_read_as_unknown():
     candidate = resolve_rehab_exposure_candidate(
         _reviewed_drill(load="enormous"), [_injury()], completion=DONE
     )
-    assert REASON_DEMAND_UNKNOWN in candidate.reasons
+    assert candidate.demand.load == "unknown"
+
+
+def test_unknown_is_a_valid_level_in_the_bank_schema():
+    from fightcamp.rehab_schema import IMPACT_VALUES, LOAD_VALUES, VELOCITY_VALUES
+
+    assert "unknown" in LOAD_VALUES
+    assert "unknown" in IMPACT_VALUES
+    assert "unknown" in VELOCITY_VALUES
+
+
+def test_demand_unknown_is_no_longer_an_ineligibility_reason():
+    assert not hasattr(module, "REASON_DEMAND_UNKNOWN")
 
 
 # ---------------------------------------------------------------------------
@@ -168,8 +200,8 @@ def test_a_reviewed_drill_on_a_matching_injury_is_eligible():
     candidate = resolve_rehab_exposure_candidate(_reviewed_drill(), [_injury()], completion=DONE)
     assert candidate.eligible is True
     assert candidate.reasons == ()
-    assert candidate.injury_id == "injury-1"
-    assert candidate.injury_episode_id == "episode-1"
+    assert candidate.injury_id == "11111111-1111-1111-1111-111111111111"
+    assert candidate.injury_episode_id == "22222222-2222-2222-2222-222222222222"
     assert candidate.body_region == "ankle"
     assert candidate.side == "left"
     assert candidate.demand is not None
@@ -185,11 +217,11 @@ def test_no_matching_region_is_attribution_unknown():
 
 def test_two_injuries_in_the_same_region_are_ambiguous():
     """Nothing says which the work was for, so neither may claim it."""
-    injuries = [_injury(), _injury(id="injury-2", episode_id="episode-2", side="right")]
+    injuries = [_injury(), _injury(id="33333333-3333-3333-3333-333333333333", episode_id="44444444-4444-4444-4444-444444444444", side="right")]
     candidate = resolve_rehab_exposure_candidate(_reviewed_drill(), injuries, completion=DONE)
     assert candidate.reasons == (REASON_MULTIPLE_POSSIBLE_INJURIES,)
     assert candidate.injury_id is None
-    assert set(candidate.candidate_injury_ids) == {"injury-1", "injury-2"}
+    assert set(candidate.candidate_injury_ids) == {"11111111-1111-1111-1111-111111111111", "33333333-3333-3333-3333-333333333333"}
 
 
 def test_an_unknown_injury_side_is_laterality_unknown():
@@ -244,11 +276,7 @@ def test_every_missing_part_is_reported_at_once():
     candidate = resolve_rehab_exposure_candidate(
         _bank_drill(), [_injury(side="unknown", episode_id="")], completion=DONE
     )
-    assert set(candidate.reasons) == {
-        REASON_EPISODE_UNKNOWN,
-        REASON_LATERALITY_UNKNOWN,
-        REASON_DEMAND_UNKNOWN,
-    }
+    assert set(candidate.reasons) == {REASON_EPISODE_UNKNOWN, REASON_LATERALITY_UNKNOWN}
 
 
 # ---------------------------------------------------------------------------
@@ -323,9 +351,12 @@ def test_the_prescribed_dose_is_never_reused_as_the_completed_dose():
 
 
 def test_the_block_is_raised_only_for_attributable_rehab_work():
+    """Unreviewed demand still asks; an unattributable drill does not."""
     injuries = [_injury()]
-    attributable = resolve_rehab_completion([_reviewed_drill()], injuries, completion=DONE)
-    unattributable = resolve_rehab_completion([_bank_drill()], injuries, completion=DONE)
+    attributable = resolve_rehab_completion([_bank_drill()], injuries, completion=DONE)
+    unattributable = resolve_rehab_completion(
+        [_reviewed_drill()], [_injury(body_region="shoulder")], completion=DONE
+    )
 
     assert attributable.has_attributable_rehab is True
     assert unattributable.has_attributable_rehab is False
@@ -343,7 +374,7 @@ def test_the_prompt_names_the_injury():
     prompt = build_rehab_response_prompts(resolution, injuries)[0]
 
     assert prompt.injury_label == "LEFT ANKLE"
-    assert prompt.injury_id == "injury-1"
+    assert prompt.injury_id == "11111111-1111-1111-1111-111111111111"
     assert prompt.during_question == "How did it feel during the rehab work?"
     assert prompt.limit_question == "Did you have to reduce or stop because of it?"
 
@@ -395,15 +426,16 @@ def test_a_categorical_answer_never_becomes_a_pain_score():
         assert response.pain_immediate_after is None
 
 
-def test_worse_is_recorded_as_worsening_and_better_is_not():
-    assert ExposureResponse(**exposure_response_from_answers("worse", "no")).worsening_reported is True
-    assert ExposureResponse(**exposure_response_from_answers("better", "no")).worsening_reported is False
-    assert ExposureResponse(**exposure_response_from_answers("same", "no")).worsening_reported is False
+@pytest.mark.parametrize("during", DURING_ANSWERS)
+def test_an_exposure_level_answer_never_becomes_an_injury_status_signal(during):
+    """``worse`` here is about this drill, not about the injury going backwards.
 
-
-def test_not_sure_is_not_recorded_as_no_worsening():
-    response = ExposureResponse(**exposure_response_from_answers("not_sure", "no"))
+    ``worsening_reported`` is liable to be read later as a broader injury
+    setback, so a single uncomfortable drill must never set it.
+    """
+    response = ExposureResponse(**exposure_response_from_answers(during, "no"))
     assert response.worsening_reported is None
+    assert response.during_response == during
 
 
 @pytest.mark.parametrize(
@@ -461,3 +493,121 @@ def test_the_stage_ladder_is_still_capped_at_restore():
     from api.contracts.rehab_stage import MAX_RESOLVABLE_STAGE, STAGE_RESTORE
 
     assert MAX_RESOLVABLE_STAGE == STAGE_RESTORE
+
+
+# ---------------------------------------------------------------------------
+# The event, and why re-submitting cannot duplicate evidence
+# ---------------------------------------------------------------------------
+
+
+def _event(**kwargs):
+    candidate = resolve_rehab_exposure_candidate(_bank_drill(), [_injury()], completion=DONE)
+    payload = {
+        "athlete_id": ATHLETE,
+        "session_id": "session-1",
+        "training_day": DAY,
+        "completion": DONE,
+    }
+    payload.update(kwargs)
+    return build_rehab_exposure_event(candidate, **payload)
+
+
+def test_the_same_completion_always_builds_the_same_exposure_id():
+    assert _event().exposure_id == _event().exposure_id
+
+
+def test_the_whole_event_is_deterministic_so_a_retry_cannot_conflict():
+    """PR3's RPC is idempotent only for an identical payload under a known id."""
+    assert _event().model_dump(mode="json") == _event().model_dump(mode="json")
+
+
+def test_a_different_drill_gets_a_different_exposure_id():
+    base = build_exposure_id(
+        athlete_id=ATHLETE,
+        injury_episode_id="22222222-2222-2222-2222-222222222222",
+        drill_id="drill_a",
+        session_id="session-1",
+        training_day=DAY,
+    )
+    other = build_exposure_id(
+        athlete_id=ATHLETE,
+        injury_episode_id="22222222-2222-2222-2222-222222222222",
+        drill_id="drill_b",
+        session_id="session-1",
+        training_day=DAY,
+    )
+    assert base != other
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("athlete_id", "99999999-9999-9999-9999-999999999999"),
+        ("injury_episode_id", "55555555-5555-5555-5555-555555555555"),
+        ("session_id", "session-2"),
+        ("training_day", "2026-08-21"),
+    ],
+)
+def test_every_identity_part_changes_the_exposure_id(field, value):
+    args = {
+        "athlete_id": ATHLETE,
+        "injury_episode_id": "22222222-2222-2222-2222-222222222222",
+        "drill_id": "drill_a",
+        "session_id": "session-1",
+        "training_day": DAY,
+    }
+    assert build_exposure_id(**args) != build_exposure_id(**{**args, field: value})
+
+
+def test_a_new_episode_does_not_reuse_the_previous_episodes_exposure_id():
+    """Episode rotation must not collide with stale evidence."""
+    args = {
+        "athlete_id": ATHLETE,
+        "drill_id": "drill_a",
+        "session_id": "session-1",
+        "training_day": DAY,
+    }
+    first = build_exposure_id(injury_episode_id="22222222-2222-2222-2222-222222222222", **args)
+    rotated = build_exposure_id(injury_episode_id="66666666-6666-6666-6666-666666666666", **args)
+    assert first != rotated
+
+
+def test_the_event_carries_the_injury_identity_the_database_checks():
+    event = _event()
+    assert str(event.injury_id) == "11111111-1111-1111-1111-111111111111"
+    assert str(event.injury_episode_id) == "22222222-2222-2222-2222-222222222222"
+    assert event.body_region == "ankle"
+    assert event.side == "left"
+    assert event.is_attributable_to(_injury()) is True
+
+
+def test_the_event_records_the_athletes_answers():
+    event = _event(during="worse", limit="reduced")
+    assert event.response.during_response == "worse"
+    assert event.response.worsening_reported is None
+    assert event.response.stopped_due_to_symptoms is False
+    assert event.dose_completed.stopped_early is True
+
+
+def test_cutting_the_work_short_withdraws_the_full_completion_claim():
+    """"Done" plus "I reduced it" cannot both mean the whole prescription."""
+    full = _event(during="same", limit="no")
+    reduced = _event(during="same", limit="reduced")
+
+    assert full.dose_completed.completed_fraction == 1.0
+    assert reduced.dose_completed.completed_fraction is None
+    assert reduced.dose_completed.stopped_early is True
+
+
+def test_provenance_marks_the_athlete_as_the_source():
+    assert _event().provenance.source == "athlete_logged_rehab"
+
+
+def test_an_ineligible_candidate_is_refused_rather_than_filled_in():
+    candidate = resolve_rehab_exposure_candidate(
+        _bank_drill(), [_injury(side="unknown")], completion=DONE
+    )
+    with pytest.raises(ValueError, match="not eligible"):
+        build_rehab_exposure_event(
+            candidate, athlete_id=ATHLETE, session_id="s1", training_day=DAY, completion=DONE
+        )

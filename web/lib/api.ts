@@ -25,6 +25,8 @@ import type {
   PlanRequest,
   PlanSummary,
   ProfileUpdateRequest,
+  RehabResponseRequest,
+  RehabResponseResult,
   SessionFeedbackRequest,
   TodayCheckinHistoryRecord,
   TodayCheckinRequest,
@@ -1132,6 +1134,24 @@ export function submitTodaySessionCompletion(
   payload: TodaySessionCompletionRequest,
 ): Promise<TodaySessionCompletionResponse> {
   return readJson<TodaySessionCompletionResponse>("/api/today/session-completion", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Append the injury-specific evidence for one completed rehab session.
+ *
+ * Deliberately a separate call from the completion itself: the completion is a
+ * training log, this is an observation about one injury. Sending answers only —
+ * no drill, episode or side — is what keeps the client out of the attribution.
+ */
+export function submitRehabResponses(
+  token: string,
+  payload: RehabResponseRequest,
+): Promise<RehabResponseResult> {
+  return readJson<RehabResponseResult>("/api/today/rehab-responses", {
     method: "POST",
     token,
     body: JSON.stringify(payload),

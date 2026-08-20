@@ -1083,9 +1083,57 @@ export type TodaySessionCompletionRequest = {
   notes?: string;
 };
 
+/** How the injury felt during the rehab work. */
+export type RehabDuringResponse = "better" | "same" | "worse" | "not_sure";
+
+/** Whether the athlete had to back off because of it. */
+export type RehabLimitResponse = "no" | "reduced" | "stopped";
+
+/**
+ * One injury's post-rehab question, exactly as the server framed it.
+ *
+ * The questions and their allowed answers both come from the server, so the
+ * client never invents either. Present only when the completed session
+ * contained rehab attributable to a known injury — a normal training session
+ * returns an empty list and the athlete is asked nothing.
+ */
+export type RehabResponsePrompt = {
+  injury_id: string;
+  /** "LEFT ANKLE" — the injury named, so multiple open injuries stay distinct. */
+  injury_label: string;
+  body_region: string;
+  side: string;
+  drill_ids: string[];
+  during_question: string;
+  during_options: RehabDuringResponse[];
+  limit_question: string;
+  limit_options: RehabLimitResponse[];
+};
+
 export type TodaySessionCompletionResponse = {
   completion_status: TodayCompletionStatus;
   landing_session_state: "none" | "resume" | "completed";
+  rehab_response_prompts?: RehabResponsePrompt[];
+};
+
+/** The athlete's answers about one injury. Carries no attribution: which drill,
+ *  which episode and which side are re-resolved server-side on submit. */
+export type RehabResponseAnswer = {
+  injury_id: string;
+  during_response: RehabDuringResponse;
+  limit_response: RehabLimitResponse;
+};
+
+export type RehabResponseRequest = {
+  plan_id: string;
+  session_id: string;
+  training_day?: string | null;
+  answers: RehabResponseAnswer[];
+};
+
+export type RehabResponseResult = {
+  recorded_exposure_ids: string[];
+  recorded_injury_ids: string[];
 };
 
 /** One stored session-completion row (mirrors SessionCompletionRecordResponse). */

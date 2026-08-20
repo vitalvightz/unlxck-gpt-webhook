@@ -20611,6 +20611,34 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
   }
 }
 
+/* Injury-specific post-rehab response. Shares the feedback card shell with the
+   session review above, but is a different question: that one asks about the
+   session, this asks how one injury behaved. Each injury gets its own labelled
+   group so the answers stay visibly attached to the injury they describe when
+   more than one is open. */
+.rehab-response-card {
+  margin-top: 20px;
+  display: grid;
+  gap: 14px;
+}
+
+.rehab-response-injury {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  border-radius: 12px;
+}
+
+.rehab-response-injury-label {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
 /* Private trial briefing — the one-time screen between sign-up and onboarding,
    and the permanent copy of it in Settings. Bullets over prose on purpose: it
    is read once, on a phone, by someone who wants to get to their plan. */
