@@ -41,6 +41,7 @@ from api.state_machine import (
 from api.generation_config import generation_worker_id
 from api.schema_requirements import GENERATION_JOB_STAGE2_COST_COLUMNS
 from api.store import _signup_date_of_birth, _generation_hard_max_runtime_seconds, _generation_startup_max_attempts, is_job_loaded_stalled_generation_job, is_stage1_planner_stalled_generation_job, is_startup_stale_generation_job
+from api.store import RehabExposureWindow
 from api.xp import XP_CALENDAR_SCOPED_ACTIONS, XP_REWARD_AMOUNTS, XpAction
 from datetime import timedelta
 
@@ -1719,7 +1720,8 @@ class FakeStore:
         injury_id: str,
         injury_episode_id: str,
         limit: int = 200,
-    ) -> list[dict]:
+    ) -> RehabExposureWindow:
+        bounded_limit = max(1, min(limit, 500))
         rows = [
             dict(row)
             for row in self.rehab_exposures.values()
@@ -1735,14 +1737,15 @@ class FakeStore:
             ),
             reverse=True,
         )
-        rows = rows[: max(1, min(limit, 500))]
+        history_truncated = len(rows) > bounded_limit
+        rows = rows[:bounded_limit]
         rows.sort(
             key=lambda row: (
                 str((row.get("event_json") or {}).get("occurred_at") or ""),
                 str(row.get("id") or ""),
             )
         )
-        return rows
+        return RehabExposureWindow(rows=rows, history_truncated=history_truncated)
 
     def create_adaptation_note(self, athlete_id: str, fields: dict) -> dict:
         row = {

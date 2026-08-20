@@ -60,6 +60,7 @@ INSUFFICIENT_UNQUANTIFIED_EXPOSURE = "insufficient_unquantified_exposure"
 INSUFFICIENT_NO_COMPLETED_DOSE = "insufficient_no_completed_dose"
 INSUFFICIENT_RESPONSE = "insufficient_injury_response"
 INSUFFICIENT_RESPONSE_GROUP = "insufficient_response_group_identity"
+INSUFFICIENT_HISTORY_TRUNCATED = "insufficient_history_truncated"
 INSUFFICIENT_UNRESOLVED_NEGATIVE_EVIDENCE = (
     "insufficient_unresolved_historical_negative_evidence"
 )
@@ -144,6 +145,7 @@ class EvidenceSummary(BaseModel):
     assessments: list[ExposureAssessment] = Field(default_factory=list)
     ignored_row_count: int = 0
     ignored_reason_counts: dict[str, int] = Field(default_factory=dict)
+    history_truncated: bool = False
 
 
 class LoadEligibilityResult(BaseModel):
@@ -197,10 +199,19 @@ def resolve_injury_type(injury: Mapping[str, Any]) -> str:
     return "unspecified"
 
 
-def criteria_for_injury_type(injury_type: str) -> LoadCriteria | None:
+def criteria_for_injury_type(
+    injury_type: str,
+    registry: Mapping[str, LoadCriteria] = LOAD_CRITERIA_REGISTRY,
+) -> LoadCriteria | None:
     normalized = _canonical_token(injury_type)
-    criteria = LOAD_CRITERIA_REGISTRY.get(normalized)
-    if criteria is None or criteria.injury_type != normalized or not criteria.provenance:
+    criteria = registry.get(normalized)
+    taxonomy = INJURY_TAXONOMY.get(normalized)
+    if (
+        criteria is None
+        or criteria.injury_type != normalized
+        or not criteria.provenance
+        or criteria.taxonomy_family != _clean((taxonomy or {}).get("category"))
+    ):
         return None
     return criteria
 
@@ -392,6 +403,7 @@ def _summary(
     criteria: LoadCriteria | None,
     qualifying_events: Sequence[RehabExposureEvent] = (),
     ignored: Counter[str] | None = None,
+    history_truncated: bool = False,
 ) -> EvidenceSummary:
     assessments: list[ExposureAssessment] = []
     counts: Counter[str] = Counter()
@@ -418,10 +430,16 @@ def _summary(
         elif criteria is not None and event.demand.load not in criteria.qualifying_loads:
             classification = "neutral_observation"
             reasons.append(INSUFFICIENT_NO_QUALIFYING_DEMAND)
-        elif event.dose_completed.completion_state != "quantified":
+        elif (
+            (criteria is None or criteria.requires_quantified_dose)
+            and event.dose_completed.completion_state != "quantified"
+        ):
             classification = "incomplete_unknown"
             reasons.append(INSUFFICIENT_UNQUANTIFIED_EXPOSURE)
-        elif not _has_positive_completed_amount(event):
+        elif (
+            (criteria is None or criteria.requires_quantified_dose)
+            and not _has_positive_completed_amount(event)
+        ):
             classification = "incomplete_unknown"
             reasons.append(INSUFFICIENT_NO_COMPLETED_DOSE)
         elif event.response.during_response not in _NON_WORSENING_RESPONSES:
@@ -459,6 +477,7 @@ def _summary(
         assessments=assessments,
         ignored_row_count=sum(ignored.values()),
         ignored_reason_counts=dict(sorted(ignored.items())),
+        history_truncated=history_truncated,
     )
 
 
@@ -495,6 +514,8 @@ def resolve_load_eligibility(
     injury: Mapping[str, Any],
     stage_decision: RehabStageDecision,
     exposure_rows: Sequence[Mapping[str, Any]] = (),
+    history_truncated: bool = False,
+    criteria_registry: Mapping[str, LoadCriteria] | None = None,
 ) -> LoadEligibilityResult:
     """Compute a shadow LOAD decision without changing stage or programming."""
 
@@ -513,6 +534,7 @@ def resolve_load_eligibility(
         groups=groups,
         criteria=None,
         ignored=ignored,
+        history_truncated=history_truncated,
     )
 
     # Existing authoritative safety routing always precedes positive criteria.
@@ -584,7 +606,10 @@ def resolve_load_eligibility(
             evaluated_at=evaluated_at,
         )
 
-    criteria = criteria_for_injury_type(injury_type)
+    criteria = criteria_for_injury_type(
+        injury_type,
+        LOAD_CRITERIA_REGISTRY if criteria_registry is None else criteria_registry,
+    )
 
     # A negative in the newest independently reported response group is current
     # negative evidence and prevents eligibility. An older negative followed by
@@ -611,7 +636,11 @@ def resolve_load_eligibility(
                 )
             ],
             evidence_summary=_summary(
-                events=events, groups=groups, criteria=criteria, ignored=ignored
+                events=events,
+                groups=groups,
+                criteria=criteria,
+                ignored=ignored,
+                history_truncated=history_truncated,
             ),
             evaluated_at=evaluated_at,
         )
@@ -644,8 +673,31 @@ def resolve_load_eligibility(
                 )
             ],
             evidence_summary=_summary(
-                events=events, groups=groups, criteria=criteria, ignored=ignored
+                events=events,
+                groups=groups,
+                criteria=criteria,
+                ignored=ignored,
+                history_truncated=history_truncated,
             ),
+            evaluated_at=evaluated_at,
+        )
+
+    if history_truncated:
+        return _result(
+            injury=injury,
+            stage_decision=stage_decision,
+            injury_type=injury_type,
+            injury_family=injury_family,
+            decision="insufficient_evidence",
+            reasons=[INSUFFICIENT_HISTORY_TRUNCATED],
+            criteria_results=[
+                _criterion(
+                    "complete_episode_history_available",
+                    "unknown",
+                    INSUFFICIENT_HISTORY_TRUNCATED,
+                )
+            ],
+            evidence_summary=empty_summary,
             evaluated_at=evaluated_at,
         )
 
@@ -719,7 +771,11 @@ def resolve_load_eligibility(
             reasons=[INSUFFICIENT_NO_EXPOSURES],
             criteria_results=criteria_results,
             evidence_summary=_summary(
-                events=events, groups=groups, criteria=criteria, ignored=ignored
+                events=events,
+                groups=groups,
+                criteria=criteria,
+                ignored=ignored,
+                history_truncated=history_truncated,
             ),
             evaluated_at=evaluated_at,
         )
@@ -755,7 +811,11 @@ def resolve_load_eligibility(
             reasons=[reason],
             criteria_results=criteria_results,
             evidence_summary=_summary(
-                events=events, groups=groups, criteria=criteria, ignored=ignored
+                events=events,
+                groups=groups,
+                criteria=criteria,
+                ignored=ignored,
+                history_truncated=history_truncated,
             ),
             evaluated_at=evaluated_at,
         )
@@ -785,22 +845,40 @@ def resolve_load_eligibility(
             reasons=[reason],
             criteria_results=criteria_results,
             evidence_summary=_summary(
-                events=events, groups=groups, criteria=criteria, ignored=ignored
+                events=events,
+                groups=groups,
+                criteria=criteria,
+                ignored=ignored,
+                history_truncated=history_truncated,
             ),
             evaluated_at=evaluated_at,
         )
-    criteria_results.append(
-        _criterion(
-            "completed_dose_quantified",
-            "pass",
-            "completed_dose_quantified",
-            quantified,
+    if criteria.requires_quantified_dose:
+        dose_candidates = quantified
+        criteria_results.append(
+            _criterion(
+                "completed_dose_quantified",
+                "pass",
+                "completed_dose_quantified",
+                quantified,
+            )
         )
-    )
+    else:
+        # The condition-specific criterion explicitly says that a quantified
+        # amount is not required. Keep the known-loading events as candidates;
+        # do not claim or infer a dose that the exposure did not record.
+        dose_candidates = known_loading
+        criteria_results.append(
+            _criterion(
+                "completed_dose_quantified",
+                "not_applicable",
+                "quantified_dose_not_required_for_criterion",
+            )
+        )
 
     favourable_during = [
         event
-        for event in quantified
+        for event in dose_candidates
         if event.response.during_response in criteria.allowed_during_responses
     ]
     if not favourable_during:
@@ -816,7 +894,11 @@ def resolve_load_eligibility(
             reasons=[INSUFFICIENT_RESPONSE],
             criteria_results=criteria_results,
             evidence_summary=_summary(
-                events=events, groups=groups, criteria=criteria, ignored=ignored
+                events=events,
+                groups=groups,
+                criteria=criteria,
+                ignored=ignored,
+                history_truncated=history_truncated,
             ),
             evaluated_at=evaluated_at,
         )
@@ -853,7 +935,11 @@ def resolve_load_eligibility(
                 reasons=[INSUFFICIENT_DELAYED_RESPONSE],
                 criteria_results=criteria_results,
                 evidence_summary=_summary(
-                    events=events, groups=groups, criteria=criteria, ignored=ignored
+                    events=events,
+                    groups=groups,
+                    criteria=criteria,
+                    ignored=ignored,
+                    history_truncated=history_truncated,
                 ),
                 evaluated_at=evaluated_at,
             )
@@ -890,6 +976,7 @@ def resolve_load_eligibility(
             criteria=criteria,
             qualifying_events=qualifying,
             ignored=ignored,
+            history_truncated=history_truncated,
         ),
         evaluated_at=evaluated_at,
     )
@@ -905,6 +992,7 @@ __all__ = [
     "FAIL_DURING_RESPONSE_WORSE",
     "FAIL_NEXT_DAY_RESPONSE_WORSE",
     "FAIL_STOPPED_DUE_TO_SYMPTOMS",
+    "INSUFFICIENT_HISTORY_TRUNCATED",
     "INSUFFICIENT_NO_EXPOSURES",
     "INSUFFICIENT_NO_QUALIFYING_DEMAND",
     "INSUFFICIENT_UNQUANTIFIED_EXPOSURE",

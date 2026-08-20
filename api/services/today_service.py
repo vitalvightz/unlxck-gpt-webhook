@@ -519,7 +519,7 @@ def _log_load_eligibility_shadow(
     injury_id = str(injury.get("id") or "")
     episode_id = str(injury.get("episode_id") or "")
     try:
-        exposures = store.list_rehab_exposures(
+        exposure_window = store.list_rehab_exposures(
             athlete_id,
             injury_id=injury_id,
             injury_episode_id=episode_id,
@@ -529,7 +529,8 @@ def _log_load_eligibility_shadow(
             athlete_id=athlete_id,
             injury=injury,
             stage_decision=stage_decision,
-            exposure_rows=exposures,
+            exposure_rows=exposure_window.rows,
+            history_truncated=exposure_window.history_truncated,
         )
     except Exception:
         # An evidence-read or evaluator failure is not "no evidence" and cannot
@@ -565,6 +566,7 @@ def _log_load_eligibility_shadow(
                 "qualifying_response_group_ids": summary.qualifying_response_group_ids,
                 "rejected_evidence": rejected,
                 "ignored_reason_counts": summary.ignored_reason_counts,
+                "history_truncated": summary.history_truncated,
                 "engine_version": result.engine_version,
             },
             sort_keys=True,

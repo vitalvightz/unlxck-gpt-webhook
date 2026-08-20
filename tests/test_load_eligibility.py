@@ -24,6 +24,7 @@ from api.contracts.load_eligibility import (
     IGNORED_INJURY_MISMATCH,
     IGNORED_REGION_MISMATCH,
     IGNORED_SIDE_MISMATCH,
+    INSUFFICIENT_HISTORY_TRUNCATED,
     INSUFFICIENT_UNRESOLVED_NEGATIVE_EVIDENCE,
     INSUFFICIENT_UNSUPPORTED_INJURY_TYPE,
     LOAD_CRITERIA_REGISTRY,
@@ -59,6 +60,26 @@ EPISODE = "33333333-3333-3333-3333-333333333333"
 OLD_EPISODE = "44444444-4444-4444-4444-444444444444"
 GROUP = "55555555-5555-5555-5555-555555555555"
 START = datetime(2026, 8, 20, 10, 0, tzinfo=timezone.utc)
+
+
+def _synthetic_criteria(*, requires_quantified_dose: bool) -> LoadCriteria:
+    """Exact test-only rule; production LOAD_CRITERIA_REGISTRY stays empty."""
+
+    return LoadCriteria(
+        injury_type="sprain",
+        taxonomy_family="soft_tissue",
+        provenance="test_only_synthetic_criterion",
+        qualifying_loads=frozenset({"low"}),
+        requires_quantified_dose=requires_quantified_dose,
+        allowed_during_responses=frozenset({"same", "better"}),
+        requires_delayed_response=False,
+        allowed_delayed_responses=frozenset({"same", "better"}),
+        historical_negative_resolution_rule=None,
+    )
+
+
+SYNTHETIC_QUANTIFIED_CRITERIA = _synthetic_criteria(requires_quantified_dose=True)
+SYNTHETIC_UNQUANTIFIED_CRITERIA = _synthetic_criteria(requires_quantified_dose=False)
 
 
 def _injury(**updates: object) -> dict:
@@ -160,12 +181,16 @@ def _resolve(
     injury: dict | None = None,
     stage: RehabStageDecision | None = None,
     athlete_id: str = ATHLETE,
+    history_truncated: bool = False,
+    criteria: LoadCriteria | None = None,
 ):
     return resolve_load_eligibility(
         athlete_id=athlete_id,
         injury=injury or _injury(),
         stage_decision=stage or _stage(),
         exposure_rows=list(rows),
+        history_truncated=history_truncated,
+        criteria_registry={criteria.injury_type: criteria} if criteria else None,
     )
 
 
@@ -230,25 +255,55 @@ def test_bounded_reader_keeps_newest_200_and_newest_negative_cannot_be_excluded(
         )
         store.create_rehab_exposure(ATHLETE, row["event_json"])
 
-    rows = store.list_rehab_exposures(
+    window = store.list_rehab_exposures(
         ATHLETE,
         injury_id=INJURY,
         injury_episode_id=EPISODE,
         limit=200,
     )
-    assert len(rows) == 200
-    assert rows[0]["event_json"]["drill_id"] == "test_drill_2"
-    assert rows[-1]["event_json"]["drill_id"] == "test_drill_201"
+    assert window.history_truncated is True
+    assert len(window.rows) == 200
+    assert window.rows[0]["event_json"]["drill_id"] == "test_drill_2"
+    assert window.rows[-1]["event_json"]["drill_id"] == "test_drill_201"
 
-    result = _resolve(*rows)
+    result = _resolve(
+        *window.rows,
+        history_truncated=window.history_truncated,
+        criteria=SYNTHETIC_QUANTIFIED_CRITERIA,
+    )
     assert result.decision == "not_eligible"
     assert FAIL_DURING_RESPONSE_WORSE in result.reason_codes
+    assert result.evidence_summary.history_truncated is True
+
+
+def test_truncated_positive_window_is_insufficient_never_eligible():
+    store = FakeStore()
+    for number in range(1, 202):
+        row = _event(number, response_group_id=str(UUID(int=20_000 + number)))
+        store.create_rehab_exposure(ATHLETE, row["event_json"])
+
+    window = store.list_rehab_exposures(
+        ATHLETE,
+        injury_id=INJURY,
+        injury_episode_id=EPISODE,
+        limit=200,
+    )
+    result = _resolve(
+        *window.rows,
+        history_truncated=window.history_truncated,
+        criteria=SYNTHETIC_QUANTIFIED_CRITERIA,
+    )
+    assert result.decision == "insufficient_evidence"
+    assert result.reason_codes == [INSUFFICIENT_HISTORY_TRUNCATED]
+    assert result.eligible_for_load is False
+    assert result.evidence_summary.history_truncated is True
 
 
 def test_supabase_reader_fetches_descending_then_returns_chronology():
     class Query:
         def __init__(self):
             self.order_call = None
+            self.limit_call = None
 
         def select(self, *_args, **_kwargs):
             return self
@@ -260,7 +315,8 @@ def test_supabase_reader_fetches_descending_then_returns_chronology():
             self.order_call = (column, desc)
             return self
 
-        def limit(self, *_args, **_kwargs):
+        def limit(self, size, **_kwargs):
+            self.limit_call = size
             return self
 
         def execute(self):
@@ -278,14 +334,16 @@ def test_supabase_reader_fetches_descending_then_returns_chronology():
     query = Query()
     store = object.__new__(SupabaseAppStore)
     store.client = type("Client", (), {"table": lambda _self, _name: query})()
-    rows = store.list_rehab_exposures(
+    window = store.list_rehab_exposures(
         ATHLETE,
         injury_id=INJURY,
         injury_episode_id=EPISODE,
         limit=200,
     )
     assert query.order_call == ("occurred_at", True)
-    assert [row["id"] for row in rows] == ["2", "3"]
+    assert query.limit_call == 201
+    assert window.history_truncated is False
+    assert [row["id"] for row in window.rows] == ["2", "3"]
 
 
 # ---------------------------------------------------------------------------
@@ -468,6 +526,29 @@ def test_21_restore_fails_closed_without_sourced_condition_criteria():
     assert result.eligible_for_load is False
 
 
+def test_synthetic_exact_quantified_criterion_can_return_shadow_eligible():
+    result = _resolve(_event(1), criteria=SYNTHETIC_QUANTIFIED_CRITERIA)
+    assert result.current_stage == STAGE_RESTORE
+    assert result.decision == "eligible"
+    assert result.reason_codes == [ELIGIBLE_LOAD_CRITERIA_MET]
+    assert _criterion(result, "completed_dose_quantified").status == "pass"
+    assert MAX_RESOLVABLE_STAGE == STAGE_RESTORE
+
+
+def test_synthetic_exact_nonquantified_criterion_uses_known_loading_candidate():
+    row = _event(1, completion_state="performed_amount_unknown")
+    result = _resolve(row, criteria=SYNTHETIC_UNQUANTIFIED_CRITERIA)
+    assert result.current_stage == STAGE_RESTORE
+    assert result.decision == "eligible"
+    dose_criterion = _criterion(result, "completed_dose_quantified")
+    assert dose_criterion.status == "not_applicable"
+    assert dose_criterion.reason_code == "quantified_dose_not_required_for_criterion"
+    assert result.evidence_summary.qualifying_exposure_ids == [row["id"]]
+    # Eligibility does not rewrite the honest unquantified observation.
+    assert row["event_json"]["dose_completed"]["completion_state"] == "performed_amount_unknown"
+    assert MAX_RESOLVABLE_STAGE == STAGE_RESTORE
+
+
 def test_22_shadow_decision_does_not_mutate_injury_or_stage_decision():
     injury = _injury()
     original = dict(injury)
@@ -513,6 +594,14 @@ def test_today_shadow_log_does_not_change_live_stage_output(monkeypatch, caplog)
         "resolve_rehab_stages",
         lambda *_args, **_kwargs: {INJURY: decision},
     )
+    monkeypatch.setattr(
+        today_service_module,
+        "resolve_load_eligibility",
+        lambda **kwargs: resolve_load_eligibility(
+            **kwargs,
+            criteria_registry={"sprain": SYNTHETIC_QUANTIFIED_CRITERIA},
+        ),
+    )
 
     with caplog.at_level("INFO"):
         stamped = today_service_module._with_rehab_stage(
@@ -523,7 +612,8 @@ def test_today_shadow_log_does_not_change_live_stage_output(monkeypatch, caplog)
     assert "load_eligibility" not in stamped[0]
     record = next(record for record in caplog.records if "load_eligibility_shadow {" in record.message)
     payload = json.loads(record.message.split("load_eligibility_shadow ", 1)[1])
-    assert payload["result"] == "insufficient_evidence"
+    assert payload["result"] == "eligible"
+    assert payload["history_truncated"] is False
     assert payload["engine_version"] == LOAD_ELIGIBILITY_ENGINE_VERSION
 
 
@@ -533,6 +623,14 @@ def test_shadow_evidence_cannot_change_today_enrichment_output(monkeypatch):
         today_service_module,
         "resolve_rehab_stages",
         lambda *_args, **_kwargs: {INJURY: decision},
+    )
+    monkeypatch.setattr(
+        today_service_module,
+        "resolve_load_eligibility",
+        lambda **kwargs: resolve_load_eligibility(
+            **kwargs,
+            criteria_registry={"sprain": SYNTHETIC_QUANTIFIED_CRITERIA},
+        ),
     )
     without_evidence = FakeStore()
     with_evidence = FakeStore()
