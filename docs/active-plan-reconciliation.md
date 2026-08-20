@@ -34,3 +34,22 @@ archived, ended, unavailable, or foreign plan.
 
 This process never deletes completion rows and never treats recency alone as
 proof of activation.
+## Training streak and adherence repair
+
+These are separate derived views. `athlete_streaks.training_*` drives the
+athlete-facing Training Streak. It uses completed, legitimate
+`session_completions` plus completed legacy/manual `session_logs`, deduplicated
+by athlete-local training day. A completed day advances once. An expected day
+missed before today, or an explicit skip, breaks the run. A genuine rest day and
+an unresolved current day are neutral. `athlete_streaks.adherence_*` remains the
+stricter prescribed-plan measure and is not displayed as Training Streak.
+
+A terminal completion triggers both rebuilds independently of XP eligibility.
+Activating a plan also runs both, so re-activating the existing active plan is
+the supported deterministic repair path after deployment. Neither rebuild
+awards XP.
+
+For a deployment-wide repair, invoke that same service reconciliation once for
+each athlete with an active plan (for example from an authenticated maintenance
+job). Do not update streak counters in SQL. The service rebuild is idempotent and
+preserves deduplication, rest-day, missed-day and active-plan rules.

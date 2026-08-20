@@ -431,7 +431,8 @@ def test_today_and_plan_detail_use_the_same_projected_open_plan_sessions():
     assert today_entry["title"] == "Support strength"
     assert next_entry is not None
     assert next_entry["calendar_date"] == "2026-07-13"
-    assert next_entry["session_id"] == today_entry["session_id"]
+    assert "session_id" not in next_entry
+    assert "session_id" not in today_entry
 
 
 def test_undated_legacy_schedule_still_clamps_to_its_final_week():

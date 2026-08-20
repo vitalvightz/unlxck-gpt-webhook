@@ -43,7 +43,7 @@ from api.services.rehab_completion_service import (
 from api.services.notification_foundation import invalidate_notification_action
 from api.services.today_service import resolve_training_day
 from api.services.week_progress import try_award_completed_week_for_completion
-from api.services.streaks import reconcile_adherence_streak
+from api.services.streaks import reconcile_adherence_streak, reconcile_training_streak
 from api.services.xp_awards import (
     award_checkin_xp,
     award_injury_update_xp,
@@ -274,6 +274,30 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
                     "[notification] session action invalidation failed profile_id=%s",
                     profile.athlete_id,
                 )
+            # Training consistency and plan adherence are both derived from
+            # completion history, never from the narrower reward rules.
+            try:
+                reconcile_training_streak(
+                    store,
+                    athlete_id=profile.athlete_id,
+                    athlete_timezone=profile.athlete_timezone,
+                )
+            except Exception:  # noqa: BLE001 - completion remains authoritative
+                logger.exception(
+                    "[streak] training reconciliation failed athlete_id=%s",
+                    profile.athlete_id,
+                )
+            try:
+                reconcile_adherence_streak(
+                    store,
+                    athlete_id=profile.athlete_id,
+                    athlete_timezone=profile.athlete_timezone,
+                )
+            except Exception:  # noqa: BLE001 - completion remains authoritative
+                logger.exception(
+                    "[streak] adherence reconciliation failed athlete_id=%s",
+                    profile.athlete_id,
+                )
         # Preserve the completion record, but only the single server-resolved
         # active plan may drive XP. This closes the overlapping/inactive-plan
         # path without deleting legitimate history or retro logs.
@@ -294,17 +318,6 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
                 athlete_timezone=profile.athlete_timezone,
                 completion=row,
             )
-            try:
-                reconcile_adherence_streak(
-                    store,
-                    athlete_id=profile.athlete_id,
-                    athlete_timezone=profile.athlete_timezone,
-                )
-            except Exception:  # noqa: BLE001 - completion remains authoritative
-                logger.exception(
-                    "[streak] adherence reconciliation failed athlete_id=%s",
-                    profile.athlete_id,
-                )
         return SessionCompletionResponse(
             completion=row,
             completion_status=completion_status,

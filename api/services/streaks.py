@@ -1,4 +1,4 @@
-"""Server-authoritative login and prescribed-training streaks."""
+"""Server-authoritative app, training-consistency and plan-adherence streaks."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from datetime import date, datetime, timedelta
 from typing import Any
 
 from api.services.active_plan import resolve_active_plan
-from api.services.today_service import resolve_training_day
+from api.services.today_service import _structured_session_entry_for_day, resolve_training_day
 from api.services.week_progress import COMPLETED_STATUSES, _latest_statuses, _plan_for_training_day
 from api.store import AppStore
 
@@ -110,6 +110,13 @@ def _public_state(row: Mapping[str, Any]) -> dict[str, Any]:
             "last_active_date": row.get("login_last_active_date"),
         },
         "adherence": {
+            # API key retained for the existing XP-card contract. The values are
+            # the athlete-facing Training Streak, not plan adherence.
+            "current": max(0, int(row.get("training_current") or 0)),
+            "best": max(0, int(row.get("training_best") or 0)),
+            "last_qualifying_day": row.get("training_last_qualifying_day"),
+        },
+        "plan_adherence": {
             "current": max(0, int(row.get("adherence_current") or 0)),
             "best": max(0, int(row.get("adherence_best") or 0)),
             "last_qualifying_day": row.get("adherence_last_qualifying_day"),
@@ -164,6 +171,132 @@ def _scheduled_days(plan: Mapping[str, Any], training_day: str) -> list[tuple[da
     return sorted(result)
 
 
+def _training_schedule(plan: Mapping[str, Any], training_day: str) -> dict[date, set[str]]:
+    """Expected training days and their canonical app-session identities."""
+    projected = _plan_for_training_day(plan, training_day)
+    structured = projected.get("structured_plan")
+    weeks = structured.get("weeks") if isinstance(structured, Mapping) else None
+    result: dict[date, set[str]] = {}
+    for week in _rows(weeks):
+        for day_row in _rows(week.get("days")):
+            try:
+                scheduled = date.fromisoformat(str(day_row.get("date")))
+            except ValueError:
+                continue
+            ids = {
+                str(session.get("session_id") or "").strip()
+                for session in _rows(day_row.get("sessions"))
+            }
+            ids.discard("")
+            # Sessionless coach/technical work is still expected training. The
+            # Today projection owns the distinction between that and true rest.
+            if ids or _structured_session_entry_for_day(day_row, week=week) is not None:
+                result[scheduled] = ids
+    return result
+
+
+def _all_completions(store: AppStore, athlete_id: str) -> list[dict[str, Any]]:
+    custom = getattr(store, "list_session_completions", None)
+    if callable(custom):
+        return _rows(custom(athlete_id, limit=500))
+    return _rows(getattr(store, "completions", None))
+
+
+def _session_logs(store: AppStore, athlete_id: str) -> list[dict[str, Any]]:
+    custom = getattr(store, "list_session_logs", None)
+    return _rows(custom(athlete_id, limit=500)) if callable(custom) else []
+
+
+def qualifying_training_days(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    today: date,
+) -> tuple[set[date], set[date]]:
+    """Return (completed training days, explicitly skipped expected days).
+
+    Current session completions qualify only when tied to a canonical scheduled
+    session, or to a sessionless coach/technical day in that completion's plan.
+    Completed legacy/manual ``session_logs`` are authoritative actual training.
+    """
+    schedules: dict[str, dict[date, set[str]]] = {}
+    qualifying: set[date] = set()
+    skipped: set[date] = set()
+    for row in _all_completions(store, athlete_id):
+        if str(row.get("status") or "") not in {"done", "modified", "skipped"}:
+            continue
+        try:
+            activity_day = date.fromisoformat(str(row.get("training_day")))
+        except ValueError:
+            continue
+        plan_id = str(row.get("plan_id") or "")
+        if plan_id not in schedules:
+            plan = store.get_plan_for_athlete(plan_id, athlete_id) if plan_id else None
+            schedules[plan_id] = _training_schedule(plan, today.isoformat()) if plan else {}
+        expected_ids = schedules[plan_id].get(activity_day)
+        session_id = str(row.get("session_id") or "").strip()
+        # Before canonical identity was enforced, the supported Today flow used
+        # the local day as its key for sessionless coach/technical cards. Accept
+        # that narrow historical provenance for streak rebuild only; it remains
+        # ineligible for XP and arbitrary ids still fail closed.
+        legacy_sessionless = (
+            expected_ids == set() and session_id == activity_day.isoformat()
+        )
+        legitimate = expected_ids is not None and (
+            session_id in expected_ids or legacy_sessionless
+        )
+        if not legitimate:
+            continue
+        if row.get("status") == "skipped":
+            skipped.add(activity_day)
+        else:
+            qualifying.add(activity_day)
+    for row in _session_logs(store, athlete_id):
+        if row.get("completed") is not True:
+            continue
+        try:
+            qualifying.add(date.fromisoformat(str(row.get("session_date"))))
+        except ValueError:
+            continue
+    return qualifying, skipped
+
+
+def reconcile_training_streak(
+    store: AppStore, *, athlete_id: str, athlete_timezone: str | None, now: datetime | None = None
+) -> dict[str, Any]:
+    """Rebuild actual-training consistency without awarding XP.
+
+    Completed training advances once per athlete-local day. Expected training
+    missed before today breaks the run. Genuine rest days are absent and neutral;
+    an unresolved expected current day is also neutral.
+    """
+    today = date.fromisoformat(resolve_training_day(athlete_timezone, now=now))
+    resolution = resolve_active_plan(store, athlete_id, current_training_day=today)
+    plan = resolution.plan
+    expected = set(_training_schedule(plan, today.isoformat())) if plan else set()
+    qualifying, skipped = qualifying_training_days(
+        store, athlete_id=athlete_id, today=today
+    )
+    current = best = 0
+    last: date | None = None
+    for activity_day in sorted(expected | qualifying | skipped):
+        if activity_day > today:
+            continue
+        if activity_day in qualifying:
+            current += 1
+            best = max(best, current)
+            last = activity_day
+        elif activity_day < today or activity_day in skipped:
+            current = 0
+            last = None
+    row = _write_state(store, athlete_id, {
+        "training_current": current,
+        "training_best": best,
+        "training_last_qualifying_day": last.isoformat() if last else None,
+    })
+    return _public_state(row)
+
+
 def reconcile_adherence_streak(
     store: AppStore, *, athlete_id: str, athlete_timezone: str | None, now: datetime | None = None
 ) -> dict[str, Any]:
@@ -216,4 +349,4 @@ def get_streak_state(
     return _public_state(_read_state(store, athlete_id))
 
 
-__all__ = ["get_streak_state", "record_daily_activity", "reconcile_adherence_streak", "reconcile_login_streak"]
+__all__ = ["get_streak_state", "qualifying_training_days", "record_daily_activity", "reconcile_adherence_streak", "reconcile_login_streak", "reconcile_training_streak"]

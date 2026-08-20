@@ -772,8 +772,7 @@ test("buildCompletionIndex keys rows by training_day|session_id", () => {
   assert.equal(completionForSession(index, day, day.sessions![1]!)?.status, "skipped");
 });
 
-test("completionForSession falls back to the day date for the id-less primary session", () => {
-  // Mirrors the backend `session_id = session.session_id || day_date` rule.
+test("completionForSession does not treat a date as an id for an id-less session", () => {
   const day = {
     date: "2026-06-20",
     sessions: [{ title: "Untitled primary", blocks: [] }, { title: "Secondary, also id-less" }],
@@ -781,8 +780,7 @@ test("completionForSession falls back to the day date for the id-less primary se
   const index = buildCompletionIndex([
     completionRow({ session_id: "2026-06-20", training_day: "2026-06-20" }),
   ]);
-  assert.equal(completionForSession(index, day, day.sessions![0]!)?.status, "done");
-  // A secondary id-less session has no completion identity — never matched.
+  assert.equal(completionForSession(index, day, day.sessions![0]!), undefined);
   assert.equal(completionForSession(index, day, day.sessions![1]!), undefined);
 });
 
@@ -795,7 +793,7 @@ test("primary session is the first session with executable blocks", () => {
     ],
   };
   assert.equal(primarySessionOf(day)?.title, "App session");
-  assert.equal(completionSessionId(day, day.sessions![1]!), "2026-06-20");
+  assert.equal(completionSessionId(day, day.sessions![1]!), null);
   assert.equal(completionSessionId(day, day.sessions![0]!), null);
 });
 

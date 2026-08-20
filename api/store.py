@@ -514,6 +514,8 @@ class AppStore(Protocol):
         self, athlete_id: str, plan_id: str, *, limit: int = 500
     ) -> list[dict[str, Any]]: ...
 
+    def list_session_logs(self, athlete_id: str, *, limit: int = 500) -> list[dict[str, Any]]: ...
+
     def list_today_checkins(
         self, athlete_id: str, *, limit: int = 14
     ) -> list[dict[str, Any]]: ...
@@ -4556,6 +4558,18 @@ class SupabaseAppStore:
             .eq("athlete_id", athlete_id)
             .eq("plan_id", plan_id)
             .order("training_day", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return getattr(response, "data", None) or []
+
+    def list_session_logs(self, athlete_id: str, *, limit: int = 500) -> list[dict[str, Any]]:
+        """Legacy/manual training history; this table has no current write API."""
+        response = (
+            self.client.table("session_logs")
+            .select("id,athlete_id,plan_id,session_date,session_type,completed,created_at,updated_at")
+            .eq("athlete_id", athlete_id)
+            .order("session_date", desc=True)
             .limit(limit)
             .execute()
         )

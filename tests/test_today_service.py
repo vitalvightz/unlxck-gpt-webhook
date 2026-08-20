@@ -3149,12 +3149,12 @@ class TestRetroLogCompletion:
         row = self._upsert(store, training_day="2026-06-16")
         assert row["training_day"] == "2026-06-16"
 
-    def test_structured_plan_accepts_the_day_date_fallback_id(self):
-        # An id-less primary session logs under the day-date session id,
-        # mirroring _structured_session_entry_for_day.
+    def test_structured_plan_rejects_a_date_as_identity_for_an_idless_session(self):
         store = self._structured_store()
-        row = self._upsert(store, training_day="2026-06-17", session_id="2026-06-17")
-        assert row["session_id"] == "2026-06-17"
+        with pytest.raises(HTTPException) as exc:
+            self._upsert(store, training_day="2026-06-17", session_id="2026-06-17")
+        assert exc.value.status_code == 422
+        assert "not scheduled" in exc.value.detail
 
     def test_skipped_retro_log_still_requires_a_reason(self):
         store = _store_with_plan()

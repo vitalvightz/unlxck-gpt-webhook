@@ -1444,14 +1444,17 @@ def submit_today_injury_checkin(
 def _session_id_for_entry(entry: Any) -> str | None:
     """A stable session id for a derived weekly-schedule day entry.
 
-    Prefers an explicit session id, then the calendar date, then the weekday
-    label. Returns ``None`` when there is nothing to key on so completion lookup
-    is simply skipped.
+    Structured plan entries use only their explicit session identity. Calendar
+    dates and weekday labels describe when a structured session happens; using
+    either as its id creates completion rows that cannot match the prescription.
+    Legacy weekly-schedule entries retain their historical date/weekday key.
     """
     if entry is None:
         return None
     if isinstance(entry, Mapping):
         explicit_session_id = entry.get("session_id")
+        if entry.get("_structured_session"):
+            return str(explicit_session_id) if explicit_session_id else None
         calendar_date = entry.get("calendar_date")
         weekday = entry.get("weekday", "")
     else:
@@ -1608,7 +1611,6 @@ def _structured_session_entry_for_day(
         if not headline:
             return None
         session = {
-            "session_id": day_date,
             "session_type": "scheduled_session",
             "title": headline,
             "objective": _clean_text(today_card.get("primary_warning")),
@@ -1621,7 +1623,7 @@ def _structured_session_entry_for_day(
         or "Today's session"
     )
     objective = _clean_text(session.get("objective")) or _clean_text(today_card.get("headline"))
-    session_id = _clean_text(session.get("session_id")) or day_date
+    session_id = _clean_text(session.get("session_id"))
     weekday = ""
     try:
         weekday = datetime.strptime(day_date, "%Y-%m-%d").strftime("%A")
@@ -1638,6 +1640,7 @@ def _structured_session_entry_for_day(
 
     entry = {
         **session,
+        "_structured_session": True,
         "calendar_date": day_date,
         "weekday": weekday,
         "weekday_with_label": _clean_text(day.get("countdown_label")) or weekday,
@@ -1648,9 +1651,10 @@ def _structured_session_entry_for_day(
         "effective_load": effective_load,
         "phase": _normalized_structured_phase(day.get("phase_label"))
         or _normalized_structured_phase(week.get("phase_label")),
-        "session_id": session_id,
         **({"coach_led_contact": coach_led_contact} if coach_led_contact else {}),
     }
+    if session_id:
+        entry["session_id"] = session_id
     # A day with no session objects is only a session when its headline names
     # real work. "Rest or active recovery" is a rest day even though it says
     # "recovery", while "Rhythm flush" is the low-cost support work Today should
@@ -1875,6 +1879,7 @@ def _next_session_payload(entry: Any, session_id: str | None, *, relation: str |
     if entry is None:
         return {}
     data = entry.model_dump() if hasattr(entry, "model_dump") else dict(entry)
+    data.pop("_structured_session", None)
     if session_id:
         data["session_id"] = session_id
     if relation:
