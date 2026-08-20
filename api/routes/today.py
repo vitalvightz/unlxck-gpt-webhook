@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from api.compliance_guards import require_health_feature_access
 from api.compliance import evaluate_profile_compliance
@@ -20,6 +20,8 @@ from api.models import (
     InjuryFlagRecord,
     LandingResponse,
     ProfileRecord,
+    RehabResponseRequest,
+    RehabResponseResult,
     SessionCompletionRecordResponse,
     SessionCompletionRequest,
     SessionCompletionResponse,
@@ -31,7 +33,13 @@ from api.models import (
 )
 from api.contracts.command_view import CommandView
 from api.contracts.completion import completion_landing_state, completion_status_of
+from api.contracts.rehab_completion import COMPLETED_STATUSES
 from api.services.progress_notifications import award_session_progress
+from api.services.rehab_completion_service import (
+    collect_rehab_response_prompts,
+    prompts_as_payload,
+    record_rehab_exposures,
+)
 from api.services.notification_foundation import invalidate_notification_action
 from api.services.today_service import resolve_training_day
 from api.services.week_progress import try_award_completed_week_for_completion
@@ -301,6 +309,116 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             completion=row,
             completion_status=completion_status,
             landing_session_state=completion_landing_state(completion_status),
+            rehab_response_prompts=_rehab_prompts_for_completion(
+                store, profile=profile, completion=row
+            ),
+        )
+
+    def _plan_row_for_completion(
+        store: AppStore, *, profile: ProfileRecord, plan_id: str
+    ) -> dict[str, Any] | None:
+        reader = getattr(store, "get_plan_for_athlete", None)
+        if not callable(reader) or not plan_id:
+            return None
+        return reader(plan_id, profile.athlete_id)
+
+    def _rehab_prompts_for_completion(
+        store: AppStore, *, profile: ProfileRecord, completion: dict[str, Any]
+    ) -> list[dict[str, Any]]:
+        """The injury-specific prompts this completion raises, or none.
+
+        Health-gated: an athlete who has not granted health consent is not asked
+        about an injury, and a resolution failure must never take the completion
+        down with it — the session is logged either way.
+        """
+        if completion_status_of(completion) not in COMPLETED_STATUSES:
+            # Checked before the plan read: starting and skipping a session are
+            # the common taps, and neither can produce an exposure.
+            return []
+        if not evaluate_profile_compliance(profile).health_consent_granted:
+            return []
+        try:
+            plan_row = _plan_row_for_completion(
+                store, profile=profile, plan_id=str(completion.get("plan_id") or "")
+            )
+            if not plan_row:
+                return []
+            prompts = collect_rehab_response_prompts(
+                store,
+                athlete_id=profile.athlete_id,
+                plan_row=plan_row,
+                training_day=str(completion.get("training_day") or ""),
+                session_id=str(completion.get("session_id") or ""),
+                completion=completion,
+            )
+        except Exception:  # noqa: BLE001 - the completion record is authoritative
+            logger.exception(
+                "[rehab] response prompt resolution failed athlete_id=%s",
+                profile.athlete_id,
+            )
+            return []
+        return prompts_as_payload(prompts)
+
+    @router.post(
+        "/api/today/rehab-responses",
+        response_model=RehabResponseResult,
+        status_code=status.HTTP_201_CREATED,
+    )
+    def submit_rehab_responses(
+        request_body: RehabResponseRequest,
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> RehabResponseResult:
+        """Append the injury-specific evidence for one completed rehab session.
+
+        The request returns the immutable injury episode context issued with each
+        prompt. The current episode must still match. Drill, side and demand are
+        re-resolved from the stored plan and injury record, so nothing the client
+        asserts can become evidence.
+        """
+        require_health_feature_access(profile)
+        plan_row = _plan_row_for_completion(
+            store, profile=profile, plan_id=request_body.plan_id
+        )
+        if not plan_row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+
+        training_day = request_body.training_day or resolve_training_day(
+            profile.athlete_timezone
+        )
+        completion = store.get_session_completion(
+            profile.athlete_id, request_body.session_id, training_day
+        )
+        if not completion:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="no session completion to attach this response to",
+            )
+        if str(completion.get("plan_id") or "") != request_body.plan_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="session completion belongs to another plan",
+            )
+
+        events = record_rehab_exposures(
+            store,
+            athlete_id=profile.athlete_id,
+            plan_row=plan_row,
+            training_day=training_day,
+            session_id=request_body.session_id,
+            completion=completion,
+            answers={
+                answer.injury_id: {
+                    "injury_episode_id": str(answer.injury_episode_id),
+                    "during_response": answer.during_response,
+                    "limit_response": answer.limit_response,
+                }
+                for answer in request_body.answers
+            },
+        )
+        return RehabResponseResult(
+            recorded_exposure_ids=[str(event.exposure_id) for event in events],
+            recorded_injury_ids=[str(event.injury_id) for event in events],
         )
 
     return router

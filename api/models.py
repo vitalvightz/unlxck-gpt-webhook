@@ -4,6 +4,7 @@ import math
 import re
 from datetime import date, datetime
 from typing import Any, Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
@@ -24,6 +25,10 @@ from .contracts.injury_checkin import (
     Drainage as _Drainage,
     FrictionOrContactProblem as _FrictionOrContactProblem,
     SkinIntegrity as _SkinIntegrity,
+)
+from .contracts.rehab_completion import (
+    DURING_ANSWERS as _DURING_ANSWERS,
+    LIMIT_ANSWERS as _LIMIT_ANSWERS,
 )
 from .contracts.rehab_stage import (
     CARE_PATHWAYS as _CARE_TYPES,
@@ -1866,6 +1871,10 @@ SurfaceInjuryClass = Literal[
 # restated, so the API schema can never drift from fightcamp.rehab_schema.
 RehabStage = Literal[_REHAB_STAGES]  # type: ignore[valid-type]
 RehabCarePathway = Literal[_CARE_TYPES]  # type: ignore[valid-type]
+# The two post-rehab answer vocabularies, derived the same way so the athlete
+# can only send back one of the options the server offered.
+RehabDuringResponse = Literal[_DURING_ANSWERS]  # type: ignore[valid-type]
+RehabLimitResponse = Literal[_LIMIT_ANSWERS]  # type: ignore[valid-type]
 _DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 DAILY_NOTE_MAX_CHARS = 2000
 
@@ -2118,10 +2127,106 @@ class SessionCompletionRecordResponse(BaseModel):
     updated_at: str = ""
 
 
+class RehabResponsePromptResponse(BaseModel):
+    """One injury's post-rehab question, as the athlete is shown it.
+
+    The server sends the questions and the allowed answers together, so the
+    client never invents either. ``drill_ids`` names the rehab work that raised
+    this prompt; it is informational, and the server re-resolves attribution on
+    submit rather than trusting it back.
+    """
+
+    injury_id: str
+    # Immutable context captured when the server raised this prompt. The client
+    # returns it verbatim so a delayed answer cannot cross injury episodes.
+    injury_episode_id: UUID
+    # "LEFT ANKLE" — the injury addressed by name, so the athlete knows which
+    # one they are answering about when more than one is open.
+    injury_label: str
+    body_region: str
+    side: str
+    drill_ids: list[str] = Field(default_factory=list)
+    during_question: str
+    during_options: list[str] = Field(default_factory=list)
+    limit_question: str
+    limit_options: list[str] = Field(default_factory=list)
+
+
 class SessionCompletionResponse(BaseModel):
     completion: SessionCompletionRecordResponse
     completion_status: CompletionStatus
     landing_session_state: LandingSessionState
+    # Non-empty only when this session actually contained rehab attributable to
+    # a known injury. A normal training session returns none and the athlete is
+    # asked nothing extra. General session feedback is unaffected either way.
+    rehab_response_prompts: list[RehabResponsePromptResponse] = Field(default_factory=list)
+
+
+class RehabResponseAnswer(BaseModel):
+    """What the athlete said about one injury after one rehab session."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    injury_id: str = Field(min_length=1)
+    injury_episode_id: UUID
+    during_response: RehabDuringResponse
+    limit_response: RehabLimitResponse
+
+
+class RehabResponseRequest(BaseModel):
+    """The athlete's answers to the prompts one completion raised.
+
+    Carries only the server-issued injury episode context alongside each answer.
+    Drill, side and demand remain server-resolved. The episode is not client
+    authority: a mismatch with the current server record rejects the entire
+    request before any exposure is written.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    plan_id: str = Field(min_length=1)
+    session_id: str = Field(min_length=1)
+    training_day: str | None = None
+    answers: list[RehabResponseAnswer] = Field(min_length=1, max_length=20)
+
+    @field_validator("plan_id")
+    @classmethod
+    def validate_plan_id(cls, value: str) -> str:
+        # Rejected here so a malformed id never reaches the database as a uuid
+        # syntax error, matching the session-completion path.
+        try:
+            UUID(value.strip())
+        except ValueError as exc:
+            raise ValueError("plan_id must be a valid UUID") from exc
+        return value.strip()
+
+    @field_validator("training_day")
+    @classmethod
+    def validate_training_day(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        if not cleaned:
+            return None
+        try:
+            date.fromisoformat(cleaned)
+        except ValueError as exc:
+            raise ValueError("training_day must be a YYYY-MM-DD date") from exc
+        return cleaned
+
+    @model_validator(mode="after")
+    def validate_one_answer_per_injury(self) -> "RehabResponseRequest":
+        seen = [answer.injury_id for answer in self.answers]
+        if len(set(seen)) != len(seen):
+            raise ValueError("each injury may be answered once")
+        return self
+
+
+class RehabResponseResult(BaseModel):
+    """Which exposures were appended, named by the identity the server resolved."""
+
+    recorded_exposure_ids: list[str] = Field(default_factory=list)
+    recorded_injury_ids: list[str] = Field(default_factory=list)
 
 
 class PlanCompletionsResponse(BaseModel):

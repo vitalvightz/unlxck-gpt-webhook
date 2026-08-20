@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 # }
 _REHAB_BANK_CACHE = None
 _REHAB_LOCATIONS_CACHE = None
+_REHAB_DRILLS_BY_ID_CACHE = None
 _EXERCISE_BANK_CACHE = None
 
 
@@ -50,6 +51,33 @@ def get_rehab_locations() -> set[str]:
             entry.get("location") for entry in get_rehab_bank() if entry.get("location")
         }
     return _REHAB_LOCATIONS_CACHE
+
+
+def rehab_drill_by_id(drill_id: str | None) -> dict | None:
+    """Look one rehab-bank drill up by its canonical ``id``.
+
+    This is the only supported way to recover a drill from something an
+    athlete's plan carried: display names are rewritten downstream and are not
+    identity. An id the bank does not contain returns ``None`` — the caller
+    refuses rather than falling back to a name search.
+
+    An id claimed by more than one group is treated as unresolvable for the same
+    reason: two drills answering to one id cannot be told apart, so neither is
+    returned. ``tools/validate_rehab_bank.py`` rejects that state, so this is a
+    guard against a bank that got past it, not an expected path.
+    """
+    global _REHAB_DRILLS_BY_ID_CACHE
+    if _REHAB_DRILLS_BY_ID_CACHE is None:
+        index: dict[str, dict | None] = {}
+        for entry in get_rehab_bank():
+            for drill in entry.get("drills", []) or []:
+                identifier = str((drill or {}).get("id") or "").strip()
+                if not identifier:
+                    continue
+                # Second claim on an id makes it ambiguous; mark it unusable.
+                index[identifier] = None if identifier in index else drill
+        _REHAB_DRILLS_BY_ID_CACHE = index
+    return _REHAB_DRILLS_BY_ID_CACHE.get(str(drill_id or "").strip())
 
 
 def prime_rehab_bank() -> None:
@@ -1269,16 +1297,37 @@ def build_coach_review_entries(
     return list(region_entries.values())
 
 
-def _rehab_drills_for_phase(itype: str, loc: str | None, phase: str, limit: int = 4) -> list[str]:
+def rehab_drill_options_for_phase(
+    itype: str, loc: str | None, phase: str, limit: int = 4
+) -> list[dict]:
+    """Return the phase's rehab options, each keeping its canonical bank identity.
+
+    Same selection and same rendered text as :func:`_rehab_drills_for_phase` —
+    that function is a thin wrapper over this one, so the two can never diverge.
+    The difference is that this keeps the drill's stable bank ``id`` and its
+    region metadata attached to the line, which is what lets a completed rehab
+    item be attributed to an injury without matching on the display name.
+
+    Each option is ``{"line", "drill": <bank drill>, "location", "type"}``.
+    """
     # Surface/skin injuries pull ONLY their own wound-care entries, never the
     # location's "unspecified" musculoskeletal loading drills.
     if _is_surface_type(itype):
         loc_candidates = normalize_rehab_location(loc)
-        surface_drills = _collect_surface_drills(itype, loc_candidates, phase)
-        rendered = [f"{name} – {notes}" if notes else name for name, notes in surface_drills]
-        return rendered[:limit]
+        options: list[dict] = []
+        for name, notes in _collect_surface_drills(itype, loc_candidates, phase):
+            options.append(
+                {
+                    "line": f"{name} – {notes}" if notes else name,
+                    "drill": None,
+                    "location": loc,
+                    "type": itype,
+                }
+            )
+        return options[:limit]
     phase = phase.upper()
-    drills: list[str] = []
+    options = []
+    seen_lines: set[str] = set()
 
     def _append_drills(entry):
         for drill in entry.get("drills", []):
@@ -1291,14 +1340,30 @@ def _rehab_drills_for_phase(itype: str, loc: str | None, phase: str, limit: int 
                 for phase_label, text in parsed:
                     if phase_label == phase:
                         entry_text = name if not text else f"{name} – {text}"
-                        if entry_text not in drills:
-                            drills.append(entry_text)
+                        if entry_text not in seen_lines:
+                            seen_lines.add(entry_text)
+                            options.append(
+                                {
+                                    "line": entry_text,
+                                    "drill": drill,
+                                    "location": entry.get("location"),
+                                    "type": entry.get("type"),
+                                }
+                            )
                         break
             else:
                 entry_text = name if not notes else f"{name} – {notes}"
-                if entry_text not in drills:
-                    drills.append(entry_text)
-            if len(drills) >= limit:
+                if entry_text not in seen_lines:
+                    seen_lines.add(entry_text)
+                    options.append(
+                        {
+                            "line": entry_text,
+                            "drill": drill,
+                            "location": entry.get("location"),
+                            "type": entry.get("type"),
+                        }
+                    )
+            if len(options) >= limit:
                 return
 
     loc_candidates = normalize_rehab_location(loc)
@@ -1317,9 +1382,14 @@ def _rehab_drills_for_phase(itype: str, loc: str | None, phase: str, limit: int 
                 if phase not in _entry_phases(entry):
                     continue
                 _append_drills(entry)
-                if len(drills) >= limit:
-                    return drills[:limit]
-    return drills[:limit]
+                if len(options) >= limit:
+                    return options[:limit]
+    return options[:limit]
+
+
+def _rehab_drills_for_phase(itype: str, loc: str | None, phase: str, limit: int = 4) -> list[str]:
+    """The rendered rehab lines for a phase. Unchanged output; see above."""
+    return [option["line"] for option in rehab_drill_options_for_phase(itype, loc, phase, limit)]
 
 
 def _format_restrictions_block(restrictions: Iterable[ParsedRestriction]) -> list[str]:

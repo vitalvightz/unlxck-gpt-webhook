@@ -67,9 +67,15 @@ REHAB_FUNCTIONS: tuple[str, ...] = (
     "recovery_downregulation",
 )
 
-IMPACT_VALUES: tuple[str, ...] = ("none", "low", "moderate", "high")
-LOAD_VALUES: tuple[str, ...] = ("minimal", "low", "moderate", "high")
-VELOCITY_VALUES: tuple[str, ...] = ("low", "moderate", "high")
+#: Physical-demand levels. ``"unknown"`` is a first-class value, not a gap: it
+#: means the level was looked at and could not be defensibly stated, which is a
+#: different fact from ``None`` (nobody has looked yet). Both are honest, and
+#: neither may ever be read as a low-demand claim — an exposure carrying an
+#: unknown level is valid observational evidence but is explicitly NOT positive
+#: evidence for LOAD/DYNAMIC/RETURN qualification.
+IMPACT_VALUES: tuple[str, ...] = ("unknown", "none", "low", "moderate", "high")
+LOAD_VALUES: tuple[str, ...] = ("unknown", "minimal", "low", "moderate", "high")
+VELOCITY_VALUES: tuple[str, ...] = ("unknown", "low", "moderate", "high")
 LATERALITY_APPLICABILITY_VALUES: tuple[str, ...] = (
     "side_specific",
     "bilateral_only",

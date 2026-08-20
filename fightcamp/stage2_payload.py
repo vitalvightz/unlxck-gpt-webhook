@@ -59,7 +59,12 @@ from .normalization import (  # noqa: F401  (phrase_in_text re-exported for back
     phrase_in_text,
     slugify,
 )
-from .rehab_protocols import _rehab_drills_for_phase, _is_surface_type, classify_drill_function, _FUNCTION_LABELS
+from .rehab_protocols import (
+    _FUNCTION_LABELS,
+    _is_surface_type,
+    classify_drill_function,
+    rehab_drill_options_for_phase,
+)
 from .restriction_parsing import CANONICAL_RESTRICTIONS  # noqa: F401  (re-exported for back-compat)
 from .priority_profile import build_priority_profile, describe_priority_focus
 from .selection_metadata import build_score_evidence, normalize_selection_metadata
@@ -2945,7 +2950,15 @@ def _serialize_conditioning_option(
     }, drill, score_evidence)
 
 
-def _serialize_rehab_option(prescription: str, *, role: str, source: str, why: str, function_class: str = "") -> dict:
+def _serialize_rehab_option(
+    prescription: str,
+    *,
+    role: str,
+    source: str,
+    why: str,
+    function_class: str = "",
+    drill_id: str = "",
+) -> dict:
     name = re.split(r"\s+(?:[\u2013-]|\u00e2\u20ac\u201c)\s+", prescription, maxsplit=1)[0].strip()
     # Strip any inline [Function: X] tag from the display name
     name = re.sub(r"\s*\[Function:[^\]]*\]", "", name).strip()
@@ -2961,6 +2974,10 @@ def _serialize_rehab_option(prescription: str, *, role: str, source: str, why: s
         "why": why,
         "function_class": fc,
         "rehab_function_label": function_label,
+        # The canonical rehab-bank id, carried so a completed drill can be
+        # attributed to an injury without matching on the display name (which
+        # Stage 2 rewrites). Empty when the option did not come from the bank.
+        "rehab_drill_id": drill_id,
     }
 
 
@@ -3185,12 +3202,19 @@ def _build_rehab_slots(rehab_block: str, phase: str) -> list[dict]:
             if not selected_lines:
                 continue
         selected_set = set(selected_lines)
-        rehab_options = _rehab_drills_for_phase(
+        rehab_option_records = rehab_drill_options_for_phase(
             injury_type.lower(),
             location.lower().replace(" ", "_"),
             phase,
             limit=6,
         )
+        rehab_options = [record["line"] for record in rehab_option_records]
+        # Canonical bank id per rendered line, so both the selected drill and
+        # its alternates keep a stable identity through Stage 2.
+        drill_ids_by_line = {
+            record["line"]: str((record.get("drill") or {}).get("id") or "")
+            for record in rehab_option_records
+        }
         # "Why today" framing: the selected drill carries phase + issue context.
         # Stage 2 is expected to enrich this with day-type reasoning.
         phase_context = f"{phase} phase" if phase else "current phase"
@@ -3230,6 +3254,7 @@ def _build_rehab_slots(rehab_block: str, phase: str) -> list[dict]:
                             source="rehab_bank",
                             why=why_today_template,
                             function_class=opt_func,
+                            drill_id=drill_ids_by_line.get(option, ""),
                         ),
                     )
                 )
@@ -3250,6 +3275,7 @@ def _build_rehab_slots(rehab_block: str, phase: str) -> list[dict]:
                         source="rehab_block",
                         why=why_today_template,
                         function_class=drill_func,
+                        drill_id=drill_ids_by_line.get(line, ""),
                     ),
                     "alternates": top_alternates,
                     "replace_with_same_role": True,

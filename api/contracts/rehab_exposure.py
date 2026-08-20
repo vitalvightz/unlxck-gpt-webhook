@@ -3,6 +3,18 @@
 This contract records observations only.  It deliberately contains no
 "tolerated" flag or clinical threshold.  In particular, session completion,
 camp phase and whole-athlete pain are not inputs to this model.
+
+Unknown demand is recordable, and is not capacity evidence
+----------------------------------------------------------
+``load``, ``impact`` and ``velocity`` accept ``"unknown"``. A drill whose
+physical demand has not been reviewed still produces a real, storable
+observation: the athlete did the work, and the injury responded a particular
+way. Refusing to store that loses evidence for no safety gain.
+
+What an unknown level must never do is count as *positive* evidence of capacity.
+"Demand not stated" is not "demand was low". :attr:`RehabExposureEvent.has_unknown_demand`
+marks exactly those events, and later progression logic must exclude them from
+LOAD / DYNAMIC / RETURN qualification.
 """
 
 from __future__ import annotations
@@ -18,11 +30,28 @@ from fightcamp.injury_body_region import injury_body_region_context
 from fightcamp.injury_formatting import extract_laterality
 
 ExposureSide = Literal["left", "right", "bilateral", "unknown"]
-DemandLevel = Literal["minimal", "low", "moderate", "high"]
-ImpactLevel = Literal["none", "low", "moderate", "high"]
-VelocityLevel = Literal["low", "moderate", "high"]
+#: ``"unknown"`` is a valid, recordable demand level. An exposure whose demand
+#: carries one is a real observation and is stored as such — but it is NOT
+#: positive evidence of what the tissue tolerated, because nobody has stated
+#: what the drill actually demanded. :attr:`RehabExposureEvent.has_unknown_demand`
+#: is the flag later progression logic must honour; see the module docstring.
+DEMAND_UNKNOWN = "unknown"
+DemandLevel = Literal["unknown", "minimal", "low", "moderate", "high"]
+ImpactLevel = Literal["unknown", "none", "low", "moderate", "high"]
+VelocityLevel = Literal["unknown", "low", "moderate", "high"]
 NextDayResponse = Literal["better", "same", "worse", "not_yet_known", "not_sure"]
+#: How the injury felt *during* the rehab work. Mirrors NextDayResponse, minus
+#: "not_yet_known" (which cannot apply to something already done) and plus
+#: "not_reported" — the default for an exposure logged without the athlete being
+#: asked, so "we did not ask" is never stored as "the athlete said nothing was
+#: wrong".
+DuringResponse = Literal["better", "same", "worse", "not_sure", "not_reported"]
 PainObservation = StrictInt | Literal["not_sure"] | None
+DoseCompletionState = Literal[
+    "performed_amount_unknown",
+    "partial_amount_unknown",
+    "quantified",
+]
 
 
 def injury_evidence_identity(body_area: str, description: str) -> dict[str, str | None]:
@@ -46,6 +75,16 @@ class ExposureDemand(BaseModel):
     resistance_type: Literal["assisted", "bodyweight", "external_load", "unknown"] | None = None
     rom_context: str | None = Field(default=None, max_length=200)
 
+    @property
+    def has_unknown_level(self) -> bool:
+        """True when any required physical demand is unstated.
+
+        The exposure is still recorded — an athlete did do the work, and that is
+        worth knowing. What it cannot do is evidence *how much* the tissue
+        tolerated, because the demand it met is not known.
+        """
+        return DEMAND_UNKNOWN in (self.load, self.impact, self.velocity)
+
 
 class ExposureDose(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -57,16 +96,39 @@ class ExposureDose(BaseModel):
     hold_seconds: float | None = Field(default=None, ge=0)
     completed_fraction: float | None = Field(default=None, ge=0, le=1)
     stopped_early: bool | None = None
+    completion_state: DoseCompletionState | None = None
 
     @model_validator(mode="after")
     def _require_one_observation(self) -> "ExposureDose":
         if not any(getattr(self, name) is not None for name in type(self).model_fields):
             raise ValueError("dose must contain at least one observed value")
+        measured_fields = (
+            "sets",
+            "reps",
+            "duration_seconds",
+            "external_load_kg",
+            "distance_metres",
+            "hold_seconds",
+            "completed_fraction",
+        )
+        has_measurement = any(getattr(self, name) is not None for name in measured_fields)
+        if self.completion_state == "quantified" and not has_measurement:
+            raise ValueError("quantified dose must contain a measured amount")
+        if self.completion_state in {
+            "performed_amount_unknown",
+            "partial_amount_unknown",
+        } and has_measurement:
+            raise ValueError("unquantified dose cannot contain a measured amount")
         return self
 
 
 class ExposureResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    #: The athlete's categorical answer to "how did it feel during the rehab
+    #: work?". Deliberately separate from ``pain_during``: a 0-10 score is a
+    #: different observation, and inventing one from a better/same/worse answer
+    #: would fabricate precision the athlete never gave.
+    during_response: DuringResponse = "not_reported"
     pain_during: PainObservation = Field(default=None)
     pain_immediate_after: PainObservation = Field(default=None)
     next_day_response: NextDayResponse = "not_yet_known"
@@ -91,6 +153,10 @@ class ExposureProvenance(BaseModel):
 class RehabExposureEvent(BaseModel):
     model_config = ConfigDict(extra="forbid")
     exposure_id: UUID
+    #: One athlete answer may describe several drill exposures for the same
+    #: injury. This shared identity prevents downstream readers from counting
+    #: copied response fields as independently assessed responses.
+    response_group_id: UUID | None = None
     injury_id: UUID
     injury_episode_id: UUID
     drill_id: str = Field(min_length=1, pattern=r"^[a-z0-9]+(?:_[a-z0-9]+)*$")
@@ -114,6 +180,18 @@ class RehabExposureEvent(BaseModel):
         if self.body_region not in self.demand.target_regions:
             raise ValueError("demand.target_regions must include body_region")
         return self
+
+    @property
+    def has_unknown_demand(self) -> bool:
+        """Whether this observation may count toward progression qualification.
+
+        ``True`` means it may **not**. The exposure is valid evidence that the
+        work happened and how the injury responded; it is not evidence of
+        capacity, because the demand it represents was never stated. PR4 must
+        exclude these from LOAD/DYNAMIC/RETURN qualification rather than
+        treating an unstated demand as a low one.
+        """
+        return self.demand.has_unknown_level
 
     def is_attributable_to(self, injury: Mapping[str, object]) -> bool:
         """Match identity only; this never interprets the response as tolerated."""

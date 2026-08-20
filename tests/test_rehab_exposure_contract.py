@@ -4,7 +4,7 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from api.contracts.rehab_exposure import RehabExposureEvent
+from api.contracts.rehab_exposure import ExposureDose, RehabExposureEvent
 
 
 def _event(**overrides):
@@ -12,6 +12,7 @@ def _event(**overrides):
     episode_id = overrides.pop("injury_episode_id", uuid4())
     payload = {
         "exposure_id": uuid4(),
+        "response_group_id": uuid4(),
         "injury_id": injury_id,
         "injury_episode_id": episode_id,
         "drill_id": "single_leg_calf_raise",
@@ -42,6 +43,12 @@ def test_exposure_requires_injury_and_episode_identity():
         del payload[field]
         with pytest.raises(ValidationError):
             RehabExposureEvent.model_validate(payload)
+
+
+def test_legacy_unpersisted_exposure_can_be_read_without_response_group_identity():
+    payload = _event()
+    del payload["response_group_id"]
+    assert RehabExposureEvent.model_validate(payload).response_group_id is None
 
 
 def test_region_and_laterality_are_preserved_and_attributed_together():
@@ -92,6 +99,25 @@ def test_malformed_pain_fails(pain):
 def test_malformed_completed_dose_fails(dose):
     with pytest.raises(ValidationError):
         RehabExposureEvent.model_validate(_event(dose_completed=dose))
+
+
+def test_unquantified_performed_state_is_an_honest_observation():
+    dose = ExposureDose(completion_state="performed_amount_unknown")
+    assert dose.completed_fraction is None
+    assert dose.sets is None
+
+
+@pytest.mark.parametrize(
+    "dose",
+    [
+        {"completion_state": "performed_amount_unknown", "reps": 10},
+        {"completion_state": "partial_amount_unknown", "completed_fraction": 0.5},
+        {"completion_state": "quantified"},
+    ],
+)
+def test_completion_state_cannot_contradict_the_observed_amount(dose):
+    with pytest.raises(ValidationError):
+        ExposureDose.model_validate(dose)
 
 
 def test_invalid_or_mismatched_demand_region_fails():
