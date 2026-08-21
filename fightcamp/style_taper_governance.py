@@ -57,6 +57,41 @@ RPE_MAX_BY_WINDOW = {
     D4_TO_D2: 4.0,
     D1: 3.0,
 }
+
+# Alactic work gets progressively smaller and more fully recovered as the fight
+# approaches. These are maxima, not targets: lower-dose technical work is valid.
+ALACTIC_MAX_ROUNDS_BY_WINDOW = {
+    D13_TO_D8: 4,
+    D7: 4,
+    D6_TO_D5: 3,
+    D4_TO_D2: 2,
+    D1: 2,
+}
+ALACTIC_MAX_WORK_SEC_BY_WINDOW = {
+    D13_TO_D8: 6.0,
+    D7: 6.0,
+    D6_TO_D5: 6.0,
+    D4_TO_D2: 6.0,
+    D1: 4.0,
+}
+ALACTIC_MIN_REST_SEC_BY_WINDOW = {
+    D13_TO_D8: 90.0,
+    D7: 90.0,
+    D6_TO_D5: 120.0,
+    D4_TO_D2: 120.0,
+    D1: 120.0,
+}
+
+# Session elapsed-time ceilings mirror the athlete-facing late-fight dosage
+# policy. They include the bank's prescribed recovery periods, not only work.
+TOTAL_MINUTES_MAX_BY_WINDOW = {
+    D13_TO_D8: 8.0,
+    D7: 7.0,
+    D6_TO_D5: 7.0,
+    D4_TO_D2: 5.0,
+    D1: 4.0,
+}
+
 ALLOWED_EXECUTION_INTENTS = {
     "relaxed",
     "technical_crisp",
@@ -95,6 +130,17 @@ def _number(value: Any) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def _fmt_number(value: float) -> str:
+    return str(int(value)) if float(value).is_integer() else str(value)
+
+
+def _expected_duration(*, rounds: float, work_sec: float, rest_sec: float) -> str:
+    return (
+        f"{_fmt_number(rounds)}x{_fmt_number(work_sec)}s "
+        f"with {_fmt_number(rest_sec)}s rest"
+    )
 
 
 def style_taper_window_for_days(days_until_fight: Any) -> str | None:
@@ -143,6 +189,10 @@ def style_taper_entry_issues(entry: dict[str, Any]) -> list[str]:
     system = _token(entry.get("system"))
     equipment = set(_tokens(entry.get("equipment")))
     rpe_max = _number(entry.get("rpe_max"))
+    work_sec = _number(entry.get("work_sec"))
+    rest_sec = _number(entry.get("rest_sec"))
+    rounds = _number(entry.get("rounds"))
+    total_minutes = _number(entry.get("total_minutes"))
 
     if not str(entry.get("name") or "").strip():
         add("missing_name")
@@ -167,6 +217,24 @@ def style_taper_entry_issues(entry: dict[str, Any]) -> list[str]:
         add("invalid_style_taper_system")
     if rpe_max is None:
         add("missing_rpe_max")
+
+    if work_sec is None or work_sec <= 0:
+        add("missing_or_invalid_work_sec")
+    if rest_sec is None or rest_sec <= 0:
+        add("missing_or_invalid_rest_sec")
+    if rounds is None or rounds <= 0 or not rounds.is_integer():
+        add("missing_or_invalid_rounds")
+    if total_minutes is None or total_minutes <= 0:
+        add("missing_or_invalid_total_minutes")
+
+    if work_sec is not None and rest_sec is not None and rounds is not None and rounds > 0:
+        expected_duration = _expected_duration(
+            rounds=rounds,
+            work_sec=work_sec,
+            rest_sec=rest_sec,
+        )
+        if str(entry.get("duration") or "").strip().lower() != expected_duration.lower():
+            add("duration_dose_mismatch")
 
     if not execution_intent:
         add("missing_execution_intent")
@@ -198,11 +266,22 @@ def style_taper_entry_issues(entry: dict[str, Any]) -> list[str]:
     for window in late_windows:
         if window not in STYLE_TAPER_WINDOWS:
             continue
+
         allowed_contact = ALLOWED_CONTACT_BY_WINDOW[window]
         if contact and contact not in allowed_contact:
             add(f"contact_too_high:{window}")
         if rpe_max is not None and rpe_max > RPE_MAX_BY_WINDOW[window]:
             add(f"rpe_too_high:{window}")
+        if total_minutes is not None and total_minutes > TOTAL_MINUTES_MAX_BY_WINDOW[window]:
+            add(f"total_minutes_too_high:{window}")
+
+        if system == "alactic":
+            if rounds is not None and rounds > ALACTIC_MAX_ROUNDS_BY_WINDOW[window]:
+                add(f"alactic_rounds_too_high:{window}")
+            if work_sec is not None and work_sec > ALACTIC_MAX_WORK_SEC_BY_WINDOW[window]:
+                add(f"alactic_work_too_long:{window}")
+            if rest_sec is not None and rest_sec < ALACTIC_MIN_REST_SEC_BY_WINDOW[window]:
+                add(f"alactic_rest_too_short:{window}")
 
     if D1 in late_windows:
         if contact != "none":
