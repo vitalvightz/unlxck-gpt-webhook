@@ -84,8 +84,8 @@
     "inferred_tags": [
       "max_velocity"
     ],
-    "item_id": "exercise_bank:Depth Drop → 5m Sprint",
-    "name": "Depth Drop → 5m Sprint"
+    "item_id": "exercise_bank:Depth Drop \u2192 5m Sprint",
+    "name": "Depth Drop \u2192 5m Sprint"
   },
   {
     "bank": "exercise_bank",
@@ -124,8 +124,8 @@
       "high_impact_plyo",
       "knee_dominant_heavy"
     ],
-    "item_id": "exercise_bank:Back Squat → Box Jump",
-    "name": "Back Squat → Box Jump"
+    "item_id": "exercise_bank:Back Squat \u2192 Box Jump",
+    "name": "Back Squat \u2192 Box Jump"
   },
   {
     "bank": "exercise_bank",
@@ -139,8 +139,8 @@
       "horizontal_push",
       "upper_push"
     ],
-    "item_id": "exercise_bank:DB Bench Press → Plyo Push-Up",
-    "name": "DB Bench Press → Plyo Push-Up"
+    "item_id": "exercise_bank:DB Bench Press \u2192 Plyo Push-Up",
+    "name": "DB Bench Press \u2192 Plyo Push-Up"
   },
   {
     "bank": "exercise_bank",
@@ -154,8 +154,8 @@
       "high_impact_plyo",
       "hinge_heavy"
     ],
-    "item_id": "exercise_bank:Heavy RDL → Broad Jump",
-    "name": "Heavy RDL → Broad Jump"
+    "item_id": "exercise_bank:Heavy RDL \u2192 Broad Jump",
+    "name": "Heavy RDL \u2192 Broad Jump"
   },
   {
     "bank": "exercise_bank",
@@ -165,8 +165,8 @@
       "anti_rotation"
     ],
     "inferred_tags": [],
-    "item_id": "exercise_bank:Landmine Press → Med Ball Chest Pass",
-    "name": "Landmine Press → Med Ball Chest Pass"
+    "item_id": "exercise_bank:Landmine Press \u2192 Med Ball Chest Pass",
+    "name": "Landmine Press \u2192 Med Ball Chest Pass"
   },
   {
     "bank": "exercise_bank",
@@ -211,8 +211,8 @@
     "inferred_tags": [
       "high_impact_plyo"
     ],
-    "item_id": "exercise_bank:Zercher Squat → Sprawl Jump",
-    "name": "Zercher Squat → Sprawl Jump"
+    "item_id": "exercise_bank:Zercher Squat \u2192 Sprawl Jump",
+    "name": "Zercher Squat \u2192 Sprawl Jump"
   },
   {
     "bank": "exercise_bank",
@@ -503,8 +503,8 @@
       "compound"
     ],
     "inferred_tags": [],
-    "item_id": "exercise_bank:DB Alternating Incline Press (30-45°)",
-    "name": "DB Alternating Incline Press (30-45°)"
+    "item_id": "exercise_bank:DB Alternating Incline Press (30-45\u00b0)",
+    "name": "DB Alternating Incline Press (30-45\u00b0)"
   },
   {
     "bank": "exercise_bank",
@@ -1288,8 +1288,8 @@
       "posterior_chain"
     ],
     "inferred_tags": [],
-    "item_id": "exercise_bank:Grappler’s Bridge (Weighted)",
-    "name": "Grappler’s Bridge (Weighted)"
+    "item_id": "exercise_bank:Grappler\u2019s Bridge (Weighted)",
+    "name": "Grappler\u2019s Bridge (Weighted)"
   },
   {
     "bank": "exercise_bank",
@@ -1916,8 +1916,8 @@
       "quad_dominant"
     ],
     "inferred_tags": [],
-    "item_id": "exercise_bank:Single-Leg Wall Sit (60°)",
-    "name": "Single-Leg Wall Sit (60°)"
+    "item_id": "exercise_bank:Single-Leg Wall Sit (60\u00b0)",
+    "name": "Single-Leg Wall Sit (60\u00b0)"
   },
   {
     "bank": "exercise_bank",
@@ -2063,8 +2063,8 @@
       "core"
     ],
     "inferred_tags": [],
-    "item_id": "exercise_bank:🔥 Single-Leg Rotational Med Ball Hold",
-    "name": "🔥 Single-Leg Rotational Med Ball Hold"
+    "item_id": "exercise_bank:\ud83d\udd25 Single-Leg Rotational Med Ball Hold",
+    "name": "\ud83d\udd25 Single-Leg Rotational Med Ball Hold"
   },
   {
     "bank": "exercise_bank",
@@ -2074,8 +2074,8 @@
       "balance"
     ],
     "inferred_tags": [],
-    "item_id": "exercise_bank:🔥 Single-Leg Combat Stance Hold (Weighted)",
-    "name": "🔥 Single-Leg Combat Stance Hold (Weighted)"
+    "item_id": "exercise_bank:\ud83d\udd25 Single-Leg Combat Stance Hold (Weighted)",
+    "name": "\ud83d\udd25 Single-Leg Combat Stance Hold (Weighted)"
   },
   {
     "bank": "exercise_bank",
@@ -2108,8 +2108,8 @@
       "rotational"
     ],
     "inferred_tags": [],
-    "item_id": "exercise_bank:Single-Leg 45° Bound",
-    "name": "Single-Leg 45° Bound"
+    "item_id": "exercise_bank:Single-Leg 45\u00b0 Bound",
+    "name": "Single-Leg 45\u00b0 Bound"
   },
   {
     "bank": "exercise_bank",
@@ -2187,8 +2187,8 @@
     "inferred_tags": [
       "high_impact_plyo"
     ],
-    "item_id": "exercise_bank:🔥 Single-Leg Combat Stance Switch Jump",
-    "name": "🔥 Single-Leg Combat Stance Switch Jump"
+    "item_id": "exercise_bank:\ud83d\udd25 Single-Leg Combat Stance Switch Jump",
+    "name": "\ud83d\udd25 Single-Leg Combat Stance Switch Jump"
   },
   {
     "bank": "exercise_bank",
@@ -2198,8 +2198,8 @@
       "triphasic"
     ],
     "inferred_tags": [],
-    "item_id": "exercise_bank:Squat Isometric (110% 1RM @ 90°)",
-    "name": "Squat Isometric (110% 1RM @ 90°)"
+    "item_id": "exercise_bank:Squat Isometric (110% 1RM @ 90\u00b0)",
+    "name": "Squat Isometric (110% 1RM @ 90\u00b0)"
   },
   {
     "bank": "exercise_bank",
@@ -2240,8 +2240,8 @@
       "axial_heavy",
       "knee_dominant_heavy"
     ],
-    "item_id": "exercise_bank:Front Squat Isometric (115% 1RM @ 100°)",
-    "name": "Front Squat Isometric (115% 1RM @ 100°)"
+    "item_id": "exercise_bank:Front Squat Isometric (115% 1RM @ 100\u00b0)",
+    "name": "Front Squat Isometric (115% 1RM @ 100\u00b0)"
   },
   {
     "bank": "exercise_bank",
@@ -2304,8 +2304,8 @@
       "horizontal_push",
       "upper_push"
     ],
-    "item_id": "exercise_bank:Incline Bench Isometric (125% 1RM @ 45°)",
-    "name": "Incline Bench Isometric (125% 1RM @ 45°)"
+    "item_id": "exercise_bank:Incline Bench Isometric (125% 1RM @ 45\u00b0)",
+    "name": "Incline Bench Isometric (125% 1RM @ 45\u00b0)"
   },
   {
     "bank": "exercise_bank",
@@ -2354,8 +2354,8 @@
       "upper_back"
     ],
     "inferred_tags": [],
-    "item_id": "exercise_bank:Safety Bar Squat Isometric (115% 1RM @ 90°)",
-    "name": "Safety Bar Squat Isometric (115% 1RM @ 90°)"
+    "item_id": "exercise_bank:Safety Bar Squat Isometric (115% 1RM @ 90\u00b0)",
+    "name": "Safety Bar Squat Isometric (115% 1RM @ 90\u00b0)"
   },
   {
     "bank": "exercise_bank",
@@ -2442,8 +2442,8 @@
       "horizontal_push",
       "upper_push"
     ],
-    "item_id": "exercise_bank:Bench Isometric (110% 1RM @ 90° Elbow)",
-    "name": "Bench Isometric (110% 1RM @ 90° Elbow)"
+    "item_id": "exercise_bank:Bench Isometric (110% 1RM @ 90\u00b0 Elbow)",
+    "name": "Bench Isometric (110% 1RM @ 90\u00b0 Elbow)"
   },
   {
     "bank": "exercise_bank",
@@ -2455,8 +2455,8 @@
       "axial_heavy",
       "knee_dominant_heavy"
     ],
-    "item_id": "exercise_bank:Front Squat Isometric (105% 1RM @ 100°)",
-    "name": "Front Squat Isometric (105% 1RM @ 100°)"
+    "item_id": "exercise_bank:Front Squat Isometric (105% 1RM @ 100\u00b0)",
+    "name": "Front Squat Isometric (105% 1RM @ 100\u00b0)"
   },
   {
     "bank": "exercise_bank",
@@ -5392,8 +5392,8 @@
       "kickboxing"
     ],
     "inferred_tags": [],
-    "item_id": "style_conditioning_bank:Sniper’s Retreat",
-    "name": "Sniper’s Retreat"
+    "item_id": "style_conditioning_bank:Sniper\u2019s Retreat",
+    "name": "Sniper\u2019s Retreat"
   },
   {
     "bank": "style_conditioning_bank",
@@ -5424,8 +5424,8 @@
       "boxing"
     ],
     "inferred_tags": [],
-    "item_id": "style_conditioning_bank:Flicker’s Gauntlet",
-    "name": "Flicker’s Gauntlet"
+    "item_id": "style_conditioning_bank:Flicker\u2019s Gauntlet",
+    "name": "Flicker\u2019s Gauntlet"
   },
   {
     "bank": "style_conditioning_bank",
@@ -5435,8 +5435,8 @@
       "kickboxing"
     ],
     "inferred_tags": [],
-    "item_id": "style_conditioning_bank:Outfighter’s Crucible",
-    "name": "Outfighter’s Crucible"
+    "item_id": "style_conditioning_bank:Outfighter\u2019s Crucible",
+    "name": "Outfighter\u2019s Crucible"
   },
   {
     "bank": "style_conditioning_bank",
@@ -5477,8 +5477,8 @@
       "boxing"
     ],
     "inferred_tags": [],
-    "item_id": "style_conditioning_bank:Sniper’s Delight",
-    "name": "Sniper’s Delight"
+    "item_id": "style_conditioning_bank:Sniper\u2019s Delight",
+    "name": "Sniper\u2019s Delight"
   },
   {
     "bank": "style_conditioning_bank",
@@ -5508,8 +5508,8 @@
       "boxing"
     ],
     "inferred_tags": [],
-    "item_id": "style_conditioning_bank:Flicker’s Endurance",
-    "name": "Flicker’s Endurance"
+    "item_id": "style_conditioning_bank:Flicker\u2019s Endurance",
+    "name": "Flicker\u2019s Endurance"
   },
   {
     "bank": "style_conditioning_bank",
@@ -5529,8 +5529,8 @@
       "mma"
     ],
     "inferred_tags": [],
-    "item_id": "style_conditioning_bank:Sniper’s Load",
-    "name": "Sniper’s Load"
+    "item_id": "style_conditioning_bank:Sniper\u2019s Load",
+    "name": "Sniper\u2019s Load"
   },
   {
     "bank": "style_conditioning_bank",
@@ -5560,8 +5560,8 @@
       "boxing"
     ],
     "inferred_tags": [],
-    "item_id": "style_conditioning_bank:Flicker’s Hell",
-    "name": "Flicker’s Hell"
+    "item_id": "style_conditioning_bank:Flicker\u2019s Hell",
+    "name": "Flicker\u2019s Hell"
   },
   {
     "bank": "style_conditioning_bank",
@@ -5570,8 +5570,8 @@
       "mma"
     ],
     "inferred_tags": [],
-    "item_id": "style_conditioning_bank:Sniper’s Grip",
-    "name": "Sniper’s Grip"
+    "item_id": "style_conditioning_bank:Sniper\u2019s Grip",
+    "name": "Sniper\u2019s Grip"
   },
   {
     "bank": "style_conditioning_bank",
@@ -6089,8 +6089,8 @@
       "mma"
     ],
     "inferred_tags": [],
-    "item_id": "style_conditioning_bank:Dirty Boxer’s Feast",
-    "name": "Dirty Boxer’s Feast"
+    "item_id": "style_conditioning_bank:Dirty Boxer\u2019s Feast",
+    "name": "Dirty Boxer\u2019s Feast"
   },
   {
     "bank": "style_conditioning_bank",
@@ -6099,8 +6099,8 @@
       "mma"
     ],
     "inferred_tags": [],
-    "item_id": "style_conditioning_bank:Mauler’s March",
-    "name": "Mauler’s March"
+    "item_id": "style_conditioning_bank:Mauler\u2019s March",
+    "name": "Mauler\u2019s March"
   },
   {
     "bank": "style_conditioning_bank",
@@ -6572,8 +6572,8 @@
       "d'arce"
     ],
     "inferred_tags": [],
-    "item_id": "style_conditioning_bank:D’Arce Depth Charge",
-    "name": "D’Arce Depth Charge"
+    "item_id": "style_conditioning_bank:D\u2019Arce Depth Charge",
+    "name": "D\u2019Arce Depth Charge"
   },
   {
     "bank": "style_conditioning_bank",
@@ -10965,8 +10965,8 @@
       "kicker"
     ],
     "inferred_tags": [],
-    "item_id": "coordination_bank:360° Spin-Kick Balance",
-    "name": "360° Spin-Kick Balance"
+    "item_id": "coordination_bank:360\u00b0 Spin-Kick Balance",
+    "name": "360\u00b0 Spin-Kick Balance"
   },
   {
     "bank": "coordination_bank",
