@@ -9,44 +9,74 @@ on:
       - '**'
 
 jobs:
-  validate:
+  migrate_generic_tactical_watch:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/fix/tag-authority-finalize'
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-    
+      contents: write
     steps:
-      - name: Checkout repository
+      - name: Checkout feature branch
         uses: actions/checkout@v4
-      
+        with:
+          ref: fix/tag-authority-finalize
+          fetch-depth: 0
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11.15"
-      
+
+      - name: Apply deterministic tag migration
+        run: python tools/migrate_tag_registry_data.py
+
+      - name: Commit migrated registry data
+        run: |
+          set -euo pipefail
+          changed="$(git diff --name-only -- data/tactical_watch_bank.json data/tag_vocabulary.json)"
+          if [ -z "$changed" ]; then
+            echo "No generic Tactical Watch migration changes required."
+            exit 0
+          fi
+          unexpected="$(git diff --name-only | grep -v -E '^(data/tactical_watch_bank\.json|data/tag_vocabulary\.json)$' || true)"
+          if [ -n "$unexpected" ]; then
+            echo "Unexpected migration changes:" >&2
+            echo "$unexpected" >&2
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- data/tactical_watch_bank.json data/tag_vocabulary.json
+          git commit -m "Restore generic Tactical Watch style tags"
+          git push origin HEAD:fix/tag-authority-finalize
+
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.15"
+
       - name: Run bank validator
         run: python tools/validate_banks.py
 
-      # Human-readable inventory remains available in logs for taxonomy review.
       - name: Audit tag registry
         run: python tools/audit_tag_registry.py
 
-      # Persisted bank data must already be canonical. This catches reintroduced
-      # aliases, setup/nonsemantic tag tokens, metadata field names in the
-      # vocabulary, and the strength metadata pseudo-tag fallback.
       - name: Check tag data migration is up to date
         run: python tools/migrate_tag_registry_data.py --check
 
-      # Blocking focused gate: vocabulary, scoring, runtime controls, generated
-      # injury/safety tags, and reviewed bank-only decisions must stay closed.
       - name: Enforce tag authority
         run: python tools/check_tag_registry.py
 
-      # Blocking gate: the rehab bank must satisfy its data contract. Unlike the
-      # wider cross-bank validator above, this exits non-zero on any schema error.
       - name: Validate rehab bank data contract
         run: python tools/validate_rehab_bank.py
 
-      # The rehab bank's derived fields (drill ids, keyword-matched function
-      # classes) are generated, not hand-written. Fail if they drifted.
       - name: Check rehab bank migration is up to date
         run: python tools/migrate_rehab_bank_schema.py --check
