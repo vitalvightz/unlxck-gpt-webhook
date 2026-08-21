@@ -9,43 +9,6 @@ on:
       - '**'
 
 jobs:
-  migrate_generic_tactical_watch:
-    if: >-
-      (github.event_name == 'push' && github.ref == 'refs/heads/fix/tag-authority-finalize') ||
-      (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'fix/tag-authority-finalize')
-    runs-on: macos-15-intel
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout feature branch
-        uses: actions/checkout@v4
-        with:
-          ref: fix/tag-authority-finalize
-          fetch-depth: 0
-
-      - name: Apply deterministic tag migration
-        run: python3 tools/migrate_tag_registry_data.py
-
-      - name: Commit migrated registry data
-        run: |
-          set -euo pipefail
-          changed="$(git diff --name-only -- data/tactical_watch_bank.json data/tag_vocabulary.json)"
-          if [ -z "$changed" ]; then
-            echo "No generic Tactical Watch migration changes required."
-            exit 0
-          fi
-          unexpected="$(git diff --name-only | grep -v -E '^(data/tactical_watch_bank\.json|data/tag_vocabulary\.json)$' || true)"
-          if [ -n "$unexpected" ]; then
-            echo "Unexpected migration changes:" >&2
-            echo "$unexpected" >&2
-            exit 1
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- data/tactical_watch_bank.json data/tag_vocabulary.json
-          git commit -m "Restore generic Tactical Watch style tags"
-          git push origin HEAD:fix/tag-authority-finalize
-
   validate:
     runs-on: ubuntu-latest
     permissions:
