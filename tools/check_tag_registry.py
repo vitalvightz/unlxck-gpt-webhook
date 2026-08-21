@@ -3,8 +3,15 @@
 
 from __future__ import annotations
 
-from fightcamp.tag_vocabulary import read_tag_vocabulary_items
-from tools.audit_tag_registry import DATA_DIR, audit_registry
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from fightcamp.tag_vocabulary import read_tag_vocabulary_items  # noqa: E402
+from tools.audit_tag_registry import DATA_DIR, audit_registry  # noqa: E402
 
 
 # Existing raw source aliases are tolerated temporarily so the authority gate can
