@@ -213,19 +213,9 @@ def all_watches() -> tuple[TacticalWatch, ...]:
             raise ValueError(f"invalid Tactical Watch identity: {key!r}")
         if "tactical_watch" not in tags:
             raise ValueError(f"Tactical Watch {key!r} is missing tactical_watch tag")
-
         style_tags = tags & set(STYLE_FAMILIES)
-        if key.startswith("generic."):
-            # `generic` is a runtime fallback family, not a semantic taxonomy tag.
-            # The key owns that identity so generic watches do not need a fake tag.
-            if style_tags:
-                raise ValueError(f"Generic Tactical Watch {key!r} must not carry a style tag")
-            style = "generic"
-        else:
-            if len(style_tags) != 1 or "generic" in style_tags:
-                raise ValueError(f"Tactical Watch {key!r} needs one style tag")
-            style = next(iter(style_tags))
-
+        if len(style_tags) != 1:
+            raise ValueError(f"Tactical Watch {key!r} needs one style tag")
         if not isinstance(mindset, dict) or not all(
             str(mindset.get(field) or "").strip()
             for field in ("intent", "focus", "reset", "anchor", "context")
@@ -237,7 +227,7 @@ def all_watches() -> tuple[TacticalWatch, ...]:
         watch = TacticalWatch(
             key=key,
             name=name,
-            style=style,
+            style=next(iter(style_tags)),
             phase=phases[0],
             why=str(entry.get("why") or "").strip(),
             intent=str(mindset.get("intent") or "").strip(),
