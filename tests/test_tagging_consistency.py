@@ -14,9 +14,7 @@ def test_normalize_tags_canonicalizes_synonyms_and_removes_duplicates():
         "Decision Speed",
     ])
 
-    assert normalized == ["muay_thai", "pressure_fighter", "decision_speed"]
-
-
+    assert normalized == ["muay_thai", "pressure_fighter", "reactive"]
 
 
 def test_normalize_tags_maps_legacy_drill_tags_to_scoring_vocab():
@@ -57,23 +55,23 @@ def test_weakness_aliases_resolve_to_existing_canonical_weakness_entries():
             assert canonical in WEAKNESS_TAG_MAP or canonical in vocabulary
 
 
-def test_trunk_strength_alias_resolves_to_core_stability_tags():
+def test_trunk_strength_alias_resolves_to_live_core_stability_tags():
     assert WEAKNESS_NORMALIZER["trunk_strength"] == ["trunk_strength"]
-    assert WEAKNESS_TAG_MAP["trunk_strength"] == ["core", "anti_rotation", "core stability"]
+    assert WEAKNESS_TAG_MAP["trunk_strength"] == ["core", "anti_rotation", "stability"]
     assert WEAKNESS_NORMALIZER["trunk strength"] == ["core stability"]
     assert WEAKNESS_TAG_MAP["core stability"] == ["core", "anti_rotation"]
 
 
-def test_current_ui_performance_values_resolve_to_scoring_tags():
+def test_current_ui_performance_values_resolve_to_live_scoring_tags():
     key_goal_required_tags = {
         "power": {"rate_of_force", "plyometric"},
         "strength": {"posterior_chain", "upper_body"},
         "conditioning": {"aerobic", "glycolytic", "work_capacity"},
         "speed": {"speed", "reactive"},
-        "skill_refinement": {"skill_refinement", "decision_speed"},
-        "mobility": {"mobility", "movement_quality"},
+        "skill_refinement": {"skill_refinement", "coordination", "cognitive"},
+        "mobility": {"mobility", "movement_quality", "stability"},
         "recovery": {"recovery", "cns_freshness", "parasympathetic"},
-        "weight_cut": {"weight_cut", "low_impact", "cns_freshness"},
+        "weight_cut": {"recovery", "low_impact", "cns_freshness"},
     }
     weak_area_required_tags = {
         "gas_tank": {"aerobic", "glycolytic", "conditioning", "work_capacity"},
@@ -94,9 +92,9 @@ def test_current_ui_performance_values_resolve_to_scoring_tags():
             "coordination",
         },
         "balance": {"balance", "stability", "unilateral"},
-        "mobility": {"mobility", "hip_dominant", "movement_quality", "range"},
+        "mobility": {"mobility", "hip_dominant", "movement_quality"},
         "coordination": {"coordination", "balance", "reactive"},
-        "trunk_strength": {"core", "anti_rotation", "core stability"},
+        "trunk_strength": {"core", "anti_rotation", "stability"},
     }
 
     for value, required_tags in key_goal_required_tags.items():

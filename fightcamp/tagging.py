@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-import json
 from typing import Iterable
+
 # Refactored: Import centralized DATA_DIR from config
 from .config import DATA_DIR
+from .tag_vocabulary import read_tag_vocabulary_items
 
 
 TAG_SYNONYMS = {
@@ -22,12 +23,20 @@ TAG_SYNONYMS = {
     "coordination / proprioception": "coordination",
     "coordination/proprioception": "coordination",
     "quickness": "speed",
-    "reactive decision": "reactive_decision",
-    "decision speed": "decision_speed",
+    "reactive decision": "reactive",
+    "decision speed": "reactive",
     "boxer": "boxing",
     "breathing": "recovery",
     "technical": "skill",
     "rhythm": "coordination",
+}
+
+# Structured exercise field names are not semantic tags. Reject them at the
+# normalization boundary so runtime tag sets can never interpret metadata field
+# names as tag authority.
+NON_SEMANTIC_TAG_TOKENS = {
+    "late_windows",
+    "cut_buckets_allowed",
 }
 
 _TAG_VOCAB_CACHE: set[str] | None = None
@@ -41,9 +50,10 @@ def normalize_tag(tag: str) -> str | None:
         return None
     canonical = TAG_SYNONYMS.get(raw)
     if canonical:
-        return canonical
+        return None if canonical in NON_SEMANTIC_TAG_TOKENS else canonical
     normalized = raw.replace("-", "_").replace(" ", "_")
-    return TAG_SYNONYMS.get(normalized, normalized)
+    canonical = TAG_SYNONYMS.get(normalized, normalized)
+    return None if canonical in NON_SEMANTIC_TAG_TOKENS else canonical
 
 
 def normalize_tags(tags: Iterable[str]) -> list[str]:
@@ -69,11 +79,10 @@ def load_tag_vocabulary() -> set[str]:
     global _TAG_VOCAB_CACHE
     if _TAG_VOCAB_CACHE is not None:
         return _TAG_VOCAB_CACHE
-    # Refactored: Use centralized DATA_DIR instead of recomputing
     vocab_path = DATA_DIR / "tag_vocabulary.json"
     if not vocab_path.exists():
         _TAG_VOCAB_CACHE = set()
         return _TAG_VOCAB_CACHE
-    vocab = normalize_tags(json.loads(vocab_path.read_text(encoding="utf-8")))
+    vocab = normalize_tags(read_tag_vocabulary_items(vocab_path))
     _TAG_VOCAB_CACHE = set(vocab)
     return _TAG_VOCAB_CACHE

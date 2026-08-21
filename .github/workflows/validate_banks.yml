@@ -9,6 +9,41 @@ on:
       - '**'
 
 jobs:
+  # Temporary migration job. Delete after the canonical persisted-data rewrite lands.
+  migrate_tag_registry:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/codex/authoritative-tag-registry'
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: codex/authoritative-tag-registry
+          fetch-depth: 0
+
+      - name: Apply deterministic tag migration
+        shell: bash
+        run: python tools/migrate_tag_registry_data.py
+
+      - name: Commit migrated files when needed
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed="$(git diff --name-only -- data fightcamp/strength.py)"
+          if [ -z "$changed" ]; then
+            echo "No migration changes required."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          while IFS= read -r path; do
+            [ -n "$path" ] && git add -- "$path"
+          done <<< "$changed"
+          git commit -m "Apply canonical tag registry migration"
+          git push origin HEAD:codex/authoritative-tag-registry
+
   validate:
     runs-on: ubuntu-latest
     permissions:
@@ -26,8 +61,23 @@ jobs:
       - name: Run bank validator
         run: python tools/validate_banks.py
 
+      # Human-readable inventory remains available in logs for taxonomy review.
+      - name: Audit tag registry
+        run: python tools/audit_tag_registry.py
+
+      # Persisted bank data must already be canonical. This catches reintroduced
+      # aliases, setup/nonsemantic tag tokens, metadata field names in the
+      # vocabulary, and the strength metadata pseudo-tag fallback.
+      - name: Check tag data migration is up to date
+        run: python tools/migrate_tag_registry_data.py --check
+
+      # Blocking focused gate: vocabulary, scoring, runtime controls, generated
+      # injury/safety tags, and reviewed bank-only decisions must stay closed.
+      - name: Enforce tag authority
+        run: python tools/check_tag_registry.py
+
       # Blocking gate: the rehab bank must satisfy its data contract. Unlike the
-      # cross-bank audit above, this exits non-zero on any schema error.
+      # wider cross-bank validator above, this exits non-zero on any schema error.
       - name: Validate rehab bank data contract
         run: python tools/validate_rehab_bank.py
 

@@ -1952,11 +1952,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
 
         if "late_strength_touch" in tags or bool(exercise.get("late_strength_touch")):
             markers.add("late_strength_touch")
-        if late_window and ("late_windows" in tags or late_window in late_windows or "all" in late_windows):
+        if late_window and (late_window in late_windows or "all" in late_windows):
             markers.add("late_windows")
         if cut_bucket and (
-            "cut_buckets_allowed" in tags
-            or cut_bucket in cut_buckets_allowed
+            cut_bucket in cut_buckets_allowed
             or "all" in cut_buckets_allowed
         ):
             markers.add("cut_buckets_allowed")

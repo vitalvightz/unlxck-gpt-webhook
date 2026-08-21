@@ -1,4 +1,8 @@
-"""Shared tag mapping definitions for training plan generation."""
+"""Shared tag mapping definitions for training plan generation.
+
+Scoring-map values must be canonical bank tags with real bank coverage. Input
+aliases belong in the normalizer maps, not in the scoring values themselves.
+"""
 
 GOAL_NORMALIZER = {
     "power": "power",
@@ -76,7 +80,6 @@ _STYLE_TAG_BASE = {
         "rate_of_force",
         "endurance",
         "mental_toughness",
-        "anaerobic_alactic",
         "ballistic_low_volume",
     ],
     "clinch_fighter": [
@@ -112,7 +115,7 @@ _STYLE_TAG_BASE = {
         "ballistic_low_volume",
     ],
     "submission_hunter": ["submission_hunter", "grip", "mobility", "core", "stability", "anti_rotation", "rotational"],
-    "kicker": ["kicker", "hinge", "posterior_chain", "balance", "mobility", "unilateral", "hip_dominant", "adductors"],
+    "kicker": ["kicker", "posterior_chain", "balance", "mobility", "unilateral", "hip_dominant", "adductors"],
     "scrambler": ["scrambler", "core", "rotational", "balance", "endurance", "agility", "reactive", "coordination", "grip"],
     "grappler": ["grappler", "grip", "core", "rotational", "balance", "unilateral"],
     "wrestler": ["wrestler", "grip", "posterior_chain", "core", "unilateral", "balance"],
@@ -143,13 +146,12 @@ STYLE_TAG_MAP = {
 GOAL_TAG_MAP = {
     "power": [
         "explosive", "rate_of_force", "triple_extension", "horizontal_power",
-        "plyometric", "elastic", "lateral_power", "deadlift",
-        "ATP-PCr", "anaerobic_alactic", "speed_strength",
+        "plyometric", "elastic", "lateral_power",
     ],
     "strength": [
         "posterior_chain", "quad_dominant", "upper_body", "core", "pull", "hamstring",
-        "hip_dominant", "eccentric", "deadlift", "compound", "manual_resistance", "isometric",
-        "late_strength_touch", "maximal_strength_maintenance", "low_eccentric", "cns_freshness",
+        "hip_dominant", "eccentric", "compound", "isometric", "late_strength_touch",
+        "maximal_strength_maintenance", "low_eccentric", "cns_freshness",
     ],
     "maximal_strength_maintenance": [
         "maximal_strength_maintenance",
@@ -162,43 +164,39 @@ GOAL_TAG_MAP = {
         "low_eccentric",
     ],
     "endurance": [
-        "aerobic", "glycolytic", "anaerobic_lactic", "work_capacity", "mental_toughness",
-        "conditioning", "improvised", "volume_tolerance",
+        "aerobic", "glycolytic", "work_capacity", "mental_toughness",
+        "conditioning", "improvised",
     ],
     "speed": [
-        "speed", "agility", "reactive", "acceleration", "ATP-PCr", "anaerobic_alactic",
-        "visual_processing", "reactive_decision",
+        "speed", "agility", "reactive", "acceleration", "visual_processing",
     ],
     "mobility": [
         "mobility", "hip_dominant", "balance", "eccentric", "unilateral", "adductors",
-        "stability", "movement_quality", "range", "rehab_friendly",
+        "stability", "movement_quality", "rehab_friendly",
     ],
     "grappler": [
         "wrestler", "bjj", "grip", "rotational", "core", "unilateral", "tactical",
-        "manual_resistance", "positioning",
     ],
     "grappling": [
         "wrestler", "bjj", "grip", "rotational", "core", "unilateral", "tactical",
-        "manual_resistance", "positioning",
     ],
     "striking": [
         "striking", "boxing", "muay_thai", "shoulders", "rate_of_force",
-        "coordination", "visual_processing", "rhythm", "timing",
+        "coordination", "visual_processing",
     ],
     "injury_prevention": [
         "recovery", "balance", "eccentric", "zero_impact", "parasympathetic",
         "cns_freshness", "unilateral", "movement_quality", "stability", "neck",
     ],
     "mental_resilience": [
-        "mental_toughness", "cognitive", "parasympathetic", "visual_processing",
-        "focus", "environmental", "pressure_tolerance",
+        "mental_toughness", "cognitive", "parasympathetic", "visual_processing", "environmental",
     ],
     "skill_refinement": [
-        "coordination", "skill", "footwork", "cognitive", "focus", "reactive", "decision_speed", "skill_refinement",
+        "coordination", "skill", "footwork", "cognitive", "reactive", "skill_refinement",
     ],
     "coordination": ["coordination"],
     "recovery": ["recovery", "cns_freshness", "parasympathetic"],
-    "weight_cut": ["weight_cut", "recovery", "low_impact", "cns_freshness"],
+    "weight_cut": ["recovery", "low_impact", "cns_freshness"],
 }
 
 GOAL_TAG_MAP["conditioning"] = list(GOAL_TAG_MAP["endurance"])
@@ -234,9 +232,9 @@ WEAKNESS_TAG_MAP = {
     ],
     "rotation": ["rotational", "anti_rotation"],
     "balance": ["balance", "stability", "unilateral"],
-    "mobility": ["mobility", "hip_dominant", "movement_quality", "range"],
+    "mobility": ["mobility", "hip_dominant", "movement_quality"],
     "coordination": ["coordination", "balance", "reactive"],
-    "trunk_strength": ["core", "anti_rotation", "core stability"],
+    "trunk_strength": ["core", "anti_rotation", "stability"],
     "explosiveness": ["explosive", "rate_of_force", "plyometric"],
     "shoulders": ["shoulders", "upper_body"],
     "shoulder": ["shoulders", "upper_body"],

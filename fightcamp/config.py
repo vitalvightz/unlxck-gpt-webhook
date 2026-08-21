@@ -13,7 +13,7 @@ PHASE_EQUIPMENT_BOOST = {
 }
 
 PHASE_TAG_BOOST = {
-    GPP: {"triphasic": 1, "tempo": 1, "eccentric": 1},
+    GPP: {"triphasic": 1, "eccentric": 1},
     SPP: {"contrast": 1.5, "explosive": 1.5},
     TAPER: {
         "late_strength_touch": 2,
