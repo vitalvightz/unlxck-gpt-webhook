@@ -13,6 +13,7 @@ from tools.audit_tag_registry import (
     collect_runtime_control_tags,
     collect_scoring_tags,
 )
+from tools.check_tag_registry import authority_failures
 from tools.validate_banks import discover_banks
 
 
@@ -110,3 +111,44 @@ def test_runtime_tag_inventory_is_precise_and_keeps_late_safety_controls():
         "vestibular_sensitive",
     }.issubset(all_tags)
     assert not {"blockquote", "h1", "iframe", "table", "tbody", "meta"}.intersection(all_tags)
+
+
+def _clean_gate_report(**overrides):
+    report = {
+        "aliases_in_vocabulary": {},
+        "vocabulary_collisions": {},
+        "bank_missing_vocab": [],
+        "scoring_missing_vocab": [],
+        "runtime_missing_vocab": [],
+        "scoring_zero_bank_coverage": [],
+        "bank_aliases": {
+            "boxer": "boxing",
+            "breathing": "recovery",
+            "rhythm": "coordination",
+            "technical": "skill",
+        },
+        "synonym_canonicals": ["boxing", "recovery", "coordination", "skill"],
+    }
+    report.update(overrides)
+    return report
+
+
+def test_authority_gate_allows_only_bounded_legacy_alias_debt():
+    vocabulary = {"boxing", "recovery", "coordination", "skill"}
+    assert authority_failures(_clean_gate_report(), vocabulary) == []
+
+    failures = authority_failures(
+        _clean_gate_report(
+            bank_aliases={"boxer": "boxing", "new legacy spelling": "boxing"}
+        ),
+        vocabulary,
+    )
+    assert any("unexpected_bank_aliases" in failure for failure in failures)
+
+
+def test_authority_gate_rejects_missing_synonym_targets():
+    failures = authority_failures(
+        _clean_gate_report(),
+        {"boxing", "recovery", "coordination"},
+    )
+    assert any("synonym_targets_missing_from_vocabulary" in failure for failure in failures)
