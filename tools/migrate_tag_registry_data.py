@@ -16,6 +16,7 @@ STRENGTH_PATH = REPO_ROOT / "fightcamp" / "strength.py"
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from fightcamp.tag_vocabulary import read_tag_vocabulary_items  # noqa: E402
 from tools.validate_banks import discover_banks  # noqa: E402
 
 
@@ -96,11 +97,19 @@ def _migrated_json_text(path: Path) -> tuple[str, int]:
 
 def _migrated_vocabulary_text(path: Path) -> tuple[str, int]:
     data = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(data, list):
-        raise ValueError("tag_vocabulary.json must remain a root list during this migration")
-    migrated = [tag for tag in data if tag not in REMOVE_FROM_VOCABULARY]
-    removed = len(data) - len(migrated)
-    return json.dumps(migrated, indent=2, ensure_ascii=False) + "\n", removed
+    items = read_tag_vocabulary_items(path)
+    migrated = [tag for tag in items if tag not in REMOVE_FROM_VOCABULARY]
+    removed = len(items) - len(migrated)
+
+    # Preserve whichever supported schema the shared parser accepted.
+    if isinstance(data, list):
+        payload: Any = migrated
+    else:
+        payload = dict(data)
+        key = "items" if isinstance(data.get("items"), list) else "data"
+        payload[key] = migrated
+
+    return json.dumps(payload, indent=2, ensure_ascii=False) + "\n", removed
 
 
 def _migrated_strength_text(path: Path) -> tuple[str, int]:

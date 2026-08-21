@@ -20,6 +20,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from fightcamp.bank_schema import KNOWN_SYSTEMS, SYSTEM_ALIASES  # noqa: E402
+from fightcamp.tag_vocabulary import read_tag_vocabulary_items  # noqa: E402
 from fightcamp.tagging import normalize_tag  # noqa: E402
 from tools.validate_rehab_bank import (  # noqa: E402
     count_by_severity as rehab_issue_counts,
@@ -38,6 +39,8 @@ OLD_VALIDATOR_SKIPPED = {
 NON_BANK_JSON = {
     "bank_inferred_tags.json",
     "regex_patterns.json",
+    # Governance record for reviewed canonical/non-taxonomy tags, not a bank.
+    "tag_registry_review.json",
     # Ledger of grandfathered rehab duplicates, not a training bank. Read by
     # tools/validate_rehab_bank.py.
     "rehab_bank_duplicate_debt.json",
@@ -158,23 +161,14 @@ def _clean_tag(value: Any) -> str | None:
 
 
 def load_tag_vocabulary(data_dir: Path = DATA_DIR, *, emit=print) -> set[str]:
-    """Load normalized tag vocabulary from tag_vocabulary.json."""
+    """Load normalized tags through the shared vocabulary parser."""
     path = data_dir / "tag_vocabulary.json"
     emit(f"Loading tag vocabulary from {path}...")
-    data = _load_json(path)
-    if isinstance(data, list):
-        tags = {_clean_tag(tag) for tag in data}
-        normalized = {tag for tag in tags if tag}
-        emit(f"Tag vocabulary loaded: {len(normalized)} tags (list schema)\n")
-        return normalized
-    if isinstance(data, dict):
-        for key in ("items", "data"):
-            if isinstance(data.get(key), list):
-                tags = {_clean_tag(tag) for tag in data[key]}
-                normalized = {tag for tag in tags if tag}
-                emit(f"Tag vocabulary loaded: {len(normalized)} tags (object schema with '{key}')\n")
-                return normalized
-    raise ValueError(f"Unrecognized tag vocabulary schema in {path}")
+    items = read_tag_vocabulary_items(path)
+    tags = {_clean_tag(tag) for tag in items}
+    normalized = {tag for tag in tags if tag}
+    emit(f"Tag vocabulary loaded: {len(normalized)} tags (shared parser)\n")
+    return normalized
 
 
 def load_injury_rules() -> dict[str, dict[str, list[str]]]:
@@ -344,16 +338,10 @@ def validate_config_target(path: Path) -> list[BankIssue]:
             severity="info",
         )
     if path.name == "tag_vocabulary.json":
-        if isinstance(data, list):
-            vocab_items = data
-        elif isinstance(data, dict) and isinstance(data.get("items"), list):
-            vocab_items = data["items"]
-        elif isinstance(data, dict) and isinstance(data.get("data"), list):
-            vocab_items = data["data"]
-        else:
-            vocab_items = None
-        if vocab_items is None or not vocab_items or any(not isinstance(tag, str) or not tag.strip() for tag in vocab_items):
-            _add_issue(issues, "config schema issues", path, path.name, "expected a non-empty list of tag strings")
+        try:
+            read_tag_vocabulary_items(path)
+        except ValueError as exc:
+            _add_issue(issues, "config schema issues", path, path.name, str(exc))
     elif path.name == "injury_exclusion_map.json":
         if not isinstance(data, dict):
             _add_issue(issues, "config schema issues", path, path.name, "expected an object keyed by injury region")

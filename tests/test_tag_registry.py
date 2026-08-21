@@ -7,6 +7,7 @@ import pytest
 
 from fightcamp.tag_vocabulary import parse_tag_vocabulary_payload, read_tag_vocabulary_items
 from fightcamp.tagging import normalize_tag
+from tools import validate_banks
 from tools.audit_tag_registry import (
     DATA_DIR,
     collect_bank_tags,
@@ -15,7 +16,7 @@ from tools.audit_tag_registry import (
 )
 from tools.check_tag_registry import authority_failures, load_review_decisions
 from tools.injury_tag_authority import collect_generated_injury_tags
-from tools.migrate_tag_registry_data import planned_changes
+from tools.migrate_tag_registry_data import _migrated_vocabulary_text, planned_changes
 from tools.validate_banks import discover_banks
 
 
@@ -42,6 +43,29 @@ def test_tag_vocabulary_parser_accepts_all_supported_schemas(tmp_path: Path):
 def test_tag_vocabulary_parser_rejects_invalid_schemas(payload):
     with pytest.raises(ValueError):
         parse_tag_vocabulary_payload(payload)
+
+
+def test_validator_uses_shared_vocabulary_reader(tmp_path: Path, monkeypatch):
+    path = tmp_path / "tag_vocabulary.json"
+    path.write_text(json.dumps({"items": ["ignored"]}), encoding="utf-8")
+    calls: list[Path] = []
+
+    def fake_reader(candidate: Path) -> list[str]:
+        calls.append(candidate)
+        return ["speed", " power "]
+
+    monkeypatch.setattr(validate_banks, "read_tag_vocabulary_items", fake_reader)
+    assert validate_banks.load_tag_vocabulary(tmp_path, emit=lambda *_args: None) == {"speed", "power"}
+    assert calls == [path]
+
+
+def test_migration_uses_shared_vocabulary_schemas_and_preserves_shape(tmp_path: Path):
+    path = tmp_path / "tag_vocabulary.json"
+    path.write_text(json.dumps({"items": ["speed", "bodyweight"]}), encoding="utf-8")
+
+    text, removed = _migrated_vocabulary_text(path)
+    assert removed == 1
+    assert json.loads(text) == {"items": ["speed"]}
 
 
 def test_bank_tag_collection_normalizes_aliases_and_tracks_coverage(tmp_path: Path):
@@ -101,7 +125,12 @@ def test_all_scoring_tags_are_canonical_vocab_tags_with_bank_coverage():
     assert scoring_tags <= bank_tags
 
 
-def test_runtime_tag_inventory_is_precise_and_keeps_late_safety_controls():
+def test_tag_registry_review_metadata_is_not_discovered_as_bank():
+    discovered = {path.name for path in discover_banks(DATA_DIR)}
+    assert "tag_registry_review.json" not in discovered
+
+
+def test_runtime_tag_inventory_is_precise_and_covers_live_safety_guards():
     runtime = collect_runtime_control_tags()
     all_tags = set().union(*runtime.values())
 
@@ -113,7 +142,14 @@ def test_runtime_tag_inventory_is_precise_and_keeps_late_safety_controls():
         "no_d7_to_d1",
         "balance_challenge",
         "vestibular_sensitive",
+        "sprint_intervals",
+        "explosive_conditioning",
+        "high_impact",
+        "jumping",
+        "ballistic_lower",
     }.issubset(all_tags)
+    assert "injury_guard.py" in runtime
+    assert "restriction_filtering.py" in runtime
     assert not {"blockquote", "h1", "iframe", "table", "tbody", "meta"}.intersection(all_tags)
     assert not {"late_windows", "cut_buckets_allowed"}.intersection(all_tags)
 
@@ -129,6 +165,11 @@ def test_generated_injury_safety_tags_are_registered():
         "contact",
         "head_impact",
         "decel_high",
+        "sprint_intervals",
+        "explosive_conditioning",
+        "high_impact",
+        "jumping",
+        "ballistic_lower",
     }.issubset(injury_tags)
     assert injury_tags <= vocabulary
 

@@ -44,6 +44,12 @@ RUNTIME_BANK_TAG_CONSTANTS: dict[str, set[str]] = {
         "LATE_CONDITIONING_SAFE_TAGS",
         "_GAS_TANK_SAFE_TAGS",
     },
+    "injury_guard.py": {
+        "CONCUSSION_BLOCK_TAGS",
+    },
+    "restriction_filtering.py": {
+        "_HIGH_IMPACT_LOWER_TAGS",
+    },
     "strength.py": {
         "LATE_STRENGTH_SAFE_TAGS",
         "STRENGTH_MAINTENANCE_INTENT_TAGS",
