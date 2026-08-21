@@ -50,7 +50,6 @@ CONDITIONING_BANK_SOURCES = {
     "footwork_conditioning_bank.json",
     "style_conditioning_bank.json",
     "style_taper_conditioning.json",
-    "universal_gpp_conditioning.json",
 }
 
 COMMON_LATE_METADATA_FIELDS = (

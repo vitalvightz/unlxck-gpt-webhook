@@ -38,10 +38,7 @@
     "style_conditioning_bank:Ring-Cut Sprint",
     "style_conditioning_bank:Sprawl-to-Shot Sprints",
     "style_conditioning_bank:Stand-Up Sprint",
-    "style_conditioning_bank:Swarm Entry Sprints",
-    "universal_gpp_conditioning:Alactic Sprint Intervals (Hill / Flat / Sled)",
-    "universal_gpp_conditioning:Clap Push-Up Sprints",
-    "universal_gpp_conditioning:Plyometric Depth Jumps"
+    "style_conditioning_bank:Swarm Entry Sprints"
   ],
   "ankle": [
     "conditioning_bank:Depth Jump to Sprint",
@@ -50,8 +47,7 @@
     "coordination_bank:Uneven Surface Hip Switch",
     "coordination_bank:Uneven Surface Stance Dance",
     "exercise_bank:Depth Jump (Stick Landing)",
-    "exercise_bank:Depth Jump to Sprint",
-    "universal_gpp_conditioning:Plyometric Depth Jumps"
+    "exercise_bank:Depth Jump to Sprint"
   ],
   "calf": [
     "conditioning_bank:Agility Ladder Sprints",
@@ -71,8 +67,7 @@
     "style_conditioning_bank:Blast Double Sprints",
     "style_conditioning_bank:Guillotine Shot Sprints",
     "style_conditioning_bank:Sprawl-to-Shot Sprints",
-    "style_conditioning_bank:Swarm Entry Sprints",
-    "universal_gpp_conditioning:Clap Push-Up Sprints"
+    "style_conditioning_bank:Swarm Entry Sprints"
   ],
   "chest": [
     "conditioning_bank:5-10-15 Ladder (Box Jumps/Push-Ups/KB Swings)",
@@ -104,7 +99,6 @@
     "style_conditioning_bank:Cross-Counter Plyo Pushups",
     "style_conditioning_bank:Flying Knee Drill",
     "style_conditioning_bank:Flying Sub Scramble",
-    "universal_gpp_conditioning:Clap Push-Up Sprints",
     "universal_gpp_strength:Barbell or DB Overhead Press",
     "universal_gpp_strength:Push-Up or Bench Press"
   ],
@@ -124,8 +118,7 @@
     "conditioning_bank:Jump Rope (Recovery Pace)",
     "conditioning_bank:Jump Rope Conditioning",
     "conditioning_bank:Meditative Jump Rope (Eyes Closed)",
-    "conditioning_bank:Pogo Jump Series (Mini Bounce)",
-    "universal_gpp_conditioning:Jump Rope Endurance (Footwork Conditioning)"
+    "conditioning_bank:Pogo Jump Series (Mini Bounce)"
   ],
   "forearm": [
     "conditioning_bank:Band-Resisted Straight Punch Release",
@@ -219,8 +212,6 @@
     "style_conditioning_bank:Sprawl-to-Shot Sprints",
     "style_conditioning_bank:Stand-Up Sprint",
     "style_conditioning_bank:Swarm Entry Sprints",
-    "universal_gpp_conditioning:Alactic Sprint Intervals (Hill / Flat / Sled)",
-    "universal_gpp_conditioning:Clap Push-Up Sprints",
     "universal_gpp_strength:Low Hurdle Hop (Rhythm Focus)"
   ],
   "hand": [
@@ -298,8 +289,6 @@
     "style_conditioning_bank:Sprawl-to-Shot Sprints",
     "style_conditioning_bank:Stand-Up Sprint",
     "style_conditioning_bank:Swarm Entry Sprints",
-    "universal_gpp_conditioning:Alactic Sprint Intervals (Hill / Flat / Sled)",
-    "universal_gpp_conditioning:Clap Push-Up Sprints",
     "universal_gpp_strength:DB Split Squat"
   ],
   "knee": [
@@ -389,8 +378,6 @@
     "style_taper_conditioning:Submission Hunter Arm Drag Jump",
     "style_taper_conditioning:Submission Hunter Bridge-Jump",
     "style_taper_conditioning:Submission Hunter Sit-Out Jump",
-    "universal_gpp_conditioning:Jump Rope Endurance (Footwork Conditioning)",
-    "universal_gpp_conditioning:Plyometric Depth Jumps",
     "universal_gpp_strength:Barbell Back Squat",
     "universal_gpp_strength:DB Split Squat"
   ],
@@ -455,8 +442,7 @@
     "conditioning_bank:Jump Rope (Recovery Pace)",
     "conditioning_bank:Jump Rope Conditioning",
     "conditioning_bank:Meditative Jump Rope (Eyes Closed)",
-    "conditioning_bank:Pogo Jump Series (Mini Bounce)",
-    "universal_gpp_conditioning:Jump Rope Endurance (Footwork Conditioning)"
+    "conditioning_bank:Pogo Jump Series (Mini Bounce)"
   ],
   "shoulder": [
     "conditioning_bank:Band-Resisted Straight Punch Release",
@@ -543,8 +529,7 @@
     "conditioning_bank:Jump Rope (Recovery Pace)",
     "conditioning_bank:Jump Rope Conditioning",
     "conditioning_bank:Meditative Jump Rope (Eyes Closed)",
-    "conditioning_bank:Pogo Jump Series (Mini Bounce)",
-    "universal_gpp_conditioning:Jump Rope Endurance (Footwork Conditioning)"
+    "conditioning_bank:Pogo Jump Series (Mini Bounce)"
   ],
   "unspecified": [],
   "upper_back": [
@@ -599,7 +584,6 @@
     "exercise_bank:Push-Up (Weighted)",
     "exercise_bank:Snatch Grip Deadlift Isometric (125% 1RM @ knee)",
     "style_conditioning_bank:Cross-Counter Plyo Pushups",
-    "universal_gpp_conditioning:Clap Push-Up Sprints",
     "universal_gpp_strength:Push-Up or Bench Press"
   ]
 }

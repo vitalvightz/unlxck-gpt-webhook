@@ -254,15 +254,15 @@ Each slot should expose:
         "role": "aerobic_base",
         "purpose": "low-damage aerobic development",
         "selected": {
-          "name": "Steady-State Cardio (Run / Bike / Row)",
-          "source": "universal_gpp_conditioning",
+          "name": "Rowing (Steady State)",
+          "source": "conditioning_bank",
           "movement_patterns": ["cyclical", "aerobic"],
           "restriction_tags": ["swap_to_bike_if_lower_limb_irritable"]
         },
         "alternates": [
           {
-            "name": "Jump Rope Endurance (Footwork Conditioning)",
-            "source": "universal_gpp_conditioning",
+            "name": "Jump Rope Conditioning",
+            "source": "conditioning_bank",
             "movement_patterns": ["reactive", "aerobic", "footwork"]
           }
         ],

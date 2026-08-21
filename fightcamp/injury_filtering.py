@@ -999,7 +999,6 @@ def collect_banks(*, mode: str = "runtime") -> dict[str, list[dict]]:
     banks["conditioning_bank"] = _load_bank_items("conditioning_bank.json", mode=mode)
     banks["style_conditioning_bank"] = _load_bank_items("style_conditioning_bank.json", mode=mode)
     banks["universal_gpp_strength"] = _load_bank_items("universal_gpp_strength.json", mode=mode)
-    banks["universal_gpp_conditioning"] = _load_bank_items("universal_gpp_conditioning.json", mode=mode)
     banks["style_taper_conditioning"] = _load_bank_items("style_taper_conditioning.json", mode=mode)
 
     coord_data = json.loads((DATA_DIR / "coordination_bank.json").read_text(encoding="utf-8"))

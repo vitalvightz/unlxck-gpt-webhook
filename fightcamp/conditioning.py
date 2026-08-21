@@ -3032,7 +3032,6 @@ def generate_conditioning_block(flags):
                 "coordination": "coordination_bank.json",
                 "skill_refinement": "style_conditioning_bank.json",
                 "style_taper": "style_taper_conditioning.json",
-                "universal_gpp": "universal_gpp_conditioning.json",
                 "runtime_fallback": "runtime_fallback",
             }.get(source, "conditioning_bank.json")
             late_eval = _cached_late_eval(drill, system, source_file)
@@ -3274,83 +3273,6 @@ def generate_conditioning_block(flags):
 
 
     _run_conditioning_poststep("gas_tank_machine_bias", _insert_gas_tank_machine_bias)
-
-    def _insert_universal_gpp_conditioning() -> None:
-            # --------- UNIVERSAL CONDITIONING INSERTION ---------
-            if phase == "GPP":
-                try:
-                    universal_conditioning = _load_bank(
-                        DATA_DIR / "universal_gpp_conditioning.json",
-                        source="universal_gpp_conditioning.json",
-                        enforce_conditioning_systems=True,
-                    )
-                except Exception:
-                    universal_conditioning = []
-
-                existing_cond_names = {d.get("name") for _, drills in final_drills for d in drills}
-                goal_tags_set = set(goal_tags or [])
-                weakness_tags_set = set(weak_tags or [])
-
-                high_priority_names = {
-                    "Jump Rope Endurance (Footwork Conditioning)",
-                    "Steady-State Cardio (Run / Bike / Row)",
-                    "Explosive Medicine Ball Throws",
-                }
-
-                injected_target = 2
-                injected = 0
-                universal_candidates = []
-                for drill in universal_conditioning:
-                    if injected >= injected_target or len(selected_drill_names) >= total_drills:
-                        break
-                    if drill.get("name") in existing_cond_names:
-                        continue
-                    if drill.get("placement", "conditioning").lower() != "conditioning":
-                        continue
-                    drill_eq = _cached_equipment(drill)
-                    if drill_eq and not set(drill_eq).issubset(equipment_access_set):
-                        continue
-                    system = _cached_system(drill, "universal_gpp_conditioning.json")
-                    if system is None:
-                        continue
-                    universal_candidates.append((system, drill))
-
-                for system, drill in sorted(
-                    universal_candidates, key=lambda pair: pair[1].get("name") or ""
-                )[:INJURY_GUARD_SHORTLIST]:
-                    if injected >= injected_target or len(selected_drill_names) >= total_drills:
-                        break
-
-                    drill_tags = set(_cached_tags(drill))
-
-                    if not (
-                        drill.get("name") in high_priority_names
-                        or drill_tags & (goal_tags_set | weakness_tags_set)
-                    ):
-                        continue
-
-                    if _try_append_conditioning_drill(
-                        system,
-                        drill,
-                        {
-                            "goal_hits": 0,
-                            "weakness_hits": 0,
-                            "style_hits": 0,
-                            "phase_hits": 1,
-                            "load_adjustments": 0,
-                            "equipment_boost": 0,
-                            "penalties": 0,
-                            "reason_codes": ["universal_gpp_guarantee"],
-                            "final_score": 0,
-                        },
-                        source="universal_gpp",
-                        enforce_late_window=False,
-                    ):
-                        existing_cond_names.add(drill.get("name"))
-                        injected += 1
-
-
-    _run_conditioning_poststep("universal_gpp_insertion", _insert_universal_gpp_conditioning)
 
         # --------- STYLE TAPER DRILL INSERTION ---------
     def _insert_style_taper_drill() -> None:
