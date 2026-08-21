@@ -14,7 +14,9 @@ concurrency:
 
 jobs:
   migrate_tag_registry:
-    if: github.event_name == 'pull_request' && github.head_ref == 'codex/authoritative-tag-registry'
+    if: >-
+      (github.event_name == 'pull_request' && github.head_ref == 'codex/authoritative-tag-registry') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/codex/authoritative-tag-registry')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -22,7 +24,7 @@ jobs:
       - name: Checkout feature branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
+          ref: codex/authoritative-tag-registry
           fetch-depth: 0
 
       - name: Apply deterministic tag migration
