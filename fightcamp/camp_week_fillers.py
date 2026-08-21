@@ -4,6 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
+from .coordination_support_library import (
+    build_coordination_display_text,
+    coordination_support_metadata,
+    has_coordination_target,
+    select_coordination_support,
+)
 from .gap_fill_inserts import (
     PHYSICAL_INSERTS,
     _new_usage_ledger,
@@ -239,8 +245,6 @@ def _ensure_tactical_watch(
         if existing is None and day and d_day is not None and d_day > 0:
             existing = candidate
             continue
-        # Invalid or duplicate watch roles must not survive beside the one
-        # authoritative mandatory watch for this week.
         session_roles.remove(candidate)
 
     if existing is not None:
@@ -291,6 +295,147 @@ def _ensure_tactical_watch(
     return True
 
 
+def _coordination_slot(
+    week: dict[str, Any],
+    session_roles: list[dict[str, Any]],
+    athlete_model: dict[str, Any],
+) -> tuple[str, int] | None:
+    hard_days = _week_hard_sparring_days(week, athlete_model)
+    intentionally_unused = {
+        _canonical_day(entry.get("day"))
+        for entry in week.get("intentionally_unused_days") or []
+        if isinstance(entry, dict)
+        and str(entry.get("role") or "").strip() in {"off_day", "recovery_only_day"}
+        and _canonical_day(entry.get("day"))
+    }
+
+    support_days = clean_list(week.get("declared_support_work_days")) or clean_list(
+        athlete_model.get("support_work_days", [])
+    )
+    training_days = clean_list(week.get("declared_training_days"))
+    existing_days = [
+        str(role.get("scheduled_day_hint") or role.get("real_weekday") or "").strip()
+        for role in session_roles
+        if isinstance(role, dict)
+        and not role.get("camp_week_filler")
+        and str(role.get("scheduled_day_hint") or role.get("real_weekday") or "").strip()
+    ]
+
+    ordered_days = list(dict.fromkeys([*support_days, *existing_days, *training_days]))
+    support_canonical = {_canonical_day(day) for day in support_days if _canonical_day(day)}
+
+    all_role_counts: dict[str, int] = {}
+    for role in session_roles:
+        if not isinstance(role, dict):
+            continue
+        canonical = _canonical_day(role.get("scheduled_day_hint") or role.get("real_weekday"))
+        if canonical:
+            all_role_counts[canonical] = all_role_counts.get(canonical, 0) + 1
+
+    candidates: list[tuple[int, int, int, str, int]] = []
+    for index, day in enumerate(ordered_days):
+        canonical = _canonical_day(day)
+        d_day = _calendar_d_day(week, day)
+        if not canonical or d_day is None or d_day <= 1:
+            continue
+        if canonical in hard_days or canonical in intentionally_unused:
+            continue
+        is_support_day = canonical in support_canonical
+        if not is_support_day and all_role_counts.get(canonical, 0) == 0:
+            continue
+        candidates.append(
+            (
+                0 if is_support_day else 1,
+                all_role_counts.get(canonical, 0),
+                index,
+                str(day).strip(),
+                d_day,
+            )
+        )
+
+    if not candidates:
+        return None
+    _, _, _, day, d_day = min(candidates)
+    return day, d_day
+
+
+def _ensure_coordination_support(
+    week: dict[str, Any],
+    athlete_model: dict[str, Any],
+    phase: str,
+    used_coordination_keys: set[str],
+) -> bool:
+    if not has_coordination_target(athlete_model) or _week_is_compressed(week):
+        return False
+
+    session_roles = week.get("session_roles")
+    if not isinstance(session_roles, list):
+        return False
+
+    hard_days = _week_hard_sparring_days(week, athlete_model)
+    existing = None
+    for candidate in list(session_roles):
+        if not isinstance(candidate, dict) or str(candidate.get("role_key") or "") != "coordination_support":
+            continue
+        day = str(candidate.get("scheduled_day_hint") or candidate.get("real_weekday") or "").strip()
+        d_day = _calendar_d_day(week, day)
+        if (
+            existing is None
+            and day
+            and d_day is not None
+            and d_day > 1
+            and _canonical_day(day) not in hard_days
+        ):
+            existing = candidate
+            continue
+        session_roles.remove(candidate)
+
+    if existing is not None:
+        day = str(existing.get("scheduled_day_hint") or existing.get("real_weekday") or "").strip()
+        d_day = _calendar_d_day(week, day)
+        slot = (day, d_day) if d_day is not None else None
+    else:
+        slot = _coordination_slot(week, session_roles, athlete_model)
+    if slot is None:
+        return False
+    day, d_day = slot
+
+    drill = select_coordination_support(athlete_model, phase, used_coordination_keys)
+    if drill is None:
+        return False
+
+    metadata = coordination_support_metadata(drill)
+    coordination_governance = dict(metadata.pop("governance"))
+    role = existing if existing is not None else {
+        "category": "support_insert",
+        "role_key": "coordination_support",
+        "athlete_facing_label": "Coordination",
+        "rpe_max": drill.rpe,
+        "mechanical_load_regions": [],
+        "countdown_offset": d_day,
+        "countdown_label": f"D-{d_day}",
+        "scheduled_countdown_label": f"D-{d_day}",
+        "governance": {"authority": "camp_week_support_insert"},
+    }
+    role.update(metadata)
+    role["coordination_support_key"] = drill.key
+    role["display_text"] = build_coordination_display_text(drill)
+    role["duration_min"] = [drill.duration_min, drill.duration_min]
+    role["weekly_requirement"] = "coordination_target"
+    role["camp_phase"] = phase
+    role["governance"] = {
+        **dict(role.get("governance") or {}),
+        **coordination_governance,
+        "mandatory_when_targeted": True,
+        "meaningful_stress": False,
+    }
+    _decorate_filler(role, day, d_day)
+    if existing is None:
+        session_roles.append(role)
+    used_coordination_keys.add(drill.key)
+    return True
+
+
 def apply_camp_week_fillers(
     weekly_role_map: dict[str, Any],
     athlete_model: dict[str, Any] | None = None,
@@ -302,6 +447,7 @@ def apply_camp_week_fillers(
     fight_dated = _has_future_fight(athlete_model)
     usage_ledger = _new_usage_ledger()
     used_watch_keys: set[str] = set()
+    used_coordination_keys: set[str] = set()
 
     for week in weekly_role_map.get("weeks", []) or []:
         if not isinstance(week, dict):
@@ -309,9 +455,13 @@ def apply_camp_week_fillers(
         phase = str(week.get("phase") or "").strip().upper()
         if fight_dated and phase in _FIGHT_PHASE_CAPS:
             _ensure_tactical_watch(week, athlete_model, phase, used_watch_keys, usage_ledger)
+            _ensure_coordination_support(week, athlete_model, phase, used_coordination_keys)
             if not _week_is_compressed(week):
                 _fill_week(week, athlete_model, _FIGHT_PHASE_CAPS[phase] - 1, usage_ledger)
             continue
+
+        if phase in {"GPP", "SPP", "TAPER"}:
+            _ensure_coordination_support(week, athlete_model, phase, used_coordination_keys)
 
         cap = _LEGACY_PHASE_CAPS.get(phase)
         if cap and not _week_is_compressed(week):
