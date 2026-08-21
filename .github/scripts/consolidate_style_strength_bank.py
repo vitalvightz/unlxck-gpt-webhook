@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import ast
 import json
-import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -53,6 +52,28 @@ def remove_top_level_assignments(text: str, names: set[str]) -> str:
     found = {name for _, _, name in spans}
     assert found == names, f"assignments missing: {sorted(names - found)}"
     for start, end, _ in sorted(spans, reverse=True):
+        del lines[start:end]
+    return "".join(lines)
+
+
+def remove_monkeypatch_attr_calls(text: str, attr_name: str) -> str:
+    tree = ast.parse(text)
+    lines = text.splitlines(keepends=True)
+    spans: list[tuple[int, int]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Expr) or not isinstance(node.value, ast.Call):
+            continue
+        call = node.value
+        if not isinstance(call.func, ast.Attribute) or call.func.attr != "setattr":
+            continue
+        if not isinstance(call.func.value, ast.Name) or call.func.value.id != "monkeypatch":
+            continue
+        if len(call.args) < 2:
+            continue
+        key = call.args[1]
+        if isinstance(key, ast.Constant) and key.value == attr_name:
+            spans.append((node.lineno - 1, node.end_lineno))
+    for start, end in sorted(set(spans), reverse=True):
         del lines[start:end]
     return "".join(lines)
 
@@ -123,6 +144,9 @@ def migrate_exclusions(main_names: set[str]) -> None:
 def retire_loader() -> None:
     text = INJURY_FILTERING.read_text(encoding="utf-8")
     text = remove_top_level_functions(text, {"_load_style_specific_exercises"})
+    dead_collect_line = '    banks["style_specific_exercises"] = _load_style_specific_exercises(mode=mode)\n'
+    assert dead_collect_line in text, "collect_banks retired source line missing"
+    text = text.replace(dead_collect_line, "", 1)
     INJURY_FILTERING.write_text(text, encoding="utf-8")
 
 
@@ -157,21 +181,6 @@ def retire_strength_side_channel() -> None:
 
 
 def update_tests() -> None:
-    paths = [
-        ROOT / "tests/test_d3_sandbag_source_guard.py",
-        ROOT / "tests/test_equipment_availability.py",
-        ROOT / "tests/test_session_restraint.py",
-        ROOT / "tests/test_late_camp_selector_rebalance.py",
-        ROOT / "tests/test_strength_low_cost_support.py",
-        ROOT / "tests/test_trap_bar_squat_preference.py",
-        ROOT / "tests/test_strength_metadata_selection.py",
-    ]
-    empty_patch = re.compile(r'^\s*monkeypatch\.setattr\(strength,\s*"get_style_exercises",\s*lambda:\s*\[\]\)\n', re.MULTILINE)
-    for path in paths:
-        text = path.read_text(encoding="utf-8")
-        text = empty_patch.sub("", text)
-        path.write_text(text, encoding="utf-8")
-
     meta = ROOT / "tests/test_strength_metadata_selection.py"
     text = meta.read_text(encoding="utf-8")
     start = text.find("def test_style_specific_technical_primer_does_not_satisfy_strength_maintenance")
@@ -203,6 +212,17 @@ def update_tests() -> None:
     text = schema_test.read_text(encoding="utf-8")
     text = text.replace('source="style_specific_exercises.json"', 'source="universal_gpp_strength.json"')
     schema_test.write_text(text, encoding="utf-8")
+
+    # Remove every test hook/cache assertion for the retired bank. AST removal
+    # handles single- or multi-line monkeypatch.setattr calls safely.
+    for path in (ROOT / "tests").rglob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        text = remove_monkeypatch_attr_calls(text, "get_style_exercises")
+        text = "".join(
+            line for line in text.splitlines(keepends=True)
+            if "strength._style_exercises_cache" not in line
+        )
+        path.write_text(text, encoding="utf-8")
 
 
 def verify_no_dead_code() -> None:
