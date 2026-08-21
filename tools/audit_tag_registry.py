@@ -32,6 +32,16 @@ SKIP_RUNTIME_SCAN = {
 }
 
 
+def _is_tag_constant_name(name: str) -> bool:
+    upper = name.upper()
+    return (
+        upper == "TAGS"
+        or upper.endswith("_TAG")
+        or upper.endswith("_TAGS")
+        or "_TAG_" in upper
+    )
+
+
 def _canonical(value: str) -> str:
     return normalize_tag(value) or ""
 
@@ -138,12 +148,12 @@ class RuntimeTagVisitor(ast.NodeVisitor):
             for target in node.targets
             if isinstance(target, ast.Name)
         ]
-        if any("TAG" in name.upper() for name in names):
+        if any(_is_tag_constant_name(name) for name in names):
             self._add(_literal_strings(node.value))
         self.generic_visit(node)
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
-        if isinstance(node.target, ast.Name) and "TAG" in node.target.id.upper():
+        if isinstance(node.target, ast.Name) and _is_tag_constant_name(node.target.id):
             self._add(_literal_strings(node.value))
         self.generic_visit(node)
 
