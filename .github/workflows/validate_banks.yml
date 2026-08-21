@@ -18,7 +18,7 @@ jobs:
     if: >-
       (github.event_name == 'pull_request' && github.head_ref == 'codex/authoritative-tag-registry') ||
       (github.event_name == 'push' && github.ref == 'refs/heads/codex/authoritative-tag-registry')
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     permissions:
       contents: write
     steps:
@@ -29,7 +29,7 @@ jobs:
           fetch-depth: 0
 
       - name: Apply deterministic tag migration
-        run: python3 tools/migrate_tag_registry_data.py
+        run: python tools/migrate_tag_registry_data.py
 
       - name: Commit migrated files when needed
         shell: bash
