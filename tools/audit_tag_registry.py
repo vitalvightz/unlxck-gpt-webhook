@@ -19,27 +19,62 @@ FIGHTCAMP_DIR = REPO_ROOT / "fightcamp"
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from fightcamp.config import PHASE_TAG_BOOST  # noqa: E402
+from fightcamp.priority_clarification_tags import (  # noqa: E402
+    CLARIFICATION_DETAIL_TAG_MAP,
+    _GENERIC_OVERALL_BY_ENTRY_TAG,
+)
 from fightcamp.tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP, WEAKNESS_TAG_MAP  # noqa: E402
 from fightcamp.tag_vocabulary import read_tag_vocabulary_items  # noqa: E402
 from fightcamp.tagging import TAG_SYNONYMS, normalize_tag  # noqa: E402
 from tools.validate_banks import discover_banks  # noqa: E402
 
 
-SKIP_RUNTIME_SCAN = {
-    "tag_maps.py",
-    "tag_vocabulary.py",
-    "tagging.py",
+# Only constants that are actually interpreted as bank tags at runtime belong
+# here. This explicit contract avoids mistaking HTML tags, injury text tokens,
+# equipment names, or other unrelated string constants for bank-tag controls.
+RUNTIME_BANK_TAG_CONSTANTS: dict[str, set[str]] = {
+    "bank_schema.py": {
+        "BALLISTIC_TAGS",
+        "PRIMER_ONLY_TAGS",
+        "STRENGTH_FULFILLMENT_TAGS",
+    },
+    "conditioning.py": {
+        "TAPER_AVOID_TAGS",
+        "LATE_CONDITIONING_SAFE_TAGS",
+        "_GAS_TANK_SAFE_TAGS",
+    },
+    "strength.py": {
+        "LATE_STRENGTH_SAFE_TAGS",
+        "STRENGTH_MAINTENANCE_INTENT_TAGS",
+        "STRENGTH_MAINTENANCE_MATCH_TAGS",
+        "PRIMER_ONLY_STRENGTH_TOUCH_TAGS",
+        "STRENGTH_MAINTENANCE_SUPPORT_TAGS",
+        "LATE_SAFE_STRENGTH_FIELDS",
+    },
+    "strength_session_quality.py": {
+        "_LOWER_BODY_JUMP_TAGS",
+        "_LOWER_BODY_HIP_BALLISTIC_TAGS",
+        "_ROTATIONAL_POWER_TAGS",
+        "_UPPER_BODY_BALLISTIC_TAGS",
+        "_CORE_BALANCE_SUPPORT_TAGS",
+    },
 }
 
+# Some runtime tag contracts are encoded as the first element of a tuple where
+# the remaining values are text-matching hints rather than tags.
+RUNTIME_FIRST_TUPLE_TAG_CONSTANTS: dict[str, set[str]] = {
+    "injury_filtering.py": {"MECH_KEYWORDS"},
+}
 
-def _is_tag_constant_name(name: str) -> bool:
-    upper = name.upper()
-    return (
-        upper == "TAGS"
-        or upper.endswith("_TAG")
-        or upper.endswith("_TAGS")
-        or "_TAG_" in upper
-    )
+RUNTIME_TAG_SOURCE_FILES = set(RUNTIME_BANK_TAG_CONSTANTS) | set(RUNTIME_FIRST_TUPLE_TAG_CONSTANTS)
+BANK_TAG_COLLECTION_NAMES = {
+    "tags",
+    "tags_lower",
+    "exercise_tags",
+    "item_tags",
+    "normalized_tags",
+}
 
 
 def _canonical(value: str) -> str:
@@ -102,11 +137,26 @@ def _mapping_tags(mapping: dict[str, list[str]]) -> set[str]:
     return tags
 
 
+def _phase_scoring_tags() -> set[str]:
+    tags: set[str] = set()
+    for values in PHASE_TAG_BOOST.values():
+        if not isinstance(values, dict):
+            continue
+        for value in values:
+            canonical = _canonical(value)
+            if canonical:
+                tags.add(canonical)
+    return tags
+
+
 def collect_scoring_tags() -> dict[str, set[str]]:
     return {
         "goal": _mapping_tags(GOAL_TAG_MAP),
         "weakness": _mapping_tags(WEAKNESS_TAG_MAP),
         "style": _mapping_tags(STYLE_TAG_MAP),
+        "clarification_detail": _mapping_tags(CLARIFICATION_DETAIL_TAG_MAP),
+        "clarification_generic": _mapping_tags(_GENERIC_OVERALL_BY_ENTRY_TAG),
+        "phase": _phase_scoring_tags(),
     }
 
 
@@ -116,25 +166,67 @@ def _literal_strings(node: ast.AST | None) -> set[str]:
     if isinstance(node, ast.Constant) and isinstance(node.value, str):
         return {node.value}
     values: set[str] = set()
-    for child in ast.iter_child_nodes(node):
-        values.update(_literal_strings(child))
+    if isinstance(node, (ast.Set, ast.List, ast.Tuple)):
+        for child in node.elts:
+            values.update(_literal_strings(child))
+    elif isinstance(node, ast.Call) and node.args:
+        # Support frozenset({...}) and set({...}) without recursively walking
+        # unrelated call arguments.
+        func_name = node.func.id if isinstance(node.func, ast.Name) else ""
+        if func_name in {"set", "frozenset", "list", "tuple"}:
+            values.update(_literal_strings(node.args[0]))
     return values
 
 
-def _expr_mentions_tags(node: ast.AST | None) -> bool:
+def _first_tuple_strings(node: ast.AST | None) -> set[str]:
+    if not isinstance(node, (ast.List, ast.Tuple)):
+        return set()
+    values: set[str] = set()
+    for child in node.elts:
+        if not isinstance(child, (ast.List, ast.Tuple)) or not child.elts:
+            continue
+        first = child.elts[0]
+        if isinstance(first, ast.Constant) and isinstance(first.value, str):
+            values.add(first.value)
+    return values
+
+
+def _call_name(node: ast.Call) -> str:
+    if isinstance(node.func, ast.Name):
+        return node.func.id
+    if isinstance(node.func, ast.Attribute):
+        return node.func.attr
+    return ""
+
+
+def _expr_is_tag_collection(node: ast.AST | None) -> bool:
     if node is None:
         return False
-    for child in ast.walk(node):
-        if isinstance(child, ast.Name) and "tag" in child.id.lower():
+    if isinstance(node, ast.Name):
+        return node.id in BANK_TAG_COLLECTION_NAMES
+    if isinstance(node, ast.Call):
+        name = _call_name(node)
+        if name == "normalize_tags":
             return True
-        if isinstance(child, ast.Attribute) and "tag" in child.attr.lower():
-            return True
+        if name == "get" and node.args:
+            first = node.args[0]
+            return isinstance(first, ast.Constant) and first.value == "tags"
+        if name in {"set", "list", "tuple", "frozenset"} and node.args:
+            return _expr_is_tag_collection(node.args[0])
     return False
 
 
 class RuntimeTagVisitor(ast.NodeVisitor):
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        allowed_constants: set[str],
+        first_tuple_constants: set[str],
+    ) -> None:
         self.tags: set[str] = set()
+        self.allowed_constants = allowed_constants
+        self.first_tuple_constants = first_tuple_constants
+        self.constant_values: dict[str, set[str]] = {}
 
     def _add(self, values: Iterable[str]) -> None:
         for value in values:
@@ -142,65 +234,84 @@ class RuntimeTagVisitor(ast.NodeVisitor):
             if canonical:
                 self.tags.add(canonical)
 
+    def _values_for_expr(self, node: ast.AST | None) -> set[str]:
+        if isinstance(node, ast.Name) and node.id in self.constant_values:
+            return set(self.constant_values[node.id])
+        return _literal_strings(node)
+
     def visit_Assign(self, node: ast.Assign) -> None:
-        names = [
-            target.id
-            for target in node.targets
-            if isinstance(target, ast.Name)
-        ]
-        if any(_is_tag_constant_name(name) for name in names):
-            self._add(_literal_strings(node.value))
+        names = [target.id for target in node.targets if isinstance(target, ast.Name)]
+        for name in names:
+            if name in self.allowed_constants:
+                values = _literal_strings(node.value)
+                self.constant_values[name] = values
+                self._add(values)
+            elif name in self.first_tuple_constants:
+                values = _first_tuple_strings(node.value)
+                self.constant_values[name] = values
+                self._add(values)
         self.generic_visit(node)
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
-        if isinstance(node.target, ast.Name) and _is_tag_constant_name(node.target.id):
-            self._add(_literal_strings(node.value))
+        if isinstance(node.target, ast.Name):
+            name = node.target.id
+            if name in self.allowed_constants:
+                values = _literal_strings(node.value)
+                self.constant_values[name] = values
+                self._add(values)
+            elif name in self.first_tuple_constants:
+                values = _first_tuple_strings(node.value)
+                self.constant_values[name] = values
+                self._add(values)
         self.generic_visit(node)
 
     def visit_Compare(self, node: ast.Compare) -> None:
         left = node.left
-        comparators = node.comparators
-        for op, right in zip(node.ops, comparators):
+        for op, right in zip(node.ops, node.comparators):
             if isinstance(op, (ast.In, ast.NotIn)):
-                if _expr_mentions_tags(right):
-                    self._add(_literal_strings(left))
-                if _expr_mentions_tags(left):
-                    self._add(_literal_strings(right))
+                if _expr_is_tag_collection(right):
+                    self._add(self._values_for_expr(left))
+                if _expr_is_tag_collection(left):
+                    self._add(self._values_for_expr(right))
             left = right
         self.generic_visit(node)
 
     def visit_BinOp(self, node: ast.BinOp) -> None:
         if isinstance(node.op, (ast.BitAnd, ast.BitOr)):
-            if _expr_mentions_tags(node.left):
-                self._add(_literal_strings(node.right))
-            if _expr_mentions_tags(node.right):
-                self._add(_literal_strings(node.left))
+            if _expr_is_tag_collection(node.left):
+                self._add(self._values_for_expr(node.right))
+            if _expr_is_tag_collection(node.right):
+                self._add(self._values_for_expr(node.left))
         self.generic_visit(node)
 
     def visit_Call(self, node: ast.Call) -> None:
         if (
             isinstance(node.func, ast.Attribute)
             and node.func.attr in {"intersection", "issubset", "isdisjoint"}
-            and _expr_mentions_tags(node.func.value)
+            and _expr_is_tag_collection(node.func.value)
         ):
             for arg in node.args:
-                self._add(_literal_strings(arg))
+                self._add(self._values_for_expr(arg))
         self.generic_visit(node)
 
 
 def collect_runtime_control_tags(source_dir: Path = FIGHTCAMP_DIR) -> dict[str, set[str]]:
     tags_by_file: dict[str, set[str]] = {}
-    for path in sorted(source_dir.glob("*.py")):
-        if path.name in SKIP_RUNTIME_SCAN:
+    for filename in sorted(RUNTIME_TAG_SOURCE_FILES):
+        path = source_dir / filename
+        if not path.exists():
             continue
         try:
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         except SyntaxError:
             continue
-        visitor = RuntimeTagVisitor()
+        visitor = RuntimeTagVisitor(
+            allowed_constants=RUNTIME_BANK_TAG_CONSTANTS.get(filename, set()),
+            first_tuple_constants=RUNTIME_FIRST_TUPLE_TAG_CONSTANTS.get(filename, set()),
+        )
         visitor.visit(tree)
         if visitor.tags:
-            tags_by_file[path.name] = visitor.tags
+            tags_by_file[filename] = visitor.tags
     return tags_by_file
 
 
@@ -239,29 +350,22 @@ def audit_registry(data_dir: Path = DATA_DIR) -> dict[str, Any]:
     scoring_missing_vocab = sorted(scoring_tags - canonical_vocab)
     runtime_missing_vocab = sorted(runtime_tags - canonical_vocab)
     bank_missing_vocab = sorted(bank_tags - canonical_vocab)
-    code_owned_missing = sorted(
-        (scoring_tags | runtime_tags) - canonical_vocab
-    )
-    unknown_bank_only = sorted(
-        (bank_tags - canonical_vocab) - scoring_tags - runtime_tags
-    )
+    code_owned_missing = sorted((scoring_tags | runtime_tags) - canonical_vocab)
+    unknown_bank_only = sorted((bank_tags - canonical_vocab) - scoring_tags - runtime_tags)
     scoring_zero_bank_coverage = sorted(scoring_tags - bank_tags)
+    runtime_zero_bank_coverage = sorted(runtime_tags - bank_tags)
     vocab_unused = sorted(canonical_vocab - bank_tags - scoring_tags - runtime_tags)
 
     runtime_files_by_tag: dict[str, list[str]] = {}
     for tag in sorted(runtime_tags):
         runtime_files_by_tag[tag] = sorted(
-            filename
-            for filename, tags in runtime_by_file.items()
-            if tag in tags
+            filename for filename, tags in runtime_by_file.items() if tag in tags
         )
 
     scoring_sources_by_tag: dict[str, list[str]] = {}
     for tag in sorted(scoring_tags):
         scoring_sources_by_tag[tag] = [
-            source
-            for source, tags in scoring_by_source.items()
-            if tag in tags
+            source for source, tags in scoring_by_source.items() if tag in tags
         ]
 
     bank_tag_details = {
@@ -281,9 +385,7 @@ def audit_registry(data_dir: Path = DATA_DIR) -> dict[str, Any]:
                 "bank_occurrences": int(bank["canonical_counts"].get(tag, 0)),
                 "banks": sorted(bank["files_by_tag"].get(tag, set())),
                 "in_vocabulary": tag in canonical_vocab,
-                "goal": tag in scoring_by_source["goal"],
-                "weakness": tag in scoring_by_source["weakness"],
-                "style": tag in scoring_by_source["style"],
+                "sources": scoring_sources_by_tag[tag],
             }
         )
 
@@ -303,6 +405,7 @@ def audit_registry(data_dir: Path = DATA_DIR) -> dict[str, Any]:
         "code_owned_missing": code_owned_missing,
         "unknown_bank_only": unknown_bank_only,
         "scoring_zero_bank_coverage": scoring_zero_bank_coverage,
+        "runtime_zero_bank_coverage": runtime_zero_bank_coverage,
         "vocab_unused": vocab_unused,
         "coverage": coverage,
         "bank_tag_details": bank_tag_details,
@@ -411,15 +514,17 @@ def print_report(report: dict[str, Any], *, emit=print) -> None:
         report=report,
         emit=emit,
     )
+    _emit_tag_details(
+        "Runtime control tags with zero bank coverage",
+        report["runtime_zero_bank_coverage"],
+        report=report,
+        emit=emit,
+    )
     _emit_list("Vocabulary tags unused by banks/scoring/runtime", report["vocab_unused"], emit=emit)
 
     emit("\nSCORING COVERAGE")
     for row in report["coverage"]:
-        sources = ",".join(
-            source
-            for source in ("goal", "weakness", "style")
-            if row[source]
-        )
+        sources = ",".join(row["sources"]) or "-"
         banks = ",".join(row["banks"]) or "-"
         emit(
             f"  - {row['tag']}: occurrences={row['bank_occurrences']} "
