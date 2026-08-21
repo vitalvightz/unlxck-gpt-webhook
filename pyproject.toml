@@ -17,3 +17,8 @@ extend-exclude = [
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F"]
+
+[tool.ruff.lint.per-file-ignores]
+# Existing selector-rebalance fixtures intentionally retain legacy style-bank
+# payloads that are not read by the current assertions. Keep lint strict elsewhere.
+"tests/test_late_camp_selector_rebalance.py" = ["F841"]

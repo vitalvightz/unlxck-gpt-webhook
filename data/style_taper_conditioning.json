@@ -1,4200 +1,983 @@
 [
   {
-    "name": "Counter-Striker Snap Hops",
+    "name": "Pocket Burst-Reset",
+    "description": "Two to three crisp close-range strikes followed immediately by guard and stance restoration.",
+    "equipment": [
+      "focus_mitts"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "style sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "brawler",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "tactical",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "touch",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ]
+  },
+  {
+    "name": "Pocket Rhythm Shadow",
+    "description": "Rehearse two or three compact pocket actions in shadow, restore guard, then settle with no impact or sustained flurry.",
     "equipment": [
       "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
-    "system": "ATP-PCr",
-    "modality": "reactive timing",
-    "duration": "4x3 ankle hops (quick ground contact)",
-    "intensity": "zone 2",
+    "system": "aerobic",
+    "modality": "pocket rhythm rehearsal",
+    "duration": "3x10s with 60s rest",
+    "intensity": "easy technical rhythm",
     "tags": [
       "boxing",
+      "kickboxing",
+      "muay_thai",
       "mma",
-      "counter_striker",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_ballistic",
-      "mech_systemic_fatigue"
+      "brawler",
+      "sharpness",
+      "skill_refinement",
+      "zero_impact",
+      "coordination",
+      "tactical",
+      "mech_trunk_rotation"
     ],
-    "notes": "Trains quick reset after defensive moves (50% effort)",
-    "equipment_note": "Mat or grass surface",
-    "work_sec": 3,
-    "rounds": 4,
-    "total_minutes": 0.2,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
     "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_upper_press"
+      "mech_trunk_rotation"
     ],
-    "rpe": 4
+    "work_sec": 10,
+    "rest_sec": 60,
+    "rounds": 3,
+    "total_minutes": 3.5,
+    "rpe_max": 3,
+    "impact_cost": "none",
+    "movement_cost": "low",
+    "lactate_load": "none",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "relaxed",
+    "contact_level": "none",
+    "late_windows": [
+      "d4_to_d2",
+      "d1"
+    ]
   },
   {
-    "name": "Clinch Frame Throws",
+    "name": "Pressure Lane Shadow",
+    "description": "Smooth ring or cage cutting against visualised exits with no sustained flurry.",
     "equipment": [
-      "med_ball"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
-    "system": "ATP-PCr",
-    "modality": "upper-body explosiveness",
-    "duration": "5x med ball chest throws (6lb)",
-    "intensity": "zone 2",
+    "system": "aerobic",
+    "modality": "pressure movement rehearsal",
+    "duration": "3x20s with 60s rest",
+    "intensity": "easy technical rhythm",
     "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "pressure_fighter",
+      "footwork",
+      "skill_refinement",
+      "coordination",
+      "zero_impact",
+      "tactical",
+      "mech_change_of_direction"
+    ],
+    "mechanical_risk_tags": [
+      "mech_change_of_direction"
+    ],
+    "work_sec": 20,
+    "rest_sec": 60,
+    "rounds": 3,
+    "total_minutes": 4.0,
+    "rpe_max": 3,
+    "impact_cost": "none",
+    "movement_cost": "low",
+    "lactate_load": "none",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "relaxed",
+    "contact_level": "none",
+    "late_windows": [
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2",
+      "d1"
+    ]
+  },
+  {
+    "name": "Cover-Return-Exit",
+    "description": "Read a light cue, cover or parry, return briefly, then exit cleanly.",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "defence-return sharpness",
+    "duration": "3x5s with 120s rest",
+    "intensity": "technical crisp",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "counter_striker",
+      "reaction",
+      "sharpness",
+      "skill_refinement",
+      "tactical",
+      "mech_trunk_rotation",
+      "mech_deceleration"
+    ],
+    "mechanical_risk_tags": [
+      "mech_trunk_rotation",
+      "mech_deceleration"
+    ],
+    "work_sec": 5,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 4,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "touch",
+    "late_windows": [
+      "d7",
+      "d6_to_d5"
+    ]
+  },
+  {
+    "name": "Visual Counter Shadow",
+    "description": "Coach gives a visual cue; rehearse the response without impact, then settle.",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "visual counter rehearsal",
+    "duration": "3x12s with 60s rest",
+    "intensity": "easy technical rhythm",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "counter_striker",
+      "visual_processing",
+      "reaction",
+      "skill_refinement",
+      "zero_impact",
+      "coordination",
+      "mech_trunk_rotation"
+    ],
+    "mechanical_risk_tags": [
+      "mech_trunk_rotation"
+    ],
+    "work_sec": 12,
+    "rest_sec": 60,
+    "rounds": 3,
+    "total_minutes": 3.6,
+    "rpe_max": 3,
+    "impact_cost": "none",
+    "movement_cost": "low",
+    "lactate_load": "none",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "relaxed",
+    "contact_level": "none",
+    "late_windows": [
+      "d6_to_d5",
+      "d4_to_d2",
+      "d1"
+    ]
+  },
+  {
+    "name": "Range Gate-Score-Exit",
+    "description": "Enter only on the range cue, score once, then immediately restore preferred distance.",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "range timing sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "competition rhythm",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "distance_striker",
+      "footwork",
+      "tactical",
+      "sharpness",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_change_of_direction"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_change_of_direction"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 4,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "competition_rhythm",
+    "contact_level": "touch",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ]
+  },
+  {
+    "name": "Long-Range Rhythm Shadow",
+    "description": "Quiet stance and range rhythm with occasional single intercepts and no bouncing contest.",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "range rhythm rehearsal",
+    "duration": "3x20s with 60s rest",
+    "intensity": "easy technical rhythm",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "distance_striker",
+      "footwork",
+      "skill_refinement",
+      "zero_impact",
+      "coordination"
+    ],
+    "mechanical_risk_tags": [],
+    "work_sec": 20,
+    "rest_sec": 60,
+    "rounds": 3,
+    "total_minutes": 4.0,
+    "rpe_max": 3,
+    "impact_cost": "none",
+    "movement_cost": "low",
+    "lactate_load": "none",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "relaxed",
+    "contact_level": "none",
+    "late_windows": [
+      "d6_to_d5",
+      "d4_to_d2",
+      "d1"
+    ]
+  },
+  {
+    "name": "Single-Kick Recoil Primer",
+    "description": "Deliver one crisp kick to a light pad and restore stance immediately without combination volume.",
+    "equipment": [
+      "thai_pad"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "kick recoil sharpness",
+    "duration": "3x4s with 120s rest",
+    "intensity": "fast crisp",
+    "tags": [
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "kicker",
+      "sharpness",
+      "low_volume",
+      "mech_trunk_rotation",
+      "mech_lower_hip_hinge",
+      "mech_deceleration"
+    ],
+    "mechanical_risk_tags": [
+      "mech_trunk_rotation",
+      "mech_lower_hip_hinge",
+      "mech_deceleration"
+    ],
+    "work_sec": 4,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.2,
+    "rpe_max": 4,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "touch",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ]
+  },
+  {
+    "name": "Kick Timing Shadow Cue",
+    "description": "Respond to a visual cue with one unloaded kick motion, then return to a quiet stance.",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "kick timing rehearsal",
+    "duration": "3x10s with 60s rest",
+    "intensity": "easy technical rhythm",
+    "tags": [
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "kicker",
+      "visual_processing",
+      "reaction",
+      "skill_refinement",
+      "zero_impact",
+      "mech_trunk_rotation"
+    ],
+    "mechanical_risk_tags": [
+      "mech_trunk_rotation"
+    ],
+    "work_sec": 10,
+    "rest_sec": 60,
+    "rounds": 3,
+    "total_minutes": 3.5,
+    "rpe_max": 3,
+    "impact_cost": "none",
+    "movement_cost": "low",
+    "lactate_load": "none",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "relaxed",
+    "contact_level": "none",
+    "late_windows": [
+      "d6_to_d5",
+      "d4_to_d2",
+      "d1"
+    ]
+  },
+  {
+    "name": "Pummel-Frame-Exit Flow",
+    "description": "Co-operative pummel to frame and clean exit with no sustained clinch battle.",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "clinch position sharpness",
+    "duration": "2x6s with 120s rest",
+    "intensity": "technical crisp",
+    "tags": [
+      "kickboxing",
       "muay_thai",
       "mma",
       "clinch_fighter",
-      "mech_grip_intensive",
-      "mech_trunk_stability",
-      "mech_ballistic",
+      "clinch",
+      "skill_refinement",
+      "tactical",
+      "sharpness",
       "mech_grip_support",
-      "mech_lower_hip_hinge"
+      "mech_trunk_stability",
+      "mech_upper_pull",
+      "mech_upper_press"
     ],
-    "notes": "Simulates framing explosiveness in clinch (60% power)",
-    "equipment_note": "Wall target at chest height",
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
     "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_grip_intensive",
       "mech_grip_support",
-      "mech_lower_hip_hinge",
-      "mech_trunk_stability"
-    ],
-    "rpe": 8
-  },
-  {
-    "name": "Scrambler Lateral Bound",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "ATP-PCr",
-    "modality": "hip switch power",
-    "duration": "3x5 lateral bounds (sub-max distance)",
-    "intensity": "zone 2",
-    "tags": [
-      "wrestler",
-      "mma",
-      "scrambler",
-      "mech_lower_hip_hinge",
       "mech_trunk_stability",
-      "mech_reactive",
-      "mech_ballistic",
-      "mech_landing_impact"
-    ],
-    "notes": "Mimics shot recovery movements (50% effort)",
-    "equipment_note": "Mark landing zones 3ft apart",
-    "work_sec": 5,
-    "rounds": 3,
-    "total_minutes": 0.25,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_reactive",
-      "mech_trunk_stability"
-    ],
-    "rpe": 8
-  },
-  {
-    "name": "Kicker Step-Bounce",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "ATP-PCr",
-    "modality": "leg recoil",
-    "duration": "4x3 step-back bounces (off lead leg)",
-    "intensity": "low",
-    "tags": [
-      "kickboxing",
-      "kicker",
-      "mma",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "high_impact_lower",
-      "mech_lower_lunge"
-    ],
-    "notes": "Primes teep/kick retraction speed (40% effort)",
-    "equipment_note": "Flat surface only",
-    "work_sec": 3,
-    "rounds": 4,
-    "total_minutes": 0.2,
-    "rpe": 5,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_lower_jump",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_trunk_rotation"
-    ]
-  },
-  {
-    "name": "Pressure Fighter Box Drive",
-    "equipment": [
-      "plyo_box"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "3x4 box step-ups (explosive drive)",
-    "intensity": "zone 2",
-    "tags": [
-      "boxing",
-      "mma",
-      "kickboxing",
-      "muay thai",
-      "pressure_fighter",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_ballistic",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge"
-    ],
-    "notes": "Develops forward knee drive for cutting off ring (50% height)",
-    "equipment_note": "12\" box height",
-    "system": "ATP-PCr",
-    "work_sec": 4,
-    "rounds": 3,
-    "total_minutes": 0.2,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_trunk_rotation",
+      "mech_upper_pull",
       "mech_upper_press"
     ],
-    "rpe": 8
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.2,
+    "rpe_max": 4,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ]
   },
   {
-    "name": "Submission Hunter Hip Pop",
+    "name": "Clinch Frame-Exit Shadow",
+    "description": "Rehearse posture, frame placement and exit footwork against an imagined clinch without partner contact.",
     "equipment": [
       "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
-    "duration": "3x5 seated hip pops (from guard)",
-    "intensity": "low",
-    "tags": [
-      "grappler",
-      "mma",
-      "submission_hunter",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_grip_intensive",
-      "mech_trunk_stability",
-      "mech_ballistic"
-    ],
-    "notes": "Trains explosive hip elevation for subs (Light explosiveness)",
-    "equipment_note": "Mat surface required",
-    "system": "ATP-PCr",
-    "work_sec": 5,
-    "rounds": 3,
-    "total_minutes": 0.25,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_grip_intensive",
-      "mech_landing_impact",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Hybrid Stance Switch",
-    "equipment": [
-      "agility_ladder"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "4x3 stance switches (with arm swing)",
-    "intensity": "zone 2",
-    "tags": [
-      "mma",
-      "boxing",
-      "muay thai",
-      "kickboxing",
-      "hybrid",
-      "mech_reactive",
-      "mech_change_of_direction",
-      "mech_trunk_stability"
-    ],
-    "notes": "Sharpens stance transition reflexes (60% speed)",
-    "equipment_note": "Ladder optional",
-    "system": "ATP-PCr",
-    "work_sec": 3,
-    "rounds": 4,
-    "total_minutes": 0.2,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_change_of_direction",
-      "mech_reactive",
-      "mech_trunk_stability"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Brawler Overhand Pop",
-    "equipment": [
-      "med_ball"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "5x3 med ball slams (8lb)",
-    "intensity": "moderate",
-    "tags": [
-      "boxing",
-      "brawler",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_ballistic"
-    ],
-    "notes": "Mimics overhand right mechanics (70% power)",
-    "equipment_note": "Concrete wall target",
-    "system": "ATP-PCr",
-    "work_sec": 3,
-    "rounds": 5,
-    "total_minutes": 0.25,
-    "rpe": 7,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Distance Striker Skip-Back",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "4x3 backward skips (quick toe-off)",
-    "intensity": "zone 2",
+    "system": "aerobic",
+    "modality": "solo clinch position rehearsal",
+    "duration": "3x12s with 60s rest",
+    "intensity": "easy technical rhythm",
     "tags": [
       "kickboxing",
-      "mma",
-      "boxing",
-      "distance_striker",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_lower_lunge",
-      "mech_trunk_stability"
-    ],
-    "notes": "Trains defensive footwork elasticity (50% effort)",
-    "equipment_note": "Grass/turf preferred",
-    "system": "ATP-PCr",
-    "work_sec": 3,
-    "rounds": 4,
-    "total_minutes": 0.2,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_jump",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ],
-    "rpe": 6
-  },
-  {
-    "name": "Grappler Takedown Pop",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "3x4 level-change jumps",
-    "intensity": "low",
-    "tags": [
-      "wrestler",
-      "grappler",
-      "mma",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_grip_intensive",
-      "mech_trunk_stability",
-      "mech_ballistic"
-    ],
-    "notes": "Primes shot explosiveness (40% explosion)",
-    "equipment_note": "Knee sleeves optional",
-    "system": "ATP-PCr",
-    "work_sec": 4,
-    "rounds": 3,
-    "total_minutes": 0.2,
-    "rpe": 5,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_grip_intensive",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_lower_jump",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "MMA Cage Push-Off",
-    "equipment": [
-      "wall"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "3x5 wall push jumps (single leg)",
-    "intensity": "zone 2",
-    "tags": [
-      "mma",
-      "scrambler",
-      "mech_reactive",
-      "mech_trunk_stability",
-      "mech_cns_high",
-      "mech_landing_impact"
-    ],
-    "notes": "Simulates cage scramble rebounds (50% power)",
-    "equipment_note": "Padded wall ideal",
-    "system": "ATP-PCr",
-    "work_sec": 5,
-    "rounds": 3,
-    "total_minutes": 0.25,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_reactive",
-      "mech_trunk_stability"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Muay Thai Knee Skip",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "4x3 skipping knee drives",
-    "intensity": "low",
-    "tags": [
       "muay_thai",
+      "mma",
       "clinch_fighter",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_grip_support"
+      "clinch",
+      "skill_refinement",
+      "zero_impact",
+      "coordination",
+      "tactical",
+      "mech_trunk_stability"
     ],
-    "notes": "Maintains clinch knee timing (30% power)",
-    "equipment_note": "Focus on rhythm",
-    "system": "ATP-PCr",
-    "work_sec": 3,
-    "rounds": 4,
-    "total_minutes": 0.2,
-    "rpe": 5,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
     "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_grip_support",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_trunk_rotation"
+      "mech_trunk_stability"
+    ],
+    "work_sec": 12,
+    "rest_sec": 60,
+    "rounds": 3,
+    "total_minutes": 3.6,
+    "rpe_max": 3,
+    "impact_cost": "none",
+    "movement_cost": "low",
+    "lactate_load": "none",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "relaxed",
+    "contact_level": "none",
+    "late_windows": [
+      "d4_to_d2",
+      "d1"
     ]
   },
   {
-    "name": "Counter Striker Slip-Jump",
+    "name": "Position-Attack Entry-Release",
+    "description": "Enter the preferred submission configuration, establish mechanics briefly, release before maximal squeeze, then reset.",
     "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "3x4 slip-to-vertical jumps",
-    "intensity": "zone 2",
-    "tags": [
-      "boxing",
-      "mma",
-      "counter_striker",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_ballistic"
-    ],
-    "notes": "Links head movement to counter explosiveness (50% height)",
-    "equipment_note": "Soft surface",
-    "system": "ATP-PCr",
-    "work_sec": 4,
-    "rounds": 3,
-    "total_minutes": 0.2,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ],
-    "rpe": 8
-  },
-  {
-    "name": "Pressure Fighter Stomp",
-    "equipment": [
-      "tire"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "3x5 tire stomps (alternating)",
-    "intensity": "zone 2",
-    "tags": [
-      "mma",
-      "pressure_fighter",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_reactive"
-    ],
-    "notes": "Develops forward pressure mechanics (60% power)",
-    "equipment_note": "300lb tire",
-    "system": "ATP-PCr",
-    "work_sec": 5,
-    "rounds": 3,
-    "total_minutes": 0.25,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_reactive",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Kicker Switch Hop",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "4x3 stance-switch hops",
-    "intensity": "low",
-    "tags": [
-      "muay_thai",
-      "mma",
-      "kicker",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_lower_lunge",
-      "mech_trunk_stability"
-    ],
-    "notes": "Trains kick setup footwork (40% effort)",
-    "equipment_note": "Mark stance width",
-    "system": "ATP-PCr",
-    "work_sec": 3,
-    "rounds": 4,
-    "total_minutes": 0.2,
-    "rpe": 5,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_lower_jump",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_trunk_rotation",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Submission Hunter Bridge Pop",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "3x3 bridge-to-hip lifts",
-    "intensity": "low",
-    "tags": [
-      "grappler",
-      "mma",
-      "submission_hunter",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_trunk_stability",
-      "mech_grip_intensive",
-      "mech_ballistic"
-    ],
-    "notes": "Maintains explosive bridging for subs (Light explosiveness)",
-    "equipment_note": "Mat required",
-    "system": "ATP-PCr",
-    "work_sec": 3,
-    "rounds": 3,
-    "total_minutes": 0.15,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_grip_intensive",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Hybrid Sprawl-Jump",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "3x4 sprawl-to-vertical jumps",
-    "intensity": "zone 2",
-    "tags": [
-      "mma",
-      "distance_fighter",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "high_impact_lower",
-      "mech_ballistic"
-    ],
-    "notes": "Links TDD to stand-up explosiveness (50% height)",
-    "equipment_note": "Grass/turf",
-    "system": "ATP-PCr",
-    "work_sec": 4,
-    "rounds": 3,
-    "total_minutes": 0.2,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_lower_jump",
-      "mech_lower_lunge",
-      "mech_reactive"
-    ],
-    "rpe": 8
-  },
-  {
-    "name": "Brawler Body Shot Throw",
-    "equipment": [
-      "med_ball"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "5x3 rotational med ball throws",
-    "intensity": "zone 2",
-    "tags": [
-      "boxing",
-      "brawler",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_ballistic",
-      "mech_cns_high"
-    ],
-    "notes": "Mimics hook/uppercut chain explosiveness (60% power)",
-    "equipment_note": "10lb ball",
-    "system": "ATP-PCr",
-    "work_sec": 3,
-    "rounds": 5,
-    "total_minutes": 0.25,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ],
-    "rpe": 8
-  },
-  {
-    "name": "Distance Striker Teep Pop",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "4x3 lead-leg drive pops",
-    "intensity": "low",
-    "tags": [
-      "muay_thai",
-      "kicker",
-      "mma",
-      "distance_striker",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_upper_press",
-      "mech_ballistic",
-      "mech_trunk_stability"
-    ],
-    "notes": "Primes teep retraction speed (40% effort)",
-    "equipment_note": "Wall for balance",
-    "system": "ATP-PCr",
-    "work_sec": 3,
-    "rounds": 4,
-    "total_minutes": 0.2,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Grappler Granby Roll",
-    "equipment": [
+      "partner",
       "mat"
     ],
     "phases": [
       "TAPER"
     ],
-    "duration": "3x3 Granby pop-ups",
-    "intensity": "low",
+    "system": "alactic",
+    "modality": "submission entry sharpness",
+    "duration": "2x6s with 120s rest",
+    "intensity": "technical crisp",
     "tags": [
-      "wrestler",
+      "bjj",
       "mma",
-      "grappler",
-      "mech_reactive",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_lower_hip_hinge",
-      "mech_trunk_stability",
-      "mech_grip_intensive",
-      "mech_ballistic"
-    ],
-    "notes": "Sharpens rolling explosiveness (Light explosiveness)",
-    "equipment_note": "BJJ mat",
-    "system": "ATP-PCr",
-    "work_sec": 3,
-    "rounds": 3,
-    "total_minutes": 0.15,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_grip_intensive",
-      "mech_lower_hip_hinge",
-      "mech_reactive",
-      "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "MMA Sprawl-Bounce",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "3x5 sprawl-to-forward jumps",
-    "intensity": "zone 2",
-    "tags": [
-      "mma",
-      "scrambler",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "high_impact_lower",
-      "mech_trunk_stability"
-    ],
-    "notes": "Trains shot defense to re-engagement (50% distance)",
-    "equipment_note": "Mark 3ft jump target",
-    "system": "ATP-PCr",
-    "work_sec": 5,
-    "rounds": 3,
-    "total_minutes": 0.25,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_lower_jump",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_trunk_stability"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Muay Thai Clinch Pop",
-    "equipment": [
-      "partner"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "3x4 pummel-to-frame jumps",
-    "intensity": "low",
-    "tags": [
-      "muay_thai",
-      "clinch_fighter",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_grip_intensive",
-      "mech_trunk_stability",
-      "mech_ballistic",
-      "mech_grip_support"
-    ],
-    "notes": "Maintains clinch posture explosiveness (30% power)",
-    "equipment_note": "Light contact only",
-    "system": "ATP-PCr",
-    "work_sec": 4,
-    "rounds": 3,
-    "total_minutes": 0.2,
-    "rpe": 5,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_grip_intensive",
-      "mech_grip_support",
-      "mech_landing_impact",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Counter Striker Pull-Jump",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "4x3 pull-counter to jump",
-    "intensity": "zone 2",
-    "tags": [
-      "boxing",
-      "counter_striker",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_upper_press",
-      "mech_trunk_rotation"
-    ],
-    "notes": "Links defensive pulls to counter bursts (50% height)",
-    "equipment_note": "Mirror for form",
-    "system": "ATP-PCr",
-    "work_sec": 3,
-    "rounds": 4,
-    "total_minutes": 0.2,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Pressure Fighter Cutoff Hop",
-    "equipment": [
-      "agility_ladder"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "3x5 lateral cutoff hops",
-    "intensity": "zone 2",
-    "tags": [
-      "boxing",
-      "pressure_fighter",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_lower_lunge"
-    ],
-    "notes": "Trains angle-cutting footwork (50% effort)",
-    "equipment_note": "Ladder optional",
-    "system": "ATP-PCr",
-    "work_sec": 5,
-    "rounds": 3,
-    "total_minutes": 0.25,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_jump",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ],
-    "rpe": 6
-  },
-  {
-    "name": "Kicker Switch-Kick Pop",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "4x3 switch-kick footwork pops",
-    "intensity": "low",
-    "tags": [
-      "kickboxing",
-      "mma",
-      "kicker",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_lower_lunge"
-    ],
-    "notes": "Primes southpaw-orthodox kick transitions (40% effort)",
-    "equipment_note": "Wall support",
-    "system": "ATP-PCr",
-    "work_sec": 3,
-    "rounds": 4,
-    "total_minutes": 0.2,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_lower_jump",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_trunk_rotation"
-    ]
-  },
-  {
-    "name": "Submission Hunter Sit-Out Jump",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "3x4 sit-out to stand jumps",
-    "intensity": "low",
-    "tags": [
-      "grappler",
-      "mma",
-      "submission_hunter",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_trunk_stability",
-      "mech_grip_intensive",
-      "mech_ballistic"
-    ],
-    "notes": "Maintains explosive stand-ups (Light explosiveness)",
-    "equipment_note": "Mat required",
-    "system": "ATP-PCr",
-    "work_sec": 4,
-    "rounds": 3,
-    "total_minutes": 0.2,
-    "rpe": 5,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_grip_intensive",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Hybrid Takedown Hop",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "3x5 shot-entry hops",
-    "intensity": "zone 2",
-    "tags": [
-      "mma",
-      "wrestler",
-      "grappler",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_trunk_stability"
-    ],
-    "notes": "Sharpens level-change timing (50% distance)",
-    "equipment_note": "Mark 3ft target",
-    "system": "ATP-PCr",
-    "work_sec": 5,
-    "rounds": 3,
-    "total_minutes": 0.25,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_lower_jump",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_trunk_stability"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Brawler Body Roll",
-    "equipment": [
-      "med_ball"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "5x3 med ball body drops",
-    "intensity": "zone 2",
-    "tags": [
-      "boxing",
-      "mma",
-      "brawler",
-      "mech_reactive",
-      "mech_upper_press",
-      "mech_trunk_rotation"
-    ],
-    "notes": "Mimics body shot absorption/recovery (60% power)",
-    "equipment_note": "20lb ball to floor",
-    "system": "ATP-PCr",
-    "work_sec": 3,
-    "rounds": 5,
-    "total_minutes": 0.25,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_reactive",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Distance Striker Skip-In",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "4x3 forward skips (quick plant)",
-    "intensity": "zone 2",
-    "tags": [
-      "kickboxing",
-      "distance_striker",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_trunk_stability"
-    ],
-    "notes": "Trains blitz entry elasticity (50% effort)",
-    "equipment_note": "Even surface",
-    "system": "ATP-PCr",
-    "work_sec": 3,
-    "rounds": 4,
-    "total_minutes": 0.2,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Grappler Hip Heist Jump",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "3x4 hip heist pops",
-    "intensity": "low",
-    "tags": [
-      "wrestler",
-      "mma",
-      "grappler",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_trunk_stability",
-      "mech_grip_intensive",
-      "mech_ballistic"
-    ],
-    "notes": "Maintains mat return explosiveness (Light explosiveness)",
-    "equipment_note": "Mat required",
-    "system": "ATP-PCr",
-    "work_sec": 4,
-    "rounds": 3,
-    "total_minutes": 0.2,
-    "rpe": 5,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_grip_intensive",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "MMA Spin-Jump",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "3x3 spin-to-jump transitions",
-    "intensity": "low",
-    "tags": [
-      "mma",
-      "scrambler",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_trunk_rotation",
-      "mech_change_of_direction"
-    ],
-    "notes": "Trains cage scramble reorientation (40% power)",
-    "equipment_note": "Open space",
-    "system": "ATP-PCr",
-    "work_sec": 3,
-    "rounds": 3,
-    "total_minutes": 0.15,
-    "rpe": 5,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_change_of_direction",
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_trunk_rotation"
-    ]
-  },
-  {
-    "name": "Muay Thai Long Guard Pop",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "4x3 long guard advance hops",
-    "intensity": "low",
-    "tags": [
-      "muay_thai",
-      "distance_striker",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_upper_press",
-      "mech_trunk_stability",
-      "mech_lower_lunge"
-    ],
-    "notes": "Maintains teep-ready footwork (30% effort)",
-    "equipment_note": "Wall for balance",
-    "system": "ATP-PCr",
-    "work_sec": 3,
-    "rounds": 4,
-    "total_minutes": 0.2,
-    "rpe": 5,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_jump",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Counter Striker Check-Hop",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "4x3 check hook to jump",
-    "intensity": "zone 2",
-    "tags": [
-      "boxing",
-      "counter_striker",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_upper_press",
-      "mech_trunk_rotation"
-    ],
-    "notes": "Links pull counters to lateral movement (50% height)",
-    "equipment_note": "Mirror for form",
-    "system": "ATP-PCr",
-    "work_sec": 3,
-    "rounds": 4,
-    "total_minutes": 0.2,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Kicker Roundhouse Pop",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "4x3 pivot hops",
-    "intensity": "low",
-    "tags": [
-      "kickboxing",
-      "mma",
-      "kicker",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Maintains kick torque mechanics (40% effort)",
-    "equipment_note": "Wall support",
-    "system": "ATP-PCr",
-    "work_sec": 3,
-    "rounds": 4,
-    "total_minutes": 0.2,
-    "rpe": 5,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_lower_jump",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation"
-    ]
-  },
-  {
-    "name": "Submission Hunter Arm Drag Jump",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "3x4 arm drag to jump",
-    "intensity": "low",
-    "tags": [
-      "grappler",
-      "mma",
-      "submission_hunter",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_trunk_stability",
-      "mech_grip_intensive",
-      "mech_ballistic"
-    ],
-    "notes": "Sharpens explosive entries to subs (Light explosiveness)",
-    "equipment_note": "Mat required",
-    "system": "ATP-PCr",
-    "work_sec": 4,
-    "rounds": 3,
-    "total_minutes": 0.2,
-    "rpe": 5,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_grip_intensive",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Hybrid Sprawl-Spin",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "3x5 sprawl-to-spin jumps",
-    "intensity": "low",
-    "tags": [
-      "mma",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_trunk_rotation",
-      "mech_change_of_direction",
-      "mech_landing_impact"
-    ],
-    "notes": "Trains TDD to back-take transitions (40% rotation)",
-    "equipment_note": "Open space",
-    "system": "ATP-PCr",
-    "work_sec": 5,
-    "rounds": 3,
-    "total_minutes": 0.25,
-    "rpe": 5,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_change_of_direction",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_trunk_rotation"
-    ]
-  },
-  {
-    "name": "Brawler Rope Hop",
-    "equipment": [
-      "battle_ropes"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "3x5 rope waves to jump",
-    "intensity": "zone 2",
-    "tags": [
-      "boxing",
-      "brawler",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_ballistic"
-    ],
-    "notes": "Mimics flurry-to-reset explosiveness (50% power)",
-    "equipment_note": "1.5\" ropes",
-    "system": "ATP-PCr",
-    "work_sec": 5,
-    "rounds": 3,
-    "total_minutes": 0.25,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ],
-    "rpe": 8
-  },
-  {
-    "name": "Distance Striker Slide-Hop",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "4x3 lateral slide jumps",
-    "intensity": "zone 2",
-    "tags": [
-      "kickboxing",
-      "distance_striker",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_ballistic",
-      "mech_trunk_stability"
-    ],
-    "notes": "Maintains angle-cutting explosiveness (50% effort)",
-    "equipment_note": "Mark 3ft zones",
-    "system": "ATP-PCr",
-    "work_sec": 3,
-    "rounds": 4,
-    "total_minutes": 0.2,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ],
-    "rpe": 8
-  },
-  {
-    "name": "Grappler Knee Cut Pop",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "3x4 knee cut drives",
-    "intensity": "low",
-    "tags": [
-      "wrestler",
-      "mma",
-      "grappler",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_grip_intensive",
-      "mech_trunk_stability",
-      "mech_ballistic"
-    ],
-    "notes": "Sharpens guard pass entries (Light explosiveness)",
-    "equipment_note": "Mat required",
-    "system": "ATP-PCr",
-    "work_sec": 4,
-    "rounds": 3,
-    "total_minutes": 0.2,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_grip_intensive",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_trunk_rotation",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "MMA Cage Jump",
-    "equipment": [
-      "wall"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "3x5 wall push-off jumps",
-    "intensity": "zone 2",
-    "tags": [
-      "mma",
-      "scrambler",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_trunk_stability",
-      "mech_ballistic"
-    ],
-    "notes": "Trains cage rebound explosiveness (50% height)",
-    "equipment_note": "Padded wall",
-    "system": "ATP-PCr",
-    "work_sec": 5,
-    "rounds": 3,
-    "total_minutes": 0.25,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_trunk_stability"
-    ],
-    "rpe": 8
-  },
-  {
-    "name": "Muay Thai Skip-Knee",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "4x3 skip knee drives",
-    "intensity": "low",
-    "tags": [
-      "muay_thai",
-      "clinch_fighter",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_grip_support"
-    ],
-    "notes": "Maintains clinch knee timing (30% power)",
-    "equipment_note": "Focus on rhythm",
-    "system": "ATP-PCr",
-    "work_sec": 3,
-    "rounds": 4,
-    "total_minutes": 0.2,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_grip_support",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_trunk_rotation"
-    ]
-  },
-  {
-    "name": "Counter Striker Roll-Jump",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "4x3 shoulder roll to jump",
-    "intensity": "zone 2",
-    "tags": [
-      "boxing",
-      "counter_striker",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_shoulder_overhead"
-    ],
-    "notes": "Links defensive rolls to counters (50% height)",
-    "equipment_note": "Soft surface",
-    "system": "ATP-PCr",
-    "work_sec": 3,
-    "rounds": 4,
-    "total_minutes": 0.2,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_shoulder_overhead",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Pressure Fighter Stomp-Switch",
-    "equipment": [
-      "tire"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "3x5 stomp-to-stance switch",
-    "intensity": "zone 2",
-    "tags": [
-      "mma",
-      "pressure_fighter",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_reactive",
-      "mech_change_of_direction",
-      "mech_lower_lunge",
-      "mech_trunk_stability"
-    ],
-    "notes": "Trains pressure footwork transitions (50% speed)",
-    "equipment_note": "200lb tire",
-    "system": "ATP-PCr",
-    "work_sec": 5,
-    "rounds": 3,
-    "total_minutes": 0.25,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_change_of_direction",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ],
-    "rpe": 6
-  },
-  {
-    "name": "Kicker Switch-Teep Pop",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "4x3 stance-switch teep pops",
-    "intensity": "low",
-    "tags": [
-      "muay_thai",
-      "kicker",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_lower_lunge",
-      "mech_trunk_stability"
-    ],
-    "notes": "Maintains teep versatility (40% effort)",
-    "equipment_note": "Wall support",
-    "system": "ATP-PCr",
-    "work_sec": 3,
-    "rounds": 4,
-    "total_minutes": 0.2,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_lower_jump",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_trunk_rotation",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Submission Hunter Bridge-Jump",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "3x3 bridge to stand jumps",
-    "intensity": "low",
-    "tags": [
-      "grappler",
-      "mma",
-      "submission_hunter",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_trunk_stability",
-      "mech_grip_intensive",
-      "mech_ballistic"
-    ],
-    "notes": "Sharpens explosive stand-ups from guard (Light explosiveness)",
-    "equipment_note": "Mat required",
-    "system": "ATP-PCr",
-    "work_sec": 3,
-    "rounds": 3,
-    "total_minutes": 0.15,
-    "rpe": 5,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_grip_intensive",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_trunk_stability"
-    ]
-  },
-  {
-    "name": "Shot-Jump",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "duration": "3x5 shot to jump transitions",
-    "intensity": "zone 2",
-    "tags": [
-      "mma",
-      "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge"
-    ],
-    "notes": "Links takedowns to stand-up bursts (50% height)",
-    "equipment_note": "Mark 3ft target",
-    "system": "ATP-PCr",
-    "work_sec": 5,
-    "rounds": 3,
-    "total_minutes": 0.25,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_lower_jump",
-      "mech_lower_lunge",
-      "mech_reactive"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Reaction Jab Matrix",
-    "equipment": [
-      "partner",
-      "reaction_ball"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "cognitive",
-    "modality": "visual processing",
-    "duration": "3min random ball toss → jab/parry response → x4 rounds",
-    "intensity": "moderate",
-    "tags": [
-      "boxing",
-      "counter_striker",
-      "skill_refinement",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_reactive",
-      "mech_cns_high",
-      "mech_ballistic",
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Partner throws ball unpredictably; react with jab or parry (70% speed)",
-    "equipment_note": "Uneven bounce ball required",
-    "work_sec": 180,
-    "rpe": 7,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "moderate",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Clinch Auditory Triggers",
-    "equipment": [
-      "bluetooth_speaker"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "cognitive",
-    "modality": "auditory reaction",
-    "duration": "5min clinch pummeling → change direction on beep → x3 rounds",
-    "intensity": "zone 2",
-    "tags": [
-      "muay_thai",
-      "clinch_fighter",
-      "skill_refinement",
-      "mech_grip_intensive",
-      "mech_trunk_stability",
-      "mech_reactive",
-      "mech_cns_high",
-      "mech_ballistic",
-      "mech_grip_support",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Pre-recorded beeps signal underhook/overhook switches (50% effort)",
-    "equipment_note": "Random interval timer (5-15s)",
-    "total_minutes": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_grip_intensive",
-      "mech_grip_support",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Wrestling Chess",
-    "equipment": [
-      "chess_clock",
-      "partner"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "cognitive",
-    "modality": "decision fatigue",
-    "duration": "3min live wrestling → 30s chess move → x5 rounds",
-    "intensity": "zone 2",
-    "tags": [
-      "wrestling",
-      "scrambler",
-      "skill_refinement",
-      "mech_reactive",
-      "mech_cns_high",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Alternate wrestling rounds with chess moves to drain mental stamina (60% effort)",
-    "equipment_note": "Portable chess set",
-    "rest_sec": 180,
-    "total_minutes": 3,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_reactive",
-      "mech_systemic_fatigue"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Kick Pattern Recall",
-    "equipment": [
-      "flashcards"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "cognitive",
-    "modality": "memory challenge",
-    "duration": "3min execute kick combos from flashed cards → x4 rounds",
-    "intensity": "low",
-    "tags": [
-      "kickboxing",
-      "kicker",
-      "skill_refinement",
-      "mech_lower_hip_hinge",
-      "mech_trunk_rotation",
-      "mech_reactive",
-      "mech_cns_high",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Coach flashes card (e.g., '3-2-5'), fighter executes combo (40% power)",
-    "equipment_note": "Pre-printed kick codes",
-    "work_sec": 180,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "moderate",
-    "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation"
-    ]
-  },
-  {
-    "name": "Takedown Dilemma",
-    "equipment": [
-      "colored_cones"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "cognitive",
-    "modality": "choice reaction",
-    "duration": "3min shot entries → cone color dictates finish (single/double) → x4 rounds",
-    "intensity": "zone 2",
-    "tags": [
-      "mma",
-      "skill_refinement",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_cns_high",
-      "mech_ballistic",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Random cone colors force adaptive takedown chains (50% speed)",
-    "equipment_note": "2+ cone colors",
-    "work_sec": 180,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_reactive",
-      "mech_systemic_fatigue"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Brawler's Puzzle Defense",
-    "equipment": [
-      "puzzle_mat"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "cognitive",
-    "modality": "pattern recognition",
-    "duration": "3min mitt work → solve 3 puzzle pieces between rounds → x5 rounds",
-    "intensity": "zone 2",
-    "tags": [
-      "boxing",
-      "brawler",
-      "skill_refinement",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_reactive",
-      "mech_cns_high",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Disrupts rhythm to simulate in-fight chaos (60% power)",
-    "equipment_note": "4-piece jigsaw",
-    "rest_sec": 180,
-    "total_minutes": 3,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ],
-    "rpe": 6
-  },
-  {
-    "name": "Distance Striker's Math Dodge",
-    "equipment": [
-      "whiteboard"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "cognitive",
-    "modality": "dual-task loading",
-    "duration": "3min footwork drills → solve math problem between combos → x4 rounds",
-    "intensity": "zone 2",
-    "tags": [
-      "muay_thai",
-      "distance_striker",
-      "skill_refinement",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ],
-    "notes": "Example: 'Teep → solve 7x8 → pivot' (50% effort)",
-    "equipment_note": "Whiteboard markers",
-    "work_sec": 8,
-    "rounds": 7,
-    "total_minutes": 0.93,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ],
-    "rpe": 6
-  },
-  {
-    "name": "Grappler's Blindfold Pummeling",
-    "equipment": [
-      "blindfold"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "cognitive",
-    "modality": "tactile sensitivity",
-    "duration": "3min pummeling blindfolded → x4 rounds",
-    "intensity": "low",
-    "tags": [
       "grappling",
       "submission_hunter",
       "skill_refinement",
-      "mech_grip_intensive",
+      "sharpness",
+      "tactical",
+      "mech_grip_support",
       "mech_trunk_stability",
-      "mech_reactive",
-      "mech_cns_high",
-      "mech_grip_support",
-      "mech_systemic_fatigue"
+      "mech_anti_rotation"
     ],
-    "notes": "Forces reliance on grip/body feel over sight (30% effort)",
-    "equipment_note": "Non-slip mat",
-    "work_sec": 180,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "moderate",
     "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_grip_intensive",
       "mech_grip_support",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_anti_rotation"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.2,
+    "rpe_max": 4,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
     ]
   },
   {
-    "name": "Pressure Fighter's Shadowboxing Riddle",
-    "equipment": [
-      "earbuds"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "cognitive",
-    "modality": "audio distraction",
-    "duration": "3min shadowboxing → answer riddle mid-round → x4 rounds",
-    "intensity": "zone 2",
-    "tags": [
-      "mma",
-      "pressure_fighter",
-      "skill_refinement",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_reactive",
-      "mech_cns_high",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Coach whispers riddles through earbuds (50% power)",
-    "equipment_note": "Wireless mic for coach",
-    "work_sec": 180,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Hybrid's Stance-Switch Reaction",
-    "equipment": [
-      "colored_lights"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "cognitive",
-    "modality": "visual cueing",
-    "duration": "3min light color dictates stance (red=orthodox/blue=southpaw) → x5 rounds",
-    "intensity": "zone 2",
-    "tags": [
-      "mma",
-      "hybrid",
-      "skill_refinement",
-      "mech_reactive",
-      "mech_cns_high",
-      "mech_change_of_direction",
-      "mech_ballistic",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ],
-    "notes": "Forces stance switches under fatigue (60% speed)",
-    "equipment_note": "Traffic light system",
-    "work_sec": 180,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_change_of_direction",
-      "mech_cns_high",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Light Sled Push - Distance Striker Recovery",
-    "equipment": [
-      "sled"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "low-impact conditioning",
-    "duration": "4x20m @ 60% effort",
-    "intensity": "zone 2",
-    "tags": [
-      "sled",
-      "conditioning",
-      "distance_striker",
-      "low_impact",
-      "zero_impact",
-      "recovery",
-      "mech_trunk_stability",
-      "mech_systemic_fatigue",
-      "mech_lower_hip_hinge",
-      "mech_upper_press"
-    ],
-    "notes": "Low-intensity sled work for maintaining conditioning without joint stress",
-    "equipment_note": "Light load, focus on steady pace",
-    "work_sec": 20,
-    "rounds": 4,
-    "total_minutes": 1.33,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ],
-    "rpe": 6
-  },
-  {
-    "name": "Sled Drag - Backward for Brawler",
-    "equipment": [
-      "sled"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "low-impact conditioning",
-    "duration": "4x15m backward drag @ 50% effort",
-    "intensity": "zone 2",
-    "tags": [
-      "sled",
-      "conditioning",
-      "brawler",
-      "low_impact",
-      "zero_impact",
-      "posterior_chain",
-      "mech_trunk_stability",
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Safe posterior chain activation during taper",
-    "equipment_note": "Rope or belt attachment",
-    "work_sec": 15,
-    "rounds": 4,
-    "total_minutes": 1,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Lateral Sled Drag - Clinch Fighter",
-    "equipment": [
-      "sled"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "lateral conditioning",
-    "duration": "4x10m each side @ 60% effort",
-    "intensity": "zone 2",
-    "tags": [
-      "sled",
-      "conditioning",
-      "clinch_fighter",
-      "low_impact",
-      "zero_impact",
-      "lateral",
-      "mech_trunk_stability",
-      "mech_grip_support",
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Lateral movement pattern without impact stress",
-    "equipment_note": "Harness attachment recommended",
-    "work_sec": 10,
-    "rounds": 4,
-    "total_minutes": 0.67,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_grip_support",
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Sled Row Pull - Grappler",
-    "equipment": [
-      "sled"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "upper body conditioning",
-    "duration": "5x15m @ 60% effort",
-    "intensity": "zone 2",
-    "tags": [
-      "sled",
-      "conditioning",
-      "grappler",
-      "pull",
-      "low_impact",
-      "zero_impact",
-      "mech_upper_pull",
-      "mech_grip_support",
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Pulling pattern for grapplers without heavy eccentric load",
-    "equipment_note": "Rope attachment",
-    "work_sec": 15,
-    "rounds": 5,
-    "total_minutes": 1.25,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_grip_support",
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue",
-      "mech_upper_pull"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Assault Bike Steady State - Counter Striker",
-    "equipment": [
-      "assault_bike"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "zero-impact cardio",
-    "duration": "20min @ 65% effort",
-    "intensity": "zone 2",
-    "tags": [
-      "aerobic",
-      "conditioning",
-      "counter_striker",
-      "low_impact",
-      "zero_impact",
-      "recovery",
-      "mech_systemic_fatigue",
-      "mech_lower_hip_hinge",
-      "mech_upper_press"
-    ],
-    "notes": "Maintains aerobic capacity without joint loading",
-    "equipment_note": "Keep RPM moderate",
-    "total_minutes": 20,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
-    ],
-    "rpe": 6
-  },
-  {
-    "name": "Stationary Bike Intervals - Kicker",
-    "equipment": [
-      "stationary_bike"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "interval work",
-    "duration": "10x(1min on / 1min easy)",
-    "intensity": "zone 2-3",
-    "tags": [
-      "aerobic",
-      "conditioning",
-      "kicker",
-      "low_impact",
-      "zero_impact",
-      "endurance",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Light intervals to maintain conditioning without impact",
-    "equipment_note": "Moderate resistance",
-    "work_sec": 60,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Rower Steady Distance - Wrestler",
-    "equipment": [
-      "rower"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "full-body conditioning",
-    "duration": "2000m @ 70% pace",
-    "intensity": "zone 2",
-    "tags": [
-      "aerobic",
-      "conditioning",
-      "wrestler",
-      "low_impact",
-      "zero_impact",
-      "pull",
-      "posterior_chain",
-      "mech_upper_pull",
-      "mech_trunk_stability",
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Full-body conditioning with zero impact stress",
-    "equipment_note": "Focus on smooth strokes",
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability",
-      "mech_upper_pull"
-    ],
-    "rpe": 6
-  },
-  {
-    "name": "Ski Erg Intervals - MMA",
-    "equipment": [
-      "ski_erg"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "upper body cardio",
-    "duration": "8x(30s work / 90s rest)",
-    "intensity": "zone 2",
-    "tags": [
-      "aerobic",
-      "conditioning",
-      "mma",
-      "low_impact",
-      "zero_impact",
-      "pull",
-      "upper_body",
-      "mech_upper_pull",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Upper body conditioning without lower body stress",
-    "equipment_note": "Light intensity",
-    "work_sec": 30,
-    "rest_sec": 90,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_systemic_fatigue",
-      "mech_upper_pull"
-    ],
-    "rpe": 6
-  },
-  {
-    "name": "Echo Bike Recovery - Pressure Fighter",
-    "equipment": [
-      "echo_bike"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "active recovery",
-    "duration": "15min @ 60% effort",
-    "intensity": "zone 1-2",
-    "tags": [
-      "aerobic",
-      "conditioning",
-      "pressure_fighter",
-      "low_impact",
-      "zero_impact",
-      "recovery",
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Light active recovery session",
-    "equipment_note": "Very light resistance",
-    "rest_sec": 900,
-    "total_minutes": 15,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "TRX-Assisted Squat - Boxing",
-    "equipment": [
-      "trx"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "ATP-PCr",
-    "modality": "supported strength",
-    "duration": "3x10 @ bodyweight",
-    "intensity": "zone 2",
-    "tags": [
-      "boxing",
-      "lower_body",
-      "stability",
-      "low_impact",
-      "mech_lower_squat",
-      "mech_trunk_stability"
-    ],
-    "notes": "Supported squat pattern reduces joint stress",
-    "equipment_note": "Hold straps for balance",
-    "work_sec": 10,
-    "rounds": 3,
-    "total_minutes": 0.5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_lower_squat",
-      "mech_trunk_stability"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Goblet Squat Light - Muay Thai",
-    "equipment": [
-      "kettlebell"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "ATP-PCr",
-    "modality": "supported movement",
-    "duration": "3x12 @ light load",
-    "intensity": "zone 2",
-    "tags": [
-      "muay_thai",
-      "lower_body",
-      "compound",
-      "low_impact",
-      "mech_lower_squat",
-      "mech_trunk_stability"
-    ],
-    "notes": "Light goblet squats for movement quality",
-    "equipment_note": "Use 12-16kg max",
-    "work_sec": 12,
-    "rounds": 3,
-    "total_minutes": 0.6,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_lower_squat",
-      "mech_trunk_stability"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Box Squat Low Height - Grappler",
-    "equipment": [
-      "box"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "ATP-PCr",
-    "modality": "controlled descent",
-    "duration": "4x8 @ bodyweight",
-    "intensity": "zone 2",
-    "tags": [
-      "grappler",
-      "lower_body",
-      "stability",
-      "low_impact",
-      "mech_lower_squat",
-      "mech_trunk_stability",
-      "mech_trunk_rotation"
-    ],
-    "notes": "Box provides feedback and control",
-    "equipment_note": "Use high box (above parallel)",
-    "work_sec": 8,
-    "rounds": 4,
-    "total_minutes": 0.53,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_lower_squat",
-      "mech_trunk_rotation",
-      "mech_trunk_stability"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Wall Sit - Distance Fighter",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "ATP-PCr",
-    "modality": "isometric strength",
-    "duration": "4x30s holds",
-    "intensity": "zone 2",
-    "tags": [
-      "distance_fighter",
-      "isometric",
-      "lower_body",
-      "stability",
-      "low_impact",
-      "zero_impact",
-      "mech_trunk_stability"
-    ],
-    "notes": "Static hold maintains strength without dynamic stress",
-    "equipment_note": "Back against wall",
-    "work_sec": 30,
-    "rounds": 4,
-    "total_minutes": 2,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_trunk_stability"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Plank Hold - Counter Striker",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "ATP-PCr",
-    "modality": "core isometric",
-    "duration": "4x45s holds",
-    "intensity": "zone 2",
-    "tags": [
-      "counter_striker",
-      "isometric",
-      "core",
-      "stability",
-      "low_impact",
-      "zero_impact",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ],
-    "notes": "Core strength maintenance without spinal loading",
-    "equipment_note": "Forearms on mat",
-    "work_sec": 45,
-    "rounds": 4,
-    "total_minutes": 3,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Side Plank Hold - Clinch Fighter",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "ATP-PCr",
-    "modality": "lateral core isometric",
-    "duration": "3x30s each side",
-    "intensity": "zone 2",
-    "tags": [
-      "clinch_fighter",
-      "isometric",
-      "core",
-      "stability",
-      "lateral",
-      "low_impact",
-      "zero_impact",
-      "mech_trunk_stability",
-      "mech_grip_support",
-      "mech_trunk_rotation"
-    ],
-    "notes": "Lateral core stability without rotation stress",
-    "equipment_note": "Forearm and feet",
-    "work_sec": 30,
-    "rounds": 3,
-    "total_minutes": 1.5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_grip_support",
-      "mech_trunk_rotation",
-      "mech_trunk_stability"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Dead Bug Hold - BJJ",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "ATP-PCr",
-    "modality": "anti-extension core",
-    "duration": "3x8 controlled reps",
-    "intensity": "zone 2",
-    "tags": [
-      "bjj",
-      "isometric",
-      "core",
-      "stability",
-      "low_impact",
-      "zero_impact",
-      "mech_trunk_stability",
-      "mech_trunk_rotation"
-    ],
-    "notes": "Anti-extension pattern for core control",
-    "equipment_note": "Supine on mat",
-    "work_sec": 8,
-    "rounds": 3,
-    "total_minutes": 0.4,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_trunk_rotation",
-      "mech_trunk_stability"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Pallof Press - Wrestler",
-    "equipment": [
-      "cable"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "ATP-PCr",
-    "modality": "anti-rotation",
-    "duration": "3x10 each side",
-    "intensity": "zone 2",
-    "tags": [
-      "wrestler",
-      "anti_rotation",
-      "core",
-      "stability",
-      "low_impact",
-      "zero_impact",
-      "mech_trunk_stability",
-      "mech_trunk_rotation"
-    ],
-    "notes": "Anti-rotation strength without spinal load",
-    "equipment_note": "Light resistance",
-    "work_sec": 10,
-    "rounds": 3,
-    "total_minutes": 0.5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_trunk_rotation",
-      "mech_trunk_stability"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Band Pallof Hold - Scrambler",
-    "equipment": [
-      "resistance_band"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "ATP-PCr",
-    "modality": "anti-rotation isometric",
-    "duration": "3x20s each side",
-    "intensity": "zone 2",
-    "tags": [
-      "scrambler",
-      "anti_rotation",
-      "core",
-      "isometric",
-      "stability",
-      "low_impact",
-      "zero_impact",
-      "mech_trunk_stability",
-      "mech_trunk_rotation"
-    ],
-    "notes": "Static anti-rotation hold",
-    "equipment_note": "Medium band tension",
-    "work_sec": 20,
-    "rounds": 3,
-    "total_minutes": 1,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_trunk_rotation",
-      "mech_trunk_stability"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Half-Kneeling Pallof - Pressure Fighter",
-    "equipment": [
-      "cable"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "ATP-PCr",
-    "modality": "anti-rotation kneeling",
-    "duration": "3x8 each side",
-    "intensity": "zone 2",
-    "tags": [
-      "pressure_fighter",
-      "anti_rotation",
-      "core",
-      "stability",
-      "low_impact",
-      "zero_impact",
-      "mech_trunk_stability",
-      "mech_trunk_rotation"
-    ],
-    "notes": "Kneeling position adds stability challenge",
-    "equipment_note": "Light weight",
-    "work_sec": 8,
-    "rounds": 3,
-    "total_minutes": 0.4,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_trunk_rotation",
-      "mech_trunk_stability"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Farmer Carry Light - MMA",
-    "equipment": [
-      "kettlebell"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "loaded carry",
-    "duration": "4x20m @ light load",
-    "intensity": "zone 2",
-    "tags": [
-      "mma",
-      "conditioning",
-      "grip",
-      "core",
-      "low_impact",
-      "mech_loaded_carry",
-      "mech_grip_support",
-      "mech_trunk_stability",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Light carry for grip and core without heavy load",
-    "equipment_note": "Use 12-16kg per hand max",
-    "work_sec": 20,
-    "rounds": 4,
-    "total_minutes": 1.33,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_grip_support",
-      "mech_loaded_carry",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Suitcase Carry - Boxing",
-    "equipment": [
-      "kettlebell"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "unilateral carry",
-    "duration": "3x15m each side",
-    "intensity": "zone 2",
-    "tags": [
-      "boxing",
-      "conditioning",
-      "grip",
-      "core",
-      "unilateral",
-      "low_impact",
-      "mech_loaded_carry",
-      "mech_grip_support",
-      "mech_trunk_stability",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Single-side carry for anti-lateral flexion",
-    "equipment_note": "Light load",
-    "work_sec": 15,
-    "rounds": 3,
-    "total_minutes": 0.75,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_grip_support",
-      "mech_loaded_carry",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Waiter Walk - Kickboxing",
-    "equipment": [
-      "kettlebell"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "overhead carry",
-    "duration": "3x10m each arm",
-    "intensity": "zone 2",
-    "tags": [
-      "kickboxing",
-      "conditioning",
-      "stability",
-      "low_impact",
-      "mech_loaded_carry",
-      "mech_shoulder_overhead",
-      "mech_trunk_stability",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Overhead stability work with light load",
-    "equipment_note": "Very light KB (8-12kg)",
-    "work_sec": 10,
-    "rounds": 3,
-    "total_minutes": 0.5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_loaded_carry",
-      "mech_lower_lunge",
-      "mech_shoulder_overhead",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ],
-    "rpe": 6
-  },
-  {
-    "name": "Pool Jogging - Kicker",
-    "equipment": [
-      "pool"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "aquatic conditioning",
-    "duration": "15min @ moderate pace",
-    "intensity": "zone 2",
-    "tags": [
-      "kicker",
-      "aerobic",
-      "conditioning",
-      "low_impact",
-      "zero_impact",
-      "recovery",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ],
-    "notes": "Water resistance with zero joint impact",
-    "equipment_note": "Chest-deep water",
-    "total_minutes": 15,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ],
-    "rpe": 6
-  },
-  {
-    "name": "Swimming Steady State - Distance Striker",
-    "equipment": [
-      "pool"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "full-body aquatic",
-    "duration": "20min continuous @ easy pace",
-    "intensity": "zone 2",
-    "tags": [
-      "distance_striker",
-      "aerobic",
-      "conditioning",
-      "low_impact",
-      "zero_impact",
-      "recovery",
-      "upper_body",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ],
-    "notes": "Any stroke, focus on movement quality",
-    "equipment_note": "Pool access required",
-    "total_minutes": 20,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_systemic_fatigue",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ],
-    "rpe": 6
-  },
-  {
-    "name": "Battle Ropes Light - Brawler",
-    "equipment": [
-      "battle_ropes"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "glycolytic",
-    "modality": "upper body conditioning",
-    "duration": "6x(20s work / 40s rest)",
-    "intensity": "zone 2",
-    "tags": [
-      "brawler",
-      "conditioning",
-      "upper_body",
-      "low_impact",
-      "zero_impact",
-      "work_capacity",
-      "mech_landing_impact",
-      "mech_reactive",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Upper body conditioning without lower body stress",
-    "equipment_note": "Light wave amplitude",
-    "work_sec": 20,
-    "rest_sec": 40,
-    "impact_cost": "high",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_landing_impact",
-      "mech_reactive",
-      "mech_systemic_fatigue"
-    ],
-    "rpe": 6
-  },
-  {
-    "name": "Seated Cable Row Steady - Grappler",
-    "equipment": [
-      "cable"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "ATP-PCr",
-    "modality": "upper body pull",
-    "duration": "3x12 @ light weight",
-    "intensity": "zone 2",
-    "tags": [
-      "grappler",
-      "pull",
-      "upper_body",
-      "low_impact",
-      "zero_impact",
-      "mech_upper_pull",
-      "mech_lower_hip_hinge"
-    ],
-    "notes": "Seated position eliminates lower body involvement",
-    "equipment_note": "Light resistance",
-    "work_sec": 12,
-    "rounds": 3,
-    "total_minutes": 0.6,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
-      "mech_upper_pull"
-    ],
-    "rpe": 6
-  },
-  {
-    "name": "Incline DB Press Light - Counter Striker",
-    "equipment": [
-      "dumbbell"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "ATP-PCr",
-    "modality": "upper body push",
-    "duration": "3x10 @ light load",
-    "intensity": "zone 2",
-    "tags": [
-      "counter_striker",
-      "push",
-      "upper_body",
-      "low_impact",
-      "zero_impact",
-      "mech_upper_press",
-      "mech_shoulder_overhead"
-    ],
-    "notes": "Light pressing without heavy shoulder stress",
-    "equipment_note": "Light DBs",
-    "work_sec": 10,
-    "rounds": 3,
-    "total_minutes": 0.5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_shoulder_overhead",
-      "mech_upper_press"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Yoga Flow Light - MMA",
+    "name": "Submission Entry Map Shadow",
+    "description": "Rehearse the preferred submission-entry pathway solo on the mat, stopping before any squeeze or loaded finish.",
     "equipment": [
       "mat"
     ],
     "phases": [
       "TAPER"
     ],
-    "system": "parasympathetic",
-    "modality": "mobility work",
-    "duration": "15min flow",
-    "intensity": "zone 1",
-    "tags": [
-      "mma",
-      "mobility",
-      "recovery",
-      "low_impact",
-      "zero_impact",
-      "parasympathetic"
-    ],
-    "notes": "Gentle movement for recovery and mobility",
-    "equipment_note": "Yoga mat",
-    "rest_sec": 900,
-    "total_minutes": 15,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "moderate",
-    "mechanical_risk_tags": [],
-    "rpe": 4
-  },
-  {
-    "name": "Breathwork Session - All Styles",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "parasympathetic",
-    "modality": "recovery breath",
-    "duration": "10min guided breathing",
-    "intensity": "zone 1",
-    "tags": [
-      "recovery",
-      "parasympathetic",
-      "cognitive",
-      "low_impact",
-      "zero_impact"
-    ],
-    "notes": "Breath work for nervous system recovery",
-    "equipment_note": "Quiet space",
-    "rest_sec": 600,
-    "total_minutes": 10,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "moderate",
-    "mechanical_risk_tags": [],
-    "rpe": 6
-  },
-  {
-    "name": "Shadow Boxing Technical - Boxing",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "skill",
-    "modality": "technical shadow",
-    "duration": "3x3min @ 50% intensity",
-    "intensity": "zone 1-2",
-    "tags": [
-      "boxing",
-      "skill",
-      "skill_refinement",
-      "footwork",
-      "low_impact",
-      "tactical"
-    ],
-    "notes": "Technical shadow work at low intensity",
-    "equipment_note": "Light movement",
-    "work_sec": 180,
-    "rounds": 3,
-    "total_minutes": 9,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "moderate",
-    "mechanical_risk_tags": [],
-    "rpe": 6
-  },
-  {
-    "name": "Shadow Kickboxing Flow - Kickboxing",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "skill",
-    "modality": "flow shadow",
-    "duration": "2x4min @ 50% intensity",
-    "intensity": "zone 1-2",
-    "tags": [
-      "kickboxing",
-      "skill",
-      "skill_refinement",
-      "footwork",
-      "low_impact",
-      "tactical",
-      "mech_lower_lunge"
-    ],
-    "notes": "Flowing combinations without power",
-    "equipment_note": "Controlled movements",
-    "work_sec": 240,
-    "rounds": 2,
-    "total_minutes": 4,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "moderate",
-    "mechanical_risk_tags": [
-      "mech_lower_lunge"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Core Circuit - Wrestler",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "glycolytic",
-    "modality": "core endurance",
-    "duration": "3 rounds: 30s each (plank, side plank L/R, dead bug, bird dog)",
-    "intensity": "zone 2",
-    "tags": [
-      "wrestler",
-      "core",
-      "conditioning",
-      "stability",
-      "low_impact",
-      "zero_impact",
-      "mech_trunk_stability",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Circuit of safe core movements",
-    "equipment_note": "Mat only",
-    "rest_sec": 30,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Anti-Rotation Circuit - Scrambler",
-    "equipment": [
-      "resistance_band"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "glycolytic",
-    "modality": "rotational stability",
-    "duration": "3 rounds: Pallof press, chops, lifts (10 reps each)",
-    "intensity": "zone 2",
-    "tags": [
-      "scrambler",
-      "anti_rotation",
-      "core",
-      "conditioning",
-      "low_impact",
-      "zero_impact",
-      "mech_trunk_stability",
-      "mech_landing_impact",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation"
-    ],
-    "notes": "Anti-rotation endurance circuit",
-    "equipment_note": "Light band or cable",
-    "impact_cost": "high",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_landing_impact",
-      "mech_reactive",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation",
-      "mech_trunk_stability"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Walking Recovery - All Styles",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
     "system": "aerobic",
-    "modality": "active recovery",
-    "duration": "30min @ easy pace",
-    "intensity": "zone 1",
-    "tags": [
-      "recovery",
-      "aerobic",
-      "low_impact",
-      "parasympathetic"
-    ],
-    "notes": "Light walking for active recovery",
-    "equipment_note": "Flat surface preferred",
-    "rest_sec": 1800,
-    "total_minutes": 30,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [],
-    "rpe": 4
-  },
-  {
-    "name": "Elliptical Steady - Pressure Fighter",
-    "equipment": [
-      "elliptical"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "low-impact cardio",
-    "duration": "20min @ 65% effort",
-    "intensity": "zone 2",
-    "tags": [
-      "pressure_fighter",
-      "aerobic",
-      "conditioning",
-      "low_impact",
-      "zero_impact",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Elliptical provides low-impact alternative",
-    "equipment_note": "Moderate resistance",
-    "total_minutes": 20,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_systemic_fatigue"
-    ],
-    "rpe": 6
-  },
-  {
-    "name": "Single-Leg Balance Holds - Kicker",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "ATP-PCr",
-    "modality": "balance work",
-    "duration": "3x30s each leg",
-    "intensity": "zone 1",
-    "tags": [
-      "kicker",
-      "balance",
-      "stability",
-      "low_impact",
-      "zero_impact",
-      "mech_lower_lunge",
-      "mech_trunk_stability"
-    ],
-    "notes": "Static balance for ankle stability",
-    "equipment_note": "Progress to eyes closed",
-    "work_sec": 30,
-    "rounds": 3,
-    "total_minutes": 1.5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_lower_lunge",
-      "mech_trunk_stability"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "TRX Y-T-W Series - Distance Striker",
-    "equipment": [
-      "trx"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "ATP-PCr",
-    "modality": "shoulder stability",
-    "duration": "3x8 each position",
-    "intensity": "zone 2",
-    "tags": [
-      "distance_striker",
-      "stability",
-      "upper_body",
-      "low_impact",
-      "zero_impact",
-      "mech_upper_pull",
-      "mech_shoulder_overhead",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ],
-    "notes": "Light shoulder stability work",
-    "equipment_note": "Bodyweight only",
-    "work_sec": 8,
-    "rounds": 3,
-    "total_minutes": 0.4,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_shoulder_overhead",
-      "mech_trunk_stability",
-      "mech_upper_press",
-      "mech_upper_pull"
-    ],
-    "rpe": 6
-  },
-  {
-    "name": "Passive Hang - BJJ",
-    "equipment": [
-      "pull_up_bar"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "ATP-PCr",
-    "modality": "grip endurance",
-    "duration": "4x20s holds",
-    "intensity": "zone 2",
+    "modality": "solo submission pathway rehearsal",
+    "duration": "3x10s with 60s rest",
+    "intensity": "easy technical rhythm",
     "tags": [
       "bjj",
-      "grip",
-      "isometric",
-      "low_impact",
+      "mma",
+      "grappling",
+      "submission_hunter",
+      "skill_refinement",
       "zero_impact",
-      "mech_grip_support"
-    ],
-    "notes": "Passive hang for grip without pull stress",
-    "equipment_note": "Dead hang position",
-    "work_sec": 20,
-    "rounds": 4,
-    "total_minutes": 1.33,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_grip_support"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Band Grip Work - Grappler",
-    "equipment": [
-      "resistance_band"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "ATP-PCr",
-    "modality": "grip strength",
-    "duration": "3x15 squeezes each hand",
-    "intensity": "zone 2",
-    "tags": [
-      "grappler",
-      "grip",
-      "isometric",
-      "low_impact",
-      "zero_impact",
-      "mech_grip_support"
-    ],
-    "notes": "Light grip work with band",
-    "equipment_note": "Loop band",
-    "work_sec": 15,
-    "rounds": 3,
-    "total_minutes": 0.75,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_grip_support"
-    ],
-    "rpe": 6
-  },
-  {
-    "name": "Low Box Step-Up - Clinch Fighter",
-    "equipment": [
-      "box"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "ATP-PCr",
-    "modality": "controlled step pattern",
-    "duration": "3x10 each leg @ slow tempo",
-    "intensity": "zone 2",
-    "tags": [
-      "clinch_fighter",
-      "lower_body",
-      "unilateral",
-      "low_impact",
-      "mech_lower_lunge",
-      "mech_grip_support",
-      "mech_trunk_rotation"
-    ],
-    "notes": "Very low box height for movement quality",
-    "equipment_note": "6-8 inch box max",
-    "work_sec": 10,
-    "rounds": 3,
-    "total_minutes": 0.5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_grip_support",
-      "mech_lower_lunge",
-      "mech_trunk_rotation"
-    ],
-    "rpe": 6
-  },
-  {
-    "name": "Sled Push Interval - Kickboxing",
-    "equipment": [
-      "sled"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "glycolytic",
-    "modality": "interval sled",
-    "duration": "6x15m @ 65% effort (90s rest)",
-    "intensity": "zone 2-3",
-    "tags": [
-      "kickboxing",
-      "sled",
-      "conditioning",
-      "low_impact",
-      "zero_impact",
-      "work_capacity",
-      "mech_trunk_stability",
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Light sled intervals for conditioning",
-    "equipment_note": "Light load",
-    "work_sec": 15,
-    "rounds": 6,
-    "total_minutes": 1.5,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
-      "mech_lower_lunge",
-      "mech_systemic_fatigue",
+      "coordination",
+      "tactical",
       "mech_trunk_stability"
     ],
-    "rpe": 4
-  },
-  {
-    "name": "Sled Pull with Arms - Boxing",
-    "equipment": [
-      "sled"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "glycolytic",
-    "modality": "upper body sled",
-    "duration": "5x20m rope pull",
-    "intensity": "zone 2",
-    "tags": [
-      "boxing",
-      "sled",
-      "pull",
-      "upper_body",
-      "low_impact",
-      "zero_impact",
-      "mech_upper_pull",
-      "mech_grip_support",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_reactive"
-    ],
-    "notes": "Hand-over-hand rope pull with sled",
-    "equipment_note": "Seated or standing",
-    "work_sec": 20,
-    "rounds": 5,
-    "total_minutes": 1.67,
-    "impact_cost": "high",
-    "lactate_load": "high",
-    "movement_cost": "high",
     "mechanical_risk_tags": [
-      "mech_grip_support",
-      "mech_landing_impact",
-      "mech_lower_hip_hinge",
-      "mech_reactive",
-      "mech_upper_pull"
+      "mech_trunk_stability"
     ],
-    "rpe": 4
+    "work_sec": 10,
+    "rest_sec": 60,
+    "rounds": 3,
+    "total_minutes": 3.5,
+    "rpe_max": 3,
+    "impact_cost": "none",
+    "movement_cost": "low",
+    "lactate_load": "none",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "relaxed",
+    "contact_level": "none",
+    "late_windows": [
+      "d4_to_d2",
+      "d1"
+    ]
   },
   {
-    "name": "Air Bike Pyramid - MMA",
+    "name": "Hip-Heist-Re-square",
+    "description": "Perform one controlled hip-heist recovery and immediately establish a stable square position.",
     "equipment": [
-      "air_bike"
+      "mat"
     ],
     "phases": [
       "TAPER"
     ],
-    "system": "glycolytic",
-    "modality": "pyramid intervals",
-    "duration": "30s/45s/60s/45s/30s @ 70% (equal rest)",
-    "intensity": "zone 2-3",
+    "system": "alactic",
+    "modality": "scramble recovery sharpness",
+    "duration": "2x5s with 120s rest",
+    "intensity": "technical crisp",
     "tags": [
       "mma",
-      "conditioning",
-      "work_capacity",
-      "low_impact",
-      "zero_impact",
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Light pyramid for work capacity",
-    "equipment_note": "Moderate pace",
-    "work_sec": 60,
-    "rest_sec": 30,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue"
-    ],
-    "rpe": 6
-  },
-  {
-    "name": "Recumbent Bike Recovery - Brawler",
-    "equipment": [
-      "recumbent_bike"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "recovery cardio",
-    "duration": "25min @ 60% effort",
-    "intensity": "zone 2",
-    "tags": [
-      "brawler",
-      "aerobic",
-      "recovery",
-      "low_impact",
-      "zero_impact",
-      "parasympathetic",
-      "mech_ballistic",
-      "mech_lower_hip_hinge"
-    ],
-    "notes": "Recumbent position for maximal support",
-    "equipment_note": "Light resistance",
-    "rest_sec": 1500,
-    "total_minutes": 25,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_lower_hip_hinge"
-    ],
-    "rpe": 8
-  },
-  {
-    "name": "Hollow Body Hold - Hybrid",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "ATP-PCr",
-    "modality": "anti-extension",
-    "duration": "4x20s holds",
-    "intensity": "zone 2",
-    "tags": [
-      "hybrid",
-      "isometric",
-      "core",
-      "stability",
-      "low_impact",
-      "zero_impact",
-      "mech_trunk_stability"
-    ],
-    "notes": "Anti-extension core isometric",
-    "equipment_note": "Supine on mat",
-    "work_sec": 20,
-    "rounds": 4,
-    "total_minutes": 1.33,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_trunk_stability"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Glute Bridge Hold - Submission Hunter",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "ATP-PCr",
-    "modality": "hip extension isometric",
-    "duration": "3x30s holds",
-    "intensity": "zone 2",
-    "tags": [
-      "submission_hunter",
-      "isometric",
-      "posterior_chain",
-      "low_impact",
-      "zero_impact"
-    ],
-    "notes": "Static glute activation",
-    "equipment_note": "Supine position",
-    "work_sec": 30,
-    "rounds": 3,
-    "total_minutes": 1.5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [],
-    "rpe": 4
-  },
-  {
-    "name": "Dynamic Stretching Flow - All Styles",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "parasympathetic",
-    "modality": "dynamic mobility",
-    "duration": "12min full-body flow",
-    "intensity": "zone 1",
-    "tags": [
-      "mobility",
-      "recovery",
-      "low_impact",
-      "zero_impact",
-      "parasympathetic"
-    ],
-    "notes": "Gentle dynamic stretching routine",
-    "equipment_note": "Mat preferred",
-    "work_sec": 720,
-    "total_minutes": 12,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "moderate",
-    "mechanical_risk_tags": [],
-    "rpe": 4
-  },
-  {
-    "name": "Foam Rolling Session - All Styles",
-    "equipment": [
-      "foam_roller"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "parasympathetic",
-    "modality": "myofascial release",
-    "duration": "15min full-body",
-    "intensity": "zone 1",
-    "tags": [
-      "recovery",
-      "mobility",
-      "low_impact",
-      "zero_impact",
-      "parasympathetic",
-      "mech_trunk_rotation"
-    ],
-    "notes": "Self-myofascial release for recovery",
-    "equipment_note": "Foam roller",
-    "rest_sec": 900,
-    "total_minutes": 15,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "moderate",
-    "mechanical_risk_tags": [
-      "mech_trunk_rotation"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Double KB Front Rack Carry - Wrestler",
-    "equipment": [
-      "kettlebell"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "loaded carry",
-    "duration": "3x15m @ light load",
-    "intensity": "zone 2",
-    "tags": [
-      "wrestler",
-      "conditioning",
-      "core",
-      "low_impact",
-      "mech_loaded_carry",
-      "mech_trunk_stability",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Front rack position with light bells",
-    "equipment_note": "Light KBs (12kg each)",
-    "work_sec": 15,
-    "rounds": 3,
-    "total_minutes": 0.75,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_loaded_carry",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Overhead Carry March - Scrambler",
-    "equipment": [
-      "kettlebell"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "overhead stability carry",
-    "duration": "2x10m each arm",
-    "intensity": "zone 2",
-    "tags": [
+      "bjj",
+      "wrestling",
+      "grappling",
       "scrambler",
-      "conditioning",
-      "stability",
+      "transition",
+      "coordination",
+      "sharpness",
       "low_impact",
-      "mech_loaded_carry",
-      "mech_shoulder_overhead",
+      "mech_trunk_rotation",
       "mech_trunk_stability",
-      "mech_lower_hip_hinge",
-      "mech_systemic_fatigue"
+      "mech_lower_hip_hinge"
     ],
-    "notes": "Single-arm overhead carry",
-    "equipment_note": "Very light load",
-    "work_sec": 10,
-    "rounds": 2,
-    "total_minutes": 0.33,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_loaded_carry",
-      "mech_lower_hip_hinge",
-      "mech_shoulder_overhead",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Assault Runner Walk - Pressure Fighter",
-    "equipment": [
-      "assault_runner"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "low-intensity walking",
-    "duration": "20min @ conversational pace",
-    "intensity": "zone 2",
-    "tags": [
-      "pressure_fighter",
-      "aerobic",
-      "recovery",
-      "low_impact",
-      "parasympathetic",
-      "mech_lower_lunge"
-    ],
-    "notes": "Walking on curved treadmill",
-    "equipment_note": "Self-powered treadmill",
-    "total_minutes": 20,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_lower_lunge"
-    ],
-    "rpe": 4
-  },
-  {
-    "name": "Upper Body Ergometer - Distance Striker",
-    "equipment": [
-      "ube"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "upper body cardio",
-    "duration": "15min @ steady pace",
-    "intensity": "zone 2",
-    "tags": [
-      "distance_striker",
-      "aerobic",
-      "upper_body",
-      "low_impact",
-      "zero_impact",
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ],
-    "notes": "Arm crank ergometer for upper body",
-    "equipment_note": "UBE machine",
-    "total_minutes": 15,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_trunk_stability",
-      "mech_upper_press"
-    ],
-    "rpe": 6
-  },
-  {
-    "name": "Bird Dog Holds - Top Control",
-    "equipment": [
-      "bodyweight"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "ATP-PCr",
-    "modality": "anti-rotation",
-    "duration": "3x8 each side (5s hold)",
-    "intensity": "zone 2",
-    "tags": [
-      "top_control",
-      "anti_rotation",
-      "core",
-      "stability",
-      "low_impact",
-      "zero_impact",
-      "mech_trunk_stability",
-      "mech_trunk_rotation"
-    ],
-    "notes": "Controlled bird dog pattern",
-    "equipment_note": "Quadruped position",
-    "work_sec": 8,
-    "rounds": 3,
-    "total_minutes": 0.4,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_trunk_rotation",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge"
     ],
-    "rpe": 4
+    "work_sec": 5,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.2,
+    "rpe_max": 3,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "none",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ]
   },
   {
-    "name": "Copenhagen Plank Short - Grappler",
+    "name": "Scramble Base Reset Shadow",
+    "description": "Rehearse one quiet scramble-to-base pathway on the mat, settle posture, then reset without speed chasing or resistance.",
     "equipment": [
-      "bench"
+      "mat"
     ],
     "phases": [
       "TAPER"
     ],
-    "system": "ATP-PCr",
-    "modality": "adductor stability",
-    "duration": "3x15s each side",
-    "intensity": "zone 2",
+    "system": "aerobic",
+    "modality": "solo scramble base rehearsal",
+    "duration": "2x10s with 60s rest",
+    "intensity": "easy technical rhythm",
     "tags": [
-      "grappler",
-      "isometric",
-      "core",
-      "stability",
-      "low_impact",
+      "mma",
+      "bjj",
+      "wrestling",
+      "grappling",
+      "scrambler",
+      "skill_refinement",
       "zero_impact",
+      "coordination",
+      "tactical",
       "mech_trunk_stability"
     ],
-    "notes": "Short duration Copenhagen planks",
-    "equipment_note": "Low bench",
-    "work_sec": 15,
-    "rounds": 3,
-    "total_minutes": 0.75,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_trunk_stability"
     ],
-    "rpe": 4
+    "work_sec": 10,
+    "rest_sec": 60,
+    "rounds": 2,
+    "total_minutes": 2.3,
+    "rpe_max": 3,
+    "impact_cost": "none",
+    "movement_cost": "low",
+    "lactate_load": "none",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "relaxed",
+    "contact_level": "none",
+    "late_windows": [
+      "d4_to_d2",
+      "d1"
+    ]
+  },
+  {
+    "name": "Position Touch-Reset",
+    "description": "Enter a preferred grappling position against light resistance, establish briefly, then disengage before fatigue.",
+    "equipment": [
+      "partner",
+      "mat"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "grappling position sharpness",
+    "duration": "2x6s with 120s rest",
+    "intensity": "technical crisp",
+    "tags": [
+      "mma",
+      "bjj",
+      "wrestling",
+      "grappling",
+      "grappler",
+      "sharpness",
+      "skill_refinement",
+      "low_impact",
+      "mech_grip_support",
+      "mech_trunk_stability"
+    ],
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_trunk_stability"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.2,
+    "rpe_max": 4,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ]
+  },
+  {
+    "name": "Grappling Base-Position Shadow",
+    "description": "Move through the athlete's preferred base, hip-line and re-square positions solo with no partner resistance.",
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "solo grappling position rehearsal",
+    "duration": "3x12s with 60s rest",
+    "intensity": "easy technical rhythm",
+    "tags": [
+      "mma",
+      "bjj",
+      "wrestling",
+      "grappling",
+      "grappler",
+      "skill_refinement",
+      "zero_impact",
+      "coordination",
+      "tactical",
+      "mech_trunk_stability"
+    ],
+    "mechanical_risk_tags": [
+      "mech_trunk_stability"
+    ],
+    "work_sec": 12,
+    "rest_sec": 60,
+    "rounds": 3,
+    "total_minutes": 3.6,
+    "rpe_max": 3,
+    "impact_cost": "none",
+    "movement_cost": "low",
+    "lactate_load": "none",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "relaxed",
+    "contact_level": "none",
+    "late_windows": [
+      "d4_to_d2",
+      "d1"
+    ]
+  },
+  {
+    "name": "Level-Change-Entry-Recover",
+    "description": "Perform one clean level change and initial penetration action without a hard finish, then recover stance.",
+    "equipment": [
+      "partner",
+      "mat"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "shot entry sharpness",
+    "duration": "3x5s with 120s rest",
+    "intensity": "fast crisp",
+    "tags": [
+      "wrestling",
+      "mma",
+      "grappling",
+      "wrestler",
+      "sharpness",
+      "low_volume",
+      "mech_acceleration",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
+    ],
+    "work_sec": 5,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ]
+  },
+  {
+    "name": "Circle-Re-shot Cue",
+    "description": "Partner circles; reposition, show the re-shot entry, then reset without finishing hard.",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "reshot timing sharpness",
+    "duration": "2x6s with 120s rest",
+    "intensity": "technical crisp",
+    "tags": [
+      "wrestling",
+      "mma",
+      "grappling",
+      "wrestler",
+      "reaction",
+      "sharpness",
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_deceleration"
+    ],
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_acceleration",
+      "mech_deceleration"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.2,
+    "rpe_max": 4,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d7",
+      "d6_to_d5"
+    ]
+  },
+  {
+    "name": "Re-shot Rhythm Shadow",
+    "description": "Rehearse re-position, level-change and re-shot rhythm solo, then recover stance without a finish.",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "solo wrestling timing rehearsal",
+    "duration": "3x10s with 60s rest",
+    "intensity": "easy technical rhythm",
+    "tags": [
+      "wrestling",
+      "mma",
+      "grappling",
+      "wrestler",
+      "reaction",
+      "skill_refinement",
+      "zero_impact",
+      "coordination",
+      "tactical",
+      "mech_change_of_direction"
+    ],
+    "mechanical_risk_tags": [
+      "mech_change_of_direction"
+    ],
+    "work_sec": 10,
+    "rest_sec": 60,
+    "rounds": 3,
+    "total_minutes": 3.5,
+    "rpe_max": 3,
+    "impact_cost": "none",
+    "movement_cost": "low",
+    "lactate_load": "none",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "relaxed",
+    "contact_level": "none",
+    "late_windows": [
+      "d4_to_d2",
+      "d1"
+    ]
   }
 ]
