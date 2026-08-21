@@ -3,7 +3,8 @@
 
 from __future__ import annotations
 
-from tools.audit_tag_registry import audit_registry
+from fightcamp.tag_vocabulary import read_tag_vocabulary_items
+from tools.audit_tag_registry import DATA_DIR, audit_registry
 
 
 # Existing raw source aliases are tolerated temporarily so the authority gate can
@@ -18,7 +19,7 @@ LEGACY_BANK_ALIAS_DEBT = {
 }
 
 
-def authority_failures(report: dict) -> list[str]:
+def authority_failures(report: dict, vocabulary: set[str]) -> list[str]:
     failures: list[str] = []
 
     for key in (
@@ -43,16 +44,6 @@ def authority_failures(report: dict) -> list[str]:
 
     # Alias debt is allowed to disappear as banks are migrated. Do not require
     # all four legacy aliases to remain present.
-    vocabulary = {
-        row["tag"]
-        for row in report.get("coverage", [])
-        if row.get("in_vocabulary")
-    }
-    vocabulary.update(report.get("vocab_unused", []))
-    vocabulary.update(report.get("bank_missing_vocab", []))
-    vocabulary.update(report.get("runtime_missing_vocab", []))
-    vocabulary.update(report.get("scoring_missing_vocab", []))
-
     missing_synonym_targets = sorted(
         set(report.get("synonym_canonicals", [])) - vocabulary
     )
@@ -64,7 +55,8 @@ def authority_failures(report: dict) -> list[str]:
 
 def main() -> int:
     report = audit_registry()
-    failures = authority_failures(report)
+    vocabulary = set(read_tag_vocabulary_items(DATA_DIR / "tag_vocabulary.json"))
+    failures = authority_failures(report, vocabulary)
     if failures:
         print("Tag authority gate failed:")
         for failure in failures:
