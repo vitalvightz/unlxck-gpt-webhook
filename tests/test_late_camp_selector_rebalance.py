@@ -24,7 +24,6 @@ NEW_LATE_STRENGTH_FAMILY_NAMES = {
 
 
 def _reset_selector_bank_caches() -> None:
-    strength._style_exercises_cache = None
     strength._exercise_bank_cache = None
     strength._universal_strength_cache = None
     strength._universal_strength_names_cache = None
@@ -163,7 +162,6 @@ def test_strength_late_window_keeps_crisp_overhead_when_low_dose(monkeypatch):
     }
 
     monkeypatch.setattr(strength, "get_exercise_bank", lambda: exercise_bank)
-    monkeypatch.setattr(strength, "get_style_exercises", lambda: [])
     monkeypatch.setattr(strength, "get_universal_strength_names", lambda: set())
     monkeypatch.setattr(strength, "allocate_sessions", lambda *_args, **_kwargs: {"strength": 1})
     monkeypatch.setattr(strength, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"strength": 3})
@@ -258,7 +256,6 @@ def test_strength_late_window_blocks_known_offenders_and_logs_reason_codes(monke
     }
 
     monkeypatch.setattr(strength, "get_exercise_bank", lambda: exercise_bank)
-    monkeypatch.setattr(strength, "get_style_exercises", lambda: style_bank)
     monkeypatch.setattr(strength, "get_universal_strength_names", lambda: set())
     monkeypatch.setattr(strength, "allocate_sessions", lambda *_args, **_kwargs: {"strength": 1})
     monkeypatch.setattr(strength, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"strength": 3})
@@ -330,7 +327,6 @@ def test_post_selection_replacement_guard_keeps_late_safe_anchor_over_trap_bar(m
     }
 
     monkeypatch.setattr(strength, "get_exercise_bank", lambda: exercise_bank)
-    monkeypatch.setattr(strength, "get_style_exercises", lambda: [])
     monkeypatch.setattr(strength, "get_universal_strength_names", lambda: set())
     monkeypatch.setattr(strength, "allocate_sessions", lambda *_args, **_kwargs: {"strength": 1})
     monkeypatch.setattr(strength, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"strength": 1})
@@ -411,7 +407,6 @@ def test_base_category_promotion_prefers_late_safe_anchor_when_available(monkeyp
     }
 
     monkeypatch.setattr(strength, "get_exercise_bank", lambda: exercise_bank)
-    monkeypatch.setattr(strength, "get_style_exercises", lambda: [])
     monkeypatch.setattr(strength, "get_universal_strength_names", lambda: set())
     monkeypatch.setattr(strength, "allocate_sessions", lambda *_args, **_kwargs: {"strength": 1})
     monkeypatch.setattr(strength, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"strength": 1})
@@ -492,7 +487,6 @@ def test_universal_gpp_insertion_respects_late_window_gate(monkeypatch):
 
     monkeypatch.setattr(strength, "get_exercise_bank", lambda: exercise_bank)
     monkeypatch.setattr(strength, "get_universal_strength", lambda: universal_bank)
-    monkeypatch.setattr(strength, "get_style_exercises", lambda: [])
     monkeypatch.setattr(
         strength,
         "get_universal_strength_names",
@@ -563,7 +557,6 @@ def test_must_have_dampening_keeps_late_safe_touch_sticky_under_high_cut(monkeyp
     ]
 
     monkeypatch.setattr(strength, "get_exercise_bank", lambda: exercise_bank)
-    monkeypatch.setattr(strength, "get_style_exercises", lambda: [])
     monkeypatch.setattr(strength, "get_universal_strength_names", lambda: set())
     monkeypatch.setattr(strength, "allocate_sessions", lambda *_args, **_kwargs: {"strength": 1})
     monkeypatch.setattr(strength, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"strength": 1})
@@ -652,7 +645,6 @@ def test_protected_style_insert_still_requires_late_safe_and_equipment_validity(
     }
 
     monkeypatch.setattr(strength, "get_exercise_bank", lambda: exercise_bank)
-    monkeypatch.setattr(strength, "get_style_exercises", lambda: style_bank)
     monkeypatch.setattr(strength, "get_universal_strength_names", lambda: set())
     monkeypatch.setattr(strength, "allocate_sessions", lambda *_args, **_kwargs: {"strength": 1})
     monkeypatch.setattr(strength, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"strength": 2})
@@ -708,7 +700,6 @@ def test_strength_bridge_phase_activates_late_selector_without_taper_label(monke
     }
 
     monkeypatch.setattr(strength, "get_exercise_bank", lambda: exercise_bank)
-    monkeypatch.setattr(strength, "get_style_exercises", lambda: [])
     monkeypatch.setattr(strength, "get_universal_strength_names", lambda: set())
     monkeypatch.setattr(strength, "allocate_sessions", lambda *_args, **_kwargs: {"strength": 1})
     monkeypatch.setattr(strength, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"strength": 1})
@@ -768,7 +759,6 @@ def test_strength_d13_high_cut_prefers_lower_noise_touch_over_heavy_loaded_lower
     }
 
     monkeypatch.setattr(strength, "get_exercise_bank", lambda: exercise_bank)
-    monkeypatch.setattr(strength, "get_style_exercises", lambda: [])
     monkeypatch.setattr(strength, "get_universal_strength_names", lambda: set())
     monkeypatch.setattr(strength, "allocate_sessions", lambda *_args, **_kwargs: {"strength": 1})
     monkeypatch.setattr(strength, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"strength": 1})
@@ -839,7 +829,6 @@ def test_strength_d7_deprioritizes_aggressive_med_ball_slam_primer(monkeypatch):
     }
 
     monkeypatch.setattr(strength, "get_exercise_bank", lambda: exercise_bank)
-    monkeypatch.setattr(strength, "get_style_exercises", lambda: [])
     monkeypatch.setattr(strength, "get_universal_strength_names", lambda: set())
     monkeypatch.setattr(strength, "allocate_sessions", lambda *_args, **_kwargs: {"strength": 1})
     monkeypatch.setattr(strength, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"strength": 1})
@@ -907,7 +896,6 @@ def test_strength_d1_blocks_trap_bar_jump_and_aggressive_med_ball_slam(monkeypat
     }
 
     monkeypatch.setattr(strength, "get_exercise_bank", lambda: exercise_bank)
-    monkeypatch.setattr(strength, "get_style_exercises", lambda: [])
     monkeypatch.setattr(strength, "get_universal_strength_names", lambda: set())
     monkeypatch.setattr(strength, "allocate_sessions", lambda *_args, **_kwargs: {"strength": 1})
     monkeypatch.setattr(strength, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"strength": 1})

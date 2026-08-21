@@ -8656,215 +8656,6 @@
     "name": "Hybrid's Stance-Switch Reaction"
   },
   {
-    "bank": "style_specific_exercises",
-    "explicit_tags": [
-      "grip",
-      "clinch_fighter",
-      "submission_hunter"
-    ],
-    "inferred_tags": [
-      "grip_max",
-      "hand_crush"
-    ],
-    "item_id": "style_specific_exercises:Plate Pinch Holds",
-    "name": "Plate Pinch Holds"
-  },
-  {
-    "bank": "style_specific_exercises",
-    "explicit_tags": [
-      "grip",
-      "isolation",
-      "clinch_fighter",
-      "submission_hunter"
-    ],
-    "inferred_tags": [],
-    "item_id": "style_specific_exercises:Wrist Roller Extensions",
-    "name": "Wrist Roller Extensions"
-  },
-  {
-    "bank": "style_specific_exercises",
-    "explicit_tags": [
-      "explosive",
-      "triple_extension",
-      "rate_of_force",
-      "compound",
-      "scrambler"
-    ],
-    "inferred_tags": [],
-    "item_id": "style_specific_exercises:Barbell Thruster",
-    "name": "Barbell Thruster"
-  },
-  {
-    "bank": "style_specific_exercises",
-    "explicit_tags": [
-      "coordination",
-      "balance",
-      "anti_rotation",
-      "scrambler"
-    ],
-    "inferred_tags": [],
-    "item_id": "style_specific_exercises:Turkish Get-Up",
-    "name": "Turkish Get-Up"
-  },
-  {
-    "bank": "style_specific_exercises",
-    "explicit_tags": [
-      "quad_dominant",
-      "balance",
-      "hip_dominant",
-      "kicker"
-    ],
-    "inferred_tags": [],
-    "item_id": "style_specific_exercises:Bulgarian Split Squat",
-    "name": "Bulgarian Split Squat"
-  },
-  {
-    "bank": "style_specific_exercises",
-    "explicit_tags": [
-      "unilateral",
-      "hip_dominant",
-      "mobility",
-      "kicker"
-    ],
-    "inferred_tags": [],
-    "item_id": "style_specific_exercises:Walking Lunges",
-    "name": "Walking Lunges"
-  },
-  {
-    "bank": "style_specific_exercises",
-    "explicit_tags": [
-      "pull",
-      "grip",
-      "upper_body",
-      "submission_hunter",
-      "clinch_fighter",
-      "compound"
-    ],
-    "inferred_tags": [],
-    "item_id": "style_specific_exercises:Weighted Pull-Up",
-    "name": "Weighted Pull-Up"
-  },
-  {
-    "bank": "style_specific_exercises",
-    "explicit_tags": [
-      "posterior_chain",
-      "grip",
-      "explosive",
-      "submission_hunter",
-      "ballistic"
-    ],
-    "inferred_tags": [],
-    "item_id": "style_specific_exercises:Kettlebell Swing",
-    "name": "Kettlebell Swing"
-  },
-  {
-    "bank": "style_specific_exercises",
-    "explicit_tags": [
-      "rotational",
-      "anti_rotation",
-      "counter_striker"
-    ],
-    "inferred_tags": [],
-    "item_id": "style_specific_exercises:Barbell Landmine Twist",
-    "name": "Barbell Landmine Twist"
-  },
-  {
-    "bank": "style_specific_exercises",
-    "explicit_tags": [
-      "anti_rotation",
-      "cognitive",
-      "counter_striker",
-      "distance_striker",
-      "cornerstone"
-    ],
-    "inferred_tags": [],
-    "item_id": "style_specific_exercises:Pallof Press",
-    "name": "Pallof Press"
-  },
-  {
-    "bank": "style_specific_exercises",
-    "explicit_tags": [
-      "explosive",
-      "overhead",
-      "rate_of_force",
-      "distance_striker",
-      "ballistic"
-    ],
-    "inferred_tags": [
-      "overhead",
-      "upper_push"
-    ],
-    "item_id": "style_specific_exercises:Overhead Med Ball Slam",
-    "name": "Overhead Med Ball Slam"
-  },
-  {
-    "bank": "style_specific_exercises",
-    "explicit_tags": [
-      "grip",
-      "core",
-      "cns_freshness",
-      "clinch_fighter",
-      "compound"
-    ],
-    "inferred_tags": [
-      "grip_max",
-      "hand_crush"
-    ],
-    "item_id": "style_specific_exercises:Farmer\u2019s Carry",
-    "name": "Farmer\u2019s Carry"
-  },
-  {
-    "bank": "style_specific_exercises",
-    "explicit_tags": [
-      "sled",
-      "work_capacity",
-      "posterior_chain",
-      "pressure_fighter",
-      "conditioning"
-    ],
-    "inferred_tags": [],
-    "item_id": "style_specific_exercises:Weighted Sled Push",
-    "name": "Weighted Sled Push"
-  },
-  {
-    "bank": "style_specific_exercises",
-    "explicit_tags": [
-      "explosive",
-      "unilateral",
-      "endurance",
-      "pressure_fighter"
-    ],
-    "inferred_tags": [
-      "high_impact_plyo"
-    ],
-    "item_id": "style_specific_exercises:Jumping Lunge",
-    "name": "Jumping Lunge"
-  },
-  {
-    "bank": "style_specific_exercises",
-    "explicit_tags": [
-      "grip",
-      "cognitive",
-      "rotational",
-      "brawler"
-    ],
-    "inferred_tags": [],
-    "item_id": "style_specific_exercises:Sledgehammer Slam",
-    "name": "Sledgehammer Slam"
-  },
-  {
-    "bank": "style_specific_exercises",
-    "explicit_tags": [
-      "explosive",
-      "cognitive",
-      "brawler",
-      "ballistic"
-    ],
-    "inferred_tags": [],
-    "item_id": "style_specific_exercises:Medicine Ball Slam",
-    "name": "Medicine Ball Slam"
-  },
-  {
     "bank": "coordination_bank",
     "explicit_tags": [
       "coordination",
@@ -11344,5 +11135,42 @@
     ],
     "item_id": "conditioning_bank:Band-Resisted Broad Jump (Max Effort)",
     "name": "Band-Resisted Broad Jump (Max Effort)"
+  },
+  {
+    "bank": "exercise_bank",
+    "explicit_tags": [
+      "grip",
+      "isolation",
+      "clinch_fighter",
+      "submission_hunter"
+    ],
+    "inferred_tags": [],
+    "item_id": "exercise_bank:Wrist Roller Extensions",
+    "name": "Wrist Roller Extensions"
+  },
+  {
+    "bank": "exercise_bank",
+    "explicit_tags": [
+      "explosive",
+      "triple_extension",
+      "rate_of_force",
+      "compound",
+      "scrambler"
+    ],
+    "inferred_tags": [],
+    "item_id": "exercise_bank:Barbell Thruster",
+    "name": "Barbell Thruster"
+  },
+  {
+    "bank": "exercise_bank",
+    "explicit_tags": [
+      "coordination",
+      "balance",
+      "anti_rotation",
+      "scrambler"
+    ],
+    "inferred_tags": [],
+    "item_id": "exercise_bank:Turkish Get-Up",
+    "name": "Turkish Get-Up"
   }
 ]

@@ -108,7 +108,7 @@ def test_validate_training_item_backfills_conditioning_bank_schema_defaults():
 def test_validate_training_item_classifies_loaded_bank_source_names_by_family():
     strength_item = bank_schema.validate_training_item(
         {"name": "Style Lift", "tags": ["strength"], "phases": ["SPP"]},
-        source="style_specific_exercises.json",
+        source="universal_gpp_strength.json",
         mode="audit",
     )
     conditioning_item = bank_schema.validate_training_item(

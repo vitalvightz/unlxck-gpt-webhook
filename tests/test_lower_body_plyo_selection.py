@@ -44,7 +44,6 @@ BOX_EXERCISES = (
 
 
 def _reset_caches() -> None:
-    strength._style_exercises_cache = None
     strength._exercise_bank_cache = None
     strength._universal_strength_cache = None
     strength._universal_strength_names_cache = None

@@ -87,7 +87,6 @@ def test_bodyweight_strength_drill_remains_selectable_when_athlete_does_not_list
     ]
 
     monkeypatch.setattr(strength, "get_exercise_bank", lambda: exercise_bank)
-    monkeypatch.setattr(strength, "get_style_exercises", lambda: [])
     monkeypatch.setattr(strength, "get_universal_strength_names", lambda: set())
 
     block = strength.generate_strength_block(
