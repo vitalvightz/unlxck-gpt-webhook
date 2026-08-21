@@ -1,0 +1,328 @@
+name: Consolidate style strength bank
+
+on:
+  push:
+    branches:
+      - codex/consolidate-style-strength-bank
+    paths:
+      - .github/workflows/consolidate-style-strength-bank.yml
+
+permissions:
+  contents: write
+
+jobs:
+  consolidate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/consolidate-style-strength-bank
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Consolidate retired style strength bank
+        shell: bash
+        run: |
+          python - <<'PY'
+          from __future__ import annotations
+
+          import ast
+          import json
+          import re
+          import textwrap
+          from pathlib import Path
+
+          root = Path('.')
+          style_path = root / 'data/style_specific_exercises'
+          exercise_path = root / 'data/exercise_bank.json'
+          inferred_path = root / 'data/bank_inferred_tags.json'
+          exclusion_path = root / 'data/injury_exclusion_map.json'
+          strength_path = root / 'fightcamp/strength.py'
+          injury_filtering_path = root / 'fightcamp/injury_filtering.py'
+
+          # Audit result: these items do not already have an equivalent main-bank
+          # exercise and should survive retirement of the dedicated style bank.
+          migrate_names = {
+              'Wrist Roller Extensions',
+              'Barbell Thruster',
+              'Turkish Get-Up',
+              'Counter-Striker Split-Line Punch Isometric Hold',
+              'Pressure-Fighter Staggered Body-Shot Med-Ball Throw',
+          }
+
+          style_items = json.loads(style_path.read_text(encoding='utf-8'))
+          style_by_name = {item['name']: item for item in style_items}
+          missing = migrate_names - style_by_name.keys()
+          assert not missing, f'Migration candidates missing from style bank: {sorted(missing)}'
+
+          exercise_raw = exercise_path.read_text(encoding='utf-8')
+          exercise_items = json.loads(exercise_raw)
+          existing_names = {item.get('name') for item in exercise_items}
+          collisions = migrate_names & existing_names
+          assert not collisions, f'Migration would duplicate existing exercise names: {sorted(collisions)}'
+
+          ordered_migrations = [item for item in style_items if item.get('name') in migrate_names]
+          assert len(ordered_migrations) == len(migrate_names)
+
+          # Append without reformatting the existing 300k+ bank.
+          trimmed = exercise_raw.rstrip()
+          assert trimmed.endswith(']')
+          body = trimmed[:-1].rstrip()
+          additions = ',\n'.join(
+              textwrap.indent(json.dumps(item, indent=2, ensure_ascii=False), '  ')
+              for item in ordered_migrations
+          )
+          exercise_path.write_text(f'{body},\n{additions}\n]\n', encoding='utf-8')
+
+          final_exercise_items = json.loads(exercise_path.read_text(encoding='utf-8'))
+          final_names = [item.get('name') for item in final_exercise_items]
+          assert len(final_names) == len(set(final_names)), 'exercise_bank.json contains duplicate names after migration'
+          final_name_set = set(final_names)
+          assert migrate_names <= final_name_set
+
+          # Migrate inferred-tag metadata only for genuinely moved exercises.
+          # Exact duplicates already represented by exercise_bank keep their existing
+          # record; all other retired-bank metadata is discarded with the source.
+          inferred = json.loads(inferred_path.read_text(encoding='utf-8'))
+          retained = [row for row in inferred if row.get('bank') != 'style_specific_exercises']
+          retained_ids = {row.get('item_id') for row in retained}
+          for row in inferred:
+              if row.get('bank') != 'style_specific_exercises':
+                  continue
+              name = row.get('name')
+              if name not in migrate_names:
+                  continue
+              target_id = f'exercise_bank:{name}'
+              if target_id in retained_ids:
+                  continue
+              migrated = dict(row)
+              migrated['bank'] = 'exercise_bank'
+              migrated['item_id'] = target_id
+              retained.append(migrated)
+              retained_ids.add(target_id)
+          assert not any(row.get('bank') == 'style_specific_exercises' for row in retained)
+          inferred_path.write_text(json.dumps(retained, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+
+          # Remove dead source prefixes from injury exclusions. If the exact exercise
+          # now exists in the main bank, preserve the safety mapping under exercise_bank;
+          # otherwise drop the obsolete retired-bank-only alias.
+          exclusions = json.loads(exclusion_path.read_text(encoding='utf-8'))
+          for region, entries in exclusions.items():
+              rewritten: list[str] = []
+              seen: set[str] = set()
+              for entry in entries:
+                  if entry.startswith('style_specific_exercises:'):
+                      name = entry.split(':', 1)[1]
+                      if name not in final_name_set:
+                          continue
+                      entry = f'exercise_bank:{name}'
+                  if entry not in seen:
+                      rewritten.append(entry)
+                      seen.add(entry)
+              exclusions[region] = rewritten
+          exclusion_path.write_text(json.dumps(exclusions, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+          assert 'style_specific_exercises:' not in exclusion_path.read_text(encoding='utf-8')
+
+          def remove_top_level_functions(text: str, names: set[str]) -> str:
+              tree = ast.parse(text)
+              lines = text.splitlines(keepends=True)
+              spans: list[tuple[int, int, str]] = []
+              for node in tree.body:
+                  if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in names:
+                      spans.append((node.lineno - 1, node.end_lineno, node.name))
+              found = {name for _, _, name in spans}
+              assert found == names, f'Expected functions not found: {sorted(names - found)}'
+              for start, end, _ in sorted(spans, reverse=True):
+                  del lines[start:end]
+              return ''.join(lines)
+
+          def remove_top_level_assignments(text: str, names: set[str]) -> str:
+              tree = ast.parse(text)
+              lines = text.splitlines(keepends=True)
+              spans: list[tuple[int, int, str]] = []
+              for node in tree.body:
+                  assigned: set[str] = set()
+                  if isinstance(node, ast.Assign):
+                      for target in node.targets:
+                          if isinstance(target, ast.Name):
+                              assigned.add(target.id)
+                  elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+                      assigned.add(node.target.id)
+                  hit = assigned & names
+                  if hit:
+                      assert len(hit) == 1
+                      spans.append((node.lineno - 1, node.end_lineno, next(iter(hit))))
+              found = {name for _, _, name in spans}
+              assert found == names, f'Expected assignments not found: {sorted(names - found)}'
+              for start, end, _ in sorted(spans, reverse=True):
+                  del lines[start:end]
+              return ''.join(lines)
+
+          # Remove the retired loader itself.
+          injury_text = injury_filtering_path.read_text(encoding='utf-8')
+          injury_text = remove_top_level_functions(injury_text, {'_load_style_specific_exercises'})
+          injury_filtering_path.write_text(injury_text, encoding='utf-8')
+
+          # Remove all dedicated style-bank runtime machinery. Tactical style still
+          # affects normal exercise-bank scoring through STYLE_TAG_MAP/style_tags.
+          strength_text = strength_path.read_text(encoding='utf-8')
+          strength_text = strength_text.replace('    _load_style_specific_exercises,\n', '')
+          strength_text = remove_top_level_functions(strength_text, {'get_style_exercises', 'normalize_style_tags'})
+          strength_text = remove_top_level_assignments(
+              strength_text,
+              {'_style_exercises_cache', 'CANONICAL_STYLE_TAGS', 'STYLE_INSERT_SCORE_MARGIN'},
+          )
+          strength_text = strength_text.replace('    get_style_exercises()\n', '')
+          strength_text = strength_text.replace('    style_exercises = get_style_exercises()\n', '')
+          strength_text = strength_text.replace('        style_exercises = list(style_exercises)\n        rng.shuffle(style_exercises)\n', '')
+
+          start_marker = '    # ------- STYLE-SPECIFIC INJECTION -------\n'
+          end_marker = '    def _apply_movement_caps(\n'
+          start = strength_text.find(start_marker)
+          assert start != -1, 'Style-specific injection marker missing'
+          end = strength_text.find(end_marker, start)
+          assert end != -1, 'Movement-cap function marker missing after style injection'
+          strength_text = strength_text[:start] + strength_text[end:]
+
+          old_signature = '''    def _apply_movement_caps(\n        exercises: list[dict],\n        *,\n        protected_names: set[str] | None = None,\n    ) -> list[dict]:\n        protected_names = {name for name in (protected_names or set()) if name}\n'''
+          new_signature = '''    def _apply_movement_caps(exercises: list[dict]) -> list[dict]:\n'''
+          assert old_signature in strength_text, 'Protected movement-cap signature changed unexpectedly'
+          strength_text = strength_text.replace(old_signature, new_signature, 1)
+
+          old_cap_block = '''        for ex in exercises:\n            name = ex.get("name")\n            movement = _cached_movement(ex)\n            if movement != "unknown" and movement_counts.get(movement, 0) >= 2:\n                if name in protected_names:\n                    replaceable_indices = [\n                        idx\n                        for idx, existing in enumerate(capped)\n                        if existing.get("name") not in protected_names\n                        and _cached_movement(existing) == movement\n                    ]\n                    if replaceable_indices:\n                        replace_index = min(\n                            replaceable_indices,\n                            key=lambda idx: score_lookup.get(capped[idx].get("name"), 0.0),\n                        )\n                        capped[replace_index] = ex\n                continue\n'''
+          new_cap_block = '''        for ex in exercises:\n            movement = _cached_movement(ex)\n            if movement != "unknown" and movement_counts.get(movement, 0) >= 2:\n                continue\n'''
+          assert old_cap_block in strength_text, 'Protected movement-cap branch changed unexpectedly'
+          strength_text = strength_text.replace(old_cap_block, new_cap_block, 1)
+          strength_text = strength_text.replace(', protected_names=protected_style_names', '')
+          strength_text = ''.join(
+              line
+              for line in strength_text.splitlines(keepends=True)
+              if '_ensure_protected_style_selection' not in line
+          )
+          strength_path.write_text(strength_text, encoding='utf-8')
+
+          # Rewrite tests so they exercise the single integrated bank rather than a
+          # deleted side channel.
+          test_files = [
+              root / 'tests/test_d3_sandbag_source_guard.py',
+              root / 'tests/test_equipment_availability.py',
+              root / 'tests/test_session_restraint.py',
+              root / 'tests/test_late_camp_selector_rebalance.py',
+              root / 'tests/test_strength_low_cost_support.py',
+              root / 'tests/test_trap_bar_squat_preference.py',
+              root / 'tests/test_strength_metadata_selection.py',
+          ]
+
+          metadata_path = root / 'tests/test_strength_metadata_selection.py'
+          metadata_text = metadata_path.read_text(encoding='utf-8')
+          fn_start = metadata_text.find('def test_style_specific_technical_primer_does_not_satisfy_strength_maintenance')
+          assert fn_start != -1, 'Style-specific maintenance test missing'
+          fn_end = metadata_text.find('\ndef ', fn_start + 1)
+          assert fn_end != -1
+          fn_block = metadata_text[fn_start:fn_end]
+          fn_block = fn_block.replace(
+              'def test_style_specific_technical_primer_does_not_satisfy_strength_maintenance',
+              'def test_tactical_style_technical_primer_does_not_satisfy_strength_maintenance',
+              1,
+          )
+          fn_block = fn_block.replace('"style_specific_exercises.json"', '"exercise_bank.json"')
+          assert '        [maintenance],\n' in fn_block
+          fn_block = fn_block.replace('        [maintenance],\n', '        [technical_primer, maintenance],\n', 1)
+          fn_block = fn_block.replace(
+              '    monkeypatch.setattr(strength, "get_style_exercises", lambda: [technical_primer])\n',
+              '',
+          )
+          metadata_text = metadata_text[:fn_start] + fn_block + metadata_text[fn_end:]
+          metadata_path.write_text(metadata_text, encoding='utf-8')
+
+          empty_style_patch = re.compile(
+              r'^\s*monkeypatch\.setattr\(strength,\s*"get_style_exercises",\s*lambda:\s*\[\]\)\n',
+              re.MULTILINE,
+          )
+          for path in test_files:
+              text = path.read_text(encoding='utf-8')
+              text = empty_style_patch.sub('', text)
+              path.write_text(text, encoding='utf-8')
+
+          style_logic_path = root / 'tests/test_style_logic.py'
+          style_logic = style_logic_path.read_text(encoding='utf-8')
+          style_logic = style_logic.replace(
+              'from fightcamp.strength import normalize_exercise_movement, normalize_style_tags, generate_strength_block\n',
+              'from fightcamp.strength import normalize_exercise_movement, generate_strength_block\n',
+          )
+          style_logic = remove_top_level_functions(style_logic, {'test_style_tag_mapping'})
+          style_logic_path.write_text(style_logic, encoding='utf-8')
+
+          schema_test_path = root / 'tests/test_bank_schema_validation.py'
+          schema_test = schema_test_path.read_text(encoding='utf-8')
+          schema_test = schema_test.replace('source="style_specific_exercises.json"', 'source="universal_gpp_strength.json"')
+          schema_test_path.write_text(schema_test, encoding='utf-8')
+
+          # The source bank is now fully retired.
+          style_path.unlink()
+
+          # Runtime/test sources must contain no dead loader/injection identifiers.
+          forbidden = {
+              '_load_style_specific_exercises',
+              'get_style_exercises',
+              'STYLE_INSERT_SCORE_MARGIN',
+              'CANONICAL_STYLE_TAGS',
+              'normalize_style_tags',
+              '_style_exercises_cache',
+              'protected_style_choice',
+              'protected_style_names',
+          }
+          scan_roots = [root / 'fightcamp', root / 'api', root / 'tests', root / 'tools', root / 'web']
+          offenders: list[str] = []
+          for scan_root in scan_roots:
+              if not scan_root.exists():
+                  continue
+              for path in scan_root.rglob('*'):
+                  if not path.is_file() or path.suffix not in {'.py', '.ts', '.tsx', '.js', '.jsx'}:
+                      continue
+                  text = path.read_text(encoding='utf-8', errors='ignore')
+                  for token in forbidden:
+                      if token in text:
+                          offenders.append(f'{path}:{token}')
+          assert not offenders, 'Dead style-bank code remains: ' + ', '.join(offenders)
+
+          assert 'style_specific_exercises:' not in exclusion_path.read_text(encoding='utf-8')
+          assert not any(row.get('bank') == 'style_specific_exercises' for row in json.loads(inferred_path.read_text(encoding='utf-8')))
+          assert not style_path.exists()
+          PY
+
+      - name: Static validation
+        shell: bash
+        run: |
+          python -m compileall -q fightcamp/strength.py fightcamp/injury_filtering.py tests/test_style_logic.py tests/test_bank_schema_validation.py tests/test_strength_metadata_selection.py
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          bank = json.loads(Path('data/exercise_bank.json').read_text(encoding='utf-8'))
+          names = [item['name'] for item in bank]
+          assert len(names) == len(set(names))
+          required = {
+              'Wrist Roller Extensions',
+              'Barbell Thruster',
+              'Turkish Get-Up',
+              'Counter-Striker Split-Line Punch Isometric Hold',
+              'Pressure-Fighter Staggered Body-Shot Med-Ball Throw',
+          }
+          assert required <= set(names)
+          assert not Path('data/style_specific_exercises').exists()
+          PY
+
+      - name: Commit consolidated bank
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- data/exercise_bank.json data/bank_inferred_tags.json data/injury_exclusion_map.json fightcamp/strength.py fightcamp/injury_filtering.py tests/test_d3_sandbag_source_guard.py tests/test_equipment_availability.py tests/test_session_restraint.py tests/test_late_camp_selector_rebalance.py tests/test_strength_low_cost_support.py tests/test_trap_bar_squat_preference.py tests/test_strength_metadata_selection.py tests/test_style_logic.py tests/test_bank_schema_validation.py
+          git rm --ignore-unmatch -- data/style_specific_exercises
+          git diff --cached --check
+          git commit -m "refactor: consolidate style strength exercises"
+          git push origin HEAD:codex/consolidate-style-strength-bank
