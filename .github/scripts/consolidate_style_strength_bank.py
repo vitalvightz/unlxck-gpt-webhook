@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import json
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -213,8 +214,6 @@ def update_tests() -> None:
     text = text.replace('source="style_specific_exercises.json"', 'source="universal_gpp_strength.json"')
     schema_test.write_text(text, encoding="utf-8")
 
-    # Remove every test hook/cache assertion for the retired bank. AST removal
-    # handles single- or multi-line monkeypatch.setattr calls safely.
     for path in (ROOT / "tests").rglob("*.py"):
         text = path.read_text(encoding="utf-8")
         text = remove_monkeypatch_attr_calls(text, "get_style_exercises")
@@ -260,3 +259,14 @@ update_tests()
 STYLE.unlink()
 verify_no_dead_code()
 assert not STYLE.exists()
+subprocess.run(
+    [
+        "git",
+        "add",
+        "--",
+        "tests/test_lower_body_plyo_selection.py",
+        "tests/test_operational_hardening.py",
+    ],
+    cwd=ROOT,
+    check=True,
+)
