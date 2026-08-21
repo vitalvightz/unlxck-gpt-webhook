@@ -31,6 +31,14 @@ TAG_SYNONYMS = {
     "rhythm": "coordination",
 }
 
+# Structured exercise field names are not semantic tags. Keeping this boundary
+# explicit means legacy runtime checks cannot accidentally treat a metadata field
+# name placed in an exercise's tags array as authority.
+NON_SEMANTIC_TAG_TOKENS = {
+    "late_windows",
+    "cut_buckets_allowed",
+}
+
 _TAG_VOCAB_CACHE: set[str] | None = None
 
 
@@ -52,7 +60,11 @@ def normalize_tags(tags: Iterable[str]) -> list[str]:
     seen: set[str] = set()
     for tag in tags:
         canonical = normalize_tag(tag)
-        if not canonical or canonical in seen:
+        if (
+            not canonical
+            or canonical in NON_SEMANTIC_TAG_TOKENS
+            or canonical in seen
+        ):
             continue
         normalized.append(canonical)
         seen.add(canonical)
