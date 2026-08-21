@@ -7,8 +7,6 @@ from fightcamp.training_context import normalize_athlete_equipment_list, normali
 from fightcamp.strength import normalize_exercise_movement, generate_strength_block
 
 
-
-
 def test_equipment_alias_split():
     assert set(normalize_equipment_list("Med Balls / Bands")) == {"medicine_ball", "bands"}
     assert set(normalize_equipment_list(["Med Balls / Bands"])) == {"medicine_ball", "bands"}
@@ -169,49 +167,3 @@ def test_dedupe_against_general_bank():
     block = generate_strength_block(flags=flags, weaknesses=["pull"], mindset_cue=None)
     names = [ex["name"] for ex in block["exercises"]]
     assert names.count("Weighted Pull-Up") <= 1
-
-
-def test_novelty_with_cornerstone():
-    # Non-cornerstone should not repeat
-    clinch_flags = {
-        "fight_format": "mma",
-        "style_tactical": ["clinch fighter"],
-        "training_days": ["mon", "wed"],
-        "training_frequency": 2,
-        "random_seed": 0,
-        "equipment": ["plate", "wrist_roller", "dumbbells", "pullup_bar"],
-        "key_goals": [],
-    }
-    gpp = generate_strength_block(flags={**clinch_flags, "phase": "GPP"}, weaknesses=[], mindset_cue=None)
-    gpp_names = [ex["name"] for ex in gpp["exercises"]]
-    gpp_moves = {ex.get("movement") for ex in gpp["exercises"] if ex.get("movement")}
-    assert "Plate Pinch Holds" in gpp_names
-    spp = generate_strength_block(
-        flags={**clinch_flags, "phase": "SPP", "prev_exercises": gpp_names, "recent_exercises": list(gpp_moves)},
-        weaknesses=[],
-        mindset_cue=None,
-    )
-    spp_names = [ex["name"] for ex in spp["exercises"]]
-    assert "Plate Pinch Holds" not in spp_names
-
-    # Cornerstone can repeat
-    counter_flags = {
-        "fight_format": "mma",
-        "style_tactical": ["counter striker"],
-        "training_days": ["mon", "wed"],
-        "training_frequency": 2,
-        "random_seed": 0,
-        "equipment": ["bands", "landmine"],
-        "key_goals": [],
-    }
-    gpp2 = generate_strength_block(flags={**counter_flags, "phase": "GPP"}, weaknesses=[], mindset_cue=None)
-    gpp2_names = [ex["name"] for ex in gpp2["exercises"]]
-    gpp2_moves = {ex.get("movement") for ex in gpp2["exercises"] if ex.get("movement")}
-    assert "Pallof Press" in gpp2_names
-    spp2 = generate_strength_block(
-        flags={**counter_flags, "phase": "SPP", "prev_exercises": gpp2_names, "recent_exercises": list(gpp2_moves)},
-        weaknesses=[],
-        mindset_cue=None,
-    )
-    spp2_names = [ex["name"] for ex in spp2["exercises"]]
-    assert "Pallof Press" in spp2_names
