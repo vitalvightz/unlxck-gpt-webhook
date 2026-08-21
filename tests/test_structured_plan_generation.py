@@ -1531,7 +1531,7 @@ def test_bank_conditioning_entry_converts_to_valid_block():
 
 def test_real_bank_entries_convert_to_valid_blocks():
     # Representative live bank entries must convert without error or invention.
-    strength = bank_strength_to_block(_first_bank_entry("universal_gpp_strength.json"))
+    strength = bank_strength_to_block(_first_bank_entry("exercise_bank.json"))
     SessionBlock.model_validate(strength)
     assert strength["display_name"]
 

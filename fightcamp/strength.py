@@ -66,8 +66,6 @@ from .priority_profile import (
 logger = logging.getLogger(__name__)
 
 _exercise_bank_cache = None
-_universal_strength_cache = None
-_universal_strength_names_cache = None
 
 
 
@@ -1386,32 +1384,6 @@ def get_exercise_bank() -> list[dict]:
     return _exercise_bank_cache
 
 
-def get_universal_strength() -> list[dict]:
-    global _universal_strength_cache
-    if _universal_strength_cache is None:
-        try:
-            _universal_strength_cache = json.loads(
-                (DATA_DIR / "universal_gpp_strength.json").read_text(encoding="utf-8")
-            )
-        except FileNotFoundError:
-            logger.warning("[bank-load] optional universal_gpp_strength bank missing")
-            _universal_strength_cache = []
-        else:
-            for item in _universal_strength_cache:
-                validate_training_item(item, source="universal_gpp_strength.json", require_phases=True, mode="runtime")
-                normalize_item_tags(item)
-    return _universal_strength_cache
-
-
-def get_universal_strength_names() -> set[str]:
-    global _universal_strength_names_cache
-    if _universal_strength_names_cache is None:
-        _universal_strength_names_cache = {
-            ex.get("name") for ex in get_universal_strength() if ex.get("name")
-        }
-    return _universal_strength_names_cache
-
-
 def prime_strength_banks() -> None:
     """Load and normalize strength banks once so later runs see consistent state.
 
@@ -1422,8 +1394,6 @@ def prime_strength_banks() -> None:
     canonical movement up front and removes that source of seeded-output drift.
     """
     for item in get_exercise_bank():
-        normalize_exercise_movement(item)
-    for item in get_universal_strength():
         normalize_exercise_movement(item)
 
 
@@ -1833,7 +1803,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     # substep.
     exercise_bank = _run_substep("candidate_pool", get_exercise_bank)
     source_candidate_count = len(exercise_bank)
-    universal_strength_names = get_universal_strength_names()
 
     # When a seed is provided, vary the iteration order of the source banks so
     # that score-tied candidates fall on different sides of the order-index
@@ -2215,8 +2184,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         # Phase-based novelty enforcement with exemptions
         if prev_exercises and ex.get("name") in prev_exercises:
             if not (
-                ex.get("name") in universal_strength_names
-                or any(
+                any(
                     term in ex.get("name", "").lower() or term in tags_lower
                     for term in cornerstone_terms
                 )
@@ -2290,8 +2258,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 continue
             if prev_exercises and ex.get("name") in prev_exercises:
                 if not (
-                    ex.get("name") in universal_strength_names
-                    or any(
+                    any(
                         term in ex.get("name", "").lower() or term in tags_lower
                         for term in cornerstone_terms
                     )
@@ -2910,32 +2877,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             movement_counts[movement] = movement_counts.get(movement, 0) + 1
             unique_top.append(ex)
     top_exercises = unique_top
-
-    # --------- UNIVERSAL STRENGTH INSERTION ---------
-    if phase == "GPP":
-        universal_strength = get_universal_strength()
-        existing_names = _selected_names(top_exercises)
-        inserted = 0
-        for category in _required_base_categories(top_exercises):
-            if inserted >= 2:
-                break
-            for drill, drill_reasons, drill_profile, _late_safe_profile in _sorted_external_candidates(
-                universal_strength,
-                exclude_names=existing_names,
-            ):
-                drill_name = drill.get("name")
-                if not drill_name:
-                    continue
-                if _cached_guarded_decision(drill).action == "exclude":
-                    continue
-                if category not in drill_profile["base_categories"]:
-                    continue
-                top_exercises.append(drill)
-                existing_names.add(drill_name)
-                reason_lookup[drill_name] = drill_reasons
-                score_lookup.setdefault(drill_name, 0.0)
-                inserted += 1
-                break
 
     base_exercises = top_exercises
     # Final safety deduplication in case database contained repeats

@@ -87,7 +87,6 @@ CONDITIONING_BANK_NAMES = {
 }
 EXERCISE_BANK_NAMES = {
     "exercise_bank.json",
-    "universal_gpp_strength.json",
 }
 CONDITIONING_COST_FIELDS = ("impact_cost", "movement_cost", "lactate_load")
 EXERCISE_COST_FIELDS = (

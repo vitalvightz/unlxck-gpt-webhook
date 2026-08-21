@@ -98,9 +98,7 @@
     "exercise_bank:Push-Up (Weighted)",
     "style_conditioning_bank:Cross-Counter Plyo Pushups",
     "style_conditioning_bank:Flying Knee Drill",
-    "style_conditioning_bank:Flying Sub Scramble",
-    "universal_gpp_strength:Barbell or DB Overhead Press",
-    "universal_gpp_strength:Push-Up or Bench Press"
+    "style_conditioning_bank:Flying Sub Scramble"
   ],
   "elbow": [
     "conditioning_bank:Band-Resisted Straight Punch Release",
@@ -155,9 +153,7 @@
     "exercise_bank:Single-Leg RDL",
     "exercise_bank:Snatch Grip Deadlift Isometric (125% 1RM @ knee)",
     "exercise_bank:Sumo Deadlift Isometric (120% 1RM @ mid-thigh)",
-    "exercise_bank:Trap Bar Deadlift",
-    "universal_gpp_strength:Low Hurdle Hop (Rhythm Focus)",
-    "universal_gpp_strength:Trap Bar Deadlift"
+    "exercise_bank:Trap Bar Deadlift"
   ],
   "groin": [
     "exercise_bank:Cossack Squat",
@@ -211,8 +207,7 @@
     "style_conditioning_bank:Ring-Cut Sprint",
     "style_conditioning_bank:Sprawl-to-Shot Sprints",
     "style_conditioning_bank:Stand-Up Sprint",
-    "style_conditioning_bank:Swarm Entry Sprints",
-    "universal_gpp_strength:Low Hurdle Hop (Rhythm Focus)"
+    "style_conditioning_bank:Swarm Entry Sprints"
   ],
   "hand": [
     "conditioning_bank:Farmers Walk (Light)",
@@ -288,8 +283,7 @@
     "style_conditioning_bank:Ring-Cut Sprint",
     "style_conditioning_bank:Sprawl-to-Shot Sprints",
     "style_conditioning_bank:Stand-Up Sprint",
-    "style_conditioning_bank:Swarm Entry Sprints",
-    "universal_gpp_strength:DB Split Squat"
+    "style_conditioning_bank:Swarm Entry Sprints"
   ],
   "knee": [
     "conditioning_bank:5-10-15 Ladder (Box Jumps/Push-Ups/KB Swings)",
@@ -377,9 +371,7 @@
     "style_taper_conditioning:Shot-Jump",
     "style_taper_conditioning:Submission Hunter Arm Drag Jump",
     "style_taper_conditioning:Submission Hunter Bridge-Jump",
-    "style_taper_conditioning:Submission Hunter Sit-Out Jump",
-    "universal_gpp_strength:Barbell Back Squat",
-    "universal_gpp_strength:DB Split Squat"
+    "style_taper_conditioning:Submission Hunter Sit-Out Jump"
   ],
   "lower_back": [
     "conditioning_bank:Hurdle Hop (Stick Landing)",
@@ -403,10 +395,7 @@
     "exercise_bank:Single-Leg RDL",
     "exercise_bank:Snatch Grip Deadlift Isometric (125% 1RM @ knee)",
     "exercise_bank:Sumo Deadlift Isometric (120% 1RM @ mid-thigh)",
-    "exercise_bank:Trap Bar Deadlift",
-    "universal_gpp_strength:Barbell Back Squat",
-    "universal_gpp_strength:Low Hurdle Hop (Rhythm Focus)",
-    "universal_gpp_strength:Trap Bar Deadlift"
+    "exercise_bank:Trap Bar Deadlift"
   ],
   "neck": [
     "conditioning_bank:Band-Resisted Straight Punch Release",
@@ -419,8 +408,7 @@
     "exercise_bank:Neck Harness Lateral Flexion",
     "exercise_bank:Single-Leg Bridge Hold",
     "style_taper_conditioning:Submission Hunter Bridge Pop",
-    "style_taper_conditioning:Submission Hunter Bridge-Jump",
-    "universal_gpp_strength:Neck Harness Isometrics"
+    "style_taper_conditioning:Submission Hunter Bridge-Jump"
   ],
   "quad": [
     "coordination_bank:Fencing Lunge Jab",
@@ -434,9 +422,7 @@
     "exercise_bank:Jump Lunge (Alternating)",
     "exercise_bank:Lateral Lunge (Plyometric)",
     "exercise_bank:Tempo Split Squat (4-0-1)",
-    "style_conditioning_bank:Forward Lunge Strikes",
-    "universal_gpp_strength:Barbell Back Squat",
-    "universal_gpp_strength:DB Split Squat"
+    "style_conditioning_bank:Forward Lunge Strikes"
   ],
   "shin": [
     "conditioning_bank:Jump Rope (Recovery Pace)",
@@ -494,9 +480,7 @@
     "style_taper_conditioning:Pressure Fighter Cutoff Hop",
     "style_taper_conditioning:Pressure Fighter Stomp",
     "style_taper_conditioning:Pressure Fighter Stomp-Switch",
-    "style_taper_conditioning:Pressure Fighter's Shadowboxing Riddle",
-    "universal_gpp_strength:Barbell or DB Overhead Press",
-    "universal_gpp_strength:Push-Up or Bench Press"
+    "style_taper_conditioning:Pressure Fighter's Shadowboxing Riddle"
   ],
   "si_joint": [
     "conditioning_bank:Hurdle Hop (Stick Landing)",
@@ -520,10 +504,7 @@
     "exercise_bank:Single-Leg RDL",
     "exercise_bank:Snatch Grip Deadlift Isometric (125% 1RM @ knee)",
     "exercise_bank:Sumo Deadlift Isometric (120% 1RM @ mid-thigh)",
-    "exercise_bank:Trap Bar Deadlift",
-    "universal_gpp_strength:Barbell Back Squat",
-    "universal_gpp_strength:Low Hurdle Hop (Rhythm Focus)",
-    "universal_gpp_strength:Trap Bar Deadlift"
+    "exercise_bank:Trap Bar Deadlift"
   ],
   "toe": [
     "conditioning_bank:Jump Rope (Recovery Pace)",
@@ -554,10 +535,7 @@
     "exercise_bank:Single-Leg RDL",
     "exercise_bank:Snatch Grip Deadlift Isometric (125% 1RM @ knee)",
     "exercise_bank:Sumo Deadlift Isometric (120% 1RM @ mid-thigh)",
-    "exercise_bank:Trap Bar Deadlift",
-    "universal_gpp_strength:Barbell Back Squat",
-    "universal_gpp_strength:Low Hurdle Hop (Rhythm Focus)",
-    "universal_gpp_strength:Trap Bar Deadlift"
+    "exercise_bank:Trap Bar Deadlift"
   ],
   "wrist": [
     "conditioning_bank:5-10-15 Ladder (Box Jumps/Push-Ups/KB Swings)",
@@ -583,7 +561,6 @@
     "exercise_bank:Explosive Push-Up (Clap-to-Tap)",
     "exercise_bank:Push-Up (Weighted)",
     "exercise_bank:Snatch Grip Deadlift Isometric (125% 1RM @ knee)",
-    "style_conditioning_bank:Cross-Counter Plyo Pushups",
-    "universal_gpp_strength:Push-Up or Bench Press"
+    "style_conditioning_bank:Cross-Counter Plyo Pushups"
   ]
 }

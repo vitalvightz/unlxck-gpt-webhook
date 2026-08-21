@@ -42,7 +42,6 @@ _SCHEMA_SOURCE_KEY = "_schema_source"
 
 STRENGTH_BANK_SOURCES = {
     "exercise_bank.json",
-    "universal_gpp_strength.json",
 }
 CONDITIONING_BANK_SOURCES = {
     "conditioning_bank.json",
