@@ -97,6 +97,31 @@ def _number(value: Any) -> float | None:
         return None
 
 
+def style_taper_window_for_days(days_until_fight: Any) -> str | None:
+    """Return the canonical Style Taper D-day window for D13 through D1."""
+    days = _number(days_until_fight)
+    if days is None or not days.is_integer():
+        return None
+    day = int(days)
+    if 8 <= day <= 13:
+        return D13_TO_D8
+    if day == 7:
+        return D7
+    if 5 <= day <= 6:
+        return D6_TO_D5
+    if 2 <= day <= 4:
+        return D4_TO_D2
+    if day == 1:
+        return D1
+    return None
+
+
+def style_taper_rpe_max_for_days(days_until_fight: Any) -> float | None:
+    """Return the canonical Style Taper RPE ceiling for a D-day value."""
+    window = style_taper_window_for_days(days_until_fight)
+    return RPE_MAX_BY_WINDOW.get(window) if window else None
+
+
 def style_taper_entry_window_eligible(entry: dict[str, Any], window: str) -> bool:
     """Return whether a style-taper entry explicitly declares the requested D-day window."""
     resolved = _token(window)
