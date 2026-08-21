@@ -214,7 +214,13 @@ def all_watches() -> tuple[TacticalWatch, ...]:
         if "tactical_watch" not in tags:
             raise ValueError(f"Tactical Watch {key!r} is missing tactical_watch tag")
         style_tags = tags & set(STYLE_FAMILIES)
-        if len(style_tags) != 1:
+        if len(style_tags) > 1:
+            raise ValueError(f"Tactical Watch {key!r} has multiple style tags")
+        if style_tags:
+            style = next(iter(style_tags))
+        elif key.startswith("generic."):
+            style = "generic"
+        else:
             raise ValueError(f"Tactical Watch {key!r} needs one style tag")
         if not isinstance(mindset, dict) or not all(
             str(mindset.get(field) or "").strip()
@@ -227,7 +233,7 @@ def all_watches() -> tuple[TacticalWatch, ...]:
         watch = TacticalWatch(
             key=key,
             name=name,
-            style=next(iter(style_tags)),
+            style=style,
             phase=phases[0],
             why=str(entry.get("why") or "").strip(),
             intent=str(mindset.get("intent") or "").strip(),
