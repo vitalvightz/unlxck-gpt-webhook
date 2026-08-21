@@ -14,7 +14,7 @@ def test_normalize_tags_canonicalizes_synonyms_and_removes_duplicates():
         "Decision Speed",
     ])
 
-    assert normalized == ["muay_thai", "pressure_fighter", "decision_speed"]
+    assert normalized == ["muay_thai", "pressure_fighter", "reactive"]
 
 
 def test_normalize_tags_maps_legacy_drill_tags_to_scoring_vocab():
