@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from fightcamp import conditioning
 from fightcamp.style_taper_governance import (
     D13_TO_D8,
     D21_TO_D14,
@@ -65,6 +66,51 @@ def test_style_taper_activation_is_explicitly_d13_and_under():
 def test_declared_late_windows_control_eligibility(window, expected):
     item = {"late_windows": [D6_TO_D5, D4_TO_D2]}
     assert style_taper_entry_window_eligible(item, window) is expected
+
+
+@pytest.mark.parametrize(
+    ("window", "expected_eligible"),
+    [
+        (D21_TO_D14, False),
+        (D13_TO_D8, False),
+        (D7, False),
+        (D6_TO_D5, True),
+        (D4_TO_D2, True),
+        (D1, False),
+    ],
+)
+def test_production_conditioning_evaluator_hard_blocks_window_mismatch(window, expected_eligible):
+    drill = {
+        "name": "Window-Specific Tactical Primer",
+        "phases": ["TAPER"],
+        "system": "alactic",
+        "tags": ["boxing", "counter_striker", "low_impact", "cns_freshness", "skill_refinement"],
+        "late_windows": [D6_TO_D5, D4_TO_D2],
+        "work_sec": 5,
+        "rest_sec": 90,
+        "rounds": 4,
+        "rpe_max": 4,
+        "impact_cost": "low",
+        "movement_cost": "low",
+        "lactate_load": "low",
+        "stress_class": "support",
+        "cost_class": "low",
+        "support_only": True,
+        "meaningful_stress": False,
+    }
+    result = conditioning._evaluate_conditioning_late_window(
+        drill,
+        system="alactic",
+        window=window,
+        bridge_rules={"glycolytic_touch_max": 0},
+    )
+
+    if expected_eligible:
+        assert "late_conditioning_block_window_mismatch" not in result["block_codes"]
+        assert result["blocked"] is False
+    else:
+        assert "late_conditioning_block_window_mismatch" in result["block_codes"]
+        assert result["blocked"] is True
 
 
 def test_d4_to_d2_rejects_cooperative_contact():
