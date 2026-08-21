@@ -8,17 +8,11 @@ on:
     branches:
       - '**'
 
-concurrency:
-  group: validate-json-banks-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
 jobs:
   # Temporary migration job. Delete after the canonical persisted-data rewrite lands.
   migrate_tag_registry:
-    if: >-
-      (github.event_name == 'pull_request' && github.head_ref == 'codex/authoritative-tag-registry') ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/codex/authoritative-tag-registry')
-    runs-on: windows-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/codex/authoritative-tag-registry'
+    runs-on: macos-latest
     permissions:
       contents: write
     steps:
@@ -29,7 +23,7 @@ jobs:
           fetch-depth: 0
 
       - name: Apply deterministic tag migration
-        run: python tools/migrate_tag_registry_data.py
+        run: python3 tools/migrate_tag_registry_data.py
 
       - name: Commit migrated files when needed
         shell: bash
