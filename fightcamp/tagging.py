@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-import json
 from typing import Iterable
+
 # Refactored: Import centralized DATA_DIR from config
 from .config import DATA_DIR
+from .tag_vocabulary import read_tag_vocabulary_items
 
 
 TAG_SYNONYMS = {
@@ -69,11 +70,10 @@ def load_tag_vocabulary() -> set[str]:
     global _TAG_VOCAB_CACHE
     if _TAG_VOCAB_CACHE is not None:
         return _TAG_VOCAB_CACHE
-    # Refactored: Use centralized DATA_DIR instead of recomputing
     vocab_path = DATA_DIR / "tag_vocabulary.json"
     if not vocab_path.exists():
         _TAG_VOCAB_CACHE = set()
         return _TAG_VOCAB_CACHE
-    vocab = normalize_tags(json.loads(vocab_path.read_text(encoding="utf-8")))
+    vocab = normalize_tags(read_tag_vocabulary_items(vocab_path))
     _TAG_VOCAB_CACHE = set(vocab)
     return _TAG_VOCAB_CACHE

@@ -26,6 +26,11 @@ jobs:
       - name: Run bank validator
         run: python tools/validate_banks.py
 
+      # Read-only migration audit. This intentionally does not block yet:
+      # existing tag debt must be classified before the authoritative gate is enabled.
+      - name: Audit tag registry
+        run: python tools/audit_tag_registry.py
+
       # Blocking gate: the rehab bank must satisfy its data contract. Unlike the
       # cross-bank audit above, this exits non-zero on any schema error.
       - name: Validate rehab bank data contract
