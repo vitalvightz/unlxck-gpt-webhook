@@ -108,10 +108,20 @@ _NON_WORSENING_RESPONSES = frozenset({"better", "same"})
 
 # No existing rehab-bank or taxonomy record currently supplies a reviewed,
 # condition-specific RESTORE -> LOAD capability rule with provenance. In
-# particular, the bank's progression/demand metadata remains pending migration.
+# particular, the bank's clinical demand metadata (``load``/``impact``/
+# ``velocity``) remains pending migration: every drill resolves to ``unknown``
+# demand today, so ``RehabExposureEvent.has_unknown_demand`` excludes every
+# exposure from LOAD qualification and any criterion added now could never fire.
 # An empty registry is therefore the only honest production configuration.
+#
+# The dependency before this can be populated is: migrate the clinical demand
+# taxonomy -> classify each drill's real load/impact/velocity -> land the
+# reviewed values in the bank -> validate coverage -> only then enable criteria.
 # Future entries must be keyed by an exact structured taxonomy type (not a broad
-# family label) and cite their reviewed source in ``provenance``.
+# family label), cite their reviewed source in ``provenance``, and be backed by
+# real bank demand — enforced by
+# ``tests/test_load_criteria_registry_coverage.py`` so a rule that can never fire
+# cannot be merged.
 LOAD_CRITERIA_REGISTRY: Mapping[str, LoadCriteria] = MappingProxyType({})
 
 

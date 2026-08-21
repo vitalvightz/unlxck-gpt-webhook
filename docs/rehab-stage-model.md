@@ -265,3 +265,34 @@ by construction: a pure function cannot accumulate progression.
 Until then, rehab drill selection is exactly what it was. Null drill stages do
 not filter anything out, `rehab_protocols` does not import the resolver, and a
 test asserts the module never will in PR2.
+
+## RESTORE → LOAD eligibility is blocked on the demand migration
+
+PR4's `RESTORE -> LOAD` interpreter (`api/contracts/load_eligibility.py`) is
+implemented and correct, but `LOAD_CRITERIA_REGISTRY` is deliberately empty and
+must stay so until the rehab bank carries reviewed clinical **demand** metadata.
+
+Every bank drill currently reports `load`, `impact` and `velocity` as `unknown`
+(the values PR1 left `null`), so every recorded exposure is
+`has_unknown_demand=True` and is excluded from LOAD qualification. A criterion
+added now — however carefully written — could therefore never return `eligible`:
+`load in ["low", "moderate"]` cannot match a demand that is always `unknown`.
+The interpreter is right to keep returning `insufficient_evidence`; that
+conservative answer is safer than inferring an unstated demand.
+
+The order this must happen in:
+
+1. Agree a fixed clinical demand taxonomy (`load` / `impact` / `velocity` /
+   `contraction_type` / `target_tissues` value sets).
+2. Review and classify each drill's real demand — never guessed by the backend.
+   Unknown stays unknown.
+3. Migrate the reviewed values into the production bank.
+4. Validate coverage: `tests/test_load_criteria_registry_coverage.py` requires
+   every enabled criterion to be backed by at least one real drill whose
+   reviewed demand can satisfy it, so a rule that can never fire cannot merge.
+5. Only then add injury-specific criteria; the interpreter can finally
+   distinguish *supports progression* / *does not support* / *insufficient*.
+
+The missing demand migration — not a shortage of criteria — is the
+production-readiness blocker for any claim of evidence-based injury progression
+from exercise exposure.
