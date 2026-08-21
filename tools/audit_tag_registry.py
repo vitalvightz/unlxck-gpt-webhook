@@ -248,6 +248,31 @@ def audit_registry(data_dir: Path = DATA_DIR) -> dict[str, Any]:
     scoring_zero_bank_coverage = sorted(scoring_tags - bank_tags)
     vocab_unused = sorted(canonical_vocab - bank_tags - scoring_tags - runtime_tags)
 
+    runtime_files_by_tag: dict[str, list[str]] = {}
+    for tag in sorted(runtime_tags):
+        runtime_files_by_tag[tag] = sorted(
+            filename
+            for filename, tags in runtime_by_file.items()
+            if tag in tags
+        )
+
+    scoring_sources_by_tag: dict[str, list[str]] = {}
+    for tag in sorted(scoring_tags):
+        scoring_sources_by_tag[tag] = [
+            source
+            for source, tags in scoring_by_source.items()
+            if tag in tags
+        ]
+
+    bank_tag_details = {
+        tag: {
+            "occurrences": int(bank["canonical_counts"].get(tag, 0)),
+            "banks": sorted(bank["files_by_tag"].get(tag, set())),
+            "raw_forms": sorted(bank["raw_forms_by_canonical"].get(tag, set())),
+        }
+        for tag in sorted(bank_tags)
+    }
+
     coverage = []
     for tag in sorted(scoring_tags):
         coverage.append(
@@ -280,6 +305,9 @@ def audit_registry(data_dir: Path = DATA_DIR) -> dict[str, Any]:
         "scoring_zero_bank_coverage": scoring_zero_bank_coverage,
         "vocab_unused": vocab_unused,
         "coverage": coverage,
+        "bank_tag_details": bank_tag_details,
+        "runtime_files_by_tag": runtime_files_by_tag,
+        "scoring_sources_by_tag": scoring_sources_by_tag,
         "runtime_by_file": {
             name: sorted(tags) for name, tags in sorted(runtime_by_file.items())
         },
@@ -306,6 +334,27 @@ def _emit_mapping(title: str, mapping: dict[str, Any], *, emit=print) -> None:
         emit(f"  - {key} -> {mapping[key]}")
 
 
+def _emit_tag_details(
+    title: str,
+    tags: Iterable[str],
+    *,
+    report: dict[str, Any],
+    emit=print,
+) -> None:
+    tags = list(tags)
+    emit(f"\n{title}: {len(tags)}")
+    for tag in tags:
+        bank = report["bank_tag_details"].get(tag, {})
+        scoring = ",".join(report["scoring_sources_by_tag"].get(tag, [])) or "-"
+        runtime = ",".join(report["runtime_files_by_tag"].get(tag, [])) or "-"
+        banks = ",".join(bank.get("banks", [])) or "-"
+        occurrences = bank.get("occurrences", 0)
+        emit(
+            f"  - {tag}: occurrences={occurrences} banks={banks} "
+            f"scoring={scoring} runtime={runtime}"
+        )
+
+
 def print_report(report: dict[str, Any], *, emit=print) -> None:
     emit("=" * 48)
     emit("TAG REGISTRY AUDIT")
@@ -326,12 +375,42 @@ def print_report(report: dict[str, Any], *, emit=print) -> None:
     _emit_mapping("Aliases in vocabulary", report["aliases_in_vocabulary"], emit=emit)
     _emit_mapping("Vocabulary normalization collisions", report["vocabulary_collisions"], emit=emit)
     _emit_mapping("Non-canonical aliases used in banks", report["bank_aliases"], emit=emit)
-    _emit_list("Code-owned tags missing from vocabulary", report["code_owned_missing"], emit=emit)
-    _emit_list("Scoring tags missing from vocabulary", report["scoring_missing_vocab"], emit=emit)
-    _emit_list("Runtime control tags missing from vocabulary", report["runtime_missing_vocab"], emit=emit)
-    _emit_list("Bank tags missing from vocabulary", report["bank_missing_vocab"], emit=emit)
-    _emit_list("Unknown bank-only tags requiring review", report["unknown_bank_only"], emit=emit)
-    _emit_list("Scoring tags with zero bank coverage", report["scoring_zero_bank_coverage"], emit=emit)
+    _emit_tag_details(
+        "Code-owned tags missing from vocabulary",
+        report["code_owned_missing"],
+        report=report,
+        emit=emit,
+    )
+    _emit_tag_details(
+        "Scoring tags missing from vocabulary",
+        report["scoring_missing_vocab"],
+        report=report,
+        emit=emit,
+    )
+    _emit_tag_details(
+        "Runtime control tags missing from vocabulary",
+        report["runtime_missing_vocab"],
+        report=report,
+        emit=emit,
+    )
+    _emit_tag_details(
+        "Bank tags missing from vocabulary",
+        report["bank_missing_vocab"],
+        report=report,
+        emit=emit,
+    )
+    _emit_tag_details(
+        "Unknown bank-only tags requiring review",
+        report["unknown_bank_only"],
+        report=report,
+        emit=emit,
+    )
+    _emit_tag_details(
+        "Scoring tags with zero bank coverage",
+        report["scoring_zero_bank_coverage"],
+        report=report,
+        emit=emit,
+    )
     _emit_list("Vocabulary tags unused by banks/scoring/runtime", report["vocab_unused"], emit=emit)
 
     emit("\nSCORING COVERAGE")
