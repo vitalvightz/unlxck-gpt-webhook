@@ -983,35 +983,6 @@ def injury_match_details(
     _INJURY_MATCH_DETAILS_CACHE[cache_key] = copy.deepcopy(reasons)
     return reasons
 
-def _load_style_specific_exercises(*, mode: str = "runtime") -> list[dict]:
-    paths = [
-        DATA_DIR / "style_specific_exercises.json",
-        DATA_DIR / "style_specific_exercises",
-    ]
-    for path in paths:
-        if not path.exists():
-            continue
-        try:
-            items = json.loads(path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError as exc:
-            raise ValueError(
-                "style_specific_exercises JSON error in "
-                f"{path}: line {exc.lineno} column {exc.colno} ({exc.msg})"
-            ) from exc
-        if not isinstance(items, list):
-            raise ValueError(
-                "style_specific_exercises must be a JSON list of exercise objects. "
-                f"Check {path}."
-            )
-        for item in items:
-            validate_training_item(item, source=str(path), require_phases=True, mode=mode)
-            normalize_item_tags(item)
-        return items
-    logger.warning(
-        "[bank] style_specific_exercises missing. Add data/style_specific_exercises.json "
-        "or data/style_specific_exercises to enable style-specific lifts."
-    )
-    return []
 
 
 def _load_bank_items(filename: str, *, mode: str = "runtime") -> list[dict]:
@@ -1030,7 +1001,6 @@ def collect_banks(*, mode: str = "runtime") -> dict[str, list[dict]]:
     banks["universal_gpp_strength"] = _load_bank_items("universal_gpp_strength.json", mode=mode)
     banks["universal_gpp_conditioning"] = _load_bank_items("universal_gpp_conditioning.json", mode=mode)
     banks["style_taper_conditioning"] = _load_bank_items("style_taper_conditioning.json", mode=mode)
-    banks["style_specific_exercises"] = _load_style_specific_exercises(mode=mode)
 
     coord_data = json.loads((DATA_DIR / "coordination_bank.json").read_text(encoding="utf-8"))
     coordination_bank: list[dict] = []

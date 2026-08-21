@@ -18,7 +18,6 @@ from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP
 # Refactored: Import centralized constants from config
 from .config import PHASE_EQUIPMENT_BOOST, PHASE_TAG_BOOST, DATA_DIR, INJURY_GUARD_SHORTLIST
 from .injury_filtering import (
-    _load_style_specific_exercises,
     _log_exclusion,
     _log_replacement,
     injury_match_details,
@@ -66,49 +65,18 @@ from .priority_profile import (
 
 logger = logging.getLogger(__name__)
 
-_style_exercises_cache = None
 _exercise_bank_cache = None
 _universal_strength_cache = None
 _universal_strength_names_cache = None
 
 
-def get_style_exercises() -> list[dict]:
-    global _style_exercises_cache
-    if _style_exercises_cache is None:
-        _style_exercises_cache = _load_style_specific_exercises()
-    return _style_exercises_cache
 
 
 
-CANONICAL_STYLE_TAGS = {
-    "brawler",
-    "pressure_fighter",
-    "clinch_fighter",
-    "distance_striker",
-    "counter_striker",
-    "submission_hunter",
-    "kicker",
-    "scrambler",
-    "grappler",
-    "wrestler",
-}
 
 
-def normalize_style_tags(tags):
-    """Return canonical tactical style tags without ``style_`` prefixes."""
-    normalized = set()
-    for tag in tags:
-        t = normalize_tag(str(tag or ""))
-        if not t:
-            continue
-        if t.startswith("style_"):
-            t = t[6:]
-        if t in CANONICAL_STYLE_TAGS:
-            normalized.add(t)
-    return normalized
 
 
-STYLE_INSERT_SCORE_MARGIN = {"GPP": 0.2, "SPP": 0.35, "TAPER": 0.15}
 SESSION_SUPPORT_CAP_MULTIPLIER = 2
 CORE_BALANCE_PRIORITY_TOKENS = {
     "core",
@@ -1453,7 +1421,6 @@ def prime_strength_banks() -> None:
     classifications than later calls. Normalizing at prime time pins the
     canonical movement up front and removes that source of seeded-output drift.
     """
-    get_style_exercises()
     for item in get_exercise_bank():
         normalize_exercise_movement(item)
     for item in get_universal_strength():
@@ -1866,7 +1833,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     # substep.
     exercise_bank = _run_substep("candidate_pool", get_exercise_bank)
     source_candidate_count = len(exercise_bank)
-    style_exercises = get_style_exercises()
     universal_strength_names = get_universal_strength_names()
 
     # When a seed is provided, vary the iteration order of the source banks so
@@ -1877,8 +1843,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     if rng is not None:
         exercise_bank = list(exercise_bank)
         rng.shuffle(exercise_bank)
-        style_exercises = list(style_exercises)
-        rng.shuffle(style_exercises)
 
     style_tags = [t for s in style_list for t in STYLE_TAG_MAP.get(s, [])]
     goal_tags = [tag for g in goals for tag in GOAL_TAG_MAP.get(g, [])]
@@ -2984,187 +2948,12 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             unique_base.append(ex)
     base_exercises = unique_base
 
-    # ------- STYLE-SPECIFIC INJECTION -------
-    athlete_style_set = normalize_style_tags(style_list)
-    available_eq = set(equipment_access)
-    style_candidates: list[tuple[dict, float, dict]] = []
-    protected_style_choice: tuple[dict, float, dict] | None = None
-    selected_cutoff = min(
-        (score_lookup.get(ex.get("name"), 0.0) for ex in base_exercises if ex.get("name")),
-        default=0.0,
-    )
-    style_margin = STYLE_INSERT_SCORE_MARGIN.get(phase, 0.25)
-    for ex in style_exercises:
-        if phase not in ex.get("phases", []):
-            continue
-        if _exercise_late_windows(ex) and not active_late_window:
-            continue
-        if _cached_guarded_decision(ex).action == "exclude":
-            continue
-        ex_tags = set(ex.get("tags", []))
-        if not ex_tags & athlete_style_set:
-            continue
-        ex_eq = _cached_equipment(ex)
-        if ex_eq and ex_eq != {"bodyweight"} and not ex_eq.issubset(available_eq):
-            continue
-        if any(e.get("name") == ex.get("name") for e in base_exercises):
-            continue
-        if ex.get("movement") in recent_movements and "cornerstone" not in ex_tags:
-            continue
-        style_score, style_reasons = score_exercise(
-            exercise_tags=ex.get("tags", []),
-            weakness_tags=weaknesses or [],
-            goal_tags=goal_tags,
-            style_tags=style_tags,
-            must_have_tags=must_have_tags,
-            phase_tags=phase_tags,
-            current_phase=phase,
-            fatigue_level=fatigue,
-            available_equipment=equipment_access,
-            required_equipment=list(_cached_equipment(ex)),
-            is_rehab=ex.get("method", "").lower() == "rehab",
-            priority_profile=priority_profile,
-            must_have_bonus_multiplier=must_have_bonus_multiplier,
-            derived_clarification_tags=derived_clarification_tags,
-            rng=rng,
-        )
-        if style_score == -999:
-            continue
-        quality_adjustment, quality_profile = strength_quality_adjustment(ex, phase=phase)
-        style_score += quality_adjustment
-        style_reasons["quality_class"] = quality_profile["quality_class"]
-        style_reasons["quality_adjustment"] = round(quality_adjustment, 2)
-        style_reasons["reason_codes"] = list(style_reasons.get("reason_codes", []))
-        metadata_adjustment, metadata_reason_codes = _strength_metadata_score_adjustment(
-            ex,
-            fatigue=fatigue,
-            cut_bucket=cut_bucket,
-        )
-        if metadata_adjustment:
-            style_score += metadata_adjustment
-            style_reasons["metadata_adjustment"] = metadata_adjustment
-        if metadata_reason_codes:
-            style_reasons["reason_codes"] = list(
-                dict.fromkeys(list(style_reasons.get("reason_codes", [])) + list(metadata_reason_codes))
-            )
-        late_eval = _evaluate_strength_late_window(
-            ex,
-            window=late_window,
-            days_until_fight=days_until_fight,
-            cut_bucket=cut_bucket,
-            familiar_names=familiar_exercise_names,
-        )
-        _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
-        if late_eval["blocked"]:
-            _record_late_block(ex, style_score, late_eval["block_codes"])
-            continue
-        if late_eval.get("penalty_codes"):
-            _record_late_penalty(ex, style_score, late_eval["penalty_codes"])
-        if late_eval["adjustment"]:
-            style_score += late_eval["adjustment"]
-        if late_eval["reason_codes"]:
-            style_reasons["reason_codes"] = list(
-                dict.fromkeys(list(style_reasons.get("reason_codes", [])) + list(late_eval["reason_codes"]))
-            )
-        if late_eval.get("penalty_codes"):
-            style_reasons["penalty_codes"] = list(
-                dict.fromkeys(list(style_reasons.get("penalty_codes", [])) + list(late_eval["penalty_codes"]))
-            )
-        style_reasons["late_window_adjustment"] = late_eval["adjustment"]
-        style_reasons["final_score"] = round(style_score, 4)
-        if quality_profile["anchor_capable"] or style_score >= selected_cutoff - style_margin:
-            style_candidates.append((ex, style_score, style_reasons))
-            if quality_profile["anchor_capable"] and (
-                protected_style_choice is None or style_score > protected_style_choice[1]
-            ):
-                protected_style_choice = (ex, style_score, style_reasons)
-
-    for ex, ex_score, ex_reasons in sorted(style_candidates, key=lambda entry: entry[1], reverse=True):
-        base_exercises.append(ex)
-        if ex.get("name"):
-            score_lookup[ex["name"]] = ex_score
-            reason_lookup[ex["name"]] = ex_reasons
-
-    if len(base_exercises) > target_exercises:
-        base_exercises = sorted(
-            base_exercises,
-            key=lambda exercise: score_lookup.get(exercise.get("name"), 0.0),
-            reverse=True,
-        )[:target_exercises]
-
-    protected_style_names = (
-        {protected_style_choice[0]["name"]}
-        if protected_style_choice and protected_style_choice[0].get("name")
-        else set()
-    )
-
-    def _ensure_protected_style_selection(exercises: list[dict]) -> list[dict]:
-        if not protected_style_choice or not protected_style_names:
-            return exercises
-
-        protected_ex, protected_score, protected_reasons = protected_style_choice
-        protected_name = protected_ex.get("name")
-        if not protected_name or any(ex.get("name") == protected_name for ex in exercises):
-            return exercises
-
-        updated = list(exercises)
-        if len(updated) < target_exercises:
-            updated.append(protected_ex)
-            score_lookup[protected_name] = protected_score
-            reason_lookup[protected_name] = protected_reasons
-            return updated
-
-        protected_movement = _cached_movement(protected_ex)
-        replaceable_indices = [
-            idx for idx, exercise in enumerate(updated) if exercise.get("name") not in protected_style_names
-        ]
-        if not replaceable_indices:
-            return exercises
-
-        same_movement_indices = [
-            idx
-            for idx in replaceable_indices
-            if _cached_movement(updated[idx]) == protected_movement
-        ]
-        candidate_indices = same_movement_indices or replaceable_indices
-        replace_index = min(
-            candidate_indices,
-            key=lambda idx: score_lookup.get(updated[idx].get("name"), 0.0),
-        )
-        _replace_exercise(
-            updated,
-            index=replace_index,
-            replacement=protected_ex,
-            replacement_score=protected_score,
-            replacement_reasons=protected_reasons,
-        )
-        return updated
-
-    def _apply_movement_caps(
-        exercises: list[dict],
-        *,
-        protected_names: set[str] | None = None,
-    ) -> list[dict]:
-        protected_names = {name for name in (protected_names or set()) if name}
+    def _apply_movement_caps(exercises: list[dict]) -> list[dict]:
         movement_counts: dict[str, int] = {}
         capped: list[dict] = []
         for ex in exercises:
-            name = ex.get("name")
             movement = _cached_movement(ex)
             if movement != "unknown" and movement_counts.get(movement, 0) >= 2:
-                if name in protected_names:
-                    replaceable_indices = [
-                        idx
-                        for idx, existing in enumerate(capped)
-                        if existing.get("name") not in protected_names
-                        and _cached_movement(existing) == movement
-                    ]
-                    if replaceable_indices:
-                        replace_index = min(
-                            replaceable_indices,
-                            key=lambda idx: score_lookup.get(capped[idx].get("name"), 0.0),
-                        )
-                        capped[replace_index] = ex
                 continue
             movement_counts[movement] = movement_counts.get(movement, 0) + 1
             capped.append(ex)
@@ -3198,14 +2987,11 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 reason_lookup.setdefault(cand.get("name"), cand_reasons)
         return capped
 
-    base_exercises = _run_real_poststep("protected_style_selection", lambda: _ensure_protected_style_selection(base_exercises))
-    base_exercises = _run_real_poststep("movement_caps_pass_1", lambda: _apply_movement_caps(base_exercises, protected_names=protected_style_names))
+    base_exercises = _run_real_poststep("movement_caps_pass_1", lambda: _apply_movement_caps(base_exercises))
     base_exercises = _run_real_poststep("base_category_promotion", lambda: _promote_base_categories(base_exercises))
-    base_exercises = _run_real_poststep("style_injection", lambda: _ensure_protected_style_selection(base_exercises))
-    base_exercises = _run_real_poststep("movement_caps_pass_2", lambda: _apply_movement_caps(base_exercises, protected_names=protected_style_names))
+    base_exercises = _run_real_poststep("movement_caps_pass_2", lambda: _apply_movement_caps(base_exercises))
     base_exercises = _run_real_poststep("force_isometric", lambda: _maybe_add_force_isometric(base_exercises))
-    base_exercises = _run_real_poststep("universal_insertion", lambda: _ensure_protected_style_selection(base_exercises))
-    base_exercises = _run_real_poststep("movement_caps_pass_3", lambda: _apply_movement_caps(base_exercises, protected_names=protected_style_names))
+    base_exercises = _run_real_poststep("movement_caps_pass_3", lambda: _apply_movement_caps(base_exercises))
     base_exercises = _run_real_poststep("session_quality", lambda: _enforce_session_quality(base_exercises))
 
     # ------ CONFLICT GUARD: heavy RDL with med-ball rotation ------

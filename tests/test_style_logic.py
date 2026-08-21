@@ -4,12 +4,9 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from fightcamp.training_context import normalize_athlete_equipment_list, normalize_equipment_list
-from fightcamp.strength import normalize_exercise_movement, normalize_style_tags, generate_strength_block
+from fightcamp.strength import normalize_exercise_movement, generate_strength_block
 
 
-def test_style_tag_mapping():
-    tags = ["style_brawler", "style_grappler", "counter_striker"]
-    assert normalize_style_tags(tags) == {"brawler", "grappler", "counter_striker"}
 
 
 def test_equipment_alias_split():

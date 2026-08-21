@@ -14547,5 +14547,292 @@
     "priority_score": 6.2,
     "late_fight_score": 6.2,
     "notes": "Micro-support drill. Stop on quality drop."
+  },
+  {
+    "name": "Wrist Roller Extensions",
+    "category": "grip",
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "method": "strength",
+    "movement": "wrist_extension",
+    "type": "bilateral",
+    "tags": [
+      "grip",
+      "isolation",
+      "clinch_fighter",
+      "submission_hunter",
+      "mech_grip_crush",
+      "mech_trunk_stability",
+      "mech_grip_support"
+    ],
+    "equipment": "wrist_roller",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_grip_crush",
+      "mech_grip_support",
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high",
+      "critical"
+    ]
+  },
+  {
+    "name": "Barbell Thruster",
+    "category": "full_body",
+    "phases": [
+      "SPP"
+    ],
+    "method": "strength",
+    "movement": "squat_to_press",
+    "type": "bilateral",
+    "tags": [
+      "explosive",
+      "triple_extension",
+      "rate_of_force",
+      "compound",
+      "scrambler",
+      "mech_lower_squat",
+      "mech_upper_press",
+      "mech_shoulder_overhead",
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue",
+      "mech_grip_support"
+    ],
+    "equipment": "barbell",
+    "movement_cost": "high",
+    "impact_cost": "low",
+    "eccentric_cost": "moderate",
+    "landing_cost": "none",
+    "cns_load": "high",
+    "soreness_risk": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_grip_support",
+      "mech_lower_squat",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ],
+    "low_impact": true,
+    "low_eccentric": false,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low"
+    ]
+  },
+  {
+    "name": "Turkish Get-Up",
+    "category": "core",
+    "phases": [
+      "SPP"
+    ],
+    "method": "strength",
+    "movement": "complex",
+    "type": "unilateral",
+    "tags": [
+      "coordination",
+      "balance",
+      "anti_rotation",
+      "scrambler",
+      "mech_shoulder_overhead",
+      "mech_trunk_stability",
+      "mech_trunk_rotation",
+      "mech_grip_support"
+    ],
+    "equipment": "kettlebell",
+    "movement_cost": "high",
+    "impact_cost": "low",
+    "eccentric_cost": "moderate",
+    "landing_cost": "none",
+    "cns_load": "high",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_shoulder_overhead",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": false,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low"
+    ]
+  },
+  {
+    "name": "Counter-Striker Split-Line Punch Isometric Hold",
+    "category": "striking",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "strength",
+    "movement": "isometric",
+    "type": "unilateral",
+    "tags": [
+      "counter_striker",
+      "distance_striker",
+      "isometric",
+      "late_strength_touch",
+      "maximal_strength_maintenance",
+      "speed",
+      "coordination",
+      "skill_refinement",
+      "low_impact",
+      "low_eccentric",
+      "cns_freshness",
+      "sport_specific",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "anti_rotation",
+      "push"
+    ],
+    "equipment": "bands,heavy_bag",
+    "phase_role": "late_strength_touch",
+    "subfamily": "counter_striker_punch_isometric_hold",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2",
+      "d1"
+    ],
+    "cut_buckets_allowed": [
+      "high",
+      "critical",
+      "extreme"
+    ],
+    "goals": [
+      "speed",
+      "coordination",
+      "skill_refinement",
+      "maximal_strength_maintenance"
+    ],
+    "weaknesses": [
+      "coordination_proprioception",
+      "cns_fatigue"
+    ],
+    "tactical_styles": [
+      "counter_striker",
+      "distance_striker"
+    ],
+    "soreness_risk": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "low_impact": true,
+    "low_eccentric": true,
+    "neural_primer": true,
+    "cns_freshness": true,
+    "ballistic_low_volume": false,
+    "sport_specific": true,
+    "contraindications": [
+      "skip if shoulder or wrist pain spikes against the bag"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Pressure-Fighter Staggered Body-Shot Med-Ball Throw",
+    "category": "striking",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "power",
+    "movement": "rotational",
+    "type": "unilateral",
+    "tags": [
+      "pressure_fighter",
+      "late_strength_touch",
+      "speed",
+      "explosive",
+      "rate_of_force",
+      "neural_primer",
+      "ballistic_low_volume",
+      "low_impact",
+      "cns_freshness",
+      "sport_specific",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_upper_pull"
+    ],
+    "equipment": "medicine_ball",
+    "phase_role": "late_strength_touch",
+    "subfamily": "pressure_fighter_body_shot_med_ball_throw",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "cut_buckets_allowed": [
+      "high",
+      "critical"
+    ],
+    "goals": [
+      "speed",
+      "power",
+      "skill_refinement"
+    ],
+    "weaknesses": [
+      "posterior_chain",
+      "coordination_proprioception"
+    ],
+    "tactical_styles": [
+      "pressure_fighter"
+    ],
+    "soreness_risk": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "low_impact": true,
+    "low_eccentric": true,
+    "neural_primer": true,
+    "cns_freshness": true,
+    "ballistic_low_volume": true,
+    "sport_specific": true,
+    "contraindications": [
+      "skip if trunk rotation is limited or the cut is too aggressive for medicine-ball work"
+    ],
+    "movement_cost": "moderate",
+    "impact_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_upper_press",
+      "mech_upper_pull"
+    ]
   }
 ]

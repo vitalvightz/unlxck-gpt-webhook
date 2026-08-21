@@ -104,7 +104,6 @@
     "style_conditioning_bank:Cross-Counter Plyo Pushups",
     "style_conditioning_bank:Flying Knee Drill",
     "style_conditioning_bank:Flying Sub Scramble",
-    "style_specific_exercises:Overhead Med Ball Slam",
     "universal_gpp_conditioning:Clap Push-Up Sprints",
     "universal_gpp_strength:Barbell or DB Overhead Press",
     "universal_gpp_strength:Push-Up or Bench Press"
@@ -119,7 +118,7 @@
     "exercise_bank:Foam Roller Thoracic Extension",
     "exercise_bank:Reverse Hyperextension",
     "exercise_bank:Single-Leg Banded Anti-Extension Hold",
-    "style_specific_exercises:Wrist Roller Extensions"
+    "exercise_bank:Wrist Roller Extensions"
   ],
   "foot": [
     "conditioning_bank:Jump Rope (Recovery Pace)",
@@ -144,9 +143,7 @@
     "exercise_bank:Plate Pinch Rotations",
     "exercise_bank:Single-Leg Farmer Carry Hold",
     "exercise_bank:Towel Hang",
-    "exercise_bank:Towel Pull-Up",
-    "style_specific_exercises:Farmer’s Carry",
-    "style_specific_exercises:Plate Pinch Holds"
+    "exercise_bank:Towel Pull-Up"
   ],
   "glute": [
     "conditioning_bank:Hurdle Hop (Stick Landing)",
@@ -239,9 +236,7 @@
     "exercise_bank:Plate Pinch Rotations",
     "exercise_bank:Single-Leg Farmer Carry Hold",
     "exercise_bank:Towel Hang",
-    "exercise_bank:Towel Pull-Up",
-    "style_specific_exercises:Farmer’s Carry",
-    "style_specific_exercises:Plate Pinch Holds"
+    "exercise_bank:Towel Pull-Up"
   ],
   "head": [
     "conditioning_bank:Wall Drill Sparring (Light Tap)",
@@ -303,9 +298,6 @@
     "style_conditioning_bank:Sprawl-to-Shot Sprints",
     "style_conditioning_bank:Stand-Up Sprint",
     "style_conditioning_bank:Swarm Entry Sprints",
-    "style_specific_exercises:Bulgarian Split Squat",
-    "style_specific_exercises:Jumping Lunge",
-    "style_specific_exercises:Walking Lunges",
     "universal_gpp_conditioning:Alactic Sprint Intervals (Hill / Flat / Sled)",
     "universal_gpp_conditioning:Clap Push-Up Sprints",
     "universal_gpp_strength:DB Split Squat"
@@ -385,9 +377,6 @@
     "style_conditioning_bank:Lateral Plyo Pushoffs",
     "style_conditioning_bank:Reactive Sprawl Jumps",
     "style_conditioning_bank:Switch-Kick Plyos",
-    "style_specific_exercises:Bulgarian Split Squat",
-    "style_specific_exercises:Jumping Lunge",
-    "style_specific_exercises:Walking Lunges",
     "style_taper_conditioning:Counter Striker Pull-Jump",
     "style_taper_conditioning:Counter Striker Roll-Jump",
     "style_taper_conditioning:Counter Striker Slip-Jump",
@@ -459,9 +448,6 @@
     "exercise_bank:Lateral Lunge (Plyometric)",
     "exercise_bank:Tempo Split Squat (4-0-1)",
     "style_conditioning_bank:Forward Lunge Strikes",
-    "style_specific_exercises:Bulgarian Split Squat",
-    "style_specific_exercises:Jumping Lunge",
-    "style_specific_exercises:Walking Lunges",
     "universal_gpp_strength:Barbell Back Squat",
     "universal_gpp_strength:DB Split Squat"
   ],
@@ -517,8 +503,7 @@
     "style_conditioning_bank:Pressure Fighter's Cutoff Circuit",
     "style_conditioning_bank:Pressure Fighter's Cutoff Shadow",
     "style_conditioning_bank:Pressure Fighter's Shadowboxing Riddle",
-    "style_specific_exercises:Overhead Med Ball Slam",
-    "style_specific_exercises:Pallof Press",
+    "exercise_bank:Pallof Press",
     "style_taper_conditioning:Pressure Fighter Box Drive",
     "style_taper_conditioning:Pressure Fighter Cutoff Hop",
     "style_taper_conditioning:Pressure Fighter Stomp",

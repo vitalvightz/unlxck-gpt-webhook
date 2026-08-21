@@ -48,7 +48,6 @@ def _quality_passthrough(exercise, phase=None):
 
 def _patch_minimal_strength_runtime(monkeypatch, exercise_bank: list[dict], score_map: dict[str, float]) -> None:
     monkeypatch.setattr(strength, "get_exercise_bank", lambda: exercise_bank)
-    monkeypatch.setattr(strength, "get_style_exercises", lambda: [])
     monkeypatch.setattr(strength, "get_universal_strength_names", lambda: set())
     monkeypatch.setattr(strength, "allocate_sessions", lambda *_args, **_kwargs: {"strength": 1})
     monkeypatch.setattr(strength, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"strength": 1})
@@ -187,11 +186,11 @@ def test_band_row_speed_focus_does_not_satisfy_strength_maintenance_when_real_ca
     assert result["why_log"][0]["name"] == "Metadata Tagged Pull Strength Hold"
 
 
-def test_style_specific_technical_primer_does_not_satisfy_strength_maintenance(monkeypatch):
+def test_tactical_style_technical_primer_does_not_satisfy_strength_maintenance(monkeypatch):
     technical_primer = _primer_touch("Style-Specific Technical Primer")
     technical_primer.update(
         {
-            "_schema_source": "style_specific_exercises.json",
+            "_schema_source": "exercise_bank.json",
             "category": "striking",
             "method": "power",
             "movement_cost": "low",
@@ -206,13 +205,12 @@ def test_style_specific_technical_primer_does_not_satisfy_strength_maintenance(m
     maintenance = _maintenance_touch("Style-Agnostic Strength Maintenance")
     _patch_minimal_strength_runtime(
         monkeypatch,
-        [maintenance],
+        [technical_primer, maintenance],
         {
             technical_primer["tags"][0]: 20.0,
             maintenance["tags"][0]: 7.5,
         },
     )
-    monkeypatch.setattr(strength, "get_style_exercises", lambda: [technical_primer])
 
     result = strength.generate_strength_block(
         flags=_flags(days_until_fight=13, key_goals=["strength"], style_tactical=["counter_striker"])
