@@ -9,6 +9,44 @@ on:
       - '**'
 
 jobs:
+  migrate_tag_registry:
+    if: github.event_name == 'pull_request' && github.head_ref == 'codex/authoritative-tag-registry'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.15"
+
+      - name: Apply deterministic tag migration
+        run: python tools/migrate_tag_registry_data.py
+
+      - name: Commit migrated files when needed
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed="$(git diff --name-only -- data fightcamp/strength.py)"
+          if [ -z "$changed" ]; then
+            echo "No migration changes required."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          while IFS= read -r path; do
+            [ -n "$path" ] && git add -- "$path"
+          done <<< "$changed"
+          git commit -m "Apply canonical tag registry migration"
+          git push origin HEAD:codex/authoritative-tag-registry
+
   validate:
     runs-on: ubuntu-latest
     permissions:
