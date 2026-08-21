@@ -23,6 +23,7 @@ MIGRATE_NAMES = {
 
 
 def remove_top_level_functions(text: str, names: set[str]) -> str:
+    text = text.lstrip("\ufeff")
     tree = ast.parse(text)
     lines = text.splitlines(keepends=True)
     spans: list[tuple[int, int, str]] = []
@@ -37,6 +38,7 @@ def remove_top_level_functions(text: str, names: set[str]) -> str:
 
 
 def remove_top_level_assignments(text: str, names: set[str]) -> str:
+    text = text.lstrip("\ufeff")
     tree = ast.parse(text)
     lines = text.splitlines(keepends=True)
     spans: list[tuple[int, int, str]] = []
@@ -58,6 +60,7 @@ def remove_top_level_assignments(text: str, names: set[str]) -> str:
 
 
 def remove_monkeypatch_attr_calls(text: str, attr_name: str) -> str:
+    text = text.lstrip("\ufeff")
     tree = ast.parse(text)
     lines = text.splitlines(keepends=True)
     spans: list[tuple[int, int]] = []
