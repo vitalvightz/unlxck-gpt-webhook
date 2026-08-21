@@ -18,7 +18,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "grip", "mech_grip_support", "mech_upper_pull", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_grip_support", "mech_trunk_stability", "mech_upper_pull"],
     "why": "Improve hand-fighting responses from contact rather than visual guessing.",
     "cue": "Feel the grip pressure, clear or replace it, then settle position."
   },
@@ -41,7 +42,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "wrist_loaded_extension", "mech_lower_squat", "mech_trunk_rotation", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_squat", "mech_trunk_rotation", "mech_trunk_stability", "wrist_loaded_extension"],
     "why": "Coordinate opposite hand-foot support through a common scramble transition.",
     "cue": "Post strong, clear the hips, finish with a stable base."
   },
@@ -64,7 +66,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "wrist_loaded_extension", "mech_lower_squat", "mech_lower_lunge", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_lunge", "mech_lower_squat", "mech_trunk_stability", "wrist_loaded_extension"],
     "why": "Connect a directional cue to a safe, organised return to standing.",
     "cue": "Protect space with the post, bring the foot under, stand facing the cue."
   },
@@ -87,7 +90,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_trunk_rotation", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_trunk_rotation", "mech_trunk_stability"],
     "why": "Coordinate hips and legs to follow changing passing direction.",
     "cue": "Move the hips first; knees and feet recover the frame after."
   },
@@ -110,7 +114,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_lower_lateral", "mech_lower_squat", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_lateral", "mech_lower_squat", "mech_trunk_stability"],
     "why": "Build smooth transitions between passing movement and a stable base.",
     "cue": "Every pass step ends with a base you could stop in."
   },
@@ -133,7 +138,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_trunk_rotation", "mech_upper_pull", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_trunk_rotation", "mech_trunk_stability", "mech_upper_pull"],
     "why": "Coordinate hip escape with frame recovery instead of treating them as separate actions.",
     "cue": "Frame creates space; hips move through it; knees recover last."
   },
@@ -156,7 +162,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "grip", "mech_grip_support", "mech_upper_pull", "mech_lower_lateral", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_grip_support", "mech_lower_lateral", "mech_trunk_stability", "mech_upper_pull"],
     "why": "Link a hand-fighting cue to a controlled snap and foot reposition.",
     "cue": "Win the contact first, step to the angle, then snap."
   }

@@ -18,7 +18,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_trunk_stability"],
     "why": "Restore fighting position quickly after a movement cue.",
     "cue": "Move first, then finish balanced with your eyes up."
   },
@@ -41,7 +42,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_lower_lateral", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_lateral", "mech_trunk_stability"],
     "why": "Link an external cue to clean movement without losing posture.",
     "cue": "React to the cue, not a guess. Keep the first step small."
   },
@@ -64,7 +66,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_lower_lateral", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_lateral", "mech_trunk_stability"],
     "why": "Train visual information to drive fast, controlled repositioning.",
     "cue": "See the point, move once, settle before the next cue."
   },
@@ -87,7 +90,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_lower_lateral", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_lateral", "mech_trunk_stability"],
     "why": "Improve the ability to change movement rhythm without crossing or reaching.",
     "cue": "Change tempo without changing stance width."
   },
@@ -110,7 +114,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_trunk_rotation", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_trunk_rotation", "mech_trunk_stability"],
     "why": "Improve opposite-side coordination used in striking, hand fighting and level changes.",
     "cue": "Keep the trunk quiet while opposite arm and leg move together."
   },
@@ -133,7 +138,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_lower_squat", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_squat", "mech_trunk_stability"],
     "why": "Improve balance recovery after kicks, checks, shots and scrambles.",
     "cue": "Own the landing before moving again."
   },
@@ -156,7 +162,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_lower_lateral", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_lateral", "mech_trunk_stability"],
     "why": "Sharpen first-step direction changes from a simple external cue.",
     "cue": "One decisive step, then rebuild stance."
   },
@@ -179,7 +186,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_lower_lateral", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_lateral", "mech_trunk_stability"],
     "why": "Develop live movement matching without turning the drill into conditioning.",
     "cue": "Match position, not speed. Stay able to stop at any moment."
   },
@@ -202,7 +210,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_trunk_stability"],
     "why": "Teach the athlete to stop and re-organise cleanly from changing movement tempo.",
     "cue": "Freeze on command with feet under hips and guard organised."
   },
@@ -225,7 +234,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_lower_lateral", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_lateral", "mech_trunk_stability"],
     "why": "Connect a simple choice cue to the correct first movement.",
     "cue": "Do not pre-load. Read the cue and take the shortest clean step."
   }

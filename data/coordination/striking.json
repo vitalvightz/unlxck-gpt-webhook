@@ -18,7 +18,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_lower_lunge", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_lunge", "mech_trunk_stability"],
     "why": "Synchronise the lead hand with the lead step so range is gained without reaching.",
     "cue": "Foot and jab land together; head stays over the stance."
   },
@@ -41,7 +42,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_lower_lateral", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_lateral", "mech_trunk_stability"],
     "why": "Link forward scoring actions to a balanced angle exit.",
     "cue": "Second jab finishes before the exit step starts."
   },
@@ -64,7 +66,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_trunk_rotation", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_trunk_rotation", "mech_trunk_stability"],
     "why": "Connect a defensive read to a clean return without rushing the counter.",
     "cue": "Defend first, find stance, then return."
   },
@@ -87,7 +90,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_trunk_rotation", "mech_lower_lateral", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_lateral", "mech_trunk_rotation", "mech_trunk_stability"],
     "why": "Coordinate hand defence, counter timing and the exit angle as one sequence.",
     "cue": "Parry small, cross straight, pivot after the punch lands."
   },
@@ -110,7 +114,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_trunk_stability"],
     "why": "Improve distance judgement and posture through a pull-counter sequence.",
     "cue": "Move the head just outside range; do not lean past the rear hip."
   },
@@ -133,7 +138,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_lower_lateral", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_lateral", "mech_trunk_stability"],
     "why": "Build a clean defence-counter-exit chain.",
     "cue": "Catch, return, then leave. Do not move all three at once."
   },
@@ -156,7 +162,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_lower_lateral", "mech_trunk_rotation", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_lateral", "mech_trunk_rotation", "mech_trunk_stability"],
     "why": "Coordinate ring cutting with a short scoring sequence.",
     "cue": "Take away the exit before throwing; do not chase the shoulders."
   },
@@ -179,7 +186,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_trunk_rotation", "mech_lower_lunge", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_lunge", "mech_trunk_rotation", "mech_trunk_stability"],
     "why": "Link forward pressure, head movement and a compact return.",
     "cue": "Step under control; slip from the legs, then hook from stance."
   },
@@ -202,7 +210,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_trunk_rotation", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_trunk_rotation", "mech_trunk_stability"],
     "why": "Improve close-range timing without turning the drill into a high-output exchange.",
     "cue": "Roll under the cue, settle, then return one clean shot."
   },
@@ -225,7 +234,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_lower_lateral", "mech_trunk_rotation", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_lateral", "mech_trunk_rotation", "mech_trunk_stability"],
     "why": "Make the pivot end in a usable fighting stance instead of a loose spin.",
     "cue": "Turn on the ball of the lead foot and finish ready to fire."
   },
@@ -248,7 +258,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_trunk_stability"],
     "why": "Improve the link between seeing a lead-hand cue and choosing the correct small response.",
     "cue": "React only to the real cue; keep the response compact."
   },
@@ -271,7 +282,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_trunk_rotation", "mech_lower_lunge", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_lunge", "mech_trunk_rotation", "mech_trunk_stability"],
     "why": "Coordinate rear-side force transfer without falling over the front leg.",
     "cue": "Finish the rear hand with both feet still able to move."
   },
@@ -294,7 +306,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_trunk_rotation", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_trunk_rotation", "mech_trunk_stability"],
     "why": "Develop clean sequencing across a short three-action combination.",
     "cue": "Keep each beat distinct; speed comes after the sequence is clean."
   },
@@ -317,7 +330,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_trunk_rotation", "mech_lower_lateral", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_lateral", "mech_trunk_rotation", "mech_trunk_stability"],
     "why": "Coordinate the scoring hook with the exit rather than spinning away from stance.",
     "cue": "Hook first, turn second, land facing the opponent."
   },
@@ -340,7 +354,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_lower_lunge", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_lunge", "mech_trunk_stability"],
     "why": "Train the athlete to connect an opponent entry cue to a balanced intercept.",
     "cue": "Touch the entry as it starts; do not reach after it."
   },
@@ -363,7 +378,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_lower_lateral", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_lateral", "mech_trunk_stability"],
     "why": "Improve lead-foot positioning when athletes are in opposite stances.",
     "cue": "Win the outside lane with small steps while keeping both hands available."
   },
@@ -386,7 +402,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_lower_lateral", "mech_trunk_rotation", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_lateral", "mech_trunk_rotation", "mech_trunk_stability"],
     "why": "Coordinate defence, turn and exit when space is restricted.",
     "cue": "Create the angle before accelerating away."
   },
@@ -409,7 +426,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_trunk_rotation", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_trunk_rotation", "mech_trunk_stability"],
     "why": "Link head movement to stance recovery and a controlled counter.",
     "cue": "Move under the line, rebuild posture, then punch."
   }

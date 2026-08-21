@@ -18,7 +18,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_lower_squat", "mech_lower_hip_hinge", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_hip_hinge", "mech_lower_squat", "mech_trunk_stability"],
     "why": "Connect striking posture to a clean level change without a pause or collapse.",
     "cue": "Finish the strike in stance, then change level with the chest up."
   },
@@ -41,7 +42,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "wrist_loaded_extension", "mech_lower_hip_hinge", "mech_lower_squat", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_hip_hinge", "mech_lower_squat", "mech_trunk_stability", "wrist_loaded_extension"],
     "why": "Coordinate defence to immediate fighting stance recovery.",
     "cue": "Hips back, hands active, then rebuild stance before the next cue."
   },
@@ -64,7 +66,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_lower_squat", "mech_lower_hip_hinge", "mech_lower_lunge", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_hip_hinge", "mech_lower_lunge", "mech_lower_squat", "mech_trunk_stability"],
     "why": "Link a simple striking entry to wrestling footwork.",
     "cue": "Jab hides the step; level change happens after range is won."
   },
@@ -87,7 +90,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "hip_flexion_loaded", "mech_lower_squat", "mech_lower_hip_hinge", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["hip_flexion_loaded", "mech_lower_hip_hinge", "mech_lower_squat", "mech_trunk_stability"],
     "why": "Train the athlete to recover from a kick into wrestling-ready posture.",
     "cue": "Bring the kicking foot home before dropping levels."
   },
@@ -110,7 +114,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_grip_support", "mech_upper_pull", "mech_lower_lateral", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_grip_support", "mech_lower_lateral", "mech_trunk_stability", "mech_upper_pull"],
     "why": "Coordinate hand fighting and foot position to leave the wall with balance.",
     "cue": "Win inside position, step the hips free, then turn."
   },
@@ -133,7 +138,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_grip_support", "mech_upper_pull", "mech_lower_lateral", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_grip_support", "mech_lower_lateral", "mech_trunk_stability", "mech_upper_pull"],
     "why": "Link upper-body position to the foot angle that makes it useful.",
     "cue": "Do not pull with the arms; step the body to the underhook."
   },
@@ -156,7 +162,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_lower_squat", "mech_lower_hip_hinge", "mech_lower_lunge", "mech_lower_lateral", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_hip_hinge", "mech_lower_lateral", "mech_lower_lunge", "mech_lower_squat", "mech_trunk_stability"],
     "why": "Improve left-right reorganisation after the first entry is stopped.",
     "cue": "Recover base before changing direction for the second entry."
   },
@@ -179,7 +186,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "wrist_loaded_extension", "mech_lower_squat", "mech_lower_lunge", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_lunge", "mech_lower_squat", "mech_trunk_stability", "wrist_loaded_extension"],
     "why": "Make the ground-to-standing transition finish in a protected fighting stance.",
     "cue": "Build base, stand with eyes up, recover guard immediately."
   },
@@ -202,7 +210,8 @@
     "support_only": true,
     "meaningful_stress": false,
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "tags": ["coordination", "skill_refinement", "low_impact"],
+    "tags": ["coordination", "skill_refinement", "low_impact", "mech_lower_lateral", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_lower_lateral", "mech_trunk_stability"],
     "why": "Coordinate cage positioning with the correct striking or grappling entry.",
     "cue": "Close the exit first, then react to the partner's final direction."
   }
