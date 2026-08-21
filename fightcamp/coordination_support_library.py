@@ -304,9 +304,13 @@ def select_coordination_support(
 
 
 def coordination_support_metadata(drill: CoordinationDrill) -> dict[str, Any]:
+    global_tags = _tokens(drill.raw.get("tags")) or ["coordination"]
     return {
         "preferred_exercise_names": [drill.name],
-        "preferred_tags": ["coordination", *drill.qualities],
+        # Fine-grained coordination qualities stay local to this selector rather
+        # than expanding the app-wide tag vocabulary.
+        "preferred_tags": list(dict.fromkeys(global_tags)),
+        "coordination_qualities": list(drill.qualities),
         "stress_class": "support",
         "cost_class": "low",
         "support_insert_category": "coordination",
