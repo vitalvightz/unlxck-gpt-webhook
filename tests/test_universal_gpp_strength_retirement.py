@@ -8,11 +8,8 @@ that fed it have been retired. These tests pin that retirement so the second
 library cannot silently reappear.
 """
 
-import re
 import sys
 from pathlib import Path
-
-import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
