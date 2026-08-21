@@ -13,7 +13,7 @@ jobs:
     if: >-
       (github.event_name == 'push' && github.ref == 'refs/heads/fix/tag-authority-finalize') ||
       (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'fix/tag-authority-finalize')
-    runs-on: ubuntu-latest
+    runs-on: macos-15-intel
     permissions:
       contents: write
     steps:
@@ -23,13 +23,8 @@ jobs:
           ref: fix/tag-authority-finalize
           fetch-depth: 0
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11.15"
-
       - name: Apply deterministic tag migration
-        run: python tools/migrate_tag_registry_data.py
+        run: python3 tools/migrate_tag_registry_data.py
 
       - name: Commit migrated registry data
         run: |
