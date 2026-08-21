@@ -343,5 +343,10 @@
   "support_accessory",
   "technical_rhythm",
   "trunk",
-  "trunk_strength"
+  "trunk_strength",
+  "ballistic_lower",
+  "explosive_conditioning",
+  "high_impact",
+  "jumping",
+  "sprint_intervals"
 ]
