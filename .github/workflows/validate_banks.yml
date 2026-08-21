@@ -13,6 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Temporary migration job. Delete after the canonical persisted-data rewrite lands.
   migrate_tag_registry:
     if: >-
       (github.event_name == 'pull_request' && github.head_ref == 'codex/authoritative-tag-registry') ||
