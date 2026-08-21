@@ -50,7 +50,6 @@ def _trap_bar_deadlift() -> dict:
 def _patch_two_anchor_runtime(monkeypatch, score_map: dict[str, float]) -> None:
     bank = [_back_squat(), _trap_bar_deadlift()]
     monkeypatch.setattr(strength, "get_exercise_bank", lambda: bank)
-    monkeypatch.setattr(strength, "get_universal_strength_names", lambda: set())
     monkeypatch.setattr(strength, "allocate_sessions", lambda *_a, **_k: {"strength": 1})
     monkeypatch.setattr(strength, "calculate_exercise_numbers", lambda *_a, **_k: {"strength": 1})
     monkeypatch.setattr(

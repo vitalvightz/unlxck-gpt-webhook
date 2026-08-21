@@ -147,8 +147,6 @@ def test_tactical_style_changes_strength_selection_without_protected_injection(m
     counter = _style_candidate("Counter Anti-Rotation Hold", counter_specific=True)
 
     monkeypatch.setattr(strength, "get_exercise_bank", lambda: [neutral, counter])
-    monkeypatch.setattr(strength, "get_universal_strength", lambda: [])
-    monkeypatch.setattr(strength, "get_universal_strength_names", lambda: set())
     monkeypatch.setattr(strength, "allocate_sessions", lambda *_args, **_kwargs: {"strength": 1})
     monkeypatch.setattr(strength, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"strength": 1})
 
