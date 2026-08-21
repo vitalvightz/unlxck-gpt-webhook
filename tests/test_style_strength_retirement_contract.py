@@ -36,7 +36,7 @@ LEGACY_STYLE_STRENGTH_NAMES = {
 # future deletion a conscious decision instead of a silent migration side effect.
 INTENTIONALLY_RETIRED = {
     "Plate Pinch Holds": "Plate Pinch Carry",
-    "Walking Lunges": "Bulgarian Split Squat",
+    "Walking Lunges": "Cross-Step Lunge",
     "Farmer’s Carry": "Farmers Walk (Fat Grip)",
     "Jumping Lunge": "Jump Lunge (Alternating)",
     "Clinch Towel/Gi Row Isometric Hold": "Towel Pull-Up",
@@ -53,9 +53,9 @@ EXPECTED_EXACT_INJURY_MAPPINGS = {
 EXPECTED_RETIRED_INJURY_REPLACEMENTS = {
     "forearm": {"Plate Pinch Carry", "Farmers Walk (Fat Grip)"},
     "hand": {"Plate Pinch Carry", "Farmers Walk (Fat Grip)"},
-    "hip_flexor": {"Bulgarian Split Squat", "Jump Lunge (Alternating)"},
-    "knee": {"Bulgarian Split Squat", "Jump Lunge (Alternating)"},
-    "quad": {"Bulgarian Split Squat", "Jump Lunge (Alternating)"},
+    "hip_flexor": {"Cross-Step Lunge", "Jump Lunge (Alternating)"},
+    "knee": {"Cross-Step Lunge", "Jump Lunge (Alternating)"},
+    "quad": {"Cross-Step Lunge", "Jump Lunge (Alternating)"},
 }
 
 
