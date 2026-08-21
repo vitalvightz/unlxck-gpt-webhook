@@ -19,6 +19,13 @@ TACTICAL_STYLES = (
     "hybrid",
 )
 SUPPORTED_SPORTS = ("boxing", "kickboxing", "muay_thai", "mma", "wrestling", "bjj")
+BANK_FILES = (
+    "coordination/universal.json",
+    "coordination/striking.json",
+    "coordination/kicks.json",
+    "coordination/mma_transitions.json",
+    "coordination/grappling.json",
+)
 
 _STYLE_ALIASES = {
     "pressure": "pressure_fighter",
@@ -150,18 +157,13 @@ def extract_coordination_style(athlete_model: dict[str, Any] | None) -> str:
 
 
 def _raw_entries() -> list[dict[str, Any]]:
-    raw = json.loads((DATA_DIR / "coordination_bank.json").read_text(encoding="utf-8"))
-    if isinstance(raw, list):
-        return [entry for entry in raw if isinstance(entry, dict)]
-    if isinstance(raw, dict):
-        return [
-            entry
-            for group in raw.values()
-            if isinstance(group, list)
-            for entry in group
-            if isinstance(entry, dict)
-        ]
-    raise ValueError("coordination_bank.json must contain a list or grouped object")
+    entries: list[dict[str, Any]] = []
+    for relative_path in BANK_FILES:
+        raw = json.loads((DATA_DIR / relative_path).read_text(encoding="utf-8"))
+        if not isinstance(raw, list):
+            raise ValueError(f"{relative_path} must contain a list")
+        entries.extend(entry for entry in raw if isinstance(entry, dict))
+    return entries
 
 
 @lru_cache(maxsize=1)
