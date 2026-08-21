@@ -12,7 +12,7 @@ jobs:
   # Temporary migration job. Delete after the canonical persisted-data rewrite lands.
   migrate_tag_registry:
     if: github.event_name == 'push' && github.ref == 'refs/heads/codex/authoritative-tag-registry'
-    runs-on: macos-15-intel
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: write
     steps:
