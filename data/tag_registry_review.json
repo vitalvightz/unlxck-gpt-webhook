@@ -18,7 +18,7 @@
     "familiarity_preferred": {"decision": "allow_canonical", "category": "operational_constraint", "rationale": "Expresses a non-blocking familiarity preference distinct from familiarity_required."},
     "foot_control": {"decision": "allow_canonical", "category": "anatomy_movement", "rationale": "Describes intrinsic foot-control work."},
     "gas_tank": {"decision": "allow_canonical", "category": "conditioning_descriptor", "rationale": "Plain-language conditioning capacity descriptor used by curated banks."},
-    "generic": {"decision": "remove_from_tags", "category": "nonsemantic", "rationale": "Generic carries no useful selection or safety meaning."},
+    "generic": {"decision": "allow_canonical", "category": "tactical_style", "rationale": "Canonical fallback Tactical Watch style family used by generic.* bank entries."},
     "glute_set": {"decision": "allow_canonical", "category": "anatomy_movement", "rationale": "Describes low-load glute activation/set work."},
     "hip_control": {"decision": "allow_canonical", "category": "anatomy_movement", "rationale": "Describes hip-control/stability content."},
     "hip_flexor": {"decision": "allow_canonical", "category": "anatomy_movement", "rationale": "Identifies hip-flexor-focused content."},

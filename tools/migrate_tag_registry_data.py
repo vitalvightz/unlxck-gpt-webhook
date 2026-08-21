@@ -30,7 +30,6 @@ BANK_ALIASES = {
 # These strings describe setup/load rather than semantic training taxonomy.
 REMOVE_FROM_BANK_TAGS = {
     "bodyweight",
-    "generic",
     "light_band",
     "partner",
     "supported",
@@ -41,6 +40,7 @@ REMOVE_FROM_BANK_TAGS = {
 }
 
 REMOVE_FROM_VOCABULARY = set(REMOVE_FROM_BANK_TAGS)
+ADD_TO_VOCABULARY = {"generic"}
 
 
 _STRENGTH_REPLACEMENTS = (
@@ -53,6 +53,20 @@ _STRENGTH_REPLACEMENTS = (
         'if cut_bucket and (\n            cut_bucket in cut_buckets_allowed\n            or "all" in cut_buckets_allowed\n        ):',
     ),
 )
+
+
+def _ensure_generic_tactical_watch_tag(value: dict[str, Any]) -> int:
+    """Keep generic.* Tactical Watch records aligned with their runtime style family."""
+    key = str(value.get("key") or "").strip()
+    tags = value.get("tags")
+    if not key.startswith("generic.") or not isinstance(tags, list):
+        return 0
+    if "tactical_watch" not in tags or "generic" in tags:
+        return 0
+
+    insert_at = tags.index("tactical_watch") + 1
+    tags.insert(insert_at, "generic")
+    return 1
 
 
 def _migrate_tag_lists(value: Any) -> int:
@@ -80,6 +94,7 @@ def _migrate_tag_lists(value: Any) -> int:
                 seen.add(canonical)
             if migrated != tags:
                 value["tags"] = migrated
+        changes += _ensure_generic_tactical_watch_tag(value)
         for key, child in value.items():
             if key != "tags":
                 changes += _migrate_tag_lists(child)
@@ -99,7 +114,11 @@ def _migrated_vocabulary_text(path: Path) -> tuple[str, int]:
     data = json.loads(path.read_text(encoding="utf-8"))
     items = read_tag_vocabulary_items(path)
     migrated = [tag for tag in items if tag not in REMOVE_FROM_VOCABULARY]
-    removed = len(items) - len(migrated)
+    changes = len(items) - len(migrated)
+    for tag in sorted(ADD_TO_VOCABULARY):
+        if tag not in migrated:
+            migrated.append(tag)
+            changes += 1
 
     # Preserve whichever supported schema the shared parser accepted.
     if isinstance(data, list):
@@ -109,7 +128,7 @@ def _migrated_vocabulary_text(path: Path) -> tuple[str, int]:
         key = "items" if isinstance(data.get("items"), list) else "data"
         payload[key] = migrated
 
-    return json.dumps(payload, indent=2, ensure_ascii=False) + "\n", removed
+    return json.dumps(payload, indent=2, ensure_ascii=False) + "\n", changes
 
 
 def _migrated_strength_text(path: Path) -> tuple[str, int]:

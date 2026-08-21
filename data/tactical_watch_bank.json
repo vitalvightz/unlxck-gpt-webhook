@@ -651,7 +651,8 @@
       "GPP"
     ],
     "tags": [
-      "tactical_watch"
+      "tactical_watch",
+      "generic"
     ],
     "duration_min": 10,
     "why": "Build basic tactical awareness by separating repeated patterns from one-off moments.",
@@ -677,7 +678,8 @@
       "GPP"
     ],
     "tags": [
-      "tactical_watch"
+      "tactical_watch",
+      "generic"
     ],
     "duration_min": 9,
     "why": "Separate the biggest tactical problem from smaller threats so training attention stays clear.",
@@ -702,7 +704,8 @@
       "GPP"
     ],
     "tags": [
-      "tactical_watch"
+      "tactical_watch",
+      "generic"
     ],
     "duration_min": 9,
     "why": "Identify the defensive habit that restores control and the one that keeps you under pressure.",
@@ -728,7 +731,8 @@
       "GPP"
     ],
     "tags": [
-      "tactical_watch"
+      "tactical_watch",
+      "generic"
     ],
     "duration_min": 9,
     "why": "Recognise when exchanges speed up, slow down or become predictable before adding tactics.",
@@ -754,7 +758,8 @@
       "GPP"
     ],
     "tags": [
-      "tactical_watch"
+      "tactical_watch",
+      "generic"
     ],
     "duration_min": 9,
     "why": "Understand what repeatedly decides the first meaningful exchange before longer sequences develop.",
@@ -780,7 +785,8 @@
       "GPP"
     ],
     "tags": [
-      "tactical_watch"
+      "tactical_watch",
+      "generic"
     ],
     "duration_min": 9,
     "why": "Identify the positions where you make good decisions and the positions that create rushed choices.",
@@ -806,7 +812,8 @@
       "GPP"
     ],
     "tags": [
-      "tactical_watch"
+      "tactical_watch",
+      "generic"
     ],
     "duration_min": 8,
     "why": "Make the reset between exchanges deliberate instead of letting the next exchange start from disorder.",
@@ -832,7 +839,8 @@
       "GPP"
     ],
     "tags": [
-      "tactical_watch"
+      "tactical_watch",
+      "generic"
     ],
     "duration_min": 9,
     "why": "Find out when you actually work in a round instead of assuming your output is evenly spread.",
@@ -858,7 +866,8 @@
       "GPP"
     ],
     "tags": [
-      "tactical_watch"
+      "tactical_watch",
+      "generic"
     ],
     "duration_min": 9,
     "why": "Expose the movement direction you default to and the side of the ring or cage you keep giving away.",
@@ -884,7 +893,8 @@
       "GPP"
     ],
     "tags": [
-      "tactical_watch"
+      "tactical_watch",
+      "generic"
     ],
     "duration_min": 9,
     "why": "Know exactly which part of your technique fails first when you tire, so you can defend it under pressure.",
@@ -910,7 +920,8 @@
       "SPP"
     ],
     "tags": [
-      "tactical_watch"
+      "tactical_watch",
+      "generic"
     ],
     "duration_min": 10,
     "why": "Turn one reliable opponent signal into a trained action instead of a vague tactical idea.",
@@ -936,7 +947,8 @@
       "SPP"
     ],
     "tags": [
-      "tactical_watch"
+      "tactical_watch",
+      "generic"
     ],
     "duration_min": 10,
     "why": "Understand how the opponent's behaviour changes through the round instead of treating every minute the same.",
@@ -962,7 +974,8 @@
       "SPP"
     ],
     "tags": [
-      "tactical_watch"
+      "tactical_watch",
+      "generic"
     ],
     "duration_min": 10,
     "why": "Separate clean, repeatable scoring actions from busy work that looks active but gives little return.",
@@ -988,7 +1001,8 @@
       "SPP"
     ],
     "tags": [
-      "tactical_watch"
+      "tactical_watch",
+      "generic"
     ],
     "duration_min": 10,
     "why": "Recognise the moment control changes so you can respond before a bad spell becomes a lost round.",
@@ -1014,7 +1028,8 @@
       "SPP"
     ],
     "tags": [
-      "tactical_watch"
+      "tactical_watch",
+      "generic"
     ],
     "duration_min": 9,
     "why": "Prepare a simple route back to control after being hit, trapped, tired or frustrated.",
@@ -1040,7 +1055,8 @@
       "SPP"
     ],
     "tags": [
-      "tactical_watch"
+      "tactical_watch",
+      "generic"
     ],
     "duration_min": 10,
     "why": "Prepare one clear adjustment when the first tactical plan stops working.",
@@ -1066,7 +1082,8 @@
       "SPP"
     ],
     "tags": [
-      "tactical_watch"
+      "tactical_watch",
+      "generic"
     ],
     "duration_min": 9,
     "why": "Use the first exchanges to gather specific information instead of trying to prove the whole game plan immediately.",
@@ -1092,7 +1109,8 @@
       "SPP"
     ],
     "tags": [
-      "tactical_watch"
+      "tactical_watch",
+      "generic"
     ],
     "duration_min": 9,
     "why": "Link one difficult position to the position where your decisions and scoring are strongest.",
@@ -1118,7 +1136,8 @@
       "SPP"
     ],
     "tags": [
-      "tactical_watch"
+      "tactical_watch",
+      "generic"
     ],
     "duration_min": 9,
     "why": "Plan how to close a round clearly when fatigue and urgency make decision-making noisier.",
@@ -1144,7 +1163,8 @@
       "SPP"
     ],
     "tags": [
-      "tactical_watch"
+      "tactical_watch",
+      "generic"
     ],
     "duration_min": 8,
     "why": "Turn a complicated tactical instruction into one action you can execute under fatigue.",
@@ -1170,7 +1190,8 @@
       "TAPER"
     ],
     "tags": [
-      "tactical_watch"
+      "tactical_watch",
+      "generic"
     ],
     "duration_min": 7,
     "why": "Confirm a familiar opening sequence without adding new decisions during taper.",
@@ -1196,7 +1217,8 @@
       "TAPER"
     ],
     "tags": [
-      "tactical_watch"
+      "tactical_watch",
+      "generic"
     ],
     "duration_min": 6,
     "why": "Reduce the trained game plan to a few familiar cues that remain usable under pressure.",
@@ -1222,7 +1244,8 @@
       "TAPER"
     ],
     "tags": [
-      "tactical_watch"
+      "tactical_watch",
+      "generic"
     ],
     "duration_min": 7,
     "why": "Confirm the two responses you have the most repetitions in and drop everything you have not trained.",
@@ -1248,7 +1271,8 @@
       "TAPER"
     ],
     "tags": [
-      "tactical_watch"
+      "tactical_watch",
+      "generic"
     ],
     "duration_min": 7,
     "why": "Rehearse the answer you have already trained for the danger you already know about, without adding new theory.",

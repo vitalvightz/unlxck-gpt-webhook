@@ -16,7 +16,11 @@ from tools.audit_tag_registry import (
 )
 from tools.check_tag_registry import authority_failures, load_review_decisions
 from tools.injury_tag_authority import collect_generated_injury_tags
-from tools.migrate_tag_registry_data import _migrated_vocabulary_text, planned_changes
+from tools.migrate_tag_registry_data import (
+    _migrate_tag_lists,
+    _migrated_vocabulary_text,
+    planned_changes,
+)
 from tools.validate_banks import discover_banks
 
 
@@ -63,9 +67,20 @@ def test_migration_uses_shared_vocabulary_schemas_and_preserves_shape(tmp_path: 
     path = tmp_path / "tag_vocabulary.json"
     path.write_text(json.dumps({"items": ["speed", "bodyweight"]}), encoding="utf-8")
 
-    text, removed = _migrated_vocabulary_text(path)
-    assert removed == 1
-    assert json.loads(text) == {"items": ["speed"]}
+    text, changes = _migrated_vocabulary_text(path)
+    assert changes == 2
+    assert json.loads(text) == {"items": ["speed", "generic"]}
+
+
+def test_migration_restores_generic_tactical_watch_style_tag():
+    entry = {
+        "key": "generic.gpp.opponent_pattern_scan",
+        "tags": ["tactical_watch"],
+    }
+
+    assert _migrate_tag_lists(entry) == 1
+    assert entry["tags"] == ["tactical_watch", "generic"]
+    assert _migrate_tag_lists(entry) == 0
 
 
 def test_bank_tag_collection_normalizes_aliases_and_tracks_coverage(tmp_path: Path):
@@ -98,6 +113,7 @@ def test_vocabulary_is_canonical_collision_free_and_excludes_field_names():
     assert len(canonical) == len(set(canonical))
     assert "distance_fighter" not in raw_vocab
     assert "distance_striker" in raw_vocab
+    assert "generic" in raw_vocab
     assert "late_windows" not in raw_vocab
     assert "cut_buckets_allowed" not in raw_vocab
 
