@@ -11,7 +11,7 @@ on:
 jobs:
   migrate_tag_registry:
     if: github.event_name == 'pull_request' && github.head_ref == 'codex/authoritative-tag-registry'
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     permissions:
       contents: write
     steps:
