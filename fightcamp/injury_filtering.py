@@ -626,6 +626,8 @@ def _infer_mechanism_tags_from_name(name: str) -> set[str]:
         return set()
     inferred: set[str] = set()
     for tag, keywords in MECH_KEYWORDS:
+        if tag == "mech_max_velocity" and not _should_apply_max_velocity(name):
+            continue
         for phrase in keywords:
             if phrase_in_text(normalized_name, phrase):
                 inferred.add(tag)
