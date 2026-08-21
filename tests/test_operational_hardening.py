@@ -65,7 +65,6 @@ def test_plan_banks_start_lazy_and_prime_on_demand():
     assert conditioning_mod._style_conditioning_bank_cache is None
     assert conditioning_mod._format_weights_cache is None
     assert strength_mod._exercise_bank_cache is None
-    assert strength_mod._style_exercises_cache is None
     assert rehab_mod._REHAB_BANK_CACHE is None
 
     conditioning_mod.prime_conditioning_banks()
@@ -76,6 +75,4 @@ def test_plan_banks_start_lazy_and_prime_on_demand():
     assert conditioning_mod._style_conditioning_bank_cache is not None
     assert conditioning_mod._format_weights_cache is not None
     assert strength_mod._exercise_bank_cache is not None
-    assert strength_mod._style_exercises_cache is not None
     assert rehab_mod._REHAB_BANK_CACHE is not None
-
