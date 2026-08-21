@@ -76,6 +76,11 @@ def _coordination_roles(week):
     ]
 
 
+def _used_coordination_keys_except(*allowed_keys):
+    allowed = set(allowed_keys)
+    return {drill.key for drill in all_coordination_drills() if drill.key not in allowed}
+
+
 def test_v2_bank_is_small_deliberate_and_split():
     all_coordination_drills.cache_clear()
     drills = all_coordination_drills()
@@ -158,6 +163,43 @@ def test_mma_grappler_gets_mma_relevant_coordination():
     assert "grappler" in drill.styles
 
 
+def test_hip_flexor_injury_skips_risky_kick_and_finds_safe_alternative():
+    athlete = _athlete(
+        sport="kickboxing",
+        technical_styles=["kickboxing"],
+        tactical_styles=["distance_striker"],
+        injuries=["hip flexor strain"],
+    )
+    selected = select_coordination_support(
+        athlete,
+        "GPP",
+        _used_coordination_keys_except("kick.teep_recover_jab", "kick.kick_and_stick"),
+    )
+
+    assert selected is not None
+    assert selected.key == "kick.kick_and_stick"
+    assert "hip_flexion_loaded" not in selected.raw.get("tags", [])
+
+
+def test_wrist_injury_skips_posting_drill_and_finds_safe_alternative():
+    athlete = _athlete(
+        sport="mma",
+        technical_styles=["mma"],
+        tactical_styles=["grappler"],
+        equipment=["partner"],
+        injuries=["wrist sprain"],
+    )
+    selected = select_coordination_support(
+        athlete,
+        "GPP",
+        _used_coordination_keys_except("mma.sprawl_stance_recover", "mma.strike_levelchange"),
+    )
+
+    assert selected is not None
+    assert selected.key == "mma.strike_levelchange"
+    assert "wrist_loaded_extension" not in selected.raw.get("tags", [])
+
+
 def test_normal_week_gets_one_coordination_support_role_only_when_targeted():
     targeted = {"weeks": [_week()]}
     apply_camp_week_fillers(targeted, _athlete())
@@ -178,7 +220,7 @@ def test_normal_week_gets_one_coordination_support_role_only_when_targeted():
 
 
 def test_coordination_support_avoids_hard_sparring_days():
-    role_map = {"weeks": [_week(hard_days=["Monday"]) ]}
+    role_map = {"weeks": [_week(hard_days=["Monday"])]}
     apply_camp_week_fillers(role_map, _athlete(hard_sparring_days=["Monday"]))
     roles = _coordination_roles(role_map["weeks"][0])
     assert len(roles) == 1
