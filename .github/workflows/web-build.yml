@@ -8,10 +8,6 @@ on:
     branches:
       - "**"
 
-concurrency:
-  group: web-build-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
 jobs:
   build:
     runs-on: ubuntu-latest
