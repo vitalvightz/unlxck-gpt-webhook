@@ -30,10 +30,14 @@ jobs:
       - name: Audit tag registry
         run: python tools/audit_tag_registry.py
 
-      # Blocking focused gate: no new vocabulary aliases/collisions, missing bank
-      # tags, code-owned gaps, or dead scoring routes. Four existing raw bank
-      # aliases are bounded legacy debt until those large source files are safely
-      # migrated; the gate rejects any new alias debt.
+      # Persisted bank data must already be canonical. This catches reintroduced
+      # aliases, setup/nonsemantic tag tokens, metadata field names in the
+      # vocabulary, and the strength metadata pseudo-tag fallback.
+      - name: Check tag data migration is up to date
+        run: python tools/migrate_tag_registry_data.py --check
+
+      # Blocking focused gate: vocabulary, scoring, runtime controls, generated
+      # injury/safety tags, and reviewed bank-only decisions must stay closed.
       - name: Enforce tag authority
         run: python tools/check_tag_registry.py
 
