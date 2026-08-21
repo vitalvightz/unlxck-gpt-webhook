@@ -13,7 +13,9 @@ from tools.audit_tag_registry import (
     collect_runtime_control_tags,
     collect_scoring_tags,
 )
-from tools.check_tag_registry import authority_failures
+from tools.check_tag_registry import authority_failures, load_review_decisions
+from tools.injury_tag_authority import collect_generated_injury_tags
+from tools.migrate_tag_registry_data import planned_changes
 from tools.validate_banks import discover_banks
 
 
@@ -64,7 +66,7 @@ def test_bank_tag_collection_normalizes_aliases_and_tracks_coverage(tmp_path: Pa
     assert result["files_by_tag"]["gas_tank"] == {"exercise_bank.json"}
 
 
-def test_vocabulary_is_canonical_and_collision_free():
+def test_vocabulary_is_canonical_collision_free_and_excludes_field_names():
     raw_vocab = read_tag_vocabulary_items(DATA_DIR / "tag_vocabulary.json")
     canonical = [normalize_tag(tag) for tag in raw_vocab]
 
@@ -72,6 +74,8 @@ def test_vocabulary_is_canonical_and_collision_free():
     assert len(canonical) == len(set(canonical))
     assert "distance_fighter" not in raw_vocab
     assert "distance_striker" in raw_vocab
+    assert "late_windows" not in raw_vocab
+    assert "cut_buckets_allowed" not in raw_vocab
 
 
 def test_scoring_tag_inventory_includes_all_live_scoring_surfaces():
@@ -111,6 +115,39 @@ def test_runtime_tag_inventory_is_precise_and_keeps_late_safety_controls():
         "vestibular_sensitive",
     }.issubset(all_tags)
     assert not {"blockquote", "h1", "iframe", "table", "tbody", "meta"}.intersection(all_tags)
+    assert not {"late_windows", "cut_buckets_allowed"}.intersection(all_tags)
+
+
+def test_generated_injury_safety_tags_are_registered():
+    vocabulary = set(read_tag_vocabulary_items(DATA_DIR / "tag_vocabulary.json"))
+    injury_tags = collect_generated_injury_tags()
+
+    assert {
+        "max_velocity",
+        "landing_stress_high",
+        "achilles_high_risk_impact",
+        "contact",
+        "head_impact",
+        "decel_high",
+    }.issubset(injury_tags)
+    assert injury_tags <= vocabulary
+
+
+def test_persisted_banks_are_canonical_and_reviewed_removed_tokens_are_gone():
+    bank = collect_bank_tags(discover_banks(DATA_DIR))
+    bank_tags = set(bank["canonical_counts"])
+
+    assert bank["aliases"] == {}
+    decisions = load_review_decisions()
+    for tag, row in decisions.items():
+        if row["decision"] == "remove_from_tags":
+            assert tag not in bank_tags
+        else:
+            assert tag in bank_tags
+
+
+def test_tag_registry_data_migration_is_up_to_date():
+    assert planned_changes() == []
 
 
 def _clean_gate_report(**overrides):
@@ -121,34 +158,79 @@ def _clean_gate_report(**overrides):
         "scoring_missing_vocab": [],
         "runtime_missing_vocab": [],
         "scoring_zero_bank_coverage": [],
-        "bank_aliases": {
-            "boxer": "boxing",
-            "breathing": "recovery",
-            "rhythm": "coordination",
-            "technical": "skill",
-        },
+        "bank_aliases": {},
         "synonym_canonicals": ["boxing", "recovery", "coordination", "skill"],
+        "bank_tag_details": {
+            "boxing": {},
+            "recovery": {},
+            "coordination": {},
+            "skill": {},
+            "max_velocity": {},
+            "reviewed_descriptor": {},
+        },
     }
     report.update(overrides)
     return report
 
 
-def test_authority_gate_allows_only_bounded_legacy_alias_debt():
-    vocabulary = {"boxing", "recovery", "coordination", "skill"}
+def test_authority_gate_rejects_any_persisted_alias_debt():
+    vocabulary = {"boxing", "recovery", "coordination", "skill", "max_velocity", "reviewed_descriptor"}
     assert authority_failures(_clean_gate_report(), vocabulary) == []
 
     failures = authority_failures(
-        _clean_gate_report(
-            bank_aliases={"boxer": "boxing", "new legacy spelling": "boxing"}
-        ),
+        _clean_gate_report(bank_aliases={"boxer": "boxing"}),
         vocabulary,
     )
-    assert any("unexpected_bank_aliases" in failure for failure in failures)
+    assert any("bank_aliases" in failure for failure in failures)
 
 
 def test_authority_gate_rejects_missing_synonym_targets():
     failures = authority_failures(
         _clean_gate_report(),
-        {"boxing", "recovery", "coordination"},
+        {"boxing", "recovery", "coordination", "max_velocity", "reviewed_descriptor"},
     )
     assert any("synonym_targets_missing_from_vocabulary" in failure for failure in failures)
+
+
+def test_authority_gate_rejects_new_generated_safety_tag_without_registration():
+    vocabulary = {"boxing", "recovery", "coordination", "skill", "reviewed_descriptor"}
+    failures = authority_failures(
+        _clean_gate_report(),
+        vocabulary,
+        generated_injury_tags={"max_velocity", "brand_new_safety_tag"},
+    )
+    assert any("generated_injury_tags_missing_from_vocabulary" in failure for failure in failures)
+
+
+def test_review_decisions_are_enforced_by_gate():
+    vocabulary = {"boxing", "recovery", "coordination", "skill", "max_velocity", "reviewed_descriptor"}
+    failures = authority_failures(
+        _clean_gate_report(),
+        vocabulary,
+        review_decisions={
+            "reviewed_descriptor": {
+                "decision": "allow_canonical",
+                "category": "movement_quality",
+                "rationale": "Reviewed descriptor.",
+            },
+            "setup_only": {
+                "decision": "remove_from_tags",
+                "category": "setup_metadata",
+                "rationale": "Not a semantic tag.",
+            },
+        },
+    )
+    assert failures == []
+
+    failures = authority_failures(
+        _clean_gate_report(bank_tag_details={"reviewed_descriptor": {}, "setup_only": {}}),
+        vocabulary | {"setup_only"},
+        review_decisions={
+            "setup_only": {
+                "decision": "remove_from_tags",
+                "category": "setup_metadata",
+                "rationale": "Not a semantic tag.",
+            }
+        },
+    )
+    assert any("reviewed_removed_tag_still_live" in failure for failure in failures)
