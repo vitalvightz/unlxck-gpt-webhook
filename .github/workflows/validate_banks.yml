@@ -15,7 +15,7 @@ concurrency:
 jobs:
   migrate_tag_registry:
     if: github.event_name == 'pull_request' && github.head_ref == 'codex/authoritative-tag-registry'
-    runs-on: ubuntu-slim
+    runs-on: macos-latest
     permissions:
       contents: write
     steps:
@@ -25,13 +25,8 @@ jobs:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11.15"
-
       - name: Apply deterministic tag migration
-        run: python tools/migrate_tag_registry_data.py
+        run: python3 tools/migrate_tag_registry_data.py
 
       - name: Commit migrated files when needed
         shell: bash
