@@ -45,8 +45,6 @@ BOX_EXERCISES = (
 
 def _reset_caches() -> None:
     strength._exercise_bank_cache = None
-    strength._universal_strength_cache = None
-    strength._universal_strength_names_cache = None
 
 
 def _strength_flags(days_until_fight: int, **overrides) -> dict:

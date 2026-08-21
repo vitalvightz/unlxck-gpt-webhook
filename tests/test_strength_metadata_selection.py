@@ -48,7 +48,6 @@ def _quality_passthrough(exercise, phase=None):
 
 def _patch_minimal_strength_runtime(monkeypatch, exercise_bank: list[dict], score_map: dict[str, float]) -> None:
     monkeypatch.setattr(strength, "get_exercise_bank", lambda: exercise_bank)
-    monkeypatch.setattr(strength, "get_universal_strength_names", lambda: set())
     monkeypatch.setattr(strength, "allocate_sessions", lambda *_args, **_kwargs: {"strength": 1})
     monkeypatch.setattr(strength, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"strength": 1})
     monkeypatch.setattr(strength, "strength_quality_adjustment", _quality_passthrough)

@@ -841,7 +841,6 @@ def test_medicine_ball_chest_toss_is_excluded_for_upper_body_injuries():
 def test_anti_rotation_core_exercises_are_not_false_positive_shoulder_exclusions():
     data_paths = [
         Path(__file__).resolve().parents[1] / "data" / "exercise_bank.json",
-        Path(__file__).resolve().parents[1] / "data" / "universal_gpp_strength.json",
     ]
     target_names = {
         "Cable Pallof Press",
@@ -866,7 +865,7 @@ def test_anti_rotation_core_exercises_are_not_false_positive_shoulder_exclusions
                 assert "mech_upper_press" not in (exercise.get("mechanical_risk_tags") or []), f"{location} should not risk-tag upper press"
 
     assert target_names <= found_names
-    assert checked_count == 5
+    assert checked_count == 4
 
 
 def test_med_ball_scoop_toss_is_not_false_positive_shoulder_press_exclusion():

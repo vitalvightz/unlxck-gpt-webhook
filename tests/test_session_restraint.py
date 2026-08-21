@@ -124,7 +124,6 @@ def test_generate_strength_block_uses_derived_fatigue_cost_for_live_near_equal_o
     score_map = {"Heavy Pull": 10.0, "Snap Down": 9.95, "Later Group": 9.7}
 
     monkeypatch.setattr(strength, "get_exercise_bank", lambda: exercise_bank)
-    monkeypatch.setattr(strength, "get_universal_strength_names", lambda: set())
     monkeypatch.setattr(strength, "allocate_sessions", lambda *_args, **_kwargs: {"strength": 1})
     monkeypatch.setattr(strength, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"strength": 3})
     monkeypatch.setattr(
