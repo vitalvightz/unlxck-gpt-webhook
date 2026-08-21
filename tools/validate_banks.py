@@ -84,7 +84,6 @@ CONDITIONING_BANK_NAMES = {
     "footwork_conditioning_bank.json",
     "style_conditioning_bank.json",
     "style_taper_conditioning.json",
-    "universal_gpp_conditioning.json",
 }
 EXERCISE_BANK_NAMES = {
     "exercise_bank.json",

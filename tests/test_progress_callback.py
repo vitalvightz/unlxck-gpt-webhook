@@ -99,8 +99,6 @@ def test_knee_instability_low_stable_emits_stage1_block_and_no_timeout():
     assert "stage1_conditioning_deficit_fill_finished" in codes
     assert "stage1_conditioning_gas_tank_machine_bias_started" in codes
     assert "stage1_conditioning_gas_tank_machine_bias_finished" in codes
-    assert "stage1_conditioning_universal_gpp_insertion_started" in codes
-    assert "stage1_conditioning_universal_gpp_insertion_finished" in codes
     assert "stage1_conditioning_style_taper_insertion_started" in codes
     assert "stage1_conditioning_style_taper_insertion_finished" in codes
     assert "stage1_conditioning_taper_plyometric_guarantee_started" in codes
