@@ -34,13 +34,12 @@ REMOVE_FROM_BANK_TAGS = {
     "partner",
     "supported",
     "wall_supported",
-}
-
-# Structured field names must never be legal semantic tags.
-REMOVE_FROM_VOCABULARY = REMOVE_FROM_BANK_TAGS | {
+    # Structured field names must never be persisted inside a tags array.
     "late_windows",
     "cut_buckets_allowed",
 }
+
+REMOVE_FROM_VOCABULARY = set(REMOVE_FROM_BANK_TAGS)
 
 
 _STRENGTH_REPLACEMENTS = (
