@@ -6,11 +6,14 @@ from pathlib import Path
 import pytest
 
 from fightcamp.tag_vocabulary import parse_tag_vocabulary_payload, read_tag_vocabulary_items
+from fightcamp.tagging import normalize_tag
 from tools.audit_tag_registry import (
+    DATA_DIR,
     collect_bank_tags,
     collect_runtime_control_tags,
     collect_scoring_tags,
 )
+from tools.validate_banks import discover_banks
 
 
 def test_tag_vocabulary_parser_accepts_all_supported_schemas(tmp_path: Path):
@@ -60,15 +63,37 @@ def test_bank_tag_collection_normalizes_aliases_and_tracks_coverage(tmp_path: Pa
     assert result["files_by_tag"]["gas_tank"] == {"exercise_bank.json"}
 
 
+def test_vocabulary_is_canonical_and_collision_free():
+    raw_vocab = read_tag_vocabulary_items(DATA_DIR / "tag_vocabulary.json")
+    canonical = [normalize_tag(tag) for tag in raw_vocab]
+
+    assert all(tag and tag == normalized for tag, normalized in zip(raw_vocab, canonical))
+    assert len(canonical) == len(set(canonical))
+    assert "distance_fighter" not in raw_vocab
+    assert "distance_striker" in raw_vocab
+
+
 def test_scoring_tag_inventory_includes_all_live_scoring_surfaces():
     scoring = collect_scoring_tags()
     all_tags = set().union(*scoring.values())
 
     assert {"goal", "weakness", "style", "clarification_detail", "clarification_generic", "phase"}.issubset(scoring)
-    assert "decision_speed" in all_tags
     assert "movement_quality" in all_tags
     assert "ringcraft" in all_tags
     assert "distance_striker" in all_tags
+    assert "decision_speed" not in all_tags
+    assert "tempo" not in all_tags
+
+
+def test_all_scoring_tags_are_canonical_vocab_tags_with_bank_coverage():
+    vocab = set(read_tag_vocabulary_items(DATA_DIR / "tag_vocabulary.json"))
+    bank = collect_bank_tags(discover_banks(DATA_DIR))
+    bank_tags = set(bank["canonical_counts"])
+    scoring = collect_scoring_tags()
+    scoring_tags = set().union(*scoring.values())
+
+    assert scoring_tags <= vocab
+    assert scoring_tags <= bank_tags
 
 
 def test_runtime_tag_inventory_is_precise_and_keeps_late_safety_controls():
