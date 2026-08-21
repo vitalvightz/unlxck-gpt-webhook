@@ -37,7 +37,7 @@ jobs:
         run: python tools/migrate_rehab_bank_schema.py --check
 
   consolidate-style-strength-bank:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/codex/consolidate-style-strength-bank' && !contains(github.event.head_commit.message, '[style-bank-migration]')
+    if: github.event_name == 'pull_request' && github.head_ref == 'codex/consolidate-style-strength-bank'
     runs-on: ubuntu-latest
     permissions:
       contents: write
