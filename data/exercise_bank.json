@@ -243,7 +243,7 @@
     "notes": "Use a light medicine ball and full rest; drive from the hips and transfer force through the torso without chasing fatigue."
   },
   {
-    "name": "Back Squat \u2192 Box Jump",
+    "name": "Back Squat → Box Jump",
     "category": "lower_body",
     "phases": [
       "SPP"
@@ -288,7 +288,7 @@
     ]
   },
   {
-    "name": "DB Bench Press \u2192 Plyo Push-Up",
+    "name": "DB Bench Press → Plyo Push-Up",
     "category": "upper_body",
     "phases": [
       "SPP"
@@ -331,7 +331,7 @@
     ]
   },
   {
-    "name": "Heavy RDL \u2192 Broad Jump",
+    "name": "Heavy RDL → Broad Jump",
     "category": "lower_body",
     "phases": [
       "SPP"
@@ -374,7 +374,7 @@
     ]
   },
   {
-    "name": "Landmine Press \u2192 Med Ball Chest Pass",
+    "name": "Landmine Press → Med Ball Chest Pass",
     "category": "upper_body",
     "phases": [
       "SPP"
@@ -573,7 +573,7 @@
     ]
   },
   {
-    "name": "Zercher Squat \u2192 Sprawl Jump",
+    "name": "Zercher Squat → Sprawl Jump",
     "category": "wrestler",
     "phases": [
       "SPP"
@@ -1543,7 +1543,7 @@
     "notes": "Use a split stance, light-to-moderate load, and full rest; drive through the floor and finish fast."
   },
   {
-    "name": "DB Alternating Incline Press (30-45\u00b0)",
+    "name": "DB Alternating Incline Press (30-45°)",
     "category": "upper_body",
     "phases": [
       "GPP"
@@ -4296,7 +4296,7 @@
     ]
   },
   {
-    "name": "Grappler\u2019s Bridge (Weighted)",
+    "name": "Grappler’s Bridge (Weighted)",
     "category": "combat",
     "phases": [
       "SPP"
@@ -6492,7 +6492,7 @@
       "mech_lower_squat"
     ],
     "equipment": "bosu_ball",
-    "notes": "Keep squats shallow (30\u00b0 knee bend)",
+    "notes": "Keep squats shallow (30° knee bend)",
     "movement_cost": "low",
     "impact_cost": "low",
     "eccentric_cost": "low",
@@ -6586,7 +6586,7 @@
     ]
   },
   {
-    "name": "Single-Leg Wall Sit (60\u00b0)",
+    "name": "Single-Leg Wall Sit (60°)",
     "category": "lower_body",
     "phases": [
       "GPP"
@@ -7097,7 +7097,7 @@
     ]
   },
   {
-    "name": "\ud83d\udd25 Single-Leg Rotational Med Ball Hold",
+    "name": "🔥 Single-Leg Rotational Med Ball Hold",
     "category": "lower_body",
     "phases": [
       "GPP"
@@ -7135,7 +7135,7 @@
     ]
   },
   {
-    "name": "\ud83d\udd25 Single-Leg Combat Stance Hold (Weighted)",
+    "name": "🔥 Single-Leg Combat Stance Hold (Weighted)",
     "category": "lower_body",
     "phases": [
       "GPP"
@@ -7247,7 +7247,7 @@
     ]
   },
   {
-    "name": "Single-Leg 45\u00b0 Bound",
+    "name": "Single-Leg 45° Bound",
     "category": "lower_body",
     "phases": [
       "SPP"
@@ -7516,7 +7516,7 @@
     ]
   },
   {
-    "name": "\ud83d\udd25 Single-Leg Combat Stance Switch Jump",
+    "name": "🔥 Single-Leg Combat Stance Switch Jump",
     "category": "lower_body",
     "phases": [
       "SPP"
@@ -7555,7 +7555,7 @@
     ]
   },
   {
-    "name": "Squat Isometric (110% 1RM @ 90\u00b0)",
+    "name": "Squat Isometric (110% 1RM @ 90°)",
     "category": "lower_body",
     "phases": [
       "SPP"
@@ -7667,7 +7667,7 @@
     ]
   },
   {
-    "name": "Front Squat Isometric (115% 1RM @ 100\u00b0)",
+    "name": "Front Squat Isometric (115% 1RM @ 100°)",
     "category": "lower_body",
     "phases": [
       "SPP"
@@ -7856,7 +7856,7 @@
     ]
   },
   {
-    "name": "Incline Bench Isometric (125% 1RM @ 45\u00b0)",
+    "name": "Incline Bench Isometric (125% 1RM @ 45°)",
     "category": "upper_body",
     "phases": [
       "SPP"
@@ -8006,7 +8006,7 @@
     ]
   },
   {
-    "name": "Safety Bar Squat Isometric (115% 1RM @ 90\u00b0)",
+    "name": "Safety Bar Squat Isometric (115% 1RM @ 90°)",
     "category": "lower_body",
     "phases": [
       "SPP"
@@ -8282,7 +8282,7 @@
     ]
   },
   {
-    "name": "Bench Isometric (110% 1RM @ 90\u00b0 Elbow)",
+    "name": "Bench Isometric (110% 1RM @ 90° Elbow)",
     "category": "upper_body",
     "phases": [
       "GPP"
@@ -8319,7 +8319,7 @@
     ]
   },
   {
-    "name": "Front Squat Isometric (105% 1RM @ 100\u00b0)",
+    "name": "Front Squat Isometric (105% 1RM @ 100°)",
     "category": "lower_body",
     "phases": [
       "GPP"
@@ -10876,7 +10876,7 @@
       "clinch_fighter",
       "grappler",
       "wrestler",
-      "boxer",
+      "boxing",
       "mech_ballistic"
     ],
     "equipment": "trap_bar,pins",
@@ -10930,7 +10930,7 @@
       "skip when pins or trap bar are unavailable",
       "avoid if aggressive brace work spikes blood pressure during the cut"
     ],
-    "notes": "2\u20133x4\u20136s, full setup and full rest. Prioritise D-13; only use on D-7 if dose stays very low. Not for D-3 or D-1.",
+    "notes": "2–3x4–6s, full setup and full rest. Prioritise D-13; only use on D-7 if dose stays very low. Not for D-3 or D-1.",
     "movement_cost": "moderate",
     "impact_cost": "low",
     "mechanical_risk_tags": [
@@ -10972,7 +10972,7 @@
       "mech_trunk_stability",
       "anti_rotation",
       "push",
-      "boxer",
+      "boxing",
       "kickboxing",
       "mma",
       "kicker",
@@ -11632,7 +11632,7 @@
       "power",
       "coordination",
       "sport_specific",
-      "boxer",
+      "boxing",
       "counter_striker",
       "distance_striker",
       "mech_ballistic",
@@ -12160,7 +12160,7 @@
       "low_eccentric",
       "cns_freshness",
       "mobility",
-      "breathing",
+      "recovery",
       "mech_trunk_stability"
     ],
     "equipment": "bodyweight",
@@ -12226,7 +12226,6 @@
     "tags": [
       "ankle_mobility",
       "boxer_footwork",
-      "supported",
       "low_soreness",
       "taper_micro_support",
       "no_d1",
@@ -12292,7 +12291,6 @@
     "type": "bilateral",
     "tags": [
       "foot_control",
-      "bodyweight",
       "d1_ok",
       "low_soreness",
       "taper_micro_support",
@@ -12627,7 +12625,6 @@
     "type": "bilateral",
     "tags": [
       "t_spine_rotation",
-      "wall_supported",
       "d1_ok",
       "low_soreness",
       "rehab_friendly",
@@ -12758,7 +12755,6 @@
     "type": "bilateral",
     "tags": [
       "serratus",
-      "wall_supported",
       "d1_ok",
       "shoulder_readiness",
       "rehab_friendly",
@@ -12824,7 +12820,6 @@
     "type": "bilateral",
     "tags": [
       "scap_retraction",
-      "light_band",
       "shoulder_readiness",
       "low_soreness",
       "rehab_friendly",
@@ -13591,7 +13586,6 @@
     "type": "bilateral",
     "tags": [
       "anti_rotation",
-      "light_band",
       "no_d4_to_d1",
       "rehab_friendly",
       "taper_micro_support",
@@ -14054,7 +14048,6 @@
     "type": "bilateral",
     "tags": [
       "posterior_shoulder",
-      "light_band",
       "no_d1",
       "rehab_friendly",
       "taper_micro_support",

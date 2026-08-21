@@ -2,8 +2,13 @@
   {
     "key": "distance_striker.gpp.range_map",
     "name": "Range Map",
-    "phases": ["GPP"],
-    "tags": ["tactical_watch", "distance_striker"],
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "distance_striker"
+    ],
     "duration_min": 10,
     "why": "Establish the ranges where you can score without staying available for the return.",
     "mindset": {
@@ -24,8 +29,13 @@
   {
     "key": "distance_striker.gpp.lead_hand_battle",
     "name": "Lead-Hand Battle",
-    "phases": ["GPP"],
-    "tags": ["tactical_watch", "distance_striker"],
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "distance_striker"
+    ],
     "duration_min": 10,
     "why": "Learn how the lead hand controls entry, rhythm and distance before exchanges develop.",
     "mindset": {
@@ -46,8 +56,13 @@
   {
     "key": "distance_striker.gpp.exit_discipline",
     "name": "Exit Discipline",
-    "phases": ["GPP"],
-    "tags": ["tactical_watch", "distance_striker"],
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "distance_striker"
+    ],
     "duration_min": 9,
     "why": "Stop clean scoring from turning into avoidable return-fire by leaving on time.",
     "mindset": {
@@ -68,8 +83,13 @@
   {
     "key": "distance_striker.spp.intercept_the_entry",
     "name": "Intercept the Entry",
-    "phases": ["SPP"],
-    "tags": ["tactical_watch", "distance_striker"],
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "distance_striker"
+    ],
     "duration_min": 10,
     "why": "Stop pressure before it reaches the pocket and takes away your preferred range.",
     "mindset": {
@@ -90,8 +110,13 @@
   {
     "key": "distance_striker.spp.exit_lane_audit",
     "name": "Exit Lane Audit",
-    "phases": ["SPP"],
-    "tags": ["tactical_watch", "distance_striker"],
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "distance_striker"
+    ],
     "duration_min": 10,
     "why": "Choose exits that move away from the opponent's strongest pursuit and return fire.",
     "mindset": {
@@ -112,8 +137,13 @@
   {
     "key": "distance_striker.spp.rope_corner_escape",
     "name": "Rope and Corner Escape",
-    "phases": ["SPP"],
-    "tags": ["tactical_watch", "distance_striker"],
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "distance_striker"
+    ],
     "duration_min": 10,
     "why": "Prepare a calm escape when pressure removes the open space you normally rely on.",
     "mindset": {
@@ -134,8 +164,13 @@
   {
     "key": "distance_striker.taper.first_round_range_script",
     "name": "First-Round Range Script",
-    "phases": ["TAPER"],
-    "tags": ["tactical_watch", "distance_striker"],
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "distance_striker"
+    ],
     "duration_min": 8,
     "why": "Confirm the opening range plan without adding new tactical information late in camp.",
     "mindset": {
@@ -156,8 +191,13 @@
   {
     "key": "distance_striker.taper.final_range_cue",
     "name": "Final Range Cue",
-    "phases": ["TAPER"],
-    "tags": ["tactical_watch", "distance_striker"],
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "distance_striker"
+    ],
     "duration_min": 6,
     "why": "Reduce your trained range plan to one cue you can recall under pressure.",
     "mindset": {
@@ -177,8 +217,13 @@
   {
     "key": "brawler.gpp.pressure_route_scan",
     "name": "Pressure Route Scan",
-    "phases": ["GPP"],
-    "tags": ["tactical_watch", "brawler"],
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "brawler"
+    ],
     "duration_min": 10,
     "why": "Learn where opponents naturally retreat so pressure can steer instead of chase.",
     "mindset": {
@@ -199,8 +244,13 @@
   {
     "key": "brawler.gpp.safe_entry_builder",
     "name": "Safe Entry Builder",
-    "phases": ["GPP"],
-    "tags": ["tactical_watch", "brawler"],
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "brawler"
+    ],
     "duration_min": 10,
     "why": "Build a repeatable way into the pocket without walking onto clean shots.",
     "mindset": {
@@ -221,8 +271,13 @@
   {
     "key": "brawler.gpp.pressure_reset",
     "name": "Pressure Reset",
-    "phases": ["GPP"],
-    "tags": ["tactical_watch", "brawler"],
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "brawler"
+    ],
     "duration_min": 9,
     "why": "Keep pressure controlled so forward intent does not turn into reckless chasing.",
     "mindset": {
@@ -243,8 +298,13 @@
   {
     "key": "brawler.spp.pocket_exchange_map",
     "name": "Pocket Exchange Map",
-    "phases": ["SPP"],
-    "tags": ["tactical_watch", "brawler"],
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "brawler"
+    ],
     "duration_min": 10,
     "why": "Know what happens after the first punches so pocket exchanges stay planned rather than chaotic.",
     "mindset": {
@@ -265,8 +325,13 @@
   {
     "key": "brawler.spp.body_attack_opportunity",
     "name": "Body Attack Opportunity",
-    "phases": ["SPP"],
-    "tags": ["tactical_watch", "brawler"],
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "brawler"
+    ],
     "duration_min": 10,
     "why": "Find safe body attacks that reward pressure without making the entry predictable.",
     "mindset": {
@@ -287,8 +352,13 @@
   {
     "key": "brawler.spp.smother_and_reset",
     "name": "Smother and Reset",
-    "phases": ["SPP"],
-    "tags": ["tactical_watch", "brawler"],
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "brawler"
+    ],
     "duration_min": 10,
     "why": "Stop the opponent firing back immediately after your pressure combination lands.",
     "mindset": {
@@ -309,8 +379,13 @@
   {
     "key": "brawler.taper.first_round_pressure_script",
     "name": "First-Round Pressure Script",
-    "phases": ["TAPER"],
-    "tags": ["tactical_watch", "brawler"],
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "brawler"
+    ],
     "duration_min": 8,
     "why": "Confirm controlled opening pressure without turning fight-night energy into a reckless start.",
     "mindset": {
@@ -331,8 +406,13 @@
   {
     "key": "brawler.taper.final_pressure_cue",
     "name": "Final Pressure Cue",
-    "phases": ["TAPER"],
-    "tags": ["tactical_watch", "brawler"],
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "brawler"
+    ],
     "duration_min": 6,
     "why": "Reduce your pressure plan to one familiar instruction that keeps aggression organised.",
     "mindset": {
@@ -352,8 +432,13 @@
   {
     "key": "counter_striker.gpp.trigger_library",
     "name": "Trigger Library",
-    "phases": ["GPP"],
-    "tags": ["tactical_watch", "counter_striker"],
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "counter_striker"
+    ],
     "duration_min": 10,
     "why": "Build a clear library of movements that reliably predict an opponent's attack.",
     "mindset": {
@@ -374,8 +459,13 @@
   {
     "key": "counter_striker.gpp.draw_the_lead",
     "name": "Draw the Lead",
-    "phases": ["GPP"],
-    "tags": ["tactical_watch", "counter_striker"],
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "counter_striker"
+    ],
     "duration_min": 10,
     "why": "Create predictable attacks instead of waiting passively for a counter opportunity.",
     "mindset": {
@@ -396,8 +486,13 @@
   {
     "key": "counter_striker.gpp.counter_activity_check",
     "name": "Counter Activity Check",
-    "phases": ["GPP"],
-    "tags": ["tactical_watch", "counter_striker"],
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "counter_striker"
+    ],
     "duration_min": 9,
     "why": "Keep counter striking active so patience does not become long periods of inactivity.",
     "mindset": {
@@ -418,8 +513,13 @@
   {
     "key": "counter_striker.spp.first_beat_second_beat",
     "name": "First Beat or Second Beat",
-    "phases": ["SPP"],
-    "tags": ["tactical_watch", "counter_striker"],
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "counter_striker"
+    ],
     "duration_min": 10,
     "why": "Decide whether the opponent is safest to counter immediately or after they continue attacking.",
     "mindset": {
@@ -440,8 +540,13 @@
   {
     "key": "counter_striker.spp.counter_and_exit",
     "name": "Counter and Exit",
-    "phases": ["SPP"],
-    "tags": ["tactical_watch", "counter_striker"],
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "counter_striker"
+    ],
     "duration_min": 10,
     "why": "Stop a successful counter from becoming a second exchange you did not choose.",
     "mindset": {
@@ -462,8 +567,13 @@
   {
     "key": "counter_striker.spp.counter_the_counter",
     "name": "Counter the Counter",
-    "phases": ["SPP"],
-    "tags": ["tactical_watch", "counter_striker"],
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "counter_striker"
+    ],
     "duration_min": 10,
     "why": "Prepare for the opponent changing their attack after your first counter starts working.",
     "mindset": {
@@ -484,8 +594,13 @@
   {
     "key": "counter_striker.taper.first_round_patience_script",
     "name": "First-Round Patience Script",
-    "phases": ["TAPER"],
-    "tags": ["tactical_watch", "counter_striker"],
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "counter_striker"
+    ],
     "duration_min": 8,
     "why": "Confirm active patience so the opening round gathers information without becoming passive.",
     "mindset": {
@@ -506,8 +621,13 @@
   {
     "key": "counter_striker.taper.final_counter_cue",
     "name": "Final Counter Cue",
-    "phases": ["TAPER"],
-    "tags": ["tactical_watch", "counter_striker"],
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "counter_striker"
+    ],
     "duration_min": 6,
     "why": "Reduce your counter plan to one familiar read-and-response cue for fight day.",
     "mindset": {
@@ -527,8 +647,12 @@
   {
     "key": "generic.gpp.opponent_pattern_scan",
     "name": "Opponent Pattern Scan",
-    "phases": ["GPP"],
-    "tags": ["tactical_watch", "generic"],
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch"
+    ],
     "duration_min": 10,
     "why": "Build basic tactical awareness by separating repeated patterns from one-off moments.",
     "mindset": {
@@ -549,8 +673,12 @@
   {
     "key": "generic.gpp.threat_priority",
     "name": "Threat Priority",
-    "phases": ["GPP"],
-    "tags": ["tactical_watch", "generic"],
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch"
+    ],
     "duration_min": 9,
     "why": "Separate the biggest tactical problem from smaller threats so training attention stays clear.",
     "mindset": {
@@ -570,8 +698,12 @@
   {
     "key": "generic.gpp.defensive_habit_review",
     "name": "Defensive Habit Review",
-    "phases": ["GPP"],
-    "tags": ["tactical_watch", "generic"],
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch"
+    ],
     "duration_min": 9,
     "why": "Identify the defensive habit that restores control and the one that keeps you under pressure.",
     "mindset": {
@@ -592,8 +724,12 @@
   {
     "key": "generic.gpp.rhythm_map",
     "name": "Rhythm Map",
-    "phases": ["GPP"],
-    "tags": ["tactical_watch", "generic"],
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch"
+    ],
     "duration_min": 9,
     "why": "Recognise when exchanges speed up, slow down or become predictable before adding tactics.",
     "mindset": {
@@ -614,8 +750,12 @@
   {
     "key": "generic.gpp.first_exchange_audit",
     "name": "First-Exchange Audit",
-    "phases": ["GPP"],
-    "tags": ["tactical_watch", "generic"],
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch"
+    ],
     "duration_min": 9,
     "why": "Understand what repeatedly decides the first meaningful exchange before longer sequences develop.",
     "mindset": {
@@ -636,8 +776,12 @@
   {
     "key": "generic.gpp.position_map",
     "name": "Position Map",
-    "phases": ["GPP"],
-    "tags": ["tactical_watch", "generic"],
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch"
+    ],
     "duration_min": 9,
     "why": "Identify the positions where you make good decisions and the positions that create rushed choices.",
     "mindset": {
@@ -658,8 +802,12 @@
   {
     "key": "generic.gpp.reset_habit_review",
     "name": "Reset Habit Review",
-    "phases": ["GPP"],
-    "tags": ["tactical_watch", "generic"],
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch"
+    ],
     "duration_min": 8,
     "why": "Make the reset between exchanges deliberate instead of letting the next exchange start from disorder.",
     "mindset": {
@@ -680,8 +828,12 @@
   {
     "key": "generic.gpp.output_window_review",
     "name": "Output Window Review",
-    "phases": ["GPP"],
-    "tags": ["tactical_watch", "generic"],
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch"
+    ],
     "duration_min": 9,
     "why": "Find out when you actually work in a round instead of assuming your output is evenly spread.",
     "mindset": {
@@ -702,8 +854,12 @@
   {
     "key": "generic.gpp.stance_and_angle_audit",
     "name": "Stance and Angle Audit",
-    "phases": ["GPP"],
-    "tags": ["tactical_watch", "generic"],
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch"
+    ],
     "duration_min": 9,
     "why": "Expose the movement direction you default to and the side of the ring or cage you keep giving away.",
     "mindset": {
@@ -724,8 +880,12 @@
   {
     "key": "generic.gpp.fatigue_signature_review",
     "name": "Fatigue Signature Review",
-    "phases": ["GPP"],
-    "tags": ["tactical_watch", "generic"],
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch"
+    ],
     "duration_min": 9,
     "why": "Know exactly which part of your technique fails first when you tire, so you can defend it under pressure.",
     "mindset": {
@@ -746,8 +906,12 @@
   {
     "key": "generic.spp.trigger_response_builder",
     "name": "Trigger-Response Builder",
-    "phases": ["SPP"],
-    "tags": ["tactical_watch", "generic"],
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch"
+    ],
     "duration_min": 10,
     "why": "Turn one reliable opponent signal into a trained action instead of a vague tactical idea.",
     "mindset": {
@@ -768,8 +932,12 @@
   {
     "key": "generic.spp.round_flow_map",
     "name": "Round Flow Map",
-    "phases": ["SPP"],
-    "tags": ["tactical_watch", "generic"],
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch"
+    ],
     "duration_min": 10,
     "why": "Understand how the opponent's behaviour changes through the round instead of treating every minute the same.",
     "mindset": {
@@ -790,8 +958,12 @@
   {
     "key": "generic.spp.scoring_map",
     "name": "Scoring Map",
-    "phases": ["SPP"],
-    "tags": ["tactical_watch", "generic"],
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch"
+    ],
     "duration_min": 10,
     "why": "Separate clean, repeatable scoring actions from busy work that looks active but gives little return.",
     "mindset": {
@@ -812,8 +984,12 @@
   {
     "key": "generic.spp.momentum_shift_review",
     "name": "Momentum Shift Review",
-    "phases": ["SPP"],
-    "tags": ["tactical_watch", "generic"],
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch"
+    ],
     "duration_min": 10,
     "why": "Recognise the moment control changes so you can respond before a bad spell becomes a lost round.",
     "mindset": {
@@ -834,8 +1010,12 @@
   {
     "key": "generic.spp.adversity_reset",
     "name": "Adversity Reset",
-    "phases": ["SPP"],
-    "tags": ["tactical_watch", "generic"],
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch"
+    ],
     "duration_min": 9,
     "why": "Prepare a simple route back to control after being hit, trapped, tired or frustrated.",
     "mindset": {
@@ -856,8 +1036,12 @@
   {
     "key": "generic.spp.adjustment_tree",
     "name": "Adjustment Tree",
-    "phases": ["SPP"],
-    "tags": ["tactical_watch", "generic"],
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch"
+    ],
     "duration_min": 10,
     "why": "Prepare one clear adjustment when the first tactical plan stops working.",
     "mindset": {
@@ -878,8 +1062,12 @@
   {
     "key": "generic.spp.opening_exchange_test",
     "name": "Opening Exchange Test",
-    "phases": ["SPP"],
-    "tags": ["tactical_watch", "generic"],
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch"
+    ],
     "duration_min": 9,
     "why": "Use the first exchanges to gather specific information instead of trying to prove the whole game plan immediately.",
     "mindset": {
@@ -900,8 +1088,12 @@
   {
     "key": "generic.spp.route_to_control",
     "name": "Route to Control",
-    "phases": ["SPP"],
-    "tags": ["tactical_watch", "generic"],
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch"
+    ],
     "duration_min": 9,
     "why": "Link one difficult position to the position where your decisions and scoring are strongest.",
     "mindset": {
@@ -922,8 +1114,12 @@
   {
     "key": "generic.spp.last_minute_control",
     "name": "Last-Minute Control",
-    "phases": ["SPP"],
-    "tags": ["tactical_watch", "generic"],
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch"
+    ],
     "duration_min": 9,
     "why": "Plan how to close a round clearly when fatigue and urgency make decision-making noisier.",
     "mindset": {
@@ -944,8 +1140,12 @@
   {
     "key": "generic.spp.corner_instruction_translation",
     "name": "Corner Instruction Translation",
-    "phases": ["SPP"],
-    "tags": ["tactical_watch", "generic"],
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch"
+    ],
     "duration_min": 8,
     "why": "Turn a complicated tactical instruction into one action you can execute under fatigue.",
     "mindset": {
@@ -966,8 +1166,12 @@
   {
     "key": "generic.taper.familiar_round_one_rehearsal",
     "name": "Familiar Round-One Rehearsal",
-    "phases": ["TAPER"],
-    "tags": ["tactical_watch", "generic"],
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch"
+    ],
     "duration_min": 7,
     "why": "Confirm a familiar opening sequence without adding new decisions during taper.",
     "mindset": {
@@ -988,8 +1192,12 @@
   {
     "key": "generic.taper.final_tactical_cue_card",
     "name": "Final Tactical Cue Card",
-    "phases": ["TAPER"],
-    "tags": ["tactical_watch", "generic"],
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch"
+    ],
     "duration_min": 6,
     "why": "Reduce the trained game plan to a few familiar cues that remain usable under pressure.",
     "mindset": {
@@ -1010,8 +1218,12 @@
   {
     "key": "generic.taper.trained_response_confirmation",
     "name": "Trained Response Confirmation",
-    "phases": ["TAPER"],
-    "tags": ["tactical_watch", "generic"],
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch"
+    ],
     "duration_min": 7,
     "why": "Confirm the two responses you have the most repetitions in and drop everything you have not trained.",
     "mindset": {
@@ -1032,8 +1244,12 @@
   {
     "key": "generic.taper.familiar_threat_rehearsal",
     "name": "Familiar Threat Rehearsal",
-    "phases": ["TAPER"],
-    "tags": ["tactical_watch", "generic"],
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch"
+    ],
     "duration_min": 7,
     "why": "Rehearse the answer you have already trained for the danger you already know about, without adding new theory.",
     "mindset": {
