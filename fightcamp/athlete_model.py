@@ -29,6 +29,7 @@ from .weight_cut import (
 
 _RECORD_PATTERN = re.compile(r"^(\d+)-(\d+)(?:-(\d+))?$")
 _UNKNOWN_COMPETITIVE_MATURITY = "unknown_competitive_maturity"
+_PRO_STATUS_ALIASES = {"pro", "professional", "professional_fighter", "pro_fighter"}
 
 
 def _parse_record(record: str) -> dict:
@@ -57,9 +58,16 @@ def _parse_record(record: str) -> dict:
     }
 
 
+def _status_token(status: str) -> str:
+    normalized = str(status or "").strip().lower()
+    for separator in (" ", "-", "/", "."):
+        normalized = normalized.replace(separator, "_")
+    return "_".join(part for part in normalized.split("_") if part)
+
+
 def _derive_competitive_maturity(status: str, record: str) -> dict:
     parsed_record = _parse_record(record)
-    normalized_status = str(status or "").strip().lower()
+    normalized_status = _status_token(status)
     total_bouts = parsed_record.get("total_bouts")
 
     competitive_maturity = _UNKNOWN_COMPETITIVE_MATURITY
@@ -70,6 +78,13 @@ def _derive_competitive_maturity(status: str, record: str) -> dict:
             competitive_maturity = "developing_amateur"
         else:
             competitive_maturity = "experienced_amateur"
+    elif normalized_status in _PRO_STATUS_ALIASES and isinstance(total_bouts, int):
+        if total_bouts <= 2:
+            competitive_maturity = "early_pro"
+        elif total_bouts <= 6:
+            competitive_maturity = "developing_pro"
+        else:
+            competitive_maturity = "established_pro"
 
     parsed_record["competitive_maturity"] = competitive_maturity
     return parsed_record
