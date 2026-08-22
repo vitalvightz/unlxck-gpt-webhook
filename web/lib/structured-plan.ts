@@ -1288,7 +1288,7 @@ function technicalContactTitleForCountdown(headline: string, countdownLabel: unk
     return headline;
   }
   if (dDay >= 8 && dDay <= 17) {
-    return "Fight-intensity technical rounds";
+    return "Controlled fight-speed technical rounds";
   }
   if (dDay >= 5 && dDay <= 7) {
     return "Technical rhythm only";

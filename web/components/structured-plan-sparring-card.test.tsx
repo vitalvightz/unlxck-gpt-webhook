@@ -23,7 +23,7 @@ test("generic D-17 technical-only cards use the fight-intensity title and summar
     <SessionlessDayCard day={sessionlessTechnicalDay("Technical-only combat")} />,
   );
 
-  assert.equal(html.includes('<h3 class="sp-session-title">Fight-intensity technical rounds'), true);
+  assert.equal(html.includes('<h3 class="sp-session-title">Controlled fight-speed technical rounds'), true);
   assert.equal(
     html.includes("Realistic exchanges at speed, controlled contact, low total volume."),
     true,
@@ -33,7 +33,7 @@ test("generic D-17 technical-only cards use the fight-intensity title and summar
 test("countdown-specific converted sparring titles keep their own short summaries", () => {
   const cases = [
     [
-      "Fight-intensity technical rounds",
+      "Controlled fight-speed technical rounds",
       "Realistic exchanges at speed, controlled contact, low total volume.",
     ],
     [

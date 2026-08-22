@@ -65,7 +65,7 @@ _HEADLINE_BY_LOAD = {
 # approaches. This is presentation-only: the sparring dose planner remains the
 # authority for whether the declared hard day was converted to technical work.
 _TECHNICAL_CARD_HEADLINES = {
-    "fight_intensity": "Fight-intensity technical rounds",
+    "fight_intensity": "Controlled fight-speed technical rounds",
     "rhythm": "Technical rhythm only",
     "touch": "Technical touch — pads / shadow",
     "activation": "Technical activation — no contact",

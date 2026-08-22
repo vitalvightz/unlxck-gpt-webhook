@@ -262,7 +262,7 @@ def test_d9_declared_technical_day_keeps_tactical_watch_as_attached_filler():
 
     day = plan["weeks"][0]["days"][0]
     assert day["today_card"]["headline"] == "Fight Tactical Watch"
-    assert day["today_card"]["coach_led_contact"] == "Fight-intensity technical rounds"
+    assert day["today_card"]["coach_led_contact"] == "Controlled fight-speed technical rounds"
     assert day["sessions"] == tactical_watch
     assert any("surfaced coach-led contact" in note for note in notes)
 
@@ -282,7 +282,7 @@ def test_declared_technical_day_preserves_app_work_alongside_contact():
 
     day = plan["weeks"][0]["days"][0]
     assert day["today_card"]["headline"] == "Fight-week freshness"
-    assert day["today_card"]["coach_led_contact"] == "Fight-intensity technical rounds"
+    assert day["today_card"]["coach_led_contact"] == "Controlled fight-speed technical rounds"
     assert day["sessions"] == freshness
     assert not any("removed incompatible same-day app work" in note for note in notes)
 
@@ -300,7 +300,7 @@ def test_allowed_filler_ignores_blocked_words_in_free_text_notes():
 
     day = plan["weeks"][0]["days"][0]
     assert day["sessions"] == tactical_watch
-    assert day["today_card"]["coach_led_contact"] == "Fight-intensity technical rounds"
+    assert day["today_card"]["coach_led_contact"] == "Controlled fight-speed technical rounds"
 
 
 def test_declared_technical_day_preserves_high_rpe_app_work():
@@ -310,7 +310,7 @@ def test_declared_technical_day_preserves_high_rpe_app_work():
 
     day = plan["weeks"][0]["days"][0]
     assert day["today_card"]["headline"] == "Mobility Reset"
-    assert day["today_card"]["coach_led_contact"] == "Fight-intensity technical rounds"
+    assert day["today_card"]["coach_led_contact"] == "Controlled fight-speed technical rounds"
     assert day["sessions"] == mobility
 
 
@@ -333,8 +333,8 @@ def test_d20_declared_hard_day_can_be_recovered_from_context_role():
 
 def test_declared_late_technical_context_cards_follow_countdown_taper():
     expected = {
-        17: "Fight-intensity technical rounds",
-        8: "Fight-intensity technical rounds",
+        17: "Controlled fight-speed technical rounds",
+        8: "Controlled fight-speed technical rounds",
         7: "Technical rhythm only",
         5: "Technical rhythm only",
         4: "Technical touch — pads / shadow",
@@ -382,10 +382,10 @@ def _normal_camp_role_brief(
 
 def test_normal_camp_converted_day_inside_d17_ban_uses_countdown_specific_card():
     expected = {
-        17: "Fight-intensity technical rounds",
-        15: "Fight-intensity technical rounds",
-        11: "Fight-intensity technical rounds",
-        8: "Fight-intensity technical rounds",
+        17: "Controlled fight-speed technical rounds",
+        15: "Controlled fight-speed technical rounds",
+        11: "Controlled fight-speed technical rounds",
+        8: "Controlled fight-speed technical rounds",
         7: "Technical rhythm only",
         5: "Technical rhythm only",
         4: "Technical touch — pads / shadow",
@@ -413,7 +413,7 @@ def test_normal_camp_hard_sparring_ban_boundary_is_d18():
 
     banned_plan = _structured_plan([_day("D-17", headline="Recovery")])
     reconcile_coach_led_sparring_days(banned_plan, _normal_camp_role_brief(d_day=17))
-    assert banned_plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Fight-intensity technical rounds"
+    assert banned_plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Controlled fight-speed technical rounds"
 
 
 def test_normal_camp_deloaded_hard_day_renders_reduced_dose():
@@ -438,7 +438,7 @@ def test_countdown_ban_outranks_a_role_still_claiming_hard_inside_d17():
     del brief["weekly_role_map"]["weeks"][0]["session_roles"][0]["hard_sparring_class"]
 
     reconcile_coach_led_sparring_days(plan, brief)
-    assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Fight-intensity technical rounds"
+    assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Controlled fight-speed technical rounds"
 
 
 def test_schedule_derived_hard_day_inside_ban_is_clamped_to_countdown_specific_technical_card():
@@ -452,7 +452,7 @@ def test_schedule_derived_hard_day_inside_ban_is_clamped_to_countdown_specific_t
     ]
     plan = _structured_plan([_day("D-10", headline="Recovery")])
     reconcile_coach_led_sparring_days(plan, _planning_brief(hard_plan, end_d=7))
-    assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Fight-intensity technical rounds"
+    assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Controlled fight-speed technical rounds"
 
 
 def test_leaves_already_coach_led_headline_alone():
