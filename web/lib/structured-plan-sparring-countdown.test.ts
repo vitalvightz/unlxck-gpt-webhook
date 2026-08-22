@@ -16,8 +16,8 @@ function technicalDay(dDay: number, headline = "Technical-only combat"): Structu
 
 test("legacy technical cards project the converted-sparring title from D-day", () => {
   const cases = [
-    [17, "Fight-intensity technical rounds"],
-    [8, "Fight-intensity technical rounds"],
+    [17, "Controlled fight-speed technical rounds"],
+    [8, "Controlled fight-speed technical rounds"],
     [7, "Technical rhythm only"],
     [5, "Technical rhythm only"],
     [4, "Technical touch — pads / shadow"],

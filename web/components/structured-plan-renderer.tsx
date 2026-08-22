@@ -123,7 +123,7 @@ const TECHNICAL_COMBAT_TAG = "Low load";
 const TECHNICAL_COMBAT_RATIONALE =
   "Technical only — no hard sparring. Stay sharp and leave fresh.";
 const TECHNICAL_COMBAT_STAGE_RATIONALES: Record<string, string> = {
-  "Fight-intensity technical rounds":
+  "Controlled fight-speed technical rounds":
     "Realistic exchanges at speed, controlled contact, low total volume.",
   "Technical rhythm only":
     "Light technical rounds. Prioritise timing, flow and clean execution.",
