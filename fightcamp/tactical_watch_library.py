@@ -10,6 +10,21 @@ from .config import DATA_DIR
 
 STYLE_FAMILIES = ("distance_striker", "brawler", "counter_striker", "generic")
 PHASES = ("GPP", "SPP", "TAPER")
+_PRO_EXPERIENCE_OVERLAYS: dict[str, tuple[str, ...]] = {
+    "early_pro": (
+        "Name the opponent danger cue that tells you to protect, delay or reset.",
+    ),
+    "developing_pro": (
+        "Name the opponent danger cue that tells you to protect, delay or reset.",
+        "Choose the round phase where this cue is most likely to matter.",
+    ),
+    "established_pro": (
+        "Name the opponent danger cue that tells you to protect, delay or reset.",
+        "Choose the control window where this tactic should win position or score.",
+        "Define the exit or reset after the action.",
+        "Write one do-not-chase rule that keeps the plan disciplined.",
+    ),
+}
 
 
 class TacticalWatchBankExhausted(RuntimeError):
@@ -90,6 +105,10 @@ def _display_label(value: Any) -> str:
     return " ".join(part.capitalize() for part in token.split("_") if part)
 
 
+def _competitive_maturity(value: Any) -> str:
+    return _token(value)
+
+
 def declared_tactical_style_labels(athlete_model: dict[str, Any] | None) -> list[str]:
     """Return athlete-facing tactical identity labels without programming aliases.
 
@@ -128,18 +147,26 @@ def declared_tactical_style_labels(athlete_model: dict[str, Any] | None) -> list
 
 
 class TacticalStyleSelection(str):
-    """Internal style-family key carrying the athlete's separate display label.
+    """Internal style-family key carrying athlete display and maturity context.
 
     It remains a real ``str`` (e.g. ``selection == "brawler"``) so existing
     programming/scoring callers keep the same contract. ``select_tactical_watch``
-    reads ``display_label`` only when producing the selected watch for rendering.
+    reads ``display_label`` and ``competitive_maturity`` only when producing the
+    selected watch for rendering.
     """
 
     display_label: str
+    competitive_maturity: str
 
-    def __new__(cls, family: str, display_label: str = "") -> "TacticalStyleSelection":
+    def __new__(
+        cls,
+        family: str,
+        display_label: str = "",
+        competitive_maturity: str = "",
+    ) -> "TacticalStyleSelection":
         instance = str.__new__(cls, family)
         instance.display_label = str(display_label or "").strip()
+        instance.competitive_maturity = _competitive_maturity(competitive_maturity)
         return instance
 
 
@@ -159,6 +186,7 @@ def extract_tactical_style(athlete_model: dict[str, Any] | None) -> TacticalStyl
 
     declared_labels = declared_tactical_style_labels(athlete_model)
     declared_label = declared_labels[0] if declared_labels else ""
+    competitive_maturity = athlete_model.get("competitive_maturity", "")
 
     for field in _STYLE_FIELDS:
         raw = athlete_model.get(field)
@@ -167,8 +195,8 @@ def extract_tactical_style(athlete_model: dict[str, Any] | None) -> TacticalStyl
             style = normalize_tactical_style(value)
             if style != "generic":
                 display_label = declared_label if normalize_tactical_style(declared_label) == style else _display_label(value)
-                return TacticalStyleSelection(style, display_label)
-    return TacticalStyleSelection("generic")
+                return TacticalStyleSelection(style, display_label, competitive_maturity)
+    return TacticalStyleSelection("generic", competitive_maturity=competitive_maturity)
 
 
 @dataclass(frozen=True)
@@ -187,6 +215,7 @@ class TacticalWatch:
     instructions: tuple[str, ...]
     progress: str
     display_style: str = ""
+    competitive_maturity: str = ""
 
 
 @lru_cache(maxsize=1)
@@ -265,10 +294,15 @@ def select_tactical_watch(
 ) -> TacticalWatch:
     used = {str(key) for key in (used_keys or ())}
     display_style = str(getattr(style, "display_label", "") or "").strip()
+    competitive_maturity = _competitive_maturity(getattr(style, "competitive_maturity", ""))
     for watch in ordered_phase_bank(style, phase):
         if watch.key not in used:
-            if display_style and watch.style != "generic":
-                return replace(watch, display_style=display_style)
+            if (display_style and watch.style != "generic") or competitive_maturity:
+                return replace(
+                    watch,
+                    display_style=display_style if watch.style != "generic" else "",
+                    competitive_maturity=competitive_maturity,
+                )
             return watch
     raise TacticalWatchBankExhausted(
         f"no unused Tactical Watch for style={style!r} phase={phase!r}"
@@ -290,6 +324,27 @@ def _athlete_visible_watch_text(watch: TacticalWatch, text: str) -> str:
     )
 
 
+def experience_overlay_instructions(competitive_maturity: Any) -> tuple[str, ...]:
+    """Return extra zero-load Tactical Watch cues for professional maturity tiers.
+
+    The JSON bank remains the tactical theme source of truth. Experience overlays
+    only alter instruction depth, so beginner and amateur tasks keep their lower
+    cognitive load while pros get the additional cues they are expected to hold.
+    """
+    return _PRO_EXPERIENCE_OVERLAYS.get(_competitive_maturity(competitive_maturity), ())
+
+
+def _watch_experience_overlay(watch: TacticalWatch) -> tuple[str, ...]:
+    return experience_overlay_instructions(watch.competitive_maturity)
+
+
+def _watch_visible_instructions(watch: TacticalWatch) -> list[str]:
+    return [
+        _athlete_visible_watch_text(watch, instruction)
+        for instruction in (*watch.instructions, *_watch_experience_overlay(watch))
+    ]
+
+
 def watch_metadata(watch: TacticalWatch) -> dict[str, Any]:
     mindset = {
         "intent": _athlete_visible_watch_text(watch, watch.intent),
@@ -299,16 +354,22 @@ def watch_metadata(watch: TacticalWatch) -> dict[str, Any]:
         "context": _athlete_visible_watch_text(watch, watch.context),
     }
     visible_why = _athlete_visible_watch_text(watch, watch.why)
-    visible_instructions = [
-        _athlete_visible_watch_text(watch, instruction) for instruction in watch.instructions
-    ]
+    visible_instructions = _watch_visible_instructions(watch)
     visible_progress = _athlete_visible_watch_text(watch, watch.progress)
+    overlay_steps = [
+        _athlete_visible_watch_text(watch, instruction)
+        for instruction in _watch_experience_overlay(watch)
+    ]
+    overlay_key = watch.competitive_maturity if overlay_steps else None
     return {
         "tactical_watch_key": watch.key,
         "tactical_watch_name": watch.name,
         "tactical_watch_style": watch.style,
         "tactical_watch_display_style": watch.display_style or None,
         "tactical_watch_phase": watch.phase,
+        "tactical_watch_competitive_maturity": watch.competitive_maturity or None,
+        "tactical_watch_experience_overlay": overlay_key,
+        "tactical_watch_experience_overlay_steps": overlay_steps,
         "tactical_watch": {
             "key": watch.key,
             "name": watch.name,
@@ -320,6 +381,9 @@ def watch_metadata(watch: TacticalWatch) -> dict[str, Any]:
             "mindset": mindset,
             "instructions": visible_instructions,
             "progress": visible_progress,
+            "competitive_maturity": watch.competitive_maturity or None,
+            "experience_overlay": overlay_key,
+            "experience_overlay_steps": overlay_steps,
         },
         "preferred_exercise_names": [watch.name],
         "preferred_tags": ["tactical_watch", watch.style, watch.phase.lower()],
@@ -328,6 +392,7 @@ def watch_metadata(watch: TacticalWatch) -> dict[str, Any]:
             "selected_drill_name": watch.name,
             "render_selected_drill_exactly": True,
             "do_not_reselect_or_generalize": True,
+            "experience_overlay_locked": bool(overlay_steps),
         },
     }
 
@@ -355,8 +420,8 @@ def build_watch_display_text(watch: TacticalWatch) -> str:
         f"Why: {_athlete_visible_watch_text(watch, watch.why)}",
         f"- {watch.name}: {watch.duration_minutes} minutes, tactical review only. No physical load.",
         *(
-            f"  Step {index}: {_athlete_visible_watch_text(watch, instruction)}"
-            for index, instruction in enumerate(watch.instructions, start=1)
+            f"  Step {index}: {instruction}"
+            for index, instruction in enumerate(_watch_visible_instructions(watch), start=1)
         ),
         f"  Intent: {_athlete_visible_watch_text(watch, watch.intent)}",
         f"  Focus: {_athlete_visible_watch_text(watch, watch.focus)}",
