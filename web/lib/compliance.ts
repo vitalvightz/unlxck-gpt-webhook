@@ -29,7 +29,7 @@ export const HEALTH_CONSENT_VERSION = "1.0";
  * itself changing. Bump this when the notice is revised; bump
  * HEALTH_CONSENT_VERSION only when what the athlete is agreeing to changes.
  */
-export const PRIVACY_NOTICE_VERSION = "1.3";
+export const PRIVACY_NOTICE_VERSION = "1.4";
 
 export const MINIMUM_SIGNUP_AGE_YEARS = 13;
 export const ADULT_AGE_YEARS = 18;
