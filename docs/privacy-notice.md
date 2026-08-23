@@ -1,13 +1,13 @@
 # UNLXCK Privacy Notice
 
-_Last updated: 19 August 2026_
+_Last updated: 23 August 2026_
 
 UNLXCK uses personal data to create, adapt and deliver personalised training guidance. This notice explains what we use, why, who receives it and your rights.
 
 ## Who we are
 UNLXCK is the controller of personal data used to provide the UNLXCK service. UNLXCK is operated by **Michael Okafor**, a sole trader trading as Unlxck, of **[TRADING ADDRESS]**.
 
-**Privacy contact:** [ADD PRIVACY EMAIL BEFORE PUBLIC LAUNCH]
+**Privacy contact:** support@unlxck.com
 
 ## What we collect
 Depending on the features you use, this may include:
