@@ -3,7 +3,7 @@
 **Internal procedure**
 
 ## Privacy contact
-Requests and privacy complaints should be sent to: **[PRIVACY EMAIL]**.
+Requests and privacy complaints should be sent to: **support@unlxck.com**.
 
 ## 1. User data requests
 This covers access, deletion, correction, restriction, portability, objection and withdrawal of health-data consent.

@@ -18,7 +18,7 @@
 // re-collects it from every athlete; PRIVACY_NOTICE_VERSION gates nothing and
 // is the one to bump when the notice is corrected.
 //
-// The two remaining bracketed placeholders are real and intentional: no contact
+// The remaining bracketed placeholder is real and intentional: no trading
 // address has been decided, and inventing one would be worse than showing it is
 // outstanding.
 
@@ -48,8 +48,7 @@ export const TERMS_OF_USE: LegalDocument = {
   title: "Terms of Use",
   version: TERMS_VERSION,
   effectiveDate: "19 August 2026",
-  status:
-    "Not ready for publication: the trading address and contact email are still to be inserted.",
+  status: "Not ready for publication: the trading address is still to be inserted.",
   intro:
     "These Terms govern use of UNLXCK, operated by Michael Okafor, a sole trader trading as Unlxck (“UNLXCK”, “we”, “us”), of [TRADING ADDRESS]. By creating an account or using UNLXCK, you agree to these Terms. Our Privacy Notice explains how we use personal data. Health-data consent is requested separately and is not part of accepting these Terms.",
   sections: [
@@ -157,9 +156,7 @@ export const TERMS_OF_USE: LegalDocument = {
     },
     {
       heading: "Contact",
-      paragraphs: [
-        "Questions or complaints about these Terms can be sent to [LEGAL/CONTACT EMAIL].",
-      ],
+      paragraphs: ["Questions or complaints about these Terms can be sent to support@unlxck.com."],
     },
   ],
 };
@@ -168,9 +165,8 @@ export const PRIVACY_NOTICE: LegalDocument = {
   slug: "privacy-notice",
   title: "Privacy Notice",
   version: PRIVACY_NOTICE_VERSION,
-  lastUpdated: "19 August 2026",
-  status:
-    "Not ready for publication: the trading address and privacy contact are still to be inserted.",
+  lastUpdated: "23 August 2026",
+  status: "Not ready for publication: the trading address is still to be inserted.",
   intro:
     "UNLXCK uses personal data to create, adapt and deliver personalised training guidance. This notice explains what we use, why, who receives it and your rights.",
   sections: [
@@ -178,7 +174,7 @@ export const PRIVACY_NOTICE: LegalDocument = {
       heading: "Who we are",
       paragraphs: [
         "UNLXCK is the controller of personal data used to provide the UNLXCK service. UNLXCK is operated by Michael Okafor, a sole trader trading as Unlxck, of [TRADING ADDRESS].",
-        "Privacy contact: [ADD PRIVACY EMAIL BEFORE PUBLIC LAUNCH]",
+        "Privacy contact: support@unlxck.com",
       ],
     },
     {
@@ -304,17 +300,17 @@ export const LEGAL_DOCUMENTS: readonly LegalDocument[] = [TERMS_OF_USE, PRIVACY_
 
 export const TERMS_HREF = `/legal/${TERMS_OF_USE.slug}`;
 export const PRIVACY_HREF = `/legal/${PRIVACY_NOTICE.slug}`;
+export const SUPPORT_EMAIL = "support@unlxck.com";
 
 /**
  * Where a data-rights request goes.
  *
- * The Privacy Notice still carries a placeholder contact address, so this reads
- * the address from the environment instead of hard-coding one. When it is unset
- * the UI points the athlete at in-app feedback rather than offering a mailto
- * link that goes nowhere.
+ * support@unlxck.com is the default public privacy/support route. Deployments
+ * may override it through NEXT_PUBLIC_PRIVACY_CONTACT_EMAIL if the contact ever
+ * changes without needing a code release.
  */
 export function getPrivacyContactEmail(): string {
-  return (process.env.NEXT_PUBLIC_PRIVACY_CONTACT_EMAIL ?? "").trim();
+  return (process.env.NEXT_PUBLIC_PRIVACY_CONTACT_EMAIL ?? "").trim() || SUPPORT_EMAIL;
 }
 
 export function buildDataRequestMailto(subject: string, body: string): string | null {

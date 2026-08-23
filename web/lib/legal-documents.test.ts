@@ -21,8 +21,9 @@ import {
  * The app ships its own rendering of the Terms and Privacy Notice so an athlete
  * can read what they are agreeing to at the moment they agree, which means two
  * copies exist and can diverge silently. These tests pin every substantive fact
- * — service-provider safeguards, the placeholders, the operator, the dates, the
- * versions — so a change to one has to be a deliberate change to the other.
+ * — service-provider safeguards, the remaining placeholder, the operator, the
+ * dates, the versions — so a change to one has to be a deliberate change to the
+ * other.
  *
  * The canonical markdown now lives in this repo under docs/, so the final test
  * compares the two copies directly instead of relying on the pinned facts alone.
@@ -224,7 +225,7 @@ test("the notice publishes only retention periods UNLXCK actually enforces", () 
 // --- placeholders ------------------------------------------------------------
 
 /**
- * The outstanding launch blockers, tracked as data.
+ * The outstanding launch blocker, tracked as data.
  *
  * UNLXCK trades as a sole trader, so the proprietor's own name and a geographic
  * address have to appear in both documents — reg. 6 of the Electronic Commerce
@@ -232,18 +233,14 @@ test("the notice publishes only retention periods UNLXCK actually enforces", () 
  * 2013, and Article 13(1)(a) UK GDPR for the controller's identity. None of
  * those is satisfied by the trading name alone.
  *
- * Each outstanding value stays a visible placeholder until the real value is
- * inserted. Inventing one, or quietly omitting the field, would turn a known
- * gap into a silent defect — and the placeholder is what makes it impossible
- * to publish these documents without noticing.
+ * The remaining outstanding value stays a visible placeholder until the real
+ * value is inserted. Inventing one, or quietly omitting the field, would turn a
+ * known gap into a silent defect — and the placeholder is what makes it
+ * impossible to publish these documents without noticing.
  */
-const OUTSTANDING_PLACEHOLDERS = [
-  "[ADD PRIVACY EMAIL BEFORE PUBLIC LAUNCH]",
-  "[LEGAL/CONTACT EMAIL]",
-  "[TRADING ADDRESS]",
-] as const;
+const OUTSTANDING_PLACEHOLDERS = ["[TRADING ADDRESS]"] as const;
 
-test("every outstanding address and contact blocker is still visible", () => {
+test("the outstanding trading-address blocker is still visible", () => {
   const published = everyDocumentText();
   for (const placeholder of OUTSTANDING_PLACEHOLDERS) {
     assert.ok(published.includes(placeholder), `${placeholder} should still be marked outstanding`);
@@ -257,16 +254,20 @@ test("every outstanding address and contact blocker is still visible", () => {
     [...OUTSTANDING_PLACEHOLDERS].sort(),
     "an untracked placeholder is in the published copy",
   );
+
+  assert.ok(published.includes("support@unlxck.com"), "the real support email should be published");
+  assert.ok(!published.includes("[ADD PRIVACY EMAIL BEFORE PUBLIC LAUNCH]"));
+  assert.ok(!published.includes("[LEGAL/CONTACT EMAIL]"));
 });
 
 test("both documents declare themselves not ready for publication", () => {
-  // While the address and contact fields are outstanding, neither document may present
+  // While the trading address is outstanding, neither document may present
   // itself as final. The status line is what an athlete and a reviewer see.
   for (const document of LEGAL_DOCUMENTS) {
     assert.match(
       document.status,
       /not ready for publication/i,
-      `${document.slug} must not read as publishable while address and contact fields are outstanding`,
+      `${document.slug} must not read as publishable while the trading address is outstanding`,
     );
   }
 
@@ -275,11 +276,21 @@ test("both documents declare themselves not ready for publication", () => {
   assert.ok(TERMS_OF_USE.intro.includes("sole trader trading as Unlxck"));
 });
 
-test("no data-request route is offered until a real address is configured", () => {
-  // A mailto link to a placeholder would be a deletion route that silently
-  // goes nowhere, which is worse than showing none.
-  if (!getPrivacyContactEmail()) {
-    assert.equal(buildDataRequestMailto("subject", "body"), null);
+test("data-request route defaults to the public support email", () => {
+  const previous = process.env.NEXT_PUBLIC_PRIVACY_CONTACT_EMAIL;
+  delete process.env.NEXT_PUBLIC_PRIVACY_CONTACT_EMAIL;
+  try {
+    assert.equal(getPrivacyContactEmail(), "support@unlxck.com");
+    assert.equal(
+      buildDataRequestMailto("subject", "body"),
+      "mailto:support@unlxck.com?subject=subject&body=body",
+    );
+  } finally {
+    if (previous === undefined) {
+      delete process.env.NEXT_PUBLIC_PRIVACY_CONTACT_EMAIL;
+    } else {
+      process.env.NEXT_PUBLIC_PRIVACY_CONTACT_EMAIL = previous;
+    }
   }
 });
 
@@ -301,7 +312,7 @@ test("each document carries its own version, and the Terms track acceptance", ()
 
 test("the Terms carry an effective date and the notice a revision date", () => {
   assert.equal(TERMS_OF_USE.effectiveDate, "19 August 2026");
-  assert.ok(PRIVACY_NOTICE.lastUpdated, "the notice should say when it was last revised");
+  assert.equal(PRIVACY_NOTICE.lastUpdated, "23 August 2026");
   assert.equal(TERMS_OF_USE.lastUpdated, undefined);
 });
 
