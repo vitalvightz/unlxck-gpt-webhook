@@ -58,6 +58,7 @@ ALL_ORCHESTRATED_INTENTS = (
     "first_plan_complete",
     "plan_complete",
     "fight_camp_complete",
+    "fight_day",
     "fight_countdown",
     "coach_message",
 )
@@ -304,6 +305,18 @@ def _fight_countdown(view: CommandView, training_day: str) -> int | None:
     return remaining if remaining in {14, 7, 3, 1} else None
 
 
+def _fight_day_date(view: CommandView, training_day: str) -> str | None:
+    value = view.active_plan.get("fight_date")
+    if not value:
+        return None
+    try:
+        fight_date = date.fromisoformat(str(value)[:10])
+        current_day = date.fromisoformat(training_day)
+    except ValueError:
+        return None
+    return fight_date.isoformat() if fight_date == current_day else None
+
+
 @dataclass(frozen=True)
 class _DeferredSource:
     """One rehydratable deferred lifecycle, keyed by its original deferral."""
@@ -527,6 +540,8 @@ def build_fight_camp_candidates(
     reference = _aware_utc(now_utc)
     local_now = reference.astimezone(_timezone(timezone_name))
     training_day = view.today.training_day
+    fight_date = _fight_day_date(view, training_day)
+    fight_day = fight_date is not None
     candidates: list[NotificationCandidate] = []
     handled: set[str] = set()
     active_plan = _has_active_plan(view)
@@ -625,7 +640,7 @@ def build_fight_camp_candidates(
     if active_plan and not checked_in:
         if today_session and _window(local_now, 7, 10):
             morning_fallback_intent = "morning_readiness"
-        elif not today_session and _window(local_now, 8, 10):
+        elif not today_session and not fight_day and _window(local_now, 8, 10):
             morning_fallback_intent = "recovery_checkin"
     merged_morning_intents = (
         (morning_fallback_intent,) if morning_fallback_intent is not None else ()
@@ -756,6 +771,12 @@ def build_fight_camp_candidates(
                 )
             )
             handled.add("recovery_checkin")
+    elif fight_day and not today_session:
+        reason(
+            "recovery_checkin",
+            "merged_into_other_intent",
+            decision="replaced_by_fight_day",
+        )
     else:
         reason(
             "recovery_checkin",
@@ -968,7 +989,13 @@ def build_fight_camp_candidates(
     if "fuel_nudge" not in handled:
         reason("fuel_nudge", "outside_due_window")
 
-    if active_plan and not today_session and _window(local_now, 14, 18):
+    if fight_day:
+        reason(
+            "recovery_nudge",
+            "merged_into_other_intent",
+            decision="replaced_by_fight_day",
+        )
+    elif active_plan and not today_session and _window(local_now, 14, 18):
         candidates.append(
             _candidate(
                 store,
@@ -998,6 +1025,44 @@ def build_fight_camp_candidates(
     # Weight prompts require an authoritative target/event. Until that signal is
     # present they remain a distinct observable intent and never become filler.
     reason("weight_check", "no_actionable_weight_event")
+
+    if fight_date is not None and _window(local_now, 7, 11):
+        plan_id = str(view.active_plan.get("id") or "")
+        candidates.append(
+            NotificationCandidate(
+                profile_id=profile_id,
+                notification_type="fight_day",
+                intent="fight_day",
+                category="plan_update_alerts",
+                priority=28,
+                title="IT'S TIME.",
+                body="Fight day. Stay sharp, stay calm. Stick to the plan.",
+                url="/today",
+                tag="fight-day",
+                dedupe_key=f"fight-day:{plan_id}:{fight_date}",
+                expires_at=_aware_utc(
+                    local_now.replace(hour=11, minute=0, second=0, microsecond=0)
+                ),
+                timezone_name=timezone_name,
+                respect_quiet_hours=True,
+                training_day=training_day,
+                variant_id="fd-01",
+                source_event_metadata={
+                    "plan_id": plan_id,
+                    "fight_date": fight_date,
+                    "template_version": 1,
+                },
+                notification_class="event",
+                min_spacing_minutes=30,
+                merged_intents=("recovery_checkin", "recovery_nudge"),
+            )
+        )
+        handled.add("fight_day")
+    else:
+        reason(
+            "fight_day",
+            "outside_due_window" if fight_date is not None else "not_fight_day",
+        )
 
     countdown = _fight_countdown(view, training_day)
     if countdown is not None and _window(local_now, 9, 18):
