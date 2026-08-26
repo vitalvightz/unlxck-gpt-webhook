@@ -336,7 +336,7 @@ def _warning_detail_line(warning: dict) -> str:
     if warning.get("code") == "weekly_session_overage":
         return "Trim extra weekly sessions so the final plan does not exceed the athlete's requested sessions per week."
     if warning.get("code") == "weekly_rhythm_broken":
-        return "Restore the default boxer weekly rhythm with recovery immediately before the primary strength day."
+        return "Restore the sport-profiled weekly rhythm with recovery immediately before the primary strength day."
     if warning.get("code") in {"gimmick_name", "overstyled_drill_name"}:
         return "Replace overstyled drill naming with plain coach-readable language."
     if warning.get("code") == "option_overload":
