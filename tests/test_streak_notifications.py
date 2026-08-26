@@ -58,6 +58,11 @@ def make_view(
 def _patch_low_timing(monkeypatch) -> None:
     monkeypatch.setattr(
         streak_notifications,
+        "_authoritative_training_current",
+        lambda store, profile_id, training_day: int(store.row.get("training_current") or 0),
+    )
+    monkeypatch.setattr(
+        streak_notifications,
         "get_notification_preferences",
         lambda store, profile_id: object(),
     )
@@ -137,6 +142,11 @@ def test_training_streak_risk_never_pushes_for_completed_session(monkeypatch) ->
 def test_training_streak_risk_waits_for_late_known_session(monkeypatch) -> None:
     monkeypatch.setattr(
         streak_notifications,
+        "_authoritative_training_current",
+        lambda store, profile_id, training_day: 5,
+    )
+    monkeypatch.setattr(
+        streak_notifications,
         "get_notification_preferences",
         lambda store, profile_id: object(),
     )
@@ -157,6 +167,30 @@ def test_training_streak_risk_waits_for_late_known_session(monkeypatch) -> None:
         profile_id="athlete-1",
         timezone_name="UTC",
         now_utc=datetime(2026, 8, 26, 21, 30, tzinfo=timezone.utc),
+    )
+
+    assert candidates == []
+
+
+def test_stale_persisted_training_streak_does_not_create_false_risk_push(monkeypatch) -> None:
+    monkeypatch.setattr(
+        streak_notifications,
+        "_authoritative_training_current",
+        lambda store, profile_id, training_day: 0,
+    )
+    store = FakeStore(
+        login_current=6,
+        login_last_active_date="2026-08-25",
+        training_current=5,
+        training_last_qualifying_day="2026-08-24",
+    )
+
+    candidates = build_streak_at_risk_candidates(
+        store,
+        make_view(),
+        profile_id="athlete-1",
+        timezone_name="UTC",
+        now_utc=datetime(2026, 8, 26, 21, 15, tzinfo=timezone.utc),
     )
 
     assert candidates == []
