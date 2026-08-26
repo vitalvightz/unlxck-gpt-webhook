@@ -100,15 +100,15 @@ _CORE_VARIANTS: dict[str, tuple[tuple[str, str, str], ...]] = {
         ("ir-08", "NO BLIND SPOTS TODAY.", "{body_area} needs an update before we make another training call."),
     ),
     "high_pain_followup": (
-        ("hp-01", "HOW DID YOUR BODY SETTLE?", "Yesterday's pain was high. Check in before we decide today's load."),
+        ("hp-01", "HOW DID YOUR BODY SETTLE?", "Recent pain was high. Check in before we decide today's load."),
         ("hp-02", "PAIN FOLLOW-UP.", "Give me the morning read before we set today's work."),
         ("hp-03", "REPORT HOW YOU SETTLED.", "High pain needs a fresh read before the next session call."),
-        ("hp-04", "BODY FIRST. THEN THE WORK.", "Check in now so yesterday's pain shapes today's decision."),
-        ("hp-05", "YESTERDAY LEFT A MARK.", "Tell me what settled and what did not before today's load is decided."),
-        ("hp-06", "FRESH READ. THEN DECIDE.", "Check in now. High pain yesterday changes how we approach today."),
+        ("hp-04", "BODY FIRST. THEN THE WORK.", "Check in now. Recent high pain changes today's call."),
+        ("hp-05", "HIGH PAIN NEEDS A FRESH READ.", "Tell me what settled and what did not before today's load is set."),
+        ("hp-06", "FRESH READ. THEN DECIDE.", "Check in now. Recent high pain changes how we approach today."),
     ),
     "recovery_checkin": (
-        ("rc-01", "RECOVERY CHECK.", "How did the body settle after yesterday? Give me the morning read."),
+        ("rc-01", "RECOVERY CHECK.", "Sleep, soreness, pain. Give me the morning read."),
         ("rc-02", "HOW DID YOU SETTLE?", "Sleep, soreness, pain. Recovery days still need an honest read."),
         ("rc-03", "REST DAY. REPORT IN.", "Tell me what recovered and what still needs protecting."),
         ("rc-04", "ABSORB THE WORK.", "Give me the body read before today's recovery call is set."),
@@ -118,8 +118,8 @@ _CORE_VARIANTS: dict[str, tuple[tuple[str, str, str], ...]] = {
         ("rn-02", "BANK THE RECOVERY DAY.", "Keep the body moving lightly and make the next hard day easier."),
         ("rn-03", "NO HERO WORK TODAY.", "Recover with intent. Food, fluids, movement and sleep all count."),
         ("rn-04", "RESET FOR THE NEXT ROUND.", "Use today to absorb the work and arrive ready for what is next."),
-        ("rn-05", "ABSORB THE LOAD.", "Eat, hydrate, move and let the last session become adaptation."),
-        ("rn-06", "MAKE TOMORROW EASIER.", "Keep today light, deliberate and pointed at the next hard day."),
+        ("rn-05", "ABSORB THE LOAD.", "Eat, hydrate, move lightly and let the body recover."),
+        ("rn-06", "KEEP TODAY LIGHT.", "Recover with intent. Don't turn rest into another session."),
         ("rn-07", "DISCIPLINE LOOKS LIKE REST.", "No extra rounds. Recover, refuel and protect the next session."),
         ("rn-08", "LET THE WORK LAND.", "Move lightly, eat properly and get the system back under you."),
     ),
@@ -141,7 +141,7 @@ _CORE_VARIANTS: dict[str, tuple[tuple[str, str, str], ...]] = {
         ("fc-d14", "D-14. TWO WEEKS.", "The final build starts now. Protect quality, recovery and every decision."),
         ("fc-d07", "D-7. FIGHT WEEK.", "Freshness, timing, discipline. Nothing outside the mission."),
         ("fc-d03", "D-3. STAY SHARP.", "The work is banked. Keep the body calm and the decisions clean."),
-        ("fc-d01", "D-1. READY.", "No chasing fitness now. Make weight, stay calm and trust the camp."),
+        ("fc-d01", "D-1. READY.", "No chasing fitness now. Stay calm and follow the plan."),
     ),
 }
 
@@ -247,13 +247,11 @@ def select_notification_template(
     ]
 
     if intent == "post_session_log":
-        completion_timing_known = confidence in {"medium", "high"} or bool(
-            render_context.get("_session_started")
-        )
+        session_started = bool(render_context.get("_session_started"))
         low_confidence_templates = [
             template for template in templates if template.variant_id.startswith("pl-low-")
         ]
-        if not completion_timing_known:
+        if not session_started:
             if not low_confidence_templates:
                 low_confidence_templates = [
                     template
