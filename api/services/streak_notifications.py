@@ -9,10 +9,11 @@ from typing import Any, Mapping
 from zoneinfo import ZoneInfo
 
 from api.contracts.command_view import CommandView
+from api.services.active_plan import resolve_active_plan
 from api.services.notification_foundation import NotificationCandidate, get_notification_preferences
 from api.services.notification_timing import ResolvedTrainingTime, resolve_training_time
 from api.services.push_notifications import dispatch_push_candidates
-from api.services.streaks import get_streak_state
+from api.services.streaks import _training_schedule, get_streak_state, qualifying_training_days
 from api.services.today_readiness_boundary import build_today_command_view
 from api.store import AppStore
 
@@ -89,6 +90,47 @@ def _app_streak_is_at_risk(
     return current >= MIN_STREAK_FOR_RISK_PUSH and last_active == today - timedelta(days=1)
 
 
+def _authoritative_training_current(
+    store: AppStore,
+    *,
+    profile_id: str,
+    training_day: str,
+) -> int | None:
+    """Rebuild the current Training Streak without mutating streak state.
+
+    Persisted streak counters advance on completions, so an athlete who simply
+    disappears after missing a scheduled day can temporarily have a stale value.
+    A retention push must not tell them a dead streak is still alive. This mirrors
+    ``reconcile_training_streak`` using the same active-plan schedule and
+    qualifying completion history, but remains read-only for the ten-minute push
+    sweep.
+    """
+
+    try:
+        today = date.fromisoformat(training_day)
+        resolution = resolve_active_plan(store, profile_id, current_training_day=today)
+        if resolution.plan is None:
+            return 0 if resolution.source != "read_failure" else None
+        expected = set(_training_schedule(resolution.plan, training_day))
+        qualifying, skipped = qualifying_training_days(
+            store,
+            athlete_id=profile_id,
+            today=today,
+        )
+    except Exception:  # noqa: BLE001 - uncertainty suppresses the streak claim
+        return None
+
+    current = 0
+    for activity_day in sorted(expected | qualifying | skipped):
+        if activity_day > today:
+            continue
+        if activity_day in qualifying:
+            current += 1
+        elif activity_day < today or activity_day in skipped:
+            current = 0
+    return current
+
+
 def build_streak_at_risk_candidates(
     store: AppStore,
     view: CommandView,
@@ -125,15 +167,33 @@ def build_streak_at_risk_candidates(
     training_state = training_state if isinstance(training_state, Mapping) else {}
 
     try:
-        training_current = int(training_state.get("current") or 0)
+        persisted_training_current = int(training_state.get("current") or 0)
     except (TypeError, ValueError):
-        training_current = 0
+        persisted_training_current = 0
 
     today_session = _today_session(view)
     session_id = _session_id(view) or training_day
     terminal = str(view.today.completion_status or "").strip().lower() in TERMINAL_SESSION_STATUSES
     stop_call = str(view.today.decision_tier or "").strip().lower() == "stop"
     fight_day = _fight_day(view, training_day)
+
+    training_current = persisted_training_current
+    if (
+        persisted_training_current >= MIN_STREAK_FOR_RISK_PUSH
+        and today_session
+        and not terminal
+        and not stop_call
+        and not fight_day
+        and 19 <= local_now.hour < 22
+    ):
+        verified = _authoritative_training_current(
+            store,
+            profile_id=profile_id,
+            training_day=training_day,
+        )
+        # Never make a streak-preservation claim when the history read is
+        # uncertain. A false "keep it alive" push is worse than silence.
+        training_current = verified if verified is not None else 0
 
     reserves_training_message = (
         training_current >= MIN_STREAK_FOR_RISK_PUSH
