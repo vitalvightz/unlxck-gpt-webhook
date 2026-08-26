@@ -660,9 +660,40 @@ def _is_optional_alactic_role(role: dict[str, Any]) -> bool:
     return str(role.get("role_key") or "").strip() in _OPTIONAL_ALACTIC_ROLE_KEYS
 
 
-def _main_job_for_role(role: dict[str, Any]) -> str:
+_DEFAULT_COLLISION_SCHEDULING = {
+    "hard_live_role_keys": ["hard_sparring_day"],
+    "blocked_same_day_conditioning_systems": ["glycolytic"],
+    "block_anchor_next_day_after_statuses": ["hard_as_planned"],
+    "adjacent_meaningful_stressor_penalty": 3,
+}
+
+
+def _collision_scheduling_rules(sport_load_profile: dict[str, Any] | None) -> dict[str, Any]:
+    resolved = dict(_DEFAULT_COLLISION_SCHEDULING)
+    configured = dict((sport_load_profile or {}).get("collision_scheduling") or {})
+    resolved.update(configured)
+    return resolved
+
+
+def _is_profile_hard_live_role(
+    role: dict[str, Any],
+    sport_load_profile: dict[str, Any] | None = None,
+) -> bool:
+    rules = _collision_scheduling_rules(sport_load_profile)
+    hard_live_role_keys = {
+        str(value).strip()
+        for value in _clean_list(rules.get("hard_live_role_keys", []))
+        if str(value).strip()
+    }
+    return str(role.get("role_key") or "").strip() in hard_live_role_keys
+
+
+def _main_job_for_role(
+    role: dict[str, Any],
+    sport_load_profile: dict[str, Any] | None = None,
+) -> str:
     role_key = str(role.get("role_key") or "").strip()
-    if role_key == "hard_sparring_day":
+    if _is_profile_hard_live_role(role, sport_load_profile):
         return "hard_sparring"
     if _is_anchor_role(role):
         return "anchor"
@@ -911,11 +942,14 @@ def _assign_declared_day_hints(
     return ordered
 
 
-def _is_meaningful_stressor(role: dict[str, Any]) -> bool:
+def _is_meaningful_stressor(
+    role: dict[str, Any],
+    sport_load_profile: dict[str, Any] | None = None,
+) -> bool:
     role_key = str(role.get("role_key") or "").strip()
     if role_key in {"main_conditioning_stressor", "fight_pace_block", "full_neural_session"}:
         return True
-    main_job = _main_job_for_role(role)
+    main_job = _main_job_for_role(role, sport_load_profile)
     if main_job in {"hard_sparring", "anchor"}:
         return True
     if main_job == "conditioning":
@@ -942,16 +976,19 @@ def _is_meaningful_stressor(role: dict[str, Any]) -> bool:
     return False
 
 
-def _main_job_day_class(day_roles: list[dict[str, Any]]) -> str:
+def _main_job_day_class(
+    day_roles: list[dict[str, Any]],
+    sport_load_profile: dict[str, Any] | None = None,
+) -> str:
     if not day_roles:
         return "off"
-    if any(_main_job_for_role(role) == "hard_sparring" for role in day_roles):
+    if any(_main_job_for_role(role, sport_load_profile) == "hard_sparring" for role in day_roles):
         return "hard_sparring"
-    if any(_main_job_for_role(role) == "anchor" for role in day_roles):
+    if any(_main_job_for_role(role, sport_load_profile) == "anchor" for role in day_roles):
         return "anchor"
-    if any(_main_job_for_role(role) == "technical" for role in day_roles):
+    if any(_main_job_for_role(role, sport_load_profile) == "technical" for role in day_roles):
         return "technical"
-    if any(_main_job_for_role(role) == "conditioning" for role in day_roles):
+    if any(_main_job_for_role(role, sport_load_profile) == "conditioning" for role in day_roles):
         return "conditioning"
     return "support_recovery"
 
@@ -970,6 +1007,7 @@ def _adjacent_meaningful_stress_count(
     *,
     training_days: list[str],
     day_to_roles: dict[str, list[dict[str, Any]]],
+    sport_load_profile: dict[str, Any] | None = None,
 ) -> int:
     day_idx = training_days.index(day)
     count = 0
@@ -977,7 +1015,10 @@ def _adjacent_meaningful_stress_count(
         if neighbor_idx < 0 or neighbor_idx >= len(training_days):
             continue
         neighbor = training_days[neighbor_idx]
-        if any(_is_meaningful_stressor(role) for role in day_to_roles.get(neighbor, [])):
+        if any(
+            _is_meaningful_stressor(role, sport_load_profile)
+            for role in day_to_roles.get(neighbor, [])
+        ):
             count += 1
     return count
 
@@ -1022,14 +1063,20 @@ def _combat_day_score(
     readiness_sensitive: bool,
     training_days: list[str],
     day_to_roles: dict[str, list[dict[str, Any]]],
+    sport_load_profile: dict[str, Any] | None = None,
 ) -> float:
     if day not in training_days:
         return -10_000
     score = 0
     day_idx = training_days.index(day)
     previous_day = training_days[day_idx - 1] if day_idx > 0 else ""
-    previous_class = _main_job_day_class(day_to_roles.get(previous_day, [])) if previous_day else "off"
-    main_job = _main_job_for_role(role)
+    collision_scheduling = _collision_scheduling_rules(sport_load_profile)
+    previous_class = (
+        _main_job_day_class(day_to_roles.get(previous_day, []), sport_load_profile)
+        if previous_day
+        else "off"
+    )
+    main_job = _main_job_for_role(role, sport_load_profile)
 
     if main_job == "anchor":
         if previous_class == "hard_sparring":
@@ -1037,27 +1084,51 @@ def _combat_day_score(
                 (
                     str(r.get("hard_sparring_status") or "hard_as_planned")
                     for r in day_to_roles.get(previous_day, [])
-                    if r.get("role_key") == "hard_sparring_day"
+                    if _is_profile_hard_live_role(r, sport_load_profile)
                 ),
                 "hard_as_planned",
             )
             # Hard-as-planned spar days hard-exclude the following anchor.
             # Deloaded/converted spar days apply a heavy but overridable penalty —
             # the stimulus is technical-level, not a full collision dose.
-            return -10_000 if prev_spar_status == "hard_as_planned" else -50
+            blocked_statuses = {
+                str(value).strip()
+                for value in _clean_list(collision_scheduling.get("block_anchor_next_day_after_statuses", []))
+                if str(value).strip()
+            }
+            return -10_000 if prev_spar_status in blocked_statuses else -50
         score += 6 if previous_class in {"off", "support_recovery", "technical"} else -6
         if prefer_midweek_anchor:
             midpoint = (len(training_days) - 1) / 2 if training_days else 0
             score -= abs(day_idx - midpoint)
             if 0 < day_idx < len(training_days) - 1:
                 score += 1
-    if _is_meaningful_stressor(role):
-        score -= 3 * _adjacent_meaningful_stress_count(day, training_days=training_days, day_to_roles=day_to_roles)
+    if _is_meaningful_stressor(role, sport_load_profile):
+        adjacent_penalty = max(
+            0,
+            int(collision_scheduling.get("adjacent_meaningful_stressor_penalty", 3)),
+        )
+        score -= adjacent_penalty * _adjacent_meaningful_stress_count(
+            day,
+            training_days=training_days,
+            day_to_roles=day_to_roles,
+            sport_load_profile=sport_load_profile,
+        )
 
     if main_job != "conditioning":
         return score
 
     system = str(role.get("preferred_system") or "").strip().lower()
+    blocked_same_day_systems = {
+        str(value).strip().lower()
+        for value in _clean_list(collision_scheduling.get("blocked_same_day_conditioning_systems", []))
+        if str(value).strip()
+    }
+    if system in blocked_same_day_systems and any(
+        _is_profile_hard_live_role(day_role, sport_load_profile)
+        for day_role in day_to_roles.get(day, [])
+    ):
+        return -10_000
     if not anchor_day or anchor_day not in training_days:
         return score
     anchor_idx = training_days.index(anchor_day)
@@ -1094,6 +1165,7 @@ def _best_free_combat_day(
     readiness_sensitive: bool,
     training_days: list[str],
     day_to_roles: dict[str, list[dict[str, Any]]],
+    sport_load_profile: dict[str, Any] | None = None,
 ) -> str:
     if not free_days:
         return ""
@@ -1107,6 +1179,7 @@ def _best_free_combat_day(
                 readiness_sensitive=readiness_sensitive,
                 training_days=training_days,
                 day_to_roles=day_to_roles,
+                sport_load_profile=sport_load_profile,
             ),
             -training_days.index(day),
             day,
@@ -1121,14 +1194,15 @@ def _try_swap_with_lighter_role(
     from_day: str,
     training_days: list[str],
     day_to_roles: dict[str, list[dict[str, Any]]],
+    sport_load_profile: dict[str, Any] | None = None,
 ) -> str:
     def _light_rank(role: dict[str, Any]) -> tuple[int, int]:
-        main_job = _main_job_for_role(role)
+        main_job = _main_job_for_role(role, sport_load_profile)
         if main_job == "support_recovery":
             return (0, 0)
         if main_job == "technical":
             return (1, 0)
-        if main_job == "conditioning" and not _is_meaningful_stressor(role):
+        if main_job == "conditioning" and not _is_meaningful_stressor(role, sport_load_profile):
             return (2, 0)
         return (9, 1)
 
@@ -1140,9 +1214,9 @@ def _try_swap_with_lighter_role(
         if len(roles) != 1:
             continue
         light_role = roles[0]
-        if str(light_role.get("role_key") or "") == "hard_sparring_day":
+        if _is_profile_hard_live_role(light_role, sport_load_profile):
             continue
-        if _is_meaningful_stressor(light_role):
+        if _is_meaningful_stressor(light_role, sport_load_profile):
             continue
         candidates.append((_light_rank(light_role), day, light_role))
 
@@ -1156,13 +1230,16 @@ def _try_swap_with_lighter_role(
     return target_day
 
 
-def _unassigned_role_priority(role: dict[str, Any]) -> tuple[int, int, str]:
-    main_job = _main_job_for_role(role)
+def _unassigned_role_priority(
+    role: dict[str, Any],
+    sport_load_profile: dict[str, Any] | None = None,
+) -> tuple[int, int, str]:
+    main_job = _main_job_for_role(role, sport_load_profile)
     role_key = str(role.get("role_key") or "").strip()
     session_index = int(role.get("session_index") or 0)
     if main_job == "anchor":
         return (0, session_index, role_key)
-    if main_job == "conditioning" and _is_meaningful_stressor(role):
+    if main_job == "conditioning" and _is_meaningful_stressor(role, sport_load_profile):
         return (1, session_index, role_key)
     if main_job == "technical":
         return (2, session_index, role_key)
@@ -1177,6 +1254,8 @@ def _sparse_week_structure_needed(
     week_entry: dict[str, Any],
     session_roles: list[dict[str, Any]],
     athlete_model: dict[str, Any],
+    sport_load_profile: dict[str, Any] | None = None,
+    max_meaningful_stressors_per_day: int = 1,
 ) -> bool:
     training_days = _ordered_weekdays(_clean_list(athlete_model.get("training_days", [])))
     if not training_days:
@@ -1201,7 +1280,30 @@ def _sparse_week_structure_needed(
         if day in day_to_roles:
             day_to_roles[day].append(role)
 
-    return any(sum(1 for role in roles if _is_meaningful_stressor(role)) > 1 for roles in day_to_roles.values())
+    collision_scheduling = _collision_scheduling_rules(sport_load_profile)
+    blocked_same_day_systems = {
+        str(value).strip().lower()
+        for value in _clean_list(collision_scheduling.get("blocked_same_day_conditioning_systems", []))
+        if str(value).strip()
+    }
+    for roles in day_to_roles.values():
+        has_hard_live = any(
+            _is_profile_hard_live_role(role, sport_load_profile)
+            for role in roles
+        )
+        has_blocked_conditioning = any(
+            _main_job_for_role(role, sport_load_profile) == "conditioning"
+            and str(role.get("preferred_system") or "").strip().lower() in blocked_same_day_systems
+            for role in roles
+        )
+        if has_hard_live and has_blocked_conditioning:
+            return True
+
+    return any(
+        sum(1 for role in roles if _is_meaningful_stressor(role, sport_load_profile))
+        > max_meaningful_stressors_per_day
+        for roles in day_to_roles.values()
+    )
 
 
 def _combat_day_identity_and_spacing_pass(
@@ -1213,16 +1315,25 @@ def _combat_day_identity_and_spacing_pass(
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     sport_load_profile = sport_load_profile or _build_sport_load_profile(athlete_model)
     planning_rules = dict(sport_load_profile.get("planning_rules") or {})
+    max_meaningful_stressors_per_day = max(
+        1,
+        int(planning_rules.get("max_meaningful_stressors_per_day", 1)),
+    )
     phase = str(week_entry.get("phase") or "").strip().upper()
     crowded_week_active = (
         (week_entry.get("intentional_compression") or {}).get("policy") == "combat_crowded_week"
     )
-    sparse_week_active = _sparse_week_structure_needed(week_entry, session_roles, athlete_model)
+    sparse_week_active = _sparse_week_structure_needed(
+        week_entry,
+        session_roles,
+        athlete_model,
+        sport_load_profile,
+        max_meaningful_stressors_per_day,
+    )
     if (
         phase not in {"GPP", "SPP"}
         or (not crowded_week_active and not sparse_week_active)
         or not session_roles
-        or int(planning_rules.get("max_meaningful_stressors_per_day", 1)) < 1
     ):
         return session_roles, suppressed_roles, False
 
@@ -1250,10 +1361,13 @@ def _combat_day_identity_and_spacing_pass(
         if str(role.get("scheduled_day_hint") or "").strip() not in day_to_roles
     ]
     if sparse_week_active and not crowded_week_active:
-        unassigned.sort(key=_unassigned_role_priority)
+        unassigned.sort(key=lambda role: _unassigned_role_priority(role, sport_load_profile))
 
     def _anchor_day_hint() -> str:
-        anchor = next((role for role in updated_roles if _main_job_for_role(role) == "anchor"), None)
+        anchor = next(
+            (role for role in updated_roles if _main_job_for_role(role, sport_load_profile) == "anchor"),
+            None,
+        )
         return str(anchor.get("scheduled_day_hint") or "").strip() if anchor else ""
 
     def _best_free_day(role: dict[str, Any], free_days: list[str]) -> str:
@@ -1266,6 +1380,7 @@ def _combat_day_identity_and_spacing_pass(
             readiness_sensitive=readiness_sensitive,
             training_days=training_days,
             day_to_roles=day_to_roles,
+            sport_load_profile=sport_load_profile,
         )
 
     free_days = [day for day in training_days if not day_to_roles[day]]
@@ -1300,13 +1415,13 @@ def _combat_day_identity_and_spacing_pass(
         roles = list(day_to_roles[day])
         if len(roles) <= 1:
             continue
-        meaningful = [role for role in roles if _is_meaningful_stressor(role)]
-        while len(meaningful) > 1:
+        meaningful = [role for role in roles if _is_meaningful_stressor(role, sport_load_profile)]
+        while len(meaningful) > max_meaningful_stressors_per_day:
             removable = min(
                 meaningful,
                 key=lambda role: (
-                    role_priority.get(_main_job_for_role(role), 0),
-                    1 if str(role.get("role_key") or "") == "hard_sparring_day" else 0,
+                    role_priority.get(_main_job_for_role(role, sport_load_profile), 0),
+                    1 if _is_profile_hard_live_role(role, sport_load_profile) else 0,
                 ),
             )
             candidate_days = [d for d in training_days if not day_to_roles[d]]
@@ -1320,21 +1435,71 @@ def _combat_day_identity_and_spacing_pass(
                     from_day=day,
                     training_days=training_days,
                     day_to_roles=day_to_roles,
+                    sport_load_profile=sport_load_profile,
                 )
                 if swap_day:
                     _append_day_hint(removable, swap_day, "Move meaningful stress by reshuffling lighter work first.")
                     day_to_roles[day].remove(removable)
                     day_to_roles[swap_day].append(removable)
                 else:
-                    _drop_role(removable, "Day identity rule allows only one meaningful stressor per day.")
-            meaningful = [role for role in day_to_roles[day] if _is_meaningful_stressor(role)]
+                    _drop_role(
+                        removable,
+                        f"Day identity rule allows at most {max_meaningful_stressors_per_day} meaningful stressor(s) per day.",
+                    )
+            meaningful = [
+                role
+                for role in day_to_roles[day]
+                if _is_meaningful_stressor(role, sport_load_profile)
+            ]
 
-    anchor_role = next((role for role in updated_roles if _main_job_for_role(role) == "anchor"), None)
+    collision_scheduling = _collision_scheduling_rules(sport_load_profile)
+    blocked_same_day_systems = {
+        str(value).strip().lower()
+        for value in _clean_list(collision_scheduling.get("blocked_same_day_conditioning_systems", []))
+        if str(value).strip()
+    }
+    for day in training_days:
+        roles = list(day_to_roles[day])
+        if not any(_is_profile_hard_live_role(role, sport_load_profile) for role in roles):
+            continue
+        blocked_roles = [
+            role
+            for role in roles
+            if _main_job_for_role(role, sport_load_profile) == "conditioning"
+            and str(role.get("preferred_system") or "").strip().lower() in blocked_same_day_systems
+        ]
+        for blocked_role in blocked_roles:
+            target_day = _best_free_day(
+                blocked_role,
+                [candidate for candidate in training_days if not day_to_roles[candidate]],
+            )
+            if target_day:
+                day_to_roles[day].remove(blocked_role)
+                _append_day_hint(
+                    blocked_role,
+                    target_day,
+                    "Sport collision profile separates blocked conditioning from the hard live load.",
+                )
+                day_to_roles[target_day].append(blocked_role)
+            else:
+                _drop_role(
+                    blocked_role,
+                    "Sport collision profile removed conditioning blocked beside the hard live load.",
+                )
+
+    anchor_role = next(
+        (role for role in updated_roles if _main_job_for_role(role, sport_load_profile) == "anchor"),
+        None,
+    )
     anchor_day = str(anchor_role.get("scheduled_day_hint") or "").strip() if anchor_role else ""
     if anchor_day and anchor_day in training_days:
         anchor_idx = training_days.index(anchor_day)
         previous_day = training_days[anchor_idx - 1] if anchor_idx > 0 else ""
-        previous_class = _main_job_day_class(day_to_roles.get(previous_day, [])) if previous_day else "off"
+        previous_class = (
+            _main_job_day_class(day_to_roles.get(previous_day, []), sport_load_profile)
+            if previous_day
+            else "off"
+        )
         if readiness_sensitive and previous_day and previous_class not in {"off", "support_recovery", "technical"}:
             candidate_day = ""
             for idx in range(1, len(training_days)):
@@ -1344,7 +1509,7 @@ def _combat_day_identity_and_spacing_pass(
                 if day_to_roles[day]:
                     continue
                 prior_day = training_days[idx - 1]
-                prior_class = _main_job_day_class(day_to_roles.get(prior_day, []))
+                prior_class = _main_job_day_class(day_to_roles.get(prior_day, []), sport_load_profile)
                 if prior_class in {"off", "support_recovery", "technical"}:
                     candidate_day = day
                     break
@@ -1357,7 +1522,7 @@ def _combat_day_identity_and_spacing_pass(
 
         glycolytic_roles = [
             role for role in updated_roles
-            if _main_job_for_role(role) == "conditioning"
+            if _main_job_for_role(role, sport_load_profile) == "conditioning"
             and str(role.get("preferred_system") or "").strip().lower() == "glycolytic"
         ]
         for glycolytic_role in glycolytic_roles:

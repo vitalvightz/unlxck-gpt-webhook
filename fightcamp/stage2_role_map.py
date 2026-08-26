@@ -23,6 +23,7 @@ from .stage2_payload_late_fight import (
 from .stage2_planning_brief import (
     dedupe_preserve_order,
     _build_sport_load_profile,
+    _resolve_conditioning_sequence,
     _is_high_pressure_weight_cut,
     _WEEKLY_STAGE_TEMPLATES,
     PLANNING_DECISION_HIERARCHY,
@@ -1523,8 +1524,12 @@ def _preferred_combat_conditioning_sequence(
     of planning without inheriting boxing demands.
     """
     phase = str(phase or "").upper()
-    preferred = list((sport_load_profile.get("conditioning_sequence") or {}).get(phase, []))
-    return dedupe_preserve_order(preferred + list(conditioning_sequence or []))
+    resolved = _resolve_conditioning_sequence(
+        phase,
+        {"conditioning_sequence": {phase: list(conditioning_sequence or [])}},
+        sport_load_profile,
+    )
+    return list(resolved["conditioning_sequence"])
 
 
 def _preferred_boxer_conditioning_sequence(phase: str, conditioning_sequence: list[str]) -> list[str]:
@@ -2703,13 +2708,9 @@ def _build_weekly_role_map(
         week_entry["calendar_days"] = calendar_days
 
         session_counts = dict(week_entry.get("session_counts") or {})
+        # ``week_entry.conditioning_sequence`` is already the single resolved
+        # phase + limiter + sport-profile order. Do not reinterpret it here.
         conditioning_sequence = list(week_entry.get("conditioning_sequence", [])) or ["aerobic", "glycolytic", "alactic"]
-        if week_entry.get("phase", "").upper() in {"GPP", "SPP"} and int(session_counts.get("conditioning", 0) or 0) >= 2:
-            conditioning_sequence = _preferred_combat_conditioning_sequence(
-                week_entry.get("phase", ""),
-                conditioning_sequence,
-                sport_load_profile,
-            )
         session_roles: list[dict] = []
         suppressed_roles: list[dict] = []
         session_index = 1
@@ -2974,6 +2975,8 @@ def _build_weekly_role_map(
                 "stage_key": week_entry.get("stage_key"),
                 "phase_week_index": week_entry.get("phase_week_index"),
                 "phase_week_total": week_entry.get("phase_week_total"),
+                "conditioning_sequence": list(week_entry.get("conditioning_sequence", [])),
+                "resolved_rule_state": dict(week_entry.get("resolved_rule_state") or {}),
                 "projected_days_until_fight_start": projected_days_until_fight_start[week_idx],
                 "projected_days_until_fight_end": projected_days_until_fight_end[week_idx],
                 "countdown_range": countdown_range,

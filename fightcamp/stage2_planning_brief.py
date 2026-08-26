@@ -951,6 +951,46 @@ _SPORT_LOAD_PROFILES = {
 }
 
 
+_SPORT_COLLISION_SCHEDULING = {
+    "boxing": {
+        "hard_live_role_keys": ["hard_sparring_day"],
+        "blocked_same_day_conditioning_systems": ["glycolytic"],
+        "block_anchor_next_day_after_statuses": ["hard_as_planned"],
+        "adjacent_meaningful_stressor_penalty": 3,
+    },
+    "kickboxing_muay_thai": {
+        "hard_live_role_keys": ["hard_sparring_day"],
+        "blocked_same_day_conditioning_systems": ["glycolytic"],
+        "block_anchor_next_day_after_statuses": ["hard_as_planned"],
+        "adjacent_meaningful_stressor_penalty": 3,
+    },
+    "mma": {
+        "hard_live_role_keys": ["hard_sparring_day"],
+        "blocked_same_day_conditioning_systems": ["glycolytic"],
+        "block_anchor_next_day_after_statuses": ["hard_as_planned"],
+        "adjacent_meaningful_stressor_penalty": 3,
+    },
+    "wrestling": {
+        "hard_live_role_keys": ["hard_sparring_day"],
+        "blocked_same_day_conditioning_systems": ["glycolytic"],
+        "block_anchor_next_day_after_statuses": ["hard_as_planned"],
+        "adjacent_meaningful_stressor_penalty": 3,
+    },
+    "bjj": {
+        "hard_live_role_keys": ["hard_sparring_day"],
+        "blocked_same_day_conditioning_systems": ["glycolytic"],
+        "block_anchor_next_day_after_statuses": ["hard_as_planned"],
+        "adjacent_meaningful_stressor_penalty": 3,
+    },
+    "general_combat": {
+        "hard_live_role_keys": ["hard_sparring_day"],
+        "blocked_same_day_conditioning_systems": ["glycolytic"],
+        "block_anchor_next_day_after_statuses": ["hard_as_planned"],
+        "adjacent_meaningful_stressor_penalty": 3,
+    },
+}
+
+
 _UNIVERSAL_COMBAT_PLANNING_RULES = {
     "max_meaningful_stressors_per_day": 1,
     "anchor_requires_low_load_lead_in_when_readiness_sensitive": True,
@@ -993,6 +1033,10 @@ def _primary_sport_load_key(athlete_model: dict) -> str:
 def _build_sport_load_profile(athlete_model: dict) -> dict:
     key = _primary_sport_load_key(athlete_model)
     template = _SPORT_LOAD_PROFILES.get(key, _SPORT_LOAD_PROFILES["general_combat"])
+    collision_scheduling = _SPORT_COLLISION_SCHEDULING.get(
+        key,
+        _SPORT_COLLISION_SCHEDULING["general_combat"],
+    )
     return {
         "key": key,
         "label": template["label"],
@@ -1007,7 +1051,75 @@ def _build_sport_load_profile(athlete_model: dict) -> dict:
             phase: list(sequence)
             for phase, sequence in template["conditioning_sequence"].items()
         },
+        # These structured fields are consumed by deterministic placement.
+        # The prose collision fields above remain finalizer/coach guidance only.
+        "collision_scheduling": {
+            "hard_live_role_keys": list(collision_scheduling["hard_live_role_keys"]),
+            "blocked_same_day_conditioning_systems": list(
+                collision_scheduling["blocked_same_day_conditioning_systems"]
+            ),
+            "block_anchor_next_day_after_statuses": list(
+                collision_scheduling["block_anchor_next_day_after_statuses"]
+            ),
+            "adjacent_meaningful_stressor_penalty": int(
+                collision_scheduling["adjacent_meaningful_stressor_penalty"]
+            ),
+        },
+        "collision_field_authority": {
+            "deterministic": [
+                "collision_scheduling.hard_live_role_keys",
+                "collision_scheduling.blocked_same_day_conditioning_systems",
+                "collision_scheduling.block_anchor_next_day_after_statuses",
+                "collision_scheduling.adjacent_meaningful_stressor_penalty",
+            ],
+            "guidance_only": ["highest_collision_load", "primary_live_loads", "collision_rules"],
+            "current_live_role_contract": "hard_sparring_day",
+        },
         "planning_rules": dict(_UNIVERSAL_COMBAT_PLANNING_RULES),
+    }
+
+
+def _resolve_conditioning_sequence(
+    phase: str,
+    limiter_profile: dict,
+    sport_load_profile: dict,
+) -> dict:
+    """Resolve one authoritative conditioning order for all downstream stages.
+
+    The limiter/phase sequence defines which physiological systems are eligible.
+    The sport demand profile orders those eligible systems for sport expression.
+    A sport profile cannot silently add a system that the limiter excluded.
+    """
+    phase = str(phase or "").strip().upper()
+    physiological_priority = dedupe_preserve_order(
+        clean_list((limiter_profile.get("conditioning_sequence") or {}).get(phase, []))
+    )
+    sport_preference = dedupe_preserve_order(
+        clean_list((sport_load_profile.get("conditioning_sequence") or {}).get(phase, []))
+    )
+    if physiological_priority:
+        eligible = set(physiological_priority)
+        primary_system = physiological_priority[0]
+        # Phase + limiter retain authority over the primary adaptation. The
+        # sport demand profile orders the remaining eligible systems, which is
+        # where sport expression belongs without displacing the main limiter.
+        resolved = dedupe_preserve_order(
+            [primary_system]
+            + [
+                system
+                for system in sport_preference
+                if system in eligible and system != primary_system
+            ]
+            + physiological_priority
+        )
+    else:
+        resolved = list(sport_preference)
+
+    return {
+        "conditioning_sequence": resolved,
+        "conditioning_sequence_driver": "phase_limiter_with_sport_profile",
+        "physiological_priority_sequence": physiological_priority,
+        "sport_conditioning_preference": sport_preference,
     }
 
 
@@ -1033,6 +1145,11 @@ def _resolve_phase_rule_state(
         readiness_flags & {"fight_week", "high_fatigue", "active_weight_cut", "aggressive_weight_cut"}
     )
     sport_load_owns_density = phase == "TAPER" and bool(sport_load_profile.get("highest_collision_load"))
+    conditioning_resolution = _resolve_conditioning_sequence(
+        phase,
+        limiter_profile,
+        sport_load_profile,
+    )
 
     protect_first = limiter_profile["protect_first"]
     if fatigue in {"moderate", "high"}:
@@ -1054,8 +1171,10 @@ def _resolve_phase_rule_state(
     return {
         "must_keep": clean_list(guardrails.get("must_keep_if_present", [])),
         "drop_order_if_thin": clean_list(guardrails.get("conditioning_drop_order_if_thin", [])),
-        "conditioning_sequence": list(limiter_profile["conditioning_sequence"].get(phase, [])),
-        "conditioning_sequence_driver": "main_limiter",
+        "conditioning_sequence": list(conditioning_resolution["conditioning_sequence"]),
+        "conditioning_sequence_driver": conditioning_resolution["conditioning_sequence_driver"],
+        "physiological_priority_sequence": list(conditioning_resolution["physiological_priority_sequence"]),
+        "sport_conditioning_preference": list(conditioning_resolution["sport_conditioning_preference"]),
         "protect_first": protect_first,
         "protect_first_driver": "safety_and_readiness" if fatigue in {"moderate", "high"} else "main_limiter",
         "cut_first_when_collisions_rise": cut_first,
