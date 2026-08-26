@@ -789,10 +789,10 @@ def test_sport_load_collision_rules_beat_goal_push_when_collisions_rise():
 
     assert any("Prioritize conditioning slots" in rule for rule in push_rules)
     assert any("Preserve explosive and alactic work" in rule for rule in push_rules)
-    assert brief["sport_load_profile"]["key"] == "wrestling"
+    assert brief["sport_load_profile"]["key"] == "mma"
     assert brief["decision_hierarchy"][2]["driver"] == "sport_load_collision_rules"
-    assert "When sport load spikes, cut optional strength accessories and non-essential conditioning density first." in spp_stress["cut_first_when_collisions_rise"]
-    assert "short positional goes or takedown chains before extra lifting" in spp_stress["replace_missing_live_load"]
+    assert "When sport load spikes, cut accessory strength volume and redundant conditioning density first." in spp_stress["cut_first_when_collisions_rise"]
+    assert "fight-pace positional or cage-wall rounds before extra lifting" in spp_stress["replace_missing_live_load"]
 
 
 def test_weekly_stress_map_exposes_resolved_hierarchy_drivers():
@@ -1016,7 +1016,7 @@ def test_build_planning_brief_uses_muay_thai_sport_load_profile():
 
 
 
-def test_build_planning_brief_uses_wrestling_sport_load_profile_from_style_identity():
+def test_build_planning_brief_keeps_explicit_mma_profile_with_wrestling_style_identity():
     brief = _build_brief(
         {
             "sport": "mma",
@@ -1042,10 +1042,10 @@ def test_build_planning_brief_uses_wrestling_sport_load_profile_from_style_ident
     sport_load = brief["sport_load_profile"]
     spp_stress = brief["weekly_stress_map"]["SPP"]
 
-    assert sport_load["key"] == "wrestling"
-    assert "live goes" in sport_load["highest_collision_load"]
-    assert any("live goes" in rule.lower() for rule in sport_load["collision_rules"])
-    assert "takedown chains" in spp_stress["replace_missing_live_load"]
+    assert sport_load["key"] == "mma"
+    assert "hard MMA sparring" in sport_load["highest_collision_load"]
+    assert any("live wrestling" in rule.lower() for rule in sport_load["collision_rules"])
+    assert "cage-wall rounds" in spp_stress["replace_missing_live_load"]
 
 
 
@@ -2998,6 +2998,42 @@ def test_universal_limiter_uses_each_sport_profile_for_technical_expression():
         assert "boxing" not in limiter["live_load_collision_rule"].lower()
         if sport != "boxing":
             assert "boxing" not in stress["sport_load_interaction"].lower()
+
+
+def test_explicit_sport_wins_over_conflicting_style_profile_tokens():
+    cases = [
+        (
+            {"sport": "mma", "technical_styles": ["wrestler"], "tactical_styles": ["wrestling_heavy"]},
+            "mma",
+        ),
+        (
+            {"sport": "mma", "technical_styles": ["boxer"], "tactical_styles": ["counter_striker"]},
+            "mma",
+        ),
+        (
+            {"sport": "boxing", "technical_styles": ["boxing"], "tactical_styles": ["pressure_fighter"]},
+            "boxing",
+        ),
+        (
+            {"sport": "bjj", "technical_styles": ["wrestling"], "tactical_styles": ["wrestler"]},
+            "bjj",
+        ),
+    ]
+
+    for athlete_model, expected_profile in cases:
+        assert (
+            stage2_planning_brief_module._build_sport_load_profile(athlete_model)["key"]
+            == expected_profile
+        )
+
+
+def test_styles_only_infer_sport_profile_when_explicit_sport_is_missing_or_unknown():
+    assert stage2_planning_brief_module._build_sport_load_profile(
+        {"sport": "", "technical_styles": ["wrestler"]}
+    )["key"] == "wrestling"
+    assert stage2_planning_brief_module._build_sport_load_profile(
+        {"sport": "unknown ruleset", "technical_styles": ["boxer"]}
+    )["key"] == "boxing"
 
 
 def test_sport_profile_changes_expression_without_changing_universal_scheduler():

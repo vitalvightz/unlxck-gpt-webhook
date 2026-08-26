@@ -1009,23 +1009,38 @@ def _join_rule_parts(*parts: str) -> str:
 
 
 
-def _primary_sport_load_key(athlete_model: dict) -> str:
-    sport_tokens = _normalize_limiter_tokens(clean_list(athlete_model.get("sport")))
-    style_tokens = _normalize_limiter_tokens(
-        clean_list(athlete_model.get("technical_styles", [])) + clean_list(athlete_model.get("tactical_styles", []))
-    )
-    combined = sport_tokens | style_tokens
-
-    if combined & {"bjj", "jiu_jitsu", "jits", "grappling"}:
+def _sport_load_key_from_tokens(tokens: set[str]) -> str | None:
+    if tokens & {"bjj", "jiu_jitsu", "jits", "grappling"}:
         return "bjj"
-    if combined & {"wrestler", "wrestling", "freestyle", "folkstyle", "greco"}:
+    if tokens & {"wrestler", "wrestling", "freestyle", "folkstyle", "greco"}:
         return "wrestling"
-    if combined & {"muay_thai", "kickboxer", "kickboxing", "karate"}:
+    if tokens & {"muay_thai", "kickboxer", "kickboxing", "karate"}:
         return "kickboxing_muay_thai"
-    if combined & {"boxing", "boxer"}:
+    if tokens & {"boxing", "boxer"}:
         return "boxing"
-    if combined & {"mma", "mixed_martial_arts", "cage_wrestling", "sambo", "judo"}:
+    if tokens & {"mma", "mixed_martial_arts", "cage_wrestling", "sambo", "judo"}:
         return "mma"
+    if tokens & {"general_combat", "general_combat_sport", "combat", "combat_sport"}:
+        return "general_combat"
+    return None
+
+
+def _primary_sport_load_key(athlete_model: dict) -> str:
+    # Explicit competition identity owns the demand profile. Technical and
+    # tactical styles describe expression inside that sport; they may only
+    # infer a profile when the sport field is missing or unrecognized.
+    sport_tokens = _normalize_limiter_tokens(clean_list(athlete_model.get("sport")))
+    explicit_sport_key = _sport_load_key_from_tokens(sport_tokens)
+    if explicit_sport_key:
+        return explicit_sport_key
+
+    style_tokens = _normalize_limiter_tokens(
+        clean_list(athlete_model.get("technical_styles", []))
+        + clean_list(athlete_model.get("tactical_styles", []))
+    )
+    style_fallback_key = _sport_load_key_from_tokens(style_tokens)
+    if style_fallback_key:
+        return style_fallback_key
     return "general_combat"
 
 
