@@ -66,6 +66,12 @@ def test_build_athlete_model_is_canonical_across_modules():
     assert stage2_planning_brief._build_athlete_model is athlete_model._build_athlete_model
 
 
+def test_stage1_programming_format_is_marked_as_derived_sport_identity():
+    model = _build(_make_training_context(injuries=[]))
+    assert model["sport"] == "boxing"
+    assert model["sport_identity_source"] == "programming_format"
+
+
 def test_athlete_helpers_are_canonical_across_modules():
     """Names that have always been part of stage2_payload's backwards-compat
     surface must resolve to the canonical athlete_model implementation."""

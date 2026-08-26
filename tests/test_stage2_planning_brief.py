@@ -3036,6 +3036,23 @@ def test_styles_only_infer_sport_profile_when_explicit_sport_is_missing_or_unkno
     )["key"] == "boxing"
 
 
+def test_programming_format_sport_keeps_style_fallback_for_bjj_and_wrestling_intake():
+    assert stage2_planning_brief_module._build_sport_load_profile(
+        {
+            "sport": "mma",
+            "sport_identity_source": "programming_format",
+            "technical_styles": ["bjj"],
+        }
+    )["key"] == "bjj"
+    assert stage2_planning_brief_module._build_sport_load_profile(
+        {
+            "sport": "mma",
+            "sport_identity_source": "programming_format",
+            "technical_styles": ["wrestler"],
+        }
+    )["key"] == "wrestling"
+
+
 def test_sport_profile_changes_expression_without_changing_universal_scheduler():
     boxing = _base_athlete()
     wrestling = {

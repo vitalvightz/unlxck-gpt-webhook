@@ -1031,7 +1031,15 @@ def _primary_sport_load_key(athlete_model: dict) -> str:
     # infer a profile when the sport field is missing or unrecognized.
     sport_tokens = _normalize_limiter_tokens(clean_list(athlete_model.get("sport")))
     explicit_sport_key = _sport_load_key_from_tokens(sport_tokens)
-    if explicit_sport_key:
+    sport_identity_source = str(
+        athlete_model.get("sport_identity_source") or "explicit"
+    ).strip().lower()
+    sport_is_explicit = sport_identity_source not in {
+        "programming_format",
+        "mapped_format",
+        "style_derived",
+    }
+    if sport_is_explicit and explicit_sport_key:
         return explicit_sport_key
 
     style_tokens = _normalize_limiter_tokens(
@@ -1041,6 +1049,8 @@ def _primary_sport_load_key(athlete_model: dict) -> str:
     style_fallback_key = _sport_load_key_from_tokens(style_tokens)
     if style_fallback_key:
         return style_fallback_key
+    if explicit_sport_key:
+        return explicit_sport_key
     return "general_combat"
 
 

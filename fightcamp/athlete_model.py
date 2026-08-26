@@ -182,6 +182,11 @@ def _build_athlete_model(
         "has_active_injury": has_active_injury,
         "surface_injury_only": surface_injury_only,
         "sport": sport,
+        # ``sport`` is currently supplied by Stage 1's programming-format map
+        # (for example BJJ/wrestling may map to MMA for bank compatibility).
+        # Preserve that provenance so sport-profile resolution does not mistake
+        # a derived programming format for an explicitly declared competition.
+        "sport_identity_source": "programming_format",
         "status": training_context.status,
         "record": record_profile["record"],
         "wins": record_profile["wins"],
