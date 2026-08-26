@@ -22,6 +22,7 @@ from .stage2_payload_late_fight import (
 )
 from .stage2_planning_brief import (
     dedupe_preserve_order,
+    _build_sport_load_profile,
     _is_high_pressure_weight_cut,
     _WEEKLY_STAGE_TEMPLATES,
     PLANNING_DECISION_HIERARCHY,
@@ -1389,7 +1390,7 @@ def _assign_declared_day_hints(
             day_assignments[primary_idx] = primary_day
             used_days.update({recovery_day, primary_day})
         else:
-            # When no clean adjacent pair exists (crowded boxing weeks where
+            # When no clean adjacent pair exists (crowded combat weeks where
             # every adjacent slot brushes a declared hard sparring day), at
             # least pin the primary strength anchor to a non-spar day before
             # the per-role fallback runs. Otherwise the support-strength,
@@ -1510,15 +1511,29 @@ def _assign_declared_day_hints(
     return ordered
 
 
-def _preferred_boxer_conditioning_sequence(phase: str, conditioning_sequence: list[str]) -> list[str]:
+def _preferred_combat_conditioning_sequence(
+    phase: str,
+    conditioning_sequence: list[str],
+    sport_load_profile: dict[str, Any],
+) -> list[str]:
+    """Apply the sport demand profile's energy-system order.
+
+    Sequencing is universal planning behaviour. The profile owns the sport's
+    expression of that behaviour, so non-boxing sports receive the same quality
+    of planning without inheriting boxing demands.
+    """
     phase = str(phase or "").upper()
-    if phase == "GPP":
-        preferred = ["aerobic", "alactic", "glycolytic"]
-    elif phase == "SPP":
-        preferred = ["aerobic", "glycolytic", "alactic"]
-    else:
-        preferred = ["alactic", "aerobic", "glycolytic"]
+    preferred = list((sport_load_profile.get("conditioning_sequence") or {}).get(phase, []))
     return dedupe_preserve_order(preferred + list(conditioning_sequence or []))
+
+
+def _preferred_boxer_conditioning_sequence(phase: str, conditioning_sequence: list[str]) -> list[str]:
+    """Backward-compatible wrapper for callers importing the old helper."""
+    return _preferred_combat_conditioning_sequence(
+        phase,
+        conditioning_sequence,
+        _build_sport_load_profile({"sport": "boxing", "technical_styles": ["boxing"]}),
+    )
 
 
 def _resequence_session_roles(
@@ -1527,12 +1542,13 @@ def _resequence_session_roles(
     athlete_model: dict,
     *,
     hard_sparring_plan: list[dict] | None = None,
+    sport_load_profile: dict[str, Any] | None = None,
 ) -> list[dict]:
     if len(session_roles) <= 1:
         return session_roles
 
     ordered = list(session_roles)
-    sport_key = _athlete_sport_key(athlete_model)
+    sport_load_profile = sport_load_profile or _build_sport_load_profile(athlete_model)
     phase = str(week_entry.get("phase", "")).upper()
 
     def _is_primary_strength(role: dict) -> bool:
@@ -1557,7 +1573,8 @@ def _resequence_session_roles(
                 result.append(role)
                 return
 
-    if sport_key == "boxing" and phase in {"GPP", "SPP"}:
+    planning_rules = dict(sport_load_profile.get("planning_rules") or {})
+    if planning_rules.get("anchor_requires_low_load_lead_in_when_readiness_sensitive", True) and phase in {"GPP", "SPP"}:
         used: set[int] = set()
         result: list[dict] = []
         _take_first(_is_support_strength, used, result)
@@ -2140,7 +2157,7 @@ def _apply_high_fatigue_week_compression(
     updated_suppressed = list(suppressed_roles)
     # Budget-driven suppressions record the reason but do not mark the
     # entry as ``intentional_compression``; that flag is reserved for
-    # policy-driven compression (boxing crowded-week, short-camp,
+    # policy-driven compression (combat crowded-week, short-camp,
     # fight-week override). See ``_make_compression_suppression`` for the
     # policy-flagged variant.
     for role in dropped_non_spar:
@@ -2163,7 +2180,7 @@ def _apply_high_fatigue_week_compression(
     )
 
     # ``intentional_compression.active`` is reserved for policy-driven
-    # compression (boxing crowded-week, short-camp, fight-week override).
+    # compression (combat crowded-week, short-camp, fight-week override).
     # Routine spar-first budget enforcement always trims the non-spar pool
     # to the weekly cap and would otherwise set the flag for every
     # over-allocated camp week — which is the default, not an intentional
@@ -2651,9 +2668,12 @@ def _build_weekly_role_map(
     week_by_week_progression: dict,
     limiter_profile: dict,
     fight_week_override: dict[str, Any] | None = None,
+    *,
+    sport_load_profile: dict[str, Any] | None = None,
 ) -> dict:
     weeks: list[dict] = []
     limiter_key = limiter_profile.get("key", "general_fight_readiness")
+    sport_load_profile = sport_load_profile or _build_sport_load_profile(athlete_model)
     progression_weeks = list(week_by_week_progression.get("weeks", []))
     projected_days_until_fight_start: list[int] = [0] * len(progression_weeks)
     projected_days_until_fight_end: list[int] = [0] * len(progression_weeks)
@@ -2684,11 +2704,11 @@ def _build_weekly_role_map(
 
         session_counts = dict(week_entry.get("session_counts") or {})
         conditioning_sequence = list(week_entry.get("conditioning_sequence", [])) or ["aerobic", "glycolytic", "alactic"]
-        sport_key = _athlete_sport_key(athlete_model)
-        if sport_key == "boxing" and week_entry.get("phase", "").upper() in {"GPP", "SPP"} and int(session_counts.get("conditioning", 0) or 0) >= 2:
-            conditioning_sequence = _preferred_boxer_conditioning_sequence(
+        if week_entry.get("phase", "").upper() in {"GPP", "SPP"} and int(session_counts.get("conditioning", 0) or 0) >= 2:
+            conditioning_sequence = _preferred_combat_conditioning_sequence(
                 week_entry.get("phase", ""),
                 conditioning_sequence,
+                sport_load_profile,
             )
         session_roles: list[dict] = []
         suppressed_roles: list[dict] = []
@@ -2855,6 +2875,7 @@ def _build_weekly_role_map(
             session_roles,
             athlete_model,
             hard_sparring_plan=hard_sparring_plan,
+            sport_load_profile=sport_load_profile,
         )
 
         session_roles, suppressed_roles = _lock_declared_hard_sparring_roles(
@@ -2915,6 +2936,7 @@ def _build_weekly_role_map(
             session_roles,
             athlete_model,
             hard_sparring_plan=hard_sparring_plan,
+            sport_load_profile=sport_load_profile,
         )
         
         calendar_days = list(week_entry.get("calendar_days") or [])
