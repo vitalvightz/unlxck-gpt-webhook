@@ -44,6 +44,7 @@ from .structured_card_lifecycle import (
     parse_structured_card_attempt_started_at,
 )
 from .structured_plan_models import StructuredTrainingPlan, safe_parse_structured_plan
+from .structured_plan_calendar_spine import reconcile_calendar_spine
 from .structured_plan_generation import (
     reconcile_late_fight_week_context,
     reconcile_rehab_drill_ids,
@@ -622,6 +623,19 @@ def _map_plan_detail(
         if reconciled_result.ok and reconciled_result.plan is not None:
             structured_plan = reconciled_result.plan
             structured_payload = reconciled_payload
+    # Restore any no-session calendar days a dated camp dropped, so week
+    # boundaries / counts / phases render from the authoritative countdown spine
+    # rather than only the days that carried a session. A no-op (returns the same
+    # object) for open plans, undated plans, and calendars already continuous.
+    spine_payload = reconcile_calendar_spine(structured_payload, planning_brief)
+    if structured_plan is not None and spine_payload is not structured_payload:
+        spine_result = safe_parse_structured_plan(
+            spine_payload,
+            raw_markdown=display_plan_text or None,
+        )
+        if spine_result.ok and spine_result.plan is not None:
+            structured_plan = spine_result.plan
+            structured_payload = spine_payload
     projected_payload, raw_schedule_context = project_open_structured_plan(
         row,
         structured_payload,
