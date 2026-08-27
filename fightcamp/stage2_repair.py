@@ -24,13 +24,13 @@ REPAIR RULES:
 11. Collapse menu-like session templates into one final prescription whenever the athlete context already resolves the choice.
 12. Keep all primary drills, support drills, and fallbacks equipment-valid for the athlete profile.
 13. Keep every active week present and structurally complete, especially the late-camp weeks.
-14. Preserve the sport-profiled weekly rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a higher-order planning rule forces a different order.
+14. Preserve the default boxer weekly rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a higher-order planning rule forces a different order.
 15. Do not create more active weekly sessions than the weekly_role_map allows. If the athlete has extra available days, leave them off or clearly optional rather than turning them into extra training days.
 16. If weekly_role_map or week_by_week_progression marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.
 17. If a week contains intentionally_unused_days entries with role off_day or recovery_only_day, leave those days as light recovery or completely off unless weekly_role_map.session_roles already includes an explicit converted low-load support role on that same day (for example recovery_aerobic_gas_tank_day or converted_low_aerobic_gas_tank_day). Do not invent new active sessions on unused days.
 18. Treat declared hard sparring days in weekly_role_map as immutable hard_sparring_day slots. Hard sparring days are the athlete's own combat locks (run in their gym, with or without a coach): the app does not prescribe or lead the sparring itself, and it never deloads, caps, or drops a declared hard sparring day. At D-18 or further out render the minimal label "Hard sparring — controlled hard contact" (or the equivalent sport-specific label such as "MMA — hard sparring / controlled hard contact") followed by exactly one short note: "Your declared hard-sparring/contact session — no extra S&C. Keep freshness priority." From D-17 onward hard sparring is banned: render "Technical-only combat" (or sport-equivalent) — the same applies whenever the day carries reason code "d17_hard_sparring_ban" — followed by exactly one short note: "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority." A technical-only day must never carry the hard-sparring note. Do not output round counts, time-x-rounds formulas, intensity targets, dose, RPE, work:rest, or any sparring template wording (e.g. never "6-8 x 3-min rounds at set intensity", "X rounds technical sparring", "live rounds at moderate intensity"). Nothing else — no programmed S&C is scheduled on a declared hard-sparring/contact day. Never say "coach-led" or "coach-owned" in athlete-facing text. If the previous plan rendered rounds, intensity, dose, or template sparring detail, strip it down to this minimal form.
-19. If weekly_role_map.intentional_compression.policy is combat_crowded_week, let sport_load_profile.highest_collision_load own the week, preserve at most one anchor and one low-load support day, and cut accessory, transfer, glycolytic, and optional alactic extras before touching the anchor.
-20. In combat-crowded weeks, anchor days and recovery/support days cannot pick up a second meaningful stressor. Strip the extra stressor instead of redistributing it across the week.
+19. If weekly_role_map.intentional_compression.policy is boxing_crowded_week, keep hard sparring as the week owner, preserve at most one anchor and one low-load support day, and cut accessory, transfer, glycolytic, and optional alactic extras before touching the anchor.
+20. In boxing crowded weeks, anchor days and recovery/support days cannot pick up a second meaningful stressor. Strip the extra stressor instead of redistributing it across the week.
 21. In taper weeks, keep the work short, direct, and low-noise with minimal branching.
 22. Keep the final output athlete-facing. Do not mention the validator, the repair process, or rejected items.
 23. If a target-weight constraint shaped the plan, acknowledge it plainly in the athlete-facing output.
@@ -252,7 +252,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
         elif code == "weekly_rhythm_broken":
             quality_fixes.append(
                 {
-                    "action": "restore_sport_profiled_weekly_rhythm",
+                    "action": "restore_default_boxer_weekly_rhythm",
                     "week_index": warning.get("week_index"),
                     "phase": warning.get("phase"),
                 }

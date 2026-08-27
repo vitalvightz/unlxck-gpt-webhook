@@ -21,8 +21,6 @@ def _make_training_context(
     injuries: list[str],
     support_work_days: list[str] | None = None,
     technical_skill_days: list[str] | None = None,
-    style_technical: list[str] | None = None,
-    style_tactical: list[str] | None = None,
 ) -> TrainingContext:
     return TrainingContext(
         fatigue="low",
@@ -30,8 +28,8 @@ def _make_training_context(
         days_available=3,
         training_days=["Mon", "Wed", "Fri"],
         injuries=injuries,
-        style_technical=style_technical or ["boxing"],
-        style_tactical=style_tactical or ["pressure_fighter"],
+        style_technical=["boxing"],
+        style_tactical=["pressure_fighter"],
         weaknesses=["gas_tank"],
         equipment=["heavy_bag"],
         weight_cut_risk=False,
@@ -52,10 +50,10 @@ def _make_training_context(
     )
 
 
-def _build(training_context: TrainingContext, *, programming_format: str = "boxing") -> dict:
+def _build(training_context: TrainingContext) -> dict:
     return athlete_model._build_athlete_model(
         training_context=training_context,
-        sport=programming_format,
+        sport="boxing",
         record="3-0",
         rounds_format="3x3",
         camp_length_weeks=5,
@@ -66,60 +64,6 @@ def _build(training_context: TrainingContext, *, programming_format: str = "boxi
 def test_build_athlete_model_is_canonical_across_modules():
     assert stage2_payload._build_athlete_model is athlete_model._build_athlete_model
     assert stage2_planning_brief._build_athlete_model is athlete_model._build_athlete_model
-
-
-def test_competition_sport_and_programming_format_are_explicitly_separate():
-    model = _build(_make_training_context(injuries=[]))
-    assert model["sport"] == "boxing"
-    assert model["competition_sport"] == "boxing"
-    assert model["programming_format"] == "boxing"
-    assert model["sport_identity_source"] == "competition_sport"
-
-
-def test_bjj_can_use_mma_programming_bank_without_receiving_mma_demand_profile():
-    model = _build(
-        _make_training_context(
-            injuries=[],
-            style_technical=["bjj"],
-            style_tactical=["grappler"],
-        ),
-        programming_format="mma",
-    )
-    assert model["sport"] == "bjj"
-    assert model["competition_sport"] == "bjj"
-    assert model["programming_format"] == "mma"
-    assert stage2_planning_brief._build_sport_load_profile(model)["key"] == "bjj"
-
-
-def test_wrestling_can_use_mma_programming_bank_without_receiving_mma_demand_profile():
-    model = _build(
-        _make_training_context(
-            injuries=[],
-            style_technical=["wrestling"],
-            style_tactical=["grappler"],
-        ),
-        programming_format="mma",
-    )
-    assert model["sport"] == "wrestling"
-    assert model["competition_sport"] == "wrestling"
-    assert model["programming_format"] == "mma"
-    assert stage2_planning_brief._build_sport_load_profile(model)["key"] == "wrestling"
-
-
-def test_mma_identity_wins_over_grappling_or_striking_style_expression():
-    for tactical_styles in (["grappler"], ["counter_striker"], ["hybrid"]):
-        model = _build(
-            _make_training_context(
-                injuries=[],
-                style_technical=["mma", "wrestling"],
-                style_tactical=tactical_styles,
-            ),
-            programming_format="mma",
-        )
-        assert model["sport"] == "mma"
-        assert model["competition_sport"] == "mma"
-        assert model["programming_format"] == "mma"
-        assert stage2_planning_brief._build_sport_load_profile(model)["key"] == "mma"
 
 
 def test_athlete_helpers_are_canonical_across_modules():

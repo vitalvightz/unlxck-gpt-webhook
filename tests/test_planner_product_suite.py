@@ -327,7 +327,7 @@ def test_scenario_wrestler_with_knee_pain_and_low_aerobic_base():
         include_rehab=True,
     )
 
-    assert brief["sport_load_profile"]["key"] == "mma"
+    assert brief["sport_load_profile"]["key"] == "wrestling"
     assert brief["limiter_profile"]["key"] == "aerobic_repeatability"
     assert brief["weekly_stress_map"]["GPP"]["conditioning_sequence"][0] == "aerobic"
     assert "rehab" in brief["phase_strategy"]["GPP"]["must_keep"]

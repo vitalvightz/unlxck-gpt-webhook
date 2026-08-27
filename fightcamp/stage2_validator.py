@@ -1186,7 +1186,7 @@ def _week_completeness_warnings(planning_brief: dict, plan_text: str) -> list[di
                 }
             )
 
-        if str(week.get("phase", "")).upper() in {"GPP", "SPP"}:
+        if sport_key == "boxing" and str(week.get("phase", "")).upper() in {"GPP", "SPP"}:
             expected_strength_roles = sum(1 for role in expected_roles if role.get("category") == "strength")
             has_recovery_role = any(role.get("category") == "recovery" for role in expected_roles)
             if expected_strength_roles >= 2 and has_recovery_role:
@@ -1203,7 +1203,7 @@ def _week_completeness_warnings(planning_brief: dict, plan_text: str) -> list[di
                     warnings.append(
                         {
                             "code": "weekly_rhythm_broken",
-                            "message": f"Week {week_index} breaks the sport-profiled combat rhythm where recovery should sit immediately before the primary strength day.",
+                            "message": f"Week {week_index} breaks the default boxer rhythm where recovery should sit immediately before the primary strength day.",
                             "week_index": week_index,
                             "phase": week.get("phase"),
                             "titles": titles,
@@ -1239,20 +1239,20 @@ def _match_crowded_week_session_block_index(
     return next((idx for idx in range(len(session_blocks)) if idx not in used_indices), None)
 
 
-def _combat_crowded_week_warnings(planning_brief: dict, final_plan_text: str) -> list[dict]:
+def _boxing_crowded_week_warnings(planning_brief: dict, final_plan_text: str) -> list[dict]:
     weekly_role_map = planning_brief.get("weekly_role_map") or {}
     weeks = list(weekly_role_map.get("weeks") or [])
     if not weeks:
         return []
+    if str(_athlete_snapshot(planning_brief).get("sport", "")).strip().lower() != "boxing":
+        return []
+
     warnings: list[dict] = []
     week_sections = _week_sections(final_plan_text)
 
     for week in weeks:
         intentional_compression = week.get("intentional_compression") or {}
-        if not (
-            intentional_compression.get("active")
-            and intentional_compression.get("policy") in {"combat_crowded_week", "boxing_crowded_week"}
-        ):
+        if not (intentional_compression.get("active") and intentional_compression.get("policy") == "boxing_crowded_week"):
             continue
 
         week_index = int(week.get("week_index", 0) or 0)
@@ -3184,7 +3184,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     equipment_congruence_warnings = _equipment_congruence_warnings(planning_brief, phase_sections, plan_lines)
     unresolved_access_fallback_warnings = _unresolved_access_fallback_warnings(planning_brief, phase_sections)
     week_completeness_warnings = _week_completeness_warnings(planning_brief, final_plan_text)
-    crowded_week_warnings = _combat_crowded_week_warnings(planning_brief, final_plan_text)
+    crowded_week_warnings = _boxing_crowded_week_warnings(planning_brief, final_plan_text)
     weight_cut_acknowledgement_warnings = _weight_cut_acknowledgement_warnings(planning_brief, final_plan_text)
     weight_cut_contradiction_warnings = _weight_cut_contradiction_warnings(planning_brief, final_plan_text)
     late_fight_header_contract_warnings = _late_fight_header_contract_warnings(planning_brief, plan_lines)

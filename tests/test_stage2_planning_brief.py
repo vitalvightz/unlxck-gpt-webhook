@@ -6,7 +6,6 @@ from fightcamp.stage2_payload import (
     _apply_high_fatigue_week_compression,
     _build_weekly_role_map,
     _boxing_day_identity_and_spacing_pass,
-    _combat_day_score,
     _compute_readiness_compression,
     _derive_competitive_maturity,
     _high_fatigue_compression_reason_codes,
@@ -587,7 +586,7 @@ def test_build_planning_brief_exposes_limiter_led_weekly_stress_map():
     assert spp_stress["organising_limiter"] == "coordination"
     assert spp_stress["conditioning_sequence"] == ["alactic", "aerobic", "glycolytic"]
     assert "limiter quality" in spp_stress["protect_first"]
-    assert "hardest live combat exposure" in spp_stress["live_load_collision_rule"]
+    assert "hard sparring" in spp_stress["sparring_collision_rule"]
     assert "pad or bag rounds" in spp_stress["replace_missing_live_load"]
 
 
@@ -789,10 +788,10 @@ def test_sport_load_collision_rules_beat_goal_push_when_collisions_rise():
 
     assert any("Prioritize conditioning slots" in rule for rule in push_rules)
     assert any("Preserve explosive and alactic work" in rule for rule in push_rules)
-    assert brief["sport_load_profile"]["key"] == "mma"
+    assert brief["sport_load_profile"]["key"] == "wrestling"
     assert brief["decision_hierarchy"][2]["driver"] == "sport_load_collision_rules"
-    assert "When sport load spikes, cut accessory strength volume and redundant conditioning density first." in spp_stress["cut_first_when_collisions_rise"]
-    assert "fight-pace positional or cage-wall rounds before extra lifting" in spp_stress["replace_missing_live_load"]
+    assert "When sport load spikes, cut optional strength accessories and non-essential conditioning density first." in spp_stress["cut_first_when_collisions_rise"]
+    assert "short positional goes or takedown chains before extra lifting" in spp_stress["replace_missing_live_load"]
 
 
 def test_weekly_stress_map_exposes_resolved_hierarchy_drivers():
@@ -823,8 +822,7 @@ def test_weekly_stress_map_exposes_resolved_hierarchy_drivers():
 
     assert resolved["protect_first_driver"] == "safety_and_readiness"
     assert resolved["cut_first_driver"] == "sport_load_collision_rules"
-    assert resolved["conditioning_sequence_driver"] == "phase_limiter_with_sport_profile"
-    assert resolved["conditioning_sequence"][0] == resolved["physiological_priority_sequence"][0]
+    assert resolved["conditioning_sequence_driver"] == "main_limiter"
 
 
 def test_weekly_role_governance_inherits_resolved_authority_drivers():
@@ -869,10 +867,7 @@ def test_weekly_role_governance_inherits_resolved_authority_drivers():
     suppressed = next(item for item in week["suppressed_roles"] if item["role_key"] == "light_fight_pace_touch_day")
 
     assert suppressed["governance"]["resolved_authority"]["cut_first_driver"] == "sport_load_collision_rules"
-    assert (
-        suppressed["governance"]["resolved_authority"]["conditioning_sequence_driver"]
-        == "phase_limiter_with_sport_profile"
-    )
+    assert suppressed["governance"]["resolved_authority"]["conditioning_sequence_driver"] == "main_limiter"
 
 
 
@@ -907,12 +902,12 @@ def test_build_planning_brief_uses_tissue_state_for_stiffness_or_injury_driven_c
     assert brief["sport_load_profile"]["key"] == "boxing"
     assert "conservative loading" in brief_profile["organising_principle"]
     assert "ballistic extras" in brief_profile["cut_first"]
-    assert spp_stress["conditioning_sequence"] == ["aerobic", "glycolytic", "alactic"]
+    assert spp_stress["conditioning_sequence"] == ["aerobic", "alactic", "glycolytic"]
     assert "recovery plus rehab only" in spp_stress["sport_load_interaction"]
 
 
 
-def test_build_planning_brief_uses_technical_quality_profile_with_boxing_expression():
+def test_build_planning_brief_uses_boxing_quality_profile_when_boxing_is_the_limiter():
     brief = _build_brief(
         {
             "sport": "boxing",
@@ -938,13 +933,11 @@ def test_build_planning_brief_uses_technical_quality_profile_with_boxing_express
     brief_profile = brief["limiter_profile"]
     spp_stress = brief["weekly_stress_map"]["SPP"]
 
-    assert brief_profile["key"] == "technical_quality_under_load"
+    assert brief_profile["key"] == "boxing_quality_under_load"
     assert brief["sport_load_profile"]["key"] == "boxing"
     assert "S&C staying secondary to sport output" in brief_profile["organising_principle"]
-    assert "technical quality and live-combat freshness" in brief_profile["protect_first"]
-    assert brief_profile["technical_quality_label"] == "boxing timing, ring movement, and shot quality"
-    assert "hardest live combat exposure owns" in spp_stress["live_load_collision_rule"]
-    assert "boxing quality" in spp_stress["sport_load_interaction"].lower()
+    assert "boxing quality and sparring freshness" in brief_profile["protect_first"]
+    assert "Hard sparring owns the main combat stress slot" in spp_stress["sparring_collision_rule"]
 
 
 
@@ -1016,7 +1009,7 @@ def test_build_planning_brief_uses_muay_thai_sport_load_profile():
 
 
 
-def test_build_planning_brief_keeps_explicit_mma_profile_with_wrestling_style_identity():
+def test_build_planning_brief_uses_wrestling_sport_load_profile_from_style_identity():
     brief = _build_brief(
         {
             "sport": "mma",
@@ -1042,10 +1035,10 @@ def test_build_planning_brief_keeps_explicit_mma_profile_with_wrestling_style_id
     sport_load = brief["sport_load_profile"]
     spp_stress = brief["weekly_stress_map"]["SPP"]
 
-    assert sport_load["key"] == "mma"
-    assert "hard MMA sparring" in sport_load["highest_collision_load"]
-    assert any("live wrestling" in rule.lower() for rule in sport_load["collision_rules"])
-    assert "cage-wall rounds" in spp_stress["replace_missing_live_load"]
+    assert sport_load["key"] == "wrestling"
+    assert "live goes" in sport_load["highest_collision_load"]
+    assert any("live goes" in rule.lower() for rule in sport_load["collision_rules"])
+    assert "takedown chains" in spp_stress["replace_missing_live_load"]
 
 
 
@@ -1082,7 +1075,7 @@ def test_build_planning_brief_falls_back_to_general_fight_readiness():
     assert brief["decision_hierarchy"][0]["driver"] == "phase_survival_rules"
     assert brief["decision_hierarchy"][2]["driver"] == "sport_load_collision_rules"
     assert "balanced development" in brief_profile["organising_principle"]
-    assert gpp_stress["conditioning_sequence"] == ["aerobic", "alactic", "glycolytic"]
+    assert gpp_stress["conditioning_sequence"] == ["aerobic", "glycolytic", "alactic"]
     assert "phase-critical work before accessories" in gpp_stress["protect_first"]
     assert "live wrestling or wall-work rounds" in gpp_stress["highest_collision_sport_load"]
 
@@ -1149,7 +1142,7 @@ def test_spp_conditioning_limiter_prioritizes_fight_pace_before_aerobic_support(
     week = brief["weekly_role_map"]["weeks"][0]
     conditioning_roles = [role for role in week["session_roles"] if role["category"] == "conditioning"]
 
-    assert brief["weekly_stress_map"]["SPP"]["conditioning_sequence"] == ["glycolytic", "aerobic", "alactic"]
+    assert brief["weekly_stress_map"]["SPP"]["conditioning_sequence"] == ["glycolytic", "alactic", "aerobic"]
     assert {role["preferred_system"] for role in conditioning_roles} == {"glycolytic", "alactic", "aerobic"}
     assert any(role["role_key"] == "fight_pace_repeatability_day" for role in conditioning_roles)
 
@@ -1496,7 +1489,7 @@ def test_weekly_role_map_fight_week_override_only_modifies_relevant_week():
             },
         ]
     }
-    limiter_profile = {"key": "technical_quality_under_load"}
+    limiter_profile = {"key": "boxing_quality_under_load"}
 
     baseline = _build_weekly_role_map(athlete_model, week_by_week_progression, limiter_profile)
     overridden = _build_weekly_role_map(
@@ -2602,7 +2595,7 @@ def test_high_fatigue_compression_blocks_glycolytic_on_next_training_day_after_r
             "fatigue": "high",
             "readiness_flags": ["high_fatigue"],
             "hard_sparring_days": ["Monday", "Wednesday"],
-            "training_days": ["Monday", "Tuesday", "Wednesday", "Friday", "Saturday"],
+            "training_days": ["Monday", "Tuesday", "Wednesday", "Friday"],
         },
         hard_sparring_plan=[
             {"day": "Monday", "status": "hard_as_planned"},
@@ -2669,7 +2662,7 @@ def test_high_fatigue_compression_allows_glycolytic_when_not_on_next_training_da
             "fatigue": "high",
             "readiness_flags": ["high_fatigue"],
             "hard_sparring_days": ["Monday", "Wednesday"],
-            "training_days": ["Monday", "Tuesday", "Wednesday", "Friday", "Saturday"],
+            "training_days": ["Monday", "Tuesday", "Wednesday", "Friday"],
         },
         hard_sparring_plan=[
             {"day": "Monday", "status": "deload_suggested"},
@@ -2967,354 +2960,6 @@ def _base_athlete(
     }
 
 
-def test_universal_limiter_uses_each_sport_profile_for_technical_expression():
-    sport_cases = {
-        "boxing": (["boxing"], "boxing", "boxing timing"),
-        "mma": (["mma"], "mma", "mma decision quality"),
-        "muay_thai": (["muay thai"], "kickboxing_muay_thai", "clinch quality"),
-        "kickboxing": (["kickboxing"], "kickboxing_muay_thai", "striking sharpness"),
-        "wrestling": (["wrestling"], "wrestling", "takedown speed"),
-        "bjj": (["bjj"], "bjj", "positional decision quality"),
-        "general_combat": (["general combat"], "general_combat", "sport-specific technical quality"),
-    }
-
-    for sport, (technical_styles, profile_key, expression) in sport_cases.items():
-        athlete = _base_athlete()
-        athlete.update(
-            sport=sport,
-            technical_styles=technical_styles,
-            tactical_styles=["generalist"],
-            key_goals=["skill_refinement"],
-            weaknesses=["footwork"],
-        )
-        brief = _build_brief(athlete)
-        limiter = brief["limiter_profile"]
-        stress = brief["weekly_stress_map"]["SPP"]
-
-        assert limiter["key"] == "technical_quality_under_load"
-        assert brief["sport_load_profile"]["key"] == profile_key
-        assert expression in limiter["technical_quality_label"].lower()
-        assert "boxing" not in limiter["universal_load_rule"].lower()
-        assert "boxing" not in limiter["live_load_collision_rule"].lower()
-        if sport != "boxing":
-            assert "boxing" not in stress["sport_load_interaction"].lower()
-
-
-def test_explicit_sport_wins_over_conflicting_style_profile_tokens():
-    cases = [
-        (
-            {"sport": "mma", "technical_styles": ["wrestler"], "tactical_styles": ["wrestling_heavy"]},
-            "mma",
-        ),
-        (
-            {"sport": "mma", "technical_styles": ["boxer"], "tactical_styles": ["counter_striker"]},
-            "mma",
-        ),
-        (
-            {"sport": "boxing", "technical_styles": ["boxing"], "tactical_styles": ["pressure_fighter"]},
-            "boxing",
-        ),
-        (
-            {"sport": "bjj", "technical_styles": ["wrestling"], "tactical_styles": ["wrestler"]},
-            "bjj",
-        ),
-    ]
-
-    for athlete_model, expected_profile in cases:
-        assert (
-            stage2_planning_brief_module._build_sport_load_profile(athlete_model)["key"]
-            == expected_profile
-        )
-
-
-def test_styles_only_infer_sport_profile_when_explicit_sport_is_missing_or_unknown():
-    assert stage2_planning_brief_module._build_sport_load_profile(
-        {"sport": "", "technical_styles": ["wrestler"]}
-    )["key"] == "wrestling"
-    assert stage2_planning_brief_module._build_sport_load_profile(
-        {"sport": "unknown ruleset", "technical_styles": ["boxer"]}
-    )["key"] == "boxing"
-
-
-def test_programming_format_sport_keeps_style_fallback_for_bjj_and_wrestling_intake():
-    assert stage2_planning_brief_module._build_sport_load_profile(
-        {
-            "sport": "mma",
-            "sport_identity_source": "programming_format",
-            "technical_styles": ["bjj"],
-        }
-    )["key"] == "bjj"
-    assert stage2_planning_brief_module._build_sport_load_profile(
-        {
-            "sport": "mma",
-            "sport_identity_source": "programming_format",
-            "technical_styles": ["wrestler"],
-        }
-    )["key"] == "wrestling"
-
-
-def test_sport_profile_changes_expression_without_changing_universal_scheduler():
-    boxing = _base_athlete()
-    wrestling = {
-        **_base_athlete(),
-        "sport": "wrestling",
-        "technical_styles": ["wrestling"],
-        "tactical_styles": ["wrestler"],
-    }
-
-    boxing_week = _spp_week_role_map(boxing, session_counts={"strength": 2, "conditioning": 2, "recovery": 1})
-    wrestling_week = _spp_week_role_map(wrestling, session_counts={"strength": 2, "conditioning": 2, "recovery": 1})
-
-    boxing_systems = [
-        role.get("preferred_system")
-        for role in boxing_week["session_roles"]
-        if role.get("category") == "conditioning" and not role.get("recovery_compatible")
-    ]
-    wrestling_systems = [
-        role.get("preferred_system")
-        for role in wrestling_week["session_roles"]
-        if role.get("category") == "conditioning" and not role.get("recovery_compatible")
-    ]
-
-    assert set(boxing_systems) == {"aerobic", "glycolytic"}
-    assert set(wrestling_systems) == {"alactic", "glycolytic"}
-    assert boxing_week["conditioning_sequence"] == ["glycolytic", "aerobic", "alactic"]
-    assert wrestling_week["conditioning_sequence"] == ["glycolytic", "alactic", "aerobic"]
-    assert (
-        boxing_week["resolved_rule_state"]["conditioning_sequence"]
-        == boxing_week["conditioning_sequence"]
-    )
-    assert (
-        wrestling_week["resolved_rule_state"]["conditioning_sequence"]
-        == wrestling_week["conditioning_sequence"]
-    )
-    assert all(role.get("scheduled_day_hint") for role in wrestling_week["session_roles"])
-    assert all(
-        sum(1 for role in wrestling_week["session_roles"] if role.get("scheduled_day_hint") == day and _is_meaningful_stressor(role)) <= 1
-        for day in wrestling["training_days"]
-    )
-
-
-def test_crowded_week_intelligence_applies_to_every_combat_sport_profile():
-    sport_cases = {
-        "boxing": ["boxing"],
-        "mma": ["mma"],
-        "muay_thai": ["muay thai"],
-        "kickboxing": ["kickboxing"],
-        "wrestling": ["wrestling"],
-        "bjj": ["bjj"],
-        "general_combat": ["general combat"],
-    }
-
-    for sport, technical_styles in sport_cases.items():
-        athlete = _base_athlete(
-            fatigue="moderate",
-            training_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-            hard_sparring_days=["Tuesday", "Thursday", "Saturday"],
-            weight_cut_risk=True,
-            weight_cut_pct=4.2,
-            readiness_flags=["moderate_fatigue", "active_weight_cut"],
-        )
-        athlete.update(sport=sport, technical_styles=technical_styles, tactical_styles=["generalist"])
-        week = _spp_week_role_map(athlete)
-        non_live_roles = [role for role in week["session_roles"] if role["role_key"] != "hard_sparring_day"]
-
-        assert week["intentional_compression"]["active"] is True
-        assert week["intentional_compression"]["policy"] == "combat_crowded_week"
-        assert len(non_live_roles) <= 2
-        assert sum(role["governance"]["main_job"] == "anchor" for role in non_live_roles) <= 1
-        assert sum(role["governance"]["main_job"] == "support_recovery" for role in non_live_roles) <= 1
-        assert all(role.get("preferred_system") != "glycolytic" for role in non_live_roles)
-
-
-def test_sport_collision_fields_drive_deterministic_day_scoring():
-    bjj_profile = stage2_planning_brief_module._build_sport_load_profile(
-        {"sport": "bjj", "technical_styles": ["bjj"]}
-    )
-    hard_live_role = {
-        "category": "sparring",
-        "role_key": "hard_sparring_day",
-        "hard_sparring_status": "hard_as_planned",
-    }
-    anchor = {"category": "strength", "role_key": "primary_strength_day"}
-    glycolytic = {
-        "category": "conditioning",
-        "role_key": "fight_pace_repeatability_day",
-        "preferred_system": "glycolytic",
-    }
-    day_to_roles = {"Monday": [hard_live_role], "Tuesday": []}
-
-    bjj_anchor_score = _combat_day_score(
-        anchor,
-        "Tuesday",
-        anchor_day="",
-        prefer_midweek_anchor=False,
-        readiness_sensitive=False,
-        training_days=["Monday", "Tuesday"],
-        day_to_roles=day_to_roles,
-        sport_load_profile=bjj_profile,
-    )
-    status_relaxed_profile = {
-        **bjj_profile,
-        "collision_scheduling": {
-            **bjj_profile["collision_scheduling"],
-            "block_anchor_next_day_after_statuses": [],
-        },
-    }
-    status_relaxed_anchor_score = _combat_day_score(
-        anchor,
-        "Tuesday",
-        anchor_day="",
-        prefer_midweek_anchor=False,
-        readiness_sensitive=False,
-        training_days=["Monday", "Tuesday"],
-        day_to_roles=day_to_roles,
-        sport_load_profile=status_relaxed_profile,
-    )
-    bjj_same_day_glycolytic_score = _combat_day_score(
-        glycolytic,
-        "Monday",
-        anchor_day="",
-        prefer_midweek_anchor=False,
-        readiness_sensitive=False,
-        training_days=["Monday", "Tuesday"],
-        day_to_roles=day_to_roles,
-        sport_load_profile=bjj_profile,
-    )
-    glycolytic_relaxed_profile = {
-        **bjj_profile,
-        "collision_scheduling": {
-            **bjj_profile["collision_scheduling"],
-            "blocked_same_day_conditioning_systems": [],
-        },
-    }
-    relaxed_same_day_glycolytic_score = _combat_day_score(
-        glycolytic,
-        "Monday",
-        anchor_day="",
-        prefer_midweek_anchor=False,
-        readiness_sensitive=False,
-        training_days=["Monday", "Tuesday"],
-        day_to_roles=day_to_roles,
-        sport_load_profile=glycolytic_relaxed_profile,
-    )
-    collision_athlete = {
-        "sport": "bjj",
-        "technical_styles": ["bjj"],
-        "training_days": ["Monday", "Tuesday"],
-        "hard_sparring_days": ["Monday"],
-        "fatigue": "low",
-        "readiness_flags": [],
-        "weight_cut_risk": False,
-        "weight_cut_pct": 0.0,
-        "injuries": [],
-    }
-    collision_roles = [
-        {**hard_live_role, "session_index": 1, "scheduled_day_hint": "Monday"},
-        {**glycolytic, "session_index": 2, "scheduled_day_hint": "Monday"},
-    ]
-    cap_two_bjj_profile = {
-        **bjj_profile,
-        "planning_rules": {
-            **bjj_profile["planning_rules"],
-            "max_meaningful_stressors_per_day": 2,
-        },
-    }
-    placed_roles, placed_suppressed, _ = _boxing_day_identity_and_spacing_pass(
-        {"phase": "SPP", "declared_hard_sparring_days": ["Monday"]},
-        [dict(role) for role in collision_roles],
-        [],
-        collision_athlete,
-        cap_two_bjj_profile,
-    )
-    relaxed_cap_two_profile = {
-        **glycolytic_relaxed_profile,
-        "planning_rules": {
-            **glycolytic_relaxed_profile["planning_rules"],
-            "max_meaningful_stressors_per_day": 2,
-        },
-    }
-    relaxed_roles, relaxed_suppressed, _ = _boxing_day_identity_and_spacing_pass(
-        {"phase": "SPP", "declared_hard_sparring_days": ["Monday"]},
-        [dict(role) for role in collision_roles],
-        [],
-        collision_athlete,
-        relaxed_cap_two_profile,
-    )
-
-    assert bjj_profile["collision_scheduling"]["hard_live_role_keys"] == ["hard_sparring_day"]
-    assert bjj_anchor_score == -10_000
-    assert status_relaxed_anchor_score > -10_000
-    assert bjj_same_day_glycolytic_score == -10_000
-    assert relaxed_same_day_glycolytic_score > -10_000
-    assert not placed_suppressed
-    assert {role["scheduled_day_hint"] for role in placed_roles} == {"Monday", "Tuesday"}
-    assert not relaxed_suppressed
-    assert {role["scheduled_day_hint"] for role in relaxed_roles} == {"Monday"}
-    assert bjj_profile["collision_field_authority"]["guidance_only"] == [
-        "highest_collision_load",
-        "primary_live_loads",
-        "collision_rules",
-    ]
-    assert bjj_profile["collision_field_authority"]["current_live_role_contract"] == "hard_sparring_day"
-
-
-def test_meaningful_stressor_cap_is_consumed_by_spacing_pass():
-    athlete = {
-        "sport": "boxing",
-        "training_days": ["Monday", "Tuesday"],
-        "hard_sparring_days": [],
-        "fatigue": "low",
-        "readiness_flags": [],
-        "weight_cut_risk": False,
-        "weight_cut_pct": 0.0,
-        "injuries": [],
-    }
-    week_entry = {"phase": "SPP", "intentional_compression": {"policy": ""}}
-
-    def roles() -> list[dict]:
-        return [
-            {
-                "session_index": 1,
-                "category": "strength",
-                "role_key": "primary_strength_day",
-                "scheduled_day_hint": "Monday",
-            },
-            {
-                "session_index": 2,
-                "category": "conditioning",
-                "role_key": "fight_pace_repeatability_day",
-                "preferred_system": "glycolytic",
-                "scheduled_day_hint": "Monday",
-            },
-        ]
-
-    cap_two_profile = stage2_planning_brief_module._build_sport_load_profile(athlete)
-    cap_two_profile["planning_rules"]["max_meaningful_stressors_per_day"] = 2
-    kept_two, suppressed_two, _ = _boxing_day_identity_and_spacing_pass(
-        dict(week_entry),
-        roles(),
-        [],
-        athlete,
-        cap_two_profile,
-    )
-
-    cap_one_profile = stage2_planning_brief_module._build_sport_load_profile(athlete)
-    cap_one_profile["planning_rules"]["max_meaningful_stressors_per_day"] = 1
-    kept_one, suppressed_one, _ = _boxing_day_identity_and_spacing_pass(
-        dict(week_entry),
-        roles(),
-        [],
-        athlete,
-        cap_one_profile,
-    )
-
-    assert not suppressed_two
-    assert {role["scheduled_day_hint"] for role in kept_two} == {"Monday"}
-    assert not suppressed_one
-    assert {role["scheduled_day_hint"] for role in kept_one} == {"Monday", "Tuesday"}
-
-
 # ── Scenario 1: Sparring counts against weekly cap ──────────────────────────
 
 def test_spar_first_sparring_counted_against_weekly_cap():
@@ -3568,7 +3213,7 @@ def test_meaningful_stressor_detects_explicit_high_load_markers():
 
 
 def test_boxing_spacing_prefers_reshuffling_lighter_role_before_drop():
-    week_entry = {"phase": "SPP", "intentional_compression": {"policy": "combat_crowded_week"}}
+    week_entry = {"phase": "SPP", "intentional_compression": {"policy": "boxing_crowded_week"}}
     athlete = {
         "sport": "boxing",
         "training_days": ["Monday", "Tuesday"],
