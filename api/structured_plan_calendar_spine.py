@@ -415,14 +415,15 @@ def _count_sessions(weeks: Any) -> int:
 
 
 def _plan_signature(weeks: Any, fight_date: date) -> tuple:
-    """A structural fingerprint: Mon-Sun grouping, per-day identity, and phase.
+    """A structural fingerprint for every calendar field the renderer consumes.
 
     Two plans share a signature only when they group the same days into the same
-    weeks with the same authoritative date/countdown/weekday/phase and the same
-    has-session shape. Cosmetic differences (a datetime suffix, ``D0`` vs ``D-0``,
-    ``Monday`` vs ``Mon``, the week id) are normalised away so the reconcile is a
-    true no-op on an already-correct plan — but a mega-week, a mislabelled phase,
-    a dropped day or a wrong date all change the fingerprint and trigger a rebuild.
+    weeks with the same authoritative week boundaries, date/countdown/weekday/
+    phase identity and the same has-session shape. Cosmetic differences (a
+    datetime suffix, ``D0`` vs ``D-0``, ``Monday`` vs ``Mon``, the week id) are
+    normalised away so the reconcile is a true no-op on an already-correct plan —
+    but a mega-week, stale week range, mislabelled phase, dropped day or wrong date
+    all change the fingerprint and trigger a rebuild.
     """
     signature: list[Any] = []
     for week in weeks if isinstance(weeks, list) else []:
@@ -438,7 +439,16 @@ def _plan_signature(weeks: Any, fight_date: date) -> tuple:
             phase = _valid_phase(day.get("phase_label"))
             has_sessions = bool(day.get("sessions"))
             day_sig.append((d_day, iso, weekday, phase, has_sessions))
-        signature.append((_valid_phase(week.get("phase_label")), tuple(day_sig)))
+        signature.append(
+            (
+                _valid_phase(week.get("phase_label")),
+                str(week.get("start_date") or "").strip()[:10],
+                str(week.get("end_date") or "").strip()[:10],
+                _parse_dday(week.get("countdown_start")),
+                _parse_dday(week.get("countdown_end")),
+                tuple(day_sig),
+            )
+        )
     return tuple(signature)
 
 
@@ -568,10 +578,9 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> Any:
             _assemble_week(days_out=days_out, source_week=source_week, week_index=index + 1)
         )
 
-    # Already correct: identical Mon-Sun grouping, phases, calendar identity and
-    # session shape. Return the input untouched so a right plan is never churned —
-    # but note continuity ALONE does not qualify (a continuous mega-week has a
-    # different grouping signature and is rebuilt).
+    # Already correct: identical Mon-Sun grouping, phases, week boundaries,
+    # calendar identity and session shape. Return the input untouched so a right
+    # plan is never churned — but continuity ALONE does not qualify.
     if _plan_signature(plan_weeks, fight_date) == _plan_signature(new_weeks, fight_date):
         return structured_plan
 
