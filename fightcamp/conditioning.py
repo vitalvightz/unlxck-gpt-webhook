@@ -1048,6 +1048,7 @@ TAPER_CONDITIONING_SAFE_NAMES = {
 _format_weights_cache = None
 _coordination_bank_cache = None
 coordination_bank = None
+_technical_footwork_bank_cache = None
 
 def get_conditioning_bank():
     global _conditioning_bank_cache
@@ -1103,11 +1104,46 @@ def get_coordination_bank():
     coordination_bank = loaded_coordination_bank
     return _coordination_bank_cache
 
+def get_technical_footwork_bank():
+    """Load the standalone technical footwork bank.
+
+    This bank holds sport-specific movement-quality / taper footwork rehearsal
+    (stance resets, pivots, ring cutting, kick recovery, scramble rebase). It is
+    deliberately kept OUT of the main conditioning scoring pool
+    (``get_conditioning_bank``): these are technical drills, not a physiological
+    conditioning dose. They reach a plan only through the dedicated
+    ``_insert_technical_footwork_drill`` guarantee, gated on footwork relevance
+    (mirroring the coordination bank). The bank is optional; a missing file
+    degrades to an empty list rather than raising.
+    """
+    global _technical_footwork_bank_cache
+    if _technical_footwork_bank_cache is not None:
+        return _technical_footwork_bank_cache
+    try:
+        bank = _load_bank(
+            DATA_DIR / "technical_footwork_bank.json",
+            source="technical_footwork_bank.json",
+            enforce_conditioning_systems=True,
+        )
+    except FileNotFoundError:
+        logger.warning("[bank-load] optional technical footwork bank missing")
+        bank = []
+    loaded: list[dict] = []
+    if isinstance(bank, list):
+        loaded.extend(item for item in bank if isinstance(item, dict))
+    elif isinstance(bank, dict):
+        for items in bank.values():
+            if isinstance(items, list):
+                loaded.extend(item for item in items if isinstance(item, dict))
+    _technical_footwork_bank_cache = loaded
+    return _technical_footwork_bank_cache
+
 def prime_conditioning_banks() -> None:
     get_conditioning_bank()
     get_style_conditioning_bank()
     get_format_weights()
     get_coordination_bank()
+    get_technical_footwork_bank()
 
 def get_system_or_warn(drill: dict, *, source: str) -> str | None:
     system = normalize_system(drill.get("system"), source=source)
@@ -1446,6 +1482,134 @@ def select_coordination_drill(flags, existing_names: set[str], injuries: list[st
         if decision.action != "exclude":
             return drill
     return None
+
+# Goal/weakness tokens that make sport-specific technical footwork relevant.
+# Mirrors the coordination-goal gate: technical footwork is a deliberate,
+# relevance-gated insert, not generic aerobic filler.
+TECHNICAL_FOOTWORK_FOCUS_TOKENS = {
+    "footwork",
+    "foot_work",
+    "footwork_speed",
+    "footwork_quality",
+    "ring_movement",
+    "ringcraft",
+    "ring_craft",
+    "ring_generalship",
+    "ring_iq",
+    "ring_cutting",
+    "angles",
+    "angle",
+    "angle_creation",
+    "angle_exit",
+    "pivot",
+    "pivots",
+    "lateral_movement",
+    "lateral",
+    "stance",
+    "stance_reset",
+    "movement_quality",
+    "cut_off",
+    "cutting_off",
+    "distance_management",
+    "distance_control",
+    "range_management",
+    "in_and_out",
+}
+
+# reactive_level values permitted per phase. Technical footwork stays familiar
+# and low-novelty in taper (no new coordination challenge near the fight); SPP
+# is where fight-reactive movement is phase-appropriate.
+_TECHNICAL_FOOTWORK_REACTIVE_BY_PHASE = {
+    "GPP": {"closed", "semi_reactive"},
+    "SPP": {"closed", "semi_reactive", "reactive"},
+    "TAPER": {"closed", "semi_reactive"},
+}
+
+
+def _footwork_focus_tokens(values) -> set[str]:
+    tokens: set[str] = set()
+    for value in values or []:
+        text = str(value).strip().lower()
+        if not text:
+            continue
+        tokens.add(text.replace(" ", "_").replace("-", "_"))
+    tokens.update(normalize_tags(list(values or [])))
+    return tokens
+
+
+def _technical_footwork_relevance(flags) -> bool:
+    """Whether the athlete's goals/weaknesses call for technical footwork work."""
+    tokens = _footwork_focus_tokens(
+        [*flags.get("key_goals", []), *flags.get("weaknesses", [])]
+    )
+    return bool(tokens & TECHNICAL_FOOTWORK_FOCUS_TOKENS)
+
+
+def select_technical_footwork_drill(flags, existing_names: set[str], injuries: list[str]):
+    """Return a technical footwork drill matching the athlete, or ``None``.
+
+    Gated on footwork relevance (goals/weaknesses), phase eligibility,
+    per-drill ``reactive_level`` vs phase, and equipment. Sport + tactical
+    function drive the pick so a boxer gets boxing footwork and a counter
+    striker gets defensive/angle movement. Injury gating is applied to the
+    shortlist. Taper/D-day (``late_windows``) gating is handled downstream by
+    ``_try_append_conditioning_drill`` so it stays consistent with the rest of
+    the conditioning selector.
+    """
+    if not _technical_footwork_relevance(flags):
+        return None
+
+    phase = str(flags.get("phase", "GPP")).upper()
+    reactive_allowed = _TECHNICAL_FOOTWORK_REACTIVE_BY_PHASE.get(
+        phase, {"closed", "semi_reactive"}
+    )
+    equipment_access = set(normalize_athlete_equipment_list(flags.get("equipment", [])))
+    fight_format = str(flags.get("fight_format") or flags.get("sport") or "").strip().lower()
+    style_tokens = set(
+        normalize_tags([*flags.get("style_tactical", []), *flags.get("style_technical", [])])
+    )
+
+    candidates = []
+    for drill in get_technical_footwork_bank():
+        if phase not in [str(p).upper() for p in drill.get("phases", [])]:
+            continue
+        if drill.get("name") in existing_names:
+            continue
+        reactive_level = str(drill.get("reactive_level", "closed")).strip().lower() or "closed"
+        if reactive_level not in reactive_allowed:
+            continue
+        # Keep novel, high-complexity coordination out of the taper: the athlete
+        # rehearses only well-grooved movement close to the fight.
+        complexity = str(drill.get("technical_complexity", "moderate")).strip().lower()
+        if phase == "TAPER" and complexity == "high":
+            continue
+        equipment = normalize_equipment_list(drill.get("equipment", []))
+        if equipment and not set(equipment).issubset(equipment_access):
+            continue
+        candidates.append(drill)
+
+    if not candidates:
+        return None
+
+    def _match_score(drill: dict) -> int:
+        tags = set(normalize_tags(drill.get("tags", [])))
+        functions = {str(f).strip().lower() for f in drill.get("tactical_function", []) if str(f).strip()}
+        score = 0
+        if fight_format and fight_format in tags:
+            score += 2
+        if style_tokens & tags:
+            score += 1
+        if style_tokens & functions:
+            score += 1
+        return score
+
+    candidates.sort(key=lambda d: (-_match_score(d), d.get("name") or ""))
+    for drill in candidates[:INJURY_GUARD_SHORTLIST]:
+        decision = injury_decision(drill, injuries, phase, flags.get("fatigue", "low"))
+        if decision.action != "exclude":
+            return drill
+    return None
+
 
 def format_drill_block(drill: dict, *, phase_color: str = "#000", fallback: bool = False) -> str:
     """Return a formatted Markdown block for a single drill."""
@@ -2809,6 +2973,12 @@ def generate_conditioning_block(flags):
         system_quota["alactic"] = min(system_quota.get("alactic", 0) + 1, 2)
         visible_drill_cap = total_drills + 1
 
+    # Whether the athlete has an explicit footwork/ring-movement focus. Gates
+    # the dedicated technical footwork insert (below). Technical footwork is a
+    # relevance-gated supplementary insert, never a primary energy-system
+    # conditioning dose, mirroring the coordination-goal guarantee.
+    technical_footwork_focus = _technical_footwork_relevance(flags)
+
     final_drills = []
     taper_selected = 0
     selected_counts = {"aerobic": 0, "glycolytic": 0, "alactic": 0}
@@ -3032,6 +3202,7 @@ def generate_conditioning_block(flags):
                 "coordination": "coordination_bank.json",
                 "skill_refinement": "style_conditioning_bank.json",
                 "style_taper": "style_taper_conditioning.json",
+                "technical_footwork": "technical_footwork_bank.json",
                 "runtime_fallback": "runtime_fallback",
             }.get(source, "conditioning_bank.json")
             late_eval = _cached_late_eval(drill, system, source_file)
@@ -3531,6 +3702,60 @@ def generate_conditioning_block(flags):
             if not inserted:
                 log_fail_safe_degrade(module="conditioning", phase=phase, reason="pro_neck_no_candidate", target=1, actual=0)
     _run_conditioning_poststep("pro_neck_guarantee", _insert_pro_neck_drill)
+
+    # --------- OPTIONAL TECHNICAL FOOTWORK INSERTION ---------
+    # Relevance-gated technical movement rehearsal for footwork-focused
+    # athletes, mirroring the coordination/skill-refinement guarantees. Runs
+    # last (after the energy-system fill, the other guarantees and the pro neck
+    # safety insert) so it only ever fills a leftover drill slot and never
+    # starves a primary conditioning dose. It is never scored against the
+    # energy-system pool, so it cannot be selected as a primary conditioning
+    # dose; when it appears it carries the ``technical_footwork_guarantee``
+    # reason code. In taper the conditioning pool is heavily restricted, so this
+    # is where familiar low-fatigue footwork most often fills the gap.
+    def _insert_technical_footwork_drill() -> None:
+        if not technical_footwork_focus or len(selected_drill_names) >= visible_drill_cap:
+            return
+        existing_names = {d.get("name") for _, drills in final_drills for d in drills}
+        drill = select_technical_footwork_drill(
+            {**flags, "equipment": equipment_access}, existing_names, injuries
+        )
+        if not drill:
+            log_fail_safe_degrade(
+                module="conditioning",
+                phase=phase,
+                reason="technical_footwork_no_candidate",
+                target=1,
+                actual=0,
+            )
+            return
+        system = _cached_system(drill, "technical_footwork")
+        if system is None:
+            return
+        if not _try_append_conditioning_drill(
+            system,
+            drill,
+            {
+                "goal_hits": 1,
+                "weakness_hits": 0,
+                "style_hits": 0,
+                "phase_hits": 1,
+                "load_adjustments": 0,
+                "equipment_boost": 0,
+                "penalties": 0,
+                "reason_codes": ["technical_footwork_guarantee"],
+                "final_score": 0,
+            },
+            source="technical_footwork",
+        ):
+            log_fail_safe_degrade(
+                module="conditioning",
+                phase=phase,
+                reason="technical_footwork_no_candidate",
+                target=1,
+                actual=0,
+            )
+    _run_conditioning_poststep("technical_footwork_insertion", _insert_technical_footwork_drill)
 
     # Trim any extras beyond the recommended count
     def _trim_extra_drills() -> None:

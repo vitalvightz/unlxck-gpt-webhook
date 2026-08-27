@@ -46,7 +46,7 @@ STRENGTH_BANK_SOURCES = {
 CONDITIONING_BANK_SOURCES = {
     "conditioning_bank.json",
     "coordination_bank.json",
-    "footwork_conditioning_bank.json",
+    "technical_footwork_bank.json",
     "style_conditioning_bank.json",
     "style_taper_conditioning.json",
 }
