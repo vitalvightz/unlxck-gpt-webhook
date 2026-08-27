@@ -25,6 +25,7 @@ from .intelligent_notifications import (
 from .push_notifications import push_notifications_configured
 from .session_timing_notifications import dispatch_session_timing_notification
 from .fight_camp_notifications import dispatch_fight_camp_notifications
+from .streak_notifications import dispatch_streak_at_risk_notifications
 
 logger = logging.getLogger(__name__)
 
@@ -172,6 +173,16 @@ def run_morning_push_sweep(
             )
             if orchestration.candidate_count > 0:
                 sent += orchestration.delivered_count
+                continue
+
+            streak_result = dispatch_streak_at_risk_notifications(
+                store,
+                profile_id=profile_id,
+                timezone_name=timezone_name,
+                now_utc=now,
+            )
+            if streak_result.candidate_count > 0:
+                sent += streak_result.delivered_count
                 continue
 
             # Compatibility fallback for profiles whose current state cannot yet
