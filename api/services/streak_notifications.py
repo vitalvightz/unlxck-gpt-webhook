@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
-from typing import Any, Mapping
+from typing import Mapping
 from zoneinfo import ZoneInfo
 
 from api.contracts.command_view import CommandView
@@ -92,7 +92,7 @@ def _training_risk_expiry(
 
 
 def _app_streak_is_at_risk(
-    state: Mapping[str, Any],
+    state: Mapping[str, object],
     *,
     training_day: str,
 ) -> bool:
