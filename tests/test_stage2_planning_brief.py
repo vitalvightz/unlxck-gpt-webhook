@@ -3513,3 +3513,74 @@ def test_weekly_role_map_rotates_to_first_available_training_day_after_generatio
         {"key": "general_fight_readiness"},
     )
     assert role_map["weeks"][0]["declared_training_days"] == ["friday", "monday"]
+
+
+def test_boxing_golden_baseline_keeps_full_app_density_around_coach_sparring():
+    """A coach-owned spar day constrains placement without replacing the app plan."""
+    training_days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    athlete = _base_athlete(
+        training_days=training_days,
+        training_frequency=len(training_days),
+        hard_sparring_days=["Wednesday"],
+    )
+    athlete.update(
+        {
+            "key_goals": ["skill_refinement", "power", "conditioning"],
+            "weaknesses": ["footwork", "coordination_proprioception"],
+            "tactical_styles": ["counter_striker"],
+        }
+    )
+
+    brief = _build_progression_brief(
+        athlete,
+        {
+            "SPP": {
+                "objective": "increase fight-specific repeatability and power transfer",
+                "emphasize": ["glycolytic repeatability", "sport speed"],
+                "deprioritize": ["non-specific conditioning volume"],
+                "risk_flags": [],
+                "session_counts": {"strength": 2, "conditioning": 2, "recovery": 1},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["glycolytic", "alactic", "primary_strength"],
+                    "conditioning_drop_order_if_thin": ["aerobic"],
+                },
+                "weeks": 1,
+                "days": 7,
+            }
+        },
+    )
+
+    week = brief["weekly_role_map"]["weeks"][0]
+    app_roles = [role for role in week["session_roles"] if role["governance"]["execution_only"]]
+    coach_roles = [role for role in week["session_roles"] if not role["governance"]["execution_only"]]
+
+    assert brief["sport_load_profile"]["key"] == "boxing"
+    assert brief["limiter_profile"]["key"] == "coordination"
+    assert "boxing timing" in brief["limiter_profile"]["boxing_load_rule"].lower()
+    assert "cut accessories first" in brief["limiter_profile"]["sparring_collision_rule"].lower()
+
+    assert len(app_roles) == 5
+    assert len(coach_roles) == 1
+    assert coach_roles[0]["role_key"] == "hard_sparring_day"
+    assert coach_roles[0]["scheduled_day_hint"] == "Wednesday"
+    assert {role["scheduled_day_hint"] for role in app_roles}.isdisjoint(
+        {role["scheduled_day_hint"] for role in coach_roles}
+    )
+    assert len({role["scheduled_day_hint"] for role in week["session_roles"]}) == len(week["session_roles"])
+
+    category_counts = {
+        category: sum(role["category"] == category for role in app_roles)
+        for category in ("strength", "conditioning", "recovery")
+    }
+    assert category_counts == {"strength": 2, "conditioning": 2, "recovery": 1}
+    assert {
+        role.get("preferred_system")
+        for role in app_roles
+        if role["category"] == "conditioning"
+    } == {"aerobic", "glycolytic"}
+
+    recovery = next(role for role in app_roles if role["category"] == "recovery")
+    strength_anchor = next(role for role in app_roles if role["anchor"] == "highest_neural_day")
+    assert training_days.index(recovery["scheduled_day_hint"]) + 1 == training_days.index(
+        strength_anchor["scheduled_day_hint"]
+    )
