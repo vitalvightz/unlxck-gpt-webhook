@@ -19,6 +19,8 @@ from api.store import AppStore
 
 MIN_STREAK_FOR_RISK_PUSH = 3
 TERMINAL_SESSION_STATUSES = frozenset({"done", "modified", "skipped"})
+KNOWN_TRAINING_RISK_DELAY = timedelta(minutes=90)
+KNOWN_TRAINING_RISK_WINDOW = timedelta(minutes=90)
 
 
 @dataclass(frozen=True)
@@ -62,18 +64,31 @@ def _fight_day(view: CommandView, training_day: str) -> bool:
     return str(value)[:10] == training_day
 
 
-def _training_risk_due(
+def _training_risk_expiry(
     local_now: datetime,
     timing: ResolvedTrainingTime | None,
-) -> bool:
-    if not (20 <= local_now.hour < 22):
-        return False
+) -> datetime | None:
+    """Return the athlete-local expiry when a Training Streak reminder is due.
+
+    Known medium/high-confidence sessions get a window relative to the actual
+    training time, so a late session can still be reminded after its likely end.
+    We retain the original 20:00 earliest-send floor for normal daytime/evening
+    sessions, while after-midnight sessions use their own schedule directly.
+    Weak timing evidence remains conservative and only uses 21:00-22:00.
+    """
+
     if timing is not None and timing.timing_confidence in {"medium", "high"}:
         scheduled_local = timing.resolved_training_time.astimezone(local_now.tzinfo)
-        return local_now >= scheduled_local + timedelta(minutes=90)
-    # With weak timing evidence, wait until the final hour instead of guessing
-    # that an athlete has already trained.
-    return local_now.hour >= 21
+        eligible_at = scheduled_local + KNOWN_TRAINING_RISK_DELAY
+        if scheduled_local.hour >= 3:
+            evening_floor = scheduled_local.replace(hour=20, minute=0, second=0, microsecond=0)
+            eligible_at = max(eligible_at, evening_floor)
+        expires_at = eligible_at + KNOWN_TRAINING_RISK_WINDOW
+        return expires_at if eligible_at <= local_now < expires_at else None
+
+    if 21 <= local_now.hour < 22:
+        return local_now.replace(hour=22, minute=0, second=0, microsecond=0)
+    return None
 
 
 def _app_streak_is_at_risk(
@@ -184,7 +199,7 @@ def build_streak_at_risk_candidates(
         and not terminal
         and not stop_call
         and not fight_day
-        and 19 <= local_now.hour < 22
+        and (local_now.hour >= 19 or local_now.hour < 3)
     ):
         verified = _authoritative_training_current(
             store,
@@ -216,8 +231,8 @@ def build_streak_at_risk_candidates(
         except Exception:  # noqa: BLE001 - low-confidence timing fallback is safer than no sweep
             timing = None
 
-        if _training_risk_due(local_now, timing):
-            expires_local = local_now.replace(hour=22, minute=0, second=0, microsecond=0)
+        expires_local = _training_risk_expiry(local_now, timing)
+        if expires_local is not None:
             return [
                 NotificationCandidate(
                     profile_id=profile_id,
@@ -247,8 +262,8 @@ def build_streak_at_risk_candidates(
                     merged_intents=("app_streak_at_risk",),
                 )
             ]
-        # A real training streak has precedence even when the session is too late
-        # for a safe reminder. Do not fall back to a generic app-streak nudge.
+        # A real training streak has precedence even when the reminder is not yet
+        # due. Do not fall back to a generic app-streak nudge on a training day.
         return []
 
     if (
