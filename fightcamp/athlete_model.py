@@ -30,24 +30,6 @@ from .weight_cut import (
 _RECORD_PATTERN = re.compile(r"^(\d+)-(\d+)(?:-(\d+))?$")
 _UNKNOWN_COMPETITIVE_MATURITY = "unknown_competitive_maturity"
 _PRO_STATUS_ALIASES = {"pro", "professional", "professional_fighter", "pro_fighter"}
-_COMPETITION_SPORT_ALIASES = {
-    "boxing": "boxing",
-    "boxer": "boxing",
-    "kickboxing": "kickboxing",
-    "kickboxer": "kickboxing",
-    "karate": "kickboxing",
-    "muay_thai": "muay_thai",
-    "mma": "mma",
-    "mixed_martial_arts": "mma",
-    "bjj": "bjj",
-    "jiu_jitsu": "bjj",
-    "jits": "bjj",
-    "wrestling": "wrestling",
-    "wrestler": "wrestling",
-    "freestyle": "wrestling",
-    "folkstyle": "wrestling",
-    "greco": "wrestling",
-}
 
 
 def _parse_record(record: str) -> dict:
@@ -160,33 +142,6 @@ def _is_high_pressure_weight_cut(*, athlete_model: dict) -> bool:
     )
 
 
-def _competition_sport_from_training_context(
-    training_context: TrainingContext,
-    programming_format: str,
-) -> str:
-    """Return competition identity without changing the Stage 1 bank format.
-
-    Stage 1 currently maps some sports (notably BJJ/wrestling) onto the MMA
-    programming bank. The athlete's first technical-style selection is the
-    competition identity at intake, while ``programming_format`` remains the
-    bank-compatibility choice. Keep those concepts separate so sport-demand
-    profiles never inherit the temporary bank mapping.
-    """
-    technical_styles = clean_list(training_context.style_technical)
-    primary_style = technical_styles[0] if technical_styles else ""
-    primary_token = re.sub(r"[^a-z0-9]+", "_", primary_style.strip().lower()).strip("_")
-    if primary_token in _COMPETITION_SPORT_ALIASES:
-        return _COMPETITION_SPORT_ALIASES[primary_token]
-
-    programming_token = re.sub(
-        r"[^a-z0-9]+", "_", str(programming_format or "").strip().lower()
-    ).strip("_")
-    return _COMPETITION_SPORT_ALIASES.get(
-        programming_token,
-        programming_token or "general_combat",
-    )
-
-
 def _build_athlete_model(
     *,
     training_context: TrainingContext,
@@ -223,22 +178,10 @@ def _build_athlete_model(
         has_active_injury
         and _all_active_injuries_surface_only_from_training_context(training_context)
     )
-    programming_format = str(sport or "").strip().lower()
-    competition_sport = _competition_sport_from_training_context(
-        training_context,
-        programming_format,
-    )
     return {
         "has_active_injury": has_active_injury,
         "surface_injury_only": surface_injury_only,
-        # ``sport`` is the athlete's competition identity from here onward.
-        # ``programming_format`` separately records the Stage 1 bank choice so
-        # BJJ/wrestling can temporarily consume MMA banks without becoming MMA
-        # in sport-demand, collision, tactical, or rendering logic.
-        "sport": competition_sport,
-        "competition_sport": competition_sport,
-        "programming_format": programming_format,
-        "sport_identity_source": "competition_sport",
+        "sport": sport,
         "status": training_context.status,
         "record": record_profile["record"],
         "wins": record_profile["wins"],
