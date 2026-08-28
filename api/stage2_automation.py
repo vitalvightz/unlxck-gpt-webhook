@@ -25,7 +25,6 @@ from .structured_plan_generation import (
     parse_structured_json,
     should_attempt_structured_plan,
 )
-from .structured_plan_calendar_spine import reconcile_calendar_spine
 from .structured_plan_models import build_strict_structured_plan_schema
 from .structured_plan_sparring_reconcile import reconcile_coach_led_sparring_days
 
@@ -1059,40 +1058,6 @@ class OpenAIStage2Automator:
             ]
         return outcome
 
-    @staticmethod
-    def _reconcile_calendar_spine(
-        outcome: StructuredPlanOutcome, planning_brief: Any
-    ) -> StructuredPlanOutcome:
-        """Restore every no-session calendar day a dated camp dropped.
-
-        The converter mirrors the sparse Stage 2 text, so uneventful D-days vanish
-        from ``weeks[*].days`` and the athlete view rebuilds week boundaries /
-        counts / phases from only the surviving session days. Rebuild the calendar
-        from the deterministic role-map spine so every countdown day exists (as a
-        session day or a no-session rest day). Runs AFTER the faithfulness gate —
-        it deliberately introduces D-days the source text never spelled out — and
-        AFTER the coach-led reconcile, whose contact days it preserves. No-op
-        unless the outcome carries a plan and a day was actually missing.
-        """
-        if outcome.structured_plan is None:
-            return outcome
-        rebuilt = reconcile_calendar_spine(outcome.structured_plan, planning_brief)
-        if rebuilt is not outcome.structured_plan and isinstance(rebuilt, dict):
-            outcome.structured_plan = rebuilt
-            outcome.warnings = list(outcome.warnings) + [
-                "calendar_spine_reconcile: rebuilt continuous countdown calendar"
-            ]
-        return outcome
-
-    @classmethod
-    def _reconcile_structured_calendar(
-        cls, outcome: StructuredPlanOutcome, planning_brief: Any
-    ) -> StructuredPlanOutcome:
-        """Coach-led contact reconcile, then continuous-calendar-spine reconcile."""
-        return cls._reconcile_calendar_spine(
-            cls._reconcile_coach_led(outcome, planning_brief), planning_brief
-        )
-
     async def _generate_structured_outcome(
         self,
         *,
@@ -1150,7 +1115,7 @@ class OpenAIStage2Automator:
         # path would re-validate the same JSON and hit the same blocking
         # findings — never spend the repair call on it.
         if first_outcome.status in ("valid", "blocked_by_safety_audit"):
-            return self._reconcile_structured_calendar(first_outcome, planning_brief), costs
+            return self._reconcile_coach_led(first_outcome, planning_brief), costs
 
         # The repair retry is the second sequential model call (the dominant cost
         # on worst-case latency). It is gated so it can be dropped via env once
@@ -1160,7 +1125,7 @@ class OpenAIStage2Automator:
                 "[stage2] structured_repair skipped (disabled) first_status=%s",
                 first_outcome.status,
             )
-            return self._reconcile_structured_calendar(first_outcome, planning_brief), costs
+            return self._reconcile_coach_led(first_outcome, planning_brief), costs
 
         # Single repair retry: re-prompt with the validation errors and the
         # broken JSON, then let build_structured_plan_outcome score the result.
@@ -1197,7 +1162,7 @@ class OpenAIStage2Automator:
             repaired_outcome.status,
             repaired_outcome.status in {"valid", "repair_attempted_valid"},
         )
-        return self._reconcile_structured_calendar(repaired_outcome, planning_brief), costs
+        return self._reconcile_coach_led(repaired_outcome, planning_brief), costs
 
 
 def build_default_stage2_automator() -> Stage2Automator:
