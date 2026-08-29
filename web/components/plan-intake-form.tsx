@@ -22,6 +22,7 @@ import {
   cycleGuidedInjurySeverity,
   normalizeGuidedInjurySeverity,
   PROFESSIONAL_STATUS_OPTIONS,
+  RECOVERY_PROFILE_OPTIONS,
   retainKnownOptionValues,
   sanitizeRecordInput,
   STANCE_OPTIONS,
@@ -97,6 +98,7 @@ const FIELD_STEP_MAP: Record<string, number> = {
   roundCount: 1,
   roundDuration: 1,
   sessionsPerWeek: 1,
+  recoveryProfile: 1,
   trainingAvailabilityGroup: 2,
   hardSparringAck: 2,
   availabilityConsistencyAlert: 2,
@@ -747,12 +749,12 @@ function CheckboxGroup({
   );
 }
 
-function OptionalDetails({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+function OptionalDetails({ title, hint, children, required = false }: { title: string; hint?: string; children: React.ReactNode; required?: boolean }) {
   return (
     <details className="overview-disclosure onboarding-optional-disclosure">
       <summary className="overview-disclosure-summary">
         <div className="overview-disclosure-copy">
-          <p className="kicker">Optional</p>
+          <p className="kicker">{required ? "Required" : "Optional"}</p>
           <p className="overview-disclosure-title">{title}</p>
           {hint ? <p className="muted">{hint}</p> : null}
         </div>
@@ -831,6 +833,7 @@ function getReviewStepBlockingIssue(
   if (!nextForm.athlete.technical_style.length) return { message: "Select a combat sport before continuing to review.", step: 0, fieldId: "technicalStyle" };
   if (!nextForm.fight_date && !options.noScheduledFight) return { message: "Choose your fight date or mark \"No scheduled fight\" before continuing to review.", step: 1, fieldId: "fightDate" };
   if (!options.noScheduledFight && isFightDateInPast(nextForm.fight_date)) return { message: FIGHT_DATE_IN_PAST_MESSAGE, step: 1, fieldId: "fightDate" };
+  if (!nextForm.fatigue_level) return { message: "Select your usual recovery speed.", step: 1, fieldId: "recoveryProfile" };
   if (!nextForm.training_availability.length) return { message: "Pick at least one training availability option before continuing to review.", step: 2, fieldId: "trainingAvailabilityGroup" };
   if (!nextForm.weekly_training_frequency || nextForm.weekly_training_frequency < 1) return { message: "Planned sessions per week must be at least 1.", step: 1, fieldId: "sessionsPerWeek" };
   if (nextForm.weekly_training_frequency > 6) return { message: "Planned sessions per week cannot exceed 6.", step: 1, fieldId: "sessionsPerWeek" };
@@ -1048,6 +1051,8 @@ export function PlanIntakeForm() {
           return Boolean(form.weekly_training_frequency)
             && (form.weekly_training_frequency ?? 0) >= 1
             && (form.weekly_training_frequency ?? 0) <= 6;
+        case "recoveryProfile":
+          return Boolean(form.fatigue_level);
         case "trainingAvailabilityGroup":
           return form.training_availability.length > 0;
         case "keyGoalsGroup":
@@ -1706,6 +1711,12 @@ export function PlanIntakeForm() {
           fieldId: "roundDuration",
         });
       }
+      if (!nextForm.fatigue_level) {
+        return reportInvalidField({
+          message: "Select your usual recovery speed.",
+          fieldId: "recoveryProfile",
+        });
+      }
     }
     if (currentStep === 2 && !nextForm.training_availability.length) {
       return reportInvalidField({
@@ -1780,6 +1791,13 @@ export function PlanIntakeForm() {
         message: "Pick at least one training availability option before generating your plan.",
         fieldId: "trainingAvailabilityGroup",
         step: 2,
+      });
+    }
+    if (!nextForm.fatigue_level) {
+      return reportInvalidField({
+        message: "Select your usual recovery speed.",
+        fieldId: "recoveryProfile",
+        step: 1,
       });
     }
     if (!nextForm.weekly_training_frequency || nextForm.weekly_training_frequency < 1) {
@@ -2104,7 +2122,7 @@ export function PlanIntakeForm() {
     technicalStyle: form.athlete.technical_style[0] ?? "",
     hardSparringDays: selectedHardSparringLabels,
   });
-  const highFatigueFlag = (form.fatigue_level || "low") === "high" ? "High fatigue already reported" : null;
+  const slowRecoveryFlag = form.fatigue_level === "high" ? "Slower recovery profile" : null;
   const hasExtraPerformanceNotes = Boolean(mindsetChallengesText || notesText);
   const hasTrainingPreference = Boolean(trainingPreferenceText);
   const restrictionSummary = formatRestrictionSummary(form.injuries);
@@ -2130,7 +2148,7 @@ export function PlanIntakeForm() {
     { label: "Fight date", value: formatFightDateValue(form.fight_date) },
     { label: "Rounds", value: formatValue(form.rounds_format) },
     { label: "Planned sessions per week", value: formatValue(form.weekly_training_frequency) },
-    { label: "Fatigue level", value: formatValue(form.fatigue_level || "low") },
+    { label: "Recovery profile", value: getOptionLabel(RECOVERY_PROFILE_OPTIONS, form.fatigue_level || "") || "Not selected" },
   ];
   const trainingReviewItems = [
     { label: "Training availability", value: selectedTrainingAvailability },
@@ -2161,7 +2179,7 @@ export function PlanIntakeForm() {
   const constraintsReviewItems = [
     { label: "Injuries / pain areas", value: restrictionSummary },
     ...(weightCutStatus ? [{ label: "Weight-cut status", value: weightCutStatus }] : []),
-    ...(highFatigueFlag ? [{ label: "Fatigue flag", value: highFatigueFlag }] : []),
+    ...(slowRecoveryFlag ? [{ label: "Recovery profile", value: slowRecoveryFlag }] : []),
     ...(equipmentLimitations ? [{ label: "Equipment limitations", value: equipmentLimitations }] : []),
     ...(sparringCollisionRisk ? [{ label: "Sparring collision risk", value: sparringCollisionRisk }] : []),
   ];
@@ -2697,19 +2715,24 @@ export function PlanIntakeForm() {
               </article>
 
               <OptionalDetails
-                title="Fatigue"
-                hint="Defaults to Low. Change it only if you feel tired today."
+                title="Recovery Profile"
+                hint="How quickly do you usually recover after demanding training?"
+                required
               >
                 {healthConsentGranted ? (
-                <div className="field">
-                  <label htmlFor="fatigueLevel">Fatigue level</label>
+                <div className={`field${invalidFieldId === "recoveryProfile" ? " field-invalid" : ""}`}>
+                  <label htmlFor="recoveryProfile">Recovery speed</label>
                   <LevelSlider
-                    id="fatigueLevel"
-                    ariaLabel="Fatigue level"
-                    value={(form.fatigue_level ?? "low") as LevelValue}
+                    id="recoveryProfile"
+                    ariaLabel="Recovery speed"
+                    value={(form.fatigue_level ?? null) as LevelValue | null}
                     onChange={(value) => updateField("fatigue_level", value)}
+                    options={RECOVERY_PROFILE_OPTIONS}
                   />
-                  <p className="muted">Low = fresh. Moderate = tired. High = very run down.</p>
+                  <p className="muted">Faster = usually ready again sooner. Average = typical recovery. Slower = usually needs extra recovery time.</p>
+                  {invalidFieldId === "recoveryProfile" && error ? (
+                    <p className="error-text" role="alert">{error}</p>
+                  ) : null}
                 </div>
                 ) : <p className="muted">{HEALTH_CONSENT_BLOCKED_MESSAGE}</p>}
               </OptionalDetails>
@@ -2725,7 +2748,7 @@ export function PlanIntakeForm() {
                   <li>Fight date: {formatFightDateValue(form.fight_date)}</li>
                   <li>Rounds: {formatValue(form.rounds_format)}</li>
                   <li>Planned sessions per week: {formatValue(form.weekly_training_frequency)}</li>
-                  <li>Fatigue level: {formatValue(form.fatigue_level || "low")}</li>
+                  <li>Recovery profile: {getOptionLabel(RECOVERY_PROFILE_OPTIONS, form.fatigue_level || "") || "Not selected"}</li>
                 </ul>
               </div>
               <div className="support-panel">

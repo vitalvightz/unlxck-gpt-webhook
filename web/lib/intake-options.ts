@@ -5,6 +5,17 @@ export type IntakeOption = {
 };
 
 export const GUIDED_INJURY_SEVERITY_VALUES = ["low", "moderate", "high"] as const;
+
+// Keep these legacy values: downstream planning still consumes low/moderate/high.
+export const RECOVERY_PROFILE_OPTIONS = [
+  { value: "low", label: "Faster" },
+  { value: "moderate", label: "Average" },
+  { value: "high", label: "Slower" },
+] as const;
+
+export function getRecoveryProfileLabel(value: string | null | undefined, fallback = ""): string {
+  return RECOVERY_PROFILE_OPTIONS.find((option) => option.value === value)?.label ?? fallback;
+}
 export type GuidedInjurySeverity = (typeof GUIDED_INJURY_SEVERITY_VALUES)[number];
 
 export const GUIDED_INJURY_SEVERITY_OPTIONS: IntakeOption[] = [
@@ -225,10 +236,10 @@ export function retainKnownOptionValues(values: string[] | undefined, options: I
   return (values ?? []).filter((value) => knownValues.has(value));
 }
 
-export function getOptionLabel(options: IntakeOption[], value: string): string {
+export function getOptionLabel(options: readonly IntakeOption[], value: string): string {
   return options.find((option) => option.value === value)?.label ?? LEGACY_OPTION_LABELS[value] ?? value;
 }
 
-export function getOptionLabels(options: IntakeOption[], values: string[] | undefined): string[] {
+export function getOptionLabels(options: readonly IntakeOption[], values: string[] | undefined): string[] {
   return (values ?? []).map((value) => getOptionLabel(options, value));
 }

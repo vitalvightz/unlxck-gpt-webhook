@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 
 import { applyNoScheduledFightSnapshot, canonicalizePerformanceFocus, emptyPlanRequest, hydratePlanRequest } from "@/lib/onboarding";
 
+test("a fresh intake does not preselect a recovery profile", () => {
+  assert.equal(emptyPlanRequest("Athlete").fatigue_level, undefined);
+});
+
 test("hydratePlanRequest clears fight_date when partial draft marks open camp", () => {
   const latest = {
     ...emptyPlanRequest("Athlete"),

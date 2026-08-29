@@ -5,6 +5,7 @@ import {
   EQUIPMENT_ACCESS_OPTIONS,
   KEY_GOAL_OPTIONS,
   PROFESSIONAL_STATUS_OPTIONS,
+  RECOVERY_PROFILE_OPTIONS,
   STANCE_OPTIONS,
   TACTICAL_STYLE_OPTIONS,
   TECHNICAL_STYLE_OPTIONS,
@@ -12,12 +13,6 @@ import {
   WEAK_AREA_OPTIONS,
 } from "@/lib/intake-options";
 import type { AdminAthleteRecord, PlanRequest } from "@/lib/types";
-
-const FATIGUE_LEVEL_OPTIONS = [
-  { value: "low", label: "Low" },
-  { value: "moderate", label: "Moderate" },
-  { value: "high", label: "High" },
-];
 
 type OverviewItem = {
   label: string;
@@ -33,7 +28,7 @@ type OverviewSection = {
   wide?: boolean;
 };
 
-function getOptionLabel(options: { value: string; label: string }[], value: string): string {
+function getOptionLabel(options: ReadonlyArray<{ value: string; label: string }>, value: string): string {
   return options.find((option) => option.value === value)?.label ?? value;
 }
 
@@ -227,8 +222,8 @@ function buildOverviewSections(athlete: AdminAthleteRecord): OverviewSection[] {
         emphasize: true,
       },
       {
-        label: "Fatigue",
-        value: formatValue(getOptionLabel(FATIGUE_LEVEL_OPTIONS, intake.fatigue_level || "")),
+        label: "Recovery profile",
+        value: formatValue(getOptionLabel(RECOVERY_PROFILE_OPTIONS, intake.fatigue_level || "")),
         emphasize: true,
       },
     ],

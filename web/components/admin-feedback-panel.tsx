@@ -6,6 +6,7 @@ import { getAdminFeedbackScreenshot, listAdminFeedback } from "@/lib/api";
 import { formatAppDateTime } from "@/lib/date-format";
 import { formatPlanLabel } from "@/lib/plan-labels";
 import type { AdminFeedbackRecord } from "@/lib/types";
+import { getRecoveryProfileLabel } from "@/lib/intake-options";
 
 const LABELS: Record<string, string> = {
   plan_usefulness: "Plan feedback",
@@ -193,7 +194,7 @@ function getIntakeRows(item: AdminFeedbackRecord): Array<[string, string]> {
   const restrictions = stringValue(record, "injuries");
   const restrictionLevel = stringValue(record, "training_restriction_level");
   const availability = record.training_availability;
-  if (fatigue) rows.push(["Fatigue", readable(fatigue)]);
+  if (fatigue) rows.push(["Recovery profile", getRecoveryProfileLabel(fatigue, readable(fatigue))]);
   if (restrictions) rows.push(["Restrictions", restrictions]);
   if (restrictionLevel) rows.push(["Restriction level", readable(restrictionLevel)]);
   if (Array.isArray(availability) && availability.length) {

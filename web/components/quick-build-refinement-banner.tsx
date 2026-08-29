@@ -33,7 +33,7 @@ export function QuickBuildRefinementBanner({
         <p className="quick-build-refine-banner__kicker">Quick Build plan</p>
         <h2 className="quick-build-refine-banner__title">Built fast. Make it sharper.</h2>
         <p className="quick-build-refine-banner__copy">
-          This plan was built with Quick Build using safe defaults. Run Advanced Intake to refine fatigue, injuries, sparring, and goals.
+          This plan was built with Quick Build using safe defaults. Run Advanced Intake to set your recovery profile and refine injuries, sparring, and goals.
         </p>
       </div>
       <div className="quick-build-refine-banner__actions">

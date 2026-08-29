@@ -260,15 +260,17 @@ export function LevelSlider({
   onChange,
   ariaLabel = "Fatigue level",
   id,
+  options = LEVEL_OPTIONS,
 }: {
   value: LevelValue | null;
   onChange: (value: LevelValue) => void;
   ariaLabel?: string;
   id?: string;
+  options?: ReadonlyArray<{ value: LevelValue; label: string }>;
 }) {
-  const selectedIndex = LEVEL_OPTIONS.findIndex((option) => option.value === value);
+  const selectedIndex = options.findIndex((option) => option.value === value);
   const currentIndex = selectedIndex === -1 ? 1 : selectedIndex;
-  const activeLabel = selectedIndex === -1 ? "Not set" : LEVEL_OPTIONS[selectedIndex].label;
+  const activeLabel = selectedIndex === -1 ? "Not set" : options[selectedIndex].label;
 
   function selectLevelFromPointer(event: PointerEvent<HTMLInputElement>) {
     if (selectedIndex !== -1) {
@@ -276,15 +278,15 @@ export function LevelSlider({
     }
     const rect = event.currentTarget.getBoundingClientRect();
     if (rect.width <= 0) {
-      onChange(LEVEL_OPTIONS[currentIndex].value);
+      onChange(options[currentIndex].value);
       return;
     }
     const percent = (event.clientX - rect.left) / rect.width;
     const nextIndex = Math.min(
-      LEVEL_OPTIONS.length - 1,
-      Math.max(0, Math.floor(percent * LEVEL_OPTIONS.length)),
+      options.length - 1,
+      Math.max(0, Math.floor(percent * options.length)),
     );
-    onChange(LEVEL_OPTIONS[nextIndex].value);
+    onChange(options[nextIndex].value);
   }
 
   return (
@@ -297,14 +299,14 @@ export function LevelSlider({
         className="level-slider-input"
         type="range"
         min={0}
-        max={LEVEL_OPTIONS.length - 1}
+        max={options.length - 1}
         step={1}
         value={currentIndex}
         aria-label={ariaLabel}
         aria-valuetext={activeLabel}
         onChange={(event) => {
           const nextIndex = Number.parseInt(event.target.value, 10);
-          onChange(LEVEL_OPTIONS[nextIndex].value);
+          onChange(options[nextIndex].value);
         }}
         onPointerDown={selectLevelFromPointer}
       />
@@ -313,12 +315,12 @@ export function LevelSlider({
           className="level-slider-indicator"
           aria-hidden="true"
           style={{
-            ["--level-count" as string]: LEVEL_OPTIONS.length,
+            ["--level-count" as string]: options.length,
             ["--level-index" as string]: selectedIndex,
           }}
         />
       ) : null}
-      {LEVEL_OPTIONS.map((option, index) => {
+      {options.map((option, index) => {
         const selected = index === selectedIndex;
         return (
           <span

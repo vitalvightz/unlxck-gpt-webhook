@@ -13,7 +13,7 @@ export const GENERATION_MILESTONES: GenerationMilestone[] = [
   { title: "Building camp phase structure", detail: "Splitting the plan into the correct training blocks." },
   { title: "Mapping training availability", detail: "Matching sessions to available training days." },
   { title: "Matching fight format demands", detail: "Adjusting for rounds, duration, and combat demands." },
-  { title: "Checking fatigue level", detail: "Controlling how aggressive the plan should be." },
+  { title: "Checking recovery profile", detail: "Matching the plan to your usual recovery speed." },
   {
     title: "Reviewing injury restrictions",
     detail: "Looking for areas that need protection or modification.",

@@ -142,7 +142,7 @@ export function emptyPlanRequest(fullName = ""): PlanRequest {
     no_scheduled_fight: false,
     rounds_format: "3 x 3",
     weekly_training_frequency: 4,
-    fatigue_level: "low",
+    fatigue_level: undefined,
     equipment_access: [],
     training_availability: [],
     hard_sparring_days: [],

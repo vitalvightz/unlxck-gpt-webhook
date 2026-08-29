@@ -786,7 +786,7 @@ function QuickBuildFormInner() {
         <p className="eyebrow">Quick Build</p>
         <h1 className="hero-title">Generate a plan in about two minutes.</h1>
         <p className="muted">
-          Quick Build uses safe defaults for fatigue, sparring intensity, and goal prioritization. Use Advanced Intake for full
+          Quick Build uses safe defaults for sparring intensity and goal prioritisation. Use Advanced Intake for full
           control - you can also refine this plan afterwards.
         </p>
       </section>
@@ -1077,7 +1077,7 @@ function QuickBuildFormInner() {
           <p className="quick-build-action-title">
             {readyToGenerate ? "Ready to generate." : "Quick Build is almost ready."}
           </p>
-          <p className="muted">Refine fatigue, sparring days, and detailed weaknesses later from the plan page.</p>
+          <p className="muted">Set your recovery profile, sparring days, and detailed weaknesses later from the plan page.</p>
         </div>
         {message ? (
           <div className="quick-build-action-feedback" role="status" aria-live="polite">
