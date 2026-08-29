@@ -1,4 +1,10 @@
-"""Tests for the D-14 to D-21 bridge rule set.
+"""Tests for the D-14 to D-21 countdown CAP overlay (``compute_bridge_rules``).
+
+These caps are no longer a routing/architecture signal: D-14..D-21 use the
+normal camp planner, and ``compute_bridge_rules`` is the progressive load-shape
+overlay the normal role map consults with each session's scheduled D-day. The
+cap values below are unchanged — only the sub-band / permissive-mode load-shape
+workarounds were removed alongside the bridge allocator.
 
 Covers the unit-test cases listed in the evidence-based spec plus the
 modifier interactions: fatigue / weight-cut / injury / sport / style.
@@ -14,7 +20,6 @@ from fightcamp.stage2_payload_late_fight import (
     TIMING_STATE_NORMAL,
     _declared_hard_spar_cap,
     _hard_spar_status_for_countdown_offset,
-    bridge_sub_band,
     compute_bridge_rules,
     timing_state,
 )
@@ -38,22 +43,6 @@ class TestTimingStates:
     )
     def test_timing_state(self, days, expected):
         assert timing_state(days) == expected
-
-    @pytest.mark.parametrize(
-        "days,expected",
-        [
-            (14, "d15_to_d14"),
-            (15, "d15_to_d14"),
-            (16, "d18_to_d16"),
-            (18, "d18_to_d16"),
-            (19, "d21_to_d19"),
-            (21, "d21_to_d19"),
-            (13, None),
-            (22, None),
-        ],
-    )
-    def test_bridge_sub_band(self, days, expected):
-        assert bridge_sub_band(days) == expected
 
 
 class TestSpecUnitCases:
@@ -273,7 +262,6 @@ class TestSpecUnitCases:
             injury_mode="full_plan",
         )
         assert result["max_meaningful_stress_exposures"] == 3
-        assert result["allow_pace_specific_interval_swap"] is True
         assert result["pressure_style_stress_cap_unchanged"] is True
 
 
@@ -418,62 +406,6 @@ class TestHardSparringSlotAccounting:
         assert result["remaining_hard_spar_slots"] == 0
 
 
-class TestPermissiveFallback:
-    def test_permissive_gated_off_for_striking_sport(self):
-        result = compute_bridge_rules(
-            days_until_fight=20,
-            sport="boxing",
-            fatigue="low",
-            weight_cut_bucket="low",
-            injury_mode="full_plan",
-            hard_sparring_days_declared=0,
-            permissive_mode=True,
-        )
-        assert result["permissive_mode_eligible"] is True
-        # Head-impact evidence prevents striking sports from using permissive mode.
-        assert "permissive_mode_blocked_for_contact_sport" in result["reason_codes"]
-        assert result["strength_touch_max"] == 1
-
-    def test_permissive_opens_extra_strength_touch_for_grappler_in_d21_d19(self):
-        result = compute_bridge_rules(
-            days_until_fight=20,
-            sport="grappler",
-            fatigue="low",
-            weight_cut_bucket="low",
-            injury_mode="full_plan",
-            hard_sparring_days_declared=0,
-            permissive_mode=True,
-        )
-        assert result["permissive_mode_eligible"] is True
-        assert result["strength_touch_max"] == 2
-
-    def test_permissive_off_when_any_risk_flag_set(self):
-        result = compute_bridge_rules(
-            days_until_fight=20,
-            sport="grappler",
-            fatigue="moderate",
-            permissive_mode=True,
-        )
-        assert result["permissive_mode_eligible"] is False
-        assert result["strength_touch_max"] == 1
-
-    def test_permissive_moderate_cut_matches_clean_athlete(self):
-        # A moderate cut is note-only, so it stays eligible for permissive mode
-        # exactly like a none/low cut — a grappler still earns the extra
-        # strength touch in D-21..D-19 instead of being gated off.
-        result = compute_bridge_rules(
-            days_until_fight=20,
-            sport="grappler",
-            fatigue="low",
-            weight_cut_bucket="moderate",
-            injury_mode="full_plan",
-            hard_sparring_days_declared=0,
-            permissive_mode=True,
-        )
-        assert result["permissive_mode_eligible"] is True
-        assert result["strength_touch_max"] == 2
-
-
 class TestBaselineNormalCamp:
     def test_normal_camp_defaults(self):
         result = compute_bridge_rules(
@@ -492,13 +424,6 @@ class TestBaselineNormalCamp:
         assert result["max_consecutive_hard_days"] == 2
         assert result["double_stress_day_allowed"] is True
         assert result["freshness_mandatory"] is False
-
-    def test_bridge_window_metadata_carries_sub_band(self):
-        result = compute_bridge_rules(
-            days_until_fight=16,
-            sport="mma",
-        )
-        assert result["bridge_sub_band"] == "d18_to_d16"
 
 
 class TestUnsafeWeightHeuristic:

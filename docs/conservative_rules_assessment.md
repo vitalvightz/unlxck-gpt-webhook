@@ -1,5 +1,51 @@
 # Conservative Rules Assessment
 
+> ## ⚠️ 2026 update — the D-14..D-21 "bridge" routing is SUPERSEDED
+>
+> The assessment below was written when D-14..D-21 were **routed into a separate
+> late-fight/bridge allocator** with its own role vocabulary (row 1 of the summary,
+> then judged *Deliberate*). Production evidence showed that this created an abrupt
+> generation-time **architecture cliff**: a plan generated at D-22 kept a rich
+> performance structure (meaningful strength, aerobic, power/neural, fight-pace,
+> taper), while the *same* athlete generated at D-21/D-20 dropped into the bridge
+> allocator and lost most of it (e.g. a D-16 primary-strength intent became a tiny
+> neural microdose). PR #2380 tried to patch this *inside* the bridge and was
+> reverted (#2382).
+>
+> **New ownership model (training architecture ≠ countdown safety):**
+>
+> - **Architecture (WHAT is trained)** is owned by the **existing normal camp
+>   planner** for D-14 and further out. Crossing D-22→D-21 no longer swaps planners.
+>   Routing authority is `_PAYLOAD_MODE_MAP` / `_days_out_payload_mode`; the
+>   dedicated compressed/taper allocator now begins at **D-13** — the single
+>   intentional planner boundary.
+> - **Countdown safety (HOW HARD / WHERE it fits)** is a **progressive overlay on
+>   that architecture**, keyed on each session's *scheduled* D-day, not the plan's
+>   generation day: the strength dose morph (`late_camp_role_morph`, uncapped at
+>   D-18+, ramping down from D-17), the fight-pace→rhythm morph (D-13 inward), and
+>   the per-day D-17 hard-contact ban (`sparring_dose_planner`).
+>
+> **Retained genuine safety rules** (unchanged, now applied as scheduled-day
+> overlays on the normal architecture): the D-17+ hard-contact conversion + D-18+
+> coach-owned combat lock (row 3); injury medical-hold / restricted-rehab / needs-
+> review gating (via triage upstream); high-fatigue suppression of hard work;
+> `compute_bridge_rules` as the countdown **cap** oracle the normal role map
+> consults with the scheduled week D-day (rows 2, and the cap set in row 1's *right*
+> column). None of these were weakened.
+>
+> **Removed / narrowed old bridge load-shape policy & workarounds:** the whole
+> `bridge_compression_payload` routing band; `performance_bias.py`
+> (`bridge_low_risk_profile`, `BRIDGE_EXTRA_EXPOSURE_DAY_RANGE`) and the low-risk
+> **active-role inflation** it fed (row 7 — its underlying reason, the bridge over-
+> throttling D-21..D-18, no longer exists); the D-17..D-14 "guarantee one extra
+> conditioning touch" compensator; the bridge **sub-bands** and the never-enabled
+> **permissive-mode** extras; and the bridge-only D-21..D-18 permission/render
+> vocabulary. Net effect: one planner owns the architecture, the countdown only
+> constrains it, and generation day no longer changes a scheduled session's safety.
+>
+> Rows below are kept for historical context; **row 1's "Deliberate" verdict for the
+> *routing* is superseded** (the *cap set* it references survives as the overlay).
+
 This document catalogues the planner's conservative training-load rules, classifies
 each as **deliberate (safety, keep)** or **tunable (opt-in performance bias)**, and
 points to the code and tests that enforce it.
@@ -21,13 +67,13 @@ managed athletes.
 
 | # | Rule | Verdict | Where |
 |---|------|---------|-------|
-| 1 | D-14..D-21 routed into the bridge "taper-on-ramp" cap set | Deliberate | `stage2_payload_late_fight.py:_bridge_baseline`, `compute_bridge_rules` |
+| 1 | D-14..D-21 *routed* into the bridge allocator | **Superseded** — D-14..D-21 now use the normal camp planner; the *cap set* survives as a scheduled-day overlay (`compute_bridge_rules`) | `stage2_payload_late_fight.py:_bridge_baseline`, `compute_bridge_rules`; routing removed from `_PAYLOAD_MODE_MAP` |
 | 2 | Moderate cut + contact sport zeros hard sparring & glycolytic in bridge | Deliberate (safety) | `stage2_payload_late_fight.py:915-932` |
 | 3 | D-17..D-0 converts all declared hard sparring to technical/rhythm | Deliberate (safety) | `sparring_dose_planner.py:_countdown_sparring_override` |
 | 4 | Generic readiness compression counts *any* injury (incl. mild) | Deliberate | `stage2_role_map.py:_active_injury_is_moderate_plus`, `stage2_payload.py:_active_injury_affects_generic_compression` |
 | 5 | Boxing crowded-week compression is severity-aware (mild excluded) | Deliberate (already nuanced) | `stage2_payload.py:_active_injury_is_moderate_plus` (line ~1946) |
 | 6 | `mobility/stiffness` weakness → `tissue_state` limiter | Deliberate | `stage2_payload.py` / `stage2_planning_brief.py:_primary_limiter_key` |
-| 7 | **Conflicting** D-14..D-21 active-role cap (baseline 3 vs budget 2) | **Fixed (unified)** | `stage2_payload_late_fight.py:_bridge_active_role_cap` |
+| 7 | ~~Conflicting D-14..D-21 active-role cap (baseline 3 vs budget 2)~~ | **Removed** — the low-risk active-role inflation (`_bridge_active_role_cap` / `performance_bias.py`) was a compensator for premature bridge compression; with D-14..D-21 on the normal planner it is obsolete and deleted | *(deleted)* |
 
 ## Unified active-role cap (implemented)
 

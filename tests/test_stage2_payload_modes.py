@@ -87,7 +87,7 @@ def test_fatigue_normalization_matches_regular_and_late_fight_paths(athlete_mode
 
 
 def test_hard_sparring_render_contract_is_canonical_in_late_fight_handoff():
-    instructions = _handoff_mode_instructions("bridge_compression_payload")
+    instructions = _handoff_mode_instructions("pre_fight_compressed_payload")
     assert CANONICAL_HARD_SPARRING_LABEL in instructions
     assert CANONICAL_HARD_SPARRING_NOTE in instructions
 
@@ -180,9 +180,11 @@ class TestPayloadModeClassification:
             (None, "camp_payload"),
             (-2, "camp_payload"),
             (22, "camp_payload"),
-            (21, "bridge_compression_payload"),
-            (17, "bridge_compression_payload"),
-            (14, "bridge_compression_payload"),
+            # D-14..D-21 now route to the normal camp planner (no bridge cliff).
+            (21, "camp_payload"),
+            (18, "camp_payload"),
+            (17, "camp_payload"),
+            (14, "camp_payload"),
             (13, "pre_fight_compressed_payload"),
             (10, "pre_fight_compressed_payload"),
             (8, "pre_fight_compressed_payload"),
@@ -215,12 +217,14 @@ class TestDaysOutPayloadBlock:
         assert block["days_out_bucket"] == "CAMP"
         assert block["fight_week_override"] == {"active": False}
 
-    def test_bridge_block_uses_bridge_mode(self):
+    def test_d20_routes_to_camp_not_bridge(self):
+        # The old D-22 -> D-21 architecture cliff is gone: D-14..D-21 use the
+        # normal camp planner, so the days-out block reports the camp payload
+        # and normal variant (the bucket keeps its D-20 countdown display label).
         block = _days_out_payload_block(20, _athlete(20))
-        assert block["payload_mode"] == "bridge_compression_payload"
-        assert block["payload_variant"] == "late_fight_stage2_payload"
-        assert block["days_out_bucket"] == "D-20"
-        assert block["late_fight_window"] == "d21_to_d14"
+        assert block["payload_mode"] == "camp_payload"
+        assert block["payload_variant"] == "normal_stage2_payload"
+        assert block["late_fight_window"] == "camp"
 
 
 def test_camp_week_four_session_boxing_keeps_coach_days_and_recovery_flush_visible():
@@ -319,29 +323,17 @@ class TestLateFightPermissionsAndRendering:
         assert permissions["allow_development_language"] is True
         assert rules == {"mode": "camp_payload", "rules": []}
 
-    def test_bridge_permissions_apply_evidence_based_caps(self):
+    def test_d20_permissions_are_camp_not_bridge(self):
+        # D-20 now uses the normal camp planner, so the late-fight permission
+        # helper reports unrestricted camp permissions rather than a separate
+        # bridge-compression permission set. Countdown load is applied by the
+        # scheduled-day dose morph + hard-sparring ban, not by a permission swap.
         permissions = _late_fight_permissions(20, _athlete(20, fatigue="low"))
         rules = _late_fight_rendering_rules(20)
-
-        assert permissions["mode"] == "bridge_compression_payload"
-        assert permissions["allow_full_weekly_structure"] is False
-        assert permissions["allow_development_language"] is False
-        assert permissions["allow_glycolytic_build"] is False
-        assert permissions["max_active_roles"] == 3
-        assert permissions["max_meaningful_stress_exposures"] == 3
-        # Two declared hard sparring days are coach-owned combat locks, so the
-        # surfaced cap floors at the declared count instead of asking the
-        # renderer to drop one.
-        assert permissions["hard_sparring_cap"] == 2
-        assert permissions["freshness_mandatory"] is True
-        assert permissions["double_stress_day_allowed"] is False
-        assert "bridge week" in [term.lower() for term in rules["preferred_terms"]]
-
-    def test_bridge_permissions_trim_stress_when_fatigued(self):
-        permissions = _late_fight_permissions(20, _athlete(20, fatigue="moderate"))
-        # Moderate fatigue must reduce the meaningful-stress cap by one.
-        assert permissions["max_meaningful_stress_exposures"] == 2
-        assert permissions["freshness_mandatory"] is True
+        assert permissions["mode"] == "camp_payload"
+        assert permissions["allow_full_weekly_structure"] is True
+        assert permissions["allow_development_language"] is True
+        assert rules == {"mode": "camp_payload", "rules": []}
 
     def test_pre_fight_compressed_permissions_cap_bridge_window_stress(self):
         permissions = _late_fight_permissions(10, _athlete(10))
@@ -517,57 +509,17 @@ class TestPlanningBriefBranching:
         assert "payload_variant" not in brief
         assert brief["weekly_role_map"]["model"] == "session_role_overlay.v1"
 
-    def test_bridge_window_uses_late_fight_planning_brief(self):
-        brief = _build_brief_for(20)
-        assert brief["generator_mode"] == "deterministic_late_fight_planner_plus_ai_finalizer"
-        assert brief["payload_variant"] == "late_fight_stage2_payload"
-        assert brief["days_out_payload"]["payload_mode"] == "bridge_compression_payload"
-
-    def test_bridge_d16_includes_bridge_and_late_stage_continuation(self):
-        brief = _build_brief_for(16)
-        weeks = brief["week_by_week_progression"]["weeks"]
-        spans = [week.get("countdown_span") for week in weeks]
-        modes = [week.get("payload_mode") for week in weeks]
-
-        assert spans[0] == {"start_day": 16, "end_day": 14}
-        assert spans[1:] == [
-            {"start_day": 13, "end_day": 8},
-            {"start_day": 7, "end_day": 7},
-            {"start_day": 6, "end_day": 5},
-            {"start_day": 4, "end_day": 2},
-            {"start_day": 1, "end_day": 1},
-            {"start_day": 0, "end_day": 0},
-        ]
-        assert modes == [
-            "bridge_compression_payload",
-            "pre_fight_compressed_payload",
-            "late_fight_week_payload",
-            "late_fight_transition_payload",
-            "late_fight_session_payload",
-            "pre_fight_day_payload",
-            "fight_day_protocol_payload",
-        ]
-
-    def test_bridge_d21_includes_bridge_and_late_stage_continuation(self):
-        brief = _build_brief_for(21)
-        weeks = brief["week_by_week_progression"]["weeks"]
-        assert weeks[0]["countdown_span"] == {"start_day": 21, "end_day": 14}
-        assert [week["payload_mode"] for week in weeks[1:]] == [
-            "pre_fight_compressed_payload",
-            "late_fight_week_payload",
-            "late_fight_transition_payload",
-            "late_fight_session_payload",
-            "pre_fight_day_payload",
-            "fight_day_protocol_payload",
-        ]
-
-    def test_bridge_d14_includes_single_bridge_day_then_late_stage_continuation(self):
-        brief = _build_brief_for(14)
-        weeks = brief["week_by_week_progression"]["weeks"]
-        assert weeks[0]["countdown_span"] == {"start_day": 14, "end_day": 14}
-        assert weeks[0]["payload_mode"] == "bridge_compression_payload"
-        assert weeks[1]["countdown_span"] == {"start_day": 13, "end_day": 8}
-        assert weeks[-1]["countdown_span"] == {"start_day": 0, "end_day": 0}
+    @pytest.mark.parametrize("days", [21, 20, 18, 16, 14])
+    def test_late_camp_window_uses_normal_camp_planning_brief(self, days):
+        # The whole D-14..D-21 window now uses the normal camp planner (no
+        # bridge_compression_payload cliff, no separate late-fight brief). The
+        # countdown constrains this architecture via scheduled-day dose morphs,
+        # it does not replace it.
+        brief = _build_brief_for(days)
+        assert brief["generator_mode"] == "deterministic_planner_plus_ai_finalizer"
+        assert "payload_variant" not in brief
+        assert "days_out_payload" not in brief
+        assert brief["weekly_role_map"]["model"] == "session_role_overlay.v1"
 
     def test_pre_fight_window_uses_dedicated_planning_brief(self):
         brief = _build_brief_for(10)
@@ -656,130 +608,6 @@ class TestPlanningBriefBranching:
             "d1",
             "d0",
         ]
-
-    def test_guardrail_bridge_mode_does_not_suppress_downstream_late_stage_takeover(self):
-        brief = _build_brief_for(16)
-        stage_keys = [week["stage_key"] for week in brief["week_by_week_progression"]["weeks"]]
-        assert stage_keys == [
-            "d21_to_d14",
-            "d13_to_d8",
-            "d7",
-            "d6_to_d5",
-            "d4_to_d2",
-            "d1",
-            "d0",
-        ]
-
-    def test_bridge_d20_weekly_role_map_phase_matches_progression(self):
-        brief = _build_brief_for(20, phase="SPP")
-
-        assert brief["week_by_week_progression"]["weeks"][0]["phase"] == "SPP"
-        assert brief["week_by_week_progression"]["weeks"][0]["phase"] == brief["weekly_role_map"]["weeks"][0]["phase"]
-
-    def test_bridge_continuation_keeps_d1_d0_as_day_specific_modes_not_development_weeks(self):
-        brief = _build_brief_for(16)
-        weeks_by_key = {
-            week["stage_key"]: week
-            for week in brief["week_by_week_progression"]["weeks"]
-        }
-        assert weeks_by_key["d1"]["payload_mode"] == "pre_fight_day_payload"
-        assert weeks_by_key["d1"]["stage_label"] == "Primer Day"
-        assert weeks_by_key["d0"]["payload_mode"] == "fight_day_protocol_payload"
-        assert weeks_by_key["d0"]["stage_label"] == "Fight-Day Protocol"
-
-    def test_bridge_d16_practical_spec_does_not_collapse_to_bridge_only(self):
-        brief = _build_brief_for(16)
-        spec = brief["late_fight_plan_spec"]
-        visible_offsets = [
-            entry.get("countdown_offset")
-            for entry in spec["visible_session_sequence"]
-        ]
-
-        assert spec["visible_session_cap"] > 2
-        assert spec["max_active_roles"] == spec["visible_session_cap"]
-        assert any(offset is not None and offset <= 13 for offset in visible_offsets)
-        assert {16, 14}.issubset(set(visible_offsets))
-
-    def test_bridge_d16_session_sequence_includes_downstream_practical_roles(self):
-        brief = _build_brief_for(16)
-        sequence = brief["late_fight_session_sequence"]
-        downstream_roles = [
-            entry
-            for entry in sequence
-            if isinstance(entry.get("countdown_offset"), int)
-            and entry["countdown_offset"] <= 13
-        ]
-
-        assert downstream_roles
-        assert any(entry.get("composite_segment_stage_key") == "d7" for entry in downstream_roles)
-        assert any(entry.get("composite_segment_stage_key") == "d1" for entry in downstream_roles)
-
-    def test_bridge_d16_weekly_role_map_uses_practical_continuation_roles(self):
-        brief = _build_brief_for(16)
-        roles = [
-            role
-            for week in brief["weekly_role_map"]["weeks"]
-            for role in week["session_roles"]
-        ]
-        offsets = [
-            role.get("countdown_offset")
-            for role in roles
-            if isinstance(role.get("countdown_offset"), int)
-        ]
-
-        assert max(offsets) <= 16
-        assert min(offsets) == 1
-        assert any(offset <= 13 for offset in offsets)
-        assert brief["weekly_role_map"]["allocator"]["composite_practical_allocation"] is True
-
-    def test_bridge_d16_practical_spacing_avoids_adjacent_app_owned_sessions(self):
-        brief = _build_brief_for(
-            16,
-            athlete_overrides={
-                "plan_creation_weekday": "monday",
-                "hard_sparring_days": [],
-            },
-        )
-        # Only genuine physical (meaningful_stress) app sessions matter for
-        # spacing. A zero-load tactical_watch / support insert sharing a day
-        # with — or sitting next to — a physical session is not
-        # physical-session adjacency: per the anti-filler policy, availability
-        # is permission not obligation, so support inserts filling open days
-        # must not be treated as back-to-back hard work.
-        physical_offsets = [
-            entry["countdown_offset"]
-            for entry in brief["late_fight_plan_spec"]["visible_session_sequence"]
-            if isinstance(entry.get("countdown_offset"), int)
-            and entry.get("stress_class") == "meaningful_stress"
-        ]
-
-        assert all(
-            first - second > 1
-            for first, second in zip(physical_offsets, physical_offsets[1:])
-        )
-
-    def test_bridge_d16_avoids_meaningful_app_owned_work_on_declared_hard_days(self):
-        brief = _build_brief_for(
-            16,
-            athlete_overrides={
-                "plan_creation_weekday": "monday",
-                "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
-                "hard_sparring_days": ["thursday"],
-            },
-        )
-        visible_sequence = brief["late_fight_plan_spec"]["visible_session_sequence"]
-        meaningful_app_roles = [
-            entry
-            for entry in visible_sequence
-            if _is_app_owned_visible_role(entry.get("role_key"))
-            and entry.get("stress_class") == "meaningful_stress"
-        ]
-
-        assert meaningful_app_roles
-        assert all(
-            str(entry.get("scheduled_day_hint") or "").lower() != "thursday"
-            for entry in meaningful_app_roles
-        )
 
     def test_d13_practical_behaviour_uses_countdown_continuation_until_d1(self):
         spec = _build_late_fight_plan_spec(13, _athlete(13))
@@ -1209,27 +1037,12 @@ class TestHandoffText:
             "Handoff should reference hard spar day accounting"
         )
 
-    def test_d16_handoff_includes_full_bridge_to_d0_mode_continuation(self):
+    def test_d16_handoff_uses_normal_camp_not_late_fight_continuation(self):
+        # D-16 now uses the normal camp planner; there is no late-fight
+        # countdown continuation map (that begins at D-13).
         text = self._build_handoff_with_brief(16)
-        for stage_key in ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2", "d1", "d0"]:
-            assert stage_key in text
-
-    def test_d16_handoff_does_not_limit_countdown_to_bridge_only(self):
-        text = self._build_handoff_with_brief(16)
-        assert "Bridge segment is front-only" in text
-        assert "Continue mode takeover from D-13 to D-0" in text
-
-    def test_d14_handoff_includes_bridge_day_plus_downstream_continuation(self):
-        text = self._build_handoff_with_brief(14)
-        assert "- d21_to_d14: bridge_compression_payload (D-14 to D-14)" in text
-        assert "- d13_to_d8: pre_fight_compressed_payload (D-13 to D-8)" in text
-        assert "- d0: fight_day_protocol_payload (D-0 to D-0)" in text
-
-    def test_d21_handoff_includes_full_bridge_and_downstream_continuation(self):
-        text = self._build_handoff_with_brief(21)
-        assert "- d21_to_d14: bridge_compression_payload (D-21 to D-14)" in text
-        assert "- d13_to_d8: pre_fight_compressed_payload (D-13 to D-8)" in text
-        assert "- d0: fight_day_protocol_payload (D-0 to D-0)" in text
+        assert "COUNTDOWN CONTINUATION MAP" not in text
+        assert "bridge_compression_payload" not in text
 
     def test_d13_handoff_includes_countdown_continuation_map(self):
         text = self._build_handoff_with_brief(13)

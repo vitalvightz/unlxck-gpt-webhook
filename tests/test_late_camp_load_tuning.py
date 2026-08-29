@@ -31,36 +31,34 @@ def _athlete(days: int, **extra) -> dict:
     return model
 
 
-# --- 1. D-17 and closer: strength touch is neural maintenance, not loaded ----
+# --- 1. D-17 and closer: strength softens to neural maintenance, not loaded ---
+#
+# D-14..D-21 now use the normal camp planner, so this progressive constraint is
+# applied by the scheduled-day late-camp morph (keyed on the session's own D-day,
+# not the plan's generation day), not by a separate bridge allocator.
 
-def test_strength_touch_at_d17_or_closer_is_neural_maintenance_only():
-    spec = _build_late_fight_plan_spec(18, _athlete(18))
-    softened = [
-        entry
-        for entry in spec["session_sequence"]
-        if entry.get("role_key") == "strength_touch_day"
-        and isinstance(entry.get("countdown_offset"), int)
-        and entry["countdown_offset"] <= 17
-    ]
-    assert softened, "expected at least one strength touch scheduled at D-17 or closer"
-    for entry in softened:
-        assert entry["rpe_cap"] == "6-7"
-        rule = entry["selection_rule"].lower()
-        assert "neural maintenance" in rule
-        assert "never render this as a loaded" in rule
+def test_full_strength_role_at_d17_or_closer_is_neural_maintenance_only():
+    week = _strength_week("primary_strength_day", 17)
+    apply_late_camp_role_morph({"weeks": [week]})
+    role = week["session_roles"][0]
+    assert role["rpe_cap"] == "6-7"
+    rule = role["selection_rule"].lower()
+    assert "neural maintenance" in rule
+    assert "never render this as a loaded" in rule
+    assert role["strength_dose_cap"]["max_sets"] <= 3
 
 
-def test_strength_touch_at_d18_or_further_keeps_meaningful_rule():
-    spec = _build_late_fight_plan_spec(21, _athlete(21))
-    tested = 0
-    for entry in spec["session_sequence"]:
-        if entry.get("role_key") != "strength_touch_day":
-            continue
-        offset = entry.get("countdown_offset")
-        if isinstance(offset, int) and offset >= 18:
-            assert "neural maintenance" not in str(entry.get("selection_rule") or "").lower()
-            tested += 1
-    assert tested, "expected at least one strength touch scheduled at D-18 or further"
+def test_full_strength_role_at_d18_or_further_keeps_meaningful():
+    # D-18 and further out: meaningful strength is retained — the morph must not
+    # cap it or relabel it as a neural touch. This is the D-18 side of the old
+    # D-22 -> D-21 cliff, now smooth and generation-day-independent.
+    week = _strength_week("primary_strength_day", 18)
+    apply_late_camp_role_morph({"weeks": [week]})
+    role = week["session_roles"][0]
+    assert role["role_key"] == "primary_strength_day"
+    assert "strength_dose_cap" not in role
+    assert role.get("late_camp_strength_morph") is not True
+    assert "neural maintenance" not in str(role.get("selection_rule") or "").lower()
 
 
 # --- 2. Weekly-map strength roles soften and lose the "Strength" label -------

@@ -111,7 +111,6 @@ def _render_guard_flags(
     late_fight_countdown = bool(
         (payload_mode or "")
         in {
-            "bridge_compression_payload",
             "pre_fight_compressed_payload",
             "late_fight_week_payload",
             "late_fight_transition_payload",

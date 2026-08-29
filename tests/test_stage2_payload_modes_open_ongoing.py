@@ -7,9 +7,13 @@ def test_fight_date_route_unchanged_not_open_ongoing():
     assert _uses_open_ongoing_payload(athlete) is False
 
 
-def test_late_fight_route_unchanged():
-    assert _uses_late_fight_stage2_payload(21) is True
+def test_late_fight_route_starts_at_d13_not_open_ongoing():
+    # D-21 now uses the normal camp planner (not the late-fight route); the
+    # late-fight/compressed route begins at D-13. Neither is open-ongoing.
+    assert _uses_late_fight_stage2_payload(21) is False
+    assert _uses_late_fight_stage2_payload(13) is True
     assert _uses_open_ongoing_payload({"days_until_fight": 21}) is False
+    assert _uses_open_ongoing_payload({"days_until_fight": 13}) is False
 
 
 def test_fight_day_route_unchanged():

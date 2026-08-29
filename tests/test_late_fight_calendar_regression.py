@@ -2,12 +2,14 @@
 
 Root cause these tests lock down
 -------------------------------
-``days_until_fight <= 21`` routes a plan through the *late-fight* payload path
-(``_PAYLOAD_MODE_MAP`` / ``_is_countdown_continuation_start``), while ``>= 22``
-takes the *normal camp* path. A fight on 26 Jun 2026 (plan made 5 Jun) is D-21
-→ late-fight; 27 Jun is D-22 → normal camp. That is the exact 21/22 boundary.
+``days_until_fight <= 13`` routes a plan through the *late-fight* / compressed
+payload path (``_PAYLOAD_MODE_MAP`` / ``_is_countdown_continuation_start``),
+while ``>= 14`` takes the *normal camp* path. (The old cliff was at 21/22; the
+D-14..D-21 "bridge" window that used to route to a separate late-fight allocator
+now uses the normal camp planner, so the architecture boundary is D-13/D-14.)
 
-The two pipelines used to ship *different* calendar contracts:
+The two pipelines still ship *different* calendar contracts for the compressed
+window, and this file guards that the extractor understands both:
 
 * normal-camp weeks  → ``calendar_days`` + list ``countdown_range``
 * late-fight weeks   → ``countdown_span`` = ``{"start_day", "end_day"}`` dict
@@ -49,6 +51,15 @@ from fightcamp.weekly_schedule_view import (
 FIGHT_FRIDAY = "2026-06-26"  # Friday → D-21 when "today" is 2026-06-05
 PLAN_TODAY = datetime(2026, 6, 5, 12, 0, tzinfo=timezone.utc)
 
+_WEEKDAY_NAMES = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+
+
+def _friday_fight_plan_weekday(days_until_fight: int) -> str:
+    # For a Friday (index 4) fight, the plan-creation weekday for a plan made
+    # ``days_until_fight`` days out. Keeps the weekday geometry self-consistent
+    # as tests vary the countdown position (e.g. D-21 is a Friday, D-13 a Sat).
+    return _WEEKDAY_NAMES[(4 - days_until_fight) % 7]
+
 
 def _athlete(days_until_fight: int, *, fight_date: str, training_days=None):
     return {
@@ -66,7 +77,7 @@ def _athlete(days_until_fight: int, *, fight_date: str, training_days=None):
         "injuries": [],
         "fight_date": fight_date,
         "days_until_fight": days_until_fight,
-        "plan_creation_weekday": "friday",
+        "plan_creation_weekday": _friday_fight_plan_weekday(days_until_fight),
     }
 
 
@@ -94,11 +105,16 @@ def _all_d_days(schedules):
 
 # ── The 21 / 22 boundary that splits the two pipelines ────────────────────────
 
-def test_d21_routes_late_fight_and_d22_routes_normal_camp():
-    assert _uses_late_fight_stage2_payload(21) is True
-    assert _days_out_payload_mode(21) == "bridge_compression_payload"
-    assert _uses_late_fight_stage2_payload(22) is False
-    assert _days_out_payload_mode(22) == "camp_payload"
+def test_d14_routes_camp_and_d13_routes_late_fight():
+    # The architecture boundary is now D-13/D-14: D-14..D-21 use the normal camp
+    # planner (no bridge cliff), D-13 and closer use the compressed/late-fight
+    # allocator.
+    assert _uses_late_fight_stage2_payload(14) is False
+    assert _days_out_payload_mode(14) == "camp_payload"
+    assert _uses_late_fight_stage2_payload(21) is False
+    assert _days_out_payload_mode(21) == "camp_payload"
+    assert _uses_late_fight_stage2_payload(13) is True
+    assert _days_out_payload_mode(13) == "pre_fight_compressed_payload"
 
 
 # ── The exact contract fix: countdown_span must be understood ─────────────────
@@ -163,8 +179,8 @@ def test_countdown_span_week_is_no_longer_blank():
 # ── End-to-end late-fight camps now render a real countdown incl. D-0 ─────────
 
 # Camps whose countdown spans multiple days build a paged weekly grid. The
-# continuation window is 3..21 days out — these all carry a D-0 segment.
-@pytest.mark.parametrize("days_until_fight", [21, 14, 7, 4, 3])
+# continuation window is 3..13 days out — these all carry a D-0 segment.
+@pytest.mark.parametrize("days_until_fight", [13, 7, 4, 3])
 def test_late_fight_camp_renders_calendar_with_fight_day(days_until_fight):
     schedules = _late_fight_schedules(days_until_fight, fight_date=FIGHT_FRIDAY)
     d_days = _all_d_days(schedules)
@@ -191,12 +207,14 @@ def test_fight_tomorrow_grid_is_empty_but_graceful():
     assert extract_weekly_schedule(brief, week_index=0, fight_date="2026-06-06") is None
 
 
-def test_late_fight_21_day_camp_does_not_start_at_d13():
-    # The reported bug: a D-21 plan visibly "started at D-13". The calendar must
-    # reach deep into the camp, well past D-13, not begin there.
-    schedules = _late_fight_schedules(21, fight_date=FIGHT_FRIDAY)
+def test_late_fight_13_day_camp_covers_full_countdown_from_d13():
+    # A compressed D-13 plan must reach its own start day (D-13) and run gap-free
+    # to D-0, never begin a segment late. (The D-21 variant of "started at D-13"
+    # is moot: D-21 now uses the normal camp planner.)
+    schedules = _late_fight_schedules(13, fight_date=FIGHT_FRIDAY)
     d_days = _all_d_days(schedules)
-    assert max(d_days) >= 14, f"calendar should cover the early camp, got max D-{max(d_days)}"
+    assert max(d_days) >= 13, f"calendar should open at D-13, got max D-{max(d_days)}"
+    assert 0 in d_days, "calendar must run through the fight day"
 
 
 def _true_weekday_d_days(start: int, end: int, fight_date: str) -> dict[str, int]:
@@ -232,7 +250,7 @@ def _declared_windows_and_schedules(days_until_fight: int, *, fight_date: str):
     return paired
 
 
-@pytest.mark.parametrize("days_until_fight", [21, 20, 17, 14, 9, 7, 4, 3])
+@pytest.mark.parametrize("days_until_fight", [13, 11, 9, 7, 4, 3])
 def test_every_late_fight_week_renders_its_own_countdown_window(days_until_fight):
     # The defect: a late-fight week is a countdown *segment* (D-20..D-14, D-7..D-7,
     # D-4..D-2 …), but the calendar was rebuilt as the Mon-Sun week around the
@@ -247,8 +265,8 @@ def test_every_late_fight_week_renders_its_own_countdown_window(days_until_fight
             for day in schedule["days"]
             if isinstance(day["d_day"], int)
         }
-        # Only the 8-day D-21..D-14 bridge overflows the seven weekday slots; it
-        # drops the plan-creation day rather than a day still to be trained.
+        # Every compressed segment (max six days, D-13..D-8) fits the seven
+        # weekday slots, so each renders exactly its own countdown window.
         for weekday, d_day in reported.items():
             assert truth.get(weekday) == d_day, (
                 f"week D-{start}..D-{end} put {weekday} at D-{d_day}, truly D-{truth.get(weekday)}"
@@ -259,7 +277,7 @@ def test_every_late_fight_week_renders_its_own_countdown_window(days_until_fight
         )
 
 
-@pytest.mark.parametrize("days_until_fight", [21, 20, 14, 7, 3])
+@pytest.mark.parametrize("days_until_fight", [13, 11, 7, 3])
 def test_late_fight_weeks_never_render_days_after_the_fight(days_until_fight):
     # The Mon-Sun rebuild ran past D-0 for the final segments, emitting negative
     # D-days (post-fight) and even stamping a sparring card on one.
@@ -275,7 +293,7 @@ def test_a_declared_sparring_day_is_not_duplicated_across_weeks():
     # hard_sparring_plan is keyed by weekday name, so before the fix one declared
     # Saturday was stamped into every week that had a Saturday slot — four weeks,
     # each at a different (or missing) D-day.
-    schedules = _late_fight_schedules(21, fight_date=FIGHT_FRIDAY)
+    schedules = _late_fight_schedules(13, fight_date=FIGHT_FRIDAY)
     placements: list[tuple[str, int | None]] = [
         (day["weekday"], day["d_day"])
         for schedule in schedules
@@ -290,7 +308,7 @@ def test_a_declared_sparring_day_is_not_duplicated_across_weeks():
 
 
 def test_late_fight_camp_never_renders_a_blank_week():
-    schedules = _late_fight_schedules(21, fight_date=FIGHT_FRIDAY)
+    schedules = _late_fight_schedules(13, fight_date=FIGHT_FRIDAY)
     for schedule in schedules:
         labelled = [day for day in schedule["days"] if isinstance(day["d_day"], int)]
         assert labelled, "no late-fight week may render an empty day grid"
@@ -321,7 +339,7 @@ def test_sparse_availability_keeps_full_calendar(training_days):
     # Availability must never shrink a week below the countdown window it covers
     # (late-fight windows run 1-8 days, so "seven days" is not the contract —
     # "exactly the declared window" is).
-    schedules = _late_fight_schedules(21, fight_date=FIGHT_FRIDAY, training_days=training_days)
+    schedules = _late_fight_schedules(13, fight_date=FIGHT_FRIDAY, training_days=training_days)
     for schedule in schedules:
         labelled = [day for day in schedule["days"] if isinstance(day["d_day"], int)]
         declared = schedule["original_countdown_range"] or schedule["countdown_range"]
@@ -346,15 +364,17 @@ def test_fight_tomorrow_is_one_day_out():
     assert _compute_days_until_fight("2026-06-06", fight, now_utc=PLAN_TODAY) == 1
 
 
-# ── The plan body must not start at D-13: bridge-window allocation ────────────
+# ── The plan body must not resolve to an empty active window ──────────────────
 #
-# Second, distinct root cause behind "the plan starts a week late": in the
-# D-21..D-18 bridge window the athlete has a *required* coach-owned
-# `hard_sparring_day` plus the app's required strength + freshness = 3 roles,
-# but `max_active_roles` is 2. The coach-owned sparring placeholder wrongly
-# counted against the app's active-role budget, so the allocator dropped every
-# role and the whole D-21..D-18 window rendered empty — the first real session
-# fell to D-13. The budget must count only app-owned sessions.
+# Root cause behind "the plan starts a week late": in a late-fight active
+# window the athlete has a *required* coach-owned `hard_sparring_day` plus the
+# app's required strength + freshness = 3 roles, but `max_active_roles` is 2.
+# The coach-owned sparring placeholder wrongly counted against the app's
+# active-role budget, so the allocator dropped every role and the window
+# rendered empty. The budget must count only app-owned sessions. (The window
+# that first surfaced this — D-21..D-18 — is now owned by the normal camp
+# planner; the same invariant is exercised here against the compressed
+# D-13..D-8 window the late-fight allocator still owns.)
 
 def _pro_pressure_boxer(days_until_fight: int, fight_date: str):
     return {
@@ -372,7 +392,7 @@ def _pro_pressure_boxer(days_until_fight: int, fight_date: str):
         "injuries": [],
         "fight_date": fight_date,
         "days_until_fight": days_until_fight,
-        "plan_creation_weekday": "friday",
+        "plan_creation_weekday": _friday_fight_plan_weekday(days_until_fight),
     }
 
 
@@ -385,10 +405,11 @@ def test_active_role_count_excludes_coach_owned_sparring():
     assert _late_fight_active_role_count(roles) == 2
 
 
-@pytest.mark.parametrize("days_until_fight", [21, 20, 19, 18])
-def test_bridge_window_allocation_is_not_empty(days_until_fight):
-    # Every day in the D-21..D-18 bridge window must place at least the app's
-    # required strength + freshness sessions (previously dropped to nothing).
+@pytest.mark.parametrize("days_until_fight", [13, 12, 11, 10])
+def test_compressed_window_allocation_is_not_empty(days_until_fight):
+    # Every day in the compressed D-13..D-8 window must place at least the app's
+    # required strength + freshness sessions (previously dropped to nothing when
+    # a coach-owned spar wrongly counted against the app active-role budget).
     athlete = _pro_pressure_boxer(days_until_fight, FIGHT_FRIDAY)
     roles = _late_fight_allocation_plan(days_until_fight, athlete).get("session_roles", [])
     role_keys = {role.get("role_key") for role in roles}
@@ -399,14 +420,15 @@ def test_bridge_window_allocation_is_not_empty(days_until_fight):
     ), "every placed role must carry a countdown offset"
 
 
-def test_d21_pressure_boxer_plan_starts_at_d21_not_d13():
-    # The exact reported case: 26 Jun fight, pro pressure boxer, Mon/Thu hard
-    # sparring, made on a Friday (D-21). The visible plan must open at D-21.
-    athlete = _pro_pressure_boxer(21, FIGHT_FRIDAY)
-    sequence = _build_late_fight_session_sequence(21, athlete)
+def test_d13_pressure_boxer_plan_starts_at_d13():
+    # The compressed late-fight plan must open at its own start day (D-13), never
+    # a week late. (The D-21 variant of this bug is now moot because D-21 uses the
+    # normal camp planner, which anchors calendar_days from the fight date.)
+    athlete = _pro_pressure_boxer(13, FIGHT_FRIDAY)
+    sequence = _build_late_fight_session_sequence(13, athlete)
     offsets = [role.get("countdown_offset") for role in sequence if isinstance(role.get("countdown_offset"), int)]
     assert offsets, "late-fight session sequence must not be empty"
-    assert max(offsets) == 21, f"plan should open at D-21, opened at D-{max(offsets)}"
+    assert max(offsets) == 13, f"plan should open at D-13, opened at D-{max(offsets)}"
 
 
 # ── System invariant: no active window ever resolves to zero sessions ─────────
@@ -424,7 +446,7 @@ def _all_days_boxer(days_until_fight: int):
         "weight_cut_pct": 0.0, "weight_cut_risk": False, "readiness_flags": [],
         "key_goals": ["recovery", "strength"], "weaknesses": ["gas_tank"],
         "injuries": [], "fight_date": FIGHT_FRIDAY, "days_until_fight": days_until_fight,
-        "plan_creation_weekday": "friday",
+        "plan_creation_weekday": _friday_fight_plan_weekday(days_until_fight),
     }
 
 
@@ -435,7 +457,7 @@ def _sparse_boxer(days_until_fight: int):
         "weight_cut_pct": 0.0, "weight_cut_risk": False, "readiness_flags": [],
         "key_goals": ["conditioning_endurance"], "weaknesses": ["gas_tank"],
         "injuries": [], "fight_date": FIGHT_FRIDAY, "days_until_fight": days_until_fight,
-        "plan_creation_weekday": "friday",
+        "plan_creation_weekday": _friday_fight_plan_weekday(days_until_fight),
     }
 
 
@@ -447,7 +469,7 @@ _PROFILE_BUILDERS = {
 
 
 @pytest.mark.parametrize("profile", ["pro_pressure_mon_thu", "all_days"])
-@pytest.mark.parametrize("days_until_fight", list(range(1, 22)))
+@pytest.mark.parametrize("days_until_fight", list(range(1, 14)))
 def test_active_window_keeps_required_app_work_when_legal_days_exist(profile, days_until_fight):
     athlete = _PROFILE_BUILDERS[profile](days_until_fight)
     roles = _late_fight_allocation_plan(days_until_fight, athlete).get("session_roles", [])
@@ -456,7 +478,7 @@ def test_active_window_keeps_required_app_work_when_legal_days_exist(profile, da
     assert app_owned, f"{profile} D-{days_until_fight} placed no app-owned session"
 
 
-@pytest.mark.parametrize("days_until_fight", list(range(1, 22)))
+@pytest.mark.parametrize("days_until_fight", list(range(1, 14)))
 def test_sparse_availability_never_manufactures_an_unavailable_app_day(days_until_fight):
     athlete = _sparse_boxer(days_until_fight)
     roles = _late_fight_allocation_plan(days_until_fight, athlete).get("session_roles", [])
@@ -467,76 +489,40 @@ def test_sparse_availability_never_manufactures_an_unavailable_app_day(days_unti
         assert weekday == "wednesday"
 
 
-def test_caps_relax_to_keep_required_roles_when_required_meets_cap():
-    # Bridge D-21: required app-owned roles (strength + freshness) == max_active
-    # cap of 2, and a coach-owned hard spar also sits in the window. The cap must
-    # not drop the required app-owned roles. (Generalises the coach-owned fix
-    # into the "caps only limit optional" invariant.)
-    athlete = _pro_pressure_boxer(21, FIGHT_FRIDAY)
-    roles = _late_fight_allocation_plan(21, athlete).get("session_roles", [])
+def test_caps_do_not_drop_required_roles_in_compressed_window():
+    # Compressed D-13: the required app-owned roles (strength touch + freshness)
+    # must survive placement even with declared coach-owned contact in the window
+    # (which converts to technical inside D-17). "Caps only limit optional roles,
+    # never drop required ones." The coach-owned-vs-app budget separation itself
+    # is unit-tested by test_active_role_count_excludes_coach_owned_sparring.
+    athlete = _pro_pressure_boxer(13, FIGHT_FRIDAY)
+    roles = _late_fight_allocation_plan(13, athlete).get("session_roles", [])
     role_keys = {r.get("role_key") for r in roles}
     assert {"strength_touch_day", "fight_week_freshness_day"} <= role_keys
-    # The app-owned active count still honours the cap (coach sparring excluded).
-    assert _late_fight_active_role_count(roles) <= 2
 
 
 def test_empty_active_window_fails_loud(monkeypatch, caplog):
     # If placement is genuinely impossible (every subset fails assignment), the
     # allocator must log a warning rather than silently shipping an empty window.
     monkeypatch.setattr(late_fight_module, "_late_fight_best_assignment", lambda *a, **k: None)
-    athlete = _pro_pressure_boxer(21, FIGHT_FRIDAY)
+    athlete = _pro_pressure_boxer(13, FIGHT_FRIDAY)
     with caplog.at_level("WARNING"):
-        result = _late_fight_allocation_plan(21, athlete)
+        result = _late_fight_allocation_plan(13, athlete)
     assert result.get("session_roles") == []
     assert any("late_fight_allocation_empty_active_window" in rec.message for rec in caplog.records)
 
 
-def test_d22_and_d21_are_adjacent_but_route_differently():
-    # 26 Jun → 21 (late-fight), 27 Jun → 22 (normal). Locks the boundary so a
-    # future refactor cannot silently move the camp/late-fight split.
-    fight_26 = _parse_fight_datetime("2026-06-26")
-    fight_27 = _parse_fight_datetime("2026-06-27")
-    assert _compute_days_until_fight("2026-06-26", fight_26, now_utc=PLAN_TODAY) == 21
-    assert _compute_days_until_fight("2026-06-27", fight_27, now_utc=PLAN_TODAY) == 22
-    assert _uses_late_fight_stage2_payload(21) is True
+def test_d21_and_d22_route_the_same_no_cliff():
+    # The old D-22 -> D-21 architecture cliff is gone: adjacent D-21 and D-22
+    # now take the SAME normal camp path. This locks the fix so a future
+    # refactor cannot silently reintroduce a one-day architecture swap here.
+    assert _uses_late_fight_stage2_payload(21) is False
     assert _uses_late_fight_stage2_payload(22) is False
 
 
-
-def test_d21_shared_weekday_uses_rendered_d14_sparring_verdict():
-    # A Friday plan created at D-21 and a Friday fight make D-21 and D-14
-    # share the same weekday. The calendar drops D-21 because eight countdown
-    # days cannot fit seven weekday slots. The visible Friday must therefore
-    # carry D-14's technical verdict, never D-21's hard verdict.
-    athlete = _athlete(21, fight_date=FIGHT_FRIDAY)
-    athlete["hard_sparring_days"] = ["friday"]
-    athlete["training_days"] = ["monday", "tuesday", "wednesday", "thursday", "friday"]
-
-    role_map = _build_late_fight_weekly_role_map(21, athlete, None, phase="TAPER")
-    role_map = apply_fight_day_override_to_weekly_role_map(role_map, athlete)
-    bridge = role_map["weeks"][0]
-    assert bridge["countdown_span"] == {"start_day": 21, "end_day": 14}
-
-    friday_entries = [
-        entry
-        for entry in bridge["hard_sparring_plan"]
-        if str(entry.get("day") or "").strip().lower() == "friday"
-    ]
-    assert len(friday_entries) == 1
-    assert friday_entries[0]["d_day"] == 14
-    assert friday_entries[0]["effective_load"] == "technical"
-    assert friday_entries[0]["status"] == "convert_to_technical_suggested"
-    assert "d17_hard_sparring_ban" in friday_entries[0]["reason_codes"]
-    assert not any(
-        entry.get("d_day") == 21 and entry.get("effective_load") == "hard"
-        for entry in bridge["hard_sparring_plan"]
-    )
-
-    brief = {"weekly_role_map": role_map, "athlete_model": athlete, "fight_date": FIGHT_FRIDAY}
-    schedule = extract_weekly_schedule(brief, week_index=0, fight_date=FIGHT_FRIDAY)
-    assert schedule is not None
-    friday = next(day for day in schedule["days"] if day["weekday"] == "Fri")
-    assert friday["d_day"] == 14
-    assert friday["effective_load"] == "technical"
-    assert friday["status"] == "convert_to_technical_suggested"
-    assert "d17_hard_sparring_ban" in friday["reason_codes"]
+def test_d13_and_d14_are_adjacent_but_route_differently():
+    # The single intentional architecture boundary now sits at D-13/D-14, where
+    # the dedicated compressed/taper allocator takes over from the normal
+    # planner. Locks it so a future refactor cannot silently move the split.
+    assert _uses_late_fight_stage2_payload(14) is False
+    assert _uses_late_fight_stage2_payload(13) is True

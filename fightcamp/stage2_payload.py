@@ -3843,12 +3843,7 @@ def _append_countdown_continuation_instructions(
     if not continuation_map:
         return mode_instructions
 
-    if payload_mode == "bridge_compression_payload":
-        continuation_lines = [
-            "COUNTDOWN CONTINUATION MAP",
-            "Bridge segment is front-only. Continue mode takeover from D-13 to D-0 exactly as mapped below.",
-        ]
-    elif len(continuation_map) > 1:
+    if len(continuation_map) > 1:
         continuation_lines = [
             "COUNTDOWN CONTINUATION MAP",
             "Continue the active late-fight countdown from this start window through D-0 exactly as mapped below.",
