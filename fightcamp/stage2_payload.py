@@ -2343,7 +2343,7 @@ def _slot_matches_late_fight_role(slot: dict[str, Any], slot_group: str, role: d
     if slot_group != "strength_slots":
         return False
 
-    if role_key == "strength_touch_day":
+    if role_key in {"strength_touch_day", "neural_plus_strength_day"}:
         return _slot_anchor_capable(slot) and not _slot_is_low_load_reset(slot)
     if role_key == "neural_primer_day":
         return _slot_anchor_capable(slot) and any(

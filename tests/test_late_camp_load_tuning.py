@@ -33,16 +33,16 @@ def _athlete(days: int, **extra) -> dict:
 
 # --- 1. D-17 and closer: strength touch is neural maintenance, not loaded ----
 
-def test_strength_touch_at_d17_or_closer_is_neural_maintenance_only():
+def test_bridge_strength_role_at_d17_or_closer_is_neural_maintenance_only():
     spec = _build_late_fight_plan_spec(18, _athlete(18))
     softened = [
         entry
         for entry in spec["session_sequence"]
-        if entry.get("role_key") == "strength_touch_day"
+        if entry.get("role_key") in {"strength_touch_day", "neural_plus_strength_day"}
         and isinstance(entry.get("countdown_offset"), int)
         and entry["countdown_offset"] <= 17
     ]
-    assert softened, "expected at least one strength touch scheduled at D-17 or closer"
+    assert softened, "expected at least one bridge strength role scheduled at D-17 or closer"
     for entry in softened:
         assert entry["rpe_cap"] == "6-7"
         rule = entry["selection_rule"].lower()
@@ -50,17 +50,17 @@ def test_strength_touch_at_d17_or_closer_is_neural_maintenance_only():
         assert "never render this as a loaded" in rule
 
 
-def test_strength_touch_at_d18_or_further_keeps_meaningful_rule():
+def test_bridge_strength_role_at_d18_or_further_keeps_meaningful_rule():
     spec = _build_late_fight_plan_spec(21, _athlete(21))
     tested = 0
     for entry in spec["session_sequence"]:
-        if entry.get("role_key") != "strength_touch_day":
+        if entry.get("role_key") not in {"strength_touch_day", "neural_plus_strength_day"}:
             continue
         offset = entry.get("countdown_offset")
         if isinstance(offset, int) and offset >= 18:
             assert "neural maintenance" not in str(entry.get("selection_rule") or "").lower()
             tested += 1
-    assert tested, "expected at least one strength touch scheduled at D-18 or further"
+    assert tested, "expected at least one bridge strength role scheduled at D-18 or further"
 
 
 # --- 2. Weekly-map strength roles soften and lose the "Strength" label -------

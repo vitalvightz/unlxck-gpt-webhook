@@ -169,7 +169,7 @@ def test_d7_role_list_remains_unchanged():
     assert role_keys == ["neural_primer_day", "alactic_sharpness_day", "fight_week_freshness_day"]
 
 
-def test_bridge_d18_is_last_clean_light_fight_rhythm_touch():
+def test_bridge_d18_is_last_low_risk_fight_pace_repeatability_exposure():
     d18_roles = [
         role["role_key"]
         for role in _late_fight_session_roles(
@@ -185,8 +185,10 @@ def test_bridge_d18_is_last_clean_light_fight_rhythm_touch():
         )
     ]
 
-    assert "light_fight_pace_touch_day" in d18_roles
-    assert "light_fight_pace_touch_day" not in d17_roles
+    assert "fight_pace_repeatability_day" in d18_roles
+    assert "neural_plus_strength_day" in d18_roles
+    assert "fight_pace_repeatability_day" not in d17_roles
+    assert "neural_plus_strength_day" not in d17_roles
     assert "alactic_sharpness_day" in d17_roles
 
 
@@ -209,7 +211,8 @@ def test_bridge_d18_routine_cut_keeps_controlled_pressure_touch():
         )
     ]
 
-    assert "light_fight_pace_touch_day" in role_keys
+    assert "fight_pace_repeatability_day" in role_keys
+    assert "neural_plus_strength_day" in role_keys
 
 
 def test_d20_declared_friday_counts_as_final_hard_pressure_without_snc_stack():
