@@ -5,10 +5,8 @@ from fightcamp.stage2_payload_late_fight import (
     _build_late_fight_plan_spec,
     _build_late_fight_session_sequence,
     _build_late_fight_weekly_role_map,
-    _countdown_offset,
     _countdown_weekday_map,
     _classify_declared_hard_days_for_late_window,
-    _is_app_owned_visible_role,
     _late_fight_active_role_count,
     _late_fight_best_assignment,
     _late_fight_session_roles,
@@ -169,47 +167,12 @@ def test_d7_role_list_remains_unchanged():
     assert role_keys == ["neural_primer_day", "alactic_sharpness_day", "fight_week_freshness_day"]
 
 
-def test_bridge_d18_is_last_clean_light_fight_rhythm_touch():
-    d18_roles = [
-        role["role_key"]
-        for role in _late_fight_session_roles(
-            18,
-            _athlete(18, hard_sparring_days=[], fatigue="low", fatigue_level="low", readiness_flags=[]),
-        )
-    ]
-    d17_roles = [
-        role["role_key"]
-        for role in _late_fight_session_roles(
-            17,
-            _athlete(17, hard_sparring_days=[], fatigue="low", fatigue_level="low", readiness_flags=[]),
-        )
-    ]
-
-    assert "light_fight_pace_touch_day" in d18_roles
-    assert "light_fight_pace_touch_day" not in d17_roles
-    assert "alactic_sharpness_day" in d17_roles
-
-
-def test_bridge_d18_routine_cut_keeps_controlled_pressure_touch():
-    # A moderate/routine active cut is note-only: the single controlled
-    # pressure touch around D-20..D-18 stays in the bridge window.
-    role_keys = [
-        role["role_key"]
-        for role in _late_fight_session_roles(
-            18,
-            _athlete(
-                18,
-                hard_sparring_days=[],
-                fatigue="low",
-                fatigue_level="low",
-                weight_cut_risk=True,
-                weight_cut_pct=2.0,
-                readiness_flags=["active_weight_cut"],
-            ),
-        )
-    ]
-
-    assert "light_fight_pace_touch_day" in role_keys
+# NOTE: D-14..D-21 (the old "bridge" window) now use the normal camp planner,
+# so the late-fight session-role allocator no longer produces roles there. The
+# "last clean fight-pace touch at D-18" and "moderate cut keeps the D-18 pressure
+# touch" behaviours are now expressed by the normal camp architecture + the
+# scheduled-day countdown overlay, and are covered by the routing/real-calendar
+# regression suites (see test_late_camp_architecture_cliff.py).
 
 
 def test_d20_declared_friday_counts_as_final_hard_pressure_without_snc_stack():
@@ -1100,40 +1063,17 @@ def test_role_cost_classifies_correctly():
     assert role_cost({}) == "medium"                              # missing anchor
 
 
-def test_late_fight_calendar_truth_and_availability_filter_regression():
-    athlete = _athlete(
-        15,
-        plan_creation_weekday="saturday",
-        fight_date="2026-05-31",
-        training_days=["tuesday", "wednesday", "thursday"],
-        hard_sparring_days=["tuesday", "thursday"],
-    )
+def test_countdown_weekday_map_truth():
+    # The countdown -> weekday map is pure calendar arithmetic used by both the
+    # normal camp and late-fight paths; it must resolve each countdown offset to
+    # its true weekday. (The D-14..D-21 session-sequence availability filtering
+    # that used to accompany this now lives in the normal camp planner and is
+    # covered by the real-calendar routing regression suite.)
     countdown_map = _countdown_weekday_map("saturday", 15)
     assert countdown_map["D-15"] == "saturday"
     assert countdown_map["D-7"] == "sunday"
     assert countdown_map["D-1"] == "saturday"
     assert countdown_map["D-0"] == "sunday"
-
-    sequence = _build_late_fight_session_sequence(15, athlete)
-    role_by_label = {role.get("scheduled_countdown_label"): role for role in sequence}
-    assert "D-15" not in role_by_label
-    assert "D-14" not in role_by_label
-    assert "D-7" not in role_by_label
-    # Tuesday (D-12) and Thursday (D-10) are declared spar weekdays — coach-owned
-    # combat days — so programmed S&C moves to the Wednesday slot (D-11).
-    assert "D-12" not in role_by_label
-    assert "D-11" in role_by_label
-    assert role_by_label["D-11"]["real_weekday"] == "wednesday"
-    assert "D-6" not in role_by_label
-    assert "D-1" not in role_by_label
-    assert "D-0" not in role_by_label
-    for role in sequence:
-        label = role.get("scheduled_countdown_label")
-        if not label:
-            continue
-        assert role.get("real_weekday") == countdown_map[label]
-        if "resolved_training_weekday" in role:
-            assert role["resolved_training_weekday"] in {"tuesday", "wednesday", "thursday"}
 
 
 def test_permission_policy_exposes_eligible_countdown_labels():
@@ -1153,34 +1093,11 @@ def test_permission_policy_exposes_eligible_countdown_labels():
     assert "D-6" not in policy["eligible_countdown_labels"]
 
 
-def test_composite_late_fight_d14_blocks_unavailable_app_owned_days():
-    athlete = _athlete(
-        14,
-        plan_creation_weekday="saturday",
-        training_days=["tuesday", "wednesday", "thursday"],
-        hard_sparring_days=[],
-    )
-    sequence = _build_late_fight_session_sequence(14, athlete)
-    labels = {role.get("scheduled_countdown_label") for role in sequence}
-    assert "D-14" not in labels
-    assert "D-13" not in labels
-    assert "D-12" not in labels
-    assert "D-7" not in labels
-    assert "D-11" in labels
-    assert "D-10" in labels or "D-9" in labels
-    assert "D-9" in labels
-    assert "D-6" not in labels
-
-    countdown_map = _countdown_weekday_map("saturday", 14)
-    for role in sequence:
-        label = role.get("scheduled_countdown_label")
-        if label:
-            assert role.get("real_weekday") == countdown_map[label]
-        if _is_app_owned_visible_role(role.get("role_key")) and label:
-            offset = _countdown_offset(label)
-            assert offset is not None
-            weekday = str(countdown_map.get(label) or "")
-            assert weekday in {"tuesday", "wednesday", "thursday"}
+# NOTE: composite late-fight availability filtering for a D-14 start moved to
+# the normal camp planner (D-14 now routes to camp). App-owned work never lands
+# on an unavailable day or a declared coach-owned combat day — this invariant is
+# exercised against the production calendar geometry (no-Saturday availability,
+# Monday support, Thursday contact) in test_late_camp_architecture_cliff.py.
 
 
 def test_bridge_mode_continuity_through_d1_does_not_place_on_d0_or_outside_label_set():
