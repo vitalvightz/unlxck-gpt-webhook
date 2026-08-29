@@ -31,6 +31,10 @@ from .fight_day_override import apply_fight_day_override_to_weekly_role_map, com
 from .fight_date_utils import build_calendar_days
 from .stage2_render_guards import _all_active_injuries_surface_only
 from .role_labels import stamp_weekly_role_map_labels
+from .stage2_role_map_patch import (
+    build_integrated_role_sort_key,
+    compute_integrated_compression_floor,
+)
 
 
 def _rotate_weekdays_from_plan_start(weekdays: list[str], plan_creation_weekday: Any) -> list[str]:
@@ -840,7 +844,7 @@ def _upgrade_unused_days_to_low_load_support(
             ),
             "anchor": "lowest_load_day",
             "placement_rule": (
-                "This was an unused recovery/off day upgraded into low-load support "
+                "This was an unused recovery/off training day upgraded into low-load support "
                 "work because the athlete profile has a matching goal, weakness, "
                 "limiter, or restriction. Allowed adjacent to hard sparring only if "
                 "it stays low intensity."
@@ -2076,7 +2080,11 @@ def _apply_high_fatigue_week_compression(
     # Step 2: Compute readiness compression score (applied to non-sparring slots only)
     fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
     compression = _compute_readiness_compression(athlete_model)
-    compression_floor = _compression_floor_value(compression)
+    compression_floor = compute_integrated_compression_floor(
+        base_floor=_compression_floor_value(compression),
+        week_entry=week_entry,
+        athlete_model=athlete_model,
+    )
 
     # Step 3: Compute target number of non-sparring active sessions
     phase = str(week_entry.get("phase", "")).strip().upper()
@@ -2117,13 +2125,22 @@ def _apply_high_fatigue_week_compression(
     resolved_rule_state = dict(week_entry.get("resolved_rule_state") or {})
     must_keep = set(clean_list(resolved_rule_state.get("must_keep", week_entry.get("must_keep", []))))
 
+    def _base_rank(role: dict) -> int:
+        return _non_spar_role_priority_rank(
+            role,
+            phase,
+            is_hard_spar_week,
+            is_meaningful_cut,
+            must_keep,
+            athlete_model,
+        )
+
     ranked_roles = sorted(
         non_spar_roles,
-        key=lambda r: (
-            _non_spar_role_priority_rank(r, phase, is_hard_spar_week, is_meaningful_cut, must_keep, athlete_model),
-            # Tiebreak: dedicated recovery/mobility support wins over generic
-            # non-essential extra conditioning at the same rank.
-            1 if r.get("is_dedicated_recovery_mobility_day") is True else 0,
+        key=lambda r: build_integrated_role_sort_key(
+            role=r,
+            base_rank_fn=_base_rank,
+            athlete_model=athlete_model,
         ),
         reverse=True,  # highest priority first
     )
