@@ -8,24 +8,9 @@ hard too late: D-19/D-18 own the final real pressure exposure.
 
 This module is a small deterministic overlay that runs after every role has a
 scheduled D-day (after ``fill_missing_session_days`` and the camp-week fillers,
-before labels are stamped). Rule:
-
-    If a conditioning role is hard fight-pace / glycolytic and its scheduled
-    D-day is D-13 or closer, morph it to a low-cost rhythm touch
-    (``light_fight_pace_touch_day``) and clear its hard-pressure metadata.
-
-    If a full strength role is scheduled at D-17 or closer, cap it to a
-    low-volume neural maintenance touch (RPE 6-7, 2-3 sets); at D-12 or
-    closer its athlete-facing label also stops rendering as "Strength".
-
-The overlay only ever reduces prescribed load. It never touches:
-
-* the D-21 → D-18 combat-pressure floor (its final hard exposure stays hard);
-* low aerobic gas-tank support, warm-ups, and existing rhythm work;
-* anything scheduled at D-14 or further out.
-
-Because it runs last, no conditioning quota or protected-slot rule can preserve
-hard glycolytic work at D-13 or closer.
+before labels are stamped). It only reduces load. It also records a semantic
+post-morph validation result so a role cannot silently keep its old intent label
+when its final dose no longer satisfies that intent.
 """
 
 from __future__ import annotations
@@ -33,20 +18,11 @@ from __future__ import annotations
 from typing import Any
 
 
-# Hard fight-pace conditioning morphs to a rhythm touch from D-13 inward.
 FIGHT_PACE_MORPH_MAX_D = 13
-# Full strength-transfer softens to low-volume neural maintenance from D-17
-# inward; from D-12 inward the "Strength" role label is also replaced so late
-# camp never renders a full strength day.
 STRENGTH_NEURAL_MORPH_MAX_D = 17
 STRENGTH_LABEL_MORPH_MAX_D = 12
-# D-21 → D-18 is the preserved combat-pressure floor; D-19/D-18 keep the final
-# hard exposure. The morph window sits strictly inside D-13, so the floor is
-# never touched by construction.
 COMBAT_FLOOR_MIN_D = 18
 
-# Hard, glycolytic fight-pace conditioning roles that carry real combat
-# pressure. Lower-cost aerobic/alactic roles are already taper-appropriate.
 HARD_FIGHT_PACE_ROLE_KEYS = frozenset(
     {
         "fight_pace_repeatability_day",
@@ -56,8 +32,6 @@ HARD_FIGHT_PACE_ROLE_KEYS = frozenset(
     }
 )
 
-# Full strength roles that render the "Strength" label. strength_touch_day /
-# small_strength_touch_day / neural_primer_day are already taper-sized.
 FULL_STRENGTH_ROLE_KEYS = frozenset(
     {
         "primary_strength_day",
@@ -68,28 +42,10 @@ FULL_STRENGTH_ROLE_KEYS = frozenset(
     }
 )
 
-# Canonical low-cost morph target (already recognised by role_labels).
 _RHYTHM_TOUCH_ROLE_KEY = "light_fight_pace_touch_day"
 _RHYTHM_TOUCH_LABEL = "Rhythm flush"
 _NEURAL_TOUCH_LABEL = "Neural speed touch"
 
-_NEURAL_MAINTENANCE_SELECTION_RULE = (
-    "Low-volume neural maintenance touch only: 2-3 crisp low-load sets at "
-    "RPE 6-7 max with full recovery between sets. Keep bar/implement speed "
-    "high and the dose tiny. No loaded strength-transfer session, no "
-    "kettlebell swings, no loaded power cleans this close to the fight."
-)
-
-# Deterministic strength-lift dose caps by countdown day.
-#
-# The late-camp morph replaces a strength role's dose with these caps so the
-# *lifting* dose (sets x reps x RPE), not just conditioning minutes, thins as
-# the fight approaches. Caps apply from D-17 inward (STRENGTH_NEURAL_MORPH_MAX_D);
-# D-18 and further out keep meaningful strength retention and are never capped.
-#
-# Each band is (min_d, max_sets, max_reps, rpe_cap, set_cap, rep_cap, dose_label,
-# movement_note). Bands are ordered widest countdown -> closest to the fight so
-# the first band whose min_d <= d wins.
 _STRENGTH_DOSE_BANDS = (
     (14, 3, 3, "6-7", "2-3 sets", "2-3 reps", "low-volume strength-retention touch",
      "familiar low-load strength retention only; never a grinding loaded session"),
@@ -109,15 +65,7 @@ _STRENGTH_DOSE_BANDS = (
 
 
 def late_fight_strength_dose_cap(d_day):
-    """Return the deterministic strength-lift dose cap for a role at ``d_day``.
-
-    Returns ``None`` for D-18 and further out (meaningful strength is retained
-    and never capped) and for values that are not a valid non-negative day.
-    Otherwise returns a dict with ``max_sets`` / ``max_reps`` (numeric ceilings
-    that decrease monotonically as the fight approaches), the human-readable
-    ``rpe_cap`` / ``set_cap`` / ``rep_cap`` strings, a ``dose_label`` and a
-    ``movement_note`` describing what is still allowed.
-    """
+    """Return the deterministic strength-lift dose cap for ``d_day``."""
     try:
         d = int(d_day)
     except (TypeError, ValueError):
@@ -139,7 +87,6 @@ def late_fight_strength_dose_cap(d_day):
 
 
 def _strength_dose_selection_rule(cap: dict) -> str:
-    """Build the athlete-facing selection rule text from a dose cap."""
     return (
         f"Low-volume neural maintenance touch only: {cap['set_cap']} x "
         f"{cap['rep_cap']} at RPE {cap['rpe_cap']} max with full recovery. "
@@ -148,8 +95,7 @@ def _strength_dose_selection_rule(cap: dict) -> str:
         "implement speed high and the dose tiny."
     )
 
-# Role-level metadata that encodes "this is hard, meaningful combat pressure".
-# Stripped on morph so nothing downstream re-reads a stale hard signal.
+
 _HARD_PRESSURE_ROLE_FIELDS = (
     "combat_pressure",
     "meaningful_stress",
@@ -175,7 +121,6 @@ _RHYTHM_TOUCH_SELECTION_RULE = (
 
 
 def _week_calendar_d_day(week: dict[str, Any], weekday: Any) -> int | None:
-    """Resolve the countdown day for a weekday from the week's calendar spine."""
     normalized = str(weekday or "").strip().lower()
     if not normalized:
         return None
@@ -194,7 +139,6 @@ def _role_d_day(week: dict[str, Any], role: dict[str, Any]) -> int | None:
     d_day = _week_calendar_d_day(week, role.get("scheduled_day_hint"))
     if d_day is not None:
         return d_day
-    # Fallback: countdown labels the role-map builder stamps directly.
     for key in ("scheduled_countdown_label", "countdown_label"):
         label = str(role.get(key) or "").strip().upper()
         if label.startswith("D-"):
@@ -221,12 +165,10 @@ def _is_hard_fight_pace_conditioning_role(role: dict[str, Any]) -> bool:
 
 
 def _clear_hard_pressure_metadata(role: dict[str, Any]) -> None:
-    """Strip stale hard-pressure signals and stamp a low-cost governance state."""
     for field in _HARD_PRESSURE_ROLE_FIELDS:
         role.pop(field, None)
     role["stress_class"] = "support"
     role["cost_class"] = "low"
-
     governance = role.get("governance")
     if not isinstance(governance, dict):
         governance = {}
@@ -245,6 +187,7 @@ def _clear_hard_pressure_metadata(role: dict[str, Any]) -> None:
 
 def _morph_to_rhythm_touch(role: dict[str, Any], d_day: int) -> None:
     role["original_role_key"] = str(role.get("role_key") or "")
+    role["original_training_intent"] = "hard_conditioning"
     role["role_key"] = _RHYTHM_TOUCH_ROLE_KEY
     role["athlete_facing_label"] = _RHYTHM_TOUCH_LABEL
     role["category"] = "conditioning"
@@ -264,7 +207,6 @@ def _morph_to_rhythm_touch(role: dict[str, Any], d_day: int) -> None:
 
 
 def _soften_full_strength_role(role: dict[str, Any], d_day: int) -> None:
-    """Cap a full strength role to a countdown-graded low-volume neural touch."""
     cap = late_fight_strength_dose_cap(d_day) or {
         "rpe_cap": "6-7",
         "set_cap": "2-3 sets",
@@ -273,11 +215,10 @@ def _soften_full_strength_role(role: dict[str, Any], d_day: int) -> None:
         "max_reps": 3,
         "movement_note": "familiar low-load strength retention only",
     }
+    role.setdefault("original_training_intent", "meaningful_strength")
     role["rpe_cap"] = cap["rpe_cap"]
     role["set_cap"] = cap["set_cap"]
     role["rep_cap"] = cap["rep_cap"]
-    # Numeric ceilings so downstream/QA can assert the lifting dose actually
-    # shrinks across the countdown (not just the prose).
     role["strength_dose_cap"] = {"max_sets": cap["max_sets"], "max_reps": cap["max_reps"]}
     role["selection_rule"] = _strength_dose_selection_rule(cap)
     role["late_camp_strength_morph"] = True
@@ -287,35 +228,96 @@ def _soften_full_strength_role(role: dict[str, Any], d_day: int) -> None:
         f"neural maintenance touch at D-{d_day}."
     )
     if d_day <= STRENGTH_LABEL_MORPH_MAX_D:
-        # D-12 and closer never render the "Strength" role label.
         role["athlete_facing_label"] = _NEURAL_TOUCH_LABEL
 
 
-def apply_late_camp_role_morph(weekly_role_map: dict[str, Any]) -> dict[str, Any]:
-    """Morph hard fight-pace conditioning at D-13 and closer to a rhythm touch.
+def _strength_intent_survives(role: dict[str, Any]) -> bool:
+    cap = role.get("strength_dose_cap")
+    if cap is None:
+        return True
+    try:
+        return int(cap.get("max_sets", 0)) >= 2 and int(cap.get("max_reps", 0)) >= 1
+    except (TypeError, ValueError):
+        return False
 
-    Mutates and returns the map. Safe to call on any ``weekly_role_map``: roles
-    without a resolvable scheduled D-day, or scheduled at D-14 and further out,
-    are left untouched.
-    """
+
+def _hard_conditioning_intent_survives(role: dict[str, Any]) -> bool:
+    if role.get("late_camp_role_morph") is True:
+        return False
+    if role.get("counts_toward_conditioning_cap") is False:
+        return False
+    system = str(role.get("preferred_system") or "").strip().lower()
+    return system in {"glycolytic", "alactic", "atp-pcr", "atp_pcr"}
+
+
+def _stamp_intent_validation(role: dict[str, Any], d_day: int | None, original_intent: str | None) -> None:
+    if not original_intent:
+        return
+    if original_intent == "meaningful_strength":
+        satisfied = _strength_intent_survives(role)
+    elif original_intent == "hard_conditioning":
+        satisfied = _hard_conditioning_intent_survives(role)
+    else:
+        return
+    validation = {
+        "intent": original_intent,
+        "satisfied": satisfied,
+        "scheduled_d_day": d_day,
+        "authority": "post_morph_semantic_validation",
+    }
+    if not satisfied:
+        validation["reason_code"] = "countdown_morph_reduced_original_intent"
+        validation["reason"] = (
+            "Countdown safety morph reduced this role below the dose/system that "
+            "originally earned the slot. Treat the original intent as unsatisfied "
+            "for downstream QA; do not claim it survived merely because the role remains visible."
+        )
+    role["intent_validation"] = validation
+
+
+def apply_late_camp_role_morph(weekly_role_map: dict[str, Any]) -> dict[str, Any]:
+    """Apply scheduled-day late-camp morphs and validate final role semantics."""
     if not isinstance(weekly_role_map, dict):
         return weekly_role_map
+
+    summary = {"checked": 0, "satisfied": 0, "unsatisfied": 0, "unsatisfied_roles": []}
+
     for week in weekly_role_map.get("weeks", []) or []:
         if not isinstance(week, dict):
             continue
         for role in week.get("session_roles") or []:
             if not isinstance(role, dict):
                 continue
+            d_day = _role_d_day(week, role)
             role_key = str(role.get("role_key") or "").strip().lower()
+            original_intent = None
+
             if role_key in FULL_STRENGTH_ROLE_KEYS:
-                d_day = _role_d_day(week, role)
+                original_intent = "meaningful_strength"
                 if d_day is not None and 0 <= d_day <= STRENGTH_NEURAL_MORPH_MAX_D:
                     _soften_full_strength_role(role, d_day)
-                continue
-            if not _is_hard_fight_pace_conditioning_role(role):
-                continue
-            d_day = _role_d_day(week, role)
-            if d_day is None or not 0 <= d_day <= FIGHT_PACE_MORPH_MAX_D:
-                continue
-            _morph_to_rhythm_touch(role, d_day)
+            elif _is_hard_fight_pace_conditioning_role(role):
+                original_intent = "hard_conditioning"
+                if d_day is not None and 0 <= d_day <= FIGHT_PACE_MORPH_MAX_D:
+                    _morph_to_rhythm_touch(role, d_day)
+
+            _stamp_intent_validation(role, d_day, original_intent)
+            validation = role.get("intent_validation")
+            if isinstance(validation, dict):
+                summary["checked"] += 1
+                if validation.get("satisfied"):
+                    summary["satisfied"] += 1
+                else:
+                    summary["unsatisfied"] += 1
+                    summary["unsatisfied_roles"].append(
+                        {
+                            "role_key": role.get("role_key"),
+                            "original_role_key": role.get("original_role_key"),
+                            "intent": validation.get("intent"),
+                            "scheduled_d_day": d_day,
+                            "reason_code": validation.get("reason_code"),
+                        }
+                    )
+
+    weekly_role_map["post_morph_intent_validation"] = summary
     return weekly_role_map
