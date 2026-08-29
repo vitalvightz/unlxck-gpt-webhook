@@ -5,7 +5,7 @@ import threading
 from .normalization import clean_list, dedupe_preserve_order, normalize_fatigue_level, ordered_weekdays as _ordered_weekdays
 from .fight_date_utils import resolve_fight_weekday
 from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_days
-from .performance_bias import bridge_low_risk_profile
+from .performance_bias import BRIDGE_EXTRA_EXPOSURE_DAY_RANGE, bridge_low_risk_profile
 from .late_camp_role_morph import late_fight_strength_dose_cap
 
 from collections import OrderedDict
@@ -102,6 +102,9 @@ _LATE_FIGHT_WINDOW_BOUNDS = {
 
 _LATE_FIGHT_ROLE_COST_CLASS = {
     "hard_sparring_day": "high",
+    "neural_plus_strength_day": "medium",
+    "fight_pace_repeatability_day": "high",
+    "aerobic_support_day": "low",
     "strength_touch_day": "medium",
     "neural_primer_day": "medium",
     "alactic_sharpness_day": "medium",
@@ -112,6 +115,9 @@ _LATE_FIGHT_ROLE_COST_CLASS = {
 
 _LATE_FIGHT_ROLE_STRESS_CLASS = {
     "hard_sparring_day": "meaningful_stress",
+    "neural_plus_strength_day": "meaningful_stress",
+    "fight_pace_repeatability_day": "meaningful_stress",
+    "aerobic_support_day": "support",
     "strength_touch_day": "meaningful_stress",
     "neural_primer_day": "meaningful_stress",
     "alactic_sharpness_day": "meaningful_stress",
@@ -123,9 +129,12 @@ _LATE_FIGHT_ROLE_STRESS_CLASS = {
 _LATE_FIGHT_ROLE_SELECTION_PRIORITY = {
     "hard_sparring_day": 120,
     "neural_primer_day": 110,
+    "neural_plus_strength_day": 108,
     "strength_touch_day": 108,
+    "fight_pace_repeatability_day": 106,
     "alactic_sharpness_day": 106,
     "fight_week_freshness_day": 104,
+    "aerobic_support_day": 102,
     "light_fight_pace_touch_day": 100,
     "technical_touch_day": -10,
 }
@@ -145,6 +154,9 @@ _COEXISTABLE_FILLER_ROLE_KEYS = {
     "footwork_walkthrough",
 }
 _DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS = {
+    "neural_plus_strength_day",
+    "fight_pace_repeatability_day",
+    "aerobic_support_day",
     "strength_touch_day",
     "neural_primer_day",
     "alactic_sharpness_day",
@@ -618,6 +630,12 @@ def _active_weight_cut_present(athlete_model: dict[str, Any], flags: set[str]) -
 
 
 def _blocks_bridge_extra_glycolytic_touch(athlete_model: dict[str, Any]) -> bool:
+    # Keep the legacy controlled-pressure fallback behind the same complete
+    # fatigue / cut / injury gate as the performance bridge. This catches
+    # persisted high-cut buckets and red-flag readiness states even when their
+    # older scalar fields are missing or internally inconsistent.
+    if not bridge_low_risk_profile(athlete_model):
+        return True
     flags = _readiness_flags(athlete_model)
     fatigue = _normalized_fatigue(athlete_model)
     if fatigue in {"moderate", "high", "critical", "extreme"}:
@@ -627,6 +645,9 @@ def _blocks_bridge_extra_glycolytic_touch(athlete_model: dict[str, Any]) -> bool
     if _weight_cut_is_extreme(athlete_model, flags):
         return True
     if clean_list(athlete_model.get("injuries", [])):
+        return True
+    injury_mode = str(athlete_model.get("injury_mode") or "").strip().lower()
+    if injury_mode in {"medical_hold", "restricted_rehab_only", "needs_review"}:
         return True
     if flags & {"injury_management", "medical_hold", "restricted_rehab", "restricted_rehab_only", "needs_review"}:
         return True
@@ -808,6 +829,22 @@ def timing_state(days_until_fight: Any) -> str:
     if 14 <= days <= 21:
         return TIMING_STATE_BRIDGE
     return TIMING_STATE_LATE_TAPER
+
+
+def _performance_bridge_active(days_until_fight: Any, athlete_model: dict[str, Any]) -> bool:
+    """Return whether D-21..D-18 may retain late-SPP role architecture.
+
+    This is a vocabulary/shape overlay only. The existing bridge caps, hard-day
+    collision locks, D-17 hard-sparring conversion, and weight-cut/injury gates
+    remain binding.
+    """
+    days = _coerce_days(days_until_fight)
+    min_day, max_day = BRIDGE_EXTRA_EXPOSURE_DAY_RANGE
+    return bool(
+        isinstance(days, int)
+        and min_day <= days <= max_day
+        and bridge_low_risk_profile(athlete_model)
+    )
 
 
 def bridge_sub_band(days_until_fight: Any) -> str | None:
@@ -1356,8 +1393,15 @@ def _late_fight_permission_policy(days_until_fight: Any, athlete_model: dict[str
         ]
     )
 
+    performance_bridge_active = _performance_bridge_active(days_until_fight, athlete_model)
     allowed_role_keys: list[str] = []
-    if mode in {"bridge_compression_payload", "pre_fight_compressed_payload"}:
+    if mode == "bridge_compression_payload":
+        allowed_role_keys = ["hard_sparring_day", "strength_touch_day", "light_fight_pace_touch_day", "alactic_sharpness_day", "technical_touch_day", "fight_week_freshness_day"]
+        if performance_bridge_active:
+            allowed_role_keys.extend(
+                ["neural_plus_strength_day", "fight_pace_repeatability_day", "aerobic_support_day"]
+            )
+    elif mode == "pre_fight_compressed_payload":
         allowed_role_keys = ["hard_sparring_day", "strength_touch_day", "light_fight_pace_touch_day", "alactic_sharpness_day", "technical_touch_day", "fight_week_freshness_day"]
     elif mode == "late_fight_week_payload":
         allowed_role_keys = ["hard_sparring_day", "neural_primer_day", "alactic_sharpness_day", "technical_touch_day", "fight_week_freshness_day"]
@@ -1410,6 +1454,8 @@ def _late_fight_permission_policy(days_until_fight: Any, athlete_model: dict[str
         "declared_hard_day_actions": declared_hard_day_actions,
         "preserved_hard_days": preserved_hard_days,
         "downgraded_hard_days": downgraded_hard_days,
+        "performance_bridge_active": performance_bridge_active,
+        "coach_owned_roles_count_toward_app_active_budget": False,
         "allowed_role_keys": dedupe_preserve_order(allowed_role_keys),
     }
 
@@ -1425,7 +1471,8 @@ def _bridge_active_role_cap(days_until_fight: Any, athlete_model: dict[str, Any]
     signal — high fatigue, moderate+ injury, aggressive cut, restricted injury
     mode — drops them back to the conservative baseline. Hard sparring and
     glycolytic caps are untouched, so the extra role is filled by low-risk work
-    only (a non-fatiguing alactic sharpness touch).
+    only (late-SPP maintenance in D-21..D-18, then a non-fatiguing alactic
+    sharpness touch in D-17..D-14).
 
     Why the bump now extends through D-17..D-14: the freshness/reset day is
     mandatory in the bridge and counts against the active-role budget, so a flat
@@ -1449,6 +1496,7 @@ def _bridge_active_role_cap(days_until_fight: Any, athlete_model: dict[str, Any]
 def _late_fight_role_budget(days_until_fight: Any, athlete_model: dict[str, Any]) -> dict[str, Any]:
     return {
         "mode": _days_out_payload_mode(days_until_fight),
+        "coach_owned_roles_count_toward_app_active_budget": False,
         "max_active_roles": _bridge_active_role_cap(days_until_fight, athlete_model),
         "max_meaningful_stress_exposures": _late_fight_max_meaningful_stress_exposures(days_until_fight),
         "max_support_roles": _late_fight_max_support_roles(days_until_fight),
@@ -1466,7 +1514,10 @@ def _late_fight_forbidden_blocks(days_until_fight: Any) -> list[str]:
             "stacked_hard_day_pair",
             "double_stress_day",
         ]
-        if days < 19:
+        # D-18 is the canonical last controlled pressure opportunity. The
+        # candidate gate still suppresses it for hard-spar collisions, high
+        # fatigue, injury, or high-pressure cuts; D-17 inward remains blocked.
+        if days < 18:
             forbidden.append("standalone_glycolytic")
         return forbidden
     if 8 <= days <= 13:
@@ -1841,8 +1892,12 @@ def _late_fight_window(days_until_fight: Any) -> str:
 def _late_fight_session_type_rules(days_until_fight: Any) -> tuple[list[str], list[str]]:
     mode = _days_out_payload_mode(days_until_fight)
     if mode == "bridge_compression_payload":
+        days = _coerce_days(days_until_fight)
+        allowed = ["sparring", "technical", "strength", "sharpness", "recovery"]
+        if isinstance(days, int) and 18 <= days <= 21:
+            allowed.insert(3, "conditioning")
         return (
-            ["sparring", "technical", "strength", "sharpness", "recovery"],
+            allowed,
             [
                 "multiple_hard_sparring_exposures",
                 "stacked_hard_day_pair",
@@ -1893,6 +1948,7 @@ def _late_fight_permissions(days_until_fight: Any, athlete_model: dict) -> dict:
             "sparring_role": "full_collision_owner",
         }
     if mode == "bridge_compression_payload":
+        performance_bridge_active = _performance_bridge_active(days_until_fight, athlete_model)
         bridge_rules = compute_bridge_rules(
             days_until_fight=days_until_fight,
             sport=athlete_model.get("sport"),
@@ -1914,7 +1970,7 @@ def _late_fight_permissions(days_until_fight: Any, athlete_model: dict) -> dict:
             "allow_full_weekly_structure": False,
             "allow_compressed_weekly_structure": True,
             "allow_normal_session_roles": True,
-            "allow_anchor_wording": False,
+            "allow_anchor_wording": performance_bridge_active,
             "allow_development_language": False,
             "allow_glycolytic_build": False,
             "allow_broad_weakness_building": False,
@@ -1933,6 +1989,8 @@ def _late_fight_permissions(days_until_fight: Any, athlete_model: dict) -> dict:
             "allow_weekly_frequency_reasoning": True,
             "allow_multi_session_stress": False,
             "sparring_role": "bridge_collision_owner_capped",
+            "performance_bridge_active": performance_bridge_active,
+            "coach_owned_roles_count_toward_app_active_budget": False,
             "forbid": [
                 "deloading, capping, or dropping a declared hard sparring day at D-18 or further out",
                 "hard sparring from D-17 onward",
@@ -2142,6 +2200,36 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
     if mode == "camp_payload":
         return {"mode": mode, "rules": []}
     if mode == "bridge_compression_payload":
+        days = _coerce_days(days_until_fight)
+        if isinstance(days, int) and 18 <= days <= 21:
+            return {
+                "mode": mode,
+                "framing": "late_spp_performance_bridge",
+                "rules": [
+                    "Late-SPP performance bridge: preserve one genuine maintenance-strength exposure and one appropriate performance exposure only when the deterministic permission policy marks the athlete low risk.",
+                    "Reduce volume and accessories progressively; this is performance maintenance and sharpening, never a new development block or conditioning build.",
+                    "5 blocks per session max. 3 meaningful stress exposures max per rolling 7-day block.",
+                    "Declared coach combat owns its day and constrains neighbouring load without consuming the app-owned active-role quota. From D-17 onward, all declared hard sparring converts to technical/rhythm only.",
+                    "One freshness / mobility session is mandatory. No double-stress days.",
+                ],
+                "preferred_terms": [
+                    "bridge week",
+                    "late-SPP performance bridge",
+                    "strength maintenance",
+                    "fight-pace touch",
+                    "aerobic support",
+                    "sharpness",
+                    "freshness",
+                    "mobility / reset",
+                ],
+                "forbidden_terms": [
+                    "development block",
+                    "conditioning build",
+                    "secondary anchor",
+                    "extra density push",
+                    "back-to-back hard days",
+                ],
+            }
         return {
             "mode": mode,
             "framing": "bridge_compression_week",
@@ -2716,30 +2804,90 @@ def _late_fight_candidate_roles(
     has_downgraded_hard_days = bool(permission_policy.get("downgraded_hard_days", []))
 
     if mode == "bridge_compression_payload":
+        days = _coerce_days(days_until_fight)
+        performance_bridge_active = bool(permission_policy.get("performance_bridge_active"))
         candidates.append(
             _late_fight_role_entry(
                 category="strength",
-                role_key="strength_touch_day",
+                role_key="neural_plus_strength_day" if performance_bridge_active else "strength_touch_day",
                 preferred_pool="strength_slots",
-                selection_rule="Use one meaningful strength or power touch only (bridge-window taper-on-ramp).",
-                placement_rule="Keep clear of hard sparring and never stack on another hard day.",
+                selection_rule=(
+                    "Retain one genuine late-SPP strength-maintenance exposure using a familiar, low-damage primary pattern. "
+                    "Keep useful loading at D-18 or further out; if spacing pushes it to D-17..D-14, apply the countdown-graded maintenance cap."
+                    if performance_bridge_active
+                    else "Use one meaningful strength or power touch only (bridge-window taper-on-ramp)."
+                ),
+                placement_rule=(
+                    "Place around coach-owned combat load, keep at least one clean recovery day where the calendar permits, "
+                    "and never stack it on a declared combat day."
+                    if performance_bridge_active
+                    else "Keep clear of hard sparring and never stack on another hard day."
+                ),
                 selection_priority=108,
                 required=True,
                 legal_countdown_labels=legal_countdown_labels,
             )
         )
         glycolytic_touch_added = False
-        days = _coerce_days(days_until_fight)
-        if (
+        if performance_bridge_active:
+            pressure_labels = [
+                label
+                for label in legal_countdown_labels
+                if (offset := _countdown_offset(str(label))) is not None and 18 <= offset <= 20
+            ] or [
+                label
+                for label in legal_countdown_labels
+                if (offset := _countdown_offset(str(label))) is not None and 18 <= offset <= 21
+            ]
+            use_aerobic_support = bool(preserved_hard_days) or _blocks_bridge_extra_glycolytic_touch(
+                athlete_model
+            ) or _suppress_standalone_glycolytic(preserved_hard_days, athlete_model)
+            if use_aerobic_support:
+                candidates.append(
+                    _late_fight_role_entry(
+                        category="conditioning",
+                        role_key="aerobic_support_day",
+                        preferred_pool="conditioning_slots",
+                        preferred_system="aerobic",
+                        selection_rule=(
+                            "Retain one low-noise aerobic support exposure around the coach-owned collision load. "
+                            "Use technical movement or coordination content when that matches the athlete's priorities; no glycolytic stacking."
+                        ),
+                        placement_rule=(
+                            "Route this onto a clean app-owned day away from declared combat. Keep it conversational and recovery-compatible."
+                        ),
+                        selection_priority=102,
+                        legal_countdown_labels=legal_countdown_labels,
+                    )
+                )
+            else:
+                candidates.append(
+                    _late_fight_role_entry(
+                        category="conditioning",
+                        role_key="fight_pace_repeatability_day",
+                        preferred_pool="conditioning_slots",
+                        preferred_system="glycolytic",
+                        selection_rule=(
+                            "D-20 to D-18: retain one controlled, low-volume fight-pace repeatability exposure. "
+                            "This is the final meaningful pressure dose, not a conditioning build; stop before output or technique degrades."
+                        ),
+                        placement_rule=(
+                            "Use D-20, D-19, or D-18 on a clean app-owned day. Protect both neighbouring days and never stack it with declared combat."
+                        ),
+                        selection_priority=106,
+                        legal_countdown_labels=pressure_labels or legal_countdown_labels,
+                    )
+                )
+                glycolytic_touch_added = True
+        elif (
             days is not None
             and 18 <= days <= 21
             and not preserved_hard_days
             and not _blocks_bridge_extra_glycolytic_touch(athlete_model)
             and not _suppress_standalone_glycolytic(preserved_hard_days, athlete_model)
         ):
-            # One controlled pressure exposure around D-20..D-18 is expected in
-            # the bridge unless a declared coach hard-sparring day already owns
-            # that band (preserved_hard_days) or a readiness blocker fires.
+            # Conservative/non-low-risk bridge profiles retain the legacy
+            # controlled touch only when every existing safety gate permits it.
             pressure_labels = [
                 label
                 for label in legal_countdown_labels
@@ -2769,7 +2917,7 @@ def _late_fight_candidate_roles(
                 )
             )
             glycolytic_touch_added = True
-        if (
+        if not performance_bridge_active and (
             not glycolytic_touch_added
             and not preserved_hard_days
             and bridge_low_risk_profile(athlete_model)
@@ -3429,7 +3577,7 @@ def _late_fight_allocation_plan(days_until_fight: Any, athlete_model: dict[str, 
         "permission_policy": permission_policy,
         "role_budget": {
             **role_budget,
-            "selected_active_roles": len(public_roles),
+            "selected_active_roles": _late_fight_active_role_count(public_roles),
             "selected_meaningful_stress_exposures": _late_fight_meaningful_stress_count(public_roles),
             "selected_support_roles": _late_fight_support_role_count(public_roles),
         },
@@ -3810,7 +3958,7 @@ def _space_bridge_countdown_roles(
     # whole-window caps exactly one extra slot for it so the pressure exposure
     # never has to evict a later sharpness-window role.
     has_bridge_pressure_touch = any(
-        str(role.get("role_key") or "") == "light_fight_pace_touch_day"
+        str(role.get("role_key") or "") in {"light_fight_pace_touch_day", "fight_pace_repeatability_day"}
         and str(role.get("composite_segment_stage_key") or "") == "d21_to_d14"
         for role in roles
     )
@@ -4170,7 +4318,9 @@ def _compute_late_fight_practical_allocation_plan(
     else:
         allocation = _late_fight_allocation_plan(days_until_fight, athlete_model)
     allocation = _ensure_compressed_freshness_role(allocation, days_until_fight, athlete_model)
-    return _append_declared_hard_spar_context(allocation, days_until_fight, athlete_model)
+    allocation = _append_declared_hard_spar_context(allocation, days_until_fight, athlete_model)
+    _soften_late_strength_touches(allocation.get("session_roles", []))
+    return allocation
 
 
 # The allocation runs an exhaustive assignment search (``_space_bridge_countdown_roles``)
@@ -4227,6 +4377,9 @@ def _late_fight_practical_allocation_plan(days_until_fight: Any, athlete_model: 
 def _late_fight_stage_label(days_until_fight: Any) -> str:
     mode = _days_out_payload_mode(days_until_fight)
     if mode == "bridge_compression_payload":
+        days = _coerce_days(days_until_fight)
+        if isinstance(days, int) and 18 <= days <= 21:
+            return "Late-SPP Performance Bridge"
         return "Bridge Compression Week"
     if mode == "pre_fight_compressed_payload":
         return "Compressed Pre-Fight Week"
@@ -4246,6 +4399,13 @@ def _late_fight_stage_label(days_until_fight: Any) -> str:
 def _late_fight_summary(days_until_fight: Any) -> str:
     mode = _days_out_payload_mode(days_until_fight)
     if mode == "bridge_compression_payload":
+        days = _coerce_days(days_until_fight)
+        if isinstance(days, int) and 18 <= days <= 21:
+            return (
+                "Use a progressive late-SPP performance bridge when the deterministic low-risk gate permits it: retain one genuine strength-maintenance exposure plus one appropriate fight-pace or aerobic-support exposure, then reduce toward D-17. "
+                "Declared combat owns its day and constrains neighbouring work but does not consume the app-owned active-role quota. "
+                "From D-17 onward, all declared hard sparring is technical-only combat; never stack programmed S&C on a declared combat day. Keep freshness mandatory and prohibit double-stress days."
+            )
         return (
             "Use a bridge compression week: taper-on-ramp rather than full camp. "
             "Declared hard sparring days in D-21 to D-18 are athlete-owned and stay hard. Keep one meaningful strength touch, "
@@ -4610,8 +4770,8 @@ def _build_late_fight_weekly_role_map(
     return {
         "model": "late_fight_role_overlay.v1",
         "source_of_truth": [
-            "Late-fight Stage 2 payload bypasses the normal camp-week payload path for 13 days and less.",
-            "Use the late-fight role map as a compressed execution guide, not as a normal weekly build.",
+            "Late-fight Stage 2 owns D-21 inward; low-risk D-21..D-18 keeps a late-SPP performance backbone before progressive compression.",
+            "Use the countdown role map as the source of truth: preserve eligible performance roles in D-21..D-18, then tighten from D-17 inward.",
             "Keep the output aligned to the time window first, then the athlete profile.",
         ],
         "payload_variant": "late_fight_stage2_payload",
@@ -4624,9 +4784,9 @@ def _build_late_fight_weekly_role_map(
     }
 
 
-# D-17 and closer never carry a full loaded strength-transfer session: once the
-# strength touch is scheduled inside that band (e.g. D-17 right after a D-18
-# fight-pace exposure), it is capped to a countdown-graded low-volume neural
+# D-17 and closer never carry a full loaded strength-transfer session: once a
+# bridge strength role is scheduled inside that band (e.g. D-17 right after a
+# D-18 fight-pace exposure), it is capped to a countdown-graded low-volume neural
 # maintenance touch whose lifting dose (sets x reps x RPE) thins toward the
 # fight. The graded caps come from late_camp_role_morph.late_fight_strength_dose_cap
 # so the role-morph path and this session-sequence path stay in lockstep.
@@ -4646,7 +4806,10 @@ def _soften_late_strength_touches(session_sequence: list[dict[str, Any]]) -> Non
     for entry in session_sequence:
         if not isinstance(entry, dict):
             continue
-        if str(entry.get("role_key") or "").strip().lower() != "strength_touch_day":
+        if str(entry.get("role_key") or "").strip().lower() not in {
+            "strength_touch_day",
+            "neural_plus_strength_day",
+        }:
             continue
         offset = entry.get("countdown_offset")
         if not isinstance(offset, int):
@@ -4839,11 +5002,12 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
         )
     if payload_mode == "bridge_compression_payload":
         return (
-            "BRIDGE COMPRESSION WEEK (D-21 to D-14)\n"
-            "Taper-on-ramp, not full camp. 5 blocks per session max.\n"
+            "PROGRESSIVE LATE-CAMP BRIDGE (D-21 to D-14)\n"
+            "D-21 to D-18: when permission_policy.performance_bridge_active is true, retain the deterministic late-SPP strength and conditioning/aerobic roles; do not replace them with generic primers. D-17 to D-14 is the true taper-on-ramp. 5 blocks per session max.\n"
             "Meaningful stress cap: 3 per rolling 7 days. Declared hard sparring in D-21 to D-18 is athlete-owned and stays hard; from D-17 onward all declared hard sparring converts to technical-only combat.\n"
-            "Strength/power: 1 touch max; when it lands at D-17 or closer, render it as a low-volume neural maintenance touch (2-3 crisp sets, RPE 6-7 max) — never a loaded strength-transfer session. Pressure exposure: one controlled fight-pace pressure touch on D-20, D-19, or D-18 when no declared hard-sparring day owns D-21 to D-18; otherwise 0.\n"
-            "One freshness/mobility reset is mandatory. Never stack programmed S&C on a declared hard-sparring/contact day. No double-stress day.\n\n"
+            "Strength/power: 1 exposure max; at D-18 or further out it may remain genuine low-damage maintenance work. When it lands at D-17 or closer, apply the countdown-graded low-volume neural maintenance cap (2-3 crisp sets, RPE 6-7 max) — never a loaded strength-transfer session.\n"
+            "Performance exposure: use one controlled fight-pace repeatability dose on D-20 to D-18 only when no declared hard combat or safety blocker owns the band; otherwise use the allocated low-noise aerobic support role. Never restore a suppressed glycolytic role.\n"
+            "Coach-owned combat constrains placement and recovery but never counts against the app-owned active-role quota. One freshness/mobility reset is mandatory. Never stack programmed S&C on a declared hard-sparring/contact day. No double-stress day.\n\n"
             + _CONTRACT
         )
     if payload_mode == "pre_fight_compressed_payload":
