@@ -2012,6 +2012,8 @@ def _build_spar_allocation_reason_codes(
     compression: int,
     is_hard_spar_week: bool,
     is_meaningful_cut: bool,
+    *,
+    proximity_compression_suppressed: bool = False,
 ) -> list[str]:
     reason_codes: list[str] = []
     fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
@@ -2025,7 +2027,15 @@ def _build_spar_allocation_reason_codes(
         reason_codes.append("injury_management")
     days_to_fight = athlete_model.get("days_until_fight")
     if isinstance(days_to_fight, int) and 0 <= days_to_fight <= 17:
-        reason_codes.append("proximity_to_fight")
+        if proximity_compression_suppressed:
+            # Proximity compression was explicitly disabled for this week (all hard
+            # sparring is already technical-only and declared contact owns the freed
+            # slots), so the surviving cap is the spar-first declared-contact
+            # frequency cap, not fight proximity. Naming it proximity_to_fight would
+            # contaminate downstream reasoning with a signal this path disabled.
+            reason_codes.append("declared_contact_frequency_cap")
+        else:
+            reason_codes.append("proximity_to_fight")
     return reason_codes
 
 
@@ -2113,14 +2123,15 @@ def _apply_high_fatigue_week_compression(
     )
 
     days_to_fight = athlete_model.get("days_until_fight")
-    if (
+    proximity_compression_suppressed = (
         hard_sparring_plan is not None
-        and locked_spar_days
+        and bool(locked_spar_days)
         and not effective_hard_sparring_days_set
         and isinstance(days_to_fight, int)
         and 0 <= days_to_fight <= 17
         and compression == 1
-    ):
+    )
+    if proximity_compression_suppressed:
         compression_floor = 0
 
     # Step 3: Compute target number of non-sparring active sessions
@@ -2187,7 +2198,13 @@ def _apply_high_fatigue_week_compression(
     kept_non_spar = ranked_roles[:non_spar_target]
     dropped_non_spar = ranked_roles[non_spar_target:]
 
-    reason_codes = _build_spar_allocation_reason_codes(athlete_model, compression, is_hard_spar_week, is_meaningful_cut)
+    reason_codes = _build_spar_allocation_reason_codes(
+        athlete_model,
+        compression,
+        is_hard_spar_week,
+        is_meaningful_cut,
+        proximity_compression_suppressed=proximity_compression_suppressed,
+    )
     if not reason_codes:
         reason_codes = ["spar_first_cap"]
     summary = _compression_summary(reason_codes)

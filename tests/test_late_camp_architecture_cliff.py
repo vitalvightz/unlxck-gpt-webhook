@@ -44,6 +44,13 @@ logging.disable(logging.CRITICAL)
 FIGHT_FRIDAY = _dt.date(2026, 1, 30)
 assert FIGHT_FRIDAY.weekday() == 4, "fixture fight date must be a Friday"
 
+# A fixed Tuesday fight anchors the exact production calendar behind the shipped
+# D-16 collapse: with Mon-Fri availability and Tue/Fri declared contact, a Tuesday
+# fight puts D-4 on a Friday contact day and D-1/D-8 on legal Mondays. That precise
+# geometry is what a Friday-anchored fixture cannot reproduce.
+FIGHT_TUESDAY = _dt.date(2026, 2, 3)
+assert FIGHT_TUESDAY.weekday() == 1, "fixture fight date must be a Tuesday"
+
 _EQUIP = (
     "bands, partner, kettlebells, dumbbells, cable, barbell, pullup_bar, "
     "heavy_bag, neck_harness, plate, towel, weight_belt, box, trap_bar, "
@@ -56,7 +63,7 @@ def _warm_banks():
     prime_plan_banks(logger=logging.getLogger("test"))
 
 
-def _fixture_fields(**over) -> list[dict]:
+def _fixture_fields(*, fight_date: _dt.date = FIGHT_FRIDAY, **over) -> list[dict]:
     """The exact production-like regression fixture, with per-test overrides."""
     return [
         {"label": "Full name", "value": "Fixture Athlete"},
@@ -87,18 +94,25 @@ def _fixture_fields(**over) -> list[dict]:
         {"label": "Primary goal", "value": over.get("primary_goal", "power")},
         {"label": "Where do you feel weakest right now?", "value": over.get("weak", "coordination, speed")},
         {"label": "Primary weak area", "value": over.get("primary_weak", "coordination")},
-        {"label": "When is your next fight?", "value": FIGHT_FRIDAY.strftime("%Y-%m-%d")},
+        {"label": "When is your next fight?", "value": fight_date.strftime("%Y-%m-%d")},
         {"label": "Any injuries or areas you need to work around?", "value": over.get("injuries", "")},
     ]
 
 
-def _run(days: int, monkeypatch, **over) -> dict:
-    """Drive the full deterministic Stage-1 pipeline and return the planning brief."""
+def _run(days: int, monkeypatch, *, fight_date: _dt.date = FIGHT_FRIDAY, **over) -> dict:
+    """Drive the full deterministic Stage-1 pipeline and return the planning brief.
+
+    ``fight_date`` anchors the weekday geometry. It defaults to the Friday fixture
+    so existing callers are unchanged; pass ``FIGHT_TUESDAY`` to reproduce the exact
+    production calendar (Tue/Fri contact, weekend-unavailable) behind the D-16 bug.
+    """
     fixed_now = _dt.datetime.combine(
-        FIGHT_FRIDAY - _dt.timedelta(days=days), _dt.time(12, 0)
+        fight_date - _dt.timedelta(days=days), _dt.time(12, 0)
     )
     monkeypatch.setattr(input_parsing, "_utc_now", lambda: fixed_now)
-    plan_input = PlanInput.from_payload({"data": {"fields": _fixture_fields(**over)}})
+    plan_input = PlanInput.from_payload(
+        {"data": {"fields": _fixture_fields(fight_date=fight_date, **over)}}
+    )
     assert plan_input.days_until_fight == days, (
         f"expected D-{days}, pinned clock gave D-{plan_input.days_until_fight}"
     )
@@ -399,19 +413,44 @@ class TestProductionCalendarCollision:
 
 
 # --------------------------------------------------------------------------- #
-# C. TWO DECLARED CONTACT DAYS AFTER D-17 DOWNGRADE
+# C. TWO DECLARED CONTACT DAYS AFTER D-17 DOWNGRADE — EXACT TUESDAY-FIGHT SHAPE
 # --------------------------------------------------------------------------- #
 
+# Legal app-owned days for the Tuesday-fight fixture: Mon-Fri availability with
+# Tuesday and Friday owned by declared contact, so app S&C may only land on
+# Monday / Wednesday / Thursday. Tuesday and Friday are contact (never app S&C).
+_TUE_FIGHT_LEGAL_DAYS = {"monday", "wednesday", "thursday"}
+_TUE_FIGHT_CONTACT_DAYS = {"tuesday", "friday"}
+
+
 class TestTwoDeclaredContactLateCampRegression:
-    """D-17..D-14 normal-camp regression with Tue/Fri declared contact."""
+    """D-17..D-14 normal-camp regression on the EXACT production Tuesday-fight shape.
+
+    This reproduces the calendar behind the shipped D-16 collapse rather than the
+    module's default Friday anchor. With a Tuesday fight, Mon-Fri availability and
+    Tuesday/Friday declared contact, the countdown lands on::
+
+        D-14 Tue (contact)  D-13 Wed          D-12 Thu          D-11 Fri (contact)
+        D-8  Mon            D-7  Tue (contact) D-6  Wed          D-5  Thu
+        D-4  Fri (contact)  D-1  Mon           D-0  Tue (FIGHT)
+
+    with the weekends (D-16/D-15 ... D-10/D-9 ... D-3/D-2) unavailable. Those are
+    the specific legal windows the bug depended on — a Friday-anchored fixture puts
+    the fight itself on a declared contact day and cannot reproduce them.
+
+    Assertions are semantic (category / energy system / role family / day), never
+    exercise names, and hold across the whole D-17..D-14 normal-camp window.
+    """
 
     @staticmethod
     def _case(days, monkeypatch):
         return _run(
             days,
             monkeypatch,
+            fight_date=FIGHT_TUESDAY,
             availability="Monday, Tuesday, Wednesday, Thursday, Friday",
             hard_sparring="Tuesday, Friday",
+            support="",
             frequency="4",
             weight="88",
             target_weight="88",
@@ -435,30 +474,99 @@ class TestTwoDeclaredContactLateCampRegression:
                 reason_codes.update(suppressed.get("compression_reason_codes") or [])
             assert "two_hard_spar_days" not in reason_codes
 
-    def test_d16_keeps_strength_and_alactic_sharpness_without_inflating_frequency(self, monkeypatch):
-        brief = self._case(16, monkeypatch)
-        weeks = {str(week.get("phase") or "").upper(): week for week in _weeks(brief)}
-        spp = weeks["SPP"]
-        taper = weeks["TAPER"]
+    @pytest.mark.parametrize("days", [17, 16, 15, 14])
+    def test_tuesday_fight_keeps_full_architecture_without_inflating_frequency(self, days, monkeypatch):
+        # The architecture assertions run across the whole D-17..D-14 window, not
+        # only at D-16: crossing a generation day must not silently drop a layer.
+        brief = self._case(days, monkeypatch)
+        placed = list(_placed_roles(brief))
 
-        spp_core = [
-            role for role in spp.get("session_roles") or []
-            if role.get("category") in {"strength", "conditioning", "recovery"}
+        # 1. Meaningful RETENTION strength (not merely the D-1 primer) survives on a
+        #    legal, non-contact available day. The shipped bug lost it to a 1-set
+        #    neural microdose; here it must stay a >= 2-set / uncapped exposure and
+        #    never stack on Tue/Fri contact or an unavailable weekend.
+        retention_strength = [
+            e for e in _meaningful_strength_exposures(brief)
+            if e["meaningful"] and e["role"].get("role_key") != "neural_primer_day"
         ]
-        taper_core = [
-            role for role in taper.get("session_roles") or []
-            if role.get("category") in {"strength", "conditioning", "recovery"}
+        assert retention_strength, f"D-{days} lost meaningful retention strength entirely"
+        for e in retention_strength:
+            wd = str(e["role"].get("scheduled_day_hint") or "").strip().lower()
+            assert wd in _TUE_FIGHT_LEGAL_DAYS, (
+                f"D-{days} meaningful strength on illegal day {wd!r} "
+                f"(key={e['role'].get('role_key')}, D-{e['d_day']})"
+            )
+
+        # 2. Fight-pace / conditioning work survives the two-contact compression
+        #    (it is not squeezed out entirely).
+        conditioning = [
+            role for _w, role, _d, _wd in placed
+            if str(role.get("category") or "").lower() == "conditioning"
+            and _is_app_owned_visible_role(role.get("role_key"))
         ]
+        assert conditioning, f"D-{days} lost app-owned conditioning entirely"
 
-        assert any(role.get("category") == "strength" for role in spp_core)
-        assert any(role.get("category") == "conditioning" for role in spp_core)
-        assert any(role.get("role_key") == "neural_primer_day" for role in taper_core)
-        assert any(role.get("preferred_system") == "alactic" for role in taper_core)
+        # 3. A last-week sharpness touch (alactic/neural) survives in the D-6..D-4
+        #    window on a legal day. D-4 is Friday contact, so it must land D-6/D-5.
+        sharpness = [
+            (role, d_day, wd) for _w, role, d_day, wd in placed
+            if d_day in {4, 5, 6}
+            and str(role.get("preferred_system") or "").strip().lower() in {"alactic", "neural"}
+        ]
+        assert sharpness, f"D-{days} has no alactic/neural sharpness touch in D-6..D-4"
+        for _role, d_day, wd in sharpness:
+            assert wd not in _TUE_FIGHT_CONTACT_DAYS, (
+                f"D-{days} placed a D-{d_day} sharpness touch on the {wd} contact day"
+            )
 
-        # Tuesday/Friday remain declared contact ownership, so the two app-owned
-        # sessions must fit the other legal days. Two contact appointments + two
-        # programmed sessions = requested frequency four; no volume inflation.
-        for week, core_roles in ((spp, spp_core), (taper, taper_core)):
-            assert len(core_roles) <= 2
-            for role in core_roles:
-                assert str(role.get("scheduled_day_hint") or "").strip().lower() not in {"tuesday", "friday"}
+        # 4. D-1 stays a small neural freshness primer.
+        assert any(
+            d_day == 1 and role.get("role_key") == "neural_primer_day"
+            for _w, role, d_day, _wd in placed
+        ), f"D-{days} lost the D-1 neural freshness primer"
+
+        # 5. No app-owned meaningful S&C is stacked on a Tue/Fri contact day.
+        for _w, role, d_day, wd in placed:
+            if wd in _TUE_FIGHT_CONTACT_DAYS and _is_app_owned_visible_role(role.get("role_key")):
+                assert role.get("stress_class") != "meaningful_stress", (
+                    f"D-{days} stacked app S&C ({role.get('role_key')}) "
+                    f"on the {wd} contact day (D-{d_day})"
+                )
+
+        # 6. No volume inflation: two declared contact appointments already own two
+        #    of the four weekly slots, so app-owned core work must fit the two
+        #    remaining legal days and never land on Tue/Fri contact.
+        for week in _weeks(brief):
+            core = [
+                role for role in week.get("session_roles") or []
+                if role.get("category") in {"strength", "conditioning", "recovery"}
+            ]
+            assert len(core) <= 2, (
+                f"D-{days} {week.get('phase')} inflated core work to {len(core)} slots: "
+                f"{[role.get('role_key') for role in core]}"
+            )
+            for role in core:
+                assert str(role.get("scheduled_day_hint") or "").strip().lower() not in _TUE_FIGHT_CONTACT_DAYS
+
+    @pytest.mark.parametrize("days", [17, 16, 15, 14])
+    def test_proximity_only_suppression_is_not_mislabelled_as_fight_proximity(self, days, monkeypatch):
+        # When all hard sparring is already technical-only and declared contact owns
+        # the freed slots, this path explicitly disables proximity compression
+        # (compression_floor -> 0). The surviving cap is then the spar-first
+        # declared-contact frequency cap, so the reason recorded on the dropped roles
+        # must say that — labelling it proximity_to_fight would contaminate every
+        # downstream consumer with a signal this week deliberately turned off.
+        brief = self._case(days, monkeypatch)
+        saw_declared_contact_cap = False
+        for week in _weeks(brief):
+            codes: set[str] = set((week.get("intentional_compression") or {}).get("reason_codes") or [])
+            for suppressed in week.get("suppressed_roles") or []:
+                codes.update(suppressed.get("compression_reason_codes") or [])
+            assert "proximity_to_fight" not in codes, (
+                f"D-{days} still labels a declared-contact-frequency drop as proximity_to_fight"
+            )
+            if "declared_contact_frequency_cap" in codes:
+                saw_declared_contact_cap = True
+        assert saw_declared_contact_cap, (
+            f"D-{days} never recorded the declared_contact_frequency_cap reason on a suppression"
+        )
