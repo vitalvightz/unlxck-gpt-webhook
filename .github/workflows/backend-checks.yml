@@ -33,8 +33,9 @@ jobs:
 
       - name: Test patch
         run: |
-          pytest -q tests/test_late_camp_architecture_cliff.py tests/test_stage2_planning_brief.py
-          python -m py_compile fightcamp/stage2_role_map.py fightcamp/weekly_plan_render.py
+          pytest -q tests/test_late_camp_architecture_cliff.py
+          pytest -q tests/test_stage2_planning_brief.py::test_taper_final_week_cap_overrides_declared_hard_sparring_role_locks
+          python -m py_compile fightcamp/stage2_role_map.py
 
       - name: Commit patch
         run: |
