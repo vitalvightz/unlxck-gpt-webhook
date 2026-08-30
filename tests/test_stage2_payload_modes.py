@@ -914,9 +914,24 @@ class TestHandoffText:
             planning_brief=brief,
         )
 
-    def test_camp_handoff_has_no_payload_mode_section(self):
+    def test_camp_handoff_carries_downstream_continuation_without_late_fight_top_mode(self):
+        # A normal-camp (D-14+) handoff now carries the D-13 -> D-0 fight-week
+        # continuation map so its scheduled countdown tail obeys the existing
+        # late-fight contracts. It must NOT, however, adopt a late-fight *top*
+        # mode: no top-mode prose block leaks in, and the continuation intro is
+        # the camp-accurate one, not the "continue the active late-fight
+        # countdown" wording reserved for D-13-inward plans.
         text = self._build_handoff(28)
-        assert "PAYLOAD MODE INSTRUCTIONS" not in text
+        assert "PAYLOAD MODE INSTRUCTIONS" in text
+        assert "COUNTDOWN CONTINUATION MAP" in text
+        assert "stays on the normal camp planner" in text
+        assert "Continue the active late-fight countdown" not in text
+        # No late-fight top-mode prose heading (those belong to D-13-inward plans).
+        assert "COMPRESSED PRE-FIGHT WEEK" not in text
+        assert "SHARPNESS WEEK" not in text
+        # The removed bridge is never reintroduced; the tail starts at D-13.
+        assert "bridge_compression_payload" not in text
+        assert "- d13_to_d8: pre_fight_compressed_payload (D-13 to D-8)" in text
         assert "INJURY CONTEXT" in text
         # PLANNING BRIEF section was replaced by the consolidated FINALIZER
         # PACKET — see test_stage2_handoff_text which explicitly asserts the
@@ -1037,12 +1052,21 @@ class TestHandoffText:
             "Handoff should reference hard spar day accounting"
         )
 
-    def test_d16_handoff_uses_normal_camp_not_late_fight_continuation(self):
-        # D-16 now uses the normal camp planner; there is no late-fight
-        # countdown continuation map (that begins at D-13).
+    def test_d16_handoff_carries_downstream_continuation_on_normal_camp_planner(self):
+        # D-16 stays on the normal camp planner (top-level architecture
+        # unchanged), but its continuous calendar still reaches the D-13 -> D-0
+        # fight-week tail, so the handoff now carries the downstream continuation
+        # map. The map begins at D-13 — never the removed D-21 -> D-14 bridge —
+        # and uses the camp-accurate intro rather than reframing the whole plan
+        # as a late-fight countdown.
         text = self._build_handoff_with_brief(16)
-        assert "COUNTDOWN CONTINUATION MAP" not in text
+        assert "COUNTDOWN CONTINUATION MAP" in text
+        assert "stays on the normal camp planner" in text
+        assert "- d13_to_d8: pre_fight_compressed_payload (D-13 to D-8)" in text
+        assert "- d1: pre_fight_day_payload (D-1 to D-1)" in text
+        assert "- d0: fight_day_protocol_payload (D-0 to D-0)" in text
         assert "bridge_compression_payload" not in text
+        assert "Continue the active late-fight countdown" not in text
 
     def test_d13_handoff_includes_countdown_continuation_map(self):
         text = self._build_handoff_with_brief(13)

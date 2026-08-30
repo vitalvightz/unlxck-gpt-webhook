@@ -4472,19 +4472,59 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
     return spec
 
 
+# Canonical downstream fight-week countdown windows (D-13 -> D-0). Single source
+# of truth for both the late-fight continuation-start sequence
+# (``_countdown_mode_sequence``, used when the plan is generated at D-13 inward)
+# and the normal-camp downstream continuation
+# (``_camp_downstream_countdown_continuation``, used when a D-14+ camp plan's
+# continuous calendar reaches the fight-week tail). It deliberately starts at
+# D-13: the removed D-21 -> D-14 ``bridge_compression_payload`` window is NOT
+# reintroduced here — D-14 and further out stay owned by the normal camp planner,
+# and this map only governs the D-13 -> D-0 tail those calendars reach.
+_COUNTDOWN_CONTINUATION_WINDOWS: tuple[dict[str, Any], ...] = (
+    {"stage_key": "d13_to_d8", "payload_mode": "pre_fight_compressed_payload", "window_start": 13, "window_end": 8},
+    {"stage_key": "d7", "payload_mode": "late_fight_week_payload", "window_start": 7, "window_end": 7},
+    {"stage_key": "d6_to_d5", "payload_mode": "late_fight_transition_payload", "window_start": 6, "window_end": 5},
+    {"stage_key": "d4_to_d2", "payload_mode": "late_fight_session_payload", "window_start": 4, "window_end": 2},
+    {"stage_key": "d1", "payload_mode": "pre_fight_day_payload", "window_start": 1, "window_end": 1},
+    {"stage_key": "d0", "payload_mode": "fight_day_protocol_payload", "window_start": 0, "window_end": 0},
+)
+
+
+def _camp_downstream_countdown_continuation(days_until_fight: Any) -> list[dict[str, Any]]:
+    """Downstream D-13 -> D-0 continuation for a normal-camp (D-14+) plan.
+
+    D-14 and further out are owned by the normal camp planner (``camp_payload``);
+    this function does NOT change that routing. But a dated camp's continuous
+    calendar still reaches the D-13 -> D-0 fight-week tail, and those scheduled
+    days must obey the existing late-fight / fight-week mode contracts. This
+    returns the same downstream mode sequence a plan generated directly at D-13
+    carries, so the Stage 2 handoff can hand the tail days their existing
+    contracts. It is empty for any plan not generated at D-14 or further out
+    (D-13 inward already carries the sequence on
+    ``late_fight_plan_spec.countdown_mode_sequence``). No bridge window is ever
+    produced — the sequence begins at D-13.
+    """
+    days = _coerce_days(days_until_fight)
+    if not isinstance(days, int) or days < 14:
+        return []
+    return [
+        {
+            "stage_key": window["stage_key"],
+            "payload_mode": window["payload_mode"],
+            "start_day": int(window["window_start"]),
+            "end_day": int(window["window_end"]),
+        }
+        for window in _COUNTDOWN_CONTINUATION_WINDOWS
+    ]
+
+
 def _countdown_mode_sequence(days_until_fight: Any) -> list[dict[str, Any]]:
     days = _coerce_days(days_until_fight)
     if not isinstance(days, int) or days < 0:
         return []
     if _is_countdown_continuation_start(days_until_fight):
-        windows = [
-            {"stage_key": "d13_to_d8", "payload_mode": "pre_fight_compressed_payload", "window_start": 13, "window_end": 8},
-            {"stage_key": "d7", "payload_mode": "late_fight_week_payload", "window_start": 7, "window_end": 7},
-            {"stage_key": "d6_to_d5", "payload_mode": "late_fight_transition_payload", "window_start": 6, "window_end": 5},
-            {"stage_key": "d4_to_d2", "payload_mode": "late_fight_session_payload", "window_start": 4, "window_end": 2},
-            {"stage_key": "d1", "payload_mode": "pre_fight_day_payload", "window_start": 1, "window_end": 1},
-            {"stage_key": "d0", "payload_mode": "fight_day_protocol_payload", "window_start": 0, "window_end": 0},
-        ]
+        windows = _COUNTDOWN_CONTINUATION_WINDOWS
         started = False
         sequence: list[dict[str, Any]] = []
         for window in windows:
