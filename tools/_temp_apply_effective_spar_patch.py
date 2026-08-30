@@ -12,22 +12,13 @@ def replace_once(path: str, old: str, new: str) -> None:
 
 role_map = "fightcamp/stage2_role_map.py"
 
+# A resolved sparring plan with zero effective hard days is authoritative. The
+# old ``effective(...) or declared`` fallback silently turned technical-only
+# contact back into hard-load pressure.
 replace_once(
     role_map,
     "    return training_days, hard_sparring, support_work\n\n\ndef _append_day_hint",
-    '''    return training_days, hard_sparring, support_work\n\n\ndef _resolved_effective_hard_days(\n    hard_sparring_plan: list[dict] | None,\n    declared_hard_days: set[str] | list[str],\n) -> set[str]:\n    """Resolve hard-load days without confusing technical contact with hard sparring.\n\n    A resolved hard-sparring plan is authoritative even when every declared hard\n    day has been downgraded to technical-only. Declared days remain calendar\n    locks elsewhere; this helper is only for hard-load pressure/collision logic.\n    Direct/legacy callers that provide no resolved plan still fall back to the\n    declared hard days.\n    """\n    if hard_sparring_plan is not None:\n        return set(effective_hard_days(hard_sparring_plan))\n    return set(declared_hard_days)\n\n\ndef _append_day_hint''',
-)
-
-replace_once(
-    role_map,
-    '''    reason_codes = list((plan_entry or {}).get("reason_codes") or [])\n    coach_note_flags = _hard_sparring_coach_note_flags(plan_entry)\n    role: dict[str, Any] = {\n        "category": "sparring",\n        "role_key": "hard_sparring_day",''',
-    '''    reason_codes = list((plan_entry or {}).get("reason_codes") or [])\n    coach_note_flags = _hard_sparring_coach_note_flags(plan_entry)\n    effective_load = str(\n        (plan_entry or {}).get("effective_load")\n        or ("hard" if status == "hard_as_planned" else "technical")\n    ).strip().lower()\n    is_technical_only = (\n        effective_load == "technical"\n        or "d17_hard_sparring_ban" in reason_codes\n    )\n    role: dict[str, Any] = {\n        "category": "sparring",\n        "role_key": "hard_sparring_day",\n        "coach_owned": True,\n        "downgraded": is_technical_only or status != "hard_as_planned",\n        "effective_load": effective_load,\n        "athlete_facing_label": "Technical-only combat" if is_technical_only else "Hard sparring",''',
-)
-
-replace_once(
-    role_map,
-    '''        if _is_final_week_capped_sparring_entry(plan_entry):\n            existing_idx = next(''',
-    '''        if _is_final_week_capped_sparring_entry(plan_entry):\n            # The final-week cap suppresses HARD sparring, not the athlete's\n            # declared training appointment. When the countdown rule has already\n            # converted that appointment to technical-only contact, preserve it as\n            # a coach-owned calendar lock. This keeps the no-S&C collision while\n            # preventing the day from counting as hard load.\n            if str((plan_entry or {}).get("effective_load") or "").strip().lower() == "technical":\n                replacement = _hard_sparring_role(week_entry, day, plan_entry)\n                existing_idx = next(\n                    (\n                        idx for idx, role in enumerate(updated_roles)\n                        if role.get("role_key") == "hard_sparring_day"\n                        and str(role.get("scheduled_day_hint") or "").strip() == day\n                    ),\n                    None,\n                )\n                if existing_idx is not None:\n                    updated_roles[existing_idx] = replacement\n                    used_indices.add(existing_idx)\n                else:\n                    same_day_idx = next(\n                        (\n                            idx\n                            for idx, role in enumerate(updated_roles)\n                            if idx not in used_indices\n                            and role.get("role_key") != "hard_sparring_day"\n                            and str(role.get("scheduled_day_hint") or "").strip().lower() == day.lower()\n                        ),\n                        None,\n                    )\n                    if same_day_idx is not None:\n                        updated_suppressed.append(\n                            _make_hard_sparring_lock_suppression(updated_roles[same_day_idx], day)\n                        )\n                        updated_roles[same_day_idx] = replacement\n                        used_indices.add(same_day_idx)\n                    else:\n                        updated_roles.append(replacement)\n                        used_indices.add(len(updated_roles) - 1)\n                _append_week_coach_note_flag(week_entry, "final week sparring cap")\n                _append_week_coach_note_flag(week_entry, "deload hard sparring")\n                continue\n\n            existing_idx = next(''',
+    '''    return training_days, hard_sparring, support_work\n\n\ndef _resolved_effective_hard_days(\n    hard_sparring_plan: list[dict] | None,\n    declared_hard_days: set[str] | list[str],\n) -> set[str]:\n    """Resolve hard-load days without confusing technical contact with hard sparring.\n\n    When a resolved hard-sparring plan is present, even an empty effective set is\n    authoritative: D-17 technical-only conversions still own their calendar days\n    but are no longer hard-load exposures. Legacy/direct callers without a\n    resolved plan retain the declared-day fallback.\n    """\n    if hard_sparring_plan is not None:\n        return set(effective_hard_days(hard_sparring_plan))\n    return set(declared_hard_days)\n\n\ndef _append_day_hint''',
 )
 
 replace_once(
@@ -36,42 +27,41 @@ replace_once(
     '''    effective_hard_days_set = _resolved_effective_hard_days(\n        hard_sparring_plan,\n        hard_sparring_days,\n    )''',
 )
 
+# Phase guardrails say ``primary_strength`` semantically, while execution roles
+# are named neural_plus_strength_day / neural_primer_day etc. Make that must-keep
+# token real instead of letting those roles rank as ordinary strength.
 replace_once(
     role_map,
     '''    # Must-keep roles always survive compression\n    if preferred_system in must_keep or role_key in must_keep:\n        return 100''',
-    '''    # Must-keep roles always survive compression. ``primary_strength``\n    # is a semantic phase requirement rather than a literal role key, so map it\n    # onto the planner's primary-strength role family before ranking.\n    if "primary_strength" in must_keep and role_key in _PRIMARY_STRENGTH_ROLE_KEYS:\n        return 100\n    if preferred_system in must_keep or role_key in must_keep:\n        return 100''',
+    '''    # Must-keep roles always survive compression. ``primary_strength`` is a\n    # semantic phase requirement rather than a literal execution role key.\n    if "primary_strength" in must_keep and role_key in _PRIMARY_STRENGTH_ROLE_KEYS:\n        return 100\n    if preferred_system in must_keep or role_key in must_keep:\n        return 100''',
 )
 
+# Keep declared contact in the frequency/calendar budget, but derive hard-load
+# pressure from the resolved effective plan.
 replace_once(
     role_map,
     '''    hard_sparring_days_set = set(_ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))))\n    sessions_per_week = int(athlete_model.get("training_frequency") or len(training_days))''',
     '''    hard_sparring_days_set = set(_ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))))\n    effective_hard_sparring_days_set = _resolved_effective_hard_days(\n        hard_sparring_plan,\n        hard_sparring_days_set,\n    )\n    sessions_per_week = int(athlete_model.get("training_frequency") or len(training_days))''',
 )
 
+# At D-17 inward the countdown rule has already reduced declared hard contact to
+# technical-only. If proximity is the *only* readiness compression signal, do
+# not subtract another programmed slot on top of that contact downgrade. Real
+# fatigue/cut/injury pressure still produces compression > 1 and is unchanged.
 replace_once(
     role_map,
     '''    compression_floor = compute_integrated_compression_floor(\n        base_floor=_compression_floor_value(compression),\n        week_entry=week_entry,\n        athlete_model=athlete_model,\n    )\n\n    # Step 3: Compute target number of non-sparring active sessions''',
-    '''    compression_floor = compute_integrated_compression_floor(\n        base_floor=_compression_floor_value(compression),\n        week_entry=week_entry,\n        athlete_model=athlete_model,\n    )\n\n    # If every declared hard-contact day has already been converted to\n    # technical-only by the D-17 countdown rule, proximity has already reduced\n    # the sport load. Keep those contact days inside the weekly frequency cap,\n    # but do not remove an additional app-owned slot for proximity alone. Real\n    # fatigue, cut, or injury pressure raises ``compression`` above 1 and still\n    # tightens the week normally.\n    days_to_fight = athlete_model.get("days_until_fight")\n    if (\n        hard_sparring_plan is not None\n        and locked_spar_days\n        and not effective_hard_sparring_days_set\n        and isinstance(days_to_fight, int)\n        and 0 <= days_to_fight <= 17\n        and compression == 1\n    ):\n        compression_floor = 0\n\n    # Step 3: Compute target number of non-sparring active sessions''',
+    '''    compression_floor = compute_integrated_compression_floor(\n        base_floor=_compression_floor_value(compression),\n        week_entry=week_entry,\n        athlete_model=athlete_model,\n    )\n\n    days_to_fight = athlete_model.get("days_until_fight")\n    if (\n        hard_sparring_plan is not None\n        and locked_spar_days\n        and not effective_hard_sparring_days_set\n        and isinstance(days_to_fight, int)\n        and 0 <= days_to_fight <= 17\n        and compression == 1\n    ):\n        compression_floor = 0\n\n    # Step 3: Compute target number of non-sparring active sessions''',
 )
 
 replace_once(
     role_map,
     '    is_hard_spar_week = len(hard_sparring_days_set) >= 2',
-    '''    # Hard-load priority/reasoning follows the resolved effective\n    # sparring plan. Declared technical-only contact still occupies its calendar\n    # slot, but it must not trigger hard-week glycolytic demotion or the\n    # ``two_hard_spar_days`` reason code.\n    is_hard_spar_week = len(effective_hard_sparring_days_set) >= 2''',
+    '''    # Technical-only contact still occupies its declared calendar slot, but\n    # only effective hard sparring drives hard-week ranking and reason codes.\n    is_hard_spar_week = len(effective_hard_sparring_days_set) >= 2''',
 )
 
-renderer = "fightcamp/weekly_plan_render.py"
-replace_once(
-    renderer,
-    '''def _sparring_session_lines() -> list[str]:\n    return ["- Your own hard sparring/contact session — no extra S&C. Keep freshness priority."]''',
-    '''def _sparring_session_lines(role: dict[str, Any]) -> list[str]:\n    status = str(role.get("hard_sparring_status") or "hard_as_planned").strip()\n    effective_load = str(role.get("effective_load") or "").strip().lower()\n    reason_codes = {str(code).strip() for code in clean_list(role.get("hard_sparring_reason_codes"))}\n    if (\n        effective_load == "technical"\n        or status != "hard_as_planned"\n        or "d17_hard_sparring_ban" in reason_codes\n    ):\n        return [\n            "- Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority."\n        ]\n    return ["- Your own hard sparring/contact session — no extra S&C. Keep freshness priority."]''',
-)
-replace_once(
-    renderer,
-    '''    if category == "sparring":\n        return _sparring_session_lines()''',
-    '''    if category == "sparring":\n        return _sparring_session_lines(role)''',
-)
-
+# Regression: exact schedule geometry that #2383's one-contact fixture did not
+# cover. Exercise names remain deliberately unconstrained.
 tests = Path("tests/test_late_camp_architecture_cliff.py")
 test_text = tests.read_text()
 if "class TestTwoDeclaredContactLateCampRegression:" in test_text:
@@ -84,7 +74,7 @@ test_text += r'''
 # --------------------------------------------------------------------------- #
 
 class TestTwoDeclaredContactLateCampRegression:
-    """Regression for the D-16 production shape that collapsed to six cards."""
+    """D-17..D-14 normal-camp regression with Tue/Fri declared contact."""
 
     @staticmethod
     def _case(days, monkeypatch):
@@ -116,29 +106,31 @@ class TestTwoDeclaredContactLateCampRegression:
                 reason_codes.update(suppressed.get("compression_reason_codes") or [])
             assert "two_hard_spar_days" not in reason_codes
 
-    def test_d16_preserves_strength_and_sharpness_inside_frequency_four(self, monkeypatch):
+    def test_d16_keeps_strength_and_alactic_sharpness_without_inflating_frequency(self, monkeypatch):
         brief = self._case(16, monkeypatch)
         weeks = {str(week.get("phase") or "").upper(): week for week in _weeks(brief)}
         spp = weeks["SPP"]
         taper = weeks["TAPER"]
 
-        spp_core = [role for role in spp.get("session_roles") or [] if role.get("category") in {"strength", "conditioning", "recovery"}]
-        taper_core = [role for role in taper.get("session_roles") or [] if role.get("category") in {"strength", "conditioning", "recovery"}]
+        spp_core = [
+            role for role in spp.get("session_roles") or []
+            if role.get("category") in {"strength", "conditioning", "recovery"}
+        ]
+        taper_core = [
+            role for role in taper.get("session_roles") or []
+            if role.get("category") in {"strength", "conditioning", "recovery"}
+        ]
 
         assert any(role.get("category") == "strength" for role in spp_core)
         assert any(role.get("category") == "conditioning" for role in spp_core)
         assert any(role.get("role_key") == "neural_primer_day" for role in taper_core)
         assert any(role.get("preferred_system") == "alactic" for role in taper_core)
 
-        for week in (spp, taper):
-            contact_roles = [role for role in week.get("session_roles") or [] if role.get("role_key") == "hard_sparring_day"]
-            for role in contact_roles:
-                assert role.get("effective_load") == "technical"
-                assert role.get("athlete_facing_label") == "Technical-only combat"
-                assert role.get("downgraded") is True
-
-            core_roles = [role for role in week.get("session_roles") or [] if role.get("category") in {"strength", "conditioning", "recovery"}]
-            assert len(contact_roles) + len(core_roles) <= 4
+        # Tuesday/Friday remain declared contact ownership, so the two app-owned
+        # sessions must fit the other legal days. Two contact appointments + two
+        # programmed sessions = requested frequency four; no volume inflation.
+        for week, core_roles in ((spp, spp_core), (taper, taper_core)):
+            assert len(core_roles) <= 2
             for role in core_roles:
                 assert str(role.get("scheduled_day_hint") or "").strip().lower() not in {"tuesday", "friday"}
 '''
