@@ -395,3 +395,70 @@ class TestProductionCalendarCollision:
         for _w, role, _d, wd in _placed_roles(brief):
             if _is_app_owned_visible_role(role.get("role_key")) and wd:
                 assert wd != "saturday"
+
+
+
+# --------------------------------------------------------------------------- #
+# C. TWO DECLARED CONTACT DAYS AFTER D-17 DOWNGRADE
+# --------------------------------------------------------------------------- #
+
+class TestTwoDeclaredContactLateCampRegression:
+    """D-17..D-14 normal-camp regression with Tue/Fri declared contact."""
+
+    @staticmethod
+    def _case(days, monkeypatch):
+        return _run(
+            days,
+            monkeypatch,
+            availability="Monday, Tuesday, Wednesday, Thursday, Friday",
+            hard_sparring="Tuesday, Friday",
+            frequency="4",
+            weight="88",
+            target_weight="88",
+            fatigue="low",
+            key_goals="speed",
+            primary_goal="speed",
+            weak="footwork, power",
+            primary_weak="footwork",
+        )
+
+    @pytest.mark.parametrize("days", [17, 16, 15, 14])
+    def test_downgraded_contact_is_not_counted_as_two_hard_days(self, days, monkeypatch):
+        brief = self._case(days, monkeypatch)
+        for week in _weeks(brief):
+            hard_plan = week.get("hard_sparring_plan") or []
+            if not hard_plan:
+                continue
+            assert week.get("effective_hard_sparring_days") == []
+            reason_codes = set((week.get("intentional_compression") or {}).get("reason_codes") or [])
+            for suppressed in week.get("suppressed_roles") or []:
+                reason_codes.update(suppressed.get("compression_reason_codes") or [])
+            assert "two_hard_spar_days" not in reason_codes
+
+    def test_d16_keeps_strength_and_alactic_sharpness_without_inflating_frequency(self, monkeypatch):
+        brief = self._case(16, monkeypatch)
+        weeks = {str(week.get("phase") or "").upper(): week for week in _weeks(brief)}
+        spp = weeks["SPP"]
+        taper = weeks["TAPER"]
+
+        spp_core = [
+            role for role in spp.get("session_roles") or []
+            if role.get("category") in {"strength", "conditioning", "recovery"}
+        ]
+        taper_core = [
+            role for role in taper.get("session_roles") or []
+            if role.get("category") in {"strength", "conditioning", "recovery"}
+        ]
+
+        assert any(role.get("category") == "strength" for role in spp_core)
+        assert any(role.get("category") == "conditioning" for role in spp_core)
+        assert any(role.get("role_key") == "neural_primer_day" for role in taper_core)
+        assert any(role.get("preferred_system") == "alactic" for role in taper_core)
+
+        # Tuesday/Friday remain declared contact ownership, so the two app-owned
+        # sessions must fit the other legal days. Two contact appointments + two
+        # programmed sessions = requested frequency four; no volume inflation.
+        for week, core_roles in ((spp, spp_core), (taper, taper_core)):
+            assert len(core_roles) <= 2
+            for role in core_roles:
+                assert str(role.get("scheduled_day_hint") or "").strip().lower() not in {"tuesday", "friday"}

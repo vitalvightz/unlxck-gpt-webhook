@@ -1031,6 +1031,22 @@ def _declared_day_sets(athlete_model: dict) -> tuple[list[str], set[str], set[st
     return training_days, hard_sparring, support_work
 
 
+def _resolved_effective_hard_days(
+    hard_sparring_plan: list[dict] | None,
+    declared_hard_days: set[str] | list[str],
+) -> set[str]:
+    """Resolve hard-load days without confusing technical contact with hard sparring.
+
+    When a resolved hard-sparring plan is present, even an empty effective set is
+    authoritative: D-17 technical-only conversions still own their calendar days
+    but are no longer hard-load exposures. Legacy/direct callers without a
+    resolved plan retain the declared-day fallback.
+    """
+    if hard_sparring_plan is not None:
+        return set(effective_hard_days(hard_sparring_plan))
+    return set(declared_hard_days)
+
+
 def _append_day_hint(role: dict, day: str | None, reason: str | None = None) -> None:
     if not day:
         role["scheduled_day_hint"] = ""
@@ -1309,7 +1325,10 @@ def _assign_declared_day_hints(
 
     day_assignments: dict[int, str] = {}
     used_days: set[str] = set()
-    effective_hard_days_set = set(effective_hard_days(hard_sparring_plan or [])) or set(hard_sparring_days)
+    effective_hard_days_set = _resolved_effective_hard_days(
+        hard_sparring_plan,
+        hard_sparring_days,
+    )
     sandwiched_days = set(sandwiched_training_days(training_days, effective_hard_days_set))
 
     # Preserve explicit scheduled days for locked roles.
@@ -1923,7 +1942,10 @@ def _non_spar_role_priority_rank(
     preferred_system = str(role.get("preferred_system") or "").strip()
     category = str(role.get("category") or "").strip()
 
-    # Must-keep roles always survive compression
+    # Must-keep roles always survive compression. ``primary_strength`` is a
+    # semantic phase requirement rather than a literal execution role key.
+    if "primary_strength" in must_keep and role_key in _PRIMARY_STRENGTH_ROLE_KEYS:
+        return 100
     if preferred_system in must_keep or role_key in must_keep:
         return 100
 
@@ -2071,6 +2093,10 @@ def _apply_high_fatigue_week_compression(
 
     # Step 1: Count sparring against the weekly cap
     hard_sparring_days_set = set(_ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))))
+    effective_hard_sparring_days_set = _resolved_effective_hard_days(
+        hard_sparring_plan,
+        hard_sparring_days_set,
+    )
     sessions_per_week = int(athlete_model.get("training_frequency") or len(training_days))
     weekly_cap = min(sessions_per_week, len(training_days))
     locked_spar_days = {day for day in training_days if day in hard_sparring_days_set}
@@ -2085,6 +2111,17 @@ def _apply_high_fatigue_week_compression(
         week_entry=week_entry,
         athlete_model=athlete_model,
     )
+
+    days_to_fight = athlete_model.get("days_until_fight")
+    if (
+        hard_sparring_plan is not None
+        and locked_spar_days
+        and not effective_hard_sparring_days_set
+        and isinstance(days_to_fight, int)
+        and 0 <= days_to_fight <= 17
+        and compression == 1
+    ):
+        compression_floor = 0
 
     # Step 3: Compute target number of non-sparring active sessions
     phase = str(week_entry.get("phase", "")).strip().upper()
@@ -2119,7 +2156,9 @@ def _apply_high_fatigue_week_compression(
         return session_roles, suppressed_roles
 
     # Step 4: Pick only the highest-priority non-sparring roles
-    is_hard_spar_week = len(hard_sparring_days_set) >= 2
+    # Technical-only contact still occupies its declared calendar slot, but
+    # only effective hard sparring drives hard-week ranking and reason codes.
+    is_hard_spar_week = len(effective_hard_sparring_days_set) >= 2
     is_meaningful_cut = _active_weight_cut_is_meaningful(athlete_model)
 
     resolved_rule_state = dict(week_entry.get("resolved_rule_state") or {})
