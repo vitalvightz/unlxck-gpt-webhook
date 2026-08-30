@@ -11,6 +11,11 @@ scheduled D-day (after ``fill_missing_session_days`` and the camp-week fillers,
 before labels are stamped). It only reduces load. It also records a semantic
 post-morph validation result so a role cannot silently keep its old intent label
 when its final dose no longer satisfies that intent.
+
+Stage 3 wires the final calendar-integrity governor immediately after this
+scheduled-day morph. If integrity relocates a normal-camp role, the same morph
+core runs once more so countdown dose is re-resolved by this module rather than
+by the calendar governor.
 """
 
 from __future__ import annotations
@@ -275,8 +280,10 @@ def _stamp_intent_validation(role: dict[str, Any], d_day: int | None, original_i
     role["intent_validation"] = validation
 
 
-def apply_late_camp_role_morph(weekly_role_map: dict[str, Any]) -> dict[str, Any]:
-    """Apply scheduled-day late-camp morphs and validate final role semantics."""
+def _apply_late_camp_role_morph_once(
+    weekly_role_map: dict[str, Any],
+) -> dict[str, Any]:
+    """Apply only the scheduled-day dose morph; no calendar repair."""
     if not isinstance(weekly_role_map, dict):
         return weekly_role_map
 
@@ -321,3 +328,18 @@ def apply_late_camp_role_morph(weekly_role_map: dict[str, Any]) -> dict[str, Any
 
     weekly_role_map["post_morph_intent_validation"] = summary
     return weekly_role_map
+
+
+def apply_late_camp_role_morph(weekly_role_map: dict[str, Any]) -> dict[str, Any]:
+    """Apply countdown dose, then enforce final deterministic calendar integrity."""
+    _apply_late_camp_role_morph_once(weekly_role_map)
+
+    # Local import keeps the ownership graph acyclic: calendar_integrity consumes
+    # the shared load policy but never imports this module. If it moves a normal
+    # role, it calls this module's *dose-only* core once more before verification.
+    from .calendar_integrity import apply_final_calendar_integrity
+
+    return apply_final_calendar_integrity(
+        weekly_role_map,
+        remorph_callback=_apply_late_camp_role_morph_once,
+    )
