@@ -385,7 +385,10 @@ def test_invariant_two_declared_hard_contacts_own_two_contact_days(briefs):
 
 def test_invariant_d16_has_no_effective_hard_contact(briefs):
     """Declared contact != effective hard load at D-16: nothing stays hard."""
-    entries = [entry for _week, entry in _all_contact_entries(briefs["d16_technical_conversion"])]
+    entries = [
+        entry
+        for _week, entry in _all_contact_entries(briefs["d16_technical_conversion"])
+    ]
     assert entries
     assert not any(
         str(entry.get("status") or "") == "hard_as_planned"
