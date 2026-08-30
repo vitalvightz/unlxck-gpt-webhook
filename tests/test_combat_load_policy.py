@@ -193,6 +193,35 @@ def test_role_classifier_accepts_explicit_canonical_stamp_and_unknowns_fail_expl
     assert role_load_profile({"role_key": "future_unknown_role"}) is None
 
 
+def test_explicit_profile_cannot_bypass_contact_or_physical_ownership():
+    with pytest.raises(ValueError):
+        role_load_profile(
+            {
+                "role_key": "primary_strength_day",
+                "category": "strength",
+                "calendar_load_class": "hard_contact",
+            }
+        )
+
+    with pytest.raises(ValueError):
+        role_load_profile(
+            {
+                "role_key": "primary_strength_day",
+                "category": "strength",
+                "calendar_load_class": "meaningful_strength",
+                "calendar_day_occupancy": "coexistable",
+            }
+        )
+
+    with pytest.raises(ValueError):
+        role_load_profile(
+            {
+                "role_key": "technical_touch_day",
+                "calendar_load_class": "meaningful_strength",
+            }
+        )
+
+
 def test_calendar_context_is_position_based_not_weekday_based():
     events = [
         _event(100, LoadClass.HARD_CONTACT, scope="microcycle-a"),
