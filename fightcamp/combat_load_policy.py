@@ -5,8 +5,9 @@ It is intentionally not wired into existing production allocators yet.
 
 The seam has four responsibilities:
 1. translate resolved combat-contact state into canonical contact load;
-2. translate deterministic planner roles into canonical calendar load;
-3. derive calendar context from monotonic chronological positions;
+2. translate deterministic planner roles into canonical calendar semantics;
+3. derive collision context from generic chronological positions and explicit
+   planner-owned collision scopes;
 4. return one operational placement directive: ALLOW, DEPRIORITIZE, or FORBID.
 
 Important boundaries:
@@ -17,6 +18,11 @@ Important boundaries:
 - calendar positions are generic integers that increase with time (for example,
   ``date.toordinal()`` or a planner-owned chronological slot index). Raw D-day
   values must be converted before use because D-day counts run in reverse;
+- sandwich protection is scope-aware. A caller must supply a planner-owned
+  collision scope (for example a normal microcycle/week or late-fight segment)
+  before the policy treats every position between two hard contacts as a
+  protected between-contact span. Immediate +/-1-day hard-contact rules still
+  work across scope boundaries;
 - renderers and labels are never inputs to legality decisions.
 """
 
@@ -24,11 +30,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any, Hashable, Iterable, Mapping, Sequence
 
 
 class LoadClass(str, Enum):
-    """Small semantic vocabulary shared by all calendar writers."""
+    """Small semantic load vocabulary shared by calendar writers."""
 
     OFF = "off"
     ZERO_LOAD = "zero_load"
@@ -45,12 +51,28 @@ class LoadClass(str, Enum):
     MEANINGFUL_CONDITIONING = "meaningful_conditioning"
 
 
+class DayOccupancy(str, Enum):
+    """Whether a role may share a day with an exclusive physical/contact slot."""
+
+    COEXISTABLE = "coexistable"
+    PHYSICAL = "physical"
+    EXCLUSIVE_PHYSICAL = "exclusive_physical"
+
+
 class PlacementDirective(str, Enum):
     """Operational result consumed consistently by future calendar writers."""
 
     ALLOW = "allow"
     DEPRIORITIZE = "deprioritize"
     FORBID = "forbid"
+
+
+@dataclass(frozen=True)
+class CalendarLoadProfile:
+    """Canonical load + day-occupancy semantics for one candidate/event."""
+
+    load_class: LoadClass
+    occupancy: DayOccupancy
 
 
 @dataclass(frozen=True)
@@ -70,25 +92,35 @@ class PlacementDecision:
 
 @dataclass(frozen=True)
 class CalendarEvent:
-    """One already-resolved load at a monotonic chronological position."""
+    """One already-placed resolved load at a chronological position.
+
+    ``events`` supplied to candidate evaluation represent *other* already-placed
+    loads. The candidate being evaluated must not be inserted into the event list
+    first; this keeps duplicate-contact and duplicate-exclusive-slot detection
+    unambiguous.
+    """
 
     position: int
-    load_class: LoadClass
+    profile: CalendarLoadProfile
+    collision_scope: Hashable | None = None
 
 
 @dataclass(frozen=True)
 class CalendarCollisionContext:
-    """Day-level context derived from the entire resolved calendar."""
+    """Day-level context derived from the resolved calendar."""
 
     candidate_position: int
-    same_day_loads: tuple[LoadClass, ...]
+    candidate_scope: Hashable | None
+    same_day_profiles: tuple[CalendarLoadProfile, ...]
     previous_hard_distance: int | None
     next_hard_distance: int | None
     between_effective_hard_contacts: bool
 
     @property
-    def same_day_contacts(self) -> tuple[LoadClass, ...]:
-        return tuple(load for load in self.same_day_loads if load in _CONTACT_LOADS)
+    def same_day_contacts(self) -> tuple[CalendarLoadProfile, ...]:
+        return tuple(
+            profile for profile in self.same_day_profiles if profile.load_class in _CONTACT_LOADS
+        )
 
 
 _CONTACT_EFFECTIVE_LOAD_TO_CLASS = {
@@ -130,14 +162,6 @@ _SANDWICH_SAFE_LOADS = frozenset(
     }
 )
 
-_SAME_CONTACT_DAY_COEXISTABLE = frozenset(
-    {
-        LoadClass.OFF,
-        LoadClass.ZERO_LOAD,
-        LoadClass.RECOVERY_ONLY,
-    }
-)
-
 _ZERO_LOAD_ROLE_KEYS = frozenset(
     {
         "tactical_watch",
@@ -149,9 +173,14 @@ _ZERO_LOAD_ROLE_KEYS = frozenset(
     }
 )
 
-_RECOVERY_ONLY_ROLE_KEYS = frozenset(
+# These are genuine coexistable recovery inserts from gap_fill_inserts.py.
+_COEXISTABLE_RECOVERY_ROLE_KEYS = frozenset({"recovery_reset"})
+
+# These are recovery/rehab sessions that still contain bodily work or explicitly
+# own a planner day slot. Their load may be low, but they are not zero-cost
+# coexistable inserts on a contact-owned day.
+_PHYSICAL_RECOVERY_ROLE_KEYS = frozenset(
     {
-        "recovery_reset",
         "fight_week_freshness_day",
         "mobility_rehab",
         "joint_prep",
@@ -159,6 +188,8 @@ _RECOVERY_ONLY_ROLE_KEYS = frozenset(
         "recovery_reset_day",
     }
 )
+
+_DAY_EXCLUSIVE_RECOVERY_ROLE_KEYS = frozenset({"fight_week_freshness_day"})
 
 _LOW_LOAD_PHYSICAL_ROLE_KEYS = frozenset(
     {
@@ -174,7 +205,6 @@ _LOW_LOAD_AEROBIC_ROLE_KEYS = frozenset(
         "aerobic_flush_day",
         "aerobic_support_day",
         "repeatability_support_day",
-        "light_fight_pace_touch_day",
         "recovery_aerobic_gas_tank_day",
         "converted_low_aerobic_gas_tank_day",
         "aerobic_shadow_flow",
@@ -186,18 +216,12 @@ _LOW_LOAD_AEROBIC_ROLE_KEYS = frozenset(
     }
 )
 
-_NEURAL_MICRODOSE_ROLE_KEYS = frozenset(
-    {
-        "neural_primer_day",
-        "strength_touch_day",
-        "alactic_sharpness_day",
-    }
-)
-
-_TECHNICAL_CONTACT_ROLE_KEYS = frozenset({"technical_touch_day"})
+_TECHNICAL_CONTACT_ROLE_KEYS = frozenset({"technical_touch_day", "light_combat_day"})
 
 
 def _enum_value(enum_type: type[Enum], value: Any):
+    if isinstance(value, enum_type):
+        return value
     normalized = str(value or "").strip().lower()
     if not normalized:
         return None
@@ -207,29 +231,66 @@ def _enum_value(enum_type: type[Enum], value: Any):
         return None
 
 
-def contact_load_class(entry: Mapping[str, Any] | None) -> LoadClass | None:
-    """Translate *resolved* sparring-plan state into the shared load vocabulary.
+def _default_occupancy(load_class: LoadClass) -> DayOccupancy:
+    if load_class in {LoadClass.OFF, LoadClass.ZERO_LOAD}:
+        return DayOccupancy.COEXISTABLE
+    if load_class in _CONTACT_LOADS:
+        return DayOccupancy.EXCLUSIVE_PHYSICAL
+    # Recovery is deliberately conservative when no role identity says it is a
+    # true coexistable insert. Low load is not synonymous with zero occupancy.
+    return DayOccupancy.PHYSICAL
 
-    ``None`` means the record does not contain enough canonical contact state to
-    classify safely. Athlete-facing labels and raw declared weekdays are ignored.
+
+def _profile(
+    load_class: LoadClass,
+    occupancy: DayOccupancy | None = None,
+) -> CalendarLoadProfile:
+    return CalendarLoadProfile(
+        load_class=load_class,
+        occupancy=occupancy or _default_occupancy(load_class),
+    )
+
+
+def _resolved_contact_class(entry: Mapping[str, Any]) -> LoadClass | None:
+    effective_raw = str(entry.get("effective_load") or "").strip().lower()
+    status_raw = str(entry.get("status") or "").strip().lower()
+    effective = _CONTACT_EFFECTIVE_LOAD_TO_CLASS.get(effective_raw)
+    status = _CONTACT_STATUS_TO_CLASS.get(status_raw)
+    if effective is not None and status is not None and effective is not status:
+        raise ValueError(
+            "Resolved contact fields disagree: effective_load and status map to different contact classes."
+        )
+    return effective or status
+
+
+def contact_load_profile(entry: Mapping[str, Any] | None) -> CalendarLoadProfile | None:
+    """Translate resolved sparring state into canonical load + occupancy.
+
+    Resolved ``effective_load`` / ``status`` fields outrank a convenience
+    ``calendar_load_class`` stamp because ``sparring_dose_planner`` owns contact
+    truth. A conflicting stamp fails explicitly rather than silently overriding
+    the resolver.
     """
 
     if not isinstance(entry, Mapping):
         return None
 
+    resolved = _resolved_contact_class(entry)
     explicit = _enum_value(LoadClass, entry.get("calendar_load_class"))
-    if explicit in _CONTACT_LOADS or explicit is LoadClass.OFF:
-        return explicit
+    if explicit is not None and explicit not in _CONTACT_LOADS and explicit is not LoadClass.OFF:
+        raise ValueError("Contact calendar_load_class must be a contact class or off.")
+    if resolved is not None and explicit is not None and resolved is not explicit:
+        raise ValueError("calendar_load_class conflicts with resolved sparring contact state.")
 
-    effective_load = str(entry.get("effective_load") or "").strip().lower()
-    if effective_load in _CONTACT_EFFECTIVE_LOAD_TO_CLASS:
-        return _CONTACT_EFFECTIVE_LOAD_TO_CLASS[effective_load]
+    load_class = resolved or explicit
+    if load_class is None:
+        return None
+    return _profile(load_class)
 
-    status = str(entry.get("status") or "").strip().lower()
-    if status in _CONTACT_STATUS_TO_CLASS:
-        return _CONTACT_STATUS_TO_CLASS[status]
 
-    return None
+def contact_load_class(entry: Mapping[str, Any] | None) -> LoadClass | None:
+    profile = contact_load_profile(entry)
+    return profile.load_class if profile is not None else None
 
 
 def is_effective_hard_contact(entry: Mapping[str, Any] | None) -> bool:
@@ -238,140 +299,195 @@ def is_effective_hard_contact(entry: Mapping[str, Any] | None) -> bool:
     return contact_load_class(entry) is LoadClass.HARD_CONTACT
 
 
-def _strength_role_load_class(role: Mapping[str, Any]) -> LoadClass:
+def _explicit_role_profile(role: Mapping[str, Any]) -> CalendarLoadProfile | None:
+    load_class = _enum_value(LoadClass, role.get("calendar_load_class"))
+    if load_class is None:
+        return None
+    occupancy = _enum_value(DayOccupancy, role.get("calendar_day_occupancy"))
+    return _profile(load_class, occupancy)
+
+
+def _strength_role_profile(role: Mapping[str, Any]) -> CalendarLoadProfile:
     cap = role.get("strength_dose_cap")
     if isinstance(cap, Mapping):
         try:
-            if int(cap.get("max_sets", 0)) <= 1:
-                return LoadClass.NEURAL_MICRODOSE
+            max_sets = int(cap.get("max_sets", 0))
         except (TypeError, ValueError):
-            pass
+            max_sets = 0
+        if max_sets == 1:
+            return _profile(LoadClass.NEURAL_MICRODOSE)
+        if max_sets >= 2:
+            return _profile(LoadClass.MEANINGFUL_STRENGTH)
 
-    role_key = str(role.get("role_key") or "").strip().lower()
-    if role_key in _NEURAL_MICRODOSE_ROLE_KEYS:
-        return LoadClass.NEURAL_MICRODOSE
-
-    if role.get("late_camp_strength_morph") and str(role.get("set_cap") or "").startswith("1"):
-        return LoadClass.NEURAL_MICRODOSE
-
-    return LoadClass.MEANINGFUL_STRENGTH
+    # Without a resolved one-set cap, do not under-classify a strength role just
+    # because its role key contains "touch" or "primer". Current late-fight roles
+    # can still carry medium-cost / meaningful-stress semantics before dosage is
+    # stamped. Final post-morph roles with a real one-set cap classify as microdose.
+    return _profile(LoadClass.MEANINGFUL_STRENGTH)
 
 
-def _conditioning_role_load_class(role: Mapping[str, Any]) -> LoadClass:
+def _conditioning_role_profile(role: Mapping[str, Any]) -> CalendarLoadProfile:
     role_key = str(role.get("role_key") or "").strip().lower()
     system = str(role.get("preferred_system") or "").strip().lower()
+    stress_class = str(role.get("stress_class") or "").strip().lower()
+    cost_class = str(role.get("cost_class") or "").strip().lower()
+    meaningful = role.get("meaningful_stress")
+    governance = role.get("governance") if isinstance(role.get("governance"), Mapping) else {}
+    if meaningful is None:
+        meaningful = governance.get("meaningful_stress")
 
-    if role_key in _LOW_LOAD_AEROBIC_ROLE_KEYS:
-        return LoadClass.LOW_LOAD_AEROBIC
+    # Post-morph / explicit low-cost semantics win over legacy role names.
     if role.get("counts_toward_conditioning_cap") is False:
-        return LoadClass.LOW_LOAD_AEROBIC
-    if role.get("recovery_compatible") and system == "aerobic":
-        return LoadClass.LOW_LOAD_AEROBIC
+        return _profile(LoadClass.LOW_LOAD_AEROBIC)
     if role.get("late_camp_role_morph") is True:
-        return LoadClass.LOW_LOAD_AEROBIC
-    if system == "aerobic":
-        return LoadClass.LOW_LOAD_AEROBIC
+        return _profile(LoadClass.LOW_LOAD_AEROBIC)
+    if meaningful is False and system == "aerobic":
+        return _profile(LoadClass.LOW_LOAD_AEROBIC)
+    if stress_class == "support" and cost_class == "low" and system == "aerobic":
+        return _profile(LoadClass.LOW_LOAD_AEROBIC)
+    if role.get("recovery_compatible") and system == "aerobic":
+        return _profile(LoadClass.LOW_LOAD_AEROBIC)
 
-    return LoadClass.MEANINGFUL_CONDITIONING
+    # Current D-13 inward roles such as strength/fight-pace/alactic touches can
+    # still be medium-cost meaningful stress. Preserve that state rather than
+    # collapsing them to low load from the role name alone.
+    if meaningful is True or stress_class == "meaningful_stress" or cost_class in {"medium", "high"}:
+        return _profile(LoadClass.MEANINGFUL_CONDITIONING)
+
+    if role_key in _LOW_LOAD_AEROBIC_ROLE_KEYS or system == "aerobic":
+        return _profile(LoadClass.LOW_LOAD_AEROBIC)
+
+    return _profile(LoadClass.MEANINGFUL_CONDITIONING)
 
 
-def role_load_class(role: Mapping[str, Any] | None) -> LoadClass | None:
-    """Classify an existing deterministic planner role into calendar semantics.
+def role_load_profile(role: Mapping[str, Any] | None) -> CalendarLoadProfile | None:
+    """Classify a deterministic planner role into canonical calendar semantics.
 
-    The function prefers an explicit ``calendar_load_class`` stamp. Otherwise it
-    maps current deterministic role metadata. Unknown/ambiguous roles return
-    ``None`` instead of guessing from labels.
-
-    Declared hard-spar roles are deliberately *not* inferred as hard. A
-    ``hard_sparring_day`` requires resolved sparring state on the record (or a
-    separate ``contact_load_class`` call) because declared contact is not
-    synonymous with effective hard load.
+    Unknown/ambiguous roles return ``None`` instead of being guessed from display
+    labels. Contact roles consume resolver-owned contact state. Stable filler keys
+    provide occupancy as well as load so a low-load physical recovery session is
+    not mistaken for a zero-cost coexistable insert.
     """
 
     if not isinstance(role, Mapping):
         return None
 
-    explicit = _enum_value(LoadClass, role.get("calendar_load_class"))
-    if isinstance(explicit, LoadClass):
-        return explicit
-
     role_key = str(role.get("role_key") or "").strip().lower()
     category = str(role.get("category") or "").strip().lower()
 
+    # Contact identity must respect resolver state before generic explicit stamps.
     if role_key == "hard_sparring_day":
-        return contact_load_class(role)
+        return contact_load_profile(role)
+
+    explicit = _explicit_role_profile(role)
+    if explicit is not None:
+        return explicit
+
     if role_key in _TECHNICAL_CONTACT_ROLE_KEYS:
-        return LoadClass.TECHNICAL_CONTACT
+        return _profile(LoadClass.TECHNICAL_CONTACT)
     if role_key in _ZERO_LOAD_ROLE_KEYS:
-        return LoadClass.ZERO_LOAD
-    if role_key in _RECOVERY_ONLY_ROLE_KEYS:
-        return LoadClass.RECOVERY_ONLY
+        return _profile(LoadClass.ZERO_LOAD, DayOccupancy.COEXISTABLE)
+    if role_key in _COEXISTABLE_RECOVERY_ROLE_KEYS:
+        return _profile(LoadClass.RECOVERY_ONLY, DayOccupancy.COEXISTABLE)
+    if role_key in _PHYSICAL_RECOVERY_ROLE_KEYS:
+        occupancy = (
+            DayOccupancy.EXCLUSIVE_PHYSICAL
+            if role_key in _DAY_EXCLUSIVE_RECOVERY_ROLE_KEYS
+            else DayOccupancy.PHYSICAL
+        )
+        return _profile(LoadClass.RECOVERY_ONLY, occupancy)
     if role_key in _LOW_LOAD_PHYSICAL_ROLE_KEYS:
-        return LoadClass.LOW_LOAD_PHYSICAL
+        return _profile(LoadClass.LOW_LOAD_PHYSICAL)
     if role_key in _LOW_LOAD_AEROBIC_ROLE_KEYS:
-        return LoadClass.LOW_LOAD_AEROBIC
-    if role_key in _NEURAL_MICRODOSE_ROLE_KEYS:
-        return LoadClass.NEURAL_MICRODOSE
+        return _profile(LoadClass.LOW_LOAD_AEROBIC)
 
     if category in {"recovery", "mobility", "rehab"}:
-        return LoadClass.RECOVERY_ONLY
+        return _profile(LoadClass.RECOVERY_ONLY)
     if category == "strength":
-        return _strength_role_load_class(role)
+        return _strength_role_profile(role)
     if category == "conditioning":
-        return _conditioning_role_load_class(role)
+        return _conditioning_role_profile(role)
 
     stress_class = str(role.get("stress_class") or "").strip().lower()
     cost_class = str(role.get("cost_class") or "").strip().lower()
     meaningful = role.get("meaningful_stress")
-    if meaningful is None and isinstance(role.get("governance"), Mapping):
-        meaningful = role["governance"].get("meaningful_stress")
+    governance = role.get("governance") if isinstance(role.get("governance"), Mapping) else {}
+    if meaningful is None:
+        meaningful = governance.get("meaningful_stress")
 
     if meaningful is False and cost_class == "low":
-        return LoadClass.LOW_LOAD_PHYSICAL
+        return _profile(LoadClass.LOW_LOAD_PHYSICAL)
     if stress_class == "support" and cost_class == "low":
-        return LoadClass.LOW_LOAD_PHYSICAL
+        return _profile(LoadClass.LOW_LOAD_PHYSICAL)
 
     return None
+
+
+def role_load_class(role: Mapping[str, Any] | None) -> LoadClass | None:
+    profile = role_load_profile(role)
+    return profile.load_class if profile is not None else None
 
 
 def build_calendar_context(
     candidate_position: int,
     events: Sequence[CalendarEvent] | Iterable[CalendarEvent],
+    *,
+    candidate_scope: Hashable | None = None,
 ) -> CalendarCollisionContext:
-    """Build weekday-agnostic collision context from the full resolved calendar.
+    """Build weekday-agnostic context from the resolved calendar.
 
-    ``position`` must increase chronologically. The function works for any day
-    geometry and never contains weekday-specific rules.
+    Immediate previous/next hard-contact distances consider the full event set so
+    D+/-1 protection survives planner-week/segment boundaries. The stronger
+    "between two hard contacts" policy is activated only inside an explicit
+    planner-owned collision scope. This prevents a full-camp integrity pass from
+    treating every day between the camp's first and last hard spar as sandwiched.
     """
 
     position = int(candidate_position)
     snapshot = tuple(events)
+    for event in snapshot:
+        if not isinstance(event, CalendarEvent):
+            raise TypeError("events must contain CalendarEvent instances")
+        if not isinstance(event.profile, CalendarLoadProfile):
+            raise TypeError("CalendarEvent.profile must be CalendarLoadProfile")
 
-    same_day_loads = tuple(event.load_class for event in snapshot if int(event.position) == position)
+    same_day_profiles = tuple(
+        event.profile for event in snapshot if int(event.position) == position
+    )
     hard_positions = sorted(
         {
             int(event.position)
             for event in snapshot
-            if event.load_class is LoadClass.HARD_CONTACT
+            if event.profile.load_class is LoadClass.HARD_CONTACT
         }
     )
 
     previous_positions = [day for day in hard_positions if day < position]
     next_positions = [day for day in hard_positions if day > position]
+    previous_hard_distance = position - previous_positions[-1] if previous_positions else None
+    next_hard_distance = next_positions[0] - position if next_positions else None
 
-    previous_hard_distance = (
-        position - previous_positions[-1] if previous_positions else None
-    )
-    next_hard_distance = (
-        next_positions[0] - position if next_positions else None
-    )
+    between_in_scope = False
+    if candidate_scope is not None:
+        scope_hard_positions = sorted(
+            {
+                int(event.position)
+                for event in snapshot
+                if event.collision_scope == candidate_scope
+                and event.profile.load_class is LoadClass.HARD_CONTACT
+            }
+        )
+        between_in_scope = any(day < position for day in scope_hard_positions) and any(
+            day > position for day in scope_hard_positions
+        )
 
     return CalendarCollisionContext(
         candidate_position=position,
-        same_day_loads=same_day_loads,
+        candidate_scope=candidate_scope,
+        same_day_profiles=same_day_profiles,
         previous_hard_distance=previous_hard_distance,
         next_hard_distance=next_hard_distance,
-        between_effective_hard_contacts=bool(previous_positions and next_positions),
+        between_effective_hard_contacts=between_in_scope,
     )
 
 
@@ -383,62 +499,76 @@ def _decision(
     return PlacementDecision(directive=directive, reason_code=reason_code, reason=reason)
 
 
+def _same_day_ownership_decision(
+    candidate: CalendarLoadProfile,
+    same_day_profiles: tuple[CalendarLoadProfile, ...],
+) -> PlacementDecision | None:
+    if not same_day_profiles:
+        return None
+
+    existing_contact = any(profile.load_class in _CONTACT_LOADS for profile in same_day_profiles)
+    existing_exclusive = any(
+        profile.occupancy is DayOccupancy.EXCLUSIVE_PHYSICAL for profile in same_day_profiles
+    )
+    existing_physical = any(
+        profile.occupancy in {DayOccupancy.PHYSICAL, DayOccupancy.EXCLUSIVE_PHYSICAL}
+        for profile in same_day_profiles
+    )
+
+    # A contact candidate owns the physical slot even if the existing physical
+    # role itself was not marked exclusive (for example strength already placed).
+    # This also makes duplicate hard/technical/reduced contacts fail explicitly.
+    if candidate.load_class in _CONTACT_LOADS and existing_physical:
+        return _decision(
+            PlacementDirective.FORBID,
+            "contact_candidate_physical_conflict",
+            "Do not add contact to a day that already contains a separate physical/contact session.",
+        )
+
+    # Other exclusive physical sessions cannot be added to an occupied physical day.
+    if candidate.occupancy is DayOccupancy.EXCLUSIVE_PHYSICAL and existing_physical:
+        return _decision(
+            PlacementDirective.FORBID,
+            "exclusive_physical_slot_conflict",
+            "This candidate owns an exclusive physical slot and cannot be added to an already-occupied physical day.",
+        )
+
+    if existing_exclusive and candidate.occupancy is not DayOccupancy.COEXISTABLE:
+        reason_code = (
+            "contact_day_extra_physical_conflict"
+            if existing_contact
+            else "exclusive_day_extra_physical_conflict"
+        )
+        return _decision(
+            PlacementDirective.FORBID,
+            reason_code,
+            "An existing exclusive physical/contact session owns this day; only coexistable support may be added.",
+        )
+
+    return None
+
+
 def evaluate_calendar_candidate(
-    candidate: LoadClass,
+    candidate: CalendarLoadProfile,
     context: CalendarCollisionContext,
 ) -> PlacementDecision:
-    """Evaluate one candidate load against contact ownership and hard-load spacing.
+    """Evaluate one candidate against day ownership and hard-contact spacing.
 
-    This function only answers legality/priority. It never relocates, suppresses,
+    The function only answers legality/priority. It never relocates, suppresses,
     inserts, or mutates sessions.
     """
 
-    same_day_contacts = set(context.same_day_contacts)
-    same_day_hard = LoadClass.HARD_CONTACT in same_day_contacts
+    if not isinstance(candidate, CalendarLoadProfile):
+        raise TypeError("candidate must be CalendarLoadProfile")
 
-    # Contact-day ownership is distinct from hard-contact recovery pressure.
-    if same_day_contacts:
-        if same_day_hard:
-            if candidate is LoadClass.HARD_CONTACT:
-                return _decision(
-                    PlacementDirective.ALLOW,
-                    "hard_contact_day_owner",
-                    "The resolved hard-contact session owns this contact day.",
-                )
-            if candidate in _SAME_CONTACT_DAY_COEXISTABLE:
-                return _decision(
-                    PlacementDirective.ALLOW,
-                    "hard_contact_day_zero_or_recovery_support",
-                    "Hard contact owns the physical day; only zero-load or recovery-only support may coexist.",
-                )
-            return _decision(
-                PlacementDirective.FORBID,
-                "hard_contact_same_day_physical_conflict",
-                "Do not schedule another physical session on an effective hard-contact day.",
-            )
+    same_day = _same_day_ownership_decision(candidate, context.same_day_profiles)
+    if same_day is not None:
+        return same_day
 
-        # Technical/reduced contact owns the physical session slot but does not
-        # create hard-contact adjacency pressure on neighbouring days.
-        if candidate in same_day_contacts:
-            return _decision(
-                PlacementDirective.ALLOW,
-                "contact_day_owner",
-                "The resolved technical/reduced contact session owns this contact slot.",
-            )
-        if candidate in _SAME_CONTACT_DAY_COEXISTABLE:
-            return _decision(
-                PlacementDirective.ALLOW,
-                "contact_day_zero_or_recovery_support",
-                "Technical/reduced contact owns the physical slot; zero-load or recovery-only support may coexist.",
-            )
-        return _decision(
-            PlacementDirective.FORBID,
-            "contact_day_extra_physical_conflict",
-            "Do not add a separate physical session to a technical/reduced contact-owned day.",
-        )
+    load_class = candidate.load_class
 
     # A candidate hard-contact session cannot create back-to-back hard contacts.
-    if candidate is LoadClass.HARD_CONTACT and (
+    if load_class is LoadClass.HARD_CONTACT and (
         context.previous_hard_distance == 1 or context.next_hard_distance == 1
     ):
         return _decision(
@@ -447,49 +577,49 @@ def evaluate_calendar_candidate(
             "Back-to-back effective hard-contact days are not legal calendar neighbours.",
         )
 
-    # Any position genuinely between two effective hard contacts uses the
-    # sandwiched-day policy, regardless of weekday names or how many days apart
-    # the two contacts are.
+    # Stronger between-contact protection is scoped to the planner-owned
+    # microcycle/segment. It is never inferred from weekday names or the full
+    # camp's first/last hard contact.
     if context.between_effective_hard_contacts:
-        if candidate in _SANDWICH_SAFE_LOADS:
+        if load_class in _SANDWICH_SAFE_LOADS:
             return _decision(
                 PlacementDirective.ALLOW,
                 "between_hard_contacts_low_cost",
-                "A day between effective hard contacts is reserved for off, zero-load, recovery, or low-aerobic support.",
+                "This scoped position between effective hard contacts is reserved for off, zero-load, recovery, or low-aerobic support.",
             )
-        if candidate is LoadClass.TECHNICAL_CONTACT:
+        if load_class is LoadClass.TECHNICAL_CONTACT:
             return _decision(
                 PlacementDirective.DEPRIORITIZE,
                 "between_hard_contacts_technical_contact",
                 "Technical-only contact may fit between hard contacts but should lose to a lower-cost option when available.",
             )
-        if candidate is LoadClass.REDUCED_CONTACT:
+        if load_class is LoadClass.REDUCED_CONTACT:
             return _decision(
                 PlacementDirective.DEPRIORITIZE,
                 "between_hard_contacts_reduced_contact",
-                "Reduced contact still carries residual collision cost and should lose to a lower-cost option between hard contacts.",
+                "Reduced contact retains residual collision cost and should lose to a lower-cost option between hard contacts.",
             )
         return _decision(
             PlacementDirective.FORBID,
             "between_hard_contacts_meaningful_or_physical_stress",
-            "Do not place meaningful S&C, neural stress, low-load physical work, or additional hard contact between effective hard contacts.",
+            "Do not place meaningful S&C, neural stress, low-load physical work, or additional hard contact inside this protected between-contact span.",
         )
 
     # Immediate day after effective hard contact: no meaningful S&C.
     if context.previous_hard_distance == 1:
-        if candidate in _MEANINGFUL_LOADS:
+        if load_class in _MEANINGFUL_LOADS:
             return _decision(
                 PlacementDirective.FORBID,
                 "post_hard_contact_meaningful_stress",
                 "The day immediately after effective hard contact cannot carry meaningful S&C.",
             )
-        if candidate is LoadClass.NEURAL_MICRODOSE:
+        if load_class is LoadClass.NEURAL_MICRODOSE:
             return _decision(
                 PlacementDirective.DEPRIORITIZE,
                 "post_hard_contact_microdose",
                 "A neural microdose may survive only when no cleaner slot exists and the dose is genuinely tiny.",
             )
-        if candidate is LoadClass.REDUCED_CONTACT:
+        if load_class is LoadClass.REDUCED_CONTACT:
             return _decision(
                 PlacementDirective.DEPRIORITIZE,
                 "post_hard_contact_reduced_contact",
@@ -504,13 +634,13 @@ def evaluate_calendar_candidate(
     # Immediate day before effective hard contact is intentionally asymmetric:
     # useful work may survive, but it must lose to a cleaner slot.
     if context.next_hard_distance == 1:
-        if candidate in _MEANINGFUL_LOADS or candidate is LoadClass.NEURAL_MICRODOSE:
+        if load_class in _MEANINGFUL_LOADS or load_class is LoadClass.NEURAL_MICRODOSE:
             return _decision(
                 PlacementDirective.DEPRIORITIZE,
                 "pre_hard_contact_managed_stress",
                 "Meaningful or neural work before hard contact is a managed collision and should lose to a cleaner slot.",
             )
-        if candidate is LoadClass.REDUCED_CONTACT:
+        if load_class is LoadClass.REDUCED_CONTACT:
             return _decision(
                 PlacementDirective.DEPRIORITIZE,
                 "pre_hard_contact_reduced_contact",
@@ -525,32 +655,41 @@ def evaluate_calendar_candidate(
     return _decision(
         PlacementDirective.ALLOW,
         "no_calendar_collision",
-        "No contact-day ownership or effective hard-contact spacing rule blocks this candidate.",
+        "No day-ownership or effective hard-contact spacing rule blocks this candidate.",
     )
 
 
 def evaluate_candidate_at_position(
-    candidate: LoadClass,
+    candidate: CalendarLoadProfile,
     *,
     candidate_position: int,
     events: Sequence[CalendarEvent] | Iterable[CalendarEvent],
+    candidate_scope: Hashable | None = None,
 ) -> PlacementDecision:
     """Convenience wrapper for future allocators, fillers, and integrity checks."""
 
-    context = build_calendar_context(candidate_position, events)
+    context = build_calendar_context(
+        candidate_position,
+        events,
+        candidate_scope=candidate_scope,
+    )
     return evaluate_calendar_candidate(candidate, context)
 
 
 __all__ = [
     "CalendarCollisionContext",
     "CalendarEvent",
+    "CalendarLoadProfile",
+    "DayOccupancy",
     "LoadClass",
     "PlacementDecision",
     "PlacementDirective",
     "build_calendar_context",
     "contact_load_class",
+    "contact_load_profile",
     "evaluate_calendar_candidate",
     "evaluate_candidate_at_position",
     "is_effective_hard_contact",
     "role_load_class",
+    "role_load_profile",
 ]
