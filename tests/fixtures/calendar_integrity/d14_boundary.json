@@ -1,0 +1,36 @@
+{
+  "generator_mode": "deterministic_planner_plus_ai_finalizer",
+  "payload_variant": null,
+  "roles": [
+    [1, "SPP", "breathing_reset", "support_insert", "friday", 7, true, false, false, "support", "low"],
+    [1, "SPP", "hard_sparring_day", "sparring", "thursday", 8, true, false, false, "support", "low"],
+    [1, "SPP", "light_combat_day", "technical", "monday", 11, true, false, false, "support", "low"],
+    [1, "SPP", "neural_primer_day", "strength", "sunday", 12, true, false, false, "meaningful_stress", "medium"],
+    [1, "SPP", "strength_touch_day", "strength", "monday", 11, true, false, false, "meaningful_stress", "medium"],
+    [1, "SPP", "tactical_cue_card", "support_insert", "wednesday", 9, true, false, false, "support", "low"],
+    [1, "SPP", "tactical_watch", "support_insert", "sunday", 12, true, false, false, "support", "low"],
+    [1, "SPP", "tactical_watch", "support_insert", "thursday", 8, true, false, false, "support", "low"],
+    [2, "TAPER", "alactic_sharpness_day", "conditioning", "wednesday", 2, true, false, false, "meaningful_stress", "medium"],
+    [2, "TAPER", "fight_day_protocol", "fight_day", "friday", 0, false, false, false, "", ""],
+    [2, "TAPER", "fight_week_freshness_day", "recovery", "friday", 0, true, false, false, "support", "low"],
+    [2, "TAPER", "hard_sparring_day", "sparring", "thursday", 1, true, false, false, "support", "low"],
+    [2, "TAPER", "light_combat_day", "technical", "monday", 4, true, false, false, "support", "low"],
+    [2, "TAPER", "tactical_cue_card", "support_insert", "thursday", 1, true, false, false, "support", "low"],
+    [2, "TAPER", "tactical_watch", "support_insert", "monday", 4, false, false, false, "support", "low"]
+  ],
+  "contacts": [
+    [1, "thursday", "convert_to_technical_suggested", "technical"],
+    [2, "thursday", "convert_to_technical_suggested", "technical"]
+  ],
+  "suppressed": [
+    [1, "aerobic_support_day", "conditioning", "", ["active_weight_cut", "proximity_to_fight"]],
+    [1, "hard_sparring_day", "sparring", "no_hard_sparring_day", []],
+    [1, "recovery_reset_day", "recovery", "", ["active_weight_cut", "proximity_to_fight"]],
+    [1, "strength_touch_day", "strength", "", ["active_weight_cut", "proximity_to_fight"]],
+    [2, "fight_week_freshness_day", "recovery", "", ["active_weight_cut", "proximity_to_fight"]],
+    [2, "hard_sparring_day", "sparring", "no_hard_sparring_day", []],
+    [2, "light_fight_pace_touch_day", "conditioning", "", []],
+    [2, "neural_primer_day", "strength", "", ["active_weight_cut", "proximity_to_fight"]]
+  ],
+  "tail_handoff": {"active": true, "normal_planner_through_d": 14, "late_fight_planner_from_d": 13, "source": "finished_existing_late_fight_path"}
+}
