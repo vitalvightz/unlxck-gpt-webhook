@@ -49,6 +49,11 @@ def _event(
     )
 
 
+# ---------------------------------------------------------------------------
+# Contact source-of-truth
+# ---------------------------------------------------------------------------
+
+
 def test_resolved_contact_state_preserves_hard_reduced_and_technical_distinctions():
     assert contact_load_class({"effective_load": "hard"}) is LoadClass.HARD_CONTACT
     assert contact_load_class({"status": "hard_as_planned"}) is LoadClass.HARD_CONTACT
@@ -86,6 +91,16 @@ def test_resolved_contact_truth_outranks_and_validates_explicit_stamp():
         )
 
 
+def test_contact_occupancy_cannot_be_overridden():
+    with pytest.raises(ValueError):
+        contact_load_profile(
+            {
+                "effective_load": "hard",
+                "calendar_day_occupancy": "physical",
+            }
+        )
+
+
 def test_conflicting_resolved_contact_fields_fail_explicit():
     with pytest.raises(ValueError):
         contact_load_profile(
@@ -102,12 +117,19 @@ def test_only_resolved_hard_contact_counts_as_effective_hard_contact():
     assert is_effective_hard_contact({"effective_load": "reduced"}) is False
 
 
+# ---------------------------------------------------------------------------
+# Canonical role classification
+# ---------------------------------------------------------------------------
+
+
 def test_role_classifier_covers_stable_existing_semantics_and_occupancy():
     tactical = role_load_profile({"role_key": "tactical_watch"})
     assert tactical == _profile(LoadClass.ZERO_LOAD, DayOccupancy.COEXISTABLE)
 
     recovery_insert = role_load_profile({"role_key": "recovery_reset"})
-    assert recovery_insert == _profile(LoadClass.RECOVERY_ONLY, DayOccupancy.COEXISTABLE)
+    assert recovery_insert == _profile(
+        LoadClass.RECOVERY_ONLY, DayOccupancy.COEXISTABLE
+    )
 
     freshness = role_load_profile({"role_key": "fight_week_freshness_day"})
     assert freshness == _profile(
@@ -136,6 +158,7 @@ def test_strength_classifier_uses_resolved_dose_instead_of_touch_name():
         }
     )
     assert meaningful.load_class is LoadClass.MEANINGFUL_STRENGTH
+    assert meaningful.occupancy is DayOccupancy.EXCLUSIVE_PHYSICAL
 
     micro = role_load_profile(
         {
@@ -145,6 +168,26 @@ def test_strength_classifier_uses_resolved_dose_instead_of_touch_name():
         }
     )
     assert micro.load_class is LoadClass.NEURAL_MICRODOSE
+    assert micro.occupancy is DayOccupancy.EXCLUSIVE_PHYSICAL
+
+
+def test_zero_set_strength_cap_is_not_called_meaningful_strength():
+    profile = role_load_profile(
+        {
+            "role_key": "primary_strength_day",
+            "category": "strength",
+            "strength_dose_cap": {"max_sets": 0, "max_reps": 0},
+        }
+    )
+    assert profile.load_class is LoadClass.RECOVERY_ONLY
+    assert profile.occupancy is DayOccupancy.PHYSICAL
+
+
+def test_small_strength_touch_is_neural_not_generic_low_load_movement():
+    profile = role_load_profile(
+        {"role_key": "small_strength_touch_day", "category": "strength"}
+    )
+    assert profile.load_class is LoadClass.NEURAL_MICRODOSE
 
 
 def test_post_morph_strength_dose_not_display_label_controls_classification():
@@ -158,6 +201,68 @@ def test_post_morph_strength_dose_not_display_label_controls_classification():
     assert role_load_class(role) is LoadClass.NEURAL_MICRODOSE
 
 
+def test_normal_alactic_roles_preserve_current_low_noise_semantics():
+    support = role_load_profile(
+        {
+            "role_key": "alactic_support_day",
+            "category": "conditioning",
+            "preferred_system": "alactic",
+        }
+    )
+    speed = role_load_profile(
+        {
+            "role_key": "alactic_speed_day",
+            "category": "conditioning",
+            "preferred_system": "alactic",
+        }
+    )
+    assert support.load_class is LoadClass.LOW_LOAD_PHYSICAL
+    assert speed.load_class is LoadClass.NEURAL_MICRODOSE
+
+
+def test_late_fight_explicit_stress_metadata_upgrades_alactic_role_and_keeps_day_exclusive():
+    profile = role_load_profile(
+        {
+            "role_key": "alactic_sharpness_day",
+            "category": "conditioning",
+            "preferred_system": "alactic",
+            "stress_class": "meaningful_stress",
+            "cost_class": "medium",
+        }
+    )
+    assert profile.load_class is LoadClass.MEANINGFUL_CONDITIONING
+    assert profile.occupancy is DayOccupancy.EXCLUSIVE_PHYSICAL
+
+
+def test_late_fight_day_exclusive_stressor_roles_keep_exclusive_occupancy():
+    cases = (
+        {
+            "role_key": "strength_touch_day",
+            "category": "strength",
+        },
+        {
+            "role_key": "neural_primer_day",
+            "category": "strength",
+        },
+        {
+            "role_key": "alactic_sharpness_day",
+            "category": "conditioning",
+            "preferred_system": "alactic",
+            "stress_class": "meaningful_stress",
+            "cost_class": "medium",
+        },
+        {
+            "role_key": "light_fight_pace_touch_day",
+            "category": "conditioning",
+            "preferred_system": "aerobic",
+            "stress_class": "meaningful_stress",
+            "cost_class": "medium",
+        },
+    )
+    for role in cases:
+        assert role_load_profile(role).occupancy is DayOccupancy.EXCLUSIVE_PHYSICAL
+
+
 def test_late_fight_medium_stress_touch_is_not_silently_low_load():
     role = {
         "role_key": "light_fight_pace_touch_day",
@@ -169,7 +274,7 @@ def test_late_fight_medium_stress_touch_is_not_silently_low_load():
     assert role_load_class(role) is LoadClass.MEANINGFUL_CONDITIONING
 
 
-def test_post_morph_fight_pace_touch_becomes_low_load_aerobic():
+def test_post_morph_fight_pace_touch_becomes_low_load_aerobic_but_keeps_role_occupancy():
     role = {
         "role_key": "light_fight_pace_touch_day",
         "category": "conditioning",
@@ -179,18 +284,48 @@ def test_post_morph_fight_pace_touch_becomes_low_load_aerobic():
         "counts_toward_conditioning_cap": False,
         "late_camp_role_morph": True,
     }
-    assert role_load_class(role) is LoadClass.LOW_LOAD_AEROBIC
+    profile = role_load_profile(role)
+    assert profile.load_class is LoadClass.LOW_LOAD_AEROBIC
+    assert profile.occupancy is DayOccupancy.EXCLUSIVE_PHYSICAL
 
 
-def test_role_classifier_accepts_explicit_canonical_stamp_and_unknowns_fail_explicit():
+def test_unknown_non_contact_role_may_use_valid_explicit_canonical_stamp():
     profile = role_load_profile(
         {
+            "role_key": "future_unknown_role",
             "calendar_load_class": LoadClass.LOW_LOAD_AEROBIC,
             "calendar_day_occupancy": DayOccupancy.PHYSICAL,
         }
     )
     assert profile == _profile(LoadClass.LOW_LOAD_AEROBIC, DayOccupancy.PHYSICAL)
     assert role_load_profile({"role_key": "future_unknown_role"}) is None
+
+
+def test_known_role_explicit_stamp_can_confirm_but_not_override_canonical_semantics():
+    matching = role_load_profile(
+        {
+            "role_key": "fight_week_freshness_day",
+            "calendar_load_class": "recovery_only",
+        }
+    )
+    assert matching.occupancy is DayOccupancy.EXCLUSIVE_PHYSICAL
+
+    with pytest.raises(ValueError):
+        role_load_profile(
+            {
+                "role_key": "fight_week_freshness_day",
+                "calendar_load_class": "recovery_only",
+                "calendar_day_occupancy": "coexistable",
+            }
+        )
+
+    with pytest.raises(ValueError):
+        role_load_profile(
+            {
+                "role_key": "tactical_watch",
+                "calendar_load_class": "meaningful_strength",
+            }
+        )
 
 
 def test_explicit_profile_cannot_bypass_contact_or_physical_ownership():
@@ -220,6 +355,19 @@ def test_explicit_profile_cannot_bypass_contact_or_physical_ownership():
                 "calendar_load_class": "meaningful_strength",
             }
         )
+
+    with pytest.raises(ValueError):
+        role_load_profile(
+            {
+                "role_key": "future_unknown_role",
+                "calendar_load_class": "technical_contact",
+            }
+        )
+
+
+# ---------------------------------------------------------------------------
+# Generic calendar geometry and scope
+# ---------------------------------------------------------------------------
 
 
 def test_calendar_context_is_position_based_not_weekday_based():
@@ -253,7 +401,7 @@ def test_every_position_between_two_hard_contacts_in_same_scope_uses_protected_p
             candidate_scope="w1",
         )
         assert decision.directive is PlacementDirective.FORBID
-        assert decision.reason_code == "between_hard_contacts_meaningful_or_physical_stress"
+        assert decision.reason_code == "between_hard_contacts_meaningful_or_neural_stress"
 
 
 def test_full_camp_events_do_not_turn_every_day_between_first_and_last_hard_into_sandwich():
@@ -266,7 +414,9 @@ def test_full_camp_events_do_not_turn_every_day_between_first_and_last_hard_into
 
     context = build_calendar_context(16, events, candidate_scope="w-mid")
     assert context.between_effective_hard_contacts is False
-    decision = evaluate_calendar_candidate(_profile(LoadClass.MEANINGFUL_STRENGTH), context)
+    decision = evaluate_calendar_candidate(
+        _profile(LoadClass.MEANINGFUL_STRENGTH), context
+    )
     assert decision.directive is PlacementDirective.ALLOW
 
 
@@ -318,6 +468,11 @@ def test_same_geometry_shifted_to_different_positions_has_identical_policy():
     assert a.reason_code == b.reason_code
 
 
+# ---------------------------------------------------------------------------
+# Same-day ownership
+# ---------------------------------------------------------------------------
+
+
 def test_technical_contact_owns_its_day_without_creating_next_day_hard_pressure():
     events = [_event(60, LoadClass.TECHNICAL_CONTACT)]
 
@@ -360,8 +515,22 @@ def test_contact_day_allows_true_coexistable_recovery_insert_but_not_freshness_s
 def test_mobility_rehab_is_low_load_but_not_contact_day_coexistable():
     events = [_event(75, LoadClass.HARD_CONTACT)]
     mobility = role_load_profile({"role_key": "mobility_rehab"})
-    decision = evaluate_candidate_at_position(mobility, candidate_position=75, events=events)
+    decision = evaluate_candidate_at_position(
+        mobility, candidate_position=75, events=events
+    )
     assert decision.directive is PlacementDirective.FORBID
+
+
+def test_day_exclusive_stressor_cannot_share_an_existing_physical_session():
+    events = [_event(76, LoadClass.LOW_LOAD_AEROBIC)]
+    primer = role_load_profile(
+        {"role_key": "neural_primer_day", "category": "strength"}
+    )
+    decision = evaluate_candidate_at_position(
+        primer, candidate_position=76, events=events
+    )
+    assert decision.directive is PlacementDirective.FORBID
+    assert decision.reason_code == "exclusive_physical_slot_conflict"
 
 
 def test_duplicate_contact_on_same_day_is_forbidden():
@@ -391,6 +560,11 @@ def test_contact_candidate_cannot_be_added_to_existing_physical_session():
     )
     assert decision.directive is PlacementDirective.FORBID
     assert decision.reason_code == "contact_candidate_physical_conflict"
+
+
+# ---------------------------------------------------------------------------
+# Hard-contact spacing
+# ---------------------------------------------------------------------------
 
 
 def test_day_after_hard_contact_forbids_meaningful_s_and_c():
@@ -451,7 +625,7 @@ def test_back_to_back_effective_hard_contact_is_forbidden():
     assert decision.reason_code == "consecutive_effective_hard_contact"
 
 
-def test_scoped_between_hard_contacts_allows_low_cost_but_not_low_load_physical():
+def test_scoped_between_hard_contacts_prefers_recovery_but_does_not_blanket_ban_light_movement():
     events = [
         _event(130, LoadClass.HARD_CONTACT, scope="w"),
         _event(134, LoadClass.HARD_CONTACT, scope="w"),
@@ -477,7 +651,16 @@ def test_scoped_between_hard_contacts_allows_low_cost_but_not_low_load_physical(
         events=events,
         candidate_scope="w",
     )
-    assert physical.directive is PlacementDirective.FORBID
+    assert physical.directive is PlacementDirective.DEPRIORITIZE
+    assert physical.reason_code == "between_hard_contacts_low_load_physical"
+
+    neural = evaluate_candidate_at_position(
+        _profile(LoadClass.NEURAL_MICRODOSE),
+        candidate_position=132,
+        events=events,
+        candidate_scope="w",
+    )
+    assert neural.directive is PlacementDirective.FORBID
 
 
 def test_technical_and_reduced_contact_have_distinct_scoped_between_contact_cost():
@@ -502,6 +685,11 @@ def test_technical_and_reduced_contact_have_distinct_scoped_between_contact_cost
     assert technical.directive is PlacementDirective.DEPRIORITIZE
     assert reduced.directive is PlacementDirective.DEPRIORITIZE
     assert technical.reason_code != reduced.reason_code
+
+
+# ---------------------------------------------------------------------------
+# Purity / validation
+# ---------------------------------------------------------------------------
 
 
 def test_context_and_evaluation_do_not_mutate_event_input():
