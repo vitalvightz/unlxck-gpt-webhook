@@ -24,6 +24,19 @@
 >   generation day: the strength dose morph (`late_camp_role_morph`, uncapped at
 >   D-18+, ramping down from D-17), the fight-pace→rhythm morph (D-13 inward), and
 >   the per-day D-17 hard-contact ban (`sparring_dose_planner`).
+> - **Fight-week rendering (HOW the tail is written)** is the same overlay for the
+>   Stage 2 handoff, also keyed on scheduled D-day. A dated camp's continuous
+>   calendar always reaches the D-13→D-0 fight-week tail, so the handoff carries a
+>   **downstream continuation map** (`_camp_downstream_countdown_continuation`,
+>   surfaced through `_countdown_continuation_map_from_packet`) that hands those
+>   scheduled days the existing late-fight/fight-week mode contracts
+>   (`pre_fight_compressed` → `late_fight_week` → `late_fight_transition` →
+>   `late_fight_session` → `pre_fight_day` → `fight_day_protocol`). This is the same
+>   sequence a plan generated directly at D-13 carries. It begins at **D-13** and
+>   **never** reintroduces the removed D-21→D-14 bridge window; a D-14+ plan keeps
+>   the normal camp planner for its earlier days and only inherits these contracts
+>   on the tail. Without it, normal-camp output could survive into actual fight week
+>   (e.g. D-1 equipment work) even though `pre_fight_day_payload` bans it.
 >
 > **Retained genuine safety rules** (unchanged, now applied as scheduled-day
 > overlays on the normal architecture): the D-17+ hard-contact conversion + D-18+

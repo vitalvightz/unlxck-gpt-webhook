@@ -30,6 +30,7 @@ from .stage2_payload_late_fight import (  # noqa: F401  (re-exported for tests/b
     _build_late_fight_session_sequence,
     _build_late_fight_week_by_week_progression,
     _build_late_fight_weekly_role_map,
+    _camp_downstream_countdown_continuation,
     _days_out_payload_block,
     _days_out_payload_mode,
     _fight_week_override_payload,
@@ -3803,6 +3804,24 @@ def _athlete_profile_block(planning_brief: dict | None, stage2_payload: dict) ->
     return athlete_model if isinstance(athlete_model, dict) else {}
 
 
+def _continuation_days_until_fight(
+    finalizer_packet: dict,
+    planning_brief: dict | None,
+) -> Any:
+    """Best-effort ``days_until_fight`` for the countdown-continuation fallback."""
+    for source in (finalizer_packet, planning_brief):
+        if not isinstance(source, dict):
+            continue
+        for model_key in ("athlete_model", "athlete_snapshot"):
+            model = source.get(model_key)
+            if isinstance(model, dict) and model.get("days_until_fight") is not None:
+                return model.get("days_until_fight")
+        fight_demands = source.get("fight_demands")
+        if isinstance(fight_demands, dict) and fight_demands.get("days_until_fight") is not None:
+            return fight_demands.get("days_until_fight")
+    return None
+
+
 def _countdown_continuation_map_from_packet(
     finalizer_packet: dict,
     planning_brief: dict | None,
@@ -3829,9 +3848,22 @@ def _countdown_continuation_map_from_packet(
         )
         if continuation_map:
             return continuation_map
-        return list((planning_brief.get("days_out_payload", {}) or {}).get("countdown_mode_sequence", []))
+        continuation_map = list(
+            (planning_brief.get("days_out_payload", {}) or {}).get("countdown_mode_sequence", [])
+        )
+        if continuation_map:
+            return continuation_map
 
-    return []
+    # Fallback for normal-camp (D-14+) plans. Their planning brief carries no
+    # late_fight_plan_spec / days_out_payload (D-14+ stays on the normal camp
+    # planner), but the plan's continuous calendar still reaches the D-13 -> D-0
+    # fight-week tail. Derive the downstream continuation from days_until_fight so
+    # those scheduled days inherit the existing late-fight mode contracts instead
+    # of silently rendering as normal-camp work into fight week. Empty for late
+    # plans (already handled above) and for undated / open plans.
+    return _camp_downstream_countdown_continuation(
+        _continuation_days_until_fight(finalizer_packet, planning_brief)
+    )
 
 
 def _append_countdown_continuation_instructions(
@@ -3843,13 +3875,30 @@ def _append_countdown_continuation_instructions(
     if not continuation_map:
         return mode_instructions
 
-    if len(continuation_map) > 1:
-        continuation_lines = [
-            "COUNTDOWN CONTINUATION MAP",
-            "Continue the active late-fight countdown from this start window through D-0 exactly as mapped below.",
-        ]
-    else:
+    if len(continuation_map) <= 1:
         return mode_instructions
+
+    # A late-fight/fight-week top mode carries non-empty mode instructions; a
+    # normal-camp plan (camp_payload / camp_plan bucket) carries none. Use that to
+    # pick the intro: the late-fight continuation-start plan continues its own
+    # active countdown, whereas a camp plan only hands its D-13 -> D-0 tail to the
+    # fight-week contracts and must NOT reframe its earlier camp days.
+    is_camp_top_mode = not str(mode_instructions or "").strip()
+    if is_camp_top_mode:
+        intro = (
+            "This plan stays on the normal camp planner from its generation day through "
+            "D-14. From D-13 onward its scheduled countdown days follow the existing "
+            "fight-week contracts mapped below — apply each mapped payload mode to its own "
+            "D-day window, in descending order through D-0. Do not convert the earlier camp "
+            "days into a late-fight countdown."
+        )
+    else:
+        intro = (
+            "Continue the active late-fight countdown from this start window through D-0 "
+            "exactly as mapped below."
+        )
+
+    continuation_lines = ["COUNTDOWN CONTINUATION MAP", intro]
 
     for segment in continuation_map:
         stage_key = str(segment.get("stage_key") or "").strip()
@@ -3864,7 +3913,10 @@ def _append_countdown_continuation_instructions(
     if len(continuation_lines) <= 2:
         return mode_instructions
 
-    return mode_instructions + "\n\n" + "\n".join(continuation_lines)
+    continuation_block = "\n".join(continuation_lines)
+    if mode_instructions:
+        return mode_instructions + "\n\n" + continuation_block
+    return continuation_block
 
 
 def build_stage2_handoff_text(
