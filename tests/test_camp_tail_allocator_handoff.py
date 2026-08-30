@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fightcamp import stage2_payload_late_fight as late_fight
+import fightcamp.camp_week_fillers as fillers
 from fightcamp.camp_week_fillers import _role_d_day, _splice_late_fight_tail
 
 
@@ -13,10 +13,10 @@ def _week(calendar_days, roles):
     }
 
 
-def _role(role_key: str, d_day: int, weekday: str):
+def _role(role_key: str, d_day: int, weekday: str, *, category: str = "strength"):
     return {
         "role_key": role_key,
-        "category": "strength",
+        "category": category,
         "countdown_offset": d_day,
         "countdown_label": f"D-{d_day}",
         "scheduled_countdown_label": f"D-{d_day}",
@@ -24,7 +24,7 @@ def _role(role_key: str, d_day: int, weekday: str):
     }
 
 
-def test_d30_keeps_d14_normal_and_hands_d13_to_d1_to_existing_late_allocator(monkeypatch):
+def test_d30_keeps_d14_normal_and_splices_finished_d13_tail(monkeypatch):
     weekly_role_map = {
         "weeks": [
             _week(
@@ -59,14 +59,7 @@ def test_d30_keeps_d14_normal_and_hands_d13_to_d1_to_existing_late_allocator(mon
                 ],
                 [
                     _role("normal_d1", 1, "wednesday"),
-                    {
-                        "role_key": "fight_day_protocol",
-                        "category": "protocol",
-                        "countdown_offset": 0,
-                        "countdown_label": "D-0",
-                        "scheduled_countdown_label": "D-0",
-                        "scheduled_day_hint": "thursday",
-                    },
+                    _role("fight_day_protocol", 0, "thursday", category="protocol"),
                 ],
             ),
         ]
@@ -77,63 +70,131 @@ def test_d30_keeps_d14_normal_and_hands_d13_to_d1_to_existing_late_allocator(mon
         "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
     }
 
-    shifted_calls = []
-    allocation_calls = []
+    calls = []
 
-    def fake_shift(days_until_fight, segment_start_day, model):
-        shifted_calls.append((days_until_fight, segment_start_day))
-        shifted = dict(model)
-        shifted["days_until_fight"] = segment_start_day
-        return shifted
-
-    def fake_allocation(days_until_fight, model):
-        allocation_calls.append(days_until_fight)
-        assert model["days_until_fight"] == 13
+    def fake_finished_tail(days_until_fight, model, *, start_day):
+        calls.append((days_until_fight, start_day, model["days_until_fight"]))
+        roles = [
+            _role("late_d13", 13, "wednesday"),
+            _role("late_d7", 7, "tuesday"),
+            _role("late_d1", 1, "wednesday"),
+        ]
         return {
-            "session_roles": [
-                _role("late_d13", 13, "wednesday"),
-                _role("late_d7", 7, "tuesday"),
-                _role("late_d1", 1, "wednesday"),
-            ]
+            "session_sequence": roles,
+            "day_metadata": {
+                13: {"stage_key": "d13_to_d8", "payload_mode": "pre_fight_compressed_payload"},
+                7: {"stage_key": "d7", "payload_mode": "late_fight_week_payload"},
+                1: {"stage_key": "d1", "payload_mode": "pre_fight_day_payload"},
+            },
+            "segments": [
+                {
+                    "stage_key": "d13_to_d8",
+                    "payload_mode": "pre_fight_compressed_payload",
+                    "countdown_span": {"start_day": 13, "end_day": 8},
+                    "intentional_compression": {"active": True},
+                    "role_budget": {"max_active_roles": 3},
+                },
+                {
+                    "stage_key": "d7",
+                    "payload_mode": "late_fight_week_payload",
+                    "countdown_span": {"start_day": 7, "end_day": 7},
+                    "intentional_compression": {"active": True},
+                    "role_budget": {"max_active_roles": 2},
+                },
+                {
+                    "stage_key": "d1",
+                    "payload_mode": "pre_fight_day_payload",
+                    "countdown_span": {"start_day": 1, "end_day": 1},
+                    "intentional_compression": {"active": True},
+                    "role_budget": {"max_active_roles": 1},
+                },
+            ],
         }
 
-    monkeypatch.setattr(late_fight, "_shifted_segment_athlete_model", fake_shift)
-    monkeypatch.setattr(late_fight, "_late_fight_practical_allocation_plan", fake_allocation)
+    monkeypatch.setattr(fillers, "build_finished_late_fight_tail", fake_finished_tail)
 
     assert _splice_late_fight_tail(weekly_role_map, athlete_model) is True
-    assert shifted_calls == [(30, 13)]
-    assert allocation_calls == [13]
+    assert calls == [(30, 13, 30)]
 
     placed = {
-        role["role_key"]: _role_d_day(week, role)
+        role["role_key"]: (_role_d_day(week, role), role)
         for week in weekly_role_map["weeks"]
         for role in week["session_roles"]
         if isinstance(role, dict)
     }
 
-    # D-14 remains exactly normal-camp owned.
-    assert placed["normal_d14"] == 14
+    # D-14 remains physically owned by the normal planner.
+    assert placed["normal_d14"][0] == 14
 
-    # Normal-planner roles inside the tail are gone.
-    assert "normal_d13" not in placed
-    assert "normal_d12" not in placed
-    assert "normal_d7" not in placed
-    assert "normal_d1" not in placed
+    # Normal-planner roles inside D-13 -> D-1 are gone.
+    for role_key in ("normal_d13", "normal_d12", "normal_d7", "normal_d1"):
+        assert role_key not in placed
 
-    # The existing late-fight allocator now owns the future tail.
-    assert placed["late_d13"] == 13
-    assert placed["late_d7"] == 7
-    assert placed["late_d1"] == 1
+    # Finished late-fight roles own the tail and carry their real window metadata.
+    assert placed["late_d13"][0] == 13
+    assert placed["late_d13"][1]["governance"]["authority"] == "finished_late_fight_tail"
+    assert placed["late_d13"][1]["late_fight_payload_mode"] == "pre_fight_compressed_payload"
+    assert placed["late_d7"][1]["late_fight_payload_mode"] == "late_fight_week_payload"
+    assert placed["late_d1"][1]["late_fight_payload_mode"] == "pre_fight_day_payload"
 
-    # Existing deterministic fight-day protocol remains intact.
-    assert placed["fight_day_protocol"] == 0
+    # D-0 remains the existing deterministic fight-day protocol.
+    assert placed["fight_day_protocol"][0] == 0
+
+    # Mixed weeks carry segment metadata without changing D-14 ownership.
+    first_week = weekly_role_map["weeks"][0]
+    assert 14 not in first_week["late_fight_tail_days"]
+    assert 13 in first_week["late_fight_tail_days"]
+    assert first_week["late_fight_tail_segments"][0]["stage_key"] == "d13_to_d8"
 
     assert weekly_role_map["late_fight_tail_handoff"] == {
         "active": True,
         "normal_planner_through_d": 14,
         "late_fight_planner_from_d": 13,
-        "source": "existing_late_fight_composite_allocator",
+        "source": "finished_existing_late_fight_path",
     }
+
+
+def test_finished_tail_tactical_watches_are_not_reselected_or_collapsed(monkeypatch):
+    watch_a = {
+        **_role("tactical_watch", 10, "monday", category="support_insert"),
+        "late_fight_tail_owned": True,
+        "tactical_watch_key": "direct-tail-a",
+        "display_text": "Direct D-13-path watch A",
+    }
+    watch_b = {
+        **_role("tactical_watch", 7, "thursday", category="support_insert"),
+        "late_fight_tail_owned": True,
+        "tactical_watch_key": "direct-tail-b",
+        "display_text": "Direct D-13-path watch B",
+    }
+    week = _week(
+        [
+            {"weekday": "monday", "d_day": 10},
+            {"weekday": "thursday", "d_day": 7},
+        ],
+        [watch_a, watch_b],
+    )
+    week["late_fight_tail_days"] = [10, 7]
+
+    def should_not_run(*_args, **_kwargs):
+        raise AssertionError("normal camp watch selector must not rewrite the finished tail")
+
+    monkeypatch.setattr(fillers._impl, "_ensure_tactical_watch", should_not_run)
+    used_watch_keys: set[str] = set()
+    usage_ledger = fillers._new_usage_ledger()
+
+    assert fillers._ensure_tactical_watch(
+        week,
+        {"days_until_fight": 30},
+        "TAPER",
+        used_watch_keys,
+        usage_ledger,
+    ) is True
+    assert [role["display_text"] for role in week["session_roles"]] == [
+        "Direct D-13-path watch A",
+        "Direct D-13-path watch B",
+    ]
+    assert used_watch_keys == {"direct-tail-a", "direct-tail-b"}
 
 
 def test_d13_generated_plan_is_not_spliced_again(monkeypatch):
@@ -143,6 +204,6 @@ def test_d13_generated_plan_is_not_spliced_again(monkeypatch):
     def should_not_run(*_args, **_kwargs):
         raise AssertionError("direct D-13 plan must keep its existing late-fight route")
 
-    monkeypatch.setattr(late_fight, "_late_fight_practical_allocation_plan", should_not_run)
+    monkeypatch.setattr(fillers, "build_finished_late_fight_tail", should_not_run)
     assert _splice_late_fight_tail(weekly_role_map, athlete_model) is False
     assert "late_fight_tail_handoff" not in weekly_role_map
