@@ -116,6 +116,8 @@ def _place_filler(
     d_day = _calendar_d_day(week, day)
     if d_day is None:
         return None
+    if d_day in set(week.get("late_fight_tail_days") or []):
+        return None
     insert = select_gap_fill_insert(
         athlete_model,
         d_day,
@@ -333,10 +335,13 @@ def _coordination_slot(
             all_role_counts[canonical] = all_role_counts.get(canonical, 0) + 1
 
     candidates: list[tuple[int, int, int, str, int]] = []
+    tail_days = set(week.get("late_fight_tail_days") or [])
     for index, day in enumerate(ordered_days):
         canonical = _canonical_day(day)
         d_day = _calendar_d_day(week, day)
         if not canonical or d_day is None or d_day <= 1:
+            continue
+        if d_day in tail_days:
             continue
         if canonical in hard_days or canonical in intentionally_unused:
             continue
@@ -373,6 +378,7 @@ def _ensure_coordination_support(
         return False
 
     hard_days = _week_hard_sparring_days(week, athlete_model)
+    tail_days = set(week.get("late_fight_tail_days") or [])
     existing = None
     for candidate in list(session_roles):
         if not isinstance(candidate, dict) or str(candidate.get("role_key") or "") != "coordination_support":
@@ -384,6 +390,7 @@ def _ensure_coordination_support(
             and day
             and d_day is not None
             and d_day > 1
+            and d_day not in tail_days
             and _canonical_day(day) not in hard_days
         ):
             existing = candidate
@@ -484,8 +491,6 @@ def _splice_late_fight_tail(
     if not weeks or _week_for_d_day(weeks, 13) is None:
         return False
 
-    # Local import avoids the module-level cycle: stage2_payload_late_fight imports
-    # late_camp_role_morph, while camp_week_fillers is imported by stage2_payload.
     from .stage2_payload_late_fight import (
         _late_fight_practical_allocation_plan,
         _shifted_segment_athlete_model,
@@ -503,10 +508,7 @@ def _splice_late_fight_tail(
     if not tail_roles:
         return False
 
-    # Remove normal-planner work only on scheduled D-13..D-1. D-14 and further
-    # out are untouched. Keep the existing D-0 fight-day protocol; fight-day
-    # ownership is already deterministic and the composite allocator does not
-    # expose it as a normal training role.
+    tail_range = set(range(0, 14))
     for week in weeks:
         kept_roles: list[Any] = []
         calendar_d_days = {
@@ -514,9 +516,12 @@ def _splice_late_fight_tail(
             for day in week.get("calendar_days") or []
             if isinstance(day, dict) and isinstance(day.get("d_day"), int)
         }
-        owns_tail_days = bool(calendar_d_days & set(range(0, 14)))
-        if owns_tail_days:
-            week["late_fight_tail_owned"] = True
+        owned_tail_days = sorted(calendar_d_days & tail_range)
+        if owned_tail_days:
+            week["late_fight_tail_days"] = owned_tail_days
+        else:
+            week.pop("late_fight_tail_days", None)
+
         for role in week.get("session_roles") or []:
             if not isinstance(role, dict):
                 kept_roles.append(role)
@@ -527,8 +532,6 @@ def _splice_late_fight_tail(
             kept_roles.append(role)
         week["session_roles"] = kept_roles
 
-        # Normal-camp off/recovery bookkeeping inside the tail is stale once the
-        # late-fight allocator owns those dates. Preserve only D-14+ entries.
         week["intentionally_unused_days"] = [
             entry
             for entry in week.get("intentionally_unused_days") or []
@@ -551,7 +554,7 @@ def _splice_late_fight_tail(
         week.setdefault("session_roles", []).append(role)
 
     for week in weeks:
-        if not week.get("late_fight_tail_owned"):
+        if not week.get("late_fight_tail_days"):
             continue
         week["session_roles"] = sorted(
             week.get("session_roles") or [],
@@ -588,14 +591,6 @@ def apply_camp_week_fillers(
         if not isinstance(week, dict):
             continue
         phase = str(week.get("phase") or "").strip().upper()
-
-        # The physical shape of D-13..D-0 is already owned by the dedicated
-        # late-fight allocator. Keep only the zero-cost tactical watch overlay;
-        # do not let normal-camp coordination/physical fillers repopulate the
-        # tail after the handoff.
-        if week.get("late_fight_tail_owned"):
-            _ensure_tactical_watch(week, athlete_model, phase or "TAPER", used_watch_keys, usage_ledger)
-            continue
 
         if fight_dated and phase in _FIGHT_PHASE_CAPS:
             _ensure_tactical_watch(week, athlete_model, phase, used_watch_keys, usage_ledger)
