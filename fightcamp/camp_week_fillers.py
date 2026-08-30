@@ -21,6 +21,20 @@ for _export_name in dir(_impl):
     if not _export_name.startswith("__"):
         globals()[_export_name] = getattr(_impl, _export_name)
 
+# Explicit aliases keep static analysis aware of the implementation symbols this
+# adapter calls while the dynamic export loop preserves the full back-compat API.
+_FIGHT_PHASE_CAPS = _impl._FIGHT_PHASE_CAPS
+_LEGACY_PHASE_CAPS = _impl._LEGACY_PHASE_CAPS
+_calendar_d_day = _impl._calendar_d_day
+_ensure_coordination_support = _impl._ensure_coordination_support
+_fill_week = _impl._fill_week
+_has_future_fight = _impl._has_future_fight
+_new_usage_ledger = _impl._new_usage_ledger
+_record_insert_usage = _impl._record_insert_usage
+_role_d_day = _impl._role_d_day
+_week_for_d_day = _impl._week_for_d_day
+_week_is_compressed = _impl._week_is_compressed
+
 
 def _sync_impl_dependencies() -> None:
     """Keep common monkeypatch/test seams working after the implementation split."""
