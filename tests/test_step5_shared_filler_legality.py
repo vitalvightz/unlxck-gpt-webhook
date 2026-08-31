@@ -15,6 +15,8 @@ These tests pin the ownership contract Step 5 establishes:
 
 from __future__ import annotations
 
+import datetime as dt
+
 import fightcamp.stage2_payload_late_fight as _late_fight_module
 from fightcamp import calendar_context as cc
 from fightcamp.calendar_context import CalendarLegalityView, sequence_legality
@@ -552,3 +554,42 @@ def test_resolve_late_fight_contacts_preserves_reduced_and_suppressed(monkeypatc
     assert "hard" not in contacts.values()
     # Suppressed Thursday (D-18 / D-11 / D-4) produces no contact occurrence.
     assert not ({18, 11, 4} & set(contacts))
+
+
+# --------------------------------------------------------------------------- #
+# 18. Missing plan_creation_weekday is derived from fight_date, not collapsed   #
+# --------------------------------------------------------------------------- #
+def test_resolve_late_fight_contacts_derives_creation_weekday_from_fight_date():
+    # fight_date known, plan_creation_weekday absent, Tuesday + Friday declared.
+    # The resolver must derive the creation weekday from fight_date (via the
+    # canonical owner) and place each declared day on its REAL countdown
+    # occurrence, not collapse both onto days_until_fight.
+    fight = dt.date(2026, 2, 13)  # Friday
+    athlete = {
+        "sport": "boxing",
+        "status": "professional",
+        "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
+        "hard_sparring_days": ["tuesday", "friday"],
+        "fatigue": "low",
+        "fatigue_level": "low",
+        "fight_date": fight.isoformat(),
+        # plan_creation_weekday intentionally omitted.
+    }
+    resolved = resolve_late_fight_contacts(13, athlete)
+    offsets = {offset for offset, _load in resolved}
+    # Real, distinct occurrences — not both collapsed onto D-13 (days_until_fight).
+    assert len(offsets) >= 2
+    assert 13 not in offsets
+
+    # End-to-end: the gap filler protects those real contact days — no physical or
+    # aerobic support insert lands on a genuine coach-owned contact occurrence.
+    sessions = [_ll_session(13), _ll_session(2, "fight_week_freshness_day")]
+    seq = apply_gap_fill_inserts(
+        [dict(s) for s in sessions],
+        dict(athlete, key_goals=["conditioning"], weaknesses=["gas_tank"]),
+    )
+    for role in seq:
+        if role.get("category") != "support_insert":
+            continue
+        if int(role.get("countdown_offset") or 0) in offsets:
+            assert role["role_key"] not in PHYSICAL_INSERTS | LOW_COST_AEROBIC_INSERTS

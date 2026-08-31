@@ -1396,9 +1396,15 @@ def resolve_late_fight_contacts(
         for entry in plan
         if str(entry.get("day") or "").strip()
     }
+    # Use the canonical creation-weekday owner: when plan_creation_weekday is
+    # absent it derives the weekday from fight_date. Passing the raw (possibly
+    # missing) field straight to the classifier would trip its unsafe fallback,
+    # collapsing every declared combat weekday onto days_until_fight and hiding
+    # the real contact occurrences from collision protection.
+    plan_creation_weekday = _resolve_plan_creation_weekday(days_until_fight, athlete_model)
     contacts: list[tuple[int, str]] = []
     for entry in _classify_declared_hard_days_for_late_window(
-        plan_creation_weekday=athlete_model.get("plan_creation_weekday"),
+        plan_creation_weekday=plan_creation_weekday,
         days_until_fight=days_until_fight,
         declared_weekdays=declared,
     ):
