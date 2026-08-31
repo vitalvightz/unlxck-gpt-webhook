@@ -32,6 +32,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from .normal_calendar_placement import fill_missing_session_days  # noqa: F401  (back-compat re-export)
 from .normalization import clean_list
 from .strength import _classify_prescription_type, _prescription_templates
 
@@ -69,41 +70,6 @@ _SYSTEM_DEFAULT_TEMPLATE = {
     "glycolytic": "Default fight-pace option — 4–6 x 2–3 min @ RPE 7–8, work:rest 1:1.",
     "alactic": "Default alactic option — 6–8 x 6–10 sec max effort, full rest (60–120 sec).",
 }
-
-
-def fill_missing_session_days(weekly_role_map: dict[str, Any]) -> dict[str, Any]:
-    """Assign a ``scheduled_day_hint`` to any session role the planner left blank.
-
-    Dayless roles otherwise render without a weekday (or on a day the validator's
-    calendar spine does not consider authorised). Filling the hint on the role
-    map itself keeps the planning brief, the validator's authorised-day set, and
-    the rendered schedule consistent — Stage 1 owns the placement deterministically
-    instead of deferring it to the LLM. Mutates and returns the map.
-    """
-    if not isinstance(weekly_role_map, dict):
-        return weekly_role_map
-    for week in weekly_role_map.get("weeks", []) or []:
-        if not isinstance(week, dict):
-            continue
-        roles = [role for role in (week.get("session_roles") or []) if isinstance(role, dict)]
-        used = {
-            normalized
-            for role in roles
-            if (normalized := str(role.get("scheduled_day_hint") or "").strip().lower())
-        }
-        declared = [
-            normalized
-            for day in clean_list(week.get("declared_training_days"))
-            if (normalized := str(day).strip().lower()) in _WEEKDAY_ORDER
-        ]
-        free = iter(day for day in sorted(set(declared), key=_WEEKDAY_ORDER.index) if day not in used)
-        for role in roles:
-            if str(role.get("scheduled_day_hint") or "").strip():
-                continue
-            day = next(free, "")
-            if day:
-                role["scheduled_day_hint"] = day.title()
-    return weekly_role_map
 
 
 def _weekday_to_d_day(week: dict[str, Any]) -> dict[str, int]:
