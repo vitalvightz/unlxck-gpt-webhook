@@ -1361,6 +1361,55 @@ def _late_fight_permission_policy(days_until_fight: Any, athlete_model: dict[str
     }
 
 
+def resolve_late_fight_contacts(
+    days_until_fight: Any, athlete_model: dict[str, Any]
+) -> list[tuple[int, str]]:
+    """Resolved ``(countdown_offset, effective_load)`` combat contact for a window.
+
+    This is the late-fight owner's answer to "where is combat contact, and is it
+    hard or technical?" so downstream support inserts consume resolved contact
+    instead of re-deriving it. ``_late_fight_permission_policy`` resolves each
+    declared weekday through ``sparring_dose_planner`` / ``compute_hard_sparring_plan``
+    (hard / reduced / technical / suppressed) and pins the hard lock to its
+    hard-allowed countdown occurrence; this pairs that per-weekday ``outcome`` with
+    the countdown occurrence offsets:
+
+    - the hard-allowed occurrence of a day the resolver kept ``hard`` -> hard;
+    - every other occurrence, and every day the resolver did not keep hard
+      (reduced / technical / suppressed, or a later same-week recurrence past the
+      D-17 ban) -> technical.
+
+    A day the dose resolver deloads or suppresses is therefore never surfaced as
+    hard contact.
+    """
+    declared = clean_list(athlete_model.get("hard_sparring_days", []))
+    if not declared:
+        return []
+    policy = _late_fight_permission_policy(days_until_fight, athlete_model)
+    actions_by_day = {
+        str(action.get("day") or "").strip().lower(): action
+        for action in policy.get("declared_hard_day_actions", [])
+        if isinstance(action, dict)
+    }
+    contacts: list[tuple[int, str]] = []
+    for entry in _classify_declared_hard_days_for_late_window(
+        plan_creation_weekday=athlete_model.get("plan_creation_weekday"),
+        days_until_fight=days_until_fight,
+        declared_weekdays=declared,
+    ):
+        offset = entry.get("offset")
+        if not isinstance(offset, int) or offset <= 0:
+            continue
+        weekday = str(entry.get("weekday") or "").strip().lower()
+        action = actions_by_day.get(weekday)
+        if action is None:
+            continue
+        is_hard = (
+            str(action.get("outcome") or "") == "hard_sparring_day"
+            and str(entry.get("status") or "") == "hard_allowed"
+        )
+        contacts.append((offset, "hard" if is_hard else "technical"))
+    return contacts
 
 
 def _late_fight_role_budget(days_until_fight: Any, athlete_model: dict[str, Any]) -> dict[str, Any]:

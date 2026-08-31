@@ -25,17 +25,19 @@ from fightcamp.combat_load_policy import (
     PlacementDirective,
     role_load_profile,
 )
-from fightcamp.stage2_payload_late_fight import _classify_declared_hard_days_for_late_window
 from fightcamp.gap_fill_inserts import (
     LOW_COST_AEROBIC_INSERTS,
     LOW_COST_RECOVERY_INSERTS,
     PHYSICAL_INSERTS,
     ZERO_COST_INSERTS,
     _legal_support_keys,
-    _resolved_contact_offsets,
     apply_gap_fill_inserts,
 )
-from fightcamp.stage2_payload_late_fight import _late_fight_permission_policy
+from fightcamp.stage2_payload_late_fight import (
+    _classify_declared_hard_days_for_late_window,
+    _late_fight_permission_policy,
+    resolve_late_fight_contacts,
+)
 
 WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
 
@@ -419,7 +421,7 @@ def test_late_fight_hard_contact_only_where_canonical_outcome_is_hard():
     weekday_by_offset = {e["offset"]: str(e["weekday"]).lower() for e in occurrences}
     status_by_offset = {e["offset"]: str(e["status"]) for e in occurrences}
 
-    resolved = _resolved_contact_offsets(athlete, 21)
+    resolved = resolve_late_fight_contacts(21, athlete)
     assert resolved, "expected declared hard days to resolve to contact occurrences"
     for offset, load in resolved:
         assert load in {"hard", "technical"}
@@ -462,3 +464,52 @@ def test_coordination_prefers_allow_day_over_deprioritized_support_day():
     )
     # The ALLOW day wins despite Wednesday being the declared support day.
     assert slot == ("Monday", 30)
+
+
+# --------------------------------------------------------------------------- #
+# 16. apply_gap_fill_inserts consumes injected resolved contacts (owned upstream)
+# --------------------------------------------------------------------------- #
+def _ll_session(offset: int, role_key: str = "strength_touch_day") -> dict:
+    return {
+        "session_index": 1,
+        "category": "strength" if role_key == "strength_touch_day" else "recovery",
+        "role_key": role_key,
+        "scheduled_day_hint": "monday",
+        "countdown_offset": offset,
+        "countdown_label": f"D-{offset}",
+        "scheduled_countdown_label": f"D-{offset}",
+    }
+
+
+def test_apply_gap_fill_consumes_injected_resolved_contacts_and_default_matches_owner():
+    athlete = _late_athlete(key_goals=["conditioning"], weaknesses=["gas_tank"])
+    sessions = [_ll_session(21), _ll_session(6, "fight_week_freshness_day")]
+
+    # Default path: the late-fight owner resolves the contacts.
+    default_seq = apply_gap_fill_inserts([dict(s) for s in sessions], athlete)
+    # Injected path: caller passes the owner's resolved contacts explicitly.
+    owner_contacts = resolve_late_fight_contacts(21, athlete)
+    injected_seq = apply_gap_fill_inserts(
+        [dict(s) for s in sessions], athlete, resolved_contacts=owner_contacts
+    )
+
+    def shape(seq: list[dict]) -> list[tuple]:
+        return [(r.get("role_key"), r.get("countdown_offset")) for r in seq]
+
+    def aerobic(seq: list[dict]) -> list[dict]:
+        return [
+            r for r in seq
+            if r.get("category") == "support_insert" and r["role_key"] in LOW_COST_AEROBIC_INSERTS
+        ]
+
+    # Consuming the injected owner contacts is identical to the default.
+    assert shape(default_seq) == shape(injected_seq)
+
+    # The filler genuinely consumes the injected value, not athlete_model: with
+    # no contacts a conditioning athlete keeps an aerobic maintenance slot; with
+    # every day injected as hard contact, aerobic is forbidden everywhere.
+    none_seq = apply_gap_fill_inserts([dict(s) for s in sessions], athlete, resolved_contacts=[])
+    all_hard = [(offset, "hard") for offset in range(1, 22)]
+    blocked_seq = apply_gap_fill_inserts([dict(s) for s in sessions], athlete, resolved_contacts=all_hard)
+    assert aerobic(none_seq), "conditioning goal keeps an aerobic slot when unconstrained"
+    assert not aerobic(blocked_seq), "every-day-hard injection forbids aerobic everywhere"

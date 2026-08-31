@@ -8,13 +8,12 @@ from .combat_load_policy import PlacementDirective, role_load_profile
 from .normalization import clean_list, normalize_fatigue_level
 from .stage2_render_guards import _all_active_injuries_surface_only
 from .stage2_payload_late_fight import (
-    _classify_declared_hard_days_for_late_window,
     _countdown_offset,
     _countdown_weekday_map,
-    _late_fight_permission_policy,
     _resolve_plan_creation_weekday,
     can_render_late_taper_day,
     is_low_cost_coexistable_filler,
+    resolve_late_fight_contacts,
 )
 from .tactical_watch_library import (
     build_watch_display_text,
@@ -1200,56 +1199,6 @@ def _candidate_offsets_from_sequence(
     return candidate_offsets
 
 
-def _resolved_contact_offsets(
-    athlete_model: dict[str, Any],
-    days_until_fight: int,
-) -> list[tuple[int, str]]:
-    """Resolved ``(countdown_offset, effective_load)`` contact for the window.
-
-    Contact legality no longer decides hard-vs-technical itself. It consumes the
-    canonical late-fight owner: ``_late_fight_permission_policy`` resolves each
-    declared weekday through ``sparring_dose_planner`` (hard / reduced / technical
-    / suppressed) and pins the hard lock to its hard-allowed countdown occurrence.
-    This helper only reads that per-weekday ``outcome`` and pairs it with the
-    countdown occurrence offsets:
-
-    - the hard-allowed occurrence of a day the resolver kept ``hard`` -> hard;
-    - every other occurrence, and every day the resolver did not keep hard
-      (reduced / technical / suppressed, or a later same-week recurrence past the
-      D-17 ban), -> technical.
-
-    A day the dose resolver deloads or suppresses is therefore no longer
-    mis-marked as hard contact, and the filler never reconstructs contact load
-    from raw declared weekday names.
-    """
-    declared = clean_list(athlete_model.get("hard_sparring_days", []))
-    if not declared:
-        return []
-    policy = _late_fight_permission_policy(days_until_fight, athlete_model)
-    actions_by_day = {
-        str(action.get("day") or "").strip().lower(): action
-        for action in policy.get("declared_hard_day_actions", [])
-        if isinstance(action, dict)
-    }
-    contacts: list[tuple[int, str]] = []
-    for entry in _classify_declared_hard_days_for_late_window(
-        plan_creation_weekday=athlete_model.get("plan_creation_weekday"),
-        days_until_fight=days_until_fight,
-        declared_weekdays=declared,
-    ):
-        offset = entry.get("offset")
-        if not isinstance(offset, int) or offset <= 0:
-            continue
-        weekday = str(entry.get("weekday") or "").strip().lower()
-        action = actions_by_day.get(weekday)
-        if action is None:
-            continue
-        is_hard = (
-            str(action.get("outcome") or "") == "hard_sparring_day"
-            and str(entry.get("status") or "") == "hard_allowed"
-        )
-        contacts.append((offset, "hard" if is_hard else "technical"))
-    return contacts
 
 
 def _has_tactical_support(session_sequence: list[dict[str, Any]]) -> bool:
@@ -1361,7 +1310,12 @@ def _ensure_weekly_tactical_watches(
     return additions
 
 
-def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model: dict[str, Any]) -> list[dict[str, Any]]:
+def apply_gap_fill_inserts(
+    session_sequence: list[dict[str, Any]],
+    athlete_model: dict[str, Any],
+    *,
+    resolved_contacts: list[tuple[int, str]] | None = None,
+) -> list[dict[str, Any]]:
     ordered = sorted(
         [dict(role) for role in session_sequence],
         key=lambda role: int(_role_offset(role) or 0),
@@ -1385,12 +1339,14 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
     creation_weekday = _resolve_plan_creation_weekday(days_until_fight, athlete_model)
     countdown_map = _countdown_weekday_map(creation_weekday, days_until_fight)
     training_days = clean_list(athlete_model.get("training_days", []))
-    # Resolved contact truth (hard vs technical) from the sparring resolver. This
-    # is the canonical source gap-fill collision legality consumes, instead of
-    # matching raw declared weekday names against the countdown map. A declared
-    # hard day the resolver downgrades to a technical touch is a technical contact
-    # here, not hard.
-    resolved_contacts = _resolved_contact_offsets(athlete_model, days_until_fight)
+    # Resolved contact truth (hard vs technical) is OWNED by the late-fight
+    # module: gap-fill consumes the resolver's occurrences rather than deriving
+    # or re-classifying contact itself. Callers may inject the resolved contacts;
+    # otherwise the late-fight owner resolves them for this athlete/window.
+    if resolved_contacts is None:
+        resolved_contacts = resolve_late_fight_contacts(days_until_fight, athlete_model)
+    else:
+        resolved_contacts = list(resolved_contacts)
     contact_offsets = {offset for offset, _load in resolved_contacts}
 
     existing_exclusive_offsets = {
