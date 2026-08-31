@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import inspect
 
-from fightcamp import normal_calendar_placement, weekly_plan_render
+from fightcamp import normal_calendar_placement, stage2_payload, weekly_plan_render
 from fightcamp.normal_calendar_placement import fill_missing_session_days
 
 
@@ -56,6 +56,14 @@ def test_fill_missing_session_days_ignores_invalid_week_entries() -> None:
 def test_renderer_only_reexports_missing_day_completion_for_back_compat() -> None:
     assert weekly_plan_render.fill_missing_session_days is normal_calendar_placement.fill_missing_session_days
     assert "def fill_missing_session_days(" not in inspect.getsource(weekly_plan_render)
+
+
+def test_stage2_payload_imports_missing_day_completion_from_placement_owner() -> None:
+    source = inspect.getsource(stage2_payload)
+
+    assert stage2_payload.fill_missing_session_days is normal_calendar_placement.fill_missing_session_days
+    assert "from .normal_calendar_placement import fill_missing_session_days" in source
+    assert "from .weekly_plan_render import fill_missing_session_days" not in source
 
 
 def test_placement_helper_does_not_add_policy_or_new_roles() -> None:
