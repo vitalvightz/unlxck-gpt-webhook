@@ -54,13 +54,13 @@ No lower layer may silently override a higher layer's ownership.
 | Effective contact load: hard / technical-only / deloaded / suppressed | `sparring_dose_planner.py`, late-fight logic, role-map logic | `sparring_dose_planner.py` | Countdown logic may request a dose transition through this contract | Compression/filler code treating every declared contact as hard load after resolution |
 | Weekly role budget / which app-owned roles survive | `stage2_role_map.py`, `stage2_payload.py`, late-fight permission/budget code | Normal camp: `stage2_role_map.py`; D-13 inward: late-fight permission/budget path | Finalizer renders only surviving roles | Renderer/finalizer restoring suppressed roles to make a week look complete |
 | Fight-week override | fight-week helpers, `fight_day_override.py`, late-fight payload | fight-week override layer; D-0 specifically `fight_day_override.py` | Remove/limit roles according to override | Generic allocator overriding D-0 or fight-week caps |
-| Normal-camp day placement | `stage2_role_map.py`, `stage2_payload.py`, `weekly_plan_render.py` | `stage2_role_map.py` | Later integrity pass may reject or relocate only through shared calendar policy | Renderer assigning dayless roles; payload post-processing creating a second placement algorithm |
+| Normal-camp day placement | `stage2_role_map.py`, `stage2_payload.py`, `normal_calendar_placement.py`, remaining renderer fallback | `stage2_role_map.py` + placement-owned completion | Later integrity pass may reject or relocate only through shared calendar policy | Renderer assigning dayless roles; payload post-processing creating a second placement algorithm |
 | Late-fight day placement | `late_fight_placement.py`, `stage2_payload_late_fight.py` | `late_fight_placement.py` | Tail reuse preserves finished placement | Normal fillers re-place tail-owned sessions |
 | Hard-sparring adjacency / collision legality | `stage2_role_map.py`, `stage2_payload.py`, `late_fight_placement.py`, `gap_fill_inserts.py` | Shared calendar legality policy to be introduced; until then allocator-specific placement layer is authoritative | Fillers query legality before inserting | Each layer maintaining its own incompatible hard-contact spacing doctrine |
 | Crowded-week compression | `stage2_role_map.py`, `stage2_payload.py` | `stage2_role_map.py` | `stage2_payload.py` may decorate governance only | Re-compressing an already-compressed week in a second layer |
 | Sandwiched-day protection | `stage2_role_map.py`, `stage2_payload.py` | Shared calendar legality policy; currently normal allocator | Suppress/relocate through one rule | Separate preference vs prohibition implementations for the same collision |
 | Intentionally unused training days | `stage2_role_map.py`, post-processing | allocator/calendar layer | Recovery conversion only through explicit low-load support policy | Renderer automatically filling unused days |
-| Missing-day completion | `weekly_plan_render.py` currently mutates placement | Must move to calendar allocator/integrity layer | Renderer may display assigned day only | `weekly_plan_render.py` choosing a day |
+| Missing-day completion | `normal_calendar_placement.py`; `weekly_plan_render.py` retains a temporary compatibility re-export only | Normal calendar placement / allocator-owned completion | Renderer may display the assigned day; compatibility imports may delegate to the owner | Renderer implementing or independently choosing a missing day |
 | Camp-week support fillers | `camp_week_fillers.py`, `camp_week_fillers_impl.py` | support-insert layer, subordinate to shared calendar legality | Add only zero/low-cost support that passes budget and collision checks | Adding new meaningful stress or mutating authoritative anchor/contact placement |
 | Late-fight gap fillers | `gap_fill_inserts.py` | support-insert layer, subordinate to late-fight placement + shared legality | Add permitted low-cost/tactical support to legal gaps | Functioning as an independent physical-session scheduler |
 | Tactical Watch placement | `camp_week_fillers.py`, `gap_fill_inserts.py`, tactical watch library | support-insert layer | Zero-load coexistence where explicitly allowed | Consuming physical training budget unless policy says it should |
@@ -86,7 +86,7 @@ build athlete model / candidate pools
   -> build week-by-week progression
   -> stage2_role_map._build_weekly_role_map
   -> boxing post-processing in stage2_payload
-  -> fill_missing_session_days
+  -> normal_calendar_placement.fill_missing_session_days
   -> apply_camp_week_fillers
   -> splice finished D-13 tail when applicable
   -> apply_late_camp_role_morph
@@ -200,7 +200,7 @@ Specifically prohibited as new architecture:
 The following current behaviour violates or partially violates the target contract and is recorded explicitly so it is not mistaken for desired architecture:
 
 1. `stage2_payload.py` is both a compatibility facade/orchestrator and a host for real post-processing policy.
-2. `weekly_plan_render.py::fill_missing_session_days` mutates placement from a rendering-named module.
+2. `weekly_plan_render.py::_resolve_role_weekdays` still contains a renderer-side fallback that can infer weekdays for dayless roles; `fill_missing_session_days` itself has moved to `normal_calendar_placement.py`. Removing the remaining renderer fallback is reserved for the read-only-renderer migration.
 3. Normal-camp hard-contact collision policy is distributed across `stage2_role_map.py` and `stage2_payload.py`.
 4. Late-fight collision policy is separately implemented in `late_fight_placement.py`.
 5. `gap_fill_inserts.py` contains enough availability/collision logic to act like a small scheduler.
