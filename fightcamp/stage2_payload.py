@@ -50,7 +50,7 @@ from .fight_day_override import apply_fight_day_override_to_weekly_role_map
 from .role_labels import stamp_weekly_role_map_labels
 from .camp_week_fillers import apply_camp_week_fillers
 from .late_camp_role_morph import apply_late_camp_role_morph
-from .weekly_plan_render import fill_missing_session_days
+from .normal_calendar_placement import fill_missing_session_days
 from .late_selector_windows import classify_late_selector_window
 from .normalization import (  # noqa: F401  (phrase_in_text re-exported for back-compat)
     clean_list,
@@ -1397,7 +1397,6 @@ def _boxing_day_identity_and_spacing_pass(
 
     updated_roles = _sort_roles_by_scheduled_day(updated_roles)
     return updated_roles, updated_suppressed, sparse_week_active
-
 
 def _compressed_priority_for_role(role: dict, athlete_model: dict) -> tuple[str, str]:
     compressed = athlete_model.get("compressed_priorities") or {}
