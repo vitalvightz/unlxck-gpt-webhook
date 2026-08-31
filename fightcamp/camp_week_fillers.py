@@ -320,7 +320,7 @@ def apply_camp_week_fillers(
             if watch_key:
                 used_watch_keys.add(watch_key)
 
-    for week in weekly_role_map.get("weeks", []) or []:
+    for week_ordinal, week in enumerate(weekly_role_map.get("weeks", []) or [], start=1):
         if not isinstance(week, dict):
             continue
         phase = str(week.get("phase") or "").strip().upper()
@@ -338,6 +338,8 @@ def apply_camp_week_fillers(
                 athlete_model,
                 phase,
                 used_coordination_keys,
+                weekly_role_map=weekly_role_map,
+                week_ordinal=week_ordinal,
             )
             if not _week_is_compressed(week):
                 _fill_week(
@@ -345,6 +347,8 @@ def apply_camp_week_fillers(
                     athlete_model,
                     _FIGHT_PHASE_CAPS[phase] - 1,
                     usage_ledger,
+                    weekly_role_map=weekly_role_map,
+                    week_ordinal=week_ordinal,
                 )
             continue
 
@@ -354,9 +358,18 @@ def apply_camp_week_fillers(
                 athlete_model,
                 phase,
                 used_coordination_keys,
+                weekly_role_map=weekly_role_map,
+                week_ordinal=week_ordinal,
             )
 
         cap = _LEGACY_PHASE_CAPS.get(phase)
         if cap and not _week_is_compressed(week):
-            _fill_week(week, athlete_model, cap, usage_ledger)
+            _fill_week(
+                week,
+                athlete_model,
+                cap,
+                usage_ledger,
+                weekly_role_map=weekly_role_map,
+                week_ordinal=week_ordinal,
+            )
     return weekly_role_map

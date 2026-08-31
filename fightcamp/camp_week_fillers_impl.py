@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .calendar_context import CalendarLegalityView, weekly_role_map_legality
 from .coordination_support_library import (
     build_coordination_display_text,
     coordination_support_metadata,
@@ -27,6 +28,17 @@ from .tactical_watch_library import (
 _FIGHT_PHASE_CAPS = {"GPP": 1, "SPP": 2, "TAPER": 1}
 _LEGACY_PHASE_CAPS = {"SPP": 2, "TAPER": 1}
 _MAX_SHARED_DAY_FILLERS = 1
+
+# Representative coordination-support role used only to classify the coordination
+# insert through combat_load_policy (low-load physical) when scoring candidate
+# slots. combat_load_policy owns the resulting legality.
+_COORDINATION_LEGALITY_ROLE = {
+    "role_key": "coordination_support",
+    "category": "support_insert",
+    "stress_class": "support",
+    "cost_class": "low",
+    "governance": {"meaningful_stress": False},
+}
 _CANONICAL_WEEKDAYS = (
     "monday",
     "tuesday",
@@ -66,13 +78,6 @@ def _has_future_fight(athlete_model: dict[str, Any]) -> bool:
         return False
 
 
-def _week_hard_sparring_days(week: dict[str, Any], athlete_model: dict[str, Any]) -> set[str]:
-    declared = clean_list(week.get("declared_hard_sparring_days")) or clean_list(
-        athlete_model.get("hard_sparring_days", [])
-    )
-    return {_canonical_day(day) for day in declared if _canonical_day(day)}
-
-
 def _role_day_counts(session_roles: list[Any]) -> dict[str, int]:
     counts: dict[str, int] = {}
     for role in session_roles:
@@ -109,7 +114,8 @@ def _place_filler(
     athlete_model: dict[str, Any],
     day: str,
     *,
-    hard_days: set[str],
+    weekly_role_map: dict[str, Any],
+    week_ordinal: int,
     usage_ledger: dict[str, Any],
     allow_physical: bool,
 ) -> dict[str, Any] | None:
@@ -118,13 +124,25 @@ def _place_filler(
         return None
     if d_day in set(week.get("late_fight_tail_days") or []):
         return None
+    # Ask the shared calendar legality before proposing a filler. Events are built
+    # from the whole weekly role map, so immediate hard-contact adjacency is seen
+    # across planner-week boundaries; resolved contact (hard_sparring_plan), not
+    # raw declared weekday names, decides whether this is a contact day.
+    legality = weekly_role_map_legality(weekly_role_map, week, week_ordinal)
+    on_hard_sparring_day = d_day in legality.contact_offsets()
     insert = select_gap_fill_insert(
         athlete_model,
         d_day,
-        on_hard_sparring_day=_canonical_day(day) in hard_days,
+        on_hard_sparring_day=on_hard_sparring_day,
         usage_ledger=usage_ledger,
+        legality=legality,
     )
     if insert is None or (not allow_physical and insert.get("role_key") in PHYSICAL_INSERTS):
+        return None
+    # A filler never survives a FORBID: if it cannot legally coexist here the
+    # filler loses, rather than being inserted and relocated/suppressed later by
+    # the final governor for a collision the policy could already see.
+    if legality.role_is_forbidden(insert, d_day):
         return None
     _decorate_filler(insert, day, d_day)
     session_roles.append(insert)
@@ -137,12 +155,14 @@ def _fill_week(
     athlete_model: dict[str, Any],
     cap: int,
     usage_ledger: dict[str, Any],
+    *,
+    weekly_role_map: dict[str, Any],
+    week_ordinal: int,
 ) -> None:
     session_roles = week.get("session_roles")
     if not isinstance(session_roles, list) or cap <= 0:
         return
 
-    hard_days = _week_hard_sparring_days(week, athlete_model)
     added = 0
     kept_unused: list[Any] = []
     for day_entry in week.get("intentionally_unused_days") or []:
@@ -163,7 +183,8 @@ def _fill_week(
             session_roles,
             athlete_model,
             day,
-            hard_days=hard_days,
+            weekly_role_map=weekly_role_map,
+            week_ordinal=week_ordinal,
             usage_ledger=usage_ledger,
             allow_physical=_week_physical_filler_count(session_roles) < 1,
         )
@@ -190,7 +211,8 @@ def _fill_week(
             session_roles,
             athlete_model,
             day,
-            hard_days=hard_days,
+            weekly_role_map=weekly_role_map,
+            week_ordinal=week_ordinal,
             usage_ledger=usage_ledger,
             allow_physical=_week_physical_filler_count(session_roles) < 1,
         )
@@ -301,8 +323,9 @@ def _coordination_slot(
     week: dict[str, Any],
     session_roles: list[dict[str, Any]],
     athlete_model: dict[str, Any],
+    *,
+    legality: CalendarLegalityView,
 ) -> tuple[str, int] | None:
-    hard_days = _week_hard_sparring_days(week, athlete_model)
     intentionally_unused = {
         _canonical_day(entry.get("day"))
         for entry in week.get("intentionally_unused_days") or []
@@ -343,7 +366,12 @@ def _coordination_slot(
             continue
         if d_day in tail_days:
             continue
-        if canonical in hard_days or canonical in intentionally_unused:
+        if canonical in intentionally_unused:
+            continue
+        # Resolved contact legality, not raw declared hard days: a coordination
+        # insert (low-load physical) may not own or share an effective contact
+        # day, so drop any slot the shared policy forbids.
+        if legality.role_is_forbidden(_COORDINATION_LEGALITY_ROLE, d_day):
             continue
         is_support_day = canonical in support_canonical
         if not is_support_day and all_role_counts.get(canonical, 0) == 0:
@@ -369,6 +397,9 @@ def _ensure_coordination_support(
     athlete_model: dict[str, Any],
     phase: str,
     used_coordination_keys: set[str],
+    *,
+    weekly_role_map: dict[str, Any],
+    week_ordinal: int,
 ) -> bool:
     if not has_coordination_target(athlete_model) or _week_is_compressed(week):
         return False
@@ -377,7 +408,7 @@ def _ensure_coordination_support(
     if not isinstance(session_roles, list):
         return False
 
-    hard_days = _week_hard_sparring_days(week, athlete_model)
+    legality = weekly_role_map_legality(weekly_role_map, week, week_ordinal)
     tail_days = set(week.get("late_fight_tail_days") or [])
     existing = None
     for candidate in list(session_roles):
@@ -391,7 +422,7 @@ def _ensure_coordination_support(
             and d_day is not None
             and d_day > 1
             and d_day not in tail_days
-            and _canonical_day(day) not in hard_days
+            and not legality.role_is_forbidden(_COORDINATION_LEGALITY_ROLE, d_day)
         ):
             existing = candidate
             continue
@@ -402,7 +433,9 @@ def _ensure_coordination_support(
         d_day = _calendar_d_day(week, day)
         slot = (day, d_day) if d_day is not None else None
     else:
-        slot = _coordination_slot(week, session_roles, athlete_model)
+        slot = _coordination_slot(
+            week, session_roles, athlete_model, legality=legality
+        )
     if slot is None:
         return False
     day, d_day = slot
@@ -587,22 +620,50 @@ def apply_camp_week_fillers(
     used_watch_keys: set[str] = set()
     used_coordination_keys: set[str] = set()
 
-    for week in weekly_role_map.get("weeks", []) or []:
+    for week_ordinal, week in enumerate(weekly_role_map.get("weeks", []) or [], start=1):
         if not isinstance(week, dict):
             continue
         phase = str(week.get("phase") or "").strip().upper()
 
         if fight_dated and phase in _FIGHT_PHASE_CAPS:
             _ensure_tactical_watch(week, athlete_model, phase, used_watch_keys, usage_ledger)
-            _ensure_coordination_support(week, athlete_model, phase, used_coordination_keys)
+            _ensure_coordination_support(
+                week,
+                athlete_model,
+                phase,
+                used_coordination_keys,
+                weekly_role_map=weekly_role_map,
+                week_ordinal=week_ordinal,
+            )
             if not _week_is_compressed(week):
-                _fill_week(week, athlete_model, _FIGHT_PHASE_CAPS[phase] - 1, usage_ledger)
+                _fill_week(
+                    week,
+                    athlete_model,
+                    _FIGHT_PHASE_CAPS[phase] - 1,
+                    usage_ledger,
+                    weekly_role_map=weekly_role_map,
+                    week_ordinal=week_ordinal,
+                )
             continue
 
         if phase in {"GPP", "SPP", "TAPER"}:
-            _ensure_coordination_support(week, athlete_model, phase, used_coordination_keys)
+            _ensure_coordination_support(
+                week,
+                athlete_model,
+                phase,
+                used_coordination_keys,
+                weekly_role_map=weekly_role_map,
+                week_ordinal=week_ordinal,
+            )
 
         cap = _LEGACY_PHASE_CAPS.get(phase)
         if cap and not _week_is_compressed(week):
-            _fill_week(week, athlete_model, cap, usage_ledger)
+            _fill_week(
+                week,
+                athlete_model,
+                cap,
+                usage_ledger,
+                weekly_role_map=weekly_role_map,
+                week_ordinal=week_ordinal,
+            )
     return weekly_role_map

@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
+from .calendar_context import CalendarLegalityView, sequence_legality
 from .camp_phases import calculate_phase_weeks
-from .normalization import clean_list, normalize_fatigue_level, ordered_weekdays
+from .normalization import clean_list, normalize_fatigue_level
 from .stage2_render_guards import _all_active_injuries_surface_only
 from .stage2_payload_late_fight import (
+    _classify_declared_hard_days_for_late_window,
     _countdown_offset,
     _countdown_weekday_map,
     _resolve_plan_creation_weekday,
@@ -987,6 +989,7 @@ def select_gap_fill_insert(
     gap_span: int | None = None,
     force_tactical: bool = False,
     force_conditioning: bool = False,
+    legality: CalendarLegalityView | None = None,
 ) -> dict[str, Any] | None:
     if insert_offset == 0:
         return None
@@ -996,6 +999,13 @@ def select_gap_fill_insert(
         insert_offset,
         on_hard_sparring_day=on_hard_sparring_day,
     )
+    # Shared calendar legality is the authority on physical coexistence: drop any
+    # candidate the policy would FORBID at this position and prefer its ALLOW
+    # options over DEPRIORITIZE ones, all read from the same canonical calendar
+    # the final governor verifies. Filler variety/injury/goal selection below is
+    # unchanged; it just chooses from the legal survivors.
+    if legality is not None:
+        allowed = legality.legal_support_keys(allowed, insert_offset)
     if not allowed:
         return None
 
@@ -1043,12 +1053,15 @@ def _select_non_physical_insert(
     usage_ledger: dict[str, Any] | None = None,
     gap_span: int | None = None,
     force_tactical: bool = False,
+    legality: CalendarLegalityView | None = None,
 ) -> dict[str, Any] | None:
     allowed = _allowed_inserts(
         athlete_model,
         insert_offset,
         on_hard_sparring_day=on_hard_sparring_day,
     ) - PHYSICAL_INSERTS
+    if legality is not None:
+        allowed = legality.legal_support_keys(allowed, insert_offset)
     role_key = _select_role_key(
         athlete_model,
         insert_offset,
@@ -1156,20 +1169,33 @@ def _candidate_offsets_from_sequence(
     return candidate_offsets
 
 
-def _declared_hard_sparring_offsets(
-    countdown_map: dict[str, str],
-    hard_sparring_days: set[str],
-) -> list[int]:
-    offsets: list[int] = []
-    if not hard_sparring_days:
-        return offsets
-    for label, weekday in countdown_map.items():
-        if str(weekday or "").strip().lower() not in hard_sparring_days:
+def _resolved_contact_offsets(
+    athlete_model: dict[str, Any],
+    days_until_fight: int,
+    creation_weekday: str | None,
+) -> list[tuple[int, str]]:
+    """Resolved ``(countdown_offset, effective_load)`` contact for the window.
+
+    Contact legality no longer reads raw declared weekday names: it consumes the
+    same sparring-resolver classification that owns the hard-vs-technical
+    downgrade, so a declared hard day the resolver reduces to a technical touch
+    becomes a *technical* contact here, not a hard one. This is the resolved
+    sparring state exposed to gap-fill legality.
+    """
+    declared = clean_list(athlete_model.get("hard_sparring_days", []))
+    if not declared:
+        return []
+    contacts: list[tuple[int, str]] = []
+    for entry in _classify_declared_hard_days_for_late_window(
+        creation_weekday, days_until_fight, declared
+    ):
+        offset = entry.get("offset")
+        if not isinstance(offset, int) or offset <= 0:
             continue
-        offset = _countdown_offset(label)
-        if offset is not None and offset > 0:
-            offsets.append(offset)
-    return sorted(set(offsets), reverse=True)
+        status = str(entry.get("status") or "")
+        load = "hard" if status == "hard_allowed" else "technical"
+        contacts.append((offset, load))
+    return contacts
 
 
 def _has_tactical_support(session_sequence: list[dict[str, Any]]) -> bool:
@@ -1305,13 +1331,15 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
     creation_weekday = _resolve_plan_creation_weekday(days_until_fight, athlete_model)
     countdown_map = _countdown_weekday_map(creation_weekday, days_until_fight)
     training_days = clean_list(athlete_model.get("training_days", []))
-    # Normalise casing: countdown-map weekdays are lowercase while declared
-    # days often arrive title-cased ("Tuesday"); without this the spar-day
-    # guard silently fails and inserts stack onto coach-owned combat days.
-    hard_sparring_days = {
-        day.strip().lower()
-        for day in ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", [])))
-    }
+    # Resolved contact truth (hard vs technical) from the sparring resolver. This
+    # is the canonical source gap-fill collision legality consumes, instead of
+    # matching raw declared weekday names against the countdown map. A declared
+    # hard day the resolver downgrades to a technical touch is a technical contact
+    # here, not hard.
+    resolved_contacts = _resolved_contact_offsets(
+        athlete_model, days_until_fight, creation_weekday
+    )
+    contact_offsets = {offset for offset, _load in resolved_contacts}
 
     existing_exclusive_offsets = {
         offset
@@ -1367,9 +1395,12 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
     )
     conditioning_required = _has_conditioning_goal(athlete_model)
     injury_state = classify_injury_state(athlete_model)
+    # Coach combat days come from resolved contact (hard + technical occurrences),
+    # so tactical support still attaches to declared combat days without matching
+    # raw weekday names.
     coach_day_candidates = [
         (offset, 0)
-        for offset in _declared_hard_sparring_offsets(countdown_map, hard_sparring_days)
+        for offset in sorted(contact_offsets, reverse=True)
         if offset not in existing_exclusive_offsets
     ]
     if tactical_required:
@@ -1387,7 +1418,15 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
             training_days=training_days,
         ):
             continue
-        on_hard_sparring_day = bool(weekday and weekday.strip().lower() in hard_sparring_days)
+        # Same shared calendar the final governor verifies, rebuilt over the
+        # sequence plus already-placed inserts and the resolved contact events.
+        legality = sequence_legality(
+            ordered + inserts,
+            resolved_contacts=resolved_contacts,
+        )
+        # A hard/technical contact owns its day exclusively: derive it from the
+        # resolved contact set, not raw declared weekday names.
+        on_hard_sparring_day = target_offset in contact_offsets
         force_tactical = tactical_required and not tactical_present
         # Once tactical support is secured, guarantee at least one low-risk
         # aerobic-maintenance slot when a conditioning / gas-tank goal is selected,
@@ -1422,6 +1461,7 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
             gap_span=gap_span,
             force_tactical=force_tactical,
             force_conditioning=force_conditioning,
+            legality=legality,
         )
         if insert is None:
             continue
@@ -1443,6 +1483,7 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
                     usage_ledger=usage_ledger,
                     gap_span=gap_span,
                     force_tactical=force_tactical,
+                    legality=legality,
                 )
                 if insert is None:
                     continue
