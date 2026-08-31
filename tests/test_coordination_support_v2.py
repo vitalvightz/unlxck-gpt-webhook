@@ -40,6 +40,7 @@ def _athlete(**overrides):
 
 def _week(*, phase="GPP", hard_days=None, d_days=None, compressed=False):
     d_days = d_days or {"monday": 21, "wednesday": 19, "friday": 17}
+    hard_days = hard_days or []
     roles = [
         {
             "role_key": "primary_strength_day",
@@ -59,7 +60,14 @@ def _week(*, phase="GPP", hard_days=None, d_days=None, compressed=False):
             {"weekday": day, "d_day": d_day} for day, d_day in d_days.items()
         ],
         "declared_training_days": ["Monday", "Wednesday", "Friday"],
-        "declared_hard_sparring_days": hard_days or [],
+        "declared_hard_sparring_days": hard_days,
+        # Resolved contact truth comes from hard_sparring_plan (Step 5), not the
+        # raw declared weekday names, so mirror the declared hard days into the
+        # canonical resolved plan the way stage2_role_map does.
+        "hard_sparring_plan": [
+            {"day": day, "status": "hard_as_planned", "effective_load": "hard"}
+            for day in hard_days
+        ],
         "declared_support_work_days": [],
         "intentionally_unused_days": [],
     }

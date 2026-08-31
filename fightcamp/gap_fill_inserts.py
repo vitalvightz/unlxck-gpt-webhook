@@ -4,12 +4,14 @@ from typing import Any, Literal
 
 from .calendar_context import CalendarLegalityView, sequence_legality
 from .camp_phases import calculate_phase_weeks
+from .combat_load_policy import PlacementDirective, role_load_profile
 from .normalization import clean_list, normalize_fatigue_level
 from .stage2_render_guards import _all_active_injuries_surface_only
 from .stage2_payload_late_fight import (
     _classify_declared_hard_days_for_late_window,
     _countdown_offset,
     _countdown_weekday_map,
+    _late_fight_permission_policy,
     _resolve_plan_creation_weekday,
     can_render_late_taper_day,
     is_low_cost_coexistable_filler,
@@ -980,6 +982,35 @@ def _build_insert_role(
     return role
 
 
+def _legal_support_keys(
+    legality: CalendarLegalityView,
+    role_keys: set[str],
+    insert_offset: int,
+) -> set[str]:
+    """Filter candidate filler role-keys through the shared calendar legality.
+
+    Keep every key the policy marks ``ALLOW``; fall back to the ``DEPRIORITIZE``
+    keys only when no ``ALLOW`` key survives; never keep a ``FORBID`` key. A key
+    the policy cannot classify from its role-key alone is left in (the filler's
+    own selection still governs it). The prefer-ALLOW choice lives here in the
+    filler layer; ``calendar_context`` only builds the view and answers per-role
+    directives, so it stays representation-only.
+    """
+    allow: set[str] = set()
+    deprioritized: set[str] = set()
+    for key in role_keys:
+        profile = role_load_profile({"role_key": str(key)})
+        if profile is None:
+            allow.add(key)
+            continue
+        directive = legality.decision_for_profile(profile, insert_offset).directive
+        if directive is PlacementDirective.ALLOW:
+            allow.add(key)
+        elif directive is PlacementDirective.DEPRIORITIZE:
+            deprioritized.add(key)
+    return allow or deprioritized
+
+
 def select_gap_fill_insert(
     athlete_model: dict[str, Any],
     insert_offset: int,
@@ -1005,7 +1036,7 @@ def select_gap_fill_insert(
     # the final governor verifies. Filler variety/injury/goal selection below is
     # unchanged; it just chooses from the legal survivors.
     if legality is not None:
-        allowed = legality.legal_support_keys(allowed, insert_offset)
+        allowed = _legal_support_keys(legality, allowed, insert_offset)
     if not allowed:
         return None
 
@@ -1061,7 +1092,7 @@ def _select_non_physical_insert(
         on_hard_sparring_day=on_hard_sparring_day,
     ) - PHYSICAL_INSERTS
     if legality is not None:
-        allowed = legality.legal_support_keys(allowed, insert_offset)
+        allowed = _legal_support_keys(legality, allowed, insert_offset)
     role_key = _select_role_key(
         athlete_model,
         insert_offset,
@@ -1172,29 +1203,52 @@ def _candidate_offsets_from_sequence(
 def _resolved_contact_offsets(
     athlete_model: dict[str, Any],
     days_until_fight: int,
-    creation_weekday: str | None,
 ) -> list[tuple[int, str]]:
     """Resolved ``(countdown_offset, effective_load)`` contact for the window.
 
-    Contact legality no longer reads raw declared weekday names: it consumes the
-    same sparring-resolver classification that owns the hard-vs-technical
-    downgrade, so a declared hard day the resolver reduces to a technical touch
-    becomes a *technical* contact here, not a hard one. This is the resolved
-    sparring state exposed to gap-fill legality.
+    Contact legality no longer decides hard-vs-technical itself. It consumes the
+    canonical late-fight owner: ``_late_fight_permission_policy`` resolves each
+    declared weekday through ``sparring_dose_planner`` (hard / reduced / technical
+    / suppressed) and pins the hard lock to its hard-allowed countdown occurrence.
+    This helper only reads that per-weekday ``outcome`` and pairs it with the
+    countdown occurrence offsets:
+
+    - the hard-allowed occurrence of a day the resolver kept ``hard`` -> hard;
+    - every other occurrence, and every day the resolver did not keep hard
+      (reduced / technical / suppressed, or a later same-week recurrence past the
+      D-17 ban), -> technical.
+
+    A day the dose resolver deloads or suppresses is therefore no longer
+    mis-marked as hard contact, and the filler never reconstructs contact load
+    from raw declared weekday names.
     """
     declared = clean_list(athlete_model.get("hard_sparring_days", []))
     if not declared:
         return []
+    policy = _late_fight_permission_policy(days_until_fight, athlete_model)
+    actions_by_day = {
+        str(action.get("day") or "").strip().lower(): action
+        for action in policy.get("declared_hard_day_actions", [])
+        if isinstance(action, dict)
+    }
     contacts: list[tuple[int, str]] = []
     for entry in _classify_declared_hard_days_for_late_window(
-        creation_weekday, days_until_fight, declared
+        plan_creation_weekday=athlete_model.get("plan_creation_weekday"),
+        days_until_fight=days_until_fight,
+        declared_weekdays=declared,
     ):
         offset = entry.get("offset")
         if not isinstance(offset, int) or offset <= 0:
             continue
-        status = str(entry.get("status") or "")
-        load = "hard" if status == "hard_allowed" else "technical"
-        contacts.append((offset, load))
+        weekday = str(entry.get("weekday") or "").strip().lower()
+        action = actions_by_day.get(weekday)
+        if action is None:
+            continue
+        is_hard = (
+            str(action.get("outcome") or "") == "hard_sparring_day"
+            and str(entry.get("status") or "") == "hard_allowed"
+        )
+        contacts.append((offset, "hard" if is_hard else "technical"))
     return contacts
 
 
@@ -1336,9 +1390,7 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
     # matching raw declared weekday names against the countdown map. A declared
     # hard day the resolver downgrades to a technical touch is a technical contact
     # here, not hard.
-    resolved_contacts = _resolved_contact_offsets(
-        athlete_model, days_until_fight, creation_weekday
-    )
+    resolved_contacts = _resolved_contact_offsets(athlete_model, days_until_fight)
     contact_offsets = {offset for offset, _load in resolved_contacts}
 
     existing_exclusive_offsets = {

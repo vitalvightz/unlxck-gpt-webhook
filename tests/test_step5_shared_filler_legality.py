@@ -19,19 +19,23 @@ from fightcamp import calendar_context as cc
 from fightcamp.calendar_context import CalendarLegalityView, sequence_legality
 from fightcamp.calendar_integrity import apply_final_calendar_integrity
 from fightcamp.camp_week_fillers import apply_camp_week_fillers
-from fightcamp.camp_week_fillers_impl import _COORDINATION_LEGALITY_ROLE
+from fightcamp.camp_week_fillers_impl import _COORDINATION_LEGALITY_ROLE, _coordination_slot
 from fightcamp.combat_load_policy import (
     LoadClass,
     PlacementDirective,
     role_load_profile,
 )
+from fightcamp.stage2_payload_late_fight import _classify_declared_hard_days_for_late_window
 from fightcamp.gap_fill_inserts import (
     LOW_COST_AEROBIC_INSERTS,
     LOW_COST_RECOVERY_INSERTS,
     PHYSICAL_INSERTS,
     ZERO_COST_INSERTS,
+    _legal_support_keys,
+    _resolved_contact_offsets,
     apply_gap_fill_inserts,
 )
+from fightcamp.stage2_payload_late_fight import _late_fight_permission_policy
 
 WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
 
@@ -162,12 +166,12 @@ def test_low_physical_between_hard_contacts_deprioritized_and_loses_to_allow():
     assert _directive(view, "footwork_walkthrough", 17) is PlacementDirective.DEPRIORITIZE
 
     # Given both a DEPRIORITIZE low-physical and an ALLOW aerobic option, the
-    # shared filter keeps only the ALLOW option.
-    legal = view.legal_support_keys({"footwork_walkthrough", "aerobic_shadow_flow"}, 17)
+    # filler-layer filter keeps only the ALLOW option.
+    legal = _legal_support_keys(view, {"footwork_walkthrough", "aerobic_shadow_flow"}, 17)
     assert legal == {"aerobic_shadow_flow"}
 
     # When only low-physical options remain, DEPRIORITIZE survives (never FORBID).
-    only_physical = view.legal_support_keys({"footwork_walkthrough", "movement_quality"}, 17)
+    only_physical = _legal_support_keys(view, {"footwork_walkthrough", "movement_quality"}, 17)
     assert only_physical == {"footwork_walkthrough", "movement_quality"}
 
 
@@ -376,3 +380,85 @@ def test_upstream_filler_not_cleaned_by_final_governor():
     assert fillers_after == fillers_before
     for f in _fillers(week):
         assert "calendar_integrity_relocation" not in f
+
+
+# --------------------------------------------------------------------------- #
+# 14. Late gap fillers consume canonical resolved contact, not a re-derivation #
+# --------------------------------------------------------------------------- #
+def _late_athlete(**overrides: object) -> dict:
+    athlete = {
+        "sport": "boxing",
+        "status": "professional",
+        "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
+        "hard_sparring_days": ["tuesday", "thursday"],
+        "fatigue": "low",
+        "fatigue_level": "low",
+        "days_until_fight": 21,
+        "plan_creation_weekday": "monday",
+    }
+    athlete.update(overrides)
+    return athlete
+
+
+def test_late_fight_hard_contact_only_where_canonical_outcome_is_hard():
+    # A resolved contact is `hard` ONLY where the canonical late-fight owner
+    # (_late_fight_permission_policy, which resolves through sparring_dose_planner)
+    # kept that weekday hard AND the occurrence is the hard-allowed one. The filler
+    # never decides hard-vs-technical from countdown status alone.
+    athlete = _late_athlete()
+    policy = _late_fight_permission_policy(21, athlete)
+    outcome_by_day = {
+        str(a.get("day") or "").strip().lower(): str(a.get("outcome") or "")
+        for a in policy["declared_hard_day_actions"]
+    }
+    occurrences = _classify_declared_hard_days_for_late_window(
+        plan_creation_weekday="monday",
+        days_until_fight=21,
+        declared_weekdays=["tuesday", "thursday"],
+    )
+    weekday_by_offset = {e["offset"]: str(e["weekday"]).lower() for e in occurrences}
+    status_by_offset = {e["offset"]: str(e["status"]) for e in occurrences}
+
+    resolved = _resolved_contact_offsets(athlete, 21)
+    assert resolved, "expected declared hard days to resolve to contact occurrences"
+    for offset, load in resolved:
+        assert load in {"hard", "technical"}
+        if load == "hard":
+            weekday = weekday_by_offset[offset]
+            assert outcome_by_day.get(weekday) == "hard_sparring_day"
+            assert status_by_offset[offset] == "hard_allowed"
+
+
+# --------------------------------------------------------------------------- #
+# 15. Coordination prefers an ALLOW day over a DEPRIORITIZE declared support day #
+# --------------------------------------------------------------------------- #
+def test_coordination_prefers_allow_day_over_deprioritized_support_day():
+    strength = {
+        "role_key": "primary_strength_day",
+        "category": "strength",
+        "scheduled_day_hint": "Monday",
+        "stress_class": "meaningful_stress",
+        "cost_class": "medium",
+    }
+    week = _week(
+        roles=[strength, _hard_role("Tuesday"), _hard_role("Friday")],
+        contacts=[_contact("Tuesday"), _contact("Friday")],
+        calendar_days=_calendar(
+            {"monday": 30, "tuesday": 29, "wednesday": 28, "thursday": 27, "friday": 26}
+        ),
+        declared=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+    )
+    week["declared_support_work_days"] = ["Wednesday"]
+    weekly = {"weeks": [week]}
+    view = _legality(weekly, week)
+
+    # Wednesday (between the two hard contacts) is DEPRIORITIZE; Monday (the day
+    # before hard, carrying a strength anchor) is ALLOW.
+    assert view.decision_for_role(_COORDINATION_LEGALITY_ROLE, 28).directive is PlacementDirective.DEPRIORITIZE
+    assert view.decision_for_role(_COORDINATION_LEGALITY_ROLE, 30).directive is PlacementDirective.ALLOW
+
+    slot = _coordination_slot(
+        week, week["session_roles"], {"weaknesses": ["coordination"]}, legality=view
+    )
+    # The ALLOW day wins despite Wednesday being the declared support day.
+    assert slot == ("Monday", 30)

@@ -388,32 +388,6 @@ class CalendarLegalityView:
             if event.profile.load_class in _CONTACT_LOADS
         }
 
-    def legal_support_keys(
-        self, role_keys: Iterable[str], offset: int
-    ) -> set[str]:
-        """Filter candidate filler role-keys through the shared policy.
-
-        Keep every key the policy marks ``ALLOW``; fall back to the
-        ``DEPRIORITIZE`` keys only when no ``ALLOW`` key survives; never return a
-        ``FORBID`` key. A key the policy cannot classify from its role-key alone
-        is left in (the caller's own selection still governs it) rather than
-        silently dropped. Selection stays filler-owned; this only removes options
-        the shared calendar legality would reject.
-        """
-        allow: list[str] = []
-        deprioritized: list[str] = []
-        for key in role_keys:
-            profile = role_load_profile({"role_key": str(key)})
-            if profile is None:
-                allow.append(key)
-                continue
-            directive = self.decision_for_profile(profile, offset).directive
-            if directive is PlacementDirective.ALLOW:
-                allow.append(key)
-            elif directive is PlacementDirective.DEPRIORITIZE:
-                deprioritized.append(key)
-        return set(allow) if allow else set(deprioritized)
-
 
 def weekly_role_map_legality(
     weekly_role_map: dict[str, Any],
