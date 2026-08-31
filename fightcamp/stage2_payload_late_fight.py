@@ -1366,30 +1366,35 @@ def resolve_late_fight_contacts(
 ) -> list[tuple[int, str]]:
     """Resolved ``(countdown_offset, effective_load)`` combat contact for a window.
 
-    This is the late-fight owner's answer to "where is combat contact, and is it
-    hard or technical?" so downstream support inserts consume resolved contact
-    instead of re-deriving it. ``_late_fight_permission_policy`` resolves each
-    declared weekday through ``sparring_dose_planner`` / ``compute_hard_sparring_plan``
-    (hard / reduced / technical / suppressed) and pins the hard lock to its
-    hard-allowed countdown occurrence; this pairs that per-weekday ``outcome`` with
-    the countdown occurrence offsets:
+    This is the late-fight owner's answer to "where is combat contact, and what is
+    its resolved load?" so downstream support inserts consume that exact resolved
+    truth instead of re-deriving or collapsing it. The load comes straight from the
+    ``sparring_dose_planner`` (via ``_late_fight_hard_sparring_plan`` ->
+    ``compute_hard_sparring_plan``) and preserves the full shared vocabulary rather
+    than a hard-vs-technical binary:
 
-    - the hard-allowed occurrence of a day the resolver kept ``hard`` -> hard;
-    - every other occurrence, and every day the resolver did not keep hard
-      (reduced / technical / suppressed, or a later same-week recurrence past the
-      D-17 ban) -> technical.
+    - ``hard`` (``hard_as_planned``) -> hard;
+    - ``reduced`` (``deload_suggested``) -> reduced;
+    - ``technical`` (``convert_to_technical_suggested``) -> technical;
+    - ``none`` / suppressed -> no contact occurrence at all.
 
-    A day the dose resolver deloads or suppresses is therefore never surfaced as
-    hard contact.
+    The one placement transform layered on top is the D-17 hard-sparring ban: a
+    ``hard`` or ``reduced`` contact caps to a technical touch on any occurrence that
+    is not the hard-allowed one (D-18+); the hard-allowed occurrence keeps the
+    resolver's dose class. ``technical`` and ``none`` are never re-escalated.
     """
     declared = clean_list(athlete_model.get("hard_sparring_days", []))
     if not declared:
         return []
-    policy = _late_fight_permission_policy(days_until_fight, athlete_model)
-    actions_by_day = {
-        str(action.get("day") or "").strip().lower(): action
-        for action in policy.get("declared_hard_day_actions", [])
-        if isinstance(action, dict)
+    plan = _late_fight_hard_sparring_plan(
+        days_until_fight=days_until_fight,
+        athlete_model=athlete_model,
+        declared_hard_days=declared,
+    )
+    load_by_day = {
+        str(entry.get("day") or "").strip().lower(): str(entry.get("effective_load") or "").strip().lower()
+        for entry in plan
+        if str(entry.get("day") or "").strip()
     }
     contacts: list[tuple[int, str]] = []
     for entry in _classify_declared_hard_days_for_late_window(
@@ -1401,14 +1406,14 @@ def resolve_late_fight_contacts(
         if not isinstance(offset, int) or offset <= 0:
             continue
         weekday = str(entry.get("weekday") or "").strip().lower()
-        action = actions_by_day.get(weekday)
-        if action is None:
+        load = load_by_day.get(weekday, "")
+        if load in {"", "none", "off", "suppressed"}:
+            # The dose resolver suppressed this day: no contact event exists.
             continue
-        is_hard = (
-            str(action.get("outcome") or "") == "hard_sparring_day"
-            and str(entry.get("status") or "") == "hard_allowed"
-        )
-        contacts.append((offset, "hard" if is_hard else "technical"))
+        if load in {"hard", "reduced"} and str(entry.get("status") or "") != "hard_allowed":
+            # D-17 ban: no hard/reduced contact inside the taper, only technical.
+            load = "technical"
+        contacts.append((offset, load))
     return contacts
 
 

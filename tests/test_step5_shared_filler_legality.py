@@ -15,6 +15,7 @@ These tests pin the ownership contract Step 5 establishes:
 
 from __future__ import annotations
 
+import fightcamp.stage2_payload_late_fight as _late_fight_module
 from fightcamp import calendar_context as cc
 from fightcamp.calendar_context import CalendarLegalityView, sequence_legality
 from fightcamp.calendar_integrity import apply_final_calendar_integrity
@@ -513,3 +514,41 @@ def test_apply_gap_fill_consumes_injected_resolved_contacts_and_default_matches_
     blocked_seq = apply_gap_fill_inserts([dict(s) for s in sessions], athlete, resolved_contacts=all_hard)
     assert aerobic(none_seq), "conditioning goal keeps an aerobic slot when unconstrained"
     assert not aerobic(blocked_seq), "every-day-hard injection forbids aerobic everywhere"
+
+
+# --------------------------------------------------------------------------- #
+# 17. Resolved contact preserves the full dose vocabulary (not hard/technical)  #
+# --------------------------------------------------------------------------- #
+def test_reduced_contact_event_preserved_and_off_dropped():
+    # The shared adapter must not collapse the resolver's vocabulary: a reduced
+    # contact stays REDUCED_CONTACT and a suppressed/off contact makes no event.
+    events = cc.sequence_events([], resolved_contacts=[(20, "reduced"), (10, "none")])
+    by_pos = {e.position: e.profile.load_class for e in events}
+    assert by_pos.get(-20) is LoadClass.REDUCED_CONTACT
+    assert -10 not in by_pos
+
+
+def test_resolve_late_fight_contacts_preserves_reduced_and_suppressed(monkeypatch):
+    # Force the dose resolver to a reduced Tuesday and a suppressed Thursday; the
+    # owner resolver must surface Tuesday as REDUCED at its hard-allowed occurrence
+    # and emit no occurrence at all for the suppressed Thursday. It must not
+    # reinterpret "reduced" as "technical" or invent a phantom technical contact
+    # for the suppressed day.
+    def fake_plan(*, days_until_fight, athlete_model, declared_hard_days=None, **_kw):
+        return [
+            {"day": "tuesday", "status": "deload_suggested", "effective_load": "reduced"},
+            {"day": "thursday", "status": "suppressed", "effective_load": "none"},
+        ]
+
+    monkeypatch.setattr(_late_fight_module, "_late_fight_hard_sparring_plan", fake_plan)
+    athlete = _late_athlete(hard_sparring_days=["tuesday", "thursday"], days_until_fight=21)
+
+    contacts = dict(resolve_late_fight_contacts(21, athlete))
+    # Tuesday hard-allowed occurrence (D-20) keeps the resolved REDUCED class.
+    assert contacts.get(20) == "reduced"
+    # The D-17 ban caps reduced to technical inside the taper (D-13, D-6), never hard.
+    assert contacts.get(13) == "technical"
+    assert contacts.get(6) == "technical"
+    assert "hard" not in contacts.values()
+    # Suppressed Thursday (D-18 / D-11 / D-4) produces no contact occurrence.
+    assert not ({18, 11, 4} & set(contacts))
