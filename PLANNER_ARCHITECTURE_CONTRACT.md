@@ -54,9 +54,9 @@ No lower layer may silently override a higher layer's ownership.
 | Effective contact load: hard / technical-only / deloaded / suppressed | `sparring_dose_planner.py`, late-fight logic, role-map logic | `sparring_dose_planner.py` | Countdown logic may request a dose transition through this contract | Compression/filler code treating every declared contact as hard load after resolution |
 | Weekly role budget / which app-owned roles survive | `stage2_role_map.py`, `stage2_payload.py`, late-fight permission/budget code | Normal camp: `stage2_role_map.py`; D-13 inward: late-fight permission/budget path | Finalizer renders only surviving roles | Renderer/finalizer restoring suppressed roles to make a week look complete |
 | Fight-week override | fight-week helpers, `fight_day_override.py`, late-fight payload | fight-week override layer; D-0 specifically `fight_day_override.py` | Remove/limit roles according to override | Generic allocator overriding D-0 or fight-week caps |
-| Normal-camp day placement | `stage2_role_map.py`, `stage2_payload.py`, `normal_calendar_placement.py` | `stage2_role_map.py` + placement-owned completion | Later integrity pass may reject or relocate only through shared calendar policy | Renderer assigning dayless roles; payload post-processing creating a second placement algorithm |
-| Late-fight day placement | `late_fight_placement.py`, `stage2_payload_late_fight.py` | `late_fight_placement.py` | Tail reuse preserves finished placement | Normal fillers re-place tail-owned sessions |
-| Hard-sparring adjacency / collision legality | `stage2_role_map.py`, `stage2_payload.py`, `late_fight_placement.py`, `gap_fill_inserts.py` | Shared calendar legality policy to be introduced; until then allocator-specific placement layer is authoritative | Fillers query legality before inserting | Each layer maintaining its own incompatible hard-contact spacing doctrine |
+| Normal-camp day placement | `stage2_role_map.py`, `normal_calendar_placement.py` | `stage2_role_map.py` (`_assign_declared_day_hints`) + placement-owned completion (`normal_calendar_placement.py`) | Later integrity pass may reject or relocate only through shared calendar policy | Renderer assigning dayless roles; payload post-processing creating a second placement algorithm (Step 9A removed the dead `stage2_payload.py` boxing placement engine and its `_assign_declared_day_hints` duplicate) |
+| Late-fight day placement | `stage2_payload_late_fight.py` (`_build_late_fight_session_sequence`), `late_fight_tail.py` (finished-tail reuse) | `stage2_payload_late_fight.py` | Tail reuse preserves finished placement | Normal fillers re-place tail-owned sessions |
+| Hard-sparring adjacency / collision legality | `stage2_role_map.py`, `stage2_payload_late_fight.py`, `gap_fill_inserts.py` | Shared calendar legality policy to be introduced; until then allocator-specific placement layer is authoritative | Fillers query legality before inserting | Each layer maintaining its own incompatible hard-contact spacing doctrine |
 | Crowded-week compression | `stage2_role_map.py`, `stage2_payload.py` | `stage2_role_map.py` | `stage2_payload.py` may decorate governance only | Re-compressing an already-compressed week in a second layer |
 | Sandwiched-day protection | `stage2_role_map.py`, `stage2_payload.py` | Shared calendar legality policy; currently normal allocator | Suppress/relocate through one rule | Separate preference vs prohibition implementations for the same collision |
 | Intentionally unused training days | `stage2_role_map.py`, post-processing | allocator/calendar layer | Recovery conversion only through explicit low-load support policy | Renderer automatically filling unused days |
@@ -112,7 +112,7 @@ permission
   -> finalizer
 ```
 
-`late_fight_placement.py` owns late-fight placement. `late_fight_tail.py` owns reuse of the finished D-13 -> D-1 path inside a longer camp. The normal planner must not re-place tail-owned sessions after handoff.
+`stage2_payload_late_fight.py` owns late-fight placement: it constructs the countdown `session_sequence` directly (`_build_late_fight_session_sequence` plus `ensure_declared_coach_combat_spine` / the visible-calendar sequence). `late_fight_tail.py` owns reuse of the finished D-13 -> D-1 path inside a longer camp. The normal planner must not re-place tail-owned sessions after handoff. (Step 9A: a separate `late_fight_placement.py` engine existed but had no production caller — the sequence was always built by `stage2_payload_late_fight.py` — so it was removed.)
 
 ## 6. State fields and who may write them
 
@@ -183,7 +183,7 @@ Until the architecture is consolidated further:
 
 - New normal-camp placement rules belong in `stage2_role_map.py` or a shared calendar-policy module called by it.
 - New hard-vs-technical contact semantics belong in `sparring_dose_planner.py`.
-- New late-fight placement rules belong in `late_fight_placement.py`.
+- New late-fight placement rules belong in `stage2_payload_late_fight.py` (the live late-fight placement owner).
 - New countdown dose-reduction rules belong in `late_camp_role_morph.py` / the canonical countdown dosage policy.
 - New filler types belong in the filler library, but their placement must use the shared legality contract.
 - New rendering copy belongs in rendering/label modules and must describe existing state only.
@@ -201,13 +201,14 @@ The following current behaviour violates or partially violates the target contra
 
 1. `stage2_payload.py` is both a compatibility facade/orchestrator and a host for real post-processing policy.
 2. As of Step 8, `weekly_plan_render.py` is read-only: `_resolve_role_weekdays` reads each role's placement-assigned `scheduled_day_hint` and no longer infers weekdays for dayless roles. Day placement is owned entirely by the calendar/placement layer (`normal_calendar_placement.fill_missing_session_days` plus the allocator), which runs before rendering; a role the placement layer leaves dayless renders without a weekday instead of the renderer inventing one. This satisfies invariant 3 for the weekly renderer.
-3. Normal-camp hard-contact collision policy is distributed across `stage2_role_map.py` and `stage2_payload.py`. As of Step 6, `stage2_payload.py` no longer keeps its own allow-list of loads legal between two effective hard contacts: its sandwiched-day suppression classifies roles through the shared `calendar_context` adapter and defers the between-hard-contacts verdict to `combat_load_policy.evaluate_calendar_candidate` (suppressing only a `FORBID`, so the policy's `DEPRIORITIZE` preference is no longer re-imposed as a local prohibition). The remaining distribution — `stage2_role_map.py`'s own inline glycolytic suppression and the boxing day-placement collision scoring still hosted in `stage2_payload.py` — is left for the placement-consolidation step (Step 9).
-4. Late-fight collision policy is separately implemented in `late_fight_placement.py`.
+3. Normal-camp hard-contact collision policy is distributed across `stage2_role_map.py` and `stage2_payload.py`. As of Step 6, `stage2_payload.py` no longer keeps its own allow-list of loads legal between two effective hard contacts: its sandwiched-day suppression classifies roles through the shared `calendar_context` adapter and defers the between-hard-contacts verdict to `combat_load_policy.evaluate_calendar_candidate` (suppressing only a `FORBID`, so the policy's `DEPRIORITIZE` preference is no longer re-imposed as a local prohibition). The `stage2_payload.py` boxing day-placement collision scoring referenced here was proven dead (no production caller) and removed in Step 9A; what remains for Step 9B is `stage2_role_map.py`'s own live inline glycolytic suppression and placement collision preferences.
+4. Late-fight placement and its collision preferences are owned by `stage2_payload_late_fight.py` (`_build_late_fight_session_sequence`). Step 9A removed the separate `late_fight_placement.py` engine, which had no production caller — the countdown sequence was always built by `stage2_payload_late_fight.py`.
 5. `gap_fill_inserts.py` still owns filler selection/budget/variety, but as of Step 5 its calendar-collision legality defers to the shared `combat_load_policy` through the canonical `calendar_context` adapter, using resolved sparring state rather than raw declared weekday matching. Its remaining `existing_exclusive_offsets` / raw-day sets survive only as non-legality bookkeeping.
 6. `camp_week_fillers.py` can add roles after the base allocator, but as of Step 5 each candidate is gated through the shared `combat_load_policy` (via `calendar_context`) against the whole weekly role map before insertion; it no longer derives effective contact from `declared_hard_sparring_days`.
 6a. `calendar_context.py` is the single canonical `planner state -> CalendarEvent[]` adapter shared by the final `calendar_integrity` governor and the upstream fillers, so there is one interpretation of position, resolved contact, load class, scope and contact de-duplication. It is representation only; `combat_load_policy` remains the rule authority.
 7. `late_camp_role_morph.py` changes semantic load after placement, so a future final calendar integrity layer must validate the resulting state.
 8. Compatibility/adaptor layers that increase trace depth should be consolidated only after characterization tests protect behaviour. As of Step 7 the `stage2_role_map_patch.py` → `stage2_role_map_integration.py` forwarding chain is collapsed: `stage2_role_map.py` now calls `allocator_priority.py` directly (the `late_camp_week_reference_d_day` reference-day resolver moved there, next to the compression-floor helper it feeds), and both wrapper modules are deleted. The remaining such layers — `camp_week_fillers.py`/`_impl.py` and the finalizer facade/impl pairs — still await consolidation.
+9. Step 9A removed dead/duplicate placement engines and established the real production placement owners: normal-camp placement is `stage2_role_map.py` (`_assign_declared_day_hints`) plus `normal_calendar_placement.py` completion; late-fight placement is `stage2_payload_late_fight.py`. Deleted (proven dead — no production caller, only implementation-only tests): the `stage2_payload.py` boxing placement engine (`_boxing_day_identity_and_spacing_pass` and its `_boxing_*` / `_main_job_day_class` / `_sort_roles_by_scheduled_day` helper tree), its `_assign_declared_day_hints` + `_declared_day_sets` duplicate, and the whole `late_fight_placement.py` module. Step 9A changed no live placement or collision semantics and added no shared-legality wiring; the surviving live owners still carry local collision preferences, which Step 9B will make consume shared `combat_load_policy` legality.
 
 These are migration targets, not instructions to delete code immediately.
 
@@ -244,7 +245,7 @@ sparring_dose_planner.py
 stage2_role_map.py + shared calendar legality
     own normal role budget and placement
 
-late_fight_placement.py
+stage2_payload_late_fight.py
     owns D-13 inward placement using the same collision semantics
 
 late_camp_role_morph.py

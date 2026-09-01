@@ -525,63 +525,6 @@ def test_two_hard_days_with_two_amber_signals_stays_hard():
 
 # ── Anchor exclusion after sparring (stage2 scoring) ─────────────────────────
 
-def test_anchor_after_hard_as_planned_spar_day_is_hard_excluded():
-    from fightcamp.stage2_payload import _boxing_day_score
-
-    anchor_role = {
-        "category": "strength",
-        "role_key": "primary_strength_day",
-        "anchor": "max_strength_neural",
-    }
-    spar_role = {
-        "category": "sparring",
-        "role_key": "hard_sparring_day",
-        "hard_sparring_status": "hard_as_planned",
-    }
-    training_days = ["Monday", "Tuesday", "Wednesday"]
-    day_to_roles = {"Tuesday": [spar_role]}
-
-    score = _boxing_day_score(
-        anchor_role,
-        "Wednesday",
-        anchor_day="Wednesday",
-        prefer_midweek_anchor=False,
-        readiness_sensitive=False,
-        training_days=training_days,
-        day_to_roles=day_to_roles,
-    )
-    assert score <= -10_000
-
-
-def test_anchor_after_deloaded_spar_day_gets_heavy_penalty_but_not_excluded():
-    from fightcamp.stage2_payload import _boxing_day_score
-
-    anchor_role = {
-        "category": "strength",
-        "role_key": "primary_strength_day",
-        "anchor": "max_strength_neural",
-    }
-    spar_role = {
-        "category": "sparring",
-        "role_key": "hard_sparring_day",
-        "hard_sparring_status": "deload_suggested",
-    }
-    training_days = ["Monday", "Tuesday", "Wednesday"]
-    day_to_roles = {"Tuesday": [spar_role]}
-
-    score = _boxing_day_score(
-        anchor_role,
-        "Wednesday",
-        anchor_day="Wednesday",
-        prefer_midweek_anchor=False,
-        readiness_sensitive=False,
-        training_days=training_days,
-        day_to_roles=day_to_roles,
-    )
-    # Heavy penalty (-50) but far above the hard-exclusion threshold (-10_000).
-    assert -10_000 < score < 0
-
-
 # ── _finalize_plan uniform post-processing ───────────────────────────────────
 
 def test_countdown_convert_all_plan_has_hard_day_class_labels():
