@@ -102,7 +102,11 @@ _CONTACT_STATUS_TO_CLASS = {
     "convert_to_technical_suggested": LoadClass.TECHNICAL_CONTACT,
     "suppressed": LoadClass.OFF,
 }
-_CONTACT_LOADS = frozenset(
+# Canonical contact/combat-load vocabulary. This is the single source of truth
+# for "which load classes are contact"; the shared adapter (calendar_context) and
+# the final governor (calendar_integrity) import this instead of redefining it, so
+# the set can never drift between the pre-insertion filler view and the governor.
+CONTACT_LOAD_CLASSES = frozenset(
     {LoadClass.TECHNICAL_CONTACT, LoadClass.REDUCED_CONTACT, LoadClass.HARD_CONTACT}
 )
 _MEANINGFUL_LOADS = frozenset(
@@ -221,7 +225,7 @@ def _explicit_enum(mapping: Mapping[str, Any], key: str, enum_type: type[Enum]):
 def _default_occupancy(load_class: LoadClass) -> DayOccupancy:
     if load_class in {LoadClass.OFF, LoadClass.ZERO_LOAD}:
         return DayOccupancy.COEXISTABLE
-    if load_class in _CONTACT_LOADS:
+    if load_class in CONTACT_LOAD_CLASSES:
         return DayOccupancy.EXCLUSIVE_PHYSICAL
     return DayOccupancy.PHYSICAL
 
@@ -233,7 +237,7 @@ def _validate_profile_compatibility(
         if occupancy is not DayOccupancy.COEXISTABLE:
             raise ValueError("Off/zero-load work must use coexistable occupancy.")
         return
-    if load_class in _CONTACT_LOADS:
+    if load_class in CONTACT_LOAD_CLASSES:
         if occupancy is not DayOccupancy.EXCLUSIVE_PHYSICAL:
             raise ValueError("Contact load must own an exclusive physical slot.")
         return
@@ -273,7 +277,7 @@ def contact_load_profile(entry: Mapping[str, Any] | None) -> CalendarLoadProfile
         entry, "calendar_day_occupancy", DayOccupancy
     )
 
-    if explicit_load is not None and explicit_load not in _CONTACT_LOADS and explicit_load is not LoadClass.OFF:
+    if explicit_load is not None and explicit_load not in CONTACT_LOAD_CLASSES and explicit_load is not LoadClass.OFF:
         raise ValueError("Contact calendar_load_class must be a contact class or off.")
     if resolved is not None and explicit_load is not None and resolved is not explicit_load:
         raise ValueError("calendar_load_class conflicts with resolved sparring contact state.")
@@ -423,7 +427,7 @@ def _reconcile_role_stamp(
         if explicit_occupancy is not None:
             raise ValueError("calendar_day_occupancy requires calendar_load_class.")
         return None
-    if explicit_load in _CONTACT_LOADS:
+    if explicit_load in CONTACT_LOAD_CLASSES:
         raise ValueError("Only contact-owned roles may carry a contact calendar_load_class.")
     return _profile(explicit_load, explicit_occupancy)
 
@@ -521,7 +525,7 @@ def _same_day_decision(
     if not existing:
         return None
 
-    existing_contact = any(p.load_class in _CONTACT_LOADS for p in existing)
+    existing_contact = any(p.load_class in CONTACT_LOAD_CLASSES for p in existing)
     existing_exclusive = any(
         p.occupancy is DayOccupancy.EXCLUSIVE_PHYSICAL for p in existing
     )
@@ -530,7 +534,7 @@ def _same_day_decision(
         for p in existing
     )
 
-    if candidate.load_class in _CONTACT_LOADS and existing_physical:
+    if candidate.load_class in CONTACT_LOAD_CLASSES and existing_physical:
         return _decision(
             PlacementDirective.FORBID,
             "contact_candidate_physical_conflict",
@@ -673,6 +677,7 @@ def evaluate_candidate_at_position(
 
 
 __all__ = [
+    "CONTACT_LOAD_CLASSES",
     "CalendarCollisionContext",
     "CalendarEvent",
     "CalendarLoadProfile",

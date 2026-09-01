@@ -19,192 +19,51 @@ Ownership boundaries:
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
 from typing import Any
 
+from .calendar_context import (
+    ContactRef as _ContactRef,
+    RoleRef as _RoleRef,
+    _calendar_by_day,
+    _normalise as _normalise_day,
+    authoritative_contact_positions as _adapter_contact_positions,
+    build_events as _adapter_build_events,
+    contact_refs as _adapter_contact_refs,
+    role_refs as _adapter_role_refs,
+)
 from .combat_load_policy import (
+    CONTACT_LOAD_CLASSES,
     CalendarEvent,
-    CalendarLoadProfile,
     DayOccupancy,
     LoadClass,
     PlacementDecision,
     PlacementDirective,
-    contact_load_profile,
     evaluate_candidate_at_position,
-    role_load_profile,
 )
 from .normalization import clean_list
-
-
-_CONTACT_LOADS = frozenset(
-    {LoadClass.TECHNICAL_CONTACT, LoadClass.REDUCED_CONTACT, LoadClass.HARD_CONTACT}
-)
-_PHYSICAL_CATEGORIES = frozenset(
-    {"strength", "conditioning", "recovery", "mobility", "rehab", "sparring"}
-)
-_CONTACT_MIRROR_ROLE_KEYS = frozenset({"hard_sparring_day", "no_hard_sparring_day"})
 
 
 class CalendarIntegrityError(ValueError):
     """Raised when canonical authorities leave a forbidden normal-camp state."""
 
 
-@dataclass(frozen=True)
-class _RoleRef:
-    week: dict[str, Any]
-    week_ordinal: int
-    role: dict[str, Any]
-    d_day: int
-    profile: CalendarLoadProfile
-
-    @property
-    def scope(self) -> tuple[str, int]:
-        try:
-            index = int(self.week.get("week_index"))
-        except (TypeError, ValueError):
-            index = self.week_ordinal
-        return ("normal_week", index)
-
-
-@dataclass(frozen=True)
-class _ContactRef:
-    week: dict[str, Any]
-    week_ordinal: int
-    entry: dict[str, Any]
-    d_day: int
-    profile: CalendarLoadProfile
-
-    @property
-    def scope(self) -> tuple[str, int]:
-        try:
-            index = int(self.week.get("week_index"))
-        except (TypeError, ValueError):
-            index = self.week_ordinal
-        return ("normal_week", index)
-
-
-def _normalise_day(value: Any) -> str:
-    return str(value or "").strip().lower()
-
-
-def _calendar_by_day(week: dict[str, Any]) -> dict[str, int]:
-    out: dict[str, int] = {}
-    for day in week.get("calendar_days") or []:
-        if not isinstance(day, dict):
-            continue
-        weekday = _normalise_day(day.get("weekday"))
-        d_day = day.get("d_day")
-        if weekday and isinstance(d_day, int):
-            out[weekday] = d_day
-    return out
-
-
-def _label_d_day(value: Any) -> int | None:
-    label = str(value or "").strip().upper()
-    if not label.startswith("D-"):
-        return None
-    digits: list[str] = []
-    for char in label[2:]:
-        if char.isdigit():
-            digits.append(char)
-        else:
-            break
-    return int("".join(digits)) if digits else None
-
-
-def _role_d_day(week: dict[str, Any], role: dict[str, Any]) -> int | None:
-    calendar = _calendar_by_day(week)
-    weekday = _normalise_day(role.get("scheduled_day_hint") or role.get("real_weekday"))
-    if weekday in calendar:
-        return calendar[weekday]
-    for key in ("scheduled_countdown_label", "countdown_label"):
-        if (d_day := _label_d_day(role.get(key))) is not None:
-            return d_day
-    return None
-
-
-def _contact_d_day(week: dict[str, Any], entry: dict[str, Any]) -> int | None:
-    calendar = _calendar_by_day(week)
-    weekday = _normalise_day(entry.get("day"))
-    if weekday in calendar:
-        return calendar[weekday]
-    for key in ("d_day", "countdown_offset"):
-        try:
-            d_day = int(entry.get(key))
-        except (TypeError, ValueError):
-            continue
-        if d_day >= 0:
-            return d_day
-    return None
-
-
-def _looks_physical(role: dict[str, Any]) -> bool:
-    if _normalise_day(role.get("category")) in _PHYSICAL_CATEGORIES:
-        return True
-    return any(
-        key in role
-        for key in (
-            "preferred_system",
-            "strength_dose_cap",
-            "meaningful_stress",
-            "stress_class",
-            "cost_class",
-            "rpe_cap",
-        )
+# The canonical planner-state -> CalendarEvent[] construction lives in
+# calendar_context so the upstream fillers and this final governor read one
+# calendar. The governor runs the construction in strict mode: an unclassifiable
+# physical role is a hole in the shared classifier and must fail loudly here
+# rather than silently drop out of the verified calendar.
+def _role_refs(weekly_role_map: dict[str, Any]) -> list[_RoleRef]:
+    return _adapter_role_refs(
+        weekly_role_map, strict=True, error_cls=CalendarIntegrityError
     )
 
 
-def _classify_role(role: dict[str, Any]) -> CalendarLoadProfile | None:
-    profile = role_load_profile(role)
-    if profile is not None:
-        return profile
-    # Current visible contact mirrors carry hard_sparring_status rather than the
-    # canonical status/effective_load fields. The resolved hard_sparring_plan
-    # entry is the contact authority and supplies the CalendarEvent instead.
-    if _normalise_day(role.get("role_key")) in _CONTACT_MIRROR_ROLE_KEYS:
-        return None
-    if _looks_physical(role):
-        raise CalendarIntegrityError(
-            "Physical planner role is not classifiable by combat_load_policy: "
-            f"{role.get('role_key')!r}. Extend the shared classifier; do not guess in the governor."
-        )
-    return None
-
-
-def _role_refs(weekly_role_map: dict[str, Any]) -> list[_RoleRef]:
-    refs: list[_RoleRef] = []
-    for ordinal, week in enumerate(weekly_role_map.get("weeks", []) or [], start=1):
-        if not isinstance(week, dict):
-            continue
-        for role in week.get("session_roles") or []:
-            if not isinstance(role, dict):
-                continue
-            d_day = _role_d_day(week, role)
-            profile = _classify_role(role)
-            if d_day is None or profile is None or profile.load_class is LoadClass.OFF:
-                continue
-            refs.append(_RoleRef(week, ordinal, role, d_day, profile))
-    return refs
-
-
 def _contact_refs(weekly_role_map: dict[str, Any]) -> list[_ContactRef]:
-    refs: list[_ContactRef] = []
-    for ordinal, week in enumerate(weekly_role_map.get("weeks", []) or [], start=1):
-        if not isinstance(week, dict):
-            continue
-        for entry in week.get("hard_sparring_plan") or []:
-            if not isinstance(entry, dict):
-                continue
-            profile = contact_load_profile(entry)
-            d_day = _contact_d_day(week, entry)
-            if profile is None or profile.load_class is LoadClass.OFF or d_day is None:
-                continue
-            refs.append(_ContactRef(week, ordinal, entry, d_day, profile))
-    return refs
+    return _adapter_contact_refs(weekly_role_map)
 
 
 def _authoritative_contact_positions(weekly_role_map: dict[str, Any]) -> set[int]:
-    return {-ref.d_day for ref in _contact_refs(weekly_role_map)}
+    return _adapter_contact_positions(weekly_role_map)
 
 
 def _build_events(
@@ -213,21 +72,13 @@ def _build_events(
     exclude_role: dict[str, Any] | None = None,
     exclude_contact: dict[str, Any] | None = None,
 ) -> list[CalendarEvent]:
-    events: list[CalendarEvent] = []
-    contact_positions = _authoritative_contact_positions(weekly_role_map)
-    for ref in _contact_refs(weekly_role_map):
-        if exclude_contact is ref.entry:
-            continue
-        events.append(CalendarEvent(-ref.d_day, ref.profile, ref.scope))
-    for ref in _role_refs(weekly_role_map):
-        if exclude_role is ref.role:
-            continue
-        # A visible contact role and the resolved plan entry describe one
-        # appointment, not two. Resolved contact remains authoritative.
-        if ref.profile.load_class in _CONTACT_LOADS and -ref.d_day in contact_positions:
-            continue
-        events.append(CalendarEvent(-ref.d_day, ref.profile, ref.scope))
-    return events
+    return _adapter_build_events(
+        weekly_role_map,
+        exclude_role=exclude_role,
+        exclude_contact=exclude_contact,
+        strict=True,
+        error_cls=CalendarIntegrityError,
+    )
 
 
 def _is_immutable_role(ref: _RoleRef) -> bool:
@@ -451,7 +302,7 @@ def _verify_normal_roles(weekly_role_map: dict[str, Any]) -> list[dict[str, Any]
         # remain in context so they can still constrain D-14+ roles.
         if _is_immutable_role(ref):
             continue
-        if ref.profile.load_class in _CONTACT_LOADS and -ref.d_day in contact_positions:
+        if ref.profile.load_class in CONTACT_LOAD_CLASSES and -ref.d_day in contact_positions:
             continue
         decision = _evaluate_role(weekly_role_map, ref)
         if decision.directive is PlacementDirective.FORBID:

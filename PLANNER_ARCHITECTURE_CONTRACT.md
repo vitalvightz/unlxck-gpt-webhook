@@ -203,8 +203,9 @@ The following current behaviour violates or partially violates the target contra
 2. `weekly_plan_render.py::_resolve_role_weekdays` still contains a renderer-side fallback that can infer weekdays for dayless roles; `fill_missing_session_days` itself has moved to `normal_calendar_placement.py`. Removing the remaining renderer fallback is reserved for the read-only-renderer migration.
 3. Normal-camp hard-contact collision policy is distributed across `stage2_role_map.py` and `stage2_payload.py`.
 4. Late-fight collision policy is separately implemented in `late_fight_placement.py`.
-5. `gap_fill_inserts.py` contains enough availability/collision logic to act like a small scheduler.
-6. `camp_week_fillers.py` can add roles after the base allocator.
+5. `gap_fill_inserts.py` still owns filler selection/budget/variety, but as of Step 5 its calendar-collision legality defers to the shared `combat_load_policy` through the canonical `calendar_context` adapter, using resolved sparring state rather than raw declared weekday matching. Its remaining `existing_exclusive_offsets` / raw-day sets survive only as non-legality bookkeeping.
+6. `camp_week_fillers.py` can add roles after the base allocator, but as of Step 5 each candidate is gated through the shared `combat_load_policy` (via `calendar_context`) against the whole weekly role map before insertion; it no longer derives effective contact from `declared_hard_sparring_days`.
+6a. `calendar_context.py` is the single canonical `planner state -> CalendarEvent[]` adapter shared by the final `calendar_integrity` governor and the upstream fillers, so there is one interpretation of position, resolved contact, load class, scope and contact de-duplication. It is representation only; `combat_load_policy` remains the rule authority.
 7. `late_camp_role_morph.py` changes semantic load after placement, so a future final calendar integrity layer must validate the resulting state.
 8. Compatibility/adaptor layers such as `stage2_role_map_patch.py`, `stage2_role_map_integration.py`, `camp_week_fillers.py`/`_impl.py`, and finalizer facade/impl pairs increase trace depth and should be consolidated only after characterization tests protect behaviour.
 

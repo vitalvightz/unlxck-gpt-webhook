@@ -1361,6 +1361,66 @@ def _late_fight_permission_policy(days_until_fight: Any, athlete_model: dict[str
     }
 
 
+def resolve_late_fight_contacts(
+    days_until_fight: Any, athlete_model: dict[str, Any]
+) -> list[tuple[int, str]]:
+    """Resolved ``(countdown_offset, effective_load)`` combat contact for a window.
+
+    This is the late-fight owner's answer to "where is combat contact, and what is
+    its resolved load?" so downstream support inserts consume that exact resolved
+    truth instead of re-deriving or collapsing it. The load comes straight from the
+    ``sparring_dose_planner`` (via ``_late_fight_hard_sparring_plan`` ->
+    ``compute_hard_sparring_plan``) and preserves the full shared vocabulary rather
+    than a hard-vs-technical binary:
+
+    - ``hard`` (``hard_as_planned``) -> hard;
+    - ``reduced`` (``deload_suggested``) -> reduced;
+    - ``technical`` (``convert_to_technical_suggested``) -> technical;
+    - ``none`` / suppressed -> no contact occurrence at all.
+
+    The one placement transform layered on top is the D-17 hard-sparring ban: a
+    ``hard`` or ``reduced`` contact caps to a technical touch on any occurrence that
+    is not the hard-allowed one (D-18+); the hard-allowed occurrence keeps the
+    resolver's dose class. ``technical`` and ``none`` are never re-escalated.
+    """
+    declared = clean_list(athlete_model.get("hard_sparring_days", []))
+    if not declared:
+        return []
+    plan = _late_fight_hard_sparring_plan(
+        days_until_fight=days_until_fight,
+        athlete_model=athlete_model,
+        declared_hard_days=declared,
+    )
+    load_by_day = {
+        str(entry.get("day") or "").strip().lower(): str(entry.get("effective_load") or "").strip().lower()
+        for entry in plan
+        if str(entry.get("day") or "").strip()
+    }
+    # Use the canonical creation-weekday owner: when plan_creation_weekday is
+    # absent it derives the weekday from fight_date. Passing the raw (possibly
+    # missing) field straight to the classifier would trip its unsafe fallback,
+    # collapsing every declared combat weekday onto days_until_fight and hiding
+    # the real contact occurrences from collision protection.
+    plan_creation_weekday = _resolve_plan_creation_weekday(days_until_fight, athlete_model)
+    contacts: list[tuple[int, str]] = []
+    for entry in _classify_declared_hard_days_for_late_window(
+        plan_creation_weekday=plan_creation_weekday,
+        days_until_fight=days_until_fight,
+        declared_weekdays=declared,
+    ):
+        offset = entry.get("offset")
+        if not isinstance(offset, int) or offset <= 0:
+            continue
+        weekday = str(entry.get("weekday") or "").strip().lower()
+        load = load_by_day.get(weekday, "")
+        if load in {"", "none", "off", "suppressed"}:
+            # The dose resolver suppressed this day: no contact event exists.
+            continue
+        if load in {"hard", "reduced"} and str(entry.get("status") or "") != "hard_allowed":
+            # D-17 ban: no hard/reduced contact inside the taper, only technical.
+            load = "technical"
+        contacts.append((offset, load))
+    return contacts
 
 
 def _late_fight_role_budget(days_until_fight: Any, athlete_model: dict[str, Any]) -> dict[str, Any]:
