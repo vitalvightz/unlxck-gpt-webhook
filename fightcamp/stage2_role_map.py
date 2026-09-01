@@ -31,9 +31,10 @@ from .fight_day_override import apply_fight_day_override_to_weekly_role_map, com
 from .fight_date_utils import build_calendar_days
 from .stage2_render_guards import _all_active_injuries_surface_only
 from .role_labels import stamp_weekly_role_map_labels
-from .stage2_role_map_patch import (
-    build_integrated_role_sort_key,
-    compute_integrated_compression_floor,
+from .allocator_priority import (
+    allocation_sort_key,
+    late_camp_week_reference_d_day,
+    readiness_compression_floor_with_late_cut,
 )
 
 
@@ -2080,10 +2081,10 @@ def _apply_high_fatigue_week_compression(
     # Step 2: Compute readiness compression score (applied to non-sparring slots only)
     fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
     compression = _compute_readiness_compression(athlete_model)
-    compression_floor = compute_integrated_compression_floor(
+    compression_floor = readiness_compression_floor_with_late_cut(
         base_floor=_compression_floor_value(compression),
-        week_entry=week_entry,
         athlete_model=athlete_model,
+        scheduled_d_day=late_camp_week_reference_d_day(week_entry, athlete_model),
     )
 
     # Step 3: Compute target number of non-sparring active sessions
@@ -2137,10 +2138,11 @@ def _apply_high_fatigue_week_compression(
 
     ranked_roles = sorted(
         non_spar_roles,
-        key=lambda r: build_integrated_role_sort_key(
+        key=lambda r: allocation_sort_key(
+            base_rank=_base_rank(r),
             role=r,
-            base_rank_fn=_base_rank,
             athlete_model=athlete_model,
+            dedicated_recovery=r.get("is_dedicated_recovery_mobility_day") is True,
         ),
         reverse=True,  # highest priority first
     )
