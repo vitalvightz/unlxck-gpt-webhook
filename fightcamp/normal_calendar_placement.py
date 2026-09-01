@@ -5,9 +5,9 @@ any surviving normal-camp role the primary allocator left dayless. It deliberate
 contains no new spacing, contact, compression, or load policy: Step 4 moves the
 existing behaviour out of the rendering layer without changing planner output.
 
-The broader renderer cleanup remains a later migration step. Until then,
-``weekly_plan_render.fill_missing_session_days`` may re-export this function for
-backward compatibility, but the implementation and placement mutation live here.
+As of Step 8 the renderer is read-only and no longer re-exports this function:
+placement (this helper plus the allocator) is owned here, and the renderer reads
+the assigned ``scheduled_day_hint`` without importing or completing missing days.
 """
 
 from __future__ import annotations

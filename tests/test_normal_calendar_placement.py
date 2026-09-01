@@ -53,9 +53,15 @@ def test_fill_missing_session_days_ignores_invalid_week_entries() -> None:
     assert weekly_role_map["weeks"][1]["session_roles"][1]["scheduled_day_hint"] == "Tuesday"
 
 
-def test_renderer_only_reexports_missing_day_completion_for_back_compat() -> None:
-    assert weekly_plan_render.fill_missing_session_days is normal_calendar_placement.fill_missing_session_days
-    assert "def fill_missing_session_days(" not in inspect.getsource(weekly_plan_render)
+def test_renderer_does_not_expose_missing_day_completion() -> None:
+    # Step 8: the read-only renderer must not re-export or define the placement
+    # mutator. Day completion is owned solely by normal_calendar_placement; the
+    # renderer neither imports nor defines it (the temporary Step-4 back-compat
+    # alias is removed now that no production caller depends on it).
+    assert not hasattr(weekly_plan_render, "fill_missing_session_days")
+    source = inspect.getsource(weekly_plan_render)
+    assert "def fill_missing_session_days(" not in source
+    assert "import fill_missing_session_days" not in source
 
 
 def test_stage2_payload_imports_missing_day_completion_from_placement_owner() -> None:

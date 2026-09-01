@@ -36,9 +36,9 @@ from fightcamp.stage1_parity import (  # noqa: E402
     review_stage1_self_output,
     stage1_parity_breakdown,
 )
+from fightcamp.normal_calendar_placement import fill_missing_session_days  # noqa: E402
 from fightcamp.weekly_plan_render import (  # noqa: E402
     _sanitize_dose,
-    fill_missing_session_days,
     render_weekly_schedule_section,
 )
 
@@ -321,19 +321,40 @@ def _synthetic_blocks() -> _FakeBlocks:
 
 
 def test_render_weekly_schedule_section_structure_and_governance() -> None:
+    brief = _synthetic_brief()
+    # Day placement is owned by the calendar/placement layer and runs before the
+    # read-only renderer. Fill the dayless role here (as the pipeline does) so the
+    # renderer reads the placed weekday rather than inferring one itself.
+    fill_missing_session_days(brief["weekly_role_map"])
     section = render_weekly_schedule_section(
-        planning_brief=_synthetic_brief(), blocks=_synthetic_blocks()
+        planning_brief=brief, blocks=_synthetic_blocks()
     )
     assert section.startswith("# Weekly Schedule")
     assert "## Week 1 — GPP (D-56 → D-53)" in section
     # Real day + D-day + label headings.
     assert "### Thursday (D-53) — Strength" in section
-    # Dayless conditioning role was placed on the free training day (Monday).
+    # Dayless conditioning role was placed on the free training day (Monday) by the
+    # placement layer; the read-only renderer reads that assignment.
     assert "### Monday (D-56) — Aerobic support" in section
     assert "Easy Bike — 25 min" in section
     # Anchor-day governance: the hinge transfer is excluded, the squat stays.
     assert "Back Squat" in section
     assert "Romanian Deadlift" not in section
+
+
+def test_render_weekly_schedule_is_read_only_and_never_infers_days() -> None:
+    # Step 8 ownership boundary: rendering is presentation-only. A role the
+    # placement layer left dayless must render without a weekday — the renderer
+    # must not infer or assign one. Here placement is deliberately NOT run, so the
+    # aerobic role stays dayless and the renderer renders it without a day.
+    brief = _synthetic_brief()
+    section = render_weekly_schedule_section(
+        planning_brief=brief, blocks=_synthetic_blocks()
+    )
+    assert "### Aerobic support" in section  # rendered dayless, label only
+    assert "### Monday" not in section  # renderer invented no weekday for it
+    # The already-placed strength role still renders on its assigned day.
+    assert "### Thursday (D-53) — Strength" in section
 
 
 def test_render_weekly_schedule_section_skips_late_fight_variant() -> None:

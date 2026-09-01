@@ -32,7 +32,6 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from .normal_calendar_placement import fill_missing_session_days  # noqa: F401  (back-compat re-export)
 from .normalization import clean_list
 from .strength import _classify_prescription_type, _prescription_templates
 
@@ -103,36 +102,19 @@ def _session_heading(role: dict[str, Any], weekday: str, d_to_day: dict[str, int
 
 def _resolve_role_weekdays(
     session_roles: list[dict[str, Any]],
-    week: dict[str, Any],
 ) -> dict[int, str]:
-    """Assign a weekday to every session role, filling any the planner left blank.
+    """Read each session role's already-placed weekday. Rendering is read-only.
 
-    Roles without a ``scheduled_day_hint`` are placed on the week's remaining
-    declared training days (in weekday order) so every rendered session maps to a
-    real calendar day — Stage 1 owns the placement instead of leaving a dayless
-    session for the LLM.
+    Day placement is owned by the calendar/placement layer
+    (``normal_calendar_placement.fill_missing_session_days`` plus the allocator),
+    which has already run by the time a plan is rendered. The renderer only reads
+    the assigned ``scheduled_day_hint``; a role the placement layer left dayless is
+    rendered without a weekday — the renderer never infers or assigns one.
     """
-    resolved: dict[int, str] = {}
-    used: set[str] = set()
-    for idx, role in enumerate(session_roles):
-        weekday = str(role.get("scheduled_day_hint") or "").strip().lower()
-        if weekday:
-            resolved[idx] = weekday
-            used.add(weekday)
-
-    declared = [
-        normalized
-        for day in clean_list(week.get("declared_training_days"))
-        if (normalized := str(day).strip().lower()) in _WEEKDAY_ORDER
-    ]
-    free = [day for day in sorted(set(declared), key=_WEEKDAY_ORDER.index) if day not in used]
-
-    free_iter = iter(free)
-    for idx, role in enumerate(session_roles):
-        if idx in resolved:
-            continue
-        resolved[idx] = next(free_iter, "")
-    return resolved
+    return {
+        idx: str(role.get("scheduled_day_hint") or "").strip().lower()
+        for idx, role in enumerate(session_roles)
+    }
 
 
 def _sanitize_dose(dose: str, forbidden: set[str]) -> str:
@@ -360,7 +342,7 @@ def _render_week(week: dict[str, Any], blocks: Any) -> list[str]:
     countdown = _countdown_label(d_to_day)
     header = f"## Week {week_index} — {phase}" + (f" ({countdown})" if countdown else "")
 
-    role_weekday = _resolve_role_weekdays(session_roles, week)
+    role_weekday = _resolve_role_weekdays(session_roles)
 
     # Render in chronological order (furthest from fight first).
     def _sort_key(item: tuple[int, dict[str, Any]]) -> tuple[int, int]:
