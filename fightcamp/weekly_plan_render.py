@@ -32,7 +32,6 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from .normal_calendar_placement import fill_missing_session_days  # noqa: F401  (back-compat re-export)
 from .normalization import clean_list
 from .strength import _classify_prescription_type, _prescription_templates
 

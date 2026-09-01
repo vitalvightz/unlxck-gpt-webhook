@@ -36,9 +36,9 @@ from fightcamp.stage1_parity import (  # noqa: E402
     review_stage1_self_output,
     stage1_parity_breakdown,
 )
+from fightcamp.normal_calendar_placement import fill_missing_session_days  # noqa: E402
 from fightcamp.weekly_plan_render import (  # noqa: E402
     _sanitize_dose,
-    fill_missing_session_days,
     render_weekly_schedule_section,
 )
 
