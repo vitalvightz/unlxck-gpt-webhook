@@ -19,11 +19,18 @@ import datetime as dt
 
 import fightcamp.stage2_payload_late_fight as _late_fight_module
 from fightcamp import calendar_context as cc
-from fightcamp.calendar_context import CalendarLegalityView, sequence_legality
+from fightcamp import calendar_integrity as ci
+from fightcamp import combat_load_policy as clp
+from fightcamp.calendar_context import (
+    CalendarLegalityView,
+    resolved_contact_offsets,
+    sequence_legality,
+)
 from fightcamp.calendar_integrity import apply_final_calendar_integrity
 from fightcamp.camp_week_fillers import apply_camp_week_fillers
 from fightcamp.camp_week_fillers_impl import _COORDINATION_LEGALITY_ROLE, _coordination_slot
 from fightcamp.combat_load_policy import (
+    CONTACT_LOAD_CLASSES,
     LoadClass,
     PlacementDirective,
     role_load_profile,
@@ -593,3 +600,129 @@ def test_resolve_late_fight_contacts_derives_creation_weekday_from_fight_date():
             continue
         if int(role.get("countdown_offset") or 0) in offsets:
             assert role["role_key"] not in PHYSICAL_INSERTS | LOW_COST_AEROBIC_INSERTS
+
+
+# --------------------------------------------------------------------------- #
+# 19. A visible mirror carrying a contact stamp cannot become a 2nd contact     #
+# --------------------------------------------------------------------------- #
+def _stamped_hard_mirror(day: str) -> dict:
+    # A visible hard_sparring_day role that ALSO carries an explicit resolved
+    # contact stamp. On its own it classifies to HARD_CONTACT, so the mirror
+    # short-circuit in classify_role is what stops it becoming a second contact.
+    return {
+        "role_key": "hard_sparring_day",
+        "category": "sparring",
+        "scheduled_day_hint": day,
+        "status": "hard_as_planned",
+        "effective_load": "hard",
+    }
+
+
+def test_stamped_mirror_role_alone_would_classify_as_contact():
+    # Guard: prove the ordering in classify_role is load-bearing. If the stamped
+    # mirror did not classify to a contact profile on its own, the regressions
+    # below would pass trivially.
+    stamped = _stamped_hard_mirror("Tuesday")
+    assert role_load_profile(stamped).load_class is LoadClass.HARD_CONTACT
+    # The adapter suppresses it: resolved contact is owned only by hard_sparring_plan.
+    assert cc.classify_role(stamped) is None
+
+
+def test_resolved_sparring_plus_stamped_mirror_counts_as_one_contact():
+    # One sparring occurrence described twice (resolved plan entry + its visible
+    # stamped mirror) must yield exactly ONE contact event, never two.
+    week = _week(roles=[_stamped_hard_mirror("Tuesday")], contacts=[_contact("Tuesday")])
+    tuesday = [e for e in cc.build_events({"weeks": [week]}) if e.position == -29]
+    assert len(tuesday) == 1
+    assert tuesday[0].profile.load_class is LoadClass.HARD_CONTACT
+
+
+def test_stamped_mirror_cannot_resurrect_suppressed_or_omitted_contact():
+    # When the resolved plan suppresses (or omits) the day, a visible stamped
+    # mirror must NOT resurrect a contact event.
+    suppressed = _week(
+        roles=[_stamped_hard_mirror("Tuesday")],
+        contacts=[_contact("Tuesday", status="suppressed", load="none")],
+    )
+    omitted = _week(roles=[_stamped_hard_mirror("Tuesday")], contacts=[])
+    assert [e for e in cc.build_events({"weeks": [suppressed]}) if e.position == -29] == []
+    assert [e for e in cc.build_events({"weeks": [omitted]}) if e.position == -29] == []
+
+
+# --------------------------------------------------------------------------- #
+# 20. Independent genuine contact occurrences still count independently          #
+# --------------------------------------------------------------------------- #
+def test_independent_contacts_count_independently():
+    # Two genuinely distinct resolved occurrences (Tue D-29 + Thu D-27) each own
+    # their day; the mirror de-dup must not collapse them into one.
+    week = _week(contacts=[_contact("Tuesday"), _contact("Thursday")])
+    events = cc.build_events({"weeks": [week]})
+    contacts = [e for e in events if e.profile.load_class in CONTACT_LOAD_CLASSES]
+    assert sorted(-e.position for e in contacts) == [27, 29]
+    view = _legality({"weeks": [week]}, week)
+    assert view.contact_offsets() == {27, 29}
+
+
+# --------------------------------------------------------------------------- #
+# 21. Suppressed/inactive resolved contact does not pollute gap-fill contacts    #
+# --------------------------------------------------------------------------- #
+def test_resolved_contact_offsets_excludes_off_loads():
+    # The shared helper the gap-fill consumes drops none/suppressed/off and keeps
+    # the real contact vocabulary, so there is one interpretation of "active
+    # contact" for both the filler pre-check and the governor.
+    offsets = resolved_contact_offsets(
+        [(20, "hard"), (14, "none"), (10, "suppressed"), (7, "technical"), (3, "reduced")]
+    )
+    assert offsets == {20, 7, 3}
+
+
+def test_gap_fill_suppressed_injected_contact_is_inert_unlike_hard():
+    # End-to-end: none/suppressed injected contacts must not pollute contact_offsets.
+    # A conditioning athlete keeps an aerobic maintenance slot when the injected
+    # contacts are all none/suppressed (identical to no contacts), but loses it
+    # when they are hard — proving the OFF loads are dropped, not counted.
+    athlete = _late_athlete(key_goals=["conditioning"], weaknesses=["gas_tank"])
+    sessions = [_ll_session(21), _ll_session(6, "fight_week_freshness_day")]
+
+    def aerobic(seq: list[dict]) -> list[dict]:
+        return [
+            r for r in seq
+            if r.get("category") == "support_insert" and r["role_key"] in LOW_COST_AEROBIC_INSERTS
+        ]
+
+    def shape(seq: list[dict]) -> list[tuple]:
+        return [(r.get("role_key"), r.get("countdown_offset")) for r in seq]
+
+    empty = apply_gap_fill_inserts([dict(s) for s in sessions], athlete, resolved_contacts=[])
+    all_none = apply_gap_fill_inserts(
+        [dict(s) for s in sessions], athlete, resolved_contacts=[(o, "none") for o in range(1, 22)]
+    )
+    all_suppressed = apply_gap_fill_inserts(
+        [dict(s) for s in sessions], athlete, resolved_contacts=[(o, "suppressed") for o in range(1, 22)]
+    )
+    all_hard = apply_gap_fill_inserts(
+        [dict(s) for s in sessions], athlete, resolved_contacts=[(o, "hard") for o in range(1, 22)]
+    )
+
+    assert aerobic(empty), "sanity: conditioning goal keeps an aerobic slot when unconstrained"
+    # OFF loads are inert: injecting them is identical to injecting nothing.
+    assert shape(all_none) == shape(empty)
+    assert shape(all_suppressed) == shape(empty)
+    # Hard everywhere DOES block aerobic, proving the contrast is real.
+    assert not aerobic(all_hard)
+
+
+# --------------------------------------------------------------------------- #
+# 22. Contact-load vocabulary has exactly one authoritative source              #
+# --------------------------------------------------------------------------- #
+def test_contact_load_vocabulary_single_source_of_truth():
+    # combat_load_policy owns the canonical set and exports it publicly.
+    assert "CONTACT_LOAD_CLASSES" in clp.__all__
+    assert CONTACT_LOAD_CLASSES is clp.CONTACT_LOAD_CLASSES
+    # The shared adapter and the final governor consume that one object — not
+    # private per-module copies that could silently drift apart.
+    assert cc.CONTACT_LOAD_CLASSES is clp.CONTACT_LOAD_CLASSES
+    assert ci.CONTACT_LOAD_CLASSES is clp.CONTACT_LOAD_CLASSES
+    # No module keeps a shadow definition of the contact-load set.
+    assert not hasattr(cc, "_CONTACT_LOADS")
+    assert not hasattr(ci, "_CONTACT_LOADS")
