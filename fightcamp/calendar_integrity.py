@@ -32,6 +32,7 @@ from .calendar_context import (
     role_refs as _adapter_role_refs,
 )
 from .combat_load_policy import (
+    CONTACT_LOAD_CLASSES,
     CalendarEvent,
     DayOccupancy,
     LoadClass,
@@ -40,11 +41,6 @@ from .combat_load_policy import (
     evaluate_candidate_at_position,
 )
 from .normalization import clean_list
-
-
-_CONTACT_LOADS = frozenset(
-    {LoadClass.TECHNICAL_CONTACT, LoadClass.REDUCED_CONTACT, LoadClass.HARD_CONTACT}
-)
 
 
 class CalendarIntegrityError(ValueError):
@@ -306,7 +302,7 @@ def _verify_normal_roles(weekly_role_map: dict[str, Any]) -> list[dict[str, Any]
         # remain in context so they can still constrain D-14+ roles.
         if _is_immutable_role(ref):
             continue
-        if ref.profile.load_class in _CONTACT_LOADS and -ref.d_day in contact_positions:
+        if ref.profile.load_class in CONTACT_LOAD_CLASSES and -ref.d_day in contact_positions:
             continue
         decision = _evaluate_role(weekly_role_map, ref)
         if decision.directive is PlacementDirective.FORBID:

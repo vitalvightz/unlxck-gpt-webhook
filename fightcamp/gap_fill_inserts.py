@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from .calendar_context import CalendarLegalityView, sequence_legality
+from .calendar_context import (
+    CalendarLegalityView,
+    resolved_contact_offsets,
+    sequence_legality,
+)
 from .camp_phases import calculate_phase_weeks
 from .combat_load_policy import PlacementDirective, role_load_profile
 from .normalization import clean_list, normalize_fatigue_level
@@ -1347,7 +1351,12 @@ def apply_gap_fill_inserts(
         resolved_contacts = resolve_late_fight_contacts(days_until_fight, athlete_model)
     else:
         resolved_contacts = list(resolved_contacts)
-    contact_offsets = {offset for offset, _load in resolved_contacts}
+    # Derive existing contact days from the SAME canonical interpretation the
+    # shared legality view uses (``calendar_context``): a suppressed / off / none
+    # resolved load carries no contact, so it must not become a coach-day tactical
+    # target or mark a day as an exclusive hard-sparring day. This keeps the filler
+    # pre-check and the final governor reading one existing-contact set.
+    contact_offsets = resolved_contact_offsets(resolved_contacts)
 
     existing_exclusive_offsets = {
         offset

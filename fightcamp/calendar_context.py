@@ -22,9 +22,10 @@ calendar.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Hashable, Iterable, Sequence
+from typing import Any, Hashable, Iterable, Iterator, Sequence
 
 from .combat_load_policy import (
+    CONTACT_LOAD_CLASSES,
     CalendarEvent,
     CalendarLoadProfile,
     LoadClass,
@@ -36,9 +37,9 @@ from .combat_load_policy import (
 )
 
 
-_CONTACT_LOADS = frozenset(
-    {LoadClass.TECHNICAL_CONTACT, LoadClass.REDUCED_CONTACT, LoadClass.HARD_CONTACT}
-)
+# Contact/combat-load vocabulary is owned by ``combat_load_policy``
+# (``CONTACT_LOAD_CLASSES``); this adapter and the final governor both consume that
+# one definition rather than keeping drifting local copies.
 _PHYSICAL_CATEGORIES = frozenset(
     {"strength", "conditioning", "recovery", "mobility", "rehab", "sparring"}
 )
@@ -138,18 +139,25 @@ def classify_role(
     """Return the shared load profile for a planner ``role``.
 
     Visible contact mirrors (``hard_sparring_day`` / ``no_hard_sparring_day``)
-    return ``None``: resolved contact is owned by ``hard_sparring_plan``, not the
-    visible role, so callers supply contact events from the resolved plan.
+    return ``None`` *before* the role is classified: resolved contact is owned by
+    ``hard_sparring_plan``, not the visible role, so a mirror role must never
+    become a second contact source even when it carries an explicit contact stamp
+    or its resolved plan entry was suppressed/omitted. Callers supply contact
+    events from the resolved plan.
 
     When ``strict`` and a physical role is not classifiable, raise ``error_cls``
     (or :class:`UnclassifiablePlannerRoleError`) so an unhandled physical role
     fails loudly instead of silently dropping out of the calendar view.
     """
+    # Mirror ownership first: only ``hard_sparring_plan`` may create contact
+    # events. A visible ``hard_sparring_day`` stamped as hard/technical contact
+    # must not slip through as an independent occurrence, so short-circuit before
+    # ``role_load_profile`` can hand back that stamped contact profile.
+    if _normalise(role.get("role_key")) in _CONTACT_MIRROR_ROLE_KEYS:
+        return None
     profile = role_load_profile(role)
     if profile is not None:
         return profile
-    if _normalise(role.get("role_key")) in _CONTACT_MIRROR_ROLE_KEYS:
-        return None
     if strict and _looks_physical(role):
         cls = error_cls or UnclassifiablePlannerRoleError
         raise cls(
@@ -257,7 +265,7 @@ def build_events(
     for ref in role_refs(weekly_role_map, strict=strict, error_cls=error_cls):
         if exclude_role is ref.role:
             continue
-        if ref.profile.load_class in _CONTACT_LOADS and -ref.d_day in contact_positions:
+        if ref.profile.load_class in CONTACT_LOAD_CLASSES and -ref.d_day in contact_positions:
             continue
         events.append(CalendarEvent(-ref.d_day, ref.profile, ref.scope))
     return events
@@ -295,6 +303,41 @@ def contact_profile_for_load(load: Any) -> CalendarLoadProfile | None:
     return contact_load_profile({"effective_load": text})
 
 
+def _iter_resolved_contacts(
+    resolved_contacts: Iterable[tuple[int, Any]],
+) -> Iterator[tuple[int, CalendarLoadProfile]]:
+    """Yield ``(offset, profile)`` for each resolved contact that counts.
+
+    The single interpretation of "active contact" for a flat late-fight window: a
+    positive countdown offset whose resolved load classifies (through the shared
+    ``combat_load_policy`` contact classifier) to a real contact class. ``none`` /
+    ``suppressed`` / off loads and non-positive offsets are dropped here, so every
+    caller — the event builder and the gap-fill pre-check alike — agrees on which
+    days carry contact and one logical occurrence is counted exactly once.
+    """
+    for offset, load in resolved_contacts:
+        try:
+            off = int(offset)
+        except (TypeError, ValueError):
+            continue
+        if off <= 0:
+            continue
+        profile = contact_profile_for_load(load)
+        if profile is None or profile.load_class is LoadClass.OFF:
+            continue
+        yield off, profile
+
+
+def resolved_contact_offsets(resolved_contacts: Iterable[tuple[int, Any]]) -> set[int]:
+    """Positive countdown offsets carrying a real (non-OFF) resolved contact.
+
+    The canonical answer to "which countdown days are effective contact?" for a
+    late-fight window, shared with :func:`sequence_events` so ``none`` /
+    ``suppressed`` occurrences never pollute a filler's existing-contact view.
+    """
+    return {off for off, _profile in _iter_resolved_contacts(resolved_contacts)}
+
+
 def sequence_events(
     roles: Iterable[dict[str, Any]],
     *,
@@ -311,16 +354,7 @@ def sequence_events(
     """
     events: list[CalendarEvent] = []
     contact_positions: set[int] = set()
-    for offset, load in resolved_contacts:
-        try:
-            off = int(offset)
-        except (TypeError, ValueError):
-            continue
-        if off <= 0:
-            continue
-        profile = contact_profile_for_load(load)
-        if profile is None or profile.load_class is LoadClass.OFF:
-            continue
+    for off, profile in _iter_resolved_contacts(resolved_contacts):
         position = -off
         events.append(CalendarEvent(position, profile, scope))
         contact_positions.add(position)
@@ -334,7 +368,7 @@ def sequence_events(
         if profile is None or profile.load_class is LoadClass.OFF:
             continue
         position = -off
-        if profile.load_class in _CONTACT_LOADS and position in contact_positions:
+        if profile.load_class in CONTACT_LOAD_CLASSES and position in contact_positions:
             continue
         events.append(CalendarEvent(position, profile, scope))
     return events
@@ -385,7 +419,7 @@ class CalendarLegalityView:
         return {
             -event.position
             for event in self.events
-            if event.profile.load_class in _CONTACT_LOADS
+            if event.profile.load_class in CONTACT_LOAD_CLASSES
         }
 
 
@@ -433,6 +467,7 @@ __all__ = [
     "contact_d_day",
     "contact_profile_for_load",
     "contact_refs",
+    "resolved_contact_offsets",
     "role_d_day",
     "role_refs",
     "sequence_events",
