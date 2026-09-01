@@ -3462,6 +3462,41 @@ def test_sandwiched_day_rejects_primary_strength_but_keeps_low_aerobic_support()
     assert "recovery_aerobic_gas_tank_day" in kept_keys
 
 
+def test_sandwiched_low_load_physical_kept_by_shared_policy():
+    # Ownership: the between-hard-contacts verdict is delegated to combat_load_policy.
+    # ``movement_quality`` classifies to LOW_LOAD_PHYSICAL, which the shared policy
+    # DEPRIORITIZES (legal, loses only to a cleaner slot) rather than forbids between
+    # two hard contacts. Stage 2 suppresses only a policy FORBID, so this role is kept
+    # instead of dropped by a local prohibition stricter than the canonical policy.
+    session_roles = [
+        {"category": "sparring", "role_key": "hard_sparring_day", "scheduled_day_hint": "Monday", "governance": {}},
+        {"category": "sparring", "role_key": "hard_sparring_day", "scheduled_day_hint": "Wednesday", "governance": {}},
+        {"category": "conditioning", "role_key": "movement_quality", "scheduled_day_hint": "Tuesday", "governance": {}},
+    ]
+    kept_roles, suppressed = _apply_high_fatigue_week_compression(
+        {"phase": "SPP", "week_index": 1, "declared_hard_sparring_days": ["Monday", "Wednesday"]},
+        session_roles,
+        [],
+        {
+            "sport": "boxing",
+            "fatigue": "low",
+            "hard_sparring_days": ["Monday", "Wednesday"],
+            "training_days": ["Monday", "Tuesday", "Wednesday", "Friday"],
+        },
+        hard_sparring_plan=[
+            {"day": "Monday", "status": "hard_as_planned"},
+            {"day": "Wednesday", "status": "hard_as_planned"},
+        ],
+    )
+
+    kept_keys = [role["role_key"] for role in kept_roles]
+    assert "movement_quality" in kept_keys
+    assert not any(
+        "sandwiched_hard_days" in (item.get("compression_reason_codes") or [])
+        for item in suppressed
+    )
+
+
 def test_weekly_role_map_rotates_declared_training_days_to_day_after_generation():
     athlete_model = _base_athlete(
         days_until_fight=42,

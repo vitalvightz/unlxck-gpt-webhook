@@ -83,6 +83,8 @@ from .sparring_dose_planner import (
     effective_hard_days,
     sandwiched_training_days,
 )
+from .calendar_context import classify_role, contact_profile_for_load
+from .combat_load_policy import CalendarEvent, evaluate_candidate_at_position
 from .strength_session_quality import classify_strength_item, infer_strength_sessions
 from .training_context import TrainingContext, allocate_sessions
 from .nutrition import compute_nutrition_targets
@@ -1805,43 +1807,39 @@ def _apply_boxing_crowded_week_compression(
     return kept_roles, updated_suppressed
 
 
-def _is_sandwiched_low_load_support_role(role: dict[str, Any]) -> bool:
-    """Allow-list for roles that are safe between two effective hard sparring days."""
-    category = str(role.get("category") or "").strip().lower()
-    preferred_system = str(role.get("preferred_system") or "").strip().lower()
-    role_key = str(role.get("role_key") or "").strip().lower()
+# Between-hard-contacts legality is owned by ``combat_load_policy``. Stage 2 no
+# longer keeps its own allow-list of "loads safe between two hard sparring days";
+# it asks the shared policy and enforces the answer. These constants are the
+# minimal canonical encoding of a sandwiched slot: one effective hard contact
+# immediately before and after the candidate, evaluated in a single collision
+# scope so the policy sees the candidate as between two hard contacts.
+_SANDWICHED_HARD_CONTACT_SCOPE = ("stage2_sandwiched_hard_days", 0)
+_HARD_CONTACT_PROFILE = contact_profile_for_load("hard")
+_SANDWICHED_HARD_CONTACT_EVENTS = (
+    CalendarEvent(-1, _HARD_CONTACT_PROFILE, _SANDWICHED_HARD_CONTACT_SCOPE),
+    CalendarEvent(1, _HARD_CONTACT_PROFILE, _SANDWICHED_HARD_CONTACT_SCOPE),
+)
 
-    if category in {"mobility", "rehab"}:
-        return True
-    if category == "conditioning" and preferred_system == "aerobic":
-        return True
 
-    tokens = {
-        str(token).strip().lower()
-        for token in (
-            list(role.get("stress_flags") or [])
-            + list(role.get("load_flags") or [])
-            + list(role.get("tags") or [])
-            + list((role.get("governance") or {}).get("load_flags") or [])
-        )
-        if str(token).strip()
-    }
-    if role.get("recovery_compatible") or role.get("allowed_on_recovery_day"):
-        return True
-    if role.get("gas_tank_recovery_touch") or role.get("priority_recovery_touch"):
-        return True
-    if any(token in tokens for token in {"mobility", "coordination", "rehab", "prehab", "low_aerobic"}):
-        return True
-    if any(token in tokens for token in {"low_cns", "low_lactate", "low_impact", "recovery_compatible"}):
-        return True
-    if role_key in {"recovery_reset_day", "recovery_aerobic_gas_tank_day", "converted_low_aerobic_gas_tank_day"}:
-        return True
+def _forbidden_between_effective_hard_contacts(role: dict[str, Any]) -> bool:
+    """Ask ``combat_load_policy`` whether ``role`` may sit between two hard contacts.
 
-    rpe = role.get("target_rpe")
-    try:
-        return float(rpe) <= 4
-    except (TypeError, ValueError):
+    Contact-spacing legality is owned by :mod:`combat_load_policy`; Stage 2 delegates
+    to it via the shared :mod:`calendar_context` classifier rather than re-deriving a
+    local allow-list. A role the shared classifier cannot place (``None`` — e.g. a
+    visible contact mirror, whose contact is owned by ``hard_sparring_plan``) is left
+    for its owner and is not suppressed here.
+    """
+    profile = classify_role(role)
+    if profile is None:
         return False
+    decision = evaluate_candidate_at_position(
+        profile,
+        candidate_position=0,
+        events=_SANDWICHED_HARD_CONTACT_EVENTS,
+        candidate_scope=_SANDWICHED_HARD_CONTACT_SCOPE,
+    )
+    return not decision.allowed
 
 
 def _suppress_sandwiched_glycolytic(
@@ -1852,9 +1850,14 @@ def _suppress_sandwiched_glycolytic(
     *,
     hard_sparring_plan: list[dict] | None = None,
 ) -> tuple[list[dict], list[dict]]:
-    """Drop any glycolytic conditioning role scheduled on a day sandwiched between two
-    effective hard sparring days. Not gated on fatigue or compression signals — it's a
+    """Suppress roles scheduled between two effective hard sparring days whose load the
+    shared policy forbids there. Not gated on fatigue or compression signals — it's a
     structural invariant about recovery windows between hard contacts.
+
+    The "which loads are legal between two hard contacts" decision is owned by
+    ``combat_load_policy`` and consulted through :func:`_forbidden_between_effective_hard_contacts`;
+    Stage 2 only locates sandwiched days (from resolved contact state) and enforces the
+    policy's answer, preserving the ``must_keep`` role-budget override.
     """
     effective_spar_days = set(effective_hard_days(hard_sparring_plan or []))
     if len(effective_spar_days) < 2:
@@ -1872,12 +1875,11 @@ def _suppress_sandwiched_glycolytic(
     updated_suppressed = list(suppressed_roles)
     for role in session_roles:
         on_sandwiched_day = str(role.get("scheduled_day_hint") or "").strip() in sandwiched
-        is_glycolytic = role.get("category") == "conditioning" and role.get("preferred_system") == "glycolytic"
         if on_sandwiched_day and role.get("preferred_system") in must_keep:
             kept.append(role)
             continue
 
-        should_suppress = on_sandwiched_day and (is_glycolytic or not _is_sandwiched_low_load_support_role(role))
+        should_suppress = on_sandwiched_day and _forbidden_between_effective_hard_contacts(role)
         if should_suppress:
             updated_suppressed.append(
                 _make_compression_suppression(
