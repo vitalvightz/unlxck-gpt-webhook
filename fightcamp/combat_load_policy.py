@@ -1,7 +1,12 @@
 """Shared calendar-load and combat-collision policy.
 
-This is the Step-2 policy seam from ``PLANNER_ARCHITECTURE_CONTRACT.md``.
-It has no production planner call sites yet.
+This is the canonical collision-legality owner named in
+``PLANNER_ARCHITECTURE_CONTRACT.md``. It is consumed in production by both
+placement owners (``stage2_role_map`` / ``normal_calendar_placement`` for normal
+camp, ``stage2_payload_late_fight`` for the countdown), by the support fillers
+(``camp_week_fillers`` / ``gap_fill_inserts``), and by the final calendar governor
+(``calendar_integrity``) — all through the canonical ``calendar_context`` adapter.
+No other module may decide ALLOW / DEPRIORITIZE / FORBID.
 
 Rules of ownership:
 - ``sparring_dose_planner`` resolves declared contact to hard/reduced/technical/off;
