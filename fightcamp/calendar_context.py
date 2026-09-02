@@ -91,15 +91,33 @@ def _label_d_day(value: Any) -> int | None:
     return int("".join(digits)) if digits else None
 
 
+def _integer_d_day(value: Any) -> int | None:
+    try:
+        d_day = int(value)
+    except (TypeError, ValueError):
+        return None
+    return d_day if d_day >= 0 else None
+
+
 def role_d_day(week: dict[str, Any], role: dict[str, Any]) -> int | None:
+    """Return the role's final scheduled countdown day.
+
+    Final placement metadata is authoritative.  In particular, a planner week
+    may span eight calendar days and therefore contain the same weekday twice;
+    resolving by weekday before ``scheduled_countdown_label`` can silently pick
+    the wrong occurrence after calendar-integrity relocation.
+    """
+    if (d_day := _label_d_day(role.get("scheduled_countdown_label"))) is not None:
+        return d_day
+    for key in ("scheduled_d_day", "countdown_offset"):
+        if (d_day := _integer_d_day(role.get(key))) is not None:
+            return d_day
+
     calendar = _calendar_by_day(week)
     weekday = _normalise(role.get("scheduled_day_hint") or role.get("real_weekday"))
     if weekday in calendar:
         return calendar[weekday]
-    for key in ("scheduled_countdown_label", "countdown_label"):
-        if (d_day := _label_d_day(role.get(key))) is not None:
-            return d_day
-    return None
+    return _label_d_day(role.get("countdown_label"))
 
 
 def contact_d_day(week: dict[str, Any], entry: dict[str, Any]) -> int | None:

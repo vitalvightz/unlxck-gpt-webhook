@@ -542,6 +542,8 @@ def test_remorph_after_relocation_outside_window_clears_stale_d16_truth():
     role = role_map["weeks"][0]["session_roles"][0]
     assert role["scheduled_d_day"] == 16
     role_map["weeks"][0]["calendar_days"][0]["d_day"] = 18
+    role["scheduled_countdown_label"] = "D-18"
+    role["scheduled_d_day"] = 18
     apply_late_camp_role_morph(role_map)
     for key in ("strength_dose_cap", "set_cap", "rep_cap", "rpe_cap", "scheduled_d_day",
                 "effective_strength_prescriptions", "effective_strength_envelope"):

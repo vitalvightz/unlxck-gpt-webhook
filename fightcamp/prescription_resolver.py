@@ -28,11 +28,33 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from .calendar_context import role_d_day
+from .late_camp_role_morph import FULL_STRENGTH_ROLE_KEYS, STRENGTH_NEURAL_MORPH_MAX_D
 from .strength_session_quality import (
     ANCHOR_CAPABLE_CLASSES,
     SUPPORT_ONLY_CLASSES,
     classify_strength_item,
 )
+
+
+class MissingLateCampEffectiveStrengthAuthorityError(ValueError):
+    """A loaded late-camp role reached the Stage 2 boundary without dose truth."""
+
+    code = "missing_late_camp_effective_strength_authority"
+
+    def __init__(self, details: dict[str, Any]):
+        self.details = details
+        fields = ", ".join(str(field) for field in details.get("missing_fields", []))
+        super().__init__(
+            f"{self.code}: role_key={details.get('role_key')!r}, "
+            f"week_index={details.get('week_index')!r}, "
+            f"session_index={details.get('session_index')!r}, "
+            f"scheduled_weekday={details.get('scheduled_weekday')!r}, "
+            f"original_countdown={details.get('original_countdown')!r}, "
+            f"scheduled_countdown={details.get('scheduled_countdown')!r}, "
+            f"resolved_d_day={details.get('resolved_d_day')!r}, "
+            f"missing_fields=[{fields}]"
+        )
 
 # Movement-role names that mark low-load trunk / prehab / support work even when
 # a quality class is unavailable. Mirrors the reservoir/support taxonomy.
@@ -350,6 +372,139 @@ def _strength_slots_for_phase(candidate_pools: dict[str, Any], phase: str) -> li
     return [slot for slot in slots if isinstance(slot, dict)]
 
 
+def _is_strength_role(role: dict[str, Any]) -> bool:
+    role_key = str(role.get("role_key") or "").strip().lower()
+    return (
+        str(role.get("category") or "").strip().lower() == "strength"
+        or role_key in FULL_STRENGTH_ROLE_KEYS
+        or str(role.get("preferred_pool") or "").strip().lower() == "strength_slots"
+    )
+
+
+def _strength_role_slot_groups(
+    *,
+    weekly_role_map: dict[str, Any],
+    candidate_pools: dict[str, Any],
+):
+    """Yield each scheduled strength role with the candidate slots it owns."""
+    for week in weekly_role_map.get("weeks", []) or []:
+        if not isinstance(week, dict):
+            continue
+        phase = str(week.get("phase") or "").strip().upper()
+        strength_slots = _strength_slots_for_phase(candidate_pools, phase)
+        strength_role_index = 0
+        for role in week.get("session_roles") or []:
+            if not isinstance(role, dict) or not _is_strength_role(role):
+                continue
+            strength_role_index += 1
+            role_session_index = _int_or_none(role.get("strength_session_index")) or strength_role_index
+            owned_slots = [
+                slot
+                for slot in strength_slots
+                if (_int_or_none(slot.get("session_index")) or 1) == role_session_index
+            ]
+            yield week, role, owned_slots
+
+
+def _loaded_candidate_names(owned_slots: list[dict[str, Any]]) -> list[str]:
+    names: list[str] = []
+    for slot in owned_slots:
+        selected = _slot_selected(slot)
+        if (
+            _role_kind(slot) not in {"anchor", "secondary"}
+            or not str(selected.get("prescription") or "").strip()
+        ):
+            continue
+        name = str(selected.get("name") or slot.get("slot_id") or "").strip()
+        if name and name not in names:
+            names.append(name)
+    return names
+
+
+def assert_late_camp_effective_strength_authority(
+    *,
+    weekly_role_map: dict[str, Any],
+    candidate_pools: dict[str, Any],
+) -> None:
+    """Block Stage 2 when a loaded countdown role lacks scheduled-day authority."""
+    if not isinstance(weekly_role_map, dict) or not isinstance(candidate_pools, dict):
+        return
+
+    for week, role, owned_slots in _strength_role_slot_groups(
+        weekly_role_map=weekly_role_map,
+        candidate_pools=candidate_pools,
+    ):
+        d_day = role_d_day(week, role)
+        loaded_names = _loaded_candidate_names(owned_slots)
+        if (
+            d_day is None
+            or not 0 <= d_day <= STRENGTH_NEURAL_MORPH_MAX_D
+            or not loaded_names
+        ):
+            continue
+
+        missing: list[str] = []
+        cap = role.get("strength_dose_cap")
+        if not isinstance(cap, dict):
+            missing.append("strength_dose_cap")
+        elif not isinstance(cap.get("loaded_allowed"), bool):
+            missing.append("strength_dose_cap.loaded_allowed")
+
+        if _int_or_none(role.get("scheduled_d_day")) != d_day:
+            missing.append("scheduled_d_day")
+        if not str(role.get("dose_adjustment_reason") or "").strip():
+            missing.append("dose_adjustment_reason")
+        if _rpe_ceiling(role.get("rpe_cap")) is None:
+            missing.append("rpe_cap")
+
+        prescriptions = role.get("effective_strength_prescriptions")
+        if not isinstance(prescriptions, list) or not prescriptions:
+            missing.append("effective_strength_prescriptions")
+            prescriptions = []
+        by_name = {
+            str(item.get("name") or "").strip(): item
+            for item in prescriptions
+            if isinstance(item, dict) and str(item.get("name") or "").strip()
+        }
+        for name in loaded_names:
+            item = by_name.get(name)
+            if not item:
+                missing.append(f"effective_strength_prescriptions[{name}]")
+                continue
+            if not str(item.get("effective_prescription") or "").strip():
+                missing.append(f"effective_strength_prescriptions[{name}].effective_prescription")
+            if item.get("dose_authority") != "scheduled_countdown_overlay":
+                missing.append(f"effective_strength_prescriptions[{name}].dose_authority")
+            if not isinstance(item.get("effective_loaded"), bool):
+                missing.append(f"effective_strength_prescriptions[{name}].effective_loaded")
+
+        envelope = role.get("effective_strength_envelope")
+        if not isinstance(envelope, dict):
+            missing.append("effective_strength_envelope")
+        else:
+            if _int_or_none(envelope.get("scheduled_d_day")) != d_day:
+                missing.append("effective_strength_envelope.scheduled_d_day")
+            if not isinstance(envelope.get("loaded_allowed"), bool):
+                missing.append("effective_strength_envelope.loaded_allowed")
+            if _int_or_none(envelope.get("rpe_cap_high")) is None:
+                missing.append("effective_strength_envelope.rpe_cap_high")
+
+        if missing:
+            raise MissingLateCampEffectiveStrengthAuthorityError(
+                {
+                    "role_key": role.get("role_key"),
+                    "week_index": week.get("week_index"),
+                    "session_index": role.get("session_index"),
+                    "scheduled_weekday": role.get("scheduled_day_hint") or role.get("real_weekday"),
+                    "original_countdown": role.get("countdown_label"),
+                    "scheduled_countdown": role.get("scheduled_countdown_label"),
+                    "resolved_d_day": d_day,
+                    "loaded_exercises": loaded_names,
+                    "missing_fields": missing,
+                }
+            )
+
+
 _PRIORITY_ORDER = {"critical": 0, "anchor": 0, "primary": 0, "high": 1, "secondary": 1,
                    "medium": 2, "support": 2, "power": 2, "ballistic": 2, "low": 3}
 
@@ -428,57 +583,49 @@ def apply_effective_strength_prescriptions(
 
     athlete_state = athlete_dose_state(athlete_model)
 
-    for week in weekly_role_map.get("weeks", []) or []:
-        if not isinstance(week, dict):
+    for week, role, owned_slots in _strength_role_slot_groups(
+        weekly_role_map=weekly_role_map,
+        candidate_pools=candidate_pools,
+    ):
+        if not isinstance(role.get("strength_dose_cap"), dict):
             continue
-        phase = str(week.get("phase") or "").strip().upper()
-        strength_slots = _strength_slots_for_phase(candidate_pools, phase)
-        if not strength_slots:
+        scheduled_d_day = role_d_day(week, role)
+        if scheduled_d_day is not None:
+            role["scheduled_d_day"] = scheduled_d_day
+
+        # Demote every anchor-capable *loaded* lift after the highest-priority
+        # one to ``secondary`` so secondary loaded work loses more volume than
+        # the session anchor (isometric anchors and neural power are left as
+        # their own kind). Ordered by planner slot priority.
+        anchor_loaded_used = False
+        resolved: list[dict[str, Any]] = []
+        for slot in sorted(owned_slots, key=_slot_priority):
+            kind = _role_kind(slot)
+            force_kind = None
+            if kind == "anchor" and _slot_quality_class_effective(slot) != "anchor_force_isometric":
+                if anchor_loaded_used:
+                    force_kind = "secondary"
+                else:
+                    anchor_loaded_used = True
+            item = resolve_strength_slot_prescription(
+                role=role,
+                slot=slot,
+                athlete_state=athlete_state,
+                force_kind=force_kind,
+            )
+            if not item.get("effective_prescription"):
+                continue
+            entry = {
+                "slot_id": slot.get("slot_id"),
+                "name": (_slot_selected(slot).get("name") if _slot_selected(slot) else None),
+                **item,
+            }
+            resolved.append(entry)
+
+        if not resolved:
             continue
-        strength_role_index = 0
-        for role in week.get("session_roles") or []:
-            if not isinstance(role, dict) or not isinstance(role.get("strength_dose_cap"), dict):
-                continue
-            strength_role_index += 1
-            role_session_index = _int_or_none(role.get("strength_session_index")) or strength_role_index
-            owned_slots = [
-                slot for slot in strength_slots
-                if (_int_or_none(slot.get("session_index")) or 1) == role_session_index
-            ]
-
-            # Demote every anchor-capable *loaded* lift after the highest-priority
-            # one to ``secondary`` so secondary loaded work loses more volume than
-            # the session anchor (isometric anchors and neural power are left as
-            # their own kind). Ordered by planner slot priority.
-            anchor_loaded_used = False
-            resolved: list[dict[str, Any]] = []
-            for slot in sorted(owned_slots, key=_slot_priority):
-                kind = _role_kind(slot)
-                force_kind = None
-                if kind == "anchor" and _slot_quality_class_effective(slot) != "anchor_force_isometric":
-                    if anchor_loaded_used:
-                        force_kind = "secondary"
-                    else:
-                        anchor_loaded_used = True
-                item = resolve_strength_slot_prescription(
-                    role=role,
-                    slot=slot,
-                    athlete_state=athlete_state,
-                    force_kind=force_kind,
-                )
-                if not item.get("effective_prescription"):
-                    continue
-                entry = {
-                    "slot_id": slot.get("slot_id"),
-                    "name": (_slot_selected(slot).get("name") if _slot_selected(slot) else None),
-                    **item,
-                }
-                resolved.append(entry)
-
-            if not resolved:
-                continue
-            role["effective_strength_prescriptions"] = resolved
-            envelope = _build_role_envelope(role, resolved)
-            if envelope:
-                role["effective_strength_envelope"] = envelope
+        role["effective_strength_prescriptions"] = resolved
+        envelope = _build_role_envelope(role, resolved)
+        if envelope:
+            role["effective_strength_envelope"] = envelope
     return weekly_role_map

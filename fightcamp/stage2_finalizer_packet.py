@@ -12,6 +12,7 @@ from copy import deepcopy
 from typing import Any
 
 from . import stage2_finalizer_packet_impl as _impl
+from .prescription_resolver import assert_late_camp_effective_strength_authority
 from .stage2_payload_late_fight import _handoff_mode_instructions
 
 for _export_name in dir(_impl):
@@ -84,17 +85,27 @@ def build_stage2_finalizer_packet(
     planning_brief: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the normal compact packet, then preserve tail render contracts."""
-    packet = _impl.build_stage2_finalizer_packet(
-        stage2_payload=stage2_payload,
-        planning_brief=planning_brief,
-    )
-
     source = planning_brief if isinstance(planning_brief, dict) else stage2_payload
     weekly_role_map = (
         source.get("weekly_role_map")
         or stage2_payload.get("weekly_role_map")
         or {}
     )
+    candidate_pools = (
+        source.get("candidate_pools")
+        or stage2_payload.get("candidate_pools")
+        or {}
+    )
+    assert_late_camp_effective_strength_authority(
+        weekly_role_map=weekly_role_map,
+        candidate_pools=candidate_pools,
+    )
+
+    packet = _impl.build_stage2_finalizer_packet(
+        stage2_payload=stage2_payload,
+        planning_brief=planning_brief,
+    )
+
     tail_contracts = _late_fight_tail_contracts(weekly_role_map)
     if not tail_contracts:
         return packet

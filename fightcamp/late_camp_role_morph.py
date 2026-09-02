@@ -22,6 +22,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from .calendar_context import role_d_day
+
 
 FIGHT_PACE_MORPH_MAX_D = 13
 STRENGTH_NEURAL_MORPH_MAX_D = 17
@@ -51,6 +53,9 @@ FULL_STRENGTH_ROLE_KEYS = frozenset(
         "structural_strength_day",
         "transfer_strength_day",
         "neural_plus_strength_day",
+        "strength_touch_day",
+        "neural_primer_day",
+        "small_strength_touch_day",
     }
 )
 
@@ -172,39 +177,6 @@ _RHYTHM_TOUCH_SELECTION_RULE = (
     "guard reset. No glycolytic density, no lactic burn — keep the dose flat "
     "and never build this session toward harder work."
 )
-
-
-def _week_calendar_d_day(week: dict[str, Any], weekday: Any) -> int | None:
-    normalized = str(weekday or "").strip().lower()
-    if not normalized:
-        return None
-    for day in week.get("calendar_days") or []:
-        if not isinstance(day, dict):
-            continue
-        if str(day.get("weekday") or "").strip().lower() == normalized:
-            try:
-                return int(day.get("d_day"))
-            except (TypeError, ValueError):
-                return None
-    return None
-
-
-def _role_d_day(week: dict[str, Any], role: dict[str, Any]) -> int | None:
-    d_day = _week_calendar_d_day(week, role.get("scheduled_day_hint"))
-    if d_day is not None:
-        return d_day
-    for key in ("scheduled_countdown_label", "countdown_label"):
-        label = str(role.get(key) or "").strip().upper()
-        if label.startswith("D-"):
-            digits = []
-            for char in label[2:]:
-                if char.isdigit():
-                    digits.append(char)
-                else:
-                    break
-            if digits:
-                return int("".join(digits))
-    return None
 
 
 def _is_hard_fight_pace_conditioning_role(role: dict[str, Any]) -> bool:
@@ -369,7 +341,7 @@ def _apply_late_camp_role_morph_once(
         for role in week.get("session_roles") or []:
             if not isinstance(role, dict):
                 continue
-            d_day = _role_d_day(week, role)
+            d_day = role_d_day(week, role)
             role_key = str(role.get("role_key") or "").strip().lower()
             original_intent = None
 
