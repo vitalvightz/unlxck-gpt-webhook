@@ -1927,10 +1927,26 @@ def _active_injury_is_moderate_plus(athlete_model: dict) -> bool:
     # a real moderate+ injury does. Surface location is not injured tissue.
     if _all_active_injuries_surface_only(athlete_model):
         return False
-    if athlete_model.get("injuries"):
-        return True
     readiness_flags = set(clean_list(athlete_model.get("readiness_flags", [])))
-    return "injury_management" in readiness_flags
+    if readiness_flags & {"injury_management", "moderate_injury", "significant_injury", "severe_injury"}:
+        return True
+    for entry in clean_list(athlete_model.get("injuries", [])):
+        lowered = entry.lower()
+        if any(
+            token in lowered
+            for token in (
+                "moderate",
+                "severe",
+                "major",
+                "significant",
+                "grade 2",
+                "grade ii",
+                "grade 3",
+                "grade iii",
+            )
+        ):
+            return True
+    return False
 
 
 def _compute_readiness_compression(athlete_model: dict) -> int:

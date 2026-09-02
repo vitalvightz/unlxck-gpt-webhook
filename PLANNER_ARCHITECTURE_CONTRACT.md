@@ -278,10 +278,10 @@ not reintroduce it:
    `_phrase_in_text`, `_slugify`) were outside the transitive closure of every real root —
    the four production entry points, module-level code, and every name any module or test
    imports from `stage2_payload` — and were deleted, along with three then-orphaned
-   constants. The live `_apply_boxing_crowded_week_*` path and the four helpers live tests
-   import as independent oracles were **kept**: a name-based sweep that deletes them leaves
-   a dangling call and a `NameError`. `tests/test_step10_architecture_closure.py` guards
-   both directions.
+   constants. The follow-up ownership closure also removed the payload-owned
+   `_apply_boxing_crowded_week_*` path. Crowded-week policy, compression, suppression,
+   and unused-day state now live only in `stage2_role_map.py`; payload post-processing
+   reads that state only to add governance decoration.
 
 ### 9.3 Remaining non-blocking debt
 

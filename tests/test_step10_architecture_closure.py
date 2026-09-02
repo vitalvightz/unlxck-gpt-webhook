@@ -422,17 +422,41 @@ def test_dead_stage2_payload_duplicates_stay_deleted(name):
     )
 
 
-def test_live_crowded_week_compression_survived_the_dedupe():
-    """The dedupe must not remove reachable code.
+def test_crowded_week_role_budget_has_one_owner():
+    """Crowded-week policy and survival decisions belong only to the role map."""
+    from fightcamp import stage2_payload, stage2_role_map
 
-    ``_apply_boxing_crowded_week_compression`` and ``_boxing_crowded_week_policy_state``
-    are reachable from the production entry points; deleting them (as a naive
-    name-based sweep would) leaves a dangling call and a NameError.
-    """
+    for name in (
+        "_apply_boxing_crowded_week_compression",
+        "_boxing_crowded_week_policy_state",
+        "_boxing_crowded_week_summary",
+        "_select_boxing_crowded_week_non_spar_roles",
+    ):
+        assert hasattr(stage2_role_map, name)
+        assert not hasattr(stage2_payload, name)
+
+
+def test_payload_crowded_week_post_processing_is_decoration_only():
     from fightcamp import stage2_payload
 
-    assert hasattr(stage2_payload, "_apply_boxing_crowded_week_compression")
-    assert hasattr(stage2_payload, "_boxing_crowded_week_policy_state")
+    week = {
+        "intentional_compression": {"policy": "boxing_crowded_week"},
+        "session_roles": [{"role_key": "primary_strength_day", "category": "strength"}],
+        "suppressed_roles": [{"role_key": "aerobic_support_day"}],
+        "intentionally_unused_days": ["Friday"],
+    }
+    before_roles = list(week["session_roles"])
+    before_suppressed = list(week["suppressed_roles"])
+    before_unused = list(week["intentionally_unused_days"])
+
+    stage2_payload._apply_boxing_crowded_week_post_processing(
+        {"weeks": [week]}, athlete_model={"sport": "boxing", "fatigue": "high"}
+    )
+
+    assert week["session_roles"] == before_roles
+    assert week["suppressed_roles"] == before_suppressed
+    assert week["intentionally_unused_days"] == before_unused
+    assert week["session_roles"][0]["governance"]["main_job"] == "anchor"
 
 
 def test_payload_test_oracles_survived_the_dedupe():
