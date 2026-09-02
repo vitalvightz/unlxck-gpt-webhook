@@ -523,12 +523,6 @@ def _join_rule_parts(*parts: str) -> str:
     return " ".join(cleaned)
 
 
-
-
-
-
-
-
 _PRIMARY_STRENGTH_ROLE_KEYS = {
     "primary_strength_day",
     "structural_strength_day",
@@ -583,8 +577,6 @@ def _ordered_weekdays(values: list[str]) -> list[str]:
     return sorted(cleaned, key=lambda day: (_WEEKDAY_ORDER.get(day.strip().lower(), 99), day.strip().lower()))
 
 
-
-
 def _is_anchor_role(role: dict[str, Any]) -> bool:
     return role.get("category") == "strength" and role.get("role_key") in _PRIMARY_STRENGTH_ROLE_KEYS
 
@@ -595,8 +587,6 @@ def _is_low_load_support_role(role: dict[str, Any]) -> bool:
     if role.get("category") == "conditioning" and role.get("preferred_system") == "aerobic":
         return True
     return str(role.get("role_key") or "").strip() in _LOW_LOAD_SUPPORT_ROLE_KEYS
-
-
 
 
 def _main_job_for_role(role: dict[str, Any]) -> str:
@@ -630,12 +620,6 @@ def _apply_day_identity_governance(role: dict[str, Any], *, crowded_week_active:
     role["governance"] = governance
 
 
-
-
-
-
-
-
 def _is_meaningful_stressor(role: dict[str, Any]) -> bool:
     role_key = str(role.get("role_key") or "").strip()
     if role_key in {"main_conditioning_stressor", "fight_pace_block", "full_neural_session"}:
@@ -665,48 +649,6 @@ def _is_meaningful_stressor(role: dict[str, Any]) -> bool:
     if {"high_cns", "high_neural", "high_metabolic", "high_load", "main_conditioning_stressor"} & load_tokens:
         return True
     return False
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Between-hard-contacts legality is owned by ``combat_load_policy``. Stage 2 no
-# longer keeps its own allow-list of "loads safe between two hard sparring days";
-# it asks the shared policy and enforces the answer. These constants are the
-# minimal canonical encoding of a sandwiched slot: one effective hard contact
-# immediately before and after the candidate, evaluated in a single collision
-# scope so the policy sees the candidate as between two hard contacts.
-
-
-
-
-
-
-
-
 
 
 def _build_weekly_role_map(
