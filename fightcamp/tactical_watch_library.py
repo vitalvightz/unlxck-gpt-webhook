@@ -204,7 +204,9 @@ def extract_tactical_style(athlete_model: dict[str, Any] | None) -> TacticalStyl
         for value in values:
             style = normalize_tactical_style(value)
             # Boxing retains its historical pressure -> brawler programming key.
-            if sport in {"", "boxing"} and style == "pressure_fighter":
+            if sport not in {"", "boxing"} and _token(value) == "pressure":
+                style = "pressure_fighter"
+            elif sport in {"", "boxing"} and style == "pressure_fighter":
                 style = "brawler"
             if style != "generic":
                 display_label = declared_label if normalize_tactical_style(declared_label) == style else _display_label(value)
