@@ -1318,7 +1318,15 @@ def _assign_declared_day_hints(
 
     day_assignments: dict[int, str] = {}
     used_days: set[str] = set()
-    effective_hard_days_set = set(effective_hard_days(hard_sparring_plan or [])) or set(hard_sparring_days)
+    # Resolver authority: only when no plan was supplied (resolver has not run) do
+    # declared hard days stand in as effective-hard. A supplied plan — even one where
+    # every declared day resolved to technical/reduced/off — is authoritative and is
+    # never overridden back to hard. This governs the sandwiched_days *preference*;
+    # the canonical legality view below applies the same rule for the FORBID gate.
+    if hard_sparring_plan is None:
+        effective_hard_days_set = set(hard_sparring_days)
+    else:
+        effective_hard_days_set = set(effective_hard_days(hard_sparring_plan))
     sandwiched_days = set(sandwiched_training_days(training_days, effective_hard_days_set))
 
     # Step 9B: the placement owner consults the shared combat_load_policy for every

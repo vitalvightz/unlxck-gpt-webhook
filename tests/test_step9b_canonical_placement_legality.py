@@ -292,3 +292,60 @@ def test_same_policy_both_owners_agree_on_legality():
     assert normal_decision.reason_code == late_decision.reason_code == "post_hard_contact_meaningful_stress"
     # Both derive from the same canonical HARD_CONTACT classification.
     assert late_events[0].profile.load_class is LoadClass.HARD_CONTACT
+
+
+# --------------------------------------------------------------------------- #
+# Resolver authority: None (resolver did not run) vs a resolved-but-empty plan #
+# --------------------------------------------------------------------------- #
+def test_resolver_none_falls_back_to_declared_hard_days():
+    # No plan supplied -> the resolver has not run, so the declared hard days are
+    # the best available truth and become HARD_CONTACT events.
+    events = cc.normal_week_contact_events(None, ["monday", "friday"], scope=("normal_week", 1))
+    assert sorted(e.profile.load_class for e in events) == [
+        LoadClass.HARD_CONTACT,
+        LoadClass.HARD_CONTACT,
+    ]
+
+
+def test_resolved_plan_is_authoritative_declared_hard_never_resurrected():
+    # A supplied plan is authoritative even when every declared day resolved to
+    # technical (zero effective hard). The declared hard days must NOT be recreated
+    # as HARD_CONTACT — they surface only as the resolved technical contact.
+    plan = [
+        {"day": "monday", "status": "convert_to_technical_suggested"},
+        {"day": "friday", "status": "convert_to_technical_suggested"},
+    ]
+    events = cc.normal_week_contact_events(plan, ["monday", "friday"], scope=("normal_week", 1))
+    assert [e.profile.load_class for e in events] == [
+        LoadClass.TECHNICAL_CONTACT,
+        LoadClass.TECHNICAL_CONTACT,
+    ]
+    assert LoadClass.HARD_CONTACT not in {e.profile.load_class for e in events}
+
+    # An empty resolved plan is authoritative "no contact", not "unresolved":
+    # declared hard days are still not resurrected.
+    assert cc.normal_week_contact_events([], ["monday", "friday"], scope=("normal_week", 1)) == []
+
+
+def test_normal_placement_respects_resolved_downgrade_not_declared_labels():
+    # Declared hard Mon & Fri, but the resolver downgraded both to technical.
+    # Wednesday is therefore NOT between two *effective hard* contacts, so meaningful
+    # strength is legal there — the owner must not treat the declared hard labels as
+    # authoritative over the resolved state.
+    plan = [
+        {"day": "Monday", "status": "convert_to_technical_suggested"},
+        {"day": "Friday", "status": "convert_to_technical_suggested"},
+    ]
+    athlete = {
+        "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        "hard_sparring_days": ["Monday", "Friday"],
+        "support_work_days": [],
+    }
+    out = _assign_declared_day_hints(
+        [{"role_key": "primary_strength_day", "category": "strength"}],
+        athlete,
+        hard_sparring_plan=plan,
+    )
+    primary = next(r for r in out if r["role_key"] == "primary_strength_day")
+    # A real training day is assigned (strength is not forbidden everywhere now).
+    assert str(primary.get("scheduled_day_hint") or "").strip()

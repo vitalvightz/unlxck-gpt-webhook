@@ -511,12 +511,11 @@ def weekday_position(day: Any) -> int | None:
     return WEEKDAY_ORDER.get(_normalise(day))
 
 
-# One canonical hard-contact profile for the fallback case where a declared hard
-# day has no resolved plan entry (mirrors the placement owner's
-# ``effective_hard_days(plan) or set(hard_sparring_days)`` fallback). Contact
-# resolution stays owned by the sparring resolver; this only reuses the policy
-# contact classifier so the event matches every other contact event the governor
-# sees.
+# One canonical hard-contact profile for the ``plan is None`` case, where the
+# sparring resolver has not supplied authoritative state and declared hard days are
+# the best available truth. Contact resolution stays owned by the sparring resolver;
+# this only reuses the policy contact classifier so the event matches every other
+# contact event the governor sees.
 _NORMAL_WEEK_HARD_CONTACT_PROFILE = contact_load_profile({"effective_load": "hard"})
 
 
@@ -528,22 +527,32 @@ def normal_week_contact_events(
 ) -> list[CalendarEvent]:
     """Resolved normal-camp contact -> canonical contact ``CalendarEvent[]``.
 
-    Representation only. Each ``hard_sparring_plan`` entry is resolved through the
-    shared :func:`combat_load_policy.contact_load_profile`, so a downgraded day
-    surfaces as reduced/technical contact (still exclusive-physical, so same-day
-    stacking stays illegal) while only ``hard_as_planned`` days become
-    ``HARD_CONTACT`` (which alone drives between-hard and adjacency protection).
-    Positions are weekday indices; ``scope`` is the week's collision scope.
+    Representation only, and the resolver is the single contact authority:
 
-    When the plan yields no ``HARD_CONTACT`` event, ``declared_hard_days`` are added
-    as ``HARD_CONTACT`` — the exact fallback the placement owner already applies
-    (``effective_hard_days(plan) or set(hard_sparring_days)``) so an
-    unresolved/empty plan still protects the declared coach-owned days.
+    - ``hard_sparring_plan is None`` means the resolver has not run/supplied state,
+      so ``declared_hard_days`` are the best available truth and become
+      ``HARD_CONTACT`` events.
+    - a supplied plan — **including an empty list, or one where every declared day
+      resolved to technical/reduced/off/suppressed** — is authoritative: contact
+      events come only from it, and a declared hard day is *never* resurrected as a
+      hard contact. Each entry resolves through the shared
+      :func:`combat_load_policy.contact_load_profile`, so a downgraded day surfaces
+      as reduced/technical contact (still exclusive-physical, so same-day stacking
+      stays illegal) while only ``hard_as_planned`` days become ``HARD_CONTACT``
+      (which alone drives between-hard and adjacency protection).
+
+    Positions are weekday indices; ``scope`` is the week's collision scope.
     """
     events: list[CalendarEvent] = []
-    covered_positions: set[int] = set()
-    has_hard = False
-    for entry in hard_sparring_plan or []:
+    if hard_sparring_plan is None:
+        for day in declared_hard_days or []:
+            position = weekday_position(day)
+            if position is not None:
+                events.append(
+                    CalendarEvent(position, _NORMAL_WEEK_HARD_CONTACT_PROFILE, scope)
+                )
+        return events
+    for entry in hard_sparring_plan:
         if not isinstance(entry, dict):
             continue
         profile = contact_load_profile(entry)
@@ -553,18 +562,6 @@ def normal_week_contact_events(
         if position is None:
             continue
         events.append(CalendarEvent(position, profile, scope))
-        covered_positions.add(position)
-        if profile.load_class is LoadClass.HARD_CONTACT:
-            has_hard = True
-    if not has_hard:
-        for day in declared_hard_days or []:
-            position = weekday_position(day)
-            if position is None or position in covered_positions:
-                continue
-            events.append(
-                CalendarEvent(position, _NORMAL_WEEK_HARD_CONTACT_PROFILE, scope)
-            )
-            covered_positions.add(position)
     return events
 
 
