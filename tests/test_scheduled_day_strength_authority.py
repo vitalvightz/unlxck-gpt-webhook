@@ -15,18 +15,19 @@ from fightcamp.stage2_pipeline import build_stage2_retry
 from fightcamp.stage2_validator import validate_stage2_output
 
 
-PRODUCTION_PLAN_ID = "efa5868e-90de-4e49-ba5f-c0ea9838736d"
-
-
 def _strength_slot(
     name: str = "Barbell Back Squat",
     prescription: str = "3 x 8 @ RPE 7",
     *,
     quality_class: str = "anchor_loaded",
     movement: str = "squat",
+    movement_patterns: list[str] | None = None,
+    equipment: list[str] | None = None,
 ) -> dict:
     anchor_capable = quality_class.startswith("anchor_")
     support_only = quality_class.startswith("support_")
+    patterns = list(movement_patterns or [])
+    equipment_list = list(equipment or [])
     return {
         "slot_id": f"gpp_strength_1_{name.lower().replace(' ', '_')}",
         "session_index": 1,
@@ -35,9 +36,14 @@ def _strength_slot(
         "quality_class": quality_class,
         "anchor_capable": anchor_capable,
         "support_only": support_only,
+        "movement_patterns": patterns,
+        "equipment": equipment_list,
         "selected": {
             "name": name,
             "prescription": prescription,
+            "movement": movement,
+            "movement_patterns": patterns,
+            "equipment": equipment_list,
             "quality_class": quality_class,
             "anchor_capable": anchor_capable,
             "support_only": support_only,
@@ -45,8 +51,9 @@ def _strength_slot(
     }
 
 
-def _production_geometry() -> tuple[dict, dict]:
-    # The production planner week spans eight days, so Thursday occurs twice.
+def _production_like_relocation_geometry() -> tuple[dict, dict]:
+    """Synthetic fixture reproducing the D-19 -> D-16 production relocation shape."""
+    # The observed planner week spans eight days, so Thursday occurs twice.
     # Calendar integrity moves the GPP role from Monday D-19 to Thursday D-16.
     week = {
         "week_index": 1,
@@ -98,8 +105,10 @@ def _production_geometry() -> tuple[dict, dict]:
     return {"weeks": [week]}, {"GPP": {"strength_slots": [_strength_slot()]}}
 
 
-def _resolve_production_geometry(*, generation_d_day: int = 24) -> tuple[dict, dict, dict]:
-    weekly_role_map, candidate_pools = _production_geometry()
+def _resolve_production_like_relocation_geometry(
+    *, generation_d_day: int = 24
+) -> tuple[dict, dict, dict]:
+    weekly_role_map, candidate_pools = _production_like_relocation_geometry()
     apply_late_camp_role_morph(weekly_role_map)
     apply_effective_strength_prescriptions(
         weekly_role_map=weekly_role_map,
@@ -136,9 +145,17 @@ def _single_day_map(*, d_day: int, role_key: str = "primary_strength_day") -> di
     }
 
 
-def _resolve_single(name: str, *, d_day: int = 16, role_key: str = "primary_strength_day") -> dict:
+def _resolve_single(
+    name: str,
+    *,
+    d_day: int = 16,
+    role_key: str = "primary_strength_day",
+    slot_kwargs: dict | None = None,
+) -> dict:
     weekly_role_map = _single_day_map(d_day=d_day, role_key=role_key)
-    candidate_pools = {"GPP": {"strength_slots": [_strength_slot(name)]}}
+    candidate_pools = {
+        "GPP": {"strength_slots": [_strength_slot(name, **(slot_kwargs or {}))]}
+    }
     apply_late_camp_role_morph(weekly_role_map)
     apply_effective_strength_prescriptions(
         weekly_role_map=weekly_role_map,
@@ -148,10 +165,9 @@ def _resolve_single(name: str, *, d_day: int = 16, role_key: str = "primary_stre
     return weekly_role_map["weeks"][0]["session_roles"][0]
 
 
-def test_production_plan_d16_relocated_primary_strength_reaches_stage2_with_authority():
-    weekly_role_map, candidate_pools, role = _resolve_production_geometry()
+def test_production_like_d16_relocated_primary_strength_reaches_stage2_with_authority():
+    weekly_role_map, candidate_pools, role = _resolve_production_like_relocation_geometry()
 
-    assert PRODUCTION_PLAN_ID == "efa5868e-90de-4e49-ba5f-c0ea9838736d"
     assert weekly_role_map["calendar_integrity"]["relocated_roles"] == 1
     assert role["scheduled_day_hint"] == "Thursday"
     assert role["countdown_label"] == "D-19"
@@ -189,7 +205,7 @@ def test_production_plan_d16_relocated_primary_strength_reaches_stage2_with_auth
 
 @pytest.mark.parametrize("generation_d_day", [24, 22, 20, 18])
 def test_final_scheduled_d16_authority_is_generation_route_independent(generation_d_day: int):
-    _weekly_role_map, _candidate_pools, role = _resolve_production_geometry(
+    _weekly_role_map, _candidate_pools, role = _resolve_production_like_relocation_geometry(
         generation_d_day=generation_d_day
     )
     effective = role["effective_strength_prescriptions"][0]
@@ -199,19 +215,62 @@ def test_final_scheduled_d16_authority_is_generation_route_independent(generatio
 
 
 @pytest.mark.parametrize(
-    "exercise",
+    ("exercise", "slot_kwargs"),
     [
-        "Back Squat",
-        "Trap Bar Deadlift",
-        "Romanian Deadlift",
-        "Bench Press",
-        "Bulgarian Split Squat",
+        (
+            "Back Squat",
+            {
+                "quality_class": "",
+                "movement": "squat",
+                "movement_patterns": ["squat", "quad_dominant"],
+                "equipment": ["barbell"],
+            },
+        ),
+        (
+            "Trap Bar Deadlift",
+            {
+                "quality_class": "",
+                "movement": "hinge",
+                "movement_patterns": ["hinge", "posterior_chain"],
+                "equipment": ["trap_bar"],
+            },
+        ),
+        (
+            "Romanian Deadlift",
+            {
+                "quality_class": "",
+                "movement": "hinge",
+                "movement_patterns": ["hinge", "posterior_chain"],
+                "equipment": ["barbell"],
+            },
+        ),
+        (
+            "Bench Press",
+            {
+                "quality_class": "",
+                "movement": "press",
+                "movement_patterns": ["press", "upper_body"],
+                "equipment": ["barbell"],
+            },
+        ),
+        (
+            "Bulgarian Split Squat",
+            {
+                "quality_class": "",
+                "movement": "split squat",
+                "movement_patterns": ["split squat", "unilateral", "quad_dominant"],
+                "equipment": ["dumbbells"],
+            },
+        ),
     ],
 )
-def test_d16_effective_resolution_is_exercise_family_agnostic(exercise: str):
-    role = _resolve_single(exercise)
+def test_d16_effective_resolution_is_exercise_family_agnostic(
+    exercise: str, slot_kwargs: dict
+):
+    role = _resolve_single(exercise, slot_kwargs=slot_kwargs)
     effective = role["effective_strength_prescriptions"][0]
     assert effective["name"] == exercise
+    assert effective["dose_role_kind"] == "anchor"
     assert effective["effective_prescription"] == "3 x 3 @ RPE 6-7 max"
     assert effective["effective_loaded"] is True
 
@@ -305,7 +364,7 @@ def test_missing_d16_loaded_strength_authority_blocks_finalizer_packet():
 
 
 def test_d16_overage_still_uses_2412_validator_and_targeted_repair():
-    weekly_role_map, _candidate_pools, _role = _resolve_production_geometry()
+    weekly_role_map, _candidate_pools, _role = _resolve_production_like_relocation_geometry()
     rendered = "D-16 (Thursday) — Strength\nBarbell Back Squat: 3 x 5 at RPE 6.5-7\n"
     brief = {"weekly_role_map": weekly_role_map}
 
@@ -326,7 +385,7 @@ def test_d16_overage_still_uses_2412_validator_and_targeted_repair():
 
 
 def test_d16_compliant_render_passes_effective_dose_validation():
-    weekly_role_map, _candidate_pools, _role = _resolve_production_geometry()
+    weekly_role_map, _candidate_pools, _role = _resolve_production_like_relocation_geometry()
     report = validate_stage2_output(
         planning_brief={"weekly_role_map": weekly_role_map},
         final_plan_text="D-16 (Thursday) — Strength\nBarbell Back Squat: 3 x 3 at RPE 7\n",
