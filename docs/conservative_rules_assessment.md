@@ -84,7 +84,7 @@ managed athletes.
 | 2 | Moderate cut + contact sport zeros hard sparring & glycolytic in bridge | Deliberate (safety) | `stage2_payload_late_fight.py:915-932` |
 | 3 | D-17..D-0 converts all declared hard sparring to technical/rhythm | Deliberate (safety) | `sparring_dose_planner.py:_countdown_sparring_override` |
 | 4 | Generic readiness compression counts *any* injury (incl. mild) | Deliberate | `stage2_role_map.py:_active_injury_is_moderate_plus`, `stage2_payload.py:_active_injury_affects_generic_compression` |
-| 5 | Boxing crowded-week compression is severity-aware (mild excluded) | Deliberate (already nuanced) | `stage2_payload.py:_active_injury_is_moderate_plus` (line ~1946) |
+| 5 | Boxing crowded-week compression is severity-aware (mild excluded) | Deliberate (already nuanced) | `stage2_role_map.py:_boxing_crowded_week_injury_is_moderate_plus` |
 | 6 | `mobility/stiffness` weakness → `tissue_state` limiter | Deliberate | `stage2_payload.py` / `stage2_planning_brief.py:_primary_limiter_key` |
 | 7 | ~~Conflicting D-14..D-21 active-role cap (baseline 3 vs budget 2)~~ | **Removed** — the low-risk active-role inflation (`_bridge_active_role_cap` / `performance_bias.py`) was a compensator for premature bridge compression; with D-14..D-21 on the normal planner it is obsolete and deleted | *(deleted)* |
 
@@ -185,9 +185,8 @@ mild injury.
 ### 5. Boxing crowded-week compression is severity-aware — Deliberate (already nuanced)
 
 The boxing crowded-week trigger uses a *separate*, severity-aware
-`_active_injury_is_moderate_plus` (`stage2_payload.py` ~line 1946) that **excludes**
-mild injury — contradicting the review's claim that "any injury is treated like
-moderate+".
+`_boxing_crowded_week_injury_is_moderate_plus` (`stage2_role_map.py`) that **excludes**
+mild injury while consuming structured severity from the canonical athlete model.
 
 - Test: `tests/test_stage2_planning_brief.py::test_boxing_crowded_week_does_not_treat_mild_injury_as_moderate_plus_signal`.
 - **Verdict:** already correct; no change.

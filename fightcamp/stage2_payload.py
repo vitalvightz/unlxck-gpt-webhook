@@ -748,172 +748,6 @@ def _build_spar_allocation_reason_codes(
     return reason_codes
 
 
-def _boxing_crowded_week_policy_state(week_entry: dict, athlete_model: dict) -> dict[str, Any]:
-    declared_hard_days = _ordered_weekdays(
-        _clean_list(week_entry.get("declared_hard_sparring_days") or athlete_model.get("hard_sparring_days", []))
-    )
-    training_days = _ordered_weekdays(_clean_list(athlete_model.get("training_days", [])))
-    fatigue = _normalized_fatigue_level(athlete_model)
-    meaningful_cut = _active_weight_cut_is_meaningful(athlete_model)
-    injury_management = _active_injury_is_moderate_plus(athlete_model)
-    days_until_fight = athlete_model.get("days_until_fight")
-
-    risk_signals: list[str] = []
-    if meaningful_cut:
-        risk_signals.append("meaningful_weight_cut")
-    if len(declared_hard_days) >= 3:
-        risk_signals.append("high_spar_load")
-    if injury_management:
-        risk_signals.append("injury_management")
-    if fatigue in {"moderate", "high"}:
-        risk_signals.append(f"{fatigue}_fatigue")
-    if len(training_days) <= 4 and len(declared_hard_days) >= 2:
-        risk_signals.append("low_session_budget_high_combat_load")
-
-    override_reason = ""
-    if len(declared_hard_days) >= 4:
-        override_reason = "four_hard_spar_days"
-    elif fatigue == "high" and meaningful_cut:
-        override_reason = "high_fatigue_active_cut"
-
-    is_boxing = _athlete_sport_key(athlete_model) == "boxing"
-    late_fight_locked = isinstance(days_until_fight, int) and 0 <= days_until_fight <= 13
-    short_notice_locked = bool(athlete_model.get("short_notice")) or bool(
-        (athlete_model.get("compressed_priorities") or {}).get("is_short_camp")
-    )
-    active = is_boxing and not late_fight_locked and not short_notice_locked and (bool(override_reason) or len(risk_signals) >= 2)
-    reason_codes = list(risk_signals)
-    if override_reason:
-        reason_codes.append(override_reason)
-
-    return {
-        "active": active,
-        "policy": "boxing_crowded_week" if active else "",
-        "risk_signals": risk_signals,
-        "override_reason": override_reason,
-        "reason_codes": reason_codes,
-        "meaningful_cut": meaningful_cut,
-        "fatigue": fatigue,
-        "hard_spar_count": len(declared_hard_days),
-        "training_day_count": len(training_days),
-        "max_non_spar_roles": 2,
-        "max_support_roles": 1,
-        "standalone_glycolytic_allowed": False,
-    }
-
-
-def _boxing_crowded_week_summary(policy_state: dict[str, Any]) -> str:
-    labels = [code.replace("_", " ") for code in policy_state.get("reason_codes", [])]
-    context = ", ".join(labels) if labels else "crowded boxing week"
-    return f"Keep the week ruthlessly compressed under {context}: hard sparring owns the week, then one anchor, then one low-load support day max."
-
-
-def _select_boxing_crowded_week_non_spar_roles(
-    non_spar_roles: list[dict[str, Any]],
-    *,
-    allowed_non_spar: int,
-    phase: str,
-    must_keep: set[str],
-    policy_state: dict[str, Any],
-) -> list[dict[str, Any]]:
-    if allowed_non_spar <= 0 or not non_spar_roles:
-        return []
-
-    indexed_roles = list(enumerate(non_spar_roles))
-
-    def _priority(item: tuple[int, dict[str, Any]]) -> tuple[int, int]:
-        index, role = item
-        return (
-            _non_spar_role_priority_rank(
-                role,
-                phase,
-                policy_state.get("hard_spar_count", 0) >= 3,
-                bool(policy_state.get("meaningful_cut")),
-                must_keep,
-                crowded_week=True,
-            ),
-            -index,
-        )
-
-    selected: list[dict[str, Any]] = []
-    anchor_candidates = [item for item in indexed_roles if _is_anchor_role(item[1])]
-    support_candidates = [item for item in indexed_roles if _is_low_load_support_role(item[1])]
-
-    if anchor_candidates:
-        selected.append(max(anchor_candidates, key=_priority)[1])
-        if allowed_non_spar > 1 and support_candidates:
-            remaining_support = [item for item in support_candidates if item[1] not in selected]
-            if remaining_support:
-                selected.append(max(remaining_support, key=_priority)[1])
-    elif support_candidates:
-        selected.append(max(support_candidates, key=_priority)[1])
-
-    return selected
-
-
-def _apply_boxing_crowded_week_compression(
-    week_entry: dict,
-    session_roles: list[dict],
-    suppressed_roles: list[dict],
-    athlete_model: dict,
-) -> tuple[list[dict], list[dict]]:
-    policy_state = _boxing_crowded_week_policy_state(week_entry, athlete_model)
-    if not policy_state["active"]:
-        return session_roles, suppressed_roles
-
-    training_days = _ordered_weekdays(_clean_list(athlete_model.get("training_days", [])))
-    sessions_per_week = int(athlete_model.get("training_frequency", len(training_days) or len(session_roles)))
-    weekly_cap = min(sessions_per_week, len(training_days)) if training_days else sessions_per_week
-
-    spar_roles = [role for role in session_roles if role.get("role_key") == "hard_sparring_day"]
-    non_spar_roles = [role for role in session_roles if role.get("role_key") != "hard_sparring_day"]
-    non_spar_cap = max(0, weekly_cap - len(spar_roles))
-    allowed_non_spar = min(non_spar_cap, policy_state["max_non_spar_roles"])
-
-    resolved_rule_state = dict(week_entry.get("resolved_rule_state") or {})
-    must_keep = set(_clean_list(resolved_rule_state.get("must_keep", week_entry.get("must_keep", []))))
-    phase = str(week_entry.get("phase", "")).strip().upper()
-
-    kept_non_spar = _select_boxing_crowded_week_non_spar_roles(
-        non_spar_roles,
-        allowed_non_spar=allowed_non_spar,
-        phase=phase,
-        must_keep=must_keep,
-        policy_state=policy_state,
-    )
-
-    kept_roles = spar_roles + kept_non_spar
-    updated_suppressed = list(suppressed_roles)
-    summary = _boxing_crowded_week_summary(policy_state)
-
-    for role in non_spar_roles:
-        if role in kept_non_spar:
-            continue
-        updated_suppressed.append(_make_compression_suppression(role, policy_state["reason_codes"], summary))
-
-    if not any(_is_anchor_role(role) for role in kept_non_spar):
-        _append_week_coach_note_flag(week_entry, "anchor limited by constraints")
-
-    has_recovery_in_kept = any(role.get("category") == "recovery" for role in kept_non_spar)
-    week_entry["intentionally_unused_days"] = _compute_intentionally_unused_days(
-        training_days,
-        kept_roles,
-        has_recovery_role=has_recovery_in_kept,
-    )
-    week_entry["intentional_compression"] = {
-        "active": True,
-        "policy": policy_state["policy"],
-        "risk_signals": list(policy_state["risk_signals"]),
-        "reason_codes": list(policy_state["reason_codes"]),
-        "reason": ", ".join(policy_state["reason_codes"]),
-        "summary": summary,
-        "max_non_spar_roles": policy_state["max_non_spar_roles"],
-        "max_support_roles": policy_state["max_support_roles"],
-        "standalone_glycolytic_allowed": policy_state["standalone_glycolytic_allowed"],
-    }
-    return kept_roles, updated_suppressed
-
-
 # Between-hard-contacts legality is owned by ``combat_load_policy``. Stage 2 no
 # longer keeps its own allow-list of "loads safe between two hard sparring days";
 # it asks the shared policy and enforces the answer. These constants are the
@@ -1034,9 +868,9 @@ def _apply_high_fatigue_week_compression(
         hard_sparring_plan=hard_sparring_plan,
     )
 
-    boxing_policy_state = _boxing_crowded_week_policy_state(week_entry, athlete_model)
+    boxing_policy_state = stage2_role_map_module._boxing_crowded_week_policy_state(week_entry, athlete_model)
     if boxing_policy_state["active"]:
-        return _apply_boxing_crowded_week_compression(
+        return stage2_role_map_module._apply_boxing_crowded_week_compression(
             week_entry,
             session_roles,
             suppressed_roles,
@@ -1640,67 +1474,26 @@ def _apply_boxing_crowded_week_post_processing(
     *,
     athlete_model: dict[str, Any],
 ) -> None:
-    """Apply the boxing crowded-week policy and day-identity governance.
+    """Decorate roles using crowded-week truth already owned by the role map.
 
-    ``stage2_role_map._build_weekly_role_map`` (the live builder) handles
-    base scheduling but does not run the boxing crowded-week policy or
-    annotate each role with the ``main_job`` / ``support_cap`` /
-    ``forbidden_secondary_stressors`` fields the planning-brief tests
-    depend on. Apply the policy in-place per week here so the returned
-    role map exposes the full contract.
-
-    Compression only fires when ``_boxing_crowded_week_policy_state``
-    reports an active week (≥2 risk signals or a hard override reason).
-    The governance pass is unconditional so every role exposes its
-    ``main_job`` classification.
+    ``athlete_model`` remains in the compatibility signature, but this payload
+    layer must not use it to re-evaluate compression or role survival.
     """
+    del athlete_model
     weeks = weekly_role_map.get("weeks")
     if not isinstance(weeks, list):
         return
     for week_entry in weeks:
         if not isinstance(week_entry, dict):
             continue
-        session_roles = list(week_entry.get("session_roles") or [])
-        suppressed_roles = list(week_entry.get("suppressed_roles") or [])
-
-        policy_state = _boxing_crowded_week_policy_state(week_entry, athlete_model)
-        crowded_week_active = bool(policy_state["active"])
-        existing_compression = week_entry.get("intentional_compression")
-        already_compressed = (
-            isinstance(existing_compression, dict)
-            and existing_compression.get("policy") == "boxing_crowded_week"
+        compression = week_entry.get("intentional_compression")
+        crowded_week_active = (
+            isinstance(compression, dict)
+            and compression.get("policy") == "boxing_crowded_week"
         )
-
-        # stage2_role_map now owns boxing crowded-week compression, hard-sparring
-        # locks, unused-day upgrades, and recovery-flush preservation. Do not
-        # compress the same week twice here, or low-load support roles such as
-        # converted_recovery_flush_day can be dropped after the role map already
-        # kept them correctly. Keep this pass as governance decoration only when
-        # the role map has already compressed the week.
-        if crowded_week_active and not already_compressed:
-            session_roles, suppressed_roles = _apply_boxing_crowded_week_compression(
-                week_entry,
-                session_roles,
-                suppressed_roles,
-                athlete_model,
-            )
-
-            # Compression creates intentionally_unused_days. Re-run the role-map
-            # unused-day upgrade so active recovery/cut pressure can become a
-            # concrete converted_recovery_flush_day instead of staying as an
-            # invisible unused-day note.
-            session_roles = stage2_role_map_module._upgrade_unused_days_to_low_load_support(
-                week_entry,
-                session_roles,
-                athlete_model,
-                hard_sparring_plan=week_entry.get("hard_sparring_plan"),
-            )
-
-            week_entry["session_roles"] = session_roles
-            week_entry["suppressed_roles"] = suppressed_roles
-
-        for role in session_roles:
-            _apply_day_identity_governance(role, crowded_week_active=crowded_week_active)
+        for role in week_entry.get("session_roles") or []:
+            if isinstance(role, dict):
+                _apply_day_identity_governance(role, crowded_week_active=crowded_week_active)
 
 
 def build_computed_support(*, flags: dict, phases: list[str] | None = None) -> dict:
@@ -1928,12 +1721,8 @@ def build_planning_brief(
         limiter_profile,
         fight_week_override=fight_week_override,
     )
-    # Stage 2 role map ships with stage2_role_map._build_weekly_role_map's
-    # base scheduling, but tests/contracts expect the boxing crowded-week
-    # policy and the day-identity governance fields (``main_job``,
-    # ``support_cap``, ``forbidden_secondary_stressors``) on every session
-    # role. Apply that post-processing here so callers get a fully-decorated
-    # role map regardless of which inner builder produced it.
+    # The role map owns the crowded-week policy and every role-survival choice.
+    # Payload only decorates its already-final decision with day-identity fields.
     _apply_boxing_crowded_week_post_processing(
         weekly_role_map,
         athlete_model=athlete_model,
