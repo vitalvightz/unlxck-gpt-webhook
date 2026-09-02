@@ -5,7 +5,7 @@ import os
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from fightcamp.stage2_pipeline import build_stage2_package, review_stage2_output
+from fightcamp.stage2_pipeline import build_stage2_package, build_stage2_retry, review_stage2_output
 from fightcamp.stage2_policy import (
     admin_review_blocking_findings,
     apply_stage2_release_policy,
@@ -896,7 +896,7 @@ class OpenAIStage2Automator:
         handoff_text = str(package["handoff_text"])
         source = _stage2_source(stage1_result)
         logger.info(
-            "[stage2] package ready model=%s source=%s handoff_chars=%s draft_chars=%s max_model_calls=1",
+            "[stage2] package ready model=%s source=%s handoff_chars=%s draft_chars=%s max_model_calls=2",
             self.model,
             source,
             len(handoff_text),
@@ -914,6 +914,43 @@ class OpenAIStage2Automator:
             **first_review,
             "validator_report": apply_stage2_release_policy(first_review["validator_report"]),
         }
+        final_text = first_pass_text
+        final_cost = first_pass_cost
+        attempt_count = 1
+        retry_text = ""
+
+        # Effective-dose violations are deterministic safety failures. Unlike
+        # subjective review findings, they get one immediate repair attempt so
+        # an over-cap loaded prescription is not released without first asking
+        # the renderer to conform to the scheduled-day source of truth.
+        first_codes = {
+            str(item.get("code") or "")
+            for item in [
+                *(first_review["validator_report"].get("errors") or []),
+                *(first_review["validator_report"].get("blocking_warnings") or []),
+            ]
+            if isinstance(item, dict)
+        }
+        if "late_camp_effective_prescription_exceeded" in first_codes:
+            retry = build_stage2_retry(
+                stage1_result=stage1_result,
+                final_plan_text=first_pass_text,
+                validator_report=first_review["validator_report"],
+            )
+            retry_text = str(retry.get("repair_prompt") or "")
+            if retry.get("needs_retry") and retry_text:
+                final_text, final_cost = await self._generate_text(
+                    retry_text, attempt_label="effective_dose_repair", source=source,
+                    log_context=log_context,
+                )
+                attempt_count = 2
+                first_review = review_stage2_output(
+                    planning_brief=package["planning_brief"], final_plan_text=final_text
+                )
+                first_review = {
+                    **first_review,
+                    "validator_report": apply_stage2_release_policy(first_review["validator_report"]),
+                }
         quality_findings = athlete_release_with_flags_findings(first_review["validator_report"])
         admin_blocking_findings = admin_review_blocking_findings(first_review["validator_report"])
         release_decision = first_review["validator_report"].get("release_decision")
@@ -933,12 +970,13 @@ class OpenAIStage2Automator:
             result = _approved_result(
                 stage1_result,
                 draft_plan_text=draft_plan_text,
-                final_plan_text=first_pass_text,
+                final_plan_text=final_text,
                 validator_report=first_review["validator_report"],
-                attempt_count=1,
+                attempt_count=attempt_count,
                 stage2_status=_STAGE2_PASS,
                 app_status=_APP_STATUS_READY,
-                stage2_cost=first_pass_cost,
+                retry_text=retry_text,
+                stage2_cost=_merge_stage2_costs(first_pass_cost, final_cost) if attempt_count == 2 else first_pass_cost,
             )
         elif release_decision == "publish_with_flags":
             logger.info(
@@ -948,12 +986,13 @@ class OpenAIStage2Automator:
             result = _approved_result(
                 stage1_result,
                 draft_plan_text=draft_plan_text,
-                final_plan_text=first_pass_text,
+                final_plan_text=final_text,
                 validator_report=first_review["validator_report"],
-                attempt_count=1,
+                attempt_count=attempt_count,
                 stage2_status=_STAGE2_PASS,
                 app_status=_APP_STATUS_PUBLISHABLE_WITH_FLAGS,
-                stage2_cost=first_pass_cost,
+                retry_text=retry_text,
+                stage2_cost=_merge_stage2_costs(first_pass_cost, final_cost) if attempt_count == 2 else first_pass_cost,
             )
         else:
             # What used to be an admin hold. The plan is released with flags and
@@ -971,12 +1010,13 @@ class OpenAIStage2Automator:
             result = _approved_result(
                 stage1_result,
                 draft_plan_text=draft_plan_text,
-                final_plan_text=first_pass_text,
+                final_plan_text=final_text,
                 validator_report=_released_with_flags_report(first_review["validator_report"]),
-                attempt_count=1,
+                attempt_count=attempt_count,
                 stage2_status=_STAGE2_FAILED,
                 app_status=_APP_STATUS_PUBLISHABLE_WITH_FLAGS,
-                stage2_cost=first_pass_cost,
+                retry_text=retry_text,
+                stage2_cost=_merge_stage2_costs(first_pass_cost, final_cost) if attempt_count == 2 else first_pass_cost,
             )
 
         # Structured-plan conversion is triggered by the canonical state-machine
@@ -1000,7 +1040,7 @@ class OpenAIStage2Automator:
 
         # Roll the structured calls' tokens into the persisted cost row so it
         # reflects total Stage 2 spend, not just the plan-text pass.
-        result["stage2_cost"] = _merge_stage2_costs(first_pass_cost, *structured_costs)
+        result["stage2_cost"] = _merge_stage2_costs(first_pass_cost, *(([final_cost] if attempt_count == 2 else []) + structured_costs))
         return result
 
     async def _attempt_structured_plan(
