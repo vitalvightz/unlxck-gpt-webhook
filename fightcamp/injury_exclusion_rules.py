@@ -445,7 +445,17 @@ INJURY_RULES = {
             "deep hip flexion",
             "deep flexion",
         ],
-        "ban_tags": ["deep_flexion", "hip_irritant", "hip_internal_rotation_stress", "hip_impingement_risk"],
+        "ban_tags": [
+            "deep_flexion",
+            "hip_irritant",
+            "hip_internal_rotation_stress",
+            "hip_impingement_risk",
+            # Rotational hip loading (pivots, switch-steps, angle resets in the
+            # technical footwork bank). Distinct from the deep-flexion/
+            # impingement tags above; gates hip-injured athletes off pivot-heavy
+            # footwork rehearsal.
+            "mech_hip_rotation",
+        ],
     },
     "groin": {
         "ban_keywords": [
@@ -650,6 +660,9 @@ INJURY_RULES = {
             "max_velocity",
             "mech_max_velocity",
             "calf_volume_high",
+            # Plantarflexor loading (push-off / re-plant in kick-recovery
+            # footwork) also stresses the gastroc-soleus complex.
+            "mech_plantarflexion",
         ],
     },
     "achilles": {
@@ -675,6 +688,10 @@ INJURY_RULES = {
             "mech_max_velocity",
             "reactive_rebound_high",
             "mech_reactive_rebound",
+            # Loaded plantarflexion (single-leg re-plant / push-off in kick
+            # recovery, teep and check footwork). A controlled plantarflexor
+            # demand the rebound/velocity tags above do not capture.
+            "mech_plantarflexion",
         ],
     },
     "ankle": {
@@ -701,6 +718,9 @@ INJURY_RULES = {
             "decel_high",
             "mech_deceleration",
             "mech_landing_impact",
+            # Loaded plantarflexion (kick recovery / teep / check re-plant)
+            # stresses the ankle joint under push-off.
+            "mech_plantarflexion",
         ],
     },
     "foot": {
@@ -716,7 +736,12 @@ INJURY_RULES = {
             "hard forefoot hops",
             "toe bounce",
         ],
-        "ban_tags": ["foot_impact_high", "forefoot_load_high"],
+        "ban_tags": [
+            "foot_impact_high",
+            "forefoot_load_high",
+            # Forefoot push-off / plantarflexion load (kick-recovery footwork).
+            "mech_plantarflexion",
+        ],
     },
     "toe": {
         "ban_keywords": [

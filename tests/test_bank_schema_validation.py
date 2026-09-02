@@ -113,7 +113,7 @@ def test_validate_training_item_classifies_loaded_bank_source_names_by_family():
     )
     conditioning_item = bank_schema.validate_training_item(
         {"name": "Footwork Reset", "tags": ["coordination"], "phases": ["TAPER"], "system": "aerobic"},
-        source="footwork_conditioning_bank.json",
+        source="technical_footwork_bank.json",
         mode="audit",
     )
 
