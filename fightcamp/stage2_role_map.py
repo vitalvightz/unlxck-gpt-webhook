@@ -1921,10 +1921,20 @@ def _cut_severity_compression_points(athlete_model: dict) -> int:
 
 
 def _active_injury_is_moderate_plus(athlete_model: dict) -> bool:
-    """True when the athlete has an active injury or restriction at moderate or greater severity."""
-    # A stable, non-severe surface (skin) injury is only a hygiene/friction
-    # constraint — not injured tissue — so it must not suppress hard work the way
-    # a real moderate+ injury does. Surface location is not injured tissue.
+    """Preserve the generic readiness rule: any non-surface active injury counts."""
+    # Generic readiness compression intentionally counts any active non-surface
+    # injury, including mild injury. Stable surface-only issues remain hygiene /
+    # friction constraints and do not add generic compression pressure.
+    if _all_active_injuries_surface_only(athlete_model):
+        return False
+    if athlete_model.get("injuries"):
+        return True
+    readiness_flags = set(clean_list(athlete_model.get("readiness_flags", [])))
+    return "injury_management" in readiness_flags
+
+
+def _boxing_crowded_week_injury_is_moderate_plus(athlete_model: dict) -> bool:
+    """Severity-aware injury signal used only by boxing crowded-week policy."""
     if _all_active_injuries_surface_only(athlete_model):
         return False
     readiness_flags = set(clean_list(athlete_model.get("readiness_flags", [])))
@@ -2140,7 +2150,7 @@ def _boxing_crowded_week_policy_state(week_entry: dict, athlete_model: dict) -> 
     training_days = _ordered_weekdays(clean_list(athlete_model.get("training_days", [])))
     fatigue = normalize_fatigue_level(athlete_model)
     meaningful_cut = _active_weight_cut_is_meaningful(athlete_model)
-    injury_management = _active_injury_is_moderate_plus(athlete_model)
+    injury_management = _boxing_crowded_week_injury_is_moderate_plus(athlete_model)
     days_until_fight = athlete_model.get("days_until_fight")
 
     risk_signals: list[str] = []

@@ -470,3 +470,25 @@ def test_payload_test_oracles_survived_the_dedupe():
         "_compute_readiness_compression",             # tests/test_stage2_planning_brief.py
     ):
         assert hasattr(stage2_payload, name), name
+
+
+
+def test_generic_and_crowded_week_injury_semantics_remain_distinct():
+    from fightcamp import stage2_role_map
+
+    athlete = {
+        "sport": "boxing",
+        "fatigue": "low",
+        "injuries": ["mild shoulder irritation"],
+        "readiness_flags": [],
+        "days_until_fight": 35,
+        "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+        "hard_sparring_days": [],
+        "weight_cut_pct": 0.0,
+    }
+
+    assert stage2_role_map._compute_readiness_compression(athlete) == 1
+    policy = stage2_role_map._boxing_crowded_week_policy_state(
+        {"declared_hard_sparring_days": []}, athlete
+    )
+    assert "injury_management" not in policy["risk_signals"]
