@@ -11,6 +11,7 @@ from .stage2_policy import (
 )
 from .stage2_repair import build_stage2_repair_prompt
 from .stage2_validator import validate_stage2_output
+from .stage2_validator_postprocess import postprocess_stage2_validator_report
 
 
 _STATUS_READY = "READY"
@@ -251,6 +252,11 @@ def _validator_report_with_required_countdown_sessions(
     validator_report = validate_stage2_output(
         planning_brief=planning_brief,
         final_plan_text=final_plan_text,
+    )
+    validator_report = postprocess_stage2_validator_report(
+        planning_brief=planning_brief,
+        final_plan_text=final_plan_text,
+        validator_report=validator_report,
     )
 
     warnings = list(validator_report.get("warnings", []) or [])
