@@ -4,6 +4,8 @@ import re
 from collections import defaultdict
 from typing import Any
 
+from .stage2_validator import week_incompleteness_code
+
 
 _PHASE_WEEK_HEADER_RE = re.compile(
     r"^\s*(?:#{1,6}\s*)?(?:\*\*)?(GPP|SPP|TAPER)\b.*?\bWeek\s+(\d+)\b",
@@ -128,6 +130,16 @@ def _active_session_counts_by_week(final_plan_text: str) -> dict[int, int]:
     return dict(counts)
 
 
+def _active_week_count(planning_brief: dict[str, Any]) -> int:
+    """Active-week span from the final role map, matching the raw validator.
+
+    Mirrors ``len(weeks)`` in ``_week_completeness_warnings`` so the shared
+    late-camp boundary is computed from identical inputs on both sides.
+    """
+    weeks = (planning_brief.get("weekly_role_map") or {}).get("weeks")
+    return len(weeks) if isinstance(weeks, list) else 0
+
+
 def _phase_roles(planning_brief: dict[str, Any], phase: str) -> list[dict[str, Any]] | None:
     weekly_role_map = planning_brief.get("weekly_role_map") or {}
     weeks = weekly_role_map.get("weeks") or []
@@ -221,7 +233,7 @@ def _is_legitimate_tactical_anchor(final_plan_text: str, line: str) -> bool:
 
 
 def _reconcile_week_warning(
-    warning: dict[str, Any], *, counts_by_week: dict[int, int]
+    warning: dict[str, Any], *, counts_by_week: dict[int, int], active_week_count: int
 ) -> dict[str, Any] | None:
     code = str(warning.get("code") or "")
     if code not in _WEEK_COMPLETENESS_CODES:
@@ -245,15 +257,12 @@ def _reconcile_week_warning(
         if actual == expected:
             return None
         if actual < expected:
-            phase = str(warning.get("phase") or "").strip().upper()
-            replacement_code = (
-                "late_camp_session_incomplete"
-                if phase in {"SPP", "TAPER"}
-                else "missing_week_session_role"
-            )
+            # Reuse the validator's global late-camp boundary (position in the
+            # active-week span) rather than inventing a phase-based rule, so an
+            # early SPP week in a long camp is not mislabelled as late camp.
             return {
                 **warning,
-                "code": replacement_code,
+                "code": week_incompleteness_code(week_index, active_week_count),
                 "actual_session_count": actual,
                 "message": f"Week {week_index} is structurally incomplete compared with the weekly role map.",
             }
@@ -267,8 +276,11 @@ def _filter_warning(
     planning_brief: dict[str, Any],
     final_plan_text: str,
     counts_by_week: dict[int, int],
+    active_week_count: int,
 ) -> dict[str, Any] | None:
-    warning = _reconcile_week_warning(warning, counts_by_week=counts_by_week)
+    warning = _reconcile_week_warning(
+        warning, counts_by_week=counts_by_week, active_week_count=active_week_count
+    )
     if warning is None:
         return None
 
@@ -303,6 +315,7 @@ def postprocess_stage2_validator_report(
         return validator_report
 
     counts_by_week = _active_session_counts_by_week(final_plan_text)
+    active_week_count = _active_week_count(planning_brief)
     filtered_warnings: list[dict[str, Any]] = []
     for raw in validator_report.get("warnings") or []:
         if not isinstance(raw, dict):
@@ -312,6 +325,7 @@ def postprocess_stage2_validator_report(
             planning_brief=planning_brief,
             final_plan_text=final_plan_text,
             counts_by_week=counts_by_week,
+            active_week_count=active_week_count,
         )
         if item is not None:
             filtered_warnings.append(item)

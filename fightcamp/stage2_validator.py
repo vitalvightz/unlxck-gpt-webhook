@@ -1117,6 +1117,23 @@ def _week_session_titles(week_lines: list[str]) -> list[str]:
     ]
 
 
+def week_incompleteness_code(week_index: int, active_week_count: int) -> str:
+    """Classification code for a structurally incomplete active week.
+
+    Shared authority for the raw validator and the Stage 2 postprocessor so the
+    "late camp" boundary cannot drift between them. Late camp is defined
+    globally by position in the active-week span — the last two active weeks,
+    ``max(1, N - 1)`` onward — never by phase, so an early SPP week in a long
+    camp is not treated as late camp.
+    """
+    late_week_start = max(1, int(active_week_count) - 1)
+    return (
+        "late_camp_session_incomplete"
+        if int(week_index) >= late_week_start
+        else "missing_week_session_role"
+    )
+
+
 def _week_completeness_warnings(planning_brief: dict, plan_text: str) -> list[dict]:
     weekly_role_map = planning_brief.get("weekly_role_map") or {}
     weeks = list(weekly_role_map.get("weeks") or [])
@@ -1126,7 +1143,6 @@ def _week_completeness_warnings(planning_brief: dict, plan_text: str) -> list[di
     warnings: list[dict] = []
     week_sections = _week_sections(plan_text)
     active_week_count = len(weeks)
-    late_week_start = max(1, active_week_count - 1)
     sport_key = str(_athlete_snapshot(planning_brief).get("sport", "")).strip().lower()
 
     for week in weeks:
@@ -1146,7 +1162,7 @@ def _week_completeness_warnings(planning_brief: dict, plan_text: str) -> list[di
         if not week_section:
             warnings.append(
                 {
-                    "code": "late_camp_session_incomplete" if week_index >= late_week_start else "missing_week_session_role",
+                    "code": week_incompleteness_code(week_index, active_week_count),
                     "message": f"Week {week_index} is missing from the final plan even though it is active in the planning brief.",
                     "week_index": week_index,
                     "phase": week.get("phase"),
@@ -1162,7 +1178,7 @@ def _week_completeness_warnings(planning_brief: dict, plan_text: str) -> list[di
         if actual_session_count < expected_session_count:
             warnings.append(
                 {
-                    "code": "late_camp_session_incomplete" if week_index >= late_week_start else "missing_week_session_role",
+                    "code": week_incompleteness_code(week_index, active_week_count),
                     "message": f"Week {week_index} is structurally incomplete compared with the weekly role map.",
                     "week_index": week_index,
                     "phase": week.get("phase"),

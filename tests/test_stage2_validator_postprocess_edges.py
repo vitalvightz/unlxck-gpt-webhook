@@ -161,3 +161,46 @@ Anchor: Make them cross your range before they can attack.
     )
     assert report["warnings"] == [warning]
     assert report["internal_render_contract_leak_warnings"] == [warning]
+
+
+def test_early_spp_week_in_long_camp_is_not_relabelled_as_late_camp():
+    # 5 active weeks. Late camp is defined globally as the last two weeks
+    # (week_index >= max(1, 5 - 1) = 4), NOT by phase. An undercounted stale
+    # overage on the early SPP week 2 must reconcile to missing_week_session_role;
+    # the old phase-based rule wrongly relabelled any SPP/TAPER week as late camp.
+    text = """SPP — Week 2 (D-15 to D-8)
+D-12 (Monday): Neural speed touch.
+- Speed Box Squat: 2 x 3.
+"""
+    warning = {
+        "code": "weekly_session_overage",
+        "phase": "SPP",
+        "week_index": 2,
+        "expected_session_count": 2,
+        "actual_session_count": 3,
+    }
+    brief = {
+        "weekly_role_map": {
+            "weeks": [
+                {"week_index": 1, "phase": "GPP", "session_roles": [{"role_key": "a"}]},
+                {
+                    "week_index": 2,
+                    "phase": "SPP",
+                    "session_roles": [{"role_key": "b"}, {"role_key": "c"}],
+                },
+                {"week_index": 3, "phase": "SPP", "session_roles": [{"role_key": "d"}]},
+                {"week_index": 4, "phase": "TAPER", "session_roles": [{"role_key": "e"}]},
+                {"week_index": 5, "phase": "TAPER", "session_roles": [{"role_key": "f"}]},
+            ]
+        }
+    }
+    report = postprocess_stage2_validator_report(
+        planning_brief=brief,
+        final_plan_text=text,
+        validator_report={"warnings": [warning]},
+    )
+    assert len(report["warnings"]) == 1
+    finding = report["warnings"][0]
+    assert finding["code"] == "missing_week_session_role"
+    assert finding["actual_session_count"] == 1
+    assert finding["expected_session_count"] == 2
