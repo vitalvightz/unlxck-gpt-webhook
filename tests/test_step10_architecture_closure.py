@@ -390,3 +390,59 @@ def test_late_fight_placement_holds_no_second_sparring_resolver():
     assert "_hard_spar_status_for_countdown_offset" not in inspect.getsource(
         lf._late_fight_legality_cost
     )
+
+
+# ---------------------------------------------------------------------------
+# Duplicate-engine removal (Step 10). stage2_payload carried stale forks of the
+# stage2_role_map role-budget/compression engine that no production entry point
+# and no test reached. They are deleted; these guard them from returning.
+# ---------------------------------------------------------------------------
+_REMOVED_PAYLOAD_DUPLICATES = (
+    "_compressed_priority_for_role",
+    "_is_final_week_capped_sparring_entry",
+    "_join_rule_parts",
+    "_lock_declared_hard_sparring_roles",
+    "_normalize_text",
+    "_phrase_in_text",
+    "_primary_limiter_key",
+    "_recovery_role_key",
+    "_role_anchor",
+    "_role_selection_rule",
+    "_slugify",
+)
+
+
+@pytest.mark.parametrize("name", _REMOVED_PAYLOAD_DUPLICATES)
+def test_dead_stage2_payload_duplicates_stay_deleted(name):
+    from fightcamp import stage2_payload
+
+    assert not hasattr(stage2_payload, name), (
+        f"{name} was a dead duplicate of the stage2_role_map owner, removed in Step 10. "
+        "The live implementation belongs to stage2_role_map."
+    )
+
+
+def test_live_crowded_week_compression_survived_the_dedupe():
+    """The dedupe must not remove reachable code.
+
+    ``_apply_boxing_crowded_week_compression`` and ``_boxing_crowded_week_policy_state``
+    are reachable from the production entry points; deleting them (as a naive
+    name-based sweep would) leaves a dangling call and a NameError.
+    """
+    from fightcamp import stage2_payload
+
+    assert hasattr(stage2_payload, "_apply_boxing_crowded_week_compression")
+    assert hasattr(stage2_payload, "_boxing_crowded_week_policy_state")
+
+
+def test_payload_test_oracles_survived_the_dedupe():
+    """Helpers that live tests import from stage2_payload as independent oracles."""
+    from fightcamp import stage2_payload
+
+    for name in (
+        "_is_meaningful_stressor",                    # tests/test_gap_fill_inserts.py
+        "_active_injury_affects_generic_compression", # tests/test_surface_injury_train_through.py
+        "_apply_high_fatigue_week_compression",       # tests/test_stage2_planning_brief.py
+        "_compute_readiness_compression",             # tests/test_stage2_planning_brief.py
+    ):
+        assert hasattr(stage2_payload, name), name

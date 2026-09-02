@@ -270,6 +270,18 @@ not reintroduce it:
    authoritative even when it resolves to zero effective hard contact. Declared hard days
    stand in **only** when the plan is `None` (the resolver did not run); an empty or
    fully-downgraded plan never resurrects declared hard days.
+8. **Duplicate role-budget engine (removed, Step 10).** `stage2_payload.py` carried stale
+   forks of the `stage2_role_map` role-budget/compression engine. Eleven of them
+   (`_lock_declared_hard_sparring_roles`, `_compressed_priority_for_role`,
+   `_is_final_week_capped_sparring_entry`, `_role_anchor`, `_role_selection_rule`,
+   `_recovery_role_key`, `_primary_limiter_key`, `_join_rule_parts`, `_normalize_text`,
+   `_phrase_in_text`, `_slugify`) were outside the transitive closure of every real root —
+   the four production entry points, module-level code, and every name any module or test
+   imports from `stage2_payload` — and were deleted, along with three then-orphaned
+   constants. The live `_apply_boxing_crowded_week_*` path and the four helpers live tests
+   import as independent oracles were **kept**: a name-based sweep that deletes them leaves
+   a dangling call and a `NameError`. `tests/test_step10_architecture_closure.py` guards
+   both directions.
 
 ### 9.3 Remaining non-blocking debt
 
@@ -282,8 +294,13 @@ work (see the freeze rule in section 12):
    selection is the filler layer's, legality is `combat_load_policy`'s.
 2. `stage2_finalizer_packet.py` / `_impl.py` are likewise a facade/implementation pair
    holding real packet-building logic. Same conclusion.
-3. `stage2_payload.py` remains a large compatibility/orchestration surface. Its dead
-   placement policy is gone; what remains is orchestration and re-exports.
+3. `stage2_payload.py` remains a compatibility/orchestration surface. Its dead placement
+   policy (Step 9A) and its dead duplicate role-budget engine (Step 10) are gone; what
+   remains is orchestration, re-exports, and four helpers live tests import as independent
+   oracles. Two of those (`_apply_high_fatigue_week_compression`,
+   `_compute_readiness_compression`) have **diverged** from their `stage2_role_map`
+   counterparts, so they are not interchangeable; repointing those tests at the live owner
+   would change what they assert and is deliberately left as separate work.
 4. `weekly_schedule_view.py` normalises resolver `status` -> display `effective_load` for
    the API/validator view layer. This is presentation-side normalisation of resolver
    output, downstream of every planner decision; it is not a second contact authority.
