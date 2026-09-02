@@ -6,6 +6,8 @@ from .normalization import clean_list, dedupe_preserve_order, normalize_fatigue_
 from .fight_date_utils import resolve_fight_weekday
 from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_days
 from .late_camp_role_morph import late_fight_strength_dose_cap
+from .calendar_context import LATE_FIGHT_SCOPE, sequence_legality
+from .combat_load_policy import placement_rank
 
 from collections import OrderedDict
 from copy import deepcopy
@@ -2938,6 +2940,85 @@ def _late_fight_assignment_score(
     return score
 
 
+# Step 9B: late-fight collision legality is the shared combat_load_policy's, not an
+# independent per-allocator penalty. Effective hard contact exists only at D-18..D-21
+# (see ``_hard_spar_status_for_countdown_offset``); for the compressed D-13-inward
+# window the policy returns ALLOW throughout, so this term is a no-op there and only
+# bites in the bridge band, where an app-owned stressor adjacent to a still-effective
+# hard contact is FORBID. FORBID is a dominant penalty so a forbidden slot can never
+# win on local preference; DEPRIORITIZE is a small nudge — it ranks a costly-but-legal
+# slot below an equivalent ALLOW one without ever suppressing a role (it stays smaller
+# than a role's presence value in either scorer). Countdown offsets become canonical
+# chronological positions via ``calendar_context.sequence_*`` (``-offset``); this owner
+# never passes raw D-day numbers as positions. Representation is the canonical
+# adapter's; the ALLOW/DEPRIORITIZE/FORBID verdict is the policy's.
+_LATE_FIGHT_FORBID_PENALTY = 5_000_000
+_LATE_FIGHT_DEPRIORITIZE_PENALTY = 900
+
+
+def _late_fight_resolved_contacts(roles: list[dict[str, Any]]) -> list[tuple[int, str]]:
+    """Resolved coach-owned contact occurrences as ``(countdown_offset, load)`` pairs.
+
+    Coach-owned ``hard_sparring_day`` placeholders are the fixed contact context the
+    policy protects around. Their effective load is the sparring resolver's D-17
+    cutoff, read back through ``_hard_spar_status_for_countdown_offset``: hard only
+    while ``18 <= offset <= 21``, technical once inside D-17. Representation only — it
+    reuses the already-resolved status; it does not re-decide hard vs technical, move
+    the day, or downgrade the dose.
+    """
+    contacts: list[tuple[int, str]] = []
+    for role in roles:
+        if str(role.get("role_key") or "").strip().lower() != "hard_sparring_day":
+            continue
+        offset = role.get("countdown_offset")
+        if not isinstance(offset, int) or offset <= 0:
+            offset = _countdown_offset(
+                str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "")
+            )
+        if not isinstance(offset, int) or offset <= 0:
+            continue
+        load = "hard" if _hard_spar_status_for_countdown_offset(offset) == "hard_allowed" else "technical"
+        contacts.append((offset, load))
+    return contacts
+
+
+def _late_fight_canonical_collision_penalty(assigned_roles: list[dict[str, Any]]) -> int:
+    """Shared-policy collision penalty for an assignment (0 when fully ALLOW).
+
+    Each app-owned, day-slot-consuming visible role is evaluated at its countdown
+    offset against the other app-owned roles plus the resolved coach-owned contact
+    occurrences (the canonical ``calendar_context`` late-fight adapter builds the
+    events; ``combat_load_policy`` returns the directive). Coach-owned contact stays
+    fixed context — it is never scored, moved, or downgraded here.
+    """
+    resolved_contacts = _late_fight_resolved_contacts(assigned_roles)
+    app_roles = [
+        role
+        for role in assigned_roles
+        if _is_app_owned_visible_role(role.get("role_key"))
+        and _role_consumes_day_slot(role)
+        and isinstance(role.get("countdown_offset"), int)
+        and role["countdown_offset"] > 0
+    ]
+    if not resolved_contacts and len(app_roles) < 2:
+        return 0
+    penalty = 0
+    for candidate in app_roles:
+        others = [role for role in app_roles if role is not candidate]
+        view = sequence_legality(
+            others, scope=LATE_FIGHT_SCOPE, resolved_contacts=resolved_contacts
+        )
+        decision = view.decision_for_role(candidate, candidate["countdown_offset"])
+        if decision is None:
+            continue
+        rank = placement_rank(decision)
+        if rank == 2:
+            penalty += _LATE_FIGHT_FORBID_PENALTY
+        elif rank == 1:
+            penalty += _LATE_FIGHT_DEPRIORITIZE_PENALTY
+    return penalty
+
+
 def _late_fight_best_assignment(
     selected_roles: list[dict[str, Any]],
     legal_countdown_labels: list[str],
@@ -3054,6 +3135,7 @@ def _late_fight_best_assignment(
                 assigned_weekday = str(scored_role.get("real_weekday") or "").strip().lower()
                 if assigned_weekday in hard_weekdays:
                     score -= 100000
+        score -= _late_fight_canonical_collision_penalty(scored_roles)
         if best_score is None or score > best_score:
             best_score = score
             best_roles = scored_roles
@@ -3638,6 +3720,7 @@ def _space_bridge_countdown_roles(
         if index >= len(ordered_roles):
             score = _score_composite_practical_assignment(assigned, label_to_weekday, hard_weekdays)
             score += _composite_role_selection_score(assigned, days_until_fight)
+            score -= _late_fight_canonical_collision_penalty(assigned)
             if best_score is None or score > best_score:
                 best_score = score
                 best_roles = list(assigned)

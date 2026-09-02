@@ -10,6 +10,12 @@ from __future__ import annotations
 from typing import Any
 
 from .normalization import clean_list, ordered_weekdays as _ordered_weekdays
+from .calendar_context import (
+    classify_role,
+    normal_week_legality,
+    weekday_position,
+    week_scope,
+)
 from .sparring_dose_planner import (
     compute_hard_sparring_plan,
     effective_hard_day_count,
@@ -1300,6 +1306,7 @@ def _assign_declared_day_hints(
     athlete_model: dict,
     *,
     hard_sparring_plan: list[dict] | None = None,
+    week_entry: dict | None = None,
 ) -> list[dict]:
     if not ordered:
         return ordered
@@ -1312,6 +1319,37 @@ def _assign_declared_day_hints(
     used_days: set[str] = set()
     effective_hard_days_set = set(effective_hard_days(hard_sparring_plan or [])) or set(hard_sparring_days)
     sandwiched_days = set(sandwiched_training_days(training_days, effective_hard_days_set))
+
+    # Step 9B: the placement owner consults the shared combat_load_policy for every
+    # physical candidate day rather than deciding same-day-exclusivity /
+    # between-hard-contact legality from its own weekday membership sets. Candidate
+    # generation, preference order, anchors, and deterministic tie-breaking stay
+    # here; ALLOW/DEPRIORITIZE/FORBID come from the policy (via the canonical
+    # calendar_context adapter). Contact events use the resolved hard_sparring_plan
+    # so a downgraded declared day is reduced/technical contact, not hard.
+    scope = week_scope(week_entry) if isinstance(week_entry, dict) else ("normal_week", None)
+    _legality = normal_week_legality(hard_sparring_plan, hard_sparring_days, scope=scope)
+    _profile_cache: dict[int, Any] = {}
+
+    def _role_profile(idx: int):
+        if idx not in _profile_cache:
+            _profile_cache[idx] = classify_role(ordered[idx])
+        return _profile_cache[idx]
+
+    def _pick_legal_day(idx: int, candidate_days: list[str], fallback: str | None) -> str | None:
+        """Best legal day for role ``idx`` among ``candidate_days`` (owner order).
+
+        Returns the policy's best legal weekday (ALLOW preferred over
+        DEPRIORITIZE, owner order breaking ties within a tier). Falls back to
+        ``fallback`` when the role is unclassifiable or every candidate is FORBID
+        — the no-legal-candidate case, where the owner keeps its prior choice so
+        Step 9B invents no new training decision.
+        """
+        profile = _role_profile(idx)
+        if profile is None:
+            return fallback
+        chosen = _legality.best_legal_weekday(profile, candidate_days)
+        return chosen if chosen is not None else fallback
 
     # Preserve explicit scheduled days for locked roles.
     # Hard sparring days are coach-owned anchors and must never move.
@@ -1428,18 +1466,29 @@ def _assign_declared_day_hints(
         # non-sandwiched non-spar days for primary strength.
 
     if glycolytic_idx is not None:
-        preferred_glycolytic_day = next(
+        # Owner preference: latest declared training day. Legality (same-day
+        # contact / between-hard) is the policy's; the raw fallback preserves the
+        # prior "latest non-spar, else latest" pick for the no-legal case (where
+        # the structural between-hard suppression then owns the outcome).
+        glycolytic_candidates = [day for day in reversed(training_days) if day not in used_days]
+        raw_glycolytic_day = next(
             (day for day in reversed(training_days) if day not in hard_sparring_days and day not in used_days),
             None,
+        ) or next((day for day in reversed(training_days) if day not in used_days), None)
+        preferred_glycolytic_day = _pick_legal_day(
+            glycolytic_idx, glycolytic_candidates, raw_glycolytic_day
         )
-        if not preferred_glycolytic_day:
-            preferred_glycolytic_day = next((day for day in reversed(training_days) if day not in used_days), None)
         if preferred_glycolytic_day:
             day_assignments[glycolytic_idx] = preferred_glycolytic_day
             used_days.add(preferred_glycolytic_day)
 
     if aerobic_idx is not None:
-        preferred_aerobic_day = next((day for day in training_days if day in support_work_days and day not in used_days), None)
+        # Owner preference: declared Support Work Days, in weekday order.
+        aerobic_candidates = [
+            day for day in training_days if day in support_work_days and day not in used_days
+        ]
+        raw_aerobic_day = aerobic_candidates[0] if aerobic_candidates else None
+        preferred_aerobic_day = _pick_legal_day(aerobic_idx, aerobic_candidates, raw_aerobic_day)
         if preferred_aerobic_day:
             day_assignments[aerobic_idx] = preferred_aerobic_day
             used_days.add(preferred_aerobic_day)
@@ -1473,11 +1522,19 @@ def _assign_declared_day_hints(
         )
 
         if is_recovery_compatible:
-            fallback_day = next((day for day in training_days if day in sandwiched_days and day not in used_days), None)
-            if fallback_day is None:
-                fallback_day = next((day for day in training_days if day not in used_days and day not in hard_sparring_days), None)
-            if fallback_day is None:
-                fallback_day = next((day for day in training_days if day not in used_days), None)
+            # Owner preference: between-hard (sandwiched) days first for low-load
+            # recovery-compatible support, then the remaining free training days.
+            recovery_candidates = [
+                day for day in training_days if day in sandwiched_days and day not in used_days
+            ] + [
+                day for day in training_days if day not in sandwiched_days and day not in used_days
+            ]
+            raw_recovery_fallback = (
+                next((day for day in training_days if day in sandwiched_days and day not in used_days), None)
+                or next((day for day in training_days if day not in used_days and day not in hard_sparring_days), None)
+                or next((day for day in training_days if day not in used_days), None)
+            )
+            fallback_day = _pick_legal_day(idx, recovery_candidates, raw_recovery_fallback)
             if fallback_day:
                 day_assignments[idx] = fallback_day
                 used_days.add(fallback_day)
@@ -1488,18 +1545,30 @@ def _assign_declared_day_hints(
                 )
             continue
 
-        fallback_day = next(
-            (
-                day
-                for day in training_days
-                if day not in used_days and day not in hard_sparring_days and day not in sandwiched_days
-            ),
-            None,
+        # Owner preference: keep non-recovery stress on a clean (non-spar,
+        # non-sandwiched) day first; the remaining free days are the fallback tail.
+        stressor_candidates = [
+            day
+            for day in training_days
+            if day not in used_days and day not in hard_sparring_days and day not in sandwiched_days
+        ] + [
+            day
+            for day in training_days
+            if day not in used_days and (day in hard_sparring_days or day in sandwiched_days)
+        ]
+        raw_stressor_fallback = (
+            next(
+                (
+                    day
+                    for day in training_days
+                    if day not in used_days and day not in hard_sparring_days and day not in sandwiched_days
+                ),
+                None,
+            )
+            or next((day for day in training_days if day not in used_days and day not in hard_sparring_days), None)
+            or next((day for day in training_days if day not in used_days), None)
         )
-        if fallback_day is None:
-            fallback_day = next((day for day in training_days if day not in used_days and day not in hard_sparring_days), None)
-        if fallback_day is None:
-            fallback_day = next((day for day in training_days if day not in used_days), None)
+        fallback_day = _pick_legal_day(idx, stressor_candidates, raw_stressor_fallback)
         if fallback_day:
             day_assignments[idx] = fallback_day
             used_days.add(fallback_day)
@@ -1591,7 +1660,9 @@ def _resequence_session_roles(
 
     for idx, role in enumerate(ordered, start=1):
         role["session_index"] = idx
-    ordered = _assign_declared_day_hints(ordered, athlete_model, hard_sparring_plan=hard_sparring_plan)
+    ordered = _assign_declared_day_hints(
+        ordered, athlete_model, hard_sparring_plan=hard_sparring_plan, week_entry=week_entry
+    )
     return ordered
 
 
@@ -2043,32 +2114,48 @@ def _apply_high_fatigue_week_compression(
             hard_sparring_plan=hard_sparring_plan,
         )
 
-    # Structural rule: suppress glycolytic on days sandwiched between two effective hard spar days.
-    # This fires unconditionally — it is not gated on fatigue or compression signals.
+    # Structural rule: suppress a glycolytic conditioning session that landed
+    # between two effective hard spar days. This fires unconditionally — it is not
+    # gated on fatigue or compression signals.
+    #
+    # Step 9B: the between-hard-contact legality is the shared combat_load_policy's
+    # (queried through the canonical calendar_context adapter on resolved contact
+    # state), not a duplicate local ``sandwiched_training_days`` verdict. This owner
+    # keeps only the role-budget scope — which roles it may suppress (glycolytic
+    # conditioning outside ``must_keep``) — and the suppression action, its
+    # no-legal-slot contract.
     _effective_spar_days = set(effective_hard_days(hard_sparring_plan or []))
     if len(_effective_spar_days) >= 2:
         _resolved = dict(week_entry.get("resolved_rule_state") or {})
         _must_keep_early = set(clean_list(_resolved.get("must_keep", week_entry.get("must_keep", []))))
-        _sandwiched = sandwiched_training_days(training_days, _effective_spar_days)
-        if _sandwiched:
-            _kept: list[dict] = []
-            for _role in session_roles:
-                if (
-                    _role.get("category") == "conditioning"
-                    and _role.get("preferred_system") == "glycolytic"
-                    and _role.get("preferred_system") not in _must_keep_early
-                    and str(_role.get("scheduled_day_hint") or "").strip() in _sandwiched
-                ):
-                    suppressed_roles = list(suppressed_roles) + [
-                        _make_compression_suppression(
-                            _role,
-                            ["sandwiched_hard_days"],
-                            "Glycolytic session falls between two hard sparring days — suppressed to protect recovery between hard contacts.",
-                        )
-                    ]
-                else:
-                    _kept.append(_role)
-            session_roles = _kept
+        _legality = normal_week_legality(
+            hard_sparring_plan,
+            clean_list(athlete_model.get("hard_sparring_days", [])),
+            scope=week_scope(week_entry),
+        )
+
+        def _is_between_hard(role: dict) -> bool:
+            position = weekday_position(str(role.get("scheduled_day_hint") or "").strip())
+            return position is not None and _legality.is_between_hard_position(position)
+
+        _kept: list[dict] = []
+        for _role in session_roles:
+            if (
+                _role.get("category") == "conditioning"
+                and _role.get("preferred_system") == "glycolytic"
+                and _role.get("preferred_system") not in _must_keep_early
+                and _is_between_hard(_role)
+            ):
+                suppressed_roles = list(suppressed_roles) + [
+                    _make_compression_suppression(
+                        _role,
+                        ["sandwiched_hard_days"],
+                        "Glycolytic session falls between two hard sparring days — suppressed to protect recovery between hard contacts.",
+                    )
+                ]
+            else:
+                _kept.append(_role)
+        session_roles = _kept
 
     # Step 1: Count sparring against the weekly cap
     hard_sparring_days_set = set(_ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))))

@@ -31,10 +31,13 @@ from .combat_load_policy import (
     LoadClass,
     PlacementDecision,
     PlacementDirective,
+    build_calendar_context,
     contact_load_profile,
     evaluate_candidate_at_position,
+    placement_rank,
     role_load_profile,
 )
+from .normalization import WEEKDAY_ORDER
 
 
 # Contact/combat-load vocabulary is owned by ``combat_load_policy``
@@ -388,15 +391,29 @@ class CalendarLegalityView:
     events: tuple[CalendarEvent, ...]
     scope: Hashable | None = None
 
-    def decision_for_profile(
-        self, profile: CalendarLoadProfile, offset: int
+    def decision_at_position(
+        self, profile: CalendarLoadProfile, position: int
     ) -> PlacementDecision:
+        """Evaluate ``profile`` at a canonical chronological ``position``.
+
+        The position must already be in canonical (monotonically increasing)
+        chronological order. Late-fight callers convert a countdown offset with
+        :meth:`decision_for_profile` (``-offset``); normal-camp callers pass the
+        weekday index directly (see :func:`weekday_position`). This is the one
+        seam that turns each owner's day representation into the shared policy's
+        position space.
+        """
         return evaluate_candidate_at_position(
             profile,
-            candidate_position=-int(offset),
+            candidate_position=int(position),
             events=self.events,
             candidate_scope=self.scope,
         )
+
+    def decision_for_profile(
+        self, profile: CalendarLoadProfile, offset: int
+    ) -> PlacementDecision:
+        return self.decision_at_position(profile, -int(offset))
 
     def decision_for_role(
         self, role: dict[str, Any], offset: int
@@ -410,6 +427,63 @@ class CalendarLegalityView:
         decision = self.decision_for_role(role, offset)
         return decision is not None and decision.directive is PlacementDirective.FORBID
 
+    def best_legal_position(
+        self, profile: CalendarLoadProfile, positions: Iterable[int]
+    ) -> int | None:
+        """Best legal chronological position for ``profile`` among ``positions``.
+
+        ``positions`` is the placement owner's candidates in its own preference
+        order. Returns the first ``ALLOW`` position (so ALLOW beats DEPRIORITIZE
+        before the owner's tie-break, and owner order breaks ties within a tier),
+        else the first ``DEPRIORITIZE`` position, else ``None`` when every
+        candidate is ``FORBID``. ``None`` is the no-legal-candidate signal: the
+        owner keeps its existing fallback rather than the policy inventing one.
+        """
+        deprioritized: int | None = None
+        for position in positions:
+            rank = placement_rank(self.decision_at_position(profile, position))
+            if rank == 0:
+                return position
+            if rank == 1 and deprioritized is None:
+                deprioritized = position
+        return deprioritized
+
+    def best_legal_weekday(
+        self, profile: CalendarLoadProfile, days: Iterable[Any]
+    ) -> Any | None:
+        """Normal-camp convenience: best legal weekday among ``days`` (owner order).
+
+        Maps each weekday to its canonical position and returns the weekday whose
+        position :meth:`best_legal_position` selects, or ``None`` if every day is
+        ``FORBID`` (or unmappable).
+        """
+        candidates = [
+            (position, day)
+            for day in days
+            if (position := weekday_position(day)) is not None
+        ]
+        chosen = self.best_legal_position(profile, [pos for pos, _day in candidates])
+        if chosen is None:
+            return None
+        for position, day in candidates:
+            if position == chosen:
+                return day
+        return None
+
+    def is_between_hard_position(self, position: int) -> bool:
+        """Is ``position`` scoped between two effective hard contacts?
+
+        The policy's own between-hard scope computation (not a re-derived local
+        weekday-span set): there is a scoped ``HARD_CONTACT`` event both before and
+        after ``position``. Lets an owner scope a between-hard action (e.g. its
+        glycolytic no-legal-slot suppression) to the canonical span without keeping
+        a duplicate ``sandwiched`` set.
+        """
+        context = build_calendar_context(
+            int(position), self.events, candidate_scope=self.scope
+        )
+        return context.between_effective_hard_contacts
+
     def contact_offsets(self) -> set[int]:
         """Countdown offsets (positive D-days) that carry a resolved contact.
 
@@ -421,6 +495,102 @@ class CalendarLegalityView:
             for event in self.events
             if event.profile.load_class in CONTACT_LOAD_CLASSES
         }
+
+
+# Normal-camp chronological positions. Normal-camp placement runs in weekday
+# space (monday..sunday), not the D-day countdown, so its canonical chronological
+# position is the calendar weekday index (monday=0 .. sunday=6): monotonically
+# increasing, adjacent weekdays exactly distance 1. This is the same weekday-index
+# order ``sparring_dose_planner.sandwiched_training_days`` uses, so a normal-camp
+# "between two effective hard contacts" span maps 1:1 onto the shared policy's
+# ``between_effective_hard_contacts``. It is the single deterministic conversion at
+# the normal-camp placement boundary (the mirror of the ``-countdown_offset``
+# conversion :func:`sequence_events` applies for late fight).
+def weekday_position(day: Any) -> int | None:
+    """Canonical chronological position for a normal-camp weekday, or ``None``."""
+    return WEEKDAY_ORDER.get(_normalise(day))
+
+
+# One canonical hard-contact profile for the fallback case where a declared hard
+# day has no resolved plan entry (mirrors the placement owner's
+# ``effective_hard_days(plan) or set(hard_sparring_days)`` fallback). Contact
+# resolution stays owned by the sparring resolver; this only reuses the policy
+# contact classifier so the event matches every other contact event the governor
+# sees.
+_NORMAL_WEEK_HARD_CONTACT_PROFILE = contact_load_profile({"effective_load": "hard"})
+
+
+def normal_week_contact_events(
+    hard_sparring_plan: Iterable[dict[str, Any]] | None,
+    declared_hard_days: Iterable[Any] | None = None,
+    *,
+    scope: Hashable | None,
+) -> list[CalendarEvent]:
+    """Resolved normal-camp contact -> canonical contact ``CalendarEvent[]``.
+
+    Representation only. Each ``hard_sparring_plan`` entry is resolved through the
+    shared :func:`combat_load_policy.contact_load_profile`, so a downgraded day
+    surfaces as reduced/technical contact (still exclusive-physical, so same-day
+    stacking stays illegal) while only ``hard_as_planned`` days become
+    ``HARD_CONTACT`` (which alone drives between-hard and adjacency protection).
+    Positions are weekday indices; ``scope`` is the week's collision scope.
+
+    When the plan yields no ``HARD_CONTACT`` event, ``declared_hard_days`` are added
+    as ``HARD_CONTACT`` — the exact fallback the placement owner already applies
+    (``effective_hard_days(plan) or set(hard_sparring_days)``) so an
+    unresolved/empty plan still protects the declared coach-owned days.
+    """
+    events: list[CalendarEvent] = []
+    covered_positions: set[int] = set()
+    has_hard = False
+    for entry in hard_sparring_plan or []:
+        if not isinstance(entry, dict):
+            continue
+        profile = contact_load_profile(entry)
+        if profile is None or profile.load_class is LoadClass.OFF:
+            continue
+        position = weekday_position(entry.get("day"))
+        if position is None:
+            continue
+        events.append(CalendarEvent(position, profile, scope))
+        covered_positions.add(position)
+        if profile.load_class is LoadClass.HARD_CONTACT:
+            has_hard = True
+    if not has_hard:
+        for day in declared_hard_days or []:
+            position = weekday_position(day)
+            if position is None or position in covered_positions:
+                continue
+            events.append(
+                CalendarEvent(position, _NORMAL_WEEK_HARD_CONTACT_PROFILE, scope)
+            )
+            covered_positions.add(position)
+    return events
+
+
+def normal_week_legality(
+    hard_sparring_plan: Iterable[dict[str, Any]] | None,
+    declared_hard_days: Iterable[Any] | None = None,
+    *,
+    scope: Hashable | None,
+) -> CalendarLegalityView:
+    """Legality view for a normal-camp placement owner choosing a weekday.
+
+    Events are the week's resolved contacts at weekday positions (see
+    :func:`normal_week_contact_events`); ``scope`` is the week's collision scope.
+    The owner then asks :meth:`CalendarLegalityView.decision_at_position` (via
+    :func:`weekday_position`) whether a candidate load may take a given weekday,
+    and selects among the legal candidates with its own preference/anchor/tie-break
+    logic. ``combat_load_policy`` remains the rule authority.
+    """
+    return CalendarLegalityView(
+        events=tuple(
+            normal_week_contact_events(
+                hard_sparring_plan, declared_hard_days, scope=scope
+            )
+        ),
+        scope=scope,
+    )
 
 
 def weekly_role_map_legality(
@@ -467,6 +637,8 @@ __all__ = [
     "contact_d_day",
     "contact_profile_for_load",
     "contact_refs",
+    "normal_week_contact_events",
+    "normal_week_legality",
     "resolved_contact_offsets",
     "role_d_day",
     "role_refs",
@@ -474,5 +646,6 @@ __all__ = [
     "sequence_legality",
     "sequence_role_offset",
     "week_scope",
+    "weekday_position",
     "weekly_role_map_legality",
 ]
