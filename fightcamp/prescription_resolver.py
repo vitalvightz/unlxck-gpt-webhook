@@ -213,11 +213,13 @@ def _format_effective_prescription(
     reps: int | None,
     rpe_cap: str | None,
     loaded: bool,
+    suppressed_loaded_lift: bool = False,
 ) -> str:
     if sets is None or reps is None:
-        # A loaded lift the countdown band no longer permits is suppressed to a
-        # clear "no loaded lifting" string; an unparseable base dose falls back.
-        return _NO_LOADED_LIFTING if not loaded else base_prescription
+        # Only a loaded lift forbidden by the countdown band is suppressed.
+        # Timed isometrics, throws, primers and support work often have a valid
+        # non-NxM bank prescription and must retain it verbatim.
+        return _NO_LOADED_LIFTING if suppressed_loaded_lift else base_prescription
     if sets == 0 or reps == 0:
         return _NO_LOADED_LIFTING
     dose = f"{sets} x {reps}"
@@ -317,6 +319,7 @@ def resolve_strength_slot_prescription(
         reps=reps,
         rpe_cap=rpe_cap,
         loaded=loaded,
+        suppressed_loaded_lift=kind in {"anchor", "secondary"} and not loaded,
     )
     result = {
         "base_prescription": base_prescription,
@@ -347,8 +350,15 @@ def _strength_slots_for_phase(candidate_pools: dict[str, Any], phase: str) -> li
     return [slot for slot in slots if isinstance(slot, dict)]
 
 
+_PRIORITY_ORDER = {"critical": 0, "anchor": 0, "primary": 0, "high": 1, "secondary": 1,
+                   "medium": 2, "support": 2, "power": 2, "ballistic": 2, "low": 3}
+
+
 def _slot_priority(slot: dict[str, Any]) -> tuple[int, int]:
-    priority = _int_or_none(slot.get("priority"))
+    raw_priority = slot.get("priority")
+    priority = _int_or_none(raw_priority)
+    if priority is None:
+        priority = _PRIORITY_ORDER.get(str(raw_priority or "").strip().lower())
     session_index = _int_or_none(slot.get("session_index")) or 1
     return (priority if priority is not None else 10_000, session_index)
 
@@ -425,9 +435,16 @@ def apply_effective_strength_prescriptions(
         strength_slots = _strength_slots_for_phase(candidate_pools, phase)
         if not strength_slots:
             continue
+        strength_role_index = 0
         for role in week.get("session_roles") or []:
             if not isinstance(role, dict) or not isinstance(role.get("strength_dose_cap"), dict):
                 continue
+            strength_role_index += 1
+            role_session_index = _int_or_none(role.get("strength_session_index")) or strength_role_index
+            owned_slots = [
+                slot for slot in strength_slots
+                if (_int_or_none(slot.get("session_index")) or 1) == role_session_index
+            ]
 
             # Demote every anchor-capable *loaded* lift after the highest-priority
             # one to ``secondary`` so secondary loaded work loses more volume than
@@ -435,7 +452,7 @@ def apply_effective_strength_prescriptions(
             # their own kind). Ordered by planner slot priority.
             anchor_loaded_used = False
             resolved: list[dict[str, Any]] = []
-            for slot in sorted(strength_slots, key=_slot_priority):
+            for slot in sorted(owned_slots, key=_slot_priority):
                 kind = _role_kind(slot)
                 force_kind = None
                 if kind == "anchor" and _slot_quality_class_effective(slot) != "anchor_force_isometric":

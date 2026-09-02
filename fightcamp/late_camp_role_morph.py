@@ -377,6 +377,17 @@ def _apply_late_camp_role_morph_once(
                 original_intent = "meaningful_strength"
                 if d_day is not None and 0 <= d_day <= STRENGTH_NEURAL_MORPH_MAX_D:
                     _soften_full_strength_role(role, d_day)
+                else:
+                    # Calendar placement is authoritative. A remorph after
+                    # relocation outside the capped window must not retain dose
+                    # truth derived from the old countdown day.
+                    for field in (
+                        "strength_dose_cap", "set_cap", "rep_cap", "rpe_cap",
+                        "scheduled_d_day", "dose_adjustment_reason",
+                        "effective_strength_prescriptions", "effective_strength_envelope",
+                        "late_camp_strength_morph",
+                    ):
+                        role.pop(field, None)
             elif _is_hard_fight_pace_conditioning_role(role):
                 original_intent = "hard_conditioning"
                 if d_day is not None and 0 <= d_day <= FIGHT_PACE_MORPH_MAX_D:

@@ -367,7 +367,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
     # are promoted into blocking_warnings by the release policy). Give the repair
     # pass a concrete dose-reduction instruction so it renders the resolved
     # effective prescription instead of re-emitting the over-dose.
-    seen_dose_lines: set[str] = set()
+    seen_dose_lines: set[tuple[object, ...]] = set()
     for finding in [
         *(validator_report.get("errors", []) or []),
         *(validator_report.get("blocking_warnings", []) or []),
@@ -377,9 +377,11 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
         if str(finding.get("code") or "") != "late_camp_effective_prescription_exceeded":
             continue
         line = str(finding.get("line") or "")
-        if line in seen_dose_lines:
+        identity = (finding.get("scheduled_d_day"), finding.get("exercise"), line,
+                    tuple(finding.get("violations") or ()))
+        if identity in seen_dose_lines:
             continue
-        seen_dose_lines.add(line)
+        seen_dose_lines.add(identity)
         quality_fixes.append(
             {
                 "action": "reduce_strength_dose_to_effective_prescription",

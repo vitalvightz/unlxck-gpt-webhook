@@ -3109,21 +3109,41 @@ def _has_blocking_hard_sparring(text: str) -> bool:
     return False
 
 # Rendered strength-dose parsing for late-camp effective-prescription enforcement.
-_RENDERED_SETS_REPS = re.compile(r"\b(\d+)\s*[x×]\s*(\d+)\b", re.IGNORECASE)
+_RENDERED_SETS_REPS = re.compile(
+    r"\b(\d+)\s*(?:sets?\s*(?:[x×]|of)|[x×])\s*(\d+)(?:\s*reps?)?\b",
+    re.IGNORECASE,
+)
 _RENDERED_RPE = re.compile(r"\brpe\s*(\d+)(?:\s*[-–]\s*(\d+))?", re.IGNORECASE)
 
 
 def _parse_rendered_strength_dose(line: str) -> tuple[int | None, int | None, int | None]:
     """Return ``(sets, reps, rpe_high)`` parsed from a rendered strength line."""
-    sets_reps = _RENDERED_SETS_REPS.search(line or "")
+    text = line or ""
+    rpe_match = _RENDERED_RPE.search(text)
+    candidates = list(_RENDERED_SETS_REPS.finditer(text))
+    # The working dose is normally the final clause and, when RPE is present,
+    # the dose immediately before that RPE. This avoids reading a warm-up dose.
+    before_rpe = [match for match in candidates if rpe_match and match.end() <= rpe_match.start()]
+    sets_reps = (before_rpe[-1] if before_rpe else (candidates[-1] if candidates else None))
     sets = int(sets_reps.group(1)) if sets_reps else None
     reps = int(sets_reps.group(2)) if sets_reps else None
-    rpe_match = _RENDERED_RPE.search(line or "")
     rpe_high: int | None = None
     if rpe_match:
         values = [int(value) for value in rpe_match.groups() if value]
         rpe_high = max(values) if values else None
     return sets, reps, rpe_high
+
+
+def _normalized_exercise_tokens(value: str) -> tuple[str, ...]:
+    return tuple(re.findall(r"[a-z0-9]+", str(value or "").casefold()))
+
+
+def _line_has_exercise(line: str, name: str) -> bool:
+    line_tokens = _normalized_exercise_tokens(line)
+    name_tokens = _normalized_exercise_tokens(name)
+    if not name_tokens or len(name_tokens) > len(line_tokens):
+        return False
+    return any(line_tokens[i:i + len(name_tokens)] == name_tokens for i in range(len(line_tokens) - len(name_tokens) + 1))
 
 
 def _late_camp_effective_prescription_warnings(
@@ -3167,21 +3187,37 @@ def _late_camp_effective_prescription_warnings(
             blocks = blocks_by_day.get(d_day)
             if not blocks:
                 continue
-            loaded_names = [name for name in (envelope.get("loaded_exercise_names") or []) if name]
-            if not loaded_names:
+            prescriptions = [
+                item for item in (role.get("effective_strength_prescriptions") or [])
+                if isinstance(item, dict) and item.get("name") and item.get("dose_role_kind") in {"anchor", "secondary"}
+            ]
+            # Backward compatibility for stored pre-per-exercise packets.
+            if not prescriptions:
+                prescriptions = [{"name": name, "effective_loaded": envelope.get("loaded_allowed"),
+                                  "effective_max_sets": envelope.get("max_sets"),
+                                  "effective_max_reps": envelope.get("max_reps"),
+                                  "effective_rpe_cap": envelope.get("rpe_cap_high")}
+                                 for name in (envelope.get("loaded_exercise_names") or []) if name]
+            if not prescriptions:
                 continue
-            loaded_allowed = bool(envelope.get("loaded_allowed"))
-            max_sets = envelope.get("max_sets")
-            max_reps = envelope.get("max_reps")
-            rpe_high = envelope.get("rpe_cap_high")
             for block in blocks:
                 for line in block.get("lines") or []:
-                    matched = next((name for name in loaded_names if phrase_in_text(line, name)), None)
-                    if not matched:
+                    entry = next((item for item in prescriptions if _line_has_exercise(line, str(item["name"]))), None)
+                    if not entry:
+                        continue
+                    matched = str(entry["name"])
+                    sets, reps, rpe = _parse_rendered_strength_dose(line)
+                    # Mentions, negative instructions and prose are not loaded
+                    # work. Enforcement starts only when a working dose exists.
+                    if sets is None or reps is None:
                         continue
                     identity = (d_day, matched, _normalize_render_line(line))
                     if identity in seen:
                         continue
+                    loaded_allowed = bool(entry.get("effective_loaded"))
+                    max_sets = entry.get("effective_max_sets")
+                    max_reps = entry.get("effective_max_reps")
+                    rpe_high = entry.get("effective_rpe_cap")
                     if not loaded_allowed:
                         seen.add(identity)
                         warnings.append(
@@ -3201,7 +3237,6 @@ def _late_camp_effective_prescription_warnings(
                             }
                         )
                         continue
-                    sets, reps, rpe = _parse_rendered_strength_dose(line)
                     violations: list[str] = []
                     if isinstance(max_sets, int) and isinstance(sets, int) and sets > max_sets:
                         violations.append(f"sets {sets} > effective max {max_sets}")
