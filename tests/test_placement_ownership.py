@@ -80,15 +80,16 @@ def test_normal_camp_owner_consumes_combat_load_policy():
 
 def test_late_fight_owner_consumes_combat_load_policy():
     # The late-fight allocator ranks slots by a canonical legality cost (built from
-    # the shared calendar_context late-fight adapter) above its own preferences.
+    # the shared calendar_context late-fight adapter) above its own preferences, and
+    # feeds it the sparring resolver's authoritative resolved contacts.
     assert stage2_payload_late_fight.sequence_legality is not None
     assert stage2_payload_late_fight.placement_rank is not None
-    forbid = [
-        {"role_key": "hard_sparring_day", "category": "sparring", "countdown_offset": 18},
+    assert stage2_payload_late_fight.resolve_late_fight_contacts is not None
+    app_touch = [
         {"role_key": "strength_touch_day", "category": "strength", "countdown_offset": 17,
          "stress_class": "meaningful_stress", "cost_class": "medium"},
     ]
-    assert stage2_payload_late_fight._late_fight_legality_cost(forbid) == (1, 0)
+    assert stage2_payload_late_fight._late_fight_legality_cost(app_touch, [(18, "hard")]) == (1, 0)
 
 
 def test_no_replacement_collision_policy_module_appears():
