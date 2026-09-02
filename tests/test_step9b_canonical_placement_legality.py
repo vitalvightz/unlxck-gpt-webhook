@@ -213,26 +213,25 @@ def test_resolved_contact_status_drives_canonical_collision_not_labels():
 # --------------------------------------------------------------------------- #
 # Late-fight owner                                                            #
 # --------------------------------------------------------------------------- #
+def _touch(offset):
+    return {"role_key": "strength_touch_day", "category": "strength", "countdown_offset": offset,
+            "stress_class": "meaningful_stress", "cost_class": "medium"}
+
+
 def test_late_fight_legality_cost_is_lexicographic_over_owner_preferences():
     # A meaningful app strength touch immediately after a still-effective hard
     # contact (D-18 hard, touch at D-17) is FORBID; the same touch clear of contact
-    # is ALLOW. The scorers rank by (-forbid, -deprioritize, owner_score), so the
-    # legality cost is a strictly higher-order key than any owner preference (the
-    # single-window -100000 hard-weekday term, the composite gap/stage terms). An
-    # owner preference can never flip ALLOW below DEPRIORITIZE or keep a FORBID slot.
-    # The compressed D-13-inward window (no effective hard contact) stays (0, 0).
-    forbid_case = [
-        {"role_key": "hard_sparring_day", "category": "sparring", "countdown_offset": 18},
-        {"role_key": "strength_touch_day", "category": "strength", "countdown_offset": 17,
-         "stress_class": "meaningful_stress", "cost_class": "medium"},
-    ]
-    allow_case = [
-        {"role_key": "hard_sparring_day", "category": "sparring", "countdown_offset": 18},
-        {"role_key": "strength_touch_day", "category": "strength", "countdown_offset": 12,
-         "stress_class": "meaningful_stress", "cost_class": "medium"},
-    ]
-    assert lf._late_fight_legality_cost(allow_case) == (0, 0)
-    assert lf._late_fight_legality_cost(forbid_case) == (1, 0)
+    # is ALLOW. Resolved contacts are the authoritative (offset, load) truth passed
+    # in — the scorer never re-resolves them. The scorers rank by
+    # (-forbid, -deprioritize, owner_score), so the legality cost is a strictly
+    # higher-order key than any owner preference (the single-window -100000
+    # hard-weekday term, the composite gap/stage terms). An owner preference can
+    # never flip ALLOW below DEPRIORITIZE or keep a FORBID slot.
+    resolved = [(18, "hard")]
+    assert lf._late_fight_legality_cost([_touch(12)], resolved) == (0, 0)
+    assert lf._late_fight_legality_cost([_touch(17)], resolved) == (1, 0)
+    # No resolved contact (compressed D-13-inward window) stays (0, 0).
+    assert lf._late_fight_legality_cost([_touch(17)], []) == (0, 0)
     # The lexicographic key: fewer FORBID wins first, then fewer DEPRIORITIZE, then
     # owner preference — legality can never be outweighed by preference.
     forbid_key = (-1, 0, 10 ** 9)      # one FORBID, huge owner preference
@@ -242,26 +241,37 @@ def test_late_fight_legality_cost_is_lexicographic_over_owner_preferences():
     assert allow_key > deprioritize_key
 
 
-def test_late_fight_resolved_contacts_respect_d17_cutoff():
-    # Coach-owned hard days above D-17 stay hard context; from D-17 inward they
-    # are resolved to technical — read back, never re-decided, by the adapter.
-    roles = [
-        {"role_key": "hard_sparring_day", "category": "sparring", "countdown_offset": 20},
-        {"role_key": "hard_sparring_day", "category": "sparring", "countdown_offset": 10},
-    ]
-    contacts = dict(lf._late_fight_resolved_contacts(roles))
-    assert contacts == {20: "hard", 10: "technical"}
+def test_late_fight_scorer_consumes_resolved_contact_no_re_resolution():
+    # Ownership: the scorer consumes the sparring resolver's authoritative
+    # (offset, effective_load) truth verbatim. It does NOT re-derive hard/technical
+    # from role_key + offset, and it holds no _hard_spar_status_for_countdown_offset
+    # in its path (that stays inside the resolver-owned resolve_late_fight_contacts).
+    import inspect
+
+    assert not hasattr(lf, "_late_fight_resolved_contacts")
+    src = inspect.getsource(lf._late_fight_legality_cost)
+    assert "_hard_spar_status_for_countdown_offset" not in src
+    assert "resolve_late_fight_contacts" in inspect.getsource(lf._late_fight_best_assignment) or \
+        "resolve_late_fight_contacts" in inspect.getsource(lf._late_fight_allocation_plan)
+
+
+def test_late_fight_resolved_reduced_contact_stays_reduced_not_hard():
+    # The reviewer's regression: a resolved *reduced* contact must be carried through
+    # as reduced, never collapsed to hard. Reduced contact is not HARD_CONTACT, so it
+    # does not trigger the policy's hard-contact adjacency protection: an app touch on
+    # the neighbouring day is ALLOW next to reduced but FORBID next to hard.
+    assert lf._late_fight_legality_cost([_touch(18)], [(19, "reduced")]) == (0, 0)
+    assert lf._late_fight_legality_cost([_touch(18)], [(19, "hard")]) == (1, 0)
+    # Technical resolves the same way (also not hard-adjacency-protected).
+    assert lf._late_fight_legality_cost([_touch(18)], [(19, "technical")]) == (0, 0)
 
 
 def test_late_fight_coexistable_filler_never_scored_as_a_day_collision():
     # A low-cost coexistable filler shares the coach's contact day legally; it
     # does not consume a day slot, so it never contributes a legality cost.
-    roles = [
-        {"role_key": "hard_sparring_day", "category": "sparring", "countdown_offset": 18},
-        {"role_key": "tactical_watch", "category": "tactical", "countdown_offset": 18,
-         "stress_class": "support", "cost_class": "zero"},
-    ]
-    assert lf._late_fight_legality_cost(roles) == (0, 0)
+    filler = {"role_key": "tactical_watch", "category": "tactical", "countdown_offset": 18,
+              "stress_class": "support", "cost_class": "zero"}
+    assert lf._late_fight_legality_cost([filler], [(18, "hard")]) == (0, 0)
 
 
 # --------------------------------------------------------------------------- #
