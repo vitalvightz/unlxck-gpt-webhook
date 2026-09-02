@@ -5,6 +5,7 @@
     "late_fight_countdown_blocked_drill",
     "late_fight_window_forbidden_exercise",
     "dangerous_late_fight_strength_or_conditioning",
+    "late_camp_effective_prescription_exceeded",
     "late_fight_missing_required_countdown_session",
     "fight_day_protocol_violation",
     "calendar_spine_fight_day_protocol_violation",

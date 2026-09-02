@@ -3108,6 +3108,131 @@ def _has_blocking_hard_sparring(text: str) -> bool:
         return True
     return False
 
+# Rendered strength-dose parsing for late-camp effective-prescription enforcement.
+_RENDERED_SETS_REPS = re.compile(r"\b(\d+)\s*[x×]\s*(\d+)\b", re.IGNORECASE)
+_RENDERED_RPE = re.compile(r"\brpe\s*(\d+)(?:\s*[-–]\s*(\d+))?", re.IGNORECASE)
+
+
+def _parse_rendered_strength_dose(line: str) -> tuple[int | None, int | None, int | None]:
+    """Return ``(sets, reps, rpe_high)`` parsed from a rendered strength line."""
+    sets_reps = _RENDERED_SETS_REPS.search(line or "")
+    sets = int(sets_reps.group(1)) if sets_reps else None
+    reps = int(sets_reps.group(2)) if sets_reps else None
+    rpe_match = _RENDERED_RPE.search(line or "")
+    rpe_high: int | None = None
+    if rpe_match:
+        values = [int(value) for value in rpe_match.groups() if value]
+        rpe_high = max(values) if values else None
+    return sets, reps, rpe_high
+
+
+def _late_camp_effective_prescription_warnings(
+    planning_brief: dict,
+    final_plan_text: str,
+) -> list[dict]:
+    """Reject rendered strength doses that exceed the resolved effective ceiling.
+
+    The deterministic prescription resolver stamps ``effective_strength_envelope``
+    onto every countdown-shaped strength role (scheduled D-day, loaded-lift
+    ceiling, RPE cap, whether loaded lifting is allowed at all, and the loaded
+    exercise names). This compares the rendered plan against THAT metadata — it
+    never re-derives sports-science rules from raw text — and blocks when the
+    render exceeds the envelope or renders loaded strength where the envelope
+    allows none.
+    """
+
+    weekly_role_map = planning_brief.get("weekly_role_map") or {}
+    weeks = [week for week in (weekly_role_map.get("weeks") or []) if isinstance(week, dict)]
+    if not weeks:
+        return []
+
+    blocks_by_day: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    for block in _countdown_blocks(final_plan_text):
+        blocks_by_day[int(block["day"])].append(block)
+    if not blocks_by_day:
+        return []
+
+    warnings: list[dict] = []
+    seen: set[tuple[Any, ...]] = set()
+    for week in weeks:
+        for role in week.get("session_roles") or []:
+            if not isinstance(role, dict):
+                continue
+            envelope = role.get("effective_strength_envelope")
+            if not isinstance(envelope, dict):
+                continue
+            d_day = envelope.get("scheduled_d_day")
+            if not isinstance(d_day, int):
+                continue
+            blocks = blocks_by_day.get(d_day)
+            if not blocks:
+                continue
+            loaded_names = [name for name in (envelope.get("loaded_exercise_names") or []) if name]
+            if not loaded_names:
+                continue
+            loaded_allowed = bool(envelope.get("loaded_allowed"))
+            max_sets = envelope.get("max_sets")
+            max_reps = envelope.get("max_reps")
+            rpe_high = envelope.get("rpe_cap_high")
+            for block in blocks:
+                for line in block.get("lines") or []:
+                    matched = next((name for name in loaded_names if phrase_in_text(line, name)), None)
+                    if not matched:
+                        continue
+                    identity = (d_day, matched, _normalize_render_line(line))
+                    if identity in seen:
+                        continue
+                    if not loaded_allowed:
+                        seen.add(identity)
+                        warnings.append(
+                            {
+                                "code": "late_camp_effective_prescription_exceeded",
+                                "message": (
+                                    f"D-{d_day} renders loaded strength ({matched}) but the resolved "
+                                    "effective prescription allows no loaded lifting at this countdown day."
+                                ),
+                                "severity": "blocker",
+                                "confidence": "high",
+                                "line": line,
+                                "scheduled_d_day": d_day,
+                                "exercise": matched,
+                                "effective_prescription": "no loaded lifting",
+                                "dose_adjustment_reason": envelope.get("dose_adjustment_reason"),
+                            }
+                        )
+                        continue
+                    sets, reps, rpe = _parse_rendered_strength_dose(line)
+                    violations: list[str] = []
+                    if isinstance(max_sets, int) and isinstance(sets, int) and sets > max_sets:
+                        violations.append(f"sets {sets} > effective max {max_sets}")
+                    if isinstance(max_reps, int) and isinstance(reps, int) and reps > max_reps:
+                        violations.append(f"reps {reps} > effective max {max_reps}")
+                    if isinstance(rpe_high, int) and isinstance(rpe, int) and rpe > rpe_high:
+                        violations.append(f"RPE {rpe} > effective cap {rpe_high}")
+                    if violations:
+                        seen.add(identity)
+                        warnings.append(
+                            {
+                                "code": "late_camp_effective_prescription_exceeded",
+                                "message": (
+                                    f"D-{d_day} strength dose exceeds the resolved effective prescription "
+                                    f"({matched}: {', '.join(violations)})."
+                                ),
+                                "severity": "blocker",
+                                "confidence": "high",
+                                "line": line,
+                                "scheduled_d_day": d_day,
+                                "exercise": matched,
+                                "violations": violations,
+                                "effective_max_sets": max_sets,
+                                "effective_max_reps": max_reps,
+                                "effective_rpe_cap": rpe_high,
+                                "dose_adjustment_reason": envelope.get("dose_adjustment_reason"),
+                            }
+                        )
+    return warnings
+
+
 def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dict:
     plan_lines = _extract_plan_lines(final_plan_text)
     phase_sections = _phase_sections(final_plan_text)
@@ -3175,6 +3300,16 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
             errors.append(_issue(code="dangerous_late_fight_strength_or_conditioning", message="D-1 includes hard strength/conditioning exposure.", severity="blocker", confidence="medium", line=block["header"]))
         if day == 0 and d0_extra_pattern.search(joined):
             errors.append(_issue(code="fight_day_protocol_violation", message="D-0 includes extra training beyond fight-day protocol.", severity="blocker", confidence="medium", line=block["header"]))
+
+    # Late-camp effective-prescription enforcement. These are hard blockers: a
+    # rendered strength dose that exceeds the deterministic effective ceiling (or
+    # renders loaded lifting where none is allowed) must not reach the athlete
+    # unflagged. Appended to errors so the release policy holds/flags it and the
+    # repair prompt receives it, exactly like the other late-fight dose blockers.
+    late_camp_effective_prescription_warnings = _late_camp_effective_prescription_warnings(
+        planning_brief, final_plan_text
+    )
+    errors.extend(_issue(**item) for item in late_camp_effective_prescription_warnings)
 
     missing_required_elements = _find_missing_required_elements(planning_brief, final_plan_text)
     missing_phase_sections = _find_missing_phase_sections(planning_brief, phase_sections)
@@ -3274,4 +3409,5 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         "late_fight_warnings": late_fight_warnings,
         "stage2_output_incomplete_warnings": [],
         "sport_language_warnings": sport_language_warnings,
+        "late_camp_effective_prescription_warnings": late_camp_effective_prescription_warnings,
     }

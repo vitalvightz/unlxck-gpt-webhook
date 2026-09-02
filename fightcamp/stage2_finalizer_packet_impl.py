@@ -183,6 +183,16 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
         "blocked_systems",
         "blocked_intensities",
         "blocked_tags",
+
+        # Deterministic late-camp strength dose truth. The resolver makes the
+        # scheduled-day effective prescription authoritative so the finalizer
+        # never renders the raw exercise-bank dose over a countdown-shaped role.
+        # base/effective/authority/reason live inside effective_strength_prescriptions;
+        # effective_strength_envelope is the numeric ceiling the validator enforces.
+        "effective_strength_prescriptions",
+        "effective_strength_envelope",
+        "scheduled_d_day",
+        "dose_adjustment_reason",
     )
     return {key: role.get(key) for key in keep if role.get(key) not in (None, "", [])}
 
@@ -522,6 +532,9 @@ def build_stage2_finalizer_packet(
             "Only render session_roles whose scheduled_day_hint exists in that week's calendar_days.",
             "Use session_count_summary to explain reduced weeks; do not restore suppressed roles to match the athlete's planned weekly frequency.",
             "Stage 1 draft exercise text is candidate material only. Final exercise rendering must obey weekly_role_map role, count, day ownership, restrictions, and taper rules first.",
+            # Late-camp effective strength dose is authoritative over the bank dose.
+            "If a session role carries effective_strength_prescriptions, each entry's effective_prescription is the authoritative dose for that exercise on that day. Render effective_prescription, never the base_prescription, and never a dose above it. Its base_prescription is the original exercise-bank dose kept only for provenance — do not render it as the prescription.",
+            "If a session role carries effective_strength_envelope, treat it as a hard ceiling: do not render more sets than effective_strength_envelope.max_sets, more reps than max_reps (for the loaded anchor/secondary lifts), or a higher RPE than rpe_cap_high. If effective_strength_envelope.loaded_allowed is false, render no loaded strength lifting on that day — neural/primer, readiness, or mobility work only.",
             "If selected_plan.session_sequence is present, render every entry in selected_plan.session_sequence as its own athlete-facing countdown card.",
             "Each selected_plan.session_sequence entry with scheduled_countdown_label/countdown_display_label must appear as a visible D-X header in the final output.",
             "Do not omit selected support, recovery, freshness, mobility, reset, or technical roles because they are low stress or short duration.",

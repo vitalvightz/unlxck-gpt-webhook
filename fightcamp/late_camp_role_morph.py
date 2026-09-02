@@ -28,6 +28,13 @@ STRENGTH_NEURAL_MORPH_MAX_D = 17
 STRENGTH_LABEL_MORPH_MAX_D = 12
 COMBAT_FLOOR_MIN_D = 18
 
+# D-17..D-14 is the reduced-volume strength-retention band: meaningful load is
+# intentionally retained (just at lower volume), so the wording and semantic
+# intent must stay "strength retention" here and only become "neural maintenance
+# / primer" at D-13 and closer. This is a ceiling, not a per-day staircase — the
+# countdown band caps the dose and readiness/cut/safety state may reduce further.
+STRENGTH_RETENTION_MIN_D = 14
+
 HARD_FIGHT_PACE_ROLE_KEYS = frozenset(
     {
         "fight_pace_repeatability_day",
@@ -51,21 +58,36 @@ _RHYTHM_TOUCH_ROLE_KEY = "light_fight_pace_touch_day"
 _RHYTHM_TOUCH_LABEL = "Rhythm flush"
 _NEURAL_TOUCH_LABEL = "Neural speed touch"
 
+# Each band: (min_d, max_sets, max_reps, rpe_cap, set_cap, rep_cap, dose_label,
+# movement_note, loaded_allowed, reason_code). ``loaded_allowed`` records whether
+# the band still permits real loaded strength work (True) or has moved to
+# neural / isometric / primer only (False) — the single source of truth the
+# resolver, the semantic intent check, and the validator all consume so
+# "no loaded lifting" is never re-derived from prose. ``reason_code`` is a
+# band-semantic dose_adjustment_reason (not a per-exact-day code, to avoid a
+# rigid "D17 always X, D16 always Y" staircase).
 _STRENGTH_DOSE_BANDS = (
     (14, 3, 3, "6-7", "2-3 sets", "2-3 reps", "low-volume strength-retention touch",
-     "familiar low-load strength retention only; never a grinding loaded session"),
+     "familiar low-load strength retention only; never a grinding loaded session",
+     True, "late_camp_strength_retention"),
     (10, 2, 3, "6-7", "2 sets", "2-3 reps", "reduced strength maintenance touch",
-     "familiar low-load strength maintenance only; never a grinding loaded session"),
+     "familiar low-load strength maintenance only; never a grinding loaded session",
+     True, "late_camp_reduced_strength_maintenance"),
     (8, 2, 2, "6-7", "1-2 sets", "1-2 reps", "minimal strength maintenance touch",
-     "single familiar low-load maintenance lift; no back-off volume, no failure"),
+     "single familiar low-load maintenance lift; no back-off volume, no failure",
+     True, "late_camp_minimal_strength_maintenance"),
     (7, 2, 1, "6", "1-2 sets", "isometric / neural microdose", "neural / max-force micro-touch",
-     "isometric or neural microdose only; no loaded strength-transfer reps"),
+     "isometric or neural microdose only; no loaded strength-transfer reps",
+     False, "late_camp_neural_microdose"),
     (5, 1, 1, "5-6", "1 set", "low-cost neural / power microdose", "low-cost neural / power microdose",
-     "low-cost neural / power expression only; no loaded strength work"),
+     "low-cost neural / power expression only; no loaded strength work",
+     False, "late_camp_neural_power_microdose"),
     (2, 1, 1, "5", "1 set", "throw / primer microdose", "sharpness microdose only",
-     "throws / primers only, tiny sharpness dose; no loaded strength work"),
+     "throws / primers only, tiny sharpness dose; no loaded strength work",
+     False, "late_camp_primer_microdose"),
     (0, 0, 0, "3-5", "no loaded lifting", "none", "no meaningful lifting stimulus",
-     "no meaningful lifting stimulus; readiness touch / mobility only"),
+     "no meaningful lifting stimulus; readiness touch / mobility only",
+     False, "fight_day_no_lifting"),
 )
 
 
@@ -77,7 +99,18 @@ def late_fight_strength_dose_cap(d_day):
         return None
     if d < 0 or d > STRENGTH_NEURAL_MORPH_MAX_D:
         return None
-    for min_d, max_sets, max_reps, rpe_cap, set_cap, rep_cap, dose_label, movement_note in _STRENGTH_DOSE_BANDS:
+    for (
+        min_d,
+        max_sets,
+        max_reps,
+        rpe_cap,
+        set_cap,
+        rep_cap,
+        dose_label,
+        movement_note,
+        loaded_allowed,
+        reason_code,
+    ) in _STRENGTH_DOSE_BANDS:
         if d >= min_d:
             return {
                 "max_sets": max_sets,
@@ -87,15 +120,31 @@ def late_fight_strength_dose_cap(d_day):
                 "rep_cap": rep_cap,
                 "dose_label": dose_label,
                 "movement_note": movement_note,
+                "loaded_allowed": loaded_allowed,
+                "reason_code": reason_code,
             }
     return None
 
 
-def _strength_dose_selection_rule(cap: dict) -> str:
+def _strength_dose_selection_rule(cap: dict, d_day: int) -> str:
+    dose = (
+        f"{cap['set_cap']} x {cap['rep_cap']} at RPE {cap['rpe_cap']} max "
+        "with full recovery"
+    )
+    note = f"{cap['movement_note'][0].upper()}{cap['movement_note'][1:]}."
+    if d_day >= STRENGTH_RETENTION_MIN_D:
+        # D-17..D-14: reduced-volume strength retention. Meaningful load is
+        # intentionally retained; this is a lighter, sharper strength session,
+        # NOT a neural-only touch. Keeping the wording truthful stops the
+        # finalizer from collapsing real (reduced) loading into a primer.
+        return (
+            f"Reduced-volume strength retention: {dose}. {note} "
+            "Keep the loading meaningful but cut total volume and stop well short "
+            "of grinding — a sharper, lighter strength session, not a neural-only touch."
+        )
+    # D-13 and closer: progressively neural maintenance / primer only.
     return (
-        f"Low-volume neural maintenance touch only: {cap['set_cap']} x "
-        f"{cap['rep_cap']} at RPE {cap['rpe_cap']} max with full recovery. "
-        f"{cap['movement_note'][0].upper()}{cap['movement_note'][1:]}. "
+        f"Low-volume neural maintenance touch only: {dose}. {note} "
         "Never render this as a loaded strength-transfer session — keep bar/"
         "implement speed high and the dose tiny."
     )
@@ -219,19 +268,39 @@ def _soften_full_strength_role(role: dict[str, Any], d_day: int) -> None:
         "max_sets": 3,
         "max_reps": 3,
         "movement_note": "familiar low-load strength retention only",
+        "loaded_allowed": True,
+        "reason_code": "late_camp_strength_retention",
     }
     role.setdefault("original_training_intent", "meaningful_strength")
     role["rpe_cap"] = cap["rpe_cap"]
     role["set_cap"] = cap["set_cap"]
     role["rep_cap"] = cap["rep_cap"]
-    role["strength_dose_cap"] = {"max_sets": cap["max_sets"], "max_reps": cap["max_reps"]}
-    role["selection_rule"] = _strength_dose_selection_rule(cap)
+    # ``loaded_allowed`` rides on the cap so downstream consumers (resolver,
+    # intent check, validator) share one truth for whether loaded strength work
+    # is still permitted at this D-day.
+    role["strength_dose_cap"] = {
+        "max_sets": cap["max_sets"],
+        "max_reps": cap["max_reps"],
+        "loaded_allowed": cap.get("loaded_allowed", True),
+    }
+    # Numeric scheduled D-day and band reason so the resolver and validator do
+    # not re-derive the countdown position from prose.
+    role["scheduled_d_day"] = d_day
+    role["dose_adjustment_reason"] = cap.get("reason_code") or "late_camp_strength_retention"
+    role["selection_rule"] = _strength_dose_selection_rule(cap, d_day)
     role["late_camp_strength_morph"] = True
-    role["day_assignment_reason"] = (
-        f"Late-camp morph: full strength-transfer softened to a "
-        f"{cap['set_cap']} x {cap['rep_cap']} @ RPE {cap['rpe_cap']} "
-        f"neural maintenance touch at D-{d_day}."
-    )
+    if d_day >= STRENGTH_RETENTION_MIN_D:
+        role["day_assignment_reason"] = (
+            f"Late-camp morph: strength-transfer trimmed to a reduced-volume "
+            f"{cap['set_cap']} x {cap['rep_cap']} @ RPE {cap['rpe_cap']} "
+            f"strength-retention touch at D-{d_day}."
+        )
+    else:
+        role["day_assignment_reason"] = (
+            f"Late-camp morph: full strength-transfer softened to a "
+            f"{cap['set_cap']} x {cap['rep_cap']} @ RPE {cap['rpe_cap']} "
+            f"neural maintenance touch at D-{d_day}."
+        )
     if d_day <= STRENGTH_LABEL_MORPH_MAX_D:
         role["athlete_facing_label"] = _NEURAL_TOUCH_LABEL
 
@@ -240,6 +309,11 @@ def _strength_intent_survives(role: dict[str, Any]) -> bool:
     cap = role.get("strength_dose_cap")
     if cap is None:
         return True
+    # Once the countdown band no longer permits loaded strength work (D-7 and
+    # closer: isometric / neural / primer only), the original meaningful-strength
+    # intent is NOT preserved even though a role stays visible on the calendar.
+    if cap.get("loaded_allowed") is False:
+        return False
     try:
         return int(cap.get("max_sets", 0)) >= 2 and int(cap.get("max_reps", 0)) >= 1
     except (TypeError, ValueError):

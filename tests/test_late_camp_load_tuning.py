@@ -37,15 +37,35 @@ def _athlete(days: int, **extra) -> dict:
 # applied by the scheduled-day late-camp morph (keyed on the session's own D-day,
 # not the plan's generation day), not by a separate bridge allocator.
 
-def test_full_strength_role_at_d17_or_closer_is_neural_maintenance_only():
+def test_full_strength_role_at_d17_is_reduced_volume_strength_retention():
+    # D-17..D-14 intentionally RETAIN meaningful (reduced-volume) strength; the
+    # wording/metadata must stay truthful so the finalizer keeps real reduced
+    # loading instead of collapsing the session to a neural-only touch.
     week = _strength_week("primary_strength_day", 17)
     apply_late_camp_role_morph({"weeks": [week]})
     role = week["session_roles"][0]
     assert role["rpe_cap"] == "6-7"
     rule = role["selection_rule"].lower()
+    assert "strength retention" in rule
+    assert "neural maintenance" not in rule
+    assert "never render this as a loaded" not in rule
+    assert role["strength_dose_cap"]["max_sets"] <= 3
+    assert role["strength_dose_cap"]["loaded_allowed"] is True
+    assert role["dose_adjustment_reason"] == "late_camp_strength_retention"
+    # Semantic intent stays truthful: meaningful strength is preserved here.
+    assert role["intent_validation"]["satisfied"] is True
+
+
+def test_full_strength_role_at_d13_becomes_neural_maintenance():
+    # Just inside the closer band the wording progressively becomes neural
+    # maintenance / primer — loaded strength is still permitted here (D-8+),
+    # but it is no longer framed as a strength-retention session.
+    week = _strength_week("primary_strength_day", 13)
+    apply_late_camp_role_morph({"weeks": [week]})
+    role = week["session_roles"][0]
+    rule = role["selection_rule"].lower()
     assert "neural maintenance" in rule
     assert "never render this as a loaded" in rule
-    assert role["strength_dose_cap"]["max_sets"] <= 3
 
 
 def test_full_strength_role_at_d18_or_further_keeps_meaningful():

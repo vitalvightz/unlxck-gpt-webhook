@@ -50,6 +50,7 @@ from .fight_day_override import apply_fight_day_override_to_weekly_role_map
 from .role_labels import stamp_weekly_role_map_labels
 from .camp_week_fillers import apply_camp_week_fillers
 from .late_camp_role_morph import apply_late_camp_role_morph
+from .prescription_resolver import apply_effective_strength_prescriptions
 from .normal_calendar_placement import fill_missing_session_days
 from .late_selector_windows import classify_late_selector_window
 from .normalization import (  # noqa: F401  (phrase_in_text re-exported for back-compat)
@@ -1739,6 +1740,16 @@ def build_planning_brief(
     # or protected-slot rule can preserve hard glycolytic work inside D-13; the
     # D-21→D-18 combat-pressure floor is untouched by construction.
     apply_late_camp_role_morph(weekly_role_map)
+    # Deterministic prescription resolution: now that every strength role has its
+    # scheduled D-day and final countdown dose envelope, resolve the single
+    # authoritative effective prescription per candidate strength exercise so
+    # Stage 2 never has to reconcile the exercise-bank dose against the role caps.
+    # Runs AFTER the morph (which owns dose shaping) and BEFORE label stamping.
+    apply_effective_strength_prescriptions(
+        weekly_role_map=weekly_role_map,
+        candidate_pools=candidate_pools,
+        athlete_model=athlete_model,
+    )
     weekly_role_map = stamp_weekly_role_map_labels(weekly_role_map)
     return {
         "schema_version": "planning_brief.v1",
