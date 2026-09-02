@@ -2,14 +2,16 @@
 from types import SimpleNamespace
 
 import fightcamp.stage2_planning_brief as stage2_planning_brief_module
-from fightcamp.stage2_payload import (
+from fightcamp.stage2_role_map import (
     _apply_high_fatigue_week_compression,
-    _build_weekly_role_map,
     _compute_readiness_compression,
+    _non_spar_role_priority_rank,
+)
+from fightcamp.stage2_payload import (
+    _build_weekly_role_map,
     _derive_competitive_maturity,
     _high_fatigue_compression_reason_codes,
     _is_meaningful_stressor,
-    _non_spar_role_priority_rank,
     _parse_record,
     build_planning_brief,
     build_stage2_payload,
