@@ -142,7 +142,9 @@ def test_bank_json_entries_are_structurally_complete():
 
         tags = set(entry.get("tags") or [])
         sports = entry.get("sports") or []
-        assert sports and all(isinstance(sport, str) and sport for sport in sports), (
+        assert isinstance(sports, list) and sports and all(
+            isinstance(sport, str) and sport.strip() for sport in sports
+        ), (
             f"{key}: needs explicit sport ownership"
         )
         assert "tactical_watch" in tags, f"{key}: missing tactical_watch tag"
