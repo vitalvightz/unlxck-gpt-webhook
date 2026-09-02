@@ -1,0 +1,63 @@
+name: Step 10 dead-code tidy
+
+on:
+  push:
+    branches:
+      - codex/audit-and-close-architecture-migration
+
+permissions:
+  contents: write
+
+jobs:
+  tidy:
+    if: ${{ !contains(github.event.head_commit.message, '[step10-tidy-done]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/audit-and-close-architecture-migration
+          fetch-depth: 0
+
+      - name: Remove orphaned comments and excess gaps
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('fightcamp/stage2_payload.py')
+          raw = path.read_bytes()
+          had_bom = raw.startswith(b'\xef\xbb\xbf')
+          text = raw.decode('utf-8-sig')
+
+          orphan = '''# Between-hard-contacts legality is owned by ``combat_load_policy``. Stage 2 no\n# longer keeps its own allow-list of "loads safe between two hard sparring days";\n# it asks the shared policy and enforces the answer. These constants are the\n# minimal canonical encoding of a sandwiched slot: one effective hard contact\n# immediately before and after the candidate, evaluated in a single collision\n# scope so the policy sees the candidate as between two hard contacts.\n'''
+          if text.count(orphan) != 1:
+              raise SystemExit('tidy guard failed: orphaned sandwich comment not found exactly once')
+          text = text.replace(orphan, '', 1)
+
+          start_marker = 'def _join_rule_parts(*parts: str) -> str:\n'
+          end_marker = 'def _build_weekly_role_map(\n'
+          start = text.index(start_marker)
+          end = text.index(end_marker, start)
+          section = text[start:end]
+          section = re.sub(r'\n{4,}', '\n\n\n', section)
+          text = text[:start] + section + text[end:]
+
+          encoded = text.encode('utf-8')
+          if had_bom:
+              encoded = b'\xef\xbb\xbf' + encoded
+          path.write_bytes(encoded)
+          PY
+          python -m py_compile fightcamp/stage2_payload.py
+          git diff --check
+
+      - name: Commit tidy and remove temporary workflow
+        shell: bash
+        run: |
+          rm .github/workflows/step10-dead-code-tidy.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --stat
+          git commit -m "refactor: tidy dead Stage 2 payload cleanup [step10-tidy-done]"
+          git push origin HEAD:codex/audit-and-close-architecture-migration
