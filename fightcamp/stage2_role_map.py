@@ -1935,11 +1935,58 @@ def _active_injury_is_moderate_plus(athlete_model: dict) -> bool:
 
 def _boxing_crowded_week_injury_is_moderate_plus(athlete_model: dict) -> bool:
     """Severity-aware injury signal used only by boxing crowded-week policy."""
+    readiness_flags = set(clean_list(athlete_model.get("readiness_flags", [])))
+    if readiness_flags & {
+        "moderate_injury",
+        "high_injury",
+        "significant_injury",
+        "severe_injury",
+        "red_flag_injury",
+    }:
+        return True
     if _all_active_injuries_surface_only(athlete_model):
         return False
-    readiness_flags = set(clean_list(athlete_model.get("readiness_flags", [])))
-    if readiness_flags & {"injury_management", "moderate_injury", "significant_injury", "severe_injury"}:
-        return True
+
+    structured_entries: list[dict] = []
+    parsed_injuries = athlete_model.get("parsed_injuries")
+    if isinstance(parsed_injuries, (list, tuple)):
+        structured_entries.extend(
+            entry for entry in parsed_injuries if isinstance(entry, dict)
+        )
+    guided_injury = athlete_model.get("guided_injury")
+    if isinstance(guided_injury, dict):
+        structured_entries.append(guided_injury)
+    injury_restrictions = athlete_model.get("injury_restrictions")
+    if isinstance(injury_restrictions, (list, tuple)):
+        structured_entries.extend(
+            entry for entry in injury_restrictions if isinstance(entry, dict)
+        )
+
+    structured_severities = {
+        str(entry.get("severity") or "").strip().lower()
+        for entry in structured_entries
+        if str(entry.get("severity") or "").strip()
+    }
+    if structured_severities:
+        return bool(
+            structured_severities
+            & {
+                "moderate",
+                "high",
+                "severe",
+                "major",
+                "significant",
+                "critical",
+                "grade 2",
+                "grade ii",
+                "grade 3",
+                "grade iii",
+            }
+        )
+
+    # Legacy athlete snapshots may predate structured severity fields. Keep the
+    # raw-text fallback, but do not treat the generic ``injury_management`` flag
+    # as severity: the canonical builder emits it for mild injuries too.
     for entry in clean_list(athlete_model.get("injuries", [])):
         lowered = entry.lower()
         if any(

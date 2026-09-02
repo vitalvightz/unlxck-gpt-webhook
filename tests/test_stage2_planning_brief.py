@@ -2534,8 +2534,16 @@ def test_boxing_crowded_week_does_not_treat_mild_injury_as_moderate_plus_signal(
         fatigue="moderate",
         injuries=["mild shoulder irritation"],
         days_until_fight=35,
-        readiness_flags=["moderate_fatigue"],
+        readiness_flags=["moderate_fatigue", "injury_management"],
     )
+    athlete["parsed_injuries"] = [
+        {
+            "injury_type": "irritation",
+            "canonical_location": "shoulder",
+            "original_phrase": "mild shoulder irritation",
+            "severity": "low",
+        }
+    ]
     week = _spp_week_role_map(athlete)
 
     assert week["intentional_compression"]["active"] is False

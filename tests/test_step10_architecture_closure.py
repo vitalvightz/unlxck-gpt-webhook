@@ -12,6 +12,7 @@ policy rather than inventing it.
 """
 from __future__ import annotations
 
+from copy import deepcopy
 import importlib
 
 import pytest
@@ -445,18 +446,23 @@ def test_payload_crowded_week_post_processing_is_decoration_only():
         "suppressed_roles": [{"role_key": "aerobic_support_day"}],
         "intentionally_unused_days": ["Friday"],
     }
-    before_roles = list(week["session_roles"])
-    before_suppressed = list(week["suppressed_roles"])
-    before_unused = list(week["intentionally_unused_days"])
+    before_week = deepcopy(week)
 
     stage2_payload._apply_boxing_crowded_week_post_processing(
         {"weeks": [week]}, athlete_model={"sport": "boxing", "fatigue": "high"}
     )
 
-    assert week["session_roles"] == before_roles
-    assert week["suppressed_roles"] == before_suppressed
-    assert week["intentionally_unused_days"] == before_unused
-    assert week["session_roles"][0]["governance"]["main_job"] == "anchor"
+    decorated_governance = [
+        role.pop("governance") for role in deepcopy(week["session_roles"])
+    ]
+    for role in before_week["session_roles"]:
+        role.pop("governance", None)
+    week_without_governance = deepcopy(week)
+    for role in week_without_governance["session_roles"]:
+        role.pop("governance", None)
+
+    assert week_without_governance == before_week
+    assert decorated_governance[0]["main_job"] == "anchor"
 
 
 def test_payload_test_oracles_survived_the_dedupe():
@@ -474,21 +480,111 @@ def test_payload_test_oracles_survived_the_dedupe():
 
 
 def test_generic_and_crowded_week_injury_semantics_remain_distinct():
-    from fightcamp import stage2_role_map
+    from fightcamp import athlete_model, stage2_role_map
+    from fightcamp.training_context import TrainingContext
 
-    athlete = {
-        "sport": "boxing",
-        "fatigue": "low",
-        "injuries": ["mild shoulder irritation"],
-        "readiness_flags": [],
-        "days_until_fight": 35,
-        "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
-        "hard_sparring_days": [],
-        "weight_cut_pct": 0.0,
-    }
+    training_context = TrainingContext(
+        fatigue="low",
+        training_frequency=5,
+        days_available=5,
+        training_days=["monday", "tuesday", "wednesday", "thursday", "friday"],
+        injuries=["mild shoulder irritation"],
+        style_technical=["boxing"],
+        style_tactical=["pressure_fighter"],
+        weaknesses=[],
+        equipment=["heavy_bag"],
+        weight_cut_risk=False,
+        weight_cut_pct=0.0,
+        fight_format="boxing",
+        status="amateur",
+        key_goals=["conditioning"],
+        training_preference="balanced",
+        mental_block=[],
+        age=25,
+        weight=70.0,
+        prev_exercises=[],
+        recent_exercises=[],
+        phase_weeks={"GPP": 1, "SPP": 1, "TAPER": 0},
+        days_until_fight=35,
+        parsed_injuries=[
+            {
+                "injury_type": "irritation",
+                "canonical_location": "shoulder",
+                "original_phrase": "mild shoulder irritation",
+                "severity": "low",
+            }
+        ],
+        guided_injury={"area": "shoulder", "severity": "low"},
+    )
+    athlete = athlete_model._build_athlete_model(
+        training_context=training_context,
+        sport="boxing",
+        record="3-0",
+        rounds_format="3x3",
+        camp_length_weeks=2,
+        short_notice=False,
+    )
 
+    assert "injury_management" in athlete["readiness_flags"]
     assert stage2_role_map._compute_readiness_compression(athlete) == 1
     policy = stage2_role_map._boxing_crowded_week_policy_state(
         {"declared_hard_sparring_days": []}, athlete
     )
     assert "injury_management" not in policy["risk_signals"]
+
+
+@pytest.mark.parametrize(
+    ("structured_field", "structured_value"),
+    [
+        ("parsed_injuries", [{"severity": "moderate"}]),
+        ("guided_injury", {"severity": "high"}),
+        ("injury_restrictions", [{"severity": "moderate"}]),
+    ],
+)
+def test_crowded_week_injury_reads_structured_moderate_plus_severity(
+    structured_field,
+    structured_value,
+):
+    from fightcamp import stage2_role_map
+
+    athlete = {
+        "sport": "boxing",
+        "fatigue": "low",
+        "injuries": [],
+        "readiness_flags": ["injury_management"],
+        "days_until_fight": 35,
+        "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+        "hard_sparring_days": [],
+        "weight_cut_pct": 0.0,
+        structured_field: structured_value,
+    }
+
+    policy = stage2_role_map._boxing_crowded_week_policy_state(
+        {"declared_hard_sparring_days": []}, athlete
+    )
+    assert "injury_management" in policy["risk_signals"]
+
+
+@pytest.mark.parametrize(
+    "readiness_flag",
+    ["moderate_injury", "high_injury", "severe_injury", "red_flag_injury"],
+)
+def test_crowded_week_injury_respects_explicit_moderate_plus_flags(readiness_flag):
+    from fightcamp import stage2_role_map
+
+    athlete = {
+        "sport": "boxing",
+        "fatigue": "low",
+        "injuries": [],
+        "readiness_flags": [readiness_flag],
+        "days_until_fight": 35,
+        "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+        "hard_sparring_days": [],
+        "weight_cut_pct": 0.0,
+        "surface_injury_only": True,
+    }
+
+    policy = stage2_role_map._boxing_crowded_week_policy_state(
+        {"declared_hard_sparring_days": []}, athlete
+    )
+    assert "injury_management" in policy["risk_signals"]
