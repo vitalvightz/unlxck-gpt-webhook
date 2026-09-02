@@ -173,3 +173,21 @@ def test_renderer_weekday_resolution_is_read_only_and_does_not_restore_roles():
     assert _resolve_role_weekdays(roles) == {0: ""}
     assert roles == before
     assert _resolve_role_weekdays([]) == {}
+
+
+def test_stage2_payload_does_not_reintroduce_role_budget_policy_copies():
+    from fightcamp import stage2_payload
+
+    removed_names = {
+        "_apply_high_fatigue_week_compression",
+        "_apply_legacy_high_fatigue_compression",
+        "_apply_boxing_crowded_week_compression",
+        "_boxing_crowded_week_policy_state",
+        "_suppress_sandwiched_glycolytic",
+        "_forbidden_between_effective_hard_contacts",
+        "_non_spar_role_priority_rank",
+        "_compute_readiness_compression",
+        "_lock_declared_hard_sparring_roles",
+        "_compressed_priority_for_role",
+    }
+    assert not (removed_names & set(vars(stage2_payload)))
