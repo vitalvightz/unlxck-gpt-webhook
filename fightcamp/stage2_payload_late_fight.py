@@ -2943,17 +2943,22 @@ def _late_fight_assignment_score(
 # Step 9B: late-fight collision legality is the shared combat_load_policy's, not an
 # independent per-allocator penalty. Effective hard contact exists only at D-18..D-21
 # (see ``_hard_spar_status_for_countdown_offset``); for the compressed D-13-inward
-# window the policy returns ALLOW throughout, so this term is a no-op there and only
-# bites in the bridge band, where an app-owned stressor adjacent to a still-effective
-# hard contact is FORBID. FORBID is a dominant penalty so a forbidden slot can never
-# win on local preference; DEPRIORITIZE is a small nudge — it ranks a costly-but-legal
-# slot below an equivalent ALLOW one without ever suppressing a role (it stays smaller
-# than a role's presence value in either scorer). Countdown offsets become canonical
-# chronological positions via ``calendar_context.sequence_*`` (``-offset``); this owner
-# never passes raw D-day numbers as positions. Representation is the canonical
-# adapter's; the ALLOW/DEPRIORITIZE/FORBID verdict is the policy's.
-_LATE_FIGHT_FORBID_PENALTY = 5_000_000
-_LATE_FIGHT_DEPRIORITIZE_PENALTY = 900
+# window the policy returns ALLOW throughout, so this term is a no-op there (penalty 0,
+# score unchanged) and only bites in the bridge band, where an app-owned stressor
+# adjacent to a still-effective hard contact is FORBID/DEPRIORITIZE.
+#
+# The penalty is *lexicographic*, not an additive nudge: the tier magnitudes each
+# dominate the largest owner preference term the two scorers can produce (composite
+# role-selection + spacing/freshness, or the single-window score with its -100000
+# hard-weekday penalty). So an assignment is ranked first by fewest FORBID slots, then
+# by fewest DEPRIORITIZE slots, and only then by the allocator's own
+# priority/target/freshness/tie-break preferences — an owner preference can never make
+# a DEPRIORITIZE slot beat an ALLOW one, nor a FORBID slot survive. Countdown offsets
+# become canonical chronological positions via ``calendar_context.sequence_*``
+# (``-offset``); this owner never passes raw D-day numbers as positions. Representation
+# is the canonical adapter's; the ALLOW/DEPRIORITIZE/FORBID verdict is the policy's.
+_LATE_FIGHT_FORBID_PENALTY = 100_000_000_000
+_LATE_FIGHT_DEPRIORITIZE_PENALTY = 100_000_000
 
 
 def _late_fight_resolved_contacts(roles: list[dict[str, Any]]) -> list[tuple[int, str]]:

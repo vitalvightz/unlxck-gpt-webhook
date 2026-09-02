@@ -16,6 +16,7 @@ from .calendar_context import (
     weekday_position,
     week_scope,
 )
+from .combat_load_policy import placement_rank
 from .sparring_dose_planner import (
     compute_hard_sparring_plan,
     effective_hard_day_count,
@@ -1336,20 +1337,33 @@ def _assign_declared_day_hints(
             _profile_cache[idx] = classify_role(ordered[idx])
         return _profile_cache[idx]
 
-    def _pick_legal_day(idx: int, candidate_days: list[str], fallback: str | None) -> str | None:
+    def _pick_legal_day(idx: int, candidate_days: list[str], unclassified_fallback: str | None) -> str | None:
         """Best legal day for role ``idx`` among ``candidate_days`` (owner order).
 
-        Returns the policy's best legal weekday (ALLOW preferred over
-        DEPRIORITIZE, owner order breaking ties within a tier). Falls back to
-        ``fallback`` when the role is unclassifiable or every candidate is FORBID
-        — the no-legal-candidate case, where the owner keeps its prior choice so
-        Step 9B invents no new training decision.
+        ALLOW is preferred over DEPRIORITIZE; owner order breaks ties within a
+        tier. Returns ``None`` when every candidate is FORBID — FORBID means the
+        day is *unavailable*, so the owner leaves the role for its existing
+        dayless/unresolved handling instead of committing a forbidden slot (a
+        forbidden placement can never be overridden back in by local preference).
+        ``unclassified_fallback`` is used only when the role cannot be classified,
+        where legality is not this owner's to decide.
         """
         profile = _role_profile(idx)
         if profile is None:
-            return fallback
-        chosen = _legality.best_legal_weekday(profile, candidate_days)
-        return chosen if chosen is not None else fallback
+            return unclassified_fallback
+        return _legality.best_legal_weekday(profile, candidate_days)
+
+    def _directive_rank(idx: int, day: str) -> int:
+        """Canonical legality tier for role ``idx`` on ``day``.
+
+        0=ALLOW, 1=DEPRIORITIZE, 2=FORBID. An unclassifiable role or unmappable
+        day yields 0 so the owner keeps its own anchor preference there.
+        """
+        profile = _role_profile(idx)
+        position = weekday_position(day)
+        if profile is None or position is None:
+            return 0
+        return placement_rank(_legality.decision_at_position(profile, position))
 
     # Preserve explicit scheduled days for locked roles.
     # Hard sparring days are coach-owned anchors and must never move.
@@ -1400,28 +1414,27 @@ def _assign_declared_day_hints(
     if recovery_idx is not None and primary_idx is not None and len(training_days) >= 2:
         middle = max(0, len(training_days) // 2)
         best_pair: tuple[int, int] | None = None
-        best_score = -10_000
-        # Reject any pair that lands the recovery slot on a declared hard
-        # sparring day. _lock_declared_hard_sparring_roles will otherwise
-        # displace the recovery role, silently consuming the gas-tank recovery
-        # touch that gas-tank-limiter athletes rely on (see
-        # _upgrade_recovery_days_to_gas_tank).
+        best_score: int | None = None
+        # The recovery -> primary adjacency, the mid-week target, and the recovery
+        # support/sandwiched preferences are the owner's anchor logic. Legality is
+        # the policy's: a FORBID day for either anchor is skipped (a forbidden
+        # anchor is never committed on preference), and a DEPRIORITIZE day is a
+        # legal fallback that ranks strictly below an ALLOW day.
         for idx in range(len(training_days) - 1):
             recovery_day = training_days[idx]
             primary_day = training_days[idx + 1]
-            if primary_day in hard_sparring_days:
-                continue
-            if recovery_day in hard_sparring_days:
+            primary_rank = _directive_rank(primary_idx, primary_day)
+            recovery_rank = _directive_rank(recovery_idx, recovery_day)
+            if primary_rank == 2 or recovery_rank == 2:
                 continue
             score = 100
-            if primary_day in sandwiched_days:
-                score -= 50
+            score -= (primary_rank + recovery_rank) * 1000
             if recovery_day in support_work_days:
                 score += 4
             if recovery_day in sandwiched_days:
                 score += 5
             score -= abs((idx + 1) - middle)
-            if score > best_score:
+            if best_score is None or score > best_score:
                 best_score = score
                 best_pair = (idx, idx + 1)
 
@@ -1432,38 +1445,20 @@ def _assign_declared_day_hints(
             day_assignments[primary_idx] = primary_day
             used_days.update({recovery_day, primary_day})
         else:
-            # When no clean adjacent pair exists (crowded boxing weeks where
-            # every adjacent slot brushes a declared hard sparring day), at
-            # least pin the primary strength anchor to a non-spar day before
-            # the per-role fallback runs. Otherwise the support-strength,
-            # aerobic, and recovery roles consume the non-spar days in order
-            # and the primary anchor lands on a sparring day — only to be
-            # poached by ``_lock_declared_hard_sparring_roles``.
-            primary_anchor_day = next(
-                (
-                    day
-                    for day in training_days
-                    if day not in hard_sparring_days
-                    and day not in used_days
-                    and day not in sandwiched_days
-                ),
+            # No legal adjacent pair. Anchor the primary strength role on its best
+            # legal free day (ALLOW before DEPRIORITIZE). If every free day is
+            # FORBID it stays dayless — the owner's existing unresolved handling —
+            # rather than taking a forbidden slot that a later pass could keep.
+            primary_anchor_day = _pick_legal_day(
+                primary_idx,
+                [day for day in training_days if day not in used_days],
                 None,
             )
-            if primary_anchor_day is None:
-                primary_anchor_day = next(
-                    (
-                        day
-                        for day in training_days
-                        if day not in hard_sparring_days and day not in used_days
-                    ),
-                    None,
-                )
             if primary_anchor_day:
                 day_assignments[primary_idx] = primary_anchor_day
                 used_days.add(primary_anchor_day)
-        # If no clean adjacent pair exists, defer to the per-role fallback
-        # below — it already prefers sandwiched non-spar days for recovery and
-        # non-sandwiched non-spar days for primary strength.
+        # If neither anchor committed here, the per-role fallback below still runs
+        # through the same canonical gate.
 
     if glycolytic_idx is not None:
         # Owner preference: latest declared training day. Legality (same-day
@@ -2114,16 +2109,19 @@ def _apply_high_fatigue_week_compression(
             hard_sparring_plan=hard_sparring_plan,
         )
 
-    # Structural rule: suppress a glycolytic conditioning session that landed
-    # between two effective hard spar days. This fires unconditionally — it is not
-    # gated on fatigue or compression signals.
+    # Structural rule: suppress a glycolytic conditioning session that has no legal
+    # day in this week's contact structure — i.e. it is boxed in between two
+    # effective hard spar days with no escape. This fires unconditionally — it is
+    # not gated on fatigue or compression signals.
     #
-    # Step 9B: the between-hard-contact legality is the shared combat_load_policy's
-    # (queried through the canonical calendar_context adapter on resolved contact
-    # state), not a duplicate local ``sandwiched_training_days`` verdict. This owner
-    # keeps only the role-budget scope — which roles it may suppress (glycolytic
-    # conditioning outside ``must_keep``) — and the suppression action, its
-    # no-legal-slot contract.
+    # Step 9B: the legality is the shared combat_load_policy's (queried through the
+    # canonical calendar_context adapter on resolved contact state), not a duplicate
+    # local ``sandwiched_training_days`` verdict. Because placement now leaves a
+    # forbidden glycolytic role dayless rather than committing it to a between-hard
+    # day, this checks whether *any* declared training day is legal for the role;
+    # when none is, the owner suppresses it (its no-legal-slot contract). The owner
+    # keeps only the role-budget scope — glycolytic conditioning outside
+    # ``must_keep`` — and the suppression action.
     _effective_spar_days = set(effective_hard_days(hard_sparring_plan or []))
     if len(_effective_spar_days) >= 2:
         _resolved = dict(week_entry.get("resolved_rule_state") or {})
@@ -2133,10 +2131,13 @@ def _apply_high_fatigue_week_compression(
             clean_list(athlete_model.get("hard_sparring_days", [])),
             scope=week_scope(week_entry),
         )
+        _training_days = _ordered_weekdays(clean_list(athlete_model.get("training_days", [])))
 
-        def _is_between_hard(role: dict) -> bool:
-            position = weekday_position(str(role.get("scheduled_day_hint") or "").strip())
-            return position is not None and _legality.is_between_hard_position(position)
+        def _has_no_legal_day(role: dict) -> bool:
+            profile = classify_role(role)
+            if profile is None:
+                return False
+            return _legality.best_legal_weekday(profile, _training_days) is None
 
         _kept: list[dict] = []
         for _role in session_roles:
@@ -2144,7 +2145,7 @@ def _apply_high_fatigue_week_compression(
                 _role.get("category") == "conditioning"
                 and _role.get("preferred_system") == "glycolytic"
                 and _role.get("preferred_system") not in _must_keep_early
-                and _is_between_hard(_role)
+                and _has_no_legal_day(_role)
             ):
                 suppressed_roles = list(suppressed_roles) + [
                     _make_compression_suppression(

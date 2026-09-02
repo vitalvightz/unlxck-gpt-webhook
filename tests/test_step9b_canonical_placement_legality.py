@@ -105,27 +105,41 @@ def test_normal_forbid_not_selected_even_when_locally_preferred():
 
 def test_normal_deprioritize_remains_selectable_when_no_allow_slot_exists():
     # Mon & Fri hard: every non-spar day (Tue/Wed/Thu) is between two hard
-    # contacts. Recovery between hard contacts is ALLOW, so a recovery role still
-    # places there — a legal fallback, never suppressed to dayless.
+    # contacts. A low-load movement role is DEPRIORITIZE there
+    # (between_hard_contacts_low_load_physical) — legal, not FORBID — so it still
+    # places on one of those days rather than being suppressed to dayless.
     plan = [{"day": "Monday", "status": "hard_as_planned"}, {"day": "Friday", "status": "hard_as_planned"}]
-    days = _assign(
+    view = cc.normal_week_legality(plan, ["Monday", "Friday"], scope=("normal_week", 1))
+    movement = cc.classify_role({"category": "conditioning", "role_key": "movement_quality"})
+    assert view.decision_at_position(movement, cc.weekday_position("wednesday")).directive is PlacementDirective.DEPRIORITIZE
+
+    # Mon-Fri only: every non-spar day (Tue/Wed/Thu) is between the two hard days,
+    # so the movement role has no ALLOW option — only DEPRIORITIZE ones.
+    athlete = {
+        "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        "hard_sparring_days": ["Monday", "Friday"],
+        "support_work_days": [],
+    }
+    out = _assign_declared_day_hints(
         [
             {"role_key": "hard_sparring_day", "category": "sparring", "scheduled_day_hint": "Monday"},
             {"role_key": "hard_sparring_day", "category": "sparring", "scheduled_day_hint": "Friday"},
-            {"role_key": "recovery_reset_day", "category": "recovery"},
+            {"role_key": "movement_quality", "category": "conditioning"},
         ],
-        hard_days=["Monday", "Friday"],
-        plan=plan,
+        athlete,
+        hard_sparring_plan=plan,
     )
-    assert days["recovery_reset_day"] in {"Tuesday", "Wednesday", "Thursday"}
+    movement_role = next(r for r in out if r["role_key"] == "movement_quality")
+    assert movement_role.get("scheduled_day_hint") in {"Tuesday", "Wednesday", "Thursday"}
 
 
-def test_normal_no_legal_candidate_keeps_owner_fallback_not_a_new_decision():
+def test_normal_forbid_means_unavailable_not_a_forbidden_fallback():
     # Mon & Fri hard, only Mon-Fri training: primary strength has no legal day
-    # (Tue/Wed/Thu are between two hard contacts = FORBID for meaningful
-    # strength; Mon/Fri are contact days). The owner keeps its existing
-    # least-bad placement (a real training day) rather than inventing a new
-    # suppression/dayless decision during Step 9B.
+    # (Tue/Wed/Thu are between two hard contacts = FORBID for meaningful strength;
+    # Mon/Fri are contact days). FORBID must mean *unavailable*: the owner leaves
+    # the role dayless (its existing unresolved handling) rather than committing a
+    # forbidden day that a later pass could keep — placement never emits an
+    # intentionally illegal calendar.
     athlete = {
         "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
         "hard_sparring_days": ["Monday", "Friday"],
@@ -140,7 +154,36 @@ def test_normal_no_legal_candidate_keeps_owner_fallback_not_a_new_decision():
         {"day": "Monday", "status": "hard_as_planned"}, {"day": "Friday", "status": "hard_as_planned"}
     ])
     primary = next(r for r in out if r["role_key"] == "primary_strength_day")
-    assert primary.get("scheduled_day_hint") in {"Tuesday", "Wednesday", "Thursday"}
+    assert not str(primary.get("scheduled_day_hint") or "").strip()
+
+
+def test_normal_completion_never_refills_a_forbidden_day():
+    # The downstream completion helper is part of the placement owner: it must not
+    # re-place a dayless role onto a forbidden day. Here every free declared day is
+    # FORBID for meaningful strength, so completion leaves it dayless too.
+    from fightcamp.normal_calendar_placement import fill_missing_session_days
+
+    weekly_role_map = {
+        "weeks": [
+            {
+                "week_index": 1,
+                "declared_training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+                "declared_hard_sparring_days": ["Monday", "Friday"],
+                "hard_sparring_plan": [
+                    {"day": "Monday", "status": "hard_as_planned"},
+                    {"day": "Friday", "status": "hard_as_planned"},
+                ],
+                "session_roles": [
+                    {"role_key": "hard_sparring_day", "category": "sparring", "scheduled_day_hint": "Monday"},
+                    {"role_key": "hard_sparring_day", "category": "sparring", "scheduled_day_hint": "Friday"},
+                    {"role_key": "primary_strength_day", "category": "strength"},
+                ],
+            }
+        ]
+    }
+    fill_missing_session_days(weekly_role_map)
+    primary = weekly_role_map["weeks"][0]["session_roles"][2]
+    assert not str(primary.get("scheduled_day_hint") or "").strip()
 
 
 # --------------------------------------------------------------------------- #
@@ -170,10 +213,15 @@ def test_resolved_contact_status_drives_canonical_collision_not_labels():
 # --------------------------------------------------------------------------- #
 # Late-fight owner                                                            #
 # --------------------------------------------------------------------------- #
-def test_late_fight_forbid_penalty_dominates_deprioritize_and_allow():
+def test_late_fight_legality_penalty_is_lexicographic_over_owner_preferences():
     # A meaningful app strength touch immediately after a still-effective hard
-    # contact (D-18 hard, touch at D-17) is FORBID; the same touch clear of
-    # contact is ALLOW. The FORBID penalty must dwarf the DEPRIORITIZE nudge.
+    # contact (D-18 hard, touch at D-17) is FORBID; the same touch clear of contact
+    # is ALLOW. The legality penalty is lexicographic: FORBID and DEPRIORITIZE tiers
+    # each dwarf the largest owner-preference swing the late-fight scorers produce
+    # (the single-window -100000 hard-weekday penalty and the composite gap/stage
+    # terms), so an owner preference can never flip ALLOW below DEPRIORITIZE or keep
+    # a FORBID slot. The compressed D-13-inward window (no effective hard contact)
+    # stays a no-op.
     forbid_case = [
         {"role_key": "hard_sparring_day", "category": "sparring", "countdown_offset": 18},
         {"role_key": "strength_touch_day", "category": "strength", "countdown_offset": 17,
@@ -184,8 +232,12 @@ def test_late_fight_forbid_penalty_dominates_deprioritize_and_allow():
         {"role_key": "strength_touch_day", "category": "strength", "countdown_offset": 12,
          "stress_class": "meaningful_stress", "cost_class": "medium"},
     ]
-    assert lf._late_fight_canonical_collision_penalty(forbid_case) >= lf._LATE_FIGHT_FORBID_PENALTY
+    _OWNER_PREFERENCE_CEILING = 1_000_000  # far above any single owner-score swing
     assert lf._late_fight_canonical_collision_penalty(allow_case) == 0
+    assert lf._late_fight_canonical_collision_penalty(forbid_case) == lf._LATE_FIGHT_FORBID_PENALTY
+    # Each tier dominates owner preference, and FORBID dominates DEPRIORITIZE.
+    assert lf._LATE_FIGHT_DEPRIORITIZE_PENALTY > _OWNER_PREFERENCE_CEILING
+    assert lf._LATE_FIGHT_FORBID_PENALTY > lf._LATE_FIGHT_DEPRIORITIZE_PENALTY * 50
 
 
 def test_late_fight_resolved_contacts_respect_d17_cutoff():
