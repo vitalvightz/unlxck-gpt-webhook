@@ -1,0 +1,63 @@
+name: PR 2409 surgical self-fix
+
+on:
+  push:
+    branches:
+      - codex/complete-role-budget-ownership-migration
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/complete-role-budget-ownership-migration
+          fetch-depth: 0
+      - name: Split generic and crowded-week injury semantics
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('fightcamp/stage2_role_map.py')
+          text = path.read_text()
+
+          old = '''def _active_injury_is_moderate_plus(athlete_model: dict) -> bool:\n    \"\"\"True when the athlete has an active injury or restriction at moderate or greater severity.\"\"\"\n    # A stable, non-severe surface (skin) injury is only a hygiene/friction\n    # constraint — not injured tissue — so it must not suppress hard work the way\n    # a real moderate+ injury does. Surface location is not injured tissue.\n    if _all_active_injuries_surface_only(athlete_model):\n        return False\n    readiness_flags = set(clean_list(athlete_model.get(\"readiness_flags\", [])))\n    if readiness_flags & {\"injury_management\", \"moderate_injury\", \"significant_injury\", \"severe_injury\"}:\n        return True\n    for entry in clean_list(athlete_model.get(\"injuries\", [])):\n        lowered = entry.lower()\n        if any(\n            token in lowered\n            for token in (\n                \"moderate\",\n                \"severe\",\n                \"major\",\n                \"significant\",\n                \"grade 2\",\n                \"grade ii\",\n                \"grade 3\",\n                \"grade iii\",\n            )\n        ):\n            return True\n    return False\n'''
+
+          new = '''def _active_injury_is_moderate_plus(athlete_model: dict) -> bool:\n    \"\"\"Preserve the generic readiness rule: any non-surface active injury counts.\"\"\"\n    # Generic readiness compression intentionally counts any active non-surface\n    # injury, including mild injury. Stable surface-only issues remain hygiene /\n    # friction constraints and do not add generic compression pressure.\n    if _all_active_injuries_surface_only(athlete_model):\n        return False\n    if athlete_model.get(\"injuries\"):\n        return True\n    readiness_flags = set(clean_list(athlete_model.get(\"readiness_flags\", [])))\n    return \"injury_management\" in readiness_flags\n\n\ndef _boxing_crowded_week_injury_is_moderate_plus(athlete_model: dict) -> bool:\n    \"\"\"Severity-aware injury signal used only by boxing crowded-week policy.\"\"\"\n    if _all_active_injuries_surface_only(athlete_model):\n        return False\n    readiness_flags = set(clean_list(athlete_model.get(\"readiness_flags\", [])))\n    if readiness_flags & {\"injury_management\", \"moderate_injury\", \"significant_injury\", \"severe_injury\"}:\n        return True\n    for entry in clean_list(athlete_model.get(\"injuries\", [])):\n        lowered = entry.lower()\n        if any(\n            token in lowered\n            for token in (\n                \"moderate\",\n                \"severe\",\n                \"major\",\n                \"significant\",\n                \"grade 2\",\n                \"grade ii\",\n                \"grade 3\",\n                \"grade iii\",\n            )\n        ):\n            return True\n    return False\n'''
+
+          if text.count(old) != 1:
+              raise SystemExit(f'expected one generic injury helper, found {text.count(old)}')
+          text = text.replace(old, new, 1)
+
+          old_call = '''    fatigue = normalize_fatigue_level(athlete_model)\n    meaningful_cut = _active_weight_cut_is_meaningful(athlete_model)\n    injury_management = _active_injury_is_moderate_plus(athlete_model)\n    days_until_fight = athlete_model.get(\"days_until_fight\")\n'''
+          new_call = '''    fatigue = normalize_fatigue_level(athlete_model)\n    meaningful_cut = _active_weight_cut_is_meaningful(athlete_model)\n    injury_management = _boxing_crowded_week_injury_is_moderate_plus(athlete_model)\n    days_until_fight = athlete_model.get(\"days_until_fight\")\n'''
+          if text.count(old_call) != 1:
+              raise SystemExit(f'expected one crowded-week injury call site, found {text.count(old_call)}')
+          text = text.replace(old_call, new_call, 1)
+          path.write_text(text)
+
+          test_path = Path('tests/test_step10_architecture_closure.py')
+          tests = test_path.read_text()
+          marker = 'def test_generic_and_crowded_week_injury_semantics_remain_distinct():'
+          if marker not in tests:
+              tests += '''\n\n\ndef test_generic_and_crowded_week_injury_semantics_remain_distinct():\n    from fightcamp import stage2_role_map\n\n    athlete = {\n        \"sport\": \"boxing\",\n        \"fatigue\": \"low\",\n        \"injuries\": [\"mild shoulder irritation\"],\n        \"readiness_flags\": [],\n        \"days_until_fight\": 35,\n        \"training_days\": [\"monday\", \"tuesday\", \"wednesday\", \"thursday\", \"friday\"],\n        \"hard_sparring_days\": [],\n        \"weight_cut_pct\": 0.0,\n    }\n\n    assert stage2_role_map._compute_readiness_compression(athlete) == 1\n    policy = stage2_role_map._boxing_crowded_week_policy_state(\n        {\"declared_hard_sparring_days\": []}, athlete\n    )\n    assert \"injury_management\" not in policy[\"risk_signals\"]\n'''
+              test_path.write_text(tests)
+          PY
+      - name: Validate focused semantics
+        run: |
+          python -m py_compile fightcamp/stage2_role_map.py
+          pytest -q tests/test_step10_architecture_closure.py -k 'injury_semantics or crowded_week'
+      - name: Commit surgical fix and remove temporary workflow
+        shell: bash
+        run: |
+          rm .github/workflows/pr2409-self-fix.yml
+          git config user.name 'ChatGPT'
+          git config user.email 'noreply@openai.com'
+          git add fightcamp/stage2_role_map.py tests/test_step10_architecture_closure.py .github/workflows/pr2409-self-fix.yml
+          git commit -m 'Preserve generic and crowded-week injury semantics'
+          git push origin HEAD:codex/complete-role-budget-ownership-migration
