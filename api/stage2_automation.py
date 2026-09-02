@@ -951,6 +951,11 @@ class OpenAIStage2Automator:
                     **first_review,
                     "validator_report": apply_stage2_release_policy(first_review["validator_report"]),
                 }
+        plan_text_cost = (
+            _merge_stage2_costs(first_pass_cost, final_cost)
+            if attempt_count == 2
+            else first_pass_cost
+        )
         quality_findings = athlete_release_with_flags_findings(first_review["validator_report"])
         admin_blocking_findings = admin_review_blocking_findings(first_review["validator_report"])
         release_decision = first_review["validator_report"].get("release_decision")
@@ -976,7 +981,7 @@ class OpenAIStage2Automator:
                 stage2_status=_STAGE2_PASS,
                 app_status=_APP_STATUS_READY,
                 retry_text=retry_text,
-                stage2_cost=_merge_stage2_costs(first_pass_cost, final_cost) if attempt_count == 2 else first_pass_cost,
+                stage2_cost=plan_text_cost,
             )
         elif release_decision == "publish_with_flags":
             logger.info(
@@ -992,7 +997,7 @@ class OpenAIStage2Automator:
                 stage2_status=_STAGE2_PASS,
                 app_status=_APP_STATUS_PUBLISHABLE_WITH_FLAGS,
                 retry_text=retry_text,
-                stage2_cost=_merge_stage2_costs(first_pass_cost, final_cost) if attempt_count == 2 else first_pass_cost,
+                stage2_cost=plan_text_cost,
             )
         else:
             # What used to be an admin hold. The plan is released with flags and
@@ -1016,7 +1021,7 @@ class OpenAIStage2Automator:
                 stage2_status=_STAGE2_FAILED,
                 app_status=_APP_STATUS_PUBLISHABLE_WITH_FLAGS,
                 retry_text=retry_text,
-                stage2_cost=_merge_stage2_costs(first_pass_cost, final_cost) if attempt_count == 2 else first_pass_cost,
+                stage2_cost=plan_text_cost,
             )
 
         # Structured-plan conversion is triggered by the canonical state-machine
@@ -1040,7 +1045,7 @@ class OpenAIStage2Automator:
 
         # Roll the structured calls' tokens into the persisted cost row so it
         # reflects total Stage 2 spend, not just the plan-text pass.
-        result["stage2_cost"] = _merge_stage2_costs(first_pass_cost, *(([final_cost] if attempt_count == 2 else []) + structured_costs))
+        result["stage2_cost"] = _merge_stage2_costs(plan_text_cost, *structured_costs)
         return result
 
     async def _attempt_structured_plan(
