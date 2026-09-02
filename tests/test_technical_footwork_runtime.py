@@ -95,6 +95,31 @@ def test_footwork_only_ever_enters_via_the_technical_guarantee():
                 assert "technical_footwork_guarantee" in codes, (phase, entry.get("name"), codes)
 
 
+def test_footwork_uses_dedicated_channel_not_aerobic_dose_accounting():
+    # Blocker 2: technical footwork must be grouped/resolved under its own
+    # channel, never counted or titled as an aerobic energy-system dose.
+    flags = _flags(phase="TAPER", days_until_fight=18)
+    markdown, names, entries, grouped, *_rest = conditioning.generate_conditioning_block(flags)
+    inserted = FOOTWORK_NAMES.intersection(names)
+    assert inserted, "expected footwork to surface in taper"
+
+    # It lives under the dedicated technical_footwork group, never under an
+    # energy system (aerobic/glycolytic/alactic).
+    tf_group = {d.get("name") for d in grouped.get("technical_footwork", [])}
+    assert inserted.issubset(tf_group), (inserted, tf_group)
+    for system in ("aerobic", "glycolytic", "alactic"):
+        system_names = {d.get("name") for d in grouped.get(system, [])}
+        assert FOOTWORK_NAMES.isdisjoint(system_names), (system, system_names)
+
+    # why_log entries for footwork carry the technical_footwork system, not aerobic.
+    for entry in entries:
+        if entry.get("name") in FOOTWORK_NAMES:
+            assert entry.get("system") == "technical_footwork", entry
+
+    # Renders under its own label, never as "Aerobic support" for the footwork drill.
+    assert "Technical Footwork" in markdown
+
+
 # --- Proof 3: injury exclusions still gate it -------------------------------
 
 def test_selector_applies_injury_exclusion(monkeypatch):
@@ -133,6 +158,55 @@ def test_late_window_gate_respects_per_drill_late_windows():
         source="technical_footwork_bank.json",
     )
     assert sprawl["blocked"]
+
+
+# --- Proof 4b: window-blocked top pick must not strand the insert -----------
+# Regression for the D-4 selection bug: the selector ranks candidates and the
+# insert applies the per-drill late_windows gate. If the top-ranked candidate is
+# out of its late window, the insert must fall through to the next eligible
+# candidate instead of inserting nothing.
+
+_FOOT_BANK = {d["name"]: d for d in conditioning.get_technical_footwork_bank()}
+
+
+def _late_windows(name: str) -> set[str]:
+    return {str(w).strip().lower() for w in _FOOT_BANK[name].get("late_windows", [])}
+
+
+def test_d4_top_ranked_candidate_is_window_blocked_but_insert_still_fills():
+    # The full ranked candidate list exists and its top pick is genuinely out of
+    # the D-4 window, yet a window-eligible footwork drill is still inserted.
+    flags = _flags(phase="TAPER", days_until_fight=4)
+    ranked = conditioning.select_technical_footwork_candidates(flags, set(), [])
+    assert ranked, "expected footwork candidates at D-4"
+    assert "d4_to_d2" not in _late_windows(ranked[0]["name"]), ranked[0]["name"]
+
+    _markdown, names, *_rest = conditioning.generate_conditioning_block(flags)
+    inserted = FOOTWORK_NAMES.intersection(names)
+    assert inserted, "footwork was stranded by a window-blocked top-ranked pick"
+    # Whatever was inserted must actually be eligible in the D-4 window.
+    for name in inserted:
+        assert "d4_to_d2" in _late_windows(name), (name, sorted(_late_windows(name)))
+
+
+def test_d4_counter_striker_falls_through_to_stance_reset():
+    # Reviewer's exact case. At D-4 the only two d4_to_d2-eligible drills are
+    # Stance Reset Line Drill and Ring Cut-Off Walkdown; every higher-ranked
+    # match (45-Degree, Check-Hook, Lateral Exit, ...) stops at d6_to_d5 or
+    # earlier. A knee issue removes the change-of-direction drills — including
+    # Ring Cut-Off (its name infers change_of_direction) — through the *real*
+    # injury guard, leaving Stance Reset Line Drill as the unique window-eligible,
+    # injury-safe survivor. The old single-pick selector would have stranded on a
+    # window-blocked higher-ranked drill and inserted nothing.
+    flags = _flags(
+        phase="TAPER",
+        days_until_fight=4,
+        injuries=["torn acl in my knee"],
+    )
+    _markdown, names, *_rest = conditioning.generate_conditioning_block(flags)
+    assert "Stance Reset Line Drill" in names, names
+    # It remains an out-of-scoring-pool technical insert, not a conditioning dose.
+    assert "Ring Cut-Off Walkdown" not in names, names
 
 
 # --- Proof 5: sport / style matching ----------------------------------------

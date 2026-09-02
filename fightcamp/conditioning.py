@@ -609,6 +609,12 @@ def athlete_facing_system_label(drill: dict, *, late_window: str | None = None) 
     frame sessions around lactate stress.
     """
 
+    # Technical footwork carries system:"aerobic" only to satisfy the legacy
+    # conditioning schema; it is not aerobic conditioning. Label it honestly by
+    # its modality so it never renders as "Aerobic support" et al.
+    if str(drill.get("modality") or "").strip().lower() == "technical_footwork":
+        return "technical footwork"
+
     system = str(drill.get("system") or "").strip().lower()
     tags = set(normalize_tags(drill.get("tags", [])))
     text = _conditioning_text_blob(drill)
@@ -1483,6 +1489,16 @@ def select_coordination_drill(flags, existing_names: set[str], injuries: list[st
             return drill
     return None
 
+# Dedicated placement/render channel key for technical footwork. It is
+# deliberately NOT one of the three energy systems ("aerobic"/"glycolytic"/
+# "alactic"): routing footwork under this key keeps it out of energy-system
+# dose accounting (``selected_counts``/``system_quota``/``missing_systems`` all
+# key off the three real systems), so a footwork rehearsal drill can never be
+# grouped, counted, titled, or resolved as an aerobic conditioning primary. The
+# drill still occupies a visible plan slot and renders under its own labelled
+# block (see ``render_conditioning_block`` / ``athlete_facing_system_label``).
+TECHNICAL_FOOTWORK_GROUP = "technical_footwork"
+
 # Goal/weakness tokens that make sport-specific technical footwork relevant.
 # Mirrors the coordination-goal gate: technical footwork is a deliberate,
 # relevance-gated insert, not generic aerobic filler.
@@ -1545,19 +1561,29 @@ def _technical_footwork_relevance(flags) -> bool:
     return bool(tokens & TECHNICAL_FOOTWORK_FOCUS_TOKENS)
 
 
-def select_technical_footwork_drill(flags, existing_names: set[str], injuries: list[str]):
-    """Return a technical footwork drill matching the athlete, or ``None``.
+def select_technical_footwork_candidates(
+    flags, existing_names: set[str], injuries: list[str]
+) -> list[dict]:
+    """Return injury-safe technical footwork drills, best match first.
 
     Gated on footwork relevance (goals/weaknesses), phase eligibility,
     per-drill ``reactive_level`` vs phase, and equipment. Sport + tactical
-    function drive the pick so a boxer gets boxing footwork and a counter
-    striker gets defensive/angle movement. Injury gating is applied to the
-    shortlist. Taper/D-day (``late_windows``) gating is handled downstream by
+    function drive the rank so a boxer gets boxing footwork and a counter
+    striker gets defensive/angle movement. Injury gating is applied to the whole
+    ranked list.
+
+    Every eligible, injury-safe candidate is returned (not only the top one) so
+    the caller can fall through to the next-best drill when the highest-ranked
+    one is later blocked by per-drill ``late_windows`` (taper/D-day) gating.
+    Taper/D-day gating itself is deliberately handled downstream by
     ``_try_append_conditioning_drill`` so it stays consistent with the rest of
-    the conditioning selector.
+    the conditioning selector; returning a single pick here and blocking it
+    downstream would strand a valid window-eligible drill (e.g. at D-4 a
+    ``d6_to_d5``-capped angle drill outranks the ``d4_to_d2``-eligible stance
+    reset, so only a list lets the reset still be used).
     """
     if not _technical_footwork_relevance(flags):
-        return None
+        return []
 
     phase = str(flags.get("phase", "GPP")).upper()
     reactive_allowed = _TECHNICAL_FOOTWORK_REACTIVE_BY_PHASE.get(
@@ -1589,7 +1615,7 @@ def select_technical_footwork_drill(flags, existing_names: set[str], injuries: l
         candidates.append(drill)
 
     if not candidates:
-        return None
+        return []
 
     def _match_score(drill: dict) -> int:
         tags = set(normalize_tags(drill.get("tags", [])))
@@ -1604,11 +1630,25 @@ def select_technical_footwork_drill(flags, existing_names: set[str], injuries: l
         return score
 
     candidates.sort(key=lambda d: (-_match_score(d), d.get("name") or ""))
-    for drill in candidates[:INJURY_GUARD_SHORTLIST]:
+    safe: list[dict] = []
+    for drill in candidates:
         decision = injury_decision(drill, injuries, phase, flags.get("fatigue", "low"))
         if decision.action != "exclude":
-            return drill
-    return None
+            safe.append(drill)
+    return safe
+
+
+def select_technical_footwork_drill(flags, existing_names: set[str], injuries: list[str]):
+    """Return the best injury-safe technical footwork drill, or ``None``.
+
+    Thin wrapper over :func:`select_technical_footwork_candidates` returning the
+    top-ranked candidate. It does NOT apply per-drill ``late_windows``
+    (taper/D-day) gating — that stays with ``_try_append_conditioning_drill`` at
+    insertion time, which is why the insert path consumes the full candidate
+    list rather than this single pick.
+    """
+    candidates = select_technical_footwork_candidates(flags, existing_names, injuries)
+    return candidates[0] if candidates else None
 
 
 def format_drill_block(drill: dict, *, phase_color: str = "#000", fallback: bool = False) -> str:
@@ -1630,6 +1670,15 @@ def format_drill_block(drill: dict, *, phase_color: str = "#000", fallback: bool
 def _conditioning_session_title(*, phase: str, systems: set[str]) -> str:
     phase = phase.upper()
     systems = set(systems or set())
+    # Technical footwork is not an energy system: it renders under its own
+    # labelled block and must never title (or, when it is the only content,
+    # masquerade as) an energy-system conditioning session such as "Aerobic
+    # support". Strip it before the energy-system title logic; when it is the
+    # only thing present, title the session as technical footwork.
+    energy_systems = systems - {TECHNICAL_FOOTWORK_GROUP}
+    if TECHNICAL_FOOTWORK_GROUP in systems and not energy_systems:
+        return "Technical footwork"
+    systems = energy_systems
     if phase == "TAPER":
         if "alactic" in systems:
             return "Alactic sharpness"
@@ -3150,8 +3199,17 @@ def generate_conditioning_block(flags):
         enforce_restrictions: bool = True,
         enforce_injury: bool = True,
         enforce_late_window: bool = True,
+        group_key: str | None = None,
     ) -> bool:
-        """Safely append late/guarantee conditioning drills."""
+        """Safely append late/guarantee conditioning drills.
+
+        ``system`` is the real physiological system used for late-window and
+        injury gating. ``group_key`` (defaulting to ``system``) is the bucket the
+        drill is actually placed into for grouping/rendering/dose accounting;
+        technical footwork passes ``TECHNICAL_FOOTWORK_GROUP`` here so it is
+        gated exactly like an aerobic drill but never counted or resolved as an
+        aerobic energy-system dose.
+        """
 
         name = drill.get("name")
         if not isinstance(name, str) or not name.strip():
@@ -3229,8 +3287,8 @@ def generate_conditioning_block(flags):
                     ),
                 }
 
-        return _append_drill(system, drill, reasons)
-        
+        return _append_drill(group_key or system, drill, reasons)
+
     _pool_treading_strong_case: bool | None = None
 
     def _base_head_is_priority_pool_treading(system: str) -> bool:
@@ -3717,44 +3775,46 @@ def generate_conditioning_block(flags):
         if not technical_footwork_focus or len(selected_drill_names) >= visible_drill_cap:
             return
         existing_names = {d.get("name") for _, drills in final_drills for d in drills}
-        drill = select_technical_footwork_drill(
+        # Consume the full ranked candidate list, not a single pick: the
+        # highest-ranked drill can be blocked by its own late_windows
+        # (taper/D-day) inside _try_append_conditioning_drill while a lower-ranked
+        # but window-eligible drill is still valid. Fall through until one clears
+        # late-window + injury + restriction gating, so a window-blocked top pick
+        # never strands the whole insert. Footwork is placed under
+        # TECHNICAL_FOOTWORK_GROUP so it is gated like aerobic work but never
+        # counted or resolved as an aerobic energy-system dose.
+        candidates = select_technical_footwork_candidates(
             {**flags, "equipment": equipment_access}, existing_names, injuries
         )
-        if not drill:
-            log_fail_safe_degrade(
-                module="conditioning",
-                phase=phase,
-                reason="technical_footwork_no_candidate",
-                target=1,
-                actual=0,
-            )
-            return
-        system = _cached_system(drill, "technical_footwork")
-        if system is None:
-            return
-        if not _try_append_conditioning_drill(
-            system,
-            drill,
-            {
-                "goal_hits": 1,
-                "weakness_hits": 0,
-                "style_hits": 0,
-                "phase_hits": 1,
-                "load_adjustments": 0,
-                "equipment_boost": 0,
-                "penalties": 0,
-                "reason_codes": ["technical_footwork_guarantee"],
-                "final_score": 0,
-            },
-            source="technical_footwork",
-        ):
-            log_fail_safe_degrade(
-                module="conditioning",
-                phase=phase,
-                reason="technical_footwork_no_candidate",
-                target=1,
-                actual=0,
-            )
+        for drill in candidates:
+            system = _cached_system(drill, "technical_footwork")
+            if system is None:
+                continue
+            if _try_append_conditioning_drill(
+                system,
+                drill,
+                {
+                    "goal_hits": 1,
+                    "weakness_hits": 0,
+                    "style_hits": 0,
+                    "phase_hits": 1,
+                    "load_adjustments": 0,
+                    "equipment_boost": 0,
+                    "penalties": 0,
+                    "reason_codes": ["technical_footwork_guarantee"],
+                    "final_score": 0,
+                },
+                source="technical_footwork",
+                group_key=TECHNICAL_FOOTWORK_GROUP,
+            ):
+                return
+        log_fail_safe_degrade(
+            module="conditioning",
+            phase=phase,
+            reason="technical_footwork_no_candidate",
+            target=1,
+            actual=0,
+        )
     _run_conditioning_poststep("technical_footwork_insertion", _insert_technical_footwork_drill)
 
     # Trim any extras beyond the recommended count

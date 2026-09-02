@@ -16,9 +16,7 @@
       "coordination",
       "boxing",
       "counter_striker",
-      "distance_striker",
-      "mech_trunk_stability",
-      "mech_ankle_stability"
+      "distance_striker"
     ],
     "footwork_pattern": "stance_reset",
     "directionality": "multi_directional",
@@ -37,7 +35,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
-    "mechanical_risk_tags": ["mech_trunk_stability", "mech_ankle_stability"],
+    "mechanical_risk_tags": [],
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"]
   },
   {
@@ -58,8 +56,7 @@
       "boxing",
       "counter_striker",
       "distance_striker",
-      "mech_trunk_stability",
-      "mech_lower_lateral",
+      "mech_change_of_direction",
       "mech_hip_rotation"
     ],
     "footwork_pattern": "retreat_pivot",
@@ -79,7 +76,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_trunk_stability", "mech_lower_lateral", "mech_hip_rotation"],
+    "mechanical_risk_tags": ["mech_change_of_direction", "mech_hip_rotation"],
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
   },
   {
@@ -100,9 +97,7 @@
       "boxing",
       "pressure_fighter",
       "counter_striker",
-      "mech_lower_lateral",
-      "mech_lateral_knee",
-      "mech_ankle_stability"
+      "mech_change_of_direction"
     ],
     "footwork_pattern": "lateral_shift",
     "directionality": "lateral",
@@ -121,7 +116,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_lower_lateral", "mech_lateral_knee", "mech_ankle_stability"],
+    "mechanical_risk_tags": ["mech_change_of_direction"],
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
   },
   {
@@ -143,8 +138,7 @@
       "distance_striker",
       "counter_striker",
       "kicker",
-      "mech_trunk_stability",
-      "mech_lower_lateral",
+      "mech_change_of_direction",
       "mech_hip_rotation"
     ],
     "footwork_pattern": "angle_step",
@@ -164,7 +158,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_trunk_stability", "mech_lower_lateral", "mech_hip_rotation"],
+    "mechanical_risk_tags": ["mech_change_of_direction", "mech_hip_rotation"],
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
   },
   {
@@ -184,10 +178,8 @@
       "boxing",
       "counter_striker",
       "distance_striker",
-      "mech_trunk_stability",
-      "mech_lower_lateral",
-      "mech_hip_rotation",
-      "mech_single_leg"
+      "mech_change_of_direction",
+      "mech_hip_rotation"
     ],
     "footwork_pattern": "pivot_exit",
     "directionality": "rotational",
@@ -206,7 +198,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_trunk_stability", "mech_lower_lateral", "mech_hip_rotation", "mech_single_leg"],
+    "mechanical_risk_tags": ["mech_change_of_direction", "mech_hip_rotation"],
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
   },
   {
@@ -229,8 +221,7 @@
       "brawler",
       "pressure_fighter",
       "clinch_fighter",
-      "mech_lower_lateral",
-      "mech_lateral_knee",
+      "mech_change_of_direction",
       "mech_hip_rotation"
     ],
     "footwork_pattern": "corner_escape",
@@ -250,7 +241,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_lower_lateral", "mech_lateral_knee", "mech_hip_rotation"],
+    "mechanical_risk_tags": ["mech_change_of_direction", "mech_hip_rotation"],
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7"]
   },
   {
@@ -270,9 +261,7 @@
       "boxing",
       "pressure_fighter",
       "brawler",
-      "clinch_fighter",
-      "mech_trunk_stability",
-      "mech_ankle_stability"
+      "clinch_fighter"
     ],
     "footwork_pattern": "ring_cut",
     "directionality": "forward",
@@ -291,7 +280,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
-    "mechanical_risk_tags": ["mech_trunk_stability", "mech_ankle_stability"],
+    "mechanical_risk_tags": [],
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"]
   },
   {
@@ -312,10 +301,8 @@
       "boxing",
       "pressure_fighter",
       "brawler",
-      "mech_lower_lateral",
-      "mech_lateral_knee",
-      "mech_single_leg",
-      "mech_braking"
+      "mech_change_of_direction",
+      "mech_deceleration"
     ],
     "footwork_pattern": "exit_lane_cut",
     "directionality": "lateral",
@@ -334,7 +321,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_lower_lateral", "mech_lateral_knee", "mech_single_leg", "mech_braking"],
+    "mechanical_risk_tags": ["mech_change_of_direction", "mech_deceleration"],
     "late_windows": ["d21_to_d14", "d13_to_d8"]
   },
   {
@@ -355,7 +342,6 @@
       "boxing",
       "clinch_fighter",
       "grappler",
-      "mech_trunk_stability",
       "mech_hip_rotation"
     ],
     "footwork_pattern": "clinch_exit",
@@ -375,7 +361,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_trunk_stability", "mech_hip_rotation"],
+    "mechanical_risk_tags": ["mech_hip_rotation"],
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
   },
   {
@@ -396,10 +382,8 @@
       "kickboxing",
       "muay_thai",
       "kicker",
-      "mech_trunk_stability",
-      "mech_single_leg",
-      "mech_hip_rotation",
-      "mech_plantarflexion"
+      "mech_plantarflexion",
+      "mech_hip_rotation"
     ],
     "footwork_pattern": "kick_recovery",
     "directionality": "rotational",
@@ -418,7 +402,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_trunk_stability", "mech_single_leg", "mech_hip_rotation", "mech_plantarflexion"],
+    "mechanical_risk_tags": ["mech_plantarflexion", "mech_hip_rotation"],
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7"]
   },
   {
@@ -440,10 +424,7 @@
       "muay_thai",
       "kicker",
       "distance_striker",
-      "mech_single_leg",
-      "mech_plantarflexion",
-      "mech_ankle_stability",
-      "mech_trunk_stability"
+      "mech_plantarflexion"
     ],
     "footwork_pattern": "teep_retreat",
     "directionality": "backward",
@@ -462,7 +443,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
-    "mechanical_risk_tags": ["mech_single_leg", "mech_plantarflexion", "mech_ankle_stability", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_plantarflexion"],
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7"]
   },
   {
@@ -484,10 +465,8 @@
       "muay_thai",
       "kicker",
       "counter_striker",
-      "mech_single_leg",
-      "mech_plantarflexion",
-      "mech_lateral_knee",
-      "mech_ankle_stability"
+      "mech_change_of_direction",
+      "mech_plantarflexion"
     ],
     "footwork_pattern": "check_return",
     "directionality": "lateral",
@@ -506,7 +485,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_single_leg", "mech_plantarflexion", "mech_lateral_knee", "mech_ankle_stability"],
+    "mechanical_risk_tags": ["mech_change_of_direction", "mech_plantarflexion"],
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7"]
   },
   {
@@ -529,9 +508,7 @@
       "kicker",
       "switch_hitter",
       "mech_hip_rotation",
-      "mech_single_leg",
-      "mech_plantarflexion",
-      "mech_trunk_stability"
+      "mech_plantarflexion"
     ],
     "footwork_pattern": "switch_step",
     "directionality": "rotational",
@@ -550,7 +527,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
-    "mechanical_risk_tags": ["mech_hip_rotation", "mech_single_leg", "mech_plantarflexion", "mech_trunk_stability"],
+    "mechanical_risk_tags": ["mech_hip_rotation", "mech_plantarflexion"],
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
   },
   {
@@ -571,9 +548,7 @@
       "mma",
       "pressure_fighter",
       "wrestler",
-      "mech_lower_lateral",
-      "mech_lateral_knee",
-      "mech_ankle_stability"
+      "mech_change_of_direction"
     ],
     "footwork_pattern": "cage_circle",
     "directionality": "lateral",
@@ -592,7 +567,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_lower_lateral", "mech_lateral_knee", "mech_ankle_stability"],
+    "mechanical_risk_tags": ["mech_change_of_direction"],
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
   },
   {
@@ -613,10 +588,8 @@
       "scrambler",
       "grappler",
       "wrestler",
-      "mech_trunk_stability",
-      "mech_ground_transition",
-      "mech_single_leg",
-      "mech_braking"
+      "mech_change_of_direction",
+      "mech_deceleration"
     ],
     "footwork_pattern": "scramble_rebase",
     "directionality": "multi_directional",
@@ -635,7 +608,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_trunk_stability", "mech_ground_transition", "mech_single_leg", "mech_braking"],
+    "mechanical_risk_tags": ["mech_change_of_direction", "mech_deceleration"],
     "late_windows": ["d21_to_d14", "d13_to_d8"]
   },
   {
@@ -657,11 +630,8 @@
       "wrestler",
       "grappler",
       "scrambler",
-      "mech_trunk_stability",
-      "mech_ground_transition",
-      "mech_level_change",
-      "mech_single_leg",
-      "mech_braking"
+      "mech_change_of_direction",
+      "mech_deceleration"
     ],
     "footwork_pattern": "sprawl_exit",
     "directionality": "multi_directional",
@@ -680,7 +650,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_trunk_stability", "mech_ground_transition", "mech_level_change", "mech_single_leg", "mech_braking"],
+    "mechanical_risk_tags": ["mech_change_of_direction", "mech_deceleration"],
     "late_windows": ["d21_to_d14", "d13_to_d8"]
   },
   {
@@ -700,10 +670,8 @@
       "wrestler",
       "pressure_fighter",
       "scrambler",
-      "mech_level_change",
-      "mech_trunk_stability",
-      "mech_single_leg",
-      "mech_braking",
+      "mech_change_of_direction",
+      "mech_deceleration",
       "mech_hip_rotation"
     ],
     "footwork_pattern": "level_change_feint",
@@ -723,7 +691,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_level_change", "mech_trunk_stability", "mech_single_leg", "mech_braking", "mech_hip_rotation"],
+    "mechanical_risk_tags": ["mech_change_of_direction", "mech_deceleration", "mech_hip_rotation"],
     "late_windows": ["d21_to_d14", "d13_to_d8"]
   },
   {
@@ -742,10 +710,7 @@
       "movement_quality",
       "mma",
       "submission_hunter",
-      "grappler",
-      "mech_trunk_stability",
-      "mech_ground_transition",
-      "mech_single_leg"
+      "grappler"
     ],
     "footwork_pattern": "standup_rebase",
     "directionality": "multi_directional",
@@ -764,7 +729,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_trunk_stability", "mech_ground_transition", "mech_single_leg"],
+    "mechanical_risk_tags": [],
     "late_windows": ["d21_to_d14", "d13_to_d8"]
   }
 ]

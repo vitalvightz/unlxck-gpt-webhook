@@ -12,21 +12,48 @@ The bank is now consumed through a dedicated, relevance-gated path that mirrors
 the coordination-goal guarantee:
 
 - `conditioning.get_technical_footwork_bank()` — standalone cached loader.
-- `conditioning.select_technical_footwork_drill()` — gates on footwork
+- `conditioning.select_technical_footwork_candidates()` — gates on footwork
   relevance (goals/weaknesses), phase eligibility, per-drill `reactive_level`
   vs phase, `technical_complexity` in taper, equipment, and injury; ranks by
-  sport + tactical function.
+  sport + tactical function and returns **every** injury-safe candidate in rank
+  order. `select_technical_footwork_drill()` is a thin wrapper returning the top
+  pick.
 - `_insert_technical_footwork_drill()` — a best-effort guarantee poststep that
-  fills a leftover drill slot for footwork-focused athletes. It is never scored
-  against the energy-system pool; when it appears it carries the
+  fills a leftover drill slot for footwork-focused athletes. It walks the ranked
+  candidate list and inserts the first one that also clears the per-drill
+  `late_windows` (taper/D-day) gate applied inside
+  `_try_append_conditioning_drill`, so a window-blocked top pick no longer
+  strands a valid, window-eligible drill (e.g. at D-4 a `d6_to_d5`-capped angle
+  drill no longer suppresses a `d4_to_d2`-eligible stance reset). It is never
+  scored against the energy-system pool; when it appears it carries the
   `technical_footwork_guarantee` reason code.
 
-Each drill now carries meaningful per-drill metadata (phase eligibility,
-`late_windows`, rpe, movement cost, honest `mech_*` tags) and a structured
-taxonomy (`footwork_pattern`, `directionality`, `tactical_function`,
-`reactive_level`, `braking_demand`, `elastic_demand`, `technical_complexity`,
+Technical footwork is placed under a dedicated `TECHNICAL_FOOTWORK_GROUP`
+channel (see the render-channel note below), so it is gated exactly like an
+aerobic drill but is **never counted, grouped, titled, or resolved as an
+aerobic energy-system dose**.
+
+Each drill carries meaningful per-drill metadata (phase eligibility,
+`late_windows`, rpe, movement cost, `mech_*` tags) and a structured taxonomy
+(`footwork_pattern`, `directionality`, `tactical_function`, `reactive_level`,
+`braking_demand`, `elastic_demand`, `technical_complexity`,
 `stance_transition`). Muay Thai/kickboxing and MMA locomotion were expanded
 (teep retreat, check-and-return, switch-step, cage circle, level-change feint).
+
+Its `mech_*` tags are reconciled to the **canonical injury vocabulary** so the
+real injury guard gates them (no parallel tag set):
+
+- `mech_change_of_direction` / `mech_deceleration` (already read by the knee,
+  ankle and hamstring rules) express the cutting / hard-braking demands that
+  were previously carried by the ad-hoc `mech_braking`, `mech_lateral_knee` and
+  `mech_level_change` tokens.
+- Two genuinely-new demands are wired into the rules and covered by regression
+  tests: `mech_plantarflexion` (achilles, calf, ankle, foot — kick-recovery
+  push-off) and `mech_hip_rotation` (hip — pivots / switch-steps).
+- Descriptive-only tokens with no injury meaning (`mech_ground_transition`,
+  `mech_single_leg`, `mech_ankle_stability`, `mech_trunk_stability`,
+  `mech_lower_lateral`) were dropped from the bank; the movement information
+  they carried lives in the taxonomy fields above.
 
 ## Deferred, on purpose
 
@@ -61,16 +88,18 @@ confusion this reclassification removes. Recommended approach:
 3. Gate/boost them by the existing footwork goal signal in
    `stage2_planning_brief` / `stage2_payload`.
 
-### 3. Visible render channel for technical footwork
+### 3. Visible render channel for technical footwork — DONE
 
-Today the conditioning block renders one primary drill per energy system.
-Technical footwork surfaces visibly only when it fills an otherwise-open
-energy-system slot (most often in taper). A dedicated, clearly-labelled
-"Technical Footwork" render element (separate from the energy-system drills, and
-excluded from dose accounting) would let its named drills appear for
-footwork-focused athletes in all phases without ever reading as a conditioning
-dose. This needs changes in `render_conditioning_block` and the grouped-drills
-builder and would ripple into render snapshots, so it is deferred.
+Previously deferred; now implemented. Technical footwork is inserted under the
+dedicated `TECHNICAL_FOOTWORK_GROUP` group key instead of `aerobic`. Because
+`selected_counts` / `system_quota` / `missing_systems` all key off the three
+real energy systems, this keeps footwork out of energy-system dose accounting
+while it still occupies a visible plan slot. `render_conditioning_block` renders
+it under its own **"Technical Footwork"** label (via
+`athlete_facing_system_label`, keyed off `modality: technical_footwork`), and
+`_conditioning_session_title` no longer lets it masquerade as an "Aerobic
+support" / energy-system session. It therefore surfaces for footwork-focused
+athletes without ever reading as a conditioning dose.
 
 ## Note on the late-camp golden snapshot
 
