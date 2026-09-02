@@ -79,8 +79,8 @@ def test_normal_camp_owner_consumes_combat_load_policy():
 
 
 def test_late_fight_owner_consumes_combat_load_policy():
-    # The late-fight allocator folds a canonical directive penalty into its slot
-    # scorer, built from the shared calendar_context late-fight adapter.
+    # The late-fight allocator ranks slots by a canonical legality cost (built from
+    # the shared calendar_context late-fight adapter) above its own preferences.
     assert stage2_payload_late_fight.sequence_legality is not None
     assert stage2_payload_late_fight.placement_rank is not None
     forbid = [
@@ -88,7 +88,7 @@ def test_late_fight_owner_consumes_combat_load_policy():
         {"role_key": "strength_touch_day", "category": "strength", "countdown_offset": 17,
          "stress_class": "meaningful_stress", "cost_class": "medium"},
     ]
-    assert stage2_payload_late_fight._late_fight_canonical_collision_penalty(forbid) > 0
+    assert stage2_payload_late_fight._late_fight_legality_cost(forbid) == (1, 0)
 
 
 def test_no_replacement_collision_policy_module_appears():

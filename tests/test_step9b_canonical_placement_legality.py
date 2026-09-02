@@ -213,15 +213,14 @@ def test_resolved_contact_status_drives_canonical_collision_not_labels():
 # --------------------------------------------------------------------------- #
 # Late-fight owner                                                            #
 # --------------------------------------------------------------------------- #
-def test_late_fight_legality_penalty_is_lexicographic_over_owner_preferences():
+def test_late_fight_legality_cost_is_lexicographic_over_owner_preferences():
     # A meaningful app strength touch immediately after a still-effective hard
     # contact (D-18 hard, touch at D-17) is FORBID; the same touch clear of contact
-    # is ALLOW. The legality penalty is lexicographic: FORBID and DEPRIORITIZE tiers
-    # each dwarf the largest owner-preference swing the late-fight scorers produce
-    # (the single-window -100000 hard-weekday penalty and the composite gap/stage
-    # terms), so an owner preference can never flip ALLOW below DEPRIORITIZE or keep
-    # a FORBID slot. The compressed D-13-inward window (no effective hard contact)
-    # stays a no-op.
+    # is ALLOW. The scorers rank by (-forbid, -deprioritize, owner_score), so the
+    # legality cost is a strictly higher-order key than any owner preference (the
+    # single-window -100000 hard-weekday term, the composite gap/stage terms). An
+    # owner preference can never flip ALLOW below DEPRIORITIZE or keep a FORBID slot.
+    # The compressed D-13-inward window (no effective hard contact) stays (0, 0).
     forbid_case = [
         {"role_key": "hard_sparring_day", "category": "sparring", "countdown_offset": 18},
         {"role_key": "strength_touch_day", "category": "strength", "countdown_offset": 17,
@@ -232,12 +231,15 @@ def test_late_fight_legality_penalty_is_lexicographic_over_owner_preferences():
         {"role_key": "strength_touch_day", "category": "strength", "countdown_offset": 12,
          "stress_class": "meaningful_stress", "cost_class": "medium"},
     ]
-    _OWNER_PREFERENCE_CEILING = 1_000_000  # far above any single owner-score swing
-    assert lf._late_fight_canonical_collision_penalty(allow_case) == 0
-    assert lf._late_fight_canonical_collision_penalty(forbid_case) == lf._LATE_FIGHT_FORBID_PENALTY
-    # Each tier dominates owner preference, and FORBID dominates DEPRIORITIZE.
-    assert lf._LATE_FIGHT_DEPRIORITIZE_PENALTY > _OWNER_PREFERENCE_CEILING
-    assert lf._LATE_FIGHT_FORBID_PENALTY > lf._LATE_FIGHT_DEPRIORITIZE_PENALTY * 50
+    assert lf._late_fight_legality_cost(allow_case) == (0, 0)
+    assert lf._late_fight_legality_cost(forbid_case) == (1, 0)
+    # The lexicographic key: fewer FORBID wins first, then fewer DEPRIORITIZE, then
+    # owner preference — legality can never be outweighed by preference.
+    forbid_key = (-1, 0, 10 ** 9)      # one FORBID, huge owner preference
+    allow_key = (0, 0, -(10 ** 9))     # fully legal, terrible owner preference
+    assert allow_key > forbid_key
+    deprioritize_key = (0, -1, 10 ** 9)  # one DEPRIORITIZE, huge owner preference
+    assert allow_key > deprioritize_key
 
 
 def test_late_fight_resolved_contacts_respect_d17_cutoff():
@@ -253,13 +255,13 @@ def test_late_fight_resolved_contacts_respect_d17_cutoff():
 
 def test_late_fight_coexistable_filler_never_scored_as_a_day_collision():
     # A low-cost coexistable filler shares the coach's contact day legally; it
-    # does not consume a day slot, so it never contributes a collision penalty.
+    # does not consume a day slot, so it never contributes a legality cost.
     roles = [
         {"role_key": "hard_sparring_day", "category": "sparring", "countdown_offset": 18},
         {"role_key": "tactical_watch", "category": "tactical", "countdown_offset": 18,
          "stress_class": "support", "cost_class": "zero"},
     ]
-    assert lf._late_fight_canonical_collision_penalty(roles) == 0
+    assert lf._late_fight_legality_cost(roles) == (0, 0)
 
 
 # --------------------------------------------------------------------------- #

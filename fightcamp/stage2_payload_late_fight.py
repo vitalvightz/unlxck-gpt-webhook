@@ -2943,24 +2943,20 @@ def _late_fight_assignment_score(
 # Step 9B: late-fight collision legality is the shared combat_load_policy's, not an
 # independent per-allocator penalty. Effective hard contact exists only at D-18..D-21
 # (see ``_hard_spar_status_for_countdown_offset``); for the compressed D-13-inward
-# window the policy returns ALLOW throughout, so this term is a no-op there (penalty 0,
-# score unchanged) and only bites in the bridge band, where an app-owned stressor
+# window the policy returns ALLOW throughout, so this is a no-op there ((0, 0) cost,
+# ranking unchanged) and only bites in the bridge band, where an app-owned stressor
 # adjacent to a still-effective hard contact is FORBID/DEPRIORITIZE.
 #
-# The penalty is *lexicographic*, not an additive nudge: the tier magnitudes each
-# dominate the largest owner preference term the two scorers can produce (composite
-# role-selection + spacing/freshness, or the single-window score with its -100000
-# hard-weekday penalty). So an assignment is ranked first by fewest FORBID slots, then
-# by fewest DEPRIORITIZE slots, and only then by the allocator's own
-# priority/target/freshness/tie-break preferences — an owner preference can never make
-# a DEPRIORITIZE slot beat an ALLOW one, nor a FORBID slot survive. Countdown offsets
-# become canonical chronological positions via ``calendar_context.sequence_*``
-# (``-offset``); this owner never passes raw D-day numbers as positions. Representation
-# is the canonical adapter's; the ALLOW/DEPRIORITIZE/FORBID verdict is the policy's.
-_LATE_FIGHT_FORBID_PENALTY = 100_000_000_000
-_LATE_FIGHT_DEPRIORITIZE_PENALTY = 100_000_000
-
-
+# Ranking is *lexicographic*, not an additive nudge: the two scorers rank an
+# assignment by the tuple ``(-forbid_count, -deprioritize_count, owner_score)``, so
+# fewest FORBID slots wins first, then fewest DEPRIORITIZE slots, and only then the
+# allocator's own priority/target/freshness/spacing tie-break (``owner_score``). No
+# owner preference — however large, e.g. the single-window -100000 hard-weekday term —
+# can make a DEPRIORITIZE slot beat an ALLOW one or keep a FORBID slot; legality is a
+# strictly higher-order key than preference. Countdown offsets become canonical
+# chronological positions via ``calendar_context.sequence_*`` (``-offset``); this owner
+# never passes raw D-day numbers as positions. Representation is the canonical
+# adapter's; the ALLOW/DEPRIORITIZE/FORBID verdict is the policy's.
 def _late_fight_resolved_contacts(roles: list[dict[str, Any]]) -> list[tuple[int, str]]:
     """Resolved coach-owned contact occurrences as ``(countdown_offset, load)`` pairs.
 
@@ -2987,14 +2983,17 @@ def _late_fight_resolved_contacts(roles: list[dict[str, Any]]) -> list[tuple[int
     return contacts
 
 
-def _late_fight_canonical_collision_penalty(assigned_roles: list[dict[str, Any]]) -> int:
-    """Shared-policy collision penalty for an assignment (0 when fully ALLOW).
+def _late_fight_legality_cost(assigned_roles: list[dict[str, Any]]) -> tuple[int, int]:
+    """Shared-policy legality cost ``(forbid_count, deprioritize_count)`` — ``(0, 0)``
+    when fully ALLOW.
 
     Each app-owned, day-slot-consuming visible role is evaluated at its countdown
     offset against the other app-owned roles plus the resolved coach-owned contact
     occurrences (the canonical ``calendar_context`` late-fight adapter builds the
     events; ``combat_load_policy`` returns the directive). Coach-owned contact stays
-    fixed context — it is never scored, moved, or downgraded here.
+    fixed context — it is never scored, moved, or downgraded here. The two scorers
+    rank by ``(-forbid, -deprioritize, owner_score)``, so this cost is a strictly
+    higher-order key than any owner preference.
     """
     resolved_contacts = _late_fight_resolved_contacts(assigned_roles)
     app_roles = [
@@ -3006,8 +3005,9 @@ def _late_fight_canonical_collision_penalty(assigned_roles: list[dict[str, Any]]
         and role["countdown_offset"] > 0
     ]
     if not resolved_contacts and len(app_roles) < 2:
-        return 0
-    penalty = 0
+        return (0, 0)
+    forbid_count = 0
+    deprioritize_count = 0
     for candidate in app_roles:
         others = [role for role in app_roles if role is not candidate]
         view = sequence_legality(
@@ -3018,10 +3018,10 @@ def _late_fight_canonical_collision_penalty(assigned_roles: list[dict[str, Any]]
             continue
         rank = placement_rank(decision)
         if rank == 2:
-            penalty += _LATE_FIGHT_FORBID_PENALTY
+            forbid_count += 1
         elif rank == 1:
-            penalty += _LATE_FIGHT_DEPRIORITIZE_PENALTY
-    return penalty
+            deprioritize_count += 1
+    return (forbid_count, deprioritize_count)
 
 
 def _late_fight_best_assignment(
@@ -3031,7 +3031,7 @@ def _late_fight_best_assignment(
     label_to_display_weekday: dict[str, str] | None = None,
     label_to_resolved_training_weekday: dict[str, str] | None = None,
     hard_weekdays: set[str] | None = None,
-) -> tuple[int, list[dict[str, Any]]] | None:
+) -> tuple[tuple[int, int, int], list[dict[str, Any]]] | None:
     locked_labels: dict[int, str] = {}
     occupied_labels: set[str] = set()
     unlocked_roles: list[dict[str, Any]] = []
@@ -3050,7 +3050,7 @@ def _late_fight_best_assignment(
         else:
             unlocked_roles.append(role)
 
-    best_score: int | None = None
+    best_score: tuple[int, int, int] | None = None
     best_roles: list[dict[str, Any]] | None = None
 
     assignments: list[dict[int, str]] = []
@@ -3127,7 +3127,7 @@ def _late_fight_best_assignment(
             role_copy["day_assignment_reason"] = _late_fight_assignment_reason(role_copy)
             scored_roles.append(role_copy)
 
-        score = _late_fight_assignment_score(scored_roles, legal_countdown_labels, label_to_weekday)
+        owner_score = _late_fight_assignment_score(scored_roles, legal_countdown_labels, label_to_weekday)
         if hard_weekdays:
             # Coach-owned combat lock: keep programmed S&C off declared spar
             # weekdays whenever any other legal day can host it. Low-cost
@@ -3139,8 +3139,10 @@ def _late_fight_best_assignment(
                     continue
                 assigned_weekday = str(scored_role.get("real_weekday") or "").strip().lower()
                 if assigned_weekday in hard_weekdays:
-                    score -= 100000
-        score -= _late_fight_canonical_collision_penalty(scored_roles)
+                    owner_score -= 100000
+        # Lexicographic: canonical legality outranks every owner preference.
+        forbid_count, deprioritize_count = _late_fight_legality_cost(scored_roles)
+        score = (-forbid_count, -deprioritize_count, owner_score)
         if best_score is None or score > best_score:
             best_score = score
             best_roles = scored_roles
@@ -3240,7 +3242,7 @@ def _late_fight_allocation_plan(days_until_fight: Any, athlete_model: dict[str, 
     effective_max_support = max(max_support_roles, required_support) if isinstance(max_support_roles, int) else None
 
     best_roles: list[dict[str, Any]] = []
-    best_score: int | None = None
+    best_score: tuple[int, int, int] | None = None
     for optional_count in range(len(optional_roles) + 1):
         for optional_subset in combinations(optional_roles, optional_count):
             selected_roles = required_roles + list(optional_subset)
@@ -3685,7 +3687,7 @@ def _space_bridge_countdown_roles(
         ),
     )
 
-    best_score: int | None = None
+    best_score: tuple[int, int, int] | None = None
     best_roles: list[dict[str, Any]] | None = None
 
     # A composite that starts in the D-21..D-18 band may carry the required
@@ -3723,9 +3725,11 @@ def _space_bridge_countdown_roles(
         if isinstance(hard_spar_cap, int) and hard_spar_count > hard_spar_cap:
             return
         if index >= len(ordered_roles):
-            score = _score_composite_practical_assignment(assigned, label_to_weekday, hard_weekdays)
-            score += _composite_role_selection_score(assigned, days_until_fight)
-            score -= _late_fight_canonical_collision_penalty(assigned)
+            owner_score = _score_composite_practical_assignment(assigned, label_to_weekday, hard_weekdays)
+            owner_score += _composite_role_selection_score(assigned, days_until_fight)
+            # Lexicographic: canonical legality outranks every owner preference.
+            forbid_count, deprioritize_count = _late_fight_legality_cost(assigned)
+            score = (-forbid_count, -deprioritize_count, owner_score)
             if best_score is None or score > best_score:
                 best_score = score
                 best_roles = list(assigned)
