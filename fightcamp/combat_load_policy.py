@@ -676,6 +676,23 @@ def evaluate_candidate_at_position(
     )
 
 
+# Canonical legality tier a placement owner ranks candidates by. Lower is better;
+# ``FORBID`` is the excluded tier. This is the one shared ordering the contract
+# recommends — ALLOW preferred, DEPRIORITIZE legal fallback, FORBID excluded — so
+# every owner ranks the same way and none invents its own tier numbers.
+_PLACEMENT_RANK = {
+    PlacementDirective.ALLOW: 0,
+    PlacementDirective.DEPRIORITIZE: 1,
+    PlacementDirective.FORBID: 2,
+}
+
+
+def placement_rank(decision: PlacementDecision | PlacementDirective) -> int:
+    """Legality tier for a decision/directive: ALLOW=0, DEPRIORITIZE=1, FORBID=2."""
+    directive = decision.directive if isinstance(decision, PlacementDecision) else decision
+    return _PLACEMENT_RANK[directive]
+
+
 __all__ = [
     "CONTACT_LOAD_CLASSES",
     "CalendarCollisionContext",
@@ -691,6 +708,7 @@ __all__ = [
     "evaluate_calendar_candidate",
     "evaluate_candidate_at_position",
     "is_effective_hard_contact",
+    "placement_rank",
     "role_load_class",
     "role_load_profile",
 ]

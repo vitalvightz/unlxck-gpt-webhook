@@ -9,6 +9,7 @@ placement.
 from __future__ import annotations
 
 import importlib
+from pathlib import Path
 
 import pytest
 
@@ -55,3 +56,75 @@ def test_real_normal_camp_placement_owner_is_stage2_role_map():
 def test_real_late_fight_placement_owner_is_stage2_payload_late_fight():
     # Late-fight placement builds the countdown sequence itself, in the payload owner.
     assert hasattr(stage2_payload_late_fight, "_build_late_fight_session_sequence")
+
+
+# --------------------------------------------------------------------------- #
+# Step 9B: the surviving owners consume canonical combat-load legality.        #
+# --------------------------------------------------------------------------- #
+def test_normal_camp_owner_consumes_combat_load_policy():
+    # Semantic/call-graph, not source-string matching: the normal-camp owner
+    # binds the canonical calendar_context legality seam, which is the policy
+    # consumer. The seam evaluates through combat_load_policy.
+    from fightcamp import calendar_context, combat_load_policy
+
+    assert stage2_role_map.normal_week_legality is calendar_context.normal_week_legality
+    view = calendar_context.normal_week_legality(
+        [{"day": "monday", "status": "hard_as_planned"}], ["monday"], scope=("normal_week", 1)
+    )
+    profile = calendar_context.classify_role(
+        {"category": "strength", "role_key": "primary_strength_day"}
+    )
+    decision = view.decision_at_position(profile, calendar_context.weekday_position("tuesday"))
+    assert isinstance(decision, combat_load_policy.PlacementDecision)
+
+
+def test_late_fight_owner_consumes_combat_load_policy():
+    # The late-fight allocator ranks slots by a canonical legality cost (built from
+    # the shared calendar_context late-fight adapter) above its own preferences.
+    assert stage2_payload_late_fight.sequence_legality is not None
+    assert stage2_payload_late_fight.placement_rank is not None
+    forbid = [
+        {"role_key": "hard_sparring_day", "category": "sparring", "countdown_offset": 18},
+        {"role_key": "strength_touch_day", "category": "strength", "countdown_offset": 17,
+         "stress_class": "meaningful_stress", "cost_class": "medium"},
+    ]
+    assert stage2_payload_late_fight._late_fight_legality_cost(forbid) == (1, 0)
+
+
+def test_no_replacement_collision_policy_module_appears():
+    # Step 9A removed the dead duplicate engines; Step 9B must not reintroduce a
+    # parallel collision engine or a wrapper facade in their place. combat_load_policy
+    # stays the single legality owner.
+    for name in (
+        "late_fight_placement",
+        "stage2_placement_patch",
+        "stage2_placement_integration",
+        "combat_policy_bridge",
+        "collision_engine",
+        "collision_policy",
+    ):
+        with pytest.raises(ModuleNotFoundError):
+            importlib.import_module(f"fightcamp.{name}")
+
+
+def test_no_reintroduced_collision_penalty_engine_in_late_fight():
+    # The deleted late_fight_placement engine owned a _collision_penalty(); the
+    # surviving owner must not host a replacement policy engine of the same shape.
+    assert not hasattr(stage2_payload_late_fight, "_collision_penalty")
+    assert not hasattr(stage2_payload_late_fight, "place_roles_in_countdown")
+
+
+def test_final_governor_still_consumes_combat_load_policy():
+    # Defence in depth: the final calendar integrity governor remains wired to the
+    # same canonical policy, independent of placement now consulting it.
+    from fightcamp import calendar_integrity
+
+    source = Path(calendar_integrity.__file__).read_text()
+    assert "combat_load_policy" in source or "calendar_context" in source
+
+
+def test_renderer_remains_read_only():
+    # No weekday recovery/fallback placement in the renderer (Step 8 invariant).
+    from fightcamp import weekly_plan_render
+
+    assert not hasattr(weekly_plan_render, "fill_missing_session_days")
