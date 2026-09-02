@@ -455,6 +455,7 @@ INJURY_RULES = {
             # impingement tags above; gates hip-injured athletes off pivot-heavy
             # footwork rehearsal.
             "mech_hip_rotation",
+            "mech_lower_limb_weight_bearing",
         ],
     },
     "groin": {
@@ -616,6 +617,7 @@ INJURY_RULES = {
             "mech_change_of_direction",
             "landing_stress_high",
             "mech_landing_impact",
+            "mech_lower_limb_weight_bearing",
         ],
     },
     "shin": {
@@ -692,6 +694,7 @@ INJURY_RULES = {
             # recovery, teep and check footwork). A controlled plantarflexor
             # demand the rebound/velocity tags above do not capture.
             "mech_plantarflexion",
+            "mech_lower_limb_weight_bearing",
         ],
     },
     "ankle": {
@@ -721,6 +724,7 @@ INJURY_RULES = {
             # Loaded plantarflexion (kick recovery / teep / check re-plant)
             # stresses the ankle joint under push-off.
             "mech_plantarflexion",
+            "mech_lower_limb_weight_bearing",
         ],
     },
     "foot": {

@@ -1541,6 +1541,13 @@ _TECHNICAL_FOOTWORK_REACTIVE_BY_PHASE = {
     "TAPER": {"closed", "semi_reactive"},
 }
 
+_TECHNICAL_FOOTWORK_SPORT_TAGS = {
+    "boxing": {"boxing"},
+    "kickboxing": {"kickboxing", "muay_thai"},
+    "muay_thai": {"kickboxing", "muay_thai"},
+    "mma": {"mma"},
+}
+
 
 def _footwork_focus_tokens(values) -> set[str]:
     tokens: set[str] = set()
@@ -1567,10 +1574,10 @@ def select_technical_footwork_candidates(
     """Return injury-safe technical footwork drills, best match first.
 
     Gated on footwork relevance (goals/weaknesses), phase eligibility,
-    per-drill ``reactive_level`` vs phase, and equipment. Sport + tactical
-    function drive the rank so a boxer gets boxing footwork and a counter
-    striker gets defensive/angle movement. Injury gating is applied to the whole
-    ranked list.
+    per-drill ``reactive_level`` vs phase, equipment, and strict sport
+    compatibility. Tactical function then drives the within-sport rank so a
+    counter striker gets defensive/angle movement. Injury gating is applied to
+    the whole ranked list.
 
     Every eligible, injury-safe candidate is returned (not only the top one) so
     the caller can fall through to the next-best drill when the highest-ranked
@@ -1591,12 +1598,22 @@ def select_technical_footwork_candidates(
     )
     equipment_access = set(normalize_athlete_equipment_list(flags.get("equipment", [])))
     fight_format = str(flags.get("fight_format") or flags.get("sport") or "").strip().lower()
+    fight_format = fight_format.replace(" ", "_").replace("-", "_")
+    compatible_sport_tags = _TECHNICAL_FOOTWORK_SPORT_TAGS.get(
+        fight_format, {fight_format} if fight_format else set()
+    )
     style_tokens = set(
         normalize_tags([*flags.get("style_tactical", []), *flags.get("style_technical", [])])
     )
 
     candidates = []
     for drill in get_technical_footwork_bank():
+        drill_tags = set(normalize_tags(drill.get("tags", [])))
+        # Sport is an eligibility rule here, not merely a ranking preference.
+        # When a sport-specific late-window candidate is unavailable, omission
+        # is safer and more correct than filling the slot with another sport.
+        if compatible_sport_tags and not (drill_tags & compatible_sport_tags):
+            continue
         if phase not in [str(p).upper() for p in drill.get("phases", [])]:
             continue
         if drill.get("name") in existing_names:
