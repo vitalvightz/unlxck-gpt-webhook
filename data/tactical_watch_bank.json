@@ -24,7 +24,10 @@
       "Choose the strike that best controls the space between you.",
       "Write one distance rule to test in your next technical session."
     ],
-    "progress": "Test the distance rule in technical work and keep it only if it holds up."
+    "progress": "Test the distance rule in technical work and keep it only if it holds up.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "distance_striker.gpp.lead_hand_battle",
@@ -51,7 +54,10 @@
       "Choose the follow-up that keeps you at your preferred range.",
       "Write one lead-hand action you should avoid because it gives away distance."
     ],
-    "progress": "Use the chosen lead-hand answer during the next technical round."
+    "progress": "Use the chosen lead-hand answer during the next technical round.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "distance_striker.gpp.exit_discipline",
@@ -78,7 +84,10 @@
       "Choose the safer exit side for that moment.",
       "Write one exit rule you can apply without thinking."
     ],
-    "progress": "Rehearse the exit rule after every clean score in shadow or technical work."
+    "progress": "Rehearse the exit rule after every clean score in shadow or technical work.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "distance_striker.spp.intercept_the_entry",
@@ -105,7 +114,10 @@
       "Choose the exit direction immediately after the intercept.",
       "Define the position or distance you want to reset to."
     ],
-    "progress": "Rehearse trigger, intercept, exit and reset as one sequence."
+    "progress": "Rehearse trigger, intercept, exit and reset as one sequence.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "distance_striker.spp.exit_lane_audit",
@@ -132,7 +144,10 @@
       "Choose the safest escape when the opponent is already pressuring.",
       "Name the direction you should avoid because it feeds their strongest attack."
     ],
-    "progress": "Use the exit choices in technical rounds and note which lane stays open most often."
+    "progress": "Use the exit choices in technical rounds and note which lane stays open most often.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "distance_striker.spp.rope_corner_escape",
@@ -159,7 +174,10 @@
       "Choose the route you will take out of the trapped position.",
       "Define the range you want once you are clear."
     ],
-    "progress": "Start one technical round near the ropes and rehearse the same escape route."
+    "progress": "Start one technical round near the ropes and rehearse the same escape route.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "distance_striker.taper.first_round_range_script",
@@ -186,7 +204,10 @@
       "Confirm your trained response if they rush the space.",
       "Write one short first-round range cue."
     ],
-    "progress": "Rehearse the cue once in shadow work, then leave it alone."
+    "progress": "Rehearse the cue once in shadow work, then leave it alone.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "distance_striker.taper.final_range_cue",
@@ -212,7 +233,10 @@
       "Choose the single range behaviour that mattered most.",
       "Turn it into a cue of no more than six words."
     ],
-    "progress": "Use the same cue in the final light rehearsal; do not add another."
+    "progress": "Use the same cue in the final light rehearsal; do not add another.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "brawler.gpp.pressure_route_scan",
@@ -239,7 +263,10 @@
       "Identify the cue that tells you pressure should start.",
       "Choose the area of the ring you want to trap them in."
     ],
-    "progress": "Use one technical round to steer toward the chosen trap instead of following."
+    "progress": "Use one technical round to steer toward the chosen trap instead of following.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "brawler.gpp.safe_entry_builder",
@@ -266,7 +293,10 @@
       "Choose the first punch that establishes the pocket.",
       "Define where your head should finish after the entry."
     ],
-    "progress": "Rehearse the same setup and head position before adding longer combinations."
+    "progress": "Rehearse the same setup and head position before adding longer combinations.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "brawler.gpp.pressure_reset",
@@ -293,7 +323,10 @@
       "Choose the setup that starts your next entry.",
       "Write one pressure rule that keeps your feet organised."
     ],
-    "progress": "Use the reset whenever you notice yourself following during technical work."
+    "progress": "Use the reset whenever you notice yourself following during technical work.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "brawler.spp.pocket_exchange_map",
@@ -320,7 +353,10 @@
       "Choose the finishing shot that best fits the opening.",
       "Decide whether that exchange should end with an exit or a smother."
     ],
-    "progress": "Rehearse the chosen exchange ending, not just the opening combination."
+    "progress": "Rehearse the chosen exchange ending, not just the opening combination.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "brawler.spp.body_attack_opportunity",
@@ -347,7 +383,10 @@
       "Choose the body target you will attack.",
       "Choose the head follow-up that punishes their reaction."
     ],
-    "progress": "Use the body attack only after the chosen setup appears in technical work."
+    "progress": "Use the body attack only after the chosen setup appears in technical work.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "brawler.spp.smother_and_reset",
@@ -374,7 +413,10 @@
       "Define the smother or control position you can reach safely.",
       "Choose the action that resets you for the next pressure sequence."
     ],
-    "progress": "Finish every rehearsed combination with the same smother-or-reset decision."
+    "progress": "Finish every rehearsed combination with the same smother-or-reset decision.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "brawler.taper.first_round_pressure_script",
@@ -401,7 +443,10 @@
       "Choose the first familiar combination you will show.",
       "Write one reset cue that prevents chasing."
     ],
-    "progress": "Rehearse the script once at low intensity and keep it unchanged."
+    "progress": "Rehearse the script once at low intensity and keep it unchanged.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "brawler.taper.final_pressure_cue",
@@ -427,7 +472,10 @@
       "Choose the behaviour that made the pressure work.",
       "Turn it into one cue of no more than six words."
     ],
-    "progress": "Use the same cue in the final light rehearsal and do not add another."
+    "progress": "Use the same cue in the final light rehearsal and do not add another.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "counter_striker.gpp.trigger_library",
@@ -454,7 +502,10 @@
       "Identify the clearest signal before a committed entry.",
       "Choose the one trigger you trust most."
     ],
-    "progress": "Look only for the most reliable trigger during the next technical round."
+    "progress": "Look only for the most reliable trigger during the next technical round.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "counter_striker.gpp.draw_the_lead",
@@ -481,7 +532,10 @@
       "Choose the counter you will use against it.",
       "Choose the exit that ends the exchange safely."
     ],
-    "progress": "Rehearse the bait and expected response before increasing speed."
+    "progress": "Rehearse the bait and expected response before increasing speed.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "counter_striker.gpp.counter_activity_check",
@@ -508,7 +562,10 @@
       "Choose the action you can use to provoke a response.",
       "Write one activity rule that keeps you engaged without forcing exchanges."
     ],
-    "progress": "Use the activity rule during quiet moments in the next technical session."
+    "progress": "Use the activity rule during quiet moments in the next technical session.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "counter_striker.spp.first_beat_second_beat",
@@ -535,7 +592,10 @@
       "Choose the counter that best fits the clearer beat.",
       "Write the safety rule that tells you when not to fire."
     ],
-    "progress": "Rehearse both beats, then keep the one that gives the cleaner exit."
+    "progress": "Rehearse both beats, then keep the one that gives the cleaner exit.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "counter_striker.spp.counter_and_exit",
@@ -562,7 +622,10 @@
       "Choose the guard position you need while leaving.",
       "Define the distance you want before looking to counter again."
     ],
-    "progress": "Attach the same exit to the counter every time you rehearse it."
+    "progress": "Attach the same exit to the counter every time you rehearse it.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "counter_striker.spp.counter_the_counter",
@@ -589,7 +652,10 @@
       "Choose your second answer to that adjustment.",
       "Define the cue that tells you to abort rather than force the sequence."
     ],
-    "progress": "Rehearse the first counter, the likely adjustment and the second answer as one decision chain."
+    "progress": "Rehearse the first counter, the likely adjustment and the second answer as one decision chain.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "counter_striker.taper.first_round_patience_script",
@@ -616,7 +682,10 @@
       "Confirm the counter you already trust most.",
       "Write one activity cue that prevents passive waiting."
     ],
-    "progress": "Run the opening script once in light rehearsal and keep it unchanged."
+    "progress": "Run the opening script once in light rehearsal and keep it unchanged.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "counter_striker.taper.final_counter_cue",
@@ -642,7 +711,10 @@
       "Choose the trigger you recognised most reliably.",
       "Turn the trigger and response into one cue of no more than six words."
     ],
-    "progress": "Use the same cue in the final light rehearsal; do not add another counter idea."
+    "progress": "Use the same cue in the final light rehearsal; do not add another counter idea.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "generic.gpp.opponent_pattern_scan",
@@ -669,7 +741,10 @@
       "Choose the main danger linked to that pattern.",
       "Write one observation to test in training rather than treating it as fact."
     ],
-    "progress": "Test the observation in technical work and keep it only if it repeats."
+    "progress": "Test the observation in technical work and keep it only if it repeats.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "generic.gpp.threat_priority",
@@ -695,7 +770,10 @@
       "Rank them from highest to lowest priority.",
       "Choose the first answer you will train for the top threat."
     ],
-    "progress": "Build the next tactical rehearsal around the top-ranked threat only."
+    "progress": "Build the next tactical rehearsal around the top-ranked threat only.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "generic.gpp.defensive_habit_review",
@@ -722,7 +800,10 @@
       "Choose the defensive position that restores control best.",
       "Write one defensive rule to carry into technical work."
     ],
-    "progress": "Use the defensive rule during the next controlled pressure round."
+    "progress": "Use the defensive rule during the next controlled pressure round.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "generic.gpp.rhythm_map",
@@ -749,7 +830,10 @@
       "Identify what usually causes the change in tempo.",
       "Choose one rhythm you want to impose in training."
     ],
-    "progress": "Use one technical round to deliberately create the chosen rhythm."
+    "progress": "Use one technical round to deliberately create the chosen rhythm.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "generic.gpp.first_exchange_audit",
@@ -776,7 +860,10 @@
       "Identify the position that usually followed that advantage.",
       "Choose one opening behaviour to test in training."
     ],
-    "progress": "Start three technical rounds by testing the chosen opening behaviour."
+    "progress": "Start three technical rounds by testing the chosen opening behaviour.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "generic.gpp.position_map",
@@ -803,7 +890,10 @@
       "Identify what movement usually takes you from the bad position to the good one.",
       "Write one positional rule to test."
     ],
-    "progress": "Use the positional rule in one controlled round and review whether it improves decision quality."
+    "progress": "Use the positional rule in one controlled round and review whether it improves decision quality.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "generic.gpp.reset_habit_review",
@@ -830,7 +920,10 @@
       "Choose the order you want your reset to happen in.",
       "Write one short reset routine."
     ],
-    "progress": "Use the reset routine after every exchange in the next technical session."
+    "progress": "Use the reset routine after every exchange in the next technical session.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "generic.gpp.output_window_review",
@@ -857,7 +950,10 @@
       "Name what usually ends that quiet stretch.",
       "Write one restart action you can use before the quiet stretch gets long."
     ],
-    "progress": "Use the restart action in the next rounds you do and note whether the quiet stretches shorten."
+    "progress": "Use the restart action in the next rounds you do and note whether the quiet stretches shorten.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "generic.gpp.stance_and_angle_audit",
@@ -884,7 +980,10 @@
       "Find the moment your stance stops being usable while you move.",
       "Write one movement rule that forces you to use the neglected direction."
     ],
-    "progress": "Apply the movement rule in shadow and footwork work; keep it only if your stance stays usable."
+    "progress": "Apply the movement rule in shadow and footwork work; keep it only if your stance stays usable.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "generic.gpp.fatigue_signature_review",
@@ -911,7 +1010,10 @@
       "Name what that degradation costs you defensively.",
       "Write one cue that holds that part together late in a round."
     ],
-    "progress": "Use the cue in the last round of your next hard session and note whether the fault still appears."
+    "progress": "Use the cue in the last round of your next hard session and note whether the fault still appears.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "generic.spp.trigger_response_builder",
@@ -938,7 +1040,10 @@
       "Choose how you leave after the action.",
       "Choose what you use to reset before the next exchange."
     ],
-    "progress": "Rehearse the full trigger-response-exit-reset chain in technical work."
+    "progress": "Rehearse the full trigger-response-exit-reset chain in technical work.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "generic.spp.round_flow_map",
@@ -965,7 +1070,10 @@
       "Describe what changes in the final minute.",
       "Choose the part of the round where you should take the most control."
     ],
-    "progress": "Plan one technical round around the chosen control window."
+    "progress": "Plan one technical round around the chosen control window.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "generic.spp.scoring_map",
@@ -992,7 +1100,10 @@
       "Choose one combination worth repeating.",
       "Identify one busy but low-value action to reduce."
     ],
-    "progress": "Track how often the selected scoring action lands cleanly in technical work."
+    "progress": "Track how often the selected scoring action lands cleanly in technical work.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "generic.spp.momentum_shift_review",
@@ -1019,7 +1130,10 @@
       "Identify what the fighter gaining control noticed or exploited.",
       "Choose the response you would use to stop the same shift."
     ],
-    "progress": "Rehearse the chosen response immediately after a deliberately difficult exchange."
+    "progress": "Rehearse the chosen response immediately after a deliberately difficult exchange.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "generic.spp.adversity_reset",
@@ -1046,7 +1160,10 @@
       "Choose the next safe action that restarts your offence or position.",
       "Choose the route that brings you back to control."
     ],
-    "progress": "Start one technical drill from a disadvantaged position and use the same reset sequence."
+    "progress": "Start one technical drill from a disadvantaged position and use the same reset sequence.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "generic.spp.adjustment_tree",
@@ -1073,7 +1190,10 @@
       "Choose one tactical change that addresses the failure.",
       "Define the sign that tells you the adjustment is working."
     ],
-    "progress": "Run one technical round where the first option is deliberately removed and use the adjustment."
+    "progress": "Run one technical round where the first option is deliberately removed and use the adjustment.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "generic.spp.opening_exchange_test",
@@ -1100,7 +1220,10 @@
       "Define the response that confirms your read.",
       "Choose what you will do next if the read is confirmed."
     ],
-    "progress": "Start a technical round with the same test and act only on the observed response."
+    "progress": "Start a technical round with the same test and act only on the observed response.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "generic.spp.route_to_control",
@@ -1127,7 +1250,10 @@
       "Identify the movement or action that links the two.",
       "Choose one cue that starts that transition."
     ],
-    "progress": "Begin one technical drill in the difficult position and earn the route back to control."
+    "progress": "Begin one technical drill in the difficult position and earn the route back to control.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "generic.spp.last_minute_control",
@@ -1154,7 +1280,10 @@
       "Choose the mistake you must avoid when urgency rises.",
       "Write one final-minute instruction."
     ],
-    "progress": "Finish one technical round using the same final-minute instruction."
+    "progress": "Finish one technical round using the same final-minute instruction.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "generic.spp.corner_instruction_translation",
@@ -1181,7 +1310,10 @@
       "Choose the single action that follows that read.",
       "Compress the instruction to three words."
     ],
-    "progress": "Use only the three-word version during the next hard technical round."
+    "progress": "Use only the three-word version during the next hard technical round.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "generic.taper.familiar_round_one_rehearsal",
@@ -1208,7 +1340,10 @@
       "Choose the position you want after the opening exchange.",
       "Say the sequence once in plain language."
     ],
-    "progress": "Rehearse the sequence once at low intensity, then stop analysing it."
+    "progress": "Rehearse the sequence once at low intensity, then stop analysing it.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "generic.taper.final_tactical_cue_card",
@@ -1235,7 +1370,10 @@
       "Choose one danger cue and one reset phrase.",
       "Condense them into one final sentence you can recall under pressure."
     ],
-    "progress": "Read the final sentence before the last light rehearsal; add nothing new."
+    "progress": "Read the final sentence before the last light rehearsal; add nothing new.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "generic.taper.trained_response_confirmation",
@@ -1262,7 +1400,10 @@
       "Remove any response you have not trained enough to trust.",
       "Say both responses out loud in the situation they belong to."
     ],
-    "progress": "Confirm both in light shadow work only; add no new response this week."
+    "progress": "Confirm both in light shadow work only; add no new response this week.",
+    "sports": [
+      "boxing"
+    ]
   },
   {
     "key": "generic.taper.familiar_threat_rehearsal",
@@ -1289,6 +1430,3112 @@
       "Confirm the position you want to be in immediately after using it.",
       "Rehearse the answer slowly until it needs no thought."
     ],
-    "progress": "Rehearse it once more at low intensity before fight day and leave the rest alone."
+    "progress": "Rehearse it once more at low intensity before fight day and leave the rest alone.",
+    "sports": [
+      "boxing"
+    ]
+  },
+  {
+    "key": "mma.pressure_fighter.gpp.cage_route_scan",
+    "sports": [
+      "mma"
+    ],
+    "name": "Cage Route Scan (MMA)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "pressure_fighter"
+    ],
+    "duration_min": 10,
+    "why": "Use the cage route scan decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the cage route scan choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "GPP tactical review for a pressure fighter in MMA."
+    },
+    "instructions": [
+      "In MMA, for this pressure fighter cage route scan, watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this pressure fighter cage route scan, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this pressure fighter cage route scan, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the cage route scan cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.pressure_fighter.gpp.level_threat_pressure_map",
+    "sports": [
+      "mma"
+    ],
+    "name": "Level-Threat Pressure Map (MMA)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "pressure_fighter"
+    ],
+    "duration_min": 10,
+    "why": "Use the level-threat pressure map decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the level-threat pressure map choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "GPP tactical review for a pressure fighter in MMA."
+    },
+    "instructions": [
+      "In MMA, for this pressure fighter level-threat pressure map, watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this pressure fighter level-threat pressure map, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this pressure fighter level-threat pressure map, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the level-threat pressure map cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.pressure_fighter.gpp.pressure_reset",
+    "sports": [
+      "mma"
+    ],
+    "name": "Pressure Reset (MMA)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "pressure_fighter"
+    ],
+    "duration_min": 10,
+    "why": "Use the pressure reset decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the pressure reset choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "GPP tactical review for a pressure fighter in MMA."
+    },
+    "instructions": [
+      "In MMA, for this pressure fighter pressure reset, watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this pressure fighter pressure reset, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this pressure fighter pressure reset, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the pressure reset cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.pressure_fighter.spp.strike_to_fence_decision",
+    "sports": [
+      "mma"
+    ],
+    "name": "Strike-to-Fence Decision (MMA)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "pressure_fighter"
+    ],
+    "duration_min": 10,
+    "why": "Use the strike-to-fence decision decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the strike-to-fence decision choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "SPP tactical review for a pressure fighter in MMA."
+    },
+    "instructions": [
+      "In MMA, for this pressure fighter strike-to-fence decision, study the expected opponent and watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this pressure fighter strike-to-fence decision, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this pressure fighter strike-to-fence decision, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the strike-to-fence decision cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.pressure_fighter.spp.cage_re_catch",
+    "sports": [
+      "mma"
+    ],
+    "name": "Cage Re-Catch (MMA)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "pressure_fighter"
+    ],
+    "duration_min": 10,
+    "why": "Use the cage re-catch decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the cage re-catch choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "SPP tactical review for a pressure fighter in MMA."
+    },
+    "instructions": [
+      "In MMA, for this pressure fighter cage re-catch, study the expected opponent and watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this pressure fighter cage re-catch, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this pressure fighter cage re-catch, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the cage re-catch cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.pressure_fighter.spp.fence_escape_denial",
+    "sports": [
+      "mma"
+    ],
+    "name": "Fence Escape Denial (MMA)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "pressure_fighter"
+    ],
+    "duration_min": 10,
+    "why": "Use the fence escape denial decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the fence escape denial choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "SPP tactical review for a pressure fighter in MMA."
+    },
+    "instructions": [
+      "In MMA, for this pressure fighter fence escape denial, study the expected opponent and watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this pressure fighter fence escape denial, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this pressure fighter fence escape denial, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the fence escape denial cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.pressure_fighter.taper.first_pressure_sequence",
+    "sports": [
+      "mma"
+    ],
+    "name": "First Pressure Sequence (MMA)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "pressure_fighter"
+    ],
+    "duration_min": 8,
+    "why": "Use the first pressure sequence decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the first pressure sequence choice early and calmly.",
+      "focus": "Choose one trusted response to that cue; do not add a new system.",
+      "reset": "Name the safe reset and finish the review with one short fight cue.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "TAPER tactical review for a pressure fighter in MMA."
+    },
+    "instructions": [
+      "In MMA, for this pressure fighter first pressure sequence, review one familiar opening and the opponent danger cue that can stop it.",
+      "For this pressure fighter first pressure sequence, choose one trusted response to that cue; do not add a new system.",
+      "For this pressure fighter first pressure sequence, name the safe reset and finish the review with one short fight cue."
+    ],
+    "progress": "In MMA, carry the first pressure sequence cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.pressure_fighter.taper.final_pressure_rule",
+    "sports": [
+      "mma"
+    ],
+    "name": "Final Pressure Rule (MMA)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "pressure_fighter"
+    ],
+    "duration_min": 8,
+    "why": "Use the final pressure rule decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the final pressure rule choice early and calmly.",
+      "focus": "Choose one trusted response to that cue; do not add a new system.",
+      "reset": "Name the safe reset and finish the review with one short fight cue.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "TAPER tactical review for a pressure fighter in MMA."
+    },
+    "instructions": [
+      "In MMA, for this pressure fighter final pressure rule, review one familiar opening and the opponent danger cue that can stop it.",
+      "For this pressure fighter final pressure rule, choose one trusted response to that cue; do not add a new system.",
+      "For this pressure fighter final pressure rule, name the safe reset and finish the review with one short fight cue."
+    ],
+    "progress": "In MMA, carry the final pressure rule cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.counter_striker.gpp.attack_trigger_map",
+    "sports": [
+      "mma"
+    ],
+    "name": "Attack Trigger Map (MMA)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "counter_striker"
+    ],
+    "duration_min": 10,
+    "why": "Use the attack trigger map decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the attack trigger map choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "GPP tactical review for a counter striker in MMA."
+    },
+    "instructions": [
+      "In MMA, for this counter striker attack trigger map, watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this counter striker attack trigger map, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this counter striker attack trigger map, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the attack trigger map cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.counter_striker.gpp.safe_counter_range",
+    "sports": [
+      "mma"
+    ],
+    "name": "Safe Counter Range (MMA)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "counter_striker"
+    ],
+    "duration_min": 10,
+    "why": "Use the safe counter range decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the safe counter range choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "GPP tactical review for a counter striker in MMA."
+    },
+    "instructions": [
+      "In MMA, for this counter striker safe counter range, watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this counter striker safe counter range, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this counter striker safe counter range, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the safe counter range cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.counter_striker.gpp.counter_exit_or_connection",
+    "sports": [
+      "mma"
+    ],
+    "name": "Counter Exit or Connection (MMA)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "counter_striker"
+    ],
+    "duration_min": 10,
+    "why": "Use the counter exit or connection decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the counter exit or connection choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "GPP tactical review for a counter striker in MMA."
+    },
+    "instructions": [
+      "In MMA, for this counter striker counter exit or connection, watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this counter striker counter exit or connection, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this counter striker counter exit or connection, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the counter exit or connection cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.counter_striker.spp.counter_to_takedown_decision",
+    "sports": [
+      "mma"
+    ],
+    "name": "Counter-to-Takedown Decision (MMA)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "counter_striker"
+    ],
+    "duration_min": 10,
+    "why": "Use the counter-to-takedown decision decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the counter-to-takedown decision choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "SPP tactical review for a counter striker in MMA."
+    },
+    "instructions": [
+      "In MMA, for this counter striker counter-to-takedown decision, study the expected opponent and watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this counter striker counter-to-takedown decision, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this counter striker counter-to-takedown decision, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the counter-to-takedown decision cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.counter_striker.spp.counter_after_level_change",
+    "sports": [
+      "mma"
+    ],
+    "name": "Counter After Level Change (MMA)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "counter_striker"
+    ],
+    "duration_min": 10,
+    "why": "Use the counter after level change decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the counter after level change choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "SPP tactical review for a counter striker in MMA."
+    },
+    "instructions": [
+      "In MMA, for this counter striker counter after level change, study the expected opponent and watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this counter striker counter after level change, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this counter striker counter after level change, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the counter after level change cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.counter_striker.spp.punish_failed_shot",
+    "sports": [
+      "mma"
+    ],
+    "name": "Punish Failed Shot (MMA)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "counter_striker"
+    ],
+    "duration_min": 10,
+    "why": "Use the punish failed shot decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the punish failed shot choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "SPP tactical review for a counter striker in MMA."
+    },
+    "instructions": [
+      "In MMA, for this counter striker punish failed shot, study the expected opponent and watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this counter striker punish failed shot, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this counter striker punish failed shot, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the punish failed shot cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.counter_striker.taper.first_counter_trigger",
+    "sports": [
+      "mma"
+    ],
+    "name": "First Counter Trigger (MMA)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "counter_striker"
+    ],
+    "duration_min": 8,
+    "why": "Use the first counter trigger decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the first counter trigger choice early and calmly.",
+      "focus": "Choose one trusted response to that cue; do not add a new system.",
+      "reset": "Name the safe reset and finish the review with one short fight cue.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "TAPER tactical review for a counter striker in MMA."
+    },
+    "instructions": [
+      "In MMA, for this counter striker first counter trigger, review one familiar opening and the opponent danger cue that can stop it.",
+      "For this counter striker first counter trigger, choose one trusted response to that cue; do not add a new system.",
+      "For this counter striker first counter trigger, name the safe reset and finish the review with one short fight cue."
+    ],
+    "progress": "In MMA, carry the first counter trigger cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.counter_striker.taper.counter_and_reset_cue",
+    "sports": [
+      "mma"
+    ],
+    "name": "Counter-and-Reset Cue (MMA)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "counter_striker"
+    ],
+    "duration_min": 8,
+    "why": "Use the counter-and-reset cue decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the counter-and-reset cue choice early and calmly.",
+      "focus": "Choose one trusted response to that cue; do not add a new system.",
+      "reset": "Name the safe reset and finish the review with one short fight cue.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "TAPER tactical review for a counter striker in MMA."
+    },
+    "instructions": [
+      "In MMA, for this counter striker counter-and-reset cue, review one familiar opening and the opponent danger cue that can stop it.",
+      "For this counter striker counter-and-reset cue, choose one trusted response to that cue; do not add a new system.",
+      "For this counter striker counter-and-reset cue, name the safe reset and finish the review with one short fight cue."
+    ],
+    "progress": "In MMA, carry the counter-and-reset cue cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.distance_striker.gpp.mma_range_map",
+    "sports": [
+      "mma"
+    ],
+    "name": "MMA Range Map (MMA)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "distance_striker"
+    ],
+    "duration_min": 10,
+    "why": "Use the mma range map decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the mma range map choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "GPP tactical review for a distance striker in MMA."
+    },
+    "instructions": [
+      "In MMA, for this distance striker mma range map, watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this distance striker mma range map, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this distance striker mma range map, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the mma range map cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.distance_striker.gpp.exit_before_connection",
+    "sports": [
+      "mma"
+    ],
+    "name": "Exit Before Connection (MMA)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "distance_striker"
+    ],
+    "duration_min": 10,
+    "why": "Use the exit before connection decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the exit before connection choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "GPP tactical review for a distance striker in MMA."
+    },
+    "instructions": [
+      "In MMA, for this distance striker exit before connection, watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this distance striker exit before connection, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this distance striker exit before connection, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the exit before connection cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.distance_striker.gpp.long_range_threat_scan",
+    "sports": [
+      "mma"
+    ],
+    "name": "Long-Range Threat Scan (MMA)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "distance_striker"
+    ],
+    "duration_min": 10,
+    "why": "Use the long-range threat scan decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the long-range threat scan choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "GPP tactical review for a distance striker in MMA."
+    },
+    "instructions": [
+      "In MMA, for this distance striker long-range threat scan, watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this distance striker long-range threat scan, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this distance striker long-range threat scan, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the long-range threat scan cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.distance_striker.spp.intercept_the_entry",
+    "sports": [
+      "mma"
+    ],
+    "name": "Intercept the Entry (MMA)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "distance_striker"
+    ],
+    "duration_min": 10,
+    "why": "Use the intercept the entry decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the intercept the entry choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "SPP tactical review for a distance striker in MMA."
+    },
+    "instructions": [
+      "In MMA, for this distance striker intercept the entry, study the expected opponent and watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this distance striker intercept the entry, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this distance striker intercept the entry, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the intercept the entry cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.distance_striker.spp.angle_off_before_fence",
+    "sports": [
+      "mma"
+    ],
+    "name": "Angle Off Before Fence (MMA)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "distance_striker"
+    ],
+    "duration_min": 10,
+    "why": "Use the angle off before fence decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the angle off before fence choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "SPP tactical review for a distance striker in MMA."
+    },
+    "instructions": [
+      "In MMA, for this distance striker angle off before fence, study the expected opponent and watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this distance striker angle off before fence, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this distance striker angle off before fence, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the angle off before fence cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.distance_striker.spp.takedown_threat_distance",
+    "sports": [
+      "mma"
+    ],
+    "name": "Takedown-Threat Distance (MMA)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "distance_striker"
+    ],
+    "duration_min": 10,
+    "why": "Use the takedown-threat distance decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the takedown-threat distance choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "SPP tactical review for a distance striker in MMA."
+    },
+    "instructions": [
+      "In MMA, for this distance striker takedown-threat distance, study the expected opponent and watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this distance striker takedown-threat distance, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this distance striker takedown-threat distance, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the takedown-threat distance cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.distance_striker.taper.first_round_range_script",
+    "sports": [
+      "mma"
+    ],
+    "name": "First-Round Range Script (MMA)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "distance_striker"
+    ],
+    "duration_min": 8,
+    "why": "Use the first-round range script decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the first-round range script choice early and calmly.",
+      "focus": "Choose one trusted response to that cue; do not add a new system.",
+      "reset": "Name the safe reset and finish the review with one short fight cue.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "TAPER tactical review for a distance striker in MMA."
+    },
+    "instructions": [
+      "In MMA, for this distance striker first-round range script, review one familiar opening and the opponent danger cue that can stop it.",
+      "For this distance striker first-round range script, choose one trusted response to that cue; do not add a new system.",
+      "For this distance striker first-round range script, name the safe reset and finish the review with one short fight cue."
+    ],
+    "progress": "In MMA, carry the first-round range script cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.distance_striker.taper.preferred_exit_cue",
+    "sports": [
+      "mma"
+    ],
+    "name": "Preferred Exit Cue (MMA)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "distance_striker"
+    ],
+    "duration_min": 8,
+    "why": "Use the preferred exit cue decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the preferred exit cue choice early and calmly.",
+      "focus": "Choose one trusted response to that cue; do not add a new system.",
+      "reset": "Name the safe reset and finish the review with one short fight cue.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "TAPER tactical review for a distance striker in MMA."
+    },
+    "instructions": [
+      "In MMA, for this distance striker preferred exit cue, review one familiar opening and the opponent danger cue that can stop it.",
+      "For this distance striker preferred exit cue, choose one trusted response to that cue; do not add a new system.",
+      "For this distance striker preferred exit cue, name the safe reset and finish the review with one short fight cue."
+    ],
+    "progress": "In MMA, carry the preferred exit cue cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.clinch_fighter.gpp.safe_clinch_entry_map",
+    "sports": [
+      "mma"
+    ],
+    "name": "Safe Clinch Entry Map (MMA)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "clinch_fighter"
+    ],
+    "duration_min": 10,
+    "why": "Use the safe clinch entry map decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the safe clinch entry map choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "GPP tactical review for a clinch fighter in MMA."
+    },
+    "instructions": [
+      "In MMA, for this clinch fighter safe clinch entry map, watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this clinch fighter safe clinch entry map, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this clinch fighter safe clinch entry map, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the safe clinch entry map cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.clinch_fighter.gpp.head_and_hand_position_audit",
+    "sports": [
+      "mma"
+    ],
+    "name": "Head-and-Hand Position Audit (MMA)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "clinch_fighter"
+    ],
+    "duration_min": 10,
+    "why": "Use the head-and-hand position audit decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the head-and-hand position audit choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "GPP tactical review for a clinch fighter in MMA."
+    },
+    "instructions": [
+      "In MMA, for this clinch fighter head-and-hand position audit, watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this clinch fighter head-and-hand position audit, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this clinch fighter head-and-hand position audit, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the head-and-hand position audit cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.clinch_fighter.gpp.clinch_exit_awareness",
+    "sports": [
+      "mma"
+    ],
+    "name": "Clinch Exit Awareness (MMA)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "clinch_fighter"
+    ],
+    "duration_min": 10,
+    "why": "Use the clinch exit awareness decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the clinch exit awareness choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "GPP tactical review for a clinch fighter in MMA."
+    },
+    "instructions": [
+      "In MMA, for this clinch fighter clinch exit awareness, watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this clinch fighter clinch exit awareness, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this clinch fighter clinch exit awareness, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the clinch exit awareness cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.clinch_fighter.spp.fence_turn_decision",
+    "sports": [
+      "mma"
+    ],
+    "name": "Fence Turn Decision (MMA)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "clinch_fighter"
+    ],
+    "duration_min": 10,
+    "why": "Use the fence turn decision decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the fence turn decision choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "SPP tactical review for a clinch fighter in MMA."
+    },
+    "instructions": [
+      "In MMA, for this clinch fighter fence turn decision, study the expected opponent and watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this clinch fighter fence turn decision, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this clinch fighter fence turn decision, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the fence turn decision cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.clinch_fighter.spp.underhook_battle_map",
+    "sports": [
+      "mma"
+    ],
+    "name": "Underhook Battle Map (MMA)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "clinch_fighter"
+    ],
+    "duration_min": 10,
+    "why": "Use the underhook battle map decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the underhook battle map choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "SPP tactical review for a clinch fighter in MMA."
+    },
+    "instructions": [
+      "In MMA, for this clinch fighter underhook battle map, study the expected opponent and watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this clinch fighter underhook battle map, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this clinch fighter underhook battle map, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the underhook battle map cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.clinch_fighter.spp.clinch_strike_or_takedown",
+    "sports": [
+      "mma"
+    ],
+    "name": "Clinch Strike or Takedown (MMA)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "clinch_fighter"
+    ],
+    "duration_min": 10,
+    "why": "Use the clinch strike or takedown decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the clinch strike or takedown choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "SPP tactical review for a clinch fighter in MMA."
+    },
+    "instructions": [
+      "In MMA, for this clinch fighter clinch strike or takedown, study the expected opponent and watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this clinch fighter clinch strike or takedown, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this clinch fighter clinch strike or takedown, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the clinch strike or takedown cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.clinch_fighter.taper.first_clinch_entry_cue",
+    "sports": [
+      "mma"
+    ],
+    "name": "First Clinch Entry Cue (MMA)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "clinch_fighter"
+    ],
+    "duration_min": 8,
+    "why": "Use the first clinch entry cue decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the first clinch entry cue choice early and calmly.",
+      "focus": "Choose one trusted response to that cue; do not add a new system.",
+      "reset": "Name the safe reset and finish the review with one short fight cue.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "TAPER tactical review for a clinch fighter in MMA."
+    },
+    "instructions": [
+      "In MMA, for this clinch fighter first clinch entry cue, review one familiar opening and the opponent danger cue that can stop it.",
+      "For this clinch fighter first clinch entry cue, choose one trusted response to that cue; do not add a new system.",
+      "For this clinch fighter first clinch entry cue, name the safe reset and finish the review with one short fight cue."
+    ],
+    "progress": "In MMA, carry the first clinch entry cue cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.clinch_fighter.taper.one_fence_control_rule",
+    "sports": [
+      "mma"
+    ],
+    "name": "One Fence Control Rule (MMA)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "clinch_fighter"
+    ],
+    "duration_min": 8,
+    "why": "Use the one fence control rule decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the one fence control rule choice early and calmly.",
+      "focus": "Choose one trusted response to that cue; do not add a new system.",
+      "reset": "Name the safe reset and finish the review with one short fight cue.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "TAPER tactical review for a clinch fighter in MMA."
+    },
+    "instructions": [
+      "In MMA, for this clinch fighter one fence control rule, review one familiar opening and the opponent danger cue that can stop it.",
+      "For this clinch fighter one fence control rule, choose one trusted response to that cue; do not add a new system.",
+      "For this clinch fighter one fence control rule, name the safe reset and finish the review with one short fight cue."
+    ],
+    "progress": "In MMA, carry the one fence control rule cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.grappler.gpp.entry_to_contact_map",
+    "sports": [
+      "mma"
+    ],
+    "name": "Entry-to-Contact Map (MMA)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "grappler"
+    ],
+    "duration_min": 10,
+    "why": "Use the entry-to-contact map decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the entry-to-contact map choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "GPP tactical review for a grappler in MMA."
+    },
+    "instructions": [
+      "In MMA, for this grappler entry-to-contact map, watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this grappler entry-to-contact map, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this grappler entry-to-contact map, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the entry-to-contact map cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.grappler.gpp.takedown_setup_reaction",
+    "sports": [
+      "mma"
+    ],
+    "name": "Takedown Setup Reaction (MMA)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "grappler"
+    ],
+    "duration_min": 10,
+    "why": "Use the takedown setup reaction decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the takedown setup reaction choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "GPP tactical review for a grappler in MMA."
+    },
+    "instructions": [
+      "In MMA, for this grappler takedown setup reaction, watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this grappler takedown setup reaction, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this grappler takedown setup reaction, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the takedown setup reaction cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.grappler.gpp.ground_destination_map",
+    "sports": [
+      "mma"
+    ],
+    "name": "Ground Destination Map (MMA)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "grappler"
+    ],
+    "duration_min": 10,
+    "why": "Use the ground destination map decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the ground destination map choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "GPP tactical review for a grappler in MMA."
+    },
+    "instructions": [
+      "In MMA, for this grappler ground destination map, watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this grappler ground destination map, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this grappler ground destination map, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the ground destination map cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.grappler.spp.fence_finish_decision",
+    "sports": [
+      "mma"
+    ],
+    "name": "Fence Finish Decision (MMA)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "grappler"
+    ],
+    "duration_min": 10,
+    "why": "Use the fence finish decision decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the fence finish decision choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "SPP tactical review for a grappler in MMA."
+    },
+    "instructions": [
+      "In MMA, for this grappler fence finish decision, study the expected opponent and watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this grappler fence finish decision, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this grappler fence finish decision, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the fence finish decision cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.grappler.spp.chain_attempt_map",
+    "sports": [
+      "mma"
+    ],
+    "name": "Chain Attempt Map (MMA)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "grappler"
+    ],
+    "duration_min": 10,
+    "why": "Use the chain attempt map decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the chain attempt map choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "SPP tactical review for a grappler in MMA."
+    },
+    "instructions": [
+      "In MMA, for this grappler chain attempt map, study the expected opponent and watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this grappler chain attempt map, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this grappler chain attempt map, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the chain attempt map cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.grappler.spp.top_control_to_effective_offense",
+    "sports": [
+      "mma"
+    ],
+    "name": "Top Control to Effective Offense (MMA)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "grappler"
+    ],
+    "duration_min": 10,
+    "why": "Use the top control to effective offense decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the top control to effective offense choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "SPP tactical review for a grappler in MMA."
+    },
+    "instructions": [
+      "In MMA, for this grappler top control to effective offense, study the expected opponent and watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this grappler top control to effective offense, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this grappler top control to effective offense, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the top control to effective offense cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.grappler.taper.first_takedown_setup",
+    "sports": [
+      "mma"
+    ],
+    "name": "First Takedown Setup (MMA)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "grappler"
+    ],
+    "duration_min": 8,
+    "why": "Use the first takedown setup decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the first takedown setup choice early and calmly.",
+      "focus": "Choose one trusted response to that cue; do not add a new system.",
+      "reset": "Name the safe reset and finish the review with one short fight cue.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "TAPER tactical review for a grappler in MMA."
+    },
+    "instructions": [
+      "In MMA, for this grappler first takedown setup, review one familiar opening and the opponent danger cue that can stop it.",
+      "For this grappler first takedown setup, choose one trusted response to that cue; do not add a new system.",
+      "For this grappler first takedown setup, name the safe reset and finish the review with one short fight cue."
+    ],
+    "progress": "In MMA, carry the first takedown setup cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.grappler.taper.first_ground_continuation_cue",
+    "sports": [
+      "mma"
+    ],
+    "name": "First Ground Continuation Cue (MMA)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "grappler"
+    ],
+    "duration_min": 8,
+    "why": "Use the first ground continuation cue decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the first ground continuation cue choice early and calmly.",
+      "focus": "Choose one trusted response to that cue; do not add a new system.",
+      "reset": "Name the safe reset and finish the review with one short fight cue.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "TAPER tactical review for a grappler in MMA."
+    },
+    "instructions": [
+      "In MMA, for this grappler first ground continuation cue, review one familiar opening and the opponent danger cue that can stop it.",
+      "For this grappler first ground continuation cue, choose one trusted response to that cue; do not add a new system.",
+      "For this grappler first ground continuation cue, name the safe reset and finish the review with one short fight cue."
+    ],
+    "progress": "In MMA, carry the first ground continuation cue cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.hybrid.gpp.range_transition_map",
+    "sports": [
+      "mma"
+    ],
+    "name": "Range Transition Map (MMA)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "hybrid"
+    ],
+    "duration_min": 10,
+    "why": "Use the range transition map decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the range transition map choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "GPP tactical review for a hybrid in MMA."
+    },
+    "instructions": [
+      "In MMA, for this hybrid range transition map, watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this hybrid range transition map, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this hybrid range transition map, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the range transition map cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.hybrid.gpp.best_phase_identification",
+    "sports": [
+      "mma"
+    ],
+    "name": "Best Phase Identification (MMA)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "hybrid"
+    ],
+    "duration_min": 10,
+    "why": "Use the best phase identification decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the best phase identification choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "GPP tactical review for a hybrid in MMA."
+    },
+    "instructions": [
+      "In MMA, for this hybrid best phase identification, watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this hybrid best phase identification, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this hybrid best phase identification, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the best phase identification cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.hybrid.gpp.strike_clinch_or_shot_tree",
+    "sports": [
+      "mma"
+    ],
+    "name": "Strike Clinch or Shot Tree (MMA)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "hybrid"
+    ],
+    "duration_min": 10,
+    "why": "Use the strike clinch or shot tree decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the strike clinch or shot tree choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "GPP tactical review for a hybrid in MMA."
+    },
+    "instructions": [
+      "In MMA, for this hybrid strike clinch or shot tree, watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this hybrid strike clinch or shot tree, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this hybrid strike clinch or shot tree, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the strike clinch or shot tree cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.hybrid.spp.strike_to_shot_branch",
+    "sports": [
+      "mma"
+    ],
+    "name": "Strike-to-Shot Branch (MMA)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "hybrid"
+    ],
+    "duration_min": 10,
+    "why": "Use the strike-to-shot branch decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the strike-to-shot branch choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "SPP tactical review for a hybrid in MMA."
+    },
+    "instructions": [
+      "In MMA, for this hybrid strike-to-shot branch, study the expected opponent and watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this hybrid strike-to-shot branch, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this hybrid strike-to-shot branch, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the strike-to-shot branch cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.hybrid.spp.shot_to_strike_branch",
+    "sports": [
+      "mma"
+    ],
+    "name": "Shot-to-Strike Branch (MMA)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "hybrid"
+    ],
+    "duration_min": 10,
+    "why": "Use the shot-to-strike branch decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the shot-to-strike branch choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "SPP tactical review for a hybrid in MMA."
+    },
+    "instructions": [
+      "In MMA, for this hybrid shot-to-strike branch, study the expected opponent and watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this hybrid shot-to-strike branch, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this hybrid shot-to-strike branch, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the shot-to-strike branch cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.hybrid.spp.winning_the_second_phase",
+    "sports": [
+      "mma"
+    ],
+    "name": "Winning the Second Phase (MMA)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "hybrid"
+    ],
+    "duration_min": 10,
+    "why": "Use the winning the second phase decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the winning the second phase choice early and calmly.",
+      "focus": "Mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "reset": "Choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "SPP tactical review for a hybrid in MMA."
+    },
+    "instructions": [
+      "In MMA, for this hybrid winning the second phase, study the expected opponent and watch the opponent’s position across striking, clinch, fence and ground phases.",
+      "For this hybrid winning the second phase, mark the reaction that opens useful striking, a level change, clinch contact or a safe exit.",
+      "For this hybrid winning the second phase, choose the effective offence or advantageous position that should follow; if it is absent, reset without chasing."
+    ],
+    "progress": "In MMA, carry the winning the second phase cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.hybrid.taper.a_b_opening_plan",
+    "sports": [
+      "mma"
+    ],
+    "name": "A/B Opening Plan (MMA)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "hybrid"
+    ],
+    "duration_min": 8,
+    "why": "Use the a/b opening plan decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the a/b opening plan choice early and calmly.",
+      "focus": "Choose one trusted response to that cue; do not add a new system.",
+      "reset": "Name the safe reset and finish the review with one short fight cue.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "TAPER tactical review for a hybrid in MMA."
+    },
+    "instructions": [
+      "In MMA, for this hybrid a/b opening plan, review one familiar opening and the opponent danger cue that can stop it.",
+      "For this hybrid a/b opening plan, choose one trusted response to that cue; do not add a new system.",
+      "For this hybrid a/b opening plan, name the safe reset and finish the review with one short fight cue."
+    ],
+    "progress": "In MMA, carry the a/b opening plan cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.hybrid.taper.first_transition_cue",
+    "sports": [
+      "mma"
+    ],
+    "name": "First Transition Cue (MMA)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "hybrid"
+    ],
+    "duration_min": 8,
+    "why": "Use the first transition cue decision to make MMA choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the first transition cue choice early and calmly.",
+      "focus": "Choose one trusted response to that cue; do not add a new system.",
+      "reset": "Name the safe reset and finish the review with one short fight cue.",
+      "anchor": "Position must lead to effective offence.",
+      "context": "TAPER tactical review for a hybrid in MMA."
+    },
+    "instructions": [
+      "In MMA, for this hybrid first transition cue, review one familiar opening and the opponent danger cue that can stop it.",
+      "For this hybrid first transition cue, choose one trusted response to that cue; do not add a new system.",
+      "For this hybrid first transition cue, name the safe reset and finish the review with one short fight cue."
+    ],
+    "progress": "In MMA, carry the first transition cue cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.pressure_fighter.gpp.ring_route_scan",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Ring Route Scan (Kickboxing)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "pressure_fighter"
+    ],
+    "duration_min": 10,
+    "why": "Use the ring route scan decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the ring route scan choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "GPP tactical review for a pressure fighter in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this pressure fighter ring route scan, watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this pressure fighter ring route scan, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this pressure fighter ring route scan, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the ring route scan cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.pressure_fighter.gpp.low_kick_steering_map",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Low-Kick Steering Map (Kickboxing)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "pressure_fighter"
+    ],
+    "duration_min": 10,
+    "why": "Use the low-kick steering map decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the low-kick steering map choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "GPP tactical review for a pressure fighter in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this pressure fighter low-kick steering map, watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this pressure fighter low-kick steering map, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this pressure fighter low-kick steering map, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the low-kick steering map cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.pressure_fighter.gpp.safe_range_crossing",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Safe Range-Crossing (Kickboxing)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "pressure_fighter"
+    ],
+    "duration_min": 10,
+    "why": "Use the safe range-crossing decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the safe range-crossing choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "GPP tactical review for a pressure fighter in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this pressure fighter safe range-crossing, watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this pressure fighter safe range-crossing, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this pressure fighter safe range-crossing, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the safe range-crossing cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.pressure_fighter.spp.cut_off_combination_decision",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Cut-Off Combination Decision (Kickboxing)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "pressure_fighter"
+    ],
+    "duration_min": 10,
+    "why": "Use the cut-off combination decision decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the cut-off combination decision choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "SPP tactical review for a pressure fighter in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this pressure fighter cut-off combination decision, study the expected opponent and watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this pressure fighter cut-off combination decision, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this pressure fighter cut-off combination decision, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the cut-off combination decision cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.pressure_fighter.spp.low_kick_after_hands",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Low Kick After Hands (Kickboxing)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "pressure_fighter"
+    ],
+    "duration_min": 10,
+    "why": "Use the low kick after hands decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the low kick after hands choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "SPP tactical review for a pressure fighter in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this pressure fighter low kick after hands, study the expected opponent and watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this pressure fighter low kick after hands, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this pressure fighter low kick after hands, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the low kick after hands cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.pressure_fighter.spp.pressure_without_counter_exposure",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Pressure Without Counter Exposure (Kickboxing)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "pressure_fighter"
+    ],
+    "duration_min": 10,
+    "why": "Use the pressure without counter exposure decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the pressure without counter exposure choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "SPP tactical review for a pressure fighter in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this pressure fighter pressure without counter exposure, study the expected opponent and watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this pressure fighter pressure without counter exposure, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this pressure fighter pressure without counter exposure, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the pressure without counter exposure cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.pressure_fighter.taper.first_pressure_sequence",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "First Pressure Sequence (Kickboxing)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "pressure_fighter"
+    ],
+    "duration_min": 8,
+    "why": "Use the first pressure sequence decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the first pressure sequence choice early and calmly.",
+      "focus": "Choose one trusted response to that cue; do not add a new system.",
+      "reset": "Name the safe reset and finish the review with one short fight cue.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "TAPER tactical review for a pressure fighter in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this pressure fighter first pressure sequence, review one familiar opening and the opponent danger cue that can stop it.",
+      "For this pressure fighter first pressure sequence, choose one trusted response to that cue; do not add a new system.",
+      "For this pressure fighter first pressure sequence, name the safe reset and finish the review with one short fight cue."
+    ],
+    "progress": "In kickboxing, carry the first pressure sequence cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.pressure_fighter.taper.final_pressure_reset",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Final Pressure Reset (Kickboxing)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "pressure_fighter"
+    ],
+    "duration_min": 8,
+    "why": "Use the final pressure reset decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the final pressure reset choice early and calmly.",
+      "focus": "Choose one trusted response to that cue; do not add a new system.",
+      "reset": "Name the safe reset and finish the review with one short fight cue.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "TAPER tactical review for a pressure fighter in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this pressure fighter final pressure reset, review one familiar opening and the opponent danger cue that can stop it.",
+      "For this pressure fighter final pressure reset, choose one trusted response to that cue; do not add a new system.",
+      "For this pressure fighter final pressure reset, name the safe reset and finish the review with one short fight cue."
+    ],
+    "progress": "In kickboxing, carry the final pressure reset cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.counter_striker.gpp.punch_counter_trigger_map",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Punch Counter Trigger Map (Kickboxing)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "counter_striker"
+    ],
+    "duration_min": 10,
+    "why": "Use the punch counter trigger map decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the punch counter trigger map choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "GPP tactical review for a counter striker in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this counter striker punch counter trigger map, watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this counter striker punch counter trigger map, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this counter striker punch counter trigger map, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the punch counter trigger map cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.counter_striker.gpp.kick_counter_trigger_map",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Kick Counter Trigger Map (Kickboxing)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "counter_striker"
+    ],
+    "duration_min": 10,
+    "why": "Use the kick counter trigger map decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the kick counter trigger map choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "GPP tactical review for a counter striker in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this counter striker kick counter trigger map, watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this counter striker kick counter trigger map, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this counter striker kick counter trigger map, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the kick counter trigger map cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.counter_striker.gpp.counter_range_audit",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Counter Range Audit (Kickboxing)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "counter_striker"
+    ],
+    "duration_min": 10,
+    "why": "Use the counter range audit decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the counter range audit choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "GPP tactical review for a counter striker in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this counter striker counter range audit, watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this counter striker counter range audit, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this counter striker counter range audit, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the counter range audit cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.counter_striker.spp.low_kick_counter_decision",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Low-Kick Counter Decision (Kickboxing)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "counter_striker"
+    ],
+    "duration_min": 10,
+    "why": "Use the low-kick counter decision decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the low-kick counter decision choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "SPP tactical review for a counter striker in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this counter striker low-kick counter decision, study the expected opponent and watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this counter striker low-kick counter decision, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this counter striker low-kick counter decision, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the low-kick counter decision cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.counter_striker.spp.body_kick_counter_decision",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Body-Kick Counter Decision (Kickboxing)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "counter_striker"
+    ],
+    "duration_min": 10,
+    "why": "Use the body-kick counter decision decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the body-kick counter decision choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "SPP tactical review for a counter striker in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this counter striker body-kick counter decision, study the expected opponent and watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this counter striker body-kick counter decision, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this counter striker body-kick counter decision, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the body-kick counter decision cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.counter_striker.spp.counter_and_angle_exit",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Counter-and-Angle Exit (Kickboxing)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "counter_striker"
+    ],
+    "duration_min": 10,
+    "why": "Use the counter-and-angle exit decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the counter-and-angle exit choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "SPP tactical review for a counter striker in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this counter striker counter-and-angle exit, study the expected opponent and watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this counter striker counter-and-angle exit, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this counter striker counter-and-angle exit, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the counter-and-angle exit cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.counter_striker.taper.first_counter_trigger",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "First Counter Trigger (Kickboxing)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "counter_striker"
+    ],
+    "duration_min": 8,
+    "why": "Use the first counter trigger decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the first counter trigger choice early and calmly.",
+      "focus": "Choose one trusted response to that cue; do not add a new system.",
+      "reset": "Name the safe reset and finish the review with one short fight cue.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "TAPER tactical review for a counter striker in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this counter striker first counter trigger, review one familiar opening and the opponent danger cue that can stop it.",
+      "For this counter striker first counter trigger, choose one trusted response to that cue; do not add a new system.",
+      "For this counter striker first counter trigger, name the safe reset and finish the review with one short fight cue."
+    ],
+    "progress": "In kickboxing, carry the first counter trigger cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.counter_striker.taper.one_trusted_kick_counter",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "One Trusted Kick Counter (Kickboxing)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "counter_striker"
+    ],
+    "duration_min": 8,
+    "why": "Use the one trusted kick counter decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the one trusted kick counter choice early and calmly.",
+      "focus": "Choose one trusted response to that cue; do not add a new system.",
+      "reset": "Name the safe reset and finish the review with one short fight cue.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "TAPER tactical review for a counter striker in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this counter striker one trusted kick counter, review one familiar opening and the opponent danger cue that can stop it.",
+      "For this counter striker one trusted kick counter, choose one trusted response to that cue; do not add a new system.",
+      "For this counter striker one trusted kick counter, name the safe reset and finish the review with one short fight cue."
+    ],
+    "progress": "In kickboxing, carry the one trusted kick counter cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.distance_striker.gpp.kick_range_map",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Kick Range Map (Kickboxing)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "distance_striker"
+    ],
+    "duration_min": 10,
+    "why": "Use the kick range map decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the kick range map choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "GPP tactical review for a distance striker in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this distance striker kick range map, watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this distance striker kick range map, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this distance striker kick range map, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the kick range map cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.distance_striker.gpp.long_weapon_range_control",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Long-Weapon Range Control (Kickboxing)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "distance_striker"
+    ],
+    "duration_min": 10,
+    "why": "Use the long-weapon range control decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the long-weapon range control choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "GPP tactical review for a distance striker in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this distance striker long-weapon range control, watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this distance striker long-weapon range control, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this distance striker long-weapon range control, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the long-weapon range control cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.distance_striker.gpp.exit_lane_audit",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Exit Lane Audit (Kickboxing)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "distance_striker"
+    ],
+    "duration_min": 10,
+    "why": "Use the exit lane audit decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the exit lane audit choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "GPP tactical review for a distance striker in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this distance striker exit lane audit, watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this distance striker exit lane audit, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this distance striker exit lane audit, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the exit lane audit cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.distance_striker.spp.intercept_forward_pressure",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Intercept Forward Pressure (Kickboxing)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "distance_striker"
+    ],
+    "duration_min": 10,
+    "why": "Use the intercept forward pressure decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the intercept forward pressure choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "SPP tactical review for a distance striker in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this distance striker intercept forward pressure, study the expected opponent and watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this distance striker intercept forward pressure, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this distance striker intercept forward pressure, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the intercept forward pressure cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.distance_striker.spp.long_to_mid_range_transition",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Long-to-Mid Range Transition (Kickboxing)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "distance_striker"
+    ],
+    "duration_min": 10,
+    "why": "Use the long-to-mid range transition decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the long-to-mid range transition choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "SPP tactical review for a distance striker in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this distance striker long-to-mid range transition, study the expected opponent and watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this distance striker long-to-mid range transition, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this distance striker long-to-mid range transition, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the long-to-mid range transition cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.distance_striker.spp.kick_and_exit_decision",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Kick-and-Exit Decision (Kickboxing)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "distance_striker"
+    ],
+    "duration_min": 10,
+    "why": "Use the kick-and-exit decision decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the kick-and-exit decision choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "SPP tactical review for a distance striker in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this distance striker kick-and-exit decision, study the expected opponent and watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this distance striker kick-and-exit decision, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this distance striker kick-and-exit decision, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the kick-and-exit decision cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.distance_striker.taper.first_round_range_script",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "First-Round Range Script (Kickboxing)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "distance_striker"
+    ],
+    "duration_min": 8,
+    "why": "Use the first-round range script decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the first-round range script choice early and calmly.",
+      "focus": "Choose one trusted response to that cue; do not add a new system.",
+      "reset": "Name the safe reset and finish the review with one short fight cue.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "TAPER tactical review for a distance striker in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this distance striker first-round range script, review one familiar opening and the opponent danger cue that can stop it.",
+      "For this distance striker first-round range script, choose one trusted response to that cue; do not add a new system.",
+      "For this distance striker first-round range script, name the safe reset and finish the review with one short fight cue."
+    ],
+    "progress": "In kickboxing, carry the first-round range script cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.distance_striker.taper.first_long_range_weapon",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "First Long-Range Weapon (Kickboxing)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "distance_striker"
+    ],
+    "duration_min": 8,
+    "why": "Use the first long-range weapon decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the first long-range weapon choice early and calmly.",
+      "focus": "Choose one trusted response to that cue; do not add a new system.",
+      "reset": "Name the safe reset and finish the review with one short fight cue.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "TAPER tactical review for a distance striker in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this distance striker first long-range weapon, review one familiar opening and the opponent danger cue that can stop it.",
+      "For this distance striker first long-range weapon, choose one trusted response to that cue; do not add a new system.",
+      "For this distance striker first long-range weapon, name the safe reset and finish the review with one short fight cue."
+    ],
+    "progress": "In kickboxing, carry the first long-range weapon cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.clinch_fighter.gpp.safe_tie_up_entry",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Safe Tie-Up Entry (Kickboxing)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "clinch_fighter"
+    ],
+    "duration_min": 10,
+    "why": "Use the safe tie-up entry decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the safe tie-up entry choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "GPP tactical review for a clinch fighter in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this clinch fighter safe tie-up entry, watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this clinch fighter safe tie-up entry, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this clinch fighter safe tie-up entry, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the safe tie-up entry cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.clinch_fighter.gpp.knee_opportunity_recognition",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Knee Opportunity Recognition (Kickboxing)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "clinch_fighter"
+    ],
+    "duration_min": 10,
+    "why": "Use the knee opportunity recognition decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the knee opportunity recognition choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "GPP tactical review for a clinch fighter in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this clinch fighter knee opportunity recognition, watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this clinch fighter knee opportunity recognition, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this clinch fighter knee opportunity recognition, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the knee opportunity recognition cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.clinch_fighter.gpp.break_and_reset_position",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Break-and-Reset Position (Kickboxing)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "clinch_fighter"
+    ],
+    "duration_min": 10,
+    "why": "Use the break-and-reset position decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the break-and-reset position choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "GPP tactical review for a clinch fighter in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this clinch fighter break-and-reset position, watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this clinch fighter break-and-reset position, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this clinch fighter break-and-reset position, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the break-and-reset position cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.clinch_fighter.spp.strike_to_brief_clinch_decision",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Strike-to-Brief-Clinch Decision (Kickboxing)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "clinch_fighter"
+    ],
+    "duration_min": 10,
+    "why": "Use the strike-to-brief-clinch decision decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the strike-to-brief-clinch decision choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "SPP tactical review for a clinch fighter in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this clinch fighter strike-to-brief-clinch decision, study the expected opponent and watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this clinch fighter strike-to-brief-clinch decision, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this clinch fighter strike-to-brief-clinch decision, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the strike-to-brief-clinch decision cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.clinch_fighter.spp.immediate_knee_opportunity",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Immediate Knee Opportunity (Kickboxing)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "clinch_fighter"
+    ],
+    "duration_min": 10,
+    "why": "Use the immediate knee opportunity decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the immediate knee opportunity choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "SPP tactical review for a clinch fighter in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this clinch fighter immediate knee opportunity, study the expected opponent and watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this clinch fighter immediate knee opportunity, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this clinch fighter immediate knee opportunity, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the immediate knee opportunity cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.clinch_fighter.spp.clinch_break_re_entry",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Clinch Break Re-Entry (Kickboxing)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "clinch_fighter"
+    ],
+    "duration_min": 10,
+    "why": "Use the clinch break re-entry decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the clinch break re-entry choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "SPP tactical review for a clinch fighter in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this clinch fighter clinch break re-entry, study the expected opponent and watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this clinch fighter clinch break re-entry, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this clinch fighter clinch break re-entry, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the clinch break re-entry cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.clinch_fighter.taper.first_close_range_cue",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "First Close-Range Cue (Kickboxing)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "clinch_fighter"
+    ],
+    "duration_min": 8,
+    "why": "Use the first close-range cue decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the first close-range cue choice early and calmly.",
+      "focus": "Choose one trusted response to that cue; do not add a new system.",
+      "reset": "Name the safe reset and finish the review with one short fight cue.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "TAPER tactical review for a clinch fighter in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this clinch fighter first close-range cue, review one familiar opening and the opponent danger cue that can stop it.",
+      "For this clinch fighter first close-range cue, choose one trusted response to that cue; do not add a new system.",
+      "For this clinch fighter first close-range cue, name the safe reset and finish the review with one short fight cue."
+    ],
+    "progress": "In kickboxing, carry the first close-range cue cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.clinch_fighter.taper.knee_and_release_rule",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Knee-and-Release Rule (Kickboxing)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "clinch_fighter"
+    ],
+    "duration_min": 8,
+    "why": "Use the knee-and-release rule decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the knee-and-release rule choice early and calmly.",
+      "focus": "Choose one trusted response to that cue; do not add a new system.",
+      "reset": "Name the safe reset and finish the review with one short fight cue.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "TAPER tactical review for a clinch fighter in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this clinch fighter knee-and-release rule, review one familiar opening and the opponent danger cue that can stop it.",
+      "For this clinch fighter knee-and-release rule, choose one trusted response to that cue; do not add a new system.",
+      "For this clinch fighter knee-and-release rule, name the safe reset and finish the review with one short fight cue."
+    ],
+    "progress": "In kickboxing, carry the knee-and-release rule cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.hybrid.gpp.range_transition_map",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Range Transition Map (Kickboxing)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "hybrid"
+    ],
+    "duration_min": 10,
+    "why": "Use the range transition map decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the range transition map choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "GPP tactical review for a hybrid in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this hybrid range transition map, watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this hybrid range transition map, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this hybrid range transition map, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the range transition map cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.hybrid.gpp.hands_to_kicks_decision",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Hands-to-Kicks Decision (Kickboxing)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "hybrid"
+    ],
+    "duration_min": 10,
+    "why": "Use the hands-to-kicks decision decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the hands-to-kicks decision choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "GPP tactical review for a hybrid in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this hybrid hands-to-kicks decision, watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this hybrid hands-to-kicks decision, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this hybrid hands-to-kicks decision, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the hands-to-kicks decision cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.hybrid.gpp.attack_or_counter_identity",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Attack or Counter Identity (Kickboxing)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "hybrid"
+    ],
+    "duration_min": 10,
+    "why": "Use the attack or counter identity decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the attack or counter identity choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "GPP tactical review for a hybrid in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this hybrid attack or counter identity, watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this hybrid attack or counter identity, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this hybrid attack or counter identity, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the attack or counter identity cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.hybrid.spp.punch_to_kick_continuation",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Punch-to-Kick Continuation (Kickboxing)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "hybrid"
+    ],
+    "duration_min": 10,
+    "why": "Use the punch-to-kick continuation decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the punch-to-kick continuation choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "SPP tactical review for a hybrid in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this hybrid punch-to-kick continuation, study the expected opponent and watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this hybrid punch-to-kick continuation, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this hybrid punch-to-kick continuation, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the punch-to-kick continuation cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.hybrid.spp.kick_to_punch_continuation",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Kick-to-Punch Continuation (Kickboxing)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "hybrid"
+    ],
+    "duration_min": 10,
+    "why": "Use the kick-to-punch continuation decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the kick-to-punch continuation choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "SPP tactical review for a hybrid in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this hybrid kick-to-punch continuation, study the expected opponent and watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this hybrid kick-to-punch continuation, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this hybrid kick-to-punch continuation, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the kick-to-punch continuation cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.hybrid.spp.pressure_to_counter_switch",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Pressure-to-Counter Switch (Kickboxing)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "hybrid"
+    ],
+    "duration_min": 10,
+    "why": "Use the pressure-to-counter switch decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the pressure-to-counter switch choice early and calmly.",
+      "focus": "Mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "reset": "Choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "SPP tactical review for a hybrid in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this hybrid pressure-to-counter switch, study the expected opponent and watch the opponent’s stance, range, rhythm and preferred exit after punches, kicks or knees.",
+      "For this hybrid pressure-to-counter switch, mark the reaction that opens a legal strike, angle change or brief knee opportunity.",
+      "For this hybrid pressure-to-counter switch, choose the scoring response and a balanced exit; if the cue is unclear, reset at safe kick range."
+    ],
+    "progress": "In kickboxing, carry the pressure-to-counter switch cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.hybrid.taper.a_b_opening_plan",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "A/B Opening Plan (Kickboxing)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "hybrid"
+    ],
+    "duration_min": 8,
+    "why": "Use the a/b opening plan decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the a/b opening plan choice early and calmly.",
+      "focus": "Choose one trusted response to that cue; do not add a new system.",
+      "reset": "Name the safe reset and finish the review with one short fight cue.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "TAPER tactical review for a hybrid in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this hybrid a/b opening plan, review one familiar opening and the opponent danger cue that can stop it.",
+      "For this hybrid a/b opening plan, choose one trusted response to that cue; do not add a new system.",
+      "For this hybrid a/b opening plan, name the safe reset and finish the review with one short fight cue."
+    ],
+    "progress": "In kickboxing, carry the a/b opening plan cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "kickboxing.hybrid.taper.first_adaptation_rule",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "First Adaptation Rule (Kickboxing)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "hybrid"
+    ],
+    "duration_min": 8,
+    "why": "Use the first adaptation rule decision to make kickboxing choices clear before the next exchange.",
+    "mindset": {
+      "intent": "Make the first adaptation rule choice early and calmly.",
+      "focus": "Choose one trusted response to that cue; do not add a new system.",
+      "reset": "Name the safe reset and finish the review with one short fight cue.",
+      "anchor": "Score, exit and stay responsible.",
+      "context": "TAPER tactical review for a hybrid in kickboxing."
+    },
+    "instructions": [
+      "In KICKBOXING, for this hybrid first adaptation rule, review one familiar opening and the opponent danger cue that can stop it.",
+      "For this hybrid first adaptation rule, choose one trusted response to that cue; do not add a new system.",
+      "For this hybrid first adaptation rule, name the safe reset and finish the review with one short fight cue."
+    ],
+    "progress": "In kickboxing, carry the first adaptation rule cue into the next scheduled technical session and review whether the decision stayed clear."
+  },
+  {
+    "key": "mma.generic.gpp.phase_route_review",
+    "sports": [
+      "mma"
+    ],
+    "name": "Phase Route Review (MMA)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "generic"
+    ],
+    "duration_min": 10,
+    "why": "Clarify the phase route review before the next MMA contest exchange.",
+    "mindset": {
+      "intent": "Use the phase route review to make one calm decision.",
+      "focus": "Notice the first clear opponent cue, not every possible action.",
+      "reset": "If the cue is absent, return to the athlete’s established safe position.",
+      "anchor": "One cue, one response, one reset.",
+      "context": "GPP zero-load decision review for MMA."
+    },
+    "instructions": [
+      "In this MMA phase route review, identify one repeated opponent cue.",
+      "For phase route review, choose one familiar response that fits the rules.",
+      "After phase route review, define the safe position where the exchange should finish."
+    ],
+    "progress": "Review the phase route review decision after the next scheduled MMA technical session."
+  },
+  {
+    "key": "mma.generic.gpp.opponent_reaction_scan",
+    "sports": [
+      "mma"
+    ],
+    "name": "Opponent Reaction Scan (MMA)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "generic"
+    ],
+    "duration_min": 10,
+    "why": "Clarify the opponent reaction scan before the next MMA contest exchange.",
+    "mindset": {
+      "intent": "Use the opponent reaction scan to make one calm decision.",
+      "focus": "Notice the first clear opponent cue, not every possible action.",
+      "reset": "If the cue is absent, return to the athlete’s established safe position.",
+      "anchor": "One cue, one response, one reset.",
+      "context": "GPP zero-load decision review for MMA."
+    },
+    "instructions": [
+      "In this MMA opponent reaction scan, identify one repeated opponent cue.",
+      "For opponent reaction scan, choose one familiar response that fits the rules.",
+      "After opponent reaction scan, define the safe position where the exchange should finish."
+    ],
+    "progress": "Review the opponent reaction scan decision after the next scheduled MMA technical session."
+  },
+  {
+    "key": "mma.generic.gpp.safe_reset_map",
+    "sports": [
+      "mma"
+    ],
+    "name": "Safe Reset Map (MMA)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "generic"
+    ],
+    "duration_min": 10,
+    "why": "Clarify the safe reset map before the next MMA contest exchange.",
+    "mindset": {
+      "intent": "Use the safe reset map to make one calm decision.",
+      "focus": "Notice the first clear opponent cue, not every possible action.",
+      "reset": "If the cue is absent, return to the athlete’s established safe position.",
+      "anchor": "One cue, one response, one reset.",
+      "context": "GPP zero-load decision review for MMA."
+    },
+    "instructions": [
+      "In this MMA safe reset map, identify one repeated opponent cue.",
+      "For safe reset map, choose one familiar response that fits the rules.",
+      "After safe reset map, define the safe position where the exchange should finish."
+    ],
+    "progress": "Review the safe reset map decision after the next scheduled MMA technical session."
+  },
+  {
+    "key": "mma.generic.spp.second-phase_decision",
+    "sports": [
+      "mma"
+    ],
+    "name": "Second-Phase Decision (MMA)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "generic"
+    ],
+    "duration_min": 10,
+    "why": "Clarify the second-phase decision before the next MMA contest exchange.",
+    "mindset": {
+      "intent": "Use the second-phase decision to make one calm decision.",
+      "focus": "Notice the first clear opponent cue, not every possible action.",
+      "reset": "If the cue is absent, return to the athlete’s established safe position.",
+      "anchor": "One cue, one response, one reset.",
+      "context": "SPP zero-load decision review for MMA."
+    },
+    "instructions": [
+      "In this MMA second-phase decision, identify one repeated opponent cue.",
+      "For second-phase decision, choose one familiar response that fits the rules.",
+      "After second-phase decision, define the safe position where the exchange should finish."
+    ],
+    "progress": "Review the second-phase decision decision after the next scheduled MMA technical session."
+  },
+  {
+    "key": "mma.generic.spp.danger_route_denial",
+    "sports": [
+      "mma"
+    ],
+    "name": "Danger Route Denial (MMA)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "generic"
+    ],
+    "duration_min": 10,
+    "why": "Clarify the danger route denial before the next MMA contest exchange.",
+    "mindset": {
+      "intent": "Use the danger route denial to make one calm decision.",
+      "focus": "Notice the first clear opponent cue, not every possible action.",
+      "reset": "If the cue is absent, return to the athlete’s established safe position.",
+      "anchor": "One cue, one response, one reset.",
+      "context": "SPP zero-load decision review for MMA."
+    },
+    "instructions": [
+      "In this MMA danger route denial, identify one repeated opponent cue.",
+      "For danger route denial, choose one familiar response that fits the rules.",
+      "After danger route denial, define the safe position where the exchange should finish."
+    ],
+    "progress": "Review the danger route denial decision after the next scheduled MMA technical session."
+  },
+  {
+    "key": "mma.generic.spp.effective_offence_check",
+    "sports": [
+      "mma"
+    ],
+    "name": "Effective Offence Check (MMA)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "generic"
+    ],
+    "duration_min": 10,
+    "why": "Clarify the effective offence check before the next MMA contest exchange.",
+    "mindset": {
+      "intent": "Use the effective offence check to make one calm decision.",
+      "focus": "Notice the first clear opponent cue, not every possible action.",
+      "reset": "If the cue is absent, return to the athlete’s established safe position.",
+      "anchor": "One cue, one response, one reset.",
+      "context": "SPP zero-load decision review for MMA."
+    },
+    "instructions": [
+      "In this MMA effective offence check, identify one repeated opponent cue.",
+      "For effective offence check, choose one familiar response that fits the rules.",
+      "After effective offence check, define the safe position where the exchange should finish."
+    ],
+    "progress": "Review the effective offence check decision after the next scheduled MMA technical session."
+  },
+  {
+    "key": "mma.generic.taper.opening_phase_cue",
+    "sports": [
+      "mma"
+    ],
+    "name": "Opening Phase Cue (MMA)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "generic"
+    ],
+    "duration_min": 8,
+    "why": "Clarify the opening phase cue before the next MMA contest exchange.",
+    "mindset": {
+      "intent": "Use the opening phase cue to make one calm decision.",
+      "focus": "Notice the first clear opponent cue, not every possible action.",
+      "reset": "If the cue is absent, return to the athlete’s established safe position.",
+      "anchor": "One cue, one response, one reset.",
+      "context": "TAPER zero-load decision review for MMA."
+    },
+    "instructions": [
+      "In this MMA opening phase cue, identify one repeated opponent cue.",
+      "For opening phase cue, choose one familiar response that fits the rules.",
+      "After opening phase cue, define the safe position where the exchange should finish."
+    ],
+    "progress": "Review the opening phase cue decision after the next scheduled MMA technical session."
+  },
+  {
+    "key": "mma.generic.taper.trusted_reset_cue",
+    "sports": [
+      "mma"
+    ],
+    "name": "Trusted Reset Cue (MMA)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "generic"
+    ],
+    "duration_min": 8,
+    "why": "Clarify the trusted reset cue before the next MMA contest exchange.",
+    "mindset": {
+      "intent": "Use the trusted reset cue to make one calm decision.",
+      "focus": "Notice the first clear opponent cue, not every possible action.",
+      "reset": "If the cue is absent, return to the athlete’s established safe position.",
+      "anchor": "One cue, one response, one reset.",
+      "context": "TAPER zero-load decision review for MMA."
+    },
+    "instructions": [
+      "In this MMA trusted reset cue, identify one repeated opponent cue.",
+      "For trusted reset cue, choose one familiar response that fits the rules.",
+      "After trusted reset cue, define the safe position where the exchange should finish."
+    ],
+    "progress": "Review the trusted reset cue decision after the next scheduled MMA technical session."
+  },
+  {
+    "key": "kickboxing.generic.gpp.range_reaction_review",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Range Reaction Review (kickboxing)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "generic"
+    ],
+    "duration_min": 10,
+    "why": "Clarify the range reaction review before the next kickboxing contest exchange.",
+    "mindset": {
+      "intent": "Use the range reaction review to make one calm decision.",
+      "focus": "Notice the first clear opponent cue, not every possible action.",
+      "reset": "If the cue is absent, return to the athlete’s established safe position.",
+      "anchor": "One cue, one response, one reset.",
+      "context": "GPP zero-load decision review for kickboxing."
+    },
+    "instructions": [
+      "In this kickboxing range reaction review, identify one repeated opponent cue.",
+      "For range reaction review, choose one familiar response that fits the rules.",
+      "After range reaction review, define the safe position where the exchange should finish."
+    ],
+    "progress": "Review the range reaction review decision after the next scheduled kickboxing technical session."
+  },
+  {
+    "key": "kickboxing.generic.gpp.opponent_rhythm_scan",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Opponent Rhythm Scan (kickboxing)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "generic"
+    ],
+    "duration_min": 10,
+    "why": "Clarify the opponent rhythm scan before the next kickboxing contest exchange.",
+    "mindset": {
+      "intent": "Use the opponent rhythm scan to make one calm decision.",
+      "focus": "Notice the first clear opponent cue, not every possible action.",
+      "reset": "If the cue is absent, return to the athlete’s established safe position.",
+      "anchor": "One cue, one response, one reset.",
+      "context": "GPP zero-load decision review for kickboxing."
+    },
+    "instructions": [
+      "In this kickboxing opponent rhythm scan, identify one repeated opponent cue.",
+      "For opponent rhythm scan, choose one familiar response that fits the rules.",
+      "After opponent rhythm scan, define the safe position where the exchange should finish."
+    ],
+    "progress": "Review the opponent rhythm scan decision after the next scheduled kickboxing technical session."
+  },
+  {
+    "key": "kickboxing.generic.gpp.balanced_reset_map",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Balanced Reset Map (kickboxing)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "generic"
+    ],
+    "duration_min": 10,
+    "why": "Clarify the balanced reset map before the next kickboxing contest exchange.",
+    "mindset": {
+      "intent": "Use the balanced reset map to make one calm decision.",
+      "focus": "Notice the first clear opponent cue, not every possible action.",
+      "reset": "If the cue is absent, return to the athlete’s established safe position.",
+      "anchor": "One cue, one response, one reset.",
+      "context": "GPP zero-load decision review for kickboxing."
+    },
+    "instructions": [
+      "In this kickboxing balanced reset map, identify one repeated opponent cue.",
+      "For balanced reset map, choose one familiar response that fits the rules.",
+      "After balanced reset map, define the safe position where the exchange should finish."
+    ],
+    "progress": "Review the balanced reset map decision after the next scheduled kickboxing technical session."
+  },
+  {
+    "key": "kickboxing.generic.spp.scoring_route_decision",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Scoring Route Decision (kickboxing)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "generic"
+    ],
+    "duration_min": 10,
+    "why": "Clarify the scoring route decision before the next kickboxing contest exchange.",
+    "mindset": {
+      "intent": "Use the scoring route decision to make one calm decision.",
+      "focus": "Notice the first clear opponent cue, not every possible action.",
+      "reset": "If the cue is absent, return to the athlete’s established safe position.",
+      "anchor": "One cue, one response, one reset.",
+      "context": "SPP zero-load decision review for kickboxing."
+    },
+    "instructions": [
+      "In this kickboxing scoring route decision, identify one repeated opponent cue.",
+      "For scoring route decision, choose one familiar response that fits the rules.",
+      "After scoring route decision, define the safe position where the exchange should finish."
+    ],
+    "progress": "Review the scoring route decision decision after the next scheduled kickboxing technical session."
+  },
+  {
+    "key": "kickboxing.generic.spp.exit_route_denial",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Exit Route Denial (kickboxing)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "generic"
+    ],
+    "duration_min": 10,
+    "why": "Clarify the exit route denial before the next kickboxing contest exchange.",
+    "mindset": {
+      "intent": "Use the exit route denial to make one calm decision.",
+      "focus": "Notice the first clear opponent cue, not every possible action.",
+      "reset": "If the cue is absent, return to the athlete’s established safe position.",
+      "anchor": "One cue, one response, one reset.",
+      "context": "SPP zero-load decision review for kickboxing."
+    },
+    "instructions": [
+      "In this kickboxing exit route denial, identify one repeated opponent cue.",
+      "For exit route denial, choose one familiar response that fits the rules.",
+      "After exit route denial, define the safe position where the exchange should finish."
+    ],
+    "progress": "Review the exit route denial decision after the next scheduled kickboxing technical session."
+  },
+  {
+    "key": "kickboxing.generic.spp.defensive_duty_check",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Defensive Duty Check (kickboxing)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "generic"
+    ],
+    "duration_min": 10,
+    "why": "Clarify the defensive duty check before the next kickboxing contest exchange.",
+    "mindset": {
+      "intent": "Use the defensive duty check to make one calm decision.",
+      "focus": "Notice the first clear opponent cue, not every possible action.",
+      "reset": "If the cue is absent, return to the athlete’s established safe position.",
+      "anchor": "One cue, one response, one reset.",
+      "context": "SPP zero-load decision review for kickboxing."
+    },
+    "instructions": [
+      "In this kickboxing defensive duty check, identify one repeated opponent cue.",
+      "For defensive duty check, choose one familiar response that fits the rules.",
+      "After defensive duty check, define the safe position where the exchange should finish."
+    ],
+    "progress": "Review the defensive duty check decision after the next scheduled kickboxing technical session."
+  },
+  {
+    "key": "kickboxing.generic.taper.opening_range_cue",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Opening Range Cue (kickboxing)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "generic"
+    ],
+    "duration_min": 8,
+    "why": "Clarify the opening range cue before the next kickboxing contest exchange.",
+    "mindset": {
+      "intent": "Use the opening range cue to make one calm decision.",
+      "focus": "Notice the first clear opponent cue, not every possible action.",
+      "reset": "If the cue is absent, return to the athlete’s established safe position.",
+      "anchor": "One cue, one response, one reset.",
+      "context": "TAPER zero-load decision review for kickboxing."
+    },
+    "instructions": [
+      "In this kickboxing opening range cue, identify one repeated opponent cue.",
+      "For opening range cue, choose one familiar response that fits the rules.",
+      "After opening range cue, define the safe position where the exchange should finish."
+    ],
+    "progress": "Review the opening range cue decision after the next scheduled kickboxing technical session."
+  },
+  {
+    "key": "kickboxing.generic.taper.trusted_exit_cue",
+    "sports": [
+      "kickboxing"
+    ],
+    "name": "Trusted Exit Cue (kickboxing)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "generic"
+    ],
+    "duration_min": 8,
+    "why": "Clarify the trusted exit cue before the next kickboxing contest exchange.",
+    "mindset": {
+      "intent": "Use the trusted exit cue to make one calm decision.",
+      "focus": "Notice the first clear opponent cue, not every possible action.",
+      "reset": "If the cue is absent, return to the athlete’s established safe position.",
+      "anchor": "One cue, one response, one reset.",
+      "context": "TAPER zero-load decision review for kickboxing."
+    },
+    "instructions": [
+      "In this kickboxing trusted exit cue, identify one repeated opponent cue.",
+      "For trusted exit cue, choose one familiar response that fits the rules.",
+      "After trusted exit cue, define the safe position where the exchange should finish."
+    ],
+    "progress": "Review the trusted exit cue decision after the next scheduled kickboxing technical session."
+  },
+  {
+    "key": "cross_sport.generic.gpp.neutral_decision_scan",
+    "sports": [
+      "cross_sport"
+    ],
+    "name": "Neutral Decision Scan (combat-sport)",
+    "phases": [
+      "GPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "generic"
+    ],
+    "duration_min": 10,
+    "why": "Clarify the neutral decision scan before the next combat-sport contest exchange.",
+    "mindset": {
+      "intent": "Use the neutral decision scan to make one calm decision.",
+      "focus": "Notice the first clear opponent cue, not every possible action.",
+      "reset": "If the cue is absent, return to the athlete’s established safe position.",
+      "anchor": "One cue, one response, one reset.",
+      "context": "GPP zero-load decision review for combat-sport."
+    },
+    "instructions": [
+      "In this combat-sport neutral decision scan, identify one repeated opponent cue.",
+      "For neutral decision scan, choose one familiar response that fits the rules.",
+      "After neutral decision scan, define the safe position where the exchange should finish."
+    ],
+    "progress": "Review the neutral decision scan decision after the next scheduled combat-sport technical session."
+  },
+  {
+    "key": "cross_sport.generic.spp.neutral_trigger_response",
+    "sports": [
+      "cross_sport"
+    ],
+    "name": "Neutral Trigger Response (combat-sport)",
+    "phases": [
+      "SPP"
+    ],
+    "tags": [
+      "tactical_watch",
+      "generic"
+    ],
+    "duration_min": 10,
+    "why": "Clarify the neutral trigger response before the next combat-sport contest exchange.",
+    "mindset": {
+      "intent": "Use the neutral trigger response to make one calm decision.",
+      "focus": "Notice the first clear opponent cue, not every possible action.",
+      "reset": "If the cue is absent, return to the athlete’s established safe position.",
+      "anchor": "One cue, one response, one reset.",
+      "context": "SPP zero-load decision review for combat-sport."
+    },
+    "instructions": [
+      "In this combat-sport neutral trigger response, identify one repeated opponent cue.",
+      "For neutral trigger response, choose one familiar response that fits the rules.",
+      "After neutral trigger response, define the safe position where the exchange should finish."
+    ],
+    "progress": "Review the neutral trigger response decision after the next scheduled combat-sport technical session."
+  },
+  {
+    "key": "cross_sport.generic.taper.neutral_opening_reminder",
+    "sports": [
+      "cross_sport"
+    ],
+    "name": "Neutral Opening Reminder (combat-sport)",
+    "phases": [
+      "TAPER"
+    ],
+    "tags": [
+      "tactical_watch",
+      "generic"
+    ],
+    "duration_min": 8,
+    "why": "Clarify the neutral opening reminder before the next combat-sport contest exchange.",
+    "mindset": {
+      "intent": "Use the neutral opening reminder to make one calm decision.",
+      "focus": "Notice the first clear opponent cue, not every possible action.",
+      "reset": "If the cue is absent, return to the athlete’s established safe position.",
+      "anchor": "One cue, one response, one reset.",
+      "context": "TAPER zero-load decision review for combat-sport."
+    },
+    "instructions": [
+      "In this combat-sport neutral opening reminder, identify one repeated opponent cue.",
+      "For neutral opening reminder, choose one familiar response that fits the rules.",
+      "After neutral opening reminder, define the safe position where the exchange should finish."
+    ],
+    "progress": "Review the neutral opening reminder decision after the next scheduled combat-sport technical session."
   }
 ]

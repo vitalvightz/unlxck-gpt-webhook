@@ -8,7 +8,10 @@ from typing import Any, Iterable
 
 from .config import DATA_DIR
 
-STYLE_FAMILIES = ("distance_striker", "brawler", "counter_striker", "generic")
+STYLE_FAMILIES = (
+    "pressure_fighter", "counter_striker", "distance_striker", "clinch_fighter",
+    "grappler", "hybrid", "brawler", "generic",
+)
 PHASES = ("GPP", "SPP", "TAPER")
 _PRO_EXPERIENCE_OVERLAYS: dict[str, tuple[str, ...]] = {
     "early_pro": (
@@ -43,7 +46,7 @@ _STYLE_ALIASES = {
     "long_range_striker": "distance_striker",
     "brawler": "brawler",
     "pressure": "brawler",
-    "pressure_fighter": "brawler",
+    "pressure_fighter": "pressure_fighter",
     "inside_fighter": "brawler",
     "in_fighter": "brawler",
     "infighter": "brawler",
@@ -56,6 +59,9 @@ _STYLE_ALIASES = {
     "counter_fighter": "counter_striker",
     "reactive_counter": "counter_striker",
     "reactive_counter_fighter": "counter_striker",
+    "clinch_fighter": "clinch_fighter",
+    "grappler": "grappler",
+    "hybrid": "hybrid",
 }
 _STYLE_FIELDS = (
     "tactical_style",
@@ -157,16 +163,19 @@ class TacticalStyleSelection(str):
 
     display_label: str
     competitive_maturity: str
+    sport: str
 
     def __new__(
         cls,
         family: str,
         display_label: str = "",
         competitive_maturity: str = "",
+        sport: str = "",
     ) -> "TacticalStyleSelection":
         instance = str.__new__(cls, family)
         instance.display_label = str(display_label or "").strip()
         instance.competitive_maturity = _competitive_maturity(competitive_maturity)
+        instance.sport = _token(sport)
         return instance
 
 
@@ -187,16 +196,20 @@ def extract_tactical_style(athlete_model: dict[str, Any] | None) -> TacticalStyl
     declared_labels = declared_tactical_style_labels(athlete_model)
     declared_label = declared_labels[0] if declared_labels else ""
     competitive_maturity = athlete_model.get("competitive_maturity", "")
+    sport = _token(athlete_model.get("sport"))
 
     for field in _STYLE_FIELDS:
         raw = athlete_model.get(field)
         values = raw if isinstance(raw, (list, tuple, set)) else [raw]
         for value in values:
             style = normalize_tactical_style(value)
+            # Boxing retains its historical pressure -> brawler programming key.
+            if sport in {"", "boxing"} and style == "pressure_fighter":
+                style = "brawler"
             if style != "generic":
                 display_label = declared_label if normalize_tactical_style(declared_label) == style else _display_label(value)
-                return TacticalStyleSelection(style, display_label, competitive_maturity)
-    return TacticalStyleSelection("generic", competitive_maturity=competitive_maturity)
+                return TacticalStyleSelection(style, display_label, competitive_maturity, sport)
+    return TacticalStyleSelection("generic", competitive_maturity=competitive_maturity, sport=sport)
 
 
 @dataclass(frozen=True)
@@ -216,6 +229,8 @@ class TacticalWatch:
     progress: str
     display_style: str = ""
     competitive_maturity: str = ""
+    sports: tuple[str, ...] = ()
+    fallback_reason: str = ""
 
 
 @lru_cache(maxsize=1)
@@ -233,6 +248,7 @@ def all_watches() -> tuple[TacticalWatch, ...]:
         name = str(entry.get("name") or "").strip()
         phases = [str(value or "").strip().upper() for value in entry.get("phases") or []]
         tags = {_token(value) for value in entry.get("tags") or []}
+        sports = tuple(_token(value) for value in entry.get("sports") or [] if _token(value))
         mindset = entry.get("mindset") or {}
         instructions = tuple(str(value).strip() for value in entry.get("instructions") or [] if str(value).strip())
 
@@ -242,6 +258,8 @@ def all_watches() -> tuple[TacticalWatch, ...]:
             raise ValueError(f"invalid Tactical Watch identity: {key!r}")
         if "tactical_watch" not in tags:
             raise ValueError(f"Tactical Watch {key!r} is missing tactical_watch tag")
+        if not sports:
+            raise ValueError(f"Tactical Watch {key!r} needs explicit sport ownership")
         style_tags = tags & set(STYLE_FAMILIES)
         if len(style_tags) != 1:
             raise ValueError(f"Tactical Watch {key!r} needs one style tag")
@@ -267,6 +285,7 @@ def all_watches() -> tuple[TacticalWatch, ...]:
             duration_minutes=int(entry.get("duration_min") or 10),
             instructions=instructions,
             progress=str(entry.get("progress") or "").strip(),
+            sports=sports,
         )
         if not watch.why or not watch.progress:
             raise ValueError(f"Tactical Watch {key!r} has incomplete visible content")
@@ -275,16 +294,30 @@ def all_watches() -> tuple[TacticalWatch, ...]:
     return tuple(watches)
 
 
-def ordered_phase_bank(style: Any, phase: Any) -> tuple[TacticalWatch, ...]:
+def ordered_phase_bank(style: Any, phase: Any, sport: Any = None) -> tuple[TacticalWatch, ...]:
     family = normalize_tactical_style(style)
+    # Calls predating sport-aware selection are boxing calls. Preserve that API.
+    sport_key = _token(sport or getattr(style, "sport", "")) or "boxing"
+    if sport_key == "boxing" and family == "pressure_fighter":
+        family = "brawler"
     phase_key = str(phase or "GPP").strip().upper()
     if phase_key not in PHASES:
         phase_key = "GPP"
-    specific = [watch for watch in all_watches() if watch.style == family and watch.phase == phase_key]
+    owned = lambda watch: sport_key in watch.sports
+    specific = [w for w in all_watches() if owned(w) and w.style == family and w.phase == phase_key]
     if family == "generic":
         return tuple(specific)
-    generic = [watch for watch in all_watches() if watch.style == "generic" and watch.phase == phase_key]
-    return tuple(specific + generic)
+    fallback_reason = ""
+    compatible: list[TacticalWatch] = []
+    if sport_key == "kickboxing" and family == "grappler":
+        compatible = [w for w in all_watches() if owned(w) and w.style == "hybrid" and w.phase == phase_key]
+        fallback_reason = "sport_incompatible_tactical_style"
+    generic = [w for w in all_watches() if owned(w) and w.style == "generic" and w.phase == phase_key]
+    cross_sport = [w for w in all_watches() if "cross_sport" in w.sports and w.style in (family, "generic") and w.phase == phase_key]
+    watches = specific + compatible + generic + cross_sport
+    if fallback_reason:
+        watches = [replace(w, fallback_reason=fallback_reason) for w in watches]
+    return tuple(watches)
 
 
 def select_tactical_watch(
@@ -367,6 +400,8 @@ def watch_metadata(watch: TacticalWatch) -> dict[str, Any]:
         "tactical_watch_style": watch.style,
         "tactical_watch_display_style": watch.display_style or None,
         "tactical_watch_phase": watch.phase,
+        "tactical_watch_sports": list(watch.sports),
+        "tactical_watch_fallback_reason": watch.fallback_reason or None,
         "tactical_watch_competitive_maturity": watch.competitive_maturity or None,
         "tactical_watch_experience_overlay": overlay_key,
         "tactical_watch_experience_overlay_steps": overlay_steps,
@@ -376,6 +411,8 @@ def watch_metadata(watch: TacticalWatch) -> dict[str, Any]:
             "style": watch.style,
             "display_style": watch.display_style or None,
             "phase": watch.phase,
+            "sports": list(watch.sports),
+            "fallback_reason": watch.fallback_reason or None,
             "why": visible_why,
             "duration_min": watch.duration_minutes,
             "mindset": mindset,
