@@ -1,7 +1,9 @@
 """Shared calendar-load and combat-collision policy.
 
-This is the Step-2 policy seam from ``PLANNER_ARCHITECTURE_CONTRACT.md``.
-It has no production planner call sites yet.
+This is the canonical collision-legality policy from
+``PLANNER_ARCHITECTURE_CONTRACT.md``.  Normal placement, late-fight placement,
+support fillers, and the final calendar governor consume it through the
+``calendar_context`` representation adapter.
 
 Rules of ownership:
 - ``sparring_dose_planner`` resolves declared contact to hard/reduced/technical/off;
