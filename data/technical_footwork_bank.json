@@ -16,7 +16,8 @@
       "coordination",
       "boxing",
       "counter_striker",
-      "distance_striker"
+      "distance_striker",
+      "mech_lower_limb_weight_bearing"
     ],
     "footwork_pattern": "stance_reset",
     "directionality": "multi_directional",
@@ -35,7 +36,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
-    "mechanical_risk_tags": [],
+    "mechanical_risk_tags": ["mech_lower_limb_weight_bearing"],
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"]
   },
   {
@@ -57,7 +58,8 @@
       "counter_striker",
       "distance_striker",
       "mech_change_of_direction",
-      "mech_hip_rotation"
+      "mech_hip_rotation",
+      "mech_lower_limb_weight_bearing"
     ],
     "footwork_pattern": "retreat_pivot",
     "directionality": "rotational",
@@ -76,7 +78,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_hip_rotation"],
+    "mechanical_risk_tags": ["mech_change_of_direction", "mech_hip_rotation", "mech_lower_limb_weight_bearing"],
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
   },
   {
@@ -97,7 +99,8 @@
       "boxing",
       "pressure_fighter",
       "counter_striker",
-      "mech_change_of_direction"
+      "mech_change_of_direction",
+      "mech_lower_limb_weight_bearing"
     ],
     "footwork_pattern": "lateral_shift",
     "directionality": "lateral",
@@ -116,7 +119,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction"],
+    "mechanical_risk_tags": ["mech_change_of_direction", "mech_lower_limb_weight_bearing"],
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
   },
   {
@@ -139,7 +142,8 @@
       "counter_striker",
       "kicker",
       "mech_change_of_direction",
-      "mech_hip_rotation"
+      "mech_hip_rotation",
+      "mech_lower_limb_weight_bearing"
     ],
     "footwork_pattern": "angle_step",
     "directionality": "diagonal",
@@ -158,7 +162,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_hip_rotation"],
+    "mechanical_risk_tags": ["mech_change_of_direction", "mech_hip_rotation", "mech_lower_limb_weight_bearing"],
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
   },
   {
@@ -179,7 +183,8 @@
       "counter_striker",
       "distance_striker",
       "mech_change_of_direction",
-      "mech_hip_rotation"
+      "mech_hip_rotation",
+      "mech_lower_limb_weight_bearing"
     ],
     "footwork_pattern": "pivot_exit",
     "directionality": "rotational",
@@ -198,7 +203,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_hip_rotation"],
+    "mechanical_risk_tags": ["mech_change_of_direction", "mech_hip_rotation", "mech_lower_limb_weight_bearing"],
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
   },
   {
@@ -222,7 +227,8 @@
       "pressure_fighter",
       "clinch_fighter",
       "mech_change_of_direction",
-      "mech_hip_rotation"
+      "mech_hip_rotation",
+      "mech_lower_limb_weight_bearing"
     ],
     "footwork_pattern": "corner_escape",
     "directionality": "lateral",
@@ -241,7 +247,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_hip_rotation"],
+    "mechanical_risk_tags": ["mech_change_of_direction", "mech_hip_rotation", "mech_lower_limb_weight_bearing"],
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7"]
   },
   {
@@ -261,7 +267,8 @@
       "boxing",
       "pressure_fighter",
       "brawler",
-      "clinch_fighter"
+      "clinch_fighter",
+      "mech_lower_limb_weight_bearing"
     ],
     "footwork_pattern": "ring_cut",
     "directionality": "forward",
@@ -280,7 +287,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
-    "mechanical_risk_tags": [],
+    "mechanical_risk_tags": ["mech_lower_limb_weight_bearing"],
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"]
   },
   {
@@ -302,7 +309,8 @@
       "pressure_fighter",
       "brawler",
       "mech_change_of_direction",
-      "mech_deceleration"
+      "mech_deceleration",
+      "mech_lower_limb_weight_bearing"
     ],
     "footwork_pattern": "exit_lane_cut",
     "directionality": "lateral",
@@ -321,7 +329,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_deceleration"],
+    "mechanical_risk_tags": ["mech_change_of_direction", "mech_deceleration", "mech_lower_limb_weight_bearing"],
     "late_windows": ["d21_to_d14", "d13_to_d8"]
   },
   {
@@ -342,7 +350,8 @@
       "boxing",
       "clinch_fighter",
       "grappler",
-      "mech_hip_rotation"
+      "mech_hip_rotation",
+      "mech_lower_limb_weight_bearing"
     ],
     "footwork_pattern": "clinch_exit",
     "directionality": "multi_directional",
@@ -352,7 +361,7 @@
     "elastic_demand": "low",
     "technical_complexity": "moderate",
     "stance_transition": "significant",
-    "notes": "Exit a clinch or tie-up, square safely, and recover stance before re-entry. Significant stance re-organisation off the break.",
+    "notes": "Disengage, regain base, and reorient to the opponent before re-entry. Use a controlled stance reset off the break.",
     "work_sec": 75,
     "rest_sec": 60,
     "rounds": 2,
@@ -361,7 +370,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_hip_rotation"],
+    "mechanical_risk_tags": ["mech_hip_rotation", "mech_lower_limb_weight_bearing"],
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
   },
   {
@@ -383,17 +392,18 @@
       "muay_thai",
       "kicker",
       "mech_plantarflexion",
-      "mech_hip_rotation"
+      "mech_hip_rotation",
+      "mech_lower_limb_weight_bearing"
     ],
     "footwork_pattern": "kick_recovery",
     "directionality": "rotational",
     "tactical_function": ["kick_recovery", "base_recovery", "range_management"],
     "reactive_level": "closed",
     "braking_demand": "moderate",
-    "elastic_demand": "moderate",
+    "elastic_demand": "low",
     "technical_complexity": "moderate",
     "stance_transition": "significant",
-    "notes": "Exit after a round kick, rebase cleanly onto the plant leg, and avoid standing square. Single-leg re-stance under hip rotation.",
+    "notes": "Rehearse the exit position after a familiar round kick. Regain stance and range without repeated kicking or a hard push-off.",
     "work_sec": 75,
     "rest_sec": 60,
     "rounds": 2,
@@ -402,8 +412,8 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_plantarflexion", "mech_hip_rotation"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7"]
+    "mechanical_risk_tags": ["mech_plantarflexion", "mech_hip_rotation", "mech_lower_limb_weight_bearing"],
+    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"]
   },
   {
     "name": "Teep Retreat and Re-Stance",
@@ -424,7 +434,8 @@
       "muay_thai",
       "kicker",
       "distance_striker",
-      "mech_plantarflexion"
+      "mech_plantarflexion",
+      "mech_lower_limb_weight_bearing"
     ],
     "footwork_pattern": "teep_retreat",
     "directionality": "backward",
@@ -443,7 +454,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
-    "mechanical_risk_tags": ["mech_plantarflexion"],
+    "mechanical_risk_tags": ["mech_plantarflexion", "mech_lower_limb_weight_bearing"],
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7"]
   },
   {
@@ -466,7 +477,8 @@
       "kicker",
       "counter_striker",
       "mech_change_of_direction",
-      "mech_plantarflexion"
+      "mech_plantarflexion",
+      "mech_lower_limb_weight_bearing"
     ],
     "footwork_pattern": "check_return",
     "directionality": "lateral",
@@ -485,7 +497,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_plantarflexion"],
+    "mechanical_risk_tags": ["mech_change_of_direction", "mech_plantarflexion", "mech_lower_limb_weight_bearing"],
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7"]
   },
   {
@@ -508,7 +520,8 @@
       "kicker",
       "switch_hitter",
       "mech_hip_rotation",
-      "mech_plantarflexion"
+      "mech_plantarflexion",
+      "mech_lower_limb_weight_bearing"
     ],
     "footwork_pattern": "switch_step",
     "directionality": "rotational",
@@ -527,7 +540,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
-    "mechanical_risk_tags": ["mech_hip_rotation", "mech_plantarflexion"],
+    "mechanical_risk_tags": ["mech_hip_rotation", "mech_plantarflexion", "mech_lower_limb_weight_bearing"],
     "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
   },
   {
@@ -548,7 +561,8 @@
       "mma",
       "pressure_fighter",
       "wrestler",
-      "mech_change_of_direction"
+      "mech_change_of_direction",
+      "mech_lower_limb_weight_bearing"
     ],
     "footwork_pattern": "cage_circle",
     "directionality": "lateral",
@@ -558,7 +572,7 @@
     "elastic_demand": "low",
     "technical_complexity": "moderate",
     "stance_transition": "minimal",
-    "notes": "Circle off the cage and cut off the escape lane while staying square to the fence, not chasing into open space. MMA cage-craft.",
+    "notes": "Use light cage-orientation steps. Keep the stance and hips oriented to the opponent while controlling the escape lane; do not chase into open space.",
     "work_sec": 90,
     "rest_sec": 60,
     "rounds": 2,
@@ -567,8 +581,8 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
+    "mechanical_risk_tags": ["mech_change_of_direction", "mech_lower_limb_weight_bearing"],
+    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"]
   },
   {
     "name": "Scramble-to-Strike Rebase",
@@ -589,7 +603,8 @@
       "grappler",
       "wrestler",
       "mech_change_of_direction",
-      "mech_deceleration"
+      "mech_deceleration",
+      "mech_lower_limb_weight_bearing"
     ],
     "footwork_pattern": "scramble_rebase",
     "directionality": "multi_directional",
@@ -608,7 +623,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_deceleration"],
+    "mechanical_risk_tags": ["mech_change_of_direction", "mech_deceleration", "mech_lower_limb_weight_bearing"],
     "late_windows": ["d21_to_d14", "d13_to_d8"]
   },
   {
@@ -631,7 +646,8 @@
       "grappler",
       "scrambler",
       "mech_change_of_direction",
-      "mech_deceleration"
+      "mech_deceleration",
+      "mech_lower_limb_weight_bearing"
     ],
     "footwork_pattern": "sprawl_exit",
     "directionality": "multi_directional",
@@ -650,7 +666,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_deceleration"],
+    "mechanical_risk_tags": ["mech_change_of_direction", "mech_deceleration", "mech_lower_limb_weight_bearing"],
     "late_windows": ["d21_to_d14", "d13_to_d8"]
   },
   {
@@ -672,7 +688,8 @@
       "scrambler",
       "mech_change_of_direction",
       "mech_deceleration",
-      "mech_hip_rotation"
+      "mech_hip_rotation",
+      "mech_lower_limb_weight_bearing"
     ],
     "footwork_pattern": "level_change_feint",
     "directionality": "forward",
@@ -691,7 +708,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_deceleration", "mech_hip_rotation"],
+    "mechanical_risk_tags": ["mech_change_of_direction", "mech_deceleration", "mech_hip_rotation", "mech_lower_limb_weight_bearing"],
     "late_windows": ["d21_to_d14", "d13_to_d8"]
   },
   {
@@ -710,7 +727,8 @@
       "movement_quality",
       "mma",
       "submission_hunter",
-      "grappler"
+      "grappler",
+      "mech_lower_limb_weight_bearing"
     ],
     "footwork_pattern": "standup_rebase",
     "directionality": "multi_directional",
@@ -729,7 +747,7 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": [],
+    "mechanical_risk_tags": ["mech_lower_limb_weight_bearing"],
     "late_windows": ["d21_to_d14", "d13_to_d8"]
   }
 ]

@@ -14,8 +14,6 @@ mirroring the coordination-goal guarantee. These tests pin the contract:
 """
 from __future__ import annotations
 
-import types
-
 from fightcamp import conditioning
 
 
@@ -122,11 +120,11 @@ def test_footwork_uses_dedicated_channel_not_aerobic_dose_accounting():
 
 # --- Proof 3: injury exclusions still gate it -------------------------------
 
-def test_selector_applies_injury_exclusion(monkeypatch):
-    excluded = types.SimpleNamespace(action="exclude", reasons=[], severity="high")
-    monkeypatch.setattr(conditioning, "injury_decision", lambda *a, **k: excluded)
-    assert conditioning.select_technical_footwork_drill(_flags(), set(), ["knee pain"]) is None
-
+def test_selector_omits_footwork_for_real_severe_lower_limb_injury():
+    flags = _flags(injuries=["ruptured achilles"])
+    assert conditioning.select_technical_footwork_drill(
+        flags, set(), flags["injuries"]
+    ) is None
 
 def test_selector_returns_drill_when_injury_allows():
     # A benign injury that does not exclude gentle technical footwork still
@@ -189,24 +187,47 @@ def test_d4_top_ranked_candidate_is_window_blocked_but_insert_still_fills():
         assert "d4_to_d2" in _late_windows(name), (name, sorted(_late_windows(name)))
 
 
-def test_d4_counter_striker_falls_through_to_stance_reset():
-    # Reviewer's exact case. At D-4 the only two d4_to_d2-eligible drills are
-    # Stance Reset Line Drill and Ring Cut-Off Walkdown; every higher-ranked
-    # match (45-Degree, Check-Hook, Lateral Exit, ...) stops at d6_to_d5 or
-    # earlier. A knee issue removes the change-of-direction drills — including
-    # Ring Cut-Off (its name infers change_of_direction) — through the *real*
-    # injury guard, leaving Stance Reset Line Drill as the unique window-eligible,
-    # injury-safe survivor. The old single-pick selector would have stranded on a
-    # window-blocked higher-ranked drill and inserted nothing.
+def test_d4_severe_knee_injury_omits_technical_footwork():
+    flags = _flags(phase="TAPER", days_until_fight=4, injuries=["torn acl in my knee"])
+    _markdown, names, *_rest = conditioning.generate_conditioning_block(flags)
+    assert FOOTWORK_NAMES.isdisjoint(names), names
+
+
+def test_d4_full_generator_keeps_technical_footwork_sport_specific_and_dedicated():
+    cases = {
+        "boxing": {"boxing"},
+        "muay_thai": {"muay_thai", "kickboxing"},
+        "mma": {"mma"},
+    }
+    for sport, accepted_tags in cases.items():
+        flags = _flags(
+            phase="TAPER", days_until_fight=4, sport=sport, fight_format=sport,
+            style_tactical=[], style_technical=[sport],
+        )
+        markdown, names, entries, grouped, *_rest = conditioning.generate_conditioning_block(flags)
+        inserted = FOOTWORK_NAMES.intersection(names)
+        assert inserted, (sport, names)
+        assert "Technical Footwork" in markdown
+        assert inserted == {d["name"] for d in grouped.get("technical_footwork", [])}
+        for name in inserted:
+            drill = _FOOT_BANK[name]
+            assert accepted_tags & {str(t).lower() for t in drill.get("tags", [])}
+            assert "d4_to_d2" in _late_windows(name)
+        for system in ("aerobic", "glycolytic", "alactic"):
+            assert inserted.isdisjoint({d["name"] for d in grouped.get(system, [])})
+        for entry in entries:
+            if entry.get("name") in inserted:
+                assert entry.get("system") == "technical_footwork"
+                assert "technical_footwork_guarantee" in entry["reasons"]["reason_codes"]
+
+
+def test_d4_without_a_sport_appropriate_candidate_omits_technical_footwork():
     flags = _flags(
-        phase="TAPER",
-        days_until_fight=4,
-        injuries=["torn acl in my knee"],
+        phase="TAPER", days_until_fight=4, sport="karate", fight_format="karate",
+        style_tactical=[], style_technical=["karate"],
     )
     _markdown, names, *_rest = conditioning.generate_conditioning_block(flags)
-    assert "Stance Reset Line Drill" in names, names
-    # It remains an out-of-scoring-pool technical insert, not a conditioning dose.
-    assert "Ring Cut-Off Walkdown" not in names, names
+    assert FOOTWORK_NAMES.isdisjoint(names), names
 
 
 # --- Proof 5: sport / style matching ----------------------------------------
