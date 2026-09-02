@@ -22,13 +22,37 @@ _WEEK_COMPLETENESS_CODES = {
     "late_camp_session_incomplete",
     "weekly_session_overage",
 }
-# Exact final-role identities whose stale preferred_system metadata must not
-# resurrect a pre-morph glycolytic requirement.
+_NON_PHASE_TOP_LEVEL_HEADINGS = {
+    "coach notes",
+    "selection rationale",
+    "nutrition",
+    "recovery",
+    "rehab protocols",
+    "mindset overview",
+    "sparring & conditioning adjustments",
+    "sparring & conditioning adjustments table",
+    "nutrition adjustments for unknown sparring load",
+    "athlete profile",
+}
+_PRIMARY_STRENGTH_ROLE_KEYS = {
+    "primary_strength_day",
+    "structural_strength_day",
+    "neural_plus_strength_day",
+}
 _GLYCOLYTIC_SUPPRESSED_ROLE_KEYS = {"light_fight_pace_touch_day"}
 
 
 def _norm(value: Any) -> str:
     return re.sub(r"[*_`]+", "", str(value or "")).strip().lower()
+
+
+def _top_level_heading_key(line: str) -> str:
+    stripped = str(line or "").strip()
+    if stripped.startswith(("- ", "* ")):
+        return ""
+    stripped = re.sub(r"^#{1,6}\s*", "", stripped)
+    stripped = re.sub(r"^\*\*(.*?)\*\*$", r"\1", stripped)
+    return _norm(stripped).rstrip(":.")
 
 
 def _session_blocks(final_plan_text: str) -> list[dict[str, Any]]:
@@ -50,6 +74,14 @@ def _session_blocks(final_plan_text: str) -> list[dict[str, Any]]:
                 current = None
             current_phase = phase_week.group(1).upper()
             current_week = int(phase_week.group(2))
+            continue
+
+        if current_week is not None and _top_level_heading_key(line) in _NON_PHASE_TOP_LEVEL_HEADINGS:
+            if current:
+                blocks.append(current)
+                current = None
+            current_phase = ""
+            current_week = None
             continue
 
         header = _SESSION_HEADER_RE.match(line)
@@ -117,8 +149,7 @@ def _requirement_survives_final_role_map(
     requirement_key = str(requirement or "").strip().lower()
     if requirement_key == "primary_strength":
         return any(
-            str(role.get("category") or "").strip().lower() == "strength"
-            or "strength" in str(role.get("role_key") or "").strip().lower()
+            str(role.get("role_key") or "").strip().lower() in _PRIMARY_STRENGTH_ROLE_KEYS
             for role in roles
         )
 
@@ -133,7 +164,6 @@ def _requirement_survives_final_role_map(
                 return True
         return False
 
-    # Do not infer suppression for any other requirement class in this PR.
     return None
 
 
@@ -173,10 +203,28 @@ def _reconcile_week_warning(
         return warning
 
     actual = counts_by_week[week_index]
-    if code in {"missing_week_session_role", "late_camp_session_incomplete"} and actual >= expected:
-        return None
-    if code == "weekly_session_overage" and actual <= expected:
-        return None
+    if code in {"missing_week_session_role", "late_camp_session_incomplete"}:
+        if actual >= expected:
+            return None
+        return {**warning, "actual_session_count": actual}
+
+    if code == "weekly_session_overage":
+        if actual == expected:
+            return None
+        if actual < expected:
+            phase = str(warning.get("phase") or "").strip().upper()
+            replacement_code = (
+                "late_camp_session_incomplete"
+                if phase in {"SPP", "TAPER"}
+                else "missing_week_session_role"
+            )
+            return {
+                **warning,
+                "code": replacement_code,
+                "actual_session_count": actual,
+                "message": f"Week {week_index} is structurally incomplete compared with the weekly role map.",
+            }
+
     return {**warning, "actual_session_count": actual}
 
 
