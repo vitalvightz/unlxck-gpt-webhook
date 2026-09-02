@@ -191,8 +191,8 @@ def _stamp_relocation(
     role["scheduled_day_hint"] = weekday.title()
     if "real_weekday" in role:
         role["real_weekday"] = weekday.title()
-    if "scheduled_countdown_label" in role:
-        role["scheduled_countdown_label"] = f"D-{d_day}"
+    role["scheduled_countdown_label"] = f"D-{d_day}"
+    role["scheduled_d_day"] = d_day
     if "countdown_offset" in role:
         role["countdown_offset"] = d_day
     role["calendar_integrity_relocation"] = {

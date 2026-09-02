@@ -189,6 +189,8 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
         # never renders the raw exercise-bank dose over a countdown-shaped role.
         # base/effective/authority/reason live inside effective_strength_prescriptions;
         # effective_strength_envelope is the numeric ceiling the validator enforces.
+        "strength_dose_cap",
+        "rpe_cap",
         "effective_strength_prescriptions",
         "effective_strength_envelope",
         "scheduled_d_day",
