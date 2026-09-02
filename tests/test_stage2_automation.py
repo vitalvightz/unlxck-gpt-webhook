@@ -410,6 +410,42 @@ def test_first_pass_hard_failure_releases_with_flags_with_one_provider_call(
     assert report["release_decision"] == "publish_with_flags"
 
 
+def test_effective_dose_failure_runs_one_repair_and_publishes_repaired_plan(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    reviews = iter([
+        {
+            "status": "FAIL", "needs_retry": True,
+            "validator_report": {"errors": [{
+                "code": "late_camp_effective_prescription_exceeded", "severity": "blocker",
+                "line": "Barbell Back Squat: 3 sets x 5 reps", "scheduled_d_day": 16,
+                "exercise": "Back Squat", "effective_max_sets": 3, "effective_max_reps": 3,
+                "effective_rpe_cap": 7, "violations": ["reps 5 > effective max 3"],
+            }], "warnings": []},
+        },
+        _review("PASS"),
+    ])
+    monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: next(reviews))
+    client = FakeClient([
+        _response("# D-16\nBack Squat: 3 x 5", input_tokens=11, output_tokens=7),
+        _response("# D-16\nBack Squat: 3 x 3", input_tokens=13, output_tokens=5),
+    ])
+    result = asyncio.run(OpenAIStage2Automator(client=client, model="test-model").finalize(
+        stage1_result=_stage1_result()
+    ))
+
+    assert len(client.responses.calls) == 2
+    assert result["stage2_attempt_count"] == 2
+    assert result["stage2_status"] == "stage2_pass"
+    assert result["status"] == "ready"
+    assert result["final_plan_text"].endswith("Back Squat: 3 x 3")
+    assert "reduce_strength_dose_to_effective_prescription" in result["stage2_retry_text"]
+    # Each plan-text call contributes exactly once to persisted telemetry.
+    assert result["stage2_cost"]["stage2_input_tokens"] == 24
+    assert result["stage2_cost"]["stage2_output_tokens"] == 12
+    assert result["stage2_cost"]["stage2_total_tokens"] == 36
+
+
 def test_first_pass_non_pass_without_release_blockers_returns_ready(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

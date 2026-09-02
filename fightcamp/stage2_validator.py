@@ -3113,10 +3113,10 @@ _RENDERED_SETS_REPS = re.compile(
     r"\b(\d+)\s*(?:sets?\s*(?:[x×]|of)|[x×])\s*(\d+)(?:\s*reps?)?\b",
     re.IGNORECASE,
 )
-_RENDERED_RPE = re.compile(r"\brpe\s*(\d+)(?:\s*[-–]\s*(\d+))?", re.IGNORECASE)
+_RENDERED_RPE = re.compile(r"\brpe\s*[~≈]?\s*(\d+(?:\.\d+)?)(?:\s*[-–]\s*(\d+(?:\.\d+)?))?", re.IGNORECASE)
 
 
-def _parse_rendered_strength_dose(line: str) -> tuple[int | None, int | None, int | None]:
+def _parse_rendered_strength_dose(line: str) -> tuple[int | None, int | None, float | None]:
     """Return ``(sets, reps, rpe_high)`` parsed from a rendered strength line."""
     text = line or ""
     rpe_match = _RENDERED_RPE.search(text)
@@ -3127,9 +3127,9 @@ def _parse_rendered_strength_dose(line: str) -> tuple[int | None, int | None, in
     sets_reps = (before_rpe[-1] if before_rpe else (candidates[-1] if candidates else None))
     sets = int(sets_reps.group(1)) if sets_reps else None
     reps = int(sets_reps.group(2)) if sets_reps else None
-    rpe_high: int | None = None
+    rpe_high: float | None = None
     if rpe_match:
-        values = [int(value) for value in rpe_match.groups() if value]
+        values = [float(value) for value in rpe_match.groups() if value]
         rpe_high = max(values) if values else None
     return sets, reps, rpe_high
 
@@ -3138,12 +3138,61 @@ def _normalized_exercise_tokens(value: str) -> tuple[str, ...]:
     return tuple(re.findall(r"[a-z0-9]+", str(value or "").casefold()))
 
 
+_EXERCISE_ALIAS_GROUPS = (
+    frozenset({("back", "squat"), ("barbell", "back", "squat"), ("back", "squat", "barbell")}),
+    frozenset({("romanian", "deadlift"), ("romanian", "deadlift", "rdl"), ("rdl",)}),
+)
+
+
+def _canonical_exercise_tokens(value: str) -> tuple[str, ...]:
+    """Canonicalise only explicit, identity-safe athlete-facing lift aliases."""
+    tokens = _normalized_exercise_tokens(value)
+    for group in _EXERCISE_ALIAS_GROUPS:
+        if tokens in group:
+            return sorted(group, key=lambda item: (len(item), item))[0]
+    return tokens
+
+
 def _line_has_exercise(line: str, name: str) -> bool:
-    line_tokens = _normalized_exercise_tokens(line)
-    name_tokens = _normalized_exercise_tokens(name)
-    if not name_tokens or len(name_tokens) > len(line_tokens):
+    expected = _canonical_exercise_tokens(name)
+    if not expected:
         return False
-    return any(line_tokens[i:i + len(name_tokens)] == name_tokens for i in range(len(line_tokens) - len(name_tokens) + 1))
+    # Exercise titles precede their dose delimiter. Compare that complete title,
+    # rather than looking for a token substring which could confuse Back Squat
+    # with Bulgarian Split Squat or another materially different variant.
+    label = _BULLET_PREFIX.sub("", str(line or "")).strip()
+    label = re.split(r"\s*(?::|[—–]|\s-\s)\s*", label, maxsplit=1)[0]
+    dose_start = _RENDERED_SETS_REPS.search(label)
+    if dose_start:
+        label = label[:dose_start.start()].strip()
+    return _canonical_exercise_tokens(label) == expected
+
+
+def _rendered_strength_entries(lines: list[str], prescriptions: list[dict]) -> list[tuple[str, str, dict]]:
+    """Return rendered label/dose text with wrapped dose lines kept together."""
+    rendered: list[tuple[str, str, dict]] = []
+    for index, line in enumerate(lines):
+        entry = next((item for item in prescriptions if _line_has_exercise(line, str(item["name"]))), None)
+        if not entry:
+            continue
+        dose_text = line
+        if _parse_rendered_strength_dose(dose_text)[:2] == (None, None):
+            continuation: list[str] = []
+            for offset, candidate in enumerate(lines[index + 1:], start=index + 1):
+                if any(_line_has_exercise(candidate, str(item["name"])) for item in prescriptions):
+                    break
+                continuation.append(candidate)
+                dose_text = " ".join([line, *continuation])
+                if _parse_rendered_strength_dose(dose_text)[:2] != (None, None):
+                    # A common renderer layout puts RPE on the line immediately
+                    # after sets/reps. Preserve it as part of the same entry.
+                    if not _RENDERED_RPE.search(dose_text) and offset + 1 < len(lines):
+                        next_line = lines[offset + 1]
+                        if _RENDERED_RPE.match(next_line.strip().lstrip("-•* ")):
+                            dose_text = f"{dose_text} {next_line}"
+                    break
+        rendered.append((line, dose_text, entry))
+    return rendered
 
 
 def _late_camp_effective_prescription_warnings(
@@ -3201,17 +3250,14 @@ def _late_camp_effective_prescription_warnings(
             if not prescriptions:
                 continue
             for block in blocks:
-                for line in block.get("lines") or []:
-                    entry = next((item for item in prescriptions if _line_has_exercise(line, str(item["name"]))), None)
-                    if not entry:
-                        continue
+                for line, dose_text, entry in _rendered_strength_entries(block.get("lines") or [], prescriptions):
                     matched = str(entry["name"])
-                    sets, reps, rpe = _parse_rendered_strength_dose(line)
+                    sets, reps, rpe = _parse_rendered_strength_dose(dose_text)
                     # Mentions, negative instructions and prose are not loaded
                     # work. Enforcement starts only when a working dose exists.
                     if sets is None or reps is None:
                         continue
-                    identity = (d_day, matched, _normalize_render_line(line))
+                    identity = (d_day, matched, _normalize_render_line(dose_text))
                     if identity in seen:
                         continue
                     loaded_allowed = bool(entry.get("effective_loaded"))
@@ -3242,7 +3288,7 @@ def _late_camp_effective_prescription_warnings(
                         violations.append(f"sets {sets} > effective max {max_sets}")
                     if isinstance(max_reps, int) and isinstance(reps, int) and reps > max_reps:
                         violations.append(f"reps {reps} > effective max {max_reps}")
-                    if isinstance(rpe_high, int) and isinstance(rpe, int) and rpe > rpe_high:
+                    if isinstance(rpe_high, (int, float)) and isinstance(rpe, (int, float)) and rpe > rpe_high:
                         violations.append(f"RPE {rpe} > effective cap {rpe_high}")
                     if violations:
                         seen.add(identity)
@@ -3258,6 +3304,13 @@ def _late_camp_effective_prescription_warnings(
                                 "line": line,
                                 "scheduled_d_day": d_day,
                                 "exercise": matched,
+                                "rendered_exercise": line.rstrip(": "),
+                                "canonical_matched_exercise": matched,
+                                "role_key": role.get("role_key"),
+                                "rendered_sets": sets,
+                                "rendered_reps": reps,
+                                "rendered_rpe": rpe,
+                                "violation_dimensions": [item.split(" ", 1)[0].lower() for item in violations],
                                 "violations": violations,
                                 "effective_max_sets": max_sets,
                                 "effective_max_reps": max_reps,

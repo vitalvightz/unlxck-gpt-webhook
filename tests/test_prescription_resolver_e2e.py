@@ -9,9 +9,12 @@ readiness/cut state worsens, never higher.
 
 from __future__ import annotations
 
+import pytest
+
 from fightcamp.late_camp_role_morph import apply_late_camp_role_morph
 from fightcamp.prescription_resolver import apply_effective_strength_prescriptions
 from fightcamp.stage2_finalizer_packet import build_stage2_finalizer_packet
+from fightcamp.stage2_pipeline import build_stage2_retry
 from fightcamp.stage2_validator import validate_stage2_output
 
 
@@ -543,3 +546,95 @@ def test_remorph_after_relocation_outside_window_clears_stale_d16_truth():
     for key in ("strength_dose_cap", "set_cap", "rep_cap", "rpe_cap", "scheduled_d_day",
                 "effective_strength_prescriptions", "effective_strength_envelope"):
         assert key not in role
+
+
+def _d16_back_squat_brief() -> dict:
+    return _brief_with_prescriptions(16, [{
+        "name": "Back Squat", "dose_role_kind": "anchor", "effective_loaded": True,
+        "effective_max_sets": 3, "effective_max_reps": 3, "effective_rpe_cap": 7,
+    }])
+
+
+def test_production_d16_wrapped_barbell_back_squat_rep_overage_blocks_and_requests_repair():
+    text = "D-16 (Thursday) - Strength\n\nBarbell Back Squat:\n3 sets x 5 reps\nRPE ~7\n"
+    brief = _d16_back_squat_brief()
+    report = validate_stage2_output(planning_brief=brief, final_plan_text=text)
+    finding = next(e for e in report["errors"] if e["code"] == "late_camp_effective_prescription_exceeded")
+    assert finding["violation_dimensions"] == ["reps"]
+    assert finding["rendered_reps"] == 5
+    assert finding["effective_max_reps"] == 3
+    assert finding["scheduled_d_day"] == 16
+    retry = build_stage2_retry(
+        stage1_result={"planning_brief": brief}, final_plan_text=text, validator_report=report
+    )
+    assert report["is_valid"] is False
+    assert retry["needs_retry"] is True
+    assert "reduce_strength_dose_to_effective_prescription" in retry["repair_prompt"]
+
+
+def test_production_d16_equivalent_at_ceiling_passes():
+    report = validate_stage2_output(
+        planning_brief=_d16_back_squat_brief(),
+        final_plan_text="D-16 (Thursday) - Strength\nBarbell Back Squat: 3 sets x 3 reps, RPE 7\n",
+    )
+    assert not any(e["code"] == "late_camp_effective_prescription_exceeded" for e in report["errors"])
+
+
+@pytest.mark.parametrize("dose", ["3x5", "3 x 5", "3×5", "3 sets x 5 reps", "3 sets of 5", "3 sets × 5 reps"])
+def test_rendered_strength_format_matrix_is_enforced(dose: str):
+    report = validate_stage2_output(
+        planning_brief=_d16_back_squat_brief(),
+        final_plan_text=f"D-16 (Thursday) - Strength\nBarbell Back Squat: {dose}, @ RPE 7\n",
+    )
+    assert any(e["code"] == "late_camp_effective_prescription_exceeded" for e in report["errors"])
+
+
+@pytest.mark.parametrize("rendered", ["Back Squat", "Barbell Back Squat", "Back Squat (Barbell)"])
+def test_back_squat_alias_matrix(rendered: str):
+    report = validate_stage2_output(planning_brief=_d16_back_squat_brief(),
+        final_plan_text=f"D-16 (Thursday) - Strength\n{rendered}: 3 x 5\n")
+    assert any(e["code"] == "late_camp_effective_prescription_exceeded" for e in report["errors"])
+
+
+@pytest.mark.parametrize("rendered", ["Romanian Deadlift", "Romanian Deadlift (RDL)", "RDL"])
+def test_rdl_alias_matrix(rendered: str):
+    brief = _brief_with_prescriptions(16, [{"name": "Romanian Deadlift", "dose_role_kind": "secondary",
+        "effective_loaded": True, "effective_max_sets": 2, "effective_max_reps": 5, "effective_rpe_cap": 7}])
+    report = validate_stage2_output(planning_brief=brief,
+        final_plan_text=f"D-16 (Thursday) - Strength\n{rendered}: 3 x 6\n")
+    assert any(e["code"] == "late_camp_effective_prescription_exceeded" for e in report["errors"])
+
+
+@pytest.mark.parametrize("rendered", ["Front Squat", "Bulgarian Split Squat", "Bulgarian Back Squat", "Conventional Deadlift"])
+def test_strength_aliases_do_not_match_unrelated_exercises(rendered: str):
+    report = validate_stage2_output(planning_brief=_d16_back_squat_brief(),
+        final_plan_text=f"D-16 (Thursday) - Strength\n{rendered}: 9 x 9 @ RPE 10\n")
+    assert not any(e["code"] == "late_camp_effective_prescription_exceeded" for e in report["errors"])
+
+
+@pytest.mark.parametrize(("dose", "dimensions"), [
+    ("4 x 3 @ RPE 7", ["sets"]), ("3 x 4 @ RPE 7", ["reps"]),
+    ("3 x 3 @ RPE 8", ["rpe"]), ("4 x 4 @ RPE 8", ["sets", "reps", "rpe"]),
+])
+def test_effective_ceiling_dimensions(dose: str, dimensions: list[str]):
+    report = validate_stage2_output(planning_brief=_d16_back_squat_brief(),
+        final_plan_text=f"D-16 (Thursday) - Strength\nBack Squat: {dose}\n")
+    finding = next(e for e in report["errors"] if e["code"] == "late_camp_effective_prescription_exceeded")
+    assert finding["violation_dimensions"] == dimensions
+
+
+@pytest.mark.parametrize("dose", ["3 x 3 @ RPE 6-7", "2 x 2 @ RPE ~6"])
+def test_effective_ceiling_exact_and_below_pass(dose: str):
+    report = validate_stage2_output(planning_brief=_d16_back_squat_brief(),
+        final_plan_text=f"D-16 (Thursday) - Strength\nBack Squat: {dose}\n")
+    assert not any(e["code"] == "late_camp_effective_prescription_exceeded" for e in report["errors"])
+
+
+def test_effective_envelopes_are_isolated_by_scheduled_day():
+    brief = _d16_back_squat_brief()
+    second = _brief_with_prescriptions(12, [{"name": "Back Squat", "dose_role_kind": "anchor",
+        "effective_loaded": True, "effective_max_sets": 1, "effective_max_reps": 1, "effective_rpe_cap": 6}])
+    brief["weekly_role_map"]["weeks"].extend(second["weekly_role_map"]["weeks"])
+    report = validate_stage2_output(planning_brief=brief,
+        final_plan_text="D-16 (Thursday) - Strength\nBack Squat: 3 x 3 @ RPE 7\n")
+    assert not any(e["code"] == "late_camp_effective_prescription_exceeded" for e in report["errors"])
