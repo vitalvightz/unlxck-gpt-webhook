@@ -363,6 +363,36 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                     "hard_sparring_sessions": list(warning.get("hard_sparring_sessions") or []),
                 }
             )
+    # Late-camp effective-prescription blockers arrive as hard-blocker errors (and
+    # are promoted into blocking_warnings by the release policy). Give the repair
+    # pass a concrete dose-reduction instruction so it renders the resolved
+    # effective prescription instead of re-emitting the over-dose.
+    seen_dose_lines: set[str] = set()
+    for finding in [
+        *(validator_report.get("errors", []) or []),
+        *(validator_report.get("blocking_warnings", []) or []),
+    ]:
+        if not isinstance(finding, dict):
+            continue
+        if str(finding.get("code") or "") != "late_camp_effective_prescription_exceeded":
+            continue
+        line = str(finding.get("line") or "")
+        if line in seen_dose_lines:
+            continue
+        seen_dose_lines.add(line)
+        quality_fixes.append(
+            {
+                "action": "reduce_strength_dose_to_effective_prescription",
+                "line": finding.get("line"),
+                "scheduled_d_day": finding.get("scheduled_d_day"),
+                "exercise": finding.get("exercise"),
+                "effective_max_sets": finding.get("effective_max_sets"),
+                "effective_max_reps": finding.get("effective_max_reps"),
+                "effective_rpe_cap": finding.get("effective_rpe_cap"),
+                "effective_prescription": finding.get("effective_prescription"),
+            }
+        )
+
     return {
         "fix_first": restriction_fixes,
         "strip_out": formatting_fixes,

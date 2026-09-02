@@ -304,7 +304,12 @@ def test_role_morph_thins_actual_lifting_dose_across_the_countdown():
     v8 = d8["strength_dose_cap"]["max_sets"] * d8["strength_dose_cap"]["max_reps"]
     assert v15 > v10 > v8
 
-    for role in (d15, d10, d8):
+    # D-15 sits in the reduced-volume strength-retention band: meaningful load is
+    # intentionally kept, so it is NOT framed as neural-only. D-10 and D-8 are
+    # progressively neural maintenance touches.
+    assert "strength retention" in d15["selection_rule"].lower()
+    assert "neural maintenance" not in d15["selection_rule"].lower()
+    for role in (d10, d8):
         assert "neural maintenance" in role["selection_rule"].lower()
         assert "never render this as a loaded" in role["selection_rule"].lower()
 
