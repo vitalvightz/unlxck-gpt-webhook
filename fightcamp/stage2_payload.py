@@ -174,9 +174,6 @@ from .stage2_role_map import (  # noqa: F401
 
 
 
-def _slugify(value: str) -> str:
-    cleaned = re.sub(r"[^a-z0-9]+", "_", (value or "").strip().lower())
-    return cleaned.strip("_") or "slot"
 
 
 def _clean_list(values) -> list[str]:
@@ -200,18 +197,8 @@ def _dedupe_preserve_order(values: list[str]) -> list[str]:
     return result
 
 
-def _normalize_text(value: str) -> str:
-    return normalize_text(value)
 
 
-def _phrase_in_text(text: str, phrase: str) -> bool:
-    if not text or not phrase:
-        return False
-    parts = [re.escape(part) for part in re.split(r"[\s-]+", phrase.strip().lower()) if part]
-    if not parts:
-        return False
-    pattern = r"\b" + r"[\s-]+".join(parts) + r"\b"
-    return re.search(pattern, text) is not None
 
 def _compress_short_camp_priorities(athlete_model: dict) -> dict:
     days_until_fight = athlete_model.get("days_until_fight")
@@ -417,161 +404,15 @@ def _build_phase_briefs(training_context: TrainingContext, phase_weeks: dict) ->
     return briefs
 
 
-def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
-    compressed = athlete_model.get("compressed_priorities") or {}
-    compressed_labels = " ".join(
-        _priority_bucket_labels(compressed.get("primary_targets", []))
-        + _priority_bucket_labels(compressed.get("maintenance_targets", []))
-    ).lower()
-    if "speed / footwork sharpness" in compressed_labels:
-        return "sharpness_under_fatigue"
-    if "footwork / ring-movement quality" in compressed_labels:
-        return "boxing_quality_under_load"
-    if "technical sharpness" in compressed_labels or "footwork" in compressed_labels:
-        return "boxing_quality_under_load"
-    if "power expression" in compressed_labels:
-        return "sharpness_under_fatigue"
-    if "freshness protection" in compressed_labels or "fight-readiness and sharpness" in compressed_labels:
-        return "sharpness_under_fatigue"
-    if "gas tank maintenance" in compressed_labels:
-        return "aerobic_repeatability"
-
-    weakness_tokens = stage2_planning_brief_module._normalize_limiter_tokens(_clean_list(athlete_model.get("weaknesses", [])))
-    goal_tokens = stage2_planning_brief_module._normalize_limiter_tokens(_clean_list(athlete_model.get("key_goals", [])))
-    style_tokens = _normalize_limiter_tokens(
-        _clean_list(athlete_model.get("technical_styles", [])) + _clean_list(athlete_model.get("tactical_styles", []))
-    )
-    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
-    days_until_fight = athlete_model.get("days_until_fight")
-    restriction_keys = {
-        str((restriction or {}).get("restriction", "")).strip().lower()
-        for restriction in restrictions or []
-        if str((restriction or {}).get("restriction", "")).strip()
-    }
-    restriction_regions = {
-        str((restriction or {}).get("region", "")).strip().lower()
-        for restriction in restrictions or []
-        if str((restriction or {}).get("region", "")).strip()
-    }
-    tissue_restriction_keys = {
-        "deep_knee_flexion",
-        "deep_hip_flexion",
-        "heavy_overhead_pressing",
-        "high_impact",
-        "high_impact_lower",
-        "high_impact_upper",
-        "high_impact_global",
-        "loaded_flexion",
-        "loaded_rotation",
-        "spinal_flexion",
-        "max_velocity",
-    }
-    tissue_region_tokens = {"shoulder", "knee", "neck", "back", "spine", "hip", "ankle", "elbow", "wrist"}
-    performance_priority_signals = bool(
-        goal_tokens & {
-            "conditioning",
-            "conditioning_endurance",
-            "endurance",
-            "power",
-            "strength",
-            "speed",
-            "skill_refinement",
-            "striking",
-        }
-        or readiness_flags & {"moderate_fatigue", "high_fatigue", "fight_week"}
-        or (style_tokens & {"boxing", "boxer"} and goal_tokens & {"skill_refinement", "striking"})
-    )
-    # A stable surface/skin-only injury is a hygiene note, not tissue pressure:
-    # it must not steer the limiter to tissue_state. Declared weaknesses and
-    # restrictions still count as real tissue signals.
-    surface_skin_only = _all_active_injuries_surface_only(athlete_model)
-    tissue_pressure = bool(
-        (
-            not surface_skin_only
-            and (athlete_model.get("injuries") or readiness_flags & {"injury_management"})
-        )
-        or restriction_keys & tissue_restriction_keys
-        or restriction_regions & tissue_region_tokens
-    )
-
-    if weakness_tokens & {"coordination", "coordination_proprioception", "proprioception", "balance", "timing", "rhythm"}:
-        return "coordination"
-    if weakness_tokens & {"conditioning", "aerobic", "endurance", "gas_tank", "recovery"}:
-        return "aerobic_repeatability"
-    if weakness_tokens & {"sharpness", "speed_reaction", "cns_fatigue", "speed", "reaction"}:
-        return "sharpness_under_fatigue"
-    if weakness_tokens & {"footwork", "boxing", "striking", "skill_refinement"}:
-        return "boxing_quality_under_load"
-    if weakness_tokens & {"shoulder", "shoulders", "knee", "knees", "neck", "mobility", "stiffness"}:
-        return "tissue_state"
-    if not surface_skin_only and athlete_model.get("injuries") and tissue_pressure and (
-        athlete_model.get("short_notice")
-        or readiness_flags & {"fight_week", "high_fatigue"}
-        or (isinstance(days_until_fight, int) and 0 <= days_until_fight <= 14)
-    ):
-        return "tissue_state"
-
-    if goal_tokens & {"conditioning", "conditioning_endurance", "endurance"}:
-        return "aerobic_repeatability"
-    if style_tokens & {"boxing", "boxer"} and goal_tokens & {"skill_refinement", "striking"}:
-        return "boxing_quality_under_load"
-    if readiness_flags & {"moderate_fatigue", "high_fatigue", "fight_week"}:
-        return "sharpness_under_fatigue"
-    if isinstance(days_until_fight, int) and 0 <= days_until_fight <= 14:
-        return "sharpness_under_fatigue"
-    if tissue_pressure and not performance_priority_signals:
-        return "tissue_state"
-    return "general_fight_readiness"
 
 
 
-def _join_rule_parts(*parts: str) -> str:
-    cleaned = _dedupe_preserve_order([str(part).strip() for part in parts if str(part).strip()])
-    return " ".join(cleaned)
 
 
-def _role_anchor(role_key: str) -> str:
-    if role_key in {
-        "primary_strength_day",
-        "structural_strength_day",
-        "neural_plus_strength_day",
-        "neural_primer_day",
-        "alactic_speed_day",
-        "alactic_sharpness_day",
-        "alactic_coordination_day",
-        "alactic_support_day",
-    }:
-        return "highest_neural_day"
-    if role_key in {"fight_pace_repeatability_day", "light_fight_pace_touch_day"}:
-        return "highest_glycolytic_day"
-    if role_key in {"recovery_reset_day", "tissue_recovery_day", "fight_week_freshness_day"}:
-        return "lowest_load_day"
-    return "support_day"
 
 
-def _recovery_role_key(phase: str, stage_key: str, athlete_model: dict) -> str:
-    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
-    if phase == "TAPER" or stage_key == "fight_week_survival_rhythm" or "fight_week" in readiness_flags:
-        return "fight_week_freshness_day"
-    if athlete_model.get("injuries"):
-        return "tissue_recovery_day"
-    return "recovery_reset_day"
 
 
-def _role_selection_rule(role_key: str, category: str, system: str | None = None) -> str:
-    if category == "strength":
-        if role_key in {"primary_strength_day", "structural_strength_day", "neural_plus_strength_day", "neural_primer_day"}:
-            return "Use the highest-priority compliant strength slot first."
-        return "Use a remaining compliant strength slot with lower interference cost than the main strength day."
-    if category == "technical":
-        return "Prefer technical rhythm touches that stay low-cost, non-fatiguing, and timing-led."
-    if category == "conditioning":
-        if system == "aerobic":
-            return "Prefer compliant aerobic or low-damage conditioning slots first."
-        if system == "glycolytic":
-            return "Prefer compliant glycolytic slots only when phase guardrails still allow density work."
-        return "Prefer compliant alactic slots that preserve speed and sharpness."
-    return "Use rehab slots first; if rehab is absent, keep this day recovery-only."
 
 
 _PRIMARY_STRENGTH_ROLE_KEYS = {
@@ -694,100 +535,8 @@ def _append_week_coach_note_flag(week_entry: dict, flag: str) -> None:
     week_entry["coach_note_flags"] = current_flags
 
 
-def _is_final_week_capped_sparring_entry(plan_entry: dict[str, Any] | None = None) -> bool:
-    if not isinstance(plan_entry, dict):
-        return False
-    reason_codes = {str(code).strip() for code in _clean_list(plan_entry.get("reason_codes")) if str(code).strip()}
-    status = str(plan_entry.get("status") or "").strip()
-    return "final_week_sparring_cap" in reason_codes and status != "hard_as_planned"
 
 
-def _lock_declared_hard_sparring_roles(
-    week_entry: dict,
-    session_roles: list[dict],
-    suppressed_roles: list[dict],
-    athlete_model: dict,
-    *,
-    hard_sparring_plan: list[dict] | None = None,
-) -> tuple[list[dict], list[dict]]:
-    declared_hard_days = _ordered_weekdays(
-        _clean_list(week_entry.get("declared_hard_sparring_days") or athlete_model.get("hard_sparring_days", []))
-    )
-    if not declared_hard_days:
-        return session_roles, suppressed_roles
-
-    updated_roles = list(session_roles)
-    updated_suppressed = list(suppressed_roles)
-    plan_by_day = {
-        str(entry.get("day") or "").strip(): entry
-        for entry in (hard_sparring_plan or [])
-        if str(entry.get("day") or "").strip()
-    }
-    used_indices: set[int] = set()
-
-    for day in declared_hard_days:
-        plan_entry = plan_by_day.get(day)
-        if _is_final_week_capped_sparring_entry(plan_entry):
-            existing_idx = next(
-                (
-                    idx for idx, role in enumerate(updated_roles)
-                    if role.get("role_key") == "hard_sparring_day" and str(role.get("scheduled_day_hint") or "").strip() == day
-                ),
-                None,
-            )
-            replaced_role = None
-            if existing_idx is not None:
-                replaced_role = updated_roles.pop(existing_idx)
-                used_indices = {idx - 1 if idx > existing_idx else idx for idx in used_indices if idx != existing_idx}
-            if not any(
-                item.get("locked_day") == day
-                and "final_week_sparring_cap" in _clean_list(item.get("hard_sparring_reason_codes"))
-                for item in updated_suppressed
-            ):
-                updated_suppressed.append(_make_final_week_sparring_cap_suppression(day, plan_entry, replaced_role))
-            _append_week_coach_note_flag(week_entry, "final week sparring cap")
-            continue
-
-        replacement = _hard_sparring_role(week_entry, day, plan_entry)
-        existing_idx = next(
-            (
-                idx for idx, role in enumerate(updated_roles)
-                if role.get("role_key") == "hard_sparring_day" and str(role.get("scheduled_day_hint") or "").strip() == day
-            ),
-            None,
-        )
-        if existing_idx is not None:
-            updated_roles[existing_idx] = replacement
-            used_indices.add(existing_idx)
-            continue
-
-        candidate_indices = [
-            idx
-            for idx, role in enumerate(updated_roles)
-            if idx not in used_indices and role.get("role_key") != "hard_sparring_day"
-        ]
-        candidate_idx = None
-        if candidate_indices:
-            candidate_idx = min(
-                candidate_indices,
-                key=lambda idx: _replaceable_role_priority(updated_roles[idx], day=day),
-            )
-
-        if candidate_idx is None:
-            updated_roles.append(replacement)
-            used_indices.add(len(updated_roles) - 1)
-            continue
-
-        updated_suppressed.append(_make_hard_sparring_lock_suppression(updated_roles[candidate_idx], day))
-        updated_roles[candidate_idx] = replacement
-        used_indices.add(candidate_idx)
-
-    if any(role.get("coach_note_flags") for role in updated_roles if role.get("role_key") == "hard_sparring_day"):
-        _append_week_coach_note_flag(week_entry, "deload hard sparring")
-
-    for idx, role in enumerate(updated_roles, start=1):
-        role["session_index"] = idx
-    return updated_roles, updated_suppressed
 
 
 def _is_meaningful_stressor(role: dict[str, Any]) -> bool:
@@ -821,56 +570,6 @@ def _is_meaningful_stressor(role: dict[str, Any]) -> bool:
     return False
 
 
-def _compressed_priority_for_role(role: dict, athlete_model: dict) -> tuple[str, str]:
-    compressed = athlete_model.get("compressed_priorities") or {}
-    label_by_kind = _short_camp_priority_catalog(compressed)
-    if not compressed.get("is_short_camp"):
-        return "", ""
-
-    role_key = str(role.get("role_key", "")).strip()
-    category = str(role.get("category", "")).strip()
-    system = str(role.get("preferred_system", "")).strip()
-
-    if category == "recovery":
-        if label_by_kind.get("freshness_protection"):
-            return label_by_kind["freshness_protection"], "primary_target"
-        return "embedded recovery support", "embedded_support"
-
-    if category == "conditioning" and system == "aerobic" and label_by_kind.get("conditioning_maintenance"):
-        return label_by_kind["conditioning_maintenance"], "maintenance_target"
-
-    if category == "conditioning" and system == "glycolytic" and label_by_kind.get("conditioning_maintenance"):
-        return label_by_kind["conditioning_maintenance"], "maintenance_target"
-
-    if (
-        category == "conditioning"
-        and system == "alactic"
-        and label_by_kind.get("power_expression")
-    ):
-        return label_by_kind["power_expression"], "primary_target"
-
-    if role_key in {
-        "aerobic_coordination_day",
-        "repeatability_support_day",
-        "aerobic_support_day",
-        "controlled_repeatability_day",
-        "fight_pace_repeatability_day",
-        "light_fight_pace_touch_day",
-        "technical_touch_day",
-    } and label_by_kind.get("technical_sharpness"):
-        return label_by_kind["technical_sharpness"], "primary_target"
-
-    if role_key in {"primary_strength_day", "neural_plus_strength_day", "neural_primer_day", "alactic_sharpness_day", "alactic_speed_day"}:
-        if label_by_kind.get("power_expression"):
-            return label_by_kind["power_expression"], "primary_target"
-        if label_by_kind.get("technical_sharpness"):
-            return label_by_kind["technical_sharpness"], "primary_target"
-
-    if role_key in {"strength_touch_day", "transfer_strength_day", "small_strength_touch_day"}:
-        if label_by_kind.get("power_expression"):
-            return label_by_kind["power_expression"], "primary_target"
-
-    return "", ""
 
 
 def _intentional_compression_stub() -> dict[str, Any]:

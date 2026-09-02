@@ -1,6 +1,8 @@
 # Planner Architecture Contract
 
-Status: architecture contract for the fight-camp planner. This document defines ownership boundaries for planner decisions. It is intentionally stricter than the current code layout where compatibility layers and post-processing still share responsibility.
+Status: **closed and frozen** (Step 10). This document defines ownership boundaries for planner decisions and, as of Step 10, describes the architecture that exists in `Main` today rather than a migration target. The staged migration (Steps 0-9B) is complete: every planner decision listed below has exactly one canonical owner.
+
+Section 3 is the canonical ownership matrix. Section 9 records what the migration removed and the small non-blocking debt that remains. Section 12 states the architecture freeze rule that governs future change.
 
 This contract is documentation-only. It does not change runtime behaviour.
 
@@ -60,7 +62,7 @@ No lower layer may silently override a higher layer's ownership.
 | Crowded-week compression | `stage2_role_map.py`, `stage2_payload.py` | `stage2_role_map.py` | `stage2_payload.py` may decorate governance only | Re-compressing an already-compressed week in a second layer |
 | Sandwiched-day protection | `stage2_role_map.py`, `stage2_payload.py` | `combat_load_policy.py` (between-effective-hard-contact legality); the normal allocator's structural glycolytic suppression queries it via `calendar_context` (Step 9B) | Owner keeps only its role-budget suppression *scope* and no-legal-slot action | Re-deriving a local `sandwiched` legality verdict; separate preference vs prohibition implementations for the same collision |
 | Intentionally unused training days | `stage2_role_map.py`, post-processing | allocator/calendar layer | Recovery conversion only through explicit low-load support policy | Renderer automatically filling unused days |
-| Missing-day completion | `normal_calendar_placement.py`; `weekly_plan_render.py` retains a temporary compatibility re-export only | Normal calendar placement / allocator-owned completion | Renderer may display the assigned day; compatibility imports may delegate to the owner | Renderer implementing or independently choosing a missing day |
+| Missing-day completion | `normal_calendar_placement.py` (`fill_missing_session_days`) | Normal calendar placement / allocator-owned completion | Fills a surviving dayless role only onto a day the shared `combat_load_policy` does not FORBID; renderer may display the assigned day | Renderer implementing or independently choosing a missing day (the Step 8 renderer re-export is deleted); completion committing a forbidden day |
 | Camp-week support fillers | `camp_week_fillers.py`, `camp_week_fillers_impl.py` | support-insert layer, subordinate to shared calendar legality | Add only zero/low-cost support that passes budget and collision checks | Adding new meaningful stress or mutating authoritative anchor/contact placement |
 | Late-fight gap fillers | `gap_fill_inserts.py` | support-insert layer, subordinate to late-fight placement + shared legality | Add permitted low-cost/tactical support to legal gaps | Functioning as an independent physical-session scheduler |
 | Tactical Watch placement | `camp_week_fillers.py`, `gap_fill_inserts.py`, tactical watch library | support-insert layer | Zero-load coexistence where explicitly allowed | Consuming physical training budget unless policy says it should |
@@ -78,23 +80,30 @@ No lower layer may silently override a higher layer's ownership.
 
 ## 4. Current normal-camp execution order
 
-Current Main executes the normal dated-camp planning brief approximately as follows:
+Current Main executes the normal dated-camp planning brief as follows:
 
 ```text
 build athlete model / candidate pools
   -> build limiter + sport load + weekly stress map
   -> build week-by-week progression
   -> stage2_role_map._build_weekly_role_map
-  -> boxing post-processing in stage2_payload
+       (role budget/compression, then _assign_declared_day_hints placement
+        through shared combat_load_policy legality)
   -> normal_calendar_placement.fill_missing_session_days
-  -> apply_camp_week_fillers
+       (placement completion, same shared legality)
+  -> apply_camp_week_fillers            (support inserts, gated by shared legality)
   -> splice finished D-13 tail when applicable
   -> apply_late_camp_role_morph
+       (countdown dose, then apply_final_calendar_integrity — the governor is the
+        last deterministic stage and re-runs dose-only morph if it relocates a role)
   -> stamp labels
   -> build finalizer handoff
 ```
 
-This order is recorded because several current layers still mutate the calendar after the base allocator. Until the later consolidation steps are complete, changes must be reviewed against the full mutation chain, not only `stage2_role_map.py`.
+The governor is deliberately the final deterministic stage: every layer that can
+mutate the calendar (placement, completion, fillers, dose morph) runs before it.
+Changes must still be reviewed against this whole chain, not only
+`stage2_role_map.py`.
 
 ## 5. Current late-fight execution ownership
 
@@ -195,23 +204,107 @@ Specifically prohibited as new architecture:
 - new `*_patch.py` forwarding layers for behaviour that can be placed in an existing canonical owner;
 - prompt-only fixes for deterministic scheduling defects.
 
-## 9. Known current exceptions / debt
+## 9. Migration record and remaining debt
 
-The following current behaviour violates or partially violates the target contract and is recorded explicitly so it is not mistaken for desired architecture:
+### 9.1 Canonical ownership summary
 
-1. `stage2_payload.py` is both a compatibility facade/orchestrator and a host for real post-processing policy.
-2. As of Step 8, `weekly_plan_render.py` is read-only: `_resolve_role_weekdays` reads each role's placement-assigned `scheduled_day_hint` and no longer infers weekdays for dayless roles. Day placement is owned entirely by the calendar/placement layer (`normal_calendar_placement.fill_missing_session_days` plus the allocator), which runs before rendering; a role the placement layer leaves dayless renders without a weekday instead of the renderer inventing one. This satisfies invariant 3 for the weekly renderer.
-3. Normal-camp hard-contact collision policy was distributed across `stage2_role_map.py` and `stage2_payload.py`. As of Step 6, `stage2_payload.py` no longer keeps its own allow-list of loads legal between two effective hard contacts: its sandwiched-day suppression classifies roles through the shared `calendar_context` adapter and defers the between-hard-contacts verdict to `combat_load_policy.evaluate_calendar_candidate` (suppressing only a `FORBID`). The `stage2_payload.py` boxing day-placement collision scoring was proven dead and removed in Step 9A. **Step 9B** wires the live normal-camp placement owner (`stage2_role_map._assign_declared_day_hints`) to the shared policy: every physical candidate day is evaluated through the `calendar_context.normal_week_legality` view (ALLOW preferred, DEPRIORITIZE legal fallback, FORBID excluded when a legal alternative exists), and the structural glycolytic between-hard suppression queries the policy's between-hard scope instead of a local `sandwiched_training_days` verdict. The owner keeps candidate generation, the recovery/primary anchor pass, preferred-weekday order, and its no-legal-slot fallback; chronological positions are calendar weekday indices (monday=0 … sunday=6).
-4. Late-fight placement and its sequencing preferences are owned by `stage2_payload_late_fight.py` (`_build_late_fight_session_sequence`). Step 9A removed the separate `late_fight_placement.py` engine, which had no production caller — the countdown sequence was always built by `stage2_payload_late_fight.py`. **Step 9B** wires the live late-fight slot scorers (`_late_fight_best_assignment` and the composite `_score_composite_practical_assignment` search in `_space_bridge_countdown_roles`) to the shared `combat_load_policy` via the `calendar_context` late-fight adapter: each candidate countdown slot is evaluated against the resolved coach-owned contact occurrences and ranked by a lexicographic legality tuple `(-forbid, -deprioritize, owner_score)` (FORBID and DEPRIORITIZE strictly outrank every owner preference; neither ever suppresses a role by itself). The contact occurrences are the sparring resolver's own `resolve_late_fight_contacts` output — the same authoritative `(countdown_offset, effective_load)` source `gap_fill_inserts.py` consumes — so the scorer preserves the full hard/reduced/technical/off vocabulary and never re-resolves hard-vs-technical from role labels + offsets (the D-17 hard-contact cutoff stays owned by `sparring_dose_planner`; the placement scorer holds no second resolver). Effective hard contact exists only at D-18…D-21, so the term is a no-op for the compressed D-13-inward window and bites only in the bridge band. The allocator keeps its role-selection priority, countdown-target/freshness preferences, weekday-affinity and gap-spacing tie-breakers, and deterministic ordering. Countdown offsets convert to canonical positions as `-offset`. The two planners remain separate sequencing owners; only their collision *legality* is now singular.
-5. `gap_fill_inserts.py` still owns filler selection/budget/variety, but as of Step 5 its calendar-collision legality defers to the shared `combat_load_policy` through the canonical `calendar_context` adapter, using resolved sparring state rather than raw declared weekday matching. Its remaining `existing_exclusive_offsets` / raw-day sets survive only as non-legality bookkeeping.
-6. `camp_week_fillers.py` can add roles after the base allocator, but as of Step 5 each candidate is gated through the shared `combat_load_policy` (via `calendar_context`) against the whole weekly role map before insertion; it no longer derives effective contact from `declared_hard_sparring_days`.
-6a. `calendar_context.py` is the single canonical `planner state -> CalendarEvent[]` adapter shared by the final `calendar_integrity` governor and the upstream fillers, so there is one interpretation of position, resolved contact, load class, scope and contact de-duplication. It is representation only; `combat_load_policy` remains the rule authority.
-7. `late_camp_role_morph.py` changes semantic load after placement, so a future final calendar integrity layer must validate the resulting state.
-8. Compatibility/adaptor layers that increase trace depth should be consolidated only after characterization tests protect behaviour. As of Step 7 the `stage2_role_map_patch.py` → `stage2_role_map_integration.py` forwarding chain is collapsed: `stage2_role_map.py` now calls `allocator_priority.py` directly (the `late_camp_week_reference_d_day` reference-day resolver moved there, next to the compression-floor helper it feeds), and both wrapper modules are deleted. The remaining such layers — `camp_week_fillers.py`/`_impl.py` and the finalizer facade/impl pairs — still await consolidation.
-9. Step 9A removed dead/duplicate placement engines and established the real production placement owners: normal-camp placement is `stage2_role_map.py` (`_assign_declared_day_hints`) plus `normal_calendar_placement.py` completion; late-fight placement is `stage2_payload_late_fight.py`. Deleted (proven dead — no production caller, only implementation-only tests): the `stage2_payload.py` boxing placement engine (`_boxing_day_identity_and_spacing_pass` and its `_boxing_*` / `_main_job_day_class` / `_sort_roles_by_scheduled_day` helper tree), its `_assign_declared_day_hints` + `_declared_day_sets` duplicate, and the whole `late_fight_placement.py` module.
-9b. **Step 9B** made both surviving production placement owners consume the canonical shared collision legality in `combat_load_policy.py` (through the `calendar_context.py` representation adapter): normal-camp `_assign_declared_day_hints` and the structural glycolytic between-hard suppression, and the late-fight slot scorers. It preserved separate normal and late-fight *sequencing* owners — the two planners are **not** merged into one allocator — and moved only collision *legality* doctrine that the shared policy now supersedes (the normal owner's inline `sandwiched`/hard-day legality determinations). Role budget/survival, dose morphs, and sparring hard/technical resolution were left with their existing owners; the final `calendar_integrity` governor remains the last enforcement (defence in depth); rendering stays read-only. New reusable representation lives beside the canonical owner in `calendar_context.py` (`normal_week_legality`, `weekday_position`, `CalendarLegalityView.best_legal_weekday`/`is_between_hard_position`) and the shared legality tier `combat_load_policy.placement_rank`; no new wrapper/patch module was added.
+The staged migration (Steps 0-9B) is complete. Every decision below has exactly one
+canonical owner in `Main` today:
 
-These are migration targets, not instructions to delete code immediately.
+| Decision | Canonical owner |
+| --- | --- |
+| Sparring / effective contact resolution (hard, reduced, technical, off) | `sparring_dose_planner.py` |
+| Normal-camp role budget, compression, suppression | `stage2_role_map.py` |
+| Late-fight role budget / permission | `stage2_payload_late_fight.py` (permission + budget path) |
+| Normal-camp day placement | `stage2_role_map.py` (`_assign_declared_day_hints`) + `normal_calendar_placement.py` (completion) |
+| Late-fight countdown placement | `stage2_payload_late_fight.py` |
+| Combat collision legality (ALLOW / DEPRIORITIZE / FORBID) | `combat_load_policy.py` |
+| Canonical calendar-event representation | `calendar_context.py` (representation only — never a verdict) |
+| Countdown dose morph | `late_camp_role_morph.py` |
+| Support inserts / fillers | `camp_week_fillers.py`, `gap_fill_inserts.py` — subordinate to shared legality |
+| Final deterministic calendar legality | `calendar_integrity.py` |
+| Rendering | `weekly_plan_render.py` — read only |
+| AI finalizer | wording / compliant exercise expression only |
+| Validation & release | validator / release layer — never repairs architecture |
+
+Both placement owners consume the same `combat_load_policy` legality through
+`calendar_context`, and both consume the sparring resolver's own resolved contact
+state. They remain **separate sequencing owners** — candidate generation, anchors,
+countdown targets and tie-breaking are local — but they cannot disagree about
+legality. Chronological positions are weekday indices (normal camp, monday=0) and
+`-countdown_offset` (late fight); raw D-day numbers are never used as positions.
+
+### 9.2 Historical migration notes
+
+Recorded only to explain architecture that no longer exists, so a future reader does
+not reintroduce it:
+
+1. **Renderer placement (removed, Step 4/8).** `weekly_plan_render.py` once inferred
+   weekdays for dayless roles. It is now read-only: `_resolve_role_weekdays` reads the
+   placement-assigned `scheduled_day_hint` and the compatibility re-export is deleted. A
+   role the placement layer leaves dayless renders without a weekday.
+2. **Duplicate sandwiched-day allow-list (removed, Step 6).** `stage2_payload.py` kept
+   its own list of loads legal between two effective hard contacts; it now defers the
+   verdict to `combat_load_policy`.
+3. **Wrapper chain (removed, Step 7).** `stage2_role_map_patch.py` ->
+   `stage2_role_map_integration.py` forwarding is collapsed; `stage2_role_map.py` calls
+   `allocator_priority.py` directly and both wrapper modules are deleted.
+4. **Dead placement engines (removed, Step 9A).** The `stage2_payload.py` boxing
+   placement engine (`_boxing_*` / `_main_job_day_class` / `_sort_roles_by_scheduled_day`),
+   its duplicate `_assign_declared_day_hints` + `_declared_day_sets`, and the whole
+   `late_fight_placement.py` module had no production caller and were deleted. The
+   countdown sequence was always built by `stage2_payload_late_fight.py`.
+5. **Placement collision doctrine (unified, Step 9B).** Both surviving placement owners
+   now consume `combat_load_policy`. Normal camp evaluates every physical candidate day
+   through `calendar_context.normal_week_legality`; the late-fight slot scorers rank
+   assignments by the lexicographic legality key `(-forbid, -deprioritize, owner_score)`,
+   so no owner preference can outrank canonical legality. FORBID means *unavailable*: a
+   role with no legal day is left to the owner's existing dayless/suppression contract
+   rather than being placed illegally.
+6. **Second sparring resolver in placement (removed, Step 9B follow-up).** Late-fight
+   placement reconstructed hard-vs-technical from `role_key` + countdown offset. It now
+   consumes `resolve_late_fight_contacts` — the sparring resolver's authoritative
+   `(countdown_offset, effective_load)` output, the same source the gap fillers use —
+   preserving the full hard / reduced / technical / off vocabulary.
+7. **Resolver authority (fixed, Step 9B).** A supplied `hard_sparring_plan` is
+   authoritative even when it resolves to zero effective hard contact. Declared hard days
+   stand in **only** when the plan is `None` (the resolver did not run); an empty or
+   fully-downgraded plan never resurrects declared hard days.
+8. **Duplicate role-budget engine (removed, Step 10).** `stage2_payload.py` carried stale
+   forks of the `stage2_role_map` role-budget/compression engine. Eleven of them
+   (`_lock_declared_hard_sparring_roles`, `_compressed_priority_for_role`,
+   `_is_final_week_capped_sparring_entry`, `_role_anchor`, `_role_selection_rule`,
+   `_recovery_role_key`, `_primary_limiter_key`, `_join_rule_parts`, `_normalize_text`,
+   `_phrase_in_text`, `_slugify`) were outside the transitive closure of every real root —
+   the four production entry points, module-level code, and every name any module or test
+   imports from `stage2_payload` — and were deleted, along with three then-orphaned
+   constants. The live `_apply_boxing_crowded_week_*` path and the four helpers live tests
+   import as independent oracles were **kept**: a name-based sweep that deletes them leaves
+   a dangling call and a `NameError`. `tests/test_step10_architecture_closure.py` guards
+   both directions.
+
+### 9.3 Remaining non-blocking debt
+
+These are real but do not affect decision ownership, and are explicitly **not** scheduled
+work (see the freeze rule in section 12):
+
+1. `camp_week_fillers.py` / `camp_week_fillers_impl.py` remain a facade/implementation
+   pair. The facade holds real orchestration (tail splicing, tactical-watch insertion), so
+   it is not pure indirection and was not collapsed. Ownership is unambiguous: filler
+   selection is the filler layer's, legality is `combat_load_policy`'s.
+2. `stage2_finalizer_packet.py` / `_impl.py` are likewise a facade/implementation pair
+   holding real packet-building logic. Same conclusion.
+3. `stage2_payload.py` remains a compatibility/orchestration surface. Its dead placement
+   policy (Step 9A) and its dead duplicate role-budget engine (Step 10) are gone; what
+   remains is orchestration, re-exports, and four helpers live tests import as independent
+   oracles. Two of those (`_apply_high_fatigue_week_compression`,
+   `_compute_readiness_compression`) have **diverged** from their `stage2_role_map`
+   counterparts, so they are not interchangeable; repointing those tests at the live owner
+   would change what they assert and is deliberately left as separate work.
+4. `weekly_schedule_view.py` normalises resolver `status` -> display `effective_load` for
+   the API/validator view layer. This is presentation-side normalisation of resolver
+   output, downstream of every planner decision; it is not a second contact authority.
+
 
 ## 10. Required review checklist for planner PRs
 
@@ -230,11 +323,10 @@ Any PR changing planner behaviour should answer:
 
 A planner PR should be treated as architecture-risky when it cannot identify one canonical owner for the behaviour it changes.
 
-## 11. Migration direction
+## 11. Achieved convergence
 
-The target is not a rewrite. The target is to reduce the number of writers to planner state.
-
-Preferred convergence:
+The migration's goal was not a rewrite; it was to reduce the number of writers to planner
+state. As of Step 10 the convergence below is **achieved**, not aspirational:
 
 ```text
 stage2_planning_brief.py
@@ -263,3 +355,52 @@ render/finalizer
 ```
 
 The architectural success condition is simple: for any athlete-facing session, a developer should be able to answer **why this role exists, why it survived, why it is on this day, what its effective load is, and which file has authority for each answer** without tracing competing implementations.
+
+## 12. Architecture freeze rule (Step 10)
+
+**After Step 10, planner architecture refactors are closed by default.**
+
+The staged migration achieved its goal: one canonical owner per decision, one collision
+legality doctrine, one contact resolver, a final governor, and a read-only renderer.
+Further structural change now costs more than it returns, and each refactor risks
+reintroducing the multi-writer bugs the migration removed.
+
+New architecture work requires **one** of the following, stated explicitly in the PR:
+
+1. a demonstrated production correctness defect that cannot be fixed inside an existing
+   canonical owner;
+2. a new feature that genuinely cannot be implemented within existing ownership;
+3. measured performance/scalability evidence that requires a structural change.
+
+"Another abstraction would be cleaner" is **not** a sufficient reason.
+
+### Where new work belongs
+
+New features enter through the existing owners:
+
+| New work | Enters through |
+| --- | --- |
+| New injury constraint | athlete model / role budget / canonical legality, as appropriate |
+| New combat contact type | `sparring_dose_planner` (resolution) + `combat_load_policy` (classification) |
+| New readiness signal | athlete model / role budget / dose owner |
+| New coach override | an explicit deterministic owner (never the renderer or finalizer) |
+| New filler type | filler library + shared legality |
+| New rendering | renderer only, read-only |
+| New collision rule | `combat_load_policy` only |
+
+### Specifically prohibited
+
+- a second module that returns ALLOW / DEPRIORITIZE / FORBID;
+- a second placement engine, or a generic "planner manager" / orchestrator over the
+  existing owners;
+- new `*_patch.py` / `*_integration.py` forwarding layers;
+- another calendar abstraction or another role classifier;
+- re-deriving effective contact from declared weekdays, role keys, or countdown
+  thresholds when resolved sparring state is available;
+- moving placement, contact, or role-survival authority into the renderer, the AI
+  finalizer, or the validator.
+
+The architecture regressions in `tests/test_step10_architecture_closure.py` and
+`tests/test_placement_ownership.py` enforce this. A change that requires editing the
+canonical legality matrix in those tests is, by definition, a change to training
+collision doctrine and must be argued as such — not slipped in as a refactor.
