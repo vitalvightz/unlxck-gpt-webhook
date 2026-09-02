@@ -105,3 +105,59 @@ D-12 (Monday): Neural speed touch.
     assert finding["code"] == "late_camp_session_incomplete"
     assert finding["actual_session_count"] == 1
     assert finding["expected_session_count"] == 2
+
+
+def _anchor_leak_warning(line: str) -> dict:
+    # The raw validator strips the bullet before flagging, so the warning's
+    # `line` is bullet-free even when the rendered occurrence carries a bullet.
+    return {
+        "code": "internal_render_contract_leak",
+        "label": "anchor_label",
+        "line": line,
+        "blocking": True,
+    }
+
+
+def test_bulleted_tactical_anchor_is_whitelisted():
+    # The only occurrence is a legitimate Tactical Watch anchor rendered with a
+    # Markdown bullet. Before bullet-normalization the `- Anchor:` occurrence
+    # failed the exact-match comparison, so this valid tactical anchor still
+    # triggered the blocking false positive the PR exists to eliminate.
+    line = "Anchor: Make them cross your range before they can attack."
+    text = """GPP — Week 1 (D-23 to D-16)
+D-17 (Wednesday) — Fight Tactical Watch.
+- Range Map: 10 minutes, tactical review only. No physical load.
+- Anchor: Make them cross your range before they can attack.
+"""
+    report = postprocess_stage2_validator_report(
+        planning_brief={},
+        final_plan_text=text,
+        validator_report={"warnings": [_anchor_leak_warning(line)]},
+    )
+    assert report["warnings"] == []
+    assert report["internal_render_contract_leak_warnings"] == []
+
+
+def test_anchor_leaked_outside_a_session_block_is_not_whitelisted():
+    # The same anchor text appears twice: once inside the D-17 Tactical Watch
+    # block and once under a non-phase "Coach Notes" section that closes the
+    # parsed session context. The out-of-session occurrence is invisible to
+    # per-block parsing, so classifying only in-block occurrences would wrongly
+    # suppress a genuine internal-contract leak.
+    line = "Anchor: Make them cross your range before they can attack."
+    text = """GPP — Week 1 (D-23 to D-16)
+D-17 (Wednesday) — Fight Tactical Watch.
+- Range Map: 10 minutes, tactical review only. No physical load.
+  Anchor: Make them cross your range before they can attack.
+
+Coach Notes
+Anchor: Make them cross your range before they can attack.
+"""
+    warning = _anchor_leak_warning(line)
+    report = postprocess_stage2_validator_report(
+        planning_brief={},
+        final_plan_text=text,
+        validator_report={"warnings": [warning]},
+    )
+    assert report["warnings"] == [warning]
+    assert report["internal_render_contract_leak_warnings"] == [warning]

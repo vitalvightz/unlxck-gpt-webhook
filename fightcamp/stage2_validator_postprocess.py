@@ -46,6 +46,19 @@ def _norm(value: Any) -> str:
     return re.sub(r"[*_`]+", "", str(value or "")).strip().lower()
 
 
+_LEADING_BULLET_RE = re.compile(r"^\s*[-*•]\s+")
+
+
+def _norm_anchor(value: Any) -> str:
+    """Normalize an anchor line, dropping a leading -, *, or • bullet marker.
+
+    The raw validator strips bullets before flagging the leak, but the rendered
+    occurrence inside a session block may still carry its Markdown bullet, so
+    both sides must be bullet-normalized before comparing anchor text.
+    """
+    return _norm(_LEADING_BULLET_RE.sub("", str(value or ""), count=1))
+
+
 def _top_level_heading_key(line: str) -> str:
     stripped = str(line or "").strip()
     if stripped.startswith(("- ", "* ")):
@@ -174,17 +187,37 @@ def _is_tactical_block(block: dict[str, Any]) -> bool:
 
 
 def _is_legitimate_tactical_anchor(final_plan_text: str, line: str) -> bool:
-    """Whitelist an Anchor line only when every rendered occurrence is tactical."""
-    target = _norm(line)
+    """Whitelist an Anchor line only when every rendered occurrence is tactical.
+
+    Classification is over the *complete* final text, not just parsed D-X
+    session blocks: an occurrence outside any session (e.g. leaked into Coach
+    Notes) or inside a non-tactical block is never captured by
+    ``_session_blocks`` and would otherwise be invisible, letting a genuine
+    internal-contract leak be silently suppressed. Every exact occurrence in
+    the full text must fall inside a Tactical Watch block for the whitelist to
+    apply.
+    """
+    target = _norm_anchor(line)
     if not target.startswith("anchor:"):
         return False
 
-    matches: list[bool] = []
-    for block in _session_blocks(final_plan_text):
-        occurrence_count = sum(1 for value in (block.get("lines") or []) if _norm(value) == target)
-        matches.extend([_is_tactical_block(block)] * occurrence_count)
+    total_occurrences = sum(
+        1
+        for raw_line in str(final_plan_text or "").splitlines()
+        if _norm_anchor(raw_line) == target
+    )
+    if not total_occurrences:
+        return False
 
-    return bool(matches) and all(matches)
+    tactical_occurrences = 0
+    for block in _session_blocks(final_plan_text):
+        if not _is_tactical_block(block):
+            continue
+        tactical_occurrences += sum(
+            1 for value in (block.get("lines") or []) if _norm_anchor(value) == target
+        )
+
+    return tactical_occurrences == total_occurrences
 
 
 def _reconcile_week_warning(

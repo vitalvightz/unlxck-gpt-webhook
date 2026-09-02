@@ -271,7 +271,23 @@ def test_real_validator_then_pipeline_clears_the_production_false_blockers():
     raw_codes = {item.get("code") for item in raw.get("warnings") or []}
     assert "missing_required_element" in raw_codes
     assert "internal_render_contract_leak" in raw_codes
-    assert raw_codes & {"missing_week_session_role", "late_camp_session_incomplete"}
+
+    # The fixture must reproduce all THREE specific week-completeness false
+    # blockers, not merely one of them. Assert each (code, phase, week_index)
+    # triple individually: a set-intersection check would still pass if a
+    # regression dropped two-thirds of the expected raw behaviour.
+    raw_week_findings = {
+        (
+            item.get("code"),
+            str(item.get("phase") or "").upper(),
+            item.get("week_index"),
+        )
+        for item in raw.get("warnings") or []
+        if item.get("code") in {"missing_week_session_role", "late_camp_session_incomplete"}
+    }
+    assert ("missing_week_session_role", "GPP", 1) in raw_week_findings
+    assert ("late_camp_session_incomplete", "SPP", 2) in raw_week_findings
+    assert ("late_camp_session_incomplete", "TAPER", 3) in raw_week_findings
 
     review = stage2_pipeline.review_stage2_output(
         planning_brief=brief,
