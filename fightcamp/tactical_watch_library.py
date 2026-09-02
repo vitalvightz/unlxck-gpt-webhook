@@ -308,7 +308,11 @@ def ordered_phase_bank(style: Any, phase: Any, sport: Any = None) -> tuple[Tacti
     owned = lambda watch: sport_key in watch.sports
     specific = [w for w in all_watches() if owned(w) and w.style == family and w.phase == phase_key]
     if family == "generic":
-        return tuple(specific)
+        cross_sport = [
+            w for w in all_watches()
+            if "cross_sport" in w.sports and w.style == "generic" and w.phase == phase_key
+        ]
+        return tuple(specific + cross_sport)
     fallback_reason = ""
     compatible: list[TacticalWatch] = []
     if sport_key == "kickboxing" and family == "grappler":
