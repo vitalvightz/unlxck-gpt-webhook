@@ -7,6 +7,7 @@ backward compatibility.
 """
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any
 
 from .normalization import clean_list, normalize_fatigue_level, ordered_weekdays as _ordered_weekdays
@@ -3141,6 +3142,7 @@ def _build_weekly_role_map(
             session_roles.append(
                 {
                     "session_index": session_index,
+                    "strength_session_index": idx + 1,
                     "category": "strength",
                     "role_key": role_key,
                     "preferred_pool": "strength_slots",
@@ -3235,6 +3237,9 @@ def _build_weekly_role_map(
             )
             session_index += 1
 
+        # Keep only planner-approved candidates for post-placement goal repair.
+        # Hard-suppressed roles never enter this reservoir.
+        goal_repair_candidates = deepcopy(session_roles)
         session_roles, suppressed_roles = _apply_short_camp_role_compression(
             week_entry,
             session_roles,
@@ -3391,6 +3396,7 @@ def _build_weekly_role_map(
                 "combat_pressure_floor": dict(week_entry.get("combat_pressure_floor") or {"active": False}),
                 "session_roles": session_roles,
                 "suppressed_roles": suppressed_roles,
+                "goal_repair_candidates": goal_repair_candidates,
             }
         )
 

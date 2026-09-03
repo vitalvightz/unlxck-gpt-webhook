@@ -14,6 +14,7 @@ Purpose:
 
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any
 
 from .fight_day_override import FIGHT_DAY_PROTOCOL_TEXT
@@ -193,6 +194,7 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
         "rpe_cap",
         "effective_strength_prescriptions",
         "effective_strength_envelope",
+        "strength_session_index",
         "scheduled_d_day",
         "dose_adjustment_reason",
     )
@@ -526,6 +528,8 @@ def build_stage2_finalizer_packet(
         "athlete_model": _compact_athlete_model(athlete_model),
         "render_guards": guards,
         "hard_rules": [
+            "selected_plan.goal_preservation is the deterministic final decision for every selected athlete goal, overriding generic Build wording in priority_focus.main_focus. Render build, maintain and explicit deferrals faithfully. Explain deferred goals and their constraint in Lead notes using plain language; never claim a deferred goal is being trained. Do not reconsider these states from role names or draft prose.",
+            "Each goal_preservation evidence entry with a name is a required selected stimulus on its recorded D-day. Preserve that exercise and its effective prescription/dose. Do not substitute a power, rehab, balance or primer exercise for meaningful_strength. These witnesses override general freedom to reselect exercises. Missing evidence requires deterministic planner repair, never an invented LLM exercise or training claim.",
             "Render only athlete-facing plan content.",
             "Do not expose candidate pools, scoring logic, internal menus, or unused options.",
             "weekly_role_map.weeks[*].calendar_days is the only authority for weekday and D-day labels.",
@@ -585,6 +589,8 @@ def build_stage2_finalizer_packet(
             source.get("restrictions") or stage2_payload.get("restrictions")
         ),
         "selected_plan": {
+            "goal_preservation_version": source.get("goal_preservation_version"),
+            "goal_preservation": deepcopy(source.get("goal_preservation") or []),
             "session_sequence": _compact_session_sequence(source)
             or _compact_session_sequence(stage2_payload),
             "weekly_role_map": _compact_weekly_role_map(weekly_role_map, athlete_model),

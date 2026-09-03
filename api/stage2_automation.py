@@ -5,6 +5,7 @@ import os
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from fightcamp.goal_preservation import validate_goal_preservation
 from fightcamp.stage2_pipeline import build_stage2_package, build_stage2_retry, review_stage2_output
 from fightcamp.stage2_policy import (
     admin_review_blocking_findings,
@@ -30,7 +31,9 @@ from .structured_plan_models import build_strict_structured_plan_schema
 from .structured_plan_sparring_reconcile import reconcile_coach_led_sparring_days
 
 # Plan statuses this module writes. Both are athlete-displayable: Stage 2
-# validator findings never hold a plan. `publishable_with_flags` is also in
+# ordinary validator findings do not hold a plan. Goal-contract failures are
+# terminal generation errors and never enter this release fallback.
+# `publishable_with_flags` is also in
 # ADMIN_REVIEW_PLAN_STATUSES, so a flagged plan reaches the athlete AND stays in
 # the admin review surface. `held_for_review` / `review_required` are written by
 # admin actions and Stage 1 triage elsewhere, never here.
@@ -88,6 +91,15 @@ def _with_stage2_cost(
 
 class Stage2AutomationUnavailableError(Stage2AutomationError):
     """Raised when Stage 2 automation is not configured for runtime use."""
+
+
+class Stage2GoalPreservationError(Stage2AutomationError):
+    """A deterministic obligation or required rendered witness was lost."""
+
+    def __init__(self, findings: list[dict]):
+        self.findings = findings
+        goals = sorted({str(item.get("goal") or item.get("requirement") or "selected goal") for item in findings})
+        super().__init__("goal_preservation_failed: deterministic repair/regeneration required for " + ", ".join(goals))
 
 
 class Stage2Automator(Protocol):
@@ -817,6 +829,11 @@ class OpenAIStage2Automator:
         self, *, stage1_result: dict[str, Any], log_context: dict[str, str] | None = None
     ) -> dict[str, Any]:
         package = build_stage2_package(stage1_result=stage1_result)
+        goal_errors = validate_goal_preservation(package["planning_brief"])
+        if goal_errors:
+            # The orchestrator already treats Stage2AutomationError as terminal
+            # without publishing the Stage 1 draft or creating a fallback plan.
+            raise Stage2GoalPreservationError(goal_errors)
         draft_plan_text = str(package.get("draft_plan_text") or "")
         handoff_text = str(package["handoff_text"])
         source = _stage2_source(stage1_result)
@@ -856,7 +873,7 @@ class OpenAIStage2Automator:
             ]
             if isinstance(item, dict)
         }
-        if "late_camp_effective_prescription_exceeded" in first_codes:
+        if first_codes & {"late_camp_effective_prescription_exceeded", "goal_preservation_render_mismatch"}:
             retry = build_stage2_retry(
                 stage1_result=stage1_result,
                 final_plan_text=first_pass_text,
@@ -881,6 +898,12 @@ class OpenAIStage2Automator:
             if attempt_count == 2
             else first_pass_cost
         )
+
+        goal_errors = [item for field in ("errors", "blocking_warnings")
+                       for item in first_review["validator_report"].get(field, [])
+                       if item.get("code") in {"goal_preservation_failed", "goal_preservation_render_mismatch"}]
+        if goal_errors:
+            raise _with_stage2_cost(Stage2GoalPreservationError(goal_errors), plan_text_cost)
 
         final_response_incomplete = bool(final_cost.get("stage2_incomplete_response"))
         if bool(plan_text_cost.get("stage2_incomplete_response")):
@@ -923,7 +946,7 @@ class OpenAIStage2Automator:
             len(admin_blocking_findings),
         )
 
-        # Stage 2 validator findings never hold a plan. Every outcome below is
+        # Goal-contract failures have already stopped above. Every outcome below is
         # athlete-displayable; the findings decide which release status is
         # written, not whether the plan is released.
         if release_decision == "publish":

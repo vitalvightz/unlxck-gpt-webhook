@@ -202,181 +202,7 @@ def _dedupe_preserve_order(values: list[str]) -> list[str]:
 
 
 def _compress_short_camp_priorities(athlete_model: dict) -> dict:
-    days_until_fight = athlete_model.get("days_until_fight")
-    camp_length_weeks = athlete_model.get("camp_length_weeks")
-    if isinstance(days_until_fight, int):
-        timeline_days = days_until_fight
-    elif isinstance(camp_length_weeks, int):
-        timeline_days = camp_length_weeks * 7
-    else:
-        timeline_days = None
-
-    weakness_tokens = stage2_planning_brief_module._normalize_limiter_tokens(_clean_list(athlete_model.get("weaknesses", [])))
-    goal_tokens = stage2_planning_brief_module._normalize_limiter_tokens(_clean_list(athlete_model.get("key_goals", [])))
-    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
-    short_window = isinstance(timeline_days, int) and timeline_days <= 7
-    ultra_short_window = isinstance(timeline_days, int) and timeline_days <= 5
-
-    if not short_window:
-        return {
-            "timeline_days": timeline_days,
-            "is_short_camp": False,
-            "is_ultra_short_camp": False,
-            "primary_targets": [],
-            "maintenance_targets": [],
-            "embedded_support": [],
-            "deferred": [],
-        }
-
-    primary: list[dict] = []
-    maintenance: list[dict] = []
-    embedded: list[dict] = []
-    deferred: list[dict] = []
-    used_labels: set[str] = set()
-
-    def add_unique(bucket: list[dict], label: str, kind: str, reason: str) -> None:
-        if label in used_labels:
-            return
-        bucket.append(stage2_planning_brief_module._priority_bucket(label, kind))
-        used_labels.add(label)
-
-    speed_signal = bool(
-        weakness_tokens & {"speed", "reactive", "reaction", "acceleration", "speed_reaction"}
-        or goal_tokens & {"speed", "reactive", "reaction", "acceleration", "speed_reaction"}
-    )
-
-    if speed_signal:
-        add_unique(
-            primary,
-            "speed / footwork sharpness",
-            "speed_footwork_sharpness",
-            "Use a short full-rest alactic speed dose for footwork speed and neural sharpness, not conditioning volume.",
-        )
-
-    footwork_signal = bool(
-        weakness_tokens & {"footwork", "lateral_movement", "ringcraft", "angles", "pivot", "stance", "stance_reset", "angle_exit"}
-        or goal_tokens & {"footwork", "lateral_movement", "ringcraft", "angles", "pivot", "stance", "stance_reset", "angle_exit"}
-    )
-
-    skill_refinement_signal = bool(goal_tokens & {"skill_refinement"} or weakness_tokens & {"skill_refinement"})
-    if ultra_short_window and footwork_signal and skill_refinement_signal:
-        add_unique(
-            primary,
-            "footwork / technical sharpness",
-            "footwork_technical_sharpness",
-            "Collapse footwork and skill refinement into one practical fight-week target.",
-        )
-    elif footwork_signal:
-        add_unique(
-            primary,
-            "footwork / ring-movement quality",
-            "footwork_ring_movement_quality",
-            "Use named footwork, stance reset, pivot, angle-exit, and ring-movement work without treating it as pure speed.",
-        )
-
-    technical_sharpness_signal = (
-        weakness_tokens & {"coordination", "coordination_proprioception", "proprioception", "balance", "timing", "rhythm", "boxing"}
-        or goal_tokens & {"skill_refinement", "striking"}
-    )
-
-    if technical_sharpness_signal and not any(entry["kind"] == "footwork_technical_sharpness" for entry in primary):
-        add_unique(
-            primary,
-            "technical sharpness",
-            "technical_sharpness",
-            "Collapse timing, rhythm, boxing quality, and skill refinement into one practical fight-week target.",
-        )
-
-    if goal_tokens & {"power", "explosive_power"} or weakness_tokens & {"sharpness", "cns_fatigue"}:
-        add_unique(
-            primary,
-            "power expression",
-            "power_expression",
-            "Keep neural power output as one sharpness-oriented target.",
-        )
-
-    if readiness_flags & {"fight_week", "high_fatigue", "active_weight_cut", "aggressive_weight_cut"} or athlete_model.get("injuries"):
-        add_unique(
-            primary,
-            "fight-readiness and freshness protection",
-            "freshness_protection",
-            "Freshness, symptom stability, and readiness outrank optional development in the final week.",
-        )
-
-    if not primary:
-        add_unique(
-            primary,
-            "fight-readiness and sharpness",
-            "fight_readiness",
-            "Short camps default to a readiness-first target when no clearer immediate limiter is present.",
-        )
-
-    while len(primary) > 2:
-        moved = primary.pop()
-        destination = embedded if moved["kind"] == "freshness_protection" else maintenance
-        destination.append(
-            stage2_planning_brief_module._priority_bucket(moved["label"], moved["kind"])
-        )
-
-    conditioning_selected = bool(
-        weakness_tokens & {"conditioning", "gas_tank", "aerobic", "endurance", "recovery"}
-        or goal_tokens & {"conditioning", "conditioning_endurance", "endurance"}
-    )
-    if conditioning_selected:
-        target_bucket = maintenance
-        reason = "Conditioning stays as one small exposure unless the athlete is clearly underprepared this week."
-        if not primary and not ultra_short_window:
-            target_bucket = primary
-            reason = "Conditioning remains primary only because no more urgent fight-week target displaced it."
-        add_unique(target_bucket, "gas tank maintenance", "conditioning_maintenance", reason)
-
-    if weakness_tokens & {"mobility", "stiffness"} or goal_tokens & {"mobility", "durability"}:
-        mobility_reason = "Mobility is embedded through warm-up, tissue care, and exercise choice unless it is the direct limiter."
-        if weakness_tokens & {"mobility", "stiffness"} and athlete_model.get("injuries") and not any(
-            entry["kind"] == "freshness_protection" for entry in primary
-        ):
-            add_unique(primary, "tissue protection / mobility bottleneck", "tissue_state", "Mobility stays primary only because tissue state is the direct limiter.")
-        else:
-            add_unique(embedded, "mobility support", "mobility_support", mobility_reason)
-
-    if goal_tokens & {"skill_refinement"}:
-        add_unique(
-            deferred,
-            "skill refinement as standalone work",
-            "skill_refinement",
-            "Absorb skill refinement into technical sharpness instead of giving it its own session objective.",
-        )
-
-    raw_other_labels = [
-        *(value.replace("_", " ") for value in _clean_list(athlete_model.get("key_goals", []))),
-        *(value.replace("_", " ") for value in _clean_list(athlete_model.get("weaknesses", []))),
-    ]
-    claimed_terms = " ".join(stage2_planning_brief_module._priority_bucket_labels(primary) + stage2_planning_brief_module._priority_bucket_labels(maintenance) + stage2_planning_brief_module._priority_bucket_labels(embedded) + stage2_planning_brief_module._priority_bucket_labels(deferred)).lower()
-    for label in raw_other_labels:
-        normalized_label = str(label).strip()
-        if not normalized_label or normalized_label.lower() in claimed_terms:
-            continue
-        add_unique(
-            embedded if not ultra_short_window else deferred,
-            normalized_label,
-            "selection_only",
-            "Selected item is acknowledged but not promoted to a standalone short-camp objective.",
-        )
-
-    if len(maintenance) > 1:
-        overflow = maintenance[1:]
-        maintenance = maintenance[:1]
-        deferred.extend(stage2_planning_brief_module._priority_bucket(item["label"], item["kind"]) for item in overflow)
-
-    return {
-        "timeline_days": timeline_days,
-        "is_short_camp": True,
-        "is_ultra_short_camp": ultra_short_window,
-        "primary_targets": primary,
-        "maintenance_targets": maintenance[:1],
-        "embedded_support": embedded,
-        "deferred": deferred,
-    }
+    return stage2_planning_brief_module._compress_short_camp_priorities(athlete_model)
 
 
 def _build_phase_briefs(training_context: TrainingContext, phase_weeks: dict) -> dict[str, dict]:
@@ -1539,6 +1365,34 @@ def build_computed_support(*, flags: dict, phases: list[str] | None = None) -> d
 
 
 def build_planning_brief(
+    *, athlete_model: dict, restrictions: list[dict], phase_briefs: dict[str, dict],
+    candidate_pools: dict[str, dict], omission_ledger: dict[str, dict],
+    rewrite_guidance: dict, plan_input: Any | None = None,
+    computed_support: dict | None = None,
+) -> dict:
+    from .goal_preservation import reconcile_goal_preservation
+
+    brief = _build_planning_brief(
+        athlete_model=athlete_model, restrictions=restrictions, phase_briefs=phase_briefs,
+        candidate_pools=candidate_pools, omission_ledger=omission_ledger,
+        rewrite_guidance=rewrite_guidance, plan_input=plan_input, computed_support=computed_support,
+    )
+    # Open ongoing systems do not yet have a deterministic executable calendar.
+    # The universal selection classification still lives in compressed_priorities;
+    # the resolved-camp contract applies to all dated camps, including D-0.
+    if brief.get("payload_variant") == "open_ongoing_stage2_payload":
+        return brief
+    if "late_fight_session_sequence" in brief:
+        from .goal_preservation import _effective_map
+        # Resolve the actual final sequence, not the earlier weekly mirror.
+        role_map = _effective_map(brief)
+        apply_effective_strength_prescriptions(
+            weekly_role_map=role_map, candidate_pools=candidate_pools, athlete_model=athlete_model,
+        )
+    return reconcile_goal_preservation(brief)
+
+
+def _build_planning_brief(
     *,
     athlete_model: dict,
     restrictions: list[dict],
@@ -1806,19 +1660,26 @@ def _why_log_score_evidence(why_entry: dict) -> dict:
     return build_score_evidence(reasons=reasons, explanation=explanation)
 
 
-def _serialize_strength_option(exercise: dict, why: str, score_evidence: dict | None = None) -> dict:
+def _serialize_strength_option(exercise: dict, why: str, score_evidence: dict | None = None, *, phase: str | None = None) -> dict:
     movement = str(exercise.get("movement", "")).strip().lower().replace(" ", "_")
     movement_patterns = [movement] if movement else []
     movement_patterns.extend(clean_list(exercise.get("tags", [])))
     quality_profile = classify_strength_item(exercise)
     required_equipment = clean_list(exercise.get("required_equipment") or exercise.get("equipment", []))
+    prescription = exercise.get("prescription") or ""
+    if not prescription and phase:
+        # Carry the same actual bank-template dose that Stage 1 renders. A method
+        # token such as "strength" or "power" is not an effective prescription.
+        from .strength import _classify_prescription_type, _prescription_templates
+        prescription = _prescription_templates(phase)[_classify_prescription_type(exercise)]
     return _with_selection_evidence({
         "name": exercise.get("name", "Unnamed"),
         "source": "exercise_bank",
         "movement_patterns": dedupe_preserve_order(movement_patterns),
         "restriction_tags": _extract_restriction_tags(exercise),
         "mechanical_risk_tags": _extract_mechanical_risk_tags(exercise),
-        "prescription": exercise.get("prescription") or exercise.get("method") or "",
+        "prescription": prescription or exercise.get("method") or "",
+        "real_strength_maintenance": exercise.get("real_strength_maintenance") is True,
         "why": why or "balanced selection",
         "quality_class": quality_profile["quality_class"],
         "anchor_capable": quality_profile["anchor_capable"],
@@ -2023,6 +1884,7 @@ def _build_strength_slots(strength_block: dict | None, phase: str) -> list[dict]
                     exercise,
                     reasons.get("explanation", "balanced selection"),
                     _why_log_score_evidence(reasons),
+                    phase=phase,
                 ),
                 "alternates": _build_strength_alternates(
                     strength_block,

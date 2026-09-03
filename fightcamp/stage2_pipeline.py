@@ -501,6 +501,17 @@ def build_stage2_retry(
             "repair_prompt": None,
         }
 
+    if any(item.get("code") == "goal_preservation_failed" for item in validator_report.get("errors", [])):
+        return {
+            "status": _STATUS_FAIL,
+            "validator_report": validator_report,
+            "summary": "FAIL: selected goal coverage requires deterministic planner repair",
+            "summary_lines": summary_lines,
+            "needs_retry": False,
+            "requires_planner_regeneration": True,
+            "repair_prompt": None,
+        }
+
     repair_report = prompt_safe_validator_report(validator_report)
     repair_prompt = build_stage2_repair_prompt(
         planning_brief=planning_brief,
