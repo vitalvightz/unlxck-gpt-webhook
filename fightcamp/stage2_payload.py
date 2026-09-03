@@ -45,7 +45,7 @@ from .stage2_payload_late_fight import (  # noqa: F401  (re-exported for tests/b
     is_low_cost_coexistable_filler,
 )
 from .gap_fill_inserts import apply_gap_fill_inserts
-from .conditioning import athlete_facing_system_label
+from .conditioning import athlete_facing_system_label, technical_footwork_prescription_fields
 from .fight_day_override import apply_fight_day_override_to_weekly_role_map
 from .role_labels import stamp_weekly_role_map_labels
 from .camp_week_fillers import apply_camp_week_fillers
@@ -1837,10 +1837,11 @@ def _serialize_conditioning_option(
     *,
     late_window: str | None = None,
     score_evidence: dict | None = None,
+    stance: str | None = None,
 ) -> dict:
     tags = clean_list(drill.get("tags", []))
     required_equipment = clean_list(drill.get("required_equipment") or drill.get("equipment", []))
-    return _with_selection_evidence({
+    option = {
         "name": drill.get("name", "Unnamed"),
         "source": "conditioning_bank",
         "movement_patterns": dedupe_preserve_order([system] + tags),
@@ -1856,7 +1857,40 @@ def _serialize_conditioning_option(
         "availability_contingency_reason": drill.get("availability_contingency_reason") or "",
         "session_index": drill.get("session_index"),
         "athlete_facing_system_label": athlete_facing_system_label(drill, late_window=late_window),
-    }, drill, score_evidence)
+    }
+    if drill.get("modality") == "technical_footwork":
+        prescription_fields = technical_footwork_prescription_fields(drill, stance=stance)
+        option["prescription"] = " | ".join(
+            part
+            for part in [
+                prescription_fields["timing"],
+                prescription_fields["rest"],
+                drill.get("load") or drill.get("intensity"),
+            ]
+            if part
+        )
+        option["technical_footwork_prescription"] = {
+            key: drill[key]
+            for key in (
+                "cue_source",
+                "cue",
+                "cue_execution",
+                "side_rule",
+                "sets",
+                "reps",
+                "reps_per_side",
+                "rest_sec",
+                "quality_stop_rule",
+            )
+            if key in drill
+        }
+        # Resolved athlete-facing side/stance instruction, not just the raw
+        # side_rule enum, so the finalizer never has to re-derive it from
+        # athlete_snapshot.stance on its own.
+        option["technical_footwork_prescription"]["side_instruction"] = prescription_fields[
+            "side_instruction"
+        ]
+    return _with_selection_evidence(option, drill, score_evidence)
 
 
 def _serialize_rehab_option(
@@ -1929,6 +1963,7 @@ def _build_conditioning_alternates(
     selected_names: set[str],
     current_name: str,
     late_window: str | None = None,
+    stance: str | None = None,
 ) -> list[dict]:
     alternates: list[dict] = []
     seen: set[str] = set()
@@ -1949,6 +1984,7 @@ def _build_conditioning_alternates(
                     reasons=candidate.get("reasons") or {},
                     explanation=candidate.get("explanation"),
                 ),
+                stance=stance,
             )
         )
         seen.add(name)
@@ -2042,7 +2078,13 @@ def _build_strength_slots(strength_block: dict | None, phase: str) -> list[dict]
     return slots
 
 
-def _build_conditioning_slots(phase_block: dict | None, phase: str, *, late_window: str | None = None) -> list[dict]:
+def _build_conditioning_slots(
+    phase_block: dict | None,
+    phase: str,
+    *,
+    late_window: str | None = None,
+    stance: str | None = None,
+) -> list[dict]:
     if not phase_block:
         return []
     reason_lookup = {
@@ -2074,6 +2116,7 @@ def _build_conditioning_slots(phase_block: dict | None, phase: str, *, late_wind
                         reasons.get("explanation", "balanced selection"),
                         late_window=late_window,
                         score_evidence=_why_log_score_evidence(reasons),
+                        stance=stance,
                     ),
                     "alternates": _build_conditioning_alternates(
                         phase_block,
@@ -2081,6 +2124,7 @@ def _build_conditioning_slots(phase_block: dict | None, phase: str, *, late_wind
                         selected_names=selected_names,
                         current_name=name,
                         late_window=late_window,
+                        stance=stance,
                     ),
                     "replace_with_same_role": True,
                     "priority": _conditioning_slot_priority(phase, system, idx),
@@ -2271,7 +2315,10 @@ def build_stage2_payload(
         candidate_pools[phase] = {
             "strength_slots": _build_strength_slots(strength_blocks.get(phase), phase),
             "conditioning_slots": _build_conditioning_slots(
-                conditioning_blocks.get(phase), phase, late_window=late_window
+                conditioning_blocks.get(phase),
+                phase,
+                late_window=late_window,
+                stance=athlete_model.get("stance"),
             ),
             "rehab_slots": _build_rehab_slots(rehab_blocks.get(phase, ""), phase) if has_active_injury else [],
         }

@@ -183,6 +183,10 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext, *, progress_callb
                 "fight_format": context.training_context.fight_format,
             },
             "sport": context.mapped_format,
+            # Preserve the canonical stance in conditioning metadata so any
+            # re-render (coach review, late-fight) resolves the same
+            # technical-footwork side/stance instruction as the first render.
+            "stance": context.training_context.stance,
         }
         conditioning_reason_log[phase] = reasons
         conditioning_blocks[phase] = {
@@ -196,6 +200,7 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext, *, progress_callb
             "num_sessions": render_metadata.get("num_sessions", 1),
             "diagnostic_context": render_metadata.get("diagnostic_context", {}),
             "sport": render_metadata.get("sport"),
+            "stance": render_metadata.get("stance"),
         }
 
     total_elapsed = perf_counter() - conditioning_started

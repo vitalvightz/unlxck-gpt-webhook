@@ -10,7 +10,11 @@ from .calendar_context import (
 from .camp_phases import calculate_phase_weeks
 from .combat_load_policy import PlacementDirective, role_load_profile
 from .normalization import clean_list, normalize_fatigue_level
-from .conditioning import TECHNICAL_FOOTWORK_GROUP, select_technical_footwork_candidates
+from .conditioning import (
+    TECHNICAL_FOOTWORK_GROUP,
+    select_technical_footwork_candidates,
+    technical_footwork_prescription_fields,
+)
 from .coordination_support_library import normalize_sport
 from .late_selector_windows import classify_late_selector_window
 from .restriction_filtering import evaluate_restriction_impact
@@ -1095,13 +1099,33 @@ def _apply_bank_footwork(
     if drill is None:
         role["technical_footwork_fallback"] = True
         return
-    name = str(drill.get("name") or "Technical Footwork")
-    duration = str(drill.get("duration") or "").strip()
+    stance = athlete_model.get("stance")
+    fields = technical_footwork_prescription_fields(drill, stance=stance)
+    name = fields["name"]
     notes = str(drill.get("notes") or "").strip()
+    dose = " ".join(
+        part
+        for part in (fields["timing"], f"Rest: {fields['rest']}." if fields["rest"] and not any(marker in fields["timing"].lower() for marker in ("rest", "reset")) else "")
+        if part
+    )
+    # Same shared "Why: / bulleted activity / indented detail lines" contract as
+    # every other gap-fill insert (see build_watch_display_text,
+    # build_coordination_display_text) so the renderer treats this as one card,
+    # not several stray lines.
+    lines = [f"Why: {notes or 'Keep the technical footwork identity sharp in this gap.'}"]
+    lines.append(f"- {name}: {dose}" if dose else f"- {name}")
+    if fields["cue"]:
+        lines.append(f"  Cue: {fields['cue']}")
+    if fields["cue_execution"]:
+        lines.append(f"  Cue Method: {fields['cue_execution']}")
+    if fields["side_instruction"]:
+        lines.append(f"  Side / Stance: {fields['side_instruction']}")
+    if fields["quality_stop_rule"]:
+        lines.append(f"  Quality Stop: {fields['quality_stop_rule']}")
     role.update(
         {
             "athlete_facing_label": name,
-            "display_text": " ".join(part for part in (duration + "." if duration else "", notes) if part),
+            "display_text": "\n".join(lines),
             "technical_footwork_name": name,
             "technical_footwork_source": "technical_footwork_bank.json",
             "technical_footwork_fallback": False,
