@@ -201,6 +201,8 @@ def test_d4_full_generator_keeps_technical_footwork_sport_specific_and_dedicated
         "boxing": {"boxing"},
         "muay_thai": {"muay_thai", "kickboxing"},
         "mma": {"mma"},
+        "wrestling": {"wrestling"},
+        "bjj": {"bjj"},
     }
     for sport, accepted_tags in cases.items():
         flags = _flags(
@@ -336,24 +338,33 @@ def _selected_names(sport: str, phase: str) -> set[str]:
     }
 
 
-def test_wrestling_compatibility_is_limited_to_a_genuine_shot_angle_drill():
-    assert _WRESTLING_DRILLS == {"Level-Change Feint to Angle"}
-    assert _selected_names("wrestling", "GPP") == set()
-    assert _selected_names("wrestling", "SPP") == _WRESTLING_DRILLS
-    assert _selected_names("wrestling", "TAPER") == set()
+def test_wrestling_compatibility_stays_sparse_and_sport_specific():
+    expected = {"Level-Change Feint to Angle", "Wrestling Stance-Motion Circle Reset"}
+    assert _WRESTLING_DRILLS == expected
+    assert _selected_names("wrestling", "GPP") == {"Wrestling Stance-Motion Circle Reset"}
+    assert _selected_names("wrestling", "SPP") == expected
+    assert _selected_names("wrestling", "TAPER") == {"Wrestling Stance-Motion Circle Reset"}
 
-    drill = _FOOT_BANK["Level-Change Feint to Angle"]
-    note = drill["notes"].lower()
+    shot_angle = _FOOT_BANK["Level-Change Feint to Angle"]
+    note = shot_angle["notes"].lower()
     assert "striking angle" not in note
     assert "instead of shooting" not in note
-    assert "takedown_setup" in drill["tactical_function"]
+    assert "takedown_setup" in shot_angle["tactical_function"]
+
+    stance_motion = _FOOT_BANK["Wrestling Stance-Motion Circle Reset"]
+    assert "takedown_setup" not in stance_motion["tactical_function"]
+    assert "base_recovery" in stance_motion["tactical_function"]
 
 
-def test_bjj_compatibility_is_limited_to_a_grappling_standup_reset():
-    assert _BJJ_DRILLS == {"Submission Hunter Stand-Up Reset"}
-    for phase in ("GPP", "SPP"):
-        assert _selected_names("bjj", phase) == _BJJ_DRILLS
-    assert _selected_names("bjj", "TAPER") == set()
+def test_bjj_compatibility_stays_sparse_and_grappling_specific():
+    expected = {"Submission Hunter Stand-Up Reset", "Standing Guard-Pass Base Circle"}
+    assert _BJJ_DRILLS == expected
+    assert _selected_names("bjj", "GPP") == expected
+    assert _selected_names("bjj", "SPP") == expected
+    assert _selected_names("bjj", "TAPER") == {"Standing Guard-Pass Base Circle"}
+
+    standing_pass = _FOOT_BANK["Standing Guard-Pass Base Circle"]
+    assert "mma" not in {str(tag).lower() for tag in standing_pass.get("tags", [])}
 
     drill = _FOOT_BANK["Submission Hunter Stand-Up Reset"]
     note = drill["notes"].lower()

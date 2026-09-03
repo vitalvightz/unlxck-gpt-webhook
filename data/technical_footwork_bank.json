@@ -2,7 +2,11 @@
   {
     "name": "Stance Reset Line Drill",
     "equipment": [],
-    "phases": ["GPP", "SPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
     "system": "aerobic",
     "modality": "technical_footwork",
     "duration": "2 x 60 sec technical sets, 60 sec reset",
@@ -21,9 +25,14 @@
     ],
     "footwork_pattern": "stance_reset",
     "directionality": "multi_directional",
-    "tactical_function": ["range_management", "base_recovery"],
+    "tactical_function": [
+      "range_management",
+      "base_recovery"
+    ],
     "reactive_level": "closed",
-    "cue_source": ["self"],
+    "cue_source": [
+      "self"
+    ],
     "cue": "Use a floor line as the reference. Move on your own start, then recover stance without crossing the feet.",
     "side_rule": "both_directions",
     "braking_demand": "low",
@@ -39,13 +48,25 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
-    "mechanical_risk_tags": ["mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"]
+    "mechanical_risk_tags": [
+      "mech_lower_limb_weight_bearing"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ]
   },
   {
     "name": "Step-Back Pivot Reset",
     "equipment": [],
-    "phases": ["GPP", "SPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
     "system": "aerobic",
     "modality": "technical_footwork",
     "duration": "2 x 75 sec technical sets, 60 sec reset",
@@ -66,9 +87,17 @@
     ],
     "footwork_pattern": "retreat_pivot",
     "directionality": "rotational",
-    "tactical_function": ["range_management", "defensive_exit", "angle_creation", "counter_setup"],
+    "tactical_function": [
+      "range_management",
+      "defensive_exit",
+      "angle_creation",
+      "counter_setup"
+    ],
     "reactive_level": "semi_reactive",
-    "cue_source": ["self", "visual"],
+    "cue_source": [
+      "self",
+      "visual"
+    ],
     "cue": "On your own start or a random forward visual cue, step out of range, pivot off line, and reset before re-entry.",
     "side_rule": "both_directions",
     "braking_demand": "moderate",
@@ -84,13 +113,26 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_hip_rotation", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_hip_rotation",
+      "mech_lower_limb_weight_bearing"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ]
   },
   {
     "name": "Lateral Exit to Re-Enter",
     "equipment": [],
-    "phases": ["GPP", "SPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
     "system": "aerobic",
     "modality": "technical_footwork",
     "duration": "2 x 75 sec technical sets, 60 sec reset",
@@ -110,9 +152,16 @@
     ],
     "footwork_pattern": "lateral_shift",
     "directionality": "lateral",
-    "tactical_function": ["range_management", "defensive_exit", "angle_creation"],
+    "tactical_function": [
+      "range_management",
+      "defensive_exit",
+      "angle_creation"
+    ],
     "reactive_level": "semi_reactive",
-    "cue_source": ["self", "visual"],
+    "cue_source": [
+      "self",
+      "visual"
+    ],
     "cue": "Use a self-chosen or random left/right visual cue to exit laterally, settle the base, then re-enter.",
     "side_rule": "both_directions",
     "braking_demand": "moderate",
@@ -128,13 +177,25 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_lower_limb_weight_bearing"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ]
   },
   {
     "name": "45-Degree Angle Step to Jab Reset",
     "equipment": [],
-    "phases": ["GPP", "SPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
     "system": "aerobic",
     "modality": "technical_footwork",
     "duration": "2 x 75 sec technical sets, 60 sec reset",
@@ -156,9 +217,16 @@
     ],
     "footwork_pattern": "angle_step",
     "directionality": "diagonal",
-    "tactical_function": ["angle_creation", "counter_setup", "pressure"],
+    "tactical_function": [
+      "angle_creation",
+      "counter_setup",
+      "pressure"
+    ],
     "reactive_level": "semi_reactive",
-    "cue_source": ["self", "visual"],
+    "cue_source": [
+      "self",
+      "visual"
+    ],
     "cue": "On your own start or a random left/right visual cue, take the 45-degree angle and reset behind the jab.",
     "side_rule": "both_directions",
     "braking_demand": "low",
@@ -174,13 +242,25 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_hip_rotation", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_hip_rotation",
+      "mech_lower_limb_weight_bearing"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ]
   },
   {
     "name": "Check-Hook Pivot Out Shadow Drill",
     "equipment": [],
-    "phases": ["SPP", "TAPER"],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "system": "aerobic",
     "modality": "technical_footwork",
     "duration": "2 x 75 sec technical sets, 60 sec reset",
@@ -200,9 +280,16 @@
     ],
     "footwork_pattern": "pivot_exit",
     "directionality": "rotational",
-    "tactical_function": ["defensive_exit", "angle_creation", "counter_setup"],
+    "tactical_function": [
+      "defensive_exit",
+      "angle_creation",
+      "counter_setup"
+    ],
     "reactive_level": "semi_reactive",
-    "cue_source": ["self", "visual"],
+    "cue_source": [
+      "self",
+      "visual"
+    ],
     "cue": "Throw the shadow check hook on your own start or a random pressure cue, then pivot clear and recover stance.",
     "side_rule": "both_directions",
     "braking_demand": "moderate",
@@ -218,13 +305,25 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_hip_rotation", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_hip_rotation",
+      "mech_lower_limb_weight_bearing"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ]
   },
   {
     "name": "Corner Escape L-Step",
     "equipment": [],
-    "phases": ["SPP", "TAPER"],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "system": "aerobic",
     "modality": "technical_footwork",
     "duration": "2 x 75 sec technical sets, 60 sec reset",
@@ -247,9 +346,16 @@
     ],
     "footwork_pattern": "corner_escape",
     "directionality": "lateral",
-    "tactical_function": ["defensive_exit", "exit_lane_control", "angle_creation"],
+    "tactical_function": [
+      "defensive_exit",
+      "exit_lane_control",
+      "angle_creation"
+    ],
     "reactive_level": "semi_reactive",
-    "cue_source": ["self", "visual"],
+    "cue_source": [
+      "self",
+      "visual"
+    ],
     "cue": "Start from a marked corner. On your own start or a random left/right visual cue, L-step to the open lane and reset.",
     "side_rule": "both_directions",
     "braking_demand": "moderate",
@@ -265,13 +371,25 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_hip_rotation", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7"]
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_hip_rotation",
+      "mech_lower_limb_weight_bearing"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7"
+    ]
   },
   {
     "name": "Ring Cut-Off Walkdown",
     "equipment": [],
-    "phases": ["GPP", "SPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
     "system": "aerobic",
     "modality": "technical_footwork",
     "duration": "2 x 90 sec technical sets, 60 sec reset",
@@ -290,9 +408,15 @@
     ],
     "footwork_pattern": "ring_cut",
     "directionality": "forward",
-    "tactical_function": ["pressure", "ring_cutting"],
+    "tactical_function": [
+      "pressure",
+      "ring_cutting"
+    ],
     "reactive_level": "semi_reactive",
-    "cue_source": ["self", "visual"],
+    "cue_source": [
+      "self",
+      "visual"
+    ],
     "cue": "Follow a self-planned or random visual escape path and close the angle without crossing the feet or chasing.",
     "side_rule": "both_directions",
     "braking_demand": "low",
@@ -308,13 +432,23 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
-    "mechanical_risk_tags": ["mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"]
+    "mechanical_risk_tags": [
+      "mech_lower_limb_weight_bearing"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ]
   },
   {
     "name": "Pressure Step-Cut Reset",
     "equipment": [],
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "system": "aerobic",
     "modality": "technical_footwork",
     "duration": "2 sets x 4 clean reactions each direction, full stance reset between reps",
@@ -335,9 +469,17 @@
     ],
     "footwork_pattern": "exit_lane_cut",
     "directionality": "lateral",
-    "tactical_function": ["pressure", "exit_lane_control", "ring_cutting"],
+    "tactical_function": [
+      "pressure",
+      "exit_lane_control",
+      "ring_cutting"
+    ],
     "reactive_level": "reactive",
-    "cue_source": ["coach", "partner", "visual"],
+    "cue_source": [
+      "coach",
+      "partner",
+      "visual"
+    ],
     "cue": "React to a partner exit, coach direction call, or random left/right visual cue. Cut that lane and fully rebuild the base before the next rep.",
     "side_rule": "both_directions",
     "braking_demand": "high",
@@ -353,13 +495,24 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_deceleration", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8"]
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_lower_limb_weight_bearing"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8"
+    ]
   },
   {
     "name": "Clinch Exit Square-Up Reset",
     "equipment": [],
-    "phases": ["GPP", "SPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
     "system": "aerobic",
     "modality": "technical_footwork",
     "duration": "2 x 75 sec technical sets, 60 sec reset",
@@ -379,9 +532,16 @@
     ],
     "footwork_pattern": "clinch_exit",
     "directionality": "multi_directional",
-    "tactical_function": ["clinch_management", "defensive_exit", "base_recovery"],
+    "tactical_function": [
+      "clinch_management",
+      "defensive_exit",
+      "base_recovery"
+    ],
     "reactive_level": "semi_reactive",
-    "cue_source": ["self", "partner"],
+    "cue_source": [
+      "self",
+      "partner"
+    ],
     "cue": "Use a rehearsed break or a light partner release. Disengage, square the base to the threat, then reset before re-entry.",
     "side_rule": "both_directions",
     "braking_demand": "moderate",
@@ -397,13 +557,25 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_hip_rotation", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
+    "mechanical_risk_tags": [
+      "mech_hip_rotation",
+      "mech_lower_limb_weight_bearing"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ]
   },
   {
     "name": "Kick Exit and Re-Stance Walkthrough",
     "equipment": [],
-    "phases": ["GPP", "SPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
     "system": "aerobic",
     "modality": "technical_footwork",
     "duration": "2 x 75 sec technical sets, 60 sec reset",
@@ -424,9 +596,15 @@
     ],
     "footwork_pattern": "kick_recovery",
     "directionality": "rotational",
-    "tactical_function": ["kick_recovery", "base_recovery", "range_management"],
+    "tactical_function": [
+      "kick_recovery",
+      "base_recovery",
+      "range_management"
+    ],
     "reactive_level": "closed",
-    "cue_source": ["self"],
+    "cue_source": [
+      "self"
+    ],
     "cue": "After each familiar round-kick pattern, place the kicking leg with control, exit, and rebuild stance before repeating.",
     "side_rule": "both_directions",
     "braking_demand": "moderate",
@@ -442,13 +620,27 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_plantarflexion", "mech_hip_rotation", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"]
+    "mechanical_risk_tags": [
+      "mech_plantarflexion",
+      "mech_hip_rotation",
+      "mech_lower_limb_weight_bearing"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ]
   },
   {
     "name": "Teep Retreat and Re-Stance",
     "equipment": [],
-    "phases": ["GPP", "SPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
     "system": "aerobic",
     "modality": "technical_footwork",
     "duration": "2 x 75 sec technical sets, 60 sec reset",
@@ -469,9 +661,15 @@
     ],
     "footwork_pattern": "teep_retreat",
     "directionality": "backward",
-    "tactical_function": ["range_management", "kick_recovery", "defensive_exit"],
+    "tactical_function": [
+      "range_management",
+      "kick_recovery",
+      "defensive_exit"
+    ],
     "reactive_level": "closed",
-    "cue_source": ["self"],
+    "cue_source": [
+      "self"
+    ],
     "cue": "Complete one controlled teep pattern, retreat off the plant, and regain range and stance before the next repetition.",
     "side_rule": "both_directions",
     "braking_demand": "moderate",
@@ -487,13 +685,23 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
-    "mechanical_risk_tags": ["mech_plantarflexion", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7"]
+    "mechanical_risk_tags": [
+      "mech_plantarflexion",
+      "mech_lower_limb_weight_bearing"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7"
+    ]
   },
   {
     "name": "Check and Return Step",
     "equipment": [],
-    "phases": ["SPP", "TAPER"],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "system": "aerobic",
     "modality": "technical_footwork",
     "duration": "2 x 75 sec technical sets, 60 sec reset",
@@ -515,9 +723,17 @@
     ],
     "footwork_pattern": "check_return",
     "directionality": "lateral",
-    "tactical_function": ["kick_recovery", "defensive_exit", "counter_setup"],
+    "tactical_function": [
+      "kick_recovery",
+      "defensive_exit",
+      "counter_setup"
+    ],
     "reactive_level": "semi_reactive",
-    "cue_source": ["self", "partner", "visual"],
+    "cue_source": [
+      "self",
+      "partner",
+      "visual"
+    ],
     "cue": "Use a rehearsed kick line, light partner feed, or random side cue. Check, plant, and angle out to the counter position.",
     "side_rule": "both_directions",
     "braking_demand": "moderate",
@@ -533,13 +749,25 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_plantarflexion", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7"]
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_plantarflexion",
+      "mech_lower_limb_weight_bearing"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7"
+    ]
   },
   {
     "name": "Switch-Step Stance Recovery",
     "equipment": [],
-    "phases": ["GPP", "SPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
     "system": "aerobic",
     "modality": "technical_footwork",
     "duration": "2 x 75 sec technical sets, 60 sec reset",
@@ -561,9 +789,15 @@
     ],
     "footwork_pattern": "switch_step",
     "directionality": "rotational",
-    "tactical_function": ["base_recovery", "kick_recovery", "range_management"],
+    "tactical_function": [
+      "base_recovery",
+      "kick_recovery",
+      "range_management"
+    ],
     "reactive_level": "closed",
-    "cue_source": ["self"],
+    "cue_source": [
+      "self"
+    ],
     "cue": "Switch once, settle the new base, and confirm guard and balance before switching back.",
     "side_rule": "alternate_stances",
     "braking_demand": "moderate",
@@ -579,13 +813,26 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
-    "mechanical_risk_tags": ["mech_hip_rotation", "mech_plantarflexion", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
+    "mechanical_risk_tags": [
+      "mech_hip_rotation",
+      "mech_plantarflexion",
+      "mech_lower_limb_weight_bearing"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ]
   },
   {
     "name": "Cage Circle and Cut-Off",
     "equipment": [],
-    "phases": ["GPP", "SPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
     "system": "aerobic",
     "modality": "technical_footwork",
     "duration": "2 x 90 sec technical sets, 60 sec reset",
@@ -605,9 +852,18 @@
     ],
     "footwork_pattern": "cage_circle",
     "directionality": "lateral",
-    "tactical_function": ["pressure", "ring_cutting", "cage_control", "exit_lane_control"],
+    "tactical_function": [
+      "pressure",
+      "ring_cutting",
+      "cage_control",
+      "exit_lane_control"
+    ],
     "reactive_level": "semi_reactive",
-    "cue_source": ["self", "partner", "visual"],
+    "cue_source": [
+      "self",
+      "partner",
+      "visual"
+    ],
     "cue": "Track a self-planned path, light partner circle, or random left/right visual cue. Close the escape lane while keeping hips and stance oriented.",
     "side_rule": "both_directions",
     "braking_demand": "moderate",
@@ -623,13 +879,24 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"]
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_lower_limb_weight_bearing"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ]
   },
   {
     "name": "Scramble-to-Strike Rebase",
     "equipment": [],
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "system": "aerobic",
     "modality": "technical_footwork",
     "duration": "3 sets x 3 clean transitions, full base reset between reps",
@@ -650,9 +917,16 @@
     ],
     "footwork_pattern": "scramble_rebase",
     "directionality": "multi_directional",
-    "tactical_function": ["scramble_recovery", "standup_transition", "base_recovery"],
+    "tactical_function": [
+      "scramble_recovery",
+      "standup_transition",
+      "base_recovery"
+    ],
     "reactive_level": "semi_reactive",
-    "cue_source": ["self", "visual"],
+    "cue_source": [
+      "self",
+      "visual"
+    ],
     "cue": "Start from a different scramble shape each rep, chosen before the rep or by a random visual cue. Stand, brake, and establish a balanced striking base.",
     "side_rule": "both_directions",
     "braking_demand": "high",
@@ -668,13 +942,22 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_deceleration", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8"]
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_lower_limb_weight_bearing"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8"
+    ]
   },
   {
     "name": "Sprawl Exit to Ring Angle",
     "equipment": [],
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "system": "aerobic",
     "modality": "technical_footwork",
     "duration": "2 sets x 3 clean reactions each direction, full stance reset between reps",
@@ -696,9 +979,17 @@
     ],
     "footwork_pattern": "sprawl_exit",
     "directionality": "multi_directional",
-    "tactical_function": ["takedown_defense", "scramble_recovery", "angle_creation"],
+    "tactical_function": [
+      "takedown_defense",
+      "scramble_recovery",
+      "angle_creation"
+    ],
     "reactive_level": "reactive",
-    "cue_source": ["coach", "partner", "visual"],
+    "cue_source": [
+      "coach",
+      "partner",
+      "visual"
+    ],
     "cue": "React to a light partner shot, coach shot call, or random visual shot cue. Sprawl, clear the line, exit to the called side, and fully rebase.",
     "side_rule": "both_directions",
     "braking_demand": "high",
@@ -714,13 +1005,22 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_deceleration", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8"]
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_lower_limb_weight_bearing"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8"
+    ]
   },
   {
     "name": "Level-Change Feint to Angle",
     "equipment": [],
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "system": "aerobic",
     "modality": "technical_footwork",
     "duration": "2 sets x 4 clean reactions each direction, full stance reset between reps",
@@ -742,9 +1042,17 @@
     ],
     "footwork_pattern": "level_change_feint",
     "directionality": "forward",
-    "tactical_function": ["pressure", "takedown_setup", "angle_creation"],
+    "tactical_function": [
+      "pressure",
+      "takedown_setup",
+      "angle_creation"
+    ],
     "reactive_level": "reactive",
-    "cue_source": ["coach", "partner", "visual"],
+    "cue_source": [
+      "coach",
+      "partner",
+      "visual"
+    ],
     "cue": "Show the level change, then react to a partner response, coach direction call, or random left/right visual cue. Step to the new attack angle and reset.",
     "side_rule": "both_directions",
     "braking_demand": "high",
@@ -760,13 +1068,24 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_deceleration", "mech_hip_rotation", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8"]
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_hip_rotation",
+      "mech_lower_limb_weight_bearing"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8"
+    ]
   },
   {
     "name": "Submission Hunter Stand-Up Reset",
     "equipment": [],
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "system": "aerobic",
     "modality": "technical_footwork",
     "duration": "2 x 75 sec technical sets, 60 sec reset",
@@ -784,9 +1103,14 @@
     ],
     "footwork_pattern": "standup_rebase",
     "directionality": "multi_directional",
-    "tactical_function": ["standup_transition", "base_recovery"],
+    "tactical_function": [
+      "standup_transition",
+      "base_recovery"
+    ],
     "reactive_level": "closed",
-    "cue_source": ["self"],
+    "cue_source": [
+      "self"
+    ],
     "cue": "Choose the same controlled grappling stand-up each rep, establish base and posture, then reset the connection or distance position.",
     "side_rule": "both_directions",
     "braking_demand": "moderate",
@@ -802,13 +1126,22 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8"]
+    "mechanical_risk_tags": [
+      "mech_lower_limb_weight_bearing"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8"
+    ]
   },
   {
     "name": "Thai Ring-Cut Pressure Walkdown",
     "equipment": [],
-    "phases": ["GPP", "SPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
     "system": "aerobic",
     "modality": "technical_footwork",
     "duration": "2 x 90 sec technical sets, 60 sec reset",
@@ -830,9 +1163,17 @@
     ],
     "footwork_pattern": "thai_ring_cut",
     "directionality": "multi_directional",
-    "tactical_function": ["pressure", "ring_cutting", "exit_lane_control"],
+    "tactical_function": [
+      "pressure",
+      "ring_cutting",
+      "exit_lane_control"
+    ],
     "reactive_level": "semi_reactive",
-    "cue_source": ["self", "partner", "visual"],
+    "cue_source": [
+      "self",
+      "partner",
+      "visual"
+    ],
     "cue": "Track a self-planned path, light partner escape, or random left/right visual cue. Step across the escape lane, keep stance width, and herd rather than chase.",
     "side_rule": "both_directions",
     "braking_demand": "moderate",
@@ -848,13 +1189,24 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_lower_limb_weight_bearing"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ]
   },
   {
     "name": "Long-Guard Clinch Entry Step",
     "equipment": [],
-    "phases": ["SPP", "TAPER"],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "system": "aerobic",
     "modality": "technical_footwork",
     "duration": "2 sets x 4 clean entries each direction, full stance reset between reps",
@@ -876,9 +1228,17 @@
     ],
     "footwork_pattern": "clinch_entry",
     "directionality": "forward",
-    "tactical_function": ["clinch_management", "pressure", "base_recovery"],
+    "tactical_function": [
+      "clinch_management",
+      "pressure",
+      "base_recovery"
+    ],
     "reactive_level": "semi_reactive",
-    "cue_source": ["self", "partner", "visual"],
+    "cue_source": [
+      "self",
+      "partner",
+      "visual"
+    ],
     "cue": "From a guarded jab, parry, or long-guard shape, step to the outside lane and close to clinch range. Use a light partner or random visual cue, establish base before the simulated tie, then reset.",
     "side_rule": "both_directions",
     "braking_demand": "moderate",
@@ -894,13 +1254,25 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_hip_rotation", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7"]
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_hip_rotation",
+      "mech_lower_limb_weight_bearing"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7"
+    ]
   },
   {
     "name": "Shot-Line Circle-Off Reset",
     "equipment": [],
-    "phases": ["GPP", "SPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
     "system": "aerobic",
     "modality": "technical_footwork",
     "duration": "2 sets x 4 clean exits each direction, full stance reset between reps",
@@ -922,9 +1294,18 @@
     ],
     "footwork_pattern": "shot_line_circle_off",
     "directionality": "lateral",
-    "tactical_function": ["defensive_exit", "range_management", "angle_creation", "takedown_defense"],
+    "tactical_function": [
+      "defensive_exit",
+      "range_management",
+      "angle_creation",
+      "takedown_defense"
+    ],
     "reactive_level": "semi_reactive",
-    "cue_source": ["self", "partner", "visual"],
+    "cue_source": [
+      "self",
+      "partner",
+      "visual"
+    ],
     "cue": "On a straight-pressure or shot-line cue, step laterally off the line before reaching the fence, reorient the hips to the opponent, and rebuild a striking and takedown-ready stance.",
     "side_rule": "both_directions",
     "braking_demand": "moderate",
@@ -940,13 +1321,26 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_deceleration", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_lower_limb_weight_bearing"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ]
   },
   {
     "name": "Kick-Recovery Anti-Shot Rebase",
     "equipment": [],
-    "phases": ["GPP", "SPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
     "system": "aerobic",
     "modality": "technical_footwork",
     "duration": "2 sets x 4 clean recoveries each side, full stance reset between reps",
@@ -966,9 +1360,17 @@
     ],
     "footwork_pattern": "mma_kick_recovery",
     "directionality": "rotational",
-    "tactical_function": ["kick_recovery", "base_recovery", "range_management", "takedown_defense"],
+    "tactical_function": [
+      "kick_recovery",
+      "base_recovery",
+      "range_management",
+      "takedown_defense"
+    ],
     "reactive_level": "semi_reactive",
-    "cue_source": ["self", "visual"],
+    "cue_source": [
+      "self",
+      "visual"
+    ],
     "cue": "After one familiar kick motion, use a self-start or random shot/no-shot visual cue. Place the kicking leg under control, recover hip position, and finish in a stance that can immediately defend a level change.",
     "side_rule": "both_directions",
     "braking_demand": "moderate",
@@ -984,13 +1386,26 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_plantarflexion", "mech_hip_rotation", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
+    "mechanical_risk_tags": [
+      "mech_plantarflexion",
+      "mech_hip_rotation",
+      "mech_lower_limb_weight_bearing"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ]
   },
   {
     "name": "Fence Exit to Center Rebase",
     "equipment": [],
-    "phases": ["GPP", "SPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
     "system": "aerobic",
     "modality": "technical_footwork",
     "duration": "2 sets x 4 clean exits each direction, full stance reset between reps",
@@ -1004,16 +1419,23 @@
       "angles",
       "movement_quality",
       "mma",
-      "counter_striker",
-      "distance_striker",
       "mech_change_of_direction",
       "mech_lower_limb_weight_bearing"
     ],
     "footwork_pattern": "fence_exit",
     "directionality": "lateral",
-    "tactical_function": ["defensive_exit", "cage_control", "range_management", "angle_creation"],
+    "tactical_function": [
+      "defensive_exit",
+      "cage_control",
+      "range_management",
+      "angle_creation"
+    ],
     "reactive_level": "semi_reactive",
-    "cue_source": ["self", "partner", "visual"],
+    "cue_source": [
+      "self",
+      "partner",
+      "visual"
+    ],
     "cue": "Start one step from a marked fence line. On a self-start, light partner pressure, or random left/right cue, circle along the boundary, turn the corner, and rebase facing center before resetting.",
     "side_rule": "both_directions",
     "braking_demand": "moderate",
@@ -1029,13 +1451,25 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_lower_limb_weight_bearing"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ]
   },
   {
     "name": "Wrestling Stance-Motion Circle Reset",
     "equipment": [],
-    "phases": ["GPP", "SPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
     "system": "aerobic",
     "modality": "technical_footwork",
     "duration": "2 x 60 sec technical sets, 60 sec reset",
@@ -1057,9 +1491,16 @@
     ],
     "footwork_pattern": "wrestling_stance_motion",
     "directionality": "multi_directional",
-    "tactical_function": ["takedown_setup", "base_recovery", "angle_creation"],
+    "tactical_function": [
+      "base_recovery",
+      "angle_creation"
+    ],
     "reactive_level": "semi_reactive",
-    "cue_source": ["self", "partner", "visual"],
+    "cue_source": [
+      "self",
+      "partner",
+      "visual"
+    ],
     "cue": "Move from wrestling stance on a self-planned path, mirror a light partner, or follow a random direction cue. Circle without crossing the feet, keep level and head position available, then settle into attack-ready base.",
     "side_rule": "both_directions",
     "braking_demand": "low",
@@ -1075,13 +1516,26 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"]
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_lower_limb_weight_bearing"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ]
   },
   {
     "name": "Standing Guard-Pass Base Circle",
     "equipment": [],
-    "phases": ["GPP", "SPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
     "system": "aerobic",
     "modality": "technical_footwork",
     "duration": "2 x 60 sec technical sets, 60 sec reset",
@@ -1101,9 +1555,14 @@
     ],
     "footwork_pattern": "standing_pass_circle",
     "directionality": "lateral",
-    "tactical_function": ["base_recovery", "angle_creation"],
+    "tactical_function": [
+      "base_recovery",
+      "angle_creation"
+    ],
     "reactive_level": "closed",
-    "cue_source": ["self"],
+    "cue_source": [
+      "self"
+    ],
     "cue": "Use a floor marker as the guard line. Step around it with knees soft and feet under the hips, pause in a balanced standing passing base, then circle back without crossing the feet.",
     "side_rule": "both_directions",
     "braking_demand": "low",
@@ -1119,7 +1578,16 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
-    "mechanical_risk_tags": ["mech_change_of_direction", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"]
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_lower_limb_weight_bearing"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ]
   }
 ]

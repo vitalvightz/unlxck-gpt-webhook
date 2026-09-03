@@ -47,7 +47,7 @@ def test_research_expansion_adds_exactly_the_expected_new_patterns():
     [
         ("muay_thai", "pressure_fighter", "Thai Ring-Cut Pressure Walkdown", "ring_cutting"),
         ("muay_thai", "clinch_fighter", "Long-Guard Clinch Entry Step", "clinch_management"),
-        ("mma", "counter_striker", "Fence Exit to Center Rebase", "defensive_exit"),
+        ("mma", "counter_striker", "Shot-Line Circle-Off Reset", "defensive_exit"),
         ("mma", "kicker", "Kick-Recovery Anti-Shot Rebase", "kick_recovery"),
     ],
 )
@@ -82,6 +82,15 @@ def test_mma_defensive_exits_cover_fence_and_open_space_without_dead_bank_conten
     )
     assert next_choice is not None
     assert next_choice["name"] == "Shot-Line Circle-Off Reset"
+
+
+def test_wrestling_spp_keeps_the_reactive_shot_angle_as_primary_choice():
+    selected = conditioning.select_technical_footwork_drill(
+        _flags(sport="wrestling", style="wrestler", phase="SPP", days=21), set(), []
+    )
+
+    assert selected is not None
+    assert selected["name"] == "Level-Change Feint to Angle"
 
 
 def test_wrestling_gets_a_low_cost_taper_stance_motion_pattern():
