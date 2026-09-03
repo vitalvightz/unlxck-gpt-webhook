@@ -1,0 +1,312 @@
+name: One-shot Cubic 2419 fix
+
+on:
+  push:
+    branches:
+      - codex/remove-stage1-athlete-fallback
+    paths:
+      - ".github/workflows/one-shot-cubic-2419.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/remove-stage1-athlete-fallback
+          fetch-depth: 0
+      - name: Apply reviewed fixes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          stage2_path = Path("api/stage2_automation.py")
+          text = stage2_path.read_text()
+
+          def replace_once(old: str, new: str) -> None:
+              global text
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"expected exactly one match, got {count}: {old[:120]!r}")
+              text = text.replace(old, new, 1)
+
+          replace_once(
+              '''    Carries an optional ``stage2_cost`` payload (token/cost telemetry captured up
+    to the point of failure) so the orchestrator can still persist what is known
+    about a failed attempt.
+
+    ``provider_request_started`` records whether a request was actually issued to
+    the provider. It stays False for failures raised before the call — a prompt
+    over the budget, or an unconfigured automator — so those are not counted as
+    provider attempts in the cost/audit telemetry.
+    """
+
+    stage2_cost: dict[str, Any] | None = None
+    provider_request_started: bool = False
+''',
+              '''    Carries an optional ``stage2_cost`` payload (token/cost telemetry captured up
+    to the point of failure) so the orchestrator can still persist what is known
+    about a failed attempt.
+    """
+
+    stage2_cost: dict[str, Any] | None = None
+''',
+          )
+
+          replace_once(
+              '''\n\ndef _mark_provider_request_started(error: Stage2AutomationError) -> Stage2AutomationError:\n    error.provider_request_started = True\n    return error\n''',
+              '',
+          )
+
+          replace_once(
+              '''            if _is_quota_or_rate_limit_error(exc):
+                raise _mark_provider_request_started(
+                    _with_stage2_cost(
+                        Stage2AutomationError(
+                            "Stage 2 stopped: OpenAI quota/rate limit hit. No further retry attempted."
+                        ),
+                        failure_cost,
+                    )
+                ) from exc
+''',
+              '''            if _is_quota_or_rate_limit_error(exc):
+                raise _with_stage2_cost(
+                    Stage2AutomationError(
+                        "Stage 2 stopped: OpenAI quota/rate limit hit. No further retry attempted."
+                    ),
+                    failure_cost,
+                ) from exc
+''',
+          )
+
+          replace_once(
+              '''            raise _mark_provider_request_started(
+                _with_stage2_cost(
+                    Stage2AutomationError("Stage 2 model request failed. Check server logs."),
+                    failure_cost,
+                )
+            ) from exc
+''',
+              '''            raise _with_stage2_cost(
+                Stage2AutomationError("Stage 2 model request failed. Check server logs."),
+                failure_cost,
+            ) from exc
+''',
+          )
+
+          replace_once(
+              '''            raise _mark_provider_request_started(
+                _with_stage2_cost(
+                    error, _build_stage2_cost(self.model, prompt=prompt, response=response)
+                )
+            )
+''',
+              '''            raise _with_stage2_cost(
+                error, _build_stage2_cost(self.model, prompt=prompt, response=response)
+            )
+''',
+          )
+
+          replace_once(
+              '''        running_usd = (merged.get("stage2_estimated_cost_usd") or 0.0) + (
+            cost.get("stage2_estimated_cost_usd") or 0.0
+        )
+        merged = dict(cost)
+        merged.update(running_tokens)
+        merged["stage2_estimated_cost_usd"] = running_usd
+''',
+              '''        running_usd = (merged.get("stage2_estimated_cost_usd") or 0.0) + (
+            cost.get("stage2_estimated_cost_usd") or 0.0
+        )
+        incomplete_response_seen = bool(merged.get("stage2_incomplete_response")) or bool(
+            cost.get("stage2_incomplete_response")
+        )
+        merged = dict(cost)
+        merged.update(running_tokens)
+        merged["stage2_estimated_cost_usd"] = running_usd
+        if incomplete_response_seen:
+            # Incomplete-response audit is sticky across repair/structured calls.
+            # A later successful call must not erase that an earlier Stage 2
+            # response was provider-truncated.
+            merged["stage2_incomplete_response"] = True
+''',
+          )
+
+          replace_once(
+              '''        if bool(final_cost.get("stage2_incomplete_response")):
+            # The provider returned real Stage 2 text but marked the response
+            # incomplete. Keep that Stage 2 output athlete-facing, never replace
+            # it with Stage 1, and force the admin-visible flagged state.
+            partial_report = dict(first_review["validator_report"])
+            warnings = list(partial_report.get("warnings") or [])
+            warnings.append(
+                {
+                    "code": "stage2_incomplete_response",
+                    "message": "Provider marked the Stage 2 response incomplete; partial Stage 2 text was released instead of falling back to Stage 1.",
+                }
+            )
+''',
+              '''        final_response_incomplete = bool(final_cost.get("stage2_incomplete_response"))
+        if bool(plan_text_cost.get("stage2_incomplete_response")):
+            # Incomplete-response audit survives an effective-dose repair. If the
+            # final call itself was incomplete, the partial Stage 2 body is the
+            # athlete-facing plan. If only an earlier call was incomplete, the
+            # repaired Stage 2 body stays athlete-facing but the audit flag remains.
+            partial_report = dict(first_review["validator_report"])
+            warnings = list(partial_report.get("warnings") or [])
+            warning_message = (
+                "Provider marked the athlete-facing Stage 2 response incomplete; partial Stage 2 text was released instead of falling back to Stage 1."
+                if final_response_incomplete
+                else "Provider marked an earlier Stage 2 response incomplete; a subsequent Stage 2 repair produced the athlete-facing plan."
+            )
+            warnings.append(
+                {
+                    "code": "stage2_incomplete_response",
+                    "message": warning_message,
+                }
+            )
+''',
+          )
+
+          stage2_path.write_text(text)
+
+          runtime_path = Path("tests/test_generation_runtime.py")
+          runtime = runtime_path.read_text()
+          old = '''    error = Stage2AutomationError("Stage 2 first_pass prompt too large: 214880 chars > 180000")\n    assert error.provider_request_started is False\n'''
+          new = '''    error = Stage2AutomationError("Stage 2 first_pass prompt too large: 214880 chars > 180000")\n'''
+          if runtime.count(old) != 1:
+              raise SystemExit("provider_request_started runtime assertion not found exactly once")
+          runtime_path.write_text(runtime.replace(old, new, 1))
+
+          focused_path = Path("tests/test_stage2_no_stage1_fallback.py")
+          focused = focused_path.read_text()
+          marker = "def test_incomplete_stage2_plan_is_released_flagged_not_replaced_by_stage1(monkeypatch):"
+          if marker not in focused:
+              raise SystemExit("focused regression anchor missing")
+          if "test_incomplete_first_pass_audit_survives_effective_dose_repair" in focused:
+              raise SystemExit("repair regression already present")
+
+          focused += r'''
+
+
+class _SequentialResponses:
+    def __init__(self, responses):
+        self._responses = list(responses)
+        self.requests: list[dict] = []
+
+    def stream(self, **request):
+        self.requests.append(request)
+        if not self._responses:
+            raise AssertionError("unexpected extra Stage 2 model call")
+        return _Stream(self._responses.pop(0))
+
+
+class _SequentialClient:
+    def __init__(self, responses):
+        self.responses = _SequentialResponses(responses)
+
+
+def _complete_response(text: str):
+    return SimpleNamespace(
+        id="resp_complete",
+        status="completed",
+        incomplete_details=None,
+        output_text=text,
+        usage={"input_tokens": 120, "output_tokens": 60, "total_tokens": 180},
+    )
+
+
+def test_incomplete_first_pass_audit_survives_effective_dose_repair(monkeypatch):
+    automator = OpenAIStage2Automator(
+        client=_SequentialClient(
+            [
+                _incomplete_response("# Partial Stage 2 plan\n\nNeeds dose repair."),
+                _complete_response("# Repaired Stage 2 plan\n\nAthlete-facing repaired output."),
+            ]
+        ),
+        model="test-model",
+    )
+
+    monkeypatch.setattr(
+        stage2_module,
+        "build_stage2_package",
+        lambda **_: {
+            "draft_plan_text": "# Stage 1 draft must stay internal",
+            "handoff_text": "handoff",
+            "planning_brief": {},
+        },
+    )
+    review_calls = {"count": 0}
+
+    def fake_review(**_):
+        review_calls["count"] += 1
+        findings = (
+            [{"code": "late_camp_effective_prescription_exceeded", "message": "repair"}]
+            if review_calls["count"] == 1
+            else []
+        )
+        return {
+            "status": "FAIL" if findings else "PASS",
+            "needs_retry": bool(findings),
+            "validator_report": {
+                "errors": findings,
+                "warnings": [],
+                "blocking_warnings": [],
+                "review_flags": [],
+            },
+        }
+
+    monkeypatch.setattr(stage2_module, "review_stage2_output", fake_review)
+    monkeypatch.setattr(
+        stage2_module,
+        "build_stage2_retry",
+        lambda **_: {"needs_retry": True, "repair_prompt": "repair"},
+    )
+    monkeypatch.setattr(
+        stage2_module,
+        "apply_stage2_release_policy",
+        lambda report: {
+            **report,
+            "release_decision": "publish",
+            "is_athlete_releasable": True,
+            "is_publishable": True,
+        },
+    )
+    monkeypatch.setattr(stage2_module, "athlete_release_with_flags_findings", lambda _report: [])
+    monkeypatch.setattr(stage2_module, "admin_review_blocking_findings", lambda _report: [])
+    monkeypatch.setattr(stage2_module, "_structured_plan_enabled", lambda: False)
+
+    result = asyncio.run(
+        automator.finalize(
+            stage1_result={
+                "status": "ready",
+                "plan_text": "# Stage 1 draft must stay internal",
+            }
+        )
+    )
+
+    assert result["status"] == "publishable_with_flags"
+    assert result["plan_text"].startswith("# Repaired Stage 2 plan")
+    assert result["plan_text"] != "# Stage 1 draft must stay internal"
+    assert result["stage2_attempt_count"] == 2
+    assert result["stage2_cost"]["stage2_incomplete_response"] is True
+    assert any(
+        warning.get("code") == "stage2_incomplete_response"
+        for warning in result["stage2_validator_report"]["warnings"]
+    )
+'''
+          focused_path.write_text(focused)
+          PY
+
+          rm .github/workflows/one-shot-cubic-2419.yml
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add api/stage2_automation.py tests/test_generation_runtime.py tests/test_stage2_no_stage1_fallback.py .github/workflows/one-shot-cubic-2419.yml
+          git diff --cached --check
+          git commit -m "Address Cubic review findings"
+          git push origin HEAD:codex/remove-stage1-athlete-fallback
