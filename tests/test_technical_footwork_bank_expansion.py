@@ -73,15 +73,21 @@ def test_mma_defensive_exits_cover_fence_and_open_space_without_dead_bank_conten
     assert "cage_control" in fence["tactical_function"]
     assert "takedown_defense" in shot_line["tactical_function"]
     assert "mma" in fence["tags"] and "mma" in shot_line["tags"]
+    assert "counter_striker" not in fence["tags"]
+    assert "distance_striker" not in fence["tags"]
 
-    # The boundary-specific exit wins the deterministic tie first; after it is
-    # already used, the open-space shot-line exit becomes the next personalised
-    # choice instead of sitting unreachable in the bank.
+    # The open-space shot-line exit is the generic counter-striker choice.
+    # Once used, the boundary-specific fence exit remains reachable as the
+    # next sport-appropriate alternative rather than winning by name order.
+    first_choice = conditioning.select_technical_footwork_drill(flags, set(), [])
+    assert first_choice is not None
+    assert first_choice["name"] == "Shot-Line Circle-Off Reset"
+
     next_choice = conditioning.select_technical_footwork_drill(
-        flags, {"Fence Exit to Center Rebase"}, []
+        flags, {"Shot-Line Circle-Off Reset"}, []
     )
     assert next_choice is not None
-    assert next_choice["name"] == "Shot-Line Circle-Off Reset"
+    assert next_choice["name"] == "Fence Exit to Center Rebase"
 
 
 def test_wrestling_spp_keeps_the_reactive_shot_angle_as_primary_choice():
