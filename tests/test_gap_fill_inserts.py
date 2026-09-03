@@ -67,18 +67,32 @@ def test_mma_pressure_footwork_gap_uses_existing_sport_bank():
     assert "jab/cross" not in role["display_text"].lower()
 
 
-def test_grappling_footwork_gap_uses_neutral_fallback_when_bank_has_no_match():
-    banned = {"jab", "cross", "punch", "boxing", "ring", "ropes", "cage", "takedown", "kick"}
-    for sport in ("wrestling", "bjj"):
+def test_grappling_footwork_gap_uses_sparse_sport_tagged_bank_without_striking_leakage():
+    # Sparse wrestling/BJJ policy: grappling sports are gated to the specific
+    # grappling-transition drills explicitly tagged for them (sparse, but not
+    # empty) and never blanket-mapped onto the striking set. The gate that
+    # matters is no cross-sport striking/ring copy leaking into a grappler's
+    # footwork gap.
+    banned = {"jab", "cross", "punch", "boxing", "ring", "ropes", "cage"}
+    expected_by_sport = {
+        "wrestling": "Level-Change Feint to Angle",
+        "bjj": "Submission Hunter Stand-Up Reset",
+    }
+    for sport, expected_name in expected_by_sport.items():
         role = _footwork_insert(
             _athlete(sport=sport, fight_format=sport, weaknesses=["footwork"])
         )
         text = role["display_text"].lower()
-        assert role["technical_footwork_fallback"] is True
+        assert role["technical_footwork_fallback"] is False, sport
+        assert role["technical_footwork_name"] == expected_name, sport
         assert not any(term in text for term in banned), (sport, text)
 
 
 def test_boxing_footwork_gap_retains_compatible_bank_specificity():
+    # Weighted style -> tactical-function ranking: a boxing counter striker's
+    # top footwork pick is the counter-oriented Step-Back Pivot Reset (a real
+    # boxing-tagged bank drill), not the neutral fallback and not a cross-sport
+    # drill.
     role = _footwork_insert(
         _athlete(
             sport="boxing",
@@ -88,7 +102,10 @@ def test_boxing_footwork_gap_retains_compatible_bank_specificity():
         )
     )
     assert role["technical_footwork_fallback"] is False
-    assert "jab" in role["display_text"].lower()
+    assert role["technical_footwork_name"] == "Step-Back Pivot Reset"
+    text = role["display_text"].lower()
+    assert "cage" not in text
+    assert "kick" not in text
 
 
 def test_kicking_sports_never_fall_through_to_cage_or_boxing_copy():
@@ -107,7 +124,11 @@ def test_kicking_sports_never_fall_through_to_cage_or_boxing_copy():
         assert "boxing rhythm" not in text
 
 
-def test_late_window_footwork_falls_through_then_uses_neutral_fallback():
+def test_late_window_footwork_uses_only_d4_eligible_sport_drills():
+    # D-4 sport correctness / late-window gate: each sport gets only the drill
+    # its bank data marks eligible for the d4_to_d2 window. For boxing the
+    # low-complexity Stance Reset Line Drill survives; for MMA the d4-eligible
+    # Cage Circle and Cut-Off does. Neither leaks the other sport's copy.
     boxer = _footwork_insert(
         _athlete(
             sport="boxing",
@@ -117,6 +138,7 @@ def test_late_window_footwork_falls_through_then_uses_neutral_fallback():
         ),
         4,
     )
+    assert boxer["technical_footwork_fallback"] is False
     assert boxer["technical_footwork_name"] == "Stance Reset Line Drill"
 
     mma = _footwork_insert(
@@ -128,7 +150,8 @@ def test_late_window_footwork_falls_through_then_uses_neutral_fallback():
         ),
         4,
     )
-    assert mma["technical_footwork_fallback"] is True
+    assert mma["technical_footwork_fallback"] is False
+    assert mma["technical_footwork_name"] == "Cage Circle and Cut-Off"
     assert "jab/cross" not in mma["display_text"].lower()
 
 
