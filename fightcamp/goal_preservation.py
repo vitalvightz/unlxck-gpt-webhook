@@ -364,6 +364,8 @@ def _role_matches_goal(role: dict, goal: str) -> bool:
         return category == "strength" or role.get("preferred_system") in {"alactic", "atp_pcr"}
     if goal == "conditioning":
         return category == "conditioning" and role.get("preferred_system") in {"aerobic", "glycolytic", "alactic"}
+    if goal == "footwork":
+        return category == "technical" or (category == "conditioning" and role.get("preferred_system") == "technical_footwork")
     return category == {"mobility": "mobility", "recovery": "recovery", "skill_refinement": "technical"}.get(goal)
 
 
