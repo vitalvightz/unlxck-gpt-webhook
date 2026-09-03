@@ -44,7 +44,6 @@ _COMPRESSION_REASONS = {
     "high_pressure_weight_cut": "weight_cut_pressure",
     "aggressive_weight_cut": "weight_cut_pressure",
     "injury_management": "injury_constraint",
-    "two_hard_spar_days": "calendar_capacity",
     "fight_week_override": "fight_proximity",
 }
 _SPEED_TAGS = {"speed", "reactive", "reaction", "acceleration", "max_velocity", "speed_reaction"}
@@ -96,10 +95,32 @@ def classify_goal_preservation(athlete: dict, focus: dict | None = None) -> list
 def _effective_map(brief: dict) -> dict:
     # Direct countdown plans render the final visible sequence. Their weekly
     # map is a separate, earlier allocation and must not supply ghost evidence.
+    # Still project the visible D-days into calendar_days so downstream
+    # deferral checks can prove a real late-countdown/readiness constraint
+    # instead of failing merely because the synthetic week had no calendar.
     if "late_fight_session_sequence" in brief:
         phase = next(iter(brief.get("candidate_pools") or {}), "TAPER")
-        return {"weeks": [{"week_index": 1, "phase": phase,
-                           "session_roles": brief["late_fight_session_sequence"]}]}
+        roles = brief["late_fight_session_sequence"]
+        calendar_days = []
+        seen_days: set[int] = set()
+        for role in roles:
+            day = role_d_day({}, role)
+            if not isinstance(day, int) or day < 0 or day in seen_days:
+                continue
+            seen_days.add(day)
+            calendar_days.append({
+                "d_day": day,
+                "is_fight_day": day == 0,
+                "is_after_fight_day": False,
+            })
+        spec = brief.get("late_fight_plan_spec") or {}
+        return {"weeks": [{
+            "week_index": 1,
+            "phase": phase,
+            "session_roles": roles,
+            "calendar_days": calendar_days,
+            "suppressed_roles": deepcopy(spec.get("suppressed_roles") or []),
+        }]}
     return brief.get("weekly_role_map") or {}
 
 
