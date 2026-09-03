@@ -20,6 +20,7 @@ from copy import deepcopy
 import pytest
 
 from fightcamp import conditioning
+from fightcamp.coach_review import run_coach_review
 from fightcamp.stage2_finalizer_packet import build_stage2_finalizer_packet
 from fightcamp.stage2_payload import build_planning_brief, build_stage2_payload
 from fightcamp.training_context import TrainingContext
@@ -156,3 +157,102 @@ def test_alternate_stance_drill_reflects_switch_identity():
     side_instruction = _footwork_side_instruction(payload)
     assert side_instruction == "Alternate orthodox and southpaw stances each rep."
     assert "alternate_stances" not in side_instruction
+
+
+# --- Coach-review re-render stance survival (Cubic finding A) -----------------
+
+def _footwork_conditioning_block(drill_name: str = "Step-Back Pivot Reset", stance: str = "") -> dict:
+    drill = deepcopy(
+        next(d for d in conditioning.get_technical_footwork_bank() if d["name"] == drill_name)
+    )
+    return {
+        "SPP": {
+            "grouped_drills": {conditioning.TECHNICAL_FOOTWORK_GROUP: [drill]},
+            "why_log": [],
+            "missing_systems": [],
+            "candidate_reservoir": {},
+            "phase_color": "#000",
+            "num_sessions": 1,
+            "diagnostic_context": {"phase": "SPP", "days_until_fight": 21},
+            "sport": "boxing",
+            "stance": stance,
+        }
+    }
+
+
+@pytest.mark.parametrize(
+    ("stance", "expected_side_instruction"),
+    [
+        ("orthodox", "Start in your orthodox stance and work both directions evenly."),
+        ("southpaw", "Start in your southpaw stance and work both directions evenly."),
+        ("switch", "Work both directions evenly from each stance."),
+    ],
+)
+def test_coach_review_rerender_retains_technical_footwork_stance(
+    stance: str, expected_side_instruction: str
+):
+    blocks = _footwork_conditioning_block(stance=stance)
+
+    # Initial render (as the first-pass renderer would produce it).
+    initial = conditioning.render_conditioning_block(
+        blocks["SPP"]["grouped_drills"],
+        phase="SPP",
+        phase_color="#000",
+        sport="boxing",
+        stance=stance,
+    )
+    assert f"Side / Stance: {expected_side_instruction}" in initial
+
+    # Coach review re-renders the block. A shoulder injury creates review
+    # entries (so the re-render path runs) without dropping lower-limb footwork.
+    _notes, _strength, updated_conditioning, _subs = run_coach_review(
+        injury_string="moderate right shoulder impingement",
+        phase="SPP",
+        training_context={
+            "equipment": ["bodyweight"],
+            "fight_format": "boxing",
+            "style_tactical": ["counter_striker"],
+            "style_technical": ["boxing"],
+            "fatigue": "low",
+            "injuries": ["moderate right shoulder impingement"],
+            "stance": stance,
+        },
+        exercise_bank=[],
+        conditioning_banks=[[]],
+        strength_blocks={"SPP": None},
+        conditioning_blocks=blocks,
+    )
+
+    rerendered = updated_conditioning["SPP"]["block"]
+    assert f"Side / Stance: {expected_side_instruction}" in rerendered
+    # Re-render is identical to the initial side/stance instruction: no
+    # degradation to neutral bilateral wording.
+    assert "Work both directions evenly from your normal stance." not in rerendered
+
+
+def test_coach_review_rerender_falls_back_to_training_context_stance():
+    # Even when the conditioning metadata lacks stance, the coach-review render
+    # recovers it from the athlete's training context rather than degrading.
+    blocks = _footwork_conditioning_block(stance="")
+    blocks["SPP"].pop("stance", None)
+
+    _notes, _strength, updated_conditioning, _subs = run_coach_review(
+        injury_string="moderate right shoulder impingement",
+        phase="SPP",
+        training_context={
+            "equipment": ["bodyweight"],
+            "fight_format": "boxing",
+            "style_tactical": ["counter_striker"],
+            "style_technical": ["boxing"],
+            "fatigue": "low",
+            "injuries": ["moderate right shoulder impingement"],
+            "stance": "southpaw",
+        },
+        exercise_bank=[],
+        conditioning_banks=[[]],
+        strength_blocks={"SPP": None},
+        conditioning_blocks=blocks,
+    )
+
+    rerendered = updated_conditioning["SPP"]["block"]
+    assert "Side / Stance: Start in your southpaw stance and work both directions evenly." in rerendered

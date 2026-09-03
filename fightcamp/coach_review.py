@@ -418,6 +418,11 @@ def run_coach_review(
             num_sessions=cond.get("num_sessions", 1),
             diagnostic_context=cond.get("diagnostic_context", {}),
             sport=cond.get("sport"),
+            # Carry the canonical stance through re-render so technical-footwork
+            # side/stance instruction is identical to the first render. Prefer
+            # the value preserved in conditioning metadata, then the athlete's
+            # training context.
+            stance=cond.get("stance") or training_context.get("stance"),
         )
         updated_conditioning[phase_key] = cond
 

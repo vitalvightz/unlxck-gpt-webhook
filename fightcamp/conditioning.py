@@ -1793,17 +1793,26 @@ def _technical_footwork_match_evidence(
 
 def _technical_footwork_selection_reasons(flags: dict, drill: dict) -> dict:
     canonical_sport = normalize_sport(flags.get("fight_format") or flags.get("sport") or "")
-    styles, function_preferences = _technical_footwork_style_preferences(
+    # ``styles`` are the athlete's own styles that feed the tactical-function
+    # preference model. They are NOT evidence that the selected drill matches
+    # that style. A real style match exists only when the drill's own tags carry
+    # the athlete's style, so ``style_hits`` and the ``style_match`` reason codes
+    # are derived from the drill tags, kept strictly separate from the
+    # preference-deriving styles below.
+    preference_styles, function_preferences = _technical_footwork_style_preferences(
         flags, canonical_sport=canonical_sport
     )
     score, matched_functions = _technical_footwork_match_evidence(
         drill,
         canonical_sport=canonical_sport,
-        style_tokens=set(styles),
+        style_tokens=set(preference_styles),
         function_preferences=function_preferences,
     )
+    drill_tags = set(normalize_tags(drill.get("tags", [])))
+    matched_styles = sorted(set(preference_styles) & drill_tags)
     reason_codes = ["technical_footwork_guarantee"]
-    reason_codes.extend(f"technical_footwork_style_match:{style}" for style in styles)
+    # Only emit a style-match reason when the drill's own tags satisfy it.
+    reason_codes.extend(f"technical_footwork_style_match:{style}" for style in matched_styles)
     reason_codes.extend(
         f"technical_footwork_function_match:{function}"
         for function in matched_functions
@@ -1811,12 +1820,18 @@ def _technical_footwork_selection_reasons(flags: dict, drill: dict) -> dict:
     return {
         "goal_hits": 1,
         "weakness_hits": 0,
-        "style_hits": len(styles),
+        # Truthful: count only direct drill style-tag matches.
+        "style_hits": len(matched_styles),
         "phase_hits": 1,
         "load_adjustments": 0,
         "equipment_boost": 0,
         "penalties": 0,
-        "technical_footwork_styles": styles,
+        # Athlete styles used to derive tactical-function preferences (not a
+        # claim that the drill carries them).
+        "technical_footwork_preference_styles": preference_styles,
+        # Actual direct drill style-tag matches (the only real style evidence).
+        "technical_footwork_styles": matched_styles,
+        "technical_footwork_style_matches": matched_styles,
         "technical_footwork_function_matches": matched_functions,
         "technical_footwork_function_hits": len(matched_functions),
         "reason_codes": reason_codes,

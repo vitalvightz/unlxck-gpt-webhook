@@ -252,6 +252,53 @@ def test_coach_only_reactive_drill_is_filtered_for_solo_athlete_without_monkeypa
     assert "Level-Change Feint to Angle" in names  # closed self-cue survives
 
 
+def _selection_reasons(style: str, drill_name: str, *, sport: str = "boxing") -> dict:
+    return conditioning._technical_footwork_selection_reasons(
+        {"fight_format": sport, "sport": sport, "style_tactical": [style], "style_technical": [sport]},
+        BANK[drill_name],
+    )
+
+
+def test_style_evidence_true_when_drill_tag_matches_athlete_style():
+    # Direct style-tag match: the selected drill carries the athlete's style, so
+    # a real style hit and reason code are emitted.
+    reasons = _selection_reasons("counter_striker", "Step-Back Pivot Reset")
+    assert "counter_striker" in BANK["Step-Back Pivot Reset"]["tags"]
+    assert reasons["style_hits"] == 1
+    assert reasons["technical_footwork_styles"] == ["counter_striker"]
+    assert "technical_footwork_style_match:counter_striker" in reasons["reason_codes"]
+
+
+def test_function_match_without_direct_style_tag_reports_zero_style_hits():
+    # Tactical-function match exists (angle_creation) but the drill does NOT
+    # carry the athlete's style tag: the function evidence stays, style hits are
+    # zero, and no false style-match reason code is emitted.
+    reasons = _selection_reasons("pressure_fighter", "Sprawl Exit to Ring Angle", sport="mma")
+    assert "pressure_fighter" not in BANK["Sprawl Exit to Ring Angle"]["tags"]
+    assert reasons["style_hits"] == 0
+    assert reasons["technical_footwork_styles"] == []
+    assert not any(
+        code.startswith("technical_footwork_style_match:") for code in reasons["reason_codes"]
+    )
+    # Function evidence is preserved and remains factually truthful.
+    assert reasons["technical_footwork_function_hits"] >= 1
+    assert "angle_creation" in reasons["technical_footwork_function_matches"]
+    assert "technical_footwork_function_match:angle_creation" in reasons["reason_codes"]
+    # The athlete's preference styles are still recorded, separately, for
+    # transparency about how tactical-function preferences were derived.
+    assert "pressure_fighter" in reasons["technical_footwork_preference_styles"]
+
+
+def test_neither_style_tag_nor_function_match_reports_no_style_or_function_hits():
+    reasons = _selection_reasons("clinch_fighter", "45-Degree Angle Step to Jab Reset")
+    assert reasons["style_hits"] == 0
+    assert reasons["technical_footwork_function_hits"] == 0
+    assert not any(
+        code.startswith(("technical_footwork_style_match:", "technical_footwork_function_match:"))
+        for code in reasons["reason_codes"]
+    )
+
+
 def test_side_sensitive_drills_have_a_supported_side_rule():
     side_sensitive_directions = {"lateral", "rotational", "diagonal", "multi_directional"}
     side_sensitive = [

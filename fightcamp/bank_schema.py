@@ -164,6 +164,25 @@ _CONDITIONING_RUNTIME_DEFAULTS = {
     "meaningful_stress": None,
 }
 
+# Technical footwork is a dedicated modality, not a physiological conditioning
+# dose (see conditioning.get_technical_footwork_bank and PRESERVE'd "no
+# aerobic/glycolytic/alactic dose accounting" / "rep-based quality dosing").
+# It carries EITHER a timed dose (work_sec + rounds + rest_sec) OR a
+# quality-rep dose (sets + exactly one of reps/reps_per_side + rest_sec +
+# quality_stop_rule), so the generic conditioning timed-dose defaults
+# (work_sec/rounds/total_minutes) must NOT be forced onto it — doing so records
+# a false "missing timed-dose metadata" issue for a valid rep-based drill.
+# These defaults keep late-window + cost + governance expectations but drop the
+# timed-dose fields; the dose itself is validated by
+# ``_technical_footwork_dose_ok`` below.
+_TECHNICAL_FOOTWORK_SCHEMA_DEFAULTS = {
+    key: value
+    for key, value in _CONDITIONING_RUNTIME_DEFAULTS.items()
+    if key not in {"work_sec", "rounds", "total_minutes"}
+}
+_TECHNICAL_FOOTWORK_BANK_SOURCES = {"technical_footwork_bank.json"}
+_TECHNICAL_FOOTWORK_MODALITY = "technical_footwork"
+
 logger = logging.getLogger(__name__)
 
 
@@ -294,6 +313,48 @@ def _late_window_for(value: Any) -> str | None:
     if days == 1:
         return D1
     return None
+
+
+def _is_technical_footwork(item: dict, source: str) -> bool:
+    """Recognise a technical-footwork drill by its bank source or its modality.
+
+    Modality covers runtime_fallback / re-serialized drills whose source string
+    is no longer the bank filename.
+    """
+    if _source_filename(source) in _TECHNICAL_FOOTWORK_BANK_SOURCES:
+        return True
+    return _normalize_token(item.get("modality")) == _TECHNICAL_FOOTWORK_MODALITY
+
+
+def _positive_number(value: Any) -> bool:
+    number = _number_or_none(value)
+    return number is not None and number > 0
+
+
+def _technical_footwork_dose_ok(item: dict) -> bool:
+    """True when the drill carries a valid technical-footwork dose contract.
+
+    TIMED: work_sec + rounds + rest_sec.
+    QUALITY-REP: sets + exactly one of reps/reps_per_side + rest_sec +
+                 quality_stop_rule.
+    Recognising either shape avoids fabricating work_sec/rounds just to satisfy
+    a conditioning schema.
+    """
+    rest_ok = _positive_number(item.get("rest_sec"))
+    timed = (
+        _positive_number(item.get("work_sec"))
+        and _positive_number(item.get("rounds"))
+        and rest_ok
+    )
+    rep_fields = [field for field in ("reps", "reps_per_side") if field in item]
+    quality_rep = (
+        len(rep_fields) == 1
+        and _positive_number(item.get(rep_fields[0]))
+        and _positive_number(item.get("sets"))
+        and rest_ok
+        and bool(str(item.get("quality_stop_rule") or "").strip())
+    )
+    return bool(timed or quality_rep)
 
 
 def _metadata_missing_issues(item: dict, *, source: str, source_kind: str | None = None) -> list[str]:
@@ -898,7 +959,15 @@ def validate_training_item(
 
     source_key = str(source).lower()
     item[_SCHEMA_SOURCE_KEY] = _source_filename(source_key)
-    defaults = _schema_defaults_for_source(source_key)
+    technical_footwork = _is_technical_footwork(item, source_key)
+    # Technical footwork uses a dedicated dose contract (timed OR quality-rep),
+    # so it must not inherit the generic conditioning timed-dose defaults that
+    # would falsely flag a valid rep-based drill as missing work_sec/rounds.
+    defaults = (
+        _TECHNICAL_FOOTWORK_SCHEMA_DEFAULTS
+        if technical_footwork
+        else _schema_defaults_for_source(source_key)
+    )
     for key, default in defaults.items():
         if key not in item:
             issue = "missing_late_windows" if key == "late_windows" else f"missing_{key}"
@@ -908,6 +977,11 @@ def validate_training_item(
 
     for issue in _metadata_missing_issues(item, source=source_key):
         _record_issue(item, issue)
+
+    # Validate the technical-footwork dose contract in its own terms instead of
+    # requiring conditioning timed metadata.
+    if technical_footwork and not _technical_footwork_dose_ok(item):
+        _record_issue(item, "missing_technical_footwork_dose")
 
     late_windows = item.get("late_windows")
     if "late_windows" in item and (not isinstance(late_windows, list) or not late_windows):
