@@ -222,7 +222,7 @@ _INSERT_META = {
         "display_text": "Nose-breathing pace only. No sweat target. Finish feeling better than when you started.",
     },
     "aerobic_shadow_flow": {
-        "label": "Shadowboxing Aerobic Flow",
+        "label": "Aerobic Movement Flow",
         "duration_min": [8, 12],
         "rpe_max": 4,
         "insert_category": "conditioning_maintenance",

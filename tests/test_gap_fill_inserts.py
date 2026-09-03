@@ -145,6 +145,8 @@ def test_generic_aerobic_shadow_copy_is_sport_neutral():
     for sport in ("mma", "wrestling", "bjj"):
         role = _build_insert_role("aerobic_shadow_flow", _athlete(sport=sport), 5)
         assert "boxing rhythm" not in role["display_text"].lower()
+        assert "boxing" not in role["athlete_facing_label"].lower()
+        assert "shadowboxing" not in role["athlete_facing_label"].lower()
 
 
 def _session(offset: int, role_key: str = "strength_touch_day") -> dict:
