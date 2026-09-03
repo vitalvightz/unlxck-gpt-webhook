@@ -100,8 +100,7 @@ still shows up in the admin review surface with every finding attached.
 | Validator has an admin-review blocking context/programme finding | `publishable_with_flags` | `stage2_failed` | `completed` |
 | Validator fails on a hard blocker (safety / output integrity) | `publishable_with_flags` | `stage2_failed` | `completed` |
 | No clean structured card | unchanged (card status logged; plan_text is the fallback) | unchanged | `completed` |
-| **Technical failure** — timeout, provider error, unavailable finalizer, incomplete/empty output | `ready` (Stage 1 plan) | `stage2_failed_stage1_fallback` | `completed` |
-| Technical failure **and** Stage 1 produced no plan text | no plan row | — | `failed` |
+| **Technical failure with no usable Stage 2 text** — timeout, provider error, unavailable finalizer, empty output | no plan row | — | `failed` |
 | Injury triage blocks Stage 2 | `triage_blocked` (or `medical_hold` / `restricted_rehab_only` / `needs_review`) | unchanged / `""` | `review_required` |
 
 The shared Stage 2 policy still has three explicit classes:
@@ -132,12 +131,7 @@ generation (`build_stage1_fallback_result` in `api/stage2_automation.py`).
 
 Such a plan is `ready`, not `publishable_with_flags`: the validator never ran
 against the Stage 1 body and has no findings to report on it. Its report is
-clean apart from a `stage2_fallback` entry carrying the reason
-(`stage2_timeout`, `stage2_model_error`, `stage2_unavailable`) and the sanitized
-error detail. The failure is logged as
-`generation:stage2_failed_stage1_completed`. `stage2_status` is
-`stage2_failed_stage1_fallback`, distinguishing it from `stage2_failed`, which
-means Stage 2 DID produce a plan that the validator flagged.
+A technical Stage 2 failure that produces no usable Stage 2 text fails the generation attempt and creates no athlete-facing plan row. Stage 1 is internal planner input only and is never promoted to the final plan. If the provider marks a response incomplete but returns usable Stage 2 text, that Stage 2 text continues through validation and releases as `publishable_with_flags`.
 
 The one case that still fails the job: Stage 1 produced no plan text either, so
 there is nothing to fall back to. That is a Stage 1 failure, and Stage 1

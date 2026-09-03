@@ -8,9 +8,7 @@ import pytest
 import api.stage2_automation as stage2_module
 from api.stage2_automation import (
     OpenAIStage2Automator,
-    Stage1FallbackUnavailableError,
     Stage2AutomationError,
-    build_stage1_fallback_result,
 )
 
 
@@ -51,14 +49,6 @@ def _incomplete_response(text: str):
         output_text=text,
         usage={"input_tokens": 100, "output_tokens": 50, "total_tokens": 150},
     )
-
-
-def test_stage1_fallback_is_disabled_even_when_stage1_has_plan_text():
-    with pytest.raises(Stage1FallbackUnavailableError, match="Stage 1 fallback is disabled"):
-        build_stage1_fallback_result(
-            {"status": "ready", "plan_text": "# deterministic Stage 1 draft"},
-            reason="stage2_timeout",
-        )
 
 
 def test_incomplete_stage2_response_keeps_usable_stage2_text():

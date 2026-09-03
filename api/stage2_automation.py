@@ -663,32 +663,6 @@ def _approved_result(
     }
 
 
-class Stage1FallbackUnavailableError(RuntimeError):
-    """Raised because athlete-facing Stage 1 fallback is intentionally disabled."""
-
-
-def build_stage1_fallback_result(
-    stage1_result: dict[str, Any],
-    *,
-    reason: str,
-    detail: str = "",
-    attempt_count: int = 1,
-    stage2_cost: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    """Compatibility shim that deliberately refuses to publish Stage 1.
-
-    The orchestrator still calls this helper on a technical Stage 2 failure so
-    older imports remain stable. Raising here makes it re-raise the original
-    Stage 2 error into the normal timeout/provider/unavailable failure handlers.
-    Stage 1 may feed Stage 2, but it is never an athlete-facing final plan.
-    """
-
-    del stage1_result, detail, attempt_count, stage2_cost
-    raise Stage1FallbackUnavailableError(
-        f"Stage 1 fallback is disabled; Stage 2 must produce athlete-facing output ({reason})."
-    )
-
-
 @dataclass
 class DisabledStage2Automator:
     reason: str
@@ -805,14 +779,17 @@ class OpenAIStage2Automator:
         response_incomplete = _response_is_incomplete(response)
         try:
             text = _extract_response_text(response)
-        except Stage2AutomationError as exc:
-            if response_incomplete:
-                exc = Stage2AutomationError(
+        except Stage2AutomationError as extraction_error:
+            error = (
+                Stage2AutomationError(
                     "Stage 2 model response was incomplete and contained no usable plan text."
                 )
+                if response_incomplete
+                else extraction_error
+            )
             raise _mark_provider_request_started(
                 _with_stage2_cost(
-                    exc, _build_stage2_cost(self.model, prompt=prompt, response=response)
+                    error, _build_stage2_cost(self.model, prompt=prompt, response=response)
                 )
             )
         cost = _build_stage2_cost(self.model, prompt=prompt, response=response, text=text)
