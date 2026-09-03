@@ -590,7 +590,13 @@ def build_stage2_finalizer_packet(
         ),
         "selected_plan": {
             "goal_preservation_version": source.get("goal_preservation_version"),
-            "goal_preservation": deepcopy(source.get("goal_preservation") or []),
+            "goal_preservation": deepcopy(
+                source.get("goal_preservation")
+                or (source.get("compressed_priorities") or {}).get("goal_preservation")
+                or ((source.get("athlete_snapshot") or source.get("athlete_model") or {}).get("compressed_priorities") or {}).get("goal_preservation")
+                or stage2_payload.get("goal_preservation")
+                or []
+            ),
             "session_sequence": _compact_session_sequence(source)
             or _compact_session_sequence(stage2_payload),
             "weekly_role_map": _compact_weekly_role_map(weekly_role_map, athlete_model),
