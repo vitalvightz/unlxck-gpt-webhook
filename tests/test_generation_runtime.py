@@ -513,7 +513,6 @@ def test_prompt_budget_failure_fails_without_publishing_stage1():
     store = FakeStore()
     seed_default_profiles(store)
     error = Stage2AutomationError("Stage 2 first_pass prompt too large: 214880 chars > 180000")
-    assert error.provider_request_started is False
     saved = _run_stage2_failure_job(
         store, FakeStage2Automator(error=error), client_request_id="stage2-prompt-budget"
     )

@@ -74,26 +74,15 @@ class Stage2AutomationError(RuntimeError):
     Carries an optional ``stage2_cost`` payload (token/cost telemetry captured up
     to the point of failure) so the orchestrator can still persist what is known
     about a failed attempt.
-
-    ``provider_request_started`` records whether a request was actually issued to
-    the provider. It stays False for failures raised before the call — a prompt
-    over the budget, or an unconfigured automator — so those are not counted as
-    provider attempts in the cost/audit telemetry.
     """
 
     stage2_cost: dict[str, Any] | None = None
-    provider_request_started: bool = False
 
 
 def _with_stage2_cost(
     error: Stage2AutomationError, cost: dict[str, Any]
 ) -> Stage2AutomationError:
     error.stage2_cost = cost
-    return error
-
-
-def _mark_provider_request_started(error: Stage2AutomationError) -> Stage2AutomationError:
-    error.provider_request_started = True
     return error
 
 
@@ -299,9 +288,17 @@ def _merge_stage2_costs(*costs: dict[str, Any] | None) -> dict[str, Any]:
         running_usd = (merged.get("stage2_estimated_cost_usd") or 0.0) + (
             cost.get("stage2_estimated_cost_usd") or 0.0
         )
+        incomplete_response_seen = bool(merged.get("stage2_incomplete_response")) or bool(
+            cost.get("stage2_incomplete_response")
+        )
         merged = dict(cost)
         merged.update(running_tokens)
         merged["stage2_estimated_cost_usd"] = running_usd
+        if incomplete_response_seen:
+            # Incomplete-response audit is sticky across repair/structured calls.
+            # A later successful call must not erase that an earlier Stage 2
+            # response was provider-truncated.
+            merged["stage2_incomplete_response"] = True
     return merged
 
 
@@ -757,23 +754,19 @@ class OpenAIStage2Automator:
             # so a failed attempt still leaves an auditable cost row.
             failure_cost = _build_stage2_cost(self.model, prompt=prompt, response=None)
             if _is_quota_or_rate_limit_error(exc):
-                raise _mark_provider_request_started(
-                    _with_stage2_cost(
-                        Stage2AutomationError(
-                            "Stage 2 stopped: OpenAI quota/rate limit hit. No further retry attempted."
-                        ),
-                        failure_cost,
-                    )
+                raise _with_stage2_cost(
+                    Stage2AutomationError(
+                        "Stage 2 stopped: OpenAI quota/rate limit hit. No further retry attempted."
+                    ),
+                    failure_cost,
                 ) from exc
             # Keep the raw provider exception (which can carry request payloads or
             # provider internals) out of the stored/visible error; the full detail
             # is captured in the server log below.
             logger.exception("[stage2] model_request_failed error_type=%s", type(exc).__name__)
-            raise _mark_provider_request_started(
-                _with_stage2_cost(
-                    Stage2AutomationError("Stage 2 model request failed. Check server logs."),
-                    failure_cost,
-                )
+            raise _with_stage2_cost(
+                Stage2AutomationError("Stage 2 model request failed. Check server logs."),
+                failure_cost,
             ) from exc
         response_id = getattr(response, "id", None) or "unknown"
         response_incomplete = _response_is_incomplete(response)
@@ -787,10 +780,8 @@ class OpenAIStage2Automator:
                 if response_incomplete
                 else extraction_error
             )
-            raise _mark_provider_request_started(
-                _with_stage2_cost(
-                    error, _build_stage2_cost(self.model, prompt=prompt, response=response)
-                )
+            raise _with_stage2_cost(
+                error, _build_stage2_cost(self.model, prompt=prompt, response=response)
             )
         cost = _build_stage2_cost(self.model, prompt=prompt, response=response, text=text)
         if response_incomplete:
@@ -891,16 +882,23 @@ class OpenAIStage2Automator:
             else first_pass_cost
         )
 
-        if bool(final_cost.get("stage2_incomplete_response")):
-            # The provider returned real Stage 2 text but marked the response
-            # incomplete. Keep that Stage 2 output athlete-facing, never replace
-            # it with Stage 1, and force the admin-visible flagged state.
+        final_response_incomplete = bool(final_cost.get("stage2_incomplete_response"))
+        if bool(plan_text_cost.get("stage2_incomplete_response")):
+            # Incomplete-response audit survives an effective-dose repair. If the
+            # final call itself was incomplete, the partial Stage 2 body is the
+            # athlete-facing plan. If only an earlier call was incomplete, the
+            # repaired Stage 2 body stays athlete-facing but the audit flag remains.
             partial_report = dict(first_review["validator_report"])
             warnings = list(partial_report.get("warnings") or [])
+            warning_message = (
+                "Provider marked the athlete-facing Stage 2 response incomplete; partial Stage 2 text was released instead of falling back to Stage 1."
+                if final_response_incomplete
+                else "Provider marked an earlier Stage 2 response incomplete; a subsequent Stage 2 repair produced the athlete-facing plan."
+            )
             warnings.append(
                 {
                     "code": "stage2_incomplete_response",
-                    "message": "Provider marked the Stage 2 response incomplete; partial Stage 2 text was released instead of falling back to Stage 1.",
+                    "message": warning_message,
                 }
             )
             partial_report.update(
