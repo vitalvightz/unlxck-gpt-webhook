@@ -123,19 +123,21 @@ plans from the admin queue or reduce review volume.
 
 #### Technical Stage 2 failures
 
-The rows above are about a Stage 2 plan that *exists*. When the finalizer never
-produces one — it times out, throws, is unavailable, or returns incomplete or
-empty output — there is nothing to publish or flag. Stage 1 has already built a
-complete deterministic plan, so the job completes on that instead of failing
-generation (`build_stage1_fallback_result` in `api/stage2_automation.py`).
+The rows above describe a Stage 2 plan that *exists*. If Stage 2 fails before
+producing usable athlete-facing text — for example a timeout, provider error,
+unavailable finalizer, empty response, or unexpected finalizer crash — the
+generation attempt fails and no plan row is created. Stage 1 remains internal
+planner input only; it is never promoted to the athlete-facing final plan.
 
-Such a plan is `ready`, not `publishable_with_flags`: the validator never ran
-against the Stage 1 body and has no findings to report on it. Its report is
-A technical Stage 2 failure that produces no usable Stage 2 text fails the generation attempt and creates no athlete-facing plan row. Stage 1 is internal planner input only and is never promoted to the final plan. If the provider marks a response incomplete but returns usable Stage 2 text, that Stage 2 text continues through validation and releases as `publishable_with_flags`.
+An `incomplete` provider response is handled by content, not by status alone. If
+it still contains usable Stage 2 text, that Stage 2 text continues through the
+validator and releases as `publishable_with_flags` with an admin-visible
+`stage2_incomplete_response` warning. If it contains no usable Stage 2 text, the
+generation attempt fails.
 
-The one case that still fails the job: Stage 1 produced no plan text either, so
-there is nothing to fall back to. That is a Stage 1 failure, and Stage 1
-failures still block.
+The historical `stage2_failed_stage1_fallback` audit value may still appear on
+old plan rows created before this contract changed. New generations do not write
+that outcome.
 
 #### What can still block a release
 
