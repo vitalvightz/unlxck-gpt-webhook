@@ -47,7 +47,7 @@ def test_research_expansion_adds_exactly_the_expected_new_patterns():
     [
         ("muay_thai", "pressure_fighter", "Thai Ring-Cut Pressure Walkdown", "ring_cutting"),
         ("muay_thai", "clinch_fighter", "Long-Guard Clinch Entry Step", "clinch_management"),
-        ("mma", "counter_striker", "Shot-Line Circle-Off Reset", "defensive_exit"),
+        ("mma", "counter_striker", "Fence Exit to Center Rebase", "defensive_exit"),
         ("mma", "kicker", "Kick-Recovery Anti-Shot Rebase", "kick_recovery"),
     ],
 )
@@ -63,15 +63,25 @@ def test_new_patterns_fill_real_style_function_gaps(
     assert required_function in selected["tactical_function"]
 
 
-def test_mma_fence_exit_is_a_distinct_defensive_cage_candidate():
-    candidates = conditioning.select_technical_footwork_candidates(
-        _flags(sport="mma", style="counter_striker"), set(), []
-    )
+def test_mma_defensive_exits_cover_fence_and_open_space_without_dead_bank_content():
+    flags = _flags(sport="mma", style="counter_striker")
+    candidates = conditioning.select_technical_footwork_candidates(flags, set(), [])
     by_name = {drill["name"]: drill for drill in candidates}
 
-    assert "Fence Exit to Center Rebase" in by_name
-    assert "cage_control" in by_name["Fence Exit to Center Rebase"]["tactical_function"]
-    assert "mma" in by_name["Fence Exit to Center Rebase"]["tags"]
+    fence = by_name["Fence Exit to Center Rebase"]
+    shot_line = by_name["Shot-Line Circle-Off Reset"]
+    assert "cage_control" in fence["tactical_function"]
+    assert "takedown_defense" in shot_line["tactical_function"]
+    assert "mma" in fence["tags"] and "mma" in shot_line["tags"]
+
+    # The boundary-specific exit wins the deterministic tie first; after it is
+    # already used, the open-space shot-line exit becomes the next personalised
+    # choice instead of sitting unreachable in the bank.
+    next_choice = conditioning.select_technical_footwork_drill(
+        flags, {"Fence Exit to Center Rebase"}, []
+    )
+    assert next_choice is not None
+    assert next_choice["name"] == "Shot-Line Circle-Off Reset"
 
 
 def test_wrestling_gets_a_low_cost_taper_stance_motion_pattern():
