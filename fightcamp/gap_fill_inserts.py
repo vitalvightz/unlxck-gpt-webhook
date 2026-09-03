@@ -10,6 +10,9 @@ from .calendar_context import (
 from .camp_phases import calculate_phase_weeks
 from .combat_load_policy import PlacementDirective, role_load_profile
 from .normalization import clean_list, normalize_fatigue_level
+from .conditioning import TECHNICAL_FOOTWORK_GROUP, select_technical_footwork_candidates
+from .late_selector_windows import classify_late_selector_window
+from .restriction_filtering import evaluate_restriction_impact
 from .stage2_render_guards import _all_active_injuries_surface_only
 from .stage2_payload_late_fight import (
     _countdown_offset,
@@ -198,9 +201,9 @@ _INSERT_META = {
         "label": "Footwork Walkthrough",
         "duration_min": [8, 12],
         "rpe_max": 2,
-        "insert_category": "footwork",
+        "insert_category": "technical_footwork",
         "repeat_allowed": False,
-        "display_text": "Stance walk, step-slide, pivot out, and exit after jab/cross. Slow rounds only; no fatigue target.",
+        "display_text": "Controlled stance movement, direction changes, pivots and position resets. Keep the movement slow and technical with no fatigue target.",
     },
     "joint_prep": {
         "label": "Joint Prep",
@@ -219,12 +222,12 @@ _INSERT_META = {
         "display_text": "Nose-breathing pace only. No sweat target. Finish feeling better than when you started.",
     },
     "aerobic_shadow_flow": {
-        "label": "Shadowboxing Aerobic Flow",
+        "label": "Aerobic Movement Flow",
         "duration_min": [8, 12],
         "rpe_max": 4,
         "insert_category": "conditioning_maintenance",
         "repeat_allowed": False,
-        "display_text": "3-5 x 2 min easy shadowboxing rounds, 60 sec rest. Smooth boxing rhythm at RPE 3-4. No contact, no power, no impact - keep the gas tank ticking over without costing freshness.",
+        "display_text": "3-5 x 2 min easy solo movement rounds, 60 sec rest. Use smooth sport-specific movement at RPE 3-4. No contact, no power and no impact. Keep the gas tank ticking over without costing freshness.",
     },
     "aerobic_walk_flush": {
         "label": "Brisk Walk Flush",
@@ -1014,6 +1017,96 @@ def _legal_support_keys(
     return allow or deprioritized
 
 
+def _select_gap_footwork_drill(
+    athlete_model: dict[str, Any],
+    insert_offset: int,
+    usage_ledger: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Select an existing bank drill for a footwork filler, if one is legal."""
+    phase = _watch_phase_for_offset(athlete_model, insert_offset)
+    sport = athlete_model.get("fight_format") or athlete_model.get("sport") or ""
+    tactical = clean_list(
+        athlete_model.get("style_tactical")
+        or athlete_model.get("tactical_styles")
+        or athlete_model.get("tactical_style")
+    )
+    technical = clean_list(athlete_model.get("style_technical") or athlete_model.get("technical_style"))
+    injury_text = _flatten_text(
+        [
+            athlete_model.get("parsed_injuries"),
+            athlete_model.get("guided_injury"),
+            athlete_model.get("injuries") or athlete_model.get("injury"),
+            athlete_model.get("injury_notes"),
+            athlete_model.get("active_injury"),
+        ]
+    ).strip()
+    injuries = [injury_text] if injury_text else []
+    existing_names = set((usage_ledger or {}).get("used_technical_footwork_names", set()))
+    flags = {
+        **athlete_model,
+        "sport": sport,
+        "fight_format": sport,
+        "phase": phase,
+        "style_tactical": tactical,
+        "style_technical": technical,
+        "weaknesses": clean_list(athlete_model.get("weaknesses")),
+        "key_goals": clean_list(athlete_model.get("key_goals")),
+        "equipment": clean_list(
+            athlete_model.get("equipment") or athlete_model.get("available_equipment")
+        ),
+    }
+    window = classify_late_selector_window(insert_offset)
+    restrictions = athlete_model.get("injury_restrictions") or []
+    for drill in select_technical_footwork_candidates(flags, existing_names, injuries):
+        eligible_windows = {
+            str(value).strip().lower()
+            for value in drill.get("late_windows", [])
+            if str(value).strip()
+        }
+        if window and eligible_windows and window not in eligible_windows:
+            continue
+        restriction = evaluate_restriction_impact(
+            restrictions,
+            text=" ".join(
+                str(drill.get(key) or "")
+                for key in ("name", "modality", "notes", "equipment_note")
+            ),
+            tags=drill.get("tags", []),
+            limit_penalty=-0.75,
+        )
+        if restriction.get("allowed", True):
+            return drill
+    return None
+
+
+def _apply_bank_footwork(
+    role: dict[str, Any],
+    athlete_model: dict[str, Any],
+    insert_offset: int,
+    usage_ledger: dict[str, Any] | None,
+) -> None:
+    drill = _select_gap_footwork_drill(athlete_model, insert_offset, usage_ledger)
+    role["technical_footwork_channel"] = TECHNICAL_FOOTWORK_GROUP
+    if drill is None:
+        role["technical_footwork_fallback"] = True
+        return
+    name = str(drill.get("name") or "Technical Footwork")
+    duration = str(drill.get("duration") or "").strip()
+    notes = str(drill.get("notes") or "").strip()
+    role.update(
+        {
+            "athlete_facing_label": name,
+            "display_text": " ".join(part for part in (duration + "." if duration else "", notes) if part),
+            "technical_footwork_name": name,
+            "technical_footwork_source": "technical_footwork_bank.json",
+            "technical_footwork_fallback": False,
+            "required_equipment": list(drill.get("equipment") or []),
+        }
+    )
+    if usage_ledger is not None:
+        usage_ledger.setdefault("used_technical_footwork_names", set()).add(name)
+
+
 def select_gap_fill_insert(
     athlete_model: dict[str, Any],
     insert_offset: int,
@@ -1054,12 +1147,15 @@ def select_gap_fill_insert(
     )
     if role_key is None:
         return None
-    return _build_insert_role(
+    role = _build_insert_role(
         role_key,
         athlete_model,
         insert_offset,
         usage_ledger=usage_ledger,
     )
+    if role_key == "footwork_walkthrough":
+        _apply_bank_footwork(role, athlete_model, insert_offset, usage_ledger)
+    return role
 
 
 def _role_offset(role: dict[str, Any]) -> int | None:
