@@ -141,8 +141,14 @@ def test_gap_footwork_keeps_dedicated_channel_and_not_conditioning_category():
     assert role["support_insert_category"] != "conditioning_maintenance"
 
 
-def test_generic_aerobic_shadow_copy_is_sport_neutral():
-    for sport in ("mma", "wrestling", "bjj"):
+def test_boxing_aerobic_shadow_flow_keeps_shadowboxing_label():
+    role = _build_insert_role("aerobic_shadow_flow", _athlete(sport="boxing"), 5)
+
+    assert role["athlete_facing_label"] == "Shadowboxing Aerobic Flow"
+
+
+def test_non_boxing_aerobic_shadow_flow_label_is_sport_neutral():
+    for sport in ("mma", "kickboxing", "muay_thai", "wrestling", "bjj"):
         role = _build_insert_role("aerobic_shadow_flow", _athlete(sport=sport), 5)
         assert "boxing rhythm" not in role["display_text"].lower()
         assert "boxing" not in role["athlete_facing_label"].lower()
