@@ -149,7 +149,7 @@ class TrainingContext:
     # Existing intake/profile stance identity. Optional for backward-compatible
     # callers; technical footwork falls back to bilateral/neutral cueing when it
     # is unavailable.
-    stance: str = ""
+    stance: str = field(default="", kw_only=True)
     # Whether current/target weight were both collected. ``weight_cut_pct`` is
     # 0.0 when either is missing, so this is the only way downstream consumers
     # can tell "no cut" apart from "no cut data".
