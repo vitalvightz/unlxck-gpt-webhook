@@ -1059,7 +1059,15 @@ def _select_gap_footwork_drill(
         "style_tactical": tactical,
         "style_technical": technical,
         "weaknesses": clean_list(athlete_model.get("weaknesses")),
-        "key_goals": clean_list(athlete_model.get("key_goals")),
+        # Reaching this function means the gap-fill engine has already selected
+        # `footwork_walkthrough` as the best legal filler. Treat that role choice
+        # as contextual footwork relevance for this local bank lookup only, so a
+        # fighter does not need to have explicitly selected footwork as a goal or
+        # weakness to benefit from the personalised bank. The athlete model is not
+        # mutated and the normal training-plan selector remains relevance-gated.
+        "key_goals": list(
+            dict.fromkeys([*clean_list(athlete_model.get("key_goals")), "footwork"])
+        ),
         "equipment": clean_list(
             athlete_model.get("equipment") or athlete_model.get("available_equipment")
         ),
