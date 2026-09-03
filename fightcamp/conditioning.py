@@ -1599,7 +1599,7 @@ def select_technical_footwork_candidates(
         "brazilian_jiu_jitsu": "bjj",
         "jiu_jitsu": "bjj",
     }.get(fight_format, fight_format)
-    sport_tags = {"boxing", "mma", "kickboxing", "muay_thai", "wrestling", "bjj"}
+    sport_tags = {"boxing", "mma", "kickboxing", "muay_thai", "wrestling", "bjj", "grappling", "grappler", "wrestler"}
     style_tokens = set(
         normalize_tags([*flags.get("style_tactical", []), *flags.get("style_technical", [])])
     )
