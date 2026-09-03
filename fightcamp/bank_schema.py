@@ -342,7 +342,8 @@ def _technical_footwork_dose_ok(item: dict) -> bool:
     """
     rest_ok = _positive_number(item.get("rest_sec"))
     timed = (
-        _positive_number(item.get("work_sec"))
+        not any(field in item for field in ("sets", "reps", "reps_per_side", "quality_stop_rule"))
+        and _positive_number(item.get("work_sec"))
         and _positive_number(item.get("rounds"))
         and rest_ok
     )
