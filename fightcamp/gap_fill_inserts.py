@@ -1105,7 +1105,7 @@ def _apply_bank_footwork(
     notes = str(drill.get("notes") or "").strip()
     dose = " ".join(
         part
-        for part in (fields["timing"], f"Rest: {fields['rest']}." if fields["rest"] else "")
+        for part in (fields["timing"], f"Rest: {fields['rest']}." if fields["rest"] and not any(marker in fields["timing"].lower() for marker in ("rest", "reset")) else "")
         if part
     )
     # Same shared "Why: / bulleted activity / indented detail lines" contract as
