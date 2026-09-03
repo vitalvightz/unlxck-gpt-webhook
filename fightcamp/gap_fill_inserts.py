@@ -11,6 +11,7 @@ from .camp_phases import calculate_phase_weeks
 from .combat_load_policy import PlacementDirective, role_load_profile
 from .normalization import clean_list, normalize_fatigue_level
 from .conditioning import TECHNICAL_FOOTWORK_GROUP, select_technical_footwork_candidates
+from .coordination_support_library import normalize_sport
 from .late_selector_windows import classify_late_selector_window
 from .restriction_filtering import evaluate_restriction_impact
 from .stage2_render_guards import _all_active_injuries_surface_only
@@ -945,6 +946,10 @@ def _build_insert_role(
 ) -> dict[str, Any]:
     meta = _INSERT_META[role_key]
     label = str(meta["label"])
+    if role_key == "aerobic_shadow_flow" and normalize_sport(
+        athlete_model.get("fight_format") or athlete_model.get("sport") or ""
+    ) == "boxing":
+        label = "Shadowboxing Aerobic Flow"
     # tactical_watch carries no static copy: its athlete-facing text is stamped
     # from the JSON drill bank below.
     display_text = "" if role_key == "tactical_watch" else str(meta["display_text"])
