@@ -1056,7 +1056,7 @@ def _select_gap_footwork_drill(
         ),
     }
     window = classify_late_selector_window(insert_offset)
-    restrictions = clean_list(athlete_model.get("injury_restrictions"))
+    restrictions = athlete_model.get("injury_restrictions") or []
     for drill in select_technical_footwork_candidates(flags, existing_names, injuries):
         eligible_windows = {
             str(value).strip().lower()
