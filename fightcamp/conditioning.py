@@ -80,6 +80,7 @@ CONDITIONING_PRIMARY_COLLISION_BONUS = 3.0
 CONDITIONING_SECONDARY_COLLISION_BONUS = 1.5
 CONDITIONING_CLARIFICATION_TAG_BONUS = 0.75
 CONDITIONING_MAX_CLARIFICATION_TAG_BONUS = 2.0
+TECHNICAL_FOOTWORK_CHANNEL = "technical_footwork"
 
 _RAW_SPEED_GOAL_TOKENS = {
     "speed",
@@ -610,6 +611,9 @@ def athlete_facing_system_label(drill: dict, *, late_window: str | None = None) 
     """
 
     system = str(drill.get("system") or "").strip().lower()
+    modality = str(drill.get("modality") or "").strip().lower()
+    if system == TECHNICAL_FOOTWORK_CHANNEL or modality == TECHNICAL_FOOTWORK_CHANNEL:
+        return "technical footwork"
     tags = set(normalize_tags(drill.get("tags", [])))
     text = _conditioning_text_blob(drill)
     structured = _conditioning_structured_profile(drill, system=system)
@@ -1276,7 +1280,12 @@ def _decorate_conditioning_drill(
 ) -> dict:
     decorated = dict(drill)
     required_equipment = _conditioning_required_equipment(decorated)
-    decorated["system"] = str(decorated.get("system") or system).upper()
+    if system == TECHNICAL_FOOTWORK_CHANNEL:
+        decorated["legacy_system"] = str(decorated.get("system") or "").upper()
+        decorated["system"] = TECHNICAL_FOOTWORK_CHANNEL.upper()
+        decorated["render_channel"] = TECHNICAL_FOOTWORK_CHANNEL
+    else:
+        decorated["system"] = str(decorated.get("system") or system).upper()
     decorated["required_equipment"] = required_equipment
     decorated["universally_available"] = _conditioning_is_universally_available(decorated)
     decorated["generic_fallback"] = bool(decorated.get("generic_fallback"))
@@ -1314,7 +1323,7 @@ def _resolve_conditioning_sessions(
     single session, at most one fallback is surfaced.
     """
 
-    ordered_keys = ["aerobic", "glycolytic", "alactic"]
+    ordered_keys = ["aerobic", "glycolytic", "alactic", TECHNICAL_FOOTWORK_CHANNEL]
     ordered_keys += [k for k in grouped_drills.keys() if k not in ordered_keys]
 
     system_entries: list[dict] = []
@@ -1545,19 +1554,22 @@ def _technical_footwork_relevance(flags) -> bool:
     return bool(tokens & TECHNICAL_FOOTWORK_FOCUS_TOKENS)
 
 
-def select_technical_footwork_drill(flags, existing_names: set[str], injuries: list[str]):
-    """Return a technical footwork drill matching the athlete, or ``None``.
+def rank_technical_footwork_drills(
+    flags,
+    existing_names: set[str],
+    injuries: list[str | dict],
+) -> list[dict]:
+    """Return injury-eligible technical footwork drills in deterministic rank order.
 
     Gated on footwork relevance (goals/weaknesses), phase eligibility,
     per-drill ``reactive_level`` vs phase, and equipment. Sport + tactical
     function drive the pick so a boxer gets boxing footwork and a counter
-    striker gets defensive/angle movement. Injury gating is applied to the
-    shortlist. Taper/D-day (``late_windows``) gating is handled downstream by
-    ``_try_append_conditioning_drill`` so it stays consistent with the rest of
-    the conditioning selector.
+    striker gets defensive/angle movement. Injury gating is applied to every
+    candidate. Taper/D-day (``late_windows``) gating stays downstream so the
+    insertion path can try the next ranked candidate after a window mismatch.
     """
     if not _technical_footwork_relevance(flags):
-        return None
+        return []
 
     phase = str(flags.get("phase", "GPP")).upper()
     reactive_allowed = _TECHNICAL_FOOTWORK_REACTIVE_BY_PHASE.get(
@@ -1589,7 +1601,7 @@ def select_technical_footwork_drill(flags, existing_names: set[str], injuries: l
         candidates.append(drill)
 
     if not candidates:
-        return None
+        return []
 
     def _match_score(drill: dict) -> int:
         tags = set(normalize_tags(drill.get("tags", [])))
@@ -1604,11 +1616,18 @@ def select_technical_footwork_drill(flags, existing_names: set[str], injuries: l
         return score
 
     candidates.sort(key=lambda d: (-_match_score(d), d.get("name") or ""))
-    for drill in candidates[:INJURY_GUARD_SHORTLIST]:
+    eligible: list[dict] = []
+    for drill in candidates:
         decision = injury_decision(drill, injuries, phase, flags.get("fatigue", "low"))
         if decision.action != "exclude":
-            return drill
-    return None
+            eligible.append(drill)
+    return eligible
+
+
+def select_technical_footwork_drill(flags, existing_names: set[str], injuries: list[str | dict]):
+    """Return the highest-ranked injury-eligible technical footwork drill."""
+    candidates = rank_technical_footwork_drills(flags, existing_names, injuries)
+    return candidates[0] if candidates else None
 
 
 def format_drill_block(drill: dict, *, phase_color: str = "#000", fallback: bool = False) -> str:
@@ -1630,6 +1649,10 @@ def format_drill_block(drill: dict, *, phase_color: str = "#000", fallback: bool
 def _conditioning_session_title(*, phase: str, systems: set[str]) -> str:
     phase = phase.upper()
     systems = set(systems or set())
+    energy_systems = systems & KNOWN_SYSTEMS
+    if systems and not energy_systems and TECHNICAL_FOOTWORK_CHANNEL in systems:
+        return "Technical footwork"
+    systems = energy_systems
     if phase == "TAPER":
         if "alactic" in systems:
             return "Alactic sharpness"
@@ -1865,7 +1888,7 @@ def render_conditioning_block(
         if diagnostic_blocks:
             output_lines.append("\n\n".join(diagnostic_blocks))
 
-    ordered_keys = ["aerobic", "glycolytic", "alactic"]
+    ordered_keys = ["aerobic", "glycolytic", "alactic", TECHNICAL_FOOTWORK_CHANNEL]
     ordered_keys += [k for k in grouped_drills.keys() if k not in ordered_keys]
     sessions = resolved_sessions or _resolve_conditioning_sessions(
         grouped_drills,
@@ -1877,11 +1900,17 @@ def render_conditioning_block(
         if not session.get("entries"):
             continue
         systems = session.get("systems", set())
+        energy_systems = set(systems) & KNOWN_SYSTEMS
+        technical_only = bool(systems) and not energy_systems and TECHNICAL_FOOTWORK_CHANNEL in systems
         title = _conditioning_session_title(phase=phase, systems=systems)
         output_lines.append(f"\n#### {title}")
-        output_lines.append(f"**Intent:** {phase_intent.get(phase, 'Match phase intent.')}")
-        output_lines.append(f"**Dosage Template:** {dosage_template.get(phase, 'Match system goals.')}")
-        if diagnostic_context.get("speed_dose_allowed"):
+        if technical_only:
+            output_lines.append("**Intent:** Rehearse clean fight movement with no conditioning target.")
+            output_lines.append("**Technical Dose:** 1-2 crisp sets; stop before movement quality drops.")
+        else:
+            output_lines.append(f"**Intent:** {phase_intent.get(phase, 'Match phase intent.')}")
+            output_lines.append(f"**Dosage Template:** {dosage_template.get(phase, 'Match system goals.')}")
+        if energy_systems and diagnostic_context.get("speed_dose_allowed"):
             output_lines.append(
                 "**Speed Dose:** 1-2 exposures/week; 4-6 reps x 4-8 sec; full rest 60-120 sec; RPE 7-8; stop before fatigue."
             )
@@ -1890,7 +1919,7 @@ def render_conditioning_block(
         # touches discomfort before fight week. When a glycolytic / fight-pace
         # exposure is actually present this session (never in TAPER), surface the
         # hard-pressure dose so the plan is not only easy aerobic support.
-        if phase in {"GPP", "SPP"} and "glycolytic" in systems:
+        if phase in {"GPP", "SPP"} and "glycolytic" in energy_systems:
             if phase == "SPP":
                 output_lines.append(
                     "**Combat Pressure Floor:** 4-6 x 2-3 min fight-pace on / 60 sec off @ RPE 8-9. "
@@ -1903,7 +1932,7 @@ def render_conditioning_block(
                     "6-8 x 60 sec hard / 60-90 sec easy @ RPE 8. Controlled discomfort, not punishment. "
                     "Stop when output or technique drops."
                 )
-        if phase != "TAPER":
+        if phase != "TAPER" and energy_systems:
             output_lines.append(f"**Weekly Progression:** {weekly_progression.get(phase, 'Progress weekly.')}")
             output_lines.append(f"**If Time Short:** {time_short.get(phase, 'Keep top 2 drills.')}")
             output_lines.append(f"**If Fatigue High:** {fatigue_note.get(phase, 'Reduce volume.')}")
@@ -3205,7 +3234,13 @@ def generate_conditioning_block(flags):
                 "technical_footwork": "technical_footwork_bank.json",
                 "runtime_fallback": "runtime_fallback",
             }.get(source, "conditioning_bank.json")
-            late_eval = _cached_late_eval(drill, system, source_file)
+            # Technical footwork keeps ``system: aerobic`` only for legacy bank
+            # validation. Use that legacy value for late-window physiology rules,
+            # while the runtime group remains its dedicated non-dose channel.
+            late_eval_system = system
+            if system == TECHNICAL_FOOTWORK_CHANNEL:
+                late_eval_system = _cached_system(drill, source) or system
+            late_eval = _cached_late_eval(drill, late_eval_system, source_file)
             _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
 
             if late_eval["blocked"]:
@@ -3714,13 +3749,13 @@ def generate_conditioning_block(flags):
     # reason code. In taper the conditioning pool is heavily restricted, so this
     # is where familiar low-fatigue footwork most often fills the gap.
     def _insert_technical_footwork_drill() -> None:
-        if not technical_footwork_focus or len(selected_drill_names) >= visible_drill_cap:
+        if not technical_footwork_focus:
             return
         existing_names = {d.get("name") for _, drills in final_drills for d in drills}
-        drill = select_technical_footwork_drill(
+        candidates = rank_technical_footwork_drills(
             {**flags, "equipment": equipment_access}, existing_names, injuries
         )
-        if not drill:
+        if not candidates:
             log_fail_safe_degrade(
                 module="conditioning",
                 phase=phase,
@@ -3729,41 +3764,51 @@ def generate_conditioning_block(flags):
                 actual=0,
             )
             return
-        system = _cached_system(drill, "technical_footwork")
-        if system is None:
-            return
-        if not _try_append_conditioning_drill(
-            system,
-            drill,
-            {
-                "goal_hits": 1,
-                "weakness_hits": 0,
-                "style_hits": 0,
-                "phase_hits": 1,
-                "load_adjustments": 0,
-                "equipment_boost": 0,
-                "penalties": 0,
-                "reason_codes": ["technical_footwork_guarantee"],
-                "final_score": 0,
-            },
-            source="technical_footwork",
-        ):
-            log_fail_safe_degrade(
-                module="conditioning",
-                phase=phase,
-                reason="technical_footwork_no_candidate",
-                target=1,
-                actual=0,
-            )
+        for drill in candidates:
+            if _try_append_conditioning_drill(
+                TECHNICAL_FOOTWORK_CHANNEL,
+                drill,
+                {
+                    "goal_hits": 1,
+                    "weakness_hits": 0,
+                    "style_hits": 0,
+                    "phase_hits": 1,
+                    "load_adjustments": 0,
+                    "equipment_boost": 0,
+                    "penalties": 0,
+                    "reason_codes": ["technical_footwork_guarantee"],
+                    "final_score": 0,
+                },
+                source="technical_footwork",
+            ):
+                return
+        log_fail_safe_degrade(
+            module="conditioning",
+            phase=phase,
+            reason="technical_footwork_no_candidate",
+            target=1,
+            actual=0,
+        )
     _run_conditioning_poststep("technical_footwork_insertion", _insert_technical_footwork_drill)
 
     # Trim any extras beyond the recommended count
     def _trim_extra_drills() -> None:
         nonlocal final_drills, selected_drill_names
-        if len(selected_drill_names) > visible_drill_cap:
-            extra = len(selected_drill_names) - visible_drill_cap
-            final_drills = final_drills[:-extra]
-            selected_drill_names = selected_drill_names[:-extra]
+        energy_count = sum(len(drills) for system, drills in final_drills if system in KNOWN_SYSTEMS)
+        extra = max(0, energy_count - visible_drill_cap)
+        while extra:
+            for index in range(len(final_drills) - 1, -1, -1):
+                system, drills = final_drills[index]
+                if system not in KNOWN_SYSTEMS or not drills:
+                    continue
+                removed = drills.pop()
+                removed_name = removed.get("name")
+                if removed_name in selected_drill_names:
+                    selected_drill_names.remove(removed_name)
+                if not drills:
+                    final_drills.pop(index)
+                extra -= 1
+                break
     _run_conditioning_poststep("trim_extras", _trim_extra_drills)
 
     # Group drills by energy system so each system only prints once
