@@ -1840,7 +1840,7 @@ def _serialize_conditioning_option(
 ) -> dict:
     tags = clean_list(drill.get("tags", []))
     required_equipment = clean_list(drill.get("required_equipment") or drill.get("equipment", []))
-    return _with_selection_evidence({
+    option = {
         "name": drill.get("name", "Unnamed"),
         "source": "conditioning_bank",
         "movement_patterns": dedupe_preserve_order([system] + tags),
@@ -1856,7 +1856,35 @@ def _serialize_conditioning_option(
         "availability_contingency_reason": drill.get("availability_contingency_reason") or "",
         "session_index": drill.get("session_index"),
         "athlete_facing_system_label": athlete_facing_system_label(drill, late_window=late_window),
-    }, drill, score_evidence)
+    }
+    if drill.get("modality") == "technical_footwork":
+        rest = drill.get("rest")
+        if not rest and drill.get("rest_sec"):
+            rest = f"{drill['rest_sec']} sec between sets"
+        option["prescription"] = " | ".join(
+            part
+            for part in [
+                drill.get("timing") or drill.get("duration"),
+                rest,
+                drill.get("load") or drill.get("intensity"),
+            ]
+            if part
+        )
+        option["technical_footwork_prescription"] = {
+            key: drill[key]
+            for key in (
+                "cue_source",
+                "cue",
+                "side_rule",
+                "sets",
+                "reps",
+                "reps_per_side",
+                "rest_sec",
+                "quality_stop_rule",
+            )
+            if key in drill
+        }
+    return _with_selection_evidence(option, drill, score_evidence)
 
 
 def _serialize_rehab_option(

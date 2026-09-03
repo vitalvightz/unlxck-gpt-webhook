@@ -24,7 +24,7 @@ from .bank_schema import (
 )
 from .injury_filtering import injury_match_details, _log_exclusion, _log_replacement
 from .injury_guard import Decision, choose_injury_replacement, injury_decision, make_guarded_decision_factory
-from .coordination_support_library import normalize_sport
+from .coordination_support_library import extract_coordination_style, normalize_sport
 from .restriction_filtering import evaluate_restriction_impact
 from .diagnostics import format_missing_system_block
 from .tagging import normalize_item_tags, normalize_tags
@@ -1142,6 +1142,8 @@ def get_technical_footwork_bank():
         for items in bank.values():
             if isinstance(items, list):
                 loaded.extend(item for item in items if isinstance(item, dict))
+    for item in loaded:
+        _validate_technical_footwork_entry(item)
     _technical_footwork_bank_cache = loaded
     return _technical_footwork_bank_cache
 
@@ -1560,6 +1562,217 @@ _TECHNICAL_FOOTWORK_SPORT_TAGS = {
     "bjj": {"bjj"},
 }
 
+# This relationship intentionally reuses the canonical style tokens already
+# present in intake/tag normalization and the bank. It is a tactical preference
+# model, not a second style ontology. Earlier ranking compared style tokens
+# directly with function tokens (for example counter_striker == counter_setup),
+# which could never match. Values stay small and relative: eligibility gates
+# above this layer always win.
+_TECHNICAL_FOOTWORK_FUNCTION_PREFERENCES = {
+    "counter_striker": {
+        "counter_setup": 1.0,
+        "defensive_exit": 0.85,
+        "angle_creation": 0.7,
+        "range_management": 0.5,
+    },
+    "pressure_fighter": {
+        "pressure": 1.0,
+        "ring_cutting": 0.85,
+        "exit_lane_control": 0.7,
+        "angle_creation": 0.4,
+    },
+    "brawler": {
+        "pressure": 1.0,
+        "ring_cutting": 0.85,
+        "exit_lane_control": 0.7,
+        "angle_creation": 0.4,
+    },
+    "distance_striker": {
+        "range_management": 1.0,
+        "defensive_exit": 0.8,
+        "angle_creation": 0.65,
+        "base_recovery": 0.35,
+    },
+    "clinch_fighter": {
+        "clinch_management": 1.0,
+        "base_recovery": 0.75,
+        "defensive_exit": 0.5,
+    },
+    "kicker": {
+        "kick_recovery": 1.0,
+        "range_management": 0.8,
+        "defensive_exit": 0.55,
+        "base_recovery": 0.4,
+    },
+    "wrestler": {
+        "takedown_setup": 1.0,
+        "takedown_defense": 0.95,
+        "scramble_recovery": 0.8,
+        "base_recovery": 0.6,
+        "cage_control": 0.5,
+    },
+    "grappler": {
+        "standup_transition": 1.0,
+        "base_recovery": 0.8,
+        "scramble_recovery": 0.6,
+    },
+    "submission_hunter": {
+        "standup_transition": 1.0,
+        "base_recovery": 0.8,
+        "scramble_recovery": 0.6,
+    },
+}
+
+_TECHNICAL_FOOTWORK_REACTIVE_LEVELS = {"closed", "semi_reactive", "reactive"}
+_TECHNICAL_FOOTWORK_CUE_SOURCES = {"self", "coach", "partner", "visual"}
+_TECHNICAL_FOOTWORK_SIDE_RULES = {
+    "both_directions",
+    "athlete_primary_stance",
+    "alternate_stances",
+}
+
+
+def _positive_int(value) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value > 0
+
+
+def _validate_technical_footwork_entry(drill: dict) -> None:
+    """Validate the dedicated execution contract without widening conditioning."""
+    name = str(drill.get("name") or "<unnamed>")
+    if drill.get("modality") != TECHNICAL_FOOTWORK_GROUP:
+        raise ValueError(f"Technical footwork drill {name!r} has invalid modality")
+
+    functions = drill.get("tactical_function")
+    if not isinstance(functions, list) or not all(str(value).strip() for value in functions):
+        raise ValueError(f"Technical footwork drill {name!r} needs tactical_function values")
+
+    reactive_level = str(drill.get("reactive_level") or "").strip().lower()
+    if reactive_level not in _TECHNICAL_FOOTWORK_REACTIVE_LEVELS:
+        raise ValueError(f"Technical footwork drill {name!r} has invalid reactive_level")
+
+    cue_sources = drill.get("cue_source")
+    if not isinstance(cue_sources, list) or not cue_sources:
+        raise ValueError(f"Technical footwork drill {name!r} needs cue_source values")
+    normalized_sources = {str(value).strip().lower() for value in cue_sources}
+    if normalized_sources - _TECHNICAL_FOOTWORK_CUE_SOURCES:
+        raise ValueError(f"Technical footwork drill {name!r} has invalid cue_source")
+    if reactive_level == "reactive" and not (
+        normalized_sources & {"coach", "partner", "visual"}
+    ):
+        raise ValueError(
+            f"Reactive technical footwork drill {name!r} needs an external/random cue source"
+        )
+    if not str(drill.get("cue") or "").strip():
+        raise ValueError(f"Technical footwork drill {name!r} needs an executable cue")
+
+    if drill.get("side_rule") not in _TECHNICAL_FOOTWORK_SIDE_RULES:
+        raise ValueError(f"Technical footwork drill {name!r} has invalid side_rule")
+
+    rep_fields = [field for field in ("reps", "reps_per_side") if field in drill]
+    if rep_fields:
+        if len(rep_fields) != 1 or not _positive_int(drill.get(rep_fields[0])):
+            raise ValueError(f"Technical footwork drill {name!r} has invalid rep dose")
+        if not _positive_int(drill.get("sets")) or not _positive_int(drill.get("rest_sec")):
+            raise ValueError(f"Technical footwork drill {name!r} needs sets and rest_sec")
+        if any(field in drill for field in ("work_sec", "rounds", "total_minutes")):
+            raise ValueError(
+                f"Rep-based technical footwork drill {name!r} cannot carry timed-work metadata"
+            )
+        if not str(drill.get("quality_stop_rule") or "").strip():
+            raise ValueError(f"Rep-based technical footwork drill {name!r} needs quality_stop_rule")
+    elif not (_positive_int(drill.get("work_sec")) and _positive_int(drill.get("rounds"))):
+        raise ValueError(f"Timed technical footwork drill {name!r} needs work_sec and rounds")
+
+
+def _technical_footwork_style_preferences(
+    flags: dict, *, canonical_sport: str
+) -> tuple[list[str], dict[str, float]]:
+    raw_tactical_styles = list(flags.get("style_tactical", []))
+    style_tokens = set(
+        normalize_tags(
+            [*raw_tactical_styles, *flags.get("style_technical", [])]
+        )
+    )
+    # Reuse the shared coordination style aliases for established inputs such
+    # as out-boxer/range-fighter. Preserve more specific bank identities such as
+    # wrestler and kicker instead of collapsing them into a broader family.
+    specialist_tokens = style_tokens & {"wrestler", "submission_hunter", "kicker"}
+    if not specialist_tokens:
+        style_tokens.add(
+            extract_coordination_style({"style_tactical": raw_tactical_styles})
+        )
+    # A wrestling-format athlete is wrestling-oriented even when the intake's
+    # broader tactical label is grappler. MMA remains dependent on the declared
+    # tactical style so submission-oriented grapplers are not treated as wrestlers.
+    if canonical_sport == "wrestling":
+        style_tokens.add("wrestler")
+
+    styles = sorted(style_tokens & _TECHNICAL_FOOTWORK_FUNCTION_PREFERENCES.keys())
+    preferences: dict[str, float] = {}
+    for style in styles:
+        for function, weight in _TECHNICAL_FOOTWORK_FUNCTION_PREFERENCES[style].items():
+            preferences[function] = max(preferences.get(function, 0.0), weight)
+    return styles, preferences
+
+
+def _technical_footwork_match_evidence(
+    drill: dict,
+    *,
+    canonical_sport: str,
+    style_tokens: set[str],
+    function_preferences: dict[str, float],
+) -> tuple[float, list[str]]:
+    tags = set(normalize_tags(drill.get("tags", [])))
+    functions = {
+        str(value).strip().lower()
+        for value in drill.get("tactical_function", [])
+        if str(value).strip()
+    }
+    matched_functions = sorted(
+        functions & function_preferences.keys(),
+        key=lambda function: (-function_preferences[function], function),
+    )
+    score = sum(function_preferences[function] for function in matched_functions)
+    # Small tie-breakers preserve exact declared identity and exact sport tags
+    # without overpowering the tactical-function relationship.
+    score += 0.25 * len(style_tokens & tags)
+    if canonical_sport and canonical_sport in tags:
+        score += 0.1
+    return score, matched_functions
+
+
+def _technical_footwork_selection_reasons(flags: dict, drill: dict) -> dict:
+    canonical_sport = normalize_sport(flags.get("fight_format") or flags.get("sport") or "")
+    styles, function_preferences = _technical_footwork_style_preferences(
+        flags, canonical_sport=canonical_sport
+    )
+    score, matched_functions = _technical_footwork_match_evidence(
+        drill,
+        canonical_sport=canonical_sport,
+        style_tokens=set(styles),
+        function_preferences=function_preferences,
+    )
+    reason_codes = ["technical_footwork_guarantee"]
+    reason_codes.extend(f"technical_footwork_style_match:{style}" for style in styles)
+    reason_codes.extend(
+        f"technical_footwork_function_match:{function}"
+        for function in matched_functions
+    )
+    return {
+        "goal_hits": 1,
+        "weakness_hits": 0,
+        "style_hits": len(styles),
+        "phase_hits": 1,
+        "load_adjustments": 0,
+        "equipment_boost": 0,
+        "penalties": 0,
+        "technical_footwork_styles": styles,
+        "technical_footwork_function_matches": matched_functions,
+        "technical_footwork_function_hits": len(matched_functions),
+        "reason_codes": reason_codes,
+        "final_score": round(score, 4),
+    }
+
 
 def _footwork_focus_tokens(values) -> set[str]:
     tokens: set[str] = set()
@@ -1617,9 +1830,10 @@ def select_technical_footwork_candidates(
     compatible_sport_tags = _TECHNICAL_FOOTWORK_SPORT_TAGS.get(
         canonical_sport, {canonical_sport} if canonical_sport else set()
     )
-    style_tokens = set(
-        normalize_tags([*flags.get("style_tactical", []), *flags.get("style_technical", [])])
+    style_tokens, function_preferences = _technical_footwork_style_preferences(
+        flags, canonical_sport=canonical_sport
     )
+    style_token_set = set(style_tokens)
 
     candidates = []
     for drill in get_technical_footwork_bank():
@@ -1644,21 +1858,20 @@ def select_technical_footwork_candidates(
         equipment = normalize_equipment_list(drill.get("equipment", []))
         if equipment and not set(equipment).issubset(equipment_access):
             continue
+        if drill.get("partner_required") is True and "partner" not in equipment_access:
+            continue
         candidates.append(drill)
 
     if not candidates:
         return []
 
-    def _match_score(drill: dict) -> int:
-        tags = set(normalize_tags(drill.get("tags", [])))
-        functions = {str(f).strip().lower() for f in drill.get("tactical_function", []) if str(f).strip()}
-        score = 0
-        if canonical_sport and canonical_sport in tags:
-            score += 2
-        if style_tokens & tags:
-            score += 1
-        if style_tokens & functions:
-            score += 1
+    def _match_score(drill: dict) -> float:
+        score, _matched = _technical_footwork_match_evidence(
+            drill,
+            canonical_sport=canonical_sport,
+            style_tokens=style_token_set,
+            function_preferences=function_preferences,
+        )
         return score
 
     candidates.sort(key=lambda d: (-_match_score(d), d.get("name") or ""))
@@ -1683,6 +1896,27 @@ def select_technical_footwork_drill(flags, existing_names: set[str], injuries: l
     return candidates[0] if candidates else None
 
 
+def _technical_footwork_side_instruction(drill: dict, stance: str | None) -> str:
+    rule = str(drill.get("side_rule") or "").strip().lower()
+    stance_token = str(stance or "").strip().lower()
+    stance_label = {
+        "orthodox": "orthodox",
+        "southpaw": "southpaw",
+    }.get(stance_token)
+
+    if rule == "alternate_stances":
+        return "Alternate orthodox and southpaw stances each rep."
+    if rule == "athlete_primary_stance":
+        if stance_label:
+            return f"Use your {stance_label} stance throughout."
+        return "Use your normal starting stance throughout."
+    if stance_token in {"switch", "hybrid"}:
+        return "Work both directions evenly from each stance."
+    if stance_label:
+        return f"Start in your {stance_label} stance and work both directions evenly."
+    return "Work both directions evenly from your normal stance."
+
+
 def format_drill_block(drill: dict, *, phase_color: str = "#000", fallback: bool = False) -> str:
     """Return a formatted Markdown block for a single drill."""
     title = f"Fallback: {drill['name']}" if fallback else drill["name"]
@@ -1695,8 +1929,14 @@ def format_drill_block(drill: dict, *, phase_color: str = "#000", fallback: bool
         f"  - Rest: {drill['rest']}",
         f"  - Timing: {drill['timing']}",
         f"  - Purpose: {drill['purpose']}",
-        f"  - Red Flags: {drill['red_flags']}",
     ]
+    if drill.get("cue"):
+        parts.append(f"  - Cue: {drill['cue']}")
+    if drill.get("side_instruction"):
+        parts.append(f"  - Side / Stance: {drill['side_instruction']}")
+    if drill.get("quality_stop_rule"):
+        parts.append(f"  - Quality Stop: {drill['quality_stop_rule']}")
+    parts.append(f"  - Red Flags: {drill['red_flags']}")
     return "\n".join(parts) + "\n"
 
 def _conditioning_session_title(*, phase: str, systems: set[str]) -> str:
@@ -1888,6 +2128,7 @@ def render_conditioning_block(
     num_sessions: int = 1,
     diagnostic_context: dict | None = None,
     sport: str | None = None,
+    stance: str | None = None,
     resolved_sessions: list[dict] | None = None,
 ) -> str:
     phase = phase.upper()
@@ -2032,7 +2273,10 @@ def render_conditioning_block(
                         or d.get("description")
                         or "—"
                     )
-                    rest = d.get("rest", "—")
+                    rest = d.get("rest")
+                    if not rest and d.get("rest_sec"):
+                        rest = f"{d['rest_sec']} sec between sets"
+                    rest = rest or "—"
 
                     name = _normalize_conditioning_name(
                         name,
@@ -2066,6 +2310,16 @@ def render_conditioning_block(
                         "purpose": purpose,
                         "red_flags": d.get("red_flags", "None"),
                     }
+                    if d.get("modality") == TECHNICAL_FOOTWORK_GROUP:
+                        drill_block.update(
+                            {
+                                "cue": d.get("cue"),
+                                "side_instruction": _technical_footwork_side_instruction(
+                                    d, stance
+                                ),
+                                "quality_stop_rule": d.get("quality_stop_rule"),
+                            }
+                        )
 
                     output_lines.append(
                         format_drill_block(
@@ -3825,17 +4079,7 @@ def generate_conditioning_block(flags):
             if _try_append_conditioning_drill(
                 system,
                 drill,
-                {
-                    "goal_hits": 1,
-                    "weakness_hits": 0,
-                    "style_hits": 0,
-                    "phase_hits": 1,
-                    "load_adjustments": 0,
-                    "equipment_boost": 0,
-                    "penalties": 0,
-                    "reason_codes": ["technical_footwork_guarantee"],
-                    "final_score": 0,
-                },
+                _technical_footwork_selection_reasons(flags, drill),
                 source="technical_footwork",
                 group_key=TECHNICAL_FOOTWORK_GROUP,
             ):
@@ -4221,6 +4465,7 @@ def generate_conditioning_block(flags):
             num_sessions=num_conditioning_sessions,
             diagnostic_context=diagnostic_context,
             sport=flags.get("sport"),
+            stance=flags.get("stance"),
             resolved_sessions=resolved_sessions,
         )
 

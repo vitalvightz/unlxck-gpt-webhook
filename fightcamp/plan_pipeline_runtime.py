@@ -411,6 +411,7 @@ def build_runtime_context(
         recent_exercises=[],
         phase_weeks=phase_weeks,
         days_until_fight=plan_input.days_until_fight,
+        stance=plan_input.stance.strip(),
         hard_sparring_days=plan_input.hard_sparring_days,
         support_work_days=getattr(plan_input, "support_work_days", []) or getattr(plan_input, "technical_skill_days", []),
         technical_skill_days=getattr(plan_input, "technical_skill_days", []),

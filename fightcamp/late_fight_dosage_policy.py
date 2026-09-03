@@ -214,6 +214,7 @@ def install() -> None:
         num_sessions: int = 1,
         diagnostic_context: dict | None = None,
         sport: str | None = None,
+        stance: str | None = None,
         resolved_sessions: list[dict] | None = None,
     ) -> str:
         context = dict(diagnostic_context or {})
@@ -235,6 +236,7 @@ def install() -> None:
             num_sessions=num_sessions,
             diagnostic_context=context,
             sport=sport,
+            stance=stance,
             resolved_sessions=resolved_sessions,
         )
 
