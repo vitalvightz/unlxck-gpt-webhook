@@ -39,13 +39,10 @@ _APP_STATUS_READY = "ready"
 _APP_STATUS_PUBLISHABLE_WITH_FLAGS = "publishable_with_flags"
 _STAGE2_PASS = "stage2_pass"
 _STAGE2_FAILED = "stage2_failed"
-# `stage2_status` audit value for a technical Stage 2 failure — the finalizer
-# never produced a usable plan (timeout, provider error, unavailable, incomplete
-# output) — so the deterministic Stage 1 plan was completed instead. Distinct
-# from `stage2_failed`, which means Stage 2 DID produce a plan that the validator
-# flagged. Never a plan or job status.
+# Legacy audit value retained for compatibility with historical rows/tests.
+# New generations must never publish Stage 1 after a technical Stage 2 failure.
 STAGE2_STAGE1_FALLBACK = "stage2_failed_stage1_fallback"
-# Key under `stage2_validator_report` recording why Stage 2 was unusable.
+# Legacy report key retained for compatibility with historical rows/tests.
 STAGE2_FALLBACK_REPORT_KEY = "stage2_fallback"
 
 logger = logging.getLogger(__name__)
@@ -77,26 +74,15 @@ class Stage2AutomationError(RuntimeError):
     Carries an optional ``stage2_cost`` payload (token/cost telemetry captured up
     to the point of failure) so the orchestrator can still persist what is known
     about a failed attempt.
-
-    ``provider_request_started`` records whether a request was actually issued to
-    the provider. It stays False for failures raised before the call — a prompt
-    over the budget, or an unconfigured automator — so those are not counted as
-    provider attempts in the cost/audit telemetry.
     """
 
     stage2_cost: dict[str, Any] | None = None
-    provider_request_started: bool = False
 
 
 def _with_stage2_cost(
     error: Stage2AutomationError, cost: dict[str, Any]
 ) -> Stage2AutomationError:
     error.stage2_cost = cost
-    return error
-
-
-def _mark_provider_request_started(error: Stage2AutomationError) -> Stage2AutomationError:
-    error.provider_request_started = True
     return error
 
 
@@ -141,13 +127,11 @@ def _stage2_max_output_tokens() -> int:
     # Bounds output token count (and therefore cost/latency) on the Stage 2 call.
     # This budget is SHARED with the model's reasoning tokens (gpt-5-* burn a
     # large, hidden share of it before emitting any plan text), so a positive cap
-    # set too low truncates the plan mid-output: ``_generate_text`` then sees an
-    # ``incomplete`` response and raises Stage2AutomationError. That no longer
-    # fails the job — the orchestrator completes it on the Stage 1 plan — but the
-    # athlete silently loses the coach-voice pass, so a cap is still worth
-    # avoiding. Default is 0 = no cap (provider default) so plans are never
-    # truncated; the Stage 2 timeout still bounds runtime. Set a positive value
-    # to bound output cost/latency.
+    # set too low can truncate the plan mid-output. If the provider marks a
+    # response incomplete but still returns usable Stage 2 text, that text is
+    # validated and released with a flag; Stage 1 is never substituted. Default
+    # is 0 = no cap (provider default), while the Stage 2 timeout still bounds
+    # runtime. Set a positive value only when cost/latency needs a hard ceiling.
     return _env_int(
         "UNLXCK_STAGE2_MAX_OUTPUT_TOKENS",
         _DEFAULT_MAX_OUTPUT_TOKENS,
@@ -304,9 +288,17 @@ def _merge_stage2_costs(*costs: dict[str, Any] | None) -> dict[str, Any]:
         running_usd = (merged.get("stage2_estimated_cost_usd") or 0.0) + (
             cost.get("stage2_estimated_cost_usd") or 0.0
         )
+        incomplete_response_seen = bool(merged.get("stage2_incomplete_response")) or bool(
+            cost.get("stage2_incomplete_response")
+        )
         merged = dict(cost)
         merged.update(running_tokens)
         merged["stage2_estimated_cost_usd"] = running_usd
+        if incomplete_response_seen:
+            # Incomplete-response audit is sticky across repair/structured calls.
+            # A later successful call must not erase that an earlier Stage 2
+            # response was provider-truncated.
+            merged["stage2_incomplete_response"] = True
     return merged
 
 
@@ -590,6 +582,7 @@ def _response_is_incomplete(response: Any) -> bool:
 
     return any(marker in detail_text for marker in ("max_output_tokens", "output", "token", "length"))
 
+
 def _extract_response_text(response: Any) -> str:
     output_text = getattr(response, "output_text", None)
     if isinstance(output_text, str) and output_text.strip():
@@ -663,76 +656,6 @@ def _approved_result(
         "stage2_status": stage2_status,
         "stage2_validator_report": validator_report,
         "stage2_retry_text": retry_text,
-        "stage2_attempt_count": attempt_count,
-    }
-
-
-class Stage1FallbackUnavailableError(RuntimeError):
-    """Raised when Stage 2 failed and Stage 1 left no plan body to fall back to."""
-
-
-def build_stage1_fallback_result(
-    stage1_result: dict[str, Any],
-    *,
-    reason: str,
-    detail: str = "",
-    attempt_count: int = 1,
-    stage2_cost: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    """Complete the job on the Stage 1 plan after a technical Stage 2 failure.
-
-    Used when the finalizer never produced a usable plan — it timed out, threw,
-    was unavailable, or returned incomplete/empty output. Stage 1 has already
-    built a complete deterministic plan, so the job completes on that instead of
-    failing generation and stranding the athlete.
-
-    This is not the validator path: a Stage 2 plan that exists but trips the
-    validator is published as `publishable_with_flags` (see `finalize`). Here
-    there is no Stage 2 plan at all, so the Stage 1 body is published as `ready`
-    with a clean report — the validator never ran against it and has nothing to
-    say about it. The failure is recorded under `stage2_fallback` and logged.
-
-    ``attempt_count`` should be 1 when a provider request was actually started
-    and 0 only when Stage 2 was unavailable before any call was made.
-
-    Raises :class:`Stage1FallbackUnavailableError` when Stage 1 produced no plan
-    text, so the caller keeps its existing failure handling rather than
-    publishing an empty plan. That is a Stage 1 failure, which still blocks.
-    """
-
-    plan_text = str(stage1_result.get("plan_text") or "").strip()
-    if not plan_text:
-        raise Stage1FallbackUnavailableError(
-            "Stage 1 produced no plan text; nothing to fall back to."
-        )
-    return {
-        **_base_result(stage1_result, draft_plan_text=plan_text, stage2_cost=stage2_cost),
-        "status": _APP_STATUS_READY,
-        "plan_text": plan_text,
-        "final_plan_text": plan_text,
-        "stage2_status": STAGE2_STAGE1_FALLBACK,
-        "stage2_validator_report": {
-            "errors": [],
-            "warnings": [],
-            "blocking_warnings": [],
-            "review_flags": [],
-            "release_decision": "publish",
-            "is_athlete_releasable": True,
-            "is_publishable": True,
-            # Terminal structured-card outcome. Without this the card state
-            # derives as "none", which reads as "might still be building" and
-            # leaves the client polling for a conversion that will never run.
-            "structured_plan": StructuredPlanOutcome(
-                status="not_attempted",
-                warnings=["stage 1 fallback released; structured conversion skipped"],
-            ).as_debug(),
-            STAGE2_FALLBACK_REPORT_KEY: {
-                "reason": reason,
-                "detail": detail,
-                "at": _utc_now_iso(),
-            },
-        },
-        "stage2_retry_text": "",
         "stage2_attempt_count": attempt_count,
     }
 
@@ -831,45 +754,47 @@ class OpenAIStage2Automator:
             # so a failed attempt still leaves an auditable cost row.
             failure_cost = _build_stage2_cost(self.model, prompt=prompt, response=None)
             if _is_quota_or_rate_limit_error(exc):
-                raise _mark_provider_request_started(
-                    _with_stage2_cost(
-                        Stage2AutomationError(
-                            "Stage 2 stopped: OpenAI quota/rate limit hit. No further retry attempted."
-                        ),
-                        failure_cost,
-                    )
+                raise _with_stage2_cost(
+                    Stage2AutomationError(
+                        "Stage 2 stopped: OpenAI quota/rate limit hit. No further retry attempted."
+                    ),
+                    failure_cost,
                 ) from exc
             # Keep the raw provider exception (which can carry request payloads or
             # provider internals) out of the stored/visible error; the full detail
             # is captured in the server log below.
             logger.exception("[stage2] model_request_failed error_type=%s", type(exc).__name__)
-            raise _mark_provider_request_started(
-                _with_stage2_cost(
-                    Stage2AutomationError("Stage 2 model request failed. Check server logs."),
-                    failure_cost,
-                )
+            raise _with_stage2_cost(
+                Stage2AutomationError("Stage 2 model request failed. Check server logs."),
+                failure_cost,
             ) from exc
         response_id = getattr(response, "id", None) or "unknown"
-        if _response_is_incomplete(response):
-            # We have a response (with usage), just not a full plan — capture the
-            # actual tokens burned before truncation.
-            raise _mark_provider_request_started(
-                _with_stage2_cost(
-                    Stage2AutomationError(
-                        "Stage 2 model response was incomplete before producing a full plan."
-                    ),
-                    _build_stage2_cost(self.model, prompt=prompt, response=response),
-                )
-            )
+        response_incomplete = _response_is_incomplete(response)
         try:
             text = _extract_response_text(response)
-        except Stage2AutomationError as exc:
-            raise _mark_provider_request_started(
-                _with_stage2_cost(
-                    exc, _build_stage2_cost(self.model, prompt=prompt, response=response)
+        except Stage2AutomationError as extraction_error:
+            error = (
+                Stage2AutomationError(
+                    "Stage 2 model response was incomplete and contained no usable plan text."
                 )
+                if response_incomplete
+                else extraction_error
+            )
+            raise _with_stage2_cost(
+                error, _build_stage2_cost(self.model, prompt=prompt, response=response)
             )
         cost = _build_stage2_cost(self.model, prompt=prompt, response=response, text=text)
+        if response_incomplete:
+            # Preserve the Stage 2 body instead of silently replacing it with the
+            # deterministic Stage 1 draft. The finalizer forces this result onto
+            # the flagged release path below so admins can see that it was partial.
+            cost["stage2_incomplete_response"] = True
+            logger.warning(
+                "[stage2] incomplete %s response id=%s chars=%s; validating partial Stage 2 text",
+                attempt_label,
+                response_id,
+                len(text),
+            )
         # Attribute cost to the job/athlete so it can be aggregated per user from
         # the logs. Falls back to "unknown" when the caller does not supply it.
         context = log_context or {}
@@ -956,6 +881,36 @@ class OpenAIStage2Automator:
             if attempt_count == 2
             else first_pass_cost
         )
+
+        final_response_incomplete = bool(final_cost.get("stage2_incomplete_response"))
+        if bool(plan_text_cost.get("stage2_incomplete_response")):
+            # Incomplete-response audit survives an effective-dose repair. If the
+            # final call itself was incomplete, the partial Stage 2 body is the
+            # athlete-facing plan. If only an earlier call was incomplete, the
+            # repaired Stage 2 body stays athlete-facing but the audit flag remains.
+            partial_report = dict(first_review["validator_report"])
+            warnings = list(partial_report.get("warnings") or [])
+            warning_message = (
+                "Provider marked the athlete-facing Stage 2 response incomplete; partial Stage 2 text was released instead of falling back to Stage 1."
+                if final_response_incomplete
+                else "Provider marked an earlier Stage 2 response incomplete; a subsequent Stage 2 repair produced the athlete-facing plan."
+            )
+            warnings.append(
+                {
+                    "code": "stage2_incomplete_response",
+                    "message": warning_message,
+                }
+            )
+            partial_report.update(
+                {
+                    "warnings": warnings,
+                    "release_decision": "publish_with_flags",
+                    "is_athlete_releasable": True,
+                    "is_publishable": True,
+                }
+            )
+            first_review = {**first_review, "validator_report": partial_report}
+
         quality_findings = athlete_release_with_flags_findings(first_review["validator_report"])
         admin_blocking_findings = admin_review_blocking_findings(first_review["validator_report"])
         release_decision = first_review["validator_report"].get("release_decision")
