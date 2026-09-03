@@ -397,7 +397,6 @@ def _safe_conditioning_maintenance_inserts(
     Higher-impact options (skip/jog) are withheld when lower legs are loaded,
     fatigue is high, or a hard weight cut is active, so the slot stays low-risk.
     """
-
     if insert_offset < MIN_AEROBIC_MAINTENANCE_OFFSET or on_hard_sparring_day:
         return set()
     if not _has_conditioning_goal(athlete_model):
@@ -945,6 +944,9 @@ def _build_insert_role(
 ) -> dict[str, Any]:
     meta = _INSERT_META[role_key]
     label = str(meta["label"])
+    sport = str(athlete_model.get("fight_format") or athlete_model.get("sport") or "").strip().lower()
+    if role_key == "aerobic_shadow_flow":
+        label = "Shadowboxing Aerobic Flow" if sport == "boxing" else "Aerobic Movement Flow"
     # tactical_watch carries no static copy: its athlete-facing text is stamped
     # from the JSON drill bank below.
     display_text = "" if role_key == "tactical_watch" else str(meta["display_text"])
