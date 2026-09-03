@@ -121,7 +121,7 @@ def test_effective_no_loading_overrides_loaded_candidate_and_cap_name():
     assert not _goal(brief, "strength")["evidence"]
 
 
-def test_sheyi_like_suppressed_gpp_then_power_only_d13_explicitly_defers_strength():
+def test_sheyi_like_two_hard_spar_count_cannot_excuse_strength_loss():
     brief = _brief(days=26, roles=[_role(13)], slots=[_slot("Medicine Ball Rotational Slam", "anchor_power")])
     brief["athlete_snapshot"].update(sport="mma", weaknesses=["footwork", "power"],
         equipment=["barbell", "kettlebells", "medicine_ball"], hard_sparring_days=["Tuesday", "Friday"])
@@ -131,12 +131,12 @@ def test_sheyi_like_suppressed_gpp_then_power_only_d13_explicitly_defers_strengt
                                  "compression_reason_codes": ["two_hard_spar_days"]}]
     _resolve(brief)
     strength = _goal(brief, "strength")
-    assert strength["state"] == "defer"
+    assert strength["state"] == "maintain"
     assert strength["satisfied"] is False
     assert strength["evidence"] == []
-    assert "calendar_capacity" in strength["reason_codes"]
-    assert not any(e["goal"] == "strength" for e in validate_goal_preservation(brief))
-    assert week["session_roles"][0]["effective_strength_envelope"]["loaded_allowed"] is False
+    assert strength["constraints"] == []
+    assert "calendar_capacity" not in strength["reason_codes"]
+    assert any(e["goal"] == "strength" for e in validate_goal_preservation(brief))
 
 
 @pytest.mark.parametrize("day", [0, 1, 3, 7])
