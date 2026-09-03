@@ -127,6 +127,20 @@ def has_coordination_target(athlete_model: dict[str, Any] | None) -> bool:
     return bool(target_tokens & normalized_targets)
 
 
+def normalize_sport(value: Any) -> str:
+    """Canonicalize a sport / fight-format string via the shared sport ontology.
+
+    Reuses the same ``_SPORT_ALIASES`` identity map the coordination-support
+    selector uses, so every consumer resolves ``"muay thai"``, ``"muaythai"``,
+    ``"wrestler"``, ``"jiu jitsu"`` etc. to one canonical sport in
+    :data:`SUPPORTED_SPORTS`. Unknown tokens are returned in cleaned form (so an
+    unsupported sport still filters strictly rather than silently matching a
+    different sport), and empty input returns ``""``.
+    """
+    token = _token(value)
+    return _SPORT_ALIASES.get(token, token)
+
+
 def extract_coordination_sport(athlete_model: dict[str, Any] | None) -> str:
     if not isinstance(athlete_model, dict):
         return "mma"

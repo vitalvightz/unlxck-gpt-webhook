@@ -1,19 +1,4 @@
-"""Blocker-3 regression: technical footwork mech_* tags are reconciled to the
-canonical injury vocabulary and are gated by the *real* injury guard.
-
-The technical footwork bank originally introduced a parallel mechanical-risk
-vocabulary (``mech_braking``, ``mech_lateral_knee``, ``mech_level_change``,
-``mech_ground_transition``, ``mech_single_leg``, ``mech_ankle_stability``) that
-no injury rule read, so genuine knee/ankle/Achilles/hip loads never interacted
-with the injury system. These tests pin the reconciliation:
-
-* every ``mech_*`` tag in the bank is canonical injury vocabulary (i.e. read by
-  ``INJURY_RULES``);
-* the two genuinely-new demands (``mech_plantarflexion`` / ``mech_hip_rotation``)
-  are wired into the relevant regions;
-* real (not monkeypatched) knee, ankle, Achilles, hip and lower-limb injuries
-  exclude the drills that load them, while the neutral fallback stays safe.
-"""
+"""Real injury-guard regressions for the dedicated technical-footwork bank."""
 from __future__ import annotations
 
 import pytest
@@ -22,116 +7,133 @@ from fightcamp import conditioning
 from fightcamp.injury_exclusion_rules import INJURY_RULES
 from fightcamp.injury_guard import injury_decision
 
-
 BANK = {d["name"]: d for d in conditioning.get_technical_footwork_bank()}
+WEIGHT_BEARING_TAG = "mech_lower_limb_weight_bearing"
 
 
 def _bank_mech_tags() -> set[str]:
-    tags: set[str] = set()
-    for drill in BANK.values():
-        tags.update(t for t in drill.get("tags", []) if str(t).startswith("mech_"))
-        tags.update(t for t in drill.get("mechanical_risk_tags", []) if str(t).startswith("mech_"))
-    return tags
+    return {
+        tag
+        for drill in BANK.values()
+        for field in ("tags", "mechanical_risk_tags")
+        for tag in drill.get(field, [])
+        if str(tag).startswith("mech_")
+    }
 
 
 def _injury_rule_mech_tags() -> set[str]:
-    tags: set[str] = set()
-    for rule in INJURY_RULES.values():
-        tags.update(t for t in rule.get("ban_tags", []) if str(t).startswith("mech_"))
-    return tags
+    return {
+        tag
+        for rule in INJURY_RULES.values()
+        for tag in rule.get("ban_tags", [])
+        if str(tag).startswith("mech_")
+    }
 
 
-# The invented, non-canonical tokens the reclassification must no longer use.
 _RETIRED_TAGS = {
-    "mech_braking",
-    "mech_lateral_knee",
-    "mech_level_change",
-    "mech_ground_transition",
-    "mech_single_leg",
-    "mech_ankle_stability",
+    "mech_braking", "mech_lateral_knee", "mech_level_change",
+    "mech_ground_transition", "mech_single_leg", "mech_ankle_stability",
 }
 
 
 def test_bank_mech_tags_are_all_canonical_injury_vocabulary():
-    # Every mech_* tag the bank uses must be a tag the injury rules actually read
-    # (no parallel vocabulary). Reuse over invention.
-    bank_tags = _bank_mech_tags()
-    assert bank_tags, "expected the footwork bank to carry mechanical tags"
-    wired = _injury_rule_mech_tags()
-    orphans = bank_tags - wired
-    assert not orphans, f"footwork mech tags not wired into any injury rule: {sorted(orphans)}"
+    assert not (_bank_mech_tags() - _injury_rule_mech_tags())
 
 
 def test_retired_invented_tags_are_gone():
-    assert _bank_mech_tags().isdisjoint(_RETIRED_TAGS), _bank_mech_tags() & _RETIRED_TAGS
+    assert _bank_mech_tags().isdisjoint(_RETIRED_TAGS)
 
 
-def test_new_tags_are_wired_into_expected_regions():
-    # mech_plantarflexion protects the plantarflexor / lower-leg chain.
-    for region in ("achilles", "calf", "ankle", "foot"):
-        assert "mech_plantarflexion" in INJURY_RULES[region]["ban_tags"], region
-    # mech_hip_rotation protects the hip.
-    assert "mech_hip_rotation" in INJURY_RULES["hip"]["ban_tags"]
+# Every region in the standing weight-bearing chain (foot-to-hip axial load +
+# the plantarflexor push-off chain) must read the shared weight-bearing tag, so a
+# severe structural injury anywhere in it can omit standing technical footwork
+# rather than fall through to a stance reset. Muscular movers whose region rules
+# already gate their footwork-relevant load (groin/glute/hip_flexor/hamstring/
+# quad) are deliberately excluded.
+WEIGHT_BEARING_REGIONS = ("achilles", "ankle", "calf", "foot", "hip", "knee", "shin", "toe")
 
 
-# region, high-severity injury phrase, drills that must be EXCLUDED
-_REGION_CASES = [
-    (
-        "knee",
-        "torn acl in my knee",
-        ["Lateral Exit to Re-Enter", "Pressure Step-Cut Reset",
-         "Sprawl Exit to Ring Angle", "Level-Change Feint to Angle"],
-    ),
-    (
-        "ankle",
-        "badly torn ankle ligaments",
-        ["Lateral Exit to Re-Enter", "Teep Retreat and Re-Stance",
-         "Kick Exit and Re-Stance Walkthrough"],
-    ),
-    (
-        "achilles",
-        "ruptured achilles",
-        ["Teep Retreat and Re-Stance", "Kick Exit and Re-Stance Walkthrough",
-         "Check and Return Step", "Switch-Step Stance Recovery"],
-    ),
-    (
-        "hip",
-        "torn hip labrum",
-        ["Step-Back Pivot Reset", "45-Degree Angle Step to Jab Reset",
-         "Switch-Step Stance Recovery", "Clinch Exit Square-Up Reset"],
-    ),
-]
+def test_weight_bearing_tag_is_on_every_drill_and_wired_to_structural_regions():
+    for drill in BANK.values():
+        assert WEIGHT_BEARING_TAG in drill["tags"], drill["name"]
+        assert WEIGHT_BEARING_TAG in drill["mechanical_risk_tags"], drill["name"]
+    for region in WEIGHT_BEARING_REGIONS:
+        assert WEIGHT_BEARING_TAG in INJURY_RULES[region]["ban_tags"], region
 
 
-@pytest.mark.parametrize("region,injury,excluded", _REGION_CASES)
-def test_real_injury_guard_excludes_loading_footwork(region, injury, excluded):
-    # No monkeypatch: the actual injury_decision must exclude the drills whose
-    # reconciled canonical tags load the injured region.
-    for name in excluded:
-        decision = injury_decision(BANK[name], [injury], "SPP", "low")
-        assert decision.action == "exclude", (region, name, decision.action)
+@pytest.mark.parametrize("injury", [
+    "ruptured achilles",
+    "torn acl in my knee",
+    "badly torn ankle ligaments",
+    "torn hip labrum",
+    # Distal weight-bearing chain added by the safety audit: a severe structural
+    # injury here must also omit all technical footwork, not fall through to a
+    # stance reset because the region rule did not read the weight-bearing tag.
+    "severe shin fracture",
+    "ruptured calf",
+    "severe foot fracture",
+    "broken toe",
+])
+def test_severe_lower_limb_injury_excludes_all_technical_footwork(injury):
+    for drill in BANK.values():
+        decision = injury_decision(drill, [injury], "SPP", "low")
+        assert decision.action == "exclude", (injury, drill["name"], decision.action)
+
+    flags = {
+        "phase": "SPP", "fatigue": "low", "sport": "boxing",
+        "fight_format": "boxing", "style_tactical": ["counter_striker"],
+        "style_technical": ["boxing"], "equipment": ["bodyweight"],
+        "key_goals": ["footwork"], "weaknesses": [], "injuries": [injury],
+    }
+    assert conditioning.select_technical_footwork_drill(flags, set(), [injury]) is None
 
 
-@pytest.mark.parametrize("region,injury,excluded", _REGION_CASES)
-def test_neutral_stance_reset_stays_safe_for_every_region(region, injury, excluded):
-    # Stance Reset Line Drill carries no mechanical-risk tag and must remain the
-    # universally injury-safe fallback across knee/ankle/Achilles/hip.
-    decision = injury_decision(BANK["Stance Reset Line Drill"], [injury], "SPP", "low")
-    assert decision.action != "exclude", (region, decision.action)
+def test_mild_wrist_issue_does_not_remove_lower_body_technical_footwork():
+    injury = "mild wrist soreness"
+    assert injury_decision(BANK["Stance Reset Line Drill"], [injury], "SPP", "low").action == "allow"
+    flags = {
+        "phase": "SPP", "fatigue": "low", "sport": "boxing",
+        "fight_format": "boxing", "style_tactical": [], "style_technical": ["boxing"],
+        "equipment": ["bodyweight"], "key_goals": ["footwork"], "weaknesses": [],
+    }
+    assert conditioning.select_technical_footwork_drill(flags, set(), [injury]) is not None
 
 
-def test_selector_returns_injury_safe_footwork_for_knee_injured_boxer():
-    # End-to-end through the real selector (not the low-level guard): a
-    # footwork-focused boxer with a serious knee injury still gets a footwork
-    # drill, and it is one that does not load the knee.
-    flags = dict(
-        phase="GPP", fatigue="low", sport="boxing", fight_format="boxing",
-        style_tactical=["counter_striker"], style_technical=["boxing"],
-        equipment=["bodyweight"], key_goals=["footwork"], weaknesses=[],
-        injuries=["torn acl in my knee"], days_until_fight=40,
-    )
-    drill = conditioning.select_technical_footwork_drill(flags, set(), flags["injuries"])
-    assert drill is not None
-    assert injury_decision(drill, flags["injuries"], "GPP", "low").action != "exclude"
-    knee_tags = {t for t in INJURY_RULES["knee"]["ban_tags"] if t.startswith("mech_")}
-    assert knee_tags.isdisjoint(drill.get("tags", [])), drill["name"]
+def test_lower_limb_severity_still_distinguishes_allow_modify_and_exclude():
+    drill = BANK["Stance Reset Line Drill"]
+    assert injury_decision(drill, ["mild knee soreness"], "TAPER", "low").action == "allow"
+    assert injury_decision(drill, ["knee strain"], "TAPER", "low").action == "modify"
+    assert injury_decision(drill, ["torn acl in my knee"], "TAPER", "low").action == "exclude"
+
+
+# For the distal weight-bearing regions the audit newly wired, prove the tag
+# preserves the full severity policy on a drill whose only weight-bearing
+# demand is the generic tag (a plain stance reset, no plantarflexion/impact
+# tags): mild allows, moderate modifies, severe excludes.
+@pytest.mark.parametrize("region,mild,moderate,severe", [
+    ("shin", "mild shin soreness", "shin strain", "severe shin fracture"),
+    ("calf", "mild calf tightness", "calf strain", "ruptured calf"),
+    ("foot", "mild foot soreness", "foot strain", "severe foot fracture"),
+    ("toe", "mild toe soreness", "toe strain", "broken toe"),
+])
+def test_distal_weight_bearing_regions_keep_allow_modify_exclude(region, mild, moderate, severe):
+    drill = BANK["Stance Reset Line Drill"]
+    assert injury_decision(drill, [mild], "SPP", "low").action == "allow", region
+    assert injury_decision(drill, [moderate], "SPP", "low").action == "modify", region
+    assert injury_decision(drill, [severe], "SPP", "low").action == "exclude", region
+
+
+@pytest.mark.parametrize("injury", [
+    "severe shin fracture",
+    "ruptured calf",
+    "severe foot fracture",
+    "broken toe",
+])
+def test_selector_omits_all_footwork_for_severe_distal_weight_bearing_injury(injury):
+    flags = {
+        "phase": "SPP", "fatigue": "low", "sport": "boxing",
+        "fight_format": "boxing", "style_tactical": ["counter_striker"],
+        "style_technical": ["boxing"], "equipment": ["bodyweight"],
+        "key_goals": ["footwork"], "weaknesses": [], "injuries": [injury],
+    }
+    assert conditioning.select_technical_footwork_drill(flags, set(), [injury]) is None
