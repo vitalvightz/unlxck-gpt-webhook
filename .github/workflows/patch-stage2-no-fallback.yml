@@ -1,0 +1,133 @@
+name: Patch Stage 2 no-fallback contract
+
+on:
+  push:
+    branches:
+      - codex/remove-stage1-athlete-fallback
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/remove-stage1-athlete-fallback
+          fetch-depth: 0
+      - name: Apply contract cleanup
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_between(path: str, start: str, end: str, replacement: str) -> None:
+              p = Path(path)
+              text = p.read_text()
+              a = text.index(start)
+              b = text.index(end, a)
+              p.write_text(text[:a] + replacement + text[b:])
+
+          # 1) Remove Stage 1 fallback machinery from the finalizer module and
+          # fix incomplete-response error handling without a lint-only reassignment.
+          p = Path("api/stage2_automation.py")
+          text = p.read_text()
+          start = text.index("class Stage1FallbackUnavailableError(RuntimeError):")
+          end = text.index("\n\n@dataclass\nclass DisabledStage2Automator", start)
+          text = text[:start] + text[end + 2:]
+          old = '''        try:\n            text = _extract_response_text(response)\n        except Stage2AutomationError as exc:\n            if response_incomplete:\n                exc = Stage2AutomationError(\n                    "Stage 2 model response was incomplete and contained no usable plan text."\n                )\n            raise _mark_provider_request_started(\n                _with_stage2_cost(\n                    exc, _build_stage2_cost(self.model, prompt=prompt, response=response)\n                )\n            )\n'''
+          new = '''        try:\n            text = _extract_response_text(response)\n        except Stage2AutomationError as extraction_error:\n            error = (\n                Stage2AutomationError(\n                    "Stage 2 model response was incomplete and contained no usable plan text."\n                )\n                if response_incomplete\n                else extraction_error\n            )\n            raise _mark_provider_request_started(\n                _with_stage2_cost(\n                    error, _build_stage2_cost(self.model, prompt=prompt, response=response)\n                )\n            )\n'''
+          if old not in text:
+              raise SystemExit("stage2 extraction block not found")
+          p.write_text(text.replace(old, new, 1))
+
+          # 2) Delete the orchestrator's technical-failure fallback branch. Any
+          # Stage 2 exception now bubbles directly into the existing failure handlers.
+          p = Path("api/generation/orchestrator.py")
+          text = p.read_text()
+          text = text.replace(
+              '''from ..stage2_automation import (\n    Stage1FallbackUnavailableError,\n    Stage2AutomationError,\n    Stage2AutomationUnavailableError,\n    Stage2Automator,\n    build_stage1_fallback_result,\n)''',
+              '''from ..stage2_automation import (\n    Stage2AutomationError,\n    Stage2AutomationUnavailableError,\n    Stage2Automator,\n)''',
+              1,
+          )
+          block_start = text.index("                stage2_fell_back = False\n")
+          block_end = text.index("        # Triage-blocked Stage 1 outcomes", block_start)
+          replacement = '''                finalized_result = await finalize_stage2_with_timeout(\n                    stage2=stage2,\n                    stage1_result=stage1_result,\n                    log_context={"job_id": job_id, "athlete_id": athlete_id},\n                )\n                await _touch_heartbeat()\n                final_result = {**finalized_result, "full_name": request_body.athlete.full_name}\n                _emit_milestone(\n                    "stage2_model_response_received",\n                    "Stage 2 model response received",\n                    "AI finalizer returned a response.",\n                )\n                _emit_milestone(\n                    "stage2_response_parse_started",\n                    "Stage 2 response parsing started",\n                    "Preparing finalizer output for validation and persistence.",\n                )\n                _emit_milestone(\n                    "stage2_response_parsed",\n                    "Stage 2 response parsed",\n                    "Finalizer output was parsed.",\n                )\n                _emit_milestone(\n                    "stage2_result_ready",\n                    "Stage 2 result ready",\n                    "Finalizer result returned; saving the release state.",\n                )\n                finalized_status = str(final_result.get("status") or "").strip().lower()\n                if finalized_status == "ready":\n                    _emit_milestone(\n                        "stage2_validated",\n                        "Stage 2 finalizer complete",\n                        "Validator passed. Final coach-voice plan ready for handoff.",\n                    )\n                elif finalized_status == "publishable_with_flags":\n                    _emit_milestone(\n                        "stage2_flagged",\n                        "Stage 2 finalizer complete (flagged)",\n                        "Finalizer output released with validator flags recorded for admin audit.",\n                    )\n                else:\n                    _emit_milestone(\n                        "stage2_review_required",\n                        "Stage 2 needs review",\n                        "Finalizer returned a status that is not athlete-displayable.",\n                    )\n'''
+          text = text[:block_start] + replacement + text[block_end:]
+          text = text.replace(
+              '''    # The Stage 2 handlers below now only fire when there was no Stage 1 plan to\n    # complete the job with (or the failure came from outside the Stage 2 call).\n    # A Stage 2 failure over a usable Stage 1 plan is absorbed at the call site.\n''',
+              '''    # Stage 2 technical failures are terminal for this generation attempt.\n    # Stage 1 is planner input only and is never promoted to an athlete-facing plan.\n''',
+              1,
+          )
+          p.write_text(text)
+
+          # 3) Replace runtime tests that explicitly locked in the unwanted fallback.
+          runtime_section = '''# ---------------------------------------------------------------------------\n# Technical Stage 2 failures never publish the Stage 1 draft.\n#\n# A Stage 2 body that exists can still release with validator flags. A technical\n# failure that produces no usable Stage 2 body fails the generation attempt and\n# creates no plan row. Stage 1 remains internal planner input only.\n# ---------------------------------------------------------------------------\n\n\ndef _run_stage2_failure_job(store, stage2, *, client_request_id, planner_fn=None):\n    job = store.create_or_get_generation_job(\n        athlete_id="athlete-1",\n        client_request_id=client_request_id,\n        source="self_serve",\n        request_payload=_build_request().model_dump(mode="json"),\n    )\n    asyncio.run(\n        generation_runtime.run_generation_job(\n            job_id=job["id"],\n            store=store,\n            planner_fn=planner_fn or _spawn_planner_returns_ready_plan,\n            stage2=stage2,\n            active_tasks=set(),\n        )\n    )\n    return store.get_generation_job(job["id"])\n\n\n_STAGE2_RESPONSE_MILESTONES = (\n    "stage2_model_response_received",\n    "stage2_response_parse_started",\n    "stage2_response_parsed",\n    "stage2_result_ready",\n    "stage2_validated",\n    "stage2_flagged",\n    "stage2_review_required",\n)\n\n\ndef _assert_stage2_failure_without_plan(store, saved):\n    assert saved["status"] == "failed"\n    assert saved.get("plan_id") is None\n    assert store.plans == {}\n    codes = [milestone["code"] for milestone in saved["progress_milestones"]]\n    assert "stage2_stage1_fallback" not in codes\n    assert [code for code in _STAGE2_RESPONSE_MILESTONES if code in codes] == []\n    return codes\n\n\ndef test_stage2_timeout_fails_without_publishing_stage1(monkeypatch):\n    class HangingStage2:\n        async def finalize(self, *, stage1_result: dict, log_context: dict | None = None) -> dict:\n            await asyncio.sleep(1)\n            return finalized_result()\n\n    monkeypatch.setenv("APP_STAGE2_FINALIZE_TIMEOUT_SECONDS", "0.01")\n    store = FakeStore()\n    seed_default_profiles(store)\n    saved = _run_stage2_failure_job(store, HangingStage2(), client_request_id="stage2-timeout")\n    codes = _assert_stage2_failure_without_plan(store, saved)\n    assert "stage2_drafting" in codes\n    assert "stage2_model_call_started" in codes\n    assert "stage2_finalizer_timeout" in codes\n\n\ndef test_stage2_provider_error_fails_without_publishing_stage1():\n    store = FakeStore()\n    seed_default_profiles(store)\n    saved = _run_stage2_failure_job(\n        store,\n        FakeStage2Automator(error=Stage2AutomationError("Stage 2 model request failed. Check server logs.")),\n        client_request_id="stage2-provider-error",\n    )\n    _assert_stage2_failure_without_plan(store, saved)\n    assert "Stage 2 model request failed" in saved["error"]\n\n\ndef test_stage2_unavailable_fails_without_publishing_stage1():\n    store = FakeStore()\n    seed_default_profiles(store)\n    saved = _run_stage2_failure_job(\n        store,\n        FakeStage2Automator(\n            error=Stage2AutomationUnavailableError(\n                "OPENAI_API_KEY is required for automated Stage 2 finalization."\n            )\n        ),\n        client_request_id="stage2-unavailable",\n    )\n    _assert_stage2_failure_without_plan(store, saved)\n    assert "OPENAI_API_KEY" in saved["error"]\n\n\ndef test_stage2_empty_incomplete_output_fails_without_publishing_stage1():\n    store = FakeStore()\n    seed_default_profiles(store)\n    saved = _run_stage2_failure_job(\n        store,\n        FakeStage2Automator(\n            error=Stage2AutomationError(\n                "Stage 2 model response was incomplete and contained no usable plan text."\n            )\n        ),\n        client_request_id="stage2-incomplete",\n    )\n    _assert_stage2_failure_without_plan(store, saved)\n    assert "incomplete" in saved["error"]\n\n\ndef test_unexpected_stage2_exception_fails_without_publishing_stage1():\n    class ExplodingStage2:\n        async def finalize(self, *, stage1_result: dict, log_context: dict | None = None) -> dict:\n            raise TypeError("unexpected crash inside the finalizer")\n\n    store = FakeStore()\n    seed_default_profiles(store)\n    saved = _run_stage2_failure_job(\n        store, ExplodingStage2(), client_request_id="stage2-unexpected"\n    )\n    _assert_stage2_failure_without_plan(store, saved)\n\n\ndef test_prompt_budget_failure_fails_without_publishing_stage1():\n    store = FakeStore()\n    seed_default_profiles(store)\n    error = Stage2AutomationError("Stage 2 first_pass prompt too large: 214880 chars > 180000")\n    assert error.provider_request_started is False\n    saved = _run_stage2_failure_job(\n        store, FakeStage2Automator(error=error), client_request_id="stage2-prompt-budget"\n    )\n    _assert_stage2_failure_without_plan(store, saved)\n\n\n'''
+          replace_between(
+              "tests/test_generation_runtime.py",
+              "# ---------------------------------------------------------------------------\n# Technical Stage 2 failures complete the job on the Stage 1 plan.",
+              "def test_flagged_release_does_not_claim_a_review_is_required():",
+              runtime_section,
+          )
+          p = Path("tests/test_generation_runtime.py")
+          text = p.read_text().replace(
+              '''def test_stage2_failure_still_fails_job_when_stage1_has_no_plan_text():\n    # The boundary: no Stage 1 plan means nothing to fall back to, so the job\n    # fails exactly as it did before rather than publishing an empty plan.\n''',
+              '''def test_stage2_failure_still_fails_job_when_stage1_has_no_plan_text():\n    # Stage 2 technical failure is terminal regardless of whether Stage 1 had text.\n''',
+              1,
+          )
+          p.write_text(text)
+
+          # 4) Reverse the three API-level tests that previously demanded Stage 1 delivery.
+          api = Path("tests/test_api_generation_flows.py")
+          text = api.read_text()
+          a = text.index("def test_stage2_unavailable_completes_job_on_the_stage1_plan():")
+          b = text.index("\ndef test_stale_running_job_is_failed_before_new_job_is_created():", a)
+          replacement = '''def test_stage2_unavailable_fails_without_publishing_stage1():\n    client, store, _ = _build_client(\n        FakeStage2Automator(\n            error=Stage2AutomationUnavailableError(\n                "OPENAI_API_KEY is required for automated Stage 2 finalization."\n            )\n        )\n    )\n\n    _, job = _start_generation(client)\n\n    assert job["status"] == "failed"\n    assert job["plan_id"] is None\n    assert "OPENAI_API_KEY" in job["error"]\n    assert store.plans == {}\n\n\ndef test_stage2_gateway_failure_fails_without_publishing_stage1():\n    client, store, _ = _build_client(\n        FakeStage2Automator(error=Stage2AutomationError("Stage 2 model request failed"))\n    )\n\n    _, job = _start_generation(client)\n\n    assert job["status"] == "failed"\n    assert job["plan_id"] is None\n    assert "Stage 2 model request failed" in job["error"]\n    assert store.plans == {}\n\n'''
+          text = text[:a] + replacement + text[b + 1:]
+          a = text.index("def test_stage2_insufficient_quota_completes_job_and_keeps_admin_detail():")
+          b = text.index("\ndef test_generate_plan_returns_existing_active_job_for_same_athlete():", a)
+          replacement = '''def test_stage2_insufficient_quota_fails_without_publishing_stage1():\n    client, store, _ = _build_client(\n        FakeStage2Automator(\n            error=Stage2AutomationError(\n                'Error code: 429 - {"error":{"message":"You exceeded your current quota","code":"insufficient_quota"}}'\n            )\n        )\n    )\n\n    _, job = _start_generation(client)\n\n    assert job["status"] == "failed"\n    assert job["plan_id"] is None\n    assert store.plans == {}\n    assert "OpenAI quota exceeded" in job["error"]\n\n'''
+          text = text[:a] + replacement + text[b + 1:]
+          api.write_text(text)
+
+          # 5) The new focused tests should exercise behaviour, not a deleted shim.
+          p = Path("tests/test_stage2_no_stage1_fallback.py")
+          text = p.read_text()
+          text = text.replace(
+              '''    Stage1FallbackUnavailableError,\n    Stage2AutomationError,\n    build_stage1_fallback_result,\n''',
+              '''    Stage2AutomationError,\n''',
+              1,
+          )
+          a = text.index("def test_stage1_fallback_is_disabled_even_when_stage1_has_plan_text():")
+          b = text.index("\ndef test_incomplete_stage2_response_keeps_usable_stage2_text():", a)
+          text = text[:a] + text[b + 1:]
+          p.write_text(text)
+
+          # 6) Update the canonical state-machine contract.
+          p = Path("docs/state_machine.md")
+          text = p.read_text()
+          text = text.replace(
+              '| **Technical failure** — timeout, provider error, unavailable finalizer, incomplete/empty output | `ready` (Stage 1 plan) | `stage2_failed_stage1_fallback` | `completed` |',
+              '| **Technical failure with no usable Stage 2 text** — timeout, provider error, unavailable finalizer, empty output | no plan row | — | `failed` |',
+          )
+          text = text.replace(
+              '| Technical failure **and** Stage 1 produced no plan text | no plan row | — | `failed` |\n',
+              '',
+          )
+          text = text.replace(
+              'clean apart from a `stage2_fallback` entry carrying the reason\n(`stage2_timeout`, `stage2_model_error`, `stage2_unavailable`) and the sanitized\nerror detail. The failure is logged as\n`generation:stage2_failed_stage1_completed`. `stage2_status` is\n`stage2_failed_stage1_fallback`, distinguishing it from `stage2_failed`, which\nmeans Stage 2 DID produce a plan that the validator flagged.\n',
+              'A technical Stage 2 failure that produces no usable Stage 2 text fails the generation attempt and creates no athlete-facing plan row. Stage 1 is internal planner input only and is never promoted to the final plan. If the provider marks a response incomplete but returns usable Stage 2 text, that Stage 2 text continues through validation and releases as `publishable_with_flags`.\n',
+          )
+          p.write_text(text)
+
+          # Remove this one-shot workflow from the resulting commit.
+          Path(".github/workflows/patch-stage2-no-fallback.yml").unlink()
+          PY
+      - name: Commit cleanup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Cleanly remove Stage 1 fallback contract"
+          git push origin HEAD:codex/remove-stage1-athlete-fallback
