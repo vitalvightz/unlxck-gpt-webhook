@@ -1,0 +1,119 @@
+name: Patch PR 2426 review fixes
+
+on:
+  push:
+    branches:
+      - codex/expand-technical-footwork-bank
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[patch-2426-done]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/expand-technical-footwork-bank
+          fetch-depth: 0
+      - name: Apply surgical fixes
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          bank_path = Path('data/technical_footwork_bank.json')
+          bank = json.loads(bank_path.read_text())
+          by_name = {d['name']: d for d in bank}
+
+          # MMA: the open-space shot-line exit is the generic counter/distance
+          # choice. Keep the fence exit context-specific instead of letting an
+          # alphabetical tie decide which one wins.
+          fence = by_name['Fence Exit to Center Rebase']
+          fence['tags'] = [
+              tag for tag in fence['tags']
+              if tag not in {'counter_striker', 'distance_striker'}
+          ]
+
+          # Wrestling: stance-and-motion is base/angle quality, not itself a
+          # specific takedown setup. This keeps the reactive shot-angle drill as
+          # the stronger SPP choice while preserving the low-cost GPP/taper option.
+          stance = by_name['Wrestling Stance-Motion Circle Reset']
+          stance['tactical_function'] = ['base_recovery', 'angle_creation']
+
+          bank_path.write_text(json.dumps(bank, indent=2) + '\n')
+
+          expansion = Path('tests/test_technical_footwork_bank_expansion.py')
+          text = expansion.read_text()
+          text = text.replace(
+              '("mma", "counter_striker", "Fence Exit to Center Rebase", "defensive_exit")',
+              '("mma", "counter_striker", "Shot-Line Circle-Off Reset", "defensive_exit")',
+          )
+          text = text.replace(
+              '# The boundary-specific exit wins the deterministic tie first; after it is\n'
+              '# already used, the open-space shot-line exit becomes the next personalised\n'
+              '# choice instead of sitting unreachable in the bank.\n'
+              '    next_choice = conditioning.select_technical_footwork_drill(\n'
+              '        flags, {"Fence Exit to Center Rebase"}, []\n'
+              '    )\n'
+              '    assert next_choice is not None\n'
+              '    assert next_choice["name"] == "Shot-Line Circle-Off Reset"',
+              '# The open-space exit is the generic counter-striker choice. Once it has\n'
+              '# been used, the boundary-specific fence exit remains reachable as the\n'
+              '# next sport-appropriate alternative rather than winning by name order.\n'
+              '    first_choice = conditioning.select_technical_footwork_drill(flags, set(), [])\n'
+              '    assert first_choice is not None\n'
+              '    assert first_choice["name"] == "Shot-Line Circle-Off Reset"\n'
+              '\n'
+              '    next_choice = conditioning.select_technical_footwork_drill(\n'
+              '        flags, {"Shot-Line Circle-Off Reset"}, []\n'
+              '    )\n'
+              '    assert next_choice is not None\n'
+              '    assert next_choice["name"] == "Fence Exit to Center Rebase"',
+          )
+          marker = 'def test_wrestling_gets_a_low_cost_taper_stance_motion_pattern():'
+          insert = '''def test_wrestling_spp_keeps_the_reactive_shot_angle_as_primary_choice():\n    selected = conditioning.select_technical_footwork_drill(\n        _flags(sport="wrestling", style="wrestler", phase="SPP", days=21), set(), []\n    )\n\n    assert selected is not None\n    assert selected["name"] == "Level-Change Feint to Angle"\n\n\n'''
+          if insert not in text:
+              text = text.replace(marker, insert + marker)
+          expansion.write_text(text)
+
+          runtime = Path('tests/test_technical_footwork_runtime.py')
+          text = runtime.read_text()
+          text = text.replace(
+              '    cases = {\n'
+              '        "boxing": {"boxing"},\n'
+              '        "muay_thai": {"muay_thai", "kickboxing"},\n'
+              '        "mma": {"mma"},\n'
+              '    }',
+              '    cases = {\n'
+              '        "boxing": {"boxing"},\n'
+              '        "muay_thai": {"muay_thai", "kickboxing"},\n'
+              '        "mma": {"mma"},\n'
+              '        "wrestling": {"wrestling"},\n'
+              '        "bjj": {"bjj"},\n'
+              '    }',
+          )
+
+          old_wrestling = '''def test_wrestling_compatibility_is_limited_to_a_genuine_shot_angle_drill():\n    assert _WRESTLING_DRILLS == {"Level-Change Feint to Angle"}\n    assert _selected_names("wrestling", "GPP") == set()\n    assert _selected_names("wrestling", "SPP") == _WRESTLING_DRILLS\n    assert _selected_names("wrestling", "TAPER") == set()\n\n    drill = _FOOT_BANK["Level-Change Feint to Angle"]\n    note = drill["notes"].lower()\n    assert "striking angle" not in note\n    assert "instead of shooting" not in note\n    assert "takedown_setup" in drill["tactical_function"]\n'''
+          new_wrestling = '''def test_wrestling_compatibility_stays_sparse_and_sport_specific():\n    expected = {"Level-Change Feint to Angle", "Wrestling Stance-Motion Circle Reset"}\n    assert _WRESTLING_DRILLS == expected\n    assert _selected_names("wrestling", "GPP") == {"Wrestling Stance-Motion Circle Reset"}\n    assert _selected_names("wrestling", "SPP") == expected\n    assert _selected_names("wrestling", "TAPER") == {"Wrestling Stance-Motion Circle Reset"}\n\n    shot_angle = _FOOT_BANK["Level-Change Feint to Angle"]\n    note = shot_angle["notes"].lower()\n    assert "striking angle" not in note\n    assert "instead of shooting" not in note\n    assert "takedown_setup" in shot_angle["tactical_function"]\n\n    stance_motion = _FOOT_BANK["Wrestling Stance-Motion Circle Reset"]\n    assert "takedown_setup" not in stance_motion["tactical_function"]\n    assert "base_recovery" in stance_motion["tactical_function"]\n'''
+          if old_wrestling not in text:
+              raise SystemExit('Expected wrestling regression block not found')
+          text = text.replace(old_wrestling, new_wrestling)
+
+          old_bjj = '''def test_bjj_compatibility_is_limited_to_a_grappling_standup_reset():\n    assert _BJJ_DRILLS == {"Submission Hunter Stand-Up Reset"}\n    for phase in ("GPP", "SPP"):\n        assert _selected_names("bjj", phase) == _BJJ_DRILLS\n    assert _selected_names("bjj", "TAPER") == set()\n'''
+          new_bjj = '''def test_bjj_compatibility_stays_sparse_and_grappling_specific():\n    expected = {"Submission Hunter Stand-Up Reset", "Standing Guard-Pass Base Circle"}\n    assert _BJJ_DRILLS == expected\n    assert _selected_names("bjj", "GPP") == expected\n    assert _selected_names("bjj", "SPP") == expected\n    assert _selected_names("bjj", "TAPER") == {"Standing Guard-Pass Base Circle"}\n\n    standing_pass = _FOOT_BANK["Standing Guard-Pass Base Circle"]\n    assert "mma" not in {str(tag).lower() for tag in standing_pass.get("tags", [])}\n'''
+          if old_bjj not in text:
+              raise SystemExit('Expected BJJ regression block not found')
+          text = text.replace(old_bjj, new_bjj)
+          runtime.write_text(text)
+          PY
+
+          rm -f .github/workflows/patch-pr2426.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/technical_footwork_bank.json tests/test_technical_footwork_bank_expansion.py tests/test_technical_footwork_runtime.py .github/workflows/patch-pr2426.yml
+          git diff --cached --check
+          git commit -m "fix: align technical footwork expansion ranking and regressions [patch-2426-done]"
+          git push origin HEAD:codex/expand-technical-footwork-bank
