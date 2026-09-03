@@ -196,6 +196,7 @@ def _build_athlete_model(
         "fight_date": getattr(training_context, "next_fight_date", "") or "",
         "next_fight_date": getattr(training_context, "next_fight_date", "") or "",
         "fatigue": training_context.fatigue,
+        "stance": training_context.stance,
         "age": training_context.age,
         "weight_cut_risk": training_context.weight_cut_risk,
         "weight_cut_pct": training_context.weight_cut_pct,

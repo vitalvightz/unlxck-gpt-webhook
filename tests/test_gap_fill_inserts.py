@@ -141,6 +141,56 @@ def test_gap_footwork_keeps_dedicated_channel_and_not_conditioning_category():
     assert role["support_insert_category"] != "conditioning_maintenance"
 
 
+def test_gap_fill_footwork_carries_full_technical_prescription():
+    """A selected bank drill consumed through footwork_walkthrough must carry the
+    same canonical technical-footwork prescription as normal conditioning: a
+    truthful rep/timed dose, rest, cue, stance/side instruction, and — where the
+    drill declares one — the quality stop rule. This is the regression proof that
+    gap-fill no longer drops to a bare duration + notes render."""
+    role = _footwork_insert(
+        _athlete(
+            sport="mma",
+            fight_format="mma",
+            style_tactical=["wrestler"],
+            weaknesses=["footwork"],
+            stance="southpaw",
+            equipment=["bodyweight"],
+        ),
+        18,
+    )
+    assert role["technical_footwork_fallback"] is False
+    assert role["technical_footwork_name"] == "Sprawl Exit to Ring Angle"
+    text = role["display_text"]
+
+    # Truthful rep-based dose and rest (no fabricated timed-work wording).
+    assert "2 sets x 3 clean reactions each direction" in text
+    assert "75 sec between sets" in text
+    assert "75 sec technical sets" not in text
+    # Cue, resolved side/stance instruction, and quality-stop rule all survive.
+    assert "Cue: React to a light partner shot" in text
+    assert "Side / Stance: Start in your southpaw stance and work both directions evenly." in text
+    assert "Quality Stop: Stop the set when the sprawl response" in text
+
+
+def test_gap_fill_footwork_timed_drill_carries_dose_without_fake_reps():
+    """A time-based bank drill keeps its honest timed dose through gap-fill and
+    does not gain rep-based wording it never declared."""
+    role = _footwork_insert(
+        _athlete(
+            sport="boxing",
+            fight_format="boxing",
+            style_tactical=["counter_striker"],
+            weaknesses=["footwork"],
+            stance="orthodox",
+        ),
+        4,
+    )
+    assert role["technical_footwork_name"] == "Stance Reset Line Drill"
+    text = role["display_text"]
+    assert "Side / Stance: Start in your orthodox stance and work both directions evenly." in text
+    assert "clean reactions each direction" not in text
+
+
 def test_generic_aerobic_shadow_copy_is_sport_neutral():
     for sport in ("mma", "wrestling", "bjj"):
         role = _build_insert_role("aerobic_shadow_flow", _athlete(sport=sport), 5)

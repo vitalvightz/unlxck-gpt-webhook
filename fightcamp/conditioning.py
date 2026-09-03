@@ -1631,6 +1631,56 @@ _TECHNICAL_FOOTWORK_SIDE_RULES = {
     "alternate_stances",
 }
 
+# Cue-source availability is a real runtime fact, not drill metadata taken at
+# face value. Two sources are genuinely executable and we commit to providing
+# them:
+#   - "self": an athlete-initiated start/reset, always executable solo.
+#   - "visual": a self-administered random visual cue (a reaction-cue app or a
+#     randomized left/right/shot call sequence the athlete runs without a
+#     helper). This is a genuinely reactive, solo-executable mechanism (option A
+#     of the availability fix); when it is the cue the athlete relies on, the
+#     prescription states the concrete executable method so a bare "visual"
+#     metadata value is never silently assumed to be available.
+# "partner" is available only when the athlete's declared equipment includes a
+# partner. "coach" has no runtime signal in intake and is never auto-available;
+# a drill that can only be driven by a coach is filtered for that athlete.
+_TECHNICAL_FOOTWORK_SOLO_EXECUTABLE_CUE_SOURCES = {"self", "visual"}
+_TECHNICAL_FOOTWORK_EQUIPMENT_CUE_SOURCES = {"partner"}
+
+
+def _technical_footwork_available_cue_sources(equipment_access: set[str]) -> set[str]:
+    """Cue sources this athlete can actually execute right now."""
+    return _TECHNICAL_FOOTWORK_SOLO_EXECUTABLE_CUE_SOURCES | (
+        _TECHNICAL_FOOTWORK_EQUIPMENT_CUE_SOURCES & set(equipment_access)
+    )
+
+
+def _technical_footwork_cue_execution(drill: dict, available_cue_sources: set[str]) -> str:
+    """State the concrete, executable way the athlete produces this drill's cue.
+
+    Makes cue availability explicit rather than assumed: a partner feed when a
+    partner is available, otherwise the self-administered random visual/random
+    cue method that keeps a semi-reactive/reactive drill genuinely executable
+    solo. Closed drills (self-paced) need no external cue.
+    """
+    reactive_level = str(drill.get("reactive_level") or "closed").strip().lower()
+    cue_sources = {
+        str(value).strip().lower()
+        for value in drill.get("cue_source", [])
+        if str(value).strip()
+    }
+    usable = cue_sources & available_cue_sources
+    if reactive_level == "closed" or usable <= {"self"}:
+        return ""
+    if "partner" in usable:
+        return "Have your partner feed the cue at random timing; reset fully between reps."
+    if "visual" in usable:
+        return (
+            "Self-administer a random visual cue (reaction-cue app or a randomized "
+            "left/right/shot call sequence) so the read stays genuinely reactive without a helper."
+        )
+    return ""
+
 
 def _positive_int(value) -> bool:
     return isinstance(value, int) and not isinstance(value, bool) and value > 0
@@ -1834,6 +1884,7 @@ def select_technical_footwork_candidates(
         flags, canonical_sport=canonical_sport
     )
     style_token_set = set(style_tokens)
+    available_cue_sources = _technical_footwork_available_cue_sources(equipment_access)
 
     candidates = []
     for drill in get_technical_footwork_bank():
@@ -1860,6 +1911,26 @@ def select_technical_footwork_candidates(
             continue
         if drill.get("partner_required") is True and "partner" not in equipment_access:
             continue
+        # Reactive drills declare their executability through cue_source, not
+        # partner_required: they need an external/random cue the athlete can
+        # actually produce. Availability is a real runtime fact (see
+        # _technical_footwork_available_cue_sources): "self" and a
+        # self-administered random "visual" cue are executable solo, "partner"
+        # only with a declared partner, "coach" never. A drill whose declared
+        # cue sources are all unavailable is dropped; a reactive drill also
+        # needs at least one available non-self (external/random) cue, so a
+        # coach-only reactive drill is filtered for a solo athlete.
+        cue_sources = {
+            str(value).strip().lower()
+            for value in drill.get("cue_source", [])
+            if str(value).strip()
+        }
+        if cue_sources and not (cue_sources & available_cue_sources):
+            continue
+        if reactive_level == "reactive" and not (
+            (cue_sources - {"self"}) & available_cue_sources
+        ):
+            continue
         candidates.append(drill)
 
     if not candidates:
@@ -1879,6 +1950,13 @@ def select_technical_footwork_candidates(
     for drill in candidates:
         decision = injury_decision(drill, injuries, phase, flags.get("fatigue", "low"))
         if decision.action != "exclude":
+            # Stamp the concrete executable cue method resolved from this
+            # athlete's real availability so a bare "visual"/"partner" cue
+            # source is never assumed downstream. Copy so the cached bank stays
+            # athlete-agnostic.
+            cue_execution = _technical_footwork_cue_execution(drill, available_cue_sources)
+            if cue_execution:
+                drill = {**drill, "cue_execution": cue_execution}
             safe.append(drill)
     return safe
 
@@ -1917,6 +1995,30 @@ def _technical_footwork_side_instruction(drill: dict, stance: str | None) -> str
     return "Work both directions evenly from your normal stance."
 
 
+def technical_footwork_prescription_fields(drill: dict, *, stance: str | None = None) -> dict:
+    """Canonical technical-footwork prescription fields for a selected bank drill.
+
+    Single source for dose (timing + rest), cue, resolved side/stance
+    instruction, and quality-stop rule so normal conditioning rendering and
+    late-fight gap-fill rendering never diverge on what a selected bank drill
+    actually prescribes.
+    """
+    timing = str(drill.get("timing") or drill.get("duration") or "").strip()
+    rest = drill.get("rest")
+    if not rest and drill.get("rest_sec"):
+        rest = f"{drill['rest_sec']} sec between sets"
+    rest = str(rest or "").strip()
+    return {
+        "name": str(drill.get("name") or "Technical Footwork"),
+        "timing": timing,
+        "rest": rest,
+        "cue": str(drill.get("cue") or "").strip(),
+        "cue_execution": str(drill.get("cue_execution") or "").strip(),
+        "side_instruction": _technical_footwork_side_instruction(drill, stance),
+        "quality_stop_rule": str(drill.get("quality_stop_rule") or "").strip(),
+    }
+
+
 def format_drill_block(drill: dict, *, phase_color: str = "#000", fallback: bool = False) -> str:
     """Return a formatted Markdown block for a single drill."""
     title = f"Fallback: {drill['name']}" if fallback else drill["name"]
@@ -1932,6 +2034,8 @@ def format_drill_block(drill: dict, *, phase_color: str = "#000", fallback: bool
     ]
     if drill.get("cue"):
         parts.append(f"  - Cue: {drill['cue']}")
+    if drill.get("cue_execution"):
+        parts.append(f"  - Cue Method: {drill['cue_execution']}")
     if drill.get("side_instruction"):
         parts.append(f"  - Side / Stance: {drill['side_instruction']}")
     if drill.get("quality_stop_rule"):
@@ -2311,13 +2415,15 @@ def render_conditioning_block(
                         "red_flags": d.get("red_flags", "None"),
                     }
                     if d.get("modality") == TECHNICAL_FOOTWORK_GROUP:
+                        prescription_fields = technical_footwork_prescription_fields(
+                            d, stance=stance
+                        )
                         drill_block.update(
                             {
-                                "cue": d.get("cue"),
-                                "side_instruction": _technical_footwork_side_instruction(
-                                    d, stance
-                                ),
-                                "quality_stop_rule": d.get("quality_stop_rule"),
+                                "cue": prescription_fields["cue"],
+                                "cue_execution": prescription_fields["cue_execution"],
+                                "side_instruction": prescription_fields["side_instruction"],
+                                "quality_stop_rule": prescription_fields["quality_stop_rule"],
                             }
                         )
 

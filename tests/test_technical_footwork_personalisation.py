@@ -179,6 +179,79 @@ def test_partner_required_drill_is_filtered_when_partner_is_unavailable(monkeypa
     )
 
 
+def test_available_cue_sources_reflect_real_runtime_signals():
+    # Solo athlete (no declared partner): only self and the provided
+    # self-administered random visual cue are genuinely executable. Coach and
+    # partner are never assumed available without a real signal.
+    solo = conditioning._technical_footwork_available_cue_sources({"bodyweight"})
+    assert solo == {"self", "visual"}
+    assert "coach" not in solo
+    assert "partner" not in solo
+
+    # A declared partner makes the partner cue genuinely available.
+    with_partner = conditioning._technical_footwork_available_cue_sources(
+        {"bodyweight", "partner"}
+    )
+    assert with_partner == {"self", "visual", "partner"}
+
+
+def test_real_reactive_bank_drill_is_executable_for_solo_athlete_via_explicit_cue_method():
+    # Real bank, no monkeypatched drill contract, athlete with no external cue
+    # source (no partner). A genuinely reactive bank drill is still offered, but
+    # ONLY because it carries an actual executable random-visual cue method — a
+    # bare "visual" metadata value is never silently assumed available.
+    selected = conditioning.select_technical_footwork_drill(
+        _flags(sport="mma", style="wrestler", equipment=["bodyweight"]), set(), []
+    )
+    assert selected is not None
+    assert selected["reactive_level"] == "reactive"
+    # The drill's declared external cue sources are coach/partner/visual, none of
+    # which is auto-available to a solo athlete except the provided visual one.
+    assert set(selected["cue_source"]) & {"coach", "partner"}
+    cue_execution = selected["cue_execution"]
+    assert "random visual cue" in cue_execution.lower()
+    assert "app" in cue_execution.lower() or "call sequence" in cue_execution.lower()
+    # It must NOT claim a partner/coach the solo athlete does not have.
+    assert "partner" not in cue_execution.lower()
+    assert "coach" not in cue_execution.lower()
+
+
+def test_partner_athlete_reactive_cue_method_prefers_the_real_partner_feed():
+    selected = conditioning.select_technical_footwork_drill(
+        _flags(sport="mma", style="wrestler", equipment=["bodyweight", "partner"]),
+        set(),
+        [],
+    )
+    assert selected is not None
+    assert selected["reactive_level"] == "reactive"
+    assert "partner" in selected["cue_execution"].lower()
+
+
+def test_coach_only_reactive_drill_is_filtered_for_solo_athlete_without_monkeypatch():
+    # Build a bank in-memory (not monkeypatching the live bank) whose sole
+    # reactive drill can only be driven by a coach. A solo athlete has no coach
+    # signal, so it must be filtered; a closed self-cue drill survives.
+    coach_only = deepcopy(BANK["Sprawl Exit to Ring Angle"])
+    coach_only["cue_source"] = ["coach"]
+    closed_solo = deepcopy(BANK["Level-Change Feint to Angle"])
+    closed_solo["reactive_level"] = "closed"
+    closed_solo["cue_source"] = ["self"]
+
+    original = conditioning.get_technical_footwork_bank
+    try:
+        conditioning.get_technical_footwork_bank = lambda: [coach_only, closed_solo]
+        names = {
+            d["name"]
+            for d in conditioning.select_technical_footwork_candidates(
+                _flags(sport="mma", style="wrestler", equipment=["bodyweight"]), set(), []
+            )
+        }
+    finally:
+        conditioning.get_technical_footwork_bank = original
+    assert "Sprawl Exit to Ring Angle" not in names  # coach-only reactive filtered
+    assert "Level-Change Feint to Angle" in names  # closed self-cue survives
+
+
 def test_side_sensitive_drills_have_a_supported_side_rule():
     side_sensitive_directions = {"lateral", "rotational", "diagonal", "multi_directional"}
     side_sensitive = [

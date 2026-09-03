@@ -30,6 +30,7 @@ _ATHLETE_KEYS = (
     "fight_date",
     "next_fight_date",
     "fatigue",
+    "stance",
     "age",
     "weight_cut_risk",
     "weight_cut_pct",
