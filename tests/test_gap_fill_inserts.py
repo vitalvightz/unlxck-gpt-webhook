@@ -11,6 +11,8 @@ from fightcamp.gap_fill_inserts import (
     apply_gap_fill_inserts,
     insert_mechanical_load_regions,
     select_gap_fill_insert,
+    _apply_bank_footwork,
+    _build_insert_role,
 )
 from fightcamp.stage2_payload import _is_meaningful_stressor, build_stage2_payload
 from fightcamp.stage2_payload_late_fight import _late_fight_meaningful_stress_count
@@ -39,6 +41,110 @@ def _athlete(**overrides):
     }
     athlete.update(overrides)
     return athlete
+
+
+def _footwork_insert(athlete: dict, offset: int = 14) -> dict:
+    """Build the footwork support role directly, without changing role scoring."""
+    role = _build_insert_role("footwork_walkthrough", athlete, offset)
+    _apply_bank_footwork(role, athlete, offset, None)
+    return role
+
+
+def test_mma_pressure_footwork_gap_uses_existing_sport_bank():
+    role = select_gap_fill_insert(
+        _athlete(
+            sport="mma",
+            fight_format="mma",
+            style_tactical=["pressure_fighter"],
+            weaknesses=["footwork"],
+        ),
+        14,
+    )
+
+    assert role["role_key"] == "footwork_walkthrough"
+    assert role["technical_footwork_name"] == "Cage Circle and Cut-Off"
+    assert role["technical_footwork_source"] == "technical_footwork_bank.json"
+    assert "jab/cross" not in role["display_text"].lower()
+
+
+def test_grappling_footwork_gap_uses_neutral_fallback_when_bank_has_no_match():
+    banned = {"jab", "cross", "punch", "boxing", "ring", "ropes", "cage", "takedown", "kick"}
+    for sport in ("wrestling", "bjj"):
+        role = _footwork_insert(
+            _athlete(sport=sport, fight_format=sport, weaknesses=["footwork"])
+        )
+        text = role["display_text"].lower()
+        assert role["technical_footwork_fallback"] is True
+        assert not any(term in text for term in banned), (sport, text)
+
+
+def test_boxing_footwork_gap_retains_compatible_bank_specificity():
+    role = _footwork_insert(
+        _athlete(
+            sport="boxing",
+            fight_format="boxing",
+            style_tactical=["counter_striker"],
+            weaknesses=["footwork"],
+        )
+    )
+    assert role["technical_footwork_fallback"] is False
+    assert "jab" in role["display_text"].lower()
+
+
+def test_kicking_sports_never_fall_through_to_cage_or_boxing_copy():
+    for sport in ("kickboxing", "muay_thai"):
+        role = _footwork_insert(
+            _athlete(
+                sport=sport,
+                fight_format=sport,
+                style_tactical=["kicker"],
+                weaknesses=["footwork"],
+            )
+        )
+        text = role["display_text"].lower()
+        assert role["technical_footwork_fallback"] is False
+        assert "cage" not in text
+        assert "boxing rhythm" not in text
+
+
+def test_late_window_footwork_falls_through_then_uses_neutral_fallback():
+    boxer = _footwork_insert(
+        _athlete(
+            sport="boxing",
+            fight_format="boxing",
+            style_tactical=["counter_striker"],
+            weaknesses=["footwork"],
+        ),
+        4,
+    )
+    assert boxer["technical_footwork_name"] == "Stance Reset Line Drill"
+
+    mma = _footwork_insert(
+        _athlete(
+            sport="mma",
+            fight_format="mma",
+            style_tactical=["pressure_fighter"],
+            weaknesses=["footwork"],
+        ),
+        4,
+    )
+    assert mma["technical_footwork_fallback"] is True
+    assert "jab/cross" not in mma["display_text"].lower()
+
+
+def test_gap_footwork_keeps_dedicated_channel_and_not_conditioning_category():
+    role = _footwork_insert(
+        _athlete(sport="mma", fight_format="mma", weaknesses=["footwork"])
+    )
+    assert role["technical_footwork_channel"] == "technical_footwork"
+    assert role["support_insert_category"] == "technical_footwork"
+    assert role["support_insert_category"] != "conditioning_maintenance"
+
+
+def test_generic_aerobic_shadow_copy_is_sport_neutral():
+    for sport in ("mma", "wrestling", "bjj"):
+        role = _build_insert_role("aerobic_shadow_flow", _athlete(sport=sport), 5)
+        assert "boxing rhythm" not in role["display_text"].lower()
 
 
 def _session(offset: int, role_key: str = "strength_touch_day") -> dict:

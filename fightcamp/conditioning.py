@@ -1591,12 +1591,28 @@ def select_technical_footwork_candidates(
     )
     equipment_access = set(normalize_athlete_equipment_list(flags.get("equipment", [])))
     fight_format = str(flags.get("fight_format") or flags.get("sport") or "").strip().lower()
+    fight_format = fight_format.replace("-", "_").replace(" ", "_")
+    fight_format = {
+        "mixed_martial_arts": "mma",
+        "muaythai": "muay_thai",
+        "thai_boxing": "muay_thai",
+        "brazilian_jiu_jitsu": "bjj",
+        "jiu_jitsu": "bjj",
+    }.get(fight_format, fight_format)
+    sport_tags = {"boxing", "mma", "kickboxing", "muay_thai", "wrestling", "bjj"}
     style_tokens = set(
         normalize_tags([*flags.get("style_tactical", []), *flags.get("style_technical", [])])
     )
 
     candidates = []
     for drill in get_technical_footwork_bank():
+        tags = set(normalize_tags(drill.get("tags", [])))
+        # The standalone bank contains deliberately sport-specific language.
+        # A rank boost is not enough here: without this eligibility check an
+        # unmatched MMA/grappling athlete can fall through to a boxing drill.
+        # Unknown/legacy formats retain the old ranked fallback behaviour.
+        if fight_format in sport_tags and fight_format not in tags:
+            continue
         if phase not in [str(p).upper() for p in drill.get("phases", [])]:
             continue
         if drill.get("name") in existing_names:
