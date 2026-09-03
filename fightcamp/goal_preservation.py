@@ -217,7 +217,9 @@ def _other_stimuli(role: dict, pool: dict, brief: dict) -> list[dict]:
     category = role.get("category")
     system = role.get("preferred_system")
     for slot in pool.get("conditioning_slots") or []:
-        if category != "conditioning" or slot.get("role") != system or not _slot_allowed(slot, role, brief):
+        if (category != "conditioning" or slot.get("role") != system
+                or slot.get("session_index", 1) != role.get("session_index", 1)
+                or not _slot_allowed(slot, role, brief)):
             continue
         selected = slot["selected"]
         # A recovery morph / support flush does not become energy-system work
