@@ -9,11 +9,12 @@ and carries the chosen watch through Stage 1 -> Stage 2.
 from __future__ import annotations
 
 import json
+import re
 from itertools import combinations
 
 import pytest
 
-from fightcamp.camp_phases import BASE_PHASE_RATIOS, calculate_phase_weeks
+from fightcamp.camp_phases import calculate_phase_weeks
 from fightcamp.camp_week_fillers import apply_camp_week_fillers
 from fightcamp.config import DATA_DIR
 from fightcamp.gap_fill_inserts import apply_gap_fill_inserts
@@ -22,6 +23,7 @@ from fightcamp.stage2_payload import build_planning_brief
 from fightcamp import tactical_watch_library as library
 from fightcamp.tactical_watch_library import (
     PHASES,
+    SPORT_OWNERSHIP_TOKENS,
     STYLE_FAMILIES,
     TacticalWatchBankExhausted,
     all_watches,
@@ -122,6 +124,58 @@ def _visible_fingerprint(role: dict) -> tuple:
     )
 
 
+def _athlete_visible_watch_text(watch) -> str:
+    """Return every bank field that can reach a Tactical Watch card."""
+    return " ".join(
+        (
+            watch.name,
+            watch.why,
+            watch.intent,
+            watch.focus,
+            watch.reset,
+            watch.anchor,
+            watch.context,
+            *watch.instructions,
+            watch.progress,
+        )
+    ).lower()
+
+
+_TASK_STOPWORDS = {
+    "a", "after", "and", "as", "at", "before", "by", "for", "from", "in", "into",
+    "is", "it", "of", "on", "one", "or", "the", "their", "this", "to", "when", "with",
+    "athlete", "opponent", "choose", "cue", "decision", "familiar", "finish", "review",
+    "tactical", "trained", "watch",
+}
+
+
+def _normalised_task_signature(entry: dict) -> frozenset[str]:
+    """Remove title/identity wrappers so renamed templates collapse together."""
+    mindset = entry["mindset"]
+    visible = " ".join(
+        (
+            entry["why"],
+            *(mindset[field] for field in MINDSET_FIELDS),
+            *entry["instructions"],
+            entry["progress"],
+        )
+    ).lower()
+    removable = {
+        *re.findall(r"[a-z0-9]+", entry["name"].lower()),
+        *entry["sports"],
+        _entry_style(entry),
+        _entry_style(entry).replace("_", " "),
+        "combat sport",
+    }
+    for phrase in sorted(removable, key=len, reverse=True):
+        visible = visible.replace(phrase, " ")
+    return frozenset(
+        token
+        for token in re.findall(r"[a-z0-9]+", visible)
+        if token not in _TASK_STOPWORDS
+    )
+
+
 # --- the JSON bank is the source of truth: validate the file itself ----------
 
 
@@ -141,11 +195,24 @@ def test_bank_json_entries_are_structurally_complete():
         )
 
         tags = set(entry.get("tags") or [])
+        sports = entry.get("sports") or []
+        assert isinstance(sports, list) and sports and all(
+            isinstance(sport, str) and sport.strip() for sport in sports
+        ), (
+            f"{key}: needs explicit sport ownership"
+        )
+        assert all(
+            library._token(sport) in SPORT_OWNERSHIP_TOKENS for sport in sports
+        ), f"{key}: unsupported sport ownership"
         assert "tactical_watch" in tags, f"{key}: missing tactical_watch tag"
         style_tags = tags & set(STYLE_FAMILIES)
         assert len(style_tags) == 1, f"{key}: needs exactly one style-family tag, got {style_tags}"
 
-        expected_prefix = f"{_entry_style(entry)}.{entry['phases'][0].lower()}."
+        expected_prefix = (
+            f"{sports[0]}.{_entry_style(entry)}.{entry['phases'][0].lower()}."
+            if sports[0] in {"mma", "kickboxing", "cross_sport"}
+            else f"{_entry_style(entry)}.{entry['phases'][0].lower()}."
+        )
         assert key.startswith(expected_prefix), f"{key}: key must start with {expected_prefix!r}"
 
         mindset = entry.get("mindset")
@@ -189,6 +256,12 @@ def test_bank_json_tasks_are_genuinely_different_not_renamed():
     instruction_sets = [tuple(entry["instructions"]) for entry in entries]
     assert len(set(instruction_sets)) == len(instruction_sets), "duplicate instruction sets"
 
+    task_signatures = [_normalised_task_signature(entry) for entry in entries]
+    assert all(task_signatures), "a watch lost its tactical task after identity wrappers were removed"
+    assert len(set(task_signatures)) == len(task_signatures), (
+        "two watches differ only by title, sport or tactical-style wrapper text"
+    )
+
     for left, right in combinations(entries, 2):
         assert set(left["instructions"]) != set(right["instructions"]), (
             f"{left['key']} and {right['key']} ask for the same work"
@@ -199,22 +272,61 @@ def test_bank_json_tasks_are_genuinely_different_not_renamed():
         )
 
 
-def test_bank_covers_the_longest_supported_camp_for_every_style():
-    """Selection raises when a bank runs dry, so the JSON must outlast any camp."""
+SPORT_STYLES = {
+    "boxing": ("distance_striker", "brawler", "counter_striker", "generic"),
+    "mma": (
+        "pressure_fighter", "counter_striker", "distance_striker", "clinch_fighter",
+        "grappler", "hybrid", "generic",
+    ),
+    "kickboxing": (
+        "pressure_fighter", "counter_striker", "distance_striker", "clinch_fighter",
+        "grappler", "hybrid", "generic",
+    ),
+}
+
+
+@pytest.mark.parametrize(
+    "sport, style",
+    [
+        (sport, style)
+        for sport, styles in SPORT_STYLES.items()
+        for style in styles
+    ],
+)
+def test_bank_covers_every_real_phase_block_without_repeating(sport, style):
+    """Use the phase authority and consume every required watch, not just the first."""
     longest = {phase: 0 for phase in PHASES}
-    for sport in sorted(next(iter(BASE_PHASE_RATIOS.values()))):
+    for days in range(14, 400, 7):
+        weeks = calculate_phase_weeks(days // 7, sport, days_until_fight=days)
+        for phase in PHASES:
+            longest[phase] = max(longest[phase], int(weeks.get(phase, 0) or 0))
+
+    selection = extract_tactical_style({"sport": sport, "tactical_style": style})
+    for phase, required in longest.items():
+        used: set[str] = set()
+        selected = []
+        for _ in range(required):
+            watch = select_tactical_watch(selection, phase, used)
+            selected.append(watch)
+            used.add(watch.key)
+        assert len(selected) == required
+        assert len({watch.key for watch in selected}) == required
+        assert all(set(watch.sports) <= {sport, "cross_sport"} for watch in selected)
+
+
+def test_cross_sport_generic_bank_covers_the_longest_possible_fallback():
+    longest = {phase: 0 for phase in PHASES}
+    for sport in SPORT_STYLES:
         for days in range(14, 400, 7):
             weeks = calculate_phase_weeks(days // 7, sport, days_until_fight=days)
             for phase in PHASES:
                 longest[phase] = max(longest[phase], int(weeks.get(phase, 0) or 0))
 
-    for style in STYLE_FAMILIES:
-        for phase in PHASES:
-            available = len(ordered_phase_bank(style, phase))
-            assert available > longest[phase], (
-                f"{style}/{phase} bank holds {available} watches but a camp can have "
-                f"{longest[phase]} {phase} weeks — add JSON entries, not Python fallbacks"
-            )
+    selection = extract_tactical_style({"sport": "legacy_rules", "tactical_style": "generic"})
+    for phase, required in longest.items():
+        bank = ordered_phase_bank(selection, phase)
+        assert len(bank) >= required
+        assert all(watch.sports == ("cross_sport",) for watch in bank)
 
 
 @pytest.mark.parametrize(
@@ -246,6 +358,34 @@ def test_loader_rejects_a_malformed_bank_entry(tmp_path, monkeypatch, mutation, 
         all_watches.cache_clear()
 
 
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        lambda entry: entry.pop("sports"),
+        lambda entry: entry.update(sports=""),
+        lambda entry: entry.update(sports="mma"),
+        lambda entry: entry.update(sports=[]),
+        lambda entry: entry.update(sports=["   "]),
+        lambda entry: entry.update(sports=["mma", 7]),
+        lambda entry: entry.update(sports=["mma", "unknown_rules"]),
+    ],
+)
+def test_loader_rejects_malformed_sport_ownership(tmp_path, monkeypatch, mutation):
+    entries = _raw_bank()[:1]
+    mutation(entries[0])
+    (tmp_path / "tactical_watch_bank.json").write_text(
+        json.dumps(entries), encoding="utf-8"
+    )
+
+    monkeypatch.setattr(library, "DATA_DIR", tmp_path)
+    all_watches.cache_clear()
+    try:
+        with pytest.raises(ValueError, match="sport ownership|sports must"):
+            all_watches()
+    finally:
+        all_watches.cache_clear()
+
+
 def test_loader_rejects_duplicate_keys(tmp_path, monkeypatch):
     entries = _raw_bank()[:1] * 2
     (tmp_path / "tactical_watch_bank.json").write_text(json.dumps(entries), encoding="utf-8")
@@ -271,7 +411,7 @@ def test_loader_rejects_duplicate_keys(tmp_path, monkeypatch):
         ("long-range striker", "distance_striker"),
         ("outside fighter", "distance_striker"),
         ("brawler", "brawler"),
-        ("pressure fighter", "brawler"),
+        ("pressure fighter", "pressure_fighter"),
         ("inside fighter", "brawler"),
         ("swarmer", "brawler"),
         ("volume pressure", "brawler"),
@@ -296,6 +436,26 @@ def test_declared_tactical_style_wins_over_sport():
     assert extract_tactical_style({"sport": "boxing", "tactical_styles": ["swarmer"]}) == "brawler"
 
 
+@pytest.mark.parametrize(
+    "sport, expected",
+    [
+        ("boxing", "brawler"),
+        ("mma", "pressure_fighter"),
+        ("kickboxing", "pressure_fighter"),
+    ],
+)
+def test_legacy_pressure_alias_is_resolved_by_sport(sport, expected):
+    assert extract_tactical_style({"sport": sport, "tactical_style": "pressure"}) == expected
+
+
+@pytest.mark.parametrize("alias", ["inside fighter", "in fighter", "swarmer", "volume pressure"])
+@pytest.mark.parametrize("sport", ["mma", "kickboxing"])
+def test_non_boxing_pressure_family_aliases_reach_the_pressure_bank(alias, sport):
+    selection = extract_tactical_style({"sport": sport, "tactical_style": alias})
+    assert selection == "pressure_fighter"
+    assert select_tactical_watch(selection, "GPP").key.startswith(f"{sport}.pressure_fighter.")
+
+
 # --- selection ---------------------------------------------------------------
 
 
@@ -312,7 +472,7 @@ def test_first_watch_is_style_and_phase_specific(style, expected):
     assert tuple(select_tactical_watch(style, phase).name for phase in PHASES) == expected
 
 
-@pytest.mark.parametrize("style", [family for family in STYLE_FAMILIES if family != "generic"])
+@pytest.mark.parametrize("style", ["distance_striker", "brawler", "counter_striker"])
 @pytest.mark.parametrize("phase", PHASES)
 def test_style_watches_come_before_the_generic_fallback(style, phase):
     bank = ordered_phase_bank(style, phase)
@@ -347,6 +507,198 @@ def test_every_bank_entry_has_unique_athlete_visible_content():
     assert len({watch.instructions for watch in watches}) == len(watches)
 
 
+SPORTS = ("mma", "kickboxing")
+INTAKE_STYLES = (
+    "pressure_fighter", "counter_striker", "distance_striker",
+    "clinch_fighter", "grappler", "hybrid",
+)
+
+
+@pytest.mark.parametrize("sport", SPORTS)
+@pytest.mark.parametrize("style", INTAKE_STYLES)
+@pytest.mark.parametrize("phase", PHASES)
+def test_sport_style_phase_matrix_resolves_without_cross_sport_leakage(sport, style, phase):
+    selection = extract_tactical_style({"sport": sport, "tactical_style": style})
+    watch = select_tactical_watch(selection, phase)
+    assert watch.phase == phase
+    assert watch.sports == (sport,)
+    assert watch.key.startswith(f"{sport}.")
+
+
+@pytest.mark.parametrize("phase", PHASES)
+def test_kickboxing_grappler_uses_transparent_sport_safe_fallback(phase):
+    selection = extract_tactical_style({"sport": "kickboxing", "tactical_style": "grappler"})
+    watch = select_tactical_watch(selection, phase)
+    metadata = library.watch_metadata(watch)
+    visible = _athlete_visible_watch_text(watch)
+    assert watch.style == "hybrid"
+    assert metadata["tactical_watch_fallback_reason"] == "sport_incompatible_tactical_style"
+    assert metadata["tactical_watch_display_style"] is None
+    assert metadata["tactical_watch"]["display_style"] is None
+    assert "grappler" not in visible
+    assert "grappler" not in library.build_watch_display_text(watch).lower()
+    assert not any(term in visible for term in (
+        "takedown", "double leg", "single leg", "sprawl", "ground and pound",
+        "submission", "guard passing", "mat return", "cage wrestling", "wall wrestling",
+    ))
+
+
+def test_mma_pressure_fighter_is_canonical_and_never_uses_boxing_bank():
+    selection = extract_tactical_style({
+        "sport": "mma", "tactical_style": "pressure_fighter",
+        "competitive_maturity": "developing_pro",
+    })
+    assert selection == "pressure_fighter"
+    watches = [select_tactical_watch(selection, phase) for phase in PHASES]
+    assert all(watch.key.startswith("mma.pressure_fighter.") for watch in watches)
+    assert {watch.sports for watch in watches} == {("mma",)}
+
+
+def test_kickboxing_bank_rejects_grappling_and_wrestling_language():
+    banned = (
+        "takedown", "double leg", "single leg", "sprawl", "ground and pound",
+        "submission", "grappling", "wrestling", "guard passing", "mat return",
+        "cage", "wall walk", "underhook",
+    )
+    for watch in all_watches():
+        if "kickboxing" not in watch.sports:
+            continue
+        visible = _athlete_visible_watch_text(watch)
+        assert not any(term in visible for term in banned), watch.key
+
+
+def test_mma_bank_does_not_use_boxing_only_boundary_language():
+    for watch in all_watches():
+        if "mma" not in watch.sports:
+            continue
+        visible = _athlete_visible_watch_text(watch)
+        assert "ropes" not in visible, watch.key
+        assert "ring corner" not in visible, watch.key
+        assert "boxing ring" not in visible, watch.key
+
+
+@pytest.mark.parametrize(
+    "key, concept_groups",
+    [
+        (
+            "mma.pressure_fighter.gpp.cage_route_scan",
+            (("escape", "exit"), ("direction", "route"), ("cut", "deny")),
+        ),
+        (
+            "mma.pressure_fighter.gpp.level_threat_pressure_map",
+            (("stance", "guard"), ("reaction", "shell", "retreat"), ("level change", "clinch")),
+        ),
+        (
+            "mma.grappler.gpp.ground_destination_map",
+            (("takedown",), ("landing", "destination"), ("position", "half guard")),
+        ),
+        (
+            "kickboxing.counter_striker.spp.low_kick_counter_decision",
+            (("low kick",), ("weight", "stance"), ("check", "withdraw", "intercept")),
+        ),
+        (
+            "kickboxing.counter_striker.spp.body_kick_counter_decision",
+            (("body kick",), ("block", "evade", "distance"), ("return", "window")),
+        ),
+    ],
+)
+def test_named_watch_content_matches_its_tactical_problem(key, concept_groups):
+    watch = next(watch for watch in all_watches() if watch.key == key)
+    visible = _athlete_visible_watch_text(watch)
+    for alternatives in concept_groups:
+        assert any(concept in visible for concept in alternatives), (key, alternatives)
+
+
+def test_taper_watches_are_familiar_cue_response_danger_reset_rehearsals():
+    for watch in all_watches():
+        if watch.phase != "TAPER" or not set(watch.sports) & {"mma", "kickboxing", "cross_sport"}:
+            continue
+        visible = _athlete_visible_watch_text(watch)
+        assert any(word in visible for word in ("familiar", "trusted", "known", "rehearsed"))
+        assert "danger cue" in visible
+        assert any(
+            word in watch.reset.lower()
+            for word in (
+                "reset", "release", "exit", "return", "restore", "re-square", "withdraw",
+                "restart", "reframe", "settle", "rebuild", "resume",
+            )
+        )
+        assert not any(line.lower().startswith("study ") for line in watch.instructions)
+
+
+@pytest.mark.parametrize("phase", PHASES)
+def test_unknown_sport_uses_only_explicit_cross_sport_generic_watch(phase):
+    selection = extract_tactical_style({"sport": "legacy_rules", "tactical_style": "hybrid"})
+    watch = select_tactical_watch(selection, phase)
+    assert watch.style == "generic"
+    assert watch.sports == ("cross_sport",)
+
+
+def _render_four_week_profile(sport: str, style: str) -> list[dict]:
+    allocation = calculate_phase_weeks(4, sport, days_until_fight=28)
+    phases = [
+        phase
+        for phase in PHASES
+        for _ in range(int(allocation.get(phase, 0) or 0))
+    ]
+    role_map = {
+        "weeks": [
+            _week(phase, 28 - (index * 7))
+            for index, phase in enumerate(phases)
+        ]
+    }
+    athlete = _athlete(
+        sport=sport,
+        tactical_style=style,
+        competitive_maturity="developing_pro",
+        camp_length_weeks=4,
+        key_goals=["speed", "strength"],
+        weaknesses=["footwork", "power"],
+        hard_sparring_days=["tuesday", "friday"],
+    )
+    apply_camp_week_fillers(role_map, athlete)
+    return _camp_watches(role_map)
+
+
+def test_damainn_mma_pressure_profile_renders_distinct_mma_tasks():
+    watches = _render_four_week_profile("mma", "pressure_fighter")
+    assert [watch["tactical_watch_name"] for watch in watches] == [
+        "Cage Route Scan (MMA)",
+        "Strike-to-Fence Decision (MMA)",
+        "Cage Re-Catch (MMA)",
+        "First Pressure Sequence (MMA)",
+    ]
+    visible = " ".join(watch["display_text"] for watch in watches).lower()
+    assert all(term in visible for term in ("cage", "fence", "level change", "clinch"))
+    assert not any(
+        term in visible
+        for term in ("pocket exchange map", "body attack opportunity", "brawler", "ring cut")
+    )
+    assert len({watch["display_text"] for watch in watches}) == len(watches)
+
+
+@pytest.mark.parametrize("style", INTAKE_STYLES)
+def test_kickboxing_profiles_render_sport_safe_distinct_tasks(style):
+    watches = _render_four_week_profile("kickboxing", style)
+    assert len(watches) == 4
+    assert len({watch["tactical_watch_key"] for watch in watches}) == 4
+    assert len({watch["display_text"] for watch in watches}) == 4
+    assert all(watch["tactical_watch_sports"] == ["kickboxing"] for watch in watches)
+    visible = " ".join(watch["display_text"] for watch in watches).lower()
+    assert any(term in visible for term in ("punch", "kick", "range", "ring", "knee"))
+    assert not any(
+        term in visible
+        for term in ("takedown", "wrestling", "submission", "cage", "underhook")
+    )
+    if style == "grappler":
+        assert all(
+            watch["tactical_watch_fallback_reason"]
+            == "sport_incompatible_tactical_style"
+            for watch in watches
+        )
+        assert "grappler" not in visible
+
+
 # --- mandatory weekly placement (normal fight-dated camp) --------------------
 
 
@@ -371,6 +723,7 @@ def test_normal_fight_camp_gets_one_named_watch_every_week():
     for week in role_map["weeks"]:
         watches = [
             role for role in week["session_roles"] if role.get("role_key") == "tactical_watch"
+            and role.get("mandatory_tactical_watch")
         ]
         assert len(watches) == 1, f"{week['phase']} week has {len(watches)} Tactical Watches"
 
@@ -662,7 +1015,7 @@ def _real_camp_brief(style: str | None, days: int) -> dict:
 
 @pytest.mark.parametrize("style", ["out-boxer", "pressure fighter", "counter puncher", None])
 @pytest.mark.parametrize("days", [84, 112])
-def test_real_fight_dated_camp_carries_one_unrepeated_watch_every_week(style, days):
+def test_real_fight_dated_camp_carries_unrepeated_watches_through_every_week(style, days):
     role_map = _real_camp_brief(style, days)["weekly_role_map"]
     weeks = [week for week in role_map["weeks"] if week.get("phase") in PHASES]
     assert weeks
@@ -671,27 +1024,27 @@ def test_real_fight_dated_camp_carries_one_unrepeated_watch_every_week(style, da
     fingerprints: list[tuple] = []
     for week in weeks:
         watches = [
-            role for role in week["session_roles"] if role.get("role_key") == "tactical_watch"
-        ]
-        assert len(watches) == 1, (
-            f"week {week.get('week_index')} ({week.get('phase')}) has {len(watches)} watches"
-        )
-        watch = watches[0]
-        assert watch["tactical_watch_phase"] == week["phase"]
-        keys.append(watch["tactical_watch_key"])
-        fingerprints.append(_visible_fingerprint(watch))
-
-        day = str(watch["scheduled_day_hint"]).strip().lower()
-        d_days = {
-            str(entry["weekday"]).strip().lower(): entry["d_day"]
-            for entry in week["calendar_days"]
-        }
-        assert d_days.get(day, 0) > 0, "mandatory watch landed on D-0 or an unmapped day"
-        assert any(
-            not role.get("camp_week_filler")
-            and str(role.get("scheduled_day_hint") or "").strip().lower() == day
+            role
             for role in week["session_roles"]
-        ), "mandatory watch created its own training day"
+            if role.get("role_key") == "tactical_watch"
+            and role.get("mandatory_tactical_watch")
+        ]
+        assert watches, f"week {week.get('week_index')} ({week.get('phase')}) lost its watch"
+        for watch in watches:
+            keys.append(watch["tactical_watch_key"])
+            fingerprints.append(_visible_fingerprint(watch))
+
+            day = str(watch["scheduled_day_hint"]).strip().lower()
+            d_days = {
+                str(entry["weekday"]).strip().lower(): entry["d_day"]
+                for entry in week["calendar_days"]
+            }
+            assert d_days.get(day, 0) > 0, "mandatory watch landed on D-0 or an unmapped day"
+            assert any(
+                not role.get("camp_week_filler")
+                and str(role.get("scheduled_day_hint") or "").strip().lower() == day
+                for role in week["session_roles"]
+            ), "mandatory watch created its own training day"
 
     assert len(set(keys)) == len(keys), "a Tactical Watch key repeated inside one camp"
     assert len(set(fingerprints)) == len(fingerprints), "two weeks shared a visible card"
