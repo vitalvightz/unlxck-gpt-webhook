@@ -639,6 +639,11 @@ INJURY_RULES = {
             "mech_reactive_rebound",
             "running_volume_high",
             "shin_splints_risk",
+            # The tibia is the primary weight-bearing bone of the lower leg, so a
+            # severe structural shin injury must be able to omit all standing
+            # technical footwork rather than fall through to a stance reset.
+            # Mild/moderate still allow/modify via severity weighting.
+            "mech_lower_limb_weight_bearing",
         ],
     },
     "calf": {
@@ -665,6 +670,11 @@ INJURY_RULES = {
             # Plantarflexor loading (push-off / re-plant in kick-recovery
             # footwork) also stresses the gastroc-soleus complex.
             "mech_plantarflexion",
+            # The gastroc-soleus complex is a primary anti-gravity/push-off
+            # structure for standing locomotion, so a severe calf injury must be
+            # able to omit all standing technical footwork, not only the
+            # plantarflexion-tagged kick-recovery drills.
+            "mech_lower_limb_weight_bearing",
         ],
     },
     "achilles": {
@@ -745,6 +755,11 @@ INJURY_RULES = {
             "forefoot_load_high",
             # Forefoot push-off / plantarflexion load (kick-recovery footwork).
             "mech_plantarflexion",
+            # The foot bears body weight in every stance and step, so a severe
+            # structural foot injury must be able to omit all standing technical
+            # footwork rather than fall through to a stance reset. Mild/moderate
+            # still allow/modify via severity weighting.
+            "mech_lower_limb_weight_bearing",
         ],
     },
     "toe": {
@@ -761,7 +776,15 @@ INJURY_RULES = {
             "forefoot hops",
             "toe bounce",
         ],
-        "ban_tags": ["foot_impact_high", "forefoot_load_high", "toe_extension_high"],
+        "ban_tags": [
+            "foot_impact_high",
+            "forefoot_load_high",
+            "toe_extension_high",
+            # The forefoot/great toe loads through terminal stance and push-off in
+            # standing locomotion, so a severe structural toe injury can omit all
+            # technical footwork; mild/moderate still allow/modify by severity.
+            "mech_lower_limb_weight_bearing",
+        ],
     },
     "unspecified": {"ban_keywords": [], "ban_tags": []},
 }

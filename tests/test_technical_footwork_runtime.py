@@ -270,3 +270,128 @@ def test_non_footwork_athlete_gets_no_technical_footwork():
 
 def test_conditioning_pool_has_no_technical_footwork_modality():
     assert not [d for d in conditioning.get_conditioning_bank() if d.get("modality") == "technical_footwork"]
+
+
+# --- Proof 7: wrestling & BJJ are served without cross-sport leakage ---------
+# The technical footwork bank is striking/MMA-oriented, but wrestling and BJJ are
+# supported combat sports (coordination_support_library.SUPPORTED_SPORTS). They
+# must not be silently made footwork-unavailable, nor broadly mapped onto every
+# MMA drill: sport is resolved through the shared canonical ontology and each
+# grappling sport is gated to the specific transition drills a per-drill movement
+# audit found genuinely appropriate. Deliberate omission (rather than another
+# sport's footwork) is correct where a sport has no eligible drill in a window.
+
+def _drills_tagged(tag: str) -> set[str]:
+    return {n for n, d in _FOOT_BANK.items() if tag in {str(t).lower() for t in d.get("tags", [])}}
+
+
+_WRESTLING_DRILLS = _drills_tagged("wrestling")
+_BJJ_DRILLS = _drills_tagged("bjj")
+# Drills that belong to a pure striking sport and must never surface for a
+# wrestling/BJJ athlete.
+_PURE_STRIKING_DRILLS = _drills_tagged("boxing") | _drills_tagged("kickboxing") | _drills_tagged("muay_thai")
+
+
+def _sport_flags(sport: str, **over) -> dict:
+    return _flags(sport=sport, fight_format=sport, style_tactical=[], style_technical=[sport], **over)
+
+
+def _selected_names(sport: str, phase: str) -> set[str]:
+    return {
+        c["name"]
+        for c in conditioning.select_technical_footwork_candidates(
+            _sport_flags(sport, phase=phase), set(), []
+        )
+    }
+
+
+def test_wrestling_selector_surfaces_only_wrestling_appropriate_drills():
+    # Served across the phases where genuine wrestling movements exist (sprawl,
+    # level change, scramble recovery, technical stand-up).
+    for phase in ("GPP", "SPP"):
+        surfaced = _selected_names("wrestling", phase)
+        assert surfaced, phase  # not silently unavailable
+        assert surfaced <= _WRESTLING_DRILLS, (phase, surfaced)
+        assert surfaced.isdisjoint(_PURE_STRIKING_DRILLS), (phase, surfaced)
+        # Cage ring-craft is a striking/MMA spatial skill, deliberately left
+        # MMA-only, so wrestling is never blanket-mapped onto every MMA drill.
+        assert "Cage Circle and Cut-Off" not in surfaced, phase
+    assert _selected_names("wrestling", "SPP") == {
+        "Level-Change Feint to Angle",
+        "Scramble-to-Strike Rebase",
+        "Sprawl Exit to Ring Angle",
+        "Submission Hunter Stand-Up Reset",
+    }
+
+
+def test_bjj_selector_surfaces_only_the_genuine_standup_drill():
+    # BJJ's only genuinely-appropriate standing pattern here is the technical
+    # stand-up to base; the strike-framed transitions are not BJJ footwork.
+    assert _BJJ_DRILLS == {"Submission Hunter Stand-Up Reset"}
+    for phase in ("GPP", "SPP"):
+        surfaced = _selected_names("bjj", phase)
+        assert surfaced, phase
+        assert surfaced <= _BJJ_DRILLS, (phase, surfaced)
+        assert surfaced.isdisjoint(_PURE_STRIKING_DRILLS), (phase, surfaced)
+
+
+def test_mma_selector_keeps_full_grappling_transition_set():
+    # MMA is unchanged by the wrestling/BJJ gating: it still gets every MMA drill
+    # including the cage ring-craft drill wrestling deliberately omits.
+    surfaced = _selected_names("mma", "SPP")
+    assert surfaced, surfaced
+    assert all("mma" in {t.lower() for t in _FOOT_BANK[n]["tags"]} for n in surfaced)
+    assert "Cage Circle and Cut-Off" in surfaced
+    assert surfaced.isdisjoint(_PURE_STRIKING_DRILLS)
+
+
+def test_grapplers_deliberately_omit_footwork_in_deep_taper():
+    # No wrestling/BJJ drill claims TAPER eligibility, so omission is the correct,
+    # deliberate outcome there — never a fall-through to a striking drill.
+    for sport in ("wrestling", "bjj"):
+        assert _selected_names(sport, "TAPER") == set(), sport
+
+
+def test_no_striking_footwork_ever_leaks_to_grapplers():
+    for sport in ("wrestling", "bjj"):
+        for phase in ("GPP", "SPP", "TAPER"):
+            assert _selected_names(sport, phase).isdisjoint(_PURE_STRIKING_DRILLS), (sport, phase)
+
+
+def test_canonical_sport_aliases_resolve_for_technical_footwork():
+    # Reuse of the shared sport ontology means aliases resolve to the same
+    # canonical sport rather than filtering to an unknown literal tag.
+    def cands(sport):
+        return sorted(_selected_names(sport, "SPP"))
+
+    assert cands("wrestler") == cands("wrestling")
+    assert cands("jiu_jitsu") == cands("bjj") == cands("brazilian_jiu_jitsu")
+    assert cands("muaythai") == cands("muay_thai")
+
+
+def test_generator_serves_wrestling_and_bjj_with_sport_appropriate_footwork():
+    # Full-generator proof (dedicated channel, guarantee, accounting separation)
+    # that wrestling/BJJ footwork-focused athletes are actually served.
+    for sport, allowed in (("wrestling", _WRESTLING_DRILLS), ("bjj", _BJJ_DRILLS)):
+        flags = _sport_flags(sport, phase="SPP", days_until_fight=40)
+        markdown, names, entries, grouped, *_rest = conditioning.generate_conditioning_block(flags)
+        inserted = FOOTWORK_NAMES.intersection(names)
+        assert inserted, (sport, names)  # served, not silently omitted
+        assert inserted <= allowed, (sport, inserted)
+        assert inserted.isdisjoint(_PURE_STRIKING_DRILLS), (sport, inserted)
+        assert "Technical Footwork" in markdown
+        assert inserted == {d["name"] for d in grouped.get("technical_footwork", [])}
+        for system in ("aerobic", "glycolytic", "alactic"):
+            assert inserted.isdisjoint({d["name"] for d in grouped.get(system, [])})
+        for entry in entries:
+            if entry.get("name") in inserted:
+                assert entry.get("system") == "technical_footwork"
+                assert "technical_footwork_guarantee" in entry["reasons"]["reason_codes"]
+
+
+def test_generator_omits_footwork_for_grapplers_in_deep_taper():
+    for sport in ("wrestling", "bjj"):
+        for days in (18, 4):
+            flags = _sport_flags(sport, phase="TAPER", days_until_fight=days)
+            _markdown, names, *_rest = conditioning.generate_conditioning_block(flags)
+            assert FOOTWORK_NAMES.isdisjoint(names), (sport, days, names)
