@@ -3370,7 +3370,7 @@ def _goal_witness_dose_matches(witness: dict, dose: str) -> bool:
         # The bound dose must state time units; repetitions cannot pay for work seconds.
         timed = re.search(r"\b(?:sec(?:onds?)?|s)\b", dose, re.I)
         rest = re.search(r"rest\s*[:=]?\s*(\d+)(?:\s*[-–]\s*\d+)?\s*(?:sec(?:onds?)?|s)\b", dose, re.I)
-        speed_rest = "speed_quality" not in witness.get("intents", []) or (rest and int(rest[1]) >= witness.get("rest_sec", 0))
+        speed_rest = witness.get("rest_sec") is None or bool(rest and int(rest[1]) >= witness["rest_sec"])
         return bool(timed and rounds >= witness["rounds"] and seconds >= witness["work_sec"] and speed_rest)
     minutes = witness.get("duration_min") or witness.get("total_minutes")
     if minutes:
