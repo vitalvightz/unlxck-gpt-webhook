@@ -24,6 +24,7 @@ from .bank_schema import (
 )
 from .injury_filtering import injury_match_details, _log_exclusion, _log_replacement
 from .injury_guard import Decision, choose_injury_replacement, injury_decision, make_guarded_decision_factory
+from .coordination_support_library import normalize_sport
 from .restriction_filtering import evaluate_restriction_impact
 from .diagnostics import format_missing_system_block
 from .tagging import normalize_item_tags, normalize_tags
@@ -1541,6 +1542,24 @@ _TECHNICAL_FOOTWORK_REACTIVE_BY_PHASE = {
     "TAPER": {"closed", "semi_reactive"},
 }
 
+# Canonical sport (see coordination_support_library.SUPPORTED_SPORTS, resolved
+# through the shared normalize_sport ontology) -> the drill sport-identity tags
+# that are genuinely appropriate for that sport. muay_thai and kickboxing share
+# a striking-footwork vocabulary. Wrestling and BJJ are grappling sports with a
+# limited standing-footwork game, so they are gated to the specific
+# grappling-transition drills explicitly tagged for them (a per-drill movement
+# audit), never blanket-mapped onto the whole MMA set. When a sport has no
+# eligible drill in a phase/window, deliberate omission is safer than surfacing
+# another sport's footwork.
+_TECHNICAL_FOOTWORK_SPORT_TAGS = {
+    "boxing": {"boxing"},
+    "kickboxing": {"kickboxing", "muay_thai"},
+    "muay_thai": {"kickboxing", "muay_thai"},
+    "mma": {"mma"},
+    "wrestling": {"wrestling"},
+    "bjj": {"bjj"},
+}
+
 
 def _footwork_focus_tokens(values) -> set[str]:
     tokens: set[str] = set()
@@ -1567,10 +1586,10 @@ def select_technical_footwork_candidates(
     """Return injury-safe technical footwork drills, best match first.
 
     Gated on footwork relevance (goals/weaknesses), phase eligibility,
-    per-drill ``reactive_level`` vs phase, and equipment. Sport + tactical
-    function drive the rank so a boxer gets boxing footwork and a counter
-    striker gets defensive/angle movement. Injury gating is applied to the whole
-    ranked list.
+    per-drill ``reactive_level`` vs phase, equipment, and strict sport
+    compatibility. Tactical function then drives the within-sport rank so a
+    counter striker gets defensive/angle movement. Injury gating is applied to
+    the whole ranked list.
 
     Every eligible, injury-safe candidate is returned (not only the top one) so
     the caller can fall through to the next-best drill when the highest-ranked
@@ -1590,13 +1609,26 @@ def select_technical_footwork_candidates(
         phase, {"closed", "semi_reactive"}
     )
     equipment_access = set(normalize_athlete_equipment_list(flags.get("equipment", [])))
-    fight_format = str(flags.get("fight_format") or flags.get("sport") or "").strip().lower()
+    # Resolve the athlete's sport through the shared canonical ontology so
+    # aliases (muay thai / muaythai / wrestler / jiu jitsu ...) and every
+    # supported combat sport — including wrestling and bjj — map consistently,
+    # rather than a footwork-local sport table that silently omitted them.
+    canonical_sport = normalize_sport(flags.get("fight_format") or flags.get("sport") or "")
+    compatible_sport_tags = _TECHNICAL_FOOTWORK_SPORT_TAGS.get(
+        canonical_sport, {canonical_sport} if canonical_sport else set()
+    )
     style_tokens = set(
         normalize_tags([*flags.get("style_tactical", []), *flags.get("style_technical", [])])
     )
 
     candidates = []
     for drill in get_technical_footwork_bank():
+        drill_tags = set(normalize_tags(drill.get("tags", [])))
+        # Sport is an eligibility rule here, not merely a ranking preference.
+        # When a sport-specific late-window candidate is unavailable, omission
+        # is safer and more correct than filling the slot with another sport.
+        if compatible_sport_tags and not (drill_tags & compatible_sport_tags):
+            continue
         if phase not in [str(p).upper() for p in drill.get("phases", [])]:
             continue
         if drill.get("name") in existing_names:
@@ -1621,7 +1653,7 @@ def select_technical_footwork_candidates(
         tags = set(normalize_tags(drill.get("tags", [])))
         functions = {str(f).strip().lower() for f in drill.get("tactical_function", []) if str(f).strip()}
         score = 0
-        if fight_format and fight_format in tags:
+        if canonical_sport and canonical_sport in tags:
             score += 2
         if style_tokens & tags:
             score += 1
