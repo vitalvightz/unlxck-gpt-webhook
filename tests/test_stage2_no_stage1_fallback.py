@@ -52,6 +52,7 @@ def _incomplete_response(text: str):
 
 
 # Regression contract: usable Stage 2 output stays athlete-facing; Stage 1 is never promoted.
+# These tests exist specifically to prevent the old technical-failure fallback from returning.
 def test_incomplete_stage2_response_keeps_usable_stage2_text():
     response = _incomplete_response("# Partial Stage 2 plan\n\nDo the Stage 2 work.")
     automator = OpenAIStage2Automator(client=_Client(response), model="test-model")
