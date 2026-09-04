@@ -46,6 +46,7 @@ _COMPRESSION_REASONS = {
     "aggressive_weight_cut": "weight_cut_pressure",
     "injury_management": "injury_constraint",
     "fight_week_override": "fight_proximity",
+    "pre_hard_contact_strength_exposure_cap": "pre_hard_contact_managed_stress",
 }
 _SPEED_TAGS = {"speed", "reactive", "reaction", "acceleration", "max_velocity", "speed_reaction"}
 _TECHNICAL_TAGS = {"technical", "skill_refinement", "technical_footwork", "footwork", "coordination"}

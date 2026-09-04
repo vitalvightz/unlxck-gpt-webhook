@@ -2549,8 +2549,13 @@ def _late_fight_line_is_exercise_like(line: str) -> bool:
 def _rendered_exercise_label(line: str) -> str:
     cleaned = re.sub(r"^(?:[-*]\s*)?", "", (line or "").strip())
     cleaned = re.sub(r"^\*\*?|\*\*?$", "", cleaned).strip()
-    cleaned = re.sub(r"^\(?[A-Za-z]{2,9}\)?\s*[-:]\s*", "", cleaned).strip()
-    match = re.split(r"\s+(?:[-–—]|:)\s+|,|\(", cleaned, maxsplit=1)
+    cleaned = re.sub(
+        rf"^\(?(?:{_COUNTDOWN_CONTRACT_WEEKDAY})\)?\s*[-:]\s*",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    ).strip()
+    match = re.split(r"\s+[-–—]\s+|:\s*|,|\(", cleaned, maxsplit=1)
     label = match[0].strip(" -*_`")
     return label or cleaned[:80]
 
@@ -3252,6 +3257,57 @@ def _late_camp_effective_prescription_warnings(
             blocks = blocks_by_day.get(d_day)
             if not blocks:
                 continue
+
+            # A pre-hard-contact strength envelope can narrow the whole S&C
+            # exercise selection, not only sets/reps on loaded lifts. Enforce
+            # that complete allow-list deterministically so the finalizer cannot
+            # restore a removed plyometric/support exercise or invent a new one.
+            if envelope.get("complete_exercise_allow_list") is True:
+                allowed_names = [
+                    str(name).strip()
+                    for name in (envelope.get("allowed_exercise_names") or [])
+                    if str(name).strip()
+                ]
+                for block in blocks:
+                    for rendered_line in block.get("lines") or []:
+                        if not _late_fight_line_is_exercise_like(rendered_line):
+                            continue
+                        rendered_label = _rendered_exercise_label(rendered_line)
+                        if _normalize_render_line(rendered_label).startswith(
+                            ("rest", "load", "tempo", "rpe", "sets", "reps")
+                        ):
+                            continue
+                        if any(_line_has_exercise(rendered_line, name) for name in allowed_names):
+                            continue
+                        identity = (
+                            d_day,
+                            "exercise_allow_list",
+                            _normalize_render_line(rendered_line),
+                        )
+                        if identity in seen:
+                            continue
+                        seen.add(identity)
+                        warnings.append(
+                            {
+                                "code": "late_camp_effective_prescription_exceeded",
+                                "message": (
+                                    f"D-{d_day} renders S&C exercise '{rendered_label}' outside "
+                                    "the resolved complete exercise allow-list."
+                                ),
+                                "severity": "blocker",
+                                "confidence": "high",
+                                "line": rendered_line,
+                                "scheduled_d_day": d_day,
+                                "exercise": rendered_label,
+                                "rendered_exercise": rendered_label,
+                                "role_key": role.get("role_key"),
+                                "violation_dimensions": ["exercise_allow_list"],
+                                "allowed_exercises": allowed_names,
+                                "effective_prescription": "exercise not allowed for this session",
+                                "dose_adjustment_reason": envelope.get("dose_adjustment_reason"),
+                            }
+                        )
+
             prescriptions = [
                 item for item in (role.get("effective_strength_prescriptions") or [])
                 if isinstance(item, dict) and item.get("name") and item.get("dose_role_kind") in {"anchor", "secondary"}

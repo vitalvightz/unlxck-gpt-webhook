@@ -54,7 +54,7 @@ No lower layer may silently override a higher layer's ownership.
 | Weekly stress intent | `stage2_planning_brief.py` | `stage2_planning_brief.py` | Role allocator converts intent to role slots | Fillers adding new meaningful stress because a week looks sparse |
 | Declared contact ownership | `sparring_dose_planner.py`, `stage2_role_map.py`, `stage2_payload_late_fight.py` | `sparring_dose_planner.py` | Calendar allocator consumes resolved contact state | Other layers inferring hard-vs-technical from raw declared weekday alone |
 | Effective contact load: hard / technical-only / deloaded / suppressed | `sparring_dose_planner.py`, late-fight logic, role-map logic | `sparring_dose_planner.py` | Countdown logic may request a dose transition through this contract | Compression/filler code treating every declared contact as hard load after resolution |
-| Weekly role budget / which app-owned roles survive | `stage2_role_map.py`, `stage2_payload.py`, late-fight permission/budget code | Normal camp: `stage2_role_map.py`; D-13 inward: late-fight permission/budget path | Finalizer renders only surviving roles | Renderer/finalizer restoring suppressed roles to make a week look complete |
+| Weekly role budget / which app-owned roles survive | `stage2_role_map.py` (with subordinate `pre_hard_contact_strength.py` helper), `stage2_payload.py`, late-fight permission/budget code | Normal camp: `stage2_role_map.py`; D-13 inward: late-fight permission/budget path | Finalizer renders only surviving roles; the subordinate pre-hard-contact helper applies the role-map owner's one-strength-exposure consequence only after final calendar integrity has fixed the normal-camp schedule | Renderer/finalizer restoring suppressed roles to make a week look complete; the helper inventing its own contact/spacing rule |
 | Fight-week override | fight-week helpers, `fight_day_override.py`, late-fight payload | fight-week override layer; D-0 specifically `fight_day_override.py` | Remove/limit roles according to override | Generic allocator overriding D-0 or fight-week caps |
 | Normal-camp day placement | `stage2_role_map.py`, `normal_calendar_placement.py` | `stage2_role_map.py` (`_assign_declared_day_hints`) + placement-owned completion (`normal_calendar_placement.py`) | Later integrity pass may reject or relocate only through shared calendar policy | Renderer assigning dayless roles; payload post-processing creating a second placement algorithm (Step 9A removed the dead `stage2_payload.py` boxing placement engine and its `_assign_declared_day_hints` duplicate) |
 | Late-fight day placement | `stage2_payload_late_fight.py` (`_build_late_fight_session_sequence`), `late_fight_tail.py` (finished-tail reuse) | `stage2_payload_late_fight.py` | Tail reuse preserves finished placement | Normal fillers re-place tail-owned sessions |
@@ -94,8 +94,10 @@ build athlete model / candidate pools
   -> apply_camp_week_fillers            (support inserts, gated by shared legality)
   -> splice finished D-13 tail when applicable
   -> apply_late_camp_role_morph
-       (countdown dose, then apply_final_calendar_integrity — the governor is the
-        last deterministic stage and re-runs dose-only morph if it relocates a role)
+       (countdown dose, then apply_final_calendar_integrity — the governor fixes
+        the final calendar and re-runs dose-only morph if it relocates a role;
+        only after that does the subordinate pre-hard-contact helper apply the
+        normal role-budget consequence on D-14+ days)
   -> stamp labels
   -> build finalizer handoff
 ```

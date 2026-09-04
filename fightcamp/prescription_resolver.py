@@ -1,27 +1,31 @@
-"""Resolve effective late-camp prescriptions from scheduled-day dose envelopes.
+"""Resolve effective strength prescriptions from scheduled-day/context dose envelopes.
 
 Exercise-bank prescriptions remain useful as the base dose, but scheduled-day
-countdown rules are authoritative once a role has been placed on the calendar.
-This module produces deterministic ``effective_prescription`` metadata so Stage 2
-never has to reconcile conflicting base exercise text and role-level caps.
+countdown and managed-contact rules are authoritative once a role has been placed
+on the calendar. This module produces deterministic ``effective_prescription``
+metadata so Stage 2 never has to reconcile conflicting base exercise text and
+role-level caps.
 
 Design contract (kept deliberately narrow):
 
-* It only runs AFTER ``apply_late_camp_role_morph`` has stamped a role's
-  ``strength_dose_cap`` (a dict carrying ``max_sets`` / ``max_reps`` /
-  ``loaded_allowed``), ``rpe_cap``, ``scheduled_d_day`` and
-  ``dose_adjustment_reason``. It never re-derives the countdown band itself — the
-  morph owns that — so calendar placement and dose shaping stay upstream.
+* Countdown shaping still comes from ``apply_late_camp_role_morph``. This module
+  never re-derives a countdown band.
+* A role marked ``pre_hard_contact_managed_stress`` receives the existing
+  D-17..D-14 strength-retention ceiling after placement: 3 x 3 max, RPE 6-7,
+  loaded lifting allowed. A stricter countdown cap always wins.
 * It is non-destructive: the exercise-bank prescription is preserved as
-  ``base_prescription`` while the scheduled-day result is stored as
+  ``base_prescription`` while the scheduled-day/context result is stored as
   ``effective_prescription`` and marked as the authoritative render dose.
 * Exercise class matters. Anchor (primary loaded) work keeps the most meaningful
-  loading the band allows; secondary loaded work loses more volume; support /
+  loading the envelope allows; secondary loaded work loses more volume; support /
   trunk / prehab work loses sets but is never forced into low-rep strength reps;
   jumps / throws / neural power work keeps its own neural-quality reps. Loaded
   power/contrast work retains both its loaded-strength and ballistic semantics.
+* Pre-hard-contact sessions keep one loaded anchor plus at most one genuinely
+  low-cost power/support item; high impact, landing, eccentric or soreness-cost
+  secondary work is excluded from the authoritative exercise allow-list.
 * Athlete readiness / cut / injury state may only reduce the resolved dose
-  further — never raise it above the scheduled-day ceiling.
+  further — never raise it above the scheduled-day/context ceiling.
 """
 
 from __future__ import annotations
@@ -30,7 +34,11 @@ import re
 from typing import Any
 
 from .calendar_context import role_d_day
-from .late_camp_role_morph import FULL_STRENGTH_ROLE_KEYS, STRENGTH_NEURAL_MORPH_MAX_D
+from .late_camp_role_morph import (
+    FULL_STRENGTH_ROLE_KEYS,
+    STRENGTH_NEURAL_MORPH_MAX_D,
+    late_fight_strength_dose_cap,
+)
 from .strength_session_quality import (
     ANCHOR_CAPABLE_CLASSES,
     SUPPORT_ONLY_CLASSES,
@@ -57,6 +65,7 @@ class MissingLateCampEffectiveStrengthAuthorityError(ValueError):
             f"missing_fields=[{fields}]"
         )
 
+
 # Movement-role names that mark low-load trunk / prehab / support work even when
 # a quality class is unavailable. Mirrors the reservoir/support taxonomy.
 _SUPPORT_MOVEMENT_ROLES = frozenset(
@@ -70,6 +79,13 @@ _SUPPORT_MOVEMENT_ROLES = frozenset(
         "strength_support",
     }
 )
+
+_PRE_HARD_CONTACT_REASON = "pre_hard_contact_managed_stress"
+_PRE_HARD_CONTACT_DOSE_REASON = "pre_hard_contact_strength_retention"
+_VERIFIED_LOW_COST_LEVELS = frozenset(
+    {"none", "low", "very low", "minimal", "negligible", "not applicable", "n/a"}
+)
+_PRE_HARD_COST_FIELDS = ("impact_cost", "landing_cost", "eccentric_cost", "soreness_risk")
 
 
 def _parse_sets_reps(prescription: str) -> tuple[int | None, int | None]:
@@ -150,7 +166,11 @@ def _is_loaded_power_hybrid(slot: dict[str, Any], *, classified: dict[str, Any] 
     }
     if not base_categories and selected:
         profile = profile or classify_strength_item(selected)
-        base_categories.update(str(value).strip() for value in profile.get("base_categories") or [] if str(value).strip())
+        base_categories.update(
+            str(value).strip()
+            for value in profile.get("base_categories") or []
+            if str(value).strip()
+        )
     loaded_structure = bool(base_categories & {"lower_body_loaded", "upper_body_push_pull"})
     if not loaded_structure and profile:
         loaded_structure = bool(profile.get("loaded_pattern"))
@@ -243,7 +263,12 @@ def _effective_counts(
 
     if role_kind == "secondary":
         # Secondary loaded work loses a set earlier than the anchor.
-        secondary_set_cap = max(1, (max_sets - 1) if isinstance(max_sets, int) and max_sets > 1 else (max_sets or 1))
+        secondary_set_cap = max(
+            1,
+            (max_sets - 1)
+            if isinstance(max_sets, int) and max_sets > 1
+            else (max_sets or 1),
+        )
         sets = min(base_sets, secondary_set_cap) if base_sets is not None else secondary_set_cap
         if base_reps is None:
             reps = None
@@ -299,10 +324,10 @@ def _format_effective_prescription(
 def _athlete_dose_reduction(athlete_state: dict[str, Any] | None) -> int:
     """Return an additional set reduction (0 or 1) from athlete readiness state.
 
-    Athlete state may only ever REDUCE the countdown-resolved dose, never raise
-    it. A single bounded step keeps the reduction monotonic: any active risk
-    signal reduces by one set; a higher-risk profile is therefore always the same
-    or lower than a lower-risk one at the same D-day, never higher.
+    Athlete state may only ever REDUCE the context-resolved dose, never raise it.
+    A single bounded step keeps the reduction monotonic: any active risk signal
+    reduces by one set; a higher-risk profile is therefore always the same or
+    lower than a lower-risk one under the same envelope, never higher.
     """
     if not isinstance(athlete_state, dict):
         return 0
@@ -338,10 +363,113 @@ def athlete_dose_state(athlete_model: dict[str, Any] | None) -> dict[str, bool]:
             or weight_cut_pct >= 5.0
         ),
         "injury_restricted": bool(injuries) or "injury_management" in readiness_flags,
-        # Reserved for future per-day coach/contact adjacency; left False here so
-        # the reduction stays athlete-level and monotonic in this PR.
+        # Reserved for genuine athlete-level recent-contact state. Scheduled
+        # next-day hard contact is a separate planner/context envelope and must
+        # not masquerade as readiness state.
         "recent_contact_load": False,
     }
+
+
+def _merge_numeric_cap(existing: Any, incoming: Any) -> int | None:
+    left = _int_or_none(existing)
+    right = _int_or_none(incoming)
+    if left is None:
+        return right
+    if right is None:
+        return left
+    return min(left, right)
+
+
+def _merge_rpe_cap(existing: Any, incoming: Any) -> str:
+    existing_text = str(existing or "").strip()
+    incoming_text = str(incoming or "").strip()
+    if not existing_text:
+        return incoming_text
+    if not incoming_text:
+        return existing_text
+    existing_high = _rpe_ceiling(existing_text)
+    incoming_high = _rpe_ceiling(incoming_text)
+    if existing_high is None:
+        return incoming_text
+    if incoming_high is None:
+        return existing_text
+    return existing_text if existing_high <= incoming_high else incoming_text
+
+
+def _apply_pre_hard_contact_cap(role: dict[str, Any]) -> None:
+    """Merge the shared D17-D14 retention ceiling into an affected role."""
+    if role.get("pre_hard_contact_managed_stress") is not True:
+        return
+    retention = late_fight_strength_dose_cap(17) or {}
+    existing = role.get("strength_dose_cap")
+    existing = dict(existing) if isinstance(existing, dict) else {}
+    merged = {
+        "max_sets": _merge_numeric_cap(existing.get("max_sets"), retention.get("max_sets")),
+        "max_reps": _merge_numeric_cap(existing.get("max_reps"), retention.get("max_reps")),
+        "loaded_allowed": (
+            existing.get("loaded_allowed") is not False
+            and retention.get("loaded_allowed") is not False
+        ),
+    }
+    role["strength_dose_cap"] = {key: value for key, value in merged.items() if value is not None}
+    role["rpe_cap"] = _merge_rpe_cap(role.get("rpe_cap"), retention.get("rpe_cap") or "6-7")
+    if not str(role.get("dose_adjustment_reason") or "").strip():
+        role["dose_adjustment_reason"] = _PRE_HARD_CONTACT_DOSE_REASON
+    role["pre_hard_contact_dose_adjustment"] = True
+
+
+def _selection_metadata(slot: dict[str, Any]) -> dict[str, Any]:
+    selected = _slot_selected(slot)
+    metadata = selected.get("selection_metadata")
+    if isinstance(metadata, dict):
+        return metadata
+    metadata = slot.get("selection_metadata")
+    return metadata if isinstance(metadata, dict) else {}
+
+
+def _cost_value(slot: dict[str, Any], field: str) -> str:
+    metadata = _selection_metadata(slot)
+    selected = _slot_selected(slot)
+    value = metadata.get(field)
+    if value in (None, ""):
+        value = selected.get(field)
+    if value in (None, ""):
+        value = slot.get(field)
+    return str(value or "").strip().lower().replace("-", "_")
+
+
+def _pre_hard_verified_low_cost(slot: dict[str, Any]) -> bool:
+    """Require affirmative low/none cost metadata for the optional second item."""
+    values = [
+        _cost_value(slot, field).replace("_", " ")
+        for field in _PRE_HARD_COST_FIELDS
+    ]
+    return all(value and value in _VERIFIED_LOW_COST_LEVELS for value in values)
+
+
+def _pre_hard_allowed_slots(owned_slots: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """One loaded anchor plus at most one genuinely low-cost support/power item."""
+    allowed: list[dict[str, Any]] = []
+    loaded_anchor_used = False
+    additional_used = False
+    for slot in sorted(owned_slots, key=_slot_priority):
+        kind = _role_kind(slot)
+        if kind in {"anchor", "hybrid", "secondary"}:
+            if loaded_anchor_used:
+                continue
+            # A true secondary slot cannot become the one anchor when a higher
+            # priority anchor was absent from the candidate group.
+            if kind == "secondary":
+                continue
+            allowed.append(slot)
+            loaded_anchor_used = True
+            continue
+        if kind in {"power", "support"}:
+            if additional_used or not _pre_hard_verified_low_cost(slot):
+                continue
+            allowed.append(slot)
+            additional_used = True
+    return allowed
 
 
 def resolve_strength_slot_prescription(
@@ -558,8 +686,18 @@ def assert_late_camp_effective_strength_authority(
             )
 
 
-_PRIORITY_ORDER = {"critical": 0, "anchor": 0, "primary": 0, "high": 1, "secondary": 1,
-                   "medium": 2, "support": 2, "power": 2, "ballistic": 2, "low": 3}
+_PRIORITY_ORDER = {
+    "critical": 0,
+    "anchor": 0,
+    "primary": 0,
+    "high": 1,
+    "secondary": 1,
+    "medium": 2,
+    "support": 2,
+    "power": 2,
+    "ballistic": 2,
+    "low": 3,
+}
 
 
 def _slot_priority(slot: dict[str, Any]) -> tuple[int, int]:
@@ -575,13 +713,7 @@ def _build_role_envelope(
     role: dict[str, Any],
     resolved: list[dict[str, Any]],
 ) -> dict[str, Any] | None:
-    """Summarise the loaded-strength ceiling for the validator to compare against.
-
-    The envelope tracks the anchor (most permissive loaded lift) so a rendered
-    dose only trips the validator when it exceeds even that ceiling, and lists
-    the loaded exercise names so the validator can match rendered lines precisely
-    without dose-checking legitimately higher-rep support / power work.
-    """
+    """Summarise the loaded-strength ceiling for the finalizer/validator."""
     cap = role.get("strength_dose_cap") if isinstance(role.get("strength_dose_cap"), dict) else {}
     loaded_entries = [item for item in resolved if item.get("dose_role_kind") in {"anchor", "secondary"}]
     loaded_names = [item.get("name") for item in loaded_entries if item.get("name")]
@@ -608,6 +740,20 @@ def _build_role_envelope(
         "rpe_cap_high": _rpe_ceiling(role.get("rpe_cap")),
         "loaded_exercise_names": loaded_names,
     }
+    if role.get("pre_hard_contact_managed_stress") is True:
+        allowed_names = [item.get("name") for item in resolved if item.get("name")]
+        envelope.update(
+            {
+                "pre_hard_contact_managed_stress": True,
+                "pre_hard_contact_reason_code": role.get("pre_hard_contact_reason_code") or _PRE_HARD_CONTACT_REASON,
+                "max_meaningful_strength_exposures": 1,
+                "max_loaded_anchors": 1,
+                "max_additional_low_cost_items": 1,
+                "allowed_exercise_names": allowed_names,
+                "complete_exercise_allow_list": True,
+                "forbid_slow_eccentric_emphasis": True,
+            }
+        )
     if isinstance(max_sets, int):
         envelope["max_sets"] = max_sets
     if isinstance(max_reps, int):
@@ -623,13 +769,11 @@ def apply_effective_strength_prescriptions(
 ) -> dict[str, Any]:
     """Attach resolved strength prescriptions to role metadata for Stage 2.
 
-    Runs after ``apply_late_camp_role_morph`` so every strength role that a
-    countdown cap applies to already carries ``strength_dose_cap`` (with
-    ``loaded_allowed``), ``rpe_cap``, ``scheduled_d_day`` and
-    ``dose_adjustment_reason``. The resolver is deliberately non-destructive: bank
-    prescriptions stay as ``base_prescription`` while the scheduled-day result is
-    stored under ``effective_strength_prescriptions`` (per candidate slot) and
-    summarised in ``effective_strength_envelope`` for validator enforcement.
+    Runs after ``apply_late_camp_role_morph``. Countdown roles therefore already
+    carry their scheduled-day cap. Normal-camp roles marked by the canonical
+    pre-hard-contact role-budget policy receive the same D17-D14 retention ceiling
+    here, after the late-camp morph has finished, so a D-18+ cap is never cleared
+    as stale countdown metadata.
     """
     if not isinstance(weekly_role_map, dict) or not isinstance(candidate_pools, dict):
         return weekly_role_map
@@ -640,11 +784,16 @@ def apply_effective_strength_prescriptions(
         weekly_role_map=weekly_role_map,
         candidate_pools=candidate_pools,
     ):
+        _apply_pre_hard_contact_cap(role)
         if not isinstance(role.get("strength_dose_cap"), dict):
             continue
         scheduled_d_day = role_d_day(week, role)
         if scheduled_d_day is not None:
             role["scheduled_d_day"] = scheduled_d_day
+
+        slots_for_resolution = owned_slots
+        if role.get("pre_hard_contact_managed_stress") is True:
+            slots_for_resolution = _pre_hard_allowed_slots(owned_slots)
 
         # Demote every anchor-capable loaded lift after the highest-priority one
         # to ``secondary`` so later loaded work loses more volume. Loaded-power
@@ -652,7 +801,7 @@ def apply_effective_strength_prescriptions(
         # remains outside it. Ordered by planner slot priority.
         anchor_loaded_used = False
         resolved: list[dict[str, Any]] = []
-        for slot in sorted(owned_slots, key=_slot_priority):
+        for slot in sorted(slots_for_resolution, key=_slot_priority):
             kind = _role_kind(slot)
             force_kind = None
             if kind in {"anchor", "hybrid"} and _slot_quality_class_effective(slot) != "anchor_force_isometric":

@@ -395,8 +395,17 @@ def apply_late_camp_role_morph(weekly_role_map: dict[str, Any]) -> dict[str, Any
     # the shared load policy but never imports this module. If it moves a normal
     # role, it calls this module's *dose-only* core once more before verification.
     from .calendar_integrity import apply_final_calendar_integrity
+    from .pre_hard_contact_strength import apply_pre_hard_contact_strength_exposure_cap
 
-    return apply_final_calendar_integrity(
+    weekly_role_map = apply_final_calendar_integrity(
         weekly_role_map,
         remorph_callback=_apply_late_camp_role_morph_once,
     )
+    # The pre-hard-contact consequence depends on the finished calendar, not an
+    # earlier placement guess. Running it here also makes goal-repair trials pass
+    # through the same one-strength-exposure policy before dose resolution.
+    apply_pre_hard_contact_strength_exposure_cap(weekly_role_map)
+    # The helper may suppress an extra strength role. Refresh the deterministic
+    # semantic summary against the surviving role set; this is dose/metadata only
+    # and does not reopen calendar placement.
+    return _apply_late_camp_role_morph_once(weekly_role_map)
