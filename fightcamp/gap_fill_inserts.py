@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any, Literal
 
 from .calendar_context import (
@@ -10,6 +11,7 @@ from .calendar_context import (
 from .camp_phases import calculate_phase_weeks
 from .combat_load_policy import PlacementDirective, role_load_profile
 from .normalization import clean_list, normalize_fatigue_level
+from .priority_profile import selected_priority_targets
 from .conditioning import (
     TECHNICAL_FOOTWORK_GROUP,
     select_technical_footwork_candidates,
@@ -19,6 +21,7 @@ from .sports import normalize_sport, planning_format
 from .late_selector_windows import classify_late_selector_window
 from .restriction_filtering import evaluate_restriction_impact
 from .stage2_render_guards import _all_active_injuries_surface_only
+from .tagging import normalize_tag
 from .stage2_payload_late_fight import (
     _countdown_offset,
     _countdown_weekday_map,
@@ -95,16 +98,6 @@ _ALL_INSERTS = (
 TACTICAL_INSERTS = {"tactical_watch", "tactical_cue_card", "self_review"}
 CONDITIONING_MAINTENANCE_INSERTS = LOW_COST_AEROBIC_INSERTS
 
-_CONDITIONING_GOAL_MARKERS = (
-    "conditioning",
-    "gas",
-    "aerobic",
-    "endurance",
-    "cardio",
-    "work_capacity",
-    "engine",
-    "stamina",
-)
 _LOWER_LEG_LOAD_MARKERS = (
     "achilles",
     "calf",
@@ -120,6 +113,125 @@ _LOWER_LEG_LOAD_MARKERS = (
     "hamstring",
     "tibia",
     "peroneal",
+)
+
+
+@dataclass(frozen=True)
+class TargetCoverageState:
+    """Coverage state for one canonical athlete-selected target.
+
+    A selected priority is not automatically a remaining training need. Full
+    programme roles can satisfy meaningful coverage; low-cost fillers can only
+    satisfy the narrower support opportunity represented by ``remaining_need``.
+    """
+
+    target: str
+    label: str
+    priority_weight: float
+    sources: tuple[str, ...]
+    meaningful_coverage: bool
+    support_coverage: float
+    remaining_need: float
+    low_cost_addressable: bool
+
+
+# Canonicalize only structured athlete-priority values. These aliases never run
+# over display copy, titles, descriptions, or renderer prose.
+_TARGET_ALIASES = {
+    "footwork": "footwork",
+    "feet": "footwork",
+    "stance": "footwork",
+    "ringcraft": "footwork",
+    "ring_craft": "footwork",
+    "angles": "footwork",
+    "speed": "speed",
+    "explosiveness": "power",
+    "explosive_power": "power",
+    "power": "power",
+    "strength": "strength",
+    "max_strength": "strength",
+    "conditioning": "conditioning",
+    "gas": "conditioning",
+    "gas_tank": "conditioning",
+    "aerobic": "conditioning",
+    "endurance": "conditioning",
+    "cardio": "conditioning",
+    "work_capacity": "conditioning",
+    "engine": "conditioning",
+    "stamina": "conditioning",
+    "mobility": "mobility",
+    "range_of_motion": "mobility",
+    "coordination": "coordination",
+    "coordination_proprioception": "coordination",
+    "proprioception": "coordination",
+    "balance": "coordination",
+    "recovery": "recovery",
+}
+
+# Intentionally small role-identity map. A role receives meaningful target
+# credit only where its canonical identity has a reliable semantic basis. Generic
+# conditioning role keys are deliberately absent: their real adaptation comes
+# from the structured preferred_system stamped by the planner.
+_MEANINGFUL_ROLE_CAPABILITIES: dict[str, frozenset[str]] = {
+    "primary_strength": frozenset({"strength"}),
+    "primary_strength_day": frozenset({"strength"}),
+    "secondary_strength_day": frozenset({"strength"}),
+    "structural_strength_day": frozenset({"strength"}),
+    "strength_touch_day": frozenset({"strength"}),
+    "transfer_strength_day": frozenset({"strength", "power"}),
+    "small_strength_touch_day": frozenset({"strength"}),
+    "neural_plus_strength_day": frozenset({"strength", "power", "speed"}),
+    "neural_primer_day": frozenset({"power", "speed"}),
+    "alactic_speed_day": frozenset({"speed"}),
+    "alactic_sharpness_day": frozenset({"speed"}),
+    "alactic_support_day": frozenset({"speed"}),
+    "aerobic_base_day": frozenset({"conditioning"}),
+    "aerobic_support_day": frozenset({"conditioning"}),
+    "aerobic_flush_day": frozenset({"conditioning"}),
+    "repeatability_support_day": frozenset({"conditioning"}),
+    "controlled_repeatability_day": frozenset({"conditioning"}),
+    "fight_pace_repeatability_day": frozenset({"conditioning"}),
+    "light_fight_pace_touch_day": frozenset({"conditioning"}),
+    "converted_low_aerobic_gas_tank_day": frozenset({"conditioning"}),
+    "recovery_aerobic_gas_tank_day": frozenset({"conditioning", "recovery"}),
+    "aerobic_coordination_day": frozenset({"conditioning", "coordination"}),
+    "alactic_coordination_day": frozenset({"speed", "coordination"}),
+    "converted_mobility_support_day": frozenset({"mobility"}),
+    "recovery_reset_day": frozenset({"recovery"}),
+    "tissue_recovery_day": frozenset({"recovery"}),
+    "converted_recovery_flush_day": frozenset({"recovery"}),
+    "fight_week_freshness_day": frozenset({"recovery", "mobility"}),
+}
+
+# Capability means honest low-cost support, not a full adaptation. Strength and
+# power are deliberately absent: cheap filler must never claim to repair them.
+_FILLER_TARGET_CAPABILITY: dict[str, dict[str, float]] = {
+    "footwork_walkthrough": {"footwork": 1.0, "coordination": 0.55},
+    "technical_shadow_rhythm": {"footwork": 0.7, "coordination": 0.6, "speed": 0.35},
+    "aerobic_footwork_rhythm": {"conditioning": 0.75, "footwork": 0.6, "coordination": 0.5},
+    "movement_quality": {"coordination": 1.0, "mobility": 0.55, "footwork": 0.35},
+    "mobility_rehab": {"mobility": 1.0},
+    "joint_prep": {"mobility": 0.75},
+    "aerobic_shadow_flow": {"conditioning": 1.0, "speed": 0.2},
+    "aerobic_walk_flush": {"conditioning": 0.8, "recovery": 0.45},
+    "aerobic_skip_flush": {"conditioning": 0.9, "coordination": 0.35},
+    "aerobic_jog_flush": {"conditioning": 0.9},
+    "recovery_reset": {"recovery": 1.0, "mobility": 0.35},
+    "breathing_reset": {"recovery": 0.7},
+    "sleep_downshift": {"recovery": 0.7},
+    "walk_flush": {"recovery": 0.55},
+    "neural_visualization": {"speed": 0.2},
+    # Normal-camp's established banked coordination role uses this same ledger.
+    "coordination_support": {"coordination": 1.0},
+}
+
+_STRUCTURED_TARGET_FIELDS = (
+    "coverage_targets",
+    "selected_targets",
+    "matched_goal_tags",
+    "matched_weakness_tags",
+    "goal_tags",
+    "weakness_tags",
 )
 
 _INSERT_META = {
@@ -313,8 +425,205 @@ def insert_mechanical_load_regions(role_key: str) -> tuple[str, ...]:
     return _INSERT_MECH_LOAD_REGIONS.get(role_key, ())
 
 
+def filler_target_capabilities(role_key: str) -> dict[str, float]:
+    """Return the shared low-cost target capability declaration for a filler."""
+    return dict(_FILLER_TARGET_CAPABILITY.get(str(role_key or "").strip().lower(), {}))
+
+
 def _normalised_set(values: Any) -> set[str]:
     return {str(value).strip().lower().replace(" ", "_") for value in clean_list(values) if str(value).strip()}
+
+
+def _canonical_target(value: Any) -> str:
+    normalized = normalize_tag(str(value or "")) or ""
+    return _TARGET_ALIASES.get(normalized, normalized)
+
+
+def _role_has_meaningful_target_coverage(role: dict[str, Any]) -> bool:
+    governance = role.get("governance")
+    if isinstance(governance, dict) and governance.get("meaningful_stress") is False:
+        return False
+    if role.get("meaningful_stress") is False:
+        return False
+    return str(role.get("category") or "").strip().lower() != "support_insert"
+
+
+def _structured_role_targets(role: dict[str, Any]) -> set[str]:
+    targets: set[str] = set()
+    sources = [role]
+    for nested_key in ("selection_metadata", "metadata"):
+        nested = role.get(nested_key)
+        if isinstance(nested, dict):
+            sources.append(nested)
+    for source in sources:
+        for field in _STRUCTURED_TARGET_FIELDS:
+            for value in clean_list(source.get(field)):
+                target = _canonical_target(value)
+                if target:
+                    targets.add(target)
+    return targets
+
+
+def role_target_capabilities(role: dict[str, Any]) -> set[str]:
+    """Return genuine semantic target coverage for one scheduled programme role.
+
+    Renderer text is intentionally ignored. Coverage comes from canonical role
+    identity, structured planner fields such as preferred_system, or explicit
+    structured target metadata. A generic role key never makes an alactic speed
+    exposure count as full aerobic / gas-tank coverage.
+    """
+
+    if not isinstance(role, dict) or not _role_has_meaningful_target_coverage(role):
+        return set()
+    role_key = str(role.get("role_key") or "").strip().lower()
+    capabilities = set(_MEANINGFUL_ROLE_CAPABILITIES.get(role_key, ()))
+    category = str(role.get("category") or "").strip().lower()
+    preferred_system = (
+        str(role.get("preferred_system") or "")
+        .strip()
+        .lower()
+        .replace("-", "_")
+        .replace(" ", "_")
+    )
+    if category == "conditioning":
+        if preferred_system == "technical_footwork":
+            capabilities.add("footwork")
+        elif preferred_system in {"aerobic", "glycolytic"}:
+            capabilities.add("conditioning")
+        elif preferred_system in {"alactic", "atp_pcr"}:
+            capabilities.add("speed")
+    elif category == "mobility":
+        capabilities.add("mobility")
+    elif category == "recovery":
+        capabilities.add("recovery")
+    return capabilities | _structured_role_targets(role)
+
+
+def build_target_coverage_state(
+    athlete_model: dict[str, Any],
+    scheduled_roles: list[dict[str, Any]] | None = None,
+) -> list[TargetCoverageState]:
+    """Build the shared selected-priority and remaining-support ledger.
+
+    Meaningful scheduled work fully covers a target. Existing low-cost fillers
+    only cover targets their conservative capability map names; they satisfy a
+    support opportunity without being reclassified as meaningful adaptation.
+    """
+
+    selected_by_target: dict[str, dict[str, Any]] = {}
+    target_order: list[str] = []
+    for selected in selected_priority_targets(athlete_model):
+        target = _canonical_target(selected.target)
+        if not target:
+            continue
+        current = selected_by_target.get(target)
+        if current is None:
+            target_order.append(target)
+            selected_by_target[target] = {
+                "label": selected.label,
+                "weight": selected.weight,
+                "sources": list(selected.sources),
+            }
+            continue
+        current["weight"] = max(float(current["weight"]), selected.weight)
+        current["sources"] = list(dict.fromkeys([*current["sources"], *selected.sources]))
+
+    roles = [role for role in (scheduled_roles or []) if isinstance(role, dict)]
+    meaningful_targets = {
+        target
+        for role in roles
+        for target in role_target_capabilities(role)
+    }
+    support_coverage: dict[str, float] = {}
+    for role in roles:
+        role_key = str(role.get("role_key") or "").strip().lower()
+        for target, capability in _FILLER_TARGET_CAPABILITY.get(role_key, {}).items():
+            support_coverage[target] = min(
+                1.0,
+                support_coverage.get(target, 0.0) + float(capability),
+            )
+
+    addressable_targets = {
+        target
+        for capabilities in _FILLER_TARGET_CAPABILITY.values()
+        for target in capabilities
+    }
+    order_index = {target: index for index, target in enumerate(target_order)}
+    states = [
+        TargetCoverageState(
+            target=target,
+            label=str(data["label"]),
+            priority_weight=float(data["weight"]),
+            sources=tuple(data["sources"]),
+            meaningful_coverage=target in meaningful_targets,
+            support_coverage=support_coverage.get(target, 0.0),
+            remaining_need=(
+                0.0
+                if target in meaningful_targets
+                else max(0.0, 1.0 - support_coverage.get(target, 0.0))
+            ),
+            low_cost_addressable=target in addressable_targets,
+        )
+        for target, data in selected_by_target.items()
+    ]
+    return sorted(
+        states,
+        key=lambda state: (-state.priority_weight, order_index[state.target]),
+    )
+
+
+def remaining_target_need(
+    athlete_model: dict[str, Any],
+    scheduled_roles: list[dict[str, Any]],
+    target: str,
+) -> float:
+    canonical = _canonical_target(target)
+    return next(
+        (
+            state.remaining_need
+            for state in build_target_coverage_state(athlete_model, scheduled_roles)
+            if state.target == canonical and state.low_cost_addressable
+        ),
+        0.0,
+    )
+
+
+def highest_priority_remaining_target(
+    athlete_model: dict[str, Any],
+    scheduled_roles: list[dict[str, Any]],
+) -> str:
+    """Return the highest canonical selected target a low-cost filler can address."""
+    return next(
+        (
+            state.target
+            for state in build_target_coverage_state(athlete_model, scheduled_roles)
+            if state.low_cost_addressable and state.remaining_need > 0
+        ),
+        "",
+    )
+
+
+def _priority_contribution(
+    role_key: str,
+    coverage_state: list[TargetCoverageState],
+) -> float:
+    capabilities = _FILLER_TARGET_CAPABILITY.get(role_key, {})
+    return max(
+        (
+            state.priority_weight * state.remaining_need * float(capabilities.get(state.target, 0.0))
+            for state in coverage_state
+            if state.low_cost_addressable and state.remaining_need > 0
+        ),
+        default=0.0,
+    )
+
+
+def _has_selected_target(athlete_model: dict[str, Any], target: str) -> bool:
+    canonical = _canonical_target(target)
+    return any(
+        state.target == canonical
+        for state in build_target_coverage_state(athlete_model)
+    )
 
 
 def _flatten_text(value: Any) -> str:
@@ -348,26 +657,15 @@ def _has_high_fatigue(athlete_model: dict[str, Any]) -> bool:
 
 
 def _has_mobility_need(athlete_model: dict[str, Any]) -> bool:
-    values = (
-        _normalised_set(athlete_model.get("weaknesses", []))
-        | _normalised_set(athlete_model.get("key_goals", []))
-        | _normalised_set(athlete_model.get("readiness_flags", []))
+    readiness = _normalised_set(athlete_model.get("readiness_flags", []))
+    return _has_selected_target(athlete_model, "mobility") or any(
+        "mobil" in value or "rehab" in value or "range" in value
+        for value in readiness
     )
-    return any("mobil" in value or "rehab" in value or "range" in value for value in values)
-
-
-def _has_power_speed_goal(athlete_model: dict[str, Any]) -> bool:
-    values = _normalised_set(athlete_model.get("key_goals", [])) | _normalised_set(athlete_model.get("weaknesses", []))
-    return any("power" in value or "speed" in value or "explosive" in value for value in values)
 
 
 def _has_conditioning_goal(athlete_model: dict[str, Any]) -> bool:
-    values = (
-        _normalised_set(athlete_model.get("key_goals", []))
-        | _normalised_set(athlete_model.get("weaknesses", []))
-        | _normalised_set(athlete_model.get("readiness_flags", []))
-    )
-    return any(marker in value for value in values for marker in _CONDITIONING_GOAL_MARKERS)
+    return _has_selected_target(athlete_model, "conditioning")
 
 
 def _has_lower_leg_load_risk(athlete_model: dict[str, Any]) -> bool:
@@ -434,19 +732,6 @@ def _safe_conditioning_maintenance_inserts(
             safe.add("aerobic_jog_flush")
 
     return safe
-
-
-def _has_footwork_weakness(athlete_model: dict[str, Any]) -> bool:
-    values = (
-        _normalised_set(athlete_model.get("weaknesses", []))
-        | _normalised_set(athlete_model.get("key_goals", []))
-        | _normalised_set(athlete_model.get("readiness_flags", []))
-    )
-    return any(
-        marker in value
-        for value in values
-        for marker in {"footwork", "feet", "stance", "ringcraft", "ring_craft", "angle", "angles"}
-    )
 
 
 def _is_fight_sport(athlete_model: dict[str, Any]) -> bool:
@@ -810,9 +1095,11 @@ def _score_insert_role(
     high_fatigue = _has_high_fatigue(athlete_model)
     active_cut = _has_active_weight_cut(athlete_model)
     injury_state = classify_injury_state(athlete_model)
-    mobility_need = _has_mobility_need(athlete_model) or injury_state in {"mild_stable", "moderate_plus"}
-    footwork_weakness = _has_footwork_weakness(athlete_model)
-    power_speed_goal = _has_power_speed_goal(athlete_model)
+    readiness = _normalised_set(athlete_model.get("readiness_flags", []))
+    mobility_safety_need = injury_state in {"mild_stable", "moderate_plus"} or any(
+        "mobil" in value or "rehab" in value or "range" in value
+        for value in readiness
+    )
 
     if active_cut:
         if role_key in {"tactical_cue_card", "breathing_reset", "sleep_downshift", "recovery_reset"}:
@@ -830,7 +1117,7 @@ def _score_insert_role(
         if role_key in PHYSICAL_INSERTS:
             score -= 8
 
-    if mobility_need:
+    if mobility_safety_need:
         if injury_state != "none" and active_cut:
             mobility_boost = 55
         elif injury_state != "none" or not active_cut:
@@ -840,34 +1127,14 @@ def _score_insert_role(
         if role_key in {"mobility_rehab", "joint_prep"}:
             score += mobility_boost
 
-    if footwork_weakness:
-        if role_key == "footwork_walkthrough":
-            score += 24
-        elif role_key == "technical_shadow_rhythm":
-            score += 20
-        elif role_key in {"tactical_watch", "tactical_cue_card"}:
-            score += 6
-
-    if power_speed_goal:
-        if role_key in {"neural_visualization", "technical_shadow_rhythm"}:
-            score += 16
-        elif role_key == "footwork_walkthrough":
-            score += 4
-
     if role_key in LOW_COST_AEROBIC_INSERTS:
-        if _has_conditioning_goal(athlete_model):
-            # Preserve the conditioning slot over generic tactical/breathing filler.
-            score += 22
-            if high_fatigue or active_cut:
-                if role_key in _ZERO_IMPACT_AEROBIC_INSERTS:
-                    score += 6
-                elif role_key in _IMPACT_AEROBIC_INSERTS:
-                    score -= 10
-            if role_key == "aerobic_shadow_flow" and _is_fight_sport(athlete_model):
-                score += 3
-        else:
-            # Never surface aerobic maintenance without an explicit conditioning signal.
-            score -= 100
+        if high_fatigue or active_cut:
+            if role_key in _ZERO_IMPACT_AEROBIC_INSERTS:
+                score += 6
+            elif role_key in _IMPACT_AEROBIC_INSERTS:
+                score -= 10
+        if role_key == "aerobic_shadow_flow" and _is_fight_sport(athlete_model):
+            score += 3
 
     if gap_span is not None and gap_span >= TWO_INSERT_GAP_MIN_DAYS:
         if role_key == "walk_flush":
@@ -899,11 +1166,16 @@ def _select_role_key(
     gap_span: int | None = None,
     force_tactical: bool = False,
     force_conditioning: bool = False,
+    coverage_state: list[TargetCoverageState] | None = None,
 ) -> str | None:
     candidates = set(allowed)
+    coverage_state = coverage_state or []
     if force_tactical:
         candidates &= TACTICAL_INSERTS
-    elif force_conditioning:
+    elif force_conditioning and any(
+        state.target == "conditioning" and state.remaining_need > 0
+        for state in coverage_state
+    ):
         aerobic = candidates & LOW_COST_AEROBIC_INSERTS
         if aerobic:
             candidates = aerobic
@@ -925,6 +1197,7 @@ def _select_role_key(
     return max(
         sorted(candidates),
         key=lambda role_key: (
+            _priority_contribution(role_key, coverage_state),
             _score_insert_role(
                 role_key,
                 athlete_model,
@@ -966,6 +1239,7 @@ def _build_insert_role(
         "rpe_max": int(meta["rpe_max"]),
         "support_insert_category": _insert_category(role_key),
         "support_insert_cost_category": _cost_category(role_key),
+        "support_target_capabilities": filler_target_capabilities(role_key),
         "mechanical_load_regions": list(insert_mechanical_load_regions(role_key)),
         "countdown_offset": insert_offset,
         "countdown_label": f"D-{insert_offset}",
@@ -1152,6 +1426,7 @@ def select_gap_fill_insert(
     force_tactical: bool = False,
     force_conditioning: bool = False,
     legality: CalendarLegalityView | None = None,
+    scheduled_roles: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any] | None:
     if insert_offset == 0:
         return None
@@ -1179,6 +1454,10 @@ def select_gap_fill_insert(
         gap_span=gap_span,
         force_tactical=force_tactical,
         force_conditioning=force_conditioning,
+        coverage_state=build_target_coverage_state(
+            athlete_model,
+            scheduled_roles,
+        ),
     )
     if role_key is None:
         return None
@@ -1219,6 +1498,7 @@ def _select_non_physical_insert(
     gap_span: int | None = None,
     force_tactical: bool = False,
     legality: CalendarLegalityView | None = None,
+    scheduled_roles: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any] | None:
     allowed = _allowed_inserts(
         athlete_model,
@@ -1234,6 +1514,10 @@ def _select_non_physical_insert(
         usage_ledger=usage_ledger,
         gap_span=gap_span,
         force_tactical=force_tactical,
+        coverage_state=build_target_coverage_state(
+            athlete_model,
+            scheduled_roles,
+        ),
     )
     if not role_key:
         return None
@@ -1538,11 +1822,6 @@ def apply_gap_fill_inserts(
         and offset > 0
     }
     tactical_required = _is_fight_sport(athlete_model) and not tactical_present
-    conditioning_present = any(
-        str(role.get("role_key") or "") in LOW_COST_AEROBIC_INSERTS for role in ordered
-    )
-    conditioning_required = _has_conditioning_goal(athlete_model)
-    injury_state = classify_injury_state(athlete_model)
     # Coach combat days come from resolved contact (hard + technical occurrences),
     # so tactical support still attaches to declared combat days without matching
     # raw weekday names.
@@ -1576,30 +1855,7 @@ def apply_gap_fill_inserts(
         # resolved contact set, not raw declared weekday names.
         on_hard_sparring_day = target_offset in contact_offsets
         force_tactical = tactical_required and not tactical_present
-        # Once tactical support is secured, guarantee at least one low-risk
-        # aerobic-maintenance slot when a conditioning / gas-tank goal is selected,
-        # so the goal stays visible instead of being dropped for pure filler. Only
-        # force it on a slot that can actually take a safe aerobic insert (offset,
-        # hard-sparring and injury safe); otherwise fall through to normal
-        # selection so the gap still gets a tactical/recovery filler.
-        force_conditioning = (
-            not force_tactical
-            and conditioning_required
-            and not conditioning_present
-            and bool(
-                _safe_conditioning_maintenance_inserts(
-                    athlete_model,
-                    target_offset,
-                    injury_state,
-                    on_hard_sparring_day=on_hard_sparring_day,
-                )
-            )
-        )
-        if (
-            len(inserts) >= MAX_INSERTS_TOTAL_D21_TO_D0
-            and not force_tactical
-            and not force_conditioning
-        ):
+        if len(inserts) >= MAX_INSERTS_TOTAL_D21_TO_D0 and not force_tactical:
             break
         insert = select_gap_fill_insert(
             athlete_model,
@@ -1608,8 +1864,8 @@ def apply_gap_fill_inserts(
             usage_ledger=usage_ledger,
             gap_span=gap_span,
             force_tactical=force_tactical,
-            force_conditioning=force_conditioning,
             legality=legality,
+            scheduled_roles=ordered + inserts,
         )
         if insert is None:
             continue
@@ -1632,6 +1888,7 @@ def apply_gap_fill_inserts(
                     gap_span=gap_span,
                     force_tactical=force_tactical,
                     legality=legality,
+                    scheduled_roles=ordered + inserts,
                 )
                 if insert is None:
                     continue
@@ -1657,8 +1914,6 @@ def apply_gap_fill_inserts(
         if insert.get("role_key") in TACTICAL_INSERTS:
             tactical_present = True
             tactical_offsets.add(target_offset)
-        if insert.get("role_key") in LOW_COST_AEROBIC_INSERTS:
-            conditioning_present = True
         if not is_low_cost_coexistable_filler(insert):
             existing_exclusive_offsets.add(target_offset)
 

@@ -55,6 +55,7 @@ _COORDINATION_TARGET_TOKENS = {
     "coordination_proprioception",
     "coordination/proprioception",
     "coordination / proprioception",
+    "balance",
 }
 
 
