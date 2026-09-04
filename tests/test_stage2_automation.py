@@ -97,7 +97,7 @@ def _stage1_result() -> dict:
         ],
     ],
 )
-def test_goal_findings_release_usable_plan_without_retry(monkeypatch, findings):
+def test_goal_findings_hold_usable_plan_without_renderer_retry(monkeypatch, findings):
     monkeypatch.setattr(stage2_module, "validate_goal_preservation", lambda _: findings)
     monkeypatch.setattr(
         stage2_module, "review_stage2_output", lambda **_: _review("PASS")
@@ -109,13 +109,14 @@ def test_goal_findings_release_usable_plan_without_retry(monkeypatch, findings):
         )
     )
     assert len(client.responses.calls) == 1
-    assert result["status"] == "publishable_with_flags"
-    assert result["plan_text"] == "# Usable camp"
+    assert result["status"] == "review_required"
+    assert result["plan_text"] == ""
+    assert result["final_plan_text"] == "# Usable camp"
     assert result["stage2_retry_text"] == ""
     report = result["stage2_validator_report"]
     assert report["errors"] == findings
-    assert report["is_athlete_releasable"] is True
-    assert report["release_decision"] == "publish_with_flags"
+    assert report["is_athlete_releasable"] is False
+    assert report["release_decision"] == "hold"
 
 
 def test_goal_witness_loss_releases_with_original_finding(monkeypatch):
@@ -160,6 +161,7 @@ def test_first_pass_pass_returns_ready_with_one_provider_call(
     assert result["stage2_status"] == "stage2_pass"
     assert result["stage2_attempt_count"] == 1
     assert result["stage2_retry_text"] == ""
+
 
 def test_first_pass_omits_max_output_tokens_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("UNLXCK_STAGE2_MAX_OUTPUT_TOKENS", raising=False)
@@ -447,7 +449,7 @@ def test_first_pass_unknown_blocking_code_holds(
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
-    # An unknown blocker is still recorded, but it no longer withholds the plan.
+    # An unknown blocker is still recorded and withholds the plan.
     assert result["status"] == "review_required"
     assert result["stage2_validator_report"]["blocking_warnings"] == [unknown]
     assert result["stage2_validator_report"]["release_decision"] == "hold"
