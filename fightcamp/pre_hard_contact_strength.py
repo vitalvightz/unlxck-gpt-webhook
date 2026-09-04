@@ -64,6 +64,10 @@ def _decision_for_role(
     d_day = role_d_day(week, role)
     if profile is None or d_day is None:
         return None
+    # D-14 and farther out belongs to the normal planner. D-13 inward is owned
+    # by the finished late-fight path and must not be recompressed here.
+    if d_day < 14:
+        return None
     # Exclude the candidate itself so the policy sees the surrounding calendar,
     # not a synthetic same-day collision with the role being evaluated. Building
     # from the whole map also preserves cross-week nearest-contact adjacency.
@@ -168,7 +172,20 @@ def apply_pre_hard_contact_strength_exposure_cap(
         roles = [role for role in (week.get("session_roles") or []) if isinstance(role, dict)]
         strength_roles = [role for role in roles if str(role.get("category") or "").strip().lower() == "strength"]
         if not strength_roles:
+            week.pop("pre_hard_contact_strength_policy", None)
             continue
+
+        # Recompute from the finished calendar on every invocation. These fields
+        # are derived state, not sticky readiness state.
+        week.pop("pre_hard_contact_strength_policy", None)
+        for role in strength_roles:
+            for field in (
+                "pre_hard_contact_managed_stress",
+                "pre_hard_contact_effective_hard_distance",
+                "pre_hard_contact_reason_code",
+                "pre_hard_contact_dose_adjustment",
+            ):
+                role.pop(field, None)
 
         affected: list[dict[str, Any]] = []
         for role in strength_roles:

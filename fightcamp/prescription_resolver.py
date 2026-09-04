@@ -82,7 +82,9 @@ _SUPPORT_MOVEMENT_ROLES = frozenset(
 
 _PRE_HARD_CONTACT_REASON = "pre_hard_contact_managed_stress"
 _PRE_HARD_CONTACT_DOSE_REASON = "pre_hard_contact_strength_retention"
-_HIGH_COST_LEVELS = frozenset({"high", "very_high", "very high", "severe", "extreme"})
+_VERIFIED_LOW_COST_LEVELS = frozenset(
+    {"none", "low", "very low", "minimal", "negligible", "not applicable", "n/a"}
+)
 _PRE_HARD_COST_FIELDS = ("impact_cost", "landing_cost", "eccentric_cost", "soreness_risk")
 
 
@@ -436,12 +438,13 @@ def _cost_value(slot: dict[str, Any], field: str) -> str:
     return str(value or "").strip().lower().replace("-", "_")
 
 
-def _pre_hard_high_cost(slot: dict[str, Any]) -> bool:
-    for field in _PRE_HARD_COST_FIELDS:
-        value = _cost_value(slot, field).replace("_", " ")
-        if value in _HIGH_COST_LEVELS:
-            return True
-    return False
+def _pre_hard_verified_low_cost(slot: dict[str, Any]) -> bool:
+    """Require affirmative low/none cost metadata for the optional second item."""
+    values = [
+        _cost_value(slot, field).replace("_", " ")
+        for field in _PRE_HARD_COST_FIELDS
+    ]
+    return all(value and value in _VERIFIED_LOW_COST_LEVELS for value in values)
 
 
 def _pre_hard_allowed_slots(owned_slots: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -462,7 +465,7 @@ def _pre_hard_allowed_slots(owned_slots: list[dict[str, Any]]) -> list[dict[str,
             loaded_anchor_used = True
             continue
         if kind in {"power", "support"}:
-            if additional_used or _pre_hard_high_cost(slot):
+            if additional_used or not _pre_hard_verified_low_cost(slot):
                 continue
             allowed.append(slot)
             additional_used = True

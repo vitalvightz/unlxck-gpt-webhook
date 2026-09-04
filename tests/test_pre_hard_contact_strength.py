@@ -7,6 +7,8 @@ from fightcamp.pre_hard_contact_strength import (
     apply_pre_hard_contact_strength_exposure_cap,
 )
 from fightcamp.prescription_resolver import apply_effective_strength_prescriptions
+from fightcamp.late_camp_role_morph import apply_late_camp_role_morph
+from fightcamp.stage2_validator import _late_camp_effective_prescription_warnings
 
 
 def _calendar(*pairs: tuple[str, int]) -> list[dict]:
@@ -290,3 +292,126 @@ def test_goal_deferral_contract_recognises_pre_hard_strength_cap() -> None:
     assert constraints
     assert constraints[0]["reason_code"] == "pre_hard_contact_managed_stress"
     assert constraints[0]["source_reason_code"] == PRE_HARD_CONTACT_STRENGTH_CAP_REASON
+
+
+
+def test_final_integrity_relocates_pre_hard_strength_when_allow_destination_exists() -> None:
+    weekly = _map()
+    apply_late_camp_role_morph(weekly)
+    role = _role(weekly)
+    assert role["scheduled_day_hint"] == "Thursday"
+    assert "pre_hard_contact_managed_stress" not in role
+
+
+def test_pre_hard_policy_applies_after_final_integrity_when_no_allow_destination_exists() -> None:
+    weekly = _map()
+    week = weekly["weeks"][0]
+    week["declared_training_days"] = ["Monday", "Tuesday"]
+    week["calendar_days"] = _calendar(("Monday", 23), ("Tuesday", 22))
+    apply_late_camp_role_morph(weekly)
+    role = _role(weekly)
+    assert role["scheduled_day_hint"] == "Monday"
+    assert role["pre_hard_contact_managed_stress"] is True
+    assert role["pre_hard_contact_effective_hard_distance"] == 1
+
+
+def test_normal_pre_hard_policy_does_not_take_ownership_inside_d13() -> None:
+    weekly = _map(strength_d_day=13, hard_d_day=12)
+    before = deepcopy(weekly)
+    apply_pre_hard_contact_strength_exposure_cap(weekly)
+    assert weekly == before
+
+
+def test_unknown_cost_support_is_not_treated_as_verified_low_cost() -> None:
+    weekly = _map()
+    apply_pre_hard_contact_strength_exposure_cap(weekly)
+    unknown_support = _low_cost_support_slot()
+    unknown_support["selected"].pop("selection_metadata", None)
+    apply_effective_strength_prescriptions(
+        weekly_role_map=weekly,
+        candidate_pools=_candidate_pools(_anchor_slot(), unknown_support),
+        athlete_model={"fatigue": "low"},
+    )
+    names = [item["name"] for item in _role(weekly)["effective_strength_prescriptions"]]
+    assert names == ["Romanian Deadlift (RDL)"]
+
+
+def test_repair_like_second_strength_role_is_recompressed_by_final_morph() -> None:
+    weekly = _map()
+    week = weekly["weeks"][0]
+    week["declared_training_days"] = ["Monday", "Tuesday"]
+    week["calendar_days"] = _calendar(("Monday", 23), ("Tuesday", 22))
+
+    apply_late_camp_role_morph(weekly)
+    assert _role(weekly)["pre_hard_contact_managed_stress"] is True
+
+    # Simulate a retained goal-repair candidate being appended after the first
+    # resolved pass. The repair trial calls the same morph again.
+    week["session_roles"].append(
+        _strength("Monday", session_index=2, strength_session_index=2)
+    )
+    apply_late_camp_role_morph(weekly)
+
+    strength_roles = [
+        role for role in week["session_roles"] if role.get("category") == "strength"
+    ]
+    assert len(strength_roles) == 1
+    assert strength_roles[0]["role_key"] == "primary_strength_day"
+    assert strength_roles[0]["pre_hard_contact_managed_stress"] is True
+    policy = week["pre_hard_contact_strength_policy"]
+    assert policy["active"] is True
+    assert policy["max_meaningful_strength_exposures"] == 1
+
+
+def test_complete_pre_hard_allow_list_blocks_removed_exercise_in_render() -> None:
+    brief = {
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "week_index": 1,
+                    "session_roles": [
+                        {
+                            "category": "strength",
+                            "role_key": "primary_strength_day",
+                            "effective_strength_envelope": {
+                                "scheduled_d_day": 23,
+                                "loaded_allowed": True,
+                                "rpe_cap_high": 7,
+                                "max_sets": 3,
+                                "max_reps": 3,
+                                "complete_exercise_allow_list": True,
+                                "allowed_exercise_names": ["Romanian Deadlift (RDL)"],
+                                "dose_adjustment_reason": "pre_hard_contact_strength_retention",
+                            },
+                            "effective_strength_prescriptions": [
+                                {
+                                    "name": "Romanian Deadlift (RDL)",
+                                    "dose_role_kind": "anchor",
+                                    "effective_loaded": True,
+                                    "effective_max_sets": 3,
+                                    "effective_max_reps": 3,
+                                    "effective_rpe_cap": 7,
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+    }
+    rendered = "\n".join(
+        [
+            "D-23 (Monday) — Strength",
+            "- Romanian Deadlift (RDL): 3 x 3 @ RPE 6",
+            "- Single-Leg Forward Hops: 3 x 5",
+        ]
+    )
+    warnings = _late_camp_effective_prescription_warnings(brief, rendered)
+    allow_list_findings = [
+        item
+        for item in warnings
+        if "exercise_allow_list" in (item.get("violation_dimensions") or [])
+    ]
+    assert len(allow_list_findings) == 1
+    assert allow_list_findings[0]["code"] == "late_camp_effective_prescription_exceeded"
+    assert allow_list_findings[0]["rendered_exercise"] == "Single-Leg Forward Hops"

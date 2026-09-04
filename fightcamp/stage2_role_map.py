@@ -44,7 +44,6 @@ from .allocator_priority import (
     late_camp_week_reference_d_day,
     readiness_compression_floor_with_late_cut,
 )
-from .pre_hard_contact_strength import apply_pre_hard_contact_strength_exposure_cap
 
 
 def _rotate_weekdays_from_plan_start(weekdays: list[str], plan_creation_weekday: Any) -> list[str]:
@@ -3486,13 +3485,6 @@ def _build_weekly_role_map(
         "weeks": weeks,
     }
     weekly_role_map = apply_fight_day_override_to_weekly_role_map(weekly_role_map, athlete_model)
-    # Normal role-budget consequence of the shared collision policy: if the
-    # highest-priority strength exposure must sit immediately before resolved
-    # effective hard contact, keep one meaningful strength exposure and mark the
-    # surviving role for downstream dose resolution. No two-days-before rule.
-    weekly_role_map = apply_pre_hard_contact_strength_exposure_cap(
-        weekly_role_map, athlete_model
-    )
     # Stamp deterministic athlete-facing labels so Stage 1 owns the session
     # titles instead of leaving them for the Stage 2 LLM to invent. Run last so
     # roles injected by the fight-day override are labelled too.
