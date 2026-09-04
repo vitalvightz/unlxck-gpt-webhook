@@ -131,9 +131,11 @@ the existing exercise/dose parsers. This is fidelity checking against a
 deterministic decision, not semantic inference from LLM prose. Missing or reduced
 witnesses produce `goal_preservation_render_mismatch`.
 
-`goal_preservation_failed` is an observational planner/evidence disagreement.
-The central Stage 2 policy preserves it and releases with flags when no blockers
-remain. It does not request a model retry or planner regeneration.
+The deterministic goal validator emits `goal_preservation_failed` with
+`severity="blocker"` for invalid state, missing effective coverage, stale evidence
+and unjustified downgrades. Those findings remain release blockers. The shared
+observational allowlist applies only to non-blocker-severity uses of the same code;
+it cannot downgrade a blocker into a publishable flag.
 
 `goal_preservation_render_mismatch` remains a hard blocker: the renderer lost or
 altered a named planner witness. It gets one conforming render repair and must
@@ -155,7 +157,8 @@ Runtime/provider failures without output and persistence failures remain termina
   They do not currently have a deterministic executable session calendar; this
   PR's resolved-camp publication gate applies to dated camps. Adding an executable
   contract to that separate planner is outside the normal/short-camp gap here.
-- Incomplete goal coverage stays observable without discarding usable plans.
+- Incomplete deterministic goal coverage remains held until repaired or justified
+  by a higher-authority planner constraint.
 
 ## Verification
 
@@ -165,4 +168,5 @@ determinism, and renderer fidelity. The synthetic MMA fixture in
 `tests/fixtures/goal_preservation/sheyi_like.json` runs through real intake,
 selection, calendar, prescriptions and handoff in
 `tests/test_goal_preservation_e2e.py`. `tests/test_stage2_automation.py` verifies
-flagged publication, original findings, and absence of validator-driven retries.
+flagged publication for non-blocking findings, retained reports, renderer repair
+and blocking behavior for deterministic/safety failures.
