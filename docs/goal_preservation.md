@@ -68,7 +68,7 @@ Primary goals default to `build`; secondary goals default to `maintain`.
 Fight proximity (D-13 inward), high fatigue and aggressive cut pressure reduce
 development expectations. Safety constraints remain authoritative.
 
-The v1 coverage minimums are conservative planner gates, not promises of an
+The v1 coverage minimums are conservative planner targets, not promises of an
 individual physiological response:
 
 - Build: a development-quality exposure in each seven-day window through D-14.
@@ -112,39 +112,45 @@ uncovered window. The structured constraint cites its authority, original reason
 code, affected week and role where applicable. Supported causes include existing
 calendar/compression decisions, fight proximity, and effective dose reductions
 caused by readiness. A missing candidate, an unexplained empty schedule or an
-arbitrary injury flag alone is not a deferral reason: that remains a blocking
-build/maintain obligation.
+arbitrary injury flag alone is not a deferral reason: it remains an unsatisfied
+planner obligation and is reported as such.
 
 ## Finalization and publication
 
 The finalizer packet carries the final contract. Required named witnesses are
 render decisions; general LLM freedom to reselect candidates cannot replace
-them. Explicit deferrals must be explained in athlete-facing Lead notes.
+them. Explicit deferrals should be explained in athlete-facing Lead notes.
 
-Stage 2 independently recomputes evidence and deferral reasons. It rejects
-missing goals, duplicate states, stale evidence, unsupported downgrades and
-unjustified deferrals with `goal_preservation_failed`. The legacy
+Stage 2 independently recomputes evidence and deferral reasons. Missing goals,
+duplicate states, stale evidence, unsupported downgrades and unjustified
+deferrals are reported as `goal_preservation_failed`. The legacy
 `intent_validation` and its summary are corrected after prescription resolution.
 
 Render validation checks the scheduled identity and dose of named witnesses with
 the existing exercise/dose parsers. This is fidelity checking against a
 deterministic decision, not semantic inference from LLM prose. Missing or reduced
-witnesses produce `goal_preservation_render_mismatch`.
+witnesses are reported as `goal_preservation_render_mismatch`.
 
-Every `goal_preservation_failed` finding is a release blocker, regardless of
-whether a producer supplies a `severity` field. Missing or malformed severity
-therefore cannot turn unresolved goal coverage into a publishable flag. A held
-goal-preservation failure is not sent to the renderer for repair:
-`build_stage2_retry()` returns `requires_planner_regeneration=true`,
-`needs_retry=false`, and no repair prompt. The deterministic planner must repair
-or explicitly justify the obligation.
+These validation codes are **observational after usable Stage 2 plan text exists**.
+They remain visible in the validator report, quality-review flags and admin audit
+surfaces, but they cannot:
 
-`goal_preservation_render_mismatch` remains a hard blocker: the renderer lost or
-altered a named planner witness. It gets one conforming render repair and must
-pass policy before release. Effective-dose overages follow the same rule.
-Unknown errors remain fail-closed. `Stage2GoalPreservationError` is retained only
-for historical compatibility; the central policy supplies the release decision.
-Runtime/provider failures without output and persistence failures remain terminal.
+- convert a usable plan to `review_required`;
+- blank athlete-facing `plan_text`;
+- force deterministic planner regeneration;
+- trigger an additional model call solely to satisfy validation; or
+- substitute Stage 1 output for the Stage 2 plan.
+
+A clean report releases as `ready`. A usable plan with any validator finding
+releases as `publishable_with_flags`. The planner remains the authority for goal
+selection, safety, calendar ownership, restrictions, dose and taper decisions;
+the validator reports when its evidence model disagrees so the canonical planner
+or evidence reader can be fixed later.
+
+True technical failures remain terminal when no usable athlete-facing plan exists
+or release is impossible, such as a provider/runtime failure before output,
+empty Stage 2 output, or persistence failure. Those are execution failures, not
+validator vetoes.
 
 ## Compatibility and scope
 
@@ -153,15 +159,15 @@ Runtime/provider failures without output and persistence failures remain termina
 - `plans.planning_brief` already stores JSON text (migration
   `20260427120000_stabilize_generation_runtime.sql`). No SQL, RLS, environment,
   exercise-bank or UI change is required.
-- Old saved plans remain readable. Re-finalizing/publishing an old dated brief
-  with selected goals and no contract retains the diagnostic finding and holds
-  release until deterministic regeneration resolves it.
+- Old saved plans remain readable. Re-finalizing an old dated brief with missing
+  goal coverage retains the diagnostic finding and releases usable Stage 2 text
+  with flags rather than withholding it.
 - Open ongoing systems retain the initial universal selection classification.
-  They do not currently have a deterministic executable session calendar; this
-  PR's resolved-camp publication gate applies to dated camps. Adding an executable
-  contract to that separate planner is outside the normal/short-camp gap here.
-- Incomplete deterministic goal coverage remains held until repaired or justified
-  by a higher-authority planner constraint.
+  They do not currently have a deterministic executable session calendar; adding
+  an executable contract to that separate planner is outside the normal/short-camp
+  gap here.
+- Goal-preservation findings continue to expose upstream candidate, mapping and
+  schedule defects even though they no longer act as release gates.
 
 ## Verification
 
@@ -171,6 +177,6 @@ determinism, and renderer fidelity. The synthetic MMA fixture in
 `tests/fixtures/goal_preservation/sheyi_like.json` runs through real intake,
 selection, calendar, prescriptions and handoff in
 `tests/test_goal_preservation_e2e.py`. `tests/test_stage2_automation.py` and
-`tests/test_validator_release_invariant.py` verify fail-closed goal handling,
-no renderer retry for deterministic goal failures, renderer repair for actual
-render divergence, and blocking behavior for deterministic/safety failures.
+`tests/test_validator_release_invariant.py` verify the release invariant:
+validator findings remain observable, but usable Stage 2 plans ship without
+validator-triggered holds or regeneration.
