@@ -6,7 +6,7 @@ from typing import Any
 from fightcamp.camp_phases import calculate_phase_weeks
 from fightcamp.input_parsing import _compute_days_until_fight, is_short_notice_days
 from fightcamp.mindset_module import classify_mental_block
-from fightcamp.plan_pipeline_runtime import STYLE_MAP
+from fightcamp.sports import planning_format
 from fightcamp.stage2_payload import _derive_readiness_flags, _is_high_pressure_weight_cut
 from fightcamp.stage2_payload_late_fight import _fight_week_override_band
 from fightcamp.weight_cut import compute_weight_cut_pct
@@ -473,7 +473,7 @@ def _resolve_effective_phase(
         return None
 
     primary_technical = technical_style[0].strip().lower() if technical_style else ""
-    mapped_format = STYLE_MAP.get(primary_technical)
+    mapped_format = planning_format(primary_technical, fallback=None)
     if mapped_format:
         weight_cut_pct = compute_weight_cut_pct(current_weight_kg or 0.0, target_weight_kg or 0.0)
         weight_cut_risk = weight_cut_pct >= 3.0

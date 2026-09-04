@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import re
 
+from .sports import normalize_sport
+
 from .goal_preservation import classify_goal_preservation
 from .input_parsing import _athlete_calendar_now, _utc_now  # noqa: F401  (re-exported so callers can monkeypatch via this module)
 from .normalization import clean_list, dedupe_preserve_order
@@ -922,9 +924,10 @@ def _join_rule_parts(*parts: str) -> str:
 
 
 def _primary_sport_load_key(athlete_model: dict) -> str:
-    sport_tokens = _normalize_limiter_tokens(clean_list(athlete_model.get("sport")))
+    sport_tokens = {normalize_sport(value) for value in clean_list(athlete_model.get("sport"))}
     style_tokens = _normalize_limiter_tokens(
-        clean_list(athlete_model.get("technical_styles", [])) + clean_list(athlete_model.get("tactical_styles", []))
+        [normalize_sport(value) for value in clean_list(athlete_model.get("technical_styles", []))]
+        + clean_list(athlete_model.get("tactical_styles", []))
     )
     combined = sport_tokens | style_tokens
 

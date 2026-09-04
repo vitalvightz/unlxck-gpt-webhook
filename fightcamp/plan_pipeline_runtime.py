@@ -7,6 +7,8 @@ from time import perf_counter
 from typing import Any, Callable
 
 from .camp_phases import calculate_phase_weeks
+from .sports import STYLE_MAP, normalize_sport, planning_format  # noqa: F401
+from .normalization import normalize_fight_format as _normalize_selection_format
 from .conditioning import (
     get_conditioning_bank,
     get_style_conditioning_bank,
@@ -75,17 +77,6 @@ MUAY_THAI_TERM_REPLACEMENTS = {
     "Judo Throw": "Clinch Off-balance + Knee Entry",
     "Grapple Circuit": "Clinch Pummel + Knee Burst Circuit",
     "cage": "ring",
-}
-STYLE_MAP = {
-    "mma": "mma",
-    "boxer": "boxing",
-    "boxing": "boxing",
-    "kickboxer": "kickboxing",
-    "muay thai": "muay_thai",
-    "bjj": "mma",
-    "wrestler": "mma",
-    "grappler": "mma",
-    "karate": "kickboxing",
 }
 TimingRecorder = Callable[[str, float], None]
 
@@ -188,6 +179,10 @@ class PlanRuntimeContext:
     training_context: TrainingContext
     sanitize_labels: tuple[str, ...] = SANITIZE_LABELS
 
+    @property
+    def canonical_sport(self) -> str:
+        return self.tech_styles[0] if self.tech_styles else ""
+
     def phase_active(self, phase: str) -> bool:
         return self.phase_weeks.get(phase, 0) > 0 or self.phase_weeks.get("days", {}).get(phase, 0) >= 1
 
@@ -221,12 +216,6 @@ class RenderedPlanBundle:
     coach_notes: str
     reason_log: dict[str, dict[str, list[dict]]]
     html: str
-
-
-def _normalize_selection_format(sport: str) -> str:
-    if sport == "muay_thai":
-        return "kickboxing"
-    return sport
 
 
 def _is_pure_striker(tech_styles: list[str], tactical_styles: list[str]) -> bool:
@@ -300,9 +289,9 @@ def build_runtime_context(
         extra={"plan_id": f"{plan_input.full_name or 'unknown'}-{plan_input.next_fight_date or 'no-date'}"},
     )
 
-    tech_styles = plan_input.tech_styles
+    tech_styles = [normalize_sport(style) for style in plan_input.tech_styles]
     primary_tech = tech_styles[0] if tech_styles else ""
-    mapped_format = STYLE_MAP.get(primary_tech, "mma")
+    mapped_format = planning_format(primary_tech)
     selection_format = _normalize_selection_format(mapped_format)
     tactical_styles = list(plan_input.tactical_styles)
     if plan_input.stance.strip().lower() == "hybrid" and "hybrid" not in tactical_styles:

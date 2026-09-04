@@ -609,7 +609,7 @@ def render_plan_bundle(*, context: PlanRuntimeContext, blocks: PlanBlocksBundle,
 
     html = build_html_document(
         full_name=context.plan_input.full_name,
-        sport=context.mapped_format,
+        sport=context.canonical_sport,
         phase_split=phase_split,
         status=context.plan_input.status,
         record=context.plan_input.record,

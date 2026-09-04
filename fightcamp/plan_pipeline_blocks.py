@@ -156,7 +156,7 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext, *, progress_callb
             {
                 **base_flags,
                 "phase": phase,
-                "sport": context.mapped_format,
+                "sport": context.canonical_sport,
                 "random_seed": context.random_seed,
                 "time_to_fight_days": context.plan_input.days_until_fight,
                 "weeks_out": context.plan_input.weeks_out,
@@ -174,7 +174,7 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext, *, progress_callb
             "num_sessions": allocate_sessions(context.training_context.training_frequency, phase).get("conditioning", 1),
             "diagnostic_context": {
                 "phase": phase,
-                "sport": context.mapped_format,
+                "sport": context.canonical_sport,
                 "time_to_fight_days": context.plan_input.days_until_fight,
                 "days_until_fight": context.plan_input.days_until_fight,
                 "weeks_out": context.plan_input.weeks_out,
@@ -182,7 +182,7 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext, *, progress_callb
                 "injuries": context.training_context.injuries,
                 "fight_format": context.training_context.fight_format,
             },
-            "sport": context.mapped_format,
+            "sport": context.canonical_sport,
             # Preserve the canonical stance in conditioning metadata so any
             # re-render (coach review, late-fight) resolves the same
             # technical-footwork side/stance instruction as the first render.

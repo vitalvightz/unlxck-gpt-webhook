@@ -6,6 +6,7 @@ from functools import lru_cache
 from typing import Any, Iterable
 
 from .config import DATA_DIR
+from .sports import SUPPORTED_SPORTS, SPORT_ALIASES as _SPORT_ALIASES, normalize_sport  # noqa: F401
 from .injury_guard import injury_decision
 from .training_context import normalize_athlete_equipment_list, normalize_equipment_list
 
@@ -18,7 +19,6 @@ TACTICAL_STYLES = (
     "grappler",
     "hybrid",
 )
-SUPPORTED_SPORTS = ("boxing", "kickboxing", "muay_thai", "mma", "wrestling", "bjj")
 BANK_FILES = (
     "coordination/universal.json",
     "coordination/striking.json",
@@ -49,21 +49,6 @@ _STYLE_ALIASES = {
     "scrambler": "hybrid",
 }
 
-_SPORT_ALIASES = {
-    "boxer": "boxing",
-    "boxing": "boxing",
-    "kickboxer": "kickboxing",
-    "kickboxing": "kickboxing",
-    "muay_thai": "muay_thai",
-    "muaythai": "muay_thai",
-    "mma": "mma",
-    "mixed_martial_arts": "mma",
-    "wrestler": "wrestling",
-    "wrestling": "wrestling",
-    "bjj": "bjj",
-    "jiu_jitsu": "bjj",
-    "brazilian_jiu_jitsu": "bjj",
-}
 
 _COORDINATION_TARGET_TOKENS = {
     "coordination",
@@ -125,20 +110,6 @@ def has_coordination_target(athlete_model: dict[str, Any] | None) -> bool:
         target_tokens.update(_tokens(athlete_model.get(field)))
     normalized_targets = {_token(value) for value in _COORDINATION_TARGET_TOKENS}
     return bool(target_tokens & normalized_targets)
-
-
-def normalize_sport(value: Any) -> str:
-    """Canonicalize a sport / fight-format string via the shared sport ontology.
-
-    Reuses the same ``_SPORT_ALIASES`` identity map the coordination-support
-    selector uses, so every consumer resolves ``"muay thai"``, ``"muaythai"``,
-    ``"wrestler"``, ``"jiu jitsu"`` etc. to one canonical sport in
-    :data:`SUPPORTED_SPORTS`. Unknown tokens are returned in cleaned form (so an
-    unsupported sport still filters strictly rather than silently matching a
-    different sport), and empty input returns ``""``.
-    """
-    token = _token(value)
-    return _SPORT_ALIASES.get(token, token)
 
 
 def extract_coordination_sport(athlete_model: dict[str, Any] | None) -> str:

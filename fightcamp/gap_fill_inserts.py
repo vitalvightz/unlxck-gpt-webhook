@@ -15,7 +15,7 @@ from .conditioning import (
     select_technical_footwork_candidates,
     technical_footwork_prescription_fields,
 )
-from .coordination_support_library import normalize_sport
+from .sports import normalize_sport, planning_format
 from .late_selector_windows import classify_late_selector_window
 from .restriction_filtering import evaluate_restriction_impact
 from .stage2_render_guards import _all_active_injuries_surface_only
@@ -626,9 +626,7 @@ def _phase_allocation_for_watch(athlete_model: dict[str, Any]) -> dict[str, Any]
     if camp_length <= 0:
         camp_length = max(1, round(days_until_fight / 7))
 
-    sport = str(athlete_model.get("sport") or "mma").strip().lower().replace("-", "_").replace(" ", "_")
-    if sport not in {"boxing", "mma", "muay_thai", "kickboxing"}:
-        sport = "mma"
+    sport = planning_format(athlete_model.get("sport"))
 
     return calculate_phase_weeks(
         camp_length,
@@ -951,7 +949,7 @@ def _build_insert_role(
     meta = _INSERT_META[role_key]
     label = str(meta["label"])
     if role_key == "aerobic_shadow_flow" and normalize_sport(
-        athlete_model.get("fight_format") or athlete_model.get("sport") or ""
+        athlete_model.get("sport") or athlete_model.get("fight_format") or ""
     ) == "boxing":
         label = "Shadowboxing Aerobic Flow"
     # tactical_watch carries no static copy: its athlete-facing text is stamped
@@ -1033,7 +1031,7 @@ def _select_gap_footwork_drill(
 ) -> dict[str, Any] | None:
     """Select an existing bank drill for a footwork filler, if one is legal."""
     phase = _watch_phase_for_offset(athlete_model, insert_offset)
-    sport = athlete_model.get("fight_format") or athlete_model.get("sport") or ""
+    sport = athlete_model.get("sport") or athlete_model.get("fight_format") or ""
     tactical = clean_list(
         athlete_model.get("style_tactical")
         or athlete_model.get("tactical_styles")
