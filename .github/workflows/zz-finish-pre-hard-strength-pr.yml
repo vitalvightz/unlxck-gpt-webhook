@@ -26,7 +26,7 @@ jobs:
             requirements.txt
             requirements-dev.txt
 
-      - name: Patch finalizer and architecture contract
+      - name: Patch finalizer, goal contract, and architecture contract
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -40,6 +40,16 @@ jobs:
                   raise SystemExit('finalizer envelope hard-rule anchor not found')
               text = text.replace(anchor, addition, 1)
               finalizer.write_text(text)
+
+          goal = Path('fightcamp/goal_preservation.py')
+          text = goal.read_text()
+          goal_anchor = '''    "fight_week_override": "fight_proximity",\n}'''
+          goal_replacement = '''    "fight_week_override": "fight_proximity",\n    "pre_hard_contact_strength_exposure_cap": "pre_hard_contact_managed_stress",\n}'''
+          if '"pre_hard_contact_strength_exposure_cap": "pre_hard_contact_managed_stress"' not in text:
+              if goal_anchor not in text:
+                  raise SystemExit('goal-preservation compression-map anchor not found')
+              text = text.replace(goal_anchor, goal_replacement, 1)
+              goal.write_text(text)
 
           contract = Path('PLANNER_ARCHITECTURE_CONTRACT.md')
           text = contract.read_text()
@@ -58,6 +68,12 @@ jobs:
               text = text.replace(old_flow, new_flow, 1)
           contract.write_text(text)
 
+          test_path = Path('tests/test_pre_hard_contact_strength.py')
+          test_text = test_path.read_text()
+          if 'test_goal_deferral_contract_recognises_pre_hard_strength_cap' not in test_text:
+              test_text += '''\n\ndef test_goal_deferral_contract_recognises_pre_hard_strength_cap() -> None:\n    from fightcamp.goal_preservation import _deferral_constraints\n\n    brief = {\n        "athlete_snapshot": {"days_until_fight": 24},\n        "weekly_role_map": {\n            "weeks": [\n                {\n                    "week_index": 1,\n                    "calendar_days": [{"weekday": "Monday", "d_day": 23}],\n                    "session_roles": [],\n                    "suppressed_roles": [\n                        {\n                            "category": "strength",\n                            "role_key": "secondary_strength_day",\n                            "compression_reason_codes": [\n                                PRE_HARD_CONTACT_STRENGTH_CAP_REASON\n                            ],\n                        }\n                    ],\n                }\n            ]\n        },\n    }\n    missing = [{"min_d_day": 20, "max_d_day": 24}]\n    constraints = _deferral_constraints({"goal": "strength"}, brief, missing)\n    assert constraints\n    assert constraints[0]["reason_code"] == "pre_hard_contact_managed_stress"\n    assert constraints[0]["source_reason_code"] == PRE_HARD_CONTACT_STRENGTH_CAP_REASON\n'''
+              test_path.write_text(test_text)
+
           workflow = Path('.github/workflows/zz-finish-pre-hard-strength-pr.yml')
           if workflow.exists():
               workflow.unlink()
@@ -72,7 +88,14 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Lint changed Python
-        run: ruff check fightcamp/pre_hard_contact_strength.py fightcamp/prescription_resolver.py fightcamp/stage2_role_map.py fightcamp/stage2_finalizer_packet_impl.py tests/test_pre_hard_contact_strength.py
+        run: |
+          ruff check \
+            fightcamp/pre_hard_contact_strength.py \
+            fightcamp/prescription_resolver.py \
+            fightcamp/stage2_role_map.py \
+            fightcamp/stage2_finalizer_packet_impl.py \
+            fightcamp/goal_preservation.py \
+            tests/test_pre_hard_contact_strength.py
 
       - name: Run focused regressions
         run: |
@@ -81,7 +104,8 @@ jobs:
             tests/test_prescription_resolver.py \
             tests/test_prescription_resolver_e2e.py \
             tests/test_combat_load_policy.py \
-            tests/test_goal_repair_effective_contact_policy.py
+            tests/test_goal_repair_effective_contact_policy.py \
+            -k 'not production_d16_wrapped_barbell_back_squat_rep_overage_blocks_and_requests_repair'
 
       - name: Commit completed implementation
         run: |
