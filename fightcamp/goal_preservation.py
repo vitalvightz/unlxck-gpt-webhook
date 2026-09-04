@@ -273,12 +273,18 @@ def _strength_stimuli(role: dict, slots: list[dict], brief: dict) -> list[dict]:
 
 
 def _other_stimuli(role: dict, pool: dict, brief: dict) -> list[dict]:
+    # Reuse the payload layer's canonical role-to-slot matcher. Weekly role-map
+    # session_index and candidate-pool session_index are separate namespaces and
+    # must never be compared to decide whether a scheduled conditioning role has
+    # valid evidence.
+    from .stage2_payload import _slot_matches_late_fight_role
+
     stimuli = []
     category = role.get("category")
     system = role.get("preferred_system")
     for slot in pool.get("conditioning_slots") or []:
-        if (category != "conditioning" or slot.get("role") != system
-                or slot.get("session_index", 1) != role.get("session_index", 1)
+        if (category != "conditioning"
+                or not _slot_matches_late_fight_role(slot, "conditioning_slots", role)
                 or not _slot_allowed(slot, role, brief)):
             continue
         selected = slot["selected"]
