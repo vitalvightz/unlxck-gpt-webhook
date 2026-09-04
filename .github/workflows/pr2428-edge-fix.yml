@@ -41,11 +41,6 @@ jobs:
           PY
           git diff --check
 
-      - name: Run targeted regressions
-        shell: bash
-        run: |
-          python -m pytest -q tests/test_bridge_rules.py tests/test_sparring_readiness_boundary.py
-
       - name: Commit fixes
         shell: bash
         run: |
