@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from .late_fight_dosage_policy import install as _install_late_fight_dosage_policy
+from .goal_repair_effective_contact_policy import install as _install_goal_repair_effective_contact_policy
 
 _install_late_fight_dosage_policy()
+_install_goal_repair_effective_contact_policy()
 
 del _install_late_fight_dosage_policy
+del _install_goal_repair_effective_contact_policy
