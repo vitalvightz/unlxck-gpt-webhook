@@ -21,8 +21,22 @@ def _calendar_day(d_day: int, weekday: str = "monday") -> dict:
     }
 
 
-def test_alactic_speed_evidence_reads_serialized_selection_metadata():
-    brief = {
+def _speed_brief(*, late_windows: list[str] | None = None) -> dict:
+    metadata = {
+        "primary_adaptation": "speed",
+        "secondary_adaptations": ["acceleration"],
+        "work_sec": 3,
+        "rest_sec": 60,
+        "rounds": 8,
+        "total_minutes": None,
+        "rpe": 6,
+        "impact_cost": "low",
+        "lactate_load": "low",
+        "movement_cost": "low",
+    }
+    if late_windows is not None:
+        metadata["late_windows"] = late_windows
+    return {
         "athlete_snapshot": {"days_until_fight": 26},
         "restrictions": [],
         "weekly_role_map": {
@@ -55,24 +69,17 @@ def test_alactic_speed_evidence_reads_serialized_selection_metadata():
                             "name": "Short Burst Repeat",
                             "prescription": "8 x 3s, full recovery",
                             "movement_patterns": ["speed"],
-                            "selection_metadata": {
-                                "primary_adaptation": "speed",
-                                "secondary_adaptations": ["acceleration"],
-                                "work_sec": 3,
-                                "rest_sec": 60,
-                                "rounds": 8,
-                                "total_minutes": None,
-                                "rpe": 6,
-                                "impact_cost": "low",
-                                "lactate_load": "low",
-                                "movement_cost": "low",
-                            },
+                            "selection_metadata": metadata,
                         },
                     }
                 ]
             }
         },
     }
+
+
+def test_alactic_speed_evidence_reads_serialized_selection_metadata():
+    brief = _speed_brief(late_windows=["d21_to_d14"])
 
     evidence = collect_goal_evidence(brief)
     speed = [row for row in evidence if "speed_quality" in row["intents"]]
@@ -83,6 +90,24 @@ def test_alactic_speed_evidence_reads_serialized_selection_metadata():
     assert speed[0]["rounds"] == 8
     assert speed[0]["rest_sec"] == 60
     assert speed[0]["development_quality"] is True
+
+
+def test_alactic_speed_evidence_rejects_nested_late_window_mismatch():
+    brief = _speed_brief(late_windows=["d13_to_d8"])
+
+    evidence = collect_goal_evidence(brief)
+
+    assert not any("speed_quality" in row["intents"] for row in evidence)
+
+
+def test_alactic_speed_evidence_keeps_flat_late_window_back_compat():
+    brief = _speed_brief()
+    selected = brief["candidate_pools"]["SPP"]["conditioning_slots"][0]["selected"]
+    selected["late_windows"] = ["d21_to_d14"]
+
+    evidence = collect_goal_evidence(brief)
+
+    assert any("speed_quality" in row["intents"] for row in evidence)
 
 
 def _hybrid_slot() -> dict:
@@ -154,9 +179,10 @@ def test_loaded_contrast_power_keeps_loaded_authority_without_new_persisted_kind
     resolved = resolve_strength_slot_prescription(role=role, slot=slot)
 
     # Internal semantic can distinguish loaded power, but persisted dose-role
-    # vocabulary stays compatible with the validator's existing schema.
+    # vocabulary stays compatible with the validator's existing schema and no
+    # second hybrid truth is stored downstream.
     assert resolved["dose_role_kind"] == "anchor"
-    assert resolved["power_hybrid"] is True
+    assert "power_hybrid" not in resolved
     assert resolved["effective_loaded"] is True
     assert resolved["effective_max_sets"] == 2
     assert resolved["effective_max_reps"] == 3
@@ -171,7 +197,7 @@ def test_pure_ballistic_power_remains_non_loaded():
     resolved = resolve_strength_slot_prescription(role=role, slot=slot)
 
     assert resolved["dose_role_kind"] == "power"
-    assert resolved["power_hybrid"] is False
+    assert "power_hybrid" not in resolved
     assert resolved["effective_loaded"] is False
 
 
@@ -182,7 +208,7 @@ def test_loaded_hybrid_still_obeys_no_loaded_lifting_band():
     resolved = resolve_strength_slot_prescription(role=role, slot=slot)
 
     assert resolved["dose_role_kind"] == "anchor"
-    assert resolved["power_hybrid"] is True
+    assert "power_hybrid" not in resolved
     assert resolved["effective_loaded"] is False
     assert resolved["effective_prescription"].startswith("No loaded lifting")
 
@@ -222,6 +248,7 @@ def test_goal_evidence_counts_loaded_hybrid_as_strength_and_power():
     assert "ballistic_power" in witness["intents"]
     assert witness["minimum_rpe"] == 6
     assert role["effective_strength_envelope"]["loaded_allowed"] is True
+    assert all("power_hybrid" not in row for row in role["effective_strength_prescriptions"])
 
 
 def test_production_shape_satisfies_speed_build_and_strength_maintenance_contract():
@@ -295,6 +322,7 @@ def test_production_shape_satisfies_speed_build_and_strength_maintenance_contrac
                 "impact_cost": "low",
                 "lactate_load": "low",
                 "movement_cost": "low",
+                "late_windows": ["d21_to_d14"],
             },
         },
     }
