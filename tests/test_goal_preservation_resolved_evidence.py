@@ -50,7 +50,9 @@ def _speed_brief(*, late_windows: list[str] | None = None) -> dict:
                             "role_key": "alactic_speed_day",
                             "category": "conditioning",
                             "preferred_system": "alactic",
-                            "session_index": 1,
+                            # Weekly role-map position. This is deliberately not
+                            # the conditioning pool's local session index.
+                            "session_index": 3,
                             "scheduled_day_hint": "Monday",
                             "scheduled_countdown_label": "D-16",
                         }
@@ -64,6 +66,8 @@ def _speed_brief(*, late_windows: list[str] | None = None) -> dict:
                     {
                         "slot_id": "spp_alactic_1",
                         "role": "alactic",
+                        # Pool-local index. Production commonly has this at 1
+                        # while the weekly role-map position is 3.
                         "session_index": 1,
                         "selected": {
                             "name": "Short Burst Repeat",
@@ -86,6 +90,7 @@ def test_alactic_speed_evidence_reads_serialized_selection_metadata():
 
     assert len(speed) == 1
     assert speed[0]["d_day"] == 16
+    assert speed[0]["session_index"] == 3
     assert speed[0]["work_sec"] == 3
     assert speed[0]["rounds"] == 8
     assert speed[0]["rest_sec"] == 60
@@ -264,7 +269,9 @@ def test_production_shape_satisfies_speed_build_and_strength_maintenance_contrac
         "role_key": "alactic_speed_day",
         "category": "conditioning",
         "preferred_system": "alactic",
-        "session_index": 1,
+        # Exact production namespace mismatch: weekly role position 3, while
+        # the selected alactic slot below is pool-local index 1.
+        "session_index": 3,
         "scheduled_day_hint": "Monday",
         "scheduled_countdown_label": "D-16",
     }
