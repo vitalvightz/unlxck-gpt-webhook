@@ -13,7 +13,10 @@ from typing import Any
 
 from .calendar_context import role_d_day, weekly_role_map_legality
 from .conditioning import _conditioning_structured_profile
-from .goal_repair_effective_contact_policy import effective_goal_repair_compression_state
+from .goal_repair_effective_contact_policy import (
+    effective_goal_repair_compression_state,
+    resolved_weekly_frequency_count,
+)
 from .prescription_resolver import (
     _role_kind,
     _slot_quality_class_effective,
@@ -446,11 +449,12 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
                               "result": "authority_preserved", "reason_codes": sorted(set(compression_codes))})
                 continue
             # Original category budget (after phase/safety allocation), plus the
-            # user's overall cap. Support inserts never supply spare stress slots.
+            # user's overall cap. Weekly-frequency occupancy comes from canonical
+            # resolved load semantics, not raw role category/filler presence.
             roles = week.get("session_roles") or []
             original_cap = sum(r.get("category") == candidate.get("category") for r in candidates)
             current = sum(r.get("category") == candidate.get("category") for r in roles)
-            total = sum(r.get("category") != "support_insert" for r in roles)
+            total = resolved_weekly_frequency_count(roles)
             frequency = _number(_athlete(brief).get("training_frequency"))
             if current >= original_cap or (frequency and total >= frequency):
                 audit.append({"week_index": week.get("week_index"), "result": "session_cap", "reason_codes": ["calendar_capacity"]})
