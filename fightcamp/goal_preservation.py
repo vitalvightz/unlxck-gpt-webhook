@@ -13,10 +13,7 @@ from typing import Any
 
 from .calendar_context import role_d_day, weekly_role_map_legality
 from .conditioning import _conditioning_structured_profile
-from .goal_repair_effective_contact_policy import (
-    effective_goal_repair_compression_state,
-    resolved_weekly_frequency_count,
-)
+from .goal_repair_effective_contact_policy import effective_goal_repair_compression_state
 from .prescription_resolver import (
     _role_kind,
     _slot_quality_class_effective,
@@ -155,8 +152,15 @@ def _effective_map(brief: dict, *, phase: str | None = None) -> dict:
 
 
 def _tags(item: dict) -> set[str]:
-    values = [*(item.get("movement_patterns") or []), *(item.get("tags") or []),
-              item.get("primary_adaptation"), *(item.get("secondary_adaptations") or [])]
+    metadata = item.get("selection_metadata") if isinstance(item.get("selection_metadata"), dict) else {}
+    values = [
+        *(item.get("movement_patterns") or []),
+        *(item.get("tags") or []),
+        item.get("primary_adaptation"),
+        metadata.get("primary_adaptation"),
+        *(item.get("secondary_adaptations") or []),
+        *(metadata.get("secondary_adaptations") or []),
+    ]
     return {_goal(value) for value in values if value}
 
 
@@ -238,8 +242,11 @@ def _strength_stimuli(role: dict, slots: list[dict], brief: dict) -> list[dict]:
         effective_slot = {**slot, **{key: selected[key] for key in ("quality_class", "anchor_capable", "support_only") if key in selected}}
         kind = _role_kind(effective_slot)
         quality = _slot_quality_class_effective(effective_slot)
-        loaded = (kind in {"anchor", "secondary"} and quality == "anchor_loaded") or (
-            quality == "anchor_force_isometric" and selected.get("real_strength_maintenance") is True)
+        loaded = (
+            (kind in {"anchor", "secondary"} and quality == "anchor_loaded")
+            or (kind == "hybrid" and quality == "anchor_power")
+            or (quality == "anchor_force_isometric" and selected.get("real_strength_maintenance") is True)
+        )
         intensity = strength_intensity(str(dose.get("effective_prescription") or ""))
         meaningful_intensity = intensity.get("minimum_rpe", 0) >= 6 or intensity.get("minimum_load_percent", 0) >= 60
         intents = []
@@ -247,7 +254,7 @@ def _strength_stimuli(role: dict, slots: list[dict], brief: dict) -> list[dict]:
                 and envelope.get("loaded_allowed") is not False
                 and dose.get("effective_loaded") is not False):
             intents.append("meaningful_strength")
-        if quality == "anchor_power" and kind == "power":
+        if quality == "anchor_power" and kind in {"power", "hybrid"}:
             intents.append("ballistic_power")
             if _tags(selected) & _SPEED_TAGS:
                 intents.append("speed_quality")
@@ -273,14 +280,25 @@ def _other_stimuli(role: dict, pool: dict, brief: dict) -> list[dict]:
                 or not _slot_allowed(slot, role, brief)):
             continue
         selected = slot["selected"]
+        # Serialized conditioning dose/cost authority lives under
+        # selected.selection_metadata. Preserve compatibility with older payloads
+        # that still carry those fields flat, but prefer the canonical metadata.
+        metadata = selected.get("selection_metadata") if isinstance(selected.get("selection_metadata"), dict) else {}
+        dose_source = dict(selected)
+        for field in (
+            "work_sec", "rest_sec", "rounds", "total_minutes", "rpe",
+            "impact_cost", "lactate_load", "movement_cost",
+        ):
+            if metadata.get(field) is not None:
+                dose_source[field] = metadata[field]
         # A recovery morph / support flush does not become energy-system work
         # through its old pool identity. Positive work metadata is required.
         if (role.get("late_camp_role_morph") or role.get("counts_toward_conditioning_cap") is False
                 or system in (role.get("blocked_systems") or [])):
             continue
-        minutes = _number(selected.get("total_minutes"))
-        work = _number(selected.get("work_sec"))
-        rounds = _number(selected.get("rounds"))
+        minutes = _number(dose_source.get("total_minutes"))
+        work = _number(dose_source.get("work_sec"))
+        rounds = _number(dose_source.get("rounds"))
         if not (minutes > 0 or (work > 0 and rounds > 0)):
             continue
         if "duration_cap_minutes" in role:
@@ -290,7 +308,7 @@ def _other_stimuli(role: dict, pool: dict, brief: dict) -> list[dict]:
         intents = []
         if system in {"aerobic", "glycolytic"} and (minutes >= 6 or work * rounds >= 180):
             intents.append("energy_system_training")
-        profile = _conditioning_structured_profile(selected, system=system)
+        profile = _conditioning_structured_profile(dose_source, system=system)
         if system in {"alactic", "atp_pcr", "atp-pcr"} and work > 0 and rounds >= 2 and profile["alactic_structure"]:
             intents.append("speed_quality")
         if _tags(selected) & _TECHNICAL_TAGS:
@@ -302,7 +320,7 @@ def _other_stimuli(role: dict, pool: dict, brief: dict) -> list[dict]:
                             "intents": intents, "system": system,
                             "dose_authority": "structured_conditioning_dose",
                             "work_sec": work, "rounds": rounds, "total_minutes": minutes,
-                            "rest_sec": _number(selected.get("rest_sec")),
+                            "rest_sec": _number(dose_source.get("rest_sec")),
                             "effective_prescription": selected.get("prescription") or ""})
     # Locked technical / mobility inserts have an actual deterministic duration.
     duration = _number(role.get("duration_min"))
@@ -449,12 +467,11 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
                               "result": "authority_preserved", "reason_codes": sorted(set(compression_codes))})
                 continue
             # Original category budget (after phase/safety allocation), plus the
-            # user's overall cap. Weekly-frequency occupancy comes from canonical
-            # resolved load semantics, not raw role category/filler presence.
+            # user's overall cap. Support inserts never supply spare stress slots.
             roles = week.get("session_roles") or []
             original_cap = sum(r.get("category") == candidate.get("category") for r in candidates)
             current = sum(r.get("category") == candidate.get("category") for r in roles)
-            total = resolved_weekly_frequency_count(roles)
+            total = sum(r.get("category") != "support_insert" for r in roles)
             frequency = _number(_athlete(brief).get("training_frequency"))
             if current >= original_cap or (frequency and total >= frequency):
                 audit.append({"week_index": week.get("week_index"), "result": "session_cap", "reason_codes": ["calendar_capacity"]})
