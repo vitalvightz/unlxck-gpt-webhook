@@ -353,8 +353,9 @@ def resolve_strength_slot_prescription(
 ) -> dict[str, Any]:
     """Return deterministic effective-prescription metadata for one strength slot.
 
-    ``force_kind`` lets the caller override the per-slot classification (used to
-    demote the non-primary loaded lift in a multi-lift session to ``secondary``).
+    ``force_kind`` lets the caller override the per-slot dose treatment (used to
+    demote a later loaded lift in a multi-lift session to ``secondary``) without
+    erasing the slot's original semantic class.
     """
     selected = _slot_selected(slot)
     base_prescription = str(selected.get("prescription") or "").strip()
@@ -366,7 +367,8 @@ def resolve_strength_slot_prescription(
             "dose_authority": "exercise_bank",
         }
 
-    kind = force_kind or _role_kind(slot)
+    semantic_kind = _role_kind(slot)
+    kind = force_kind or semantic_kind
     base_sets, base_reps = _parse_sets_reps(base_prescription)
     sets, reps, loaded = _effective_counts(
         base_sets=base_sets,
@@ -391,15 +393,15 @@ def resolve_strength_slot_prescription(
     )
     # ``dose_role_kind`` is a persisted validator-facing enum. Keep its existing
     # anchor/secondary/power/support vocabulary even when the internal resolver
-    # recognises a loaded-power hybrid. ``power_hybrid`` carries the extra truth
-    # without creating a new schema value downstream consumers would miss.
-    persisted_kind = "anchor" if kind == "hybrid" else kind
+    # recognises a loaded-power hybrid. ``power_hybrid`` preserves that original
+    # semantic truth even if the dose treatment is demoted to ``secondary``.
+    persisted_kind = "anchor" if semantic_kind == "hybrid" and kind == "hybrid" else kind
     result = {
         "base_prescription": base_prescription,
         "effective_prescription": effective,
         "dose_authority": "scheduled_countdown_overlay",
         "dose_role_kind": persisted_kind,
-        "power_hybrid": kind == "hybrid",
+        "power_hybrid": semantic_kind == "hybrid",
         "dose_adjustment_reason": role.get("dose_adjustment_reason"),
         "effective_loaded": bool(loaded),
         "strength_dose_cap": dict(cap),
@@ -582,7 +584,7 @@ def _build_role_envelope(
     without dose-checking legitimately higher-rep support / power work.
     """
     cap = role.get("strength_dose_cap") if isinstance(role.get("strength_dose_cap"), dict) else {}
-    loaded_entries = [item for item in resolved if item.get("dose_role_kind") in {"anchor", "secondary", "hybrid"}]
+    loaded_entries = [item for item in resolved if item.get("dose_role_kind") in {"anchor", "secondary"}]
     loaded_names = [item.get("name") for item in loaded_entries if item.get("name")]
     loaded_allowed = cap.get("loaded_allowed") is not False and any(
         item.get("effective_loaded") for item in loaded_entries
