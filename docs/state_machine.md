@@ -1,38 +1,35 @@
 # Canonical State Machines
 
 ## Purpose
-Status strings are shared by the API, Supabase rows, admin review actions, workers, and the frontend. This document is the human-readable contract for those states.
 
-The executable contract lives in `api/state_machine.py`. Status checks and writes should use that module instead of open-coded sets.
+Status strings are shared by the API, Supabase rows, admin review actions,
+workers, and the frontend. This document is the human-readable contract for
+those states.
 
-## Status vocabularies (do not mix)
+The executable contract lives in `api/state_machine.py`. Status checks and
+writes should use that module instead of open-coded sets.
 
-There are **three distinct status fields**. They share some words (notably
-`review_required`) but live on different rows and mean different things. Code,
-docs, and UI must use the exact string for the right field — never assume a plan
-status is also a job status.
+## Status vocabularies
+
+There are three distinct status fields. They may share words but live on
+different rows and must not be treated as interchangeable.
 
 | Field | Lives on | Allowed values | Authority |
 |---|---|---|---|
-| **Generation job status** | `generation_jobs.status` | `queued`, `running`, `completed`, `review_required`, `failed` | `GENERATION_JOB_STATUSES` |
-| **Plan status** | `plans.status` | `generated`, `ready`, `review_required`, `held_for_review`, `publishable_with_flags`, `triage_blocked`, `medical_hold`, `restricted_rehab_only`, `needs_review`, `archived` | `PLAN_STATUSES` |
-| **`stage2_status`** | plan `admin_outputs.stage2_status` (audit only) | `stage2_pass`, `stage2_failed`, `stage2_failed_stage1_fallback`, `admin_review_approved`, `admin_review_rejected`, `admin_archived`, `triage_resume_approved`, `manual_stage2_pass`, `manual_stage2_retry_pass`, `manual_stage2_retry_required`, `""` (not run) | `api/stage2_automation.py`, admin services |
+| Generation job status | `generation_jobs.status` | `queued`, `running`, `completed`, `review_required`, `failed` | `GENERATION_JOB_STATUSES` |
+| Plan status | `plans.status` | `generated`, `ready`, `review_required`, `held_for_review`, `publishable_with_flags`, `triage_blocked`, `medical_hold`, `restricted_rehab_only`, `needs_review`, `archived` | `PLAN_STATUSES` |
+| `stage2_status` | plan admin output/audit | `stage2_pass`, `stage2_failed`, legacy/admin audit values, or empty when not run | Stage 2/admin services |
 
-Key trap that prompted this section: **`review_required` exists as both a job
-status and a plan status, and `held_for_review` exists only as a plan status.**
-`held_for_review` is written by admin action only — a failed Stage 2 validation
-no longer produces it (see [Stage 2 outcomes](#stage-2-outcomes--statuses) and the
-[plan→job mapping](#plan-status--generation-job-status)). `stage2_status` is a
-separate audit trail and is never a job or plan status.
+`stage2_status` is an audit field. It is never a plan status or a generation-job
+status.
 
-## Generation Job States
-Generation jobs describe worker execution. They do not describe whether a saved plan is clinically safe or publishable.
+## Generation job states
 
 - `queued`: persisted and waiting for a worker.
 - `running`: claimed by a worker.
-- `completed`: worker finished and saved a terminal plan result.
-- `review_required`: worker finished, but the Stage 2 output needs admin review.
-- `failed`: worker could not finish successfully.
+- `completed`: worker finished and saved a releasable plan result.
+- `review_required`: a pre-release planner/triage/admin workflow requires human action.
+- `failed`: worker could not produce or persist a usable result.
 
 Allowed transitions:
 
@@ -43,30 +40,19 @@ Allowed transitions:
 - `review_required` -> `queued`, `completed`, `failed`
 
 Self-transitions are allowed for idempotent updates.
-Workers must claim a job and move it through `running` before writing
-`completed` or `review_required`; direct `queued` -> terminal success/review
-transitions are not part of the contract.
 
-## Plan States
-Plans describe the saved planning result and review/safety state.
+## Plan states
 
 - `generated`: legacy/default pre-finalization state.
-- `ready`: plan is available to the athlete.
-- `review_required`: Stage 2 or admin review must resolve the plan before release.
-- `held_for_review`: explicit admin hold.
-- `publishable_with_flags`: the plan is athlete-releasable with known low-risk quality warnings and remains visible for asynchronous admin audit.
-- `triage_blocked`: injury triage blocked Stage 2.
-- `medical_hold`: injury triage requires medical clearance before planning proceeds.
-- `restricted_rehab_only`: injury triage allows restricted rehab-only planning.
-- `needs_review`: injury triage requires review before normal planning proceeds.
+- `ready`: clean plan available to the athlete.
+- `publishable_with_flags`: athlete-visible plan with validator/admin audit findings.
+- `review_required`: explicit pre-release review state; ordinary post-plan validator findings do not create it.
+- `held_for_review`: explicit admin hold/historical review state.
+- `triage_blocked`: injury triage blocked normal generation before a usable plan was produced.
+- `medical_hold`: injury triage requires medical clearance.
+- `restricted_rehab_only`: triage allows only restricted rehab planning.
+- `needs_review`: triage requires review before normal planning proceeds.
 - `archived`: hidden from athlete-facing active plan lists.
-
-Allowed transitions are defined in `api/state_machine.py`. In plain terms:
-
-- New/legacy generated plans may move into any terminal review, safety, ready, or archived state.
-- Review states may resolve to `ready`, stay under review, or be archived.
-- Triage-blocked/restricted review states may resolve to `ready`, remain constrained, move to another triage safety state, or be archived.
-- `archived` is terminal except for idempotent archive writes.
 
 ### Explicit plan transition matrix
 
@@ -83,57 +69,85 @@ Allowed transitions are defined in `api/state_machine.py`. In plain terms:
 | needs_review | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
 | archived | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 
-### Stage 2 outcomes → statuses
+## Stage 2 outcomes and release policy
 
-`fightcamp/stage2_policy.py` is the Stage 2 release authority. Automatic and
-manual submission paths consume its decision without upgrading `hold` to
-publication. They use the same audit statuses: `stage2_pass` for a policy-approved
-release and `stage2_failed` for a hold. Held renderer output is retained in
-`final_plan_text` for admins; athlete-facing `plan_text` is empty.
+`fightcamp/stage2_policy.py` is the Stage 2 release-policy surface, but it is not
+a second planner. Once Stage 2 has produced non-empty usable athlete-facing plan
+text, **validator findings are observational only**.
 
-| Central decision | Plan status | Audit status | Job status |
+The invariant is:
+
+> **Planner decides. Validators report. Usable plans ship.**
+
+For a usable Stage 2 plan:
+
+| Validator result | Plan status | `stage2_status` | Job status |
 |---|---|---|---|
-| `publish` | `ready` | `stage2_pass` | `completed` |
-| `publish_with_flags` | `publishable_with_flags` | `stage2_pass` | `completed` |
-| `hold` | `review_required` | `stage2_failed` | `review_required` |
-| Runtime/provider failure with no usable response, empty output, persistence failure | no released plan | failure telemetry | `failed` |
+| no findings | `ready` | `stage2_pass` | `completed` |
+| one or more findings of any code/severity | `publishable_with_flags` | `stage2_pass` | `completed` |
 
-`goal_preservation_failed` is always a release blocker. Missing severity, warning
-severity, or any other metadata cannot convert unresolved deterministic goal
-coverage into `publishable_with_flags`. These failures require deterministic
-planner repair or a justified higher-authority deferral. `build_stage2_retry()`
-returns `requires_planner_regeneration=true`, `needs_retry=false`, and no renderer
-repair prompt for this code.
+This includes findings labelled as:
 
-Renderer divergence is different: injury restrictions, illegal sparring, forbidden
-exercises, effective-dose overages, witness render mismatches, fight-day protocol
-violations, and truncated output remain blocking. Unknown errors, unknown
-blocking warnings, malformed reports, blocker-severity findings, and admin-review
-blockers fail closed.
+- `goal_preservation_failed`;
+- `goal_preservation_render_mismatch`;
+- restriction/safety or late-fight validator findings;
+- dose/evidence mismatches;
+- admin-review classifications;
+- unknown validator codes;
+- `severity="blocker"`; and
+- malformed validator collections.
 
-Effective-dose and witness render mismatches get at most one conforming renderer
-repair. Both the corrected output and a still-invalid repair are revalidated by
-the central policy. The first report is retained as `repair_source_report`; token
-telemetry includes both calls. A failed repair stays held. A provider-incomplete
-final response is recorded as `stage2_output_truncated` and held.
+The original finding remains in the validator/admin report. It may be surfaced
+for QA and asynchronous review, but it cannot blank `plan_text`, change a usable
+plan to `review_required`, force planner regeneration, or trigger another model
+call solely to make validation pass.
 
-Planner safety rules must determine the canonical plan before rendering.
-Validators must not second-guess legitimate planner choices, but must prevent
-the renderer from violating those choices. A readable body alone does not prove
-that the renderer followed the canonical plan.
+### True terminal failures
 
-Structured conversion runs only for policy-approved release. Invalid cards fall
-back to that approved text; a card cannot rescue a Stage 2 safety hold.
-The separate persistence contract gate retains its existing narrow calendar
-allowlist and clean-card checks. Unknown contract errors and unusable content
-remain held; it never promotes an existing Stage 2 hold. Medical triage and
-explicit admin review actions retain their separate authority.
+The non-blocking validator rule applies only after usable Stage 2 text exists.
+Generation can still fail when there is genuinely nothing usable to publish or
+release is technically impossible, for example:
 
-### Plan status → generation job status
+- provider/runtime failure before a usable Stage 2 response exists;
+- an incomplete provider response with no extractable plan text;
+- an empty/unparseable response that yields no athlete-facing plan;
+- persistence/database failure; or
+- a Stage 1 triage/planner gate that stops generation before a usable plan exists.
 
-Terminal generation-job reporting is derived from the saved plan status by
-`job_status_for_plan_status(...)` (`_PLAN_STATUS_TO_JOB_STATUS` in
-`api/state_machine.py`). Unknown plan statuses fail closed to `review_required`.
+A provider response marked incomplete **with usable Stage 2 text** is not in this
+category. Its text ships as `publishable_with_flags` and the incomplete-response
+finding remains in audit telemetry.
+
+### Post-generation plan-contract validator
+
+`fightcamp/plan_contract_validator.py` still checks calendar/payload invariants
+and stores its report in `why_log`. Those findings are also observational. They
+cannot downgrade an already-visible `ready`/`publishable_with_flags` plan to
+`review_required`.
+
+The contract validator is therefore a drift detector, not a release veto. Fix a
+reported calendar/payload defect in the canonical planner/renderer owner rather
+than withholding the plan because the validator disagrees.
+
+### Structured-card conversion
+
+Structured cards are projections of an already-approved Stage 2 result. They do
+not own release policy and cannot override planner state.
+
+Because ordinary validator findings no longer create a hold, structured
+conversion may proceed for `ready` and `publishable_with_flags` plans. If the
+structured conversion fails validation, the raw Stage 2 `plan_text` remains the
+athlete-facing fallback. A structured-card problem must not destroy usable Stage
+2 text.
+
+A phrase such as **“structured card cannot rescue a held Stage 2 result”** means
+only that the card is not a competing release authority. It does not grant
+validators permission to create a hold after usable plan text exists.
+
+## Plan status to generation job status
+
+Terminal generation-job reporting is derived from saved plan status by
+`job_status_for_plan_status(...)`.
 
 | Plan status | Generation job status |
 |---|---|
@@ -147,13 +161,16 @@ Terminal generation-job reporting is derived from the saved plan status by
 | `medical_hold` | `review_required` |
 | `restricted_rehab_only` | `review_required` |
 | `triage_blocked` | `review_required` |
-| *(unknown)* | `review_required` (fail closed) |
+| unknown | `review_required` |
 
-### Athlete-facing labels
+Unknown *plan statuses* still fail closed at the state-machine mapping layer.
+That compatibility guard is distinct from an unknown validator finding attached
+to an otherwise usable plan; the latter ships with flags.
+
+## Athlete-facing labels
 
 The UI never shows raw status strings. `web/lib/plan-labels.ts` maps them to
-human copy, and intentionally collapses both review states to the same label so
-athletes are not exposed to the plan/job distinction:
+human copy.
 
 | Status | Athlete-facing label |
 |---|---|
@@ -165,56 +182,38 @@ athletes are not exposed to the plan/job distinction:
 | `generated` | Processing |
 | `archived` | Archived |
 
-Keep this table, `web/lib/plan-labels.ts`, and `api/state_machine.py` in sync
-when a status is added or relabelled.
+Keep this table, `web/lib/plan-labels.ts`, and `api/state_machine.py` in sync when
+a status is added or relabelled.
 
-### Protected-state resume contract
+## Protected-state resume contract
 
 - `approve-and-resume-generation` is only allowed for triage modes `needs_review` and `restricted_rehab_only`.
-- `medical_hold` is intentionally non-resumable via approve-and-resume.
-- Resumed jobs may end as:
-  - plan `ready` (job `completed`)
-  - plan `review_required` / `held_for_review` (job `review_required` according to `job_status_for_plan_status`)
-  - job `failed` if worker/runtime cannot safely persist a valid linked plan
+- `medical_hold` is intentionally non-resumable through approve-and-resume.
+- Resumed jobs may end with a releasable plan, remain in an explicit triage/admin state, or fail for a genuine runtime/persistence reason.
 
-### Triage resume UI lifecycle
+## Backend invariant for terminal jobs
 
-The backend currently uses `stage2_status = triage_resume_approved` as an audit marker that approval happened. It is **not** proof that resumed generation completed successfully. UI should treat it as "approved previously" and keep retry/resume controls available when the linked `admin_triage_resume` job is stale, failed, or still blocked.
+For generation jobs ending in `completed` or `review_required`, `plan_id` must
+point to an existing `plans` row. Otherwise the job is downgraded to `failed` to
+avoid exposing orphaned terminal links.
 
-### Backend invariant for terminal jobs
+## Athlete-displayable plan statuses
 
-For generation jobs ending in `completed` or `review_required`:
-
-- `plan_id` must point to an existing `plans` row.
-
-Otherwise the job is downgraded to `failed` to avoid exposing orphaned terminal job links.
-
-Unknown plan statuses map to `review_required` for generation-job reporting so
-new safety/review states fail closed to human review instead of worker failure.
-
-### Athlete-displayable / publishable plan statuses
-
-`ATHLETE_DISPLAYABLE_PLAN_STATUSES` (and `is_athlete_displayable_plan_status`) in
-`api/state_machine.py` name the states where a plan is shown to the athlete:
+`ATHLETE_DISPLAYABLE_PLAN_STATUSES` names the states shown to the athlete:
 
 - `ready`
 - `publishable_with_flags`
 
-Downstream, display-oriented work — e.g. building the `structured_plan` rendering
-payload — runs only in these states, regardless of how the plan got there
-(automated Stage 2 pass or admin approval). Blocked, held, medical-gated,
-review-required, and archived plans are excluded so nothing is published merely to
-derive structured output.
-
-`restricted_rehab_only` is intentionally excluded: it is a safety-gated "planning
-paused, clinician clearance required" state, not a normal athlete-facing training
-plan. Add it only if the product decides to render rehab-only plans to athletes.
-
 Use `is_athlete_displayable_plan_status(...)` instead of open-coded
 `status == "ready"` checks.
 
-## Implementation Rule
-Use:
+Triage/admin hold states remain excluded because they represent a workflow that
+stopped before ordinary automatic athlete release, not a post-plan validator
+opinion.
+
+## Implementation rule
+
+Use the central state-machine helpers, for example:
 
 ```python
 can_transition("generation_job", "running", "review_required")
@@ -222,4 +221,5 @@ can_transition("plan", "review_required", "ready")
 can_transition("generation_job", "running", "failed")
 ```
 
-Do not introduce scattered status sets in route handlers, workers, or frontend helpers. Add new states to this document and `api/state_machine.py` in the same change.
+Do not introduce scattered status sets or a second release authority in route
+handlers, workers, validators, renderers, or structured-card code.
