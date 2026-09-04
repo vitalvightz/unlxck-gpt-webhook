@@ -142,14 +142,17 @@ def _strength_role(d_day: int, *, loaded_allowed: bool = True) -> dict:
     }
 
 
-def test_loaded_contrast_power_is_hybrid_and_keeps_loaded_authority():
+def test_loaded_contrast_power_keeps_loaded_authority_without_new_persisted_kind():
     slot = _hybrid_slot()
     role = _strength_role(13)
 
     assert _role_kind(slot) == "hybrid"
     resolved = resolve_strength_slot_prescription(role=role, slot=slot)
 
-    assert resolved["dose_role_kind"] == "hybrid"
+    # Internal semantic can distinguish loaded power, but persisted dose-role
+    # vocabulary stays compatible with the validator's existing schema.
+    assert resolved["dose_role_kind"] == "anchor"
+    assert resolved["power_hybrid"] is True
     assert resolved["effective_loaded"] is True
     assert resolved["effective_max_sets"] == 2
     assert resolved["effective_max_reps"] == 3
@@ -164,6 +167,7 @@ def test_pure_ballistic_power_remains_non_loaded():
     resolved = resolve_strength_slot_prescription(role=role, slot=slot)
 
     assert resolved["dose_role_kind"] == "power"
+    assert resolved["power_hybrid"] is False
     assert resolved["effective_loaded"] is False
 
 
@@ -173,7 +177,8 @@ def test_loaded_hybrid_still_obeys_no_loaded_lifting_band():
 
     resolved = resolve_strength_slot_prescription(role=role, slot=slot)
 
-    assert resolved["dose_role_kind"] == "hybrid"
+    assert resolved["dose_role_kind"] == "anchor"
+    assert resolved["power_hybrid"] is True
     assert resolved["effective_loaded"] is False
     assert resolved["effective_prescription"].startswith("No loaded lifting")
 
