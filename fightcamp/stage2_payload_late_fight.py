@@ -1077,6 +1077,7 @@ def _bridge_resolve_hard_spar_slots(
         and isinstance(days, int)
         and rules.get("hard_sparring_cutoff_d_day", 14) < days <= 21
         and cap == rules.get("hard_sparring_cap_default")
+        and "serious_contact_safety" not in set(rules.get("reason_codes", []))
         and declared > cap
     ):
         # Preserve eligible declarations only when no stricter risk cap fired.

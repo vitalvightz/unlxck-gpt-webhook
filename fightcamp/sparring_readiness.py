@@ -67,8 +67,8 @@ def sparring_readiness_flags(context: dict[str, Any]) -> list[str]:
     blocked_contact_tags = {"contact", "sparring", "hard_contact", "head_impact"}
     for row in active_injuries:
         category = str(row.get("triage_category") or row.get("injury_type") or "").strip().lower()
-        row_flags = {str(value).strip().lower() for value in row.get("flags", []) if str(value).strip()}
-        blocked_tags = {str(value).strip().lower() for value in row.get("blocked_training_tags", []) if str(value).strip()}
+        row_flags = {str(value).strip().lower() for value in (row.get("flags") or []) if str(value).strip()}
+        blocked_tags = {str(value).strip().lower() for value in (row.get("blocked_training_tags") or []) if str(value).strip()}
         description = str(row.get("description") or "").strip().lower()
         if (
             category in serious_categories
