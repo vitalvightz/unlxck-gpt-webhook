@@ -790,7 +790,8 @@ def test_declared_coach_combat_spine_keeps_tuesday_friday_thursday_fight_visible
 
     assert set(roles_by_label) >= {"D-20", "D-16", "D-13", "D-9", "D-6", "D-2"}
     assert roles_by_label["D-20"].get("downgraded") is not True
-    for label in ["D-16", "D-13", "D-9", "D-6", "D-2"]:
+    assert roles_by_label["D-16"].get("downgraded") is not True
+    for label in ["D-13", "D-9", "D-6", "D-2"]:
         assert roles_by_label[label].get("downgraded") is True
         assert "technical-only combat" in roles_by_label[label].get("athlete_facing_label", "").lower()
 

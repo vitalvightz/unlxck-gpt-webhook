@@ -4,7 +4,7 @@ import logging
 import threading
 from .normalization import clean_list, dedupe_preserve_order, normalize_fatigue_level, ordered_weekdays as _ordered_weekdays
 from .fight_date_utils import resolve_fight_weekday
-from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_days
+from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_days, hard_sparring_cutoff, contact_safety_reasons
 from .late_camp_role_morph import late_fight_strength_dose_cap
 from .calendar_context import LATE_FIGHT_SCOPE, sequence_legality
 from .combat_load_policy import placement_rank
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 CANONICAL_HARD_SPARRING_LABEL = "Hard sparring — controlled hard contact"
 CANONICAL_HARD_SPARRING_BAN_LABEL = "Technical-only combat"
-# Two distinct notes: a hard-sparring day and a D-17+ technical-only day must never
+# Two distinct notes: a hard-sparring day and a converted technical-only day must never
 # share wording, or a technical-only card would tell the athlete to spar hard. Both
 # keep the "no extra S&C" + "freshness priority" tokens the validator's minimal
 # coach-owned render check looks for.
@@ -40,7 +40,7 @@ CANONICAL_TECHNICAL_ONLY_NOTE = "Technical-only contact today — no hard sparri
 # cliff is removed: D-14..D-21 now use the same normal camp planning architecture
 # as D-22+, and the countdown only *constrains* it progressively (scheduled-day
 # strength/fight-pace dose morphs in ``late_camp_role_morph`` and the per-day
-# D-17+ hard-contact ban in ``sparring_dose_planner``). See
+# risk-adjusted hard-contact cutoff in ``sparring_dose_planner``). See
 # ``docs/conservative_rules_assessment.md`` for the ownership model.
 _PAYLOAD_MODE_MAP = {
     0: "fight_day_protocol_payload",
@@ -178,15 +178,13 @@ def _coerce_days(days_until_fight: Any, default: int | None = None) -> int | Non
 
 
 
-def _declared_hard_spar_cap(days_until_fight: Any) -> int | None:
+def _declared_hard_spar_cap(days_until_fight: Any, athlete_model: dict[str, Any] | None = None) -> int | None:
+    if contact_safety_reasons(athlete_model or {}):
+        return 0
     days = _coerce_days(days_until_fight)
     if days is None:
         return None
-    if 18 <= days <= 21:
-        # Declared hard sparring at D-18 or further out is a coach-owned
-        # combat lock: the app never caps or deloads it.
-        return None
-    if 0 <= days <= 17:
+    if 0 <= days <= hard_sparring_cutoff(athlete_model or {}):
         return 0
     return None
 
@@ -238,20 +236,18 @@ def _future_declared_weekdays_with_countdown(
     return future
 
 
-def _hard_spar_status_for_countdown_offset(offset: int) -> str:
-    if 18 <= offset <= 21:
-        return "hard_allowed"
-    if 0 <= offset <= 17:
-        # D-17 onward caps hard sparring at zero, so declared hard days
-        # downgrade to technical / rhythm instead of staying hard-allowed.
-        return "downgrade"
-    return "downgrade"
+def _hard_spar_status_for_countdown_offset(offset: int, athlete_model: dict[str, Any] | None = None) -> str:
+    snapshot = athlete_model or {}
+    if contact_safety_reasons(snapshot):
+        return "blocked"
+    return "hard_allowed" if offset > hard_sparring_cutoff(snapshot) else "downgrade"
 
 
 def _classify_declared_hard_days_for_late_window(
     plan_creation_weekday: str | None,
     days_until_fight: Any,
     declared_weekdays: list[str],
+    athlete_model: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     classified: list[dict[str, Any]] = []
     for entry in _future_declared_weekdays_with_countdown(
@@ -262,7 +258,7 @@ def _classify_declared_hard_days_for_late_window(
         classified.append(
             {
                 **entry,
-                "status": _hard_spar_status_for_countdown_offset(int(entry.get("offset", -1))),
+                "status": _hard_spar_status_for_countdown_offset(int(entry.get("offset", -1)), athlete_model),
             }
         )
     return classified
@@ -345,7 +341,7 @@ def _late_fight_hard_sparring_plan(
         "main_fight_pace_day": athlete_model.get("main_fight_pace_day"),
     }
     # Thread the fight calendar through so the planner's per-day countdown
-    # authority (D-17 ban, D-18+ coach-owned hard lock) can resolve each
+    # authority (D-14 normally, D-17 for elevated risk) can resolve each
     # declared weekday to its own D-day. Without this the whole window is
     # judged by its start day, and a D-20 hard day could be downgraded while
     # a D-16 day survived as hard.
@@ -841,10 +837,8 @@ def _bridge_baseline(state: str, days_until_fight: Any) -> dict[str, Any]:
             "freshness_mandatory": False,
         }
     if state == TIMING_STATE_BRIDGE:
-        # D-21 to D-18 allow one hard sparring exposure for clean/low-risk
-        # athletes; D-17 and closer always convert declared hard days to
-        # technical/rhythm only.
-        hard_spar_default = 1 if (days is not None and 18 <= days <= 21) else 0
+        # Calendar baseline; elevated risk can bring conversion forward below.
+        hard_spar_default = 1 if (days is not None and 15 <= days <= 21) else 0
         return {
             "max_active_roles": 3,
             "max_meaningful_stress_exposures": 3,
@@ -854,7 +848,7 @@ def _bridge_baseline(state: str, days_until_fight: Any) -> dict[str, Any]:
             "max_consecutive_hard_days": 1,
             "double_stress_day_allowed": False,
             "freshness_mandatory": True,
-            "no_hard_sparring_after_d16": days is not None and days <= 17,
+            "hard_sparring_cutoff_d_day": 14,
         }
     # Late taper baseline reflects the spec's evidence-based caps (D-13 to D-8
     # tighter than the legacy late-fight role budget). Callers that need the
@@ -1058,7 +1052,7 @@ def _bridge_apply_sport_style(
     if rules.get("timing_state") != TIMING_STATE_BRIDGE:
         return rules
     if sport in _BRIDGE_STRIKING_SPORTS:
-        rules["latest_hard_spar_day"] = "d16"
+        rules["latest_hard_spar_day"] = f"d{rules.get('hard_sparring_cutoff_d_day', 14) + 1}"
         rules["headgear_recommended_for_contact"] = True
     if sport in _BRIDGE_MMA_SPORTS:
         rules["mma_grappling_shares_hard_spar_slot"] = True
@@ -1081,12 +1075,12 @@ def _bridge_resolve_hard_spar_slots(
     if (
         rules.get("timing_state") == TIMING_STATE_BRIDGE
         and isinstance(days, int)
-        and 18 <= days <= 21
+        and rules.get("hard_sparring_cutoff_d_day", 14) < days <= 21
+        and cap == rules.get("hard_sparring_cap_default")
+        and "serious_contact_safety" not in set(rules.get("reason_codes", []))
         and declared > cap
     ):
-        # Declared hard sparring days at D-18 or further out are coach-owned
-        # combat locks — the surfaced cap never asks the renderer to deload
-        # or drop them.
+        # Preserve eligible declarations only when no stricter risk cap fired.
         cap = declared
         rules["reason_codes"].append("declared_hard_spar_coach_owned_lock")
     rules["hard_sparring_cap"] = cap
@@ -1107,6 +1101,7 @@ def compute_bridge_rules(
     weight_cut_bucket: Any = "none",
     injury_mode: Any = "full_plan",
     hard_sparring_days_declared: Any = 0,
+    athlete_model: dict[str, Any] | None = None,
     athlete_pct_above_class: float | None = None,
     hours_to_recovery_after_weigh_in: float | None = None,
     force_unsafe_weight_cut: bool = False,
@@ -1136,6 +1131,17 @@ def compute_bridge_rules(
     )
 
     baseline = _bridge_baseline(state, days_until_fight)
+    cutoff_snapshot = dict(athlete_model or {})
+    cutoff_snapshot.setdefault("fatigue", fatigue_norm)
+    cutoff_snapshot.setdefault("cut_severity_bucket", bucket_norm)
+    cutoff_flags = set(clean_list(cutoff_snapshot.get("readiness_flags", [])))
+    if injury_norm != "full_plan":
+        cutoff_flags.add("moderate_injury")
+    cutoff_snapshot["readiness_flags"] = sorted(cutoff_flags)
+    sparring_cutoff = hard_sparring_cutoff(cutoff_snapshot)
+    contact_blocked = bool(contact_safety_reasons(cutoff_snapshot))
+    if contact_blocked or (state == TIMING_STATE_BRIDGE and days is not None and days <= sparring_cutoff):
+        baseline["hard_sparring_cap_default"] = 0
     rules: dict[str, Any] = {
         "timing_state": state,
         "days_until_fight": days,
@@ -1143,6 +1149,7 @@ def compute_bridge_rules(
         "max_meaningful_stress_exposures": baseline["max_meaningful_stress_exposures"],
         "hard_sparring_cap_default": baseline["hard_sparring_cap_default"],
         "hard_sparring_cap": baseline["hard_sparring_cap_default"],
+        "hard_sparring_cutoff_d_day": sparring_cutoff,
         "strength_touch_max": baseline["strength_touch_max"],
         "glycolytic_touch_max": baseline["glycolytic_touch_max"],
         "max_consecutive_hard_days": baseline["max_consecutive_hard_days"],
@@ -1156,9 +1163,8 @@ def compute_bridge_rules(
         "injury_mode": injury_norm,
         "unsafe_weight_flag": unsafe,
     }
-    if baseline.get("no_hard_sparring_after_d16"):
-        rules["no_hard_sparring_after_d16"] = True
-
+    if contact_blocked:
+        rules["reason_codes"].append("serious_contact_safety")
     rules = _bridge_apply_injury(rules, injury_norm)
     rules = _bridge_apply_fatigue(rules, fatigue_norm)
     rules = _bridge_apply_weight_cut(rules, bucket_norm, unsafe)
@@ -1273,6 +1279,7 @@ def _late_fight_permission_policy(days_until_fight: Any, athlete_model: dict[str
         plan_creation_weekday=plan_weekday,
         days_until_fight=days_until_fight,
         declared_weekdays=declared_hard_days,
+        athlete_model=athlete_model,
     )
     countdown_by_day = {
         str(entry.get("weekday") or "").strip().lower(): entry
@@ -1337,7 +1344,8 @@ def _late_fight_permission_policy(days_until_fight: Any, athlete_model: dict[str
         is_effective_hard = str(plan_entry.get("effective_load") or "") == "hard"
         action: dict[str, Any] = {
             "day": normalized_day,
-            "outcome": "hard_sparring_day" if is_effective_hard else "technical_touch_day",
+            "outcome": ("blocked" if plan_entry.get("effective_load") == "none" else
+                        "hard_sparring_day" if is_effective_hard else "technical_touch_day"),
             "locked": bool(is_effective_hard),
         }
         if is_effective_hard:
@@ -1380,9 +1388,9 @@ def resolve_late_fight_contacts(
     - ``technical`` (``convert_to_technical_suggested``) -> technical;
     - ``none`` / suppressed -> no contact occurrence at all.
 
-    The one placement transform layered on top is the D-17 hard-sparring ban: a
+    The placement transform applies the shared risk-adjusted cutoff: a
     ``hard`` or ``reduced`` contact caps to a technical touch on any occurrence that
-    is not the hard-allowed one (D-18+); the hard-allowed occurrence keeps the
+    is inside the applicable conversion window; the hard-allowed occurrence keeps the
     resolver's dose class. ``technical`` and ``none`` are never re-escalated.
     """
     declared = clean_list(athlete_model.get("hard_sparring_days", []))
@@ -1409,6 +1417,7 @@ def resolve_late_fight_contacts(
         plan_creation_weekday=plan_creation_weekday,
         days_until_fight=days_until_fight,
         declared_weekdays=declared,
+        athlete_model=athlete_model,
     ):
         offset = entry.get("offset")
         if not isinstance(offset, int) or offset <= 0:
@@ -1419,7 +1428,7 @@ def resolve_late_fight_contacts(
             # The dose resolver suppressed this day: no contact event exists.
             continue
         if load in {"hard", "reduced"} and str(entry.get("status") or "") != "hard_allowed":
-            # D-17 ban: no hard/reduced contact inside the taper, only technical.
+            # Apply the same risk-adjusted cutoff to recurring contact dates.
             load = "technical"
         contacts.append((offset, load))
     return contacts
@@ -2351,6 +2360,14 @@ def ensure_declared_coach_combat_spine(
     if not countdown_map or not (hard_days or support_days):
         return session_sequence
 
+    # Rebuilding the display spine must consume the resolver's reductions too.
+    # Calendar eligibility alone cannot turn a reduced/blocked day back to hard.
+    contact_days = _coerce_days(athlete_model.get("days_until_fight"))
+    if contact_days is None:
+        contact_days = max((_countdown_offset(label) or 0) for label in countdown_map)
+    resolved_contacts = dict(resolve_late_fight_contacts(contact_days, athlete_model))
+    safety_hold = bool(contact_safety_reasons(athlete_model))
+
     hard_labels = {
         label: str(weekday or "").strip().lower()
         for label, weekday in countdown_map.items()
@@ -2372,6 +2389,8 @@ def ensure_declared_coach_combat_spine(
         role_key = str(role_copy.get("role_key") or "").strip().lower()
         downgraded_from = str(role_copy.get("downgraded_from_role_key") or "").strip().lower()
         coach_context = role_key == "hard_sparring_day" or downgraded_from == "hard_sparring_day"
+        if safety_hold and (coach_context or role_key == "light_combat_day"):
+            continue
         allowed_filler = is_low_cost_coexistable_filler(role_copy) or role_key == "fight_week_freshness_day"
         if label in hard_labels and _is_app_owned_visible_role(role_key) and not coach_context and not allowed_filler:
             continue
@@ -2398,7 +2417,12 @@ def ensure_declared_coach_combat_spine(
         offset = _countdown_offset(label)
         if offset is None or offset <= 0 or label in existing_hard:
             continue
-        downgraded = offset <= 17
+        if safety_hold:
+            continue
+        resolved_load = resolved_contacts.get(offset, "none")
+        if resolved_load == "none":
+            continue
+        downgraded = resolved_load != "hard"
         sequence.append({
             "session_index": len(sequence) + 1,
             "category": "sparring",
@@ -2421,12 +2445,19 @@ def ensure_declared_coach_combat_spine(
             "declared_day_locked": True,
             "coach_owned": True,
             "downgraded": downgraded,
+            "hard_sparring_status": (
+                "hard_as_planned" if resolved_load == "hard" else
+                "deload_suggested" if resolved_load == "reduced" else "convert_to_technical_suggested"
+            ),
             "placement_basis": "locked",
             "day_assignment_reason": "Declared hard-sparring/contact day restored to the calendar spine before app-owned placement.",
         })
         if downgraded:
             sequence[-1]["downgraded_to_role_key"] = "technical_touch_day"
-            sequence[-1]["downgrade_reason_code"] = "d17_hard_sparring_ban"
+            sequence[-1]["downgrade_reason_code"] = (
+                f"d{hard_sparring_cutoff(athlete_model)}_hard_sparring_ban"
+                if offset <= hard_sparring_cutoff(athlete_model) else "readiness_contact_reduction"
+            )
         existing_hard.add(label)
 
     for label, weekday in sorted(
@@ -2563,7 +2594,7 @@ def _late_fight_candidate_roles(
         if outcome == "hard_sparring_day":
             # Pin the lock to the hard-allowed occurrence (D-18+) when known,
             # so a weekday that recurs later in the countdown can never have
-            # its hard lock resolved onto a banned D-17-or-closer occurrence.
+            # its hard lock resolved onto a banned inside-cutoff occurrence.
             hard_lock_label = str(item.get("countdown_label") or "").strip()
             candidates.append(
                 _late_fight_role_entry(
@@ -3331,7 +3362,7 @@ def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dic
     """Return the visible/app-owned late-fight session sequence.
 
     Coach-owned ``hard_sparring_day`` placeholders (including downgraded
-    context entries appended for D-17 downgrade tracking) are filtered out
+    context entries appended for hard-sparring downgrade tracking) are filtered out
     so the brief surfaces only the sessions the athlete actually does. The
     full list — including the coach-owned context — remains available on
     ``late_fight_plan_spec.session_sequence``.
@@ -3657,7 +3688,7 @@ def _space_bridge_countdown_roles(
     max_visible_roles = None
     if isinstance(max_meaningful_stress_exposures, int) and isinstance(max_support_roles, int):
         max_visible_roles = max_meaningful_stress_exposures + max_support_roles
-    hard_spar_cap = _declared_hard_spar_cap(days_until_fight)
+    hard_spar_cap = _declared_hard_spar_cap(days_until_fight, athlete_model)
     label_to_weekday = _full_countdown_weekday_map(days_until_fight, athlete_model)
     label_to_display_weekday = dict(label_to_weekday)
     hard_weekdays = _declared_hard_weekdays(athlete_model)
@@ -3923,7 +3954,7 @@ def _append_declared_hard_spar_context(
 ) -> dict[str, Any]:
     """Append coach-owned ``hard_sparring_day`` context entries to the plan.
 
-    Declared boxing days that the D-17 ban downgraded to technical/rhythm
+    Declared boxing days that the resolver downgraded to technical/rhythm
     still belong to the gym/coach. ``_late_fight_allocation_plan`` builds
     them as ``technical_touch_day`` candidates that compete (and usually
     lose) for app-side insert slots. The session_roles list, however, must
@@ -3963,7 +3994,7 @@ def _append_declared_hard_spar_context(
     new_entries: list[dict[str, Any]] = []
     for action in actions:
         declared_day = str(action.get("day") or "").strip().lower()
-        if not declared_day:
+        if not declared_day or action.get("outcome") == "blocked":
             continue
         is_hard_locked = str(action.get("outcome") or "") == "hard_sparring_day"
         hard_lock_offset = action.get("countdown_offset")
@@ -3973,9 +4004,9 @@ def _append_declared_hard_spar_context(
             offset = _countdown_offset(label)
             if offset is None or offset <= 0:
                 continue
-            if is_hard_locked and (offset == hard_lock_offset or offset >= 18):
+            if is_hard_locked and (offset == hard_lock_offset or offset > hard_sparring_cutoff(athlete_model)):
                 # The hard-allowed occurrence is already carried by the locked
-                # hard_sparring_day role; only later (D-17 or closer)
+                # hard_sparring_day role; only later converted
                 # recurrences of this weekday become technical-only context.
                 continue
             key = (declared_day, offset)
@@ -3990,7 +4021,7 @@ def _append_declared_hard_spar_context(
                 "preferred_pool": "declared_hard_sparring_days",
                 "selection_rule": (
                     "Declared hard-sparring/contact day converted to technical-only combat "
-                    "under the D-17 hard-sparring ban; render it as a hard-sparring/contact "
+                    "under the resolved hard-sparring restriction; render it as a hard-sparring/contact "
                     "label, never as a programmed S&C session. The athlete owns the "
                     "whole day — do not stack any programmed S&C on it."
                 ),
@@ -4018,10 +4049,10 @@ def _append_declared_hard_spar_context(
                 "coach_owned": True,
                 "downgraded": True,
                 "downgraded_to_role_key": "technical_touch_day",
-                "downgrade_reason_code": "d17_hard_sparring_ban",
+                "downgrade_reason_code": f"d{hard_sparring_cutoff(athlete_model)}_hard_sparring_ban",
                 "day_assignment_reason": (
                     "Declared hard-sparring/contact day fixed by declaration; downgraded to "
-                    "technical/rhythm under the D-17 hard-sparring ban."
+                    "technical/rhythm under the resolved hard-sparring restriction."
                 ),
                 "placement_basis": "locked",
             }
@@ -4128,7 +4159,7 @@ def _late_fight_summary(days_until_fight: Any) -> str:
     if mode == "pre_fight_compressed_payload":
         return (
             "Use a compressed pre-fight week. No effective hard sparring is allowed: all declared hard sparring "
-            "from D-17 onward converts to technical/rhythm only. Keep one meaningful strength touch, an optional "
+            "in this window converts to technical/rhythm only. Keep one meaningful strength touch, an optional "
             "light fight-rhythm touch, and one freshness / mobility reset day."
         )
     if mode == "late_fight_week_payload":
@@ -4610,9 +4641,9 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
     if hard_sparring_context:
         spec.update(hard_sparring_context)
     days = _coerce_days(days_until_fight)
-    if days is not None and 0 <= days <= 17:
+    if days is not None and 0 <= days <= hard_sparring_cutoff(athlete_model):
         spec["hard_sparring_ban_summary"] = (
-            "All declared hard sparring from D-17 onward is converted to technical/rhythm only. "
+            "Declared hard sparring converts from D-14 normally or D-17 with elevated risk. "
             "No effective hard sparring allowed."
         )
     return spec
@@ -4724,11 +4755,11 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
         "From D-10 to the fight, the progression/regression line offers regressions and stop rules only — never a progression/advance option (no add load/sets, heavier ball, stronger band, or \"to progress\").\n"
         "Write meaningful adjustment lines as \"Easier: <action>\" and \"Stop: <trigger/action>\". Never emit a bare \"Regression /\", \"Regression\", or slash-separated structural label.\n"
         "From D-13, strength & conditioning sessions (strength, power, alactic, aerobic, fight-pace, neural speed work) also lock to regressions and stop rules only; fillers, rehab, mobility, and light recovery work may still progress on D-13 to D-11.\n"
-        "Declared hard-spar days are fixed athlete-owned combat locks. Never move, drop, or deload them; from D-17 onward they render as technical-only combat.\n"
+        "Declared hard-spar dates stay fixed, but the resolved safety/readiness/calendar decision controls contact. Convert from D-14 normally or D-17 with elevated risk. A blocked/none status means no contact or sparring and medical evaluation/clearance guidance; never restore it to technical contact.\n"
         "If late_fight_plan_spec.surviving_hard_spar_days / late_fight_plan_spec.downgraded_declared_spar_days are present, use those fields as source of truth and add one short deterministic sentence (hard days first, downgraded days second).\n"
         "Add one short rationale only when placement/compression would otherwise make day choice look arbitrary.\n"
         "One hard-spar doctrine per output. No split schedule realities.\n"
-"Hard sparring days are the athlete's own combat locks (run in their gym, with or without a coach). The app must not prescribe the sparring and never deloads it. At D-18 or further out render the label \"" + CANONICAL_HARD_SPARRING_LABEL + "\" (or sport-equivalent like \"MMA — hard sparring / controlled hard contact\") followed by exactly one note: \"" + CANONICAL_HARD_SPARRING_NOTE + "\" From D-17 onward hard sparring is banned: render \"" + CANONICAL_HARD_SPARRING_BAN_LABEL + "\" (or sport-equivalent) followed by exactly one note: \"" + CANONICAL_TECHNICAL_ONLY_NOTE + "\" — a technical-only day must never carry the hard-sparring note. No round counts, no time-x-rounds, no intensity targets, no dose, no RPE, no work:rest, no sparring template wording. Nothing else — never schedule or list programmed S&C on a declared hard-sparring/contact day."
+"Hard sparring days are the athlete's own combat locks (run in their gym, with or without a coach). The app must not prescribe the sparring and must respect resolved safety, readiness, and calendar restrictions. Only for a resolved hard-as-planned day render the label \"" + CANONICAL_HARD_SPARRING_LABEL + "\" (or sport-equivalent like \"MMA — hard sparring / controlled hard contact\") followed by exactly one note: \"" + CANONICAL_HARD_SPARRING_NOTE + "\" From D-14 normally, or D-17 with elevated risk, hard sparring is converted to technical work: render \"" + CANONICAL_HARD_SPARRING_BAN_LABEL + "\" (or sport-equivalent) followed by exactly one note: \"" + CANONICAL_TECHNICAL_ONLY_NOTE + "\" — a technical-only day must never carry the hard-sparring note. No round counts, no time-x-rounds, no intensity targets, no dose, no RPE, no work:rest, no sparring template wording. Nothing else — never schedule or list programmed S&C on a declared hard-sparring/contact day."
     )
     if payload_mode == "fight_day_protocol_payload":
         return (

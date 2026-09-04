@@ -190,6 +190,7 @@ export type PlanRequest = {
   equipment_access: string[];
   training_availability: string[];
   hard_sparring_days: string[];
+  reduced_contact_requested?: boolean;
   support_work_days: string[];
   injuries?: string;
   guided_injury?: GuidedInjuryInput | null;

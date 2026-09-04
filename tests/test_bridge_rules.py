@@ -87,7 +87,7 @@ class TestSpecUnitCases:
         assert result["glycolytic_touch_max"] == 0
         assert result["strength_touch_max"] == 1
         assert result["freshness_mandatory"] is True
-        assert result["hard_sparring_cap"] == 0
+        assert result["hard_sparring_cap"] == 1
         assert result["block_full_plan"] is False
         assert "weight_cut_moderate_note_only" in result["reason_codes"]
         assert "weight_cut_moderate_trim_stress" not in result["reason_codes"]
@@ -168,8 +168,8 @@ class TestSpecUnitCases:
         assert result["glycolytic_touch_max"] == 0
         assert result["strength_touch_max"] == 1
         assert result["freshness_mandatory"] is True
-        # D-17 onward forbids further hard sparring.
-        assert result.get("no_hard_sparring_after_d16") is True
+        # Normal risk retains hard eligibility through D-15.
+        assert result["hard_sparring_cutoff_d_day"] == 14
 
     def test_late_taper_boxer(self):
         result = compute_bridge_rules(
@@ -271,13 +271,13 @@ class TestBridgeHelperConsistency:
         # no app-side cap. From D-17 the ban zeros effective hard sparring.
         assert _declared_hard_spar_cap(21) is None
         assert _declared_hard_spar_cap(18) is None
-        assert _declared_hard_spar_cap(17) == 0
+        assert _declared_hard_spar_cap(17) is None
         assert _declared_hard_spar_cap(14) == 0
 
     def test_hard_spar_status_bridge_boundaries(self):
         assert _hard_spar_status_for_countdown_offset(21) == "hard_allowed"
         assert _hard_spar_status_for_countdown_offset(18) == "hard_allowed"
-        assert _hard_spar_status_for_countdown_offset(17) != "hard_allowed"
+        assert _hard_spar_status_for_countdown_offset(17) == "hard_allowed"
         assert _hard_spar_status_for_countdown_offset(14) != "hard_allowed"
 
 
@@ -305,17 +305,16 @@ class TestModifierOrdering:
         assert result["plan_mode"] == "needs_review"
         assert result["block_full_plan"] is True
 
-    def test_high_fatigue_keeps_declared_hard_spar_as_coach_owned_lock(self):
-        # High fatigue zeroes app-added hard sparring, but a declared hard day
-        # at D-18+ is a coach-owned combat lock the app never caps or deloads.
+    def test_high_fatigue_restriction_is_not_reversed_by_declaration(self):
+        # A stricter fatigue cap must survive the declaration lock.
         result = compute_bridge_rules(
             days_until_fight=20,
             sport="boxing",
             fatigue="high",
             hard_sparring_days_declared=1,
         )
-        assert result["hard_sparring_cap"] == 1
-        assert "declared_hard_spar_coach_owned_lock" in result["reason_codes"]
+        assert result["hard_sparring_cap"] == 0
+        assert "declared_hard_spar_coach_owned_lock" not in result["reason_codes"]
         assert result["remaining_hard_spar_slots"] == 0
 
     def test_high_fatigue_zeros_hard_spar_when_none_declared(self):
@@ -487,7 +486,7 @@ class TestBridgeCapTransitions:
         assert result["hard_sparring_cap"] == 1
         assert result["remaining_hard_spar_slots"] == 1
 
-    def test_d17_clean_boxer_zero_hard_spar(self):
+    def test_d17_clean_boxer_retains_hard_eligibility(self):
         result = compute_bridge_rules(
             days_until_fight=17,
             sport="boxing",
@@ -496,10 +495,10 @@ class TestBridgeCapTransitions:
             injury_mode="full_plan",
             hard_sparring_days_declared=0,
         )
-        assert result["hard_sparring_cap"] == 0
-        assert result["remaining_hard_spar_slots"] == 0
+        assert result["hard_sparring_cap"] == 1
+        assert result["remaining_hard_spar_slots"] == 1
 
-    def test_d16_clean_boxer_zero_hard_spar(self):
+    def test_d16_clean_boxer_retains_hard_eligibility(self):
         result = compute_bridge_rules(
             days_until_fight=16,
             sport="boxing",
@@ -507,9 +506,9 @@ class TestBridgeCapTransitions:
             weight_cut_bucket="low",
             injury_mode="full_plan",
         )
-        assert result["hard_sparring_cap"] == 0
+        assert result["hard_sparring_cap"] == 1
 
-    def test_d15_and_d14_zero_hard_spar(self):
+    def test_normal_cutoff_transitions_between_d15_and_d14(self):
         for day in (15, 14):
             result = compute_bridge_rules(
                 days_until_fight=day,
@@ -518,10 +517,10 @@ class TestBridgeCapTransitions:
                 weight_cut_bucket="low",
                 injury_mode="full_plan",
             )
-            assert result["hard_sparring_cap"] == 0
+            assert result["hard_sparring_cap"] == (1 if day == 15 else 0)
             assert result["glycolytic_touch_max"] == 0
             assert result["freshness_mandatory"] is True
-            assert result.get("no_hard_sparring_after_d16") is True
+            assert result["hard_sparring_cutoff_d_day"] == 14
 
 
 class TestBridgeModerateCutContactSports:
@@ -728,12 +727,12 @@ class TestDeclaredHardSparCapHelper:
         # hard sparring. From D-17 the ban zeros effective hard sparring.
         assert _declared_hard_spar_cap(21) is None
         assert _declared_hard_spar_cap(18) is None
-        assert _declared_hard_spar_cap(17) == 0
+        assert _declared_hard_spar_cap(17) is None
         assert _declared_hard_spar_cap(14) == 0
 
 
 class TestHardSparStatusForCountdownOffset:
-    """D-17 and below must not be described as hard-allowed anywhere."""
+    """The normal hard-contact boundary is D-14; elevated risk uses D-17."""
 
     def test_bridge_offset_statuses(self):
         from fightcamp.stage2_payload_late_fight import (
@@ -742,5 +741,43 @@ class TestHardSparStatusForCountdownOffset:
 
         assert _hard_spar_status_for_countdown_offset(21) == "hard_allowed"
         assert _hard_spar_status_for_countdown_offset(18) == "hard_allowed"
-        assert _hard_spar_status_for_countdown_offset(17) == "downgrade"
+        assert _hard_spar_status_for_countdown_offset(17) == "hard_allowed"
         assert _hard_spar_status_for_countdown_offset(14) == "downgrade"
+
+
+def test_bridge_uses_full_canonical_sparring_risk_state():
+    athlete_model = {
+        "readiness_flags": ["high_contact_load"],
+        "fatigue": "low",
+        "cut_severity_bucket": "low",
+    }
+    result = compute_bridge_rules(
+        days_until_fight=16,
+        sport="boxing",
+        fatigue="low",
+        weight_cut_bucket="low",
+        injury_mode="full_plan",
+        hard_sparring_days_declared=1,
+        athlete_model=athlete_model,
+    )
+    assert result["hard_sparring_cutoff_d_day"] == 17
+    assert result["hard_sparring_cap"] == 0
+
+
+def test_bridge_blocks_hard_contact_when_canonical_state_is_contact_blocked():
+    athlete_model = {
+        "readiness_flags": ["medical_contact_restriction"],
+        "fatigue": "low",
+        "cut_severity_bucket": "low",
+    }
+    result = compute_bridge_rules(
+        days_until_fight=20,
+        sport="boxing",
+        fatigue="low",
+        weight_cut_bucket="low",
+        injury_mode="full_plan",
+        hard_sparring_days_declared=1,
+        athlete_model=athlete_model,
+    )
+    assert result["hard_sparring_cap"] == 0
+    assert "serious_contact_safety" in result["reason_codes"]

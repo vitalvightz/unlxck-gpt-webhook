@@ -45,7 +45,10 @@ test("planner-emitted reason codes are all covered", () => {
     "hard_day_cap",
     "fight_week_taper",
     "final_week_sparring_cap",
+    "d14_hard_sparring_ban",
     "d17_hard_sparring_ban",
+    "serious_contact_safety",
+    "medical_contact_restriction",
     "d21_d18_cap_one",
   ];
 

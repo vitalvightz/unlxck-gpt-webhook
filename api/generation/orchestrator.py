@@ -29,6 +29,7 @@ from ..generation_health import (
 )
 from ..minor_safety import minor_safe_stage1_payload
 from ..services.rehab_stage_snapshot import annotate_payload_with_rehab_stage
+from ..services.sparring_readiness_snapshot import annotate_payload_with_sparring_readiness
 from ..models import (
     PROFILE_REFRESH_FAILED_WARNING as _PROFILE_REFRESH_FAILED_WARNING,
     PROFILE_REFRESH_FAILED_WHY_LOG_KEY as _PROFILE_REFRESH_FAILED_WHY_LOG_KEY,
@@ -475,6 +476,14 @@ async def run_generation_job(
                 store=store,
                 athlete_id=athlete_id,
             )
+            if not non_health_mode:
+                planner_payload = await _to_thread_with_heartbeat(
+                    annotate_payload_with_sparring_readiness,
+                    planner_payload,
+                    store=store,
+                    athlete_id=athlete_id,
+                    athlete_timezone=request_body.athlete.athlete_timezone or "",
+                )
             _emit_milestone(
                 "stage1_planner_starting",
                 "Stage 1 planner starting",

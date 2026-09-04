@@ -228,10 +228,10 @@ def test_d14_is_normal_camp_and_d13_inward_is_late_fight():
     assert lf._is_countdown_continuation_start(13) is True
 
 
-def test_d17_hard_contact_cutoff_is_resolver_owned():
-    for offset in (21, 20, 19, 18):
+def test_dynamic_hard_contact_cutoff_is_resolver_owned():
+    for offset in (21, 20, 19, 18, 17, 16, 15):
         assert lf._hard_spar_status_for_countdown_offset(offset) == "hard_allowed", offset
-    for offset in (17, 16, 13, 7, 1, 0):
+    for offset in (14, 13, 7, 1, 0):
         assert lf._hard_spar_status_for_countdown_offset(offset) == "downgrade", offset
 
 
@@ -243,14 +243,14 @@ def test_d0_and_d1_are_terminal_protocol_modes():
     assert lf._is_countdown_continuation_start(1) is False
 
 
-def test_d18_to_d21_is_the_only_effective_hard_contact_band():
+def test_d15_to_d21_is_the_normal_late_window_hard_contact_band():
     """Effective hard contact survives only in the bridge band, so canonical
     hard-contact protection applies there and is a no-op inside the taper."""
     hard_allowed = {
         offset for offset in range(0, 22)
         if lf._hard_spar_status_for_countdown_offset(offset) == "hard_allowed"
     }
-    assert hard_allowed == {18, 19, 20, 21}
+    assert hard_allowed == {15, 16, 17, 18, 19, 20, 21}
 
 
 # ---------------------------------------------------------------------------

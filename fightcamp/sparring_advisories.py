@@ -4,7 +4,7 @@ import re
 from typing import Any
 
 from .injury_formatting import parse_injury_entry
-from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_day_count
+from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_day_count, contact_safety_reasons, CONTACT_SAFETY_NOTE
 from .weight_cut import compute_cut_severity_score, compute_weight_cut_pct, cut_severity_bucket
 from .normalization import clean_list, ordered_weekdays as _ordered_weekdays
 
@@ -641,6 +641,14 @@ def _build_week_advisory(
     hard_days = _ordered_weekdays(week.get("declared_hard_sparring_days") or athlete_snapshot.get("hard_sparring_days"))
     if not hard_days:
         return None
+    if contact_safety_reasons(athlete_snapshot):
+        return (3, 0, 0, 0, 0), {
+            "kind": "sparring_adjustment", "action": "convert", "phase": str(week.get("phase") or ""),
+            "week_label": _week_label(week), "days": hard_days, "title": "No contact or sparring",
+            "reason": CONTACT_SAFETY_NOTE, "suggestion": CONTACT_SAFETY_NOTE,
+            "disclaimer": "Follow your medical restrictions and clearance pathway.",
+            "risk_band": "black", "replacement": "Medical evaluation / recovery guidance only.",
+        }
     plan = hard_sparring_plan or week.get("hard_sparring_plan")
     if not isinstance(plan, list):
         plan = compute_hard_sparring_plan(week=week, athlete_snapshot=athlete_snapshot)

@@ -365,16 +365,16 @@ class TestD24GeneratedFightWeek:
 
 class TestHardSparringConversionPreserved:
     @pytest.mark.parametrize("days", [24, 20, 17])
-    def test_declared_hard_sparring_inside_d17_stays_technical_only(self, days, monkeypatch):
+    def test_declared_hard_sparring_inside_d14_stays_technical_only(self, days, monkeypatch):
         # Requirement 7: any declared hard-sparring session whose SCHEDULED D-day is
-        # <= 17 converts to technical-only, keyed on its own countdown position, and
+        # <= 14 converts to technical-only, keyed on its own countdown position, and
         # no app-owned S&C is stacked onto that day. The fix touches only the Stage 2
         # handoff, so this existing safety invariant must be untouched.
         _payload, brief, _handoff = _run(days, monkeypatch)
         inside = [
             entry
             for entry in _hard_sparring_entries(brief)
-            if isinstance(entry.get("d_day"), int) and 0 <= entry["d_day"] <= 17
+            if isinstance(entry.get("d_day"), int) and 0 <= entry["d_day"] <= 14
         ]
         assert inside, f"D-{days} produced no in-window declared hard-sparring entry to check"
         technical_days = set()
@@ -382,7 +382,7 @@ class TestHardSparringConversionPreserved:
             assert entry.get("effective_load") == "technical", (
                 f"D-{days}: hard sparring at D-{entry['d_day']} was not converted to technical"
             )
-            assert "d17_hard_sparring_ban" in (entry.get("reason_codes") or [])
+            assert "d14_hard_sparring_ban" in (entry.get("reason_codes") or [])
             technical_days.add(entry["d_day"])
 
         # No extra app-owned strength/conditioning stacked on a technical-only day.
