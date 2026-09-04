@@ -259,3 +259,34 @@ def test_clean_week_without_next_day_hard_contact_is_unchanged() -> None:
     before = deepcopy(weekly)
     apply_pre_hard_contact_strength_exposure_cap(weekly)
     assert weekly == before
+
+
+def test_goal_deferral_contract_recognises_pre_hard_strength_cap() -> None:
+    from fightcamp.goal_preservation import _deferral_constraints
+
+    brief = {
+        "athlete_snapshot": {"days_until_fight": 24},
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "week_index": 1,
+                    "calendar_days": [{"weekday": "Monday", "d_day": 23}],
+                    "session_roles": [],
+                    "suppressed_roles": [
+                        {
+                            "category": "strength",
+                            "role_key": "secondary_strength_day",
+                            "compression_reason_codes": [
+                                PRE_HARD_CONTACT_STRENGTH_CAP_REASON
+                            ],
+                        }
+                    ],
+                }
+            ]
+        },
+    }
+    missing = [{"min_d_day": 20, "max_d_day": 24}]
+    constraints = _deferral_constraints({"goal": "strength"}, brief, missing)
+    assert constraints
+    assert constraints[0]["reason_code"] == "pre_hard_contact_managed_stress"
+    assert constraints[0]["source_reason_code"] == PRE_HARD_CONTACT_STRENGTH_CAP_REASON
