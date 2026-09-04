@@ -24,7 +24,8 @@ from .bank_schema import (
 )
 from .injury_filtering import injury_match_details, _log_exclusion, _log_replacement
 from .injury_guard import Decision, choose_injury_replacement, injury_decision, make_guarded_decision_factory
-from .coordination_support_library import extract_coordination_style, normalize_sport
+from .coordination_support_library import extract_coordination_style
+from .sports import normalize_sport, planning_format
 from .restriction_filtering import evaluate_restriction_impact
 from .diagnostics import format_missing_system_block
 from .tagging import normalize_item_tags, normalize_tags
@@ -215,24 +216,7 @@ def _style_specificity_sport_tag(primary_tech: str, selection_format: str) -> st
     not therefore make an MMA-tagged style drill look more sport-specific than
     a BJJ- or wrestling-tagged drill.
     """
-    tech = str(primary_tech or "").strip().lower().replace("-", " " )
-    aliases = {
-        "boxer": "boxing",
-        "boxing": "boxing",
-        "kickboxer": "kickboxing",
-        "kickboxing": "kickboxing",
-        "karate": "kickboxing",
-        "muay thai": "muay_thai",
-        "muaythai": "muay_thai",
-        "muay_thai": "muay_thai",
-        "mma": "mma",
-        "bjj": "bjj",
-        "wrestler": "wrestling",
-        "wrestling": "wrestling",
-        "grappler": "grappling",
-        "grappling": "grappling",
-    }
-    return aliases.get(tech, str(selection_format or "").strip().lower())
+    return normalize_sport(primary_tech) or normalize_sport(selection_format)
 
 
 def _style_exact_sport_bonus(raw_tags: list[str], athlete_sport_tag: str) -> float:
@@ -1792,7 +1776,7 @@ def _technical_footwork_match_evidence(
 
 
 def _technical_footwork_selection_reasons(flags: dict, drill: dict) -> dict:
-    canonical_sport = normalize_sport(flags.get("fight_format") or flags.get("sport") or "")
+    canonical_sport = normalize_sport(flags.get("sport") or flags.get("fight_format") or "")
     # ``styles`` are the athlete's own styles that feed the tactical-function
     # preference model. They are NOT evidence that the selected drill matches
     # that style. A real style match exists only when the drill's own tags carry
@@ -1891,7 +1875,7 @@ def select_technical_footwork_candidates(
     # aliases (muay thai / muaythai / wrestler / jiu jitsu ...) and every
     # supported combat sport — including wrestling and bjj — map consistently,
     # rather than a footwork-local sport table that silently omitted them.
-    canonical_sport = normalize_sport(flags.get("fight_format") or flags.get("sport") or "")
+    canonical_sport = normalize_sport(flags.get("sport") or flags.get("fight_format") or "")
     compatible_sport_tags = _TECHNICAL_FOOTWORK_SPORT_TAGS.get(
         canonical_sport, {canonical_sport} if canonical_sport else set()
     )
@@ -2692,22 +2676,7 @@ def generate_conditioning_block(flags):
         'shoulder' in w.lower() for w in weaknesses
     )
 
-    style_map = {
-        "mma": "mma",
-        "boxer": "boxing",
-        "boxing": "boxing",
-        "kickboxer": "kickboxing",
-        "kickboxing": "kickboxing",
-        "muay thai": "muay_thai",
-        "muaythai": "muay_thai",
-        "bjj": "mma",
-        "wrestler": "mma",
-        "wrestling": "wrestler",
-        "grappler": "mma",
-        "grappling": "grappler",
-        "karate": "kickboxing",
-    }
-    fight_format = style_map.get(primary_tech, "mma")
+    fight_format = planning_format(primary_tech or flags.get("sport") or flags.get("fight_format"))
     selection_format = _normalize_fight_format(fight_format)
     specificity_sport_tag = _style_specificity_sport_tag(primary_tech, selection_format)
     energy_weights = get_format_weights().get(selection_format, {})

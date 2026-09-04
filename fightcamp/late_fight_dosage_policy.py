@@ -4,6 +4,8 @@ from contextvars import ContextVar
 from functools import wraps
 from typing import Iterable
 
+from .sports import normalize_sport
+
 from .style_taper_governance import (
     D13_TO_D8,
     D7,
@@ -43,23 +45,8 @@ def _values(value: object) -> list[str]:
 
 
 def _canonical_sport(value: object) -> str:
-    token = _token(value)
-    aliases = {
-        "boxer": "boxing",
-        "boxing": "boxing",
-        "kickboxer": "kickboxing",
-        "kickboxing": "kickboxing",
-        "karate": "kickboxing",
-        "muay_thai": "muay_thai",
-        "muaythai": "muay_thai",
-        "mma": "mma",
-        "bjj": "bjj",
-        "wrestler": "wrestling",
-        "wrestling": "wrestling",
-        "grappler": "grappling",
-        "grappling": "grappling",
-    }
-    return aliases.get(token, token if token in SPORT_TAGS else "")
+    sport = normalize_sport(value)
+    return sport if sport in SPORT_TAGS else ""
 
 
 def _style_taper_context_from_flags(flags: dict, style_tag_map: dict) -> tuple[str, frozenset[str]]:

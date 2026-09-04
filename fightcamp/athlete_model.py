@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import re
 
+from .sports import normalize_sport
+
 from .normalization import clean_list
 from .stage2_render_guards import (
     _all_active_injuries_surface_only_from_training_context,
@@ -181,7 +183,7 @@ def _build_athlete_model(
     return {
         "has_active_injury": has_active_injury,
         "surface_injury_only": surface_injury_only,
-        "sport": sport,
+        "sport": normalize_sport(training_context.style_technical[0] if training_context.style_technical else sport),
         "status": training_context.status,
         "record": record_profile["record"],
         "wins": record_profile["wins"],
