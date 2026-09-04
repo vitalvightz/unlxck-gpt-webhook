@@ -2,18 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from .combat_load_policy import LoadClass, role_load_profile
 from .normalization import clean_list
 
 _STALE_REASON = "two_hard_spar_days"
-_FREQUENCY_CONSUMING_LOADS = frozenset(
-    {
-        LoadClass.REDUCED_CONTACT,
-        LoadClass.HARD_CONTACT,
-        LoadClass.MEANINGFUL_STRENGTH,
-        LoadClass.MEANINGFUL_CONDITIONING,
-    }
-)
 
 
 def _effective_hard_count_is_resolved_below_two(week: dict[str, Any]) -> bool:
@@ -26,37 +17,6 @@ def _effective_hard_count_is_resolved_below_two(week: dict[str, Any]) -> bool:
     if "effective_hard_sparring_days" not in week:
         return False
     return len(clean_list(week.get("effective_hard_sparring_days"))) < 2
-
-
-def counts_toward_weekly_frequency(role: dict[str, Any]) -> bool:
-    """Return whether a resolved role consumes one planned weekly-session slot.
-
-    Calendar/load semantics are owned by ``combat_load_policy``. Goal repair must
-    not rebuild those semantics from role labels/categories. Genuine hard/reduced
-    contact and meaningful strength/conditioning consume the athlete's planned
-    weekly frequency. Technical-only contact, neural microdoses, recovery, low-load
-    work and zero-load support do not consume a full slot.
-
-    Unknown non-filler roles fail safe and count. A camp-week filler is free unless
-    canonical load authority independently classifies it as a genuine consuming
-    load.
-    """
-    profile = role_load_profile(role)
-    if profile is None:
-        return not bool(role.get("camp_week_filler")) and role.get("category") != "support_insert"
-
-    if profile.load_class in _FREQUENCY_CONSUMING_LOADS:
-        return True
-
-    if role.get("camp_week_filler"):
-        return False
-
-    return False
-
-
-def resolved_weekly_frequency_count(roles: list[dict[str, Any]]) -> int:
-    """Count genuine planned sessions from final resolved role semantics."""
-    return sum(1 for role in roles if counts_toward_weekly_frequency(role))
 
 
 def effective_goal_repair_compression_state(
