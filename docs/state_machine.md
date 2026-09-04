@@ -98,17 +98,18 @@ release and `stage2_failed` for a hold. Held renderer output is retained in
 | `hold` | `review_required` | `stage2_failed` | `review_required` |
 | Runtime/provider failure with no usable response, empty output, persistence failure | no released plan | failure telemetry | `failed` |
 
-Only `goal_preservation_failed` is allowlisted as an observational error in the
-shared policy. It describes planner/evidence disagreement and is preserved in
-`errors` and `quality_review_flags`, including unsatisfied states and missing
-coverage. It cannot trigger planner regeneration or a renderer retry by itself.
-Existing allowlisted presentation warnings can also publish with flags.
+`goal_preservation_failed` has a narrow observational exception only when the
+finding is **not** blocker-severity. The deterministic goal validator emits
+`severity="blocker"` for invalid state, missing effective coverage, stale evidence
+and unjustified downgrades, so those cases remain `hold`. A non-blocker use of the
+same code can publish with flags while retaining the original finding. The policy
+never uses the code allowlist to downgrade a blocker-severity finding.
 
 Renderer divergence is different: injury restrictions, illegal sparring, forbidden
 exercises, effective-dose overages, witness render mismatches, fight-day protocol
 violations, and truncated output remain blocking. Unknown errors, unknown
-blocking warnings, malformed reports, and admin-review blockers fail closed.
-Observations mixed with blockers never override a hold.
+blocking warnings, malformed reports, blocker-severity findings, and admin-review
+blockers fail closed. Observations mixed with blockers never override a hold.
 
 Effective-dose and witness render mismatches get at most one conforming renderer
 repair. Both the corrected output and a still-invalid repair are revalidated by
