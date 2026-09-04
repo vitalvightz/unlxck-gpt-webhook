@@ -6,7 +6,11 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from fightcamp.goal_preservation import validate_goal_preservation
-from fightcamp.stage2_pipeline import build_stage2_package, build_stage2_retry, review_stage2_output
+from fightcamp.stage2_pipeline import (
+    build_stage2_package,
+    build_stage2_retry,
+    review_stage2_output,
+)
 from fightcamp.stage2_policy import (
     admin_review_blocking_findings,
     apply_stage2_release_policy,
@@ -30,13 +34,8 @@ from .structured_plan_calendar_spine import reconcile_calendar_spine
 from .structured_plan_models import build_strict_structured_plan_schema
 from .structured_plan_sparring_reconcile import reconcile_coach_led_sparring_days
 
-# Plan statuses this module writes. Both are athlete-displayable: Stage 2
-# ordinary validator findings do not hold a plan. Goal-contract failures are
-# terminal generation errors and never enter this release fallback.
-# `publishable_with_flags` is also in
-# ADMIN_REVIEW_PLAN_STATUSES, so a flagged plan reaches the athlete AND stays in
-# the admin review surface. `held_for_review` / `review_required` are written by
-# admin actions and Stage 1 triage elsewhere, never here.
+# The central policy owns release. Ready/flagged plans are athlete-displayable;
+# review_required retains the rendered text for admins without releasing it.
 # See docs/state_machine.md > "Stage 2 outcomes".
 _APP_STATUS_READY = "ready"
 _APP_STATUS_PUBLISHABLE_WITH_FLAGS = "publishable_with_flags"
@@ -52,23 +51,6 @@ logger = logging.getLogger(__name__)
 _DEFAULT_FIRST_PASS_CHAR_LIMIT = 180_000
 _DEFAULT_OPENAI_MAX_RETRIES = 0
 _DEFAULT_MAX_OUTPUT_TOKENS = 0
-
-
-def _released_with_flags_report(validator_report: dict[str, Any]) -> dict[str, Any]:
-    """Record that a plan with validator blockers was released anyway.
-
-    Every finding is kept verbatim so the admin review surface still shows what
-    the validator caught. Only the release decision changes, so the persisted
-    report agrees with the saved `publishable_with_flags` status instead of
-    claiming a hold that no longer happens.
-    """
-
-    return {
-        **validator_report,
-        "release_decision": "publish_with_flags",
-        "is_athlete_releasable": True,
-        "is_publishable": True,
-    }
 
 
 class Stage2AutomationError(RuntimeError):
@@ -94,7 +76,7 @@ class Stage2AutomationUnavailableError(Stage2AutomationError):
 
 
 class Stage2GoalPreservationError(Stage2AutomationError):
-    """A deterministic obligation or required rendered witness was lost."""
+    """Historical compatibility only; the central policy decides release."""
 
     def __init__(self, findings: list[dict]):
         self.findings = findings
@@ -141,7 +123,7 @@ def _stage2_max_output_tokens() -> int:
     # large, hidden share of it before emitting any plan text), so a positive cap
     # set too low can truncate the plan mid-output. If the provider marks a
     # response incomplete but still returns usable Stage 2 text, that text is
-    # validated and released with a flag; Stage 1 is never substituted. Default
+    # retained for review; Stage 1 is never substituted. Default
     # is 0 = no cap (provider default), while the Stage 2 timeout still bounds
     # runtime. Set a positive value only when cost/latency needs a hard ceiling.
     return _env_int(
@@ -672,6 +654,29 @@ def _approved_result(
     }
 
 
+def _reviewed_result(stage1_result, *, validator_report, **kwargs):
+    """Store the central decision identically for automatic and manual review."""
+    decision = validator_report["release_decision"]
+    held = decision == "hold"
+    result = _approved_result(
+        stage1_result,
+        validator_report=validator_report,
+        stage2_status=_STAGE2_FAILED if held else _STAGE2_PASS,
+        app_status=(
+            "review_required"
+            if held
+            else _APP_STATUS_PUBLISHABLE_WITH_FLAGS
+            if decision == "publish_with_flags"
+            else _APP_STATUS_READY
+        ),
+        **kwargs,
+    )
+    if held:
+        # Keep rendered content in final_plan_text for admin repair only.
+        result["plan_text"] = ""
+    return result
+
+
 @dataclass
 class DisabledStage2Automator:
     reason: str
@@ -826,14 +831,13 @@ class OpenAIStage2Automator:
         return text, cost
 
     async def finalize(
-        self, *, stage1_result: dict[str, Any], log_context: dict[str, str] | None = None
+        self,
+        *,
+        stage1_result: dict[str, Any],
+        log_context: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         package = build_stage2_package(stage1_result=stage1_result)
         goal_errors = validate_goal_preservation(package["planning_brief"])
-        if goal_errors:
-            # The orchestrator already treats Stage2AutomationError as terminal
-            # without publishing the Stage 1 draft or creating a fallback plan.
-            raise Stage2GoalPreservationError(goal_errors)
         draft_plan_text = str(package.get("draft_plan_text") or "")
         handoff_text = str(package["handoff_text"])
         source = _stage2_source(stage1_result)
@@ -846,16 +850,28 @@ class OpenAIStage2Automator:
         )
 
         first_pass_text, first_pass_cost = await self._generate_text(
-            handoff_text, attempt_label="first_pass", source=source, log_context=log_context
+            handoff_text,
+            attempt_label="first_pass",
+            source=source,
+            log_context=log_context,
         )
         first_review = review_stage2_output(
             planning_brief=package["planning_brief"],
             final_plan_text=first_pass_text,
         )
-        first_review = {
-            **first_review,
-            "validator_report": apply_stage2_release_policy(first_review["validator_report"]),
-        }
+
+        def reviewed_report(review):
+            report = dict(review["validator_report"])
+            errors = report.get("errors")
+            if isinstance(errors, list):
+                errors = list(errors)
+                errors.extend(
+                    finding for finding in goal_errors if finding not in errors
+                )
+                report["errors"] = errors
+            return {**review, "validator_report": apply_stage2_release_policy(report)}
+
+        first_review = reviewed_report(first_review)
         final_text = first_pass_text
         final_cost = first_pass_cost
         attempt_count = 1
@@ -873,7 +889,11 @@ class OpenAIStage2Automator:
             ]
             if isinstance(item, dict)
         }
-        if first_codes & {"late_camp_effective_prescription_exceeded", "goal_preservation_render_mismatch"}:
+        original_review_report = dict(first_review["validator_report"])
+        if first_codes & {
+            "late_camp_effective_prescription_exceeded",
+            "goal_preservation_render_mismatch",
+        }:
             retry = build_stage2_retry(
                 stage1_result=stage1_result,
                 final_plan_text=first_pass_text,
@@ -882,57 +902,37 @@ class OpenAIStage2Automator:
             retry_text = str(retry.get("repair_prompt") or "")
             if retry.get("needs_retry") and retry_text:
                 final_text, final_cost = await self._generate_text(
-                    retry_text, attempt_label="effective_dose_repair", source=source,
+                    retry_text,
+                    attempt_label="effective_dose_repair",
+                    source=source,
                     log_context=log_context,
                 )
                 attempt_count = 2
                 first_review = review_stage2_output(
                     planning_brief=package["planning_brief"], final_plan_text=final_text
                 )
-                first_review = {
-                    **first_review,
-                    "validator_report": apply_stage2_release_policy(first_review["validator_report"]),
-                }
+                first_review = reviewed_report(first_review)
         plan_text_cost = (
             _merge_stage2_costs(first_pass_cost, final_cost)
             if attempt_count == 2
             else first_pass_cost
         )
 
-        goal_errors = [item for field in ("errors", "blocking_warnings")
-                       for item in first_review["validator_report"].get(field, [])
-                       if item.get("code") in {"goal_preservation_failed", "goal_preservation_render_mismatch"}]
-        if goal_errors:
-            raise _with_stage2_cost(Stage2GoalPreservationError(goal_errors), plan_text_cost)
+        if attempt_count == 2:
+            first_review["validator_report"]["repair_source_report"] = (
+                original_review_report
+            )
 
-        final_response_incomplete = bool(final_cost.get("stage2_incomplete_response"))
-        if bool(plan_text_cost.get("stage2_incomplete_response")):
-            # Incomplete-response audit survives an effective-dose repair. If the
-            # final call itself was incomplete, the partial Stage 2 body is the
-            # athlete-facing plan. If only an earlier call was incomplete, the
-            # repaired Stage 2 body stays athlete-facing but the audit flag remains.
-            partial_report = dict(first_review["validator_report"])
-            warnings = list(partial_report.get("warnings") or [])
-            warning_message = (
-                "Provider marked the athlete-facing Stage 2 response incomplete; partial Stage 2 text was released instead of falling back to Stage 1."
-                if final_response_incomplete
-                else "Provider marked an earlier Stage 2 response incomplete; a subsequent Stage 2 repair produced the athlete-facing plan."
-            )
-            warnings.append(
+        if final_cost.get("stage2_incomplete_response"):
+            report = dict(first_review["validator_report"])
+            report["errors"] = [
+                *(report.get("errors") or []),
                 {
-                    "code": "stage2_incomplete_response",
-                    "message": warning_message,
-                }
-            )
-            partial_report.update(
-                {
-                    "warnings": warnings,
-                    "release_decision": "publish_with_flags",
-                    "is_athlete_releasable": True,
-                    "is_publishable": True,
-                }
-            )
-            first_review = {**first_review, "validator_report": partial_report}
+                    "code": "stage2_output_truncated",
+                    "message": "Provider marked the final Stage 2 response incomplete.",
+                },
+            ]
+            first_review = reviewed_report({**first_review, "validator_report": report})
 
         quality_findings = athlete_release_with_flags_findings(first_review["validator_report"])
         admin_blocking_findings = admin_review_blocking_findings(first_review["validator_report"])
@@ -946,61 +946,16 @@ class OpenAIStage2Automator:
             len(admin_blocking_findings),
         )
 
-        # Goal-contract failures have already stopped above. Every outcome below is
-        # athlete-displayable; the findings decide which release status is
-        # written, not whether the plan is released.
-        if release_decision == "publish":
-            result = _approved_result(
-                stage1_result,
-                draft_plan_text=draft_plan_text,
-                final_plan_text=final_text,
-                validator_report=first_review["validator_report"],
-                attempt_count=attempt_count,
-                stage2_status=_STAGE2_PASS,
-                app_status=_APP_STATUS_READY,
-                retry_text=retry_text,
-                stage2_cost=plan_text_cost,
-            )
-        elif release_decision == "publish_with_flags":
-            logger.info(
-                "[stage2] first_pass releasing with quality flags count=%s",
-                len(quality_findings),
-            )
-            result = _approved_result(
-                stage1_result,
-                draft_plan_text=draft_plan_text,
-                final_plan_text=final_text,
-                validator_report=first_review["validator_report"],
-                attempt_count=attempt_count,
-                stage2_status=_STAGE2_PASS,
-                app_status=_APP_STATUS_PUBLISHABLE_WITH_FLAGS,
-                retry_text=retry_text,
-                stage2_cost=plan_text_cost,
-            )
-        else:
-            # What used to be an admin hold. The plan is released with flags and
-            # stays in the admin review surface (`publishable_with_flags` is in
-            # ADMIN_REVIEW_PLAN_STATUSES), so every finding is still visible to
-            # admins — it just no longer gates delivery to the athlete. The
-            # `stage2_failed` audit value records that the validator did fail.
-            logger.warning(
-                "[stage2] first_pass has release blockers; releasing with flags for admin audit "
-                "(errors=%s blocking=%s admin_blockers=%s)",
-                len(first_review["validator_report"].get("errors") or []),
-                len(first_review["validator_report"].get("blocking_warnings") or []),
-                len(admin_blocking_findings),
-            )
-            result = _approved_result(
-                stage1_result,
-                draft_plan_text=draft_plan_text,
-                final_plan_text=final_text,
-                validator_report=_released_with_flags_report(first_review["validator_report"]),
-                attempt_count=attempt_count,
-                stage2_status=_STAGE2_FAILED,
-                app_status=_APP_STATUS_PUBLISHABLE_WITH_FLAGS,
-                retry_text=retry_text,
-                stage2_cost=plan_text_cost,
-            )
+        # The central policy is final: callers never upgrade HOLD to publication.
+        result = _reviewed_result(
+            stage1_result,
+            draft_plan_text=draft_plan_text,
+            final_plan_text=final_text,
+            validator_report=first_review["validator_report"],
+            attempt_count=attempt_count,
+            retry_text=retry_text,
+            stage2_cost=plan_text_cost,
+        )
 
         # Structured-plan conversion is triggered by the canonical state-machine
         # predicate (athlete-displayable plans only), not a hardcoded Stage 2

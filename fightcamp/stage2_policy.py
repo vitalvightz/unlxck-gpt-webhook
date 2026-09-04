@@ -65,6 +65,7 @@ def __getattr__(name: str) -> Any:
 
 
 def is_hard_stage2_blocker(code: str) -> bool:
+    """Historical diagnostic classification; it no longer vetoes release."""
     return str(code or "").strip() in _code_set("hard_stage2_blocker_codes")
 
 
@@ -77,6 +78,7 @@ def is_athlete_release_with_flags_code(code: str) -> bool:
 
 
 def is_admin_review_blocking_code(code: str) -> bool:
+    """Historical/admin diagnostic classification; it no longer vetoes release."""
     return str(code or "").strip() in _code_set("admin_review_blocking_codes")
 
 
@@ -87,6 +89,7 @@ def _finding_identity(item: dict) -> tuple:
         str(item.get("week_index") or "").strip(),
         str(item.get("session_index") or "").strip(),
         str(item.get("requirement") or "").strip(),
+        str(item.get("goal") or "").strip(),
         str(item.get("line") or "").strip(),
     )
 
@@ -122,79 +125,80 @@ def admin_review_blocking_findings(validator_report: dict) -> list[dict]:
     return _policy_findings(validator_report, _code_set("admin_review_blocking_codes"))
 
 
+def _normalised_collection(validator_report: dict, key: str) -> list[dict]:
+    value = validator_report.get(key, [])
+    if not isinstance(value, list):
+        return []
+    return [dict(item) for item in value if isinstance(item, dict)]
+
+
 def apply_stage2_release_policy(validator_report: dict) -> dict:
-    """Attach one release decision whose fields agree with the saved status.
+    """Attach the non-blocking Stage 2 release decision.
 
-    Low-risk allowlisted findings move to ``quality_review_flags`` and remain
-    athlete-releasable. Admin-review and hard-blocker warnings are promoted to
-    ``blocking_warnings``. Any other pre-existing blocking warning is preserved,
-    so an unknown blocker fails closed instead of silently reaching an athlete.
+    Once Stage 2 has produced usable athlete-facing plan text, validators are
+    observational only. Every validator finding remains available for telemetry,
+    QA and admin review, but no error, warning, severity label, unknown code or
+    malformed validator collection may convert that usable plan into a hold.
 
-    Release-relevant collections must be lists when present. Malformed persisted
-    reports fail closed before policy findings are inspected, preventing a dict,
-    string, or arbitrary object from being treated as an empty warning list.
+    True no-plan/runtime/persistence failures are handled outside this policy,
+    before or after a usable Stage 2 result exists. This function therefore has
+    only two release outcomes: ``publish`` for a clean report and
+    ``publish_with_flags`` when anything needs audit.
     """
 
+    report = validator_report if isinstance(validator_report, dict) else {}
     malformed_fields = [
         key
         for key in _RELEASE_COLLECTION_FIELDS
-        if key in validator_report and not isinstance(validator_report.get(key), list)
+        if key in report
+        and (
+            not isinstance(report.get(key), list)
+            or any(not isinstance(item, dict) for item in report.get(key, []))
+        )
     ]
-    if malformed_fields:
-        return {
-            **validator_report,
-            "quality_review_flags": [],
-            "quality_review_flag_count": 0,
-            "admin_review_blocking_flags": [],
-            "admin_review_blocking_flag_count": 0,
-            "release_policy_malformed_fields": malformed_fields,
-            "release_decision": "hold",
-            "is_athlete_releasable": False,
-            "is_publishable": False,
-        }
 
-    quality_findings = athlete_release_with_flags_findings(validator_report)
-    admin_findings = admin_review_blocking_findings(validator_report)
-    existing_blocking = [
-        dict(item)
-        for item in validator_report.get("blocking_warnings", []) or []
-        if isinstance(item, dict)
-        and not is_athlete_release_with_flags_code(str(item.get("code") or ""))
-    ]
-    hard_warning_findings = [
-        dict(item)
-        for key in ("warnings", "review_flags")
-        for item in validator_report.get(key, []) or []
-        if isinstance(item, dict)
-        and is_hard_stage2_blocker(str(item.get("code") or ""))
-    ]
-    blocking_warnings = _dedupe_findings(
-        [*existing_blocking, *admin_findings, *hard_warning_findings]
+    collections = {
+        key: _normalised_collection(report, key)
+        for key in _RELEASE_COLLECTION_FIELDS
+    }
+    all_findings = _dedupe_findings(
+        [
+            dict(item)
+            for key in _RELEASE_COLLECTION_FIELDS
+            for item in collections[key]
+        ]
     )
-    errors = validator_report.get("errors")
-    malformed_errors = not isinstance(errors, list)
-    has_errors = malformed_errors or bool(errors)
-    is_athlete_releasable = not has_errors and not blocking_warnings
-    release_decision = (
-        "hold"
-        if not is_athlete_releasable
-        else ("publish_with_flags" if quality_findings else "publish")
-    )
+    malformed_findings = [
+        {
+            "code": "validator_report_malformed",
+            "field": key,
+            "severity": "audit",
+            "message": "Validator collection was malformed; plan released and report flagged for audit.",
+        }
+        for key in malformed_fields
+    ]
+    quality_findings = _dedupe_findings([*all_findings, *malformed_findings])
+    admin_findings = admin_review_blocking_findings(collections)
+    release_decision = "publish_with_flags" if quality_findings else "publish"
+
     return {
-        **validator_report,
-        "blocking_warnings": blocking_warnings,
-        "blocking_warning_count": len(blocking_warnings),
+        **report,
+        **collections,
+        "blocking_warning_count": len(collections["blocking_warnings"]),
         "quality_review_flags": quality_findings,
         "quality_review_flag_count": len(quality_findings),
         "admin_review_blocking_flags": admin_findings,
         "admin_review_blocking_flag_count": len(admin_findings),
+        "release_policy_malformed_fields": malformed_fields,
+        "validator_findings_observational": True,
         "release_decision": release_decision,
-        "is_athlete_releasable": is_athlete_releasable,
-        "is_publishable": is_athlete_releasable,
+        "is_athlete_releasable": True,
+        "is_publishable": True,
     }
 
 
 def _is_repair_prompt_code(code: str) -> bool:
+    """Keep repair classification available for explicit/manual tooling only."""
     normalized = str(code or "").strip()
     if not normalized or normalized in _REPAIR_PROMPT_EXCLUDED_CODES:
         return False
@@ -207,6 +211,7 @@ def _is_repair_prompt_code(code: str) -> bool:
 
 
 def hard_blocker_findings(validator_report: dict) -> list[dict]:
+    """Return legacy hard-classified findings for diagnostics, never release gating."""
     findings: list[dict] = []
     for key in ("errors", "blocking_warnings"):
         for item in validator_report.get(key, []) or []:
@@ -240,7 +245,10 @@ def prompt_safe_validator_report(validator_report: dict) -> dict:
         + admin_blocking_findings
         + quality_findings
     )
-    hard_codes = {str(item.get("code") or "").strip() for item in [*errors, *blocking_warnings]}
+    hard_codes = {
+        str(item.get("code") or "").strip()
+        for item in [*errors, *blocking_warnings]
+    }
     restricted_hits = (
         list(validator_report.get("restricted_hits", []) or [])
         if "restriction_violation" in hard_codes
@@ -249,7 +257,11 @@ def prompt_safe_validator_report(validator_report: dict) -> dict:
     return {
         "errors": errors,
         "warnings": repair_warnings,
-        "blocking_warnings": _dedupe_findings([*blocking_warnings, *admin_blocking_findings]),
-        "missing_required_elements": list(validator_report.get("missing_required_elements", []) or []),
+        "blocking_warnings": _dedupe_findings(
+            [*blocking_warnings, *admin_blocking_findings]
+        ),
+        "missing_required_elements": list(
+            validator_report.get("missing_required_elements", []) or []
+        ),
         "restricted_hits": restricted_hits,
     }

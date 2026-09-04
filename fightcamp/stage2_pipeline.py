@@ -501,7 +501,14 @@ def build_stage2_retry(
             "repair_prompt": None,
         }
 
-    if any(item.get("code") == "goal_preservation_failed" for item in validator_report.get("errors", [])):
+    goal_failures = [
+        item
+        for field in ("errors", "blocking_warnings")
+        for item in validator_report.get(field, []) or []
+        if isinstance(item, dict)
+        and str(item.get("code") or "").strip() == "goal_preservation_failed"
+    ]
+    if goal_failures:
         return {
             "status": _STATUS_FAIL,
             "validator_report": validator_report,

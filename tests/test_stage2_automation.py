@@ -79,45 +79,78 @@ def _stage1_result() -> dict:
     }
 
 
-def test_missing_deterministic_goal_contract_stops_before_model_or_release():
-    stage1 = _stage1_result()
-    stage1["planning_brief"]["athlete_snapshot"] = {"key_goals": ["strength"], "days_until_fight": 26}
-    client = FakeClient([])
-    automator = OpenAIStage2Automator(client=client, model="test-model")
-    with pytest.raises(stage2_module.Stage2GoalPreservationError, match="strength"):
-        asyncio.run(automator.finalize(stage1_result=stage1))
-    assert not client.responses.calls
+@pytest.mark.parametrize(
+    "findings",
+    [
+        [
+            {
+                "code": "goal_preservation_failed",
+                "goal": "speed",
+                "satisfied": False,
+                "missing_coverage": ["D14-D20"],
+            }
+        ],
+        [
+            {"code": "goal_preservation_failed", "goal": "speed"},
+            {"code": "goal_preservation_failed", "goal": "strength"},
+            {"code": "goal_preservation_failed", "goal": "conditioning"},
+        ],
+    ],
+)
+def test_goal_findings_release_usable_plan_without_renderer_retry(monkeypatch, findings):
+    monkeypatch.setattr(stage2_module, "validate_goal_preservation", lambda _: findings)
+    monkeypatch.setattr(
+        stage2_module, "review_stage2_output", lambda **_: _review("PASS")
+    )
+    client = FakeClient([_response("# Usable camp")])
+    result = asyncio.run(
+        OpenAIStage2Automator(client=client, model="test").finalize(
+            stage1_result=_stage1_result()
+        )
+    )
+    assert len(client.responses.calls) == 1
+    assert result["status"] == "publishable_with_flags"
+    assert result["plan_text"] == "# Usable camp"
+    assert result["final_plan_text"] == "# Usable camp"
+    assert result["stage2_status"] == "stage2_pass"
+    assert result["stage2_retry_text"] == ""
+    report = result["stage2_validator_report"]
+    assert report["errors"] == findings
+    assert report["is_athlete_releasable"] is True
+    assert report["release_decision"] == "publish_with_flags"
 
 
-def test_goal_witness_loss_cannot_publish_with_flags_after_failed_render_repair(monkeypatch):
-    def review(**_):
-        return {"status": "FAIL", "needs_retry": True, "validator_report": {
-            "errors": [{"code": "goal_preservation_render_mismatch", "goal": "strength"}], "warnings": []}}
-    monkeypatch.setattr(stage2_module, "review_stage2_output", review)
-    client = FakeClient([_response("# Power only"), _incomplete_response()])
-    automator = OpenAIStage2Automator(client=client, model="test-model")
-    with pytest.raises(stage2_module.Stage2GoalPreservationError) as caught:
-        asyncio.run(automator.finalize(stage1_result=_stage1_result()))
-    assert len(client.responses.calls) == 2
-    assert caught.value.stage2_cost
+def test_goal_witness_loss_releases_without_validator_retry(monkeypatch):
+    finding = {"code": "goal_preservation_render_mismatch", "goal": "strength"}
+    monkeypatch.setattr(
+        stage2_module,
+        "review_stage2_output",
+        lambda **_: {
+            "status": "FAIL",
+            "needs_retry": True,
+            "validator_report": {"errors": [finding], "warnings": []},
+        },
+    )
+    client = FakeClient([_response("# Usable camp")])
+    result = asyncio.run(
+        OpenAIStage2Automator(client=client, model="test").finalize(
+            stage1_result=_stage1_result()
+        )
+    )
+    assert len(client.responses.calls) == 1
+    assert result["status"] == "publishable_with_flags"
+    assert result["plan_text"] == "# Usable camp"
+    assert result["stage2_attempt_count"] == 1
+    assert result["stage2_retry_text"] == ""
+    assert result["stage2_validator_report"]["errors"] == [finding]
 
 
-def test_goal_witness_render_repair_may_publish_after_it_passes(monkeypatch):
-    reviews = iter([
-        {"status": "FAIL", "needs_retry": True, "validator_report": {
-            "errors": [{"code": "goal_preservation_render_mismatch", "goal": "strength"}], "warnings": []}},
-        _review("PASS"),
-    ])
-    monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: next(reviews))
-    client = FakeClient([_response("# Power only"), _response("# Preserved strength")])
-    result = asyncio.run(OpenAIStage2Automator(client=client, model="test-model").finalize(stage1_result=_stage1_result()))
-    assert len(client.responses.calls) == 2
-    assert result["status"] == "ready"
-    assert result["final_plan_text"] == "# Preserved strength"
-
-
-def test_first_pass_pass_returns_ready_with_one_provider_call(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("PASS"))
+def test_first_pass_pass_returns_ready_with_one_provider_call(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        stage2_module, "review_stage2_output", lambda **_: _review("PASS")
+    )
     client = FakeClient([_response("# final plan")])
     automator = OpenAIStage2Automator(client=client, model="test-model")
 
@@ -130,6 +163,7 @@ def test_first_pass_pass_returns_ready_with_one_provider_call(monkeypatch: pytes
     assert result["stage2_status"] == "stage2_pass"
     assert result["stage2_attempt_count"] == 1
     assert result["stage2_retry_text"] == ""
+
 
 def test_first_pass_omits_max_output_tokens_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("UNLXCK_STAGE2_MAX_OUTPUT_TOKENS", raising=False)
@@ -268,24 +302,32 @@ def test_plan_text_first_pass_omits_json_mode(monkeypatch: pytest.MonkeyPatch) -
     assert "text" not in client.responses.calls[0]
 
 
-def test_first_pass_incomplete_response_fails_the_job(monkeypatch: pytest.MonkeyPatch) -> None:
-    # A response truncated by the output-token cap must hard-fail (athlete retries)
-    # rather than ship a half-written plan. This is the production failure that the
-    # generous default + 0-means-no-cap knob are meant to avoid.
+def test_first_pass_incomplete_response_releases_with_flags(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Partial Stage 2 text is still a usable plan; the provider audit stays visible.
     monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("PASS"))
     client = FakeClient([_incomplete_response()])
     automator = OpenAIStage2Automator(client=client, model="test-model")
 
-    with pytest.raises(Stage2AutomationError, match="incomplete before producing a full plan"):
-        asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+    assert result["status"] == "publishable_with_flags"
+    assert result["plan_text"].startswith("# Fight Camp Plan")
+    assert result["stage2_status"] == "stage2_pass"
+    assert any(
+        item.get("code") == "stage2_output_truncated"
+        for item in result["stage2_validator_report"]["errors"]
+    )
 
 
-def test_first_pass_pass_with_review_flags_returns_ready(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_first_pass_pass_with_review_flags_returns_flagged(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("PASS_WITH_FLAGS"))
     client = FakeClient([_response("# final plan with minor flags")])
     automator = OpenAIStage2Automator(client=client, model="test-model")
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
-    assert result["status"] == "ready"
+    assert result["status"] == "publishable_with_flags"
     assert result["plan_text"] == "# final plan with minor flags"
 
 
@@ -327,7 +369,7 @@ def test_first_pass_low_risk_quality_codes_publish_with_flags(
 
 
 @pytest.mark.parametrize("code", sorted(ADMIN_REVIEW_BLOCKING_CODES))
-def test_first_pass_context_or_programme_codes_release_with_flags(
+def test_first_pass_context_or_programme_codes_publish_with_flags(
     monkeypatch: pytest.MonkeyPatch,
     code: str,
 ) -> None:
@@ -353,11 +395,9 @@ def test_first_pass_context_or_programme_codes_release_with_flags(
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
-    # Released to the athlete, and still in the admin review surface
-    # (publishable_with_flags) with the finding intact.
     assert result["status"] == "publishable_with_flags"
     assert result["plan_text"] == "# unsafe or incomplete plan"
-    assert result["stage2_status"] == "stage2_failed"
+    assert result["stage2_status"] == "stage2_pass"
     report = result["stage2_validator_report"]
     assert report["release_decision"] == "publish_with_flags"
     assert report["is_athlete_releasable"] is True
@@ -365,7 +405,9 @@ def test_first_pass_context_or_programme_codes_release_with_flags(
     assert report["admin_review_blocking_flags"] == [finding]
 
 
-def test_first_pass_mixed_quality_and_blocking_codes_release_with_flags(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_first_pass_mixed_quality_and_blocking_codes_publish_with_flags(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     findings = [{"code": "option_overload"}, {"code": "missing_required_element"}]
     monkeypatch.setattr(
         stage2_module,
@@ -386,15 +428,16 @@ def test_first_pass_mixed_quality_and_blocking_codes_release_with_flags(monkeypa
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
     assert result["status"] == "publishable_with_flags"
-    assert result["stage2_validator_report"]["quality_review_flags"] == [
-        {"code": "option_overload"}
-    ]
+    assert result["plan_text"] == "# mixed plan"
+    assert result["stage2_validator_report"]["quality_review_flags"] == findings
     assert result["stage2_validator_report"]["admin_review_blocking_flags"] == [
         {"code": "missing_required_element"}
     ]
 
 
-def test_first_pass_unknown_blocking_code_releases_with_flags(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_first_pass_unknown_blocking_code_publishes_with_flags(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     unknown = {"code": "brand_new_warning_code"}
     monkeypatch.setattr(
         stage2_module,
@@ -414,14 +457,14 @@ def test_first_pass_unknown_blocking_code_releases_with_flags(monkeypatch: pytes
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
-    # An unknown blocker is still recorded, but it no longer withholds the plan.
     assert result["status"] == "publishable_with_flags"
+    assert result["plan_text"] == "# unknown plan"
     assert result["stage2_validator_report"]["blocking_warnings"] == [unknown]
     assert result["stage2_validator_report"]["release_decision"] == "publish_with_flags"
     assert result["stage2_validator_report"]["is_publishable"] is True
 
 
-def test_first_pass_hard_failure_releases_with_flags_with_one_provider_call(
+def test_first_pass_hard_failure_publishes_with_flags_with_one_provider_call(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("FAIL"))
@@ -434,11 +477,9 @@ def test_first_pass_hard_failure_releases_with_flags_with_one_provider_call(
     assert result["status"] == "publishable_with_flags"
     assert result["plan_text"] == "# first pass needs review"
     assert result["final_plan_text"] == "# first pass needs review"
-    assert result["stage2_status"] == "stage2_failed"
+    assert result["stage2_status"] == "stage2_pass"
     assert result["stage2_attempt_count"] == 1
     assert result["stage2_retry_text"] == ""
-    # Every validator finding survives for the admin surface; only the release
-    # decision differs from the raw policy report.
     report = dict(result["stage2_validator_report"])
     report.pop("structured_plan")
     expected = apply_stage2_release_policy(_review("FAIL")["validator_report"])
@@ -447,43 +488,48 @@ def test_first_pass_hard_failure_releases_with_flags_with_one_provider_call(
     assert report["release_decision"] == "publish_with_flags"
 
 
-def test_effective_dose_failure_runs_one_repair_and_publishes_repaired_plan(
+def test_effective_dose_failure_does_not_force_renderer_repair(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    reviews = iter([
-        {
-            "status": "FAIL", "needs_retry": True,
-            "validator_report": {"errors": [{
-                "code": "late_camp_effective_prescription_exceeded", "severity": "blocker",
-                "line": "Barbell Back Squat: 3 sets x 5 reps", "scheduled_d_day": 16,
-                "exercise": "Back Squat", "effective_max_sets": 3, "effective_max_reps": 3,
-                "effective_rpe_cap": 7, "violations": ["reps 5 > effective max 3"],
-            }], "warnings": []},
+    finding = {
+        "code": "late_camp_effective_prescription_exceeded",
+        "severity": "blocker",
+        "line": "Barbell Back Squat: 3 sets x 5 reps",
+        "scheduled_d_day": 16,
+        "exercise": "Back Squat",
+        "effective_max_sets": 3,
+        "effective_max_reps": 3,
+        "effective_rpe_cap": 7,
+        "violations": ["reps 5 > effective max 3"],
+    }
+    monkeypatch.setattr(
+        stage2_module,
+        "review_stage2_output",
+        lambda **_: {
+            "status": "FAIL",
+            "needs_retry": True,
+            "validator_report": {"errors": [finding], "warnings": []},
         },
-        _review("PASS"),
-    ])
-    monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: next(reviews))
+    )
     client = FakeClient([
         _response("# D-16\nBack Squat: 3 x 5", input_tokens=11, output_tokens=7),
-        _response("# D-16\nBack Squat: 3 x 3", input_tokens=13, output_tokens=5),
     ])
     result = asyncio.run(OpenAIStage2Automator(client=client, model="test-model").finalize(
         stage1_result=_stage1_result()
     ))
 
-    assert len(client.responses.calls) == 2
-    assert result["stage2_attempt_count"] == 2
+    assert len(client.responses.calls) == 1
+    assert result["stage2_attempt_count"] == 1
     assert result["stage2_status"] == "stage2_pass"
-    assert result["status"] == "ready"
-    assert result["final_plan_text"].endswith("Back Squat: 3 x 3")
-    assert "reduce_strength_dose_to_effective_prescription" in result["stage2_retry_text"]
-    # Each plan-text call contributes exactly once to persisted telemetry.
-    assert result["stage2_cost"]["stage2_input_tokens"] == 24
-    assert result["stage2_cost"]["stage2_output_tokens"] == 12
-    assert result["stage2_cost"]["stage2_total_tokens"] == 36
+    assert result["status"] == "publishable_with_flags"
+    assert result["final_plan_text"].endswith("Back Squat: 3 x 5")
+    assert result["stage2_retry_text"] == ""
+    assert result["stage2_cost"]["stage2_input_tokens"] == 11
+    assert result["stage2_cost"]["stage2_output_tokens"] == 7
+    assert result["stage2_cost"]["stage2_total_tokens"] == 18
 
 
-def test_first_pass_non_pass_without_release_blockers_returns_ready(
+def test_first_pass_non_pass_with_findings_returns_flagged(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("WARN"))
@@ -493,7 +539,7 @@ def test_first_pass_non_pass_without_release_blockers_returns_ready(
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
     assert len(client.responses.calls) == 1
-    assert result["status"] == "ready"
+    assert result["status"] == "publishable_with_flags"
     assert result["plan_text"] == "# first pass clean enough to release"
     assert result["final_plan_text"] == "# first pass clean enough to release"
     assert result["stage2_status"] == "stage2_pass"
@@ -671,15 +717,16 @@ def test_missing_usage_does_not_crash_and_falls_back_to_estimates(
     assert cost["stage2_response_id"] == "resp_no_usage"
 
 
-def test_incomplete_response_failure_carries_actual_cost(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_incomplete_response_release_carries_actual_cost(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("PASS"))
     client = FakeClient([_incomplete_response()])
     automator = OpenAIStage2Automator(client=client, model="test-model")
 
-    with pytest.raises(Stage2AutomationError) as exc_info:
-        asyncio.run(automator.finalize(stage1_result=_stage1_result()))
-
-    cost = exc_info.value.stage2_cost
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+    cost = result["stage2_cost"]
+    assert result["status"] == "publishable_with_flags"
     assert cost is not None
     assert cost["stage2_model"] == "test-model"
     assert cost["stage2_input_tokens"] == 10
