@@ -203,7 +203,10 @@ def test_two_day_contact_gap_exposes_managed_strength_repair_slot():
     week["goal_repair_candidates"] = [_role()]
     _resolve(brief)
     roles = brief["weekly_role_map"]["weeks"][0]["session_roles"]
+    roles = brief["weekly_role_map"]["weeks"][0]["session_roles"]
     assert roles[0]["scheduled_day_hint"] == "Wednesday"
+    assert any(a["reason_code"] == "between_hard_contacts_managed_strength"
+               for a in _goal(brief, "strength")["repair_attempts"])
     assert _goal(brief, "strength")["satisfied"] is True
 
 
