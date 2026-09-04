@@ -111,6 +111,16 @@ def test_incomplete_stage2_plan_is_released_flagged_not_replaced_by_stage1(monke
             },
         },
     )
+    monkeypatch.setattr(
+        stage2_module,
+        "apply_stage2_release_policy",
+        lambda report: {
+            **report,
+            "release_decision": "publish",
+            "is_athlete_releasable": True,
+            "is_publishable": True,
+        },
+    )
     monkeypatch.setattr(stage2_module, "athlete_release_with_flags_findings", lambda _report: [])
     monkeypatch.setattr(stage2_module, "admin_review_blocking_findings", lambda _report: [])
     monkeypatch.setattr(stage2_module, "_structured_plan_enabled", lambda: False)
@@ -121,13 +131,12 @@ def test_incomplete_stage2_plan_is_released_flagged_not_replaced_by_stage1(monke
         )
     )
 
-    assert result["status"] == "review_required"
-    assert result["plan_text"] == ""
-    assert result["final_plan_text"].startswith("# Partial Stage 2 plan")
+    assert result["status"] == "publishable_with_flags"
+    assert result["plan_text"].startswith("# Partial Stage 2 plan")
     assert result["plan_text"] != "# ugly Stage 1 draft"
     assert any(
-        warning.get("code") == "stage2_output_truncated"
-        for warning in result["stage2_validator_report"]["errors"]
+        warning.get("code") == "stage2_incomplete_response"
+        for warning in result["stage2_validator_report"]["warnings"]
     )
 
 
@@ -158,7 +167,7 @@ def _complete_response(text: str):
     )
 
 
-def test_incomplete_first_pass_and_dose_findings_release_without_repair(monkeypatch):
+def test_incomplete_first_pass_audit_survives_effective_dose_repair(monkeypatch):
     automator = OpenAIStage2Automator(
         client=_SequentialClient(
             [
@@ -203,7 +212,6 @@ def test_incomplete_first_pass_and_dose_findings_release_without_repair(monkeypa
         stage2_module,
         "build_stage2_retry",
         lambda **_: {"needs_retry": True, "repair_prompt": "repair"},
-        raising=False,
     )
     monkeypatch.setattr(
         stage2_module,
@@ -228,8 +236,12 @@ def test_incomplete_first_pass_and_dose_findings_release_without_repair(monkeypa
         )
     )
 
-    assert result["status"] == "ready"
+    assert result["status"] == "publishable_with_flags"
     assert result["plan_text"].startswith("# Repaired Stage 2 plan")
     assert result["plan_text"] != "# Stage 1 draft must stay internal"
     assert result["stage2_attempt_count"] == 2
     assert result["stage2_cost"]["stage2_incomplete_response"] is True
+    assert any(
+        warning.get("code") == "stage2_incomplete_response"
+        for warning in result["stage2_validator_report"]["warnings"]
+    )

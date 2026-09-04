@@ -340,20 +340,6 @@ def _fail_review(*codes: str):
     return _review
 
 
-def _quality_review(code: str = "option_overload"):
-    finding = {"code": code}
-    return {
-        "status": "PASS",
-        "needs_retry": False,
-        "validator_report": {
-            "errors": [],
-            "warnings": [finding],
-            "review_flags": [finding],
-            "review_flag_count": 1,
-        },
-    }
-
-
 def test_finalize_skips_structured_when_disabled(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "0")
     monkeypatch.setattr(stage2_module, "review_stage2_output", _pass_review)
@@ -385,11 +371,29 @@ def test_finalize_attaches_valid_structured_plan(monkeypatch: pytest.MonkeyPatch
     assert result["stage2_validator_report"]["structured_plan"]["status"] == "valid"
 
 
-def test_finalize_quality_flag_released_with_flags_and_clean_card(monkeypatch: pytest.MonkeyPatch):
-    # A genuinely allowlisted low-risk quality finding remains athlete-releasable
-    # and the structured card still builds normally.
+def _fail_review(*codes: str):
+    error_codes = codes or ("true_internal_system_leak",)
+
+    def _review(**_):
+        return {
+            "status": "FAIL",
+            "needs_retry": True,
+            "validator_report": {
+                "errors": [{"code": code} for code in error_codes],
+                "warnings": [],
+                "blocking_warnings": [],
+                "review_flag_count": 0,
+            },
+        }
+
+    return _review
+
+
+def test_finalize_soft_blocker_released_with_flags_and_clean_card(monkeypatch: pytest.MonkeyPatch):
+    # A non-safety error (internal scaffolding leak) no longer holds the plan.
+    # It releases with flags and the structured card still builds normally.
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
-    monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _quality_review())
+    monkeypatch.setattr(stage2_module, "review_stage2_output", _fail_review("true_internal_system_leak"))
     client = _FakeClient([_response(_FAITHFUL_FINAL_PLAN), _response(json.dumps(_valid_plan()))])
     automator = OpenAIStage2Automator(client=client, model="test-model")
 
@@ -399,13 +403,11 @@ def test_finalize_quality_flag_released_with_flags_and_clean_card(monkeypatch: p
     assert result["plan_text"] == _FAITHFUL_FINAL_PLAN
     assert isinstance(result["structured_plan"], dict)
     assert result["stage2_validator_report"]["structured_plan"]["status"] == "valid"
-    assert result["stage2_validator_report"]["errors"] == []
-    assert result["stage2_validator_report"]["quality_review_flags"] == [
-        {"code": "option_overload"}
-    ]
+    # The original error is still recorded for admin visibility.
+    assert result["stage2_validator_report"]["errors"] == [{"code": "true_internal_system_leak"}]
 
 
-def test_finalize_blocker_severity_warning_holds(monkeypatch: pytest.MonkeyPatch):
+def test_finalize_soft_blocking_warning_released_with_flags(monkeypatch: pytest.MonkeyPatch):
     def _warn_review(**_):
         return {
             "status": "WARN",
@@ -425,25 +427,33 @@ def test_finalize_blocker_severity_warning_holds(monkeypatch: pytest.MonkeyPatch
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
-    assert result["status"] == "review_required"
-    assert result["plan_text"] == ""
-    assert result["structured_plan"] is None
-    assert (
-        result["stage2_validator_report"]["structured_plan"]["status"]
-        == "not_attempted"
-    )
+    assert result["status"] == "publishable_with_flags"
+    assert result["plan_text"] == _FAITHFUL_FINAL_PLAN
+    assert result["structured_plan"] is not None
+    assert result["stage2_validator_report"]["structured_plan"]["status"] == "valid"
     assert result["stage2_validator_report"]["blocking_warnings"] == [
         {"code": "generic_filler_phrase", "severity": "blocker"}
     ]
 
 
 def test_finalize_low_risk_quality_warning_releases_with_flags(monkeypatch: pytest.MonkeyPatch):
+    # An explicitly allowlisted low-risk quality flag does not hold the athlete.
+    # The structured call has no mocked response, so it must fail cleanly and
+    # leave an auditable not_attempted marker instead of masking the release.
+    def _warn_review(**_):
+        return {
+            "status": "WARN",
+            "needs_retry": True,
+            "validator_report": {
+                "errors": [],
+                "warnings": [{"code": "template_like_session_render", "severity": "blocker"}],
+                "blocking_warnings": [{"code": "template_like_session_render", "severity": "blocker"}],
+                "review_flag_count": 0,
+            },
+        }
+
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
-    monkeypatch.setattr(
-        stage2_module,
-        "review_stage2_output",
-        lambda **_: _quality_review("template_like_session_render"),
-    )
+    monkeypatch.setattr(stage2_module, "review_stage2_output", _warn_review)
     client = _FakeClient([_response("# final plan")])
     automator = OpenAIStage2Automator(client=client, model="test-model")
 
@@ -454,17 +464,17 @@ def test_finalize_low_risk_quality_warning_releases_with_flags(monkeypatch: pyte
     assert result["structured_plan"] is None
     assert result["stage2_validator_report"]["structured_plan"]["status"] == "not_attempted"
     assert result["stage2_validator_report"]["quality_review_flags"] == [
-        {"code": "template_like_session_render"}
+        {"code": "template_like_session_render", "severity": "blocker"}
     ]
     assert result["stage2_validator_report"]["release_decision"] == "publish_with_flags"
     assert result["stage2_validator_report"]["is_publishable"] is True
 
 
 def test_finalize_still_releases_when_card_invalid(monkeypatch: pytest.MonkeyPatch):
-    # A low-risk flagged plan remains releasable even if its optional structured
-    # card never validates; raw plan_text stays the fallback.
+    # The card never validates. The plan still ships on the raw plan_text
+    # fallback; the failed conversion is recorded, not escalated.
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
-    monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _quality_review())
+    monkeypatch.setattr(stage2_module, "review_stage2_output", _fail_review("true_internal_system_leak"))
     client = _FakeClient(
         [
             _response("# final plan"),
@@ -485,10 +495,11 @@ def test_finalize_still_releases_when_card_invalid(monkeypatch: pytest.MonkeyPat
     assert debug["errors"]
 
 
-def test_finalize_safety_error_holds_without_building_card(
-    monkeypatch: pytest.MonkeyPatch,
-):
-    # A safety hold cannot be rescued by building a structured card.
+def test_finalize_safety_error_releases_with_flags_and_builds_card(monkeypatch: pytest.MonkeyPatch):
+    # A safety error (restriction violation) is flagged for admins but no longer
+    # holds the plan, so the release path runs in full — including the structured
+    # card conversion. Both provider responses are supplied so the card really is
+    # built rather than silently failing on an exhausted queue.
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
     monkeypatch.setattr(stage2_module, "review_stage2_output", _fail_review("restriction_violation"))
     client = _FakeClient([_response(_FAITHFUL_FINAL_PLAN), _response(json.dumps(_valid_plan()))])
@@ -496,24 +507,21 @@ def test_finalize_safety_error_holds_without_building_card(
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
-    assert result["status"] == "review_required"
-    assert result["plan_text"] == ""
+    assert result["status"] == "publishable_with_flags"
+    assert result["plan_text"] == _FAITHFUL_FINAL_PLAN
     assert result["stage2_validator_report"]["errors"] == [{"code": "restriction_violation"}]
-    # Held text does not trigger card conversion.
-    assert len(client.responses.calls) == 1
-    assert result["structured_plan"] is None
-    assert result["schema_version"] is None
-    assert (
-        result["stage2_validator_report"]["structured_plan"]["status"]
-        == "not_attempted"
-    )
+    # The card was actually converted: plan-text pass + structured pass.
+    assert len(client.responses.calls) == 2
+    assert isinstance(result["structured_plan"], dict)
+    assert result["schema_version"] == SCHEMA_VERSION
+    assert result["stage2_validator_report"]["structured_plan"]["status"] == "valid"
 
 
-def test_finalize_quality_flag_released_when_structured_disabled(monkeypatch: pytest.MonkeyPatch):
-    # With structured generation off, a genuinely low-risk quality flag still
-    # releases on one model call.
+def test_finalize_soft_blocker_released_when_structured_disabled(monkeypatch: pytest.MonkeyPatch):
+    # With structured generation off there is no card at all; the plan still
+    # releases with flags on one model call.
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "0")
-    monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _quality_review())
+    monkeypatch.setattr(stage2_module, "review_stage2_output", _fail_review("true_internal_system_leak"))
     client = _FakeClient([_response("# final plan")])
     automator = OpenAIStage2Automator(client=client, model="test-model")
 

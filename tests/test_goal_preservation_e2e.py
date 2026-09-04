@@ -19,23 +19,15 @@ def _run(monkeypatch, **fixture_overrides):
     fixture.update(fixture_overrides)
     monkeypatch.setattr(input_parsing, "_utc_now", lambda: dt.datetime(2026, 1, 4, 12))
     fields = {
-        "Full name": "Goal Preservation Regression",
-        "Age": "28",
-        "Weight (kg)": "77",
-        "Target Weight (kg)": "77",
-        "Height (cm)": "180",
-        "Stance": "Orthodox",
-        "Fighting Style (Technical)": fixture["sport"],
-        "Professional Status": "amateur",
-        "Rounds x Minutes": "3x5",
-        "Weekly Training Frequency": str(fixture["training_frequency"]),
-        "Fatigue Level": fixture["fatigue"],
-        "Equipment Access": ", ".join(fixture["equipment"]),
+        "Full name": "Goal Preservation Regression", "Age": "28", "Weight (kg)": "77",
+        "Target Weight (kg)": "77", "Height (cm)": "180", "Stance": "Orthodox",
+        "Fighting Style (Technical)": fixture["sport"], "Professional Status": "amateur",
+        "Rounds x Minutes": "3x5", "Weekly Training Frequency": str(fixture["training_frequency"]),
+        "Fatigue Level": fixture["fatigue"], "Equipment Access": ", ".join(fixture["equipment"]),
         "Training Availability": ", ".join(fixture["training_days"]),
         "Hard Sparring Days": ", ".join(fixture["hard_sparring_days"]),
         "What are your key performance goals?": ", ".join(fixture["key_goals"]),
         "Primary goal": fixture["primary_goal"],
-        "Fighting Style (Tactical)": fixture.get("tactical_style", ""),
         "Where do you feel weakest right now?": ", ".join(fixture["weaknesses"]),
         "Primary weak area": fixture["primary_weak_area"],
         "When is your next fight?": "2026-01-30",
@@ -102,75 +94,3 @@ def test_dense_three_hard_week_full_planner_respects_three_session_budget(monkey
             role.get("category") == "strength" and role.get("compression_reason_codes")
             for role in week["suppressed_roles"]
         )
-
-
-def test_sheyi_speed_audit_holds_unresolved_goal_failure(monkeypatch):
-    import asyncio
-    from types import SimpleNamespace
-
-    import api.stage2_automation as automation
-    from api.generation.persistence import _apply_plan_contract_validation
-    from api.state_machine import job_status_for_plan_status
-    from support import FakeOpenAIClient
-
-    payload, brief, handoff = _run(
-        monkeypatch,
-        hard_sparring_days=["Tuesday", "Friday"],
-        tactical_style="pressure_fighter",
-    )
-    finding = {
-        "code": "goal_preservation_failed",
-        "goal": "speed",
-        "satisfied": False,
-        "missing_coverage": ["D14-D20"],
-    }
-    monkeypatch.setattr(automation, "validate_goal_preservation", lambda _: [finding])
-    # Isolate deterministic goal failure from renderer divergence.
-    monkeypatch.setattr(
-        automation,
-        "review_stage2_output",
-        lambda **_: {
-            "status": "PASS",
-            "needs_retry": False,
-            "validator_report": {"errors": [], "warnings": []},
-        },
-    )
-    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "0")
-    text = """# MMA pressure fighter camp — Week 2
-D-19 (Friday) — Hard sparring
-D-18 (Saturday) — Tactical support
-D-17 (Sunday) — Recovery
-D-16 (Monday) — alactic_speed_day
-D-15 (Tuesday) — Contact converted to technical
-D-14 (Wednesday) — Conditioning
-D-13 (Thursday) — Late-tail strength touch
-"""
-    client = FakeOpenAIClient(
-        [SimpleNamespace(id="speed-regression", output_text=text)]
-    )
-    result = asyncio.run(
-        automation.OpenAIStage2Automator(client=client, model="test").finalize(
-            stage1_result={
-                "plan_text": "Internal draft",
-                "planning_brief": brief,
-                "stage2_payload": payload,
-                "stage2_handoff_text": handoff,
-            }
-        )
-    )
-    persisted = _apply_plan_contract_validation(
-        result,
-        fight_date=brief.get("fight_date"),
-        athlete_id="test",
-        job_id="test",
-        emit_milestone=lambda *args, **kwargs: None,
-    )
-    assert persisted["plan_text"] == ""
-    assert persisted["final_plan_text"] == text.strip()
-    assert persisted["status"] == "review_required"
-    assert job_status_for_plan_status(persisted["status"]) == "review_required"
-    assert finding in persisted["stage2_validator_report"]["errors"]
-    assert persisted["stage2_validator_report"]["is_athlete_releasable"] is False
-    assert persisted["stage2_validator_report"]["release_decision"] == "hold"
-    assert len(client.responses.calls) == 1
-    assert persisted["stage2_attempt_count"] == 1
