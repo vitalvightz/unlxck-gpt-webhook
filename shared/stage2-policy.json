@@ -80,7 +80,5 @@
     "stage2_warning",
     "true_internal_system_leak"
   ],
-  "observational_error_codes": [
-    "goal_preservation_failed"
-  ]
+  "observational_error_codes": []
 }
