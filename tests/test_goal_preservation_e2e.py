@@ -4,6 +4,8 @@ import json
 import logging
 from pathlib import Path
 
+import pytest
+
 from fightcamp import input_parsing
 from fightcamp.goal_preservation import collect_goal_evidence, validate_goal_preservation
 from fightcamp.input_parsing import PlanInput
@@ -12,8 +14,9 @@ from fightcamp.plan_pipeline_rendering import build_stage2_outputs
 from fightcamp.plan_pipeline_runtime import RenderedPlanBundle, build_runtime_context
 
 
-def _run(monkeypatch):
+def _run(monkeypatch, **fixture_overrides):
     fixture = json.loads((Path(__file__).parent / "fixtures/goal_preservation/sheyi_like.json").read_text())
+    fixture.update(fixture_overrides)
     monkeypatch.setattr(input_parsing, "_utc_now", lambda: dt.datetime(2026, 1, 4, 12))
     fields = {
         "Full name": "Goal Preservation Regression", "Age": "28", "Weight (kg)": "77",
@@ -64,3 +67,30 @@ def test_sheyi_like_full_planner_never_credits_a_power_touch_as_strength(monkeyp
     # The full persisted brief remains ordinary JSON; plans.planning_brief is
     # already stored as JSON text, so this addition requires no SQL migration.
     assert json.loads(json.dumps(brief))["goal_preservation"] == brief["goal_preservation"]
+
+
+@pytest.mark.parametrize("fatigue", ["Low", "Moderate"])
+def test_dense_three_hard_week_full_planner_respects_three_session_budget(monkeypatch, fatigue):
+    _, brief, _ = _run(
+        monkeypatch,
+        sport="Boxing",
+        training_frequency=3,
+        training_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+        hard_sparring_days=["Monday", "Wednesday", "Friday"],
+        fatigue=fatigue,
+    )
+    dense_weeks = [
+        week for week in brief["weekly_role_map"]["weeks"]
+        if {day.lower() for day in week.get("effective_hard_sparring_days", [])}
+        == {"monday", "wednesday", "friday"}
+        and min(day["d_day"] for day in week["calendar_days"]) > 13
+    ]
+    assert dense_weeks, "Exercise a normal-camp week with three resolved hard contacts"
+    for week in dense_weeks:
+        roles = week["session_roles"]
+        assert len([role for role in roles if role["role_key"] == "hard_sparring_day"]) == 3
+        assert not any(role.get("category") == "strength" for role in roles)
+        assert any(
+            role.get("category") == "strength" and role.get("compression_reason_codes")
+            for role in week["suppressed_roles"]
+        )

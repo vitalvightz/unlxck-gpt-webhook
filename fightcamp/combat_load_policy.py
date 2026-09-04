@@ -16,9 +16,8 @@ Rules of ownership:
   occupancy semantics;
 - calendar positions are monotonically increasing chronological integers. Raw
   D-day counts must be converted by callers because they run in reverse;
-- stronger between-hard protection requires an explicit planner-owned collision
-  scope. Immediate +/-1-day hard-contact protection remains global across scope
-  boundaries;
+- tight gaps of one or two intervening days use the nearest hard contacts
+  globally, independently of planner scope. Wider spans use normal adjacency;
 - bad explicit canonical stamps fail loudly instead of becoming a second source
   of truth.
 """
@@ -92,6 +91,7 @@ class CalendarCollisionContext:
     previous_hard_distance: int | None
     next_hard_distance: int | None
     between_effective_hard_contacts: bool
+    # Always the nearest global pair; scope must not hide a tighter hard gap.
     hard_contact_gap_intervening_days: int | None
 
 
@@ -523,9 +523,7 @@ def build_calendar_context(
         next_hard_distance=next_distance,
         between_effective_hard_contacts=between,
         hard_contact_gap_intervening_days=(
-            (scoped_previous_distance + scoped_next_distance - 1)
-            if between
-            else (previous_distance + next_distance - 1)
+            previous_distance + next_distance - 1
             if previous_distance is not None and next_distance is not None
             else None
         ),
@@ -600,20 +598,12 @@ def evaluate_calendar_candidate(
         )
 
     gap_days = context.hard_contact_gap_intervening_days
-    has_nearest_hard_pair = (
-        context.previous_hard_distance is not None
-        and context.next_hard_distance is not None
-    )
-    if (
-        gap_days is not None
-        and gap_days <= 2
-        and (context.between_effective_hard_contacts or has_nearest_hard_pair)
-    ):
+    if gap_days is not None and gap_days <= 2:
         if load in _SANDWICH_ALLOW_LOADS:
             return _decision(
                 PlacementDirective.ALLOW,
                 "between_hard_contacts_low_cost",
-                "Scoped between-contact days prefer off, zero-load, recovery, or low-aerobic support.",
+                "Tight between-contact days prefer off, zero-load, recovery, or low-aerobic support.",
             )
         if load is LoadClass.LOW_LOAD_PHYSICAL:
             return _decision(

@@ -768,20 +768,26 @@ def test_cross_scope_tight_gap_still_applies_meaningful_load_policy():
     assert decision.reason_code == "between_hard_contacts_managed_strength"
 
 
-def test_scoped_gap_uses_nearest_scoped_contacts_not_global_contacts():
+@pytest.mark.parametrize("next_hard, directive, reason", [
+    (16, PlacementDirective.FORBID, "between_hard_contacts_tight_gap_meaningful_stress"),
+    (17, PlacementDirective.DEPRIORITIZE, "between_hard_contacts_managed_strength"),
+])
+def test_nearest_global_tight_gap_outranks_wider_scoped_pair(next_hard, directive, reason):
     events = [
         _event(10, LoadClass.HARD_CONTACT, scope="week"),
         _event(14, LoadClass.HARD_CONTACT, scope="other"),
-        _event(16, LoadClass.HARD_CONTACT, scope="other"),
+        _event(next_hard, LoadClass.HARD_CONTACT, scope="other"),
         _event(20, LoadClass.HARD_CONTACT, scope="week"),
     ]
     context = build_calendar_context(15, events, candidate_scope="week")
 
     assert context.previous_hard_distance == 1
-    assert context.next_hard_distance == 1
-    assert context.hard_contact_gap_intervening_days == 9
+    assert context.next_hard_distance == next_hard - 15
+    assert context.between_effective_hard_contacts is True
+    assert context.hard_contact_gap_intervening_days == next_hard - 15
     decision = evaluate_calendar_candidate(_profile(LoadClass.MEANINGFUL_STRENGTH), context)
-    assert decision.reason_code == "post_hard_contact_managed_stress"
+    assert decision.directive is directive
+    assert decision.reason_code == reason
 
 
 def test_technical_and_reduced_contact_are_allowed_in_three_day_gap_interior():
