@@ -18,7 +18,8 @@ Design contract (kept deliberately narrow):
 * Exercise class matters. Anchor (primary loaded) work keeps the most meaningful
   loading the band allows; secondary loaded work loses more volume; support /
   trunk / prehab work loses sets but is never forced into low-rep strength reps;
-  jumps / throws / neural power work keeps its own neural-quality reps.
+  jumps / throws / neural power work keeps its own neural-quality reps. Loaded
+  power/contrast work retains both its loaded-strength and ballistic semantics.
 * Athlete readiness / cut / injury state may only reduce the resolved dose
   further — never raise it above the scheduled-day ceiling.
 """
@@ -112,11 +113,56 @@ def _slot_quality_class(slot: dict[str, Any]) -> str:
     return ""
 
 
+def _has_explicit_strength_intensity(prescription: str) -> bool:
+    """Return whether a power-labelled item explicitly carries loaded intensity."""
+    text = str(prescription or "")
+    return bool(
+        re.search(r"\b\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?\s*%", text)
+        or re.search(r"\bRPE\s*[:=]?\s*\d+(?:\.\d+)?", text, re.I)
+    )
+
+
+def _is_loaded_power_hybrid(slot: dict[str, Any], *, classified: dict[str, Any] | None = None) -> bool:
+    """Identify a ballistic/contrast slot that also contains real loaded work.
+
+    ``anchor_power`` is intentionally broad: it covers pure jumps/throws as well
+    as contrast lifts such as ``Heavy RDL → Broad Jump``. The latter must not lose
+    their loaded-strength semantics merely because power is the headline quality.
+    We require both an explicit loaded structural signal and an explicit working
+    intensity; pure neural/ballistic work therefore remains power-only.
+    """
+    selected = _slot_selected(slot)
+    quality_class = _slot_quality_class(slot)
+    profile = classified
+    if not quality_class and selected:
+        profile = profile or classify_strength_item(selected)
+        quality_class = str(profile.get("quality_class") or "")
+    if quality_class != "anchor_power":
+        return False
+
+    base_categories = {
+        str(value).strip()
+        for value in [
+            *(slot.get("base_categories") or []),
+            *(selected.get("base_categories") or []),
+        ]
+        if str(value).strip()
+    }
+    if not base_categories and selected:
+        profile = profile or classify_strength_item(selected)
+        base_categories.update(str(value).strip() for value in profile.get("base_categories") or [] if str(value).strip())
+    loaded_structure = bool(base_categories & {"lower_body_loaded", "upper_body_push_pull"})
+    if not loaded_structure and profile:
+        loaded_structure = bool(profile.get("loaded_pattern"))
+    return loaded_structure and _has_explicit_strength_intensity(selected.get("prescription") or "")
+
+
 def _role_kind(slot: dict[str, Any]) -> str:
     """Classify a strength slot's programming role.
 
     Returns one of ``anchor`` (primary loaded strength / max-force isometric),
-    ``power`` (jumps / throws / olympic / ballistic neural work), ``support``
+    ``hybrid`` (loaded contrast/power work that carries both strength and power),
+    ``power`` (pure jumps / throws / olympic / ballistic neural work), ``support``
     (trunk / anti-rotation / prehab / accessory) or ``secondary`` (a loaded lift
     that is not the session's primary anchor). Explicit structural flags win; a
     bare exercise is classified only when it carries no such signal.
@@ -128,7 +174,7 @@ def _role_kind(slot: dict[str, Any]) -> str:
     movement = str(slot.get("role") or selected.get("role") or "").strip().lower()
 
     if quality_class == "anchor_power":
-        return "power"
+        return "hybrid" if _is_loaded_power_hybrid(slot) else "power"
     if support_flag or quality_class in SUPPORT_ONLY_CLASSES or movement in _SUPPORT_MOVEMENT_ROLES:
         return "support"
     if anchor_flag or quality_class in ANCHOR_CAPABLE_CLASSES:
@@ -139,7 +185,7 @@ def _role_kind(slot: dict[str, Any]) -> str:
         classified = classify_strength_item(selected)
         classified_class = str(classified.get("quality_class") or "")
         if classified_class == "anchor_power":
-            return "power"
+            return "hybrid" if _is_loaded_power_hybrid(slot, classified=classified) else "power"
         if classified.get("support_only") and movement not in {"press", "hinge", "squat", "pull", "row"}:
             return "support"
         if classified.get("anchor_capable"):
@@ -174,15 +220,15 @@ def _effective_counts(
     max_sets = _int_or_none(strength_cap.get("max_sets"))
     max_reps = _int_or_none(strength_cap.get("max_reps"))
     # Absent flag (hand-built caps in focused unit tests) means "loaded still
-    # allowed" so the anchor/secondary maths run as before.
+    # allowed" so the anchor/secondary/hybrid maths run as before.
     loaded_allowed = strength_cap.get("loaded_allowed") is not False
 
-    if role_kind in {"anchor", "secondary"}:
+    if role_kind in {"anchor", "secondary", "hybrid"}:
         if not loaded_allowed:
             # Band no longer permits loaded strength work: no loaded lift renders.
             return None, None, False
 
-    if role_kind == "anchor":
+    if role_kind in {"anchor", "hybrid"}:
         sets = (
             min(base_sets, max_sets)
             if base_sets is not None and max_sets is not None
@@ -341,7 +387,7 @@ def resolve_strength_slot_prescription(
         reps=reps,
         rpe_cap=rpe_cap,
         loaded=loaded,
-        suppressed_loaded_lift=kind in {"anchor", "secondary"} and not loaded,
+        suppressed_loaded_lift=kind in {"anchor", "secondary", "hybrid"} and not loaded,
     )
     result = {
         "base_prescription": base_prescription,
@@ -411,7 +457,7 @@ def _loaded_candidate_names(owned_slots: list[dict[str, Any]]) -> list[str]:
     for slot in owned_slots:
         selected = _slot_selected(slot)
         if (
-            _role_kind(slot) not in {"anchor", "secondary"}
+            _role_kind(slot) not in {"anchor", "secondary", "hybrid"}
             or not str(selected.get("prescription") or "").strip()
         ):
             continue
@@ -530,7 +576,7 @@ def _build_role_envelope(
     without dose-checking legitimately higher-rep support / power work.
     """
     cap = role.get("strength_dose_cap") if isinstance(role.get("strength_dose_cap"), dict) else {}
-    loaded_entries = [item for item in resolved if item.get("dose_role_kind") in {"anchor", "secondary"}]
+    loaded_entries = [item for item in resolved if item.get("dose_role_kind") in {"anchor", "secondary", "hybrid"}]
     loaded_names = [item.get("name") for item in loaded_entries if item.get("name")]
     loaded_allowed = cap.get("loaded_allowed") is not False and any(
         item.get("effective_loaded") for item in loaded_entries
@@ -593,16 +639,16 @@ def apply_effective_strength_prescriptions(
         if scheduled_d_day is not None:
             role["scheduled_d_day"] = scheduled_d_day
 
-        # Demote every anchor-capable *loaded* lift after the highest-priority
-        # one to ``secondary`` so secondary loaded work loses more volume than
-        # the session anchor (isometric anchors and neural power are left as
-        # their own kind). Ordered by planner slot priority.
+        # Demote every anchor-capable loaded lift after the highest-priority one
+        # to ``secondary`` so later loaded work loses more volume. Loaded-power
+        # hybrids compete for the same loaded-anchor budget; pure neural power
+        # remains outside it. Ordered by planner slot priority.
         anchor_loaded_used = False
         resolved: list[dict[str, Any]] = []
         for slot in sorted(owned_slots, key=_slot_priority):
             kind = _role_kind(slot)
             force_kind = None
-            if kind == "anchor" and _slot_quality_class_effective(slot) != "anchor_force_isometric":
+            if kind in {"anchor", "hybrid"} and _slot_quality_class_effective(slot) != "anchor_force_isometric":
                 if anchor_loaded_used:
                     force_kind = "secondary"
                 else:
