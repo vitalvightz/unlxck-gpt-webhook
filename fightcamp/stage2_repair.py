@@ -389,7 +389,10 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
             continue
         seen_effective_findings.add(identity)
 
-        if "exercise_allow_list" in dimensions:
+        if (
+            "exercise_allow_list" in dimensions
+            or finding.get("effective_prescription") == "no loaded lifting"
+        ):
             quality_fixes.append(
                 {
                     "action": "remove_unselected_exercise",
