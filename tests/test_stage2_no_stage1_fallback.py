@@ -167,7 +167,7 @@ def _complete_response(text: str):
     )
 
 
-def test_incomplete_first_pass_audit_survives_effective_dose_repair(monkeypatch):
+def test_incomplete_first_pass_and_dose_findings_release_without_repair(monkeypatch):
     automator = OpenAIStage2Automator(
         client=_SequentialClient(
             [
@@ -212,6 +212,7 @@ def test_incomplete_first_pass_audit_survives_effective_dose_repair(monkeypatch)
         stage2_module,
         "build_stage2_retry",
         lambda **_: {"needs_retry": True, "repair_prompt": "repair"},
+        raising=False,
     )
     monkeypatch.setattr(
         stage2_module,
@@ -237,9 +238,9 @@ def test_incomplete_first_pass_audit_survives_effective_dose_repair(monkeypatch)
     )
 
     assert result["status"] == "publishable_with_flags"
-    assert result["plan_text"].startswith("# Repaired Stage 2 plan")
+    assert result["plan_text"].startswith("# Partial Stage 2 plan")
     assert result["plan_text"] != "# Stage 1 draft must stay internal"
-    assert result["stage2_attempt_count"] == 2
+    assert result["stage2_attempt_count"] == 1
     assert result["stage2_cost"]["stage2_incomplete_response"] is True
     assert any(
         warning.get("code") == "stage2_incomplete_response"

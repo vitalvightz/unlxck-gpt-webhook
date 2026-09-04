@@ -74,8 +74,8 @@ Allowed transitions are defined in `api/state_machine.py`. In plain terms:
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | generated | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | ready | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| review_required | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| held_for_review | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| review_required | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| held_for_review | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | publishable_with_flags | ❌ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | triage_blocked | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | medical_hold | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
@@ -121,6 +121,24 @@ released-with-flags values so the report agrees with the saved plan status.
 audit. This policy removes athlete release delay; it does not remove flagged
 plans from the admin queue or reduce review volume.
 
+Planner decisions are authoritative. Validators are observational after a usable
+plan exists. Validator findings may flag a plan for review but cannot veto athlete
+release or convert a usable plan into a failed generation. Safety must be enforced
+by the canonical planner before output, not retroactively by relying on a validator
+kill switch.
+
+Goal-preservation and rendered-witness findings use this same release policy.
+They remain in `stage2_validator_report.errors`, with unsatisfied states and
+missing coverage unchanged. Automatic finalization makes no dose/goal repair
+call and never requests planner regeneration to satisfy a validator.
+Post-generation contract checks flag usable content even for unknown error codes.
+Manual Stage 2 submissions use the same released-with-flags report policy.
+The offline `build_stage2_retry` helper remains available for explicit diagnostic
+repair tooling, but neither automatic nor manual release calls it. Structured
+conversion failures retain their debug report and fall back to existing plan text;
+card-format repair does not regenerate the canonical plan.
+Explicit admin holds and pre-planner triage remain separate decisions.
+
 #### Technical Stage 2 failures
 
 The rows above describe a Stage 2 plan that *exists*. If Stage 2 fails before
@@ -161,19 +179,13 @@ by consequence, not by which stage produced them:
 | `fight_day_missing` | `publishable_with_flags` |
 | `late_fight_session_sequence_empty` | `publishable_with_flags` |
 | `plan_text_empty` | `review_required` |
-| `validator_error`, or any unknown code | `review_required` |
+| `validator_error`, or any unknown code | `publishable_with_flags` if usable content exists; otherwise `review_required` |
 
-The first four describe a degraded calendar render. The athlete still has
-readable plan text, and most athletes have no coach to escalate to, so
-withholding the plan helps nobody — the finding is flagged for admin audit and
-the plan stays visible. `plan_text_empty` is the one that must still withhold:
-there is genuinely nothing to show, and flagging it would ship a blank plan.
-
-The allowlist (`_CONTRACT_FLAGGABLE_ERROR_CODES`) fails closed, so a future
-contract finding nobody has classified withholds rather than silently becoming a
-flag. The same list decides which findings a clean structured card can vouch for
-outright — a schema-valid card proves the plan is well-formed, so those keep
-`ready` rather than dropping to `publishable_with_flags`.
+Findings flag readable plan text or a usable structured card for admin audit.
+A `plan_text_empty` finding still releases with flags if a usable card exists;
+without either form of content, the plan remains withheld. Unknown validator
+codes cannot veto existing content. The separate card-rescue classification can
+keep a clean card at `ready` for known render-only discrepancies.
 
 ### Plan status → generation job status
 

@@ -428,78 +428,60 @@ async def prewarm_structured_plan(
         _PREWARM_IN_FLIGHT.discard(plan_id)
 
 
-def _manual_stage2_result(plan_row: dict[str, Any], final_plan_text: str) -> dict[str, Any]:
-    from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
-    from fightcamp.stage2_policy import (
-        apply_stage2_release_policy,
-    )
+def _manual_stage2_result(
+    plan_row: dict[str, Any], final_plan_text: str
+) -> dict[str, Any]:
+    from fightcamp.stage2_pipeline import review_stage2_output
+    from fightcamp.stage2_policy import apply_stage2_release_policy
 
+    from ..stage2_automation import _released_with_flags_report
+
+    if not final_plan_text.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No usable Stage 2 plan text.",
+        )
     planning_brief = _decode_structured_text(plan_row.get("planning_brief")) or {}
-    review = review_stage2_output(planning_brief=planning_brief, final_plan_text=final_plan_text)
+    review = review_stage2_output(
+        planning_brief=planning_brief, final_plan_text=final_plan_text
+    )
     validator_report = apply_stage2_release_policy(review["validator_report"])
     release_decision = validator_report.get("release_decision")
     next_attempt_count = int(plan_row.get("stage2_attempt_count") or 0) + 1
     had_retry_prompt = bool(str(plan_row.get("stage2_retry_text") or "").strip())
 
-    if release_decision in {"publish", "publish_with_flags"}:
-        return {
-            "status": (
-                "publishable_with_flags"
-                if release_decision == "publish_with_flags"
-                else "ready"
-            ),
-            "plan_text": final_plan_text,
-            "draft_plan_text": str(plan_row.get("draft_plan_text") or plan_row.get("plan_text") or ""),
-            "final_plan_text": final_plan_text,
-            "pdf_url": None,
-            "stage2_retry_text": "",
-            "stage2_validator_report": validator_report,
-            "stage2_status": "manual_stage2_retry_pass" if had_retry_prompt else "manual_stage2_pass",
-            "stage2_attempt_count": next_attempt_count,
-        }
+    if release_decision not in {"publish", "publish_with_flags"}:
+        validator_report = _released_with_flags_report(validator_report)
+        release_decision = "publish_with_flags"
 
-    retry = build_stage2_retry(
-        stage1_result={"planning_brief": planning_brief},
-        final_plan_text=final_plan_text,
-        validator_report=validator_report,
-    )
-    if retry.get("requires_planner_regeneration"):
-        # goal_preservation_failed is a deterministic planner failure, not an LLM
-        # prose retry: no Stage 2 rewrite can restore a selected-goal witness the
-        # planner never scheduled. Surface a terminal outcome (consistent with the
-        # automation path raising Stage2GoalPreservationError and failing the job)
-        # instead of holding the plan behind an empty manual-retry prompt.
-        goal_failures = sorted(
-            {
-                str(item.get("goal") or item.get("requirement") or "").strip()
-                for item in validator_report.get("errors", [])
-                if item.get("code") == "goal_preservation_failed"
-            }
-            - {""}
-        )
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                "Selected goal coverage is missing from the deterministic plan"
-                + (f" ({', '.join(goal_failures)})" if goal_failures else "")
-                + "; this requires deterministic planner regeneration, not a Stage 2 rewrite."
-            ),
-        )
     return {
-        "status": "review_required",
-        "plan_text": "",
-        "draft_plan_text": str(plan_row.get("draft_plan_text") or plan_row.get("plan_text") or ""),
+        "status": (
+            "publishable_with_flags"
+            if release_decision == "publish_with_flags"
+            else "ready"
+        ),
+        "plan_text": final_plan_text,
+        "draft_plan_text": str(
+            plan_row.get("draft_plan_text") or plan_row.get("plan_text") or ""
+        ),
         "final_plan_text": final_plan_text,
         "pdf_url": None,
-        "stage2_retry_text": str(retry.get("repair_prompt") or ""),
+        "stage2_retry_text": "",
         "stage2_validator_report": validator_report,
-        "stage2_status": "manual_stage2_retry_required",
+        "stage2_status": "manual_stage2_retry_pass"
+        if had_retry_prompt
+        else "manual_stage2_pass",
         "stage2_attempt_count": next_attempt_count,
     }
 
 
 def _admin_approved_result(plan_row: dict[str, Any]) -> dict[str, Any]:
-    approved_text = str(plan_row.get("final_plan_text") or plan_row.get("draft_plan_text") or plan_row.get("plan_text") or "").strip()
+    approved_text = str(
+        plan_row.get("final_plan_text")
+        or plan_row.get("draft_plan_text")
+        or plan_row.get("plan_text")
+        or ""
+    ).strip()
     if not approved_text:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -480,7 +480,7 @@ def test_manual_stage2_submission_publishes_validated_admin_result():
     assert saved["stage2_retry_text"] == ""
 
 
-def test_manual_stage2_submission_generates_retry_prompt_when_output_needs_revision():
+def test_manual_stage2_submission_releases_findings_without_retry():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(
         user_id="athlete-1",
@@ -536,10 +536,10 @@ def test_manual_stage2_submission_generates_retry_prompt_when_output_needs_revis
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "held_for_review"
-    assert body["outputs"]["plan_text"] == ""
-    assert body["admin_outputs"]["stage2_status"] == "manual_stage2_retry_required"
-    assert body["admin_outputs"]["stage2_retry_text"]
+    assert body["status"] == "publishable_with_flags"
+    assert body["outputs"]["plan_text"].startswith("## PHASE 2: SPP")
+    assert body["admin_outputs"]["stage2_status"] == "manual_stage2_pass"
+    assert body["admin_outputs"]["stage2_retry_text"] == ""
 
 
 def test_manual_stage2_submission_publishes_when_only_non_blocking_review_flags_exist():
@@ -585,7 +585,7 @@ def test_manual_stage2_submission_publishes_when_only_non_blocking_review_flags_
     assert body["admin_outputs"]["stage2_validator_report"]["review_flag_count"] >= 1
 
 
-def test_manual_stage2_submission_holds_admin_review_blocking_quality_flags():
+def test_manual_stage2_submission_releases_admin_review_quality_flags():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(
         user_id="athlete-1",
@@ -635,10 +635,10 @@ def test_manual_stage2_submission_holds_admin_review_blocking_quality_flags():
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "held_for_review"
-    assert body["outputs"]["plan_text"] == ""
-    assert body["admin_outputs"]["stage2_status"] == "manual_stage2_retry_required"
-    assert body["admin_outputs"]["stage2_retry_text"]
+    assert body["status"] == "publishable_with_flags"
+    assert body["outputs"]["plan_text"].startswith("## PHASE 2: SPP")
+    assert body["admin_outputs"]["stage2_status"] == "manual_stage2_pass"
+    assert body["admin_outputs"]["stage2_retry_text"] == ""
     assert body["admin_outputs"]["stage2_validator_report"]["admin_review_blocking_flags"][
         0
     ]["code"] == "missing_required_element"

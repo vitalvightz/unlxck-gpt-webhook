@@ -131,12 +131,12 @@ the existing exercise/dose parsers. This is fidelity checking against a
 deterministic decision, not semantic inference from LLM prose. Missing or reduced
 witnesses produce `goal_preservation_render_mismatch`.
 
-Both codes are hard blockers. Automation stops invalid planner contracts before
-spending a model call. A render mismatch gets one conforming render retry; if it
-still fails, `Stage2GoalPreservationError` terminates generation through the
-existing orchestrator error path. It cannot be converted to a publishable plan
-with flags or to a Stage 1 fallback. Cost telemetry is retained after model calls.
-Deterministic coverage errors are never sent to the LLM to invent a repair.
+Both codes retain diagnostic severity but cannot veto release. Automation records
+pre-render and rendered-witness findings in the existing validator report and
+releases usable Stage 2 content as `publishable_with_flags`. No automatic model
+repair or planner regeneration is triggered solely by these findings.
+`Stage2GoalPreservationError` is historical compatibility only. Runtime/provider
+failures without usable output and persistence failures remain terminal.
 
 ## Compatibility and scope
 
@@ -146,14 +146,12 @@ Deterministic coverage errors are never sent to the LLM to invent a repair.
   `20260427120000_stabilize_generation_runtime.sql`). No SQL, RLS, environment,
   exercise-bank or UI change is required.
 - Old saved plans remain readable. Re-finalizing/publishing an old dated brief
-  with selected goals and no contract requires deterministic regeneration.
+  with selected goals and no contract retains the diagnostic finding.
 - Open ongoing systems retain the initial universal selection classification.
   They do not currently have a deterministic executable session calendar; this
   PR's resolved-camp publication gate applies to dated camps. Adding an executable
   contract to that separate planner is outside the normal/short-camp gap here.
-- Previously silently incomplete dated plans can now fail generation. This is an
-  intentional compatibility change and exposes upstream candidate/schedule gaps
-  rather than making the LLM disguise them.
+- Incomplete goal coverage stays observable without discarding usable plans.
 
 ## Verification
 
@@ -163,4 +161,4 @@ determinism, and renderer fidelity. The synthetic MMA fixture in
 `tests/fixtures/goal_preservation/sheyi_like.json` runs through real intake,
 selection, calendar, prescriptions and handoff in
 `tests/test_goal_preservation_e2e.py`. `tests/test_stage2_automation.py` verifies
-the publication gate, no-model-call failure, repair and failed-repair cost audit.
+flagged publication, original findings, and absence of validator-driven retries.

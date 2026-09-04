@@ -95,10 +95,36 @@ _PLAN_TRANSITIONS: dict[PlanStatus, frozenset[PlanStatus]] = {
             "archived",
         }
     ),
-    "ready": frozenset({"ready", "review_required", "held_for_review", "publishable_with_flags", "archived"}),
-    "publishable_with_flags": frozenset({"ready", "publishable_with_flags", "review_required", "archived"}),
-    "review_required": frozenset({"ready", "review_required", "held_for_review", "archived"}),
-    "held_for_review": frozenset({"ready", "review_required", "held_for_review", "archived"}),
+    "ready": frozenset(
+        {
+            "ready",
+            "review_required",
+            "held_for_review",
+            "publishable_with_flags",
+            "archived",
+        }
+    ),
+    "publishable_with_flags": frozenset(
+        {"ready", "publishable_with_flags", "review_required", "archived"}
+    ),
+    "review_required": frozenset(
+        {
+            "ready",
+            "review_required",
+            "held_for_review",
+            "publishable_with_flags",
+            "archived",
+        }
+    ),
+    "held_for_review": frozenset(
+        {
+            "ready",
+            "review_required",
+            "held_for_review",
+            "publishable_with_flags",
+            "archived",
+        }
+    ),
     "triage_blocked": frozenset(
         {
             "ready",
@@ -111,9 +137,29 @@ _PLAN_TRANSITIONS: dict[PlanStatus, frozenset[PlanStatus]] = {
             "archived",
         }
     ),
-    "medical_hold": frozenset({"medical_hold", "needs_review", "restricted_rehab_only", "archived"}),
-    "restricted_rehab_only": frozenset({"ready", "held_for_review", "restricted_rehab_only", "needs_review", "archived"}),
-    "needs_review": frozenset({"ready", "review_required", "held_for_review", "needs_review", "restricted_rehab_only", "medical_hold", "archived"}),
+    "medical_hold": frozenset(
+        {"medical_hold", "needs_review", "restricted_rehab_only", "archived"}
+    ),
+    "restricted_rehab_only": frozenset(
+        {
+            "ready",
+            "held_for_review",
+            "restricted_rehab_only",
+            "needs_review",
+            "archived",
+        }
+    ),
+    "needs_review": frozenset(
+        {
+            "ready",
+            "review_required",
+            "held_for_review",
+            "needs_review",
+            "restricted_rehab_only",
+            "medical_hold",
+            "archived",
+        }
+    ),
     "archived": frozenset({"archived"}),
 }
 
