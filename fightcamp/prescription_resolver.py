@@ -816,6 +816,31 @@ def apply_effective_strength_prescriptions(
     ):
         _apply_pre_hard_contact_cap(role)
         assignments = role.get("selected_exercise_assignments")
+        slots_for_resolution = owned_slots
+        if isinstance(assignments, list) and role.get("pre_hard_contact_managed_stress") is True:
+            # #2435 is a deterministic composition decision, not merely a dose
+            # filter. Once it removes a high-cost secondary/power item, that item
+            # must also disappear from the authoritative selected membership so
+            # PR2 cannot re-authorise it via the closed allow-list.
+            slots_for_resolution = _pre_hard_allowed_slots(owned_slots)
+            surviving_strength_keys = {
+                (str(slot.get("slot_id") or ""), str(_slot_selected(slot).get("name") or ""))
+                for slot in slots_for_resolution
+            }
+            assignments = [
+                assignment
+                for assignment in assignments
+                if isinstance(assignment, dict)
+                and (
+                    assignment.get("slot_group") != "strength_slots"
+                    or (
+                        str(assignment.get("slot_id") or ""),
+                        str(assignment.get("name") or ""),
+                    ) in surviving_strength_keys
+                )
+            ]
+            role["selected_exercise_assignments"] = assignments
+
         if isinstance(assignments, list):
             # Even a normal-camp role with no countdown dose overlay has closed
             # composition once the selector has written this field.  Reuse the
@@ -846,9 +871,6 @@ def apply_effective_strength_prescriptions(
 
         if not isinstance(assignments, list):
             continue
-        slots_for_resolution = owned_slots
-        if role.get("pre_hard_contact_managed_stress") is True:
-            slots_for_resolution = _pre_hard_allowed_slots(owned_slots)
 
         # Demote every anchor-capable loaded lift after the highest-priority one
         # to ``secondary`` so later loaded work loses more volume. Loaded-power
