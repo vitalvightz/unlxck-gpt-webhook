@@ -389,11 +389,17 @@ def resolve_strength_slot_prescription(
         loaded=loaded,
         suppressed_loaded_lift=kind in {"anchor", "secondary", "hybrid"} and not loaded,
     )
+    # ``dose_role_kind`` is a persisted validator-facing enum. Keep its existing
+    # anchor/secondary/power/support vocabulary even when the internal resolver
+    # recognises a loaded-power hybrid. ``power_hybrid`` carries the extra truth
+    # without creating a new schema value downstream consumers would miss.
+    persisted_kind = "anchor" if kind == "hybrid" else kind
     result = {
         "base_prescription": base_prescription,
         "effective_prescription": effective,
         "dose_authority": "scheduled_countdown_overlay",
-        "dose_role_kind": kind,
+        "dose_role_kind": persisted_kind,
+        "power_hybrid": kind == "hybrid",
         "dose_adjustment_reason": role.get("dose_adjustment_reason"),
         "effective_loaded": bool(loaded),
         "strength_dose_cap": dict(cap),
