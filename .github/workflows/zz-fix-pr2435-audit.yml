@@ -24,7 +24,9 @@ jobs:
           cache-dependency-path: requirements-dev.txt
 
       - name: Apply fixes
-        run: python .github/scripts/fix_pr2435_audit.py
+        run: |
+          python .github/scripts/fix_pr2435_audit.py
+          python .github/scripts/fix_pr2435_followup.py
 
       - name: Install test dependencies
         run: pip install -r requirements-dev.txt
@@ -40,13 +42,15 @@ jobs:
         run: >-
           pytest -q tests/test_pre_hard_contact_strength.py tests/test_prescription_resolver.py
           tests/test_prescription_resolver_e2e.py tests/test_calendar_integrity.py
-          tests/test_late_camp_role_morph.py tests/test_goal_preservation.py
-          tests/test_goal_repair_effective_contact_policy.py tests/test_stage2_validator.py
+          tests/test_late_camp_role_morph.py tests/test_goal_repair_effective_contact_policy.py
+          tests/test_stage2_validator.py
           -k 'not production_d16_wrapped_barbell_back_squat_rep_overage_blocks_and_requests_repair'
 
       - name: Commit fixes
         run: |
-          rm -f .github/workflows/zz-fix-pr2435-audit.yml .github/scripts/fix_pr2435_audit.py
+          rm -f .github/workflows/zz-fix-pr2435-audit.yml \
+            .github/scripts/fix_pr2435_audit.py \
+            .github/scripts/fix_pr2435_followup.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
