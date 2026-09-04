@@ -202,9 +202,11 @@ def _slot_allowed(slot: dict, role: dict, brief: dict) -> bool:
     allowed_by_day = (brief.get("late_fight_plan_spec") or {}).get("allowed_exercises_by_day") or {}
     if f"D-{day}" in allowed_by_day and selected.get("name") not in allowed_by_day[f"D-{day}"]:
         return False
-    if isinstance(day, int) and day <= 21 and selected.get("late_windows"):
+    metadata = selected.get("selection_metadata") if isinstance(selected.get("selection_metadata"), dict) else {}
+    late_windows = metadata["late_windows"] if "late_windows" in metadata else selected.get("late_windows")
+    if isinstance(day, int) and day <= 21 and late_windows:
         from .late_selector_windows import classify_late_selector_window
-        if classify_late_selector_window(day) not in selected["late_windows"]:
+        if classify_late_selector_window(day) not in late_windows:
             return False
     tags = _tags(selected) | set(selected.get("restriction_tags") or [])
     if tags & set(role.get("blocked_tags") or []):
