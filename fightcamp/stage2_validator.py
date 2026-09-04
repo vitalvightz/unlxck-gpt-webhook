@@ -3337,13 +3337,106 @@ def _late_camp_effective_prescription_warnings(
     return warnings
 
 
+def _goal_witness_rendered_doses(lines: list[str], witness: dict) -> list[str]:
+    """Bind wrapped dose fields to this activity, never to the next exercise."""
+    doses = []
+    detail = re.compile(r"^(?:load|sets?|reps?|holds?|work|rounds?|duration|timing|intensity|rpe|rest|tempo|dose)\s*[:=]|^\d", re.I)
+    for index, line in enumerate(lines):
+        if not _line_has_exercise(line, witness["name"]):
+            continue
+        parts = [line]
+        for following in lines[index + 1:]:
+            cleaned = _BULLET_PREFIX.sub("", following).strip().replace("**", "")
+            if not detail.match(cleaned):
+                break
+            parts.append(cleaned)
+        dose = " ".join(parts)
+        if not re.search(r"\b(?:omitted|not performed|not prescribed|replaced by)\b", dose, re.I):
+            doses.append(dose)
+    return doses
+
+
+def _goal_witness_dose_matches(witness: dict, dose: str) -> bool:
+    from .goal_preservation import _sets_reps, strength_intensity
+    if witness.get("sets"):
+        sets, reps, _ = _parse_rendered_strength_dose(dose)
+        # A rendered set range such as "2-3 x 3" must satisfy the witness on its
+        # MINIMUM set count, not the upper bound the working-dose parser returns.
+        set_range = re.search(r"\b(\d+)\s*[-–]\s*(\d+)\s*(?:sets?\s*(?:[x×]|of)|[x×])", dose, re.I)
+        if set_range:
+            sets = min(int(set_range.group(1)), int(set_range.group(2)))
+        if sets is None and witness.get("quality_class") == "anchor_force_isometric":
+            sets, reps = _sets_reps(dose)
+        return ((sets or 0) >= witness["sets"] and (reps or 0) >= witness["reps"]
+                and all(strength_intensity(dose).get(key, 0) >= witness[key]
+                        for key in ("minimum_rpe", "minimum_load_percent") if key in witness))
+    if witness.get("work_sec") and witness.get("rounds"):
+        # Parse common structured timed forms — "3 rounds x 2 min", "3 rounds of
+        # 2 minutes", "4 x 30 sec" — in consistent units, normalising minutes to
+        # seconds before comparing with work_sec. On any parse failure return a
+        # clean mismatch; never leave rounds/seconds unbound or raise.
+        timed = re.search(
+            r"\b(?P<rounds>\d+)(?:\s*[-–]\s*\d+)?\s*(?:rounds?\s*)?(?:x|×|of|for)\s*"
+            r"(?P<duration>\d+(?:\.\d+)?)\s*(?P<unit>seconds?|secs?|s|minutes?|mins?|m)\b",
+            dose,
+            re.I,
+        )
+        if not timed:
+            return False
+        rounds = int(timed["rounds"])
+        seconds = float(timed["duration"]) * (60 if timed["unit"].lower().startswith("m") else 1)
+        rest = re.search(r"rest\s*[:=]?\s*(\d+)(?:\s*[-–]\s*\d+)?\s*(?:sec(?:onds?)?|s)\b", dose, re.I)
+        # If the witness declares rest_sec, the rendered rest must meet it.
+        rest_ok = witness.get("rest_sec") is None or bool(rest and int(rest[1]) >= witness["rest_sec"])
+        return bool(rounds >= witness["rounds"] and seconds >= witness["work_sec"] and rest_ok)
+    minutes = witness.get("duration_min") or witness.get("total_minutes")
+    if minutes:
+        rendered = re.search(r"\b(\d+(?:\.\d+)?)(?:\s*[-–]\s*\d+)?\s*min(?:utes?)?\b", dose, re.I)
+        return bool(rendered and float(rendered[1]) >= minutes)
+    return False
+
+
+def _goal_preservation_render_errors(planning_brief: dict, final_plan_text: str) -> list[dict]:
+    """Check render fidelity to selected witnesses, never infer goal semantics.
+
+    The deterministic contract already decided which exercise/dose qualifies.
+    This check only verifies that exact selected identity and its minimum dose
+    survived rendering on its scheduled day, using the existing identity parser.
+    """
+    errors = []
+    blocks = _countdown_blocks(final_plan_text)
+    seen = set()
+    for goal in planning_brief.get("goal_preservation") or []:
+        if not isinstance(goal, dict) or goal.get("state") == "defer":
+            continue
+        for witness in goal.get("evidence") or []:
+            if not witness.get("name") or not isinstance(witness.get("d_day"), int):
+                continue
+            identity = (witness["d_day"], witness["name"])
+            if identity in seen:
+                continue
+            seen.add(identity)
+            lines = [line for block in blocks if block["day"] == witness["d_day"] for line in block.get("lines", [])]
+            present = any(_goal_witness_dose_matches(witness, dose) for dose in _goal_witness_rendered_doses(lines, witness))
+            if not present:
+                errors.append({"code": "goal_preservation_render_mismatch", "goal": goal.get("goal"),
+                    "requirement": goal.get("required_intent"), "exercise": witness["name"],
+                    "scheduled_d_day": witness["d_day"], "severity": "blocker", "confidence": "high",
+                    "message": "A deterministic goal witness or its prescribed dose disappeared during rendering.",
+                    "effective_prescription": witness.get("effective_prescription")})
+    return errors
+
+
 def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dict:
+    from .goal_preservation import validate_goal_preservation
     plan_lines = _extract_plan_lines(final_plan_text)
     phase_sections = _phase_sections(final_plan_text)
     restricted_hits = _find_restricted_hits(planning_brief, plan_lines)
     countdown_blocks = _countdown_blocks(final_plan_text)
 
-    errors: list[dict[str, Any]] = []
+    errors: list[dict[str, Any]] = validate_goal_preservation(planning_brief)
+    if not errors:
+        errors.extend(_goal_preservation_render_errors(planning_brief, final_plan_text))
     warnings: list[dict[str, Any]] = []
     if not plan_lines:
         errors.append(_issue(code="stage2_output_empty", message="Stage 2 output is empty.", severity="blocker", confidence="high"))

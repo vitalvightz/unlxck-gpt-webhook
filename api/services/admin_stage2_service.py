@@ -463,6 +463,28 @@ def _manual_stage2_result(plan_row: dict[str, Any], final_plan_text: str) -> dic
         final_plan_text=final_plan_text,
         validator_report=validator_report,
     )
+    if retry.get("requires_planner_regeneration"):
+        # goal_preservation_failed is a deterministic planner failure, not an LLM
+        # prose retry: no Stage 2 rewrite can restore a selected-goal witness the
+        # planner never scheduled. Surface a terminal outcome (consistent with the
+        # automation path raising Stage2GoalPreservationError and failing the job)
+        # instead of holding the plan behind an empty manual-retry prompt.
+        goal_failures = sorted(
+            {
+                str(item.get("goal") or item.get("requirement") or "").strip()
+                for item in validator_report.get("errors", [])
+                if item.get("code") == "goal_preservation_failed"
+            }
+            - {""}
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Selected goal coverage is missing from the deterministic plan"
+                + (f" ({', '.join(goal_failures)})" if goal_failures else "")
+                + "; this requires deterministic planner regeneration, not a Stage 2 rewrite."
+            ),
+        )
     return {
         "status": "review_required",
         "plan_text": "",

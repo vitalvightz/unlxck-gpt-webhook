@@ -56,14 +56,15 @@ def normalize_priority_values(value: str | list[str] | None) -> list[str]:
 
 
 def build_priority_profile(plan_input: Any) -> PriorityProfile:
-    all_goals = normalize_priority_values(getattr(plan_input, "key_goals", None))
-    all_weak_areas = normalize_priority_values(getattr(plan_input, "weak_areas", None))
+    read = plan_input.get if isinstance(plan_input, dict) else lambda key, default=None: getattr(plan_input, key, default)
+    all_goals = normalize_priority_values(read("key_goals"))
+    all_weak_areas = normalize_priority_values(read("weak_areas", read("weaknesses")))
 
-    primary_goal = str(getattr(plan_input, "primary_goal", "") or "").strip()
+    primary_goal = str(read("primary_goal", "") or "").strip()
     if not primary_goal or primary_goal not in all_goals:
         primary_goal = all_goals[0] if all_goals else ""
 
-    primary_weak_area = str(getattr(plan_input, "primary_weak_area", "") or "").strip()
+    primary_weak_area = str(read("primary_weak_area", "") or "").strip()
     if not primary_weak_area or primary_weak_area not in all_weak_areas:
         primary_weak_area = all_weak_areas[0] if all_weak_areas else ""
 

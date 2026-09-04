@@ -1,0 +1,15 @@
+{
+  "days_until_fight": 26,
+  "sport": "mma",
+  "key_goals": ["speed", "strength"],
+  "primary_goal": "speed",
+  "weaknesses": ["footwork", "power"],
+  "primary_weak_area": "footwork",
+  "training_frequency": 4,
+  "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+  "hard_sparring_days": ["Tuesday", "Friday"],
+  "fatigue": "low",
+  "equipment": ["barbell", "kettlebells", "medicine_ball", "heavy_bag", "bodyweight"],
+  "weight_cut_pct": 0,
+  "injuries": []
+}

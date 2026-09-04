@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 
+from .goal_preservation import classify_goal_preservation
 from .input_parsing import _athlete_calendar_now, _utc_now  # noqa: F401  (re-exported so callers can monkeypatch via this module)
 from .normalization import clean_list, dedupe_preserve_order
 from .training_context import TrainingContext, allocate_sessions
@@ -190,6 +191,7 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
             "maintenance_targets": [],
             "embedded_support": [],
             "deferred": [],
+            "goal_preservation": classify_goal_preservation(athlete_model),
         }
 
     primary: list[dict] = []
@@ -337,6 +339,7 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
         "maintenance_targets": maintenance[:1],
         "embedded_support": embedded,
         "deferred": deferred,
+        "goal_preservation": classify_goal_preservation(athlete_model),
     }
 
 

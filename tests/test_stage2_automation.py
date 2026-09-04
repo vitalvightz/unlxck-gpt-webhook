@@ -79,6 +79,43 @@ def _stage1_result() -> dict:
     }
 
 
+def test_missing_deterministic_goal_contract_stops_before_model_or_release():
+    stage1 = _stage1_result()
+    stage1["planning_brief"]["athlete_snapshot"] = {"key_goals": ["strength"], "days_until_fight": 26}
+    client = FakeClient([])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+    with pytest.raises(stage2_module.Stage2GoalPreservationError, match="strength"):
+        asyncio.run(automator.finalize(stage1_result=stage1))
+    assert not client.responses.calls
+
+
+def test_goal_witness_loss_cannot_publish_with_flags_after_failed_render_repair(monkeypatch):
+    def review(**_):
+        return {"status": "FAIL", "needs_retry": True, "validator_report": {
+            "errors": [{"code": "goal_preservation_render_mismatch", "goal": "strength"}], "warnings": []}}
+    monkeypatch.setattr(stage2_module, "review_stage2_output", review)
+    client = FakeClient([_response("# Power only"), _incomplete_response()])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+    with pytest.raises(stage2_module.Stage2GoalPreservationError) as caught:
+        asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+    assert len(client.responses.calls) == 2
+    assert caught.value.stage2_cost
+
+
+def test_goal_witness_render_repair_may_publish_after_it_passes(monkeypatch):
+    reviews = iter([
+        {"status": "FAIL", "needs_retry": True, "validator_report": {
+            "errors": [{"code": "goal_preservation_render_mismatch", "goal": "strength"}], "warnings": []}},
+        _review("PASS"),
+    ])
+    monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: next(reviews))
+    client = FakeClient([_response("# Power only"), _response("# Preserved strength")])
+    result = asyncio.run(OpenAIStage2Automator(client=client, model="test-model").finalize(stage1_result=_stage1_result()))
+    assert len(client.responses.calls) == 2
+    assert result["status"] == "ready"
+    assert result["final_plan_text"] == "# Preserved strength"
+
+
 def test_first_pass_pass_returns_ready_with_one_provider_call(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("PASS"))
     client = FakeClient([_response("# final plan")])
