@@ -132,7 +132,7 @@ def test_legacy_conditioning_bank_is_an_empty_shim():
 def test_coordination_target_gate_is_explicit():
     assert has_coordination_target(_athlete())
     assert has_coordination_target(_athlete(weaknesses=["coordination / proprioception"]))
-    assert not has_coordination_target(_athlete(weaknesses=["balance"], key_goals=["speed"]))
+    assert has_coordination_target(_athlete(weaknesses=["balance"], key_goals=["speed"]))
 
 
 def test_sport_and_style_normalization_match_current_intake_taxonomy():
@@ -223,8 +223,18 @@ def test_normal_week_gets_one_coordination_support_role_only_when_targeted():
     assert "coordination support" in role["display_text"].lower()
 
     untargeted = {"weeks": [_week()]}
-    apply_camp_week_fillers(untargeted, _athlete(weaknesses=["balance"]))
+    apply_camp_week_fillers(untargeted, _athlete(weaknesses=["strength"]))
     assert _coordination_roles(untargeted["weeks"][0]) == []
+
+
+def test_meaningful_coordination_role_prevents_redundant_support_insert():
+    week = _week()
+    week["session_roles"][1]["role_key"] = "aerobic_coordination_day"
+    role_map = {"weeks": [week]}
+
+    apply_camp_week_fillers(role_map, _athlete())
+
+    assert _coordination_roles(week) == []
 
 
 def test_coordination_support_avoids_hard_sparring_days():

@@ -16,6 +16,16 @@ MAX_GOAL_PRIORITY_BONUS = 1.2
 MAX_WEAKNESS_PRIORITY_BONUS = 1.35
 COLLISION_INTENT_BONUS = 0.2
 
+# Runtime intake normalization intentionally uses selection-oriented vocabulary
+# such as ``reactive`` and ``explosive``. Coverage-aware low-cost support reasons
+# about broader adaptation families instead. Keep that bridge inside this
+# read-only projection so global tag semantics and canonical priority weights are
+# left unchanged.
+_SELECTED_PRIORITY_TARGET_ALIASES = {
+    "reactive": "speed",
+    "explosive": "power",
+}
+
 
 @dataclass(frozen=True)
 class PriorityProfile:
@@ -28,6 +38,16 @@ class PriorityProfile:
     goal_weakness_collisions: list[str] = field(default_factory=list)
     primary_goal_weakness_collision: bool = False
     primary_collision_tag: str = ""
+
+
+@dataclass(frozen=True)
+class SelectedPriority:
+    """One canonical athlete-selected target and its existing profile weight."""
+
+    target: str
+    label: str
+    weight: float
+    sources: tuple[str, ...]
 
 
 def normalize_priority_values(value: str | list[str] | None) -> list[str]:
@@ -115,6 +135,77 @@ def weakness_priority_weight(weakness: str, profile: PriorityProfile) -> float:
     if weakness in profile.secondary_weak_areas:
         return SECONDARY_WEAKNESS_WEIGHT
     return 0.0
+
+
+def selected_priority_targets(plan_input: Any) -> list[SelectedPriority]:
+    """Return selected targets ordered by the canonical profile weights.
+
+    Normalized duplicates (for example a target selected as both a goal and a
+    weakness) are represented once at their highest existing canonical weight.
+    Runtime selection vocabulary is projected onto broader adaptation families
+    only here; the canonical priority profile itself remains unchanged. Consumers
+    must not recreate the primary/secondary weighting doctrine locally.
+    """
+
+    profile = plan_input if isinstance(plan_input, PriorityProfile) else build_priority_profile(plan_input)
+    selections: list[tuple[str, str, float]] = []
+    if profile.primary_weak_area:
+        selections.append(
+            (
+                "primary_weakness",
+                profile.primary_weak_area,
+                weakness_priority_weight(profile.primary_weak_area, profile),
+            )
+        )
+    if profile.primary_goal:
+        selections.append(
+            (
+                "primary_goal",
+                profile.primary_goal,
+                goal_priority_weight(profile.primary_goal, profile),
+            )
+        )
+    selections.extend(
+        ("secondary_weakness", weakness, weakness_priority_weight(weakness, profile))
+        for weakness in profile.secondary_weak_areas
+    )
+    selections.extend(
+        ("secondary_goal", goal, goal_priority_weight(goal, profile))
+        for goal in profile.secondary_goals
+    )
+
+    merged: dict[str, SelectedPriority] = {}
+    order: list[str] = []
+    for source, label, weight in selections:
+        normalized_target = _normalized_priority_tag(label)
+        target = _SELECTED_PRIORITY_TARGET_ALIASES.get(
+            normalized_target,
+            normalized_target,
+        )
+        if not target or weight <= 0:
+            continue
+        current = merged.get(target)
+        if current is None:
+            order.append(target)
+            merged[target] = SelectedPriority(
+                target=target,
+                label=label,
+                weight=weight,
+                sources=(source,),
+            )
+            continue
+        merged[target] = SelectedPriority(
+            target=target,
+            label=current.label,
+            weight=max(current.weight, weight),
+            sources=(*current.sources, source),
+        )
+
+    order_index = {target: index for index, target in enumerate(order)}
+    return sorted(
+        merged.values(),
+        key=lambda item: (-item.weight, order_index[item.target]),
+    )
 
 
 def is_priority_collision_tag(tag: str, profile: PriorityProfile) -> bool:

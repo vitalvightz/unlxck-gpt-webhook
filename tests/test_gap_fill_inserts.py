@@ -584,14 +584,14 @@ def test_high_fatigue_mild_stable_injury_does_not_readd_physical_inserts():
     assert not (allowed & PHYSICAL_INSERTS)
 
 
-def test_power_speed_low_risk_gap_chooses_neural_or_technical_support():
+def test_power_goal_does_not_relabel_cheap_support_as_power_coverage():
     insert = select_gap_fill_insert(
         _athlete(key_goals=["power"], fatigue="low", fatigue_level="low"),
         12,
     )
 
     assert insert is not None
-    assert insert["role_key"] in {"neural_visualization", "technical_shadow_rhythm"}
+    assert "power" not in insert["support_target_capabilities"]
 
 
 def test_high_fatigue_blocks_physical_inserts():

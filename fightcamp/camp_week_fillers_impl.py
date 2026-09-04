@@ -9,13 +9,14 @@ from .combat_load_policy import PlacementDirective
 from .coordination_support_library import (
     build_coordination_display_text,
     coordination_support_metadata,
-    has_coordination_target,
     select_coordination_support,
 )
 from .gap_fill_inserts import (
     PHYSICAL_INSERTS,
     _new_usage_ledger,
     _record_insert_usage,
+    filler_target_capabilities,
+    highest_priority_remaining_target,
     select_gap_fill_insert,
 )
 from .normalization import WEEKDAY_ORDER, clean_list
@@ -79,6 +80,27 @@ def _has_future_fight(athlete_model: dict[str, Any]) -> bool:
         return False
 
 
+def _seed_programme_coverage_roles(
+    weekly_role_map: dict[str, Any],
+    usage_ledger: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Seed one normal-camp coverage context from the authoritative programme.
+
+    Normal filler placement is week-local, but target coverage is programme-level:
+    a real role scheduled elsewhere in the visible programme still counts, and a
+    filler inserted earlier must reduce remaining support need for later weeks.
+    """
+    coverage_roles = [
+        role
+        for week in weekly_role_map.get("weeks", []) or []
+        if isinstance(week, dict)
+        for role in week.get("session_roles", []) or []
+        if isinstance(role, dict)
+    ]
+    usage_ledger["coverage_roles"] = coverage_roles
+    return coverage_roles
+
+
 def _role_day_counts(session_roles: list[Any]) -> dict[str, int]:
     counts: dict[str, int] = {}
     for role in session_roles:
@@ -131,12 +153,14 @@ def _place_filler(
     # raw declared weekday names, decides whether this is a contact day.
     legality = weekly_role_map_legality(weekly_role_map, week, week_ordinal)
     on_hard_sparring_day = d_day in legality.contact_offsets()
+    coverage_roles = usage_ledger.setdefault("coverage_roles", [])
     insert = select_gap_fill_insert(
         athlete_model,
         d_day,
         on_hard_sparring_day=on_hard_sparring_day,
         usage_ledger=usage_ledger,
         legality=legality,
+        scheduled_roles=coverage_roles,
     )
     if insert is None or (not allow_physical and insert.get("role_key") in PHYSICAL_INSERTS):
         return None
@@ -147,6 +171,7 @@ def _place_filler(
         return None
     _decorate_filler(insert, day, d_day)
     session_roles.append(insert)
+    coverage_roles.append(insert)
     _record_insert_usage(usage_ledger, str(insert.get("role_key") or ""), d_day)
     return insert
 
@@ -421,12 +446,44 @@ def _ensure_coordination_support(
     *,
     weekly_role_map: dict[str, Any],
     week_ordinal: int,
+    usage_ledger: dict[str, Any],
 ) -> bool:
-    if not has_coordination_target(athlete_model) or _week_is_compressed(week):
+    if _week_is_compressed(week):
         return False
 
     session_roles = week.get("session_roles")
     if not isinstance(session_roles, list):
+        return False
+
+    # The banked coordination role is only a materialisation path. The shared
+    # programme-level coverage ledger decides whether coordination is the highest
+    # remaining addressable target; current-week coordination candidates are
+    # excluded from that decision so they cannot satisfy themselves.
+    coverage_roles = usage_ledger.setdefault("coverage_roles", [])
+    current_coordination_ids = {
+        id(role)
+        for role in session_roles
+        if isinstance(role, dict)
+        and str(role.get("role_key") or "") == "coordination_support"
+    }
+    roles_without_current_coordination = [
+        role
+        for role in coverage_roles
+        if id(role) not in current_coordination_ids
+    ]
+    if highest_priority_remaining_target(
+        athlete_model,
+        roles_without_current_coordination,
+    ) != "coordination":
+        session_roles[:] = [
+            role
+            for role in session_roles
+            if not (
+                isinstance(role, dict)
+                and id(role) in current_coordination_ids
+            )
+        ]
+        coverage_roles[:] = roles_without_current_coordination
         return False
 
     legality = weekly_role_map_legality(weekly_role_map, week, week_ordinal)
@@ -448,6 +505,20 @@ def _ensure_coordination_support(
             existing = candidate
             continue
         session_roles.remove(candidate)
+
+    # Keep the shared coverage list aligned when duplicate/invalid current-week
+    # coordination roles were removed above. Previous-week coordination support
+    # remains in the ledger and can legitimately satisfy remaining need.
+    active_current_ids = {
+        id(role)
+        for role in session_roles
+        if isinstance(role, dict)
+    }
+    coverage_roles[:] = [
+        role
+        for role in coverage_roles
+        if id(role) not in current_coordination_ids or id(role) in active_current_ids
+    ]
 
     if existing is not None:
         existing_day = str(existing.get("scheduled_day_hint") or existing.get("real_weekday") or "").strip()
@@ -495,6 +566,9 @@ def _ensure_coordination_support(
         "governance": {"authority": "camp_week_support_insert"},
     }
     role.update(metadata)
+    role["support_target_capabilities"] = filler_target_capabilities(
+        "coordination_support"
+    )
     # Keep the countdown fields consistent with the chosen day for both a freshly
     # built role and an existing role relocated to a cleaner ALLOW slot.
     role["countdown_offset"] = d_day
@@ -508,12 +582,12 @@ def _ensure_coordination_support(
     role["governance"] = {
         **dict(role.get("governance") or {}),
         **coordination_governance,
-        "mandatory_when_targeted": True,
         "meaningful_stress": False,
     }
     _decorate_filler(role, day, d_day)
     if existing is None:
         session_roles.append(role)
+        coverage_roles.append(role)
     used_coordination_keys.add(drill.key)
     return True
 
@@ -659,6 +733,7 @@ def apply_camp_week_fillers(
     fight_dated = _has_future_fight(athlete_model)
     _splice_late_fight_tail(weekly_role_map, athlete_model)
     usage_ledger = _new_usage_ledger()
+    _seed_programme_coverage_roles(weekly_role_map, usage_ledger)
     used_watch_keys: set[str] = set()
     used_coordination_keys: set[str] = set()
 
@@ -669,33 +744,39 @@ def apply_camp_week_fillers(
 
         if fight_dated and phase in _FIGHT_PHASE_CAPS:
             _ensure_tactical_watch(week, athlete_model, phase, used_watch_keys, usage_ledger)
-            _ensure_coordination_support(
-                week,
-                athlete_model,
-                phase,
-                used_coordination_keys,
-                weekly_role_map=weekly_role_map,
-                week_ordinal=week_ordinal,
-            )
+            discretionary_cap = max(0, _FIGHT_PHASE_CAPS[phase] - 1)
+            coordination_added = False
+            if discretionary_cap > 0:
+                coordination_added = _ensure_coordination_support(
+                    week,
+                    athlete_model,
+                    phase,
+                    used_coordination_keys,
+                    weekly_role_map=weekly_role_map,
+                    week_ordinal=week_ordinal,
+                    usage_ledger=usage_ledger,
+                )
             if not _week_is_compressed(week):
                 _fill_week(
                     week,
                     athlete_model,
-                    _FIGHT_PHASE_CAPS[phase] - 1,
+                    max(0, discretionary_cap - int(coordination_added)),
                     usage_ledger,
                     weekly_role_map=weekly_role_map,
                     week_ordinal=week_ordinal,
                 )
             continue
 
+        coordination_added = False
         if phase in {"GPP", "SPP", "TAPER"}:
-            _ensure_coordination_support(
+            coordination_added = _ensure_coordination_support(
                 week,
                 athlete_model,
                 phase,
                 used_coordination_keys,
                 weekly_role_map=weekly_role_map,
                 week_ordinal=week_ordinal,
+                usage_ledger=usage_ledger,
             )
 
         cap = _LEGACY_PHASE_CAPS.get(phase)
@@ -703,7 +784,7 @@ def apply_camp_week_fillers(
             _fill_week(
                 week,
                 athlete_model,
-                cap,
+                max(0, cap - int(coordination_added)),
                 usage_ledger,
                 weekly_role_map=weekly_role_map,
                 week_ordinal=week_ordinal,

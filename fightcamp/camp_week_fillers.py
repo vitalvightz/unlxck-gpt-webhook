@@ -32,6 +32,7 @@ _has_future_fight = _impl._has_future_fight
 _new_usage_ledger = _impl._new_usage_ledger
 _record_insert_usage = _impl._record_insert_usage
 _role_d_day = _impl._role_d_day
+_seed_programme_coverage_roles = _impl._seed_programme_coverage_roles
 _week_for_d_day = _impl._week_for_d_day
 _week_is_compressed = _impl._week_is_compressed
 
@@ -298,6 +299,7 @@ def apply_camp_week_fillers(
     fight_dated = _has_future_fight(athlete_model)
     _splice_late_fight_tail(weekly_role_map, athlete_model)
     usage_ledger = _new_usage_ledger()
+    _seed_programme_coverage_roles(weekly_role_map, usage_ledger)
     used_watch_keys: set[str] = set()
     used_coordination_keys: set[str] = set()
 
@@ -333,33 +335,39 @@ def apply_camp_week_fillers(
                 used_watch_keys,
                 usage_ledger,
             )
-            _ensure_coordination_support(
-                week,
-                athlete_model,
-                phase,
-                used_coordination_keys,
-                weekly_role_map=weekly_role_map,
-                week_ordinal=week_ordinal,
-            )
+            discretionary_cap = max(0, _FIGHT_PHASE_CAPS[phase] - 1)
+            coordination_added = False
+            if discretionary_cap > 0:
+                coordination_added = _ensure_coordination_support(
+                    week,
+                    athlete_model,
+                    phase,
+                    used_coordination_keys,
+                    weekly_role_map=weekly_role_map,
+                    week_ordinal=week_ordinal,
+                    usage_ledger=usage_ledger,
+                )
             if not _week_is_compressed(week):
                 _fill_week(
                     week,
                     athlete_model,
-                    _FIGHT_PHASE_CAPS[phase] - 1,
+                    max(0, discretionary_cap - int(coordination_added)),
                     usage_ledger,
                     weekly_role_map=weekly_role_map,
                     week_ordinal=week_ordinal,
                 )
             continue
 
+        coordination_added = False
         if phase in {"GPP", "SPP", "TAPER"}:
-            _ensure_coordination_support(
+            coordination_added = _ensure_coordination_support(
                 week,
                 athlete_model,
                 phase,
                 used_coordination_keys,
                 weekly_role_map=weekly_role_map,
                 week_ordinal=week_ordinal,
+                usage_ledger=usage_ledger,
             )
 
         cap = _LEGACY_PHASE_CAPS.get(phase)
@@ -367,7 +375,7 @@ def apply_camp_week_fillers(
             _fill_week(
                 week,
                 athlete_model,
-                cap,
+                max(0, cap - int(coordination_added)),
                 usage_ledger,
                 weekly_role_map=weekly_role_map,
                 week_ordinal=week_ordinal,
