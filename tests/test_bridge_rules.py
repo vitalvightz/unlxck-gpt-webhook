@@ -743,3 +743,41 @@ class TestHardSparStatusForCountdownOffset:
         assert _hard_spar_status_for_countdown_offset(18) == "hard_allowed"
         assert _hard_spar_status_for_countdown_offset(17) == "hard_allowed"
         assert _hard_spar_status_for_countdown_offset(14) == "downgrade"
+
+
+def test_bridge_uses_full_canonical_sparring_risk_state():
+    athlete_model = {
+        "readiness_flags": ["high_contact_load"],
+        "fatigue": "low",
+        "cut_severity_bucket": "low",
+    }
+    result = compute_bridge_rules(
+        days_until_fight=16,
+        sport="boxing",
+        fatigue="low",
+        weight_cut_bucket="low",
+        injury_mode="full_plan",
+        hard_sparring_days_declared=1,
+        athlete_model=athlete_model,
+    )
+    assert result["hard_sparring_cutoff_d_day"] == 17
+    assert result["hard_sparring_cap"] == 0
+
+
+def test_bridge_blocks_hard_contact_when_canonical_state_is_contact_blocked():
+    athlete_model = {
+        "readiness_flags": ["medical_contact_restriction"],
+        "fatigue": "low",
+        "cut_severity_bucket": "low",
+    }
+    result = compute_bridge_rules(
+        days_until_fight=20,
+        sport="boxing",
+        fatigue="low",
+        weight_cut_bucket="low",
+        injury_mode="full_plan",
+        hard_sparring_days_declared=1,
+        athlete_model=athlete_model,
+    )
+    assert result["hard_sparring_cap"] == 0
+    assert "serious_contact_safety" in result["reason_codes"]

@@ -1100,6 +1100,7 @@ def compute_bridge_rules(
     weight_cut_bucket: Any = "none",
     injury_mode: Any = "full_plan",
     hard_sparring_days_declared: Any = 0,
+    athlete_model: dict[str, Any] | None = None,
     athlete_pct_above_class: float | None = None,
     hours_to_recovery_after_weigh_in: float | None = None,
     force_unsafe_weight_cut: bool = False,
@@ -1129,11 +1130,16 @@ def compute_bridge_rules(
     )
 
     baseline = _bridge_baseline(state, days_until_fight)
-    sparring_cutoff = hard_sparring_cutoff({
-        "fatigue": fatigue_norm, "cut_severity_bucket": bucket_norm,
-        "readiness_flags": ["moderate_injury"] if injury_norm != "full_plan" else [],
-    })
-    if state == TIMING_STATE_BRIDGE and days is not None and days <= sparring_cutoff:
+    cutoff_snapshot = dict(athlete_model or {})
+    cutoff_snapshot.setdefault("fatigue", fatigue_norm)
+    cutoff_snapshot.setdefault("cut_severity_bucket", bucket_norm)
+    cutoff_flags = set(clean_list(cutoff_snapshot.get("readiness_flags", [])))
+    if injury_norm != "full_plan":
+        cutoff_flags.add("moderate_injury")
+    cutoff_snapshot["readiness_flags"] = sorted(cutoff_flags)
+    sparring_cutoff = hard_sparring_cutoff(cutoff_snapshot)
+    contact_blocked = bool(contact_safety_reasons(cutoff_snapshot))
+    if contact_blocked or (state == TIMING_STATE_BRIDGE and days is not None and days <= sparring_cutoff):
         baseline["hard_sparring_cap_default"] = 0
     rules: dict[str, Any] = {
         "timing_state": state,
@@ -1156,6 +1162,8 @@ def compute_bridge_rules(
         "injury_mode": injury_norm,
         "unsafe_weight_flag": unsafe,
     }
+    if contact_blocked:
+        rules["reason_codes"].append("serious_contact_safety")
     rules = _bridge_apply_injury(rules, injury_norm)
     rules = _bridge_apply_fatigue(rules, fatigue_norm)
     rules = _bridge_apply_weight_cut(rules, bucket_norm, unsafe)

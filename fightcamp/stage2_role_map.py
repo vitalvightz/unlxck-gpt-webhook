@@ -2805,6 +2805,7 @@ def _bridge_allows_pressure_touch(athlete_model: dict, days: int) -> bool:
         weight_cut_bucket=_resolved_cut_severity_bucket(athlete_model) or "none",
         injury_mode=athlete_model.get("injury_mode", "full_plan"),
         hard_sparring_days_declared=len(clean_list(athlete_model.get("hard_sparring_days", []))),
+        athlete_model=athlete_model,
     )
     if rules.get("block_full_plan"):
         return False

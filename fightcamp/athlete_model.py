@@ -180,7 +180,6 @@ def _build_athlete_model(
         and _all_active_injuries_surface_only_from_training_context(training_context)
     )
     return {
-        "sparring_readiness": dict(training_context.sparring_readiness),
         "has_active_injury": has_active_injury,
         "surface_injury_only": surface_injury_only,
         "sport": sport,

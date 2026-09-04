@@ -27,7 +27,16 @@ def _contact_load(plan: dict, completion: dict) -> str:
                     return "none"
                 if not re.search(r"\bspar(?:ring)?\b", text):
                     return "none"
-                if completion.get("status") == "done" and re.search(r"\bhard spar(?:ring)?\b", text) and not re.search(r"\b(?:no|avoid) hard\b|\b(?:light|technical|controlled|reduced|managed)\b", text):
+                effective_load = str(session.get("effective_load") or "").strip().lower()
+                if completion.get("status") == "done" and effective_load == "hard":
+                    return "hard"
+                if effective_load in {"technical", "reduced", "light", "none"}:
+                    return "reduced" if effective_load != "none" else "none"
+                if (
+                    completion.get("status") == "done"
+                    and re.search(r"\bhard spar(?:ring)?\b", text)
+                    and not re.search(r"\b(?:no|avoid) hard\b|\b(?:light|technical|reduced|managed)\b", text)
+                ):
                     return "hard"
                 return "reduced"
     return "unknown"

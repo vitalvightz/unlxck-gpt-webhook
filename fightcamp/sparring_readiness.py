@@ -56,8 +56,28 @@ def sparring_readiness_flags(context: dict[str, Any]) -> list[str]:
         for row in context.get("active_injuries", [])
     ):
         flags.add("moderate_injury")
-    if any(row.get("surface_class") == "surface_no_contact" for row in context.get("active_injuries", [])):
+    active_injuries = context.get("active_injuries", [])
+    if any(row.get("surface_class") == "surface_no_contact" for row in active_injuries):
         flags.add("medical_contact_restriction")
+    serious_categories = {"concussion", "suspected_concussion", "acute_nerve_issue", "nerve_involvement"}
+    serious_flag_names = {
+        "suspected_concussion", "concussion_symptoms", "neurological_symptoms",
+        "recent_ko", "recent_head_injury", "medical_contact_restriction", "no_contact",
+    }
+    blocked_contact_tags = {"contact", "sparring", "hard_contact", "head_impact"}
+    for row in active_injuries:
+        category = str(row.get("triage_category") or row.get("injury_type") or "").strip().lower()
+        row_flags = {str(value).strip().lower() for value in row.get("flags", []) if str(value).strip()}
+        blocked_tags = {str(value).strip().lower() for value in row.get("blocked_training_tags", []) if str(value).strip()}
+        description = str(row.get("description") or "").strip().lower()
+        if (
+            category in serious_categories
+            or row_flags & serious_flag_names
+            or any(token in description for token in ("concussion", "knocked out", "knockout", "neurological"))
+        ):
+            flags.add("suspected_concussion")
+        if blocked_tags & blocked_contact_tags:
+            flags.add("medical_contact_restriction")
     if context.get("reduced_contact_requested") is True:
         flags.add("reduced_contact_requested")
     if context.get("unavailable"):

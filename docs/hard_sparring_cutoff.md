@@ -51,9 +51,10 @@ tests/test_sparring_dose_planner.py tests/test_structured_plan_sparring_reconcil
 
 The generation worker reads athlete-scoped Today check-ins, session completions
 and active injury flags through the existing store. It stamps a dated, ephemeral
-`_sparring_readiness` snapshot on the planner payload. `PlanInput` and
-`TrainingContext` carry it into the canonical athlete model. This does not write
-history back into intake or change the database schema. Non-health generation
+`_sparring_readiness` snapshot on the planner payload. `PlanInput` and `TrainingContext` carry it only long enough to derive canonical
+readiness/contact flags. The raw seven-day snapshot is not copied into the athlete
+model or persisted planning brief. This does not write history back into intake or
+change the database schema. Non-health generation
 skips these reads. The snapshot is refreshed when generating a plan; this change
 does not retroactively edit already-saved plans on every check-in.
 

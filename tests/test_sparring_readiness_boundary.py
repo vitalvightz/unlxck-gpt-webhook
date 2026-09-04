@@ -61,7 +61,7 @@ def test_persisted_inputs_reach_athlete_model_and_d17_conversion(monkeypatch, so
             _session(store, age, title="Hard sparring" if source == "contact" else "Strength", session_rpe=9 if source == "rpe" else 5)
     model = _model(store, monkeypatch, requested=source == "request")
     assert flag in model["readiness_flags"]
-    assert not model["sparring_readiness"]["unavailable"]
+    assert "sparring_readiness" not in model
     assert hard_sparring_risk_state(model) == "ELEVATED"
     assert hard_sparring_cutoff(model) == 17
     assert _single_day(16, **model)[2]["effective_load"] == "technical"
@@ -109,7 +109,8 @@ def test_failed_history_read_is_explicit_and_conservative(monkeypatch):
         raise RuntimeError("offline")
     monkeypatch.setattr(store, "list_today_checkins", fail)
     model = _model(store, monkeypatch)
-    assert "list_today_checkins" in model["sparring_readiness"]["unavailable"]
+    assert "sparring_history_unavailable" in model["readiness_flags"]
+    assert "sparring_readiness" not in model
     assert hard_sparring_cutoff(model) == 17
 
 
@@ -156,6 +157,24 @@ def test_completion_cannot_read_another_athletes_plan(monkeypatch):
     _session(store, 0)
     store.plans[f"plan-{ATHLETE}"]["athlete_id"] = "someone-else"
     model = _model(store, monkeypatch)
-    assert "completion_plan" in model["sparring_readiness"]["unavailable"]
-    assert model["sparring_readiness"]["sessions"][0]["contact_load"] == "unknown"
+    assert "sparring_history_unavailable" in model["readiness_flags"]
+    assert "sparring_readiness" not in model
     assert hard_sparring_cutoff(model) == 17
+
+
+def test_canonical_controlled_hard_contact_counts_as_hard(monkeypatch):
+    store = FakeStore()
+    for age in [0, 2]:
+        _session(store, age, title="Hard sparring — controlled hard contact")
+    model = _model(store, monkeypatch)
+    assert "high_contact_load" in model["readiness_flags"]
+    assert hard_sparring_cutoff(model) == 17
+
+
+def test_raw_sparring_history_is_not_copied_into_athlete_model(monkeypatch):
+    store = FakeStore()
+    for age in [0, 1, 2]:
+        _checkin(store, age)
+    model = _model(store, monkeypatch)
+    assert "poor_recovery" in model["readiness_flags"]
+    assert "sparring_readiness" not in model
