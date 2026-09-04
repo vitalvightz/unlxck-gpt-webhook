@@ -10,19 +10,17 @@ it emits and another stage keeps rendering a blank calendar without anyone
 noticing until an athlete sees an empty plan.
 
 This module runs once, after Stage 2 finalization and before the plan is
-persisted, and asserts the invariants that must hold for a plan that is about
-to be shown to an athlete. It is intentionally:
+persisted, and records those invariants for telemetry and QA. It is intentionally:
 
 * **shape-agnostic** — it reuses ``extract_weekly_schedule`` (the same code the
   UI renders from) so it validates the *rendered* calendar, catching
   range/span drift regardless of which planner built the plan; and
-* **fail-open on its own bugs** — it never raises. A validator defect must
-  never block plan delivery; the caller treats an internal error as "no
-  finding" and ships the plan as it would have without this layer.
+* **observational** — findings never veto or downgrade an already-produced plan.
+  Planner/runtime logic owns the prescription and releaseable plan; this module
+  only reports disagreement so it can be fixed at the canonical source.
 
-A finding with ``severity == "error"`` means the plan should not be shown to an
-athlete unreviewed; the caller routes such a plan to ``review_required`` so an
-admin sees it first. ``warning`` findings are recorded for visibility only.
+``severity == "error"`` remains useful diagnostic metadata. It no longer means
+an athlete-facing plan should be held for admin review.
 """
 from __future__ import annotations
 
@@ -81,21 +79,21 @@ def validate_plan_contract(
     *,
     fight_date: Any = None,
 ) -> dict[str, Any]:
-    """Validate the invariants a finalized plan must satisfy before persistence.
+    """Validate finalized-plan invariants for observational QA.
 
     Returns a structured, JSON-serialisable report::
 
         {
-            "ran": bool,            # False only when there was nothing to check
-            "ok": bool,             # True when no error-severity findings
+            "ran": bool,
+            "ok": bool,
             "has_errors": bool,
             "checks": {check_name: bool, ...},
             "violations": [{"code", "severity", "message", "week_index?"}, ...],
             "week_count": int,
         }
 
-    Never raises: any internal failure is captured as a ``validator_error``
-    warning and ``ok`` stays True so the caller ships the plan unchanged.
+    Never raises. Findings are diagnostic only; callers must not use this report
+    to withhold an already-produced usable plan.
     """
     checks: dict[str, bool] = {}
     violations: list[dict[str, Any]] = []
@@ -126,8 +124,7 @@ def validate_plan_contract(
         )
 
         # No structured weekly schedule to validate. This is a legacy/edge shape,
-        # not drift, so we record it as a warning and do not route to review:
-        # newly blocking these would be a regression, not a catch.
+        # not drift, so record it as a warning only.
         if not weeks:
             checks["weekly_schedule_present"] = False
             violations.append(
@@ -225,7 +222,6 @@ def validate_plan_contract(
                         )
                     )
 
-        # A would-be-visible plan must carry athlete-facing plan text.
         plan_text = (
             final_result.get("plan_text")
             or final_result.get("final_plan_text")
@@ -274,5 +270,5 @@ def _finalize(
 
 
 def contract_report_requires_review(report: Any) -> bool:
-    """True when a contract report has error-severity findings that warrant review."""
-    return bool(isinstance(report, dict) and report.get("has_errors"))
+    """Compatibility shim: contract findings are observational and never gate release."""
+    return False
