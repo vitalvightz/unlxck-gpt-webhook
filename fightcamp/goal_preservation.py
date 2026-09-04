@@ -457,6 +457,7 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
     """
     from .late_camp_role_morph import apply_late_camp_role_morph
     from .prescription_resolver import apply_effective_strength_prescriptions
+    from .session_composition import compose_normal_strength_assignments
 
     audit = []
     if "late_fight_session_sequence" in brief:
@@ -506,6 +507,10 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
                 restored["goal_preservation_repair"] = {"goal": entry["goal"], "authority": VERSION}
                 trial_week["session_roles"].append(restored)
                 apply_late_camp_role_morph(trial["weekly_role_map"])
+                compose_normal_strength_assignments(
+                    weekly_role_map=trial["weekly_role_map"],
+                    candidate_pools=trial.get("candidate_pools") or {},
+                )
                 apply_effective_strength_prescriptions(weekly_role_map=trial["weekly_role_map"],
                                                       candidate_pools=trial.get("candidate_pools") or {}, athlete_model=_athlete(trial))
                 _, missing_before = _coverage(entry, brief, collect_goal_evidence(brief))
