@@ -571,22 +571,34 @@ def _strength_role_slot_groups(
     for week in weekly_role_map.get("weeks", []) or []:
         if not isinstance(week, dict):
             continue
-        phase = str(week.get("phase") or "").strip().upper()
-        strength_slots = _strength_slots_for_phase(candidate_pools, phase)
         for role in week.get("session_roles") or []:
             if not isinstance(role, dict) or not _is_strength_role(role):
                 continue
             assignments = role.get("selected_exercise_assignments")
             if isinstance(assignments, list):
-                selected_keys = {
-                    (str(item.get("slot_id") or ""), str(item.get("name") or ""))
-                    for item in assignments if isinstance(item, dict)
-                }
-                owned_slots = [
-                    slot for slot in strength_slots
-                    if (str(slot.get("slot_id") or ""), str(_slot_selected(slot).get("name") or ""))
-                    in selected_keys
-                ]
+                owned_slots = []
+                for assignment in assignments:
+                    if not isinstance(assignment, dict) or assignment.get("slot_group") != "strength_slots":
+                        continue
+                    # The selector owns the source phase.  A spliced D-13 role
+                    # may sit in an SPP calendar week while its exact selected
+                    # slot came from another phase; never rediscover it from the
+                    # containing week's phase.
+                    source_phase = str(assignment.get("source_phase") or "").strip().upper()
+                    if not source_phase:
+                        continue
+                    slot_id = str(assignment.get("slot_id") or "")
+                    name = str(assignment.get("name") or "")
+                    match = next(
+                        (
+                            slot for slot in _strength_slots_for_phase(candidate_pools, source_phase)
+                            if str(slot.get("slot_id") or "") == slot_id
+                            and str(_slot_selected(slot).get("name") or "") == name
+                        ),
+                        None,
+                    )
+                    if match is not None:
+                        owned_slots.append(match)
             else:
                 # Candidate grouping is retained for diagnostics only.  It must
                 # never become athlete-facing prescription authority.
