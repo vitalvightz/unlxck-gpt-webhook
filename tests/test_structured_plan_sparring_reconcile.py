@@ -406,14 +406,35 @@ def test_normal_camp_converted_day_inside_d17_ban_uses_countdown_specific_card()
         assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == expected_headline
 
 
-def test_normal_camp_hard_sparring_ban_boundary_is_d18():
-    hard_plan = _structured_plan([_day("D-18", headline="Recovery")])
-    reconcile_coach_led_sparring_days(hard_plan, _normal_camp_role_brief(d_day=18))
+def test_normal_camp_hard_sparring_ban_boundary_is_d15():
+    hard_plan = _structured_plan([_day("D-15", headline="Recovery")])
+    reconcile_coach_led_sparring_days(hard_plan, _normal_camp_role_brief(d_day=15))
     assert hard_plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Hard sparring"
 
-    banned_plan = _structured_plan([_day("D-17", headline="Recovery")])
-    reconcile_coach_led_sparring_days(banned_plan, _normal_camp_role_brief(d_day=17))
+    banned_plan = _structured_plan([_day("D-14", headline="Recovery")])
+    reconcile_coach_led_sparring_days(banned_plan, _normal_camp_role_brief(d_day=14))
     assert banned_plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Controlled fight-speed technical rounds"
+
+
+def test_stale_role_cannot_override_resolved_readiness_reduction():
+    brief = _planning_brief([{
+        "day": "Thursday", "status": "deload_suggested", "effective_load": "reduced",
+    }])
+    brief["weekly_role_map"]["weeks"][0]["session_roles"] = [{
+        "role_key": "hard_sparring_day", "countdown_offset": 31,
+        "hard_sparring_status": "hard_as_planned",
+    }]
+    plan = _structured_plan([_day("D-31", headline="Recovery")])
+    reconcile_coach_led_sparring_days(plan, brief)
+    assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Hard sparring — reduced dose"
+
+
+def test_elevated_risk_clamps_stale_d16_role_to_existing_technical_format():
+    brief = _normal_camp_role_brief(d_day=16)
+    brief["athlete_snapshot"] = {"fatigue": "high"}
+    plan = _structured_plan([_day("D-16", headline="Recovery")])
+    reconcile_coach_led_sparring_days(plan, brief)
+    assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == "Controlled fight-speed technical rounds"
 
 
 def test_normal_camp_deloaded_hard_day_renders_reduced_dose():

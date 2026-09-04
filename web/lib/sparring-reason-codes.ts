@@ -91,10 +91,22 @@ const REASON_EXPLANATIONS: Record<string, SparringReasonExplanation> = {
     body:
       "Final taper week is capped at one effective hard sparring day. Extra declared hard days become technical or reduced-contact work to protect freshness.",
   },
+  d14_hard_sparring_ban: {
+    title: "Hard sparring cutoff",
+    body: "From D-14, declared hard sparring converts to the existing technical or rhythm work. This scheduling rule does not provide medical clearance.",
+  },
+  serious_contact_safety: {
+    title: "No contact or sparring",
+    body: "A serious safety concern requires medical evaluation and the appropriate clearance pathway before contact resumes.",
+  },
+  medical_contact_restriction: {
+    title: "Contact restricted",
+    body: "Follow the active no-contact restriction. The fight countdown does not clear it.",
+  },
   d17_hard_sparring_ban: {
-    title: "D-17 hard sparring ban",
+    title: "Earlier hard sparring cutoff",
     body:
-      "From D-17 onward, all declared hard sparring becomes technical or rhythm-only. Effective hard sparring is not allowed in the back half of camp.",
+      "Elevated risk brings hard-sparring conversion forward to D-17. The session keeps its existing technical or rhythm format.",
   },
   d21_d18_cap_one: {
     title: "D-21 to D-18 single hard day",

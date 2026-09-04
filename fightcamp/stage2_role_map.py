@@ -1251,6 +1251,14 @@ def _lock_declared_hard_sparring_roles(
 
     for day in declared_hard_days:
         plan_entry = plan_by_day.get(day)
+        if plan_entry and plan_entry.get("effective_load") == "none":
+            updated_roles = [role for role in updated_roles if not (
+                role.get("role_key") == "hard_sparring_day"
+                and str(role.get("scheduled_day_hint") or "").strip() == day
+            )]
+            if not any(item.get("locked_day") == day and item.get("hard_sparring_status") == "blocked" for item in updated_suppressed):
+                updated_suppressed.append(_make_final_week_sparring_cap_suppression(day, plan_entry))
+            continue
         if _is_final_week_capped_sparring_entry(plan_entry):
             existing_idx = next(
                 (

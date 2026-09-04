@@ -301,6 +301,8 @@ def _session_count_summary(week: dict[str, Any], athlete_model: dict[str, Any]) 
         reasons.append("weight_cut")
     if "d17_hard_sparring_ban" in reason_codes:
         reasons.append("d17_technical_only_rule")
+    elif "d14_hard_sparring_ban" in reason_codes:
+        reasons.append("d14_technical_only_rule")
     if (
         _has_active_injury(athlete_model) or "injury_management" in reason_codes
     ) and not _all_active_injuries_surface_only(athlete_model):
@@ -315,7 +317,8 @@ def _session_count_summary(week: dict[str, Any], athlete_model: dict[str, Any]) 
     reason_labels = {
         "taper": "Taper trims volume while preserving sharpness.",
         "weight_cut": "Target-weight pressure tightens recovery tolerance.",
-        "d17_technical_only_rule": "D-17+ hard-contact rule moves contact work to technical-only.",
+        "d17_technical_only_rule": "Elevated risk brings hard-sparring conversion forward to D-17.",
+        "d14_technical_only_rule": "The D-14 hard-sparring cutoff moves contact work to technical-only.",
         "injury_management": "Injury management removes or compresses risky standalone work.",
         "coach_led_contact_load": "Hard sparring / contact work owns part of the weekly load.",
         "fight_week_override": "Fight-week override caps app-owned work.",

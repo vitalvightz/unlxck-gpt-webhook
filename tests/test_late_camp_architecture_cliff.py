@@ -127,6 +127,30 @@ def _weeks(brief: dict) -> list[dict]:
     return brief.get("weekly_role_map", {}).get("weeks", []) or []
 
 
+@pytest.mark.parametrize("fatigue,expected_d16", [("low", "hard"), ("high", "technical")])
+def test_full_planner_weekly_sparring_uses_dynamic_cutoff(monkeypatch, fatigue, expected_d16):
+    from fightcamp.weekly_schedule_view import extract_weekly_schedule
+
+    brief = _run(31, monkeypatch, fatigue=fatigue, hard_sparring="Wednesday", target_weight="88")
+    entries = {
+        entry["d_day"]: entry
+        for week in _weeks(brief)
+        for entry in week.get("hard_sparring_plan", [])
+        if isinstance(entry.get("d_day"), int)
+    }
+    assert entries[23]["effective_load"] == "hard"
+    assert entries[16]["effective_load"] == expected_d16
+    assert entries[9]["effective_load"] == "technical"
+    assert entries[2]["effective_load"] == "technical"
+    displayed = {
+        day["d_day"]: day["effective_load"]
+        for index in range(len(_weeks(brief)))
+        for day in extract_weekly_schedule(brief, week_index=index)["days"]
+        if day["effective_load"] != "none"
+    }
+    assert displayed[16] == expected_d16
+
+
 def _week_calendar(week: dict) -> dict[str, int]:
     out: dict[str, int] = {}
     for day in week.get("calendar_days", []) or []:
@@ -322,21 +346,21 @@ class TestProductionCalendarCollision:
 
     def test_declared_hard_sparring_inside_d17_is_converted_to_technical(self, monkeypatch):
         # The genuine safety invariant that must survive the refactor: any declared
-        # hard-sparring session whose SCHEDULED D-day is <= 17 converts to
+        # hard-sparring session whose SCHEDULED D-day is <= 14 converts to
         # technical-only, keyed on the session's own countdown position.
         for days in (21, 20, 18, 16):
             brief = _run(days, monkeypatch)
             inside = [
                 entry
                 for _w, entry in _hard_sparring_plan_entries(brief)
-                if isinstance(entry.get("d_day"), int) and 0 <= entry["d_day"] <= 17
+                if isinstance(entry.get("d_day"), int) and 0 <= entry["d_day"] <= 14
             ]
             assert inside, f"D-{days} produced no in-window declared hard-sparring entry to check"
             for entry in inside:
                 assert entry.get("effective_load") == "technical", (
                     f"D-{days}: hard sparring at D-{entry['d_day']} was not converted"
                 )
-                assert "d17_hard_sparring_ban" in (entry.get("reason_codes") or [])
+                assert "d14_hard_sparring_ban" in (entry.get("reason_codes") or [])
 
     def test_declared_hard_sparring_at_d18_plus_stays_a_coach_owned_lock(self, monkeypatch):
         # The other side of the same invariant: D-18 and further out, declared hard

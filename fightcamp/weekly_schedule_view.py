@@ -92,7 +92,7 @@ def _coerce_effective_load(entry: dict[str, Any]) -> str:
         return "none"
 
     reason_codes = {str(code).strip() for code in _clean_list(entry.get("reason_codes"))}
-    if "d17_hard_sparring_ban" in reason_codes or "final_week_sparring_cap" in reason_codes:
+    if reason_codes & {"d14_hard_sparring_ban", "d17_hard_sparring_ban", "final_week_sparring_cap"}:
         return "technical"
 
     return "none"
@@ -159,29 +159,6 @@ def _mark_missing_effective_sparring_plan(day: dict[str, Any]) -> None:
             "reason_codes": ["missing_effective_sparring_plan"],
         }
     )
-
-
-def _mark_late_hard_sparring_ban(day: dict[str, Any]) -> None:
-    day.update(
-        {
-            "sparring_day_class": "technical",
-            "effective_load": "technical",
-            "status": "convert_to_technical_suggested",
-            "reason": (
-                "D-17 onward hard sparring ban: declared hard sparring is converted "
-                "to technical/rhythm only. No effective hard sparring allowed."
-            ),
-            "coach_note": "Technical/rhythm only. No hard contact.",
-            "reason_codes": ["d17_hard_sparring_ban"],
-        }
-    )
-
-
-def _is_d17_or_closer(day: dict[str, Any]) -> bool:
-    d_day = day.get("d_day")
-    if d_day is None:
-        return True
-    return isinstance(d_day, int) and 0 <= d_day <= 17
 
 
 def _resolve_week_countdown_span(week: dict[str, Any]) -> tuple[int, int] | None:

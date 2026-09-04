@@ -38,17 +38,13 @@ import re
 from typing import Any
 
 from fightcamp.weekly_schedule_view import extract_weekly_schedule
+from fightcamp.sparring_dose_planner import hard_sparring_cutoff, contact_safety_reasons
 
 # effective_load values from the deterministic schedule that mean coach-owned
 # contact work the athlete must see as its own card.
 _CONTACT_EFFECTIVE_LOADS = {"hard", "technical", "reduced"}
 
-# From D-17 onward hard sparring is banned — every declared hard day converts to
-# technical/rhythm (``sparring_dose_planner._apply_per_day_countdown_overrides``).
-# The calendar is the authority here too: a contact card at or inside this
-# countdown never carries a hard-sparring headline, whatever the role or schedule
-# entry it was built from claims.
-_HARD_SPARRING_BAN_D_DAY = 17
+# Contact ceilings come from the same risk-aware owner as the planner.
 
 # Canonical headlines chosen so the web classifier reliably tags the day:
 #   "spar"      -> SPARRING_RE  -> kind "sparring"  (athlete-owned contact note shows)
@@ -178,14 +174,16 @@ def _is_allowed_nontechnical_contact_filler(session: Any) -> bool:
     return bool(_ALLOWED_HARD_DAY_FILLER_RE.search(text))
 
 
-def _ban_clamped_load(load: str, d_day: int | None) -> str:
-    """Force technical on any contact day inside the D-17 hard-sparring ban."""
-    if load == "hard" and d_day is not None and 0 <= d_day <= _HARD_SPARRING_BAN_D_DAY:
+def _ban_clamped_load(load: str, d_day: int | None, athlete_snapshot: dict[str, Any] | None = None) -> str:
+    """Apply the shared ceiling without upgrading already reduced contact."""
+    if contact_safety_reasons(athlete_snapshot or {}):
+        return "none"
+    if load in {"hard", "reduced"} and d_day is not None and 0 <= d_day <= hard_sparring_cutoff(athlete_snapshot or {}):
         return "technical"
     return load
 
 
-def _role_contact_load(role: dict[str, Any], d_day: int | None) -> str:
+def _role_contact_load(role: dict[str, Any], d_day: int | None, athlete_snapshot: dict[str, Any] | None = None) -> str:
     """Effective contact load for a declared ``hard_sparring_day`` role.
 
     ``role_key`` records only that the day was *declared* hard — never what the
@@ -197,6 +195,8 @@ def _role_contact_load(role: dict[str, Any], d_day: int | None) -> str:
     roles are collected before the weekly schedule, that wrong headline won the
     d-day dedupe over the schedule's correct technical entry.
     """
+    if contact_safety_reasons(athlete_snapshot or {}) or role.get("hard_sparring_status") == "blocked":
+        return "none"
     if bool(role.get("downgraded")) or str(
         role.get("downgraded_to_role_key") or ""
     ).strip() == "technical_touch_day":
@@ -208,14 +208,14 @@ def _role_contact_load(role: dict[str, Any], d_day: int | None) -> str:
         str(code).strip()
         for code in (raw_codes if isinstance(raw_codes, (list, tuple)) else [])
     }
-    if status == "convert_to_technical_suggested" or "d17_hard_sparring_ban" in reason_codes:
+    if status == "convert_to_technical_suggested" or reason_codes & {"d14_hard_sparring_ban", "d17_hard_sparring_ban"}:
         return "technical"
     if (
         status == "deload_suggested"
         or str(role.get("hard_sparring_class") or "").strip() == "managed_hard"
     ):
         return "reduced"
-    return _ban_clamped_load("hard", d_day)
+    return _ban_clamped_load("hard", d_day, athlete_snapshot)
 
 
 def _resolve_fight_date(planning_brief: dict[str, Any]) -> Any:
@@ -279,6 +279,7 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
     if not isinstance(weeks, list):
         return []
 
+    athlete_snapshot = planning_brief.get("athlete_model") or planning_brief.get("athlete_snapshot") or {}
     fight_date = _resolve_fight_date(planning_brief)
     contact_days: list[_ContactDay] = []
     seen_dates: set[str] = set()
@@ -300,6 +301,13 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
         if not isinstance(week, dict):
             continue
 
+        schedule = extract_weekly_schedule(planning_brief, week_index=week_index, fight_date=fight_date)
+        resolved_loads = {
+            day["d_day"]: day["effective_load"]
+            for day in (schedule or {}).get("days", [])
+            if day.get("status") and isinstance(day.get("d_day"), int)
+        }
+        load_rank = {"none": 0, "technical": 1, "reduced": 2, "hard": 3}
         role_phase = str(week.get("phase") or "").strip().upper()
         session_roles = week.get("session_roles")
         role_entries = session_roles if isinstance(session_roles, list) else []
@@ -318,7 +326,12 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
             if d_day is None or d_day == 0:
                 continue
 
-            load = _role_contact_load(role, d_day)
+            load = _ban_clamped_load(_role_contact_load(role, d_day, athlete_snapshot), d_day, athlete_snapshot)
+            resolved_load = resolved_loads.get(d_day)
+            if resolved_load in load_rank and load_rank[resolved_load] < load_rank[load]:
+                load = resolved_load
+            if load == "none":
+                continue
             append_contact(
                 _ContactDay(
                     date=str(role.get("calendar_date") or role.get("date") or "").strip() or None,
@@ -331,11 +344,6 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
                 )
             )
 
-        schedule = extract_weekly_schedule(
-            planning_brief,
-            week_index=week_index,
-            fight_date=fight_date,
-        )
         if not isinstance(schedule, dict):
             continue
 
@@ -364,7 +372,9 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
             if cal is None and d_day is None:
                 continue
 
-            load = _ban_clamped_load(load, d_day)
+            load = _ban_clamped_load(load, d_day, athlete_snapshot)
+            if load == "none":
+                continue
             append_contact(
                 _ContactDay(
                     date=cal,
