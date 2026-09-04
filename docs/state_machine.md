@@ -85,107 +85,48 @@ Allowed transitions are defined in `api/state_machine.py`. In plain terms:
 
 ### Stage 2 outcomes → statuses
 
-What the automated Stage 2 finalizer (`api/stage2_automation.py`) writes, by outcome:
+`fightcamp/stage2_policy.py` is the Stage 2 release authority. Automatic and
+manual submission paths consume its decision without upgrading `hold` to
+publication. They use the same audit statuses: `stage2_pass` for a policy-approved
+release and `stage2_failed` for a hold. Held renderer output is retained in
+`final_plan_text` for admins; athlete-facing `plan_text` is empty.
 
-**Stage 2 validator findings never hold a plan.** They decide which release
-status is written, not whether the athlete gets the plan. Flagged plans land in
-`publishable_with_flags`, which is athlete-displayable *and* in
-`ADMIN_REVIEW_PLAN_STATUSES` — so the plan reaches the athlete immediately and
-still shows up in the admin review surface with every finding attached.
-
-| Stage 2 outcome | Plan status | `stage2_status` | Generation job status |
+| Central decision | Plan status | Audit status | Job status |
 |---|---|---|---|
-| Validator passes (clean) | `ready` | `stage2_pass` | `completed` |
-| Validator has only allowlisted low-risk quality flags | `publishable_with_flags` | `stage2_pass` | `completed` |
-| Validator has an admin-review blocking context/programme finding | `publishable_with_flags` | `stage2_failed` | `completed` |
-| Validator fails on a hard blocker (safety / output integrity) | `publishable_with_flags` | `stage2_failed` | `completed` |
-| No clean structured card | unchanged (card status logged; plan_text is the fallback) | unchanged | `completed` |
-| **Technical failure with no usable Stage 2 text** — timeout, provider error, unavailable finalizer, empty output | no plan row | — | `failed` |
-| Injury triage blocks Stage 2 | `triage_blocked` (or `medical_hold` / `restricted_rehab_only` / `needs_review`) | unchanged / `""` | `review_required` |
+| `publish` | `ready` | `stage2_pass` | `completed` |
+| `publish_with_flags` | `publishable_with_flags` | `stage2_pass` | `completed` |
+| `hold` | `review_required` | `stage2_failed` | `review_required` |
+| Runtime/provider failure with no usable response, empty output, persistence failure | no released plan | failure telemetry | `failed` |
 
-The shared Stage 2 policy still has three explicit classes:
+Only `goal_preservation_failed` is allowlisted as an observational error in the
+shared policy. It describes planner/evidence disagreement and is preserved in
+`errors` and `quality_review_flags`, including unsatisfied states and missing
+coverage. It cannot trigger planner regeneration or a renderer retry by itself.
+Existing allowlisted presentation warnings can also publish with flags.
 
-- `hard_stage2_blocker_codes`: safety and output-integrity failures;
-- `athlete_release_with_flags_codes`: a narrow allowlist of low-risk clarity findings;
-- `admin_review_blocking_codes`: athlete-context and programme-quality failures.
+Renderer divergence is different: injury restrictions, illegal sparring, forbidden
+exercises, effective-dose overages, witness render mismatches, fight-day protocol
+violations, and truncated output remain blocking. Unknown errors, unknown
+blocking warnings, malformed reports, and admin-review blockers fail closed.
+Observations mixed with blockers never override a hold.
 
-What changed is the consequence, not the classification. Validator errors, hard
-blockers, admin-review blockers, mixed reports, and unknown `blocking_warnings`
-are all still detected and recorded verbatim on the plan; they now release with
-flags rather than holding. `stage2_status` stays `stage2_failed` on those plans,
-so the audit trail still shows the validator failed. The persisted report's
-`release_decision` / `is_athlete_releasable` / `is_publishable` are set to the
-released-with-flags values so the report agrees with the saved plan status.
+Effective-dose and witness render mismatches get at most one conforming renderer
+repair. Both the corrected output and a still-invalid repair are revalidated by
+the central policy. The first report is retained as `repair_source_report`; token
+telemetry includes both calls. A failed repair stays held. A provider-incomplete
+final response is recorded as `stage2_output_truncated` and held.
 
-`publishable_with_flags` remains in the admin review surface for asynchronous
-audit. This policy removes athlete release delay; it does not remove flagged
-plans from the admin queue or reduce review volume.
+Planner safety rules must determine the canonical plan before rendering.
+Validators must not second-guess legitimate planner choices, but must prevent
+the renderer from violating those choices. A readable body alone does not prove
+that the renderer followed the canonical plan.
 
-Planner decisions are authoritative. Validators are observational after a usable
-plan exists. Validator findings may flag a plan for review but cannot veto athlete
-release or convert a usable plan into a failed generation. Safety must be enforced
-by the canonical planner before output, not retroactively by relying on a validator
-kill switch.
-
-Goal-preservation and rendered-witness findings use this same release policy.
-They remain in `stage2_validator_report.errors`, with unsatisfied states and
-missing coverage unchanged. Automatic finalization makes no dose/goal repair
-call and never requests planner regeneration to satisfy a validator.
-Post-generation contract checks flag usable content even for unknown error codes.
-Manual Stage 2 submissions use the same released-with-flags report policy.
-The offline `build_stage2_retry` helper remains available for explicit diagnostic
-repair tooling, but neither automatic nor manual release calls it. Structured
-conversion failures retain their debug report and fall back to existing plan text;
-card-format repair does not regenerate the canonical plan.
-Explicit admin holds and pre-planner triage remain separate decisions.
-
-#### Technical Stage 2 failures
-
-The rows above describe a Stage 2 plan that *exists*. If Stage 2 fails before
-producing usable athlete-facing text — for example a timeout, provider error,
-unavailable finalizer, empty response, or unexpected finalizer crash — the
-generation attempt fails and no plan row is created. Stage 1 remains internal
-planner input only; it is never promoted to the athlete-facing final plan.
-
-An `incomplete` provider response is handled by content, not by status alone. If
-it still contains usable Stage 2 text, that Stage 2 text continues through the
-validator and releases as `publishable_with_flags` with an admin-visible
-`stage2_incomplete_response` warning. If it contains no usable Stage 2 text, the
-generation attempt fails.
-
-The historical `stage2_failed_stage1_fallback` audit value may still appear on
-old plan rows created before this contract changed. New generations do not write
-that outcome.
-
-#### What can still block a release
-
-Two Stage 1 gates remain. Both are deliberately narrow.
-
-1. **Injury triage** — `triage_blocked` / `medical_hold` /
-   `restricted_rehab_only` / `needs_review`.
-2. **The post-generation plan-contract gate**
-   (`_apply_plan_contract_validation` in `api/generation/persistence.py`), but
-   only for an unrecoverable finding.
-
-The contract gate runs after Stage 2 and validates the finalized result: the
-calendar rendered from `planning_brief`, the `stage2_payload` late-fight
-sequence, and the athlete-facing plan text. Its error-severity findings are split
-by consequence, not by which stage produced them:
-
-| Finding | Outcome |
-|---|---|
-| `weekly_schedule_blank` | `publishable_with_flags` |
-| `calendar_unrenderable` | `publishable_with_flags` |
-| `fight_day_missing` | `publishable_with_flags` |
-| `late_fight_session_sequence_empty` | `publishable_with_flags` |
-| `plan_text_empty` | `review_required` |
-| `validator_error`, or any unknown code | `publishable_with_flags` if usable content exists; otherwise `review_required` |
-
-Findings flag readable plan text or a usable structured card for admin audit.
-A `plan_text_empty` finding still releases with flags if a usable card exists;
-without either form of content, the plan remains withheld. Unknown validator
-codes cannot veto existing content. The separate card-rescue classification can
-keep a clean card at `ready` for known render-only discrepancies.
+Structured conversion runs only for policy-approved release. Invalid cards fall
+back to that approved text; a card cannot rescue a Stage 2 safety hold.
+The separate persistence contract gate retains its existing narrow calendar
+allowlist and clean-card checks. Unknown contract errors and unusable content
+remain held; it never promotes an existing Stage 2 hold. Medical triage and
+explicit admin review actions retain their separate authority.
 
 ### Plan status → generation job status
 

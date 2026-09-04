@@ -131,12 +131,16 @@ the existing exercise/dose parsers. This is fidelity checking against a
 deterministic decision, not semantic inference from LLM prose. Missing or reduced
 witnesses produce `goal_preservation_render_mismatch`.
 
-Both codes retain diagnostic severity but cannot veto release. Automation records
-pre-render and rendered-witness findings in the existing validator report and
-releases usable Stage 2 content as `publishable_with_flags`. No automatic model
-repair or planner regeneration is triggered solely by these findings.
-`Stage2GoalPreservationError` is historical compatibility only. Runtime/provider
-failures without usable output and persistence failures remain terminal.
+`goal_preservation_failed` is an observational planner/evidence disagreement.
+The central Stage 2 policy preserves it and releases with flags when no blockers
+remain. It does not request a model retry or planner regeneration.
+
+`goal_preservation_render_mismatch` remains a hard blocker: the renderer lost or
+altered a named planner witness. It gets one conforming render repair and must
+pass policy before release. Effective-dose overages follow the same rule.
+Unknown errors remain fail-closed. `Stage2GoalPreservationError` is retained only
+for historical compatibility; the central policy supplies the release decision.
+Runtime/provider failures without output and persistence failures remain terminal.
 
 ## Compatibility and scope
 

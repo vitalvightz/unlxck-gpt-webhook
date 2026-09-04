@@ -125,6 +125,16 @@ def test_sheyi_speed_audit_cannot_discard_usable_stage2_plan(monkeypatch):
         "missing_coverage": ["D14-D20"],
     }
     monkeypatch.setattr(automation, "validate_goal_preservation", lambda _: [finding])
+    # Isolate the reported evidence-reader disagreement from renderer divergence.
+    monkeypatch.setattr(
+        automation,
+        "review_stage2_output",
+        lambda **_: {
+            "status": "PASS",
+            "needs_retry": False,
+            "validator_report": {"errors": [], "warnings": []},
+        },
+    )
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "0")
     text = """# MMA pressure fighter camp — Week 2
 D-19 (Friday) — Hard sparring

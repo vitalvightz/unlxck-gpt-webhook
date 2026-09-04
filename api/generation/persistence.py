@@ -33,8 +33,8 @@ _POST_PERSIST_CLEANUP_TIMEOUT_SECONDS = 8.0
 _ADMIN_CANCELLED_JOB_ERROR = "Generation cancelled by admin."
 
 # Statuses that surface the plan to the athlete. A contract violation on one of
-# these flags usable content, or routes absent content to review_required;
-# a violation on an already-non-visible
+# these either flags the plan (keeping it visible) or, for an unrecoverable
+# finding, routes it to review_required; a violation on an already-non-visible
 # status is recorded without changing the status.
 _CONTRACT_VISIBLE_PLAN_STATUSES = {"ready", "publishable_with_flags"}
 _CONTRACT_REVIEW_PLAN_STATUS = "review_required"
@@ -177,8 +177,8 @@ def _apply_plan_contract_validation(
 
     Runs the post-generation contract validator, attaches its report to
     ``why_log`` for visibility, and — when a would-be-visible plan has
-    error-severity findings — flags usable content as ``publishable_with_flags``
-    for asynchronous review. Only absent content can still be withheld. Returns the (possibly
+    error-severity findings — downgrades the status to ``review_required`` so an
+    admin reviews the plan before the athlete sees it. Returns the (possibly
     updated) final_result. Never raises: a validator failure leaves the plan
     untouched so generation is never blocked by a defect in this layer.
     """
@@ -236,12 +236,10 @@ def _apply_plan_contract_validation(
         # A degraded calendar render is not a reason to withhold the plan. The
         # athlete still has readable plan text, and most athletes have no coach to
         # escalate to, so the finding is flagged for admin audit and the plan stays
-        # visible. Content availability, not the validator code, determines
-        # whether an unknown finding can withhold a plan.
-        has_usable_plan = bool(
-            str(final_result.get("plan_text") or "").strip()
-        ) or has_clean_structured_card(final_result)
-        if has_usable_plan:
+        # visible. Fails closed: an unrecoverable finding (plan_text_empty, where
+        # there is genuinely nothing to show) or any unknown code still routes to
+        # review.
+        if _contract_report_is_flaggable(report):
             # Rebind before emitting, so a throwing milestone sink cannot lose the
             # flag (the outer handler returns the latest binding).
             final_result = {**final_result, "status": _CONTRACT_FLAGGED_PLAN_STATUS}

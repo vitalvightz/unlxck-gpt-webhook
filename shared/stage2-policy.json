@@ -1,6 +1,5 @@
 {
   "hard_stage2_blocker_codes": [
-    "goal_preservation_failed",
     "goal_preservation_render_mismatch",
     "restriction_violation",
     "late_fight_hard_sparring_violation",
@@ -80,5 +79,8 @@
     "sport_language_leak",
     "stage2_warning",
     "true_internal_system_leak"
+  ],
+  "observational_error_codes": [
+    "goal_preservation_failed"
   ]
 }

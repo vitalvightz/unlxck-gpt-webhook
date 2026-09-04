@@ -431,10 +431,9 @@ async def prewarm_structured_plan(
 def _manual_stage2_result(
     plan_row: dict[str, Any], final_plan_text: str
 ) -> dict[str, Any]:
-    from fightcamp.stage2_pipeline import review_stage2_output
+    from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
     from fightcamp.stage2_policy import apply_stage2_release_policy
-
-    from ..stage2_automation import _released_with_flags_report
+    from ..stage2_automation import _reviewed_result
 
     if not final_plan_text.strip():
         raise HTTPException(
@@ -445,34 +444,26 @@ def _manual_stage2_result(
     review = review_stage2_output(
         planning_brief=planning_brief, final_plan_text=final_plan_text
     )
-    validator_report = apply_stage2_release_policy(review["validator_report"])
-    release_decision = validator_report.get("release_decision")
-    next_attempt_count = int(plan_row.get("stage2_attempt_count") or 0) + 1
-    had_retry_prompt = bool(str(plan_row.get("stage2_retry_text") or "").strip())
-
-    if release_decision not in {"publish", "publish_with_flags"}:
-        validator_report = _released_with_flags_report(validator_report)
-        release_decision = "publish_with_flags"
-
-    return {
-        "status": (
-            "publishable_with_flags"
-            if release_decision == "publish_with_flags"
-            else "ready"
-        ),
-        "plan_text": final_plan_text,
-        "draft_plan_text": str(
+    report = apply_stage2_release_policy(review["validator_report"])
+    retry = (
+        build_stage2_retry(
+            stage1_result={"planning_brief": planning_brief},
+            final_plan_text=final_plan_text,
+            validator_report=report,
+        )
+        if report["release_decision"] == "hold"
+        else {}
+    )
+    return _reviewed_result(
+        {},
+        draft_plan_text=str(
             plan_row.get("draft_plan_text") or plan_row.get("plan_text") or ""
         ),
-        "final_plan_text": final_plan_text,
-        "pdf_url": None,
-        "stage2_retry_text": "",
-        "stage2_validator_report": validator_report,
-        "stage2_status": "manual_stage2_retry_pass"
-        if had_retry_prompt
-        else "manual_stage2_pass",
-        "stage2_attempt_count": next_attempt_count,
-    }
+        final_plan_text=final_plan_text,
+        validator_report=report,
+        attempt_count=int(plan_row.get("stage2_attempt_count") or 0) + 1,
+        retry_text=str(retry.get("repair_prompt") or ""),
+    )
 
 
 def _admin_approved_result(plan_row: dict[str, Any]) -> dict[str, Any]:

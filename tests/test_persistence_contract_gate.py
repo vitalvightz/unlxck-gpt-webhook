@@ -187,8 +187,9 @@ def test_unknown_contract_code_still_withholds():
     ) is False
 
 
-def test_empty_text_with_usable_card_releases_flagged():
-    # A usable card remains athlete-facing content when the text is empty.
+def test_empty_plan_text_is_not_rescued_even_with_card():
+    # An empty body is unrecoverable output integrity; the card cannot vouch for
+    # it, so the plan is still routed to review.
     emit, events = _emit_collector()
     result = _apply_plan_contract_validation(
         _result(
@@ -202,8 +203,8 @@ def test_empty_text_with_usable_card_releases_flagged():
         job_id="job-1",
         emit_milestone=emit,
     )
-    assert result["status"] == "publishable_with_flags"
-    assert any(code == "plan_contract_flagged" for code, _ in events)
+    assert result["status"] == "review_required"
+    assert any(code == "plan_contract_review_required" for code, _ in events)
 
 
 def test_already_non_visible_status_is_not_changed():
@@ -351,8 +352,8 @@ def test_contract_rescuable_false_for_malformed_reports():
     ) is False
 
 
-def test_contract_unknown_code_with_card_releases_flagged():
-    # Unknown findings remain observable but cannot withhold usable content.
+def test_contract_unknown_code_with_card_routes_to_review():
+    # End-to-end: an unknown error-level finding is NOT rescued even with a card.
     emit, events = _emit_collector()
 
     def _fake_validate(_final_result, *, fight_date=None):
@@ -380,5 +381,5 @@ def test_contract_unknown_code_with_card_releases_flagged():
     finally:
         persistence_module.validate_plan_contract = original
 
-    assert result["status"] == "publishable_with_flags"
-    assert any(code == "plan_contract_flagged" for code, _ in events)
+    assert result["status"] == "review_required"
+    assert any(code == "plan_contract_review_required" for code, _ in events)

@@ -1,4 +1,4 @@
-"""Post-plan audit findings cannot veto either release entry point."""
+"""Central policy distinguishes observations from renderer contract violations."""
 
 import pytest
 from fastapi import HTTPException
@@ -51,7 +51,7 @@ def test_unknown_contract_finding_releases_raw_text_without_card(monkeypatch):
         job_id="test",
         emit_milestone=lambda *args, **kwargs: None,
     )
-    assert result["status"] == "publishable_with_flags"
+    assert result["status"] == "review_required"
     assert result["why_log"]["plan_contract_validation"] == report
 
 
@@ -60,3 +60,89 @@ def test_manual_flagged_release_transition_is_allowed(source):
     from api.state_machine import can_transition
 
     assert can_transition("plan", source, "publishable_with_flags")
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        "restriction_violation",
+        "late_fight_hard_sparring_violation",
+        "late_fight_countdown_blocked_drill",
+        "late_fight_window_forbidden_exercise",
+        "dangerous_late_fight_strength_or_conditioning",
+        "late_camp_effective_prescription_exceeded",
+        "fight_day_protocol_violation",
+        "stage2_output_truncated",
+        "goal_preservation_render_mismatch",
+        "unknown_error",
+    ],
+)
+def test_automatic_and_manual_safety_holds_are_identical(monkeypatch, code):
+    import asyncio
+    from types import SimpleNamespace
+    import api.stage2_automation as automation
+    import fightcamp.stage2_pipeline as pipeline
+    from support import FakeOpenAIClient
+
+    finding = {"code": code, "message": "renderer diverged from canonical plan"}
+    observation = {
+        "code": "goal_preservation_failed",
+        "goal": "speed",
+        "satisfied": False,
+    }
+    review = {
+        "status": "FAIL",
+        "needs_retry": True,
+        "validator_report": {"errors": [observation, finding], "warnings": []},
+    }
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "0")
+    monkeypatch.setattr(automation, "review_stage2_output", lambda **_: review)
+    monkeypatch.setattr(pipeline, "review_stage2_output", lambda **_: review)
+    responses = [
+        SimpleNamespace(id="test", output_text="# Rendered plan") for _ in range(2)
+    ]
+    client = FakeOpenAIClient(responses)
+    auto = asyncio.run(
+        automation.OpenAIStage2Automator(client=client, model="test").finalize(
+            stage1_result={
+                "planning_brief": {},
+                "stage2_payload": {},
+                "stage2_handoff_text": "handoff",
+                "plan_text": "Internal draft",
+            }
+        )
+    )
+    manual = _manual_stage2_result({}, "# Rendered plan")
+    for result in (auto, manual):
+        assert result["status"] == "review_required"
+        assert result["stage2_status"] == "stage2_failed"
+        assert result["plan_text"] == ""
+        assert result["final_plan_text"] == "# Rendered plan"
+        assert result["stage2_validator_report"]["errors"] == [observation, finding]
+        assert result["stage2_validator_report"]["release_decision"] == "hold"
+        assert result["stage2_validator_report"]["is_athlete_releasable"] is False
+
+
+def test_multiple_goal_observations_preserved_without_error_veto():
+    from fightcamp.stage2_policy import apply_stage2_release_policy
+
+    findings = [
+        {"code": "goal_preservation_failed", "goal": goal, "satisfied": False}
+        for goal in ("speed", "strength")
+    ]
+    report = apply_stage2_release_policy({"errors": findings, "warnings": []})
+    assert report["errors"] == findings
+    assert report["quality_review_flags"] == findings
+    assert report["release_decision"] == "publish_with_flags"
+
+
+def test_malformed_errors_fail_closed_even_with_goal_observation():
+    from fightcamp.stage2_policy import apply_stage2_release_policy
+
+    report = apply_stage2_release_policy(
+        {
+            "errors": "malformed",
+            "warnings": [{"code": "goal_preservation_failed", "goal": "speed"}],
+        }
+    )
+    assert report["release_decision"] == "hold"

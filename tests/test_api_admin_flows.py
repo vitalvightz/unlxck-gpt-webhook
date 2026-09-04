@@ -474,13 +474,13 @@ def test_manual_stage2_submission_publishes_validated_admin_result():
     body = response.json()
     assert body["status"] == "ready"
     assert body["outputs"]["plan_text"] == "# Manual GPT Final"
-    assert body["admin_outputs"]["stage2_status"] == "manual_stage2_retry_pass"
+    assert body["admin_outputs"]["stage2_status"] == "stage2_pass"
     saved = store.get_plan(plan["id"])
     assert saved["plan_text"] == "# Manual GPT Final"
     assert saved["stage2_retry_text"] == ""
 
 
-def test_manual_stage2_submission_releases_findings_without_retry():
+def test_manual_stage2_submission_holds_render_violations_with_repair_prompt():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(
         user_id="athlete-1",
@@ -536,10 +536,10 @@ def test_manual_stage2_submission_releases_findings_without_retry():
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "publishable_with_flags"
-    assert body["outputs"]["plan_text"].startswith("## PHASE 2: SPP")
-    assert body["admin_outputs"]["stage2_status"] == "manual_stage2_pass"
-    assert body["admin_outputs"]["stage2_retry_text"] == ""
+    assert body["status"] == "held_for_review"
+    assert body["outputs"]["plan_text"] == ""
+    assert body["admin_outputs"]["stage2_status"] == "stage2_failed"
+    assert body["admin_outputs"]["stage2_retry_text"]
 
 
 def test_manual_stage2_submission_publishes_when_only_non_blocking_review_flags_exist():
@@ -581,11 +581,11 @@ def test_manual_stage2_submission_publishes_when_only_non_blocking_review_flags_
     body = response.json()
     assert body["status"] == "ready"
     assert body["outputs"]["plan_text"]
-    assert body["admin_outputs"]["stage2_status"] == "manual_stage2_pass"
+    assert body["admin_outputs"]["stage2_status"] == "stage2_pass"
     assert body["admin_outputs"]["stage2_validator_report"]["review_flag_count"] >= 1
 
 
-def test_manual_stage2_submission_releases_admin_review_quality_flags():
+def test_manual_stage2_submission_holds_admin_review_quality_flags():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(
         user_id="athlete-1",
@@ -635,10 +635,10 @@ def test_manual_stage2_submission_releases_admin_review_quality_flags():
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "publishable_with_flags"
-    assert body["outputs"]["plan_text"].startswith("## PHASE 2: SPP")
-    assert body["admin_outputs"]["stage2_status"] == "manual_stage2_pass"
-    assert body["admin_outputs"]["stage2_retry_text"] == ""
+    assert body["status"] == "held_for_review"
+    assert body["outputs"]["plan_text"] == ""
+    assert body["admin_outputs"]["stage2_status"] == "stage2_failed"
+    assert body["admin_outputs"]["stage2_retry_text"]
     assert body["admin_outputs"]["stage2_validator_report"]["admin_review_blocking_flags"][
         0
     ]["code"] == "missing_required_element"
@@ -2513,7 +2513,7 @@ def test_curated_review_required_scenarios_are_fast_for_admin_to_resolve():
             )
             assert resolved.status_code == 200
             assert resolved.json()["status"] == "ready"
-            assert resolved.json()["admin_outputs"]["stage2_status"] == "manual_stage2_retry_pass"
+            assert resolved.json()["admin_outputs"]["stage2_status"] == "stage2_pass"
         else:
             raise AssertionError(f"Unexpected resolution strategy: {scenario.expected_resolution}")
 

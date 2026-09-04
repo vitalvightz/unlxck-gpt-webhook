@@ -93,7 +93,7 @@ def _stage1_result() -> dict:
         [
             {"code": "goal_preservation_failed", "goal": "speed"},
             {"code": "goal_preservation_failed", "goal": "strength"},
-            {"code": "periodisation_warning", "message": "coverage disagreement"},
+            {"code": "goal_preservation_failed", "goal": "conditioning"},
         ],
     ],
 )
@@ -129,14 +129,16 @@ def test_goal_witness_loss_releases_with_original_finding(monkeypatch):
             "validator_report": {"errors": [finding], "warnings": []},
         },
     )
-    client = FakeClient([_response("# Usable camp")])
+    client = FakeClient(
+        [_response("# Usable camp"), _response("# Still missing witness")]
+    )
     result = asyncio.run(
         OpenAIStage2Automator(client=client, model="test").finalize(
             stage1_result=_stage1_result()
         )
     )
-    assert len(client.responses.calls) == 1
-    assert result["status"] == "publishable_with_flags"
+    assert len(client.responses.calls) == 2
+    assert result["status"] == "review_required"
     assert result["stage2_validator_report"]["errors"] == [finding]
 
 
@@ -305,7 +307,7 @@ def test_first_pass_incomplete_response_releases_with_flags(
     automator = OpenAIStage2Automator(client=client, model="test-model")
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
-    assert result["status"] == "publishable_with_flags"
+    assert result["status"] == "review_required"
 
 
 def test_first_pass_pass_with_review_flags_returns_ready(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -355,7 +357,7 @@ def test_first_pass_low_risk_quality_codes_publish_with_flags(
 
 
 @pytest.mark.parametrize("code", sorted(ADMIN_REVIEW_BLOCKING_CODES))
-def test_first_pass_context_or_programme_codes_release_with_flags(
+def test_first_pass_context_or_programme_codes_hold_for_review(
     monkeypatch: pytest.MonkeyPatch,
     code: str,
 ) -> None:
@@ -381,19 +383,20 @@ def test_first_pass_context_or_programme_codes_release_with_flags(
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
-    # Released to the athlete, and still in the admin review surface
-    # (publishable_with_flags) with the finding intact.
-    assert result["status"] == "publishable_with_flags"
-    assert result["plan_text"] == "# unsafe or incomplete plan"
+    # Held for review with the finding intact.
+    assert result["status"] == "review_required"
+    assert result["plan_text"] == ""
     assert result["stage2_status"] == "stage2_failed"
     report = result["stage2_validator_report"]
-    assert report["release_decision"] == "publish_with_flags"
-    assert report["is_athlete_releasable"] is True
-    assert report["is_publishable"] is True
+    assert report["release_decision"] == "hold"
+    assert report["is_athlete_releasable"] is False
+    assert report["is_publishable"] is False
     assert report["admin_review_blocking_flags"] == [finding]
 
 
-def test_first_pass_mixed_quality_and_blocking_codes_release_with_flags(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_first_pass_mixed_quality_and_blocking_codes_hold_for_review(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     findings = [{"code": "option_overload"}, {"code": "missing_required_element"}]
     monkeypatch.setattr(
         stage2_module,
@@ -413,7 +416,7 @@ def test_first_pass_mixed_quality_and_blocking_codes_release_with_flags(monkeypa
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
-    assert result["status"] == "publishable_with_flags"
+    assert result["status"] == "review_required"
     assert result["stage2_validator_report"]["quality_review_flags"] == [
         {"code": "option_overload"}
     ]
@@ -422,7 +425,9 @@ def test_first_pass_mixed_quality_and_blocking_codes_release_with_flags(monkeypa
     ]
 
 
-def test_first_pass_unknown_blocking_code_releases_with_flags(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_first_pass_unknown_blocking_code_holds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     unknown = {"code": "brand_new_warning_code"}
     monkeypatch.setattr(
         stage2_module,
@@ -443,13 +448,13 @@ def test_first_pass_unknown_blocking_code_releases_with_flags(monkeypatch: pytes
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
     # An unknown blocker is still recorded, but it no longer withholds the plan.
-    assert result["status"] == "publishable_with_flags"
+    assert result["status"] == "review_required"
     assert result["stage2_validator_report"]["blocking_warnings"] == [unknown]
-    assert result["stage2_validator_report"]["release_decision"] == "publish_with_flags"
-    assert result["stage2_validator_report"]["is_publishable"] is True
+    assert result["stage2_validator_report"]["release_decision"] == "hold"
+    assert result["stage2_validator_report"]["is_publishable"] is False
 
 
-def test_first_pass_hard_failure_releases_with_flags_with_one_provider_call(
+def test_first_pass_hard_failure_holds_with_one_provider_call(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("FAIL"))
@@ -459,8 +464,8 @@ def test_first_pass_hard_failure_releases_with_flags_with_one_provider_call(
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
     assert len(client.responses.calls) == 1
-    assert result["status"] == "publishable_with_flags"
-    assert result["plan_text"] == "# first pass needs review"
+    assert result["status"] == "review_required"
+    assert result["plan_text"] == ""
     assert result["final_plan_text"] == "# first pass needs review"
     assert result["stage2_status"] == "stage2_failed"
     assert result["stage2_attempt_count"] == 1
@@ -472,10 +477,10 @@ def test_first_pass_hard_failure_releases_with_flags_with_one_provider_call(
     expected = apply_stage2_release_policy(_review("FAIL")["validator_report"])
     assert report["errors"] == expected["errors"]
     assert report["blocking_warnings"] == expected["blocking_warnings"]
-    assert report["release_decision"] == "publish_with_flags"
+    assert report["release_decision"] == "hold"
 
 
-def test_effective_dose_finding_releases_original_plan_without_repair(
+def test_effective_dose_failure_runs_one_repair_and_publishes_repaired_plan(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     reviews = iter([
@@ -499,18 +504,18 @@ def test_effective_dose_finding_releases_original_plan_without_repair(
         stage1_result=_stage1_result()
     ))
 
-    assert len(client.responses.calls) == 1
-    assert result["stage2_attempt_count"] == 1
-    assert result["stage2_status"] == "stage2_failed"
-    assert result["status"] == "publishable_with_flags"
-    assert result["final_plan_text"].endswith("Back Squat: 3 x 5")
-    assert result["stage2_retry_text"] == ""
-    assert result["stage2_validator_report"]["errors"][0]["violations"] == [
-        "reps 5 > effective max 3"
-    ]
-    assert result["stage2_cost"]["stage2_input_tokens"] == 11
-    assert result["stage2_cost"]["stage2_output_tokens"] == 7
-    assert result["stage2_cost"]["stage2_total_tokens"] == 18
+    assert len(client.responses.calls) == 2
+    assert result["stage2_attempt_count"] == 2
+    assert result["stage2_status"] == "stage2_pass"
+    assert result["status"] == "ready"
+    assert result["final_plan_text"].endswith("Back Squat: 3 x 3")
+    assert (
+        "reduce_strength_dose_to_effective_prescription" in result["stage2_retry_text"]
+    )
+    # Each plan-text call contributes exactly once to persisted telemetry.
+    assert result["stage2_cost"]["stage2_input_tokens"] == 24
+    assert result["stage2_cost"]["stage2_output_tokens"] == 12
+    assert result["stage2_cost"]["stage2_total_tokens"] == 36
 
 
 def test_first_pass_non_pass_without_release_blockers_returns_ready(
@@ -551,7 +556,7 @@ def test_build_stage2_retry_is_not_called_during_automatic_finalization(
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
     assert len(client.responses.calls) == 1
-    assert result["status"] == "publishable_with_flags"
+    assert result["status"] == "review_required"
 
 
 def test_retry_pass_is_never_sent_during_automatic_finalization(
@@ -588,7 +593,7 @@ def test_retry_pass_is_never_sent_during_automatic_finalization(
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
-    assert result["status"] == "publishable_with_flags"
+    assert result["status"] == "review_required"
     assert seen_attempts == ["first_pass"]
     assert len(client.responses.calls) == 1
 
@@ -677,7 +682,7 @@ def test_flagged_release_also_carries_cost(monkeypatch: pytest.MonkeyPatch) -> N
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
-    assert result["status"] == "publishable_with_flags"
+    assert result["status"] == "review_required"
     assert result["stage2_cost"]["stage2_input_tokens"] == 7
     assert result["stage2_cost"]["stage2_output_tokens"] == 9
 

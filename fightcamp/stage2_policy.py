@@ -38,7 +38,7 @@ def _load_stage2_policy() -> dict[str, Any]:
     return policy
 
 
-@lru_cache(maxsize=4)
+@lru_cache(maxsize=5)
 def _code_set(key: str) -> frozenset[str]:
     value = _load_stage2_policy().get(key)
     if not isinstance(value, list) or not all(isinstance(item, str) and item for item in value):
@@ -87,6 +87,7 @@ def _finding_identity(item: dict) -> tuple:
         str(item.get("week_index") or "").strip(),
         str(item.get("session_index") or "").strip(),
         str(item.get("requirement") or "").strip(),
+        str(item.get("goal") or "").strip(),
         str(item.get("line") or "").strip(),
     )
 
@@ -125,6 +126,8 @@ def admin_review_blocking_findings(validator_report: dict) -> list[dict]:
 def apply_stage2_release_policy(validator_report: dict) -> dict:
     """Attach one release decision whose fields agree with the saved status.
 
+    Only allowlisted planner/evidence errors are observational; original errors
+    stay intact. Renderer divergence and unknown errors remain blocking.
     Low-risk allowlisted findings move to ``quality_review_flags`` and remain
     athlete-releasable. Admin-review and hard-blocker warnings are promoted to
     ``blocking_warnings``. Any other pre-existing blocking warning is preserved,
@@ -138,7 +141,11 @@ def apply_stage2_release_policy(validator_report: dict) -> dict:
     malformed_fields = [
         key
         for key in _RELEASE_COLLECTION_FIELDS
-        if key in validator_report and not isinstance(validator_report.get(key), list)
+        if key in validator_report
+        and (
+            not isinstance(validator_report.get(key), list)
+            or any(not isinstance(item, dict) for item in validator_report[key])
+        )
     ]
     if malformed_fields:
         return {
@@ -153,13 +160,26 @@ def apply_stage2_release_policy(validator_report: dict) -> dict:
             "is_publishable": False,
         }
 
-    quality_findings = athlete_release_with_flags_findings(validator_report)
+    observational_codes = _code_set("observational_error_codes")
+    observational = _dedupe_findings(
+        [
+            dict(item)
+            for field in _RELEASE_COLLECTION_FIELDS
+            for item in validator_report.get(field, []) or []
+            if isinstance(item, dict)
+            and str(item.get("code") or "").strip() in observational_codes
+        ]
+    )
+    quality_findings = _dedupe_findings(
+        [*athlete_release_with_flags_findings(validator_report), *observational]
+    )
     admin_findings = admin_review_blocking_findings(validator_report)
     existing_blocking = [
         dict(item)
         for item in validator_report.get("blocking_warnings", []) or []
         if isinstance(item, dict)
         and not is_athlete_release_with_flags_code(str(item.get("code") or ""))
+        and str(item.get("code") or "").strip() not in observational_codes
     ]
     hard_warning_findings = [
         dict(item)
@@ -173,7 +193,11 @@ def apply_stage2_release_policy(validator_report: dict) -> dict:
     )
     errors = validator_report.get("errors")
     malformed_errors = not isinstance(errors, list)
-    has_errors = malformed_errors or bool(errors)
+    has_errors = malformed_errors or any(
+        not isinstance(item, dict)
+        or str(item.get("code") or "").strip() not in observational_codes
+        for item in (errors if isinstance(errors, list) else [])
+    )
     is_athlete_releasable = not has_errors and not blocking_warnings
     release_decision = (
         "hold"
@@ -196,7 +220,11 @@ def apply_stage2_release_policy(validator_report: dict) -> dict:
 
 def _is_repair_prompt_code(code: str) -> bool:
     normalized = str(code or "").strip()
-    if not normalized or normalized in _REPAIR_PROMPT_EXCLUDED_CODES:
+    if (
+        not normalized
+        or normalized in _REPAIR_PROMPT_EXCLUDED_CODES
+        or normalized in _code_set("observational_error_codes")
+    ):
         return False
     return (
         is_hard_stage2_blocker(normalized)
