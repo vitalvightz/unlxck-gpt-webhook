@@ -24,7 +24,6 @@ from typing import Any
 from .calendar_context import (
     ContactRef as _ContactRef,
     RoleRef as _RoleRef,
-    _calendar_by_day,
     _normalise as _normalise_day,
     authoritative_contact_positions as _adapter_contact_positions,
     build_events as _adapter_build_events,
@@ -121,12 +120,20 @@ def _evaluate_role(weekly_role_map: dict[str, Any], ref: _RoleRef) -> PlacementD
 
 
 def _available_destination_days(ref: _RoleRef) -> list[tuple[str, int]]:
-    calendar = _calendar_by_day(ref.week)
+    # Keep every calendar occurrence: a planner week may span eight days and
+    # therefore contain the same weekday twice.
+    calendar_days = [
+        (_normalise_day(day.get("weekday")), day.get("d_day"))
+        for day in ref.week.get("calendar_days") or []
+        if isinstance(day, dict)
+        and _normalise_day(day.get("weekday"))
+        and isinstance(day.get("d_day"), int)
+    ]
     declared = [
         _normalise_day(day)
         for day in clean_list(ref.week.get("declared_training_days"))
         if _normalise_day(day)
-    ] or list(calendar)
+    ] or [weekday for weekday, _d_day in calendar_days]
     tail_days = {
         int(value)
         for value in ref.week.get("late_fight_tail_days") or []
@@ -135,7 +142,8 @@ def _available_destination_days(ref: _RoleRef) -> list[tuple[str, int]]:
     return [
         (weekday, d_day)
         for weekday in declared
-        if (d_day := calendar.get(weekday)) is not None
+        for calendar_weekday, d_day in calendar_days
+        if calendar_weekday == weekday
         and d_day > 13
         and d_day != ref.d_day
         and d_day not in tail_days
@@ -185,7 +193,8 @@ def _best_destination(
 
 
 def _stamp_relocation(
-    role: dict[str, Any], *, weekday: str, d_day: int, reason_code: str
+    role: dict[str, Any], *, weekday: str, d_day: int, reason_code: str,
+    directive: PlacementDirective,
 ) -> None:
     previous_day = str(role.get("scheduled_day_hint") or role.get("real_weekday") or "")
     role["scheduled_day_hint"] = weekday.title()
@@ -204,7 +213,7 @@ def _stamp_relocation(
     }
     role["day_assignment_reason"] = (
         f"Final calendar integrity relocated this role to {weekday.title()} (D-{d_day}) "
-        f"because the original placement was forbidden: {reason_code}."
+        f"because the original placement was {directive.value}: {reason_code}."
     )
 
 
@@ -257,7 +266,33 @@ def _repair_forbidden_roles(
         if decision.directive is PlacementDirective.ALLOW:
             continue
         if decision.directive is PlacementDirective.DEPRIORITIZE:
-            deprioritized_kept += 1
+            best = _best_destination(weekly_role_map, ref)
+            if best is None or best[2].directive is not PlacementDirective.ALLOW:
+                deprioritized_kept += 1
+                continue
+            weekday, d_day, destination_decision = best
+            from_day = str(
+                ref.role.get("scheduled_day_hint") or ref.role.get("real_weekday") or ""
+            )
+            _stamp_relocation(
+                ref.role,
+                weekday=weekday,
+                d_day=d_day,
+                reason_code=decision.reason_code,
+                directive=decision.directive,
+            )
+            actions.append(
+                {
+                    "role_key": ref.role.get("role_key"),
+                    "action": "relocated",
+                    "from_day": from_day,
+                    "from_d_day": ref.d_day,
+                    "to_day": weekday.title(),
+                    "to_d_day": d_day,
+                    "reason_code": decision.reason_code,
+                    "destination_directive": destination_decision.directive.value,
+                }
+            )
             continue
 
         destinations = _available_destination_days(ref)
@@ -278,6 +313,7 @@ def _repair_forbidden_roles(
             weekday=weekday,
             d_day=d_day,
             reason_code=decision.reason_code,
+            directive=decision.directive,
         )
         actions.append(
             {

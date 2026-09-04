@@ -4,6 +4,8 @@ from types import SimpleNamespace
 
 import pytest
 
+from fightcamp.calendar_context import build_events, role_refs
+from fightcamp.combat_load_policy import evaluate_candidate_at_position
 from fightcamp.goal_preservation import (
     _effective_map, classify_goal_preservation, collect_goal_evidence,
     reconcile_goal_preservation, validate_goal_preservation,
@@ -194,7 +196,7 @@ def test_injury_restriction_and_session_cap_are_authoritative():
     assert not _goal(brief, "strength")["satisfied"]
 
 
-def test_calendar_sandwich_rule_is_consumed_without_being_overridden():
+def test_two_day_contact_gap_exposes_managed_strength_repair_slot():
     brief = _brief(roles=[])
     week = brief["weekly_role_map"]["weeks"][0]
     week["calendar_days"] = [{"weekday": "tuesday", "d_day": 20}, {"weekday": "wednesday", "d_day": 19}, {"weekday": "friday", "d_day": 17}]
@@ -202,8 +204,17 @@ def test_calendar_sandwich_rule_is_consumed_without_being_overridden():
     week["hard_sparring_plan"] = [{"day": day, "status": "hard_as_planned", "effective_load": "hard"} for day in ("Tuesday", "Friday")]
     week["goal_repair_candidates"] = [_role()]
     _resolve(brief)
-    assert not brief["weekly_role_map"]["weeks"][0]["session_roles"]
-    assert any(a["result"] == "calendar_forbidden" for a in _goal(brief, "strength")["repair_attempts"])
+    roles = brief["weekly_role_map"]["weeks"][0]["session_roles"]
+    assert roles[0]["scheduled_day_hint"] == "Wednesday"
+    ref = next(ref for ref in role_refs(brief["weekly_role_map"]) if ref.role is roles[0])
+    decision = evaluate_candidate_at_position(
+        ref.profile,
+        candidate_position=-ref.d_day,
+        events=build_events(brief["weekly_role_map"], exclude_role=ref.role),
+        candidate_scope=ref.scope,
+    )
+    assert decision.reason_code == "between_hard_contacts_managed_strength"
+    assert _goal(brief, "strength")["satisfied"] is True
 
 
 def test_determinism_and_finalizer_packet_preserve_structured_contract():
