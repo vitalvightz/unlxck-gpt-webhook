@@ -245,11 +245,12 @@ def test_pre_hard_allow_list_drops_high_impact_power_but_keeps_anchor() -> None:
     role = _role(weekly)
     names = [item["name"] for item in role["effective_strength_prescriptions"]]
     assert names == ["Romanian Deadlift (RDL)"]
+    assert [item["name"] for item in role["selected_exercise_assignments"]] == [
+        "Romanian Deadlift (RDL)"
+    ]
     envelope = role["effective_strength_envelope"]
     assert envelope["complete_exercise_allow_list"] is True
-    assert envelope["allowed_exercise_names"] == [
-        "Romanian Deadlift (RDL)", "Single-Leg Forward Hops"
-    ]
+    assert envelope["allowed_exercise_names"] == ["Romanian Deadlift (RDL)"]
     assert envelope["forbid_slow_eccentric_emphasis"] is True
 
 
@@ -341,8 +342,12 @@ def test_unknown_cost_support_is_not_treated_as_verified_low_cost() -> None:
         candidate_pools=_selected_candidate_pools(weekly, _anchor_slot(), unknown_support),
         athlete_model={"fatigue": "low"},
     )
-    names = [item["name"] for item in _role(weekly)["effective_strength_prescriptions"]]
+    role = _role(weekly)
+    names = [item["name"] for item in role["effective_strength_prescriptions"]]
     assert names == ["Romanian Deadlift (RDL)"]
+    assert [item["name"] for item in role["selected_exercise_assignments"]] == [
+        "Romanian Deadlift (RDL)"
+    ]
 
 
 def test_repair_like_second_strength_role_is_recompressed_by_final_morph() -> None:
