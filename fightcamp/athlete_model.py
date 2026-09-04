@@ -15,6 +15,7 @@ from __future__ import annotations
 import re
 
 from .normalization import clean_list
+from .sparring_readiness import sparring_readiness_flags
 from .stage2_render_guards import (
     _all_active_injuries_surface_only_from_training_context,
     _has_active_injury_from_training_context,
@@ -179,6 +180,7 @@ def _build_athlete_model(
         and _all_active_injuries_surface_only_from_training_context(training_context)
     )
     return {
+        "sparring_readiness": dict(training_context.sparring_readiness),
         "has_active_injury": has_active_injury,
         "surface_injury_only": surface_injury_only,
         "sport": sport,
@@ -236,5 +238,5 @@ def _build_athlete_model(
             short_notice=short_notice,
             days_until_fight=training_context.days_until_fight,
             surface_injury_only=surface_injury_only,
-        ),
+        ) + sparring_readiness_flags(training_context.sparring_readiness),
     }

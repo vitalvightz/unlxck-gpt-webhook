@@ -829,6 +829,7 @@ class PlanRequest(BaseModel):
     goal_weakness_collision_detail: str = Field(default="", max_length=GENERIC_PROFILE_NOTES_MAX_CHARS)
     goal_weakness_collision_tags: list[str] = Field(default_factory=list, max_length=64)
     goal_weakness_collision_details: list[dict[str, str]] = Field(default_factory=list, max_length=64)
+    reduced_contact_requested: bool = False
     training_preference: str = Field(default="", max_length=TRAINING_PREFERENCE_MAX_CHARS)
     mindset_challenges: str = Field(default="", max_length=MENTAL_BLOCKERS_MAX_CHARS)
     notes: str = Field(default="", max_length=PREVIOUS_PLAN_FEEDBACK_MAX_CHARS)
@@ -1127,6 +1128,7 @@ class PlanRequest(BaseModel):
             "no_scheduled_fight": self.no_scheduled_fight,
             "open_camp_weeks": self.open_camp_weeks,
             "camp_timeline_type": camp_timeline_type,
+            "reduced_contact_requested": self.reduced_contact_requested,
         }
         if self.guided_injuries:
             # The frontend (buildGuidedInjuryFields) always sends BOTH the plural

@@ -6,6 +6,7 @@ from typing import Any
 from .fight_date_utils import d_day_for_weekday
 from .injury_formatting import parse_injury_entry
 from .normalization import clean_list, ordered_weekdays as _ordered_weekdays
+from .sparring_readiness import sparring_readiness_flags
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 
 _ORDERED_WEEKDAYS = (
@@ -45,6 +46,7 @@ def contact_safety_reasons(athlete_snapshot: dict[str, Any]) -> list[str]:
     """Consume active injury/restriction evidence; never infer clearance from time."""
     reasons: set[str] = set()
     flags = set(clean_list(athlete_snapshot.get("readiness_flags", [])))
+    flags.update(sparring_readiness_flags(athlete_snapshot.get("sparring_readiness", {})))
     serious_flags = {
         "suspected_concussion", "concussion_symptoms", "neurological_symptoms",
         "recent_ko", "recent_head_injury", "medical_contact_restriction", "no_contact",
@@ -53,6 +55,9 @@ def contact_safety_reasons(athlete_snapshot: dict[str, Any]) -> list[str]:
         reasons.add("serious_contact_safety")
     entries = [item for item in athlete_snapshot.get("parsed_injuries", []) or [] if isinstance(item, dict)]
     texts = clean_list(athlete_snapshot.get("injuries", []))
+    for item in athlete_snapshot.get("sparring_readiness", {}).get("active_injuries", []):
+        texts.extend(clean_list(item.get("description")))
+        entries.append(item)
     texts += clean_list(athlete_snapshot.get("injuries_raw_text", []))
     for item in athlete_snapshot.get("injury_restrictions", []) or []:
         if isinstance(item, dict):
@@ -81,12 +86,16 @@ def contact_safety_reasons(athlete_snapshot: dict[str, Any]) -> list[str]:
     return sorted(reasons)
 
 
-def hard_sparring_cutoff(athlete_snapshot: dict[str, Any]) -> int:
-    """Return the countdown ceiling; stricter existing restrictions still win."""
+def hard_sparring_risk_state(athlete_snapshot: dict[str, Any]) -> str:
+    """Resolve safety first, then intake and observed readiness/contact evidence."""
+    if contact_safety_reasons(athlete_snapshot):
+        return "CONTACT_BLOCKED"
     flags = set(clean_list(athlete_snapshot.get("readiness_flags", [])))
+    flags.update(sparring_readiness_flags(athlete_snapshot.get("sparring_readiness", {})))
     elevated_flags = {
         "high_fatigue", "poor_recovery", "high_contact_load", "aggressive_weight_cut",
         "difficult_weight_cut", "reduced_contact_requested", "moderate_injury", "severe_injury",
+        "sparring_history_unavailable",
     }
     injury = _injury_assessment(athlete_snapshot)
     elevated = (
@@ -97,7 +106,13 @@ def hard_sparring_cutoff(athlete_snapshot: dict[str, Any]) -> int:
         or bool(flags & elevated_flags)
         or any(athlete_snapshot.get(key) is True for key in elevated_flags)
     )
-    return ELEVATED_HARD_SPARRING_CUTOFF if elevated else NORMAL_HARD_SPARRING_CUTOFF
+    return "ELEVATED" if elevated else "NORMAL"
+
+
+def hard_sparring_cutoff(athlete_snapshot: dict[str, Any]) -> int:
+    """Date ceiling only; CONTACT_BLOCKED is enforced independently at every date."""
+    state = hard_sparring_risk_state(athlete_snapshot)
+    return NORMAL_HARD_SPARRING_CUTOFF if state == "NORMAL" else ELEVATED_HARD_SPARRING_CUTOFF
 
 
 

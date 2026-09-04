@@ -2787,6 +2787,17 @@ export function PlanIntakeForm() {
                 <p className="muted">
                   Mark which combat days are hard sparring and which are light or technical. These still count within your weekly session total.
                 </p>
+                <label className="field">
+                  <span>
+                    <input
+                      type="checkbox"
+                      checked={form.reduced_contact_requested ?? false}
+                      onChange={(event) => setForm((current) => ({ ...current, reduced_contact_requested: event.target.checked }))}
+                    />
+                    {" "}My coach or I request an earlier reduction in hard sparring
+                  </span>
+                  <span className="muted">Convert hard sparring from 17 days before the fight.</span>
+                </label>
                 {shouldHideField(daysOutCtx, "hard_sparring_days") ? (
                   <div className="field">
                     <p className="muted" style={{ opacity: 0.5 }}>Hard sparring day selection is not used for planning at this stage.</p>

@@ -17,8 +17,9 @@ the D-14–D-8 and D-7–D-1 session formats.
 
 `fightcamp/sparring_dose_planner.py` owns the cutoff. Elevated signals include
 high fatigue, high cut pressure, moderate/high injury severity or worsening,
-and explicit poor-recovery, high-contact-load, aggressive/difficult-cut or
-reduced-contact-request signals when supplied. A routine moderate cut alone
+and observed poor recovery, high contact load, aggressive/difficult cuts or an
+explicit reduced-contact request. `hard_sparring_risk_state()` resolves
+`NORMAL`, `ELEVATED` or `CONTACT_BLOCKED` before the cutoff is applied. A routine moderate cut alone
 does not select the earlier cutoff. Serious injury parsing uses the existing
 negation-aware injury parser and structured injury/restriction data. Restriction
 evidence remains authoritative regardless of the countdown or improving symptoms;
@@ -45,3 +46,38 @@ contact restriction and an appropriate medical return pathway after concussion.
 
 Focused verification: `python -m pytest -q tests/test_dynamic_sparring_cutoff.py
 tests/test_sparring_dose_planner.py tests/test_structured_plan_sparring_reconcile.py`.
+
+## Generation-time evidence
+
+The generation worker reads athlete-scoped Today check-ins, session completions
+and active injury flags through the existing store. It stamps a dated, ephemeral
+`_sparring_readiness` snapshot on the planner payload. `PlanInput` and
+`TrainingContext` carry it into the canonical athlete model. This does not write
+history back into intake or change the database schema. Non-health generation
+skips these reads. The snapshot is refreshed when generating a plan; this change
+does not retroactively edit already-saved plans on every check-in.
+
+Scheduling defaults (not validated medical thresholds):
+
+- Poor recovery: poor sleep or a flat body on at least three distinct days within
+  the seven-day window ending on the athlete's current training day.
+- High contact load: at least three completed hard-sparring sessions in seven
+  days, two in three days, or four sparring/contact sessions in seven days.
+- Accumulated fatigue: at least two completed sessions at RPE 8+ in three days,
+  or two distinct recent check-in days reporting a very hard previous session.
+- Current meaningful pain/worsening and active moderate-or-worse injury flags
+  also elevate risk. Stable surface-only injuries retain their existing exception.
+- The intake checkbox supplies `reduced_contact_requested` directly. It is saved
+  with intake and survives validation, regeneration and draft restoration.
+
+Completion evidence is joined to the exact session ID and date in its owned
+structured plan. An unrelated strength session on a sparring day is not contact.
+Skipped, unstarted, future and stale rows never count; duplicates are deduplicated.
+A modified sparring completion is counted as reduced contact, not confirmed hard
+contact. Unlogged external sparring is not inferred from the weekly declaration.
+Missing/unreadable completion classification or failed history reads are recorded
+as unavailable and select the conservative D-17 cutoff; an empty history is normal.
+Active serious injury restrictions remain blocking regardless of their age.
+
+`tests/test_sparring_readiness_boundary.py` covers persisted inputs through the
+canonical athlete model and D-16 conversion, including the actual worker hop.

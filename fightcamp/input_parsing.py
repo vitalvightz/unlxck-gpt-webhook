@@ -959,6 +959,7 @@ class PlanInput:
     # athlete typed. When true the pipeline must not produce weight-cut,
     # dehydration or water-cut guidance (docs/children-age-appropriate-use-policy.md).
     is_minor: bool = False
+    sparring_readiness: dict = field(default_factory=dict)
 
     @classmethod
     def from_payload(cls, data: dict) -> "PlanInput":
@@ -1135,6 +1136,10 @@ class PlanInput:
 
         return cls(
             **normalized_values,
+            sparring_readiness={
+                **(data.get("_sparring_readiness") if isinstance(data.get("_sparring_readiness"), dict) else {}),
+                "reduced_contact_requested": data.get("reduced_contact_requested") is True,
+            },
             next_fight_date=next_fight_date,
             injuries=injuries,
             guided_injury=guided_injury,
