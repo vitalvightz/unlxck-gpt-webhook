@@ -656,16 +656,11 @@ def test_stage2_payload_carries_declared_sparring_days_into_athlete_model_and_pr
     hard_spar_days = [role["scheduled_day_hint"] for role in spp_week["session_roles"] if role["role_key"] == "hard_sparring_day"]
     role_keys = [role["role_key"] for role in spp_week["session_roles"]]
 
-    # When conditioning is the declared weakness, the recovery slot is
-    # legitimately upgraded into a gas-tank flush — see
-    # ``_upgrade_recovery_days_to_gas_tank``. The slot stays low-load and
-    # coach-safe regardless of name. The primary neural strength role is
-    # the SPP anchor and must still be present.
-    assert any(
-        key in {"recovery_reset_day", "recovery_aerobic_gas_tank_day"}
-        for key in role_keys
-    )
-    assert "neural_plus_strength_day" in role_keys
+    # With three or more intervening days, normal role allocation may use the
+    # interior rather than forcing a recovery-only sandwich across the whole
+    # Tuesday-Saturday span. This conditioning-goal fixture keeps its normal SPP
+    # conditioning roles instead of manufacturing a non-selected strength goal.
+    assert "repeatability_support_day" in role_keys
     assert sorted(hard_spar_days) == ["Saturday", "Tuesday"]
 
 

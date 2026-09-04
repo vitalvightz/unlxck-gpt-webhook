@@ -96,22 +96,22 @@ def test_meaningful_day_after_hard_contact_relocates_to_cleaner_slot():
     apply_final_calendar_integrity(weekly)
 
     assert strength["scheduled_day_hint"] == "Thursday"
-    assert strength["calendar_integrity_relocation"]["reason_code"] == "post_hard_contact_meaningful_stress"
+    assert strength["calendar_integrity_relocation"]["reason_code"] == "post_hard_contact_managed_stress"
     assert weekly["calendar_integrity"]["relocated_roles"] == 1
 
 
-def test_pre_hard_meaningful_strength_is_deprioritized_but_kept():
+def test_pre_hard_meaningful_strength_relocates_to_cleaner_allow_day():
     strength = _strength("Monday")
     weekly = _map(_week(roles=[strength], contacts=[_hard("Tuesday")]))
 
     apply_final_calendar_integrity(weekly)
 
-    assert strength["scheduled_day_hint"] == "Monday"
-    assert weekly["calendar_integrity"]["deprioritized_kept"] == 1
-    assert weekly["calendar_integrity"]["relocated_roles"] == 0
+    assert strength["scheduled_day_hint"] == "Thursday"
+    assert weekly["calendar_integrity"]["deprioritized_kept"] == 0
+    assert weekly["calendar_integrity"]["relocated_roles"] == 1
 
 
-def test_two_hard_contacts_block_meaningful_stress_between_them():
+def test_two_day_gap_keeps_managed_strength_between_contacts():
     strength = _strength("Wednesday")
     weekly = _map(
         _week(
@@ -122,13 +122,11 @@ def test_two_hard_contacts_block_meaningful_stress_between_them():
 
     apply_final_calendar_integrity(weekly)
 
-    # Monday is legal-but-deprioritized and therefore beats suppression; every
-    # Wednesday/Thursday slot between the two hard contacts is forbidden.
-    assert strength["scheduled_day_hint"] == "Monday"
-    assert strength["calendar_integrity_relocation"]["reason_code"] == "between_hard_contacts_meaningful_or_neural_stress"
+    assert strength["scheduled_day_hint"] == "Wednesday"
+    assert weekly["calendar_integrity"]["deprioritized_kept"] == 1
 
 
-def test_no_legal_home_suppresses_lower_priority_meaningful_role_with_ledger():
+def test_two_day_gap_can_retain_a_secondary_meaningful_strength_role():
     anchor = _strength("Monday", key="strength_touch_day", index=1)
     secondary = _strength("Wednesday", key="transfer_strength_day", index=2)
     weekly = _map(
@@ -141,12 +139,8 @@ def test_no_legal_home_suppresses_lower_priority_meaningful_role_with_ledger():
     apply_final_calendar_integrity(weekly)
 
     assert anchor in weekly["weeks"][0]["session_roles"]
-    assert secondary not in weekly["weeks"][0]["session_roles"]
-    suppression = weekly["weeks"][0]["suppressed_roles"][-1]
-    assert suppression["calendar_integrity"] is True
-    assert suppression["role_key"] == "transfer_strength_day"
-    assert suppression["reason_code"] == "between_hard_contacts_meaningful_or_neural_stress"
-    assert weekly["weeks"][0]["session_count_summary"]["reduced_from_planned"] is True
+    assert secondary in weekly["weeks"][0]["session_roles"]
+    assert weekly["calendar_integrity"]["suppressed_roles"] == 0
 
 
 def test_technical_contact_does_not_create_hard_recovery_pressure():
@@ -227,7 +221,7 @@ def test_physical_mobility_cannot_stack_on_contact_day_and_moves():
 
     apply_final_calendar_integrity(weekly)
 
-    assert mobility["scheduled_day_hint"] == "Wednesday"
+    assert mobility["scheduled_day_hint"] == "Monday"
     assert mobility["calendar_integrity_relocation"]["reason_code"] == "contact_day_extra_physical_conflict"
 
 
@@ -256,8 +250,8 @@ def test_immediate_post_hard_rule_crosses_week_boundary():
 
     apply_final_calendar_integrity(weekly)
 
-    assert week_two["session_roles"] == []
-    assert week_two["suppressed_roles"][-1]["reason_code"] == "post_hard_contact_meaningful_stress"
+    assert week_two["session_roles"]
+    assert weekly["calendar_integrity"]["deprioritized_kept"] == 1
 
 
 def test_finished_d13_tail_is_never_replanned_by_stage3():

@@ -261,16 +261,14 @@ def test_build_planning_brief_uses_stage2_role_map_builder(monkeypatch):
     )
     assert called["builder"] is True
 
-def test_sandwiched_days_prefer_low_load_support_and_primary_strength_stays_off_collision_days():
+def test_sandwiched_days_prefer_low_load_support_and_post_hard_is_fallback():
     # Alternating spar/S&C week: sparring Mon/Wed/Fri, S&C on the off days
     # Tue/Thu/Sat. Low-load aerobic/recovery support belongs on the between-hard
     # days (ALLOW). Primary strength does NOT: Tue and Thu are between two hard
     # contacts (between_hard_contacts_meaningful_or_neural_stress -> FORBID) and
-    # Sat is immediately after Friday's hard contact
-    # (post_hard_contact_meaningful_stress -> FORBID). Step 9B change: the old
-    # local rule treated Sat as "clean" and placed meaningful strength there; the
-    # canonical combat_load_policy forbids every training day for it, so the owner
-    # leaves it dayless (unavailable) rather than committing a forbidden slot.
+    # Sat is immediately after Friday's hard contact, so it is a legal but
+    # deprioritized fallback. Readiness and session-budget owners may still remove
+    # it in a complete dense-week plan; this placement helper does not own that rule.
     athlete_model = {
         "training_days": ["tuesday", "thursday", "saturday"],
         "support_work_days": ["tuesday", "thursday", "saturday"],
@@ -295,6 +293,5 @@ def test_sandwiched_days_prefer_low_load_support_and_primary_strength_stays_off_
 
     # Low-load support still lands on the between-hard (ALLOW) days...
     assert aerobic.get("scheduled_day_hint") in {"tuesday", "thursday"}
-    # ...but meaningful strength has no legal day, so it is not force-placed on a
-    # forbidden one (FORBID means unavailable, not merely dispreferred).
-    assert not str(primary.get("scheduled_day_hint") or "").strip()
+    # ...and the only legal strength fallback is the post-hard Saturday slot.
+    assert primary.get("scheduled_day_hint") == "saturday"

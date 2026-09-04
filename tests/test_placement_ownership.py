@@ -89,7 +89,7 @@ def test_late_fight_owner_consumes_combat_load_policy():
         {"role_key": "strength_touch_day", "category": "strength", "countdown_offset": 17,
          "stress_class": "meaningful_stress", "cost_class": "medium"},
     ]
-    assert stage2_payload_late_fight._late_fight_legality_cost(app_touch, [(18, "hard")]) == (1, 0)
+    assert stage2_payload_late_fight._late_fight_legality_cost(app_touch, [(18, "hard")]) == (0, 1)
 
 
 def test_no_replacement_collision_policy_module_appears():

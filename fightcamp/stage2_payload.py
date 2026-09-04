@@ -84,8 +84,14 @@ from .sparring_dose_planner import (
     effective_hard_days,
     sandwiched_training_days,
 )
-from .calendar_context import classify_role, contact_profile_for_load
-from .combat_load_policy import CalendarEvent, evaluate_candidate_at_position
+from .calendar_context import (
+    CalendarLegalityView,
+    classify_role,
+    normal_week_legality,
+    week_scope,
+    weekday_position,
+)
+from .combat_load_policy import PlacementDirective
 from .strength_session_quality import classify_strength_item, infer_strength_sessions
 from .training_context import TrainingContext, allocate_sessions
 from .nutrition import compute_nutrition_targets
@@ -575,21 +581,9 @@ def _build_spar_allocation_reason_codes(
     return reason_codes
 
 
-# Between-hard-contacts legality is owned by ``combat_load_policy``. Stage 2 no
-# longer keeps its own allow-list of "loads safe between two hard sparring days";
-# it asks the shared policy and enforces the answer. These constants are the
-# minimal canonical encoding of a sandwiched slot: one effective hard contact
-# immediately before and after the candidate, evaluated in a single collision
-# scope so the policy sees the candidate as between two hard contacts.
-_SANDWICHED_HARD_CONTACT_SCOPE = ("stage2_sandwiched_hard_days", 0)
-_HARD_CONTACT_PROFILE = contact_profile_for_load("hard")
-_SANDWICHED_HARD_CONTACT_EVENTS = (
-    CalendarEvent(-1, _HARD_CONTACT_PROFILE, _SANDWICHED_HARD_CONTACT_SCOPE),
-    CalendarEvent(1, _HARD_CONTACT_PROFILE, _SANDWICHED_HARD_CONTACT_SCOPE),
-)
-
-
-def _forbidden_between_effective_hard_contacts(role: dict[str, Any]) -> bool:
+def _forbidden_between_effective_hard_contacts(
+    role: dict[str, Any], day: str, legality: CalendarLegalityView
+) -> bool:
     """Ask ``combat_load_policy`` whether ``role`` may sit between two hard contacts.
 
     Contact-spacing legality is owned by :mod:`combat_load_policy`; Stage 2 delegates
@@ -601,13 +595,13 @@ def _forbidden_between_effective_hard_contacts(role: dict[str, Any]) -> bool:
     profile = classify_role(role)
     if profile is None:
         return False
-    decision = evaluate_candidate_at_position(
-        profile,
-        candidate_position=0,
-        events=_SANDWICHED_HARD_CONTACT_EVENTS,
-        candidate_scope=_SANDWICHED_HARD_CONTACT_SCOPE,
+    position = weekday_position(day)
+    if position is None:
+        return False
+    return (
+        legality.decision_at_position(profile, position).directive
+        is PlacementDirective.FORBID
     )
-    return not decision.allowed
 
 
 def _suppress_sandwiched_glycolytic(
@@ -635,6 +629,11 @@ def _suppress_sandwiched_glycolytic(
     sandwiched = sandwiched_training_days(training_days, effective_spar_days)
     if not sandwiched:
         return session_roles, suppressed_roles
+    legality = normal_week_legality(
+        hard_sparring_plan,
+        [],
+        scope=week_scope(week_entry),
+    )
 
     resolved = dict(week_entry.get("resolved_rule_state") or {})
     must_keep = set(_clean_list(resolved.get("must_keep", week_entry.get("must_keep", []))))
@@ -647,7 +646,11 @@ def _suppress_sandwiched_glycolytic(
             kept.append(role)
             continue
 
-        should_suppress = on_sandwiched_day and _forbidden_between_effective_hard_contacts(role)
+        should_suppress = on_sandwiched_day and _forbidden_between_effective_hard_contacts(
+            role,
+            str(role.get("scheduled_day_hint") or "").strip(),
+            legality,
+        )
         if should_suppress:
             updated_suppressed.append(
                 _make_compression_suppression(

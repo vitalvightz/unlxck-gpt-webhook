@@ -257,7 +257,32 @@ def _repair_forbidden_roles(
         if decision.directive is PlacementDirective.ALLOW:
             continue
         if decision.directive is PlacementDirective.DEPRIORITIZE:
-            deprioritized_kept += 1
+            best = _best_destination(weekly_role_map, ref)
+            if best is None or best[2].directive is not PlacementDirective.ALLOW:
+                deprioritized_kept += 1
+                continue
+            weekday, d_day, destination_decision = best
+            from_day = str(
+                ref.role.get("scheduled_day_hint") or ref.role.get("real_weekday") or ""
+            )
+            _stamp_relocation(
+                ref.role,
+                weekday=weekday,
+                d_day=d_day,
+                reason_code=decision.reason_code,
+            )
+            actions.append(
+                {
+                    "role_key": ref.role.get("role_key"),
+                    "action": "relocated",
+                    "from_day": from_day,
+                    "from_d_day": ref.d_day,
+                    "to_day": weekday.title(),
+                    "to_d_day": d_day,
+                    "reason_code": decision.reason_code,
+                    "destination_directive": destination_decision.directive.value,
+                }
+            )
             continue
 
         destinations = _available_destination_days(ref)

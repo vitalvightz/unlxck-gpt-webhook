@@ -92,6 +92,7 @@ class CalendarCollisionContext:
     previous_hard_distance: int | None
     next_hard_distance: int | None
     between_effective_hard_contacts: bool
+    hard_contact_gap_intervening_days: int | None
 
 
 _CONTACT_EFFECTIVE_LOAD_TO_CLASS = {
@@ -514,6 +515,11 @@ def build_calendar_context(
         previous_hard_distance=previous_distance,
         next_hard_distance=next_distance,
         between_effective_hard_contacts=between,
+        hard_contact_gap_intervening_days=(
+            previous_distance + next_distance - 1
+            if previous_distance is not None and next_distance is not None
+            else None
+        ),
     )
 
 
@@ -584,7 +590,8 @@ def evaluate_calendar_candidate(
             "Back-to-back effective hard-contact days are not legal neighbours.",
         )
 
-    if context.between_effective_hard_contacts:
+    gap_days = context.hard_contact_gap_intervening_days
+    if context.between_effective_hard_contacts and gap_days is not None and gap_days <= 2:
         if load in _SANDWICH_ALLOW_LOADS:
             return _decision(
                 PlacementDirective.ALLOW,
@@ -609,18 +616,30 @@ def evaluate_calendar_candidate(
                 "between_hard_contacts_reduced_contact",
                 "Reduced contact retains residual collision cost between hard contacts.",
             )
+        if load is LoadClass.NEURAL_MICRODOSE:
+            return _decision(
+                PlacementDirective.DEPRIORITIZE,
+                "between_hard_contacts_neural_microdose",
+                "A true neural microdose may survive a tight contact gap only when no cleaner slot exists.",
+            )
+        if gap_days == 2 and load is LoadClass.MEANINGFUL_STRENGTH:
+            return _decision(
+                PlacementDirective.DEPRIORITIZE,
+                "between_hard_contacts_managed_strength",
+                "Managed strength may survive a two-day contact gap when no cleaner slot exists.",
+            )
         return _decision(
             PlacementDirective.FORBID,
-            "between_hard_contacts_meaningful_or_neural_stress",
-            "Do not place meaningful S&C, neural stress, or additional hard contact in the protected span.",
+            "between_hard_contacts_tight_gap_meaningful_stress",
+            "Do not place meaningful S&C or additional hard contact in this tight contact gap.",
         )
 
     if context.previous_hard_distance == 1:
         if load in _MEANINGFUL_LOADS:
             return _decision(
-                PlacementDirective.FORBID,
-                "post_hard_contact_meaningful_stress",
-                "The day immediately after hard contact cannot carry meaningful S&C.",
+                PlacementDirective.DEPRIORITIZE,
+                "post_hard_contact_managed_stress",
+                "Meaningful S&C after hard contact should lose to a cleaner slot.",
             )
         if load is LoadClass.NEURAL_MICRODOSE:
             return _decision(

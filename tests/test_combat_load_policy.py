@@ -387,21 +387,26 @@ def test_calendar_context_is_position_based_not_weekday_based():
     assert later_gap.between_effective_hard_contacts is True
 
 
-def test_every_position_between_two_hard_contacts_in_same_scope_uses_protected_policy():
+def test_three_day_gap_uses_adjacency_only_and_allows_the_interior():
     events = [
         _event(20, LoadClass.HARD_CONTACT, scope="w1"),
         _event(24, LoadClass.HARD_CONTACT, scope="w1"),
     ]
 
-    for candidate_position in (21, 22, 23):
-        decision = evaluate_candidate_at_position(
+    decisions = [
+        evaluate_candidate_at_position(
             _profile(LoadClass.MEANINGFUL_STRENGTH),
-            candidate_position=candidate_position,
+            candidate_position=position,
             events=events,
             candidate_scope="w1",
         )
-        assert decision.directive is PlacementDirective.FORBID
-        assert decision.reason_code == "between_hard_contacts_meaningful_or_neural_stress"
+        for position in (21, 22, 23)
+    ]
+    assert [decision.directive for decision in decisions] == [
+        PlacementDirective.DEPRIORITIZE,
+        PlacementDirective.ALLOW,
+        PlacementDirective.DEPRIORITIZE,
+    ]
 
 
 def test_full_camp_events_do_not_turn_every_day_between_first_and_last_hard_into_sandwich():
@@ -437,8 +442,8 @@ def test_immediate_post_hard_rule_crosses_scope_boundary():
         events=events,
         candidate_scope="new-week",
     )
-    assert decision.directive is PlacementDirective.FORBID
-    assert decision.reason_code == "post_hard_contact_meaningful_stress"
+    assert decision.directive is PlacementDirective.DEPRIORITIZE
+    assert decision.reason_code == "post_hard_contact_managed_stress"
 
 
 def test_same_geometry_shifted_to_different_positions_has_identical_policy():
@@ -567,7 +572,7 @@ def test_contact_candidate_cannot_be_added_to_existing_physical_session():
 # ---------------------------------------------------------------------------
 
 
-def test_day_after_hard_contact_forbids_meaningful_s_and_c():
+def test_day_after_hard_contact_deprioritizes_meaningful_s_and_c():
     events = [_event(90, LoadClass.HARD_CONTACT)]
 
     for load in (
@@ -579,8 +584,8 @@ def test_day_after_hard_contact_forbids_meaningful_s_and_c():
             candidate_position=91,
             events=events,
         )
-        assert decision.directive is PlacementDirective.FORBID
-        assert decision.reason_code == "post_hard_contact_meaningful_stress"
+        assert decision.directive is PlacementDirective.DEPRIORITIZE
+        assert decision.reason_code == "post_hard_contact_managed_stress"
 
 
 def test_day_after_hard_contact_deprioritizes_true_microdose_and_reduced_contact():
@@ -625,7 +630,7 @@ def test_back_to_back_effective_hard_contact_is_forbidden():
     assert decision.reason_code == "consecutive_effective_hard_contact"
 
 
-def test_scoped_between_hard_contacts_prefers_recovery_but_does_not_blanket_ban_light_movement():
+def test_three_day_gap_does_not_penalize_low_load_interior_work():
     events = [
         _event(130, LoadClass.HARD_CONTACT, scope="w"),
         _event(134, LoadClass.HARD_CONTACT, scope="w"),
@@ -651,8 +656,8 @@ def test_scoped_between_hard_contacts_prefers_recovery_but_does_not_blanket_ban_
         events=events,
         candidate_scope="w",
     )
-    assert physical.directive is PlacementDirective.DEPRIORITIZE
-    assert physical.reason_code == "between_hard_contacts_low_load_physical"
+    assert physical.directive is PlacementDirective.ALLOW
+    assert physical.reason_code == "no_calendar_collision"
 
     neural = evaluate_candidate_at_position(
         _profile(LoadClass.NEURAL_MICRODOSE),
@@ -660,10 +665,97 @@ def test_scoped_between_hard_contacts_prefers_recovery_but_does_not_blanket_ban_
         events=events,
         candidate_scope="w",
     )
-    assert neural.directive is PlacementDirective.FORBID
+    assert neural.directive is PlacementDirective.ALLOW
 
 
-def test_technical_and_reduced_contact_have_distinct_scoped_between_contact_cost():
+def test_one_intervening_day_forbids_meaningful_loading_but_allows_recovery():
+    events = [
+        _event(130, LoadClass.HARD_CONTACT, scope="w"),
+        _event(132, LoadClass.HARD_CONTACT, scope="w"),
+    ]
+    context = build_calendar_context(131, events, candidate_scope="w")
+
+    assert context.hard_contact_gap_intervening_days == 1
+    for load in (
+        LoadClass.MEANINGFUL_STRENGTH,
+        LoadClass.MEANINGFUL_CONDITIONING,
+    ):
+        decision = evaluate_calendar_candidate(_profile(load), context)
+        assert decision.directive is PlacementDirective.FORBID
+        assert decision.reason_code == "between_hard_contacts_tight_gap_meaningful_stress"
+
+    recovery = evaluate_calendar_candidate(
+        _profile(LoadClass.RECOVERY_ONLY, DayOccupancy.COEXISTABLE), context
+    )
+    assert recovery.directive is PlacementDirective.ALLOW
+
+
+def test_two_intervening_days_expose_managed_strength_not_conditioning():
+    events = [
+        _event(20, LoadClass.HARD_CONTACT, scope="w"),
+        _event(23, LoadClass.HARD_CONTACT, scope="w"),
+    ]
+
+    for position in (21, 22):
+        context = build_calendar_context(position, events, candidate_scope="w")
+        assert context.hard_contact_gap_intervening_days == 2
+        strength = evaluate_calendar_candidate(
+            _profile(LoadClass.MEANINGFUL_STRENGTH), context
+        )
+        conditioning = evaluate_calendar_candidate(
+            _profile(LoadClass.MEANINGFUL_CONDITIONING), context
+        )
+        assert strength.directive is PlacementDirective.DEPRIORITIZE
+        assert strength.reason_code == "between_hard_contacts_managed_strength"
+        assert conditioning.directive is PlacementDirective.FORBID
+
+
+def test_three_plus_intervening_days_only_apply_adjacency_to_edges():
+    events = [
+        _event(30, LoadClass.HARD_CONTACT, scope="w"),
+        _event(35, LoadClass.HARD_CONTACT, scope="w"),
+    ]
+
+    after = evaluate_candidate_at_position(
+        _profile(LoadClass.MEANINGFUL_STRENGTH),
+        candidate_position=31,
+        events=events,
+        candidate_scope="w",
+    )
+    interior = evaluate_candidate_at_position(
+        _profile(LoadClass.MEANINGFUL_CONDITIONING),
+        candidate_position=33,
+        events=events,
+        candidate_scope="w",
+    )
+    before = evaluate_candidate_at_position(
+        _profile(LoadClass.MEANINGFUL_STRENGTH),
+        candidate_position=34,
+        events=events,
+        candidate_scope="w",
+    )
+
+    assert after.directive is PlacementDirective.DEPRIORITIZE
+    assert interior.directive is PlacementDirective.ALLOW
+    assert before.directive is PlacementDirective.DEPRIORITIZE
+
+
+def test_cross_week_positions_classify_two_intervening_days_without_global_scope():
+    events = [
+        _event(4, LoadClass.HARD_CONTACT, scope="week-1"),
+        _event(7, LoadClass.HARD_CONTACT, scope="week-2"),
+    ]
+
+    unscoped = build_calendar_context(5, events)
+    scoped = build_calendar_context(5, events, candidate_scope="week-1")
+
+    assert unscoped.previous_hard_distance == 1
+    assert unscoped.next_hard_distance == 2
+    assert unscoped.hard_contact_gap_intervening_days == 2
+    assert scoped.between_effective_hard_contacts is False
+
+
+def test_technical_and_reduced_contact_are_allowed_in_three_day_gap_interior():
     events = [
         _event(140, LoadClass.HARD_CONTACT, scope="w"),
         _event(144, LoadClass.HARD_CONTACT, scope="w"),
@@ -682,9 +774,8 @@ def test_technical_and_reduced_contact_have_distinct_scoped_between_contact_cost
         candidate_scope="w",
     )
 
-    assert technical.directive is PlacementDirective.DEPRIORITIZE
-    assert reduced.directive is PlacementDirective.DEPRIORITIZE
-    assert technical.reason_code != reduced.reason_code
+    assert technical.directive is PlacementDirective.ALLOW
+    assert reduced.directive is PlacementDirective.ALLOW
 
 
 # ---------------------------------------------------------------------------
