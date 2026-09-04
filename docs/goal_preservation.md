@@ -131,11 +131,13 @@ the existing exercise/dose parsers. This is fidelity checking against a
 deterministic decision, not semantic inference from LLM prose. Missing or reduced
 witnesses produce `goal_preservation_render_mismatch`.
 
-The deterministic goal validator emits `goal_preservation_failed` with
-`severity="blocker"` for invalid state, missing effective coverage, stale evidence
-and unjustified downgrades. Those findings remain release blockers. The shared
-observational allowlist applies only to non-blocker-severity uses of the same code;
-it cannot downgrade a blocker into a publishable flag.
+Every `goal_preservation_failed` finding is a release blocker, regardless of
+whether a producer supplies a `severity` field. Missing or malformed severity
+therefore cannot turn unresolved goal coverage into a publishable flag. A held
+goal-preservation failure is not sent to the renderer for repair:
+`build_stage2_retry()` returns `requires_planner_regeneration=true`,
+`needs_retry=false`, and no repair prompt. The deterministic planner must repair
+or explicitly justify the obligation.
 
 `goal_preservation_render_mismatch` remains a hard blocker: the renderer lost or
 altered a named planner witness. It gets one conforming render repair and must
@@ -152,7 +154,8 @@ Runtime/provider failures without output and persistence failures remain termina
   `20260427120000_stabilize_generation_runtime.sql`). No SQL, RLS, environment,
   exercise-bank or UI change is required.
 - Old saved plans remain readable. Re-finalizing/publishing an old dated brief
-  with selected goals and no contract retains the diagnostic finding.
+  with selected goals and no contract retains the diagnostic finding and holds
+  release until deterministic regeneration resolves it.
 - Open ongoing systems retain the initial universal selection classification.
   They do not currently have a deterministic executable session calendar; this
   PR's resolved-camp publication gate applies to dated camps. Adding an executable
@@ -167,6 +170,7 @@ restoration, safety, stale contracts, explicit deferral, chronological coverage,
 determinism, and renderer fidelity. The synthetic MMA fixture in
 `tests/fixtures/goal_preservation/sheyi_like.json` runs through real intake,
 selection, calendar, prescriptions and handoff in
-`tests/test_goal_preservation_e2e.py`. `tests/test_stage2_automation.py` verifies
-flagged publication for non-blocking findings, retained reports, renderer repair
-and blocking behavior for deterministic/safety failures.
+`tests/test_goal_preservation_e2e.py`. `tests/test_stage2_automation.py` and
+`tests/test_validator_release_invariant.py` verify fail-closed goal handling,
+no renderer retry for deterministic goal failures, renderer repair for actual
+render divergence, and blocking behavior for deterministic/safety failures.
