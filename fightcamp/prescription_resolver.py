@@ -51,7 +51,7 @@ class MissingLateCampEffectiveStrengthAuthorityError(ValueError):
             f"week_index={details.get('week_index')!r}, "
             f"session_index={details.get('session_index')!r}, "
             f"scheduled_weekday={details.get('scheduled_weekday')!r}, "
-            f"original_countdown={details.get('original_countdown')!r}, "
+            f"original_countdown={details.get('countdown_label')!r}, "
             f"scheduled_countdown={details.get('scheduled_countdown')!r}, "
             f"resolved_d_day={details.get('resolved_d_day')!r}, "
             f"missing_fields=[{fields}]"
@@ -391,17 +391,16 @@ def resolve_strength_slot_prescription(
         loaded=loaded,
         suppressed_loaded_lift=kind in {"anchor", "secondary", "hybrid"} and not loaded,
     )
-    # ``dose_role_kind`` is a persisted validator-facing enum. Keep its existing
-    # anchor/secondary/power/support vocabulary even when the internal resolver
-    # recognises a loaded-power hybrid. ``power_hybrid`` preserves that original
-    # semantic truth even if the dose treatment is demoted to ``secondary``.
+    # ``dose_role_kind`` is the existing persisted validator-facing vocabulary.
+    # Loaded-power hybrid is an internal semantic used to resolve the right dose;
+    # downstream truth stays expressed through the canonical slot plus the
+    # existing anchor/secondary/power/support kind and effective-loaded fields.
     persisted_kind = "anchor" if semantic_kind == "hybrid" and kind == "hybrid" else kind
     result = {
         "base_prescription": base_prescription,
         "effective_prescription": effective,
         "dose_authority": "scheduled_countdown_overlay",
         "dose_role_kind": persisted_kind,
-        "power_hybrid": semantic_kind == "hybrid",
         "dose_adjustment_reason": role.get("dose_adjustment_reason"),
         "effective_loaded": bool(loaded),
         "strength_dose_cap": dict(cap),
