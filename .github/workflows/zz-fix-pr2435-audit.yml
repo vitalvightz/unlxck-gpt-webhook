@@ -27,6 +27,7 @@ jobs:
         run: |
           python .github/scripts/fix_pr2435_audit.py
           python .github/scripts/fix_pr2435_followup.py
+          python .github/scripts/fix_pr2435_followup2.py
 
       - name: Install test dependencies
         run: pip install -r requirements-dev.txt
@@ -50,7 +51,8 @@ jobs:
         run: |
           rm -f .github/workflows/zz-fix-pr2435-audit.yml \
             .github/scripts/fix_pr2435_audit.py \
-            .github/scripts/fix_pr2435_followup.py
+            .github/scripts/fix_pr2435_followup.py \
+            .github/scripts/fix_pr2435_followup2.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
