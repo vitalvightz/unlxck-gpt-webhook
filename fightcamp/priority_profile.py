@@ -24,6 +24,7 @@ COLLISION_INTENT_BONUS = 0.2
 _SELECTED_PRIORITY_TARGET_ALIASES = {
     "reactive": "speed",
     "explosive": "power",
+    "hip_mobility": "mobility",
 }
 
 

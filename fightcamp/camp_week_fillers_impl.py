@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any
 
 from .calendar_context import CalendarLegalityView, weekly_role_map_legality
@@ -14,9 +15,10 @@ from .coordination_support_library import (
 from .gap_fill_inserts import (
     PHYSICAL_INSERTS,
     _new_usage_ledger,
+    _priority_contribution,
     _record_insert_usage,
+    build_target_coverage_state,
     filler_target_capabilities,
-    highest_priority_remaining_target,
     select_gap_fill_insert,
 )
 from .normalization import WEEKDAY_ORDER, clean_list
@@ -131,9 +133,8 @@ def _decorate_filler(insert: dict[str, Any], day: str, d_day: int) -> None:
     insert["camp_week_filler"] = True
 
 
-def _place_filler(
+def _select_filler_for_day(
     week: dict[str, Any],
-    session_roles: list[dict[str, Any]],
     athlete_model: dict[str, Any],
     day: str,
     *,
@@ -141,16 +142,12 @@ def _place_filler(
     week_ordinal: int,
     usage_ledger: dict[str, Any],
     allow_physical: bool,
-) -> dict[str, Any] | None:
+) -> tuple[dict[str, Any], int] | None:
+    """Select the real generic filler candidate for one day without placing it."""
     d_day = _calendar_d_day(week, day)
-    if d_day is None:
+    if d_day is None or d_day in set(week.get("late_fight_tail_days") or []):
         return None
-    if d_day in set(week.get("late_fight_tail_days") or []):
-        return None
-    # Ask the shared calendar legality before proposing a filler. Events are built
-    # from the whole weekly role map, so immediate hard-contact adjacency is seen
-    # across planner-week boundaries; resolved contact (hard_sparring_plan), not
-    # raw declared weekday names, decides whether this is a contact day.
+
     legality = weekly_role_map_legality(weekly_role_map, week, week_ordinal)
     on_hard_sparring_day = d_day in legality.contact_offsets()
     coverage_roles = usage_ledger.setdefault("coverage_roles", [])
@@ -164,16 +161,51 @@ def _place_filler(
     )
     if insert is None or (not allow_physical and insert.get("role_key") in PHYSICAL_INSERTS):
         return None
-    # A filler never survives a FORBID: if it cannot legally coexist here the
-    # filler loses, rather than being inserted and relocated/suppressed later by
-    # the final governor for a collision the policy could already see.
     if legality.role_is_forbidden(insert, d_day):
         return None
+    return insert, d_day
+
+
+def _place_filler(
+    week: dict[str, Any],
+    session_roles: list[dict[str, Any]],
+    athlete_model: dict[str, Any],
+    day: str,
+    *,
+    weekly_role_map: dict[str, Any],
+    week_ordinal: int,
+    usage_ledger: dict[str, Any],
+    allow_physical: bool,
+) -> dict[str, Any] | None:
+    selected = _select_filler_for_day(
+        week,
+        athlete_model,
+        day,
+        weekly_role_map=weekly_role_map,
+        week_ordinal=week_ordinal,
+        usage_ledger=usage_ledger,
+        allow_physical=allow_physical,
+    )
+    if selected is None:
+        return None
+    insert, d_day = selected
     _decorate_filler(insert, day, d_day)
     session_roles.append(insert)
-    coverage_roles.append(insert)
+    usage_ledger.setdefault("coverage_roles", []).append(insert)
     _record_insert_usage(usage_ledger, str(insert.get("role_key") or ""), d_day)
     return insert
+
+
+def _unused_day_is_fillable(day_entry: Any) -> bool:
+    if not isinstance(day_entry, dict):
+        return False
+    day = str(day_entry.get("day") or "").strip()
+    role = str(day_entry.get("role") or "").strip()
+    return bool(
+        day
+        and role in {"off_day", "recovery_only_day"}
+        and not day_entry.get("low_aerobic_cap_skipped")
+    )
 
 
 def _fill_week(
@@ -192,18 +224,11 @@ def _fill_week(
     added = 0
     kept_unused: list[Any] = []
     for day_entry in week.get("intentionally_unused_days") or []:
-        if added >= cap or not isinstance(day_entry, dict):
+        if added >= cap or not _unused_day_is_fillable(day_entry):
             kept_unused.append(day_entry)
             continue
         day = str(day_entry.get("day") or "").strip()
         unused_role = str(day_entry.get("role") or "").strip()
-        if (
-            not day
-            or unused_role not in {"off_day", "recovery_only_day"}
-            or day_entry.get("low_aerobic_cap_skipped")
-        ):
-            kept_unused.append(day_entry)
-            continue
         insert = _place_filler(
             week,
             session_roles,
@@ -247,6 +272,94 @@ def _fill_week(
         added += 1
         shared_added += 1
         day_counts[normalized] = day_counts.get(normalized, 0) + 1
+
+
+def _probe_first_generic_filler(
+    week: dict[str, Any],
+    session_roles: list[dict[str, Any]],
+    athlete_model: dict[str, Any],
+    *,
+    weekly_role_map: dict[str, Any],
+    week_ordinal: int,
+    usage_ledger: dict[str, Any],
+    coverage_roles: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    """Dry-run the same first generic filler the real week fill would attempt."""
+    probe_ledger = deepcopy(usage_ledger)
+    probe_ledger["coverage_roles"] = list(coverage_roles)
+    allow_physical = _week_physical_filler_count(session_roles) < 1
+
+    for day_entry in week.get("intentionally_unused_days") or []:
+        if not _unused_day_is_fillable(day_entry):
+            continue
+        selected = _select_filler_for_day(
+            week,
+            athlete_model,
+            str(day_entry.get("day") or "").strip(),
+            weekly_role_map=weekly_role_map,
+            week_ordinal=week_ordinal,
+            usage_ledger=probe_ledger,
+            allow_physical=allow_physical,
+        )
+        if selected is not None:
+            return selected[0]
+
+    day_counts = _role_day_counts(session_roles)
+    for day in clean_list(week.get("declared_training_days")):
+        if day_counts.get(_canonical_day(day), 0) != 1:
+            continue
+        selected = _select_filler_for_day(
+            week,
+            athlete_model,
+            day,
+            weekly_role_map=weekly_role_map,
+            week_ordinal=week_ordinal,
+            usage_ledger=probe_ledger,
+            allow_physical=allow_physical,
+        )
+        if selected is not None:
+            return selected[0]
+    return None
+
+
+def _coordination_is_best_remaining_option(
+    week: dict[str, Any],
+    session_roles: list[dict[str, Any]],
+    athlete_model: dict[str, Any],
+    *,
+    weekly_role_map: dict[str, Any],
+    week_ordinal: int,
+    usage_ledger: dict[str, Any],
+    coverage_roles: list[dict[str, Any]],
+) -> bool:
+    """Compare banked coordination with the generic selector's real eligible winner."""
+    coverage_state = build_target_coverage_state(athlete_model, coverage_roles)
+    coordination_opportunity = _priority_contribution(
+        "coordination_support",
+        coverage_state,
+    )
+    if coordination_opportunity <= 0:
+        return False
+
+    generic = _probe_first_generic_filler(
+        week,
+        session_roles,
+        athlete_model,
+        weekly_role_map=weekly_role_map,
+        week_ordinal=week_ordinal,
+        usage_ledger=usage_ledger,
+        coverage_roles=coverage_roles,
+    )
+    if generic is None:
+        return True
+
+    generic_opportunity = _priority_contribution(
+        str(generic.get("role_key") or ""),
+        coverage_state,
+    )
+    # Preserve the established coordination-bank materialisation on an exact
+    # opportunity tie; otherwise the higher real eligible opportunity owns the slot.
+    return coordination_opportunity + 1e-9 >= generic_opportunity
 
 
 def _existing_training_day(week: dict[str, Any], session_roles: list[dict[str, Any]]) -> tuple[str, int] | None:
@@ -455,10 +568,10 @@ def _ensure_coordination_support(
     if not isinstance(session_roles, list):
         return False
 
-    # The banked coordination role is only a materialisation path. The shared
-    # programme-level coverage ledger decides whether coordination is the highest
-    # remaining addressable target; current-week coordination candidates are
-    # excluded from that decision so they cannot satisfy themselves.
+    # The banked coordination role is a materialisation path, not a second
+    # priority engine. Exclude current-week coordination candidates from the
+    # programme coverage ledger so they cannot satisfy themselves, then compare
+    # the banked role against the real generic filler that the week would select.
     coverage_roles = usage_ledger.setdefault("coverage_roles", [])
     current_coordination_ids = {
         id(role)
@@ -471,20 +584,6 @@ def _ensure_coordination_support(
         for role in coverage_roles
         if id(role) not in current_coordination_ids
     ]
-    if highest_priority_remaining_target(
-        athlete_model,
-        roles_without_current_coordination,
-    ) != "coordination":
-        session_roles[:] = [
-            role
-            for role in session_roles
-            if not (
-                isinstance(role, dict)
-                and id(role) in current_coordination_ids
-            )
-        ]
-        coverage_roles[:] = roles_without_current_coordination
-        return False
 
     legality = weekly_role_map_legality(weekly_role_map, week, week_ordinal)
     tail_days = set(week.get("late_fight_tail_days") or [])
@@ -546,8 +645,29 @@ def _ensure_coordination_support(
         )
     if slot is None:
         return False
-    day, d_day = slot
 
+    session_roles_without_current_coordination = [
+        role
+        for role in session_roles
+        if not (
+            isinstance(role, dict)
+            and id(role) in current_coordination_ids
+        )
+    ]
+    if not _coordination_is_best_remaining_option(
+        week,
+        session_roles_without_current_coordination,
+        athlete_model,
+        weekly_role_map=weekly_role_map,
+        week_ordinal=week_ordinal,
+        usage_ledger=usage_ledger,
+        coverage_roles=roles_without_current_coordination,
+    ):
+        session_roles[:] = session_roles_without_current_coordination
+        coverage_roles[:] = roles_without_current_coordination
+        return False
+
+    day, d_day = slot
     drill = select_coordination_support(athlete_model, phase, used_coordination_keys)
     if drill is None:
         return False
