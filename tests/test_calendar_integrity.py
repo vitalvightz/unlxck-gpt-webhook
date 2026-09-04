@@ -111,6 +111,37 @@ def test_pre_hard_meaningful_strength_relocates_to_cleaner_allow_day():
     assert weekly["calendar_integrity"]["relocated_roles"] == 1
 
 
+def test_relocation_preserves_duplicate_weekday_calendar_occurrences():
+    strength = _strength("Sunday")
+    week = _week(roles=[strength], contacts=[_hard("Monday")], declared=["Monday"])
+    week["calendar_days"] = [
+        {"weekday": "Monday", "d_day": 24},
+        {"weekday": "Tuesday", "d_day": 23},
+        {"weekday": "Wednesday", "d_day": 22},
+        {"weekday": "Thursday", "d_day": 21},
+        {"weekday": "Friday", "d_day": 20},
+        {"weekday": "Saturday", "d_day": 19},
+        {"weekday": "Sunday", "d_day": 18},
+        {"weekday": "Monday", "d_day": 17},
+    ]
+    weekly = _map(week)
+
+    apply_final_calendar_integrity(weekly)
+
+    assert strength["scheduled_day_hint"] == "Monday"
+    assert strength["scheduled_d_day"] == 24
+    assert strength["calendar_integrity_relocation"]["to_d_day"] == 24
+
+
+def test_deprioritized_relocation_stamp_is_not_called_forbidden():
+    strength = _strength("Wednesday")
+    weekly = _map(_week(roles=[strength], contacts=[_hard("Tuesday")]))
+
+    apply_final_calendar_integrity(weekly)
+
+    assert "was deprioritize: post_hard_contact_managed_stress" in strength["day_assignment_reason"]
+
+
 def test_two_day_gap_keeps_managed_strength_between_contacts():
     strength = _strength("Wednesday")
     weekly = _map(

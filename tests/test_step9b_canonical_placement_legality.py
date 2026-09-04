@@ -101,16 +101,14 @@ def test_normal_forbid_not_selected_even_when_locally_preferred():
 
 def test_normal_three_day_gap_uses_normal_interior_placement():
     # Mon & Fri hard: every non-spar day (Tue/Wed/Thu) is between two hard
-    # contacts. A low-load movement role is DEPRIORITIZE there
-    # (between_hard_contacts_low_load_physical) — legal, not FORBID — so it still
-    # places on one of those days rather than being suppressed to dayless.
+    # contacts. With three full intervening days the tight-gap branch is skipped,
+    # so a low-load movement role is ALLOW throughout the interior.
     plan = [{"day": "Monday", "status": "hard_as_planned"}, {"day": "Friday", "status": "hard_as_planned"}]
     view = cc.normal_week_legality(plan, ["Monday", "Friday"], scope=("normal_week", 1))
     movement = cc.classify_role({"category": "conditioning", "role_key": "movement_quality"})
     assert view.decision_at_position(movement, cc.weekday_position("wednesday")).directive is PlacementDirective.ALLOW
 
-    # Mon-Fri only: every non-spar day (Tue/Wed/Thu) is between the two hard days,
-    # so the movement role has no ALLOW option — only DEPRIORITIZE ones.
+    # Mon-Fri only: the three interior days remain normal ALLOW destinations.
     athlete = {
         "training_days": ["Tuesday", "Wednesday", "Thursday", "Friday"],
         "hard_sparring_days": ["Monday", "Friday"],

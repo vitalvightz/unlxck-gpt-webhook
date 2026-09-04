@@ -755,6 +755,35 @@ def test_cross_week_positions_classify_two_intervening_days_without_global_scope
     assert scoped.between_effective_hard_contacts is False
 
 
+def test_cross_scope_tight_gap_still_applies_meaningful_load_policy():
+    events = [
+        _event(4, LoadClass.HARD_CONTACT, scope="week-1"),
+        _event(7, LoadClass.HARD_CONTACT, scope="week-2"),
+    ]
+    context = build_calendar_context(5, events, candidate_scope="week-2")
+
+    decision = evaluate_calendar_candidate(_profile(LoadClass.MEANINGFUL_STRENGTH), context)
+
+    assert decision.directive is PlacementDirective.DEPRIORITIZE
+    assert decision.reason_code == "between_hard_contacts_managed_strength"
+
+
+def test_scoped_gap_uses_nearest_scoped_contacts_not_global_contacts():
+    events = [
+        _event(10, LoadClass.HARD_CONTACT, scope="week"),
+        _event(14, LoadClass.HARD_CONTACT, scope="other"),
+        _event(16, LoadClass.HARD_CONTACT, scope="other"),
+        _event(20, LoadClass.HARD_CONTACT, scope="week"),
+    ]
+    context = build_calendar_context(15, events, candidate_scope="week")
+
+    assert context.previous_hard_distance == 1
+    assert context.next_hard_distance == 1
+    assert context.hard_contact_gap_intervening_days == 9
+    decision = evaluate_calendar_candidate(_profile(LoadClass.MEANINGFUL_STRENGTH), context)
+    assert decision.reason_code == "post_hard_contact_managed_stress"
+
+
 def test_technical_and_reduced_contact_are_allowed_in_three_day_gap_interior():
     events = [
         _event(140, LoadClass.HARD_CONTACT, scope="w"),

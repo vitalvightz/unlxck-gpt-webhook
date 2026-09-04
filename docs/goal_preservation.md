@@ -105,7 +105,7 @@ only if it improves goal coverage without removing another effective stimulus.
 Hard-suppressed candidates, intentionally compressed weeks, protected recovery
 days and finished D-13 tails are not reopened. In particular,
 `two_hard_spar_days`, immediate post-contact restrictions and
-`between_hard_contacts_meaningful_or_neural_stress` are unchanged.
+`between_hard_contacts_tight_gap_meaningful_stress` are unchanged.
 
 An unresolved goal can become `defer` only with a live constraint for **every**
 uncovered window. The structured constraint cites its authority, original reason

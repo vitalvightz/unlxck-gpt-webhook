@@ -265,7 +265,7 @@ def test_sandwiched_days_prefer_low_load_support_and_post_hard_is_fallback():
     # Alternating spar/S&C week: sparring Mon/Wed/Fri, S&C on the off days
     # Tue/Thu/Sat. Low-load aerobic/recovery support belongs on the between-hard
     # days (ALLOW). Primary strength does NOT: Tue and Thu are between two hard
-    # contacts (between_hard_contacts_meaningful_or_neural_stress -> FORBID) and
+    # contacts (between_hard_contacts_tight_gap_meaningful_stress -> FORBID) and
     # Sat is immediately after Friday's hard contact, so it is a legal but
     # deprioritized fallback. Readiness and session-budget owners may still remove
     # it in a complete dense-week plan; this placement helper does not own that rule.

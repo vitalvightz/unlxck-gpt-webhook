@@ -495,6 +495,8 @@ def build_calendar_context(
     next_distance = after[0] - position if after else None
 
     between = False
+    scoped_previous_distance = None
+    scoped_next_distance = None
     if candidate_scope is not None:
         scoped_hard = sorted(
             {
@@ -504,8 +506,13 @@ def build_calendar_context(
                 and event.profile.load_class is LoadClass.HARD_CONTACT
             }
         )
-        between = any(p < position for p in scoped_hard) and any(
-            p > position for p in scoped_hard
+        scoped_before = [p for p in scoped_hard if p < position]
+        scoped_after = [p for p in scoped_hard if p > position]
+        scoped_previous_distance = position - scoped_before[-1] if scoped_before else None
+        scoped_next_distance = scoped_after[0] - position if scoped_after else None
+        between = (
+            scoped_previous_distance is not None
+            and scoped_next_distance is not None
         )
 
     return CalendarCollisionContext(
@@ -516,7 +523,9 @@ def build_calendar_context(
         next_hard_distance=next_distance,
         between_effective_hard_contacts=between,
         hard_contact_gap_intervening_days=(
-            previous_distance + next_distance - 1
+            (scoped_previous_distance + scoped_next_distance - 1)
+            if between
+            else (previous_distance + next_distance - 1)
             if previous_distance is not None and next_distance is not None
             else None
         ),
@@ -591,7 +600,15 @@ def evaluate_calendar_candidate(
         )
 
     gap_days = context.hard_contact_gap_intervening_days
-    if context.between_effective_hard_contacts and gap_days is not None and gap_days <= 2:
+    has_nearest_hard_pair = (
+        context.previous_hard_distance is not None
+        and context.next_hard_distance is not None
+    )
+    if (
+        gap_days is not None
+        and gap_days <= 2
+        and (context.between_effective_hard_contacts or has_nearest_hard_pair)
+    ):
         if load in _SANDWICH_ALLOW_LOADS:
             return _decision(
                 PlacementDirective.ALLOW,
