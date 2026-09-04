@@ -2432,7 +2432,7 @@ AUTHORITY ORDER
 1. FINALIZER PACKET — primary authority for calendar, render mode, countdown labels, restrictions, priorities, compact selected candidate facts, session-count metadata, and risks.
 2. Render guards and restrictions — hard constraints. Non-negotiable.
 3. Weekly role map / hard-sparring days — source of truth for visible session count, day ownership, declared days, and protected hard-sparring/contact slots.
-4. Stage 1 selected exercises and draft text — candidate material only. Not final authority.
+4. Stage 1 draft text and unselected candidate material — not final authority. Deterministic selected_exercise_assignments in the FINALIZER PACKET are final session membership.
 
 RULE 1 — HARD FILTER
 Remove every exercise, drill, or prescription that violates any restriction, including synonyms and mechanical equivalents. Apply to strength, conditioning, rehab, warm-ups, and finishers. Do not modify a violating item into compliance — replace or drop it.
@@ -2441,7 +2441,7 @@ RULE 2 — PLAN THE CAMP, DON'T JUST EDIT
 Build the best final plan from the FINALIZER PACKET. Use selected_plan, weekly_role_map, session_sequence, week_by_week_progression, and render_guards to sequence the camp. Reorganise and tighten — coherence over inertia.
 
 RULE 3 — SELECTION ORDER
-Preserve the calendar, declared days, coach-led ownership, session count, phase, and taper window from selected_plan / weekly_role_map, but make the final exercise and prescription choices yourself. Treat Stage 1 selected exercises as candidates, not truth; draft text is also candidate material. Keep a Stage 1 item only when it is the best compliant coaching choice for the athlete's sport, fight date, phase, injury, weight cut, fatigue, goals, weak areas, and schedule. If a Stage 1 item is weak, generic, violating, off-role, or poorly timed, override it using compact selected candidate facts, fallback items, selected_plan, or final coaching judgement. Do not create athlete-facing option menus. Never let Stage 1 draft wording decide final exercise rendering when the FINALIZER PACKET says a different role, day, count, restriction, or taper rule owns the session.
+Preserve the calendar, declared days, coach-led ownership, session count, phase, and taper window from selected_plan / weekly_role_map. When a role has selected_exercise_assignments, use only those exercises. That list is closed session membership from the deterministic planner. Do not add, restore, or substitute candidates, alternates, or other S&C exercises, even when their dose would be legal. Use each selected exercise's effective prescription when supplied. Roles without selected_exercise_assignments keep their existing contract. Draft text is candidate material and cannot override the FINALIZER PACKET.
 
 RULE 4 — ANCHOR STANDARD
 Every anchor session must contain at least one serious high-transfer strength or power exercise if a compliant compact candidate or finalizer-safe substitution exists. Do not build anchors from bird dogs, dead bugs, planks, carries, or rehab-level work unless restrictions force it. Support work assists the anchor — it cannot become it.

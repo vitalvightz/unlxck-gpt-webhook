@@ -752,15 +752,24 @@ def _build_role_envelope(
         if isinstance(item_reps, int):
             max_reps = item_reps if max_reps is None else max(max_reps, item_reps)
 
+    selected_names = [
+        str(assignment.get("name") or "").strip()
+        for assignment in (role.get("selected_exercise_assignments") or [])
+        if isinstance(assignment, dict) and str(assignment.get("name") or "").strip()
+    ]
     envelope = {
         "scheduled_d_day": role.get("scheduled_d_day"),
         "dose_adjustment_reason": role.get("dose_adjustment_reason"),
         "loaded_allowed": bool(loaded_allowed),
         "rpe_cap_high": _rpe_ceiling(role.get("rpe_cap")),
         "loaded_exercise_names": loaded_names,
+        # Composition and dose are separate authorities.  This list is derived
+        # only from the deterministic selector, never from the candidate pool or
+        # from whichever entries happened to resolve a dose successfully.
+        "allowed_exercise_names": list(dict.fromkeys(selected_names)),
+        "complete_exercise_allow_list": True,
     }
     if role.get("pre_hard_contact_managed_stress") is True:
-        allowed_names = [item.get("name") for item in resolved if item.get("name")]
         envelope.update(
             {
                 "pre_hard_contact_managed_stress": True,
@@ -768,7 +777,9 @@ def _build_role_envelope(
                 "max_meaningful_strength_exposures": 1,
                 "max_loaded_anchors": 1,
                 "max_additional_low_cost_items": 1,
-                "allowed_exercise_names": allowed_names,
+                # The pre-contact policy may reduce dose/volume, but it must not
+                # reopen or independently redefine selected membership.
+                "allowed_exercise_names": list(dict.fromkeys(selected_names)),
                 "complete_exercise_allow_list": True,
                 "forbid_slow_eccentric_emphasis": True,
             }
@@ -804,13 +815,36 @@ def apply_effective_strength_prescriptions(
         candidate_pools=candidate_pools,
     ):
         _apply_pre_hard_contact_cap(role)
+        assignments = role.get("selected_exercise_assignments")
+        if isinstance(assignments, list):
+            # Even a normal-camp role with no countdown dose overlay has closed
+            # composition once the selector has written this field.  Reuse the
+            # existing complete allow-list envelope instead of introducing a
+            # second validator contract.
+            envelope = role.get("effective_strength_envelope")
+            if not isinstance(envelope, dict):
+                envelope = {}
+            selected_names = [
+                str(assignment.get("name") or "").strip()
+                for assignment in assignments
+                if isinstance(assignment, dict) and str(assignment.get("name") or "").strip()
+            ]
+            envelope.update(
+                allowed_exercise_names=list(dict.fromkeys(selected_names)),
+                complete_exercise_allow_list=True,
+            )
+            scheduled_d_day = role_d_day(week, role)
+            if scheduled_d_day is not None:
+                role["scheduled_d_day"] = scheduled_d_day
+                envelope["scheduled_d_day"] = scheduled_d_day
+            role["effective_strength_envelope"] = envelope
         if not isinstance(role.get("strength_dose_cap"), dict):
             continue
         scheduled_d_day = role_d_day(week, role)
         if scheduled_d_day is not None:
             role["scheduled_d_day"] = scheduled_d_day
 
-        if not isinstance(role.get("selected_exercise_assignments"), list):
+        if not isinstance(assignments, list):
             continue
         slots_for_resolution = owned_slots
         if role.get("pre_hard_contact_managed_stress") is True:

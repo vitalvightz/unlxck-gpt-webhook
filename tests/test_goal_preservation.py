@@ -397,6 +397,10 @@ def test_restored_goal_repair_role_carries_athlete_facing_label():
     restored = session_roles[0]
     assert restored.get("goal_preservation_repair")
     assert str(restored.get("athlete_facing_label") or "").strip()
+    selected_names = [item["name"] for item in restored["selected_exercise_assignments"]]
+    envelope = restored["effective_strength_envelope"]
+    assert envelope["complete_exercise_allow_list"] is True
+    assert envelope["allowed_exercise_names"] == selected_names
 
 
 def test_stale_or_missing_goal_preservation_version_blocks_dated_resolved_plan():

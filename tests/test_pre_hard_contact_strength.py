@@ -9,6 +9,7 @@ from fightcamp.pre_hard_contact_strength import (
 from fightcamp.prescription_resolver import apply_effective_strength_prescriptions
 from fightcamp.late_camp_role_morph import apply_late_camp_role_morph
 from fightcamp.stage2_validator import _late_camp_effective_prescription_warnings
+from fightcamp.session_composition import compose_normal_strength_assignments
 
 
 def _calendar(*pairs: tuple[str, int]) -> list[dict]:
@@ -129,6 +130,12 @@ def _candidate_pools(*slots: dict) -> dict:
     return {"GPP": {"strength_slots": list(slots)}}
 
 
+def _selected_candidate_pools(weekly: dict, *slots: dict) -> dict:
+    pools = _candidate_pools(*slots)
+    compose_normal_strength_assignments(weekly_role_map=weekly, candidate_pools=pools)
+    return pools
+
+
 def _role(weekly: dict) -> dict:
     return weekly["weeks"][0]["session_roles"][0]
 
@@ -142,7 +149,7 @@ def test_one_day_before_effective_hard_contact_marks_strength_and_reuses_retenti
 
     apply_effective_strength_prescriptions(
         weekly_role_map=weekly,
-        candidate_pools=_candidate_pools(_anchor_slot()),
+        candidate_pools=_selected_candidate_pools(weekly, _anchor_slot()),
         athlete_model={"fatigue": "low"},
     )
     role = _role(weekly)
@@ -163,7 +170,7 @@ def test_two_days_before_effective_hard_contact_does_not_trigger() -> None:
 
     apply_effective_strength_prescriptions(
         weekly_role_map=weekly,
-        candidate_pools=_candidate_pools(_anchor_slot()),
+        candidate_pools=_selected_candidate_pools(weekly, _anchor_slot()),
         athlete_model={"fatigue": "low"},
     )
     role = _role(weekly)
@@ -201,7 +208,7 @@ def test_pre_hard_retention_cap_stacks_with_existing_high_fatigue_reduction() ->
     apply_pre_hard_contact_strength_exposure_cap(weekly)
     apply_effective_strength_prescriptions(
         weekly_role_map=weekly,
-        candidate_pools=_candidate_pools(_anchor_slot()),
+        candidate_pools=_selected_candidate_pools(weekly, _anchor_slot()),
         athlete_model={"fatigue": "high"},
     )
     assert _role(weekly)["effective_strength_prescriptions"][0]["effective_prescription"] == "2 x 3 @ RPE 6-7 max"
@@ -220,7 +227,7 @@ def test_stricter_existing_countdown_cap_wins_over_pre_hard_retention_cap() -> N
     )
     apply_effective_strength_prescriptions(
         weekly_role_map=weekly,
-        candidate_pools=_candidate_pools(_anchor_slot()),
+        candidate_pools=_selected_candidate_pools(weekly, _anchor_slot()),
         athlete_model={"fatigue": "low"},
     )
     assert _role(weekly)["effective_strength_prescriptions"][0]["effective_prescription"] == "2 x 3 @ RPE 6-7 max"
@@ -232,7 +239,7 @@ def test_pre_hard_allow_list_drops_high_impact_power_but_keeps_anchor() -> None:
     apply_pre_hard_contact_strength_exposure_cap(weekly)
     apply_effective_strength_prescriptions(
         weekly_role_map=weekly,
-        candidate_pools=_candidate_pools(_anchor_slot(), _high_cost_power_slot()),
+        candidate_pools=_selected_candidate_pools(weekly, _anchor_slot(), _high_cost_power_slot()),
         athlete_model={"fatigue": "low"},
     )
     role = _role(weekly)
@@ -240,7 +247,9 @@ def test_pre_hard_allow_list_drops_high_impact_power_but_keeps_anchor() -> None:
     assert names == ["Romanian Deadlift (RDL)"]
     envelope = role["effective_strength_envelope"]
     assert envelope["complete_exercise_allow_list"] is True
-    assert envelope["allowed_exercise_names"] == ["Romanian Deadlift (RDL)"]
+    assert envelope["allowed_exercise_names"] == [
+        "Romanian Deadlift (RDL)", "Single-Leg Forward Hops"
+    ]
     assert envelope["forbid_slow_eccentric_emphasis"] is True
 
 
@@ -249,7 +258,7 @@ def test_pre_hard_allow_list_permits_one_low_cost_support_item() -> None:
     apply_pre_hard_contact_strength_exposure_cap(weekly)
     apply_effective_strength_prescriptions(
         weekly_role_map=weekly,
-        candidate_pools=_candidate_pools(_anchor_slot(), _low_cost_support_slot()),
+        candidate_pools=_selected_candidate_pools(weekly, _anchor_slot(), _low_cost_support_slot()),
         athlete_model={"fatigue": "low"},
     )
     names = [item["name"] for item in _role(weekly)["effective_strength_prescriptions"]]
@@ -329,7 +338,7 @@ def test_unknown_cost_support_is_not_treated_as_verified_low_cost() -> None:
     unknown_support["selected"].pop("selection_metadata", None)
     apply_effective_strength_prescriptions(
         weekly_role_map=weekly,
-        candidate_pools=_candidate_pools(_anchor_slot(), unknown_support),
+        candidate_pools=_selected_candidate_pools(weekly, _anchor_slot(), unknown_support),
         athlete_model={"fatigue": "low"},
     )
     names = [item["name"] for item in _role(weekly)["effective_strength_prescriptions"]]
