@@ -51,7 +51,7 @@ class MissingLateCampEffectiveStrengthAuthorityError(ValueError):
             f"week_index={details.get('week_index')!r}, "
             f"session_index={details.get('session_index')!r}, "
             f"scheduled_weekday={details.get('scheduled_weekday')!r}, "
-            f"original_countdown={details.get('countdown_label')!r}, "
+            f"original_countdown={details.get('original_countdown')!r}, "
             f"scheduled_countdown={details.get('scheduled_countdown')!r}, "
             f"resolved_d_day={details.get('resolved_d_day')!r}, "
             f"missing_fields=[{fields}]"
