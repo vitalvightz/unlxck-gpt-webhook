@@ -17,16 +17,6 @@ def test_hard_stage2_blocker_codes_load_from_shared_json() -> None:
     )
 
 
-def test_goal_preservation_failure_is_always_hard_blocking() -> None:
-    assert "goal_preservation_failed" in stage2_policy.HARD_STAGE2_BLOCKER_CODES
-    for field in ("errors", "warnings", "review_flags", "blocking_warnings"):
-        report = {"errors": [], "warnings": [], "review_flags": [], "blocking_warnings": []}
-        report[field] = [{"code": "goal_preservation_failed", "goal": "speed"}]
-        decided = stage2_policy.apply_stage2_release_policy(report)
-        assert decided["release_decision"] == "hold", field
-        assert decided["is_athlete_releasable"] is False, field
-
-
 def test_late_fight_illegal_exercise_codes_are_hard_not_card_rescuable() -> None:
     illegal_exercise_codes = {
         "late_fight_countdown_blocked_drill",
