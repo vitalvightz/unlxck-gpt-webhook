@@ -104,7 +104,7 @@ def test_dense_three_hard_week_full_planner_respects_three_session_budget(monkey
         )
 
 
-def test_sheyi_speed_audit_cannot_discard_usable_stage2_plan(monkeypatch):
+def test_sheyi_speed_audit_holds_unresolved_goal_failure(monkeypatch):
     import asyncio
     from types import SimpleNamespace
 
@@ -125,7 +125,7 @@ def test_sheyi_speed_audit_cannot_discard_usable_stage2_plan(monkeypatch):
         "missing_coverage": ["D14-D20"],
     }
     monkeypatch.setattr(automation, "validate_goal_preservation", lambda _: [finding])
-    # Isolate the reported evidence-reader disagreement from renderer divergence.
+    # Isolate deterministic goal failure from renderer divergence.
     monkeypatch.setattr(
         automation,
         "review_stage2_output",
@@ -165,10 +165,12 @@ D-13 (Thursday) — Late-tail strength touch
         job_id="test",
         emit_milestone=lambda *args, **kwargs: None,
     )
-    assert persisted["plan_text"] == text.strip()
-    assert persisted["status"] == "publishable_with_flags"
-    assert job_status_for_plan_status(persisted["status"]) == "completed"
+    assert persisted["plan_text"] == ""
+    assert persisted["final_plan_text"] == text.strip()
+    assert persisted["status"] == "review_required"
+    assert job_status_for_plan_status(persisted["status"]) == "review_required"
     assert finding in persisted["stage2_validator_report"]["errors"]
-    assert persisted["stage2_validator_report"]["is_athlete_releasable"] is True
+    assert persisted["stage2_validator_report"]["is_athlete_releasable"] is False
+    assert persisted["stage2_validator_report"]["release_decision"] == "hold"
     assert len(client.responses.calls) == 1
     assert persisted["stage2_attempt_count"] == 1
