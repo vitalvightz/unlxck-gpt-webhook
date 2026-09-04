@@ -8,6 +8,7 @@ from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_da
 from .late_camp_role_morph import late_fight_strength_dose_cap
 from .calendar_context import LATE_FIGHT_SCOPE, sequence_legality
 from .combat_load_policy import placement_rank
+from .declared_combat_ownership import build_declared_light_combat_role
 
 from collections import OrderedDict
 from copy import deepcopy
@@ -2468,30 +2469,25 @@ def ensure_declared_coach_combat_spine(
         offset = _countdown_offset(label)
         if offset is None or offset <= 0 or label in existing_support:
             continue
-        sequence.append({
-            "session_index": len(sequence) + 1,
-            "category": "technical",
-            "role_key": "light_combat_day",
-            "preferred_pool": "declared_support_work_days",
-            "anchor": "support_day",
-            "cost_class": "low",
-            "stress_class": "support",
-            "placement_source": "declared_support_work_spine",
-            "legal_countdown_labels": [label],
-            "governance": {"late_fight_payload": True, "coach_owned": True},
-            "locked_day": weekday,
-            "scheduled_day_hint": weekday,
-            "real_weekday": weekday,
-            "scheduled_countdown_label": label,
-            "countdown_label": label,
-            "countdown_display_label": _countdown_display_label(label, weekday),
-            "countdown_weekday": weekday,
-            "countdown_offset": offset,
-            "declared_day_locked": True,
-            "coach_owned": True,
-            "placement_basis": "locked",
-            "day_assignment_reason": "Declared light-combat/technical day restored to the calendar spine.",
-        })
+        # Same coach-owned light-combat identity the normal-camp lock uses
+        # (shared ``declared_combat_ownership`` factory); the countdown spine only
+        # layers on its placement source, countdown labels, and payload governance.
+        sequence.append(
+            build_declared_light_combat_role(
+                weekday,
+                session_index=len(sequence) + 1,
+                placement_source="declared_support_work_spine",
+                legal_countdown_labels=[label],
+                governance={"late_fight_payload": True, "coach_owned": True},
+                locked_day=weekday,
+                scheduled_countdown_label=label,
+                countdown_label=label,
+                countdown_display_label=_countdown_display_label(label, weekday),
+                countdown_weekday=weekday,
+                countdown_offset=offset,
+                day_assignment_reason="Declared light-combat/technical day restored to the calendar spine.",
+            )
+        )
         existing_support.add(label)
 
     sorted_sequence = sorted(sequence, key=lambda role: int(role.get("countdown_offset") or 0), reverse=True)
