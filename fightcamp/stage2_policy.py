@@ -38,7 +38,7 @@ def _load_stage2_policy() -> dict[str, Any]:
     return policy
 
 
-@lru_cache(maxsize=5)
+@lru_cache(maxsize=4)
 def _code_set(key: str) -> frozenset[str]:
     value = _load_stage2_policy().get(key)
     if not isinstance(value, list) or not all(isinstance(item, str) and item for item in value):
@@ -123,29 +123,16 @@ def admin_review_blocking_findings(validator_report: dict) -> list[dict]:
     return _policy_findings(validator_report, _code_set("admin_review_blocking_codes"))
 
 
-def _is_observational_error(item: dict) -> bool:
-    """Only non-blocker findings may use the narrow observational exception."""
-
-    return (
-        str(item.get("code") or "").strip() in _code_set("observational_error_codes")
-        and str(item.get("severity") or "").strip().lower() != "blocker"
-    )
-
-
 def apply_stage2_release_policy(validator_report: dict) -> dict:
     """Attach one release decision whose fields agree with the saved status.
 
-    Only allowlisted non-blocker planner/evidence errors are observational;
-    original errors stay intact. Blocker-severity planner failures, renderer
-    divergence and unknown errors remain blocking. Low-risk allowlisted findings
-    move to ``quality_review_flags`` and remain athlete-releasable. Admin-review
-    and hard-blocker warnings are promoted to ``blocking_warnings``. Any other
-    pre-existing blocking warning is preserved, so an unknown blocker fails
-    closed instead of silently reaching an athlete.
+    Every error is blocking. Low-risk allowlisted warning/review findings move to
+    ``quality_review_flags`` and remain athlete-releasable. Admin-review and hard
+    blocker warnings are promoted to ``blocking_warnings``. Any other pre-existing
+    blocking warning is preserved, so unknown blockers fail closed.
 
-    Release-relevant collections must be lists when present. Malformed persisted
-    reports fail closed before policy findings are inspected, preventing a dict,
-    string, or arbitrary object from being treated as an empty warning list.
+    Release-relevant collections must be lists of dicts when present. Malformed
+    persisted reports fail closed before policy findings are inspected.
     """
 
     malformed_fields = [
@@ -170,24 +157,13 @@ def apply_stage2_release_policy(validator_report: dict) -> dict:
             "is_publishable": False,
         }
 
-    observational = _dedupe_findings(
-        [
-            dict(item)
-            for field in _RELEASE_COLLECTION_FIELDS
-            for item in validator_report.get(field, []) or []
-            if isinstance(item, dict) and _is_observational_error(item)
-        ]
-    )
-    quality_findings = _dedupe_findings(
-        [*athlete_release_with_flags_findings(validator_report), *observational]
-    )
+    quality_findings = athlete_release_with_flags_findings(validator_report)
     admin_findings = admin_review_blocking_findings(validator_report)
     existing_blocking = [
         dict(item)
         for item in validator_report.get("blocking_warnings", []) or []
         if isinstance(item, dict)
         and not is_athlete_release_with_flags_code(str(item.get("code") or ""))
-        and not _is_observational_error(item)
     ]
     hard_warning_findings = [
         dict(item)
@@ -204,10 +180,7 @@ def apply_stage2_release_policy(validator_report: dict) -> dict:
     )
     errors = validator_report.get("errors")
     malformed_errors = not isinstance(errors, list)
-    has_errors = malformed_errors or any(
-        not isinstance(item, dict) or not _is_observational_error(item)
-        for item in (errors if isinstance(errors, list) else [])
-    )
+    has_errors = malformed_errors or bool(errors)
     is_athlete_releasable = not has_errors and not blocking_warnings
     release_decision = (
         "hold"
@@ -230,11 +203,7 @@ def apply_stage2_release_policy(validator_report: dict) -> dict:
 
 def _is_repair_prompt_code(code: str) -> bool:
     normalized = str(code or "").strip()
-    if (
-        not normalized
-        or normalized in _REPAIR_PROMPT_EXCLUDED_CODES
-        or normalized in _code_set("observational_error_codes")
-    ):
+    if not normalized or normalized in _REPAIR_PROMPT_EXCLUDED_CODES:
         return False
     return (
         is_hard_stage2_blocker(normalized)
