@@ -13,6 +13,7 @@ from typing import Any
 
 from .calendar_context import role_d_day, weekly_role_map_legality
 from .conditioning import _conditioning_structured_profile
+from .goal_repair_effective_contact_policy import effective_goal_repair_compression_state
 from .prescription_resolver import (
     _role_kind,
     _slot_quality_class_effective,
@@ -438,11 +439,8 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
             identity = (candidate.get("role_key"), candidate.get("strength_session_index"))
             if identity in existing or not _role_matches_goal(candidate, entry["goal"]):
                 continue
-            compression = week.get("intentional_compression") or {}
             suppressed = [r for r in week.get("suppressed_roles") or [] if r.get("role_key") == candidate.get("role_key")]
-            compression_codes = list(compression.get("reason_codes") or [])
-            for row in suppressed:
-                compression_codes.extend(row.get("compression_reason_codes") or [])
+            compression, compression_codes = effective_goal_repair_compression_state(week, suppressed)
             if compression_codes or compression.get("active") or any((r.get("governance") or {}).get("hard_suppression_reasons") for r in suppressed):
                 audit.append({"week_index": week.get("week_index"), "role_key": candidate.get("role_key"),
                               "result": "authority_preserved", "reason_codes": sorted(set(compression_codes))})
