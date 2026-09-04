@@ -2,6 +2,7 @@
 
 from fightcamp.prescription_resolver import apply_effective_strength_prescriptions
 from fightcamp.stage2_finalizer_packet import build_stage2_finalizer_packet
+from fightcamp.stage2_repair import REPAIR_PROMPT_TEMPLATE, _build_revision_priorities
 from fightcamp.stage2_validator import _late_camp_effective_prescription_warnings
 
 
@@ -105,6 +106,11 @@ def test_resolver_stamps_complete_authority_from_assignments_not_alternates() ->
         "alternates": [{"name": "Front Squat", "prescription": "3 x 5 @ RPE 7"}],
     }
     role = _role(["Trap Bar Deadlift"], day=30)
+    # Do not pre-seed the authority this test is supposed to prove. The resolver
+    # must derive the complete allow-list and scheduled D-day from the selected
+    # assignment + calendar, and must not admit the candidate alternate.
+    role["effective_strength_envelope"] = {}
+    role.pop("scheduled_d_day", None)
     role_map = {"weeks": [{"phase": "SPP", "calendar_days": [{"weekday": "tuesday", "d_day": 30}],
                            "session_roles": [role]}]}
 
@@ -114,6 +120,7 @@ def test_resolver_stamps_complete_authority_from_assignments_not_alternates() ->
 
     assert role["effective_strength_envelope"]["complete_exercise_allow_list"] is True
     assert role["effective_strength_envelope"]["allowed_exercise_names"] == ["Trap Bar Deadlift"]
+    assert "Front Squat" not in role["effective_strength_envelope"]["allowed_exercise_names"]
     assert role["effective_strength_envelope"]["scheduled_d_day"] == 30
 
 
@@ -125,6 +132,60 @@ def test_finalizer_packet_exposes_selected_identity_and_closed_rule() -> None:
     assert compact_role["selected_exercise_assignments"] == role["selected_exercise_assignments"]
     assert compact_role["effective_strength_envelope"]["allowed_exercise_names"] == ["Trap Bar Deadlift"]
     assert any("complete session membership" in rule for rule in packet["hard_rules"])
+    assert any("including Rules 4, 5, 6A, 7, and 8" in rule for rule in packet["hard_rules"])
+    assert any("never choose a downstream replacement" in rule for rule in packet["hard_rules"])
+
+
+def test_repair_removes_unselected_exercise_instead_of_reducing_its_dose() -> None:
+    finding = {
+        "code": "late_camp_effective_prescription_exceeded",
+        "line": "- High Pull: 1 x 3 @ RPE 5",
+        "scheduled_d_day": 7,
+        "exercise": "High Pull",
+        "rendered_exercise": "High Pull",
+        "violation_dimensions": ["exercise_allow_list"],
+        "allowed_exercises": ["Thruster"],
+    }
+
+    priorities = _build_revision_priorities({"errors": [finding], "blocking_warnings": []})
+    repairs = priorities["quality_repairs"]
+
+    assert len(repairs) == 1
+    repair = repairs[0]
+    assert repair["action"] == "remove_unselected_exercise"
+    assert repair["rendered_exercise"] == "High Pull"
+    assert repair["allowed_exercises"] == ["Thruster"]
+    assert repair["replacement_allowed"] is False
+    assert not any(item["action"] == "reduce_strength_dose_to_effective_prescription" for item in repairs)
+
+
+def test_repair_still_reduces_dose_for_selected_exercise_dose_violation() -> None:
+    finding = {
+        "code": "late_camp_effective_prescription_exceeded",
+        "line": "- Trap Bar Deadlift: 3 x 3 @ RPE 6",
+        "scheduled_d_day": 7,
+        "exercise": "Trap Bar Deadlift",
+        "rendered_exercise": "Trap Bar Deadlift",
+        "violation_dimensions": ["sets"],
+        "effective_max_sets": 2,
+        "effective_max_reps": 3,
+        "effective_rpe_cap": 7,
+        "effective_prescription": "2 x 3 @ RPE 6-7 max",
+    }
+
+    priorities = _build_revision_priorities({"errors": [finding], "blocking_warnings": []})
+    repairs = priorities["quality_repairs"]
+
+    assert len(repairs) == 1
+    assert repairs[0]["action"] == "reduce_strength_dose_to_effective_prescription"
+    assert not any(item["action"] == "remove_unselected_exercise" for item in repairs)
+
+
+def test_repair_prompt_closes_membership_before_candidate_and_replacement_rules() -> None:
+    assert "CLOSED MEMBERSHIP PRECEDENCE" in REPAIR_PROMPT_TEMPLATE
+    assert "overrides every repair rule below that mentions candidate pools" in REPAIR_PROMPT_TEMPLATE
+    assert "If removal leaves a gap, leave the gap" in REPAIR_PROMPT_TEMPLATE
+    assert "must never be replaced downstream" in REPAIR_PROMPT_TEMPLATE
 
 
 def test_role_without_composition_authority_is_not_constrained() -> None:
