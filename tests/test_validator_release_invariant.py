@@ -15,6 +15,7 @@ def test_manual_goal_failure_releases_and_retains_report(monkeypatch):
         "goal": "speed",
         "satisfied": False,
         "missing_coverage": ["D14-D20"],
+        "severity": "warning",
     }
     monkeypatch.setattr(
         pipeline,
@@ -27,6 +28,32 @@ def test_manual_goal_failure_releases_and_retains_report(monkeypatch):
     assert result["stage2_validator_report"]["errors"] == [finding]
     assert result["stage2_validator_report"]["is_athlete_releasable"] is True
     assert result["stage2_retry_text"] == ""
+
+
+def test_blocker_severity_goal_failure_holds(monkeypatch):
+    import fightcamp.stage2_pipeline as pipeline
+
+    finding = {
+        "code": "goal_preservation_failed",
+        "goal": "speed",
+        "satisfied": False,
+        "missing_coverage": ["D14-D20"],
+        "severity": "blocker",
+        "confidence": "high",
+    }
+    monkeypatch.setattr(
+        pipeline,
+        "review_stage2_output",
+        lambda **_: {"validator_report": {"errors": [finding], "warnings": []}},
+    )
+    result = _manual_stage2_result({}, "# Usable camp")
+    assert result["status"] == "review_required"
+    assert result["stage2_status"] == "stage2_failed"
+    assert result["plan_text"] == ""
+    assert result["final_plan_text"] == "# Usable camp"
+    assert result["stage2_validator_report"]["errors"] == [finding]
+    assert result["stage2_validator_report"]["release_decision"] == "hold"
+    assert result["stage2_validator_report"]["is_athlete_releasable"] is False
 
 
 def test_manual_empty_content_is_not_released():
@@ -127,7 +154,12 @@ def test_multiple_goal_observations_preserved_without_error_veto():
     from fightcamp.stage2_policy import apply_stage2_release_policy
 
     findings = [
-        {"code": "goal_preservation_failed", "goal": goal, "satisfied": False}
+        {
+            "code": "goal_preservation_failed",
+            "goal": goal,
+            "satisfied": False,
+            "severity": "warning",
+        }
         for goal in ("speed", "strength")
     ]
     report = apply_stage2_release_policy({"errors": findings, "warnings": []})
