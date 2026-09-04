@@ -152,8 +152,15 @@ def _effective_map(brief: dict, *, phase: str | None = None) -> dict:
 
 
 def _tags(item: dict) -> set[str]:
-    values = [*(item.get("movement_patterns") or []), *(item.get("tags") or []),
-              item.get("primary_adaptation"), *(item.get("secondary_adaptations") or [])]
+    metadata = item.get("selection_metadata") if isinstance(item.get("selection_metadata"), dict) else {}
+    values = [
+        *(item.get("movement_patterns") or []),
+        *(item.get("tags") or []),
+        item.get("primary_adaptation"),
+        metadata.get("primary_adaptation"),
+        *(item.get("secondary_adaptations") or []),
+        *(metadata.get("secondary_adaptations") or []),
+    ]
     return {_goal(value) for value in values if value}
 
 
@@ -195,9 +202,11 @@ def _slot_allowed(slot: dict, role: dict, brief: dict) -> bool:
     allowed_by_day = (brief.get("late_fight_plan_spec") or {}).get("allowed_exercises_by_day") or {}
     if f"D-{day}" in allowed_by_day and selected.get("name") not in allowed_by_day[f"D-{day}"]:
         return False
-    if isinstance(day, int) and day <= 21 and selected.get("late_windows"):
+    metadata = selected.get("selection_metadata") if isinstance(selected.get("selection_metadata"), dict) else {}
+    late_windows = metadata["late_windows"] if "late_windows" in metadata else selected.get("late_windows")
+    if isinstance(day, int) and day <= 21 and late_windows:
         from .late_selector_windows import classify_late_selector_window
-        if classify_late_selector_window(day) not in selected["late_windows"]:
+        if classify_late_selector_window(day) not in late_windows:
             return False
     tags = _tags(selected) | set(selected.get("restriction_tags") or [])
     if tags & set(role.get("blocked_tags") or []):
@@ -235,8 +244,11 @@ def _strength_stimuli(role: dict, slots: list[dict], brief: dict) -> list[dict]:
         effective_slot = {**slot, **{key: selected[key] for key in ("quality_class", "anchor_capable", "support_only") if key in selected}}
         kind = _role_kind(effective_slot)
         quality = _slot_quality_class_effective(effective_slot)
-        loaded = (kind in {"anchor", "secondary"} and quality == "anchor_loaded") or (
-            quality == "anchor_force_isometric" and selected.get("real_strength_maintenance") is True)
+        loaded = (
+            (kind in {"anchor", "secondary"} and quality == "anchor_loaded")
+            or (kind == "hybrid" and quality == "anchor_power")
+            or (quality == "anchor_force_isometric" and selected.get("real_strength_maintenance") is True)
+        )
         intensity = strength_intensity(str(dose.get("effective_prescription") or ""))
         meaningful_intensity = intensity.get("minimum_rpe", 0) >= 6 or intensity.get("minimum_load_percent", 0) >= 60
         intents = []
@@ -244,7 +256,7 @@ def _strength_stimuli(role: dict, slots: list[dict], brief: dict) -> list[dict]:
                 and envelope.get("loaded_allowed") is not False
                 and dose.get("effective_loaded") is not False):
             intents.append("meaningful_strength")
-        if quality == "anchor_power" and kind == "power":
+        if quality == "anchor_power" and kind in {"power", "hybrid"}:
             intents.append("ballistic_power")
             if _tags(selected) & _SPEED_TAGS:
                 intents.append("speed_quality")
@@ -270,14 +282,25 @@ def _other_stimuli(role: dict, pool: dict, brief: dict) -> list[dict]:
                 or not _slot_allowed(slot, role, brief)):
             continue
         selected = slot["selected"]
+        # Serialized conditioning dose/cost authority lives under
+        # selected.selection_metadata. Preserve compatibility with older payloads
+        # that still carry those fields flat, but prefer the canonical metadata.
+        metadata = selected.get("selection_metadata") if isinstance(selected.get("selection_metadata"), dict) else {}
+        dose_source = dict(selected)
+        for field in (
+            "work_sec", "rest_sec", "rounds", "total_minutes", "rpe",
+            "impact_cost", "lactate_load", "movement_cost",
+        ):
+            if metadata.get(field) is not None:
+                dose_source[field] = metadata[field]
         # A recovery morph / support flush does not become energy-system work
         # through its old pool identity. Positive work metadata is required.
         if (role.get("late_camp_role_morph") or role.get("counts_toward_conditioning_cap") is False
                 or system in (role.get("blocked_systems") or [])):
             continue
-        minutes = _number(selected.get("total_minutes"))
-        work = _number(selected.get("work_sec"))
-        rounds = _number(selected.get("rounds"))
+        minutes = _number(dose_source.get("total_minutes"))
+        work = _number(dose_source.get("work_sec"))
+        rounds = _number(dose_source.get("rounds"))
         if not (minutes > 0 or (work > 0 and rounds > 0)):
             continue
         if "duration_cap_minutes" in role:
@@ -287,7 +310,7 @@ def _other_stimuli(role: dict, pool: dict, brief: dict) -> list[dict]:
         intents = []
         if system in {"aerobic", "glycolytic"} and (minutes >= 6 or work * rounds >= 180):
             intents.append("energy_system_training")
-        profile = _conditioning_structured_profile(selected, system=system)
+        profile = _conditioning_structured_profile(dose_source, system=system)
         if system in {"alactic", "atp_pcr", "atp-pcr"} and work > 0 and rounds >= 2 and profile["alactic_structure"]:
             intents.append("speed_quality")
         if _tags(selected) & _TECHNICAL_TAGS:
@@ -299,7 +322,7 @@ def _other_stimuli(role: dict, pool: dict, brief: dict) -> list[dict]:
                             "intents": intents, "system": system,
                             "dose_authority": "structured_conditioning_dose",
                             "work_sec": work, "rounds": rounds, "total_minutes": minutes,
-                            "rest_sec": _number(selected.get("rest_sec")),
+                            "rest_sec": _number(dose_source.get("rest_sec")),
                             "effective_prescription": selected.get("prescription") or ""})
     # Locked technical / mobility inserts have an actual deterministic duration.
     duration = _number(role.get("duration_min"))
