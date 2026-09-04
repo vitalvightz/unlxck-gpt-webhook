@@ -80,6 +80,5 @@
     "sport_language_leak",
     "stage2_warning",
     "true_internal_system_leak"
-  ],
-  "observational_error_codes": []
+  ]
 }
