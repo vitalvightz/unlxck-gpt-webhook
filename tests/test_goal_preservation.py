@@ -1,18 +1,21 @@
 """Goal survival is an effective-stimulus contract, not a role-name check."""
 from copy import deepcopy
+from types import SimpleNamespace
 
 import pytest
 
 from fightcamp.goal_preservation import (
-    classify_goal_preservation, collect_goal_evidence, reconcile_goal_preservation,
-    validate_goal_preservation,
+    _effective_map, classify_goal_preservation, collect_goal_evidence,
+    reconcile_goal_preservation, validate_goal_preservation,
 )
 from fightcamp.late_camp_role_morph import apply_late_camp_role_morph
 from fightcamp.prescription_resolver import apply_effective_strength_prescriptions
 from fightcamp.stage2_finalizer_packet import build_stage2_finalizer_packet
-from fightcamp.stage2_payload import _compress_short_camp_priorities, build_planning_brief
+from fightcamp.stage2_payload import (
+    _build_strength_slots, _compress_short_camp_priorities, build_planning_brief,
+)
 from fightcamp.stage2_pipeline import build_stage2_retry
-from fightcamp.stage2_validator import validate_stage2_output
+from fightcamp.stage2_validator import _goal_witness_dose_matches, validate_stage2_output
 
 
 def _slot(name="Deadlift", quality="anchor_loaded", **changes):
@@ -302,3 +305,153 @@ def test_wrapped_strength_dose_stays_bound_to_selected_exercise():
     text = "D-18 Monday\n- Deadlift\n  3 x 3\n  RPE: 7\n- Medicine Ball Rotational Slam: 3 x 3 @ RPE 7\nD-0\nFight day protocol."
     report = validate_stage2_output(planning_brief=brief, final_plan_text=text)
     assert not any(e["code"].startswith("goal_preservation") for e in report["errors"])
+
+
+# --- Repair-pass regressions (PR #2424) -------------------------------------
+
+
+def test_late_fight_effective_map_uses_authoritative_phase_not_first_pool():
+    # A late-fight brief can carry several active candidate pools. The effective
+    # map must resolve the phase that produced the sequence (late_fight_plan_spec
+    # .phase), never the first candidate-pool key, which would bind late-fight
+    # roles to the wrong (e.g. GPP) effective dose.
+    brief = {
+        "late_fight_session_sequence": [_role(10)],
+        "candidate_pools": {"GPP": {"strength_slots": []}, "SPP": {"strength_slots": [_slot()]}},
+        "late_fight_plan_spec": {"phase": "SPP", "suppressed_roles": []},
+    }
+    week = _effective_map(brief)["weeks"][0]
+    assert week["phase"] == "SPP"
+    # An explicit phase argument still wins over the spec/first pool.
+    assert _effective_map(brief, phase="TAPER")["weeks"][0]["phase"] == "TAPER"
+
+
+def test_open_ongoing_plan_uses_explicit_primary_goal_not_first_key_goal():
+    # The explicit primary goal is not first in key_goals and lives only on
+    # plan_input. Open payloads return before reconciliation, so
+    # compressed_priorities.goal_preservation is the only goal-state authority.
+    athlete_model = {
+        "key_goals": ["speed", "strength"],
+        "no_scheduled_fight": True,
+        "sport": "mma",
+        "training_days": ["Monday", "Thursday"],
+    }
+    plan_input = SimpleNamespace(
+        key_goals=["speed", "strength"], primary_goal="strength",
+        weaknesses=[], primary_weak_area="",
+    )
+    brief = build_planning_brief(
+        athlete_model=athlete_model, restrictions=[], phase_briefs={},
+        candidate_pools={}, omission_ledger={}, rewrite_guidance={}, plan_input=plan_input,
+    )
+    assert brief["payload_variant"] == "open_ongoing_stage2_payload"
+    goal_preservation = brief["athlete_snapshot"]["compressed_priorities"]["goal_preservation"]
+    assert [e["goal"] for e in goal_preservation if e["priority"] == "primary"] == ["strength"]
+    assert "speed" in {e["goal"] for e in goal_preservation if e["priority"] == "secondary"}
+
+
+def test_promoted_strength_alternate_carries_real_prescription_not_bare_method():
+    # The selected option receives a phase-specific bank-template dose; a
+    # same-role alternate promoted via replace_with_same_role must carry the same
+    # dose authority, never a bare "strength"/"power" method token.
+    strength_block = {
+        "num_sessions": 1,
+        "why_log": [],
+        "exercises": [{"name": "Trap Bar Carry", "movement": "hinge", "method": "strength"}],
+        "candidate_reservoir": {
+            "hinge": [
+                {"exercise": {"name": "Hip Thrust", "movement": "hinge", "method": "strength"},
+                 "explanation": "balanced selection"},
+            ]
+        },
+    }
+    slots = _build_strength_slots(strength_block, "SPP")
+    assert slots and slots[0]["replace_with_same_role"] is True
+    alternates = slots[0]["alternates"]
+    assert alternates, "alternate should be produced from the same-role reservoir"
+    for option in alternates:
+        prescription = str(option.get("prescription") or "")
+        assert prescription.lower() not in {"", "strength", "power"}
+        assert any(char.isdigit() for char in prescription)
+
+
+def test_restored_goal_repair_role_carries_athlete_facing_label():
+    brief = _brief(roles=[])
+    week = brief["weekly_role_map"]["weeks"][0]
+    week["goal_repair_candidates"] = [_role()]
+    week["suppressed_roles"] = [{"category": "strength", "role_key": "strength_touch_day"}]
+    _resolve(brief)
+    session_roles = brief["weekly_role_map"]["weeks"][0]["session_roles"]
+    assert len(session_roles) == 1
+    restored = session_roles[0]
+    assert restored.get("goal_preservation_repair")
+    assert str(restored.get("athlete_facing_label") or "").strip()
+
+
+def test_stale_or_missing_goal_preservation_version_blocks_dated_resolved_plan():
+    brief = _resolve(_brief())
+    assert validate_goal_preservation(brief) == []
+    brief["goal_preservation_version"] = "goal_preservation.v0"
+    assert any(e["code"] == "goal_preservation_contract_stale" for e in validate_goal_preservation(brief))
+    del brief["goal_preservation_version"]
+    assert any(e["code"] == "goal_preservation_contract_stale" for e in validate_goal_preservation(brief))
+
+
+def test_suppressed_only_late_d_day_can_prove_causal_deferral():
+    # The strength maintenance window (D-8..D-13) is only reachable through a
+    # suppressed strength role; the visible sequence sits at D-2. The suppressed
+    # role's legal D-day must project into the effective map so its compression
+    # reason can justify the deferral.
+    suppressed = {
+        "category": "strength", "role_key": "primary_strength_day",
+        "scheduled_countdown_label": "D-10", "scheduled_day_hint": "Monday",
+        "compression_reason_codes": ["high_fatigue"],
+    }
+    visible = {
+        "role_key": "fight_week_freshness_day", "category": "recovery", "session_index": 1,
+        "scheduled_countdown_label": "D-2", "scheduled_day_hint": "Saturday", "duration_min": 15,
+    }
+    brief = {
+        "athlete_snapshot": {"key_goals": ["strength"], "primary_goal": "strength",
+                             "days_until_fight": 13, "fatigue": "high", "training_frequency": 4},
+        "priority_focus": {"primary_goal": "strength", "secondary_goals": []},
+        "late_fight_session_sequence": [visible],
+        "late_fight_plan_spec": {"phase": "SPP", "suppressed_roles": [suppressed]},
+        "candidate_pools": {},
+        "restrictions": [],
+    }
+    reconcile_goal_preservation(brief)
+    strength = _goal(brief, "strength")
+    assert strength["state"] == "defer"
+    assert any(constraint["reason_code"] == "high_fatigue"
+               and constraint["authority"] == "planner_compression"
+               for constraint in strength["constraints"])
+    assert validate_goal_preservation(brief) == []
+
+
+def test_strength_set_range_render_compares_against_minimum_set_count():
+    witness = {"sets": 3, "reps": 3}
+    assert _goal_witness_dose_matches(witness, "Deadlift: 3 x 3 @ RPE 7") is True
+    # "2-3 x 3" has a minimum of two sets and must not satisfy a 3-set witness.
+    assert _goal_witness_dose_matches(witness, "Deadlift: 2-3 x 3 @ RPE 7") is False
+
+
+def test_timed_conditioning_dose_forms_validate_against_120s_witness():
+    witness = {"work_sec": 120, "rounds": 3}
+    assert _goal_witness_dose_matches(witness, "3 rounds x 2 min") is True
+    assert _goal_witness_dose_matches(witness, "3 rounds of 2 minutes") is True
+    assert _goal_witness_dose_matches({"work_sec": 30, "rounds": 4}, "4 x 30 sec") is True
+    # A shorter work interval must not satisfy the 120-second witness.
+    assert _goal_witness_dose_matches(witness, "3 rounds x 1 min") is False
+
+
+def test_timed_conditioning_rest_requirement_is_enforced():
+    witness = {"work_sec": 120, "rounds": 3, "rest_sec": 60}
+    assert _goal_witness_dose_matches(witness, "3 rounds x 2 min, rest 60 sec") is True
+    assert _goal_witness_dose_matches(witness, "3 rounds x 2 min, rest 30 sec") is False
+
+
+def test_malformed_timed_dose_returns_mismatch_without_exception():
+    witness = {"work_sec": 120, "rounds": 3}
+    assert _goal_witness_dose_matches(witness, "prose with no structured dose") is False
+    assert _goal_witness_dose_matches(witness, "3 rounds") is False

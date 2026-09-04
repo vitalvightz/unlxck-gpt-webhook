@@ -521,6 +521,31 @@ def build_stage2_finalizer_packet(
         or {}
     )
 
+    # Resolve goal-preservation entries and their contract version from the same
+    # fallback chain, so version and data always travel together. Open/ongoing
+    # payloads skip reconciliation and carry the entries only in
+    # compressed_priorities (with no top-level version); stamp the current
+    # contract when the supplying container lacks one, rather than emitting
+    # entries alongside a None version.
+    from .goal_preservation import VERSION as _GOAL_PRESERVATION_VERSION
+
+    _goal_snapshot = source.get("athlete_snapshot") or source.get("athlete_model") or {}
+    goal_preservation_entries: list = []
+    goal_preservation_version = source.get("goal_preservation_version")
+    for _goal_source in (
+        source,
+        source.get("compressed_priorities") or {},
+        _goal_snapshot.get("compressed_priorities") or {},
+        stage2_payload,
+    ):
+        _entries = _goal_source.get("goal_preservation")
+        if _entries:
+            goal_preservation_entries = deepcopy(_entries)
+            goal_preservation_version = (
+                _goal_source.get("goal_preservation_version") or _GOAL_PRESERVATION_VERSION
+            )
+            break
+
     packet = {
         "packet_type": "stage2_finalizer_packet",
         "packet_version": 1,
@@ -589,14 +614,8 @@ def build_stage2_finalizer_packet(
             source.get("restrictions") or stage2_payload.get("restrictions")
         ),
         "selected_plan": {
-            "goal_preservation_version": source.get("goal_preservation_version"),
-            "goal_preservation": deepcopy(
-                source.get("goal_preservation")
-                or (source.get("compressed_priorities") or {}).get("goal_preservation")
-                or ((source.get("athlete_snapshot") or source.get("athlete_model") or {}).get("compressed_priorities") or {}).get("goal_preservation")
-                or stage2_payload.get("goal_preservation")
-                or []
-            ),
+            "goal_preservation_version": goal_preservation_version,
+            "goal_preservation": goal_preservation_entries,
             "session_sequence": _compact_session_sequence(source)
             or _compact_session_sequence(stage2_payload),
             "weekly_role_map": _compact_weekly_role_map(weekly_role_map, athlete_model),

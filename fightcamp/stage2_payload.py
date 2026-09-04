@@ -1404,6 +1404,16 @@ def _build_planning_brief(
     computed_support: dict | None = None,
 ) -> dict:
     athlete_model = dict(athlete_model)
+    # Persist the explicit resolved primary goal (from plan_input when present)
+    # onto the athlete model before classification. Open/ongoing payloads return
+    # before reconciliation, so compressed_priorities.goal_preservation is their
+    # only goal-state authority; without this, classification would assume the
+    # first key_goals entry is primary whenever athlete_model omits primary_goal.
+    _resolved_primary = build_priority_profile(
+        plan_input if plan_input is not None else athlete_model
+    ).primary_goal
+    if _resolved_primary:
+        athlete_model["primary_goal"] = _resolved_primary
     # Compute short-camp compression up front so downstream consumers (role
     # map, weekly stress map, planning brief output) see a real
     # ``compressed_priorities`` dict. The helper is otherwise dead code, which
@@ -1499,6 +1509,10 @@ def _build_planning_brief(
         late_fight_plan_spec = _with_late_fight_allowed_exercises(
             spec={
                 **base_late_fight_plan_spec,
+                # Carry the authoritative late-fight phase so goal-preservation's
+                # _effective_map resolves the effective dose against the pool that
+                # actually produced this sequence, not an arbitrary first pool.
+                "phase": late_fight_phase,
                 "role_budget": {
                     **dict(base_late_fight_plan_spec.get("role_budget", {})),
                     "selected_active_roles": sum(
@@ -1757,6 +1771,7 @@ def _build_strength_alternates(
     role: str,
     selected_names: set[str],
     current_name: str,
+    phase: str | None = None,
 ) -> list[dict]:
     alternates: list[dict] = []
     seen: set[str] = set()
@@ -1775,6 +1790,10 @@ def _build_strength_alternates(
                     reasons=candidate.get("reasons") or {},
                     explanation=candidate.get("explanation"),
                 ),
+                # An alternate promoted via replace_with_same_role must carry the
+                # same phase-specific bank-template dose authority as the selected
+                # option, never a bare "strength"/"power" method token.
+                phase=phase,
             )
         )
         seen.add(name)
@@ -1891,6 +1910,7 @@ def _build_strength_slots(strength_block: dict | None, phase: str) -> list[dict]
                     role=role,
                     selected_names=selected_names,
                     current_name=name,
+                    phase=phase,
                 ),
                 "replace_with_same_role": True,
                 "priority": _strength_slot_priority(phase, role, idx),
@@ -2268,6 +2288,10 @@ def build_stage2_payload(
         late_fight_plan_spec = _with_late_fight_allowed_exercises(
             spec={
                 **base_late_fight_plan_spec,
+                # Same authoritative late-fight phase on the stage2 payload spec so
+                # every consumer resolves the effective dose against the correct
+                # pool rather than an arbitrary candidate-pool key.
+                "phase": _resolve_late_fight_phase(phase_briefs),
                 "role_budget": {
                     **dict(base_late_fight_plan_spec.get("role_budget", {})),
                     "selected_active_roles": sum(

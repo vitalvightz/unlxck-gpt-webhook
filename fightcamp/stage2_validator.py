@@ -3360,18 +3360,35 @@ def _goal_witness_dose_matches(witness: dict, dose: str) -> bool:
     from .goal_preservation import _sets_reps, strength_intensity
     if witness.get("sets"):
         sets, reps, _ = _parse_rendered_strength_dose(dose)
+        # A rendered set range such as "2-3 x 3" must satisfy the witness on its
+        # MINIMUM set count, not the upper bound the working-dose parser returns.
+        set_range = re.search(r"\b(\d+)\s*[-–]\s*(\d+)\s*(?:sets?\s*(?:[x×]|of)|[x×])", dose, re.I)
+        if set_range:
+            sets = min(int(set_range.group(1)), int(set_range.group(2)))
         if sets is None and witness.get("quality_class") == "anchor_force_isometric":
             sets, reps = _sets_reps(dose)
         return ((sets or 0) >= witness["sets"] and (reps or 0) >= witness["reps"]
                 and all(strength_intensity(dose).get(key, 0) >= witness[key]
                         for key in ("minimum_rpe", "minimum_load_percent") if key in witness))
     if witness.get("work_sec") and witness.get("rounds"):
-        rounds, seconds = _sets_reps(dose)
-        # The bound dose must state time units; repetitions cannot pay for work seconds.
-        timed = re.search(r"\b(?:sec(?:onds?)?|s)\b", dose, re.I)
+        # Parse common structured timed forms — "3 rounds x 2 min", "3 rounds of
+        # 2 minutes", "4 x 30 sec" — in consistent units, normalising minutes to
+        # seconds before comparing with work_sec. On any parse failure return a
+        # clean mismatch; never leave rounds/seconds unbound or raise.
+        timed = re.search(
+            r"\b(?P<rounds>\d+)(?:\s*[-–]\s*\d+)?\s*(?:rounds?\s*)?(?:x|×|of|for)\s*"
+            r"(?P<duration>\d+(?:\.\d+)?)\s*(?P<unit>seconds?|secs?|s|minutes?|mins?|m)\b",
+            dose,
+            re.I,
+        )
+        if not timed:
+            return False
+        rounds = int(timed["rounds"])
+        seconds = float(timed["duration"]) * (60 if timed["unit"].lower().startswith("m") else 1)
         rest = re.search(r"rest\s*[:=]?\s*(\d+)(?:\s*[-–]\s*\d+)?\s*(?:sec(?:onds?)?|s)\b", dose, re.I)
-        speed_rest = witness.get("rest_sec") is None or bool(rest and int(rest[1]) >= witness["rest_sec"])
-        return bool(timed and rounds >= witness["rounds"] and seconds >= witness["work_sec"] and speed_rest)
+        # If the witness declares rest_sec, the rendered rest must meet it.
+        rest_ok = witness.get("rest_sec") is None or bool(rest and int(rest[1]) >= witness["rest_sec"])
+        return bool(rounds >= witness["rounds"] and seconds >= witness["work_sec"] and rest_ok)
     minutes = witness.get("duration_min") or witness.get("total_minutes")
     if minutes:
         rendered = re.search(r"\b(\d+(?:\.\d+)?)(?:\s*[-–]\s*\d+)?\s*min(?:utes?)?\b", dose, re.I)

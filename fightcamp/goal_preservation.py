@@ -20,7 +20,7 @@ from .prescription_resolver import (
     athlete_dose_state,
 )
 from .priority_profile import build_priority_profile, normalize_priority_values
-from .role_labels import athlete_facing_label_for
+from .role_labels import athlete_facing_label_for, stamp_role_label
 from .tagging import normalize_tag
 
 
@@ -92,18 +92,45 @@ def classify_goal_preservation(athlete: dict, focus: dict | None = None) -> list
     ]
 
 
-def _effective_map(brief: dict) -> dict:
+def _late_fight_phase(brief: dict) -> str:
+    """Recover the late-fight phase when the plan spec did not carry one.
+
+    Prefer the earlier weekly allocation's phase when it is unambiguous; taper is
+    the canonical late-fight phase otherwise. This deliberately never keys off
+    ``candidate_pools`` ordering, which is not phase authority: with several
+    active pools that would silently bind late-fight roles to the wrong pool.
+    """
+    phases = [
+        week.get("phase")
+        for week in (brief.get("weekly_role_map") or {}).get("weeks") or []
+        if week.get("phase")
+    ]
+    unique = list(dict.fromkeys(phases))
+    return unique[0] if len(unique) == 1 else "TAPER"
+
+
+def _effective_map(brief: dict, *, phase: str | None = None) -> dict:
     # Direct countdown plans render the final visible sequence. Their weekly
     # map is a separate, earlier allocation and must not supply ghost evidence.
     # Still project the visible D-days into calendar_days so downstream
     # deferral checks can prove a real late-countdown/readiness constraint
     # instead of failing merely because the synthetic week had no calendar.
     if "late_fight_session_sequence" in brief:
-        phase = next(iter(brief.get("candidate_pools") or {}), "TAPER")
+        spec = brief.get("late_fight_plan_spec") or {}
+        # The authoritative phase is the one that produced the late-fight
+        # sequence, carried on late_fight_plan_spec.phase (or passed in by the
+        # payload before prescription resolution). Never fall back to an
+        # arbitrary candidate-pool key as phase authority.
+        phase = phase or spec.get("phase") or _late_fight_phase(brief)
         roles = brief["late_fight_session_sequence"]
+        suppressed = deepcopy(spec.get("suppressed_roles") or [])
         calendar_days = []
         seen_days: set[int] = set()
-        for role in roles:
+        # Project legal D-days from both the visible roles AND the relevant
+        # suppressed roles, so _deferral_constraints() can associate a
+        # suppression reason with its coverage window even when the only role on
+        # a late D-day was the one that was removed.
+        for role in [*roles, *suppressed]:
             day = role_d_day({}, role)
             if not isinstance(day, int) or day < 0 or day in seen_days:
                 continue
@@ -113,13 +140,12 @@ def _effective_map(brief: dict) -> dict:
                 "is_fight_day": day == 0,
                 "is_after_fight_day": False,
             })
-        spec = brief.get("late_fight_plan_spec") or {}
         return {"weeks": [{
             "week_index": 1,
             "phase": phase,
             "session_roles": roles,
             "calendar_days": calendar_days,
-            "suppressed_roles": deepcopy(spec.get("suppressed_roles") or []),
+            "suppressed_roles": suppressed,
         }]}
     return brief.get("weekly_role_map") or {}
 
@@ -464,6 +490,12 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
                     continue
                 trial_week["suppressed_roles"] = [r for r in trial_week.get("suppressed_roles") or [] if r.get("role_key") != candidate.get("role_key")]
                 brief["weekly_role_map"] = trial["weekly_role_map"]
+                # The goal_repair reservoir holds pre-finalization role copies, so
+                # a restored role reaches the finalizer without the athlete-facing
+                # label surviving roles get from stamp_weekly_role_map_labels. Give
+                # it the same final decoration now (after the morph has run so any
+                # morph-owned label wins), rather than appending a stale copy.
+                stamp_role_label(restored)
                 audit.append({"week_index": week.get("week_index"), "d_day": d_day, "result": "restored", "reason_codes": []})
                 return audit + _restore_goal_roles(brief, entry) if missing_after else audit
     return audit
@@ -583,6 +615,24 @@ def validate_goal_preservation(brief: dict) -> list[dict]:
         return []
     if brief.get("payload_variant") == "open_ongoing_stage2_payload" and not brief.get("goal_preservation_version"):
         return []
+    # A resolved dated payload that carries goal-preservation entries must also
+    # carry the current contract version before publication validation. Without
+    # this, a brief with valid-looking states/evidence but a missing or stale
+    # version would slip stale contract semantics through. A brief with no entries
+    # at all is not "resolved": it falls through to the per-goal checks below,
+    # which report the missing contract for each selected goal.
+    if (brief.get("payload_variant") != "open_ongoing_stage2_payload"
+            and isinstance(entries, list) and entries
+            and brief.get("goal_preservation_version") != VERSION):
+        return [{
+            "code": "goal_preservation_contract_stale",
+            "requirement": "goal_preservation_version",
+            "message": "Resolved dated payload must carry the current goal-preservation contract version.",
+            "expected_version": VERSION,
+            "actual_version": brief.get("goal_preservation_version"),
+            "severity": "blocker",
+            "confidence": "high",
+        }]
     errors = []
     evidence = collect_goal_evidence(brief)
     initial = {e["goal"]: e for e in classify_goal_preservation(_athlete(brief), brief.get("priority_focus"))}
