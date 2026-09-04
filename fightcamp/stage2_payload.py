@@ -51,6 +51,7 @@ from .role_labels import stamp_weekly_role_map_labels
 from .camp_week_fillers import apply_camp_week_fillers
 from .late_camp_role_morph import apply_late_camp_role_morph
 from .prescription_resolver import apply_effective_strength_prescriptions
+from .session_composition import attach_late_fight_assignments, compose_normal_strength_assignments
 from .normal_calendar_placement import fill_missing_session_days
 from .late_selector_windows import classify_late_selector_window
 from .normalization import (  # noqa: F401  (phrase_in_text re-exported for back-compat)
@@ -1292,6 +1293,8 @@ def _with_late_fight_allowed_exercises(
     )
     for day in _late_fight_countdown_days_from_spec(days_until_fight, spec):
         allowed_by_day.setdefault(f"D-{day}", [])
+    roles = spec.get("visible_session_sequence") or spec.get("session_sequence") or []
+    attach_late_fight_assignments(roles, assignments_by_day)
     return {
         **spec,
         "allowed_exercises_by_day": allowed_by_day,
@@ -1611,9 +1614,24 @@ def _build_planning_brief(
     # or protected-slot rule can preserve hard glycolytic work inside D-13; the
     # D-21→D-18 combat-pressure floor is untouched by construction.
     apply_late_camp_role_morph(weekly_role_map)
+    compose_normal_strength_assignments(
+        weekly_role_map=weekly_role_map, candidate_pools=candidate_pools,
+    )
+    # The long-camp splice owns D-13 inward, but uses the same selector and
+    # assignment schema as direct late-fight generation.
+    tail_roles = [
+        role for week in weekly_role_map.get("weeks", []) or []
+        for role in week.get("session_roles", []) or []
+        if isinstance(role, dict) and role.get("late_fight_tail_owned")
+    ]
+    if tail_roles:
+        _, tail_assignments = _build_late_fight_allowed_exercises_by_day(
+            spec={"visible_session_sequence": tail_roles}, candidate_pools=candidate_pools,
+        )
+        attach_late_fight_assignments(tail_roles, tail_assignments)
     # Deterministic prescription resolution: now that every strength role has its
     # scheduled D-day and final countdown dose envelope, resolve the single
-    # authoritative effective prescription per candidate strength exercise so
+    # authoritative effective prescription per selected strength exercise so
     # Stage 2 never has to reconcile the exercise-bank dose against the role caps.
     # Runs AFTER the morph (which owns dose shaping) and BEFORE label stamping.
     apply_effective_strength_prescriptions(

@@ -193,6 +193,7 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
         # effective_strength_envelope is the numeric ceiling the validator enforces.
         "strength_dose_cap",
         "rpe_cap",
+        "selected_exercise_assignments",
         "effective_strength_prescriptions",
         "effective_strength_envelope",
         "strength_session_index",
