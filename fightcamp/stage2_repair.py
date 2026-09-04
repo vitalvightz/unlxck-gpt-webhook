@@ -11,18 +11,19 @@ GOAL:
 Repair the previous final plan so it becomes restriction-compliant, phase-consistent, and coherent with the planning brief.
 
 REPAIR RULES:
-1. Treat restrictions as hard constraints. Remove or replace violating items; do not soften them into compliance.
+1. Treat restrictions as hard constraints. Remove violating items rather than softening them into compliance. For a role with selected_exercise_assignments, a violating selected exercise may be removed/held but must never be replaced downstream; for roles without selected_exercise_assignments, replacement with a compliant same-role option remains allowed.
 2. Fix hard blocker findings first.
 3. Preserve compliant parts of the previous final plan when they still fit the planning brief.
-4. Use candidate pools and same-role alternates from the planning brief before inventing anything new.
-5. If a phase-critical element is missing, reintroduce it with a conservative, compliant option that matches the phase strategy.
+3A. CLOSED MEMBERSHIP PRECEDENCE: when a role carries selected_exercise_assignments, that list is the deterministic planner's closed session membership. It overrides every repair rule below that mentions candidate pools, alternates, restoration, replacement, stronger options, or substitutions. Repair may remove an illegal selected exercise or lower its dose, but it must not add, restore, replace, or substitute any S&C exercise outside the selected set. If removal leaves a gap, leave the gap; selection belongs upstream.
+4. Only for roles without selected_exercise_assignments, use candidate pools and same-role alternates from the planning brief before inventing anything new.
+5. If a phase-critical element is missing, restore an already-selected legal exercise when the role has selected_exercise_assignments. Only roles without selected_exercise_assignments may reintroduce the element with a conservative, compliant option that matches the phase strategy.
 6. Remove any internal/admin scaffolding such as Athlete Profile, Selection Rationale, Coach Notes, planning-brief labels, or Stage-2-only notes.
 7. Remove raw HTML, code fences, and any non-athlete formatting artifacts.
-8. If an anchor session drifted into support work, restore the strongest compliant anchor option available before accessories.
-9. In non-taper weeks, restore a true externally loaded high-transfer anchor when a compliant option exists; if none exists, label the week injury-limited and keep the safest force-preserving substitute.
-10. Resolve conditioning choices into one primary prescription and at most one explicit fallback.
+8. If an anchor session drifted into support work, restore a selected anchor when the role has selected_exercise_assignments. Only roles without selected_exercise_assignments may choose the strongest compliant anchor option available before accessories.
+9. In non-taper weeks, preserve a selected externally loaded high-transfer anchor when legal. Only roles without selected_exercise_assignments may restore or substitute a different externally loaded anchor; if none exists, label the week injury-limited and keep the safest force-preserving option already authorised by the planning brief.
+10. Resolve conditioning choices into one primary prescription and at most one explicit fallback without changing closed session membership.
 11. Collapse menu-like session templates into one final prescription whenever the athlete context already resolves the choice.
-12. Keep all primary drills, support drills, and fallbacks equipment-valid for the athlete profile.
+12. Keep all primary drills, support drills, and fallbacks equipment-valid for the athlete profile. Equipment invalidity never authorises a substitute for a role with selected_exercise_assignments; remove/hold the invalid selected item instead.
 13. Keep every active week present and structurally complete, especially the late-camp weeks.
 14. Preserve the default boxer weekly rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a higher-order planning rule forces a different order.
 15. Do not create more active weekly sessions than the weekly_role_map allows. If the athlete has extra available days, leave them off or clearly optional rather than turning them into extra training days.
@@ -43,7 +44,7 @@ REPAIR RULES:
 30. Do not use generic motivation such as 'stay consistent', 'trust the process', 'push yourself', or 'you've got this'.
 31. Do not use empty safety language such as 'listen to your body', 'be careful', or 'avoid overtraining' unless it adds a concrete rule, symptom trigger, or plan change.
 32. If fatigue is high or fight-week pressure is active, reduce optionality and make the safest performance-preserving call plainly.
-33. If injury management is active, lead with constraints, substitutions, or stop rules rather than optional language.
+33. If injury management is active, lead with constraints, substitutions, or stop rules rather than optional language. Closed membership still controls S&C exercise identity.
 34. Do not prescribe exercises the plan already marks as avoid/contraindicated for the athlete's injury status.
 35. If a target-weight constraint is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.
 36. Aim critique at the plan, load, or execution issue, never at the athlete's character.
@@ -364,10 +365,10 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                 }
             )
     # Late-camp effective-prescription blockers arrive as hard-blocker errors (and
-    # are promoted into blocking_warnings by the release policy). Give the repair
-    # pass a concrete dose-reduction instruction so it renders the resolved
-    # effective prescription instead of re-emitting the over-dose.
-    seen_dose_lines: set[tuple[object, ...]] = set()
+    # are promoted into blocking_warnings by the release policy). Membership and
+    # dose are different repair classes: an unselected exercise is removed, while
+    # an authorised exercise with excessive dose is reduced to its effective cap.
+    seen_effective_findings: set[tuple[object, ...]] = set()
     for finding in [
         *(validator_report.get("errors", []) or []),
         *(validator_report.get("blocking_warnings", []) or []),
@@ -377,11 +378,34 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
         if str(finding.get("code") or "") != "late_camp_effective_prescription_exceeded":
             continue
         line = str(finding.get("line") or "")
-        identity = (finding.get("scheduled_d_day"), finding.get("exercise"), line,
-                    tuple(finding.get("violations") or ()))
-        if identity in seen_dose_lines:
+        dimensions = tuple(str(value) for value in (finding.get("violation_dimensions") or ()))
+        identity = (
+            finding.get("scheduled_d_day"),
+            finding.get("rendered_exercise") or finding.get("exercise"),
+            line,
+            dimensions,
+        )
+        if identity in seen_effective_findings:
             continue
-        seen_dose_lines.add(identity)
+        seen_effective_findings.add(identity)
+
+        if (
+            "exercise_allow_list" in dimensions
+            or finding.get("effective_prescription") == "no loaded lifting"
+        ):
+            quality_fixes.append(
+                {
+                    "action": "remove_unselected_exercise",
+                    "line": finding.get("line"),
+                    "scheduled_d_day": finding.get("scheduled_d_day"),
+                    "rendered_exercise": finding.get("rendered_exercise") or finding.get("exercise"),
+                    "allowed_exercises": clean_list(finding.get("allowed_exercises", [])),
+                    "reason": "closed_session_membership",
+                    "replacement_allowed": False,
+                }
+            )
+            continue
+
         quality_fixes.append(
             {
                 "action": "reduce_strength_dose_to_effective_prescription",

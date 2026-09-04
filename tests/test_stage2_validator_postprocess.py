@@ -386,3 +386,137 @@ def test_pipeline_applies_postprocess_before_warning_buckets(monkeypatch):
         final_plan_text=PRODUCTION_LIKE_PLAN,
     )
     assert [item["code"] for item in report["warnings"]] == ["conditional_conditioning_choice"]
+
+
+def _closed_strength_role(*, day: int = 7, allowed: list[str] | None = None) -> dict:
+    allowed = allowed or ["Trap Bar Deadlift"]
+    return {
+        "role_key": "primary_strength_day",
+        "category": "strength",
+        "athlete_facing_label": "Strength",
+        "scheduled_day_hint": "Tuesday",
+        "selected_exercise_assignments": [
+            {"name": name, "slot_id": f"slot-{index}", "slot_group": "strength_slots", "source_phase": "SPP"}
+            for index, name in enumerate(allowed, 1)
+        ],
+        "effective_strength_envelope": {
+            "scheduled_d_day": day,
+            "complete_exercise_allow_list": True,
+            "allowed_exercise_names": allowed,
+        },
+    }
+
+
+def _stacked_brief(*extra_roles: dict) -> dict:
+    strength = _closed_strength_role()
+    return {
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "week_index": 1,
+                    "phase": "SPP",
+                    "calendar_days": [{"weekday": "Tuesday", "d_day": 7}],
+                    "session_roles": [strength, *extra_roles],
+                }
+            ]
+        }
+    }
+
+
+def _membership_errors(report: dict) -> list[dict]:
+    return [
+        item
+        for item in report.get("errors") or []
+        if "exercise_allow_list" in (item.get("violation_dimensions") or [])
+    ]
+
+
+def test_closed_strength_membership_ignores_legal_conditioning_card_on_same_day():
+    conditioning = {
+        "role_key": "aerobic_support_day",
+        "category": "conditioning",
+        "athlete_facing_label": "Aerobic support",
+        "scheduled_countdown_label": "D-7",
+        "scheduled_day_hint": "Tuesday",
+    }
+    brief = _stacked_brief(conditioning)
+    rendered = "\n".join(
+        [
+            "D-7 (Tuesday) — Strength",
+            "- Trap Bar Deadlift: 2 x 3 @ RPE 6",
+            "D-7 (Tuesday) — Aerobic support",
+            "- Assault Bike: 4 x 2 min @ RPE 5",
+        ]
+    )
+
+    raw = validate_stage2_output(planning_brief=brief, final_plan_text=rendered)
+    assert any(item.get("rendered_exercise") == "Assault Bike" for item in _membership_errors(raw))
+
+    report = postprocess_stage2_validator_report(
+        planning_brief=brief,
+        final_plan_text=rendered,
+        validator_report=raw,
+    )
+    assert _membership_errors(report) == []
+    assert report["is_valid"] is True
+
+
+def test_closed_strength_membership_ignores_declared_light_combat_card_on_same_day():
+    light_combat = {
+        "role_key": "light_combat_day",
+        "category": "combat",
+        "athlete_facing_label": "Light technical combat",
+        "scheduled_countdown_label": "D-7",
+        "scheduled_day_hint": "Tuesday",
+    }
+    brief = _stacked_brief(light_combat)
+    rendered = "\n".join(
+        [
+            "D-7 (Tuesday) — Strength",
+            "- Trap Bar Deadlift: 2 x 3 @ RPE 6",
+            "D-7 (Tuesday) — Light technical combat",
+            "- Technical pummelling: 3 x 2 min",
+        ]
+    )
+
+    raw = validate_stage2_output(planning_brief=brief, final_plan_text=rendered)
+    assert any(item.get("rendered_exercise") == "Technical pummelling" for item in _membership_errors(raw))
+
+    report = postprocess_stage2_validator_report(
+        planning_brief=brief,
+        final_plan_text=rendered,
+        validator_report=raw,
+    )
+    assert _membership_errors(report) == []
+    assert report["is_valid"] is True
+
+
+def test_role_scoping_does_not_union_other_role_permission_into_strength_card():
+    conditioning = {
+        "role_key": "aerobic_support_day",
+        "category": "conditioning",
+        "athlete_facing_label": "Aerobic support",
+        "scheduled_countdown_label": "D-7",
+        "scheduled_day_hint": "Tuesday",
+    }
+    brief = _stacked_brief(conditioning)
+    rendered = "\n".join(
+        [
+            "D-7 (Tuesday) — Strength",
+            "- Trap Bar Deadlift: 2 x 3 @ RPE 6",
+            "- High Pull: 1 x 3 @ RPE 5",
+            "D-7 (Tuesday) — Aerobic support",
+            "- Assault Bike: 4 x 2 min @ RPE 5",
+        ]
+    )
+
+    raw = validate_stage2_output(planning_brief=brief, final_plan_text=rendered)
+    report = postprocess_stage2_validator_report(
+        planning_brief=brief,
+        final_plan_text=rendered,
+        validator_report=raw,
+    )
+    findings = _membership_errors(report)
+    assert len(findings) == 1
+    assert findings[0]["rendered_exercise"] == "High Pull"
+    assert report["is_valid"] is False

@@ -4,7 +4,8 @@ import re
 from collections import defaultdict
 from typing import Any
 
-from .stage2_validator import week_incompleteness_code
+from .role_labels import athlete_facing_label_for
+from .stage2_validator import _line_has_exercise, week_incompleteness_code
 
 
 _PHASE_WEEK_HEADER_RE = re.compile(
@@ -118,6 +119,136 @@ def _session_blocks(final_plan_text: str) -> list[dict[str, Any]]:
     if current:
         blocks.append(current)
     return blocks
+
+
+def _role_d_day(week: dict[str, Any], role: dict[str, Any]) -> int | None:
+    """Resolve the already-scheduled D-day without inventing new calendar truth."""
+    envelope = role.get("effective_strength_envelope")
+    if isinstance(envelope, dict) and isinstance(envelope.get("scheduled_d_day"), int):
+        return int(envelope["scheduled_d_day"])
+    if isinstance(role.get("scheduled_d_day"), int):
+        return int(role["scheduled_d_day"])
+    for key in ("scheduled_countdown_label", "countdown_label", "countdown_display_label"):
+        match = re.search(r"\bD-(\d{1,2})\b", str(role.get(key) or ""), re.IGNORECASE)
+        if match:
+            return int(match.group(1))
+
+    scheduled_day = _norm(role.get("scheduled_day_hint"))
+    if scheduled_day:
+        for day in week.get("calendar_days") or []:
+            if not isinstance(day, dict):
+                continue
+            if _norm(day.get("weekday")) == scheduled_day and isinstance(day.get("d_day"), int):
+                return int(day["d_day"])
+    return None
+
+
+def _roles_on_day(planning_brief: dict[str, Any], d_day: int) -> list[dict[str, Any]]:
+    roles: list[dict[str, Any]] = []
+    weekly_role_map = planning_brief.get("weekly_role_map") or {}
+    for week in weekly_role_map.get("weeks") or []:
+        if not isinstance(week, dict):
+            continue
+        for role in week.get("session_roles") or []:
+            if isinstance(role, dict) and _role_d_day(week, role) == d_day:
+                roles.append(role)
+    return roles
+
+
+def _role_render_label(role: dict[str, Any]) -> str:
+    return _norm(
+        role.get("athlete_facing_label")
+        or athlete_facing_label_for(role.get("role_key"))
+    )
+
+
+def _role_allowed_exercise_names(role: dict[str, Any]) -> list[str]:
+    envelope = role.get("effective_strength_envelope")
+    if not isinstance(envelope, dict) or envelope.get("complete_exercise_allow_list") is not True:
+        return []
+    return [
+        str(name).strip()
+        for name in envelope.get("allowed_exercise_names") or []
+        if str(name).strip()
+    ]
+
+
+def _block_contains_any_exercise(block: dict[str, Any], names: list[str]) -> bool:
+    return any(
+        _line_has_exercise(line, name)
+        for line in block.get("lines") or []
+        for name in names
+    )
+
+
+def _membership_finding_is_other_role_card(
+    finding: dict[str, Any],
+    *,
+    planning_brief: dict[str, Any],
+    session_blocks: list[dict[str, Any]],
+) -> bool:
+    """Prove that a day-wide raw allow-list hit belongs to another legal role.
+
+    The raw validator historically groups every D-X card on the same day before
+    applying each strength role's complete allow-list. Legal stacking can
+    therefore make conditioning or coach-owned light combat look like an
+    unselected strength exercise. This post-processing step removes a membership
+    finding only when the rendered line can be bound to a different scheduled
+    role card. Ambiguous cases remain blockers (fail closed).
+    """
+    if str(finding.get("code") or "") != "late_camp_effective_prescription_exceeded":
+        return False
+    if "exercise_allow_list" not in (finding.get("violation_dimensions") or []):
+        return False
+    d_day = finding.get("scheduled_d_day")
+    if not isinstance(d_day, int):
+        return False
+
+    target_line = _norm_anchor(finding.get("line"))
+    matching_blocks = [
+        block
+        for block in session_blocks
+        if block.get("d_day") == d_day
+        and target_line
+        and any(_norm_anchor(line) == target_line for line in block.get("lines") or [])
+    ]
+    if len(matching_blocks) != 1:
+        return False
+    block = matching_blocks[0]
+    block_title = _norm(block.get("title"))
+
+    day_roles = _roles_on_day(planning_brief, d_day)
+    role_key = str(finding.get("role_key") or "").strip()
+    target_roles = [role for role in day_roles if str(role.get("role_key") or "").strip() == role_key]
+    if len(target_roles) != 1:
+        return False
+    target_role = target_roles[0]
+    target_label = _role_render_label(target_role)
+
+    # Different deterministic title: only suppress when another scheduled role
+    # on the same day owns that exact rendered card title.
+    if target_label and block_title != target_label:
+        return any(
+            role is not target_role and _role_render_label(role) == block_title
+            for role in day_roles
+        )
+
+    # Same-title roles (e.g. two Strength cards) need exercise identity to
+    # disambiguate. If this block already contains an exercise selected by the
+    # target role, keep the finding: the extra exercise is inside its own card.
+    target_allowed = _role_allowed_exercise_names(target_role)
+    if target_allowed and _block_contains_any_exercise(block, target_allowed):
+        return False
+
+    matching_other_roles = [
+        role
+        for role in day_roles
+        if role is not target_role
+        and _role_render_label(role) == block_title
+        and (allowed := _role_allowed_exercise_names(role))
+        and _block_contains_any_exercise(block, allowed)
+    ]
+    return len(matching_other_roles) == 1
 
 
 def _active_session_counts_by_week(final_plan_text: str) -> dict[int, int]:
@@ -304,6 +435,21 @@ def _filter_warning(
     return warning
 
 
+def _filter_error(
+    error: dict[str, Any],
+    *,
+    planning_brief: dict[str, Any],
+    session_blocks: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    if _membership_finding_is_other_role_card(
+        error,
+        planning_brief=planning_brief,
+        session_blocks=session_blocks,
+    ):
+        return None
+    return error
+
+
 def postprocess_stage2_validator_report(
     *,
     planning_brief: dict[str, Any],
@@ -314,8 +460,22 @@ def postprocess_stage2_validator_report(
     if not isinstance(validator_report, dict):
         return validator_report
 
+    session_blocks = _session_blocks(final_plan_text)
     counts_by_week = _active_session_counts_by_week(final_plan_text)
     active_week_count = _active_week_count(planning_brief)
+
+    filtered_errors: list[dict[str, Any]] = []
+    for raw in validator_report.get("errors") or []:
+        if not isinstance(raw, dict):
+            continue
+        item = _filter_error(
+            raw,
+            planning_brief=planning_brief,
+            session_blocks=session_blocks,
+        )
+        if item is not None:
+            filtered_errors.append(item)
+
     filtered_warnings: list[dict[str, Any]] = []
     for raw in validator_report.get("warnings") or []:
         if not isinstance(raw, dict):
@@ -330,7 +490,25 @@ def postprocess_stage2_validator_report(
         if item is not None:
             filtered_warnings.append(item)
 
-    result = {**validator_report, "warnings": filtered_warnings}
+    filtered_effective_findings: list[dict[str, Any]] = []
+    for raw in validator_report.get("late_camp_effective_prescription_warnings") or []:
+        if not isinstance(raw, dict):
+            continue
+        item = _filter_error(
+            raw,
+            planning_brief=planning_brief,
+            session_blocks=session_blocks,
+        )
+        if item is not None:
+            filtered_effective_findings.append(item)
+
+    result = {
+        **validator_report,
+        "errors": filtered_errors,
+        "warnings": filtered_warnings,
+        "is_valid": len(filtered_errors) == 0,
+        "late_camp_effective_prescription_warnings": filtered_effective_findings,
+    }
     result["week_completeness_warnings"] = [
         item for item in filtered_warnings if str(item.get("code") or "") in _WEEK_COMPLETENESS_CODES
     ]
