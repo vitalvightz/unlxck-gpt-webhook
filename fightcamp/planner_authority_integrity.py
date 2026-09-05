@@ -15,6 +15,7 @@ PLANNER_AUTHORITY_BLOCKER_CODES = frozenset(
         "selected_exercise_phase_ineligible",
         "selected_exercise_late_window_ineligible",
         "selected_loaded_exercise_forbidden",
+        "late_physical_role_missing_assignment",
     }
 )
 
@@ -226,6 +227,26 @@ def planner_authority_findings(planning_brief: dict[str, Any]) -> list[dict[str,
 
     for week_phase, role in _iter_scheduled_roles(planning_brief):
         assignments = role.get("selected_exercise_assignments")
+        category = str(role.get("category") or "").strip().lower()
+        if (
+            role.get("late_fight_tail_owned")
+            and category in {"strength", "conditioning"}
+            and (not isinstance(assignments, list) or not assignments)
+        ):
+            findings.append(
+                {
+                    "code": "late_physical_role_missing_assignment",
+                    "severity": "blocker",
+                    "message": "A dated app-owned physical role has no deterministic exercise assignment.",
+                    "countdown_label": str(
+                        role.get("scheduled_countdown_label")
+                        or role.get("countdown_label")
+                        or ""
+                    ).strip(),
+                    "role_key": role.get("role_key"),
+                }
+            )
+            continue
         if not isinstance(assignments, list) or not assignments:
             continue
 

@@ -374,12 +374,11 @@ def test_d30_spliced_tail_matches_direct_late_fight_assignment_authority():
         (item["slot_id"], item["name"]) for item in selected_strength}
 
 
-def test_late_taper_neural_primer_accepts_safe_alactic_conditioning_slot():
+def test_late_taper_neural_primer_accepts_safe_alactic_conditioning_slot_without_role_phase():
     role = {
         "role_key": "neural_primer_day",
         "category": "strength",
         "preferred_pool": "strength_slots",
-        "phase": "TAPER",
         "late_fight_tail_owned": True,
         "scheduled_countdown_label": "D-7",
     }
@@ -391,7 +390,7 @@ def test_late_taper_neural_primer_accepts_safe_alactic_conditioning_slot():
     )
     safe_style_taper["selected"]["source"] = "style_taper"
     assert _slot_matches_late_fight_role(
-        safe_style_taper, "conditioning_slots", role
+        safe_style_taper, "conditioning_slots", role, source_phase="TAPER"
     ) is True
 
     glycolytic = _conditioning_slot("Glycolytic Repeat", 2, system="glycolytic")
@@ -401,6 +400,63 @@ def test_late_taper_neural_primer_accepts_safe_alactic_conditioning_slot():
         "lactate_load": "low",
     }
     assert _slot_matches_late_fight_role(glycolytic, "conditioning_slots", role) is False
+
+
+@pytest.mark.parametrize(
+    "role_key", ["strength_touch_day", "neural_primer_day", "alactic_sharpness_day"]
+)
+def test_all_late_sharpness_roles_share_safe_style_taper_authority(role_key):
+    role = {
+        "role_key": role_key,
+        "category": "conditioning" if role_key == "alactic_sharpness_day" else "strength",
+        "late_fight_tail_owned": True,
+        "scheduled_countdown_label": "D-7",
+    }
+    primer = _conditioning_slot("Range Gate-Score-Exit", 1, late_windows=["d7"])
+    primer["selected"].update({
+        "source": "style_taper",
+        "selection_metadata": {
+            "late_windows": ["d7"], "support_only": True,
+            "meaningful_stress": False, "lactate_load": "low",
+        },
+    })
+
+    _, assignments = _build_late_fight_allowed_exercises_by_day(
+        spec={"visible_session_sequence": [role], "athlete_model": _taper_athlete()},
+        candidate_pools={"TAPER": {"conditioning_slots": [primer]}},
+    )
+
+    assert [item["name"] for item in assignments["D-7"]] == ["Range Gate-Score-Exit"]
+
+
+def test_late_selector_uses_window_legal_stage1_alternate_on_d2():
+    role = {
+        "role_key": "alactic_sharpness_day", "category": "conditioning",
+        "preferred_system": "alactic", "late_fight_tail_owned": True,
+        "scheduled_countdown_label": "D-2",
+    }
+    slot = _conditioning_slot("Range Gate-Score-Exit", 1, late_windows=["d7"])
+    slot["selected"].update({
+        "source": "style_taper",
+        "selection_metadata": {
+            "late_windows": ["d7"], "support_only": True,
+            "meaningful_stress": False, "lactate_load": "low",
+        },
+    })
+    slot["alternates"] = [{
+        "name": "Long-Range Rhythm Shadow", "source": "style_taper",
+        "selection_metadata": {
+            "late_windows": ["d4_to_d2"], "support_only": True,
+            "meaningful_stress": False, "lactate_load": "low",
+        },
+    }]
+
+    _, assignments = _build_late_fight_allowed_exercises_by_day(
+        spec={"visible_session_sequence": [role], "athlete_model": _taper_athlete()},
+        candidate_pools={"TAPER": {"conditioning_slots": [slot]}},
+    )
+
+    assert [item["name"] for item in assignments["D-2"]] == ["Long-Range Rhythm Shadow"]
 
 
 @pytest.mark.parametrize(

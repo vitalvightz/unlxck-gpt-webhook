@@ -59,6 +59,18 @@ def _codes(brief: dict) -> set[str]:
     return {item["code"] for item in planner_authority_findings(brief)}
 
 
+def test_empty_app_owned_late_physical_role_is_a_release_blocker() -> None:
+    brief = _brief(
+        name="Back Squat", slot_group="strength_slots", d_day=7,
+        week_phase="TAPER", category="strength", source_phase="TAPER",
+        late_fight_tail_owned=True, role_key="neural_primer_day",
+    )
+    role = brief["weekly_role_map"]["weeks"][0]["session_roles"][0]
+    role["selected_exercise_assignments"] = []
+
+    assert _codes(brief) == {"late_physical_role_missing_assignment"}
+
+
 def test_gpp_only_hang_power_clean_is_blocked_on_stage1_spp_day() -> None:
     brief = _brief(
         name="Hang Power Clean",
