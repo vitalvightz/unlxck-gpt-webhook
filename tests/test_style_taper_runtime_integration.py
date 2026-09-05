@@ -155,7 +155,6 @@ def test_generated_taper_plan_preserves_sport_style_and_day_window(
         source = bank_by_name[drill["name"]]
         tags = set(source.get("tags", []))
         assert sport in tags
-        assert style in tags
         assert expected_window in source.get("late_windows", [])
         assert style_taper_window_for_days(days_until_fight) == expected_window
 
@@ -182,3 +181,76 @@ def test_style_taper_is_withheld_when_sport_cannot_be_resolved(monkeypatch):
         if drill.get("name")
     }
     assert selected_names.isdisjoint(bank_names)
+
+@pytest.mark.parametrize(
+    ("sport", "style", "days_until_fight", "equipment"),
+    [
+        ("boxing", "counter_striker", 9, ["bodyweight", "partner", "focus_mitts"]),
+        ("kickboxing", "pressure_fighter", 7, ["bodyweight", "partner", "thai_pad", "focus_mitts"]),
+        ("muay_thai", "clinch_fighter", 5, ["bodyweight", "partner", "thai_pad", "focus_mitts"]),
+        ("mma", "scrambler", 3, ["bodyweight", "mat", "partner", "thai_pad", "focus_mitts"]),
+        ("wrestling", "wrestler", 1, ["bodyweight", "mat", "partner"]),
+        ("bjj", "submission_hunter", 3, ["bodyweight", "mat", "partner"]),
+    ],
+)
+def test_real_taper_competition_selects_window_legal_same_sport_content(
+    sport, style, days_until_fight, equipment
+):
+    bank = _load_bank()
+    bank_by_name = {item["name"]: item for item in bank}
+
+    _output, names, _why, grouped, _missing, _reservoir = conditioning.generate_conditioning_block(
+        _base_flags(
+            sport=sport,
+            fight_format=sport,
+            style_technical=[sport],
+            style_tactical=[style],
+            days_until_fight=days_until_fight,
+            equipment=equipment,
+        )
+    )
+
+    selected = [
+        drill for drills in grouped.values() for drill in drills
+        if drill.get("name") in bank_by_name
+    ]
+    assert selected
+    expected_window = style_taper_window_for_days(days_until_fight)
+    assert all(sport in bank_by_name[drill["name"]]["tags"] for drill in selected)
+    assert all(expected_window in bank_by_name[drill["name"]]["late_windows"] for drill in selected)
+    assert len(names) == len(set(names))
+
+
+def test_pressure_style_dead_end_keeps_compatible_same_sport_alactic_candidate():
+    filtered = conditioning._filter_style_taper_bank_for_context(
+        _load_bank(), sport="kickboxing", styles={"pressure_fighter"}
+    )
+    names = {item["name"] for item in filtered}
+
+    assert "Pressure Lane Shadow" in names
+    assert "Single-Kick Recoil Primer" in names
+
+
+def test_style_taper_bank_order_breaks_equal_ties_not_alphabetical(monkeypatch):
+    _patch_to_isolate_style_taper(monkeypatch)
+    bank = _load_bank()
+    pocket = next(item for item in bank if item["name"] == "Pocket Burst-Reset")
+    recoil = next(item for item in bank if item["name"] == "Single-Kick Recoil Primer")
+    monkeypatch.setattr(
+        conditioning,
+        "_load_bank",
+        lambda path, **kwargs: [recoil, pocket] if getattr(path, "name", "") == "style_taper_conditioning.json" else [],
+    )
+
+    result = conditioning.generate_conditioning_block(
+        _base_flags(
+            sport="kickboxing",
+            fight_format="kickboxing",
+            style_technical=["kickboxing"],
+            style_tactical=["pressure_fighter"],
+            days_until_fight=9,
+            equipment=["thai_pad", "focus_mitts"],
+        )
+    )
+    selected = [drill["name"] for drills in result[3].values() for drill in drills]
+    assert selected == ["Single-Kick Recoil Primer"]

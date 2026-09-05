@@ -3665,6 +3665,80 @@ def generate_conditioning_block(flags):
 
         return _append_drill(group_key or system, drill, reasons)
 
+    def _select_style_taper_candidate() -> bool:
+        """Give one legal D13-D1 Style Taper drill first refusal on a slot."""
+        if phase.upper() != "TAPER" or total_drills <= 0:
+            return False
+        try:
+            bank = _load_bank(
+                DATA_DIR / "style_taper_conditioning.json",
+                source="style_taper_conditioning.json",
+                enforce_conditioning_systems=True,
+            )
+        except Exception:
+            return False
+
+        ranked: list[tuple[tuple[int, int, int], int, dict, str, dict]] = []
+        raw_tactical_styles = style or style_names
+        if isinstance(raw_tactical_styles, str):
+            raw_tactical_styles = [raw_tactical_styles]
+        tactical_styles = {
+            token
+            for raw in raw_tactical_styles
+            if (token := str(raw).strip().lower().replace(" ", "_"))
+        }
+        for bank_index, drill in enumerate(bank):
+            if drill.get("placement", "conditioning").lower() != "conditioning":
+                continue
+            system = _cached_system(drill, "style_taper_conditioning.json")
+            if system not in {"alactic", "aerobic"}:  # never broaden primers into glycolytic work
+                continue
+            equipment = _cached_equipment(drill)
+            if equipment and not set(equipment).issubset(equipment_access_set):
+                continue
+            tags = set(_cached_tags(drill))
+            restriction = evaluate_restriction_impact(
+                restrictions,
+                text=" ".join(str(drill.get(key, "") or "") for key in ("name", "modality", "notes", "equipment_note")),
+                tags=tags,
+                limit_penalty=-0.75,
+            )
+            if not ignore_restrictions and not restriction.get("allowed", True):
+                continue
+            if _cached_injury_decision(drill).action == "exclude":
+                continue
+            late_eval = _cached_late_eval(drill, system, "style_taper_conditioning.json")
+            if late_eval["blocked"]:
+                continue
+
+            style_hits = len(tactical_styles.intersection(tags))
+            goal_hits = len(set(goal_tags).intersection(tags))
+            weakness_hits = len(set(weak_tags).intersection(tags))
+            # System/role capability outranks tactical style. Bank position is
+            # retained separately as the stable final tie-break.
+            relevance = (1 if system == "alactic" else 0, style_hits, goal_hits + weakness_hits)
+            reasons = {
+                "goal_hits": goal_hits,
+                "weakness_hits": weakness_hits,
+                "style_hits": style_hits,
+                "phase_hits": 1,
+                "load_adjustments": 0,
+                "equipment_boost": 0,
+                "penalties": 0,
+                "reason_codes": ["style_taper_priority", *late_eval["reason_codes"]],
+                "penalty_codes": list(late_eval.get("penalty_codes", [])),
+                "late_window_adjustment": late_eval["adjustment"],
+                "final_score": float(sum(relevance)),
+            }
+            ranked.append((relevance, bank_index, drill, system, reasons))
+
+        ranked.sort(key=lambda item: (-item[0][0], -item[0][1], -item[0][2], item[1]))
+        for _relevance, _bank_index, drill, system, reasons in ranked:
+            if _try_append_conditioning_drill(system, drill, reasons, source="style_taper"):
+                selected_counts[system] += 1
+                return True
+        return False
+
     _pool_treading_strong_case: bool | None = None
 
     def _base_head_is_priority_pool_treading(system: str) -> bool:
@@ -3726,14 +3800,17 @@ def generate_conditioning_block(flags):
         combined_focus = [w.lower() for w in weaknesses] + goal_list
         allow_aerobic = any(k in combined_focus for k in ["conditioning", "endurance"])
 
-        d, r = blended_pick("alactic")
+        if _select_style_taper_candidate():
+            taper_selected += 1
+
+        d, r = blended_pick("alactic") if taper_selected < total_drills else (None, None)
         if d:
             final_drills.append(("alactic", [d]))
             reason_lookup[d.get("name")] = r
             selected_counts["alactic"] += 1
             taper_selected += 1
 
-        if allow_aerobic and taper_selected < 2:
+        if allow_aerobic and taper_selected < min(2, total_drills):
             d, r = blended_pick("aerobic")
             if d:
                 final_drills.append(("aerobic", [d]))
@@ -3741,7 +3818,7 @@ def generate_conditioning_block(flags):
                 selected_counts["aerobic"] += 1
                 taper_selected += 1
 
-        if allow_glycolytic and taper_selected < 2 and _allow_system_insert("glycolytic"):
+        if allow_glycolytic and taper_selected < min(2, total_drills) and _allow_system_insert("glycolytic"):
             d, r = blended_pick("glycolytic")
             if d:
                 final_drills.append(("glycolytic", [d]))
@@ -3881,84 +3958,10 @@ def generate_conditioning_block(flags):
 
         # --------- STYLE TAPER DRILL INSERTION ---------
     def _insert_style_taper_drill() -> None:
-        if phase != "TAPER":
-            return
-        try:
-            style_taper_bank = _load_bank(
-                DATA_DIR / "style_taper_conditioning.json",
-                source="style_taper_conditioning.json",
-                enforce_conditioning_systems=True,
-            )
-        except Exception:
-            style_taper_bank = []
-
-        existing_cond_names = {d.get("name") for _, drills in final_drills for d in drills}
-        style_set = set(style_names)
-        taper_candidates = []
-
-        for d in style_taper_bank:
-            if d.get("placement", "conditioning").lower() != "conditioning":
-                continue
-            if not style_set.intersection(set(_cached_tags(d))):
-                continue
-            eq = _cached_equipment(d)
-            if eq and not set(eq).issubset(equipment_access_set):
-                continue
-            taper_candidates.append(d)
-
-        if not taper_candidates:
-            taper_candidates = [
-                d
-                for d in style_taper_bank
-                if d.get("placement", "conditioning").lower() == "conditioning"
-                and (
-                    not _cached_equipment(d)
-                    or set(_cached_equipment(d)).issubset(
-                        equipment_access_set
-                    )
-                )
-            ]
-
-        inserted = False
-        if taper_candidates and len(selected_drill_names) < total_drills:
-            scan_pool = sorted(
-                taper_candidates,
-                key=lambda d: d.get("name") or "",
-            )[:INJURY_GUARD_SHORTLIST]
-            max_scan = bounded_max_iterations(len(scan_pool), multiplier=2, floor=4)
-            for scan_idx, drill in enumerate(scan_pool, start=1):
-                if scan_idx > max_scan:
-                    log_fail_safe_degrade(module="conditioning", phase=phase, reason="guarantee_scan_guard:style_taper", target=len(scan_pool), actual=scan_idx)
-                    break
-                if drill.get("name") in existing_cond_names:
-                    continue
-
-                system = _cached_system(
-                    drill,
-                    "style_taper_conditioning.json",
-                )
-                if system is None:
-                    continue
-
-                if _try_append_conditioning_drill(
-                    system,
-                    drill,
-                    {
-                        "goal_hits": 0,
-                        "weakness_hits": 0,
-                        "style_hits": 1,
-                        "phase_hits": 1,
-                        "load_adjustments": 0,
-                        "equipment_boost": 0,
-                        "penalties": 0,
-                        "reason_codes": ["style_taper_guarantee"],
-                        "final_score": 0,
-                    },
-                    source="style_taper",
-                ):
-                    inserted = True
-                    break
-        if not inserted:
+        if phase.upper() == "TAPER" and not any(
+            "style_taper_priority" in reason_lookup.get(drill.get("name"), {}).get("reason_codes", [])
+            for _system, drills in final_drills for drill in drills
+        ):
             log_fail_safe_degrade(module="conditioning", phase=phase, reason="style_taper_no_candidate", target=1, actual=0)
                     
     _run_conditioning_poststep("style_taper_insertion", _insert_style_taper_drill)

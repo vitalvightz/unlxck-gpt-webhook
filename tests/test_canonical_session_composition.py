@@ -1,3 +1,5 @@
+import pytest
+
 from fightcamp.late_camp_role_morph import apply_late_camp_role_morph
 from fightcamp.camp_week_fillers import _splice_late_fight_tail
 from fightcamp.late_fight_tail import build_finished_late_fight_tail
@@ -7,7 +9,7 @@ from fightcamp.late_fight_phase_eligibility import (
 )
 from fightcamp.prescription_resolver import apply_effective_strength_prescriptions
 from fightcamp.session_composition import attach_late_fight_assignments, compose_normal_strength_assignments
-from fightcamp.stage2_payload import _build_late_fight_allowed_exercises_by_day
+from fightcamp.stage2_payload import _build_late_fight_allowed_exercises_by_day, _slot_matches_late_fight_role
 from fightcamp.stage2_payload_late_fight import _countdown_weekday_map
 
 
@@ -370,3 +372,127 @@ def test_d30_spliced_tail_matches_direct_late_fight_assignment_authority():
     assert selected_strength
     assert {(item["slot_id"], item["name"]) for item in resolved_strength} == {
         (item["slot_id"], item["name"]) for item in selected_strength}
+
+
+def test_late_taper_neural_primer_accepts_safe_alactic_conditioning_slot():
+    role = {
+        "role_key": "neural_primer_day",
+        "category": "strength",
+        "preferred_pool": "strength_slots",
+        "phase": "TAPER",
+        "late_fight_tail_owned": True,
+        "scheduled_countdown_label": "D-7",
+    }
+    safe_style_taper = _conditioning_slot(
+        "Single-Kick Recoil Primer", 1, late_windows=["d13_to_d8", "d7", "d6_to_d5"]
+    )
+    safe_style_taper["selected"]["selection_metadata"].update(
+        {"support_only": True, "meaningful_stress": False, "lactate_load": "low"}
+    )
+    safe_style_taper["selected"]["source"] = "style_taper"
+    assert _slot_matches_late_fight_role(
+        safe_style_taper, "conditioning_slots", role
+    ) is True
+
+    glycolytic = _conditioning_slot("Glycolytic Repeat", 2, system="glycolytic")
+    glycolytic["selected"]["selection_metadata"] = {
+        "support_only": True,
+        "meaningful_stress": False,
+        "lactate_load": "low",
+    }
+    assert _slot_matches_late_fight_role(glycolytic, "conditioning_slots", role) is False
+
+
+@pytest.mark.parametrize(
+    "sport_primer",
+    ["Single-Kick Recoil Primer", "Circle-Re-shot Cue"],
+)
+def test_neural_primer_allocator_prefers_safe_style_taper_over_generic_strength(
+    sport_primer,
+):
+    role = {
+        "role_key": "neural_primer_day",
+        "category": "strength",
+        "preferred_pool": "strength_slots",
+        "phase": "TAPER",
+        "late_fight_tail_owned": True,
+        "scheduled_countdown_label": "D-7",
+    }
+    generic = _slot("Technical Shadowboxing Tempo", 1)
+    generic["selected"]["quality_class"] = "anchor_loaded_neural_primer"
+    style_taper = _conditioning_slot(
+        sport_primer, 1, late_windows=["d13_to_d8", "d7", "d6_to_d5"]
+    )
+    style_taper["selected"].update(
+        {
+            "source": "style_taper",
+            "selection_metadata": {
+                "late_windows": ["d13_to_d8", "d7", "d6_to_d5"],
+                "support_only": True,
+                "meaningful_stress": False,
+                "lactate_load": "low",
+            },
+        }
+    )
+
+    _, assignments = _build_late_fight_allowed_exercises_by_day(
+        spec={
+            "visible_session_sequence": [role],
+            "phase": "TAPER",
+            "athlete_model": {
+                "phase_weeks": {"days": {"GPP": 0, "SPP": 0, "TAPER": 7}}
+            },
+        },
+        candidate_pools={
+            "TAPER": {
+                "strength_slots": [generic],
+                "conditioning_slots": [style_taper],
+            }
+        },
+    )
+
+    assert assignments["D-7"][0]["name"] == sport_primer
+    assert assignments["D-7"][0]["slot_group"] == "conditioning_slots"
+
+
+def test_neural_primer_keeps_explicit_day_assignment_ahead_of_style_taper():
+    role = {
+        "role_key": "neural_primer_day",
+        "phase": "TAPER",
+        "late_fight_tail_owned": True,
+        "scheduled_countdown_label": "D-7",
+    }
+    explicit = _slot("Explicit Neural Primer", 1)
+    explicit["selected"]["quality_class"] = "anchor_loaded_neural_primer"
+    explicit["allowed_countdown_labels"] = ["D-7"]
+    style_taper = _conditioning_slot("Circle-Re-shot Cue", 1, late_windows=["d7"])
+    style_taper["selected"].update(
+        {
+            "source": "style_taper",
+            "selection_metadata": {
+                "late_windows": ["d7"],
+                "support_only": True,
+                "meaningful_stress": False,
+                "lactate_load": "low",
+            },
+        }
+    )
+
+    _, assignments = _build_late_fight_allowed_exercises_by_day(
+        spec={
+            "visible_session_sequence": [role],
+            "phase": "TAPER",
+            "athlete_model": {
+                "phase_weeks": {"days": {"GPP": 0, "SPP": 0, "TAPER": 7}}
+            },
+        },
+        candidate_pools={
+            "TAPER": {
+                "strength_slots": [explicit],
+                "conditioning_slots": [style_taper],
+            }
+        },
+    )
+
+    assert assignments["D-7"][0]["name"] == "Explicit Neural Primer"
+    assert assignments["D-7"][0]["slot_group"] == "strength_slots"

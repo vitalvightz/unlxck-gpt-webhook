@@ -53,6 +53,7 @@ BOOLEAN_METADATA_FIELDS = {
     "low_eccentric",
     "low_impact",
     "low_soreness",
+    "meaningful_stress",
     "neural_primer",
     "sport_specific",
     "support_only",
