@@ -1103,13 +1103,15 @@ def _slot_is_low_load_reset(slot: dict[str, Any]) -> bool:
     )
 
 
-def _slot_is_style_taper_neural_primer(slot: dict[str, Any], role: dict[str, Any]) -> bool:
+def _slot_is_style_taper_neural_primer(
+    slot: dict[str, Any], role: dict[str, Any], *, source_phase: str = ""
+) -> bool:
     """Return whether a conditioning slot is the narrow Style Taper primer exception."""
     selected = _slot_selected_option(slot)
     metadata = selected.get("selection_metadata") if isinstance(selected, dict) else {}
     return bool(
         role.get("late_fight_tail_owned")
-        and str(role.get("phase") or "").upper() == "TAPER"
+        and str(source_phase or role.get("phase") or "").upper() == "TAPER"
         and str(slot.get("role") or "").strip().lower() == "alactic"
         and selected.get("source") == "style_taper"
         and isinstance(metadata, dict)
@@ -1119,7 +1121,9 @@ def _slot_is_style_taper_neural_primer(slot: dict[str, Any], role: dict[str, Any
     )
 
 
-def _slot_matches_late_fight_role(slot: dict[str, Any], slot_group: str, role: dict[str, Any]) -> bool:
+def _slot_matches_late_fight_role(
+    slot: dict[str, Any], slot_group: str, role: dict[str, Any], *, source_phase: str = ""
+) -> bool:
     role_key = str(role.get("role_key") or "").strip()
     preferred_system = str(role.get("preferred_system") or "").strip().lower()
     slot_role = str(slot.get("role") or "").strip().lower()
@@ -1128,8 +1132,9 @@ def _slot_matches_late_fight_role(slot: dict[str, Any], slot_group: str, role: d
     if slot_group == "rehab_slots":
         return role_key in {"fight_week_freshness_day", "technical_touch_day"}
     if slot_group == "conditioning_slots":
-        if role_key == "neural_primer_day":
-            return _slot_is_style_taper_neural_primer(slot, role)
+        if role_key in {"strength_touch_day", "neural_primer_day", "alactic_sharpness_day"}:
+            if _slot_is_style_taper_neural_primer(slot, role, source_phase=source_phase):
+                return True
         if preferred_system:
             return slot_role == preferred_system
         return role_key in {"alactic_sharpness_day", "light_fight_pace_touch_day", "technical_touch_day"}
@@ -1167,8 +1172,25 @@ def _candidate_slots_for_role(candidate_pools: dict[str, dict], role: dict[str, 
             for slot in pool.get(slot_group, []) or []:
                 if not isinstance(slot, dict) or not _slot_exercise_name(slot):
                     continue
-                if _slot_matches_late_fight_role(slot, slot_group, role):
+                if _slot_matches_late_fight_role(slot, slot_group, role, source_phase=str(phase)):
                     matched.append((str(phase), slot_group, slot))
+                # Alternates remain Stage 1 candidate authority. Expose them to
+                # the dated selector so a phase can use different legal drills
+                # in different late windows instead of treating one selected
+                # phase drill as universal.
+                for index, alternate in enumerate(slot.get("alternates", []) or []):
+                    if not isinstance(alternate, dict) or not alternate.get("name"):
+                        continue
+                    alternate_slot = {
+                        **slot,
+                        "slot_id": f"{slot.get('slot_id') or 'slot'}:alternate:{index}",
+                        "selected": alternate,
+                        "alternates": [],
+                    }
+                    if _slot_matches_late_fight_role(
+                        alternate_slot, slot_group, role, source_phase=str(phase)
+                    ):
+                        matched.append((str(phase), slot_group, alternate_slot))
     return matched
 
 
@@ -1290,7 +1312,9 @@ def _build_late_fight_allowed_exercises_by_day(
                 fallback_matches.append((phase, slot_group, slot))
 
         selected_matches = explicit_matches
-        if not selected_matches and str(role.get("role_key") or "") == "neural_primer_day":
+        if not selected_matches and str(role.get("role_key") or "") in {
+            "strength_touch_day", "neural_primer_day", "alactic_sharpness_day"
+        }:
             # Keep explicit day authority. For unlabelled fallbacks only, let a
             # safe TAPER-owned sport primer beat the legacy generic strength
             # primer without globally reordering candidate pool families.
@@ -1299,7 +1323,7 @@ def _build_late_fight_allowed_exercises_by_day(
                 for match in fallback_matches
                 if match[0].upper() == "TAPER"
                 and match[1] == "conditioning_slots"
-                and _slot_is_style_taper_neural_primer(match[2], role)
+                and _slot_is_style_taper_neural_primer(match[2], role, source_phase=match[0])
             ][:1]
         if not selected_matches:
             selected_matches = fallback_matches[:1]
@@ -2510,7 +2534,7 @@ RULE 2 — PLAN THE CAMP, DON'T JUST EDIT
 Build the best final plan from the FINALIZER PACKET. Use selected_plan, weekly_role_map, session_sequence, week_by_week_progression, and render_guards to sequence the camp. Reorganise and tighten — coherence over inertia.
 
 RULE 3 — SELECTION ORDER
-Preserve the calendar, declared days, coach-led ownership, session count, phase, and taper window from selected_plan / weekly_role_map. When a role has selected_exercise_assignments, use only those exercises. That list is closed session membership from the deterministic planner. Do not add, restore, or substitute candidates, alternates, or other S&C exercises, even when their dose would be legal. Use each selected exercise's effective prescription when supplied. Roles without selected_exercise_assignments keep their existing contract. Draft text is candidate material and cannot override the FINALIZER PACKET.
+Preserve the calendar, declared days, coach-led ownership, session count, phase, and taper window from selected_plan / weekly_role_map. When a role has selected_exercise_assignments, use only those exercises. That list is closed session membership from the deterministic planner. An empty selected_exercise_assignments list is not creative freedom: do not invent or add an exercise. Do not add, restore, or substitute candidates, alternates, or other S&C exercises, even when their dose would be legal. Use each selected exercise's effective prescription when supplied. Roles without selected_exercise_assignments keep their existing contract. Draft text is candidate material and cannot override the FINALIZER PACKET.
 
 RULE 4 — ANCHOR STANDARD
 Every anchor session must contain at least one serious high-transfer strength or power exercise if a compliant compact candidate or finalizer-safe substitution exists. Do not build anchors from bird dogs, dead bugs, planks, carries, or rehab-level work unless restrictions force it. Support work assists the anchor — it cannot become it.
