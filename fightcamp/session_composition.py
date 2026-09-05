@@ -109,18 +109,11 @@ def _injury_restricted(athlete_model: dict[str, Any]) -> bool:
     return bool(injuries) or "injury_management" in flags
 
 
-def composition_pressure_state(athlete_model: dict[str, Any] | None) -> dict[str, Any]:
-    """Resolve reduce-only session-composition pressure from existing athlete buckets.
-
-    The strongest active signal owns the base pressure. A second independent
-    stressor adds one interaction step, capped at preservation mode (3). This
-    avoids naively summing three moderate signals while still recognising that
-    combined fatigue/cut/injury meaningfully reduces recovery capacity.
-    """
-    model = athlete_model if isinstance(athlete_model, dict) else {}
-    fatigue = _normalized_fatigue(model)
-    cut_bucket = _resolved_cut_bucket(model)
-    injury_restricted = _injury_restricted(model)
+def _pressure_state_from_components(
+    *, fatigue: str, cut_bucket: str, injury_restricted: bool
+) -> dict[str, Any]:
+    fatigue = fatigue if fatigue in _FATIGUE_PRESSURE else "low"
+    cut_bucket = cut_bucket if cut_bucket in _CUT_PRESSURE else "none"
 
     fatigue_pressure = _FATIGUE_PRESSURE[fatigue]
     cut_pressure = _CUT_PRESSURE[cut_bucket]
@@ -142,6 +135,72 @@ def composition_pressure_state(athlete_model: dict[str, Any] | None) -> dict[str
         "injury_restricted": injury_restricted,
         "injury_pressure": injury_pressure,
         "active_stressors": active_stressors,
+    }
+
+
+def composition_pressure_state(athlete_model: dict[str, Any] | None) -> dict[str, Any]:
+    """Resolve reduce-only session-composition pressure from existing athlete buckets.
+
+    The strongest active signal owns the base pressure. A second independent
+    stressor adds one interaction step, capped at preservation mode (3). This
+    avoids naively summing three moderate signals while still recognising that
+    combined fatigue/cut/injury meaningfully reduces recovery capacity.
+    """
+    model = athlete_model if isinstance(athlete_model, dict) else {}
+    return _pressure_state_from_components(
+        fatigue=_normalized_fatigue(model),
+        cut_bucket=_resolved_cut_bucket(model),
+        injury_restricted=_injury_restricted(model),
+    )
+
+
+def _float_or_none(value: Any) -> float | None:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed
+
+
+def _int_or_none(value: Any) -> int | None:
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _active_weight_cut(
+    athlete_model: dict[str, Any], *, current_bucket: str, cut_pct: float | None
+) -> bool:
+    flags = {
+        str(flag).strip().lower()
+        for flag in (athlete_model.get("readiness_flags") or [])
+        if str(flag).strip()
+    }
+    return bool(
+        athlete_model.get("weight_cut_risk")
+        or flags & {"active_weight_cut", "aggressive_weight_cut", "extreme_weight_cut"}
+        or (cut_pct is not None and cut_pct > 0.0)
+        or current_bucket not in {"", "none"}
+    )
+
+
+def _composition_context_from_model(athlete_model: dict[str, Any] | None) -> dict[str, Any]:
+    model = athlete_model if isinstance(athlete_model, dict) else {}
+    current_state = composition_pressure_state(model)
+    cut_pct = _float_or_none(model.get("weight_cut_pct"))
+    if cut_pct is not None and cut_pct <= 0.0:
+        cut_pct = None
+
+    return {
+        **current_state,
+        "generation_days_until_fight": _int_or_none(model.get("days_until_fight")),
+        "weight_cut_pct": cut_pct,
+        "active_weight_cut": _active_weight_cut(
+            model,
+            current_bucket=str(current_state["cut_severity_bucket"]),
+            cut_pct=cut_pct,
+        ),
     }
 
 
@@ -236,14 +295,7 @@ def _candidate_records(slots: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "original_index": index,
             }
         )
-    return sorted(
-        records,
-        key=lambda item: (
-            1 if item["support_only"] else 0,
-            item["sort_key"][0],
-            item["sort_key"][1],
-        ),
-    )
+    return sorted(records, key=lambda item: item["sort_key"])
 
 
 def _would_exceed_family_limit(
@@ -292,7 +344,21 @@ def _select_bounded_records(
             _add_record(record, selected, family_counts)
             break
 
-    for record in records:
+    # Preserve Stage 1 ranking as the authority. Support/accessory status is only
+    # a drop preference when the session actually has to shrink; it is never a
+    # global pre-selection ranking penalty.
+    fill_records = records
+    if len(records) > cap:
+        fill_records = sorted(
+            records,
+            key=lambda item: (
+                1 if item["support_only"] else 0,
+                item["sort_key"][0],
+                item["sort_key"][1],
+            ),
+        )
+
+    for record in fill_records:
         if len(selected) >= cap:
             break
         if record in selected:
@@ -308,10 +374,11 @@ def _select_bounded_records(
             continue
         dropped.setdefault(record["name"], "role_or_readiness_cap")
 
+    selected.sort(key=lambda item: item["sort_key"])
     return selected, dropped
 
 
-def _pressure_state_from_map(weekly_role_map: dict[str, Any]) -> dict[str, Any] | None:
+def _pressure_context_from_map(weekly_role_map: dict[str, Any]) -> dict[str, Any] | None:
     state = weekly_role_map.get("strength_composition_context")
     if not isinstance(state, dict):
         return None
@@ -324,6 +391,49 @@ def _pressure_state_from_map(weekly_role_map: dict[str, Any]) -> dict[str, Any] 
     return dict(state)
 
 
+def _role_days_until_fight(role: dict[str, Any]) -> int | None:
+    for key in ("countdown_offset", "scheduled_countdown_offset"):
+        value = _int_or_none(role.get(key))
+        if value is not None:
+            return max(0, value)
+
+    for key in ("scheduled_countdown_label", "countdown_label"):
+        label = str(role.get(key) or "").strip().upper()
+        if not label.startswith("D-"):
+            continue
+        value = _int_or_none(label[2:])
+        if value is not None:
+            return max(0, value)
+    return None
+
+
+def _role_pressure_state(
+    context: dict[str, Any], *, role: dict[str, Any], week_position: int
+) -> dict[str, Any]:
+    fatigue_applied = week_position == 0
+    fatigue = str(context.get("fatigue") or "low").strip().lower() if fatigue_applied else "low"
+    if fatigue not in _FATIGUE_PRESSURE:
+        fatigue = "low"
+
+    active_cut = bool(context.get("active_weight_cut"))
+    cut_bucket = str(context.get("cut_severity_bucket") or "none").strip().lower()
+    role_d_day = _role_days_until_fight(role)
+    cut_pct = _float_or_none(context.get("weight_cut_pct"))
+    if active_cut and cut_pct is not None and cut_pct > 0.0 and role_d_day is not None:
+        cut_bucket = cut_severity_bucket(compute_cut_severity_score(cut_pct, role_d_day))
+    elif not active_cut:
+        cut_bucket = "none"
+
+    state = _pressure_state_from_components(
+        fatigue=fatigue,
+        cut_bucket=cut_bucket,
+        injury_restricted=bool(context.get("injury_restricted")),
+    )
+    state["fatigue_applied"] = fatigue_applied
+    state["role_days_until_fight"] = role_d_day
+    return state
+
+
 def compose_normal_strength_assignments(
     *, weekly_role_map: dict[str, Any], candidate_pools: dict[str, Any]
 ) -> dict[str, Any]:
@@ -333,20 +443,23 @@ def compose_normal_strength_assignments(
     alternate and never invents an exercise. It only prunes already-selected
     slots using role ceilings, athlete recovery pressure, and existing movement
     tags. Late-fight-owned roles are excluded and keep their dedicated selector.
+
+    Current fatigue is applied only to the first active camp week. Persistent
+    injury state remains active, while weight-cut severity is recalculated from
+    each role's D-day when the cut percentage is available.
     """
     athlete_model = get_planner_athlete_model()
-    pressure_state = (
-        composition_pressure_state(athlete_model)
+    pressure_context = (
+        _composition_context_from_model(athlete_model)
         if athlete_model is not None
-        else _pressure_state_from_map(weekly_role_map)
+        else _pressure_context_from_map(weekly_role_map)
     )
-    if pressure_state is None:
-        pressure_state = composition_pressure_state(None)
+    if pressure_context is None:
+        pressure_context = _composition_context_from_model(None)
 
-    weekly_role_map["strength_composition_context"] = dict(pressure_state)
-    pressure = int(pressure_state["pressure"])
+    weekly_role_map["strength_composition_context"] = dict(pressure_context)
 
-    for week in weekly_role_map.get("weeks", []) or []:
+    for week_position, week in enumerate(weekly_role_map.get("weeks", []) or []):
         if not isinstance(week, dict):
             continue
         phase = str(week.get("phase") or "").strip().upper()
@@ -365,6 +478,13 @@ def compose_normal_strength_assignments(
             strength_index += 1
             if role.get("late_fight_tail_owned"):
                 continue
+
+            pressure_state = _role_pressure_state(
+                pressure_context,
+                role=role,
+                week_position=week_position,
+            )
+            pressure = int(pressure_state["pressure"])
 
             session_index = role.get("strength_session_index") or strength_index
             owned_slots = [
