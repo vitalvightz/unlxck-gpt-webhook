@@ -8,6 +8,7 @@ from fightcamp.late_fight_phase_eligibility import (
 from fightcamp.prescription_resolver import apply_effective_strength_prescriptions
 from fightcamp.session_composition import attach_late_fight_assignments, compose_normal_strength_assignments
 from fightcamp.stage2_payload import _build_late_fight_allowed_exercises_by_day
+from fightcamp.stage2_payload_late_fight import _countdown_weekday_map
 
 
 def _slot(name, priority, quality="anchor_loaded"):
@@ -19,14 +20,22 @@ def _slot(name, priority, quality="anchor_loaded"):
     }
 
 
-def _conditioning_slot(name, priority, system="alactic"):
+def _conditioning_slot(name, priority, system="alactic", late_windows=None):
     return {
         "slot_id": f"conditioning-slot-{priority}-{name}",
         "session_index": 1,
         "priority": priority,
         "purpose": name,
         "role": system,
-        "selected": {"name": name, "role": system},
+        "selected": {
+            "name": name,
+            "role": system,
+            **(
+                {"selection_metadata": {"late_windows": late_windows}}
+                if late_windows is not None
+                else {}
+            ),
+        },
     }
 
 
@@ -180,7 +189,9 @@ def test_d2_alactic_assignment_cannot_reach_gpp_broad_jump_repeats():
     pools = {
         "GPP": {"conditioning_slots": [_conditioning_slot("Broad Jump Repeats", 1)]},
         "SPP": {"conditioning_slots": [_conditioning_slot("SPP Alactic Burst", 1)]},
-        "TAPER": {"conditioning_slots": [_conditioning_slot("Reactive Shuffle Repeats", 1)]},
+        "TAPER": {"conditioning_slots": [
+            _conditioning_slot("Taper D2 Alactic Burst", 1, late_windows=["d4_to_d2"])
+        ]},
     }
     role = {
         "role_key": "alactic_sharpness_day",
@@ -199,11 +210,113 @@ def test_d2_alactic_assignment_cannot_reach_gpp_broad_jump_repeats():
         },
         candidate_pools=pools,
     )
-    selected = assignments["D-2"]
+    attach_late_fight_assignments([role], assignments)
+    selected = role["selected_exercise_assignments"]
     assert len(selected) == 1
     assert selected[0]["source_phase"] == "TAPER"
-    assert selected[0]["name"] == "Reactive Shuffle Repeats"
+    assert selected[0]["name"] == "Taper D2 Alactic Burst"
     assert selected[0]["name"] != "Broad Jump Repeats"
+
+
+def _sharpness_role(d_day, weekday="wednesday"):
+    return {
+        "role_key": "alactic_sharpness_day",
+        "category": "conditioning",
+        "preferred_system": "alactic",
+        "scheduled_countdown_label": f"D-{d_day}",
+        "scheduled_day_hint": weekday,
+        "phase": "TAPER",
+        "late_fight_tail_owned": True,
+    }
+
+
+def _taper_athlete():
+    return {"phase_weeks": {"days": {"GPP": 0, "SPP": 0, "TAPER": 13}}}
+
+
+def test_d4_excludes_reactive_shuffle_before_late_tail_selection():
+    role = _sharpness_role(4)
+    reactive = _conditioning_slot(
+        "Reactive Shuffle Repeats", 1, late_windows=["d13_to_d8", "d7", "d6_to_d5"]
+    )
+
+    _, assignments = _build_late_fight_allowed_exercises_by_day(
+        spec={"visible_session_sequence": [role], "athlete_model": _taper_athlete()},
+        candidate_pools={"TAPER": {"conditioning_slots": [reactive]}},
+    )
+    attach_late_fight_assignments([role], assignments)
+
+    assert assignments["D-4"] == []
+    assert role["selected_exercise_assignments"] == []
+
+
+def test_d6_keeps_reactive_shuffle_eligible():
+    reactive = _conditioning_slot(
+        "Reactive Shuffle Repeats", 1, late_windows=["d13_to_d8", "d7", "d6_to_d5"]
+    )
+    _, assignments = _build_late_fight_allowed_exercises_by_day(
+        spec={"visible_session_sequence": [_sharpness_role(6, "monday")],
+              "athlete_model": _taper_athlete()},
+        candidate_pools={"TAPER": {"conditioning_slots": [reactive]}},
+    )
+
+    assert [item["name"] for item in assignments["D-6"]] == ["Reactive Shuffle Repeats"]
+
+
+def test_late_window_illegal_top_candidate_falls_through_to_next_legal_candidate():
+    slots = [
+        _conditioning_slot("Reactive Shuffle Repeats", 1, late_windows=["d6_to_d5"]),
+        _conditioning_slot("Legal D4 Sharpness", 2, late_windows=["d4_to_d2"]),
+    ]
+    _, assignments = _build_late_fight_allowed_exercises_by_day(
+        spec={"visible_session_sequence": [_sharpness_role(4)],
+              "athlete_model": _taper_athlete()},
+        candidate_pools={"TAPER": {"conditioning_slots": slots}},
+    )
+
+    assert [item["name"] for item in assignments["D-4"]] == ["Legal D4 Sharpness"]
+
+
+def test_wrong_phase_candidate_is_excluded_even_when_late_window_matches():
+    pools = {
+        "SPP": {"conditioning_slots": [
+            _conditioning_slot("Wrong Phase D4 Drill", 1, late_windows=["d4_to_d2"])
+        ]},
+        "TAPER": {"conditioning_slots": [
+            _conditioning_slot("Taper D4 Drill", 2, late_windows=["d4_to_d2"])
+        ]},
+    }
+    _, assignments = _build_late_fight_allowed_exercises_by_day(
+        spec={"visible_session_sequence": [_sharpness_role(4)],
+              "athlete_model": _taper_athlete()},
+        candidate_pools=pools,
+    )
+
+    assert [item["name"] for item in assignments["D-4"]] == ["Taper D4 Drill"]
+
+
+def test_sunday_fight_week_d4_sharpness_assignment_uses_its_actual_window():
+    # 2026-10-04 is Sunday: D-7 Sunday, D-6 Monday and D-4 Wednesday.
+    countdown_map = _countdown_weekday_map("saturday", 29)
+    assert {label: countdown_map[label] for label in ("D-7", "D-6", "D-4")} == {
+        "D-7": "sunday",
+        "D-6": "monday",
+        "D-4": "wednesday",
+    }
+    role = _sharpness_role(4, "wednesday")
+    slots = [
+        _conditioning_slot("Reactive Shuffle Repeats", 1, late_windows=["d6_to_d5"]),
+        _conditioning_slot("Wednesday Sharpness", 2, late_windows=["d4_to_d2"]),
+    ]
+    _, assignments = _build_late_fight_allowed_exercises_by_day(
+        spec={"visible_session_sequence": [role], "athlete_model": {
+            **_taper_athlete(), "fight_date": "2026-10-04",
+        }},
+        candidate_pools={"TAPER": {"conditioning_slots": slots}},
+    )
+
+    assert role["scheduled_day_hint"] == "wednesday"
+    assert [item["name"] for item in assignments["D-4"]] == ["Wednesday Sharpness"]
 
 
 def test_d30_spliced_tail_matches_direct_late_fight_assignment_authority():

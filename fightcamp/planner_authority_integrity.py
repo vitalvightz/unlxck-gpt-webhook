@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .config import DATA_DIR
-from .late_selector_windows import classify_late_selector_window
+from .late_selector_windows import late_window_allowed
 
 
 _CANONICAL_PHASES = ("GPP", "SPP", "TAPER")
@@ -146,7 +146,7 @@ def _bank_indexes() -> dict[str, dict[str, list[dict[str, Any]]]]:
     return indexes
 
 
-def _entries_for_assignment(assignment: dict[str, Any]) -> list[dict[str, Any]]:
+def original_bank_entries(assignment: dict[str, Any]) -> list[dict[str, Any]]:
     """Resolve original bank rows, using source_phase only as a provenance hint.
 
     ``source_phase`` is never allowed to decide scheduled legality, but when the
@@ -287,27 +287,6 @@ def _phase_compatible_entries(
     ]
 
 
-def _late_window_allowed(
-    entries: list[dict[str, Any]],
-    *,
-    offset: int,
-) -> bool:
-    window = classify_late_selector_window(offset)
-    if not window:
-        return True
-    window_key = str(window).strip().lower()
-
-    # ``late_windows`` is an opt-in restriction. If any matching original entry
-    # does not declare one, its phase permission remains sufficient.
-    for item in entries:
-        late_windows = _normalise_tokens(item.get("late_windows"))
-        if not late_windows:
-            return True
-        if "all" in late_windows or window_key in late_windows:
-            return True
-    return False
-
-
 def _iter_scheduled_roles(
     planning_brief: dict[str, Any],
 ) -> Iterable[tuple[str, dict[str, Any]]]:
@@ -358,7 +337,7 @@ def planner_authority_findings(planning_brief: dict[str, Any]) -> list[dict[str,
             if not name:
                 continue
 
-            entries = _entries_for_assignment(assignment)
+            entries = original_bank_entries(assignment)
             if not entries:
                 # Only original-bank-backed physical assignments are in scope.
                 continue
@@ -418,7 +397,7 @@ def planner_authority_findings(planning_brief: dict[str, Any]) -> list[dict[str,
             if (
                 offset is not None
                 and phase_entries
-                and not _late_window_allowed(phase_entries, offset=offset)
+                and not late_window_allowed(phase_entries, offset=offset)
             ):
                 findings.append(
                     {

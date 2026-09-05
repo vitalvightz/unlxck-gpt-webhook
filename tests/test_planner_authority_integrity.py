@@ -152,6 +152,32 @@ def test_review_pipeline_holds_phase_illegal_selected_assignment() -> None:
     )
 
 
+def test_review_pipeline_still_holds_late_window_illegal_selected_assignment() -> None:
+    brief = _brief(
+        name="Reactive Shuffle Repeats",
+        slot_group="conditioning_slots",
+        d_day=4,
+        week_phase="TAPER",
+        category="conditioning",
+        source_phase="TAPER",
+        phase_days={"GPP": 0, "SPP": 0, "TAPER": 13},
+    )
+
+    review = review_stage2_output(
+        planning_brief=brief,
+        final_plan_text="D-4 (Wednesday) — Reactive Shuffle Repeats",
+    )
+    report = review["validator_report"]
+
+    assert report["release_decision"] == "hold"
+    assert report["planner_authority_integrity_hold"] is True
+    assert any(
+        item.get("code") == "selected_exercise_late_window_ineligible"
+        for item in report.get("errors", [])
+        if isinstance(item, dict)
+    )
+
+
 def test_planner_authority_hold_routes_to_planner_regeneration_not_renderer_retry() -> None:
     validator_report = {
         "errors": [
