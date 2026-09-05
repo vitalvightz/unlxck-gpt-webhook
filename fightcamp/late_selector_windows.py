@@ -73,9 +73,9 @@ def _normalise_late_window_tokens(value: object) -> set[str]:
 def late_window_allowed(entries: list[dict[str, Any]], *, offset: int) -> bool:
     """Apply the canonical opt-in ``late_windows`` contract for a D-day.
 
-    An unrestricted matching bank row keeps the exercise eligible. When every
-    matching row declares explicit windows, at least one must contain the
-    scheduled window (or ``all``).
+    Active late-fight selection is opt-in. At least one matching bank row must
+    explicitly contain the scheduled window (or ``all``); missing or empty
+    metadata is not late-fight approval.
     """
     window = classify_late_selector_window(offset)
     if not window:
@@ -83,6 +83,6 @@ def late_window_allowed(entries: list[dict[str, Any]], *, offset: int) -> bool:
 
     for item in entries:
         late_windows = _normalise_late_window_tokens(item.get("late_windows"))
-        if not late_windows or "all" in late_windows or window in late_windows:
+        if "all" in late_windows or window in late_windows:
             return True
     return False

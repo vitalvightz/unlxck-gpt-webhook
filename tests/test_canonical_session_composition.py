@@ -81,14 +81,14 @@ def test_normal_full_strength_composition_preserves_anchor_secondary_and_support
 
 
 def test_late_fight_selector_selects_one_fallback_candidate_for_reduced_touch():
-    slots = [_slot("Barbell Thruster", 1), _slot("High Pull", 2), _slot("Skater Hop", 3)]
+    slots = [_slot("First SPP Touch", 1), _slot("Second SPP Touch", 2)]
     role = {"role_key": "strength_touch_day", "category": "strength",
             "scheduled_countdown_label": "D-10"}
     _, assignments = _build_late_fight_allowed_exercises_by_day(
         spec={"visible_session_sequence": [role], "phase": "SPP"},
         candidate_pools={"SPP": {"strength_slots": slots}},
     )
-    assert [item["name"] for item in assignments["D-10"]] == ["Barbell Thruster"]
+    assert [item["name"] for item in assignments["D-10"]] == ["First SPP Touch"]
 
 
 def test_stage1_phase_days_map_d7_to_spp_before_d5_taper():
@@ -248,6 +248,18 @@ def test_d4_excludes_reactive_shuffle_before_late_tail_selection():
 
     assert assignments["D-4"] == []
     assert role["selected_exercise_assignments"] == []
+
+
+def test_d4_excludes_bank_candidate_with_missing_late_windows():
+    role = _sharpness_role(4)
+    missing_windows = _conditioning_slot("Low Box Jump (Fast Reset)", 1)
+
+    _, assignments = _build_late_fight_allowed_exercises_by_day(
+        spec={"visible_session_sequence": [role], "athlete_model": _taper_athlete()},
+        candidate_pools={"TAPER": {"conditioning_slots": [missing_windows]}},
+    )
+
+    assert assignments["D-4"] == []
 
 
 def test_d6_keeps_reactive_shuffle_eligible():

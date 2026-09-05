@@ -49,6 +49,7 @@ from .conditioning import athlete_facing_system_label, technical_footwork_prescr
 from .fight_day_override import apply_fight_day_override_to_weekly_role_map
 from .role_labels import stamp_weekly_role_map_labels
 from .camp_week_fillers import apply_camp_week_fillers
+from .bank_authority import original_bank_entries
 from .late_camp_role_morph import apply_late_camp_role_morph
 from .prescription_resolver import apply_effective_strength_prescriptions
 from .session_composition import attach_late_fight_assignments, compose_normal_strength_assignments
@@ -1209,8 +1210,6 @@ def _slot_late_window_allowed(
 ) -> bool:
     """Check original bank authority (with serialized metadata as fallback)."""
     selected = _slot_selected_option(slot)
-    from .planner_authority_integrity import original_bank_entries
-
     entries = original_bank_entries(
         {
             "name": _slot_exercise_name(slot),
