@@ -3665,10 +3665,20 @@ def generate_conditioning_block(flags):
 
         return _append_drill(group_key or system, drill, reasons)
 
-    def _select_style_taper_candidate() -> bool:
-        """Give one legal D13-D1 Style Taper drill first refusal on a slot."""
-        if phase.upper() != "TAPER" or total_drills <= 0:
-            return False
+    style_taper_ranked = None
+
+    def _rank_style_taper_candidates():
+        """Preserve phase-authorised support candidates for every dated window.
+
+        The generation-day window constrains the phase winner, not the future
+        dated reservoir. Equipment, injury, sport and restrictions still apply.
+        """
+        nonlocal style_taper_ranked
+        if style_taper_ranked is not None:
+            return style_taper_ranked
+        style_taper_ranked = []
+        if phase not in {"SPP", "TAPER"}:
+            return style_taper_ranked
         try:
             bank = _load_bank(
                 DATA_DIR / "style_taper_conditioning.json",
@@ -3676,7 +3686,7 @@ def generate_conditioning_block(flags):
                 enforce_conditioning_systems=True,
             )
         except Exception:
-            return False
+            return style_taper_ranked
 
         ranked: list[tuple[tuple[int, int, int], int, dict, str, dict]] = []
         raw_tactical_styles = style or style_names
@@ -3688,6 +3698,8 @@ def generate_conditioning_block(flags):
             if (token := str(raw).strip().lower().replace(" ", "_"))
         }
         for bank_index, drill in enumerate(bank):
+            if phase not in drill.get("phases", []):
+                continue
             if drill.get("placement", "conditioning").lower() != "conditioning":
                 continue
             system = _cached_system(drill, "style_taper_conditioning.json")
@@ -3707,8 +3719,12 @@ def generate_conditioning_block(flags):
                 continue
             if _cached_injury_decision(drill).action == "exclude":
                 continue
-            late_eval = _cached_late_eval(drill, system, "style_taper_conditioning.json")
-            if late_eval["blocked"]:
+            if not (
+                drill.get("support_only") is True
+                and drill.get("meaningful_stress") is False
+                and drill.get("lactate_load") in {"low", "none"}
+                and drill.get("late_windows")
+            ):
                 continue
 
             style_hits = len(tactical_styles.intersection(tags))
@@ -3725,15 +3741,23 @@ def generate_conditioning_block(flags):
                 "load_adjustments": 0,
                 "equipment_boost": 0,
                 "penalties": 0,
-                "reason_codes": ["style_taper_priority", *late_eval["reason_codes"]],
-                "penalty_codes": list(late_eval.get("penalty_codes", [])),
-                "late_window_adjustment": late_eval["adjustment"],
+                "reason_codes": ["style_taper_priority"],
+                "penalty_codes": [],
+                "late_window_adjustment": 0,
                 "final_score": float(sum(relevance)),
             }
+            drill = {**drill, "bank_order": bank_index}
             ranked.append((relevance, bank_index, drill, system, reasons))
 
         ranked.sort(key=lambda item: (-item[0][0], -item[0][1], -item[0][2], item[1]))
-        for _relevance, _bank_index, drill, system, reasons in ranked:
+        style_taper_ranked = ranked
+        return ranked
+
+    def _select_style_taper_candidate() -> bool:
+        """Keep the existing phase winner policy; dated roles select separately."""
+        if phase != "TAPER" or total_drills <= 0:
+            return False
+        for _relevance, _bank_index, drill, system, reasons in _rank_style_taper_candidates():
             if _try_append_conditioning_drill(system, drill, reasons, source="style_taper"):
                 selected_counts[system] += 1
                 return True
@@ -4580,6 +4604,18 @@ def generate_conditioning_block(flags):
             grouped_drills,
             reason_lookup,
         )
+        # Extend the existing reservoir, outside its ordinary top-five cap.
+        # Window-specific support must survive even when no phase slot selects
+        # that system. Every record keeps its own original bank metadata.
+        for _relevance, _bank_index, drill, system, reasons in _rank_style_taper_candidates():
+            entries = reservoir.setdefault(system, [])
+            entries[:] = [entry for entry in entries if entry["drill"].get("name") != drill["name"]]
+            entries.append({
+                "drill": drill.copy(), "score": reasons["final_score"],
+                "reasons": reasons.copy(), "explanation": _conditioning_explanation(reasons),
+                "score_evidence": build_score_evidence(reasons=reasons),
+                "metadata": normalize_selection_metadata(drill),
+            })
         total_candidates = sum(len(v) for v in reservoir.values())
         max_candidates = 400
         if total_candidates > max_candidates:

@@ -59,6 +59,7 @@ def _bank_indexes() -> dict[str, dict[str, list[dict[str, Any]]]]:
         "conditioning_slots": [
             DATA_DIR / "conditioning_bank.json",
             DATA_DIR / "style_conditioning_bank.json",
+            DATA_DIR / "style_taper_conditioning.json",
         ],
     }
     coordination_dir = DATA_DIR / "coordination"

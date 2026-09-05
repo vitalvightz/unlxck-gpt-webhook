@@ -429,7 +429,7 @@ def test_all_late_sharpness_roles_share_safe_style_taper_authority(role_key):
     assert [item["name"] for item in assignments["D-7"]] == ["Range Gate-Score-Exit"]
 
 
-def test_late_selector_uses_window_legal_stage1_alternate_on_d2():
+def test_late_selector_does_not_masquerade_aerobic_alternate_as_alactic_on_d2():
     role = {
         "role_key": "alactic_sharpness_day", "category": "conditioning",
         "preferred_system": "alactic", "late_fight_tail_owned": True,
@@ -445,6 +445,7 @@ def test_late_selector_uses_window_legal_stage1_alternate_on_d2():
     })
     slot["alternates"] = [{
         "name": "Long-Range Rhythm Shadow", "source": "style_taper",
+        "system": "aerobic",
         "selection_metadata": {
             "late_windows": ["d4_to_d2"], "support_only": True,
             "meaningful_stress": False, "lactate_load": "low",
@@ -456,7 +457,8 @@ def test_late_selector_uses_window_legal_stage1_alternate_on_d2():
         candidate_pools={"TAPER": {"conditioning_slots": [slot]}},
     )
 
-    assert [item["name"] for item in assignments["D-2"]] == ["Long-Range Rhythm Shadow"]
+    assert assignments["D-2"] == []
+    assert slot["alternates"][0]["system"] == "aerobic"
 
 
 @pytest.mark.parametrize(

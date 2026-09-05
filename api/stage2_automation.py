@@ -837,6 +837,17 @@ class OpenAIStage2Automator:
         log_context: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         package = build_stage2_package(stage1_result=stage1_result)
+        if package.get("planner_preflight_findings"):
+            report = apply_stage2_release_policy({
+                "errors": package["planner_preflight_findings"],
+                "is_valid": False,
+                "planner_preflight_failed": True,
+            })
+            return _reviewed_result(
+                stage1_result, validator_report=report,
+                draft_plan_text=str(package.get("draft_plan_text") or ""),
+                final_plan_text="", attempt_count=0,
+            )
         goal_errors = validate_goal_preservation(package["planning_brief"])
         draft_plan_text = str(package.get("draft_plan_text") or "")
         handoff_text = str(package["handoff_text"])

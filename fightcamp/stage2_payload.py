@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import re
+from copy import deepcopy
 from typing import Any
 
 from . import stage2_planning_brief as stage2_planning_brief_module
@@ -1111,14 +1112,21 @@ def _slot_is_style_taper_neural_primer(
     metadata = selected.get("selection_metadata") if isinstance(selected, dict) else {}
     return bool(
         role.get("late_fight_tail_owned")
-        and str(source_phase or role.get("phase") or "").upper() == "TAPER"
-        and str(slot.get("role") or "").strip().lower() == "alactic"
+        and str(source_phase or role.get("phase") or "").upper() in {"SPP", "TAPER"}
+        and _candidate_system(slot) == "alactic"
         and selected.get("source") == "style_taper"
         and isinstance(metadata, dict)
         and metadata.get("support_only") is True
         and metadata.get("meaningful_stress") is False
-        and str(metadata.get("lactate_load") or "").lower() == "low"
+        and str(metadata.get("lactate_load") or "").lower() in {"low", "none"}
     )
+
+
+def _candidate_system(slot: dict[str, Any]) -> str:
+    selected = _slot_selected_option(slot)
+    metadata = selected.get("selection_metadata") or {}
+    system = str(selected.get("system") or selected.get("role") or metadata.get("system") or slot.get("role") or "").lower()
+    return "alactic" if system in {"atp-pcr", "atp_pcr"} else system
 
 
 def _slot_matches_late_fight_role(
@@ -1126,7 +1134,7 @@ def _slot_matches_late_fight_role(
 ) -> bool:
     role_key = str(role.get("role_key") or "").strip()
     preferred_system = str(role.get("preferred_system") or "").strip().lower()
-    slot_role = str(slot.get("role") or "").strip().lower()
+    slot_role = _candidate_system(slot)
     text = _slot_text(slot)
 
     if slot_group == "rehab_slots":
@@ -1135,6 +1143,9 @@ def _slot_matches_late_fight_role(
         if role_key in {"strength_touch_day", "neural_primer_day", "alactic_sharpness_day"}:
             if _slot_is_style_taper_neural_primer(slot, role, source_phase=source_phase):
                 return True
+            if role_key in {"strength_touch_day", "neural_primer_day"}:
+                return False
+            return slot_role == "alactic" and _slot_selected_option(slot).get("source") != "style_taper"
         if preferred_system:
             return slot_role == preferred_system
         return role_key in {"alactic_sharpness_day", "light_fight_pace_touch_day", "technical_touch_day"}
@@ -1169,7 +1180,10 @@ def _candidate_slots_for_role(candidate_pools: dict[str, dict], role: dict[str, 
         if not isinstance(pool, dict):
             continue
         for slot_group in ("strength_slots", "conditioning_slots", "rehab_slots"):
-            for slot in pool.get(slot_group, []) or []:
+            slots = list(pool.get(slot_group, []) or [])
+            if slot_group == "conditioning_slots":
+                slots.extend(pool.get("late_tail_candidates", []) or [])
+            for slot in slots:
                 if not isinstance(slot, dict) or not _slot_exercise_name(slot):
                     continue
                 if _slot_matches_late_fight_role(slot, slot_group, role, source_phase=str(phase)):
@@ -1182,9 +1196,9 @@ def _candidate_slots_for_role(candidate_pools: dict[str, dict], role: dict[str, 
                     if not isinstance(alternate, dict) or not alternate.get("name"):
                         continue
                     alternate_slot = {
-                        **slot,
                         "slot_id": f"{slot.get('slot_id') or 'slot'}:alternate:{index}",
                         "selected": alternate,
+                        "role": alternate.get("system") or alternate.get("role") or (alternate.get("selection_metadata") or {}).get("system", ""),
                         "alternates": [],
                     }
                     if _slot_matches_late_fight_role(
@@ -1192,6 +1206,22 @@ def _candidate_slots_for_role(candidate_pools: dict[str, dict], role: dict[str, 
                     ):
                         matched.append((str(phase), slot_group, alternate_slot))
     return matched
+
+
+def _slot_sport_allowed(slot: dict[str, Any], spec: dict[str, Any]) -> bool:
+    from .planner_context import get_planner_athlete_model
+    from .style_taper_governance import SPORT_TAGS
+    athlete = get_planner_athlete_model() or spec.get("athlete_model") or {}
+    sport = str(athlete.get("sport") or athlete.get("fight_format") or "").lower()
+    if not sport:
+        return True  # Legacy contextless tooling; production supplies the athlete.
+    option = _slot_selected_option(slot)
+    metadata = option.get("selection_metadata") or {}
+    tags = set(metadata.get("tags") or option.get("movement_patterns") or [])
+    explicit_sports = tags & SPORT_TAGS
+    return not explicit_sports or sport in explicit_sports or (
+        explicit_sports == {"grappling"} and sport in {"mma", "wrestling", "bjj"}
+    )
 
 
 # Mirror of the Stage 2 validator's D-1 safety rule
@@ -1258,7 +1288,8 @@ def _slot_late_window_allowed(
         }
     )
     if entries:
-        return late_window_allowed(entries, offset=offset)
+        entries = [entry for entry in entries if phase in entry.get("phases", [])]
+        return bool(entries) and late_window_allowed(entries, offset=offset)
 
     metadata = selected.get("selection_metadata")
     if not isinstance(metadata, dict):
@@ -1289,6 +1320,8 @@ def _build_late_fight_allowed_exercises_by_day(
 
         explicit_matches: list[tuple[str, str, dict[str, Any]]] = []
         fallback_matches: list[tuple[str, str, dict[str, Any]]] = []
+        diagnostics = {"phase_window_rejected": 0, "sport_rejected": 0, "day_safety_rejected": 0}
+        role["late_assignment_diagnostics"] = diagnostics
         for phase, slot_group, slot in _candidate_slots_for_role(candidate_pools, role):
             # Bank late-window permission is a hard eligibility gate. Apply it
             # before explicit/fallback ranking so the next legal candidate can
@@ -1296,11 +1329,16 @@ def _build_late_fight_allowed_exercises_by_day(
             if scheduled_offset >= 0 and not _slot_late_window_allowed(
                 phase, slot_group, slot, offset=scheduled_offset
             ):
+                diagnostics["phase_window_rejected"] += 1
+                continue
+            if not _slot_sport_allowed(slot, spec):
+                diagnostics["sport_rejected"] += 1
                 continue
             # Drop day-unsafe candidates (e.g. loaded work on D-1) before
             # selection so a safe explicit match or fallback can still be used
             # instead of leaving the day empty.
             if _late_fight_assignment_is_unsafe(day_label, _slot_exercise_name(slot)):
+                diagnostics["day_safety_rejected"] += 1
                 continue
             slot_id = str(slot.get("slot_id") or f"{phase}:{slot_group}:{_slot_exercise_name(slot)}")
             labels = _slot_countdown_labels(slot)
@@ -1308,7 +1346,7 @@ def _build_late_fight_allowed_exercises_by_day(
                 if day_label in labels:
                     explicit_matches.append((phase, slot_group, slot))
                 continue
-            if slot_id not in consumed_slot_ids:
+            if slot_id not in consumed_slot_ids or _slot_selected_option(slot).get("source") == "style_taper":
                 fallback_matches.append((phase, slot_group, slot))
 
         selected_matches = explicit_matches
@@ -1321,10 +1359,16 @@ def _build_late_fight_allowed_exercises_by_day(
             selected_matches = [
                 match
                 for match in fallback_matches
-                if match[0].upper() == "TAPER"
-                and match[1] == "conditioning_slots"
+                if match[1] == "conditioning_slots"
                 and _slot_is_style_taper_neural_primer(match[2], role, source_phase=match[0])
-            ][:1]
+            ]
+            selected_matches = sorted(selected_matches, key=lambda match: (
+                -float((_slot_selected_option(match[2]).get("relevance") or {}).get("style_hits", 0)),
+                -float((_slot_selected_option(match[2]).get("relevance") or {}).get("goal_hits", 0))
+                -float((_slot_selected_option(match[2]).get("relevance") or {}).get("weakness_hits", 0)),
+                -float(_slot_selected_option(match[2]).get("score", 0)),
+                _slot_selected_option(match[2]).get("bank_order") or 10000,
+            ))[:1]
         if not selected_matches:
             selected_matches = fallback_matches[:1]
         for phase, slot_group, slot in selected_matches:
@@ -1879,7 +1923,33 @@ def _serialize_conditioning_option(
         option["technical_footwork_prescription"]["side_instruction"] = prescription_fields[
             "side_instruction"
         ]
-    return _with_selection_evidence(option, drill, score_evidence)
+    option = _with_selection_evidence(option, drill, score_evidence)
+    option["system"] = drill.get("system") or system
+    option["bank_order"] = drill.get("bank_order")
+    # Retain original phase, sport, style and safety authority on each option.
+    option["selection_metadata"] = {**deepcopy(drill), **option["selection_metadata"]}
+    return option
+
+
+def _build_late_tail_candidates(phase_block: dict | None, phase: str, *, stance=None) -> list[dict]:
+    """Serialize the existing qualified reservoir without phase-slot truncation."""
+    slots = []
+    for system, candidates in ((phase_block or {}).get("candidate_reservoir") or {}).items():
+        if system not in {"alactic", "aerobic"}:
+            continue
+        for candidate in candidates:
+            drill = candidate.get("drill") or {}
+            if not str(drill.get("_schema_source") or "").endswith("style_taper_conditioning.json"):
+                continue
+            option = _serialize_conditioning_option(
+                drill, system, candidate.get("explanation", ""),
+                score_evidence=candidate.get("score_evidence"), stance=stance,
+            )
+            option["relevance"] = {key: (candidate.get("reasons") or {}).get(key, 0)
+                                   for key in ("style_hits", "goal_hits", "weakness_hits")}
+            slots.append({"slot_id": f"{phase.lower()}_late_{slugify(drill['name'])}",
+                          "role": option["system"], "selected": option, "alternates": []})
+    return slots
 
 
 def _serialize_rehab_option(
@@ -2309,6 +2379,8 @@ def build_stage2_payload(
         if phase_weeks.get(phase, 0) <= 0 and phase_weeks.get("days", {}).get(phase, 0) < 1:
             continue
         candidate_pools[phase] = {
+            "late_tail_candidates": _build_late_tail_candidates(
+                conditioning_blocks.get(phase), phase, stance=athlete_model.get("stance")),
             "strength_slots": _build_strength_slots(strength_blocks.get(phase), phase),
             "conditioning_slots": _build_conditioning_slots(
                 conditioning_blocks.get(phase),

@@ -37,6 +37,30 @@ def _bank_by_name():
     return {item["name"]: item for item in _load_bank()}
 
 
+@pytest.mark.parametrize("name", [
+    "Pocket Burst-Reset", "Pressure Lane Shadow", "Cover-Return-Exit",
+    "Visual Counter Shadow", "Range Gate-Score-Exit", "Long-Range Rhythm Shadow",
+    "Single-Kick Recoil Primer", "Kick Timing Shadow Cue", "Pummel-Frame-Exit Flow",
+    "Position-Attack Entry-Release", "Hip-Heist-Re-square", "Position Touch-Reset",
+    "Level-Change-Entry-Recover", "Circle-Re-shot Cue",
+])
+def test_early_window_support_has_explicit_spp_and_taper_authority(name):
+    item = _bank_by_name()[name]
+    assert item["phases"] == ["SPP", "TAPER"]
+    assert item["support_only"] is True and item["meaningful_stress"] is False
+    assert item["lactate_load"] in {"low", "none"}
+    assert item["impact_cost"] in {"low", "none"}
+    assert item["movement_cost"] in {"low", "none"}
+    assert item["cost_class"] == "low"
+    assert set(item["late_windows"]) & {D13_TO_D8, D7, D6_TO_D5}
+    from fightcamp.stage2_payload import _slot_late_window_allowed, _serialize_conditioning_option
+    slot = {"selected": _serialize_conditioning_option(item, item["system"], "test")}
+    day = 13 if D13_TO_D8 in item["late_windows"] else 7 if D7 in item["late_windows"] else 5
+    for phase in ("SPP", "TAPER"):
+        assert _slot_late_window_allowed(phase, "conditioning_slots", slot, offset=day)
+    assert not _slot_late_window_allowed("GPP", "conditioning_slots", slot, offset=day)
+
+
 def _valid_alactic_probe(window: str) -> dict:
     rounds = min(2, ALACTIC_MAX_ROUNDS_BY_WINDOW[window])
     work_sec = min(5, ALACTIC_MAX_WORK_SEC_BY_WINDOW[window])

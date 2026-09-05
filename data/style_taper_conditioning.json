@@ -6,6 +6,7 @@
       "focus_mitts"
     ],
     "phases": [
+      "SPP",
       "TAPER"
     ],
     "system": "alactic",
@@ -108,6 +109,7 @@
       "bodyweight"
     ],
     "phases": [
+      "SPP",
       "TAPER"
     ],
     "system": "aerobic",
@@ -158,6 +160,7 @@
       "partner"
     ],
     "phases": [
+      "SPP",
       "TAPER"
     ],
     "system": "alactic",
@@ -207,6 +210,7 @@
       "bodyweight"
     ],
     "phases": [
+      "SPP",
       "TAPER"
     ],
     "system": "aerobic",
@@ -256,6 +260,7 @@
       "partner"
     ],
     "phases": [
+      "SPP",
       "TAPER"
     ],
     "system": "alactic",
@@ -307,6 +312,7 @@
       "bodyweight"
     ],
     "phases": [
+      "SPP",
       "TAPER"
     ],
     "system": "aerobic",
@@ -352,6 +358,7 @@
       "thai_pad"
     ],
     "phases": [
+      "SPP",
       "TAPER"
     ],
     "system": "alactic",
@@ -401,6 +408,7 @@
       "bodyweight"
     ],
     "phases": [
+      "SPP",
       "TAPER"
     ],
     "system": "aerobic",
@@ -448,6 +456,7 @@
       "partner"
     ],
     "phases": [
+      "SPP",
       "TAPER"
     ],
     "system": "alactic",
@@ -549,6 +558,7 @@
       "mat"
     ],
     "phases": [
+      "SPP",
       "TAPER"
     ],
     "system": "alactic",
@@ -645,6 +655,7 @@
       "mat"
     ],
     "phases": [
+      "SPP",
       "TAPER"
     ],
     "system": "alactic",
@@ -746,6 +757,7 @@
       "mat"
     ],
     "phases": [
+      "SPP",
       "TAPER"
     ],
     "system": "alactic",
@@ -843,6 +855,7 @@
       "mat"
     ],
     "phases": [
+      "SPP",
       "TAPER"
     ],
     "system": "alactic",
@@ -892,6 +905,7 @@
       "partner"
     ],
     "phases": [
+      "SPP",
       "TAPER"
     ],
     "system": "alactic",
@@ -974,6 +988,52 @@
     "support_only": true,
     "meaningful_stress": false,
     "execution_intent": "relaxed",
+    "contact_level": "none",
+    "late_windows": [
+      "d4_to_d2",
+      "d1"
+    ]
+  },
+  {
+    "name": "Standing Stance-Set Cue",
+    "description": "From a relaxed standing stance, respond to a visual or self cue with one small stance adjustment and freeze in balance. No strikes, jumps, level changes or contact; fully relax between cues.",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "neural stance cue",
+    "duration": "2x3s with 120s rest",
+    "intensity": "relaxed technical crisp",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "wrestling",
+      "bjj",
+      "coordination",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "cns_freshness",
+      "counter_striker"
+    ],
+    "work_sec": 3,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.0,
+    "rpe_max": 3,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
     "contact_level": "none",
     "late_windows": [
       "d4_to_d2",

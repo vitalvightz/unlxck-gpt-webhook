@@ -425,6 +425,7 @@ def _build_review_summary(validator_report: dict, status: str) -> tuple[str, lis
 
 
 def build_stage2_package(*, stage1_result: dict) -> dict:
+    from .planner_authority_integrity import late_physical_planner_preflight
     stage1_result = _require_dict(stage1_result, name="stage1_result")
     planning_brief = _require_dict(_require_stage1_field(stage1_result, "planning_brief"), name="planning_brief")
     stage2_payload = _require_dict(_require_stage1_field(stage1_result, "stage2_payload"), name="stage2_payload")
@@ -433,9 +434,11 @@ def build_stage2_package(*, stage1_result: dict) -> dict:
     phase_count = len((planning_brief.get("phase_strategy") or {}).keys())
     restriction_count = len((planning_brief.get("restrictions") or []))
     slot_count = _count_candidate_slots(planning_brief)
+    preflight_findings = late_physical_planner_preflight(planning_brief)
 
     return {
-        "status": _STATUS_READY,
+        "status": "REVIEW_REQUIRED" if preflight_findings else _STATUS_READY,
+        "planner_preflight_findings": preflight_findings,
         "planning_brief": planning_brief,
         "stage2_payload": stage2_payload,
         "handoff_text": handoff_text,

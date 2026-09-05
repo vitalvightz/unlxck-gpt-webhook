@@ -244,6 +244,9 @@ def planner_authority_findings(planning_brief: dict[str, Any]) -> list[dict[str,
                         or ""
                     ).strip(),
                     "role_key": role.get("role_key"),
+                    "scheduled_phase": _scheduled_phase(role, athlete_model=athlete_model, week_phase=week_phase),
+                    "attempted_slot_groups": ["strength_slots", "conditioning_slots"],
+                    "rejection_summary": role.get("late_assignment_diagnostics") or {},
                 }
             )
             continue
@@ -369,6 +372,33 @@ def planner_authority_findings(planning_brief: dict[str, Any]) -> list[dict[str,
                 )
 
     return findings
+
+
+def late_physical_planner_preflight(planning_brief: dict[str, Any]) -> list[dict[str, Any]]:
+    """Fail before model rendering using the same original-bank authority gate."""
+    from .goal_preservation import _effective_map
+
+    weeks = []
+    for week in _effective_map(planning_brief).get("weeks", []) or []:
+        roles = []
+        for role in week.get("session_roles", []) or []:
+            offset = _role_countdown_offset(role)
+            if (
+                (not role.get("late_fight_tail_owned") and not (offset is not None and 1 <= offset <= 13))
+                or role.get("category") not in {"strength", "conditioning"}
+                or role.get("nonphysical")
+                or role.get("preferred_pool") == "rehab_slots_or_recovery_only"
+                or role.get("role_key") in {"hard_sparring_day", "light_combat_day"}
+            ):
+                continue
+            assignments = role.get("selected_exercise_assignments")
+            valid_members = [item for item in assignments or []
+                             if isinstance(item, dict) and item.get("name")
+                             and original_bank_entries(item)] if isinstance(assignments, list) else []
+            roles.append({**role, "late_fight_tail_owned": True,
+                          "selected_exercise_assignments": valid_members})
+        weeks.append({**week, "session_roles": roles})
+    return planner_authority_findings({**planning_brief, "weekly_role_map": {"weeks": weeks}})
 
 
 def _authority_findings_from_report(report: dict[str, Any]) -> list[dict[str, Any]]:
