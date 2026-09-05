@@ -168,8 +168,29 @@ def _slot_selected_item(slot: dict[str, Any]) -> dict[str, Any]:
 
 
 def _composition_families(slot: dict[str, Any]) -> tuple[set[str], dict[str, Any]]:
-    profile = classify_strength_item(_slot_selected_item(slot))
-    categories = set(profile.get("base_categories") or [])
+    """Map existing Stage 1 quality metadata into broad session families.
+
+    Stage 1 already serializes ``base_categories`` and ``support_only`` from the
+    exercise classifier. Those fields are preferred as authoritative evidence;
+    reclassification is only a fallback/union for older or hand-built slots.
+    """
+    item = _slot_selected_item(slot)
+    profile = classify_strength_item(item)
+    categories = {
+        str(value).strip()
+        for value in [
+            *(slot.get("base_categories") or []),
+            *(item.get("base_categories") or []),
+            *(profile.get("base_categories") or []),
+        ]
+        if str(value).strip()
+    }
+    support_only = bool(
+        slot.get("support_only")
+        or item.get("support_only")
+        or profile.get("support_only")
+    )
+
     families: set[str] = set()
     if "lower_body_loaded" in categories:
         families.add("lower_strength")
@@ -181,9 +202,13 @@ def _composition_families(slot: dict[str, Any]) -> tuple[set[str], dict[str, Any
         families.add("rotational_power")
     if "upper_body_ballistic" in categories:
         families.add("upper_power")
-    if profile.get("support_only"):
+    if support_only:
         families.add("support")
-    return families, profile
+
+    effective_profile = dict(profile)
+    effective_profile["base_categories"] = sorted(categories)
+    effective_profile["support_only"] = support_only
+    return families, effective_profile
 
 
 def _slot_priority(slot: dict[str, Any], original_index: int) -> tuple[int, int]:
