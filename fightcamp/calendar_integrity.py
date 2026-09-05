@@ -81,6 +81,12 @@ def _build_events(
 
 
 def _is_immutable_role(ref: _RoleRef) -> bool:
+    if (
+        str(ref.role.get("role_key") or "").strip().lower() == "light_combat_day"
+        and bool(ref.role.get("coach_owned"))
+        and bool(ref.role.get("declared_day_locked"))
+    ):
+        return True
     if ref.d_day <= 13 or ref.role.get("late_fight_tail_owned"):
         return True
     governance = ref.role.get("governance")
