@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from contextvars import ContextVar
 from functools import wraps
 from typing import Any
 
+from .planner_context import planner_athlete_model_context
+
 
 _CANONICAL_PHASES = {"GPP", "SPP", "TAPER"}
-_PHASE_CONTEXT: ContextVar[dict[str, Any] | None] = ContextVar(
-    "late_fight_phase_eligibility_context",
-    default=None,
-)
+# Backward-compatible alias for focused tests/debug tooling that may still refer
+# to the old late-fight-specific context name.
+_PHASE_CONTEXT = planner_athlete_model_context
 
 
 def _canonical_phase(value: object) -> str:
@@ -57,8 +57,6 @@ def _stage1_phase_for_offset(athlete_model: dict[str, Any], offset: int) -> str:
         if remaining <= days:
             return phase
         remaining -= days
-
-    # A dated role outside the declared Stage 1 allocation is not phase-legal.
     return ""
 
 
@@ -68,23 +66,12 @@ def scheduled_phase_for_role(
     athlete_model: dict[str, Any] | None = None,
     spec_phase: object = None,
 ) -> str:
-    """Return the Stage 1 phase that owns this scheduled late-fight role.
-
-    For dated roles, Stage 1's dynamic ``phase_weeks.days`` allocation is the
-    authority. Downstream role phase stamps must not override that mapping.
-    Direct callers without an athlete model may provide ``spec_phase`` as an
-    explicit compatibility fallback.
-    """
+    """Return the Stage 1 phase that owns this scheduled late-fight role."""
     offset = _countdown_offset(role)
     if offset is not None and isinstance(athlete_model, dict):
-        # Production is fail-closed: once a dated role has Stage 1 context,
-        # unresolved phase authority must not fall through to stale role/spec
-        # metadata and must never reopen all candidate pools.
         return _stage1_phase_for_offset(athlete_model, offset)
-
     if offset is not None:
         return _canonical_phase(spec_phase)
-
     if phase := _canonical_phase(spec_phase):
         return phase
     for key in ("camp_phase", "scheduled_phase", "phase"):
@@ -108,11 +95,10 @@ def phase_scoped_candidate_pools(
 def install() -> None:
     """Make late-tail exercise selection obey Stage 1 phase eligibility.
 
-    The legacy selector iterates every candidate pool for every late role. This
-    runtime policy keeps the existing role matcher/ranking but scopes its input
-    to the phase that owns each scheduled D-day. A GPP-only exercise therefore
-    cannot be transplanted into an SPP/TAPER late role simply because its name
-    semantically matches the role.
+    The build wrapper also exposes the same athlete model through a shared
+    ContextVar while deterministic planning is executing. Normal strength
+    composition consumes that context to apply fatigue/cut/injury pressure
+    without duplicating athlete-state derivation or changing Stage 2 authority.
     """
     from . import stage2_payload as payload
 
@@ -124,11 +110,13 @@ def install() -> None:
 
     @wraps(original_build)
     def build_planning_brief(*, athlete_model: dict, **kwargs):
-        token = _PHASE_CONTEXT.set(athlete_model if isinstance(athlete_model, dict) else None)
+        token = planner_athlete_model_context.set(
+            athlete_model if isinstance(athlete_model, dict) else None
+        )
         try:
             return original_build(athlete_model=athlete_model, **kwargs)
         finally:
-            _PHASE_CONTEXT.reset(token)
+            planner_athlete_model_context.reset(token)
 
     @wraps(original_allocate)
     def _build_late_fight_allowed_exercises_by_day(
@@ -141,16 +129,11 @@ def install() -> None:
         if not roles:
             return original_allocate(spec=spec, candidate_pools=candidate_pools)
 
-        athlete_model = _PHASE_CONTEXT.get()
+        athlete_model = planner_athlete_model_context.get()
         if athlete_model is None and isinstance(spec.get("athlete_model"), dict):
-            # Explicit direct-call test/compatibility path. Production receives
-            # the same model through build_planning_brief's context above.
             athlete_model = spec["athlete_model"]
         spec_phase = spec.get("phase")
 
-        # Preserve original role order while grouping by authoritative phase so
-        # the allocator still shares its consumed-slot ledger across all roles
-        # inside the same Stage 1 phase.
         grouped: list[tuple[str, list[dict[str, Any]]]] = []
         group_index: dict[str, int] = {}
         for role in roles:
