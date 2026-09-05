@@ -6,18 +6,23 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .config import DATA_DIR
-from .late_fight_phase_eligibility import scheduled_phase_for_role
 from .late_selector_windows import classify_late_selector_window
 
 
+_CANONICAL_PHASES = ("GPP", "SPP", "TAPER")
+
 PLANNER_AUTHORITY_BLOCKER_CODES = frozenset(
     {
+        "selected_exercise_phase_unresolved",
         "selected_exercise_phase_ineligible",
         "selected_exercise_late_window_ineligible",
         "selected_loaded_exercise_forbidden",
     }
 )
 
+# Clearly external-loaded strength equipment. This intentionally does not include
+# bands: late-camp support work may legitimately use light band resistance even
+# when loaded lifting is disabled.
 _LOADED_STRENGTH_EQUIPMENT = frozenset(
     {
         "barbell",
@@ -34,6 +39,15 @@ _LOADED_STRENGTH_EQUIPMENT = frozenset(
         "atlas stone",
         "weighted_vest",
         "weighted vest",
+        "cable",
+        "cables",
+        "machine",
+        "plate",
+        "plates",
+        "weight_plate",
+        "weight plate",
+        "smith_machine",
+        "smith machine",
     }
 )
 
@@ -44,7 +58,7 @@ def _normalise_name(value: object) -> str:
 
 def _normalise_phase(value: object) -> str:
     phase = str(value or "").strip().upper()
-    return phase if phase in {"GPP", "SPP", "TAPER"} else ""
+    return phase if phase in _CANONICAL_PHASES else ""
 
 
 def _normalise_phase_list(value: object) -> set[str]:
@@ -54,22 +68,30 @@ def _normalise_phase_list(value: object) -> set[str]:
         values = list(value)
     else:
         values = []
-    return {phase for phase in (_normalise_phase(item) for item in values) if phase}
+    return {
+        phase
+        for phase in (_normalise_phase(item) for item in values)
+        if phase
+    }
 
 
 def _normalise_tokens(value: object) -> set[str]:
+    """Normalise scalar/list metadata into comma-safe lower-case tokens."""
     if value is None:
         return set()
-    if isinstance(value, str):
-        raw = value.replace(",", " ").split()
-    elif isinstance(value, (list, tuple, set)):
-        raw = [str(item) for item in value]
-    else:
-        raw = [str(value)]
+
+    values = list(value) if isinstance(value, (list, tuple, set)) else [value]
+    raw: list[str] = []
+    for item in values:
+        text = str(item or "").strip()
+        if not text:
+            continue
+        raw.extend(text.replace(",", " ").split())
+
     return {
-        " ".join(str(item).strip().lower().replace("-", "_").split())
-        for item in raw
-        if str(item).strip()
+        " ".join(token.strip().lower().replace("-", "_").split())
+        for token in raw
+        if token.strip()
     }
 
 
@@ -80,8 +102,10 @@ def _iter_training_items(value: object) -> Iterable[dict[str, Any]]:
         return
     if not isinstance(value, dict):
         return
+
     if str(value.get("name") or "").strip() and value.get("phases") is not None:
         yield value
+
     for nested in value.values():
         if isinstance(nested, (dict, list)):
             yield from _iter_training_items(nested)
@@ -100,7 +124,6 @@ def _bank_indexes() -> dict[str, dict[str, list[dict[str, Any]]]]:
         "strength_slots": {},
         "conditioning_slots": {},
     }
-
     sources: dict[str, list[Path]] = {
         "strength_slots": [DATA_DIR / "exercise_bank.json"],
         "conditioning_slots": [
@@ -108,6 +131,7 @@ def _bank_indexes() -> dict[str, dict[str, list[dict[str, Any]]]]:
             DATA_DIR / "style_conditioning_bank.json",
         ],
     }
+
     coordination_dir = DATA_DIR / "coordination"
     if coordination_dir.exists():
         sources["conditioning_slots"].extend(sorted(coordination_dir.rglob("*.json")))
@@ -126,7 +150,12 @@ def _entries_for_assignment(assignment: dict[str, Any]) -> list[dict[str, Any]]:
     slot_group = str(assignment.get("slot_group") or "").strip()
     if slot_group not in _bank_indexes():
         return []
-    return list(_bank_indexes()[slot_group].get(_normalise_name(assignment.get("name")), []))
+    return list(
+        _bank_indexes()[slot_group].get(
+            _normalise_name(assignment.get("name")),
+            [],
+        )
+    )
 
 
 def _athlete_model(planning_brief: dict[str, Any]) -> dict[str, Any]:
@@ -156,6 +185,42 @@ def _role_countdown_offset(role: dict[str, Any]) -> int | None:
     return None
 
 
+def _stage1_phase_for_offset(athlete_model: dict[str, Any], offset: int) -> str:
+    """Independently resolve Stage 1 phase ownership for a D-day.
+
+    Do not call the late-selector helper here. The release gate intentionally
+    recomputes the mapping from the canonical Stage 1 ``phase_weeks.days`` data
+    so a defect in selector phase resolution cannot automatically be repeated by
+    the validator that is supposed to catch it.
+    """
+    phase_weeks = athlete_model.get("phase_weeks")
+    if not isinstance(phase_weeks, dict):
+        return ""
+    phase_days = phase_weeks.get("days")
+    if not isinstance(phase_days, dict):
+        return ""
+
+    normalised_days: dict[str, int] = {}
+    for phase in _CANONICAL_PHASES:
+        try:
+            normalised_days[phase] = max(0, int(phase_days.get(phase, 0) or 0))
+        except (TypeError, ValueError):
+            return ""
+
+    if not any(normalised_days.values()):
+        return ""
+
+    remaining = max(1, int(offset))
+    for phase in ("TAPER", "SPP", "GPP"):
+        days = normalised_days[phase]
+        if days <= 0:
+            continue
+        if remaining <= days:
+            return phase
+        remaining -= days
+    return ""
+
+
 def _scheduled_phase(
     role: dict[str, Any],
     *,
@@ -163,14 +228,10 @@ def _scheduled_phase(
     week_phase: object,
 ) -> str:
     offset = _role_countdown_offset(role)
-    if offset is not None and athlete_model:
-        phase = scheduled_phase_for_role(
-            role,
-            athlete_model=athlete_model,
-            spec_phase=week_phase,
-        )
-        if phase:
-            return phase
+    if offset is not None:
+        # Dated roles are fail-closed. Never fall back to a stale week/role phase
+        # when Stage 1 phase authority is missing or cannot own this D-day.
+        return _stage1_phase_for_offset(athlete_model, offset)
     return _normalise_phase(week_phase) or _normalise_phase(role.get("phase"))
 
 
@@ -196,29 +257,42 @@ def _is_clearly_loaded_strength_item(
     return bool(equipment & _LOADED_STRENGTH_EQUIPMENT)
 
 
-def _late_window_allowed(entries: list[dict[str, Any]], *, offset: int, phase: str) -> bool:
+def _phase_compatible_entries(
+    entries: list[dict[str, Any]],
+    *,
+    phase: str,
+) -> list[dict[str, Any]]:
+    return [
+        item
+        for item in entries
+        if phase in _normalise_phase_list(item.get("phases"))
+    ]
+
+
+def _late_window_allowed(
+    entries: list[dict[str, Any]],
+    *,
+    offset: int,
+) -> bool:
     window = classify_late_selector_window(offset)
     if not window:
         return True
     window_key = str(window).strip().lower()
-    phase_compatible = [
-        item for item in entries if not _normalise_phase_list(item.get("phases")) or phase in _normalise_phase_list(item.get("phases"))
-    ]
-    if not phase_compatible:
-        return True
 
-    saw_explicit_window = False
-    for item in phase_compatible:
+    # ``late_windows`` is an opt-in restriction. If any matching original entry
+    # does not declare one, its phase permission remains sufficient.
+    for item in entries:
         late_windows = _normalise_tokens(item.get("late_windows"))
         if not late_windows:
             return True
-        saw_explicit_window = True
         if "all" in late_windows or window_key in late_windows:
             return True
-    return not saw_explicit_window
+    return False
 
 
-def _iter_scheduled_roles(planning_brief: dict[str, Any]) -> Iterable[tuple[str, dict[str, Any]]]:
+def _iter_scheduled_roles(
+    planning_brief: dict[str, Any],
+) -> Iterable[tuple[str, dict[str, Any]]]:
     role_map = planning_brief.get("weekly_role_map")
     if not isinstance(role_map, dict):
         return
@@ -232,14 +306,7 @@ def _iter_scheduled_roles(planning_brief: dict[str, Any]) -> Iterable[tuple[str,
 
 
 def planner_authority_findings(planning_brief: dict[str, Any]) -> list[dict[str, Any]]:
-    """Validate selected physical assignments against original bank authority.
-
-    This check deliberately ignores candidate-pool/source-phase claims as proof of
-    legality. The scheduled Stage 1 phase is resolved independently, then the
-    selected exercise is looked up in the original training bank. Multi-phase
-    exercises remain legal whenever the scheduled phase appears in their bank
-    ``phases`` list.
-    """
+    """Validate selected physical assignments against original bank authority."""
     if not isinstance(planning_brief, dict):
         return []
 
@@ -252,12 +319,12 @@ def planner_authority_findings(planning_brief: dict[str, Any]) -> list[dict[str,
         if not isinstance(assignments, list) or not assignments:
             continue
 
+        offset = _role_countdown_offset(role)
         scheduled_phase = _scheduled_phase(
             role,
             athlete_model=athlete_model,
             week_phase=week_phase,
         )
-        offset = _role_countdown_offset(role)
         envelope = _role_envelope(role)
         loaded_allowed = envelope.get("loaded_allowed") is not False
         countdown_label = str(
@@ -272,16 +339,34 @@ def planner_authority_findings(planning_brief: dict[str, Any]) -> list[dict[str,
             name = str(assignment.get("name") or "").strip()
             if not name:
                 continue
+
             entries = _entries_for_assignment(assignment)
             if not entries:
-                # Only bank-backed assignments are in scope for this invariant.
-                # Support/filler roles may legitimately be generated elsewhere.
+                # Only original-bank-backed physical assignments are in scope.
                 continue
 
-            identity = (countdown_label, str(role.get("role_key") or ""), name)
+            identity = (
+                countdown_label,
+                str(role.get("role_key") or ""),
+                name,
+            )
             if identity in seen:
                 continue
             seen.add(identity)
+
+            if offset is not None and not scheduled_phase:
+                findings.append(
+                    {
+                        "code": "selected_exercise_phase_unresolved",
+                        "severity": "blocker",
+                        "message": "A dated selected exercise could not be mapped to the canonical Stage 1 phase allocation.",
+                        "exercise": name,
+                        "countdown_label": countdown_label,
+                        "role_key": role.get("role_key"),
+                        "source_phase": assignment.get("source_phase"),
+                    }
+                )
+                continue
 
             allowed_phases = sorted(
                 {
@@ -290,7 +375,13 @@ def planner_authority_findings(planning_brief: dict[str, Any]) -> list[dict[str,
                     for phase in _normalise_phase_list(item.get("phases"))
                 }
             )
-            if scheduled_phase and allowed_phases and scheduled_phase not in allowed_phases:
+            phase_entries = (
+                _phase_compatible_entries(entries, phase=scheduled_phase)
+                if scheduled_phase
+                else entries
+            )
+
+            if scheduled_phase and allowed_phases and not phase_entries:
                 findings.append(
                     {
                         "code": "selected_exercise_phase_ineligible",
@@ -306,10 +397,10 @@ def planner_authority_findings(planning_brief: dict[str, Any]) -> list[dict[str,
                 )
                 continue
 
-            if offset is not None and scheduled_phase and not _late_window_allowed(
-                entries,
-                offset=offset,
-                phase=scheduled_phase,
+            if (
+                offset is not None
+                and phase_entries
+                and not _late_window_allowed(phase_entries, offset=offset)
             ):
                 findings.append(
                     {
@@ -329,7 +420,7 @@ def planner_authority_findings(planning_brief: dict[str, Any]) -> list[dict[str,
                     role=role,
                     assignment=assignment,
                 )
-                for item in entries
+                for item in phase_entries
             ):
                 findings.append(
                     {
@@ -356,7 +447,11 @@ def _authority_findings_from_report(report: dict[str, Any]) -> list[dict[str, An
             code = str(item.get("code") or "").strip()
             if code not in PLANNER_AUTHORITY_BLOCKER_CODES:
                 continue
-            identity = (code, str(item.get("exercise") or ""), str(item.get("countdown_label") or ""))
+            identity = (
+                code,
+                str(item.get("exercise") or ""),
+                str(item.get("countdown_label") or ""),
+            )
             if identity in seen:
                 continue
             seen.add(identity)
@@ -365,14 +460,7 @@ def _authority_findings_from_report(report: dict[str, Any]) -> list[dict[str, An
 
 
 def install() -> None:
-    """Add an independent planner-authority gate before athlete release.
-
-    Ordinary Stage 2/render validator findings remain observational under the
-    existing release policy. These findings are different: they prove the
-    deterministic planner's selected membership itself contradicts original bank
-    or countdown authority, so releasing the plan would make downstream
-    validation circular. Only this narrow integrity class may force ``hold``.
-    """
+    """Add an independent planner-authority gate before athlete release."""
     from . import stage2_pipeline as pipeline
     from . import stage2_policy as policy
 
@@ -391,7 +479,12 @@ def install() -> None:
         findings = planner_authority_findings(planning_brief)
         if not findings:
             return report
-        errors = [dict(item) for item in report.get("errors", []) or [] if isinstance(item, dict)]
+
+        errors = [
+            dict(item)
+            for item in report.get("errors", []) or []
+            if isinstance(item, dict)
+        ]
         existing = {
             (
                 str(item.get("code") or ""),
@@ -409,6 +502,7 @@ def install() -> None:
             if identity not in existing:
                 errors.append(finding)
                 existing.add(identity)
+
         return {
             **report,
             "errors": errors,
@@ -419,10 +513,16 @@ def install() -> None:
 
     @wraps(original_release_policy)
     def authority_release_policy(validator_report: dict):
+        # Capture integrity blockers before the ordinary policy transforms the
+        # report, then also inspect its result. This gate must not depend on the
+        # observational policy preserving a particular field layout.
+        blockers = _authority_findings_from_report(validator_report)
         report = original_release_policy(validator_report)
-        blockers = _authority_findings_from_report(report)
+        if not blockers:
+            blockers = _authority_findings_from_report(report)
         if not blockers:
             return report
+
         return {
             **report,
             "planner_authority_integrity_findings": blockers,
@@ -436,6 +536,6 @@ def install() -> None:
     pipeline._validator_report_with_required_countdown_sessions = authority_report_builder
     policy.apply_stage2_release_policy = authority_release_policy
     # stage2_pipeline imported the policy function by value, so replace that
-    # local reference as well. Later API imports resolve the patched module attr.
+    # module-local reference as well. Later API imports resolve the patched attr.
     pipeline.apply_stage2_release_policy = authority_release_policy
     pipeline._PLANNER_AUTHORITY_INTEGRITY_INSTALLED = True
