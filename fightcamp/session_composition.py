@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .normalization import normalize_fatigue_level
 from .planner_context import get_planner_athlete_model
 from .strength_session_quality import classify_strength_item
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
@@ -70,15 +71,7 @@ def assignment_from_slot(phase: str, slot_group: str, slot: dict[str, Any]) -> d
 
 
 def _normalized_fatigue(athlete_model: dict[str, Any]) -> str:
-    flags = {
-        str(flag).strip().lower()
-        for flag in (athlete_model.get("readiness_flags") or [])
-        if str(flag).strip()
-    }
-    if "high_fatigue" in flags:
-        return "high"
-    fatigue = str(athlete_model.get("fatigue") or "low").strip().lower()
-    return fatigue if fatigue in _FATIGUE_PRESSURE else "low"
+    return normalize_fatigue_level(athlete_model)
 
 
 def _resolved_cut_bucket(athlete_model: dict[str, Any]) -> str:
@@ -165,8 +158,6 @@ def _effective_role_cap(role_key: str, pressure: int) -> tuple[int, int]:
 
 def _slot_selected_item(slot: dict[str, Any]) -> dict[str, Any]:
     selected = slot.get("selected") if isinstance(slot.get("selected"), dict) else {}
-    # Slot-level structural metadata is useful when selected-bank metadata is
-    # sparse; selected values stay authoritative on collisions.
     merged = {
         key: value
         for key, value in slot.items()
@@ -220,9 +211,6 @@ def _candidate_records(slots: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "original_index": index,
             }
         )
-    # Support/accessory work is the first composition volume to lose when the
-    # session must shrink; existing Stage 1 priority remains authoritative
-    # within adaptation-bearing work and within support work.
     return sorted(
         records,
         key=lambda item: (
@@ -330,9 +318,6 @@ def compose_normal_strength_assignments(
     if pressure_state is None:
         pressure_state = composition_pressure_state(None)
 
-    # Persist only the deterministic composition inputs/result so later
-    # goal-preservation recomposition uses the exact same pressure even after the
-    # build_planning_brief ContextVar has been reset.
     weekly_role_map["strength_composition_context"] = dict(pressure_state)
     pressure = int(pressure_state["pressure"])
 
