@@ -7,7 +7,7 @@ from fightcamp.late_fight_phase_eligibility import (
 )
 from fightcamp.prescription_resolver import apply_effective_strength_prescriptions
 from fightcamp.session_composition import attach_late_fight_assignments, compose_normal_strength_assignments
-from fightcamp.stage2_payload import _build_late_fight_allowed_exercises_by_day
+from fightcamp.stage2_payload import _build_late_fight_allowed_exercises_by_day, _slot_matches_late_fight_role
 from fightcamp.stage2_payload_late_fight import _countdown_weekday_map
 
 
@@ -370,3 +370,31 @@ def test_d30_spliced_tail_matches_direct_late_fight_assignment_authority():
     assert selected_strength
     assert {(item["slot_id"], item["name"]) for item in resolved_strength} == {
         (item["slot_id"], item["name"]) for item in selected_strength}
+
+
+def test_late_taper_neural_primer_accepts_safe_alactic_conditioning_slot():
+    role = {
+        "role_key": "neural_primer_day",
+        "category": "strength",
+        "preferred_pool": "strength_slots",
+        "phase": "TAPER",
+        "late_fight_tail_owned": True,
+        "scheduled_countdown_label": "D-7",
+    }
+    safe_style_taper = _conditioning_slot(
+        "Single-Kick Recoil Primer", 1, late_windows=["d13_to_d8", "d7", "d6_to_d5"]
+    )
+    safe_style_taper["selected"]["selection_metadata"].update(
+        {"support_only": True, "meaningful_stress": False, "lactate_load": "low"}
+    )
+    assert _slot_matches_late_fight_role(
+        safe_style_taper, "conditioning_slots", role
+    ) is True
+
+    glycolytic = _conditioning_slot("Glycolytic Repeat", 2, system="glycolytic")
+    glycolytic["selected"]["selection_metadata"] = {
+        "support_only": True,
+        "meaningful_stress": False,
+        "lactate_load": "low",
+    }
+    assert _slot_matches_late_fight_role(glycolytic, "conditioning_slots", role) is False

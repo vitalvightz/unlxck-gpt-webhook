@@ -1112,6 +1112,18 @@ def _slot_matches_late_fight_role(slot: dict[str, Any], slot_group: str, role: d
     if slot_group == "rehab_slots":
         return role_key in {"fight_week_freshness_day", "technical_touch_day"}
     if slot_group == "conditioning_slots":
+        if role_key == "neural_primer_day":
+            selected = _slot_selected_option(slot)
+            metadata = selected.get("selection_metadata") if isinstance(selected, dict) else {}
+            return bool(
+                role.get("late_fight_tail_owned")
+                and str(role.get("phase") or "").upper() == "TAPER"
+                and slot_role == "alactic"
+                and isinstance(metadata, dict)
+                and metadata.get("support_only") is True
+                and metadata.get("meaningful_stress") is False
+                and str(metadata.get("lactate_load") or "").lower() == "low"
+            )
         if preferred_system:
             return slot_role == preferred_system
         return role_key in {"alactic_sharpness_day", "light_fight_pace_touch_day", "technical_touch_day"}

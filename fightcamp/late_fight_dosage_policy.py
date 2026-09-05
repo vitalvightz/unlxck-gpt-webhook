@@ -81,8 +81,9 @@ def _filter_style_taper_bank_for_context(
 ):
     """Validate Style Taper entries and fail closed across incompatible sports.
 
-    Exact/related style matches are preferred when available. If no compatible
-    style entry exists, fallback remains inside the athlete's canonical sport.
+    Tactical style is ranked after role/window eligibility by the selector. This
+    boundary therefore filters only by sport; deleting non-style matches here
+    can leave a later role with no usable candidate.
     When no canonical sport can be resolved, the Style Taper guarantee is
     withheld rather than risking a cross-sport prescription.
     """
@@ -105,16 +106,6 @@ def _filter_style_taper_bank_for_context(
     ]
     if not sport_safe:
         return []
-
-    canonical_styles = {_token(style) for style in styles if _token(style) in STYLE_TAGS}
-    if canonical_styles:
-        style_safe = [
-            entry
-            for entry in sport_safe
-            if canonical_styles.intersection({_token(tag) for tag in entry.get("tags", [])})
-        ]
-        if style_safe:
-            return style_safe
 
     return sport_safe
 
