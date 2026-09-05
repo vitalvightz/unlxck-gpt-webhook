@@ -12,9 +12,7 @@ from typing import Any
 
 from .normalization import clean_list, normalize_fatigue_level, ordered_weekdays as _ordered_weekdays
 from .calendar_context import (
-    CalendarLegalityView,
     classify_role,
-    normal_week_contact_events,
     normal_week_legality,
     weekday_position,
     week_scope,
@@ -1255,13 +1253,19 @@ def _lock_declared_light_combat_roles(
 
     Run after placement is final. For each declared light-combat weekday it:
 
-    1. guarantees a coach-owned ``light_combat_day`` role on that exact day
-       (never dropped, replaced, or moved); then
-    2. reconciles anything the allocator left on the same day against the shared
-       ``combat_load_policy``. A candidate the policy lets share the day
-       (coexistable support) stays; a candidate the policy forbids (physical S&C
-       cannot share an exclusive technical-contact day) is moved to a legal free
-       training day when one exists, otherwise dropped into ``suppressed_roles``.
+    1. guarantees a coach-owned ``light_combat_day`` role on that exact day — it
+       is never dropped, replaced, or moved; then
+    2. reconciles anything the allocator co-located on that day against the shared
+       ``combat_load_policy``. A candidate the policy lets share a light-combat day
+       (low-load / true-microdose S&C — see ``_LIGHT_COMBAT_COEXIST_LOADS``) STAYS
+       and stacks; a candidate the policy forbids (meaningful strength/conditioning
+       or a second contact) is dropped into ``suppressed_roles``.
+
+    It does **no** cross-week relocation. The allocator already chose every day
+    with full context; this lock only reconciles the light-combat day, so it never
+    invents a placement or expands the week onto an extra training day (a displaced
+    S&C stacks in place when legal, else yields). Placement stays owned by
+    ``_assign_declared_day_hints``.
     """
     training_days = [
         normalised
@@ -1279,28 +1283,9 @@ def _lock_declared_light_combat_roles(
     updated_suppressed = list(suppressed_roles)
 
     scope = week_scope(week_entry) if isinstance(week_entry, dict) else ("normal_week", None)
-    # The exclusive technical-contact profile the light-combat slot owns. Used both
-    # to test same-day coexistence and, when re-homing an evicted role, to keep
-    # every other declared light-combat day off the candidate list.
+    # The exclusive technical-contact profile the light-combat slot owns, used to
+    # ask the shared policy whether a same-day app role may legally coexist.
     light_profile = role_load_profile({"role_key": LIGHT_COMBAT_ROLE_KEY})
-
-    relocation_view: CalendarLegalityView | None = None
-
-    def _relocation_legality() -> CalendarLegalityView:
-        events = list(
-            normal_week_contact_events(
-                hard_sparring_plan,
-                week_entry.get("declared_hard_sparring_days")
-                or athlete_model.get("hard_sparring_days", []),
-                scope=scope,
-            )
-        )
-        if light_profile is not None:
-            for day in declared_light_days:
-                position = weekday_position(day)
-                if position is not None:
-                    events.append(CalendarEvent(position, light_profile, scope))
-        return CalendarLegalityView(events=tuple(events), scope=scope)
 
     # 1. Guarantee the coach-owned light-combat lock on each declared weekday.
     for day in declared_light_days:
@@ -1313,11 +1298,6 @@ def _lock_declared_light_combat_roles(
             updated_roles.append(build_declared_light_combat_role(day))
 
     # 2. Reconcile same-day app roles against the exclusive light-combat owner.
-    used_days = {
-        normalised
-        for role in updated_roles
-        if (normalised := str(role.get("scheduled_day_hint") or "").strip().lower())
-    }
     kept_roles: list[dict] = []
     for role in updated_roles:
         role_key = str(role.get("role_key") or "").strip().lower()
@@ -1342,31 +1322,13 @@ def _lock_declared_light_combat_roles(
             candidate_scope=scope,
         )
         if decision.directive is not PlacementDirective.FORBID:
-            kept_roles.append(role)  # LEGAL -> stack with the light-combat slot
-            continue
-
-        # ILLEGAL -> the S&C yields. Move it to a legal free training day if one
-        # exists; otherwise drop it. The light-combat slot always remains.
-        if relocation_view is None:
-            relocation_view = _relocation_legality()
-        free_days = [
-            candidate
-            for candidate in training_days
-            if candidate not in used_days and candidate not in light_day_set
-        ]
-        target = relocation_view.best_legal_weekday(profile, free_days) if free_days else None
-        if target:
-            moved = dict(role)
-            moved["scheduled_day_hint"] = target
-            moved["day_assignment_reason"] = (
-                "Moved off the declared light-combat day: that day is a coach-owned "
-                "immutable lock and the combat-load policy forbids stacking this session on it."
-            )
-            moved.pop("scheduled_countdown_label", None)
-            moved.pop("countdown_label", None)
-            used_days.add(target)
-            kept_roles.append(moved)
+            # LEGAL -> stack with the light-combat slot on the same day. This uses
+            # no extra training day, so it can never over-allocate the week.
+            kept_roles.append(role)
         else:
+            # ILLEGAL (meaningful S&C / second contact) -> the S&C yields; the
+            # light-combat slot always remains. Not relocated: moving it to a fresh
+            # day would expand the athlete's planned weekly training exposure.
             updated_suppressed.append(_make_light_combat_lock_suppression(role, day))
 
     for idx, role in enumerate(kept_roles, start=1):

@@ -126,6 +126,25 @@ _SANDWICH_ALLOW_LOADS = frozenset(
         LoadClass.LOW_LOAD_AEROBIC,
     }
 )
+# Loads that may legally *share* a light (technical-contact-only) combat day.
+# Declared light combat is coach-owned and immutable, but S&C-compatible, not
+# day-exclusive: a low-load or true-microdose support session may coexist with a
+# light-technical session. Hard/reduced contact and meaningful strength/
+# conditioning are deliberately absent — they still own the day exclusively, so a
+# light day is more permissive than a hard-contact day but never as permissive as
+# an empty day (contact adjacency rules below still apply). Non-contact exclusive
+# stressors (fight-week freshness, neural primer, sharpness) are excluded via
+# their EXCLUSIVE_PHYSICAL occupancy before this set is consulted.
+_LIGHT_COMBAT_COEXIST_LOADS = frozenset(
+    {
+        LoadClass.OFF,
+        LoadClass.ZERO_LOAD,
+        LoadClass.RECOVERY_ONLY,
+        LoadClass.LOW_LOAD_AEROBIC,
+        LoadClass.LOW_LOAD_PHYSICAL,
+        LoadClass.NEURAL_MICRODOSE,
+    }
+)
 
 _ZERO_LOAD_ROLE_KEYS = frozenset(
     {
@@ -551,6 +570,21 @@ def _same_day_decision(
         p.occupancy in {DayOccupancy.PHYSICAL, DayOccupancy.EXCLUSIVE_PHYSICAL}
         for p in existing
     )
+    # A *light* combat day is one owned only by technical contact — no hard/reduced
+    # contact, and no non-contact exclusive stressor (freshness/primer/sharpness).
+    # Only such a day is S&C-compatible; everything else owns its day strictly.
+    existing_light_combat_only = (
+        any(p.load_class is LoadClass.TECHNICAL_CONTACT for p in existing)
+        and not any(
+            p.load_class in {LoadClass.HARD_CONTACT, LoadClass.REDUCED_CONTACT}
+            for p in existing
+        )
+        and not any(
+            p.occupancy is DayOccupancy.EXCLUSIVE_PHYSICAL
+            and p.load_class not in CONTACT_LOAD_CLASSES
+            for p in existing
+        )
+    )
 
     if candidate.load_class in CONTACT_LOAD_CLASSES and existing_physical:
         return _decision(
@@ -565,13 +599,23 @@ def _same_day_decision(
             "This candidate owns an exclusive physical slot and the day is already physically occupied.",
         )
     if existing_exclusive and candidate.occupancy is not DayOccupancy.COEXISTABLE:
-        return _decision(
-            PlacementDirective.FORBID,
-            "contact_day_extra_physical_conflict"
-            if existing_contact
-            else "exclusive_day_extra_physical_conflict",
-            "An exclusive physical/contact session owns this day; only coexistable support may be added.",
-        )
+        # Light (technical) combat is S&C-compatible, not day-exclusive: a low-load
+        # or true-microdose support session may share a light-technical day. Defer
+        # to the hard-contact adjacency rules below for the final verdict rather
+        # than forbidding here. Hard/reduced contact and non-contact exclusive
+        # stressors are not ``existing_light_combat_only``, so they still own the
+        # day exclusively and fall through to FORBID.
+        if not (
+            existing_light_combat_only
+            and candidate.load_class in _LIGHT_COMBAT_COEXIST_LOADS
+        ):
+            return _decision(
+                PlacementDirective.FORBID,
+                "contact_day_extra_physical_conflict"
+                if existing_contact
+                else "exclusive_day_extra_physical_conflict",
+                "An exclusive physical/contact session owns this day; only coexistable support may be added.",
+            )
     return None
 
 

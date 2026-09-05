@@ -124,6 +124,23 @@ def build_declared_light_combat_role(day: str, **overrides: Any) -> dict[str, An
     defined in exactly one place.
     """
     day_l = str(day or "").strip().lower()
+    # Canonical coach-owned governance shared by both owners. A caller's
+    # ``governance`` override is *merged* into this base (not replaced), so every
+    # variant carries the same declared_schedule_lock identity plus whatever extra
+    # keys that owner needs (e.g. the late-fight ``late_fight_payload`` marker).
+    governance: dict[str, Any] = {
+        "authority": "declared_schedule_lock",
+        "coach_owned": True,
+        "locked_day": day_l,
+        "suppression_rules": [
+            "Declared light-combat days are immutable coach-owned weekly role locks."
+        ],
+        "hard_suppression_reasons": [],
+    }
+    governance_override = overrides.pop("governance", None)
+    if isinstance(governance_override, dict):
+        governance.update(governance_override)
+
     role: dict[str, Any] = {
         "category": "technical",
         "role_key": LIGHT_COMBAT_ROLE_KEY,
@@ -138,15 +155,7 @@ def build_declared_light_combat_role(day: str, **overrides: Any) -> dict[str, An
         "placement_basis": "locked",
         "selection_rule": LIGHT_COMBAT_SELECTION_RULE,
         "day_assignment_reason": LIGHT_COMBAT_DAY_ASSIGNMENT_REASON,
-        "governance": {
-            "authority": "declared_schedule_lock",
-            "coach_owned": True,
-            "locked_day": day_l,
-            "suppression_rules": [
-                "Declared light-combat days are immutable coach-owned weekly role locks."
-            ],
-            "hard_suppression_reasons": [],
-        },
+        "governance": governance,
     }
     role.update(overrides)
     return role
