@@ -23,16 +23,16 @@ from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 
 
 _NORMAL_STRENGTH_ROLE_CAPS: dict[str, int] = {
-    "primary_strength_day": 5,
-    "structural_strength_day": 5,
-    "secondary_strength_day": 4,
-    "neural_plus_strength_day": 4,
-    "transfer_strength_day": 4,
+    "primary_strength_day": 4,
+    "structural_strength_day": 4,
+    "secondary_strength_day": 3,
+    "neural_plus_strength_day": 3,
+    "transfer_strength_day": 3,
     "strength_touch_day": 2,
     "neural_primer_day": 2,
     "small_strength_touch_day": 2,
 }
-_DEFAULT_NORMAL_STRENGTH_CAP = 4
+_DEFAULT_NORMAL_STRENGTH_CAP = 3
 
 _FATIGUE_PRESSURE = {"low": 0, "moderate": 1, "high": 2}
 _CUT_PRESSURE = {
@@ -324,7 +324,7 @@ def _select_bounded_records(
     cap: int,
     pressure: int,
 ) -> tuple[list[dict[str, Any]], dict[str, str]]:
-    family_limit = 2 if pressure <= 1 else 1
+    family_limit = 2 if pressure == 0 else 1
     selected: list[dict[str, Any]] = []
     family_counts: dict[str, int] = {}
     dropped: dict[str, str] = {}
@@ -408,9 +408,8 @@ def _role_days_until_fight(role: dict[str, Any]) -> int | None:
 
 
 def _role_pressure_state(
-    context: dict[str, Any], *, role: dict[str, Any], week_position: int
+    context: dict[str, Any], *, role: dict[str, Any], fatigue_applied: bool
 ) -> dict[str, Any]:
-    fatigue_applied = week_position == 0
     fatigue = str(context.get("fatigue") or "low").strip().lower() if fatigue_applied else "low"
     if fatigue not in _FATIGUE_PRESSURE:
         fatigue = "low"
@@ -444,9 +443,10 @@ def compose_normal_strength_assignments(
     slots using role ceilings, athlete recovery pressure, and existing movement
     tags. Late-fight-owned roles are excluded and keep their dedicated selector.
 
-    Current fatigue is applied only to the first active camp week. Persistent
-    injury state remains active, while weight-cut severity is recalculated from
-    each role's D-day when the cut percentage is available.
+    Current fatigue is applied only to the first camp week containing a normal
+    strength role handled here. Persistent injury state remains active, while
+    weight-cut severity is recalculated from each role's D-day when the cut
+    percentage is available.
     """
     athlete_model = get_planner_athlete_model()
     pressure_context = (
@@ -458,6 +458,24 @@ def compose_normal_strength_assignments(
         pressure_context = _composition_context_from_model(None)
 
     weekly_role_map["strength_composition_context"] = dict(pressure_context)
+
+    first_strength_week_position = next(
+        (
+            position
+            for position, week in enumerate(weekly_role_map.get("weeks", []) or [])
+            if isinstance(week, dict)
+            and any(
+                isinstance(role, dict)
+                and not role.get("late_fight_tail_owned")
+                and (
+                    str(role.get("category") or "").lower() == "strength"
+                    or str(role.get("preferred_pool") or "").lower() == "strength_slots"
+                )
+                for role in (week.get("session_roles", []) or [])
+            )
+        ),
+        None,
+    )
 
     for week_position, week in enumerate(weekly_role_map.get("weeks", []) or []):
         if not isinstance(week, dict):
@@ -482,7 +500,7 @@ def compose_normal_strength_assignments(
             pressure_state = _role_pressure_state(
                 pressure_context,
                 role=role,
-                week_position=week_position,
+                fatigue_applied=week_position == first_strength_week_position,
             )
             pressure = int(pressure_state["pressure"])
 
@@ -513,7 +531,7 @@ def compose_normal_strength_assignments(
                 "role_key": role_key,
                 "base_exercise_cap": base_cap,
                 "effective_exercise_cap": effective_cap,
-                "major_family_limit": 2 if pressure <= 1 else 1,
+                "major_family_limit": 2 if pressure == 0 else 1,
                 "selected_count": len(assignments),
                 "selected_names": [item["name"] for item in assignments],
                 "dropped": [
