@@ -4,8 +4,6 @@ from contextvars import ContextVar
 from functools import wraps
 from typing import Any
 
-from .gap_fill_inserts import _watch_phase_for_offset
-
 
 _CANONICAL_PHASES = {"GPP", "SPP", "TAPER"}
 _PHASE_CONTEXT: ContextVar[dict[str, Any] | None] = ContextVar(
@@ -33,6 +31,37 @@ def _countdown_offset(role: dict[str, Any]) -> int | None:
     return None
 
 
+def _stage1_phase_for_offset(athlete_model: dict[str, Any], offset: int) -> str:
+    """Map D-day using only Stage 1's existing ``phase_weeks.days`` allocation."""
+    phase_weeks = athlete_model.get("phase_weeks")
+    if not isinstance(phase_weeks, dict):
+        return ""
+    phase_days = phase_weeks.get("days")
+    if not isinstance(phase_days, dict):
+        return ""
+
+    normalized_days: dict[str, int] = {}
+    for phase in _CANONICAL_PHASES:
+        try:
+            normalized_days[phase] = max(0, int(phase_days.get(phase, 0) or 0))
+        except (TypeError, ValueError):
+            return ""
+    if not any(normalized_days.values()):
+        return ""
+
+    remaining = max(1, int(offset))
+    for phase in ("TAPER", "SPP", "GPP"):
+        days = normalized_days[phase]
+        if days <= 0:
+            continue
+        if remaining <= days:
+            return phase
+        remaining -= days
+
+    # A dated role outside the declared Stage 1 allocation is not phase-legal.
+    return ""
+
+
 def scheduled_phase_for_role(
     role: dict[str, Any],
     *,
@@ -48,14 +77,10 @@ def scheduled_phase_for_role(
     """
     offset = _countdown_offset(role)
     if offset is not None and isinstance(athlete_model, dict):
-        try:
-            phase = _canonical_phase(_watch_phase_for_offset(athlete_model, offset))
-        except (KeyError, TypeError, ValueError):
-            phase = ""
         # Production is fail-closed: once a dated role has Stage 1 context,
         # unresolved phase authority must not fall through to stale role/spec
         # metadata and must never reopen all candidate pools.
-        return phase
+        return _stage1_phase_for_offset(athlete_model, offset)
 
     if offset is not None:
         return _canonical_phase(spec_phase)
