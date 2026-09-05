@@ -1103,6 +1103,22 @@ def _slot_is_low_load_reset(slot: dict[str, Any]) -> bool:
     )
 
 
+def _slot_is_style_taper_neural_primer(slot: dict[str, Any], role: dict[str, Any]) -> bool:
+    """Return whether a conditioning slot is the narrow Style Taper primer exception."""
+    selected = _slot_selected_option(slot)
+    metadata = selected.get("selection_metadata") if isinstance(selected, dict) else {}
+    return bool(
+        role.get("late_fight_tail_owned")
+        and str(role.get("phase") or "").upper() == "TAPER"
+        and str(slot.get("role") or "").strip().lower() == "alactic"
+        and selected.get("source") == "style_taper"
+        and isinstance(metadata, dict)
+        and metadata.get("support_only") is True
+        and metadata.get("meaningful_stress") is False
+        and str(metadata.get("lactate_load") or "").lower() == "low"
+    )
+
+
 def _slot_matches_late_fight_role(slot: dict[str, Any], slot_group: str, role: dict[str, Any]) -> bool:
     role_key = str(role.get("role_key") or "").strip()
     preferred_system = str(role.get("preferred_system") or "").strip().lower()
@@ -1113,17 +1129,7 @@ def _slot_matches_late_fight_role(slot: dict[str, Any], slot_group: str, role: d
         return role_key in {"fight_week_freshness_day", "technical_touch_day"}
     if slot_group == "conditioning_slots":
         if role_key == "neural_primer_day":
-            selected = _slot_selected_option(slot)
-            metadata = selected.get("selection_metadata") if isinstance(selected, dict) else {}
-            return bool(
-                role.get("late_fight_tail_owned")
-                and str(role.get("phase") or "").upper() == "TAPER"
-                and slot_role == "alactic"
-                and isinstance(metadata, dict)
-                and metadata.get("support_only") is True
-                and metadata.get("meaningful_stress") is False
-                and str(metadata.get("lactate_load") or "").lower() == "low"
-            )
+            return _slot_is_style_taper_neural_primer(slot, role)
         if preferred_system:
             return slot_role == preferred_system
         return role_key in {"alactic_sharpness_day", "light_fight_pace_touch_day", "technical_touch_day"}
@@ -1283,7 +1289,20 @@ def _build_late_fight_allowed_exercises_by_day(
             if slot_id not in consumed_slot_ids:
                 fallback_matches.append((phase, slot_group, slot))
 
-        selected_matches = explicit_matches or fallback_matches[:1]
+        selected_matches = explicit_matches
+        if not selected_matches and str(role.get("role_key") or "") == "neural_primer_day":
+            # Keep explicit day authority. For unlabelled fallbacks only, let a
+            # safe TAPER-owned sport primer beat the legacy generic strength
+            # primer without globally reordering candidate pool families.
+            selected_matches = [
+                match
+                for match in fallback_matches
+                if match[0].upper() == "TAPER"
+                and match[1] == "conditioning_slots"
+                and _slot_is_style_taper_neural_primer(match[2], role)
+            ][:1]
+        if not selected_matches:
+            selected_matches = fallback_matches[:1]
         for phase, slot_group, slot in selected_matches:
             name = _slot_exercise_name(slot)
             if not name:
@@ -1785,7 +1804,11 @@ def _serialize_conditioning_option(
     required_equipment = clean_list(drill.get("required_equipment") or drill.get("equipment", []))
     option = {
         "name": drill.get("name", "Unnamed"),
-        "source": "conditioning_bank",
+        "source": (
+            "style_taper"
+            if str(drill.get("_schema_source") or "").endswith("style_taper_conditioning.json")
+            else "conditioning_bank"
+        ),
         "movement_patterns": dedupe_preserve_order([system] + tags),
         "restriction_tags": _extract_restriction_tags(drill),
         "mechanical_risk_tags": _extract_mechanical_risk_tags(drill),
