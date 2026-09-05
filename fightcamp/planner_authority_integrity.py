@@ -147,15 +147,33 @@ def _bank_indexes() -> dict[str, dict[str, list[dict[str, Any]]]]:
 
 
 def _entries_for_assignment(assignment: dict[str, Any]) -> list[dict[str, Any]]:
+    """Resolve original bank rows, using source_phase only as a provenance hint.
+
+    ``source_phase`` is never allowed to decide scheduled legality, but when the
+    same display name exists in more than one original bank row it can identify
+    which row the candidate actually came from and prevents an unrelated row
+    with broader phase permissions from masking a violation.
+    """
     slot_group = str(assignment.get("slot_group") or "").strip()
     if slot_group not in _bank_indexes():
         return []
-    return list(
+
+    entries = list(
         _bank_indexes()[slot_group].get(
             _normalise_name(assignment.get("name")),
             [],
         )
     )
+    source_phase = _normalise_phase(assignment.get("source_phase"))
+    if not source_phase or not entries:
+        return entries
+
+    narrowed = [
+        item
+        for item in entries
+        if source_phase in _normalise_phase_list(item.get("phases"))
+    ]
+    return narrowed or entries
 
 
 def _athlete_model(planning_brief: dict[str, Any]) -> dict[str, Any]:
@@ -469,6 +487,7 @@ def install() -> None:
 
     original_report_builder = pipeline._validator_report_with_required_countdown_sessions
     original_release_policy = policy.apply_stage2_release_policy
+    original_build_retry = pipeline.build_stage2_retry
 
     @wraps(original_report_builder)
     def authority_report_builder(*, planning_brief: dict, final_plan_text: str):
@@ -533,9 +552,36 @@ def install() -> None:
             "is_publishable": False,
         }
 
+    @wraps(original_build_retry)
+    def authority_build_stage2_retry(*args, **kwargs):
+        result = original_build_retry(*args, **kwargs)
+        report = result.get("validator_report") if isinstance(result, dict) else None
+        blockers = (
+            _authority_findings_from_report(report)
+            if isinstance(report, dict)
+            else []
+        )
+        if not blockers:
+            return result
+
+        # Renderer/LLM repair cannot make an upstream illegal candidate legal.
+        # Keep the plan held and require deterministic planner regeneration.
+        return {
+            **result,
+            "needs_retry": False,
+            "requires_planner_regeneration": True,
+            "repair_prompt": None,
+            "summary": "FAIL: selected exercise authority requires deterministic planner regeneration.",
+            "summary_lines": [
+                str(item.get("message") or "Planner authority violation.")
+                for item in blockers
+            ],
+        }
+
     pipeline._validator_report_with_required_countdown_sessions = authority_report_builder
     policy.apply_stage2_release_policy = authority_release_policy
     # stage2_pipeline imported the policy function by value, so replace that
     # module-local reference as well. Later API imports resolve the patched attr.
     pipeline.apply_stage2_release_policy = authority_release_policy
+    pipeline.build_stage2_retry = authority_build_stage2_retry
     pipeline._PLANNER_AUTHORITY_INTEGRITY_INSTALLED = True
