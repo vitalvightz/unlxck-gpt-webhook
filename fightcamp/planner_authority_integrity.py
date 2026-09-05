@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import json
-from functools import lru_cache, wraps
-from pathlib import Path
+from functools import wraps
 from typing import Any, Iterable
 
-from .config import DATA_DIR
-from .late_selector_windows import classify_late_selector_window
+from .bank_authority import original_bank_entries
+from .late_selector_windows import late_window_allowed
 
 
 _CANONICAL_PHASES = ("GPP", "SPP", "TAPER")
@@ -52,10 +50,6 @@ _LOADED_STRENGTH_EQUIPMENT = frozenset(
 )
 
 
-def _normalise_name(value: object) -> str:
-    return " ".join(str(value or "").strip().lower().split())
-
-
 def _normalise_phase(value: object) -> str:
     phase = str(value or "").strip().upper()
     return phase if phase in _CANONICAL_PHASES else ""
@@ -93,87 +87,6 @@ def _normalise_tokens(value: object) -> set[str]:
         for token in raw
         if token.strip()
     }
-
-
-def _iter_training_items(value: object) -> Iterable[dict[str, Any]]:
-    if isinstance(value, list):
-        for item in value:
-            yield from _iter_training_items(item)
-        return
-    if not isinstance(value, dict):
-        return
-
-    if str(value.get("name") or "").strip() and value.get("phases") is not None:
-        yield value
-
-    for nested in value.values():
-        if isinstance(nested, (dict, list)):
-            yield from _iter_training_items(nested)
-
-
-def _load_json(path: Path) -> object:
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return []
-
-
-@lru_cache(maxsize=1)
-def _bank_indexes() -> dict[str, dict[str, list[dict[str, Any]]]]:
-    indexes: dict[str, dict[str, list[dict[str, Any]]]] = {
-        "strength_slots": {},
-        "conditioning_slots": {},
-    }
-    sources: dict[str, list[Path]] = {
-        "strength_slots": [DATA_DIR / "exercise_bank.json"],
-        "conditioning_slots": [
-            DATA_DIR / "conditioning_bank.json",
-            DATA_DIR / "style_conditioning_bank.json",
-        ],
-    }
-
-    coordination_dir = DATA_DIR / "coordination"
-    if coordination_dir.exists():
-        sources["conditioning_slots"].extend(sorted(coordination_dir.rglob("*.json")))
-
-    for slot_group, paths in sources.items():
-        index = indexes[slot_group]
-        for path in paths:
-            for item in _iter_training_items(_load_json(path)):
-                key = _normalise_name(item.get("name"))
-                if key:
-                    index.setdefault(key, []).append(item)
-    return indexes
-
-
-def _entries_for_assignment(assignment: dict[str, Any]) -> list[dict[str, Any]]:
-    """Resolve original bank rows, using source_phase only as a provenance hint.
-
-    ``source_phase`` is never allowed to decide scheduled legality, but when the
-    same display name exists in more than one original bank row it can identify
-    which row the candidate actually came from and prevents an unrelated row
-    with broader phase permissions from masking a violation.
-    """
-    slot_group = str(assignment.get("slot_group") or "").strip()
-    if slot_group not in _bank_indexes():
-        return []
-
-    entries = list(
-        _bank_indexes()[slot_group].get(
-            _normalise_name(assignment.get("name")),
-            [],
-        )
-    )
-    source_phase = _normalise_phase(assignment.get("source_phase"))
-    if not source_phase or not entries:
-        return entries
-
-    narrowed = [
-        item
-        for item in entries
-        if source_phase in _normalise_phase_list(item.get("phases"))
-    ]
-    return narrowed or entries
 
 
 def _athlete_model(planning_brief: dict[str, Any]) -> dict[str, Any]:
@@ -287,27 +200,6 @@ def _phase_compatible_entries(
     ]
 
 
-def _late_window_allowed(
-    entries: list[dict[str, Any]],
-    *,
-    offset: int,
-) -> bool:
-    window = classify_late_selector_window(offset)
-    if not window:
-        return True
-    window_key = str(window).strip().lower()
-
-    # ``late_windows`` is an opt-in restriction. If any matching original entry
-    # does not declare one, its phase permission remains sufficient.
-    for item in entries:
-        late_windows = _normalise_tokens(item.get("late_windows"))
-        if not late_windows:
-            return True
-        if "all" in late_windows or window_key in late_windows:
-            return True
-    return False
-
-
 def _iter_scheduled_roles(
     planning_brief: dict[str, Any],
 ) -> Iterable[tuple[str, dict[str, Any]]]:
@@ -358,7 +250,7 @@ def planner_authority_findings(planning_brief: dict[str, Any]) -> list[dict[str,
             if not name:
                 continue
 
-            entries = _entries_for_assignment(assignment)
+            entries = original_bank_entries(assignment)
             if not entries:
                 # Only original-bank-backed physical assignments are in scope.
                 continue
@@ -418,7 +310,7 @@ def planner_authority_findings(planning_brief: dict[str, Any]) -> list[dict[str,
             if (
                 offset is not None
                 and phase_entries
-                and not _late_window_allowed(phase_entries, offset=offset)
+                and not late_window_allowed(phase_entries, offset=offset)
             ):
                 findings.append(
                     {

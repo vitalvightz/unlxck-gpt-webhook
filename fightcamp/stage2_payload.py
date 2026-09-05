@@ -49,11 +49,12 @@ from .conditioning import athlete_facing_system_label, technical_footwork_prescr
 from .fight_day_override import apply_fight_day_override_to_weekly_role_map
 from .role_labels import stamp_weekly_role_map_labels
 from .camp_week_fillers import apply_camp_week_fillers
+from .bank_authority import original_bank_entries
 from .late_camp_role_morph import apply_late_camp_role_morph
 from .prescription_resolver import apply_effective_strength_prescriptions
 from .session_composition import attach_late_fight_assignments, compose_normal_strength_assignments
 from .normal_calendar_placement import fill_missing_session_days
-from .late_selector_windows import classify_late_selector_window
+from .late_selector_windows import classify_late_selector_window, late_window_allowed
 from .normalization import (  # noqa: F401  (phrase_in_text re-exported for back-compat)
     clean_list,
     dedupe_preserve_order,
@@ -1204,6 +1205,28 @@ def _late_fight_assignment_is_unsafe(day_label: str, name: str) -> bool:
     return _bank_requires_equipment(name)
 
 
+def _slot_late_window_allowed(
+    phase: str, slot_group: str, slot: dict[str, Any], *, offset: int
+) -> bool:
+    """Check original bank authority (with serialized metadata as fallback)."""
+    selected = _slot_selected_option(slot)
+    entries = original_bank_entries(
+        {
+            "name": _slot_exercise_name(slot),
+            "slot_group": slot_group,
+            "source_phase": phase,
+        }
+    )
+    if entries:
+        return late_window_allowed(entries, offset=offset)
+
+    metadata = selected.get("selection_metadata")
+    if not isinstance(metadata, dict):
+        # Non-bank synthetic/legacy slots retain their established behaviour.
+        return True
+    return late_window_allowed([metadata], offset=offset)
+
+
 def _build_late_fight_allowed_exercises_by_day(
     *,
     spec: dict[str, Any],
@@ -1217,12 +1240,23 @@ def _build_late_fight_allowed_exercises_by_day(
         day_label = str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "").strip()
         if not day_label:
             continue
+        try:
+            scheduled_offset = int(day_label.upper().removeprefix("D-"))
+        except ValueError:
+            scheduled_offset = -1
         allowed_by_day.setdefault(day_label, [])
         assignments_by_day.setdefault(day_label, [])
 
         explicit_matches: list[tuple[str, str, dict[str, Any]]] = []
         fallback_matches: list[tuple[str, str, dict[str, Any]]] = []
         for phase, slot_group, slot in _candidate_slots_for_role(candidate_pools, role):
+            # Bank late-window permission is a hard eligibility gate. Apply it
+            # before explicit/fallback ranking so the next legal candidate can
+            # win instead of committing a contradiction for Stage 2 to catch.
+            if scheduled_offset >= 0 and not _slot_late_window_allowed(
+                phase, slot_group, slot, offset=scheduled_offset
+            ):
+                continue
             # Drop day-unsafe candidates (e.g. loaded work on D-1) before
             # selection so a safe explicit match or fallback can still be used
             # instead of leaving the day empty.

@@ -58,3 +58,31 @@ def classify_late_selector_window(
 
 def is_active_late_selector_window(window: str | None) -> bool:
     return window in {D21_TO_D14, D13_TO_D8, D7, D6_TO_D5, D4_TO_D2, D1}
+
+
+def _normalise_late_window_tokens(value: object) -> set[str]:
+    values = list(value) if isinstance(value, (list, tuple, set)) else [value]
+    return {
+        str(token).strip().lower().replace("-", "_")
+        for item in values
+        for token in str(item or "").replace(",", " ").split()
+        if str(token).strip()
+    }
+
+
+def late_window_allowed(entries: list[dict[str, Any]], *, offset: int) -> bool:
+    """Apply the canonical opt-in ``late_windows`` contract for a D-day.
+
+    Active late-fight selection is opt-in. At least one matching bank row must
+    explicitly contain the scheduled window (or ``all``); missing or empty
+    metadata is not late-fight approval.
+    """
+    window = classify_late_selector_window(offset)
+    if not window:
+        return True
+
+    for item in entries:
+        late_windows = _normalise_late_window_tokens(item.get("late_windows"))
+        if "all" in late_windows or window in late_windows:
+            return True
+    return False
