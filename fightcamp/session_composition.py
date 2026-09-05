@@ -330,19 +330,41 @@ def _select_bounded_records(
     dropped: dict[str, str] = {}
 
     required_groups = _ROLE_REQUIRED_FAMILY_GROUPS.get(role_key, ())
-    for required_group in required_groups:
-        if len(selected) >= cap:
-            break
+    while required_groups and len(selected) < cap:
         covered = set().union(*(item["families"] for item in selected)) if selected else set()
-        if covered & required_group:
-            continue
+        unsatisfied_groups = tuple(
+            group for group in required_groups if not (covered & group)
+        )
+        if not unsatisfied_groups:
+            break
+
+        eligible_required: list[tuple[int, tuple[int, int], dict[str, Any]]] = []
         for record in records:
-            if record in selected or not (record["families"] & required_group):
+            if record in selected:
+                continue
+            coverage_count = sum(
+                bool(record["families"] & group) for group in unsatisfied_groups
+            )
+            if coverage_count <= 0:
                 continue
             if _would_exceed_family_limit(record["families"], family_counts, family_limit):
                 continue
-            _add_record(record, selected, family_counts)
+            eligible_required.append(
+                (-coverage_count, record["sort_key"], record)
+            )
+
+        if not eligible_required:
             break
+
+        # Required adaptation coverage wins before redundancy capacity is spent.
+        # A hybrid that covers two still-unmet groups therefore beats a higher-
+        # ranked single-family item; Stage 1 priority remains the tiebreaker when
+        # candidates cover the same number of required groups.
+        _, _, best_required = min(
+            eligible_required,
+            key=lambda item: (item[0], item[1]),
+        )
+        _add_record(best_required, selected, family_counts)
 
     # Preserve Stage 1 ranking as the authority. Support/accessory status is only
     # a drop preference when the session actually has to shrink; it is never a
