@@ -25,10 +25,7 @@ could take the declared Wednesday and the light-combat session simply vanished.
 
 from copy import deepcopy
 
-from fightcamp.calendar_integrity import (
-    CalendarIntegrityError,
-    apply_final_calendar_integrity,
-)
+from fightcamp.calendar_integrity import apply_final_calendar_integrity
 from fightcamp.combat_load_policy import LoadClass, role_load_class
 from fightcamp.declared_combat_ownership import (
     LIGHT_COMBAT_ROLE_KEY,
