@@ -41,25 +41,31 @@ def scheduled_phase_for_role(
 ) -> str:
     """Return the Stage 1 phase that owns this scheduled late-fight role.
 
-    Prefer phase already stamped on the role. Otherwise use Stage 1's dynamic
-    phase allocation carried on the athlete model and map the role's D-day back
-    to GPP/SPP/TAPER. ``spec_phase`` is only a compatibility fallback for direct
-    callers that do not carry the phase allocation.
+    For dated roles, Stage 1's dynamic ``phase_weeks.days`` allocation is the
+    authority. Downstream role phase stamps must not override that mapping.
+    Direct callers without an athlete model may provide ``spec_phase`` as an
+    explicit compatibility fallback.
     """
-    for key in ("camp_phase", "scheduled_phase", "phase"):
-        if phase := _canonical_phase(role.get(key)):
-            return phase
-
     offset = _countdown_offset(role)
     if offset is not None and isinstance(athlete_model, dict):
         try:
             phase = _canonical_phase(_watch_phase_for_offset(athlete_model, offset))
         except (KeyError, TypeError, ValueError):
             phase = ""
-        if phase:
-            return phase
+        # Production is fail-closed: once a dated role has Stage 1 context,
+        # unresolved phase authority must not fall through to stale role/spec
+        # metadata and must never reopen all candidate pools.
+        return phase
 
-    return _canonical_phase(spec_phase)
+    if offset is not None:
+        return _canonical_phase(spec_phase)
+
+    if phase := _canonical_phase(spec_phase):
+        return phase
+    for key in ("camp_phase", "scheduled_phase", "phase"):
+        if phase := _canonical_phase(role.get(key)):
+            return phase
+    return ""
 
 
 def phase_scoped_candidate_pools(
@@ -69,7 +75,7 @@ def phase_scoped_candidate_pools(
     """Expose only the Stage 1 pool whose phase owns the scheduled role."""
     canonical = _canonical_phase(phase)
     if not canonical:
-        return candidate_pools
+        return {}
     pool = (candidate_pools or {}).get(canonical)
     return {canonical: pool} if isinstance(pool, dict) else {}
 
@@ -111,6 +117,10 @@ def install() -> None:
             return original_allocate(spec=spec, candidate_pools=candidate_pools)
 
         athlete_model = _PHASE_CONTEXT.get()
+        if athlete_model is None and isinstance(spec.get("athlete_model"), dict):
+            # Explicit direct-call test/compatibility path. Production receives
+            # the same model through build_planning_brief's context above.
+            athlete_model = spec["athlete_model"]
         spec_phase = spec.get("phase")
 
         # Preserve original role order while grouping by authoritative phase so
@@ -124,7 +134,7 @@ def install() -> None:
                 athlete_model=athlete_model,
                 spec_phase=spec_phase,
             )
-            group_key = phase or "__legacy__"
+            group_key = phase or "__unresolved__"
             if group_key not in group_index:
                 group_index[group_key] = len(grouped)
                 grouped.append((group_key, []))
@@ -138,11 +148,7 @@ def install() -> None:
                 "visible_session_sequence": group_roles,
                 "session_sequence": group_roles,
             }
-            scoped_pools = (
-                candidate_pools
-                if group_key == "__legacy__"
-                else phase_scoped_candidate_pools(candidate_pools, group_key)
-            )
+            scoped_pools = phase_scoped_candidate_pools(candidate_pools, group_key)
             group_allowed, group_assignments = original_allocate(
                 spec=group_spec,
                 candidate_pools=scoped_pools,
