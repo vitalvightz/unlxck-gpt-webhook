@@ -1,6 +1,10 @@
 from fightcamp.late_camp_role_morph import apply_late_camp_role_morph
 from fightcamp.camp_week_fillers import _splice_late_fight_tail
 from fightcamp.late_fight_tail import build_finished_late_fight_tail
+from fightcamp.late_fight_phase_eligibility import (
+    phase_scoped_candidate_pools,
+    scheduled_phase_for_role,
+)
 from fightcamp.prescription_resolver import apply_effective_strength_prescriptions
 from fightcamp.session_composition import attach_late_fight_assignments, compose_normal_strength_assignments
 from fightcamp.stage2_payload import _build_late_fight_allowed_exercises_by_day
@@ -12,6 +16,17 @@ def _slot(name, priority, quality="anchor_loaded"):
         "quality_class": quality, "anchor_capable": quality != "support_isometric",
         "support_only": quality == "support_isometric",
         "selected": {"name": name, "prescription": "3 x 5 @ RPE 7", "quality_class": quality},
+    }
+
+
+def _conditioning_slot(name, priority, system="alactic"):
+    return {
+        "slot_id": f"conditioning-slot-{priority}-{name}",
+        "session_index": 1,
+        "priority": priority,
+        "purpose": name,
+        "role": system,
+        "selected": {"name": name, "role": system},
     }
 
 
@@ -61,13 +76,44 @@ def test_late_fight_selector_selects_one_fallback_candidate_for_reduced_touch():
     role = {"role_key": "strength_touch_day", "category": "strength",
             "scheduled_countdown_label": "D-10"}
     _, assignments = _build_late_fight_allowed_exercises_by_day(
-        spec={"visible_session_sequence": [role]},
+        spec={"visible_session_sequence": [role], "phase": "SPP"},
         candidate_pools={"SPP": {"strength_slots": slots}},
     )
     assert [item["name"] for item in assignments["D-10"]] == ["Barbell Thruster"]
 
 
-def test_spliced_role_resolves_exact_selected_source_phase_not_containing_week():
+def test_stage1_phase_days_map_d7_to_spp_before_d5_taper():
+    athlete_model = {
+        "phase_weeks": {
+            "days": {"GPP": 19, "SPP": 2, "TAPER": 5},
+        }
+    }
+    assert scheduled_phase_for_role(
+        {"scheduled_countdown_label": "D-7", "phase": "TAPER"},
+        athlete_model=athlete_model,
+    ) == "SPP"
+    assert scheduled_phase_for_role(
+        {"scheduled_countdown_label": "D-5", "phase": "SPP"},
+        athlete_model=athlete_model,
+    ) == "TAPER"
+
+
+def test_phase_scope_fails_closed_when_phase_is_unresolved():
+    pools = {
+        "GPP": {"strength_slots": [_slot("GPP Lift", 1)]},
+        "SPP": {"strength_slots": [_slot("SPP Lift", 1)]},
+        "TAPER": {"strength_slots": [_slot("Taper Lift", 1)]},
+    }
+    assert phase_scoped_candidate_pools(pools, "") == {}
+    assert phase_scoped_candidate_pools(pools, "unknown") == {}
+
+
+def test_late_fight_selector_stays_inside_authoritative_stage1_phase():
+    athlete_model = {
+        "phase_weeks": {
+            "days": {"GPP": 14, "SPP": 7, "TAPER": 5},
+        }
+    }
     pools = {
         "GPP": {"strength_slots": [_slot("GPP Trap Bar Deadlift", 1)]},
         "SPP": {"strength_slots": [_slot("SPP Barbell Thruster", 1)]},
@@ -75,49 +121,95 @@ def test_spliced_role_resolves_exact_selected_source_phase_not_containing_week()
     }
     role = {"role_key": "strength_touch_day", "category": "strength",
             "scheduled_countdown_label": "D-10", "scheduled_day_hint": "tuesday",
-            "late_fight_tail_owned": True}
+            "phase": "GPP", "late_fight_tail_owned": True}
     _, assignments = _build_late_fight_allowed_exercises_by_day(
-        spec={"visible_session_sequence": [role]}, candidate_pools=pools,
+        spec={
+            "visible_session_sequence": [role],
+            "phase": "GPP",
+            "athlete_model": athlete_model,
+        },
+        candidate_pools=pools,
     )
     attach_late_fight_assignments([role], assignments)
-    assert role["selected_exercise_assignments"][0]["source_phase"] == "GPP"
+    assert role["selected_exercise_assignments"][0]["source_phase"] == "SPP"
 
-    # The role deliberately lives in an SPP week. Resolution must still use the
-    # exact GPP assignment selected by the shared late-fight authority.
     role_map = {"weeks": [{"phase": "SPP", "calendar_days": [{"weekday": "tuesday", "d_day": 10}],
                            "session_roles": [role]}]}
     apply_late_camp_role_morph(role_map)
     apply_effective_strength_prescriptions(weekly_role_map=role_map, candidate_pools=pools)
     assert [item["name"] for item in role["effective_strength_prescriptions"]] == [
-        "GPP Trap Bar Deadlift"]
+        "SPP Barbell Thruster"]
 
 
-def test_d7_neural_assignment_uses_exact_source_and_excludes_alternatives():
+def test_d7_neural_assignment_cannot_reach_gpp_hang_power_clean():
+    athlete_model = {
+        "phase_weeks": {
+            "days": {"GPP": 19, "SPP": 2, "TAPER": 5},
+        }
+    }
     pools = {
-        "GPP": {"strength_slots": [_slot("GPP Speed Isometric", 1)]},
+        "GPP": {"strength_slots": [_slot("Hang Power Clean", 1)]},
         "SPP": {"strength_slots": [_slot("SPP Speed High Pull", 1), _slot("SPP Speed Row", 2)]},
         "TAPER": {"strength_slots": [_slot("Taper Speed Shuffle", 1)]},
     }
     role = {"role_key": "neural_primer_day", "category": "strength",
             "scheduled_countdown_label": "D-7", "scheduled_day_hint": "tuesday",
-            "late_fight_tail_owned": True}
+            "phase": "TAPER", "late_fight_tail_owned": True}
     _, assignments = _build_late_fight_allowed_exercises_by_day(
-        spec={"visible_session_sequence": [role]}, candidate_pools=pools,
+        spec={
+            "visible_session_sequence": [role],
+            "phase": "TAPER",
+            "athlete_model": athlete_model,
+        },
+        candidate_pools=pools,
     )
     attach_late_fight_assignments([role], assignments)
-    role_map = {"weeks": [{"phase": "TAPER", "calendar_days": [{"weekday": "tuesday", "d_day": 7}],
-                           "session_roles": [role]}]}
-    apply_late_camp_role_morph(role_map)
-    apply_effective_strength_prescriptions(weekly_role_map=role_map, candidate_pools=pools)
     selected = role["selected_exercise_assignments"]
-    resolved = role["effective_strength_prescriptions"]
-    assert len(selected) == len(resolved) == 1
-    assert resolved[0]["name"] == selected[0]["name"]
+    assert len(selected) == 1
+    assert selected[0]["source_phase"] == "SPP"
+    assert selected[0]["name"] == "SPP Speed High Pull"
+    assert selected[0]["name"] != "Hang Power Clean"
+
+
+def test_d2_alactic_assignment_cannot_reach_gpp_broad_jump_repeats():
+    athlete_model = {
+        "phase_weeks": {
+            "days": {"GPP": 19, "SPP": 2, "TAPER": 5},
+        }
+    }
+    pools = {
+        "GPP": {"conditioning_slots": [_conditioning_slot("Broad Jump Repeats", 1)]},
+        "SPP": {"conditioning_slots": [_conditioning_slot("SPP Alactic Burst", 1)]},
+        "TAPER": {"conditioning_slots": [_conditioning_slot("Reactive Shuffle Repeats", 1)]},
+    }
+    role = {
+        "role_key": "alactic_sharpness_day",
+        "category": "conditioning",
+        "preferred_system": "alactic",
+        "scheduled_countdown_label": "D-2",
+        "scheduled_day_hint": "sunday",
+        "phase": "GPP",
+        "late_fight_tail_owned": True,
+    }
+    _, assignments = _build_late_fight_allowed_exercises_by_day(
+        spec={
+            "visible_session_sequence": [role],
+            "phase": "GPP",
+            "athlete_model": athlete_model,
+        },
+        candidate_pools=pools,
+    )
+    selected = assignments["D-2"]
+    assert len(selected) == 1
+    assert selected[0]["source_phase"] == "TAPER"
+    assert selected[0]["name"] == "Reactive Shuffle Repeats"
+    assert selected[0]["name"] != "Broad Jump Repeats"
 
 
 def test_d30_spliced_tail_matches_direct_late_fight_assignment_authority():
     athlete = {"days_until_fight": 30, "plan_creation_weekday": "monday", "sport": "mma",
-               "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday"]}
+               "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+               "phase_weeks": {"days": {"GPP": 13, "SPP": 4, "TAPER": 13}}}
     pools = {
         "GPP": {"strength_slots": [_slot("GPP Barbell Thruster", 1), _slot("GPP High Pull", 2)]},
         "SPP": {"strength_slots": [_slot("SPP Rotational Slam", 1), _slot("SPP Speed Row", 2)]},
@@ -135,10 +227,11 @@ def test_d30_spliced_tail_matches_direct_late_fight_assignment_authority():
                      if role.get("late_fight_tail_owned")]
     direct_roles = build_finished_late_fight_tail(30, athlete)["session_sequence"]
 
+    spec_context = {"athlete_model": athlete}
     _, spliced_by_day = _build_late_fight_allowed_exercises_by_day(
-        spec={"visible_session_sequence": spliced_roles}, candidate_pools=pools)
+        spec={"visible_session_sequence": spliced_roles, **spec_context}, candidate_pools=pools)
     _, direct_by_day = _build_late_fight_allowed_exercises_by_day(
-        spec={"visible_session_sequence": direct_roles}, candidate_pools=pools)
+        spec={"visible_session_sequence": direct_roles, **spec_context}, candidate_pools=pools)
     assert spliced_by_day == direct_by_day
 
     attach_late_fight_assignments(spliced_roles, spliced_by_day)
