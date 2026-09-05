@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from .late_fight_dosage_policy import install as _install_late_fight_dosage_policy
 from .late_fight_phase_eligibility import install as _install_late_fight_phase_eligibility
+from .planner_authority_integrity import install as _install_planner_authority_integrity
 
 _install_late_fight_dosage_policy()
 _install_late_fight_phase_eligibility()
+_install_planner_authority_integrity()
 
 del _install_late_fight_dosage_policy
 del _install_late_fight_phase_eligibility
+del _install_planner_authority_integrity
