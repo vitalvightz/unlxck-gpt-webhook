@@ -1,6 +1,7 @@
 from fightcamp.late_camp_role_morph import apply_late_camp_role_morph
 from fightcamp.camp_week_fillers import _splice_late_fight_tail
 from fightcamp.late_fight_tail import build_finished_late_fight_tail
+from fightcamp.late_fight_phase_eligibility import scheduled_phase_for_role
 from fightcamp.prescription_resolver import apply_effective_strength_prescriptions
 from fightcamp.session_composition import attach_late_fight_assignments, compose_normal_strength_assignments
 from fightcamp.stage2_payload import _build_late_fight_allowed_exercises_by_day
@@ -67,7 +68,23 @@ def test_late_fight_selector_selects_one_fallback_candidate_for_reduced_touch():
     assert [item["name"] for item in assignments["D-10"]] == ["Barbell Thruster"]
 
 
-def test_spliced_role_resolves_exact_selected_source_phase_not_containing_week():
+def test_stage1_phase_days_map_d7_to_spp_before_d5_taper():
+    athlete_model = {
+        "phase_weeks": {
+            "days": {"GPP": 19, "SPP": 2, "TAPER": 5},
+        }
+    }
+    assert scheduled_phase_for_role(
+        {"scheduled_countdown_label": "D-7"},
+        athlete_model=athlete_model,
+    ) == "SPP"
+    assert scheduled_phase_for_role(
+        {"scheduled_countdown_label": "D-5"},
+        athlete_model=athlete_model,
+    ) == "TAPER"
+
+
+def test_late_fight_selector_stays_inside_authoritative_stage1_phase():
     pools = {
         "GPP": {"strength_slots": [_slot("GPP Trap Bar Deadlift", 1)]},
         "SPP": {"strength_slots": [_slot("SPP Barbell Thruster", 1)]},
@@ -77,22 +94,20 @@ def test_spliced_role_resolves_exact_selected_source_phase_not_containing_week()
             "scheduled_countdown_label": "D-10", "scheduled_day_hint": "tuesday",
             "late_fight_tail_owned": True}
     _, assignments = _build_late_fight_allowed_exercises_by_day(
-        spec={"visible_session_sequence": [role]}, candidate_pools=pools,
+        spec={"visible_session_sequence": [role], "phase": "SPP"}, candidate_pools=pools,
     )
     attach_late_fight_assignments([role], assignments)
-    assert role["selected_exercise_assignments"][0]["source_phase"] == "GPP"
+    assert role["selected_exercise_assignments"][0]["source_phase"] == "SPP"
 
-    # The role deliberately lives in an SPP week. Resolution must still use the
-    # exact GPP assignment selected by the shared late-fight authority.
     role_map = {"weeks": [{"phase": "SPP", "calendar_days": [{"weekday": "tuesday", "d_day": 10}],
                            "session_roles": [role]}]}
     apply_late_camp_role_morph(role_map)
     apply_effective_strength_prescriptions(weekly_role_map=role_map, candidate_pools=pools)
     assert [item["name"] for item in role["effective_strength_prescriptions"]] == [
-        "GPP Trap Bar Deadlift"]
+        "SPP Barbell Thruster"]
 
 
-def test_d7_neural_assignment_uses_exact_source_and_excludes_alternatives():
+def test_d7_neural_assignment_uses_taper_pool_when_taper_owns_day():
     pools = {
         "GPP": {"strength_slots": [_slot("GPP Speed Isometric", 1)]},
         "SPP": {"strength_slots": [_slot("SPP Speed High Pull", 1), _slot("SPP Speed Row", 2)]},
@@ -102,7 +117,7 @@ def test_d7_neural_assignment_uses_exact_source_and_excludes_alternatives():
             "scheduled_countdown_label": "D-7", "scheduled_day_hint": "tuesday",
             "late_fight_tail_owned": True}
     _, assignments = _build_late_fight_allowed_exercises_by_day(
-        spec={"visible_session_sequence": [role]}, candidate_pools=pools,
+        spec={"visible_session_sequence": [role], "phase": "TAPER"}, candidate_pools=pools,
     )
     attach_late_fight_assignments([role], assignments)
     role_map = {"weeks": [{"phase": "TAPER", "calendar_days": [{"weekday": "tuesday", "d_day": 7}],
@@ -112,7 +127,8 @@ def test_d7_neural_assignment_uses_exact_source_and_excludes_alternatives():
     selected = role["selected_exercise_assignments"]
     resolved = role["effective_strength_prescriptions"]
     assert len(selected) == len(resolved) == 1
-    assert resolved[0]["name"] == selected[0]["name"]
+    assert selected[0]["source_phase"] == "TAPER"
+    assert resolved[0]["name"] == "Taper Speed Shuffle"
 
 
 def test_d30_spliced_tail_matches_direct_late_fight_assignment_authority():
