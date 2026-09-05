@@ -210,6 +210,108 @@ def test_neural_strength_hybrid_can_satisfy_strength_and_power_without_forcing_d
     assert role["strength_composition_policy"]["effective_exercise_cap"] == 2
 
 
+def test_current_fatigue_only_tightens_first_active_week():
+    role_map = {
+        "weeks": [
+            {
+                "phase": "GPP",
+                "session_roles": [
+                    {
+                        "role_key": "primary_strength_day",
+                        "category": "strength",
+                        "strength_session_index": 1,
+                        "scheduled_countdown_label": "D-41",
+                    }
+                ],
+            },
+            {
+                "phase": "GPP",
+                "session_roles": [
+                    {
+                        "role_key": "primary_strength_day",
+                        "category": "strength",
+                        "strength_session_index": 1,
+                        "scheduled_countdown_label": "D-34",
+                    }
+                ],
+            },
+        ]
+    }
+    token = planner_athlete_model_context.set(
+        {"fatigue": "high", "cut_severity_bucket": "none", "days_until_fight": 42}
+    )
+    try:
+        compose_normal_strength_assignments(
+            weekly_role_map=role_map,
+            candidate_pools={"GPP": {"strength_slots": _diverse_slots()}},
+        )
+    finally:
+        planner_athlete_model_context.reset(token)
+
+    first_policy = role_map["weeks"][0]["session_roles"][0]["strength_composition_policy"]
+    future_policy = role_map["weeks"][1]["session_roles"][0]["strength_composition_policy"]
+    assert first_policy["fatigue_applied"] is True
+    assert first_policy["pressure"] == 2
+    assert first_policy["effective_exercise_cap"] == 3
+    assert future_policy["fatigue_applied"] is False
+    assert future_policy["fatigue_pressure"] == 0
+    assert future_policy["pressure"] == 0
+    assert future_policy["effective_exercise_cap"] == 5
+
+
+def test_weight_cut_pressure_recalculates_from_each_roles_d_day():
+    role_map = {
+        "weeks": [
+            {
+                "phase": "GPP",
+                "session_roles": [
+                    {
+                        "role_key": "primary_strength_day",
+                        "category": "strength",
+                        "strength_session_index": 1,
+                        "scheduled_countdown_label": "D-35",
+                    }
+                ],
+            },
+            {
+                "phase": "GPP",
+                "session_roles": [
+                    {
+                        "role_key": "primary_strength_day",
+                        "category": "strength",
+                        "strength_session_index": 1,
+                        "scheduled_countdown_label": "D-7",
+                    }
+                ],
+            },
+        ]
+    }
+    token = planner_athlete_model_context.set(
+        {
+            "fatigue": "low",
+            "weight_cut_risk": True,
+            "weight_cut_pct": 4.5,
+            "days_until_fight": 35,
+        }
+    )
+    try:
+        compose_normal_strength_assignments(
+            weekly_role_map=role_map,
+            candidate_pools={"GPP": {"strength_slots": _diverse_slots()}},
+        )
+    finally:
+        planner_athlete_model_context.reset(token)
+
+    early_policy = role_map["weeks"][0]["session_roles"][0]["strength_composition_policy"]
+    late_policy = role_map["weeks"][1]["session_roles"][0]["strength_composition_policy"]
+    assert early_policy["role_days_until_fight"] == 35
+    assert early_policy["cut_severity_bucket"] == "moderate"
+    assert early_policy["effective_exercise_cap"] == 4
+    assert late_policy["role_days_until_fight"] == 7
+    assert late_policy["cut_severity_bucket"] == "high"
+    assert late_policy["effective_exercise_cap"] == 3
+
+
 def test_composition_context_persists_for_recomposition_after_build_context_resets():
     role_map, first_role = _compose(
         {"fatigue": "moderate", "cut_severity_bucket": "moderate"}
