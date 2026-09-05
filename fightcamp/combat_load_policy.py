@@ -59,6 +59,10 @@ class PlacementDirective(str, Enum):
 class CalendarLoadProfile:
     load_class: LoadClass
     occupancy: DayOccupancy
+    # Provenance-sensitive exception: only the canonical coach-owned
+    # ``light_combat_day`` role may set this. Resolved hard-sparring contact stays
+    # strict even when its effective load is downgraded to technical-only.
+    allows_light_combat_stack: bool = False
 
 
 @dataclass(frozen=True)
@@ -126,15 +130,10 @@ _SANDWICH_ALLOW_LOADS = frozenset(
         LoadClass.LOW_LOAD_AEROBIC,
     }
 )
-# Loads that may legally *share* a light (technical-contact-only) combat day.
-# Declared light combat is coach-owned and immutable, but S&C-compatible, not
-# day-exclusive: a low-load or true-microdose support session may coexist with a
-# light-technical session. Hard/reduced contact and meaningful strength/
-# conditioning are deliberately absent — they still own the day exclusively, so a
-# light day is more permissive than a hard-contact day but never as permissive as
-# an empty day (contact adjacency rules below still apply). Non-contact exclusive
-# stressors (fight-week freshness, neural primer, sharpness) are excluded via
-# their EXCLUSIVE_PHYSICAL occupancy before this set is consulted.
+# Loads that may legally *share* a declared light-combat day. The permissive
+# exception is provenance-gated by ``CalendarLoadProfile.allows_light_combat_stack``;
+# a resolved hard-sparring day that becomes TECHNICAL_CONTACT never receives that
+# flag and therefore remains strict.
 _LIGHT_COMBAT_COEXIST_LOADS = frozenset(
     {
         LoadClass.OFF,
@@ -271,11 +270,18 @@ def _validate_profile_compatibility(
 
 
 def _profile(
-    load_class: LoadClass, occupancy: DayOccupancy | None = None
+    load_class: LoadClass,
+    occupancy: DayOccupancy | None = None,
+    *,
+    allows_light_combat_stack: bool = False,
 ) -> CalendarLoadProfile:
     occupancy = occupancy or _default_occupancy(load_class)
     _validate_profile_compatibility(load_class, occupancy)
-    return CalendarLoadProfile(load_class=load_class, occupancy=occupancy)
+    return CalendarLoadProfile(
+        load_class=load_class,
+        occupancy=occupancy,
+        allows_light_combat_stack=allows_light_combat_stack,
+    )
 
 
 def _resolved_contact_class(entry: Mapping[str, Any]) -> LoadClass | None:
@@ -313,6 +319,8 @@ def contact_load_profile(entry: Mapping[str, Any] | None) -> CalendarLoadProfile
             raise ValueError("calendar_day_occupancy requires resolved contact/load class.")
         return None
 
+    # Resolved sparring/contact provenance is always strict. A declared hard day
+    # downgraded to technical-only must not inherit the light-combat stack exception.
     canonical = _profile(load_class)
     if explicit_occupancy is not None and explicit_occupancy is not canonical.occupancy:
         raise ValueError("calendar_day_occupancy conflicts with contact ownership semantics.")
@@ -466,7 +474,15 @@ def role_load_profile(role: Mapping[str, Any] | None) -> CalendarLoadProfile | N
         return contact_load_profile(role)
 
     if role_key in _TECHNICAL_CONTACT_ROLE_KEYS:
-        canonical = _profile(LoadClass.TECHNICAL_CONTACT)
+        # Provenance is carried by the role-vs-resolved-contact path: canonical
+        # declared light combat is the only role key that gets this exception;
+        # downgraded hard sparring is classified through ``contact_load_profile``
+        # and therefore never receives it.
+        is_declared_light_combat = role_key == "light_combat_day"
+        canonical = _profile(
+            LoadClass.TECHNICAL_CONTACT,
+            allows_light_combat_stack=is_declared_light_combat,
+        )
         explicit_load = _explicit_enum(role, "calendar_load_class", LoadClass)
         explicit_occupancy = _explicit_enum(
             role, "calendar_day_occupancy", DayOccupancy
@@ -570,13 +586,14 @@ def _same_day_decision(
         p.occupancy in {DayOccupancy.PHYSICAL, DayOccupancy.EXCLUSIVE_PHYSICAL}
         for p in existing
     )
-    # A *light* combat day is one owned only by technical contact — no hard/reduced
-    # contact, and no non-contact exclusive stressor (freshness/primer/sharpness).
-    # Only such a day is S&C-compatible; everything else owns its day strictly.
+    # The permissive exception belongs to a declared light-combat role, not to
+    # TECHNICAL_CONTACT as a generic load class. A hard-sparring appointment that
+    # resolves down to technical remains strict because its profile carries no flag.
     existing_light_combat_only = (
-        any(p.load_class is LoadClass.TECHNICAL_CONTACT for p in existing)
+        any(p.allows_light_combat_stack for p in existing)
         and not any(
-            p.load_class in {LoadClass.HARD_CONTACT, LoadClass.REDUCED_CONTACT}
+            p.load_class in CONTACT_LOAD_CLASSES
+            and not p.allows_light_combat_stack
             for p in existing
         )
         and not any(
@@ -599,12 +616,9 @@ def _same_day_decision(
             "This candidate owns an exclusive physical slot and the day is already physically occupied.",
         )
     if existing_exclusive and candidate.occupancy is not DayOccupancy.COEXISTABLE:
-        # Light (technical) combat is S&C-compatible, not day-exclusive: a low-load
-        # or true-microdose support session may share a light-technical day. Defer
-        # to the hard-contact adjacency rules below for the final verdict rather
-        # than forbidding here. Hard/reduced contact and non-contact exclusive
-        # stressors are not ``existing_light_combat_only``, so they still own the
-        # day exclusively and fall through to FORBID.
+        # Only an explicitly provenance-stamped declared light-combat appointment
+        # gets the low-load/microdose coexistence exception. Resolved hard/reduced
+        # contact remains strict even if its effective load is TECHNICAL_CONTACT.
         if not (
             existing_light_combat_only
             and candidate.load_class in _LIGHT_COMBAT_COEXIST_LOADS
