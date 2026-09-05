@@ -1,5 +1,5 @@
 from fightcamp.planner_authority_integrity import planner_authority_findings
-from fightcamp.stage2_pipeline import review_stage2_output
+from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
 from fightcamp.stage2_policy import apply_stage2_release_policy
 
 
@@ -150,6 +150,42 @@ def test_review_pipeline_holds_phase_illegal_selected_assignment() -> None:
         for item in report.get("errors", [])
         if isinstance(item, dict)
     )
+
+
+def test_planner_authority_hold_routes_to_planner_regeneration_not_renderer_retry() -> None:
+    validator_report = {
+        "errors": [
+            {
+                "code": "selected_exercise_phase_ineligible",
+                "exercise": "Hang Power Clean",
+                "countdown_label": "D-7",
+                "severity": "blocker",
+                "message": "Illegal selected exercise for Stage 1 phase.",
+            }
+        ],
+        "warnings": [],
+        "blocking_warnings": [],
+        "review_flags": [],
+    }
+
+    retry = build_stage2_retry(
+        stage1_result={
+            "planning_brief": _brief(
+                name="Hang Power Clean",
+                slot_group="strength_slots",
+                d_day=7,
+                week_phase="SPP",
+                category="strength",
+                source_phase="GPP",
+            )
+        },
+        final_plan_text="D-7 — Hang Power Clean",
+        validator_report=validator_report,
+    )
+
+    assert retry["needs_retry"] is False
+    assert retry["requires_planner_regeneration"] is True
+    assert retry["repair_prompt"] is None
 
 
 def test_planner_authority_blocker_forces_hold() -> None:
