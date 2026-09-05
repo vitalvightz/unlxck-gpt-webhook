@@ -143,16 +143,16 @@ def test_composition_pressure_uses_existing_buckets_and_interactions(athlete, ex
 @pytest.mark.parametrize(
     ("athlete", "expected_cap"),
     [
-        ({"fatigue": "low", "cut_severity_bucket": "none"}, 5),
-        ({"fatigue": "moderate", "cut_severity_bucket": "none"}, 4),
-        ({"fatigue": "high", "cut_severity_bucket": "none"}, 3),
+        ({"fatigue": "low", "cut_severity_bucket": "none"}, 4),
+        ({"fatigue": "moderate", "cut_severity_bucket": "none"}, 3),
+        ({"fatigue": "high", "cut_severity_bucket": "none"}, 2),
         ({"fatigue": "high", "cut_severity_bucket": "moderate"}, 2),
     ],
 )
 def test_primary_strength_cap_scales_with_composition_pressure(athlete, expected_cap):
     _, role = _compose(athlete)
     policy = role["strength_composition_policy"]
-    assert policy["base_exercise_cap"] == 5
+    assert policy["base_exercise_cap"] == 4
     assert policy["effective_exercise_cap"] == expected_cap
     assert len(role["selected_exercise_assignments"]) <= expected_cap
 
@@ -176,38 +176,42 @@ def test_material_pressure_reduces_same_family_limit_to_one():
     slots = [
         _slot("Broad Jump", 1, movement="jump", tags=["explosive", "mech_lower_jump"], movement_patterns=["jump", "explosive", "mech_lower_jump"]),
         _slot("Lateral Bound", 2, movement="jump", tags=["explosive", "mech_lower_jump"], movement_patterns=["bound", "explosive", "mech_lower_jump"]),
-        _slot("Banded Row", 3, movement="pull", tags=["compound", "upper_body"], movement_patterns=["pull", "upper_body"]),
-        _slot("Trap Bar Deadlift", 4, movement="hinge", tags=["compound", "posterior_chain"], movement_patterns=["hinge", "posterior_chain"], equipment=["barbell"]),
+        _slot("Jump Lunge", 3, movement="lunge", tags=["explosive", "mech_lower_jump"], movement_patterns=["jump", "explosive", "mech_lower_jump"]),
+        _slot("Banded Row", 4, movement="pull", tags=["compound", "upper_body"], movement_patterns=["pull", "upper_body"]),
+        _slot("Trap Bar Deadlift", 5, movement="hinge", tags=["compound", "posterior_chain"], movement_patterns=["hinge", "posterior_chain"], equipment=["barbell"]),
     ]
-    _, role = _compose({"fatigue": "high", "cut_severity_bucket": "none"}, slots=slots)
+    _, role = _compose({"fatigue": "moderate", "cut_severity_bucket": "none"}, slots=slots)
     names = [item["name"] for item in role["selected_exercise_assignments"]]
-    assert len({"Broad Jump", "Lateral Bound"} & set(names)) == 1
+    assert len({"Broad Jump", "Lateral Bound", "Jump Lunge"} & set(names)) == 1
     assert role["strength_composition_policy"]["major_family_limit"] == 1
 
 
-def test_neural_strength_hybrid_can_satisfy_strength_and_power_without_forcing_duplicates():
+@pytest.mark.parametrize("role_key", ["neural_plus_strength_day", "transfer_strength_day"])
+def test_hybrid_coverage_wins_before_pure_power_consumes_family_limit(role_key):
     slots = [
+        _slot("Broad Jump", 1, movement="jump", tags=["explosive", "mech_lower_jump"], movement_patterns=["jump", "explosive", "mech_lower_jump"]),
         _slot(
             "Heavy RDL → Broad Jump",
-            1,
+            2,
             movement="hinge",
             tags=["compound", "posterior_chain", "explosive", "mech_lower_jump"],
             movement_patterns=["hinge", "posterior_chain", "explosive", "mech_lower_jump"],
             equipment=["barbell"],
             prescription="3 x 3 @ 85% then 3 broad jumps",
         ),
-        _slot("Banded Row", 2, movement="pull", tags=["compound", "upper_body"], movement_patterns=["pull", "upper_body"]),
-        _slot("Jump Lunge", 3, movement="lunge", tags=["explosive", "mech_lower_jump"], movement_patterns=["jump", "explosive", "mech_lower_jump"]),
-        _slot("Pallof Hold", 4, movement="core", tags=["anti_rotation", "core"], movement_patterns=["anti_rotation", "core"]),
+        _slot("Pallof Hold", 3, movement="core", tags=["anti_rotation", "core"], movement_patterns=["anti_rotation", "core"]),
     ]
     _, role = _compose(
-        {"fatigue": "high", "cut_severity_bucket": "moderate"},
-        role_key="neural_plus_strength_day",
+        {"fatigue": "low", "cut_severity_bucket": "moderate"},
+        role_key=role_key,
         slots=slots,
     )
     names = [item["name"] for item in role["selected_exercise_assignments"]]
-    assert names == ["Heavy RDL → Broad Jump", "Banded Row"]
-    assert role["strength_composition_policy"]["effective_exercise_cap"] == 2
+    policy = role["strength_composition_policy"]
+    assert names == ["Heavy RDL → Broad Jump", "Pallof Hold"]
+    assert "Broad Jump" not in names
+    assert policy["effective_exercise_cap"] == 2
+    assert policy["major_family_limit"] == 1
 
 
 def test_current_fatigue_only_tightens_first_active_week():
@@ -252,11 +256,11 @@ def test_current_fatigue_only_tightens_first_active_week():
     future_policy = role_map["weeks"][1]["session_roles"][0]["strength_composition_policy"]
     assert first_policy["fatigue_applied"] is True
     assert first_policy["pressure"] == 2
-    assert first_policy["effective_exercise_cap"] == 3
+    assert first_policy["effective_exercise_cap"] == 2
     assert future_policy["fatigue_applied"] is False
     assert future_policy["fatigue_pressure"] == 0
     assert future_policy["pressure"] == 0
-    assert future_policy["effective_exercise_cap"] == 5
+    assert future_policy["effective_exercise_cap"] == 4
 
 
 def test_weight_cut_pressure_recalculates_from_each_roles_d_day():
@@ -306,10 +310,10 @@ def test_weight_cut_pressure_recalculates_from_each_roles_d_day():
     late_policy = role_map["weeks"][1]["session_roles"][0]["strength_composition_policy"]
     assert early_policy["role_days_until_fight"] == 35
     assert early_policy["cut_severity_bucket"] == "moderate"
-    assert early_policy["effective_exercise_cap"] == 4
+    assert early_policy["effective_exercise_cap"] == 3
     assert late_policy["role_days_until_fight"] == 7
     assert late_policy["cut_severity_bucket"] == "high"
-    assert late_policy["effective_exercise_cap"] == 3
+    assert late_policy["effective_exercise_cap"] == 2
 
 
 def test_composition_context_persists_for_recomposition_after_build_context_resets():
@@ -326,3 +330,97 @@ def test_composition_context_persists_for_recomposition_after_build_context_rese
     second_role = role_map["weeks"][0]["session_roles"][0]
     assert second_role["strength_composition_policy"]["pressure"] == 2
     assert [item["name"] for item in second_role["selected_exercise_assignments"]] == first_names
+
+
+@pytest.mark.parametrize(
+    ("athlete", "expected_cap"),
+    [
+        ({"fatigue": "low", "cut_severity_bucket": "none"}, 3),
+        ({"fatigue": "low", "cut_severity_bucket": "moderate"}, 2),
+    ],
+)
+def test_neural_plus_strength_cap_scales_from_three(athlete, expected_cap):
+    _, role = _compose(athlete, role_key="neural_plus_strength_day")
+    policy = role["strength_composition_policy"]
+    assert policy["base_exercise_cap"] == 3
+    assert policy["effective_exercise_cap"] == expected_cap
+
+
+def test_current_fatigue_applies_to_first_week_with_normal_strength():
+    role_map = {
+        "weeks": [
+            {
+                "phase": "GPP",
+                "session_roles": [
+                    {"role_key": "aerobic_base_day", "category": "conditioning"}
+                ],
+            },
+            {
+                "phase": "GPP",
+                "session_roles": [
+                    {
+                        "role_key": "primary_strength_day",
+                        "category": "strength",
+                        "strength_session_index": 1,
+                    }
+                ],
+            },
+            {
+                "phase": "GPP",
+                "session_roles": [
+                    {
+                        "role_key": "primary_strength_day",
+                        "category": "strength",
+                        "strength_session_index": 1,
+                    }
+                ],
+            },
+        ]
+    }
+    token = planner_athlete_model_context.set(
+        {"fatigue": "high", "cut_severity_bucket": "none"}
+    )
+    try:
+        compose_normal_strength_assignments(
+            weekly_role_map=role_map,
+            candidate_pools={"GPP": {"strength_slots": _diverse_slots()}},
+        )
+    finally:
+        planner_athlete_model_context.reset(token)
+
+    first = role_map["weeks"][1]["session_roles"][0]["strength_composition_policy"]
+    later = role_map["weeks"][2]["session_roles"][0]["strength_composition_policy"]
+    assert first["fatigue_applied"] is True
+    assert first["effective_exercise_cap"] == 2
+    assert later["fatigue_applied"] is False
+    assert later["effective_exercise_cap"] == 4
+
+
+@pytest.mark.parametrize(
+    ("role_key", "d_day", "expected_cap"),
+    [
+        ("primary_strength_day", 26, 3),
+        ("neural_plus_strength_day", 19, 2),
+    ],
+)
+def test_active_three_point_four_percent_cut_uses_canonical_role_pressure(
+    role_key, d_day, expected_cap
+):
+    role_map = _role_map(role_key)
+    role = role_map["weeks"][0]["session_roles"][0]
+    role["scheduled_countdown_label"] = f"D-{d_day}"
+    token = planner_athlete_model_context.set(
+        {"fatigue": "low", "weight_cut_risk": True, "weight_cut_pct": 3.4}
+    )
+    try:
+        compose_normal_strength_assignments(
+            weekly_role_map=role_map,
+            candidate_pools={"GPP": {"strength_slots": _diverse_slots()}},
+        )
+    finally:
+        planner_athlete_model_context.reset(token)
+
+    policy = role["strength_composition_policy"]
+    assert policy["cut_severity_bucket"] == "moderate"
+    assert policy["effective_exercise_cap"] == expected_cap
+    assert len(role["selected_exercise_assignments"]) <= expected_cap
