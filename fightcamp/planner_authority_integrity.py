@@ -308,7 +308,10 @@ def planner_authority_findings(planning_brief: dict[str, Any]) -> list[dict[str,
                 continue
 
             if (
-                offset is not None
+                # Countdown proximity does not transfer exercise authority from
+                # the normal camp planner to the dedicated late-tail selector.
+                role.get("late_fight_tail_owned")
+                and offset is not None
                 and phase_entries
                 and not late_window_allowed(phase_entries, offset=offset)
             ):

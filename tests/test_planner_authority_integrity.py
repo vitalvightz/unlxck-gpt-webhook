@@ -13,8 +13,10 @@ def _brief(
     source_phase: str,
     loaded_allowed: bool = True,
     phase_days: dict[str, int] | None = None,
+    late_fight_tail_owned: bool = False,
+    role_key: str = "test_role",
 ) -> dict:
-    return {
+    brief = {
         "athlete_snapshot": {
             "phase_weeks": {
                 "days": phase_days or {"GPP": 19, "SPP": 2, "TAPER": 5},
@@ -26,7 +28,7 @@ def _brief(
                     "phase": week_phase,
                     "session_roles": [
                         {
-                            "role_key": "test_role",
+                            "role_key": role_key,
                             "category": category,
                             "scheduled_countdown_label": f"D-{d_day}",
                             "selected_exercise_assignments": [
@@ -45,6 +47,12 @@ def _brief(
             ]
         },
     }
+
+    if late_fight_tail_owned:
+        brief["weekly_role_map"]["weeks"][0]["session_roles"][0][
+            "late_fight_tail_owned"
+        ] = True
+    return brief
 
 
 def _codes(brief: dict) -> set[str]:
@@ -161,6 +169,7 @@ def test_review_pipeline_still_holds_late_window_illegal_selected_assignment() -
         category="conditioning",
         source_phase="TAPER",
         phase_days={"GPP": 0, "SPP": 0, "TAPER": 13},
+        late_fight_tail_owned=True,
     )
 
     review = review_stage2_output(
@@ -176,6 +185,101 @@ def test_review_pipeline_still_holds_late_window_illegal_selected_assignment() -
         for item in report.get("errors", [])
         if isinstance(item, dict)
     )
+
+
+def test_normal_d19_spp_role_does_not_require_late_window_permission() -> None:
+    brief = _brief(
+        name="Heavy RDL → Broad Jump",
+        slot_group="strength_slots",
+        d_day=19,
+        week_phase="SPP",
+        category="strength",
+        source_phase="SPP",
+        phase_days={"GPP": 28, "SPP": 14, "TAPER": 5},
+        role_key="neural_plus_strength_day",
+    )
+
+    assert "selected_exercise_late_window_ineligible" not in _codes(brief)
+
+
+def test_normal_d18_spp_role_does_not_require_late_window_permission() -> None:
+    brief = _brief(
+        name="Barbell Thruster",
+        slot_group="strength_slots",
+        d_day=18,
+        week_phase="SPP",
+        category="strength",
+        source_phase="SPP",
+        phase_days={"GPP": 28, "SPP": 14, "TAPER": 5},
+        role_key="neural_plus_strength_day",
+    )
+
+    assert "selected_exercise_late_window_ineligible" not in _codes(brief)
+
+
+def test_normal_d19_spp_role_still_enforces_phase_authority() -> None:
+    brief = _brief(
+        name="Hang Power Clean",
+        slot_group="strength_slots",
+        d_day=19,
+        week_phase="SPP",
+        category="strength",
+        source_phase="GPP",
+        phase_days={"GPP": 28, "SPP": 14, "TAPER": 5},
+        role_key="neural_plus_strength_day",
+    )
+
+    assert "selected_exercise_phase_ineligible" in _codes(brief)
+
+
+def test_late_tail_d6_keeps_matching_late_window_permission() -> None:
+    brief = _brief(
+        name="Reactive Shuffle Repeats",
+        slot_group="conditioning_slots",
+        d_day=6,
+        week_phase="TAPER",
+        category="conditioning",
+        source_phase="TAPER",
+        phase_days={"GPP": 0, "SPP": 0, "TAPER": 13},
+        late_fight_tail_owned=True,
+    )
+
+    assert "selected_exercise_late_window_ineligible" not in _codes(brief)
+
+
+def test_late_tail_role_still_blocks_missing_late_window_metadata() -> None:
+    brief = _brief(
+        name="TRX Row",
+        slot_group="strength_slots",
+        d_day=4,
+        week_phase="TAPER",
+        category="strength",
+        source_phase="TAPER",
+        phase_days={"GPP": 0, "SPP": 0, "TAPER": 13},
+        late_fight_tail_owned=True,
+    )
+
+    assert "selected_exercise_late_window_ineligible" in _codes(brief)
+
+
+def test_review_pipeline_does_not_hold_valid_normal_d19_spp_assignment() -> None:
+    brief = _brief(
+        name="Jump Lunge (Alternating)",
+        slot_group="strength_slots",
+        d_day=19,
+        week_phase="SPP",
+        category="strength",
+        source_phase="SPP",
+        phase_days={"GPP": 28, "SPP": 14, "TAPER": 5},
+        role_key="neural_plus_strength_day",
+    )
+
+    review = review_stage2_output(
+        planning_brief=brief,
+        final_plan_text="D-19 (Tuesday) — Neural + Strength\nJump Lunge (Alternating) — 3 x 3",
+    )
+
+    assert review["validator_report"].get("planner_authority_integrity_hold") is not True
 
 
 def test_planner_authority_hold_routes_to_planner_regeneration_not_renderer_retry() -> None:
