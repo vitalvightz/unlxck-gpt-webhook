@@ -371,3 +371,55 @@ def test_finalizer_packet_explains_reduced_count_for_bad_boxing_profile():
     assert "injury" in joined_reasons
     assert "hard sparring / contact" in joined_reasons
     assert "intentional compression" in joined_reasons
+
+
+def test_camp_finalizer_packet_exposes_authoritative_deterministic_session_spine():
+    stage2_payload = {
+        "athlete_model": {
+            "days_until_fight": 22,
+            "fight_date": "2026-09-28",
+            "next_fight_date": "2026-09-28",
+            "sport": "boxing",
+        },
+        "render_mode": "camp_plan",
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "week_index": 2,
+                    "phase": "SPP",
+                    "calendar_days": [{"weekday": "Wednesday", "countdown_label": "D-12"}],
+                    "session_roles": [
+                        {
+                            "session_index": 1,
+                            "role_key": "strength_touch_day",
+                            "category": "strength",
+                            "scheduled_day_hint": "Wednesday",
+                            "scheduled_countdown_label": "D-12",
+                        }
+                    ],
+                }
+            ]
+        },
+    }
+    packet = build_stage2_finalizer_packet(stage2_payload=stage2_payload)
+    spine = packet["selected_plan"]["deterministic_session_spine"]
+    assert spine[0]["week_index"] == 2
+    assert spine[0]["sessions"][0]["role_key"] == "strength_touch_day"
+    assert spine[0]["sessions"][0]["scheduled_countdown_label"] == "D-12"
+    assert any(
+        "deterministic_session_spine is the authoritative finished" in rule
+        and "Do not delete, omit, merge, move" in rule
+        for rule in packet["hard_rules"]
+    )
+
+
+def test_non_camp_finalizer_does_not_add_deterministic_session_spine():
+    stage2_payload = {
+        "payload_mode": "open_ongoing_payload",
+        "render_mode": "open_ongoing_system",
+        "athlete_model": {"days_until_fight": None, "fight_date": None, "next_fight_date": None},
+        "open_plan_spec": {"plan_type": "open_ongoing_system", "structure": ["Immediate Coach Summary"]},
+        "weekly_role_map": {"weeks": [{"week_index": 1, "session_roles": [{"session_index": 1, "role_key": "x"}]}]},
+    }
+    packet = build_stage2_finalizer_packet(stage2_payload=stage2_payload)
+    assert "deterministic_session_spine" not in packet["selected_plan"]

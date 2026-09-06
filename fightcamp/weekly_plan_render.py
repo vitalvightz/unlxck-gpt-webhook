@@ -377,6 +377,45 @@ def _render_week(week: dict[str, Any], blocks: Any) -> list[str]:
     return lines
 
 
+def render_weekly_session_spine(weekly_role_map: dict[str, Any]) -> list[dict[str, Any]]:
+    """Copy the finished planner's session identities for finalizer rendering.
+
+    No placement, selection, dose default, or session-count repair happens here.
+    """
+    if not isinstance(weekly_role_map, dict):
+        return []
+    spine: list[dict[str, Any]] = []
+    for week in weekly_role_map.get("weeks", []) or []:
+        if not isinstance(week, dict):
+            continue
+        sessions = [
+            {
+                key: role[key]
+                for key in (
+                    "session_index", "session_id", "role_key", "category",
+                    "preferred_system", "scheduled_day_hint", "scheduled_countdown_label",
+                    "countdown_label", "countdown_offset", "athlete_facing_label",
+                    "coach_owned", "render_mandatory",
+                )
+                if key in role
+            }
+            for role in week.get("session_roles", []) or []
+            if isinstance(role, dict) and role.get("render_mandatory") is not False
+        ]
+        if sessions:
+            spine.append(
+                {
+                    **{
+                        key: week[key]
+                        for key in ("week_index", "phase", "calendar_days")
+                        if key in week
+                    },
+                    "sessions": sessions,
+                }
+            )
+    return spine
+
+
 def render_weekly_schedule_section(*, planning_brief: dict[str, Any], blocks: Any) -> str:
     """Render the deterministic week-by-week schedule, or ``""`` when N/A.
 

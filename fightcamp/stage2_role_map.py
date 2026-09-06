@@ -1754,6 +1754,22 @@ def _preferred_boxer_conditioning_sequence(phase: str, conditioning_sequence: li
     return dedupe_preserve_order(preferred + list(conditioning_sequence or []))
 
 
+def _prioritize_required_conditioning_systems(sequence: list[str], week: dict) -> list[str]:
+    """Protect resolved conditioning intent within the existing finite slots."""
+    state = week.get("resolved_rule_state") or {}
+    required = [
+        system
+        for item in clean_list(state.get("must_keep", week.get("must_keep", [])))
+        if (system := str(item).strip().lower()) in {"aerobic", "glycolytic", "alactic"}
+    ]
+    if not required:
+        return sequence
+    # The brief already resolved phase and athlete-limiter priorities. Keep
+    # those as the optional order rather than forcing a universal SPP pair.
+    adaptive = list(week.get("conditioning_sequence") or sequence)
+    return dedupe_preserve_order(required + adaptive)
+
+
 def _resequence_session_roles(
     week_entry: dict,
     session_roles: list[dict],
@@ -3296,6 +3312,11 @@ def _build_weekly_role_map(
             conditioning_sequence = _preferred_boxer_conditioning_sequence(
                 week_entry.get("phase", ""),
                 conditioning_sequence,
+            )
+        if sport_key == "boxing" and week_entry.get("phase", "").upper() in {"GPP", "SPP"}:
+            conditioning_sequence = _prioritize_required_conditioning_systems(
+                conditioning_sequence,
+                week_entry,
             )
         session_roles: list[dict] = []
         suppressed_roles: list[dict] = []

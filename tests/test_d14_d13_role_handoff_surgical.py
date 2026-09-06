@@ -195,3 +195,27 @@ def test_real_splice_preserves_unmet_parent_alactic_intent():
         for role in week["session_roles"]
     )
     assert any(role["role_key"] == "normal_d14" for role in week["session_roles"])
+
+
+def test_required_conditioning_priority_preserves_finite_slot_intent() -> None:
+    from fightcamp.stage2_role_map import _prioritize_required_conditioning_systems
+
+    week = {
+        "resolved_rule_state": {"must_keep": ["rehab", "glycolytic", "alactic", "primary_strength"]},
+        "conditioning_sequence": ["aerobic", "glycolytic", "alactic"],
+    }
+    assert _prioritize_required_conditioning_systems(
+        ["aerobic", "glycolytic", "alactic"], week
+    ) == ["glycolytic", "alactic", "aerobic"]
+
+
+def test_required_conditioning_priority_is_not_a_fixed_spp_pair() -> None:
+    from fightcamp.stage2_role_map import _prioritize_required_conditioning_systems
+
+    week = {
+        "resolved_rule_state": {"must_keep": ["aerobic", "glycolytic"]},
+        "conditioning_sequence": ["alactic", "glycolytic", "aerobic"],
+    }
+    assert _prioritize_required_conditioning_systems(
+        ["aerobic", "glycolytic", "alactic"], week
+    )[:2] == ["aerobic", "glycolytic"]
