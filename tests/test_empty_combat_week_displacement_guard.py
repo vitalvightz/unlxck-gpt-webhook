@@ -13,7 +13,7 @@ def _athlete() -> dict:
         "status": "amateur",
         "record": "0-0",
         "rounds_format": "3 x 3",
-        "fight_date": "2027-07-21",
+        "fight_date": "2026-10-11",
         "days_until_fight": 35,
         "plan_creation_weekday": "wednesday",
         "fatigue": "low",
@@ -45,7 +45,22 @@ def _progression() -> dict:
                 "span_days": 7,
                 "session_counts": {"strength": 2, "conditioning": 2, "recovery": 1},
                 "conditioning_sequence": ["aerobic", "glycolytic", "alactic"],
-            }
+            },
+            *[
+                {
+                    "week_index": index,
+                    "phase": "GPP" if index < 4 else "SPP",
+                    "stage_key": "general_capacity",
+                    "span_days": 7,
+                    "session_counts": {
+                        "strength": 2,
+                        "conditioning": 2,
+                        "recovery": 1,
+                    },
+                    "conditioning_sequence": ["aerobic", "glycolytic", "alactic"],
+                }
+                for index in range(2, 6)
+            ],
         ]
     }
 

@@ -58,6 +58,7 @@ _EXPLICIT_HARD_LOAD_TOKENS = {
     "maximal",
 }
 _RESOLVED_HARD_CONTACT_COUNT_KEY = "_resolved_effective_hard_contact_count"
+_RESOLVED_HARD_EXPOSURE_COUNT_KEY = "_resolved_effective_hard_exposure_count"
 
 
 def _token(value: Any) -> str:
@@ -332,9 +333,23 @@ def _bridge_allows_glycolytic_on_day(athlete_model: dict, d_day: int) -> bool:
         hard_sparring_days_declared=resolved_hard_count,
         athlete_model=athlete_model,
     )
-    return not bool(rules.get("block_full_plan")) and int(
-        rules.get("glycolytic_touch_max") or 0
-    ) >= 1
+    if bool(rules.get("block_full_plan")):
+        return False
+    if int(rules.get("glycolytic_touch_max") or 0) >= 1:
+        return True
+
+    # The shared bridge policy describes moderate fatigue as blocking an
+    # *extra* glycolytic touch.  In an otherwise empty hard-exposure week this
+    # policy is considering the first controlled touch, not an extra one.  Keep
+    # every other bridge restriction binding and only restore the D-21..D-18
+    # baseline in that exact case.
+    resolved_exposure_count = athlete_model.get(_RESOLVED_HARD_EXPOSURE_COUNT_KEY)
+    reason_codes = set(clean_list(rules.get("reason_codes", [])))
+    return bool(
+        resolved_exposure_count == 0
+        and 18 <= d_day <= 21
+        and "fatigue_moderate_blocks_extra_glycolytic_touch" in reason_codes
+    )
 
 
 def _bridge_legal_pressure_days(
@@ -353,6 +368,13 @@ def _bridge_legal_pressure_days(
     bridge_athlete = dict(athlete_model)
     bridge_athlete[_RESOLVED_HARD_CONTACT_COUNT_KEY] = len(
         _effective_hard_contact_days(
+            week_entry,
+            athlete_model,
+            hard_sparring_plan=hard_sparring_plan,
+        )
+    )
+    bridge_athlete[_RESOLVED_HARD_EXPOSURE_COUNT_KEY] = len(
+        _effective_hard_exposure_days(
             week_entry,
             athlete_model,
             hard_sparring_plan=hard_sparring_plan,

@@ -97,7 +97,7 @@ def test_mixed_bridge_week_places_mandatory_hard_role_only_on_exact_legal_day(mo
     )
     hard = next(role for role in assigned if role.get("mandatory_hard_conditioning_exposure"))
 
-    assert hard["scheduled_day_hint"] == "monday"
+    assert hard["scheduled_day_hint"] == "Monday"
     assert hard["scheduled_day_hint"] not in {"tuesday", "wednesday"}
 
 

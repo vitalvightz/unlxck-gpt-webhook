@@ -117,6 +117,19 @@ def _glycolytic_slot(phase: str) -> dict:
     }
 
 
+def _aerobic_slot(phase: str) -> dict:
+    slot = _glycolytic_slot(phase)
+    slot["role"] = "aerobic"
+    slot["slot_id"] = f"{phase.lower()}_aerobic_regression"
+    slot["selected"]["name"] = "Easy Aerobic Run"
+    slot["selected"]["system"] = "AEROBIC"
+    slot["selected"]["prescription"] = "20 minutes at RPE 5"
+    slot["selected"]["selection_metadata"].update(
+        system="AEROBIC", work_sec=0, rest_sec=0, rounds=0, total_minutes=20, rpe=5
+    )
+    return slot
+
+
 def test_missing_hard_stimulus_gives_primary_conditioning_a_pressure_role():
     role_map = _build_weekly_role_map(_athlete(), _progression(), LIMITER)
     week = _first_week(role_map)
@@ -124,7 +137,7 @@ def test_missing_hard_stimulus_gives_primary_conditioning_a_pressure_role():
 
     assert pressure is not None
     assert pressure["preferred_system"] == "glycolytic"
-    assert pressure["anchor"] == "highest_glycolytic_day"
+    assert pressure["anchor"] == "support_day"
     assert pressure["governance"]["authority"] == "execution_layer_only"
     assert pressure["governance"]["execution_only"] is True
     assert "strength" not in pressure["selection_rule"].lower()
@@ -145,7 +158,7 @@ def test_hard_stimulus_substitution_applies_to_every_supported_combat_sport(spor
     assert policy._eligible_hard_stimulus_deficit(week, athlete) is True
     pressure = _hard_pressure_role(week)
     assert pressure is not None
-    assert pressure.get("upgraded_from_hard_stimulus_deficit") is True
+    assert pressure.get("mandatory_hard_conditioning_exposure") is True
     assert pressure["preferred_system"] == "glycolytic"
 
 
@@ -245,7 +258,12 @@ def test_hard_pressure_survives_goal_preservation_and_render_validation():
         "priority_focus": {"primary_goal": "conditioning", "secondary_goals": []},
         "weekly_role_map": role_map,
         "candidate_pools": {
-            "GPP": {"conditioning_slots": [_glycolytic_slot("GPP")]},
+            "GPP": {
+                "conditioning_slots": [
+                    _glycolytic_slot("GPP"),
+                    _aerobic_slot("GPP"),
+                ]
+            },
             "SPP": {"conditioning_slots": [_glycolytic_slot("SPP")]},
             "TAPER": {"conditioning_slots": []},
         },
@@ -272,7 +290,9 @@ def test_hard_pressure_survives_goal_preservation_and_render_validation():
         planning_brief=brief,
         final_plan_text=(
             "D-21 Monday\n"
-            "- Assault Bike Repeated Hard Efforts: 6 x 30s hard / 90s easy\n"
+            "- Easy Aerobic Run: 20 minutes at RPE 5\n"
+            "D-18 Thursday\n"
+            "- Assault Bike Repeated Hard Efforts: 6 x 30s hard / rest 90 sec\n"
             "D-0 Monday\n"
             "Fight day protocol."
         ),
