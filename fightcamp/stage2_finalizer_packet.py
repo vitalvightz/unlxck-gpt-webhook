@@ -14,6 +14,7 @@ from typing import Any
 from . import stage2_finalizer_packet_impl as _impl
 from .prescription_resolver import assert_late_camp_effective_strength_authority
 from .stage2_payload_late_fight import _handoff_mode_instructions
+from .weekly_plan_render import render_weekly_session_spine
 
 for _export_name in dir(_impl):
     if not _export_name.startswith("__"):
@@ -135,6 +136,24 @@ def build_stage2_finalizer_packet(
         planning_brief=planning_brief,
     )
     _lock_sparse_hard_conditioning_contract(packet)
+
+    if packet.get("render_mode") == "camp_plan":
+        spine = render_weekly_session_spine(weekly_role_map)
+        if spine:
+            selected_plan = packet.setdefault("selected_plan", {})
+            selected_plan["deterministic_session_spine"] = deepcopy(spine)
+            packet.setdefault("hard_rules", []).append(
+                "selected_plan.deterministic_session_spine is the authoritative finished "
+                "week/day/session structure, not candidate material. Render every listed "
+                "session exactly once using its supplied week_index, session_index, role_key, "
+                "category, and day/countdown identity. Do not delete, omit, merge, move, "
+                "replace, or invent sessions, or reinterpret S&C as unrelated skill/tactical work. "
+                "Wording and compliant coaching detail remain editable inside each session; "
+                "selected exercise membership and all supplied dose/safety contracts still apply. "
+                "Coach-owned entries retain their existing contact/context rendering contract; "
+                "they are not permission to prescribe additional app-owned work. "
+                "Do not reconstruct intent from Stage 1 exercise menus or restore suppressed roles."
+            )
 
     tail_contracts = _late_fight_tail_contracts(weekly_role_map)
     if not tail_contracts:

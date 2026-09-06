@@ -170,9 +170,38 @@ def _splice_late_fight_tail(
     if not weeks or _week_for_d_day(weeks, 13) is None:
         return False
 
+    tail_athlete_model = dict(athlete_model)
+    tail_athlete_model.pop("handoff_required_conditioning_systems", None)
+    parent_week = _week_for_d_day(weeks, 13)
+    if (
+        parent_week is _week_for_d_day(weeks, 14)
+        and str(parent_week.get("phase") or "").upper() == "SPP"
+    ):
+        # Carry only unmet parent intent across the physical ownership boundary.
+        # The late-fight allocator still owns survival, legality, placement and dose.
+        rule_state = dict(parent_week.get("resolved_rule_state") or {})
+        must_keep = rule_state.get("must_keep", parent_week.get("must_keep", []))
+        if not isinstance(must_keep, (list, tuple, set)):
+            must_keep = []
+        completed_systems = {
+            str(role.get("preferred_system") or "").strip().lower()
+            for role in parent_week.get("session_roles", []) or []
+            if isinstance(role, dict)
+            and (d_day := _role_d_day(parent_week, role)) is not None
+            and d_day >= 14
+        }
+        required_systems = list(dict.fromkeys(
+            system
+            for raw_system in must_keep
+            if (system := str(raw_system).strip().lower()) in {"aerobic", "glycolytic", "alactic"}
+            and system not in completed_systems
+        ))
+        if required_systems:
+            tail_athlete_model["handoff_required_conditioning_systems"] = required_systems
+
     finished_tail = build_finished_late_fight_tail(
         days_until_fight,
-        athlete_model,
+        tail_athlete_model,
         start_day=13,
     )
     tail_roles = [
