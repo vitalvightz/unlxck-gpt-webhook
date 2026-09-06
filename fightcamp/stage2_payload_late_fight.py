@@ -2651,6 +2651,49 @@ def _late_fight_candidate_roles(
                 legal_countdown_labels=legal_countdown_labels,
             )
         )
+        handoff_required_systems = {
+            str(system).strip().lower()
+            for system in clean_list(
+                athlete_model.get("handoff_required_conditioning_systems", [])
+            )
+        }
+        handoff_alactic_labels = [
+            label
+            for label in legal_countdown_labels
+            if (
+                (offset := _countdown_offset(str(label))) is not None
+                and 8 <= offset <= 13
+            )
+        ]
+        if (
+            "alactic" in handoff_required_systems
+            and not preserved_hard_days
+            and handoff_alactic_labels
+        ):
+            # The parent SPP week required alactic work before ownership crossed
+            # D-13. Preserve that still-legal intent by offering the existing
+            # late-fight sharpness role to the existing allocator, restricted to
+            # the D-13..D-8 parent window. Hard glycolytic work remains forbidden.
+            candidates.append(
+                _late_fight_role_entry(
+                    category="conditioning",
+                    role_key="alactic_sharpness_day",
+                    preferred_pool="conditioning_slots",
+                    preferred_system="alactic",
+                    selection_rule=(
+                        "Preserve the parent week's required alactic intent as one "
+                        "brief sharpness exposure; never turn it into density work."
+                    ),
+                    placement_rule=(
+                        "Place this only inside D-13 to D-8 and keep it crisp, "
+                        "low-volume, and non-glycolytic."
+                    ),
+                    selection_priority=108,
+                    required=True,
+                    legal_countdown_labels=handoff_alactic_labels,
+                    placement_source="parent_week_required_intent_handoff",
+                )
+            )
         if not _suppress_standalone_glycolytic(preserved_hard_days, athlete_model):
             candidates.append(
                 _late_fight_role_entry(
