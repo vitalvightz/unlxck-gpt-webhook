@@ -66,3 +66,5 @@ jobs:
             tests/test_d14_d13_role_handoff_surgical.py
           git commit -m "fix: preserve required intent across D13 handoff"
           git push origin codex/d14-d13-role-handoff-surgical
+
+# Trigger verification after the corrected workflow exists on the branch.
