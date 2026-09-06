@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import wraps
+import re
 from typing import Any
 
 from .combat_load_policy import is_effective_hard_contact
@@ -40,6 +41,21 @@ _LOW_IMPACT_RESTRICTION_TOKENS = {
     "tendon",
     "weight_bearing",
     "single_leg_loading",
+}
+_EXPLICIT_HARD_LOAD_TOKENS = {
+    "hard",
+    "hard_spar",
+    "hard_sparring",
+    "hard_pad",
+    "hard_pads",
+    "hard_bag",
+    "hard_conditioning",
+    "fight_pace",
+    "fight_pace_hard",
+    "high",
+    "very_high",
+    "max",
+    "maximal",
 }
 
 
@@ -96,46 +112,110 @@ def _effective_hard_days_from_plan(plan: list[dict] | None) -> set[str]:
     return hard_days
 
 
+def _structured_load_is_hard(value: Any) -> bool:
+    """Recognise only explicit hard external-load metadata; never infer from attendance."""
+    if isinstance(value, dict):
+        for key in ("effective_load", "load", "intensity", "session_type", "type"):
+            if _token(value.get(key)) in _EXPLICIT_HARD_LOAD_TOKENS:
+                return True
+        try:
+            if float(value.get("rpe")) >= 8:
+                return True
+        except (TypeError, ValueError):
+            pass
+        return False
+    return _token(value) in _EXPLICIT_HARD_LOAD_TOKENS
+
+
+def _explicit_external_hard_days(athlete_model: dict) -> set[str]:
+    """Read explicit non-contact hard-load metadata when an upstream caller provides it.
+
+    The current intake's generic ``conditioning`` / ``technical`` labels do not imply
+    hard work. Only explicit hard/high/fight-pace metadata or RPE >= 8 counts.
+    """
+    hard_days = {
+        _token(day)
+        for key in ("external_hard_training_days", "hard_training_days")
+        for day in clean_list(athlete_model.get(key, []))
+        if _token(day)
+    }
+    for key in (
+        "external_training_load_by_day",
+        "session_load_by_day",
+        "session_loads_by_day",
+        "session_types_by_day",
+    ):
+        values = athlete_model.get(key)
+        if not isinstance(values, dict):
+            continue
+        for day, value in values.items():
+            if _structured_load_is_hard(value) and _token(day):
+                hard_days.add(_token(day))
+    return hard_days
+
+
 def _effective_hard_exposure_days(
     week_entry: dict,
     athlete_model: dict,
     *,
     hard_sparring_plan: list[dict] | None = None,
 ) -> set[str]:
-    """Return genuine external hard exposures, not merely declared gym attendance.
+    """Return genuine external hard exposures, not merely declared gym attendance."""
+    explicit_hard = _explicit_external_hard_days(athlete_model)
 
-    The resolved sparring/contact plan is authoritative when present. Technical/support
-    attendance is intentionally not counted as hard. The session-types fallback
-    exists only for compatibility callers that have not built the contact plan.
-    """
     if hard_sparring_plan is not None:
-        return _effective_hard_days_from_plan(hard_sparring_plan)
+        return _effective_hard_days_from_plan(hard_sparring_plan) | explicit_hard
 
     if "hard_sparring_plan" in week_entry:
-        return _effective_hard_days_from_plan(week_entry.get("hard_sparring_plan") or [])
+        return _effective_hard_days_from_plan(week_entry.get("hard_sparring_plan") or []) | explicit_hard
 
     if "effective_hard_sparring_days" in week_entry:
-        return {
+        resolved = {
             _token(day)
             for day in clean_list(week_entry.get("effective_hard_sparring_days", []))
             if _token(day)
         }
+        return resolved | explicit_hard
 
-    session_types = athlete_model.get("session_types_by_day")
-    if isinstance(session_types, dict):
-        typed_hard = {
-            _token(day)
-            for day, session_type in session_types.items()
-            if _token(session_type) == "hard_spar" and _token(day)
-        }
-        if typed_hard:
-            return typed_hard
-
-    return {
+    declared = {
         _token(day)
         for day in clean_list(athlete_model.get("hard_sparring_days", []))
         if _token(day)
     }
+    return declared | explicit_hard
+
+
+def _readiness_allows_second_hard_exposure(week_entry: dict, athlete_model: dict) -> bool:
+    """Conservative budget gate for a second weekly hard exposure.
+
+    One hard external exposure may coexist with one app conditioning exposure only
+    in roomy, early-development weeks. This is intentionally stricter than the
+    zero-exposure rule: it never blindly adds a second hard day.
+    """
+    if str(week_entry.get("phase") or "").strip().upper() != "GPP":
+        return False
+    frequency = int(athlete_model.get("training_frequency") or len(clean_list(athlete_model.get("training_days", []))) or 0)
+    if frequency < 5 or len(clean_list(athlete_model.get("training_days", []))) < 5:
+        return False
+    fatigue = _token(athlete_model.get("fatigue") or athlete_model.get("fatigue_level"))
+    if fatigue not in {"", "low"}:
+        return False
+    cut = _token(athlete_model.get("cut_severity_bucket"))
+    if cut not in {"", "none", "low"} or athlete_model.get("weight_cut_risk"):
+        return False
+    if _token(athlete_model.get("injury_mode")) not in {"", "full_plan"}:
+        return False
+    if athlete_model.get("injuries") or athlete_model.get("short_notice"):
+        return False
+    readiness = {_token(flag) for flag in clean_list(athlete_model.get("readiness_flags", []))}
+    if readiness & {"high_fatigue", "critical_fatigue", "fight_week", "aggressive_weight_cut", "medical_hold", "needs_review"}:
+        return False
+    return True
+
+
+def _weekly_hard_exposure_target(week_entry: dict, athlete_model: dict) -> int:
+    """Total hard-exposure budget target before app conditioning is considered."""
+    return 2 if _readiness_allows_second_hard_exposure(week_entry, athlete_model) else 1
 
 
 def _hard_stimulus_deficit(
@@ -144,12 +224,18 @@ def _hard_stimulus_deficit(
     *,
     hard_sparring_plan: list[dict] | None = None,
 ) -> bool:
-    """True when no genuine external hard exposure currently covers the week."""
-    return not _effective_hard_exposure_days(
-        week_entry,
-        athlete_model,
-        hard_sparring_plan=hard_sparring_plan,
+    """True when genuine external hard load is below the safe weekly target."""
+    count = len(
+        _effective_hard_exposure_days(
+            week_entry,
+            athlete_model,
+            hard_sparring_plan=hard_sparring_plan,
+        )
     )
+    # Zero external hard exposures always need one controlled app exposure when
+    # safe. A single external hard exposure only leaves a deficit when the
+    # conservative roomy-week budget explicitly allows two total hard exposures.
+    return count == 0 or (count == 1 and _weekly_hard_exposure_target(week_entry, athlete_model) >= 2)
 
 
 def _has_empty_external_combat_week(athlete_model: dict) -> bool:
@@ -173,11 +259,7 @@ def _restriction_blob(athlete_model: dict) -> str:
 
 
 def _prefer_low_impact_repeatability(athlete_model: dict) -> bool:
-    """Bias modality only when mechanical context warrants lower impact.
-
-    This never changes the required physiological intensity. Body mass and
-    moderate fatigue alone are not lower-impact triggers.
-    """
+    """Bias modality only when mechanical context warrants lower impact."""
     if bool(
         athlete_model.get("low_impact_required")
         or athlete_model.get("impact_restriction")
@@ -218,28 +300,36 @@ def _bridge_allows_glycolytic_on_day(athlete_model: dict, d_day: int) -> bool:
         fatigue=athlete_model.get("fatigue") or athlete_model.get("fatigue_level") or "low",
         weight_cut_bucket=athlete_model.get("cut_severity_bucket") or "high",
         injury_mode=athlete_model.get("injury_mode") or "full_plan",
-        # Eligibility is evaluated only when resolved hard exposure is zero.
         hard_sparring_days_declared=0,
         athlete_model=athlete_model,
     )
     return not bool(rules.get("block_full_plan")) and int(rules.get("glycolytic_touch_max") or 0) >= 1
 
 
+def _bridge_legal_pressure_days(week_entry: dict, athlete_model: dict) -> list[str]:
+    external_light_days = {
+        _token(day)
+        for key in ("support_work_days", "technical_skill_days")
+        for day in clean_list(athlete_model.get(key, []))
+        if _token(day)
+    }
+    return [
+        weekday
+        for weekday, d_day in _training_day_calendar(week_entry, athlete_model)
+        if weekday not in external_light_days and _bridge_allows_glycolytic_on_day(athlete_model, d_day)
+    ]
+
+
 def _earliest_safe_pressure_slot(
     week_entry: dict,
     athlete_model: dict,
 ) -> tuple[str, int] | None:
-    """Eligibility probe only; this function never owns calendar placement.
-
-    It checks whether any declared training day is still in a canonical bridge
-    window that permits glycolytic development. Actual weekday placement remains
-    exclusively owned by ``stage2_role_map`` / ``normal_calendar_placement`` via
-    the shared combat-load legality policy.
-    """
+    """Eligibility probe only; actual day selection stays with the canonical owner."""
+    allowed = set(_bridge_legal_pressure_days(week_entry, athlete_model))
     candidates = [
         (weekday, d_day)
         for weekday, d_day in _training_day_calendar(week_entry, athlete_model)
-        if _bridge_allows_glycolytic_on_day(athlete_model, d_day)
+        if weekday in allowed
     ]
     candidates.sort(key=lambda item: -item[1])
     return candidates[0] if candidates else None
@@ -293,8 +383,143 @@ def _scrub_stale_spar_first_state(
             row["reasons"] = [neutral_summary]
 
 
+def _parse_rounds_format(athlete_model: dict) -> tuple[int, int] | None:
+    raw = str(athlete_model.get("rounds_format") or "").strip().lower()
+    match = re.match(r"^(\d+)\s*x\s*(\d+)$", raw)
+    if not match:
+        return None
+    rounds, minutes = int(match.group(1)), int(match.group(2))
+    if rounds <= 0 or minutes <= 0:
+        return None
+    return rounds, minutes
+
+
+def _sport_specific_pressure_metadata(athlete_model: dict, phase: str) -> dict[str, Any]:
+    """Keep physiological intent hard while matching SPP dose to actual bout format."""
+    phase_key = str(phase or "").upper()
+    parsed = _parse_rounds_format(athlete_model)
+    sport = _combat_sport_key(athlete_model).replace("_", " ") or "combat"
+    if phase_key != "SPP" or parsed is None:
+        return {}
+
+    rounds, round_minutes = parsed
+    if round_minutes <= 2:
+        reps = max(3, min(6, rounds + 1))
+        work = f"{round_minutes} min"
+        recovery = "60 sec"
+    elif round_minutes == 3:
+        reps = max(3, min(5, rounds + 1))
+        work = "3 min"
+        recovery = "60-75 sec"
+    else:
+        # Five-plus-minute sports should not be treated as 3-minute boxing rounds.
+        # Use hard high-output segments inside the longer bout demand rather than
+        # prescribing several full 5-minute glycolytic rounds.
+        reps = max(3, min(4, rounds + 1))
+        work = "3 min high-output segment"
+        recovery = "90 sec"
+
+    return {
+        "prescribed_intensity_rpe": "8-9",
+        "prescribed_dose": (
+            f"{reps} x {work} fight-pace on / {recovery} off @ RPE 8-9 "
+            f"(built from {rounds} x {round_minutes} min {sport} format)"
+        ),
+        "dose_basis": "athlete_rounds_format",
+        "fight_format_rounds": rounds,
+        "fight_format_round_minutes": round_minutes,
+    }
+
+
+def _is_deficit_hard_role(role: dict) -> bool:
+    return bool(
+        role.get("upgraded_from_hard_stimulus_deficit")
+        or (
+            role.get("mandatory_hard_conditioning_exposure")
+            and _token(role.get("preferred_system")) == "glycolytic"
+        )
+    )
+
+
+def _assign_hard_role_with_day_level_bridge(
+    original_assign,
+    ordered: list[dict],
+    athlete_model: dict,
+    *,
+    hard_sparring_plan: list[dict] | None,
+    week_entry: dict | None,
+) -> list[dict]:
+    """Pre-filter only the mandatory hard role, then delegate placement to the owner.
+
+    This fixes mixed bridge weeks without becoming a second placement engine: the
+    canonical ``_assign_declared_day_hints`` still selects the weekday and applies
+    combat-load legality. This wrapper only supplies that owner with the exact
+    countdown-eligible candidate set for the mandatory hard role.
+    """
+    if not isinstance(week_entry, dict):
+        return original_assign(
+            ordered,
+            athlete_model,
+            hard_sparring_plan=hard_sparring_plan,
+            week_entry=week_entry,
+        )
+    pressure_indices = [idx for idx, role in enumerate(ordered) if _is_deficit_hard_role(role)]
+    if len(pressure_indices) != 1:
+        return original_assign(
+            ordered,
+            athlete_model,
+            hard_sparring_plan=hard_sparring_plan,
+            week_entry=week_entry,
+        )
+
+    allowed_days = set(_bridge_legal_pressure_days(week_entry, athlete_model))
+    original_training_days = clean_list(athlete_model.get("training_days", []))
+    allowed_training_days = [day for day in original_training_days if _token(day) in allowed_days]
+    pressure_idx = pressure_indices[0]
+    pressure_role = dict(ordered[pressure_idx])
+    other_roles = [dict(role) for idx, role in enumerate(ordered) if idx != pressure_idx]
+
+    if not allowed_training_days:
+        assigned_others = original_assign(
+            other_roles,
+            athlete_model,
+            hard_sparring_plan=hard_sparring_plan,
+            week_entry=week_entry,
+        )
+        pressure_role["scheduled_day_hint"] = ""
+        pressure_role["day_assignment_reason"] = "No countdown-eligible hard-conditioning day remained."
+    else:
+        pressure_athlete = dict(athlete_model)
+        pressure_athlete["training_days"] = allowed_training_days
+        assigned_pressure = original_assign(
+            [pressure_role],
+            pressure_athlete,
+            hard_sparring_plan=hard_sparring_plan,
+            week_entry=week_entry,
+        )
+        pressure_role = assigned_pressure[0]
+        pressure_day = _token(pressure_role.get("scheduled_day_hint"))
+        remaining_athlete = dict(athlete_model)
+        if pressure_day:
+            remaining_athlete["training_days"] = [
+                day for day in original_training_days if _token(day) != pressure_day
+            ]
+        assigned_others = original_assign(
+            other_roles,
+            remaining_athlete,
+            hard_sparring_plan=hard_sparring_plan,
+            week_entry=week_entry,
+        )
+
+    result: list[dict] = []
+    other_iter = iter(assigned_others)
+    for idx in range(len(ordered)):
+        result.append(pressure_role if idx == pressure_idx else next(other_iter))
+    return result
+
+
 def install() -> None:
-    """Install combat hard-stimulus preservation without becoming a placement owner."""
+    """Install combat hard-stimulus preservation with canonical day placement."""
     from . import stage2_role_map as module
 
     if getattr(module, "_EMPTY_COMBAT_WEEK_POLICY_INSTALLED", False):
@@ -303,6 +528,7 @@ def install() -> None:
     original_blockers = module._combat_pressure_floor_blockers
     original_compression = module._apply_high_fatigue_week_compression
     original_enforce = module._enforce_combat_pressure_floor
+    original_assign = module._assign_declared_day_hints
 
     @wraps(original_blockers)
     def combat_pressure_floor_blockers(
@@ -312,6 +538,9 @@ def install() -> None:
         reasons = list(original_blockers(week_entry, athlete_model))
         if not _eligible_hard_stimulus_deficit(week_entry, athlete_model):
             return reasons
+        # A week-level proximity code may be coarse when the week spans both an
+        # eligible and an ineligible countdown day. Exact-day eligibility is
+        # enforced by the canonical placement-owner wrapper below.
         return [
             reason
             for reason in reasons
@@ -334,7 +563,7 @@ def install() -> None:
             athlete_model,
             hard_sparring_plan=hard_sparring_plan,
         )
-        if _is_supported_combat_sport(athlete_model) and _hard_stimulus_deficit(
+        if _is_supported_combat_sport(athlete_model) and not _effective_hard_exposure_days(
             week_entry,
             athlete_model,
             hard_sparring_plan=hard_sparring_plan,
@@ -422,15 +651,45 @@ def install() -> None:
                     )
                     secondary_strength.pop("strength_session_index", None)
                     secondary_strength.pop("athlete_facing_label", None)
-        return original_enforce(
+
+        roles = original_enforce(
             week_entry,
             session_roles,
             suppressed_roles,
             athlete_model,
         )
+        phase = str(week_entry.get("phase") or "").strip().upper()
+        dose_metadata = _sport_specific_pressure_metadata(athlete_model, phase)
+        if dose_metadata:
+            for role in roles:
+                if _is_deficit_hard_role(role):
+                    role.update(dose_metadata)
+        week_entry["hard_stimulus_budget"] = {
+            "external_hard_exposures": len(_effective_hard_exposure_days(week_entry, athlete_model)),
+            "target_total_hard_exposures": _weekly_hard_exposure_target(week_entry, athlete_model),
+            "conditioning_primary": _conditioning_is_primary(athlete_model),
+        }
+        return roles
+
+    @wraps(original_assign)
+    def assign_declared_day_hints(
+        ordered: list[dict],
+        athlete_model: dict,
+        *,
+        hard_sparring_plan: list[dict] | None = None,
+        week_entry: dict | None = None,
+    ) -> list[dict]:
+        return _assign_hard_role_with_day_level_bridge(
+            original_assign,
+            ordered,
+            athlete_model,
+            hard_sparring_plan=hard_sparring_plan,
+            week_entry=week_entry,
+        )
 
     module._combat_pressure_floor_blockers = combat_pressure_floor_blockers
     module._apply_high_fatigue_week_compression = apply_high_fatigue_week_compression
     module._enforce_combat_pressure_floor = enforce_combat_pressure_floor
+    module._assign_declared_day_hints = assign_declared_day_hints
     module._HARD_STIMULUS_DEFICIT_POLICY_INSTALLED = True
     module._EMPTY_COMBAT_WEEK_POLICY_INSTALLED = True
