@@ -378,9 +378,12 @@ def _render_week(week: dict[str, Any], blocks: Any) -> list[str]:
 
 
 def render_weekly_session_spine(weekly_role_map: dict[str, Any]) -> list[dict[str, Any]]:
-    """Copy the finished planner's session identities for finalizer rendering.
+    """Copy only renderable sessions from the finished planner's role map.
 
-    No placement, selection, dose default, or session-count repair happens here.
+    A surviving but unplaced role is not a scheduled session. The placement
+    owner may legitimately leave it dayless when no legal slot exists. Keep the
+    original role map and suppression/reduction metadata intact for validation;
+    never ask the finalizer to invent a day or restore that role.
     """
     if not isinstance(weekly_role_map, dict):
         return []
@@ -388,8 +391,19 @@ def render_weekly_session_spine(weekly_role_map: dict[str, Any]) -> list[dict[st
     for week in weekly_role_map.get("weeks", []) or []:
         if not isinstance(week, dict):
             continue
-        sessions = [
-            {
+        calendar_weekdays = {
+            str(day.get("weekday") or "").strip().lower()
+            for day in week.get("calendar_days", []) or []
+            if isinstance(day, dict) and str(day.get("weekday") or "").strip()
+        }
+        sessions = []
+        for role in week.get("session_roles", []) or []:
+            if not isinstance(role, dict) or role.get("render_mandatory") is False:
+                continue
+            weekday = str(role.get("scheduled_day_hint") or "").strip().lower()
+            if not weekday or weekday not in calendar_weekdays:
+                continue
+            sessions.append({
                 key: role[key]
                 for key in (
                     "session_index", "session_id", "role_key", "category",
@@ -398,21 +412,16 @@ def render_weekly_session_spine(weekly_role_map: dict[str, Any]) -> list[dict[st
                     "coach_owned", "render_mandatory",
                 )
                 if key in role
-            }
-            for role in week.get("session_roles", []) or []
-            if isinstance(role, dict) and role.get("render_mandatory") is not False
-        ]
+            })
         if sessions:
-            spine.append(
-                {
-                    **{
-                        key: week[key]
-                        for key in ("week_index", "phase", "calendar_days")
-                        if key in week
-                    },
-                    "sessions": sessions,
-                }
-            )
+            spine.append({
+                **{
+                    key: week[key]
+                    for key in ("week_index", "phase", "calendar_days")
+                    if key in week
+                },
+                "sessions": sessions,
+            })
     return spine
 
 
