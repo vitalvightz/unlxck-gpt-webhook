@@ -3025,6 +3025,35 @@ def _combat_pressure_floor_blockers(week_entry: dict, athlete_model: dict) -> li
     return dedupe_preserve_order(reasons)
 
 
+def _is_sparse_combat_week(athlete_model: dict) -> bool:
+    """Return True only for the narrow no/very-limited combat-gym case.
+
+    Any declared hard-sparring day keeps the existing populated-week path fully
+    unchanged. Sparse fallback is therefore limited to zero hard-sparring days
+    and at most one declared light/technical combat day.
+    """
+    if clean_list(athlete_model.get("hard_sparring_days", [])):
+        return False
+
+    training_days = {
+        str(day).strip().lower()
+        for day in clean_list(athlete_model.get("training_days", []))
+        if str(day).strip()
+    }
+    support_days = {
+        str(day).strip().lower()
+        for day in clean_list(
+            athlete_model.get("support_work_days")
+            or athlete_model.get("technical_skill_days")
+            or []
+        )
+        if str(day).strip()
+    }
+    if training_days:
+        support_days &= training_days
+    return len(support_days) <= 1
+
+
 def _combat_pressure_floor_metadata(phase: str) -> dict[str, Any]:
     """Coach-language dose/purpose/stop-rule for the hard exposure."""
     if str(phase).upper() == "SPP":
@@ -3188,6 +3217,14 @@ def _enforce_combat_pressure_floor(
         )
     }
     target = _pick_combat_floor_upgrade_target(session_roles, must_keep)
+    sparse_override = False
+    if target is None and _is_sparse_combat_week(athlete_model):
+        # Sparse-week fallback may repurpose the sole ordinary conditioning slot
+        # after every existing pressure-floor safety blocker has already passed.
+        # It never creates another session and never runs when hard sparring is
+        # declared, so populated combat weeks keep their existing behaviour.
+        target = _pick_combat_floor_upgrade_target(session_roles, set())
+        sparse_override = target is not None
     if target is None:
         week_entry["combat_pressure_floor"] = {
             "active": False,
@@ -3196,9 +3233,15 @@ def _enforce_combat_pressure_floor(
         return session_roles
 
     _convert_role_to_combat_pressure(target, phase)
+    if sparse_override:
+        target["sparse_combat_week_hard_fallback"] = True
     week_entry["combat_pressure_floor"] = {
         "active": True,
-        "source": "upgraded_conditioning_slot",
+        "source": (
+            "sparse_week_upgraded_conditioning_slot"
+            if sparse_override
+            else "upgraded_conditioning_slot"
+        ),
         "role_key": target.get("role_key"),
     }
     return session_roles

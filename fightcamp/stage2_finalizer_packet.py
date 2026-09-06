@@ -79,6 +79,76 @@ def _late_fight_tail_contracts(weekly_role_map: Any) -> dict[str, Any]:
     }
 
 
+_SPARSE_HARD_CONDITIONING_FIELDS = (
+    "sparse_combat_week_hard_fallback",
+    "combat_pressure_floor",
+    "mandatory_hard_conditioning_exposure",
+    "prescribed_intensity_rpe",
+    "prescribed_dose",
+    "floor_purpose",
+    "floor_stop_rule",
+)
+
+
+def _preserve_sparse_hard_conditioning_contract(
+    packet: dict[str, Any], weekly_role_map: Any
+) -> None:
+    """Carry the sparse-week hard dose through finalizer compaction."""
+    if not isinstance(weekly_role_map, dict):
+        return
+    selected_plan = packet.get("selected_plan")
+    if not isinstance(selected_plan, dict):
+        return
+    compact_map = selected_plan.get("weekly_role_map")
+    if not isinstance(compact_map, dict):
+        return
+
+    compact_weeks = {
+        week.get("week_index"): week
+        for week in compact_map.get("weeks", []) or []
+        if isinstance(week, dict)
+    }
+    preserved = False
+    for raw_week in weekly_role_map.get("weeks", []) or []:
+        if not isinstance(raw_week, dict):
+            continue
+        compact_week = compact_weeks.get(raw_week.get("week_index"))
+        if not isinstance(compact_week, dict):
+            continue
+        compact_roles = compact_week.get("session_roles", []) or []
+        for raw_role in raw_week.get("session_roles", []) or []:
+            if not isinstance(raw_role, dict) or not raw_role.get("sparse_combat_week_hard_fallback"):
+                continue
+            match = next(
+                (
+                    role
+                    for role in compact_roles
+                    if isinstance(role, dict)
+                    and role.get("session_index") == raw_role.get("session_index")
+                    and role.get("role_key") == raw_role.get("role_key")
+                ),
+                None,
+            )
+            if not isinstance(match, dict):
+                continue
+            for field in _SPARSE_HARD_CONDITIONING_FIELDS:
+                value = raw_role.get(field)
+                if value not in (None, "", []):
+                    match[field] = deepcopy(value)
+            preserved = True
+
+    if preserved:
+        packet.setdefault("hard_rules", []).append(
+            "A session role with sparse_combat_week_hard_fallback=true is the "
+            "deterministic replacement for an otherwise underloaded sparse combat week. "
+            "It MUST remain a hard glycolytic/fight-pace exposure at its supplied "
+            "prescribed_intensity_rpe and prescribed_dose. Do not soften it into easy "
+            "aerobic work, recovery, rhythm work, or a light conditioning session. "
+            "Existing countdown, injury, fatigue, weight-cut and fight-week safety "
+            "rules remain authoritative and may remove or reduce it upstream."
+        )
+
+
 def build_stage2_finalizer_packet(
     *,
     stage2_payload: dict[str, Any],
@@ -105,6 +175,7 @@ def build_stage2_finalizer_packet(
         stage2_payload=stage2_payload,
         planning_brief=planning_brief,
     )
+    _preserve_sparse_hard_conditioning_contract(packet, weekly_role_map)
 
     tail_contracts = _late_fight_tail_contracts(weekly_role_map)
     if not tail_contracts:
