@@ -79,6 +79,35 @@ def _late_fight_tail_contracts(weekly_role_map: Any) -> dict[str, Any]:
     }
 
 
+def _lock_sparse_hard_conditioning_contract(packet: dict[str, Any]) -> None:
+    """Lock a sparse hard role after canonical finalizer compaction."""
+    selected_plan = packet.get("selected_plan")
+    if not isinstance(selected_plan, dict):
+        return
+    compact_map = selected_plan.get("weekly_role_map")
+    if not isinstance(compact_map, dict):
+        return
+
+    has_sparse_role = any(
+        isinstance(role, dict) and role.get("sparse_combat_week_hard_fallback")
+        for week in compact_map.get("weeks", []) or []
+        if isinstance(week, dict)
+        for role in week.get("session_roles", []) or []
+    )
+    if not has_sparse_role:
+        return
+
+    packet.setdefault("hard_rules", []).append(
+        "A session role with sparse_combat_week_hard_fallback=true is the "
+        "deterministic replacement for an otherwise underloaded sparse combat week. "
+        "It MUST remain a hard glycolytic/fight-pace exposure at its supplied "
+        "prescribed_intensity_rpe and prescribed_dose. Do not soften it into easy "
+        "aerobic work, recovery, rhythm work, or a light conditioning session. "
+        "Existing countdown, injury, fatigue, weight-cut and fight-week safety "
+        "rules remain authoritative and may remove or reduce it upstream."
+    )
+
+
 def build_stage2_finalizer_packet(
     *,
     stage2_payload: dict[str, Any],
@@ -105,6 +134,7 @@ def build_stage2_finalizer_packet(
         stage2_payload=stage2_payload,
         planning_brief=planning_brief,
     )
+    _lock_sparse_hard_conditioning_contract(packet)
 
     tail_contracts = _late_fight_tail_contracts(weekly_role_map)
     if not tail_contracts:

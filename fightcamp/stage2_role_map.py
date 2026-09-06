@@ -3025,6 +3025,26 @@ def _combat_pressure_floor_blockers(week_entry: dict, athlete_model: dict) -> li
     return dedupe_preserve_order(reasons)
 
 
+def _is_sparse_combat_week(week_entry: dict, athlete_model: dict) -> bool:
+    """Return True only for zero resolved hard contact and <=1 light-combat day.
+
+    Hard-contact truth comes from the already-resolved sparring plan owned by
+    ``sparring_dose_planner``. Light-combat identity comes from the shared
+    declared-combat ownership helper. This function does not reinterpret raw
+    hard-sparring declarations.
+    """
+    if clean_list(week_entry.get("hard_sparring_plan", [])):
+        return False
+    if clean_list(week_entry.get("effective_hard_sparring_days", [])):
+        return False
+
+    light_days = declared_light_combat_weekdays(
+        athlete_model,
+        training_days=clean_list(athlete_model.get("training_days", [])),
+    )
+    return len(light_days) <= 1
+
+
 def _combat_pressure_floor_metadata(phase: str) -> dict[str, Any]:
     """Coach-language dose/purpose/stop-rule for the hard exposure."""
     if str(phase).upper() == "SPP":
@@ -3112,6 +3132,22 @@ def _pick_combat_floor_upgrade_target(
     return None
 
 
+def _pick_sparse_combat_floor_upgrade_target(
+    session_roles: list[dict], must_keep: set[str]
+) -> dict | None:
+    """Relax only the sole aerobic must-keep for a genuinely sparse week."""
+    if "aerobic" not in must_keep:
+        return None
+    target = _pick_combat_floor_upgrade_target(
+        session_roles, must_keep - {"aerobic"}
+    )
+    if target is None:
+        return None
+    if str(target.get("preferred_system") or "").strip().lower() != "aerobic":
+        return None
+    return target
+
+
 def _convert_role_to_combat_pressure(role: dict, phase: str) -> None:
     new_key = "fight_pace_repeatability_day" if str(phase).upper() == "SPP" else "controlled_repeatability_day"
     role["role_key"] = new_key
@@ -3188,6 +3224,13 @@ def _enforce_combat_pressure_floor(
         )
     }
     target = _pick_combat_floor_upgrade_target(session_roles, must_keep)
+    sparse_override = False
+    if target is None and _is_sparse_combat_week(week_entry, athlete_model):
+        # Narrow exception: only a sole ordinary aerobic must-keep may become
+        # the existing hard glycolytic role. Every other must-keep protection,
+        # plus every existing pressure-floor safety blocker, stays authoritative.
+        target = _pick_sparse_combat_floor_upgrade_target(session_roles, must_keep)
+        sparse_override = target is not None
     if target is None:
         week_entry["combat_pressure_floor"] = {
             "active": False,
@@ -3196,9 +3239,15 @@ def _enforce_combat_pressure_floor(
         return session_roles
 
     _convert_role_to_combat_pressure(target, phase)
+    if sparse_override:
+        target["sparse_combat_week_hard_fallback"] = True
     week_entry["combat_pressure_floor"] = {
         "active": True,
-        "source": "upgraded_conditioning_slot",
+        "source": (
+            "sparse_week_upgraded_conditioning_slot"
+            if sparse_override
+            else "upgraded_conditioning_slot"
+        ),
         "role_key": target.get("role_key"),
     }
     return session_roles
