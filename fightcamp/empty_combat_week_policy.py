@@ -26,14 +26,10 @@ def _token(value: Any) -> str:
 
 
 def _has_empty_external_combat_week(athlete_model: dict) -> bool:
-    """Training days are availability; only declared combat work is external load."""
+    """Training days are availability; declared combat days are external load."""
     return not any(
         clean_list(athlete_model.get(key, []))
-        for key in (
-            "hard_sparring_days",
-            "support_work_days",
-            "technical_skill_days",
-        )
+        for key in ("hard_sparring_days", "support_work_days", "technical_skill_days")
     )
 
 
@@ -81,7 +77,7 @@ def _bridge_allows_glycolytic_on_day(athlete_model: dict, d_day: int) -> bool:
         sport=athlete_model.get("sport", ""),
         style=athlete_model.get("tactical_styles") or athlete_model.get("style"),
         fatigue=athlete_model.get("fatigue") or athlete_model.get("fatigue_level") or "low",
-        weight_cut_bucket=athlete_model.get("cut_severity_bucket") or "low",
+        weight_cut_bucket=athlete_model.get("cut_severity_bucket") or "high",
         injury_mode=athlete_model.get("injury_mode") or "full_plan",
         hard_sparring_days_declared=0,
         athlete_model=athlete_model,
@@ -89,8 +85,11 @@ def _bridge_allows_glycolytic_on_day(athlete_model: dict, d_day: int) -> bool:
     return not bool(rules.get("block_full_plan")) and int(rules.get("glycolytic_touch_max") or 0) >= 1
 
 
-def _earliest_safe_pressure_slot(week_entry: dict, athlete_model: dict) -> tuple[str, int] | None:
-    """Pick the earliest camp slot in the D21-D18 pressure-eligible bridge slice."""
+def _earliest_safe_pressure_slot(
+    week_entry: dict,
+    athlete_model: dict,
+) -> tuple[str, int] | None:
+    """Choose the earliest available D-21..D-18 slot that bridge rules allow."""
     candidates = sorted(
         (
             (weekday, d_day)
@@ -121,71 +120,42 @@ def _eligible_empty_week(week_entry: dict, athlete_model: dict) -> bool:
     )
 
 
-def _scrub_stale_spar_first_state(week_entry: dict, suppressed_roles: list[dict]) -> None:
-    """A zero-spar week must never carry spar-first authority into goal repair."""
+def _scrub_stale_spar_first_state(
+    week_entry: dict,
+    suppressed_roles: list[dict],
+) -> None:
+    """Zero-spar weeks must not carry spar-first authority into goal repair."""
     compression = dict(week_entry.get("intentional_compression") or {})
-    own_codes = [
-        str(code)
-        for code in clean_list(compression.get("reason_codes"))
-        if str(code) != _STALE_SPAR_REASON
-    ]
-    if own_codes != list(clean_list(compression.get("reason_codes"))):
+    original_codes = [str(code) for code in clean_list(compression.get("reason_codes"))]
+    own_codes = [code for code in original_codes if code != _STALE_SPAR_REASON]
+    if own_codes != original_codes:
         compression["reason_codes"] = own_codes
         if not own_codes:
             compression.update(active=False, reason="", summary="")
         week_entry["intentional_compression"] = compression
 
-    neutral_summary = "Weekly session cap applied to app-programmed sessions; no sparring load is being protected."
+    neutral_summary = (
+        "Weekly session cap applied to app-programmed sessions; "
+        "no sparring load is being protected."
+    )
     for row in suppressed_roles:
-        codes = [
-            str(code)
-            for code in clean_list(row.get("compression_reason_codes"))
-            if str(code) != _STALE_SPAR_REASON
+        original_row_codes = [
+            str(code) for code in clean_list(row.get("compression_reason_codes"))
         ]
-        if len(codes) == len(clean_list(row.get("compression_reason_codes"))):
+        row_codes = [code for code in original_row_codes if code != _STALE_SPAR_REASON]
+        if row_codes == original_row_codes:
             continue
-        row["compression_reason_codes"] = codes
-        if not codes:
+        row["compression_reason_codes"] = row_codes
+        if not row_codes:
             row["compression_summary"] = neutral_summary
             row["reasons"] = [neutral_summary]
 
 
-def _convert_secondary_strength_to_pressure(role: dict, week_entry: dict, module) -> None:
-    phase = str(week_entry.get("phase") or "").strip().upper()
-    role_key = "fight_pace_repeatability_day" if phase == "SPP" else "controlled_repeatability_day"
-    role.update(
-        category="conditioning",
-        role_key=role_key,
-        preferred_system="glycolytic",
-        preferred_pool="conditioning_slots",
-        preferred_tags=list(
-            dict.fromkeys(
-                [
-                    *clean_list(role.get("preferred_tags", [])),
-                    "glycolytic",
-                    "fight_pace",
-                    "repeatability",
-                    "gas_tank",
-                ]
-            )
-        ),
-        selection_rule=module._role_selection_rule(role_key, "conditioning", "glycolytic"),
-        anchor=module._role_anchor(role_key),
-        governance=module._role_governance(
-            week_entry,
-            category="conditioning",
-            role_key=role_key,
-            athlete_model={},
-            system="glycolytic",
-            idx=0,
-        ),
-        upgraded_from_empty_combat_week=True,
-    )
-    role.pop("strength_session_index", None)
-    role.pop("athlete_facing_label", None)
-
-
-def _move_pressure_to_early_slot(roles: list[dict], week_entry: dict, athlete_model: dict, module) -> list[dict]:
+def _move_pressure_to_early_slot(
+    roles: list[dict],
+    week_entry: dict,
+    athlete_model: dict,
+) -> list[dict]:
     target = _earliest_safe_pressure_slot(week_entry, athlete_model)
     if target is None:
         return roles
@@ -235,34 +205,46 @@ def _move_pressure_to_early_slot(roles: list[dict], week_entry: dict, athlete_mo
             for day, d_day in _training_day_calendar(week_entry, athlete_model)
             if day not in occupied and day != target_day and d_day >= 15
         ]
+        # Prefer a genuinely unused earlier build slot before falling back to
+        # the pressure role's old day.
         free_days.sort(key=lambda item: (item[1] < 18, -item[1]))
         destination = free_days[0][0] if free_days else ""
-        if not destination and current_day and current_day != target_day and calendar.get(current_day, -1) >= 15:
+        if (
+            not destination
+            and current_day
+            and current_day != target_day
+            and calendar.get(current_day, -1) >= 15
+        ):
             destination = current_day
         if not destination:
             return roles
         occupant["scheduled_day_hint"] = destination
         occupant["day_assignment_reason"] = (
-            "Moved within the same weekly session budget so the primary conditioning goal can own the early pressure slot."
+            "Moved within the same weekly session budget so the primary "
+            "conditioning goal can own the early pressure slot."
         )
         occupant["placement_rule"] = (
             f"{str(occupant.get('placement_rule') or '').strip()} "
-            "Yield the early pressure slot when no external combat work is scheduled and conditioning is the primary goal."
+            "Yield the early pressure slot when no external combat work is "
+            "scheduled and conditioning is the primary goal."
         ).strip()
 
     pressure["scheduled_day_hint"] = target_day
     pressure["day_assignment_reason"] = (
-        f"Primary conditioning/gas-tank work uses D-{target_d_day} because there is no declared sparring, technical, or gym combat load to protect."
+        f"Primary conditioning/gas-tank work uses D-{target_d_day} because "
+        "there is no declared sparring, technical, or gym combat load to protect."
     )
     pressure["placement_rule"] = (
         f"{str(pressure.get('placement_rule') or '').strip()} "
-        "When the combat week is otherwise empty, place the controlled repeatability exposure in the earliest bridge-eligible slot instead of reserving recovery for imaginary sport load."
+        "When the combat week is otherwise empty, place the controlled "
+        "repeatability exposure in the earliest bridge-eligible slot instead "
+        "of reserving recovery for imaginary sport load."
     ).strip()
     return roles
 
 
 def install() -> None:
-    """Install empty-combat-week planner corrections without changing real combat-load protection."""
+    """Install corrections for app-owned boxing weeks with no external combat load."""
     from . import stage2_role_map as module
 
     if getattr(module, "_EMPTY_COMBAT_WEEK_POLICY_INSTALLED", False):
@@ -274,14 +256,16 @@ def install() -> None:
     original_assign = module._assign_declared_day_hints
 
     @wraps(original_blockers)
-    def combat_pressure_floor_blockers(week_entry: dict, athlete_model: dict) -> list[str]:
+    def combat_pressure_floor_blockers(
+        week_entry: dict,
+        athlete_model: dict,
+    ) -> list[str]:
         reasons = list(original_blockers(week_entry, athlete_model))
         if not _eligible_empty_week(week_entry, athlete_model):
             return reasons
-        # The week may extend to D-15/D-17, but a declared training day earlier
-        # in the same week can still be a legal D-21..D-18 pressure slot. Keep
-        # every real safety/readiness blocker; remove only the coarse whole-week
-        # bridge blockers that the per-day bridge check has disproved.
+        # The coarse week can end at D-15/D-17 while still containing a legal
+        # D-21..D-18 training day. Keep every real safety/readiness blocker and
+        # remove only bridge blockers disproved by the per-day bridge check.
         return [reason for reason in reasons if reason not in _BRIDGE_ONLY_BLOCKERS]
 
     @wraps(original_compression)
@@ -315,10 +299,13 @@ def install() -> None:
         suppressed_roles: list[dict],
         athlete_model: dict,
     ) -> list[dict]:
-        if _eligible_empty_week(week_entry, athlete_model) and not combat_pressure_floor_blockers(
-            week_entry, athlete_model
-        ):
-            already_hard = any(module._is_hard_pressure_conditioning_role(role) for role in session_roles)
+        eligible = _eligible_empty_week(week_entry, athlete_model)
+        blockers = combat_pressure_floor_blockers(week_entry, athlete_model)
+        if eligible and not blockers:
+            already_hard = any(
+                module._is_hard_pressure_conditioning_role(role)
+                for role in session_roles
+            )
             if not already_hard:
                 secondary_strength = next(
                     (
@@ -330,10 +317,14 @@ def install() -> None:
                     None,
                 )
                 if secondary_strength is not None:
-                    # Primary conditioning outranks an extra lift when the app is
+                    # Primary conditioning outranks an extra lift when Unlxck is
                     # effectively programming the whole combat week.
                     phase = str(week_entry.get("phase") or "").strip().upper()
-                    role_key = "fight_pace_repeatability_day" if phase == "SPP" else "controlled_repeatability_day"
+                    role_key = (
+                        "fight_pace_repeatability_day"
+                        if phase == "SPP"
+                        else "controlled_repeatability_day"
+                    )
                     secondary_strength.update(
                         category="conditioning",
                         role_key=role_key,
@@ -350,13 +341,22 @@ def install() -> None:
                                 ]
                             )
                         ),
-                        selection_rule=module._role_selection_rule(role_key, "conditioning", "glycolytic"),
+                        selection_rule=module._role_selection_rule(
+                            role_key,
+                            "conditioning",
+                            "glycolytic",
+                        ),
                         anchor=module._role_anchor(role_key),
                         upgraded_from_empty_combat_week=True,
                     )
                     secondary_strength.pop("strength_session_index", None)
                     secondary_strength.pop("athlete_facing_label", None)
-        return original_enforce(week_entry, session_roles, suppressed_roles, athlete_model)
+        return original_enforce(
+            week_entry,
+            session_roles,
+            suppressed_roles,
+            athlete_model,
+        )
 
     @wraps(original_assign)
     def assign_declared_day_hints(
@@ -373,7 +373,7 @@ def install() -> None:
             week_entry=week_entry,
         )
         if isinstance(week_entry, dict) and _eligible_empty_week(week_entry, athlete_model):
-            roles = _move_pressure_to_early_slot(roles, week_entry, athlete_model, module)
+            roles = _move_pressure_to_early_slot(roles, week_entry, athlete_model)
         return roles
 
     module._combat_pressure_floor_blockers = combat_pressure_floor_blockers
