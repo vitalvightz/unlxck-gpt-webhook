@@ -346,13 +346,7 @@ def describe_priority_focus(
         main_focus = ""
         focus_instruction = ""
 
-    clarification_entries = list(sanitized_collision_details)
-    if collision_detail and not clarification_entries:
-        fallback_tag = profile.primary_collision_tag or profile.primary_goal or profile.primary_weak_area
-        clarification_entries = [
-            {"tag": fallback_tag, "label": "", "detail": collision_detail}
-        ]
-    derived_clarification_tags = derive_clarification_tags(clarification_entries)
+    derived_clarification_tags = derive_clarification_tags(sanitized_collision_details)
 
     return {
         "main_focus": main_focus,

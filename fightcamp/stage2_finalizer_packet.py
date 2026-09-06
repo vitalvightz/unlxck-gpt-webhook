@@ -1,9 +1,9 @@
 """Stage 2 finalizer packet plus downstream late-fight contract propagation.
 
 The established compaction implementation lives in
-``stage2_finalizer_packet_impl``. This compatibility surface preserves planner
-contracts that the compact packet must not lose: late-fight tail contracts and
-mandatory hard-conditioning dose/intensity owned by the weekly role map.
+``stage2_finalizer_packet_impl``. This compatibility surface adds one thing the
+long-camp D-13 handoff needs: the actual existing payload-mode contracts, not
+just their names, survive into the finalizer packet as hard rendering authority.
 """
 
 from __future__ import annotations
@@ -18,18 +18,6 @@ from .stage2_payload_late_fight import _handoff_mode_instructions
 for _export_name in dir(_impl):
     if not _export_name.startswith("__"):
         globals()[_export_name] = getattr(_impl, _export_name)
-
-
-_HARD_CONDITIONING_CONTRACT_KEYS = (
-    "combat_pressure_floor",
-    "mandatory_hard_conditioning_exposure",
-    "prescribed_intensity_rpe",
-    "prescribed_dose",
-    "floor_purpose",
-    "floor_stop_rule",
-    "low_impact_preferred",
-    "upgraded_from_hard_stimulus_deficit",
-)
 
 
 def _late_fight_tail_contracts(weekly_role_map: Any) -> dict[str, Any]:
@@ -91,105 +79,12 @@ def _late_fight_tail_contracts(weekly_role_map: Any) -> dict[str, Any]:
     }
 
 
-def _role_identity(role: dict[str, Any]) -> tuple[Any, str, str]:
-    return (
-        role.get("session_index"),
-        str(role.get("role_key") or "").strip(),
-        str(role.get("scheduled_day_hint") or "").strip().lower(),
-    )
-
-
-def _propagate_hard_conditioning_contract(
-    *, packet: dict[str, Any], weekly_role_map: dict[str, Any]
-) -> bool:
-    """Keep planner-owned hard-conditioning dose truth through compaction.
-
-    The compact implementation intentionally drops most internal rationale, but
-    RPE/dose/stop-rule on a mandatory hard-conditioning role are execution
-    authority, not rationale. Losing them lets the finalizer turn a hard
-    repeatability role back into generic/easy conditioning.
-    """
-    selected_map = (
-        (packet.get("selected_plan") or {}).get("weekly_role_map")
-        if isinstance(packet.get("selected_plan"), dict)
-        else None
-    )
-    if not isinstance(selected_map, dict):
-        return False
-
-    source_weeks = [
-        week for week in weekly_role_map.get("weeks", []) or [] if isinstance(week, dict)
-    ]
-    compact_weeks = [
-        week for week in selected_map.get("weeks", []) or [] if isinstance(week, dict)
-    ]
-    source_by_index = {
-        week.get("week_index"): week
-        for week in source_weeks
-        if week.get("week_index") is not None
-    }
-
-    propagated = False
-    for position, compact_week in enumerate(compact_weeks):
-        source_week = source_by_index.get(compact_week.get("week_index"))
-        if source_week is None and position < len(source_weeks):
-            source_week = source_weeks[position]
-        if not isinstance(source_week, dict):
-            continue
-
-        source_roles = [
-            role for role in source_week.get("session_roles", []) or [] if isinstance(role, dict)
-        ]
-        by_identity = {_role_identity(role): role for role in source_roles}
-        for compact_role in compact_week.get("session_roles", []) or []:
-            if not isinstance(compact_role, dict):
-                continue
-            source_role = by_identity.get(_role_identity(compact_role))
-            if source_role is None:
-                source_role = next(
-                    (
-                        role
-                        for role in source_roles
-                        if str(role.get("role_key") or "").strip()
-                        == str(compact_role.get("role_key") or "").strip()
-                        and str(role.get("scheduled_day_hint") or "").strip().lower()
-                        == str(compact_role.get("scheduled_day_hint") or "").strip().lower()
-                    ),
-                    None,
-                )
-            if not isinstance(source_role, dict):
-                continue
-            if not (
-                source_role.get("mandatory_hard_conditioning_exposure") is True
-                or source_role.get("combat_pressure_floor") is True
-            ):
-                continue
-            for key in _HARD_CONDITIONING_CONTRACT_KEYS:
-                if key in source_role and source_role.get(key) not in (None, "", []):
-                    compact_role[key] = deepcopy(source_role[key])
-            propagated = True
-
-    if propagated:
-        hard_rules = packet.setdefault("hard_rules", [])
-        hard_rule = (
-            "A role with mandatory_hard_conditioning_exposure=true is a required "
-            "hard physiological exposure, not low-aerobic support. Render its "
-            "prescribed_intensity_rpe, prescribed_dose, purpose, and stop rule as "
-            "authoritative unless a later deterministic safety/morph contract has "
-            "already changed that role. Low-impact preference changes modality only, "
-            "never the required intensity."
-        )
-        if hard_rule not in hard_rules:
-            hard_rules.append(hard_rule)
-    return propagated
-
-
 def build_stage2_finalizer_packet(
     *,
     stage2_payload: dict[str, Any],
     planning_brief: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Build the normal compact packet, then preserve execution contracts."""
+    """Build the normal compact packet, then preserve tail render contracts."""
     source = planning_brief if isinstance(planning_brief, dict) else stage2_payload
     weekly_role_map = (
         source.get("weekly_role_map")
@@ -210,12 +105,6 @@ def build_stage2_finalizer_packet(
         stage2_payload=stage2_payload,
         planning_brief=planning_brief,
     )
-
-    if isinstance(weekly_role_map, dict):
-        _propagate_hard_conditioning_contract(
-            packet=packet,
-            weekly_role_map=weekly_role_map,
-        )
 
     tail_contracts = _late_fight_tail_contracts(weekly_role_map)
     if not tail_contracts:
