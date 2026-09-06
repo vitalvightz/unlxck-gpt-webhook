@@ -186,6 +186,16 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
         "blocked_intensities",
         "blocked_tags",
 
+        # Sparse combat-week hard-conditioning contract. These are deterministic
+        # role-budget facts and must survive the canonical compactor.
+        "sparse_combat_week_hard_fallback",
+        "combat_pressure_floor",
+        "mandatory_hard_conditioning_exposure",
+        "prescribed_intensity_rpe",
+        "prescribed_dose",
+        "floor_purpose",
+        "floor_stop_rule",
+
         # Deterministic late-camp strength dose truth. The resolver makes the
         # scheduled-day effective prescription authoritative so the finalizer
         # never renders the raw exercise-bank dose over a countdown-shaped role.
