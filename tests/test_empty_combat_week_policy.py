@@ -132,20 +132,27 @@ def test_missing_hard_stimulus_gives_primary_conditioning_a_pressure_role():
     )
 
 
-def test_one_technical_gym_session_does_not_satisfy_hard_stimulus():
-    role_map = _build_weekly_role_map(
-        _athlete(
-            support_work_days=["Wednesday"],
-            technical_skill_days=["Wednesday"],
-        ),
-        _progression(),
-        LIMITER,
-    )
+def test_hard_stimulus_substitution_is_boxing_scoped():
+    athlete = _athlete(sport="football")
+    role_map = _build_weekly_role_map(athlete, _progression(), LIMITER)
     week = _first_week(role_map)
 
-    assert policy._hard_stimulus_deficit(week, _athlete(
-        support_work_days=["Wednesday"], technical_skill_days=["Wednesday"]
-    )) is True
+    assert policy._eligible_hard_stimulus_deficit(week, athlete) is False
+    assert not any(
+        role.get("upgraded_from_hard_stimulus_deficit")
+        for role in week["session_roles"]
+    )
+
+
+def test_one_technical_gym_session_does_not_satisfy_hard_stimulus():
+    athlete = _athlete(
+        support_work_days=["Wednesday"],
+        technical_skill_days=["Wednesday"],
+    )
+    role_map = _build_weekly_role_map(athlete, _progression(), LIMITER)
+    week = _first_week(role_map)
+
+    assert policy._hard_stimulus_deficit(week, athlete) is True
     assert _hard_pressure_role(week) is not None
     assert week["combat_pressure_floor"]["active"] is True
 
@@ -163,12 +170,16 @@ def test_effective_hard_plan_is_authoritative_over_declared_presence():
 
     hard_week = {
         "hard_sparring_plan": [
-            {"day": "Friday", "effective_load": "hard", "status": "planned"}
+            {"day": "Friday", "effective_load": "hard", "status": "hard_as_planned"}
         ]
     }
     reduced_week = {
         "hard_sparring_plan": [
-            {"day": "Friday", "effective_load": "technical", "status": "convert_to_technical_suggested"}
+            {
+                "day": "Friday",
+                "effective_load": "technical",
+                "status": "convert_to_technical_suggested",
+            }
         ]
     }
 
