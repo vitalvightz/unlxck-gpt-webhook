@@ -19,6 +19,8 @@ _PRIMARY_STRENGTH_ROLE_KEYS = {
     "neural_plus_strength_day",
     "neural_primer_day",
 }
+_MIN_DEVELOPMENT_D_DAY = 8
+_LOW_IMPACT_BODY_MASS_KG = 90.0
 
 
 def _token(value: Any) -> str:
@@ -51,6 +53,36 @@ def _gas_tank_is_limiter(athlete_model: dict) -> bool:
     return bool(
         weaknesses
         & {"gas_tank", "conditioning", "conditioning_endurance", "endurance", "work_capacity"}
+    )
+
+
+def _numeric_body_mass_kg(athlete_model: dict) -> float | None:
+    for key in (
+        "body_mass_kg",
+        "bodyweight_kg",
+        "body_weight_kg",
+        "current_weight_kg",
+        "weight_kg",
+    ):
+        raw = athlete_model.get(key)
+        try:
+            value = float(raw)
+        except (TypeError, ValueError):
+            continue
+        if value > 0:
+            return value
+    return None
+
+
+def _prefer_low_impact_repeatability(athlete_model: dict) -> bool:
+    """Bias hard conditioning toward ergometer/low-impact options when load warrants it."""
+    fatigue = _token(athlete_model.get("fatigue") or athlete_model.get("fatigue_level"))
+    readiness_flags = {_token(flag) for flag in clean_list(athlete_model.get("readiness_flags", []))}
+    body_mass_kg = _numeric_body_mass_kg(athlete_model)
+    return bool(
+        fatigue in {"moderate", "high", "very_high"}
+        or readiness_flags & {"moderate_fatigue", "high_fatigue", "very_high_fatigue"}
+        or (body_mass_kg is not None and body_mass_kg >= _LOW_IMPACT_BODY_MASS_KG)
     )
 
 
@@ -89,12 +121,12 @@ def _earliest_safe_pressure_slot(
     week_entry: dict,
     athlete_model: dict,
 ) -> tuple[str, int] | None:
-    """Choose the earliest available D-21..D-18 slot that bridge rules allow."""
+    """Choose the earliest bridge-legal pre-taper development slot."""
     candidates = sorted(
         (
             (weekday, d_day)
             for weekday, d_day in _training_day_calendar(week_entry, athlete_model)
-            if 18 <= d_day <= 21
+            if d_day >= _MIN_DEVELOPMENT_D_DAY
         ),
         key=lambda item: item[1],
         reverse=True,
@@ -203,17 +235,17 @@ def _move_pressure_to_early_slot(
         free_days = [
             (day, d_day)
             for day, d_day in _training_day_calendar(week_entry, athlete_model)
-            if day not in occupied and day != target_day and d_day >= 15
+            if day not in occupied and day != target_day and d_day >= _MIN_DEVELOPMENT_D_DAY
         ]
-        # Prefer a genuinely unused earlier build slot before falling back to
-        # the pressure role's old day.
-        free_days.sort(key=lambda item: (item[1] < 18, -item[1]))
+        # Prefer a genuinely unused earlier development slot before falling back
+        # to the pressure role's old day.
+        free_days.sort(key=lambda item: -item[1])
         destination = free_days[0][0] if free_days else ""
         if (
             not destination
             and current_day
             and current_day != target_day
-            and calendar.get(current_day, -1) >= 15
+            and calendar.get(current_day, -1) >= _MIN_DEVELOPMENT_D_DAY
         ):
             destination = current_day
         if not destination:
@@ -221,11 +253,11 @@ def _move_pressure_to_early_slot(
         occupant["scheduled_day_hint"] = destination
         occupant["day_assignment_reason"] = (
             "Moved within the same weekly session budget so the primary "
-            "conditioning goal can own the early pressure slot."
+            "conditioning goal can own the development pressure slot."
         )
         occupant["placement_rule"] = (
             f"{str(occupant.get('placement_rule') or '').strip()} "
-            "Yield the early pressure slot when no external combat work is "
+            "Yield the development pressure slot when no external combat work is "
             "scheduled and conditioning is the primary goal."
         ).strip()
 
@@ -237,8 +269,8 @@ def _move_pressure_to_early_slot(
     pressure["placement_rule"] = (
         f"{str(pressure.get('placement_rule') or '').strip()} "
         "When the combat week is otherwise empty, place the controlled "
-        "repeatability exposure in the earliest bridge-eligible slot instead "
-        "of reserving recovery for imaginary sport load."
+        "repeatability exposure in the earliest bridge-eligible development slot "
+        "instead of reserving recovery for imaginary sport load."
     ).strip()
     return roles
 
@@ -263,9 +295,8 @@ def install() -> None:
         reasons = list(original_blockers(week_entry, athlete_model))
         if not _eligible_empty_week(week_entry, athlete_model):
             return reasons
-        # The coarse week can end at D-15/D-17 while still containing a legal
-        # D-21..D-18 training day. Keep every real safety/readiness blocker and
-        # remove only bridge blockers disproved by the per-day bridge check.
+        # A coarse week-level bridge blocker can be disproved by a specific
+        # bridge-legal development day. Keep all true safety/readiness blockers.
         return [reason for reason in reasons if reason not in _BRIDGE_ONLY_BLOCKERS]
 
     @wraps(original_compression)
@@ -326,22 +357,21 @@ def install() -> None:
                         else "controlled_repeatability_day"
                     )
                     anchor = module._role_anchor(role_key)
+                    preferred_tags = [
+                        *clean_list(secondary_strength.get("preferred_tags", [])),
+                        "glycolytic",
+                        "fight_pace",
+                        "repeatability",
+                        "gas_tank",
+                    ]
+                    if _prefer_low_impact_repeatability(athlete_model):
+                        preferred_tags.extend(["low_impact", "low_joint_stress"])
                     secondary_strength.update(
                         category="conditioning",
                         role_key=role_key,
                         preferred_system="glycolytic",
                         preferred_pool="conditioning_slots",
-                        preferred_tags=list(
-                            dict.fromkeys(
-                                [
-                                    *clean_list(secondary_strength.get("preferred_tags", [])),
-                                    "glycolytic",
-                                    "fight_pace",
-                                    "repeatability",
-                                    "gas_tank",
-                                ]
-                            )
-                        ),
+                        preferred_tags=list(dict.fromkeys(preferred_tags)),
                         selection_rule=module._role_selection_rule(
                             role_key,
                             "conditioning",
@@ -357,6 +387,7 @@ def install() -> None:
                             system="glycolytic",
                         ),
                         upgraded_from_empty_combat_week=True,
+                        low_impact_preferred=_prefer_low_impact_repeatability(athlete_model),
                     )
                     secondary_strength.pop("strength_session_index", None)
                     secondary_strength.pop("athlete_facing_label", None)
