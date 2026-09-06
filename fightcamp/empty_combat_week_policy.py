@@ -325,6 +325,7 @@ def install() -> None:
                         if phase == "SPP"
                         else "controlled_repeatability_day"
                     )
+                    anchor = module._role_anchor(role_key)
                     secondary_strength.update(
                         category="conditioning",
                         role_key=role_key,
@@ -346,7 +347,15 @@ def install() -> None:
                             "conditioning",
                             "glycolytic",
                         ),
-                        anchor=module._role_anchor(role_key),
+                        anchor=anchor,
+                        placement_rule=module._placement_rule_for_anchor(anchor, week_entry),
+                        governance=module._role_governance(
+                            week_entry,
+                            category="conditioning",
+                            role_key=role_key,
+                            athlete_model=athlete_model,
+                            system="glycolytic",
+                        ),
                         upgraded_from_empty_combat_week=True,
                     )
                     secondary_strength.pop("strength_session_index", None)
