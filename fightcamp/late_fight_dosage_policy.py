@@ -5,6 +5,7 @@ from functools import wraps
 from typing import Iterable
 
 from .sports import normalize_sport
+from .training_context import allocate_sessions
 
 from .style_taper_governance import (
     D13_TO_D8,
@@ -171,6 +172,209 @@ def _replace_dosage_template(rendered: str, replacement: str) -> str:
     return rendered
 
 
+def _is_style_taper_drill(drill: object) -> bool:
+    return isinstance(drill, dict) and str(
+        drill.get("_schema_source") or ""
+    ).endswith("style_taper_conditioning.json")
+
+
+def _style_taper_candidate_rank(entry: dict) -> tuple[float, float, float, int]:
+    reasons = entry.get("reasons") if isinstance(entry.get("reasons"), dict) else {}
+    drill = entry.get("drill") if isinstance(entry.get("drill"), dict) else {}
+    try:
+        score = float(entry.get("score", 0) or 0)
+    except (TypeError, ValueError):
+        score = 0.0
+    try:
+        bank_order = int(drill.get("bank_order"))
+    except (TypeError, ValueError):
+        bank_order = 10_000
+    return (
+        -float(reasons.get("style_hits", 0) or 0),
+        -float(reasons.get("goal_hits", 0) or 0)
+        - float(reasons.get("weakness_hits", 0) or 0),
+        -score,
+        bank_order,
+    )
+
+
+def _repair_taper_phase_winner_for_current_window(
+    result,
+    *,
+    flags: dict,
+    conditioning_module,
+):
+    """Keep the phase winner current-window legal without shrinking the reservoir.
+
+    The Stage-1 reservoir intentionally contains every phase-authorised, safe
+    Style Taper candidate so later D-days can choose independently. The visible
+    TAPER phase winner is different: when generation itself is already inside a
+    governed D13-D1 window, that winner must also be legal for the current window.
+    """
+    if not isinstance(result, tuple) or len(result) != 6:
+        return result
+
+    phase = str(flags.get("phase") or "").strip().upper()
+    if phase != "TAPER":
+        return result
+
+    days_until_fight = flags.get("days_until_fight")
+    if days_until_fight is None:
+        days_until_fight = flags.get("time_to_fight_days")
+    try:
+        days_until_fight = int(days_until_fight)
+    except (TypeError, ValueError):
+        return result
+
+    window = style_taper_window_for_days(days_until_fight)
+    if window is None:
+        return result
+
+    output, _names, why_log, grouped_drills, missing_systems, reservoir = result
+    if not isinstance(grouped_drills, dict) or not isinstance(reservoir, dict):
+        return result
+
+    grouped = {
+        system: [dict(drill) for drill in drills if isinstance(drill, dict)]
+        for system, drills in grouped_drills.items()
+        if isinstance(drills, list)
+    }
+    used_names = {
+        str(drill.get("name") or "")
+        for drills in grouped.values()
+        for drill in drills
+        if drill.get("name")
+    }
+    changed = False
+
+    legal_by_system: dict[str, list[dict]] = {}
+    for system in ("alactic", "aerobic"):
+        entries = reservoir.get(system)
+        if not isinstance(entries, list):
+            continue
+        legal = []
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            drill = entry.get("drill")
+            if not _is_style_taper_drill(drill):
+                continue
+            if phase not in (drill.get("phases") or []):
+                continue
+            if window not in (drill.get("late_windows") or []):
+                continue
+            legal.append(entry)
+        legal_by_system[system] = sorted(legal, key=_style_taper_candidate_rank)
+
+    for system, drills in list(grouped.items()):
+        repaired: list[dict] = []
+        for drill in drills:
+            if not _is_style_taper_drill(drill) or window in (drill.get("late_windows") or []):
+                repaired.append(drill)
+                continue
+
+            changed = True
+            old_name = str(drill.get("name") or "")
+            used_names.discard(old_name)
+            replacement = next(
+                (
+                    entry
+                    for entry in legal_by_system.get(system, [])
+                    if str((entry.get("drill") or {}).get("name") or "") not in used_names
+                ),
+                None,
+            )
+            if replacement is None:
+                # Fail closed: do not keep a Style Taper phase winner that is
+                # illegal for the athlete's current late window.
+                continue
+
+            replacement_drill = dict(replacement["drill"])
+            repaired.append(replacement_drill)
+            replacement_name = str(replacement_drill.get("name") or "")
+            if replacement_name:
+                used_names.add(replacement_name)
+
+        grouped[system] = repaired
+
+    if not changed:
+        return result
+
+    selected_names = [
+        str(drill.get("name") or "")
+        for drills in grouped.values()
+        for drill in drills
+        if drill.get("name")
+    ]
+
+    candidate_by_name: dict[str, dict] = {}
+    for entries in reservoir.values():
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            drill = entry.get("drill")
+            if not isinstance(drill, dict) or not drill.get("name"):
+                continue
+            candidate_by_name[str(drill["name"])] = entry
+
+    old_why = {
+        str(item.get("name") or ""): item
+        for item in why_log or []
+        if isinstance(item, dict) and item.get("name")
+    }
+    rebuilt_why = []
+    for system, drills in grouped.items():
+        for drill in drills:
+            name = str(drill.get("name") or "")
+            candidate = candidate_by_name.get(name)
+            if candidate:
+                rebuilt_why.append(
+                    {
+                        "name": name,
+                        "system": system,
+                        "reasons": dict(candidate.get("reasons") or {}),
+                        "explanation": str(candidate.get("explanation") or ""),
+                    }
+                )
+            elif name in old_why:
+                rebuilt_why.append(dict(old_why[name]))
+
+    training_frequency = flags.get("training_frequency", flags.get("days_available", 4))
+    try:
+        training_frequency = int(training_frequency)
+    except (TypeError, ValueError):
+        training_frequency = 4
+
+    missing = list(missing_systems or [])
+    for system in ("alactic", "aerobic"):
+        if system in grouped and not grouped[system] and system not in missing:
+            missing.append(system)
+
+    diagnostic_context = {
+        "phase": phase,
+        "sport": flags.get("sport"),
+        "time_to_fight_days": flags.get("time_to_fight_days"),
+        "days_until_fight": days_until_fight,
+        "weeks_out": flags.get("weeks_out"),
+        "fatigue_level": flags.get("fatigue_level", flags.get("fatigue")),
+        "injuries": flags.get("injuries"),
+        "fight_format": flags.get("fight_format"),
+    }
+    output = conditioning_module.render_conditioning_block(
+        grouped,
+        phase=phase,
+        phase_color="#F44336",
+        missing_systems=missing,
+        num_sessions=allocate_sessions(training_frequency, phase).get("conditioning", 0),
+        diagnostic_context=diagnostic_context,
+        sport=flags.get("sport"),
+        stance=flags.get("stance"),
+    )
+    return output, selected_names, rebuilt_why, grouped, missing, reservoir
+
+
 def install() -> None:
     """Install canonical D13-D1 taper dosage and Style Taper runtime governance."""
     from . import conditioning as conditioning_module
@@ -254,7 +458,12 @@ def install() -> None:
         )
         token = _STYLE_TAPER_CONTEXT.set((sport, styles))
         try:
-            return original_generate(flags)
+            result = original_generate(flags)
+            return _repair_taper_phase_winner_for_current_window(
+                result,
+                flags=flags or {},
+                conditioning_module=conditioning_module,
+            )
         finally:
             _STYLE_TAPER_CONTEXT.reset(token)
 
