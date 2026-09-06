@@ -156,6 +156,7 @@ def _build_week_by_week_progression(
                     "must_keep": clean_list(guardrails.get("must_keep_if_present", [])),
                     "drop_order_if_thin": clean_list(guardrails.get("conditioning_drop_order_if_thin", [])),
                     "conditioning_sequence": list(stress.get("conditioning_sequence", [])),
+                    "conditioning_quota_boost": dict(guardrails.get("conditioning_quota_boost") or {}),
                     "highest_neural_day": stress.get("highest_neural_day", ""),
                     "highest_glycolytic_day": stress.get("highest_glycolytic_day", ""),
                     "lowest_load_day": stress.get("lowest_load_day", ""),
@@ -2627,6 +2628,9 @@ def _apply_high_fatigue_week_compression(
     # Step 1: Count sparring against the weekly cap
     hard_sparring_days_set = set(_ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))))
     sessions_per_week = int(athlete_model.get("training_frequency") or len(training_days))
+    quota_boost = week_entry.get("conditioning_quota_boost") or {}
+    if isinstance(quota_boost, dict) and int(quota_boost.get("count") or 0) > 0:
+        sessions_per_week += int(quota_boost.get("count") or 0)
     weekly_cap = min(sessions_per_week, len(training_days))
     locked_spar_days = {day for day in training_days if day in hard_sparring_days_set}
     spar_count = len(locked_spar_days)
@@ -3318,6 +3322,16 @@ def _build_weekly_role_map(
                 conditioning_sequence,
                 week_entry,
             )
+        quota_boost = week_entry.get("conditioning_quota_boost") or {}
+        required_boost_system = (
+            str(quota_boost.get("required_system") or "").strip().lower()
+            if isinstance(quota_boost, dict)
+            else ""
+        )
+        if required_boost_system in {"glycolytic", "alactic"}:
+            conditioning_sequence = [required_boost_system] + [
+                system for system in conditioning_sequence if system != required_boost_system
+            ]
         session_roles: list[dict] = []
         suppressed_roles: list[dict] = []
         session_index = 1

@@ -443,6 +443,46 @@ def _apply_conditioning_priority_session_shift(session_counts: dict, training_co
     return adjusted
 
 
+def _declared_combat_gym_day_count(training_context: TrainingContext) -> int:
+    days = {
+        str(day).strip().lower()
+        for values in (
+            training_context.hard_sparring_days,
+            training_context.support_work_days,
+            training_context.technical_skill_days,
+        )
+        for day in clean_list(values)
+        if str(day).strip()
+    }
+    return len(days)
+
+
+def _sparse_conditioning_quota_boost_requested(
+    training_context: TrainingContext, phase: str
+) -> bool:
+    if str(phase or "").upper() not in {"GPP", "SPP"}:
+        return False
+
+    goals = _normalize_limiter_tokens(clean_list(training_context.key_goals))
+    weaknesses = _normalize_limiter_tokens(clean_list(training_context.weaknesses))
+    conditioning_priority = bool(
+        goals & {"conditioning", "conditioning_endurance"}
+        or weaknesses
+        & {"gas_tank", "conditioning", "conditioning_endurance", "endurance", "work_capacity"}
+    )
+    return conditioning_priority and _declared_combat_gym_day_count(training_context) <= 1
+
+
+def _apply_sparse_conditioning_quota_boost(
+    session_counts: dict, training_context: TrainingContext, phase: str
+) -> tuple[dict, bool]:
+    adjusted = dict(session_counts)
+    active = _sparse_conditioning_quota_boost_requested(training_context, phase)
+    if active:
+        adjusted["conditioning"] = int(adjusted.get("conditioning", 0) or 0) + 1
+    return adjusted, active
+
+
 def _cap_session_counts_to_frequency(session_counts: dict, training_context: TrainingContext) -> dict:
     adjusted = dict(session_counts)
     days_until_fight = training_context.days_until_fight
@@ -483,6 +523,15 @@ def _build_phase_briefs(training_context: TrainingContext, phase_weeks: dict) ->
             ),
             training_context,
         )
+        session_counts, sparse_conditioning_quota_boost = _apply_sparse_conditioning_quota_boost(
+            session_counts, training_context, phase
+        )
+        selection_guardrails = _build_phase_selection_guardrails(phase, training_context)
+        if sparse_conditioning_quota_boost:
+            selection_guardrails["conditioning_quota_boost"] = {
+                "count": 1,
+                "required_system": "glycolytic",
+            }
         risk_flags: list[str] = []
         if training_context.injuries:
             risk_flags.append("respect injury guardrails")
@@ -496,7 +545,7 @@ def _build_phase_briefs(training_context: TrainingContext, phase_weeks: dict) ->
             "deprioritize": PHASE_DEPRIORITIZE.get(phase, []),
             "risk_flags": dedupe_preserve_order(risk_flags),
             "session_counts": session_counts,
-            "selection_guardrails": _build_phase_selection_guardrails(phase, training_context),
+            "selection_guardrails": selection_guardrails,
             "weeks": phase_weeks.get(phase, 0),
             "days": phase_weeks.get("days", {}).get(phase, 0),
         }
