@@ -1,0 +1,40 @@
+name: Finish PR2455 v4
+on:
+  push:
+    branches: [codex/d14-d13-role-handoff-surgical]
+permissions:
+  contents: write
+jobs:
+  verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/d14-d13-role-handoff-surgical
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Apply patch
+        run: python .github/scripts/finish_pr2455.py
+      - name: Install
+        run: pip install -r requirements-dev.txt
+      - name: New regressions
+        run: |
+          pytest -q tests/test_d14_d13_role_handoff_surgical.py::test_required_conditioning_priority_preserves_finite_slot_intent tests/test_d14_d13_role_handoff_surgical.py::test_required_conditioning_priority_is_not_a_fixed_spp_pair tests/test_stage2_finalizer_packet.py::test_camp_finalizer_packet_exposes_authoritative_deterministic_session_spine tests/test_stage2_finalizer_packet.py::test_non_camp_finalizer_does_not_add_deterministic_session_spine
+      - name: Focused suite excluding proven Main baseline failures
+        run: |
+          pytest -q tests/test_d14_d13_role_handoff_surgical.py tests/test_camp_tail_allocator_handoff.py tests/test_stage2_payload_late_fight_roles.py tests/test_stage2_payload_modes.py tests/test_stage2_finalizer_packet.py tests/test_sparse_combat_week_hard_conditioning.py --deselect=tests/test_stage2_payload_modes.py::TestPlanningBriefBranching::test_late_fight_uses_dedicated_planning_brief --deselect=tests/test_stage2_payload_modes.py::TestPlanningBriefBranching::test_d13_practical_behaviour_uses_countdown_continuation_until_d1 --deselect=tests/test_stage2_payload_modes.py::TestStage2PayloadBranching::test_d3_payload_exposes_continued_session_sequence --deselect=tests/test_stage2_payload_modes.py::TestStage2PayloadBranching::test_plan_spec_exposes_allocator_metadata_and_source_of_truth_fields --deselect=tests/test_stage2_payload_modes.py::TestStage2PayloadBranching::test_bridge_weekly_role_map_uses_planner_cap_one_for_d21_to_d18
+      - name: Lint
+        run: |
+          ruff check fightcamp/stage2_role_map.py fightcamp/weekly_plan_render.py fightcamp/stage2_finalizer_packet.py tests/test_d14_d13_role_handoff_surgical.py tests/test_stage2_finalizer_packet.py
+          python -m compileall -q fightcamp
+      - name: Commit clean implementation
+        run: |
+          git rm .github/workflows/finish-pr2455.yml .github/workflows/finish-pr2455-v2.yml .github/workflows/finish-pr2455-v3.yml .github/workflows/finish-pr2455-v4.yml .github/scripts/finish_pr2455.py
+          git add fightcamp/stage2_role_map.py fightcamp/weekly_plan_render.py fightcamp/stage2_finalizer_packet.py tests/test_d14_d13_role_handoff_surgical.py tests/test_stage2_finalizer_packet.py
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m 'fix: preserve adaptive role authority through finalizer'
+          git push origin HEAD:codex/d14-d13-role-handoff-surgical
