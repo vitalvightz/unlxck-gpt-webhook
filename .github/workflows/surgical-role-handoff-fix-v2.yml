@@ -1,0 +1,82 @@
+name: Surgical role handoff verification
+
+on:
+  push:
+    branches:
+      - codex/d14-d13-role-handoff-surgical
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: codex/d14-d13-role-handoff-surgical
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.15"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Apply surgical patch
+        run: python .github/scripts/surgical_role_handoff_fix.py
+
+      - name: Install test dependencies
+        env:
+          PIP_RETRIES: "5"
+          PIP_DEFAULT_TIMEOUT: "60"
+        run: |
+          python -m pip install --upgrade pip
+          n=0
+          until pip install -r requirements-dev.txt; do
+            n=$((n + 1))
+            if [ "$n" -ge 3 ]; then
+              echo "pip install failed after $n attempts"
+              exit 1
+            fi
+            sleep $((n * 15))
+          done
+
+      - name: Focused regression tests
+        run: |
+          pytest -q \
+            tests/test_d14_d13_role_handoff_surgical.py \
+            tests/test_camp_tail_allocator_handoff.py \
+            tests/test_stage2_finalizer_packet.py \
+            tests/test_sparse_combat_week_hard_conditioning.py
+
+      - name: Lint and compile
+        run: |
+          ruff check \
+            fightcamp/stage2_role_map.py \
+            fightcamp/camp_week_fillers.py \
+            fightcamp/stage2_payload_late_fight.py \
+            fightcamp/stage2_finalizer_packet.py \
+            tests/test_d14_d13_role_handoff_surgical.py
+          python -m compileall -q fightcamp
+
+      - name: Commit verified patch and remove temporary tooling
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm \
+            .github/workflows/surgical-role-handoff-fix.yml \
+            .github/workflows/surgical-role-handoff-fix-v2.yml \
+            .github/scripts/surgical_role_handoff_fix.py
+          git add \
+            fightcamp/stage2_role_map.py \
+            fightcamp/camp_week_fillers.py \
+            fightcamp/stage2_payload_late_fight.py \
+            fightcamp/stage2_finalizer_packet.py \
+            tests/test_d14_d13_role_handoff_surgical.py
+          git commit -m "fix: preserve required intent across D13 handoff"
+          git push origin codex/d14-d13-role-handoff-surgical
