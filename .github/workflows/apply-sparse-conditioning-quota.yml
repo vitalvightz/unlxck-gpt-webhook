@@ -1,0 +1,37 @@
+name: Apply sparse conditioning quota
+on:
+  push:
+    branches:
+      - fix/sparse-conditioning-quota-plus-one
+permissions:
+  contents: write
+jobs:
+  apply-test-clean:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/sparse-conditioning-quota-plus-one
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply patch
+        run: python .github/scripts/apply_sparse_conditioning_quota.py
+      - name: Install focused test tools
+        run: python -m pip install pytest ruff
+      - name: New quota regressions
+        run: pytest -q tests/test_sparse_conditioning_quota_plus_one.py --maxfail=1
+      - name: Existing sparse hard-conditioning regressions
+        run: pytest -q tests/test_sparse_combat_week_hard_conditioning.py --maxfail=1
+      - name: Lint changed Python
+        run: ruff check fightcamp/stage2_planning_brief.py fightcamp/stage2_role_map.py tests/test_sparse_conditioning_quota_plus_one.py
+      - name: Commit clean implementation
+        run: |
+          rm -f .github/scripts/apply_sparse_conditioning_quota.py
+          rm -f .github/workflows/apply-sparse-conditioning-quota.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add fightcamp/stage2_planning_brief.py fightcamp/stage2_role_map.py tests/test_sparse_conditioning_quota_plus_one.py .github
+          git commit -m 'fix: add sparse conditioning quota for gas-tank priority'
+          git push origin HEAD:fix/sparse-conditioning-quota-plus-one
