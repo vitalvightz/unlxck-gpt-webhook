@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import fightcamp.empty_combat_week_policy as policy
 from fightcamp.goal_preservation import reconcile_goal_preservation, validate_goal_preservation
-from fightcamp.stage2_role_map import _build_weekly_role_map
+from fightcamp.stage2_role_map import _build_weekly_role_map, _is_hard_pressure_conditioning_role
 from fightcamp.stage2_validator import validate_stage2_output
 
 
@@ -74,6 +75,18 @@ def _first_week(role_map):
     return role_map["weeks"][0]
 
 
+def _hard_pressure_role(week):
+    return next(
+        (
+            role
+            for role in week["session_roles"]
+            if role.get("category") == "conditioning"
+            and _is_hard_pressure_conditioning_role(role)
+        ),
+        None,
+    )
+
+
 def _glycolytic_slot(phase: str) -> dict:
     return {
         "role": "glycolytic",
@@ -101,37 +114,95 @@ def _glycolytic_slot(phase: str) -> dict:
     }
 
 
-def test_empty_boxing_week_gives_primary_conditioning_the_early_pressure_slot():
+def test_missing_hard_stimulus_gives_primary_conditioning_a_pressure_role():
     role_map = _build_weekly_role_map(_athlete(), _progression(), LIMITER)
     week = _first_week(role_map)
+    pressure = _hard_pressure_role(week)
 
-    pressure = next(
-        role
-        for role in week["session_roles"]
-        if role.get("category") == "conditioning"
-        and role.get("preferred_system") == "glycolytic"
-        and role.get("combat_pressure_floor")
-    )
-
-    assert pressure.get("upgraded_from_empty_combat_week") is True
-    assert pressure["scheduled_countdown_label"] == "D-21"
+    assert pressure is not None
+    assert pressure["preferred_system"] == "glycolytic"
     assert pressure["anchor"] == "highest_glycolytic_day"
     assert pressure["governance"]["authority"] == "execution_layer_only"
     assert pressure["governance"]["execution_only"] is True
     assert "strength" not in pressure["selection_rule"].lower()
-    assert pressure["placement_rule"] == week["highest_glycolytic_day"]
     assert week["combat_pressure_floor"]["active"] is True
-    assert not any(
-        role.get("role_key") == "secondary_strength_day"
-        for role in week["session_roles"]
-    )
     assert any(
         role.get("role_key") == "primary_strength_day"
         for role in week["session_roles"]
     )
 
 
-def test_empty_boxing_week_pressure_survives_goal_preservation_and_render_validation():
+def test_one_technical_gym_session_does_not_satisfy_hard_stimulus():
+    role_map = _build_weekly_role_map(
+        _athlete(
+            support_work_days=["Wednesday"],
+            technical_skill_days=["Wednesday"],
+        ),
+        _progression(),
+        LIMITER,
+    )
+    week = _first_week(role_map)
+
+    assert policy._hard_stimulus_deficit(week, _athlete(
+        support_work_days=["Wednesday"], technical_skill_days=["Wednesday"]
+    )) is True
+    assert _hard_pressure_role(week) is not None
+    assert week["combat_pressure_floor"]["active"] is True
+
+
+def test_multiple_easy_technical_sessions_are_still_zero_hard_exposures():
+    athlete = _athlete(
+        support_work_days=["Monday", "Wednesday", "Friday"],
+        technical_skill_days=["Monday", "Wednesday", "Friday"],
+    )
+    assert policy._hard_stimulus_deficit({}, athlete) is True
+
+
+def test_effective_hard_plan_is_authoritative_over_declared_presence():
+    athlete = _athlete(hard_sparring_days=["Friday"])
+
+    hard_week = {
+        "hard_sparring_plan": [
+            {"day": "Friday", "effective_load": "hard", "status": "planned"}
+        ]
+    }
+    reduced_week = {
+        "hard_sparring_plan": [
+            {"day": "Friday", "effective_load": "technical", "status": "convert_to_technical_suggested"}
+        ]
+    }
+
+    assert policy._hard_stimulus_deficit(hard_week, athlete) is False
+    assert policy._hard_stimulus_deficit(reduced_week, athlete) is True
+
+
+def test_session_type_hard_spar_counts_but_technical_does_not():
+    assert policy._hard_stimulus_deficit(
+        {},
+        _athlete(session_types_by_day={"monday": "technical"}),
+    ) is True
+    assert policy._hard_stimulus_deficit(
+        {},
+        _athlete(session_types_by_day={"monday": "hard_spar"}),
+    ) is False
+
+
+def test_zero_effective_hard_sparring_never_reports_spar_first_cap():
+    role_map = _build_weekly_role_map(
+        _athlete(support_work_days=["Wednesday"], technical_skill_days=["Wednesday"]),
+        _progression(),
+        LIMITER,
+    )
+    week = _first_week(role_map)
+
+    assert "spar_first_cap" not in (week.get("intentional_compression") or {}).get("reason_codes", [])
+    assert all(
+        "spar_first_cap" not in (row.get("compression_reason_codes") or [])
+        for row in week.get("suppressed_roles") or []
+    )
+
+
+def test_hard_pressure_survives_goal_preservation_and_render_validation():
     athlete = _athlete(key_goals=["conditioning"], primary_goal="conditioning")
     role_map = _build_weekly_role_map(athlete, _progression(), LIMITER)
     brief = {
@@ -178,43 +249,4 @@ def test_empty_boxing_week_pressure_survives_goal_preservation_and_render_valida
             "goal_preservation_render_mismatch",
         }
         for error in report["errors"]
-    )
-
-
-def test_empty_boxing_week_never_reports_spar_first_cap():
-    role_map = _build_weekly_role_map(_athlete(), _progression(), LIMITER)
-    week = _first_week(role_map)
-
-    assert "spar_first_cap" not in (week.get("intentional_compression") or {}).get("reason_codes", [])
-    assert all(
-        "spar_first_cap" not in (row.get("compression_reason_codes") or [])
-        for row in week.get("suppressed_roles") or []
-    )
-
-
-def test_real_declared_combat_load_disables_empty_week_substitution():
-    role_map = _build_weekly_role_map(
-        _athlete(hard_sparring_days=["Friday"]),
-        _progression(),
-        LIMITER,
-    )
-    week = _first_week(role_map)
-
-    assert not any(
-        role.get("upgraded_from_empty_combat_week")
-        for role in week["session_roles"]
-    )
-
-
-def test_declared_light_combat_also_disables_empty_week_substitution():
-    role_map = _build_weekly_role_map(
-        _athlete(support_work_days=["Wednesday"], technical_skill_days=["Wednesday"]),
-        _progression(),
-        LIMITER,
-    )
-    week = _first_week(role_map)
-
-    assert not any(
-        role.get("upgraded_from_empty_combat_week")
-        for role in week["session_roles"]
     )
