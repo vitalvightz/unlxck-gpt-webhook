@@ -17,38 +17,26 @@ jobs:
           python-version: "3.11.15"
       - name: Apply candidate patch
         run: python .github/scripts/surgical_role_handoff_fix_v2.py
-      - name: Inspect allocator
+      - name: Inspect D13 segment allocation
         run: |
           python - <<'PY'
           import json
           from fightcamp import stage2_payload_late_fight as lf
-          from fightcamp.late_fight_tail import build_finished_late_fight_tail
           athlete = {
               "sport":"boxing", "fight_format":"boxing", "days_until_fight":22,
               "fight_date":"2026-09-28", "next_fight_date":"2026-09-28",
               "plan_creation_weekday":"sunday", "training_frequency":4,
               "weekly_training_frequency":4, "days_available":4,
               "training_days":["monday","wednesday","thursday","friday"],
-              "hard_sparring_days":[], "support_work_days":[],
-              "fatigue":"moderate", "fatigue_level":"moderate",
-              "readiness_flags":[], "injuries":[], "restrictions":[],
-              "weight_cut_risk":False, "cut_severity_bucket":"low",
+              "hard_sparring_days":[], "support_work_days":[], "fatigue":"moderate",
+              "fatigue_level":"moderate", "readiness_flags":[], "injuries":[],
+              "restrictions":[], "weight_cut_risk":False, "cut_severity_bucket":"low",
               "key_goals":["conditioning","speed"], "weaknesses":["conditioning"],
               "equipment":["bodyweight","bands","medicine_ball","assault_bike","rower"],
               "handoff_required_conditioning_systems":["glycolytic","alactic"],
           }
           shifted = lf._shifted_segment_athlete_model(22, 13, athlete)
-          print("SHIFTED_HANDOFF", shifted.get("handoff_required_conditioning_systems"))
-          permissions = lf._late_fight_permission_policy(13, shifted)
-          print("LEGAL", permissions.get("legal_countdown_labels"))
-          print("BUDGET", json.dumps(lf._late_fight_role_budget(13, shifted), indent=2, default=str))
-          candidates = lf._late_fight_candidate_roles(13, shifted, permissions)
-          print("CANDIDATES")
-          print(json.dumps([{k:r.get(k) for k in ("role_key","category","preferred_system","legal_countdown_labels","selection_priority","_selection_priority","required","_required")} for r in candidates], indent=2, default=str))
-          allocation = lf._late_fight_practical_allocation_plan(13, shifted)
-          print("ALLOCATION")
-          print(json.dumps({k:allocation.get(k) for k in ("legal_countdown_labels","session_roles","suppressed_roles","role_budget")}, indent=2, default=str))
-          tail = build_finished_late_fight_tail(22, athlete, start_day=13)
-          print("TAIL")
-          print(json.dumps([{k:r.get(k) for k in ("role_key","scheduled_countdown_label","countdown_offset","placement_source","stress_class","cost_class")} for r in tail.get("session_sequence",[])], indent=2, default=str))
+          local = lf._late_fight_allocation_plan(13, shifted)
+          print("LOCAL")
+          print(json.dumps({k: local.get(k) for k in ("session_roles","suppressed_roles","role_budget","legal_countdown_labels")}, indent=2, default=str))
           PY
