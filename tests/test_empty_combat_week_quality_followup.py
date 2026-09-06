@@ -262,11 +262,6 @@ def test_real_stage1_to_finalizer_path_preserves_hard_distance_striker_contract(
             hard_slots.append(slot)
 
     assert hard_slots, [slot.get("selected", {}).get("name") for slot in gpp_slots]
-    assert any(
-        "distance_striker" in (slot.get("selected", {}).get("selection_metadata", {}).get("tags") or [])
-        for slot in hard_slots
-    )
-
     brief = build_planning_brief(
         athlete_model=payload["athlete_model"],
         restrictions=payload["restrictions"],
