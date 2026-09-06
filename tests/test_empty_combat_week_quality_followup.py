@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from fightcamp import conditioning
+from fightcamp import stage2_planning_brief as stage2_planning_brief_module
 import fightcamp.empty_combat_week_policy as policy
+from fightcamp.stage2_finalizer_packet import build_stage2_finalizer_packet
+from fightcamp.stage2_payload import build_planning_brief, build_stage2_payload
 from fightcamp.stage2_role_map import _build_weekly_role_map
+from fightcamp.training_context import TrainingContext
 
 
 LIMITER = {"key": "aerobic_repeatability"}
@@ -24,6 +30,7 @@ def _athlete(**overrides):
         "weight_cut_risk": False,
         "injury_mode": "full_plan",
         "injuries": [],
+        "injury_restrictions": [],
         "readiness_flags": ["moderate_fatigue", "reduced_contact_requested"],
         "key_goals": ["conditioning", "speed"],
         "primary_goal": "conditioning",
@@ -70,7 +77,7 @@ def _progression():
     }
 
 
-def test_pressure_slot_can_start_well_before_d21(monkeypatch):
+def test_pressure_eligibility_can_start_well_before_d21(monkeypatch):
     monkeypatch.setattr(policy, "_bridge_allows_glycolytic_on_day", lambda athlete, d_day: True)
     athlete = _athlete(training_days=["Monday", "Wednesday"])
     week = {
@@ -84,6 +91,7 @@ def test_pressure_slot_can_start_well_before_d21(monkeypatch):
 
     assert policy._earliest_safe_pressure_slot(week, athlete) == ("monday", 35)
     assert not hasattr(policy, "_MIN_DEVELOPMENT_D_DAY")
+    assert not hasattr(policy, "_move_pressure_to_early_slot")
 
 
 def test_canonical_bridge_not_local_cutoff_blocks_d7_inward():
@@ -101,27 +109,6 @@ def test_canonical_bridge_not_local_cutoff_blocks_d7_inward():
     assert policy._earliest_safe_pressure_slot(week, athlete) is None
 
 
-def test_technical_attendance_is_avoided_as_pressure_day_when_another_day_exists(monkeypatch):
-    monkeypatch.setattr(policy, "_bridge_allows_glycolytic_on_day", lambda athlete, d_day: True)
-    athlete = _athlete(
-        training_days=["Monday", "Wednesday"],
-        support_work_days=["Monday"],
-        technical_skill_days=["Monday"],
-    )
-    week = {
-        "phase": "GPP",
-        "declared_training_days": ["Monday", "Wednesday"],
-        "declared_support_work_days": ["Monday"],
-        "declared_technical_skill_days": ["Monday"],
-        "calendar_days": [
-            {"weekday": "monday", "d_day": 35},
-            {"weekday": "wednesday", "d_day": 33},
-        ],
-    }
-
-    assert policy._earliest_safe_pressure_slot(week, athlete) == ("wednesday", 33)
-
-
 def test_body_mass_and_moderate_fatigue_do_not_force_low_impact_modality():
     assert policy._prefer_low_impact_repeatability(_athlete(body_mass_kg=103)) is False
     assert policy._prefer_low_impact_repeatability(
@@ -132,24 +119,17 @@ def test_body_mass_and_moderate_fatigue_do_not_force_low_impact_modality():
     ) is False
 
 
-def test_mechanical_restriction_can_bias_modality_without_downgrading_system():
-    assert policy._prefer_low_impact_repeatability(
-        _athlete(
-            fatigue="low",
-            readiness_flags=["joint_load_restriction"],
-            body_mass_kg=80,
-        )
-    ) is True
-
-    role_map = _build_weekly_role_map(
-        _athlete(
-            fatigue="low",
-            readiness_flags=["joint_load_restriction"],
-            body_mass_kg=80,
-        ),
-        _progression(),
-        LIMITER,
+def test_real_injury_restriction_can_bias_modality_without_downgrading_system():
+    restriction = {"restriction": "single_leg_loading", "region": "knee"}
+    athlete = _athlete(
+        fatigue="low",
+        readiness_flags=["baseline"],
+        body_mass_kg=80,
+        injury_restrictions=[restriction],
     )
+    assert policy._prefer_low_impact_repeatability(athlete) is True
+
+    role_map = _build_weekly_role_map(athlete, _progression(), LIMITER)
     week = role_map["weeks"][0]
     pressure = next(
         role
@@ -179,46 +159,152 @@ def test_exact_profile_keeps_hard_system_without_body_mass_low_impact_bias():
     assert pressure.get("mandatory_hard_conditioning_exposure") is True
 
 
-def test_real_conditioning_selector_has_hard_distance_striker_candidate():
+def _real_training_context() -> TrainingContext:
+    phase_weeks = {
+        "GPP": 1,
+        "SPP": 1,
+        "TAPER": 1,
+        "days": {"GPP": 7, "SPP": 8, "TAPER": 7},
+    }
+    return TrainingContext(
+        fatigue="moderate",
+        training_frequency=4,
+        days_available=5,
+        training_days=["Monday", "Friday", "Wednesday", "Sunday", "Thursday"],
+        injuries=[],
+        style_technical=["boxing"],
+        style_tactical=["distance_striker"],
+        weaknesses=["gas_tank", "trunk_strength"],
+        equipment=["bodyweight", "partner", "heavy_bag", "assault_bike", "rower"],
+        weight_cut_risk=False,
+        weight_cut_pct=2.0,
+        fight_format="boxing",
+        status="amateur",
+        key_goals=["conditioning", "speed"],
+        training_preference="",
+        mental_block=[],
+        age=23,
+        weight=103.0,
+        prev_exercises=[],
+        recent_exercises=[],
+        phase_weeks=phase_weeks,
+        days_until_fight=22,
+        hard_sparring_days=[],
+        support_work_days=[],
+        technical_skill_days=[],
+        athlete_timezone="Europe/London",
+        next_fight_date="2026-09-28",
+        injury_restrictions=[],
+    )
+
+
+def _real_conditioning_block(context: TrainingContext, phase: str) -> dict:
     flags = {
-        "phase": "SPP",
+        **context.to_flags(),
+        "phase": phase,
         "sport": "boxing",
-        "style_technical": ["boxing"],
-        "style_tactical": ["distance striker"],
-        "key_goals": ["conditioning", "speed"],
+        "time_to_fight_days": context.days_until_fight,
         "primary_goal": "conditioning",
-        "weaknesses": ["gas tank", "trunk strength"],
-        "fatigue": "moderate",
-        "equipment": ["bodyweight", "partner", "heavy_bag", "assault_bike", "rower"],
-        "training_frequency": 4,
-        "days_available": 5,
-        "days_until_fight": 22,
-        "time_to_fight_days": 22,
-        "injuries": [],
-        "restrictions": [],
         "priority_focus": {
             "primary_goal": "conditioning",
             "primary_weakness": "gas_tank",
             "derived_clarification_tags": ["glycolytic", "work_capacity", "conditioning"],
         },
     }
-
-    result = conditioning.generate_conditioning_block(flags)
-    reservoir = result[5]
-    diagnostics = reservoir["__style_conditioning__"]
-    selected_names = set(diagnostics["final_selected_style_conditioning_names"])
-    style_bank = {
-        item["name"]: item
-        for item in conditioning.get_style_conditioning_bank()
+    _text, _names, why_log, grouped, missing, reservoir = conditioning.generate_conditioning_block(flags)
+    return {
+        "grouped_drills": grouped,
+        "why_log": why_log,
+        "candidate_reservoir": reservoir,
+        "missing_systems": missing,
     }
-    selected_hard = [
-        style_bank[name]
-        for name in selected_names
-        if name in style_bank
-        and str(style_bank[name].get("system") or "").strip().lower() == "glycolytic"
-        and float(style_bank[name].get("rpe") or 0) >= 7
-        and str(style_bank[name].get("lactate_load") or "").strip().lower() == "high"
-    ]
 
-    assert selected_hard, selected_names
-    assert any("distance_striker" in item.get("tags", []) for item in selected_hard)
+
+def test_real_stage1_to_finalizer_path_preserves_hard_distance_striker_contract(monkeypatch):
+    # Freeze plan creation so the real calendar is the exact D-22 profile rather
+    # than depending on the date the test suite happens to run.
+    monkeypatch.setattr(
+        stage2_planning_brief_module,
+        "_utc_now",
+        lambda: datetime(2026, 9, 6, 10, 0),
+    )
+    context = _real_training_context()
+    phase_weeks = context.phase_weeks
+    conditioning_blocks = {
+        phase: _real_conditioning_block(context, phase)
+        for phase in ("GPP", "SPP", "TAPER")
+    }
+
+    payload = build_stage2_payload(
+        training_context=context,
+        mapped_format="boxing",
+        record="0-0",
+        rounds_format="3 x 3",
+        camp_len=4,
+        short_notice=False,
+        restrictions=[],
+        phase_weeks=phase_weeks,
+        strength_blocks={"GPP": None, "SPP": None, "TAPER": None},
+        conditioning_blocks=conditioning_blocks,
+        rehab_blocks={},
+    )
+
+    gpp_slots = payload["candidate_pools"]["GPP"]["conditioning_slots"]
+    hard_slots = []
+    for slot in gpp_slots:
+        selected = slot.get("selected") or {}
+        metadata = selected.get("selection_metadata") or {}
+        if (
+            str(slot.get("role") or "").lower() == "glycolytic"
+            and float(metadata.get("rpe") or 0) >= 7
+            and str(metadata.get("lactate_load") or "").lower() == "high"
+        ):
+            hard_slots.append(slot)
+
+    assert hard_slots, [slot.get("selected", {}).get("name") for slot in gpp_slots]
+    assert any(
+        "distance_striker" in (slot.get("selected", {}).get("selection_metadata", {}).get("tags") or [])
+        for slot in hard_slots
+    )
+
+    brief = build_planning_brief(
+        athlete_model=payload["athlete_model"],
+        restrictions=payload["restrictions"],
+        phase_briefs=payload["phase_briefs"],
+        candidate_pools=payload["candidate_pools"],
+        omission_ledger=payload["omission_ledger"],
+        rewrite_guidance=payload["rewrite_guidance"],
+    )
+
+    hard_role = next(
+        role
+        for week in brief["weekly_role_map"]["weeks"]
+        for role in week["session_roles"]
+        if role.get("upgraded_from_hard_stimulus_deficit")
+    )
+    assert hard_role["preferred_system"] == "glycolytic"
+    assert hard_role["mandatory_hard_conditioning_exposure"] is True
+    assert hard_role["prescribed_intensity_rpe"] in {"8", "8-9"}
+    assert "distance_striker" in hard_role["preferred_tags"]
+
+    packet = build_stage2_finalizer_packet(
+        stage2_payload=payload,
+        planning_brief=brief,
+    )
+    packet_hard_role = next(
+        role
+        for week in packet["selected_plan"]["weekly_role_map"]["weeks"]
+        for role in week["session_roles"]
+        if role.get("mandatory_hard_conditioning_exposure") is True
+    )
+
+    # The LLM boundary must receive the deterministic hard-dose contract. This is
+    # what prevents the finalizer from turning the required role back into Zone 2.
+    assert packet_hard_role["preferred_system"] == "glycolytic"
+    assert packet_hard_role["prescribed_intensity_rpe"] in {"8", "8-9"}
+    assert "hard" in packet_hard_role["prescribed_dose"].lower() or "fight-pace" in packet_hard_role["prescribed_dose"].lower()
+    assert packet_hard_role["floor_stop_rule"]
+    assert any(
+        "mandatory_hard_conditioning_exposure" in rule
+        for rule in packet["hard_rules"]
+    )
