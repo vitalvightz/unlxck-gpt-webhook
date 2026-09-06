@@ -1,3 +1,4 @@
+# registered workflow trigger
 name: Apply sparse conditioning quota
 on:
   push:
