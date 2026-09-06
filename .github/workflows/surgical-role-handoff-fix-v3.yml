@@ -25,6 +25,18 @@ jobs:
             requirements-dev.txt
       - name: Apply corrected patch
         run: python .github/scripts/surgical_role_handoff_fix_v2.py
+      - name: Preserve handoff role in composite arbitration
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("fightcamp/stage2_payload_late_fight.py")
+          text = path.read_text()
+          old = '''                    selection_priority=107,\n                    required=True,\n                    legal_countdown_labels=handoff_alactic_labels,\n                    placement_source="parent_week_required_intent_handoff",\n'''
+          new = '''                    selection_priority=108,\n                    required=True,\n                    legal_countdown_labels=handoff_alactic_labels,\n                    placement_source="parent_week_required_intent_handoff",\n'''
+          if text.count(old) != 1:
+              raise SystemExit(f"expected one handoff priority block, found {text.count(old)}")
+          path.write_text(text.replace(old, new, 1))
+          PY
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
@@ -66,5 +78,3 @@ jobs:
             tests/test_d14_d13_role_handoff_surgical.py
           git commit -m "fix: preserve required intent across D13 handoff"
           git push origin codex/d14-d13-role-handoff-surgical
-
-# Trigger verification after the corrected workflow exists on the branch.
