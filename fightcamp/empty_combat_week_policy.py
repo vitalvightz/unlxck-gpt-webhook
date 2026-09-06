@@ -235,8 +235,10 @@ def _move_pressure_to_early_slot(
         free_days = [
             (day, d_day)
             for day, d_day in _training_day_calendar(week_entry, athlete_model)
-            if day not in occupied and day != target_day and d_day >= _MIN_DEVELOPMENT_D_DAY
+            if day not in occupied and day != target_day and d_day >= 15
         ]
+        # Do not displace strength/support work into the D-14..D-8 window just
+        # to free a pressure slot; preserve the existing late-strength safety bound.
         # Prefer a genuinely unused earlier development slot before falling back
         # to the pressure role's old day.
         free_days.sort(key=lambda item: -item[1])
@@ -245,7 +247,7 @@ def _move_pressure_to_early_slot(
             not destination
             and current_day
             and current_day != target_day
-            and calendar.get(current_day, -1) >= _MIN_DEVELOPMENT_D_DAY
+            and calendar.get(current_day, -1) >= 15
         ):
             destination = current_day
         if not destination:
