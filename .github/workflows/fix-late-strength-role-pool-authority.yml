@@ -1,0 +1,82 @@
+name: Fix late strength role pool authority
+
+on:
+  push:
+    branches:
+      - fix/late-strength-role-pool-authority
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/late-strength-role-pool-authority
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply surgical production fix
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('fightcamp/stage2_payload.py')
+          s = p.read_text()
+          old = '''    if slot_group == "conditioning_slots":
+        if role_key in {"strength_touch_day", "neural_primer_day", "alactic_sharpness_day"}:
+            if _slot_is_style_taper_neural_primer(slot, role, source_phase=source_phase):
+                return True
+            if role_key in {"strength_touch_day", "neural_primer_day"}:
+                return False
+            return slot_role == "alactic" and _slot_selected_option(slot).get("source") != "style_taper"
+'''
+          new = '''    if slot_group == "conditioning_slots":
+        # A late strength touch must stay inside strength candidate authority.
+        # Do not let style-taper technical rhythm drills satisfy a meaningful
+        # strength role merely because they are legal in the same countdown window.
+        if role_key == "strength_touch_day":
+            return False
+        if role_key in {"neural_primer_day", "alactic_sharpness_day"}:
+            if _slot_is_style_taper_neural_primer(slot, role, source_phase=source_phase):
+                return True
+            if role_key == "neural_primer_day":
+                return False
+            return slot_role == "alactic" and _slot_selected_option(slot).get("source") != "style_taper"
+'''
+          if old not in s:
+              raise SystemExit('target role-match block not found')
+          s = s.replace(old, new, 1)
+          old2 = '''        if not selected_matches and str(role.get("role_key") or "") in {
+            "strength_touch_day", "neural_primer_day", "alactic_sharpness_day"
+        }:
+'''
+          new2 = '''        if not selected_matches and str(role.get("role_key") or "") in {
+            "neural_primer_day", "alactic_sharpness_day"
+        }:
+'''
+          if old2 not in s:
+              raise SystemExit('target fallback-role set not found')
+          s = s.replace(old2, new2, 1)
+          p.write_text(s)
+          PY
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pytest ruff
+      - name: Focused regression
+        run: |
+          pytest -q tests/test_canonical_session_composition.py tests/test_stage2_payload_modes.py --maxfail=1
+      - name: Ruff
+        run: ruff check fightcamp/stage2_payload.py
+      - name: Commit production fix and remove workflow
+        run: |
+          rm .github/workflows/fix-late-strength-role-pool-authority.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add fightcamp/stage2_payload.py .github/workflows/fix-late-strength-role-pool-authority.yml
+          git commit -m "fix: keep late strength touches in strength pool authority"
+          git push origin HEAD:fix/late-strength-role-pool-authority
