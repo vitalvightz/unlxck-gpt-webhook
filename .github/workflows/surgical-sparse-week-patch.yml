@@ -1,0 +1,105 @@
+name: Surgical sparse-week patch
+
+on:
+  push:
+    branches:
+      - codex/sparse-week-hard-conditioning-surgical
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test-commit:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: codex/sparse-week-hard-conditioning-surgical
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.15"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Apply surgical patch
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          role_map_path = Path('fightcamp/stage2_role_map.py')
+          text = role_map_path.read_text()
+
+          helper_anchor = '''def _combat_pressure_floor_metadata(phase: str) -> dict[str, Any]:\n'''
+          helper = '''def _is_sparse_combat_week(athlete_model: dict) -> bool:\n    \"\"\"Return True only for the narrow no/very-limited combat-gym case.\n\n    Any declared hard-sparring day keeps the existing populated-week path fully\n    unchanged. Sparse fallback is therefore limited to zero hard-sparring days\n    and at most one declared light/technical combat day.\n    \"\"\"\n    if clean_list(athlete_model.get(\"hard_sparring_days\", [])):\n        return False\n\n    training_days = {\n        str(day).strip().lower()\n        for day in clean_list(athlete_model.get(\"training_days\", []))\n        if str(day).strip()\n    }\n    support_days = {\n        str(day).strip().lower()\n        for day in clean_list(\n            athlete_model.get(\"support_work_days\")\n            or athlete_model.get(\"technical_skill_days\")\n            or []\n        )\n        if str(day).strip()\n    }\n    if training_days:\n        support_days &= training_days\n    return len(support_days) <= 1\n\n\n'''
+          if helper_anchor not in text:
+              raise SystemExit('helper anchor missing')
+          if 'def _is_sparse_combat_week(' not in text:
+              text = text.replace(helper_anchor, helper + helper_anchor, 1)
+
+          old = '''    target = _pick_combat_floor_upgrade_target(session_roles, must_keep)\n    if target is None:\n        week_entry[\"combat_pressure_floor\"] = {\n            \"active\": False,\n            \"reason_codes\": [\"no_convertible_slot_without_breaking_must_keep\"],\n        }\n        return session_roles\n\n    _convert_role_to_combat_pressure(target, phase)\n    week_entry[\"combat_pressure_floor\"] = {\n        \"active\": True,\n        \"source\": \"upgraded_conditioning_slot\",\n        \"role_key\": target.get(\"role_key\"),\n    }\n'''
+          new = '''    target = _pick_combat_floor_upgrade_target(session_roles, must_keep)\n    sparse_override = False\n    if target is None and _is_sparse_combat_week(athlete_model):\n        # Sparse-week fallback may repurpose the sole ordinary conditioning slot\n        # after every existing pressure-floor safety blocker has already passed.\n        # It never creates another session and never runs when hard sparring is\n        # declared, so populated combat weeks keep their existing behaviour.\n        target = _pick_combat_floor_upgrade_target(session_roles, set())\n        sparse_override = target is not None\n    if target is None:\n        week_entry[\"combat_pressure_floor\"] = {\n            \"active\": False,\n            \"reason_codes\": [\"no_convertible_slot_without_breaking_must_keep\"],\n        }\n        return session_roles\n\n    _convert_role_to_combat_pressure(target, phase)\n    if sparse_override:\n        target[\"sparse_combat_week_hard_fallback\"] = True\n    week_entry[\"combat_pressure_floor\"] = {\n        \"active\": True,\n        \"source\": (\n            \"sparse_week_upgraded_conditioning_slot\"\n            if sparse_override\n            else \"upgraded_conditioning_slot\"\n        ),\n        \"role_key\": target.get(\"role_key\"),\n    }\n'''
+          if old not in text:
+              raise SystemExit('pressure-floor replacement anchor missing')
+          text = text.replace(old, new, 1)
+          role_map_path.write_text(text)
+
+          finalizer_path = Path('fightcamp/stage2_finalizer_packet.py')
+          text = finalizer_path.read_text()
+          insert_anchor = '''def build_stage2_finalizer_packet(\n'''
+          helper = '''_SPARSE_HARD_CONDITIONING_FIELDS = (\n    \"sparse_combat_week_hard_fallback\",\n    \"combat_pressure_floor\",\n    \"mandatory_hard_conditioning_exposure\",\n    \"prescribed_intensity_rpe\",\n    \"prescribed_dose\",\n    \"floor_purpose\",\n    \"floor_stop_rule\",\n)\n\n\ndef _preserve_sparse_hard_conditioning_contract(\n    packet: dict[str, Any], weekly_role_map: Any\n) -> None:\n    \"\"\"Carry the sparse-week hard dose through finalizer compaction.\"\"\"\n    if not isinstance(weekly_role_map, dict):\n        return\n    selected_plan = packet.get(\"selected_plan\")\n    if not isinstance(selected_plan, dict):\n        return\n    compact_map = selected_plan.get(\"weekly_role_map\")\n    if not isinstance(compact_map, dict):\n        return\n\n    compact_weeks = {\n        week.get(\"week_index\"): week\n        for week in compact_map.get(\"weeks\", []) or []\n        if isinstance(week, dict)\n    }\n    preserved = False\n    for raw_week in weekly_role_map.get(\"weeks\", []) or []:\n        if not isinstance(raw_week, dict):\n            continue\n        compact_week = compact_weeks.get(raw_week.get(\"week_index\"))\n        if not isinstance(compact_week, dict):\n            continue\n        compact_roles = compact_week.get(\"session_roles\", []) or []\n        for raw_role in raw_week.get(\"session_roles\", []) or []:\n            if not isinstance(raw_role, dict) or not raw_role.get(\"sparse_combat_week_hard_fallback\"):\n                continue\n            match = next(\n                (\n                    role\n                    for role in compact_roles\n                    if isinstance(role, dict)\n                    and role.get(\"session_index\") == raw_role.get(\"session_index\")\n                    and role.get(\"role_key\") == raw_role.get(\"role_key\")\n                ),\n                None,\n            )\n            if not isinstance(match, dict):\n                continue\n            for field in _SPARSE_HARD_CONDITIONING_FIELDS:\n                value = raw_role.get(field)\n                if value not in (None, \"\", []):\n                    match[field] = deepcopy(value)\n            preserved = True\n\n    if preserved:\n        packet.setdefault(\"hard_rules\", []).append(\n            \"A session role with sparse_combat_week_hard_fallback=true is the \"\n            \"deterministic replacement for an otherwise underloaded sparse combat week. \"\n            \"It MUST remain a hard glycolytic/fight-pace exposure at its supplied \"\n            \"prescribed_intensity_rpe and prescribed_dose. Do not soften it into easy \"\n            \"aerobic work, recovery, rhythm work, or a light conditioning session. \"\n            \"Existing countdown, injury, fatigue, weight-cut and fight-week safety \"\n            \"rules remain authoritative and may remove or reduce it upstream.\"\n        )\n\n\n'''
+          if insert_anchor not in text:
+              raise SystemExit('finalizer insertion anchor missing')
+          if '_preserve_sparse_hard_conditioning_contract(' not in text:
+              text = text.replace(insert_anchor, helper + insert_anchor, 1)
+
+          call_anchor = '''    packet = _impl.build_stage2_finalizer_packet(\n        stage2_payload=stage2_payload,\n        planning_brief=planning_brief,\n    )\n\n    tail_contracts = _late_fight_tail_contracts(weekly_role_map)\n'''
+          call_replacement = '''    packet = _impl.build_stage2_finalizer_packet(\n        stage2_payload=stage2_payload,\n        planning_brief=planning_brief,\n    )\n    _preserve_sparse_hard_conditioning_contract(packet, weekly_role_map)\n\n    tail_contracts = _late_fight_tail_contracts(weekly_role_map)\n'''
+          if call_anchor not in text:
+              raise SystemExit('finalizer call anchor missing')
+          text = text.replace(call_anchor, call_replacement, 1)
+          finalizer_path.write_text(text)
+
+          test_path = Path('tests/test_sparse_combat_week_hard_conditioning.py')
+          test_path.write_text('''from __future__ import annotations\n\nfrom copy import deepcopy\n\nfrom fightcamp.stage2_finalizer_packet import build_stage2_finalizer_packet\nfrom fightcamp.stage2_role_map import _enforce_combat_pressure_floor\n\n\ndef _week(phase: str = \"GPP\") -> dict:\n    return {\n        \"week_index\": 1,\n        \"phase\": phase,\n        \"calendar_days\": [{\"weekday\": \"monday\", \"d_day\": 35}],\n        \"must_keep\": [\"aerobic\"],\n        \"resolved_rule_state\": {\"must_keep\": [\"aerobic\"]},\n    }\n\n\ndef _aerobic_role() -> dict:\n    return {\n        \"session_index\": 1,\n        \"category\": \"conditioning\",\n        \"role_key\": \"aerobic_base_day\",\n        \"preferred_pool\": \"conditioning_slots\",\n        \"preferred_system\": \"aerobic\",\n        \"governance\": {},\n        \"scheduled_day_hint\": \"monday\",\n    }\n\n\ndef _athlete(**overrides) -> dict:\n    athlete = {\n        \"sport\": \"boxing\",\n        \"training_days\": [\"monday\", \"tuesday\", \"wednesday\", \"thursday\"],\n        \"hard_sparring_days\": [],\n        \"support_work_days\": [],\n        \"fatigue\": \"low\",\n        \"cut_severity_bucket\": \"low\",\n        \"injury_mode\": \"full_plan\",\n    }\n    athlete.update(overrides)\n    return athlete\n\n\ndef test_zero_combat_sessions_repuposes_sole_aerobic_slot_to_hard_gpp() -> None:\n    week = _week()\n    roles = _enforce_combat_pressure_floor(week, [_aerobic_role()], [], _athlete())\n    role = roles[0]\n    assert role[\"preferred_system\"] == \"glycolytic\"\n    assert role[\"role_key\"] == \"controlled_repeatability_day\"\n    assert role[\"mandatory_hard_conditioning_exposure\"] is True\n    assert role[\"prescribed_intensity_rpe\"] == \"8\"\n    assert role[\"sparse_combat_week_hard_fallback\"] is True\n    assert week[\"combat_pressure_floor\"][\"source\"] == \"sparse_week_upgraded_conditioning_slot\"\n\n\ndef test_one_light_combat_day_still_gets_hard_sparse_fallback() -> None:\n    week = _week(\"SPP\")\n    roles = _enforce_combat_pressure_floor(\n        week,\n        [_aerobic_role()],\n        [],\n        _athlete(support_work_days=[\"wednesday\"]),\n    )\n    role = roles[0]\n    assert role[\"preferred_system\"] == \"glycolytic\"\n    assert role[\"role_key\"] == \"fight_pace_repeatability_day\"\n    assert role[\"prescribed_intensity_rpe\"] == \"8-9\"\n    assert role[\"sparse_combat_week_hard_fallback\"] is True\n\n\ndef test_two_light_combat_days_do_not_activate_sparse_override() -> None:\n    week = _week()\n    original = _aerobic_role()\n    roles = _enforce_combat_pressure_floor(\n        week,\n        [deepcopy(original)],\n        [],\n        _athlete(support_work_days=[\"tuesday\", \"thursday\"]),\n    )\n    assert roles[0][\"preferred_system\"] == \"aerobic\"\n    assert not roles[0].get(\"sparse_combat_week_hard_fallback\")\n    assert week[\"combat_pressure_floor\"][\"active\"] is False\n\n\ndef test_any_declared_hard_spar_keeps_existing_path_untouched() -> None:\n    week = _week()\n    roles = _enforce_combat_pressure_floor(\n        week,\n        [_aerobic_role()],\n        [],\n        _athlete(hard_sparring_days=[\"tuesday\"]),\n    )\n    assert roles[0][\"preferred_system\"] == \"aerobic\"\n    assert not roles[0].get(\"sparse_combat_week_hard_fallback\")\n\n\ndef test_existing_safety_blockers_still_win_before_sparse_override() -> None:\n    week = _week()\n    roles = _enforce_combat_pressure_floor(\n        week,\n        [_aerobic_role()],\n        [],\n        _athlete(fatigue=\"high\", readiness_flags=[\"high_fatigue\"]),\n    )\n    assert roles[0][\"preferred_system\"] == \"aerobic\"\n    assert week[\"combat_pressure_floor\"][\"active\"] is False\n    assert \"high_fatigue\" in week[\"combat_pressure_floor\"][\"reason_codes\"]\n\n\ndef test_finalizer_preserves_and_locks_sparse_hard_dose() -> None:\n    week = _week()\n    roles = _enforce_combat_pressure_floor(week, [_aerobic_role()], [], _athlete())\n    week[\"session_roles\"] = roles\n    week[\"suppressed_roles\"] = []\n    week[\"declared_training_days\"] = [\"monday\", \"tuesday\", \"wednesday\", \"thursday\"]\n    weekly_role_map = {\"weeks\": [week]}\n    packet = build_stage2_finalizer_packet(\n        stage2_payload={},\n        planning_brief={\n            \"athlete_snapshot\": _athlete(),\n            \"weekly_role_map\": weekly_role_map,\n        },\n    )\n    compact_role = packet[\"selected_plan\"][\"weekly_role_map\"][\"weeks\"][0][\"session_roles\"][0]\n    assert compact_role[\"sparse_combat_week_hard_fallback\"] is True\n    assert compact_role[\"mandatory_hard_conditioning_exposure\"] is True\n    assert compact_role[\"prescribed_intensity_rpe\"] == \"8\"\n    assert \"hard\" in compact_role[\"prescribed_dose\"].lower()\n    assert any(\n        \"MUST remain a hard glycolytic/fight-pace exposure\" in rule\n        for rule in packet[\"hard_rules\"]\n    )\n''')
+          PY
+
+      - name: Install targeted test dependencies
+        env:
+          PIP_RETRIES: "5"
+          PIP_DEFAULT_TIMEOUT: "60"
+        run: |
+          python -m pip install --upgrade pip
+          n=0
+          until pip install -r requirements-dev.txt; do
+            n=$((n + 1))
+            if [ "$n" -ge 3 ]; then
+              echo "pip install failed after $n attempts"; exit 1
+            fi
+            sleep $((n * 15))
+          done
+
+      - name: Run surgical regression suite
+        run: |
+          pytest -q \
+            tests/test_sparse_combat_week_hard_conditioning.py \
+            tests/test_combat_pressure_conditioning_floor.py \
+            tests/test_stage2_finalizer_packet.py
+          ruff check fightcamp/stage2_role_map.py fightcamp/stage2_finalizer_packet.py tests/test_sparse_combat_week_hard_conditioning.py
+          python -m compileall -q fightcamp
+
+      - name: Remove temporary workflow and commit patch
+        run: |
+          rm .github/workflows/surgical-sparse-week-patch.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add fightcamp/stage2_role_map.py fightcamp/stage2_finalizer_packet.py tests/test_sparse_combat_week_hard_conditioning.py .github/workflows/surgical-sparse-week-patch.yml
+          git commit -m "Fix hard conditioning for sparse combat weeks"
+          git push origin HEAD:codex/sparse-week-hard-conditioning-surgical
