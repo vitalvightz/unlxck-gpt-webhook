@@ -1,0 +1,30 @@
+name: Add late strength regression
+on:
+  push:
+    branches:
+      - fix/late-strength-role-pool-authority
+permissions:
+  contents: write
+jobs:
+  patch-test-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/late-strength-role-pool-authority
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python .github/scripts/add_late_strength_regression.py
+      - run: python -m pip install pytest ruff
+      - run: pytest -q tests/test_canonical_session_composition.py --maxfail=1
+      - run: ruff check fightcamp/stage2_payload.py tests/test_canonical_session_composition.py
+      - run: |
+          rm -f .github/scripts/add_late_strength_regression.py
+          rm -f .github/workflows/add-late-strength-regression.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add tests/test_canonical_session_composition.py .github
+          git commit -m 'test: protect late strength pool authority'
+          git push origin HEAD:fix/late-strength-role-pool-authority
