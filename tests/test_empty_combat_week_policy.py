@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import pytest
+
 import fightcamp.empty_combat_week_policy as policy
 from fightcamp.goal_preservation import reconcile_goal_preservation, validate_goal_preservation
+from fightcamp.sports import SUPPORTED_SPORTS
 from fightcamp.stage2_role_map import _build_weekly_role_map, _is_hard_pressure_conditioning_role
 from fightcamp.stage2_validator import validate_stage2_output
 
@@ -132,16 +135,37 @@ def test_missing_hard_stimulus_gives_primary_conditioning_a_pressure_role():
     )
 
 
-def test_hard_stimulus_substitution_is_boxing_scoped():
+@pytest.mark.parametrize("sport", SUPPORTED_SPORTS)
+def test_hard_stimulus_substitution_applies_to_every_supported_combat_sport(sport):
+    athlete = _athlete(sport=sport)
+    role_map = _build_weekly_role_map(athlete, _progression(), LIMITER)
+    week = _first_week(role_map)
+
+    assert policy._is_supported_combat_sport(athlete) is True
+    assert policy._eligible_hard_stimulus_deficit(week, athlete) is True
+    pressure = _hard_pressure_role(week)
+    assert pressure is not None
+    assert pressure.get("upgraded_from_hard_stimulus_deficit") is True
+    assert pressure["preferred_system"] == "glycolytic"
+
+
+def test_hard_stimulus_substitution_excludes_non_combat_sports():
     athlete = _athlete(sport="football")
     role_map = _build_weekly_role_map(athlete, _progression(), LIMITER)
     week = _first_week(role_map)
 
+    assert policy._is_supported_combat_sport(athlete) is False
     assert policy._eligible_hard_stimulus_deficit(week, athlete) is False
     assert not any(
         role.get("upgraded_from_hard_stimulus_deficit")
         for role in week["session_roles"]
     )
+
+
+def test_combat_sport_aliases_use_canonical_sport_identity():
+    assert policy._is_supported_combat_sport(_athlete(sport="Muay Thai")) is True
+    assert policy._is_supported_combat_sport(_athlete(sport="mixed martial arts")) is True
+    assert policy._is_supported_combat_sport(_athlete(sport="Brazilian Jiu Jitsu")) is True
 
 
 def test_one_technical_gym_session_does_not_satisfy_hard_stimulus():
