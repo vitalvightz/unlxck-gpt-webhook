@@ -375,16 +375,15 @@ def planner_authority_findings(planning_brief: dict[str, Any]) -> list[dict[str,
 
 
 def late_physical_planner_preflight(planning_brief: dict[str, Any]) -> list[dict[str, Any]]:
-    """Fail before model rendering using the same original-bank authority gate."""
+    """Fail before model rendering for canonically late-tail-owned physical roles only."""
     from .goal_preservation import _effective_map
 
     weeks = []
     for week in _effective_map(planning_brief).get("weeks", []) or []:
         roles = []
         for role in week.get("session_roles", []) or []:
-            offset = _role_countdown_offset(role)
             if (
-                (not role.get("late_fight_tail_owned") and not (offset is not None and 1 <= offset <= 13))
+                not role.get("late_fight_tail_owned")
                 or role.get("category") not in {"strength", "conditioning"}
                 or role.get("nonphysical")
                 or role.get("preferred_pool") == "rehab_slots_or_recovery_only"
@@ -392,11 +391,14 @@ def late_physical_planner_preflight(planning_brief: dict[str, Any]) -> list[dict
             ):
                 continue
             assignments = role.get("selected_exercise_assignments")
-            valid_members = [item for item in assignments or []
-                             if isinstance(item, dict) and item.get("name")
-                             and original_bank_entries(item)] if isinstance(assignments, list) else []
-            roles.append({**role, "late_fight_tail_owned": True,
-                          "selected_exercise_assignments": valid_members})
+            valid_members = [
+                item
+                for item in assignments or []
+                if isinstance(item, dict)
+                and item.get("name")
+                and original_bank_entries(item)
+            ] if isinstance(assignments, list) else []
+            roles.append({**role, "selected_exercise_assignments": valid_members})
         weeks.append({**week, "session_roles": roles})
     return planner_authority_findings({**planning_brief, "weekly_role_map": {"weeks": weeks}})
 
