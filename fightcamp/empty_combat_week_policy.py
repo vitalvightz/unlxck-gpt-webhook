@@ -5,6 +5,7 @@ from typing import Any
 
 from .combat_load_policy import is_effective_hard_contact
 from .normalization import clean_list
+from .sports import SUPPORTED_SPORTS, normalize_sport
 from .stage2_payload_late_fight import compute_bridge_rules
 
 
@@ -46,9 +47,21 @@ def _token(value: Any) -> str:
     return str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
 
 
+def _combat_sport_key(athlete_model: dict) -> str:
+    """Return canonical combat-sport identity from the athlete snapshot."""
+    return normalize_sport(
+        athlete_model.get("sport") or athlete_model.get("fight_format") or ""
+    )
+
+
+def _is_supported_combat_sport(athlete_model: dict) -> bool:
+    """Apply the deficit policy to every officially supported combat sport."""
+    return _combat_sport_key(athlete_model) in SUPPORTED_SPORTS
+
+
 def _is_boxing(athlete_model: dict) -> bool:
-    """This policy is intentionally boxing-scoped until other combat sports opt in."""
-    return _token(athlete_model.get("sport")) == "boxing"
+    """Compatibility helper for older callers/tests that still ask for boxing."""
+    return _combat_sport_key(athlete_model) == "boxing"
 
 
 def _conditioning_is_primary(athlete_model: dict) -> bool:
@@ -91,9 +104,9 @@ def _effective_hard_exposure_days(
 ) -> set[str]:
     """Return genuine external hard exposures, not merely declared gym attendance.
 
-    The resolved sparring plan is authoritative when present. Technical/support
+    The resolved sparring/contact plan is authoritative when present. Technical/support
     attendance is intentionally not counted as hard. The session-types fallback
-    exists only for compatibility callers that have not built the sparring plan.
+    exists only for compatibility callers that have not built the contact plan.
     """
     if hard_sparring_plan is not None:
         return _effective_hard_days_from_plan(hard_sparring_plan)
@@ -200,7 +213,7 @@ def _training_day_calendar(week_entry: dict, athlete_model: dict) -> list[tuple[
 def _bridge_allows_glycolytic_on_day(athlete_model: dict, d_day: int) -> bool:
     rules = compute_bridge_rules(
         days_until_fight=d_day,
-        sport=athlete_model.get("sport", ""),
+        sport=_combat_sport_key(athlete_model),
         style=athlete_model.get("tactical_styles") or athlete_model.get("style"),
         fatigue=athlete_model.get("fatigue") or athlete_model.get("fatigue_level") or "low",
         weight_cut_bucket=athlete_model.get("cut_severity_bucket") or "high",
@@ -235,7 +248,7 @@ def _earliest_safe_pressure_slot(
 def _eligible_hard_stimulus_deficit(week_entry: dict, athlete_model: dict) -> bool:
     phase = str(week_entry.get("phase") or "").strip().upper()
     return bool(
-        _is_boxing(athlete_model)
+        _is_supported_combat_sport(athlete_model)
         and phase in {"GPP", "SPP"}
         and _conditioning_is_primary(athlete_model)
         and _gas_tank_is_limiter(athlete_model)
@@ -253,7 +266,7 @@ def _scrub_stale_spar_first_state(
     week_entry: dict,
     suppressed_roles: list[dict],
 ) -> None:
-    """Zero effective hard sparring must not retain spar-first authority."""
+    """Zero effective hard contact must not retain spar-first authority."""
     compression = dict(week_entry.get("intentional_compression") or {})
     original_codes = [str(code) for code in clean_list(compression.get("reason_codes"))]
     own_codes = [code for code in original_codes if code != _STALE_SPAR_REASON]
@@ -265,7 +278,7 @@ def _scrub_stale_spar_first_state(
 
     neutral_summary = (
         "Weekly session cap applied to app-programmed sessions; "
-        "no effective hard sparring load is being protected."
+        "no effective hard combat load is being protected."
     )
     for row in suppressed_roles:
         original_row_codes = [
@@ -281,7 +294,7 @@ def _scrub_stale_spar_first_state(
 
 
 def install() -> None:
-    """Install boxing hard-stimulus preservation without becoming a placement owner."""
+    """Install combat hard-stimulus preservation without becoming a placement owner."""
     from . import stage2_role_map as module
 
     if getattr(module, "_EMPTY_COMBAT_WEEK_POLICY_INSTALLED", False):
@@ -321,7 +334,7 @@ def install() -> None:
             athlete_model,
             hard_sparring_plan=hard_sparring_plan,
         )
-        if _is_boxing(athlete_model) and _hard_stimulus_deficit(
+        if _is_supported_combat_sport(athlete_model) and _hard_stimulus_deficit(
             week_entry,
             athlete_model,
             hard_sparring_plan=hard_sparring_plan,
