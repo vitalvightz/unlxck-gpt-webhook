@@ -29,11 +29,11 @@ LEGACY = {
     "Clinch Fighter's Neck Endurance", "Clinch Fighter's Frame Endurance",
 }
 PRESERVED_HASHES = {
-    ("boxing", "clinch_fighter"): "e5dab2bd52fedd4eb7ff47206c92fc7114162b3db382b3fe60a3b8c47d5f8daa",
-    ("muay_thai", "brawler"): "0de248a0ea8e4b420e1bb71d2809017d0e61abcf2ef4b1091505c0fd8f0cfcec",
-    ("muay_thai", "pressure_fighter"): "78d027c8185c83f4c5516fb5faddb9f0d70a7aaede9e308b904e18ace56f35b3",
-    ("muay_thai", "counter_striker"): "d0c679f5df1ca69d68dbdc58cd44f57b984de79c3ed373a1a44fda18a1713828",
-    ("muay_thai", "distance_striker"): "c16b1172f6d123ccceaa3c8612fcd30f3d093a96c8433337e1b4c6423a281cb1",
+    ("boxing", "clinch_fighter"): "a8c2cacfaf4b81155c1048bad4bb3b17ffd90c600991fd2750ffe05cdb36b4a9",
+    ("muay_thai", "brawler"): "3ccf3c0ce34b1e5e3d54884036111ce00dd9cbc9dc9b802dc32dd230f4403d59",
+    ("muay_thai", "pressure_fighter"): "c50d134c3ce131f8a27081820bd11d9aa4ab0177bc3dedb68da7769a3688131f",
+    ("muay_thai", "counter_striker"): "301695d8d03ef77551bd48d0973618b4f0fb51b91ba86e23b9c7d8d3fb9aa442",
+    ("muay_thai", "distance_striker"): "e5a39b46a7bb4ddb47d441595d6b999fc48754d178052840413f32f83d68cc01",
 }
 
 
