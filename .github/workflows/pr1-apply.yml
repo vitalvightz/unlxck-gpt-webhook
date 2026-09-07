@@ -27,7 +27,16 @@ jobs:
             requirements.txt
             requirements-dev.txt
       - name: Apply surgical source changes
-        run: python tools/pr1_apply.py
+        run: |
+          python tools/pr1_apply.py
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('fightcamp/closed_conditioning_render.py')
+          source = p.read_text()
+          old = '        identity = (week.get("week_index"), role.get("role_key"), day)\n'
+          assert source.count(old) == 1
+          p.write_text(source.replace(old, '', 1))
+          PY
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
