@@ -64,6 +64,18 @@ def test_selected_multi_exercise_session_is_accepted() -> None:
     assert _membership_findings(_brief(_role(names)), rendered) == []
 
 
+def test_easier_adjustment_is_not_treated_as_an_unselected_exercise() -> None:
+    rendered = "\n".join(
+        [
+            "D-20 (Tuesday) — Strength",
+            "- Kettlebell Swing: 2 x 5 @ RPE 6",
+            "Easier: use lighter kettlebell and assisted pull-ups, or reduce sets to 2.",
+        ]
+    )
+
+    assert _membership_findings(_brief(_role(["Kettlebell Swing"], day=20)), rendered) == []
+
+
 def test_candidate_alternate_cannot_substitute_for_selected_exercise() -> None:
     candidate = {
         "slot_id": "slot-1",
