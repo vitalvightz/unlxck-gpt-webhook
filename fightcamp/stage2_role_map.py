@@ -1715,6 +1715,28 @@ def _assign_declared_day_hints(
             for day in training_days
             if day not in used_days and (day in hard_sparring_days or day in sandwiched_days)
         ]
+        if role.get("category") == "strength":
+            assigned_strength_days = {
+                assigned_day
+                for assigned_idx, assigned_day in day_assignments.items()
+                if ordered[assigned_idx].get("category") == "strength"
+            }
+
+            def _is_adjacent_strength_day(candidate: str) -> bool:
+                candidate_index = _WEEKDAY_ORDER.get(candidate)
+                return candidate_index is not None and any(
+                    (_WEEKDAY_ORDER.get(assigned_day) - candidate_index) % 7 in {1, 6}
+                    for assigned_day in assigned_strength_days
+                    if _WEEKDAY_ORDER.get(assigned_day) is not None
+                )
+
+            separated_candidates = [
+                day for day in stressor_candidates if not _is_adjacent_strength_day(day)
+            ]
+            if separated_candidates:
+                stressor_candidates = separated_candidates + [
+                    day for day in stressor_candidates if day not in separated_candidates
+                ]
         raw_stressor_fallback = (
             next(
                 (
