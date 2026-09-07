@@ -13,11 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -26,12 +24,10 @@ jobs:
           cache-dependency-path: |
             requirements.txt
             requirements-dev.txt
-
       - name: Install lint dependencies
         run: |
           python -m pip install --upgrade pip
           pip install ruff
-
       - name: Run Ruff
         run: ruff check api fightcamp tests tools
 
@@ -39,11 +35,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -52,12 +46,10 @@ jobs:
           cache-dependency-path: |
             requirements.txt
             requirements-dev.txt
-
       - name: Install pip-audit
         run: |
           python -m pip install --upgrade pip
           pip install pip-audit
-
       - name: Audit runtime dependencies for known vulnerabilities
         run: pip-audit -r requirements.txt
 
@@ -65,11 +57,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -78,11 +68,8 @@ jobs:
           cache-dependency-path: |
             requirements.txt
             requirements-dev.txt
-
       - name: Install test dependencies
         env:
-          # Give pip its own network resilience; the loop below is the belt-and-
-          # braces for a transient 5xx on the GitHub-hosted en_core_web_sm wheel.
           PIP_RETRIES: "5"
           PIP_DEFAULT_TIMEOUT: "60"
         run: |
@@ -96,7 +83,6 @@ jobs:
             echo "Transient install failure; retry $n in $((n * 15))s..."; sleep $((n * 15))
           done
           pip check
-
       - name: Run full pytest suite
         run: pytest tests/ -q
 
@@ -104,11 +90,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -117,10 +101,8 @@ jobs:
           cache-dependency-path: |
             requirements.txt
             requirements-dev.txt
-
       - name: Install runtime + test dependencies
         env:
-          # See test-full-suite: retry a transient 5xx on the GitHub-hosted wheel.
           PIP_RETRIES: "5"
           PIP_DEFAULT_TIMEOUT: "60"
         run: |
@@ -134,9 +116,47 @@ jobs:
             echo "Transient install failure; retry $n in $((n * 15))s..."; sleep $((n * 15))
           done
           pip check
-
       - name: Run generation/runtime regression suite
         run: |
           pytest -q \
             tests/test_api_generation_flows.py \
             tests/test_generation_runtime.py
+
+  pr1-integration:
+    if: github.ref == 'refs/heads/codex/repair-conditioning-render-retry' || github.head_ref == 'codex/repair-conditioning-render-retry'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.15'
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+      - name: Apply proposed integration
+        run: python tools/pr1_apply.py
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Compile and lint
+        run: |
+          python -m compileall -q fightcamp api
+          ruff check fightcamp/conditioning_render_repair.py fightcamp/stage2_pipeline.py fightcamp/stage2_policy.py fightcamp/stage2_repair.py fightcamp/stage2_payload.py api/stage2_automation.py
+      - name: Run focused regressions
+        run: pytest -q tests/test_conditioning_render_membership.py tests/test_closed_session_composition.py tests/test_stage2_repair.py tests/test_stage2_automation.py
+      - name: Preserve integration source
+        if: always()
+        run: |
+          mkdir -p /tmp/pr1-evidence/source
+          git diff --binary > /tmp/pr1-evidence/integration.patch
+          cp -R api fightcamp /tmp/pr1-evidence/source/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pr1-integration-evidence
+          path: /tmp/pr1-evidence
+          retention-days: 3
