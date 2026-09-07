@@ -10,7 +10,13 @@ from .stage2_policy import (
     prompt_safe_validator_report,
 )
 from .stage2_repair import build_stage2_repair_prompt
-from .stage2_validator import _week_sections, validate_stage2_output
+from .stage2_validator import (
+    _BULLET_PREFIX,
+    _MARKDOWN_HEADER,
+    _PHASE_HEADER,
+    _WEEK_HEADER,
+    validate_stage2_output,
+)
 from .stage2_validator_postprocess import postprocess_stage2_validator_report
 
 
@@ -229,14 +235,29 @@ def _role_countdown_from_week(week: dict[str, Any], role: dict[str, Any]) -> str
     return ""
 
 
-def _selected_assignment_lines(role: dict[str, Any]) -> list[str]:
+def _authoritative_role_body(role: dict[str, Any]) -> list[str] | None:
+    """Return the role's authoritative athlete-facing body, or ``None``.
+
+    Authoritative means content the deterministic planner already resolved: an
+    explicit ``display_text``, or ``selected_exercise_assignments`` where every
+    entry carries both a name and an approved ``effective_prescription``. It
+    deliberately refuses to synthesise a body from ``preferred_exercise_names``
+    or from the role category, so a role whose content is not fully resolved is
+    left unrestored (and therefore held) rather than papered over with generic
+    or unapproved text.
+    """
+    display_text = str(role.get("display_text") or "").strip()
+    if display_text:
+        return [line.rstrip() for line in display_text.splitlines() if line.strip()]
+
+    assignments = _list_value(role.get("selected_exercise_assignments"))
+    if not assignments:
+        return None
     lines: list[str] = []
-    for assignment in _list_value(role.get("selected_exercise_assignments")):
+    for assignment in assignments:
         if not isinstance(assignment, dict):
-            continue
+            return None
         name = str(assignment.get("name") or assignment.get("exercise_name") or "").strip()
-        if not name:
-            continue
         prescription = assignment.get("effective_prescription")
         if isinstance(prescription, dict):
             display = str(
@@ -246,58 +267,189 @@ def _selected_assignment_lines(role: dict[str, Any]) -> list[str]:
                 or ""
             ).strip()
         else:
-            display = str(prescription or assignment.get("prescription") or "").strip()
-        lines.append(f"- {name} — {display}" if display else f"- {name}")
-    return lines
+            display = str(prescription or "").strip()
+        # Require both an exercise name and an approved effective prescription.
+        # A single partial assignment makes the whole role non-authoritative.
+        if not name or not display:
+            return None
+        lines.append(f"- {name} — {display}")
+    return lines or None
 
 
-def _role_body_lines(role: dict[str, Any]) -> list[str]:
-    display_text = str(role.get("display_text") or "").strip()
-    if display_text:
-        return [line.rstrip() for line in display_text.splitlines() if line.strip()]
+def _role_requires_authoritative_render(role: dict[str, Any]) -> bool:
+    """Whether a missing role is app-rendered work this repair must own.
 
-    assignment_lines = _selected_assignment_lines(role)
-    if assignment_lines:
-        return assignment_lines
-
-    names = [
-        str(name).strip()
-        for name in _list_value(role.get("preferred_exercise_names"))
-        if str(name).strip()
-    ]
-    if names:
-        return [f"- {name}" for name in names]
-
-    role_key = str(role.get("role_key") or "").strip()
-    category = str(role.get("category") or "").strip().lower()
-    if role_key == "hard_sparring_day" or category == "sparring":
-        return ["- Your declared hard-sparring/contact session — no extra S&C. Keep freshness priority."]
-    if category == "recovery":
-        return ["- Easy mobility, breathing, and tissue work. Keep it fully restorative."]
-    if category == "skill":
-        return ["- Technical rhythm and shadow work. Stay sharp at low fatigue; no hard contact."]
-
-    return []
+    Roles the deterministic layer marks non-mandatory, or coach-owned context
+    days (declared hard sparring / coach-led contact), are never synthesised
+    here. Their absence is not an app-content loss this repair can author, so
+    they are neither restored nor counted as its unresolved diagnostics — the
+    validator's own structural findings still hold the plan if their loss
+    matters.
+    """
+    if role.get("render_mandatory") is False:
+        return False
+    if _is_hidden_context_role(role):
+        return False
+    return True
 
 
-def _role_survives_week_section(
+_WEEKDAY_CANONICAL = {
+    "monday": "Monday",
+    "mon": "Monday",
+    "tuesday": "Tuesday",
+    "tue": "Tuesday",
+    "tues": "Tuesday",
+    "wednesday": "Wednesday",
+    "wed": "Wednesday",
+    "thursday": "Thursday",
+    "thu": "Thursday",
+    "thur": "Thursday",
+    "thurs": "Thursday",
+    "friday": "Friday",
+    "fri": "Friday",
+    "saturday": "Saturday",
+    "sat": "Saturday",
+    "sunday": "Sunday",
+    "sun": "Sunday",
+}
+
+
+def _canonical_weekday(value: Any) -> str:
+    return _WEEKDAY_CANONICAL.get(str(value or "").strip().lower(), "")
+
+
+def _first_weekday_in_text(text: str) -> str:
+    for match in re.finditer(r"[A-Za-z]+", text or ""):
+        canonical = _WEEKDAY_CANONICAL.get(match.group(0).lower())
+        if canonical:
+            return canonical
+    return ""
+
+
+def _is_week_or_phase_header(header_text: str) -> bool:
+    return bool(_WEEK_HEADER.search(header_text) or _PHASE_HEADER.search(header_text))
+
+
+def _is_day_block_start(raw_line: str) -> bool:
+    """A day/session heading inside a week section (never a week/phase header)."""
+    if _COUNTDOWN_HEADER_RE.match(raw_line or ""):
+        return True
+    header_match = _MARKDOWN_HEADER.match(raw_line or "")
+    if not header_match:
+        return False
+    return not _is_week_or_phase_header(header_match.group(2).strip())
+
+
+def _week_section_layout(lines: list[str]) -> dict[int, dict[str, int]]:
+    """Map ``week_index -> {header_idx, section_end}`` for each rendered week.
+
+    ``section_end`` is the line index of the next week or phase header (or EOF),
+    so a week's canonical body is ``lines[header_idx + 1 : section_end]``. Only
+    the first render of a week number is kept, so a stray duplicate heading can
+    never create a second canonical section to insert into.
+    """
+    boundaries: list[tuple[int, int | None]] = []
+    for idx, raw_line in enumerate(lines):
+        header_match = _MARKDOWN_HEADER.match(raw_line)
+        if not header_match:
+            continue
+        header_text = header_match.group(2).strip()
+        week_match = _WEEK_HEADER.search(header_text)
+        if week_match:
+            boundaries.append((idx, int(week_match.group(1))))
+        elif _PHASE_HEADER.search(header_text):
+            boundaries.append((idx, None))
+
+    layout: dict[int, dict[str, int]] = {}
+    for position, (idx, week_no) in enumerate(boundaries):
+        if week_no is None or week_no in layout:
+            continue
+        section_end = (
+            boundaries[position + 1][0]
+            if position + 1 < len(boundaries)
+            else len(lines)
+        )
+        layout[week_no] = {"header_idx": idx, "section_end": section_end}
+    return layout
+
+
+def _day_blocks_in_section(lines: list[str], start: int, end: int) -> list[dict[str, Any]]:
+    """Partition a week section into day blocks keyed by countdown/weekday."""
+    blocks: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
+    for idx in range(max(start, 0), min(end, len(lines))):
+        raw_line = lines[idx]
+        if _is_day_block_start(raw_line):
+            if current is not None:
+                blocks.append(current)
+            header_match = _MARKDOWN_HEADER.match(raw_line)
+            heading = header_match.group(2).strip() if header_match else raw_line.strip()
+            current = {
+                "countdown": _normalise_countdown_label(heading),
+                "weekday": _first_weekday_in_text(heading),
+                "text": [heading],
+            }
+            continue
+        if current is not None:
+            cleaned = _BULLET_PREFIX.sub("", raw_line).strip()
+            if cleaned:
+                current["text"].append(cleaned)
+    if current is not None:
+        blocks.append(current)
+    return blocks
+
+
+def _role_survives_day_block(
     *,
     role: dict[str, Any],
     countdown_label: str,
-    week_lines: list[str],
+    day_blocks: list[dict[str, Any]],
 ) -> bool:
+    """Exact role/day survival check.
+
+    The role's own countdown/weekday day block must exist and carry the role's
+    identity marker. A matching marker somewhere else in the week (a repeated
+    exercise, or a generic role name on another day) does not count — that was
+    the loophole that let the wrong session appear to satisfy a missing one.
+    """
+    role_countdown = countdown_label or _role_countdown_label(role)
+    role_weekday = _canonical_weekday(_role_weekday(role))
     markers = _role_render_markers(role)
-    weekday = _role_weekday(role)
-    rendered = _normalise_render_match_text(" ".join(week_lines))
-    if countdown_label and _normalise_render_match_text(countdown_label) in rendered:
+
+    for block in day_blocks:
+        block_countdown = str(block.get("countdown") or "")
+        block_weekday = str(block.get("weekday") or "")
+        same_day = False
+        if role_countdown and block_countdown:
+            same_day = block_countdown == role_countdown
+        elif role_weekday and block_weekday:
+            same_day = block_weekday == role_weekday
+        if not same_day:
+            continue
+        rendered = _normalise_render_match_text(" ".join(block.get("text") or []))
         if not markers or any(marker in rendered for marker in markers):
             return True
-    if weekday and _normalise_render_match_text(weekday) in rendered:
-        if not markers or any(marker in rendered for marker in markers):
-            return True
-    if markers and any(marker in rendered for marker in markers):
-        return True
     return False
+
+
+def _restored_day_heading(role: dict[str, Any], countdown_label: str) -> str:
+    label = (
+        str(
+            role.get("athlete_facing_label")
+            or role.get("label")
+            or role.get("role_key")
+            or "Session"
+        ).strip()
+        or "Session"
+    )
+    weekday = _role_weekday(role)
+    if weekday and countdown_label:
+        return f"### {weekday.title()} ({countdown_label}) — {label}"
+    if countdown_label:
+        return f"### {countdown_label} — {label}"
+    if weekday:
+        return f"### {weekday.title()} — {label}"
+    return f"### {label}"
 
 
 def repair_stage2_structural_text(
@@ -306,12 +458,22 @@ def repair_stage2_structural_text(
     final_plan_text: str,
     validator_report: dict | None = None,
 ) -> dict[str, Any]:
-    """Append known Stage 1 week/session role shells when Stage 2 dropped them.
+    """Restore known Stage 1 session roles that Stage 2 dropped, in place.
 
-    This is deliberately narrow: it only restores normal-camp structural
-    identity from ``weekly_role_map`` when the missing role's day/title/body are
-    deterministic. It never rewrites existing Stage 2 content and it never
-    invents exercise prescriptions for roles without authoritative content.
+    This is deliberately narrow and fail-closed:
+
+    * It only restores a role that carries **complete authoritative content**
+      (``display_text`` or fully-priced ``selected_exercise_assignments``); it
+      never synthesises a body from a category or from preferred exercise names.
+    * It only restores app-rendered mandatory work — non-mandatory and
+      coach-owned context roles are left to the validator.
+    * It matches **exact role/day identity** and inserts the restored day into
+      the role's own canonical week section. It never appends a second week or
+      phase schedule, and it never restores a role whose canonical week is not
+      already rendered.
+
+    Every role it cannot fully and safely restore is reported in ``unresolved``
+    so the caller can hold the plan instead of publishing a partial repair.
     """
     report = validator_report or _validator_report_with_required_countdown_sessions(
         planning_brief=planning_brief,
@@ -323,75 +485,73 @@ def repair_stage2_structural_text(
 
     role_map = planning_brief.get("weekly_role_map") or {}
     weeks = [week for week in (role_map.get("weeks") or []) if isinstance(week, dict)]
-    if len(weeks) <= 1:
+    if not weeks:
         return {"text": final_plan_text, "applied": [], "unresolved": findings}
 
-    sections = _week_sections(final_plan_text)
-    additions: list[str] = []
+    lines = (final_plan_text or "").split("\n")
+    layout = _week_section_layout(lines)
+
     applied: list[dict[str, Any]] = []
     unresolved: list[dict[str, Any]] = []
+    # (insert_at_index, [lines]) collected then applied bottom-up so an earlier
+    # insertion never shifts a later insertion's index.
+    pending_inserts: list[tuple[int, list[str]]] = []
 
     for week in weeks:
         week_index = int(week.get("week_index", 0) or 0)
         if week_index <= 0:
             continue
-        section = sections.get(week_index)
-        week_lines = list(section.get("lines") or []) if section else []
-        missing_roles: list[dict[str, Any]] = []
-        for role in week.get("session_roles") or []:
-            if not isinstance(role, dict):
-                continue
-            countdown_label = _role_countdown_from_week(week, role)
-            if section and _role_survives_week_section(
-                role=role,
-                countdown_label=countdown_label,
-                week_lines=week_lines,
-            ):
-                continue
-            missing_roles.append(role)
-
-        if not missing_roles:
+        roles = [role for role in (week.get("session_roles") or []) if isinstance(role, dict)]
+        if not roles:
             continue
 
-        week_additions: list[str] = []
-        phase = str(week.get("phase") or "").strip().upper() or "SPP"
-        ddays = []
-        for day in week.get("calendar_days") or []:
-            if isinstance(day, dict) and isinstance(day.get("d_day"), int):
-                ddays.append(day["d_day"])
-        countdown = f" (D-{max(ddays)} to D-{min(ddays)})" if ddays else ""
-        week_additions.append(f"## {phase} — Week {week_index}{countdown} — Stage 1 schedule")
+        phase = str(week.get("phase") or "").strip().upper()
+        section = layout.get(week_index)
+        day_blocks = (
+            _day_blocks_in_section(lines, section["header_idx"] + 1, section["section_end"])
+            if section
+            else []
+        )
 
-        for role in missing_roles:
-            body = _role_body_lines(role)
-            if not body:
-                unresolved.append(
-                    {
-                        "code": "structural_role_repair_unresolved",
-                        "week_index": week_index,
-                        "phase": phase,
-                        "role_key": role.get("role_key"),
-                        "message": "Missing role has no deterministic body to restore.",
-                    }
-                )
-                continue
-            label = str(
-                role.get("athlete_facing_label")
-                or role.get("label")
-                or role.get("role_key")
-                or "Session"
-            ).strip()
-            weekday = _role_weekday(role)
+        week_insert_lines: list[str] = []
+        for role in roles:
             countdown_label = _role_countdown_from_week(week, role)
-            if weekday and countdown_label:
-                heading = f"### {weekday.title()} ({countdown_label}) — {label}"
-            elif countdown_label:
-                heading = f"### {countdown_label} — {label}"
-            elif weekday:
-                heading = f"### {weekday.title()} — {label}"
-            else:
-                heading = f"### {label}"
-            week_additions.extend(["", heading, *body])
+            if section and _role_survives_day_block(
+                role=role,
+                countdown_label=countdown_label,
+                day_blocks=day_blocks,
+            ):
+                continue
+
+            # Role is missing from its canonical day.
+            if not _role_requires_authoritative_render(role):
+                # Non-mandatory / coach-owned context: not this repair's to author.
+                continue
+
+            unresolved_entry = {
+                "code": "structural_role_repair_unresolved",
+                "week_index": week_index,
+                "phase": phase,
+                "role_key": role.get("role_key"),
+                "countdown_label": countdown_label,
+            }
+            if section is None:
+                unresolved_entry["message"] = (
+                    "Canonical week is not rendered; cannot restore in place."
+                )
+                unresolved.append(unresolved_entry)
+                continue
+
+            body = _authoritative_role_body(role)
+            if not body:
+                unresolved_entry["message"] = (
+                    "Missing role has no complete authoritative content to restore."
+                )
+                unresolved.append(unresolved_entry)
+                continue
+
+            heading = _restored_day_heading(role, countdown_label)
+            week_insert_lines.extend(["", heading, *body])
             applied.append(
                 {
                     "week_index": week_index,
@@ -401,13 +561,16 @@ def repair_stage2_structural_text(
                 }
             )
 
-        if len(week_additions) > 1:
-            additions.extend(["", *week_additions])
+        if week_insert_lines and section is not None:
+            pending_inserts.append((section["section_end"], week_insert_lines))
 
-    if not additions:
-        return {"text": final_plan_text, "applied": applied, "unresolved": [*findings, *unresolved]}
-    repaired = (final_plan_text or "").rstrip() + "\n\n# Stage 1 Structural Repair\n" + "\n".join(additions).strip()
-    return {"text": repaired.strip(), "applied": applied, "unresolved": unresolved}
+    if not pending_inserts:
+        return {"text": final_plan_text, "applied": applied, "unresolved": unresolved}
+
+    for insert_at, new_lines in sorted(pending_inserts, key=lambda item: item[0], reverse=True):
+        lines[insert_at:insert_at] = new_lines
+
+    return {"text": "\n".join(lines), "applied": applied, "unresolved": unresolved}
 
 
 def structural_integrity_findings(validator_report: dict | None) -> list[dict[str, Any]]:

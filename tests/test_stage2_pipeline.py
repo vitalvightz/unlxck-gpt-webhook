@@ -126,7 +126,46 @@ def _structural_brief_fixture() -> dict:
     }
 
 
-def test_repair_stage2_structural_text_appends_missing_week_and_roles():
+_RENDERED_WEEK_ONE = (
+    "## PHASE 1: GPP\n"
+    "### Week 1\n"
+    "#### Mon (D-28) — Strength build\n"
+    "- Landmine Press - 4x5\n"
+)
+
+
+def test_repair_restores_missing_day_into_canonical_week_in_place():
+    brief = _structural_brief_fixture()
+    report = {
+        "blocking_warnings": [
+            {"code": "missing_week_session_role", "phase": "SPP", "week_index": 2, "role_key": "conditioning_day"},
+        ],
+        "review_flags": [],
+        "errors": [],
+    }
+
+    # Week 1 renders fully; week 2 renders its header but dropped its one session.
+    final_plan_text = _RENDERED_WEEK_ONE + "\n## PHASE 2: SPP\n### Week 2\n"
+
+    repaired = repair_stage2_structural_text(
+        planning_brief=brief,
+        final_plan_text=final_plan_text,
+        validator_report=report,
+    )
+
+    # The dropped day is restored from its authoritative effective prescription,
+    # inside the existing week 2 section (no appended second schedule).
+    assert "### Mon (D-21) — Alactic conditioning" in repaired["text"]
+    assert "- Air Bike Sprint — 6 x 6 sec / 90 sec easy" in repaired["text"]
+    assert "# Stage 1 Structural Repair" not in repaired["text"]
+    assert repaired["text"].count("Week 2") == 1
+    # The restored day lands in week 2's section, before EOF (no new week header).
+    assert repaired["text"].index("Alactic conditioning") > repaired["text"].index("### Week 2")
+    assert [entry["role_key"] for entry in repaired["applied"]] == ["conditioning_day"]
+    assert repaired["unresolved"] == []
+
+
+def test_repair_holds_wholly_missing_week_instead_of_appending():
     brief = _structural_brief_fixture()
     report = {
         "blocking_warnings": [
@@ -137,18 +176,120 @@ def test_repair_stage2_structural_text_appends_missing_week_and_roles():
         "errors": [],
     }
 
+    # Week 1 is not rendered at all; it cannot be restored in place.
     repaired = repair_stage2_structural_text(
         planning_brief=brief,
         final_plan_text="## PHASE 2: SPP\n### Week 2\n",
         validator_report=report,
     )
 
-    assert "## GPP — Week 1" in repaired["text"]
-    assert "### Mon (D-28) — Strength build" in repaired["text"]
-    assert "- Landmine Press - 4x5" in repaired["text"]
-    assert "### Tue (D-27) — Hard sparring" in repaired["text"]
-    assert "## SPP — Week 2" in repaired["text"]
+    # No second schedule is appended for the missing week.
+    assert "GPP" not in repaired["text"]
+    assert "Week 1" not in repaired["text"]
+    assert "# Stage 1 Structural Repair" not in repaired["text"]
+    # The missing mandatory week-1 strength day is reported as unresolved so the
+    # caller holds; the coach-owned sparring day is neither restored nor unresolved.
+    unresolved_keys = {entry["role_key"] for entry in repaired["unresolved"]}
+    assert "strength_day" in unresolved_keys
+    assert "hard_sparring_day" not in unresolved_keys
+    # A rendered week's own dropped session is still restored in place.
     assert "Air Bike Sprint" in repaired["text"]
+
+
+def test_repair_uses_changed_effective_prescription_not_stale_content():
+    # A role that survived Stage 1 but had its dose legitimately changed carries
+    # the changed dose in its effective prescription. The repair must restore the
+    # effective (changed) content, never a stale/preferred value.
+    brief = _structural_brief_fixture()
+    conditioning = brief["weekly_role_map"]["weeks"][1]["session_roles"][0]
+    conditioning["preferred_exercise_names"] = ["Air Bike Sprint MAX (stale)"]
+    conditioning["selected_exercise_assignments"] = [
+        {
+            "name": "Air Bike Sprint",
+            "effective_prescription": {"display": "3 x 6 sec / 3 min easy (reduced)"},
+        }
+    ]
+    report = {
+        "blocking_warnings": [
+            {"code": "missing_week_session_role", "phase": "SPP", "week_index": 2, "role_key": "conditioning_day"},
+        ],
+        "review_flags": [],
+        "errors": [],
+    }
+
+    repaired = repair_stage2_structural_text(
+        planning_brief=brief,
+        final_plan_text=_RENDERED_WEEK_ONE + "\n## PHASE 2: SPP\n### Week 2\n",
+        validator_report=report,
+    )
+
+    assert "3 x 6 sec / 3 min easy (reduced)" in repaired["text"]
+    assert "stale" not in repaired["text"]
+
+
+def test_repair_holds_role_without_authoritative_content():
+    # A mandatory app-work role that only carries preferred exercise names (no
+    # display_text, no priced effective prescription) is NOT synthesised: it is
+    # left unresolved so the plan holds.
+    brief = _structural_brief_fixture()
+    brief["weekly_role_map"]["weeks"][1]["session_roles"][0] = {
+        "role_key": "conditioning_day",
+        "category": "conditioning",
+        "athlete_facing_label": "Alactic conditioning",
+        "scheduled_day_hint": "Mon",
+        "scheduled_countdown_label": "D-21",
+        "preferred_exercise_names": ["Air Bike Sprint"],
+    }
+    report = {
+        "blocking_warnings": [
+            {"code": "missing_week_session_role", "phase": "SPP", "week_index": 2, "role_key": "conditioning_day"},
+        ],
+        "review_flags": [],
+        "errors": [],
+    }
+
+    repaired = repair_stage2_structural_text(
+        planning_brief=brief,
+        final_plan_text=_RENDERED_WEEK_ONE + "\n## PHASE 2: SPP\n### Week 2\n",
+        validator_report=report,
+    )
+
+    assert "Air Bike Sprint" not in repaired["text"]
+    assert repaired["applied"] == []
+    unresolved_keys = {entry["role_key"] for entry in repaired["unresolved"]}
+    assert "conditioning_day" in unresolved_keys
+
+
+def test_repair_requires_exact_day_identity_not_repeated_marker():
+    # The missing role's marker appears on a DIFFERENT day. Loose matching would
+    # treat the role as surviving; exact role/day identity must still detect it
+    # missing and restore it into its own canonical day.
+    brief = _structural_brief_fixture()
+    report = {
+        "blocking_warnings": [
+            {"code": "missing_week_session_role", "phase": "SPP", "week_index": 2, "role_key": "conditioning_day"},
+        ],
+        "review_flags": [],
+        "errors": [],
+    }
+    # Week 2 renders a Tuesday day that name-drops "Alactic conditioning", but the
+    # role's own Monday (D-21) slot is absent.
+    final_plan_text = (
+        _RENDERED_WEEK_ONE
+        + "\n## PHASE 2: SPP\n### Week 2\n"
+        + "#### Tue (D-20) — Note about Alactic conditioning\n"
+        + "- Easy Bike - 20 min\n"
+    )
+
+    repaired = repair_stage2_structural_text(
+        planning_brief=brief,
+        final_plan_text=final_plan_text,
+        validator_report=report,
+    )
+
+    assert "### Mon (D-21) — Alactic conditioning" in repaired["text"]
+    assert "- Air Bike Sprint — 6 x 6 sec / 90 sec easy" in repaired["text"]
+    assert [entry["role_key"] for entry in repaired["applied"]] == ["conditioning_day"]
     assert repaired["unresolved"] == []
 
 
@@ -172,25 +313,41 @@ def test_structural_integrity_hold_blocks_unresolved_missing_role_flags():
     assert held["errors"][-1]["code"] == "structural_integrity_failure"
 
 
-def test_repair_does_not_restore_safety_omitted_roles_outside_session_roles():
+def test_repair_never_restores_suppressed_or_coach_owned_content():
     brief = _structural_brief_fixture()
+    # A role dropped for safety lives in suppressed_roles, never in session_roles.
     brief["weekly_role_map"]["weeks"][0]["suppressed_roles"] = [
         {"role_key": "max_effort_strength", "reason": "injury_restriction"}
     ]
     report = {
-        "blocking_warnings": [{"code": "phase_section_missing", "phase": "GPP"}],
+        "blocking_warnings": [
+            {"code": "phase_section_missing", "phase": "GPP"},
+            {"code": "missing_week_session_role", "phase": "GPP", "week_index": 1, "role_key": "hard_sparring_day"},
+        ],
         "review_flags": [],
         "errors": [],
     }
 
+    # Week 1 renders its strength day but the coach-owned hard-sparring day is
+    # absent; week 2 renders only its header.
     repaired = repair_stage2_structural_text(
         planning_brief=brief,
-        final_plan_text="## PHASE 2: SPP\n### Week 2\n- Air Bike Sprint\n",
+        final_plan_text=_RENDERED_WEEK_ONE + "\n## PHASE 2: SPP\n### Week 2\n",
         validator_report=report,
     )
 
+    # Suppressed roles are never resurrected.
     assert "max_effort_strength" not in repaired["text"]
-    assert "Hard sparring" in repaired["text"]
+    # Coach-owned sparring is never synthesised from a category and is not one of
+    # the repair's unresolved diagnostics (the validator still owns its loss).
+    assert "declared hard-sparring/contact session" not in repaired["text"]
+    assert "Hard sparring" not in repaired["text"]
+    assert all(
+        entry["role_key"] != "hard_sparring_day" for entry in repaired["unresolved"]
+    )
+    assert all(
+        entry["role_key"] != "hard_sparring_day" for entry in repaired["applied"]
+    )
 
 
 def test_build_stage2_package_returns_ready_bundle():
