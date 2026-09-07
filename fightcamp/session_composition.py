@@ -14,6 +14,7 @@ Normal strength composition is deliberately reduce-only:
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from .normalization import normalize_fatigue_level
@@ -550,6 +551,155 @@ def compose_normal_strength_assignments(
                     for name, reason in dropped.items()
                 ],
             }
+    return weekly_role_map
+
+
+def _conditioning_duration_minutes(option: dict[str, Any]) -> float | None:
+    metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else {}
+    for key in ("total_minutes", "duration_min"):
+        value = metadata.get(key)
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return max(0.0, float(value))
+
+    text = str(metadata.get("duration") or metadata.get("timing") or "").lower()
+    match = re.search(r"(\d+(?:\.\d+)?)\s*(?:[-–]\s*\d+(?:\.\d+)?)?\s*min", text)
+    return float(match.group(1)) if match else None
+
+
+def _conditioning_is_high_load(option: dict[str, Any]) -> bool:
+    metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else {}
+    rpe = _float_or_none(metadata.get("rpe"))
+    load_tokens = " ".join(
+        str(metadata.get(key) or "").strip().lower()
+        for key in ("load", "intensity", "lactate_load", "movement_cost")
+    )
+    return bool((rpe is not None and rpe >= 8) or re.search(r"\b(?:high|max|maximal|all[- ]out)\b", load_tokens))
+
+
+def _conditioning_role_is_hard_spar_adjacent(week: dict[str, Any], role: dict[str, Any]) -> bool:
+    weekday_order = {
+        "monday": 0,
+        "tuesday": 1,
+        "wednesday": 2,
+        "thursday": 3,
+        "friday": 4,
+        "saturday": 5,
+        "sunday": 6,
+    }
+    scheduled_day = str(role.get("scheduled_day_hint") or "").strip().lower()
+    scheduled_index = weekday_order.get(scheduled_day)
+    if scheduled_index is None:
+        return False
+
+    hard_days = {
+        str(day).strip().lower()
+        for day in (week.get("effective_hard_sparring_days") or [])
+        if str(day).strip()
+    }
+    if not hard_days:
+        hard_days = {
+            str(entry.get("day") or "").strip().lower()
+            for entry in (week.get("hard_sparring_plan") or [])
+            if isinstance(entry, dict) and entry.get("status") == "hard_as_planned"
+        }
+    return any(
+        ((weekday_order[hard_day] - scheduled_index) % 7) in {1, 6}
+        for hard_day in hard_days
+        if hard_day in weekday_order
+    )
+
+
+def compose_normal_conditioning_assignments(
+    *, weekly_role_map: dict[str, Any], candidate_pools: dict[str, Any]
+) -> dict[str, Any]:
+    """Attach a safe bank-backed minimum composition to normal conditioning roles."""
+    for week in weekly_role_map.get("weeks", []) or []:
+        if not isinstance(week, dict):
+            continue
+        phase = str(week.get("phase") or "").strip().upper()
+        pool = candidate_pools.get(phase) if isinstance(candidate_pools, dict) else None
+        slots = pool.get("conditioning_slots", []) if isinstance(pool, dict) else []
+
+        for role in week.get("session_roles", []) or []:
+            if (
+                not isinstance(role, dict)
+                or role.get("late_fight_tail_owned")
+                or str(role.get("category") or "").strip().lower() != "conditioning"
+            ):
+                continue
+
+            preferred_system = str(role.get("preferred_system") or "").strip().lower()
+            matching_slots = [
+                slot
+                for slot in slots
+                if isinstance(slot, dict)
+                and str(slot.get("role") or "").strip().lower() == preferred_system
+            ]
+            options: list[tuple[dict[str, Any], dict[str, Any], bool]] = []
+            seen_names: set[str] = set()
+            for is_selected in (True, False):
+                for slot in matching_slots:
+                    candidates = (
+                        [slot.get("selected")]
+                        if is_selected
+                        else list(slot.get("alternates") or [])
+                    )
+                    for option in candidates:
+                        if not isinstance(option, dict):
+                            continue
+                        name = str(option.get("name") or "").strip()
+                        if not name or name in seen_names:
+                            continue
+                        seen_names.add(name)
+                        options.append((slot, option, is_selected))
+
+            if not options:
+                continue
+
+            adjacent_hard_spar = _conditioning_role_is_hard_spar_adjacent(week, role)
+            primary_duration = _conditioning_duration_minutes(options[0][1])
+            long_aerobic = preferred_system == "aerobic" and primary_duration is not None and primary_duration >= 25
+            minimum = 1 if adjacent_hard_spar else (2 if long_aerobic else 3)
+
+            selected: list[tuple[dict[str, Any], dict[str, Any], bool]] = []
+            total_minutes = 0.0
+            high_load_count = 0
+            for slot, option, is_selected in options:
+                duration = _conditioning_duration_minutes(option)
+                high_load = _conditioning_is_high_load(option)
+                if selected:
+                    if high_load and high_load_count:
+                        continue
+                    if duration is not None and total_minutes + duration > 45:
+                        continue
+                selected.append((slot, option, is_selected))
+                if duration is not None:
+                    total_minutes += duration
+                if high_load:
+                    high_load_count += 1
+                if len(selected) >= minimum:
+                    break
+
+            assignments = []
+            for slot, option, is_selected in selected:
+                assignments.append(
+                    {
+                        "slot_id": slot.get("slot_id"),
+                        "name": option.get("name"),
+                        "source_phase": phase,
+                        "slot_group": "conditioning_slots",
+                        "selected_option": is_selected,
+                    }
+                )
+            role["selected_exercise_assignments"] = assignments
+            role["conditioning_composition_policy"] = {
+                "minimum_exercise_count": None if adjacent_hard_spar else minimum,
+                "selected_count": len(assignments),
+                "long_aerobic_session": long_aerobic,
+                "hard_sparring_adjacent": adjacent_hard_spar,
+                "workload_limited": len(assignments) < minimum,
+            }
+
     return weekly_role_map
 
 

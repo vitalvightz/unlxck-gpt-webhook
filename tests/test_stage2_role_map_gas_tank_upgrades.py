@@ -156,6 +156,70 @@ def test_unused_day_upgrade_skips_days_with_existing_session_role():
     assert week["intentionally_unused_days"][0]["role"] == "off_day"
 
 
+def test_unused_day_upgrade_prioritizes_empty_day_after_generation():
+    week = {
+        "phase": "SPP",
+        "calendar_days": [
+            {"weekday": "thursday", "d_day": 28},
+            {"weekday": "saturday", "d_day": 26},
+        ],
+        "intentionally_unused_days": [
+            {"day": "saturday", "role": "off_day"},
+            {"day": "thursday", "role": "off_day"},
+        ],
+    }
+    athlete_model = {
+        "key_goals": ["conditioning"],
+        "plan_creation_weekday": "wednesday",
+    }
+
+    upgraded = _upgrade_unused_days_to_low_load_support(week, [], athlete_model)
+
+    assert [role["scheduled_day_hint"] for role in upgraded] == ["thursday"]
+
+
+def test_unused_day_upgrade_does_not_replace_occupied_day_after_generation():
+    week = {
+        "phase": "SPP",
+        "calendar_days": [{"weekday": "thursday", "d_day": 28}],
+        "intentionally_unused_days": [{"day": "thursday", "role": "off_day"}],
+    }
+    strength_role = {
+        "session_index": 1,
+        "category": "strength",
+        "role_key": "primary_strength_day",
+        "scheduled_day_hint": "thursday",
+    }
+    athlete_model = {
+        "weaknesses": ["gas_tank"],
+        "plan_creation_weekday": "wednesday",
+    }
+
+    upgraded = _upgrade_unused_days_to_low_load_support(week, [strength_role], athlete_model)
+
+    assert upgraded == [strength_role]
+    assert week["intentionally_unused_days"] == [{"day": "thursday", "role": "off_day"}]
+
+
+def test_unused_day_after_generation_stays_empty_when_recovery_rules_block_it():
+    week = {
+        "phase": "SPP",
+        "calendar_days": [{"weekday": "thursday", "d_day": 28}],
+        "intentionally_unused_days": [{"day": "thursday", "role": "off_day"}],
+    }
+    athlete_model = {
+        "key_goals": ["conditioning"],
+        "plan_creation_weekday": "wednesday",
+        "fatigue": "high",
+        "cut_severity_bucket": "extreme",
+    }
+
+    upgraded = _upgrade_unused_days_to_low_load_support(week, [], athlete_model)
+
+    assert upgraded == []
+    assert week["intentionally_unused_days"][0]["day"] == "thursday"
+
+
 def test_weekly_role_map_roles_carry_countdown_labels_for_renderers():
     athlete_model = {
         "sport_style": "boxing",
