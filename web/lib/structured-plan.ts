@@ -275,6 +275,42 @@ function daySpan(startIso: string, endIso: string): number | null {
   return Math.round((end.getTime() - start.getTime()) / 86_400_000);
 }
 
+const PHASE_RANK: Record<string, number> = {
+  GPP: 0,
+  SPP: 1,
+  TAPER: 2,
+  FIGHT_WEEK: 3,
+  REINTEGRATION: 4,
+};
+
+function phaseCoverage(days: StructuredDay[]): string[] {
+  const phases: string[] = [];
+  for (const day of days) {
+    const phase = cleanText(day.phase_label)?.toUpperCase();
+    if (phase && !phases.includes(phase)) {
+      phases.push(phase);
+    }
+  }
+  return phases;
+}
+
+function displayPhaseForDays(days: StructuredDay[], fallback: string | null | undefined): string | null {
+  const counts = new Map<string, number>();
+  for (const day of days) {
+    const phase = cleanText(day.phase_label)?.toUpperCase();
+    if (!phase) continue;
+    counts.set(phase, (counts.get(phase) ?? 0) + 1);
+  }
+  if (counts.size === 0) {
+    return cleanText(fallback);
+  }
+  const top = Math.max(...counts.values());
+  return [...counts.entries()]
+    .filter(([, count]) => count === top)
+    .map(([phase]) => phase)
+    .sort((a, b) => (PHASE_RANK[b] ?? 0) - (PHASE_RANK[a] ?? 0))[0] ?? cleanText(fallback);
+}
+
 /**
  * Split one plan week into per-calendar-week (Mon–Sun) display weeks.
  *
@@ -347,6 +383,8 @@ function splitWeekByCalendarWeek(week: StructuredWeek): StructuredWeek[] {
       week_id: `${cleanText(week.week_id) || "week"}-${group.monday}-cw${index + 1}`,
 
       days: group.days,
+      phase_label: displayPhaseForDays(group.days, week.phase_label),
+      phase_coverage: phaseCoverage(group.days),
       start_date: dates[0] ?? week.start_date,
       end_date: dates[dates.length - 1] ?? week.end_date,
       // Days run furthest-from-fight first, so the first/last labels bound the range.

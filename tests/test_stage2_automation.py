@@ -15,6 +15,13 @@ from fightcamp.stage2_policy import (
 )
 from support import FakeOpenAIClient as FakeClient
 
+STRUCTURAL_INTEGRITY_CODES = {
+    "phase_section_missing",
+    "missing_week_session_role",
+    "late_camp_session_incomplete",
+    "late_fight_missing_required_countdown_session",
+}
+
 
 @pytest.fixture(autouse=True)
 def _structured_plan_off(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -368,7 +375,7 @@ def test_first_pass_low_risk_quality_codes_publish_with_flags(
     assert result["stage2_validator_report"]["is_publishable"] is True
 
 
-@pytest.mark.parametrize("code", sorted(ADMIN_REVIEW_BLOCKING_CODES))
+@pytest.mark.parametrize("code", sorted(ADMIN_REVIEW_BLOCKING_CODES - STRUCTURAL_INTEGRITY_CODES))
 def test_first_pass_context_or_programme_codes_publish_with_flags(
     monkeypatch: pytest.MonkeyPatch,
     code: str,
@@ -403,6 +410,47 @@ def test_first_pass_context_or_programme_codes_publish_with_flags(
     assert report["is_athlete_releasable"] is True
     assert report["is_publishable"] is True
     assert report["admin_review_blocking_flags"] == [finding]
+
+
+@pytest.mark.parametrize("code", sorted(ADMIN_REVIEW_BLOCKING_CODES & STRUCTURAL_INTEGRITY_CODES))
+def test_first_pass_structural_integrity_codes_hold_after_unresolved_repair(
+    monkeypatch: pytest.MonkeyPatch,
+    code: str,
+) -> None:
+    finding = {"code": code, "phase": "SPP"}
+    monkeypatch.setattr(
+        stage2_module,
+        "review_stage2_output",
+        lambda **_: {
+            "status": "PASS",
+            "needs_retry": False,
+            "validator_report": {
+                "errors": [],
+                "warnings": [finding],
+                "review_flags": [finding],
+                "review_flag_count": 1,
+                "release_decision": "publish_with_flags",
+                "is_athlete_releasable": True,
+                "is_publishable": True,
+            },
+        },
+    )
+    automator = OpenAIStage2Automator(
+        client=FakeClient([_response("# structurally incomplete plan")]),
+        model="test-model",
+    )
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    assert result["status"] == "review_required"
+    assert result["plan_text"] == ""
+    assert result["final_plan_text"] == "# structurally incomplete plan"
+    assert result["stage2_status"] == "stage2_failed"
+    report = result["stage2_validator_report"]
+    assert report["release_decision"] == "hold"
+    assert report["is_athlete_releasable"] is False
+    assert report["is_publishable"] is False
+    assert report["errors"][-1]["code"] == "structural_integrity_failure"
 
 
 def test_first_pass_mixed_quality_and_blocking_codes_publish_with_flags(
@@ -784,3 +832,224 @@ def test_from_env_invalid_timeout_falls_back_to_210(monkeypatch: pytest.MonkeyPa
 
     assert isinstance(automator, OpenAIStage2Automator)
     assert captured_kwargs["timeout"] == 210.0
+
+
+# --- Structural source repair: fail-closed release + audit -------------------
+
+_STRUCTURAL_REPAIR_RENDERED_WEEK_ONE = (
+    "## PHASE 1: GPP\n"
+    "### Week 1\n"
+    "#### Mon (D-28) — Strength build\n"
+    "- Landmine Press - 4x5\n"
+)
+
+
+def _structural_repair_brief() -> dict:
+    return {
+        "athlete_model": {"sport": "boxing"},
+        "restrictions": [],
+        "phase_strategy": {},
+        "candidate_pools": {},
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "week_index": 1,
+                    "phase": "GPP",
+                    "calendar_days": [{"weekday": "Mon", "d_day": 28}],
+                    "session_roles": [
+                        {
+                            "role_key": "strength_day",
+                            "category": "strength",
+                            "athlete_facing_label": "Strength build",
+                            "scheduled_day_hint": "Mon",
+                            "scheduled_countdown_label": "D-28",
+                            "display_text": "- Landmine Press - 4x5",
+                        }
+                    ],
+                },
+                {
+                    "week_index": 2,
+                    "phase": "SPP",
+                    "calendar_days": [{"weekday": "Mon", "d_day": 21}],
+                    "session_roles": [
+                        {
+                            "role_key": "conditioning_day",
+                            "category": "conditioning",
+                            "athlete_facing_label": "Alactic conditioning",
+                            "scheduled_day_hint": "Mon",
+                            "scheduled_countdown_label": "D-21",
+                            "selected_exercise_assignments": [
+                                {
+                                    "name": "Air Bike Sprint",
+                                    "effective_prescription": {"display": "6 x 6 sec / 90 sec easy"},
+                                }
+                            ],
+                        }
+                    ],
+                },
+            ]
+        },
+    }
+
+
+def _structural_repair_result(final_plan_text: str, structural_finding: dict, *, extra_errors=None) -> dict:
+    return {
+        "status": "publishable_with_flags",
+        "plan_text": final_plan_text,
+        "final_plan_text": final_plan_text,
+        "stage2_status": "stage2_pass",
+        "stage2_validator_report": {
+            "errors": list(extra_errors or []),
+            "warnings": [structural_finding],
+            "review_flags": [structural_finding],
+            "release_decision": "publish_with_flags",
+            "is_publishable": True,
+            "is_athlete_releasable": True,
+        },
+    }
+
+
+def test_structural_source_repair_publishes_when_repair_clears_loss(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original_text = _STRUCTURAL_REPAIR_RENDERED_WEEK_ONE + "\n## PHASE 2: SPP\n### Week 2\n"
+    finding = {"code": "missing_week_session_role", "week_index": 2, "role_key": "conditioning_day"}
+    result = _structural_repair_result(original_text, finding)
+
+    monkeypatch.setattr(
+        stage2_module,
+        "review_stage2_output",
+        lambda **_: {
+            "status": "PASS",
+            "validator_report": {
+                "errors": [],
+                "warnings": [{"code": "option_overload"}],
+                "review_flags": [{"code": "option_overload"}],
+                "release_decision": "publish_with_flags",
+                "is_publishable": True,
+                "is_athlete_releasable": True,
+            },
+        },
+    )
+
+    stage2_module._apply_structural_source_repair_and_hold(
+        result, planning_brief=_structural_repair_brief(), source="test"
+    )
+
+    assert result["status"] == "publishable_with_flags"
+    assert result["stage2_status"] == "stage2_pass"
+    assert "- Air Bike Sprint — 6 x 6 sec / 90 sec easy" in result["final_plan_text"]
+    assert result["plan_text"] == result["final_plan_text"]
+    report = result["stage2_validator_report"]
+    assert report["release_decision"] == "publish_with_flags"
+    audit = report["source_repair"]["structural_source_repair"]
+    assert audit["status"] == "applied"
+    assert audit["unresolved_count"] == 0
+    assert any(entry["role_key"] == "conditioning_day" for entry in audit["applied"])
+    assert audit["previous_release_decision"] == "publish_with_flags"
+
+
+def test_structural_source_repair_holds_and_preserves_original_on_unresolved() -> None:
+    # Week 1 is not rendered, so its mandatory strength day cannot be restored in
+    # place; the repair reports it unresolved and the plan must hold with the
+    # ORIGINAL text (never a partial repair) and the original failure preserved.
+    original_text = "## PHASE 2: SPP\n### Week 2\n"
+    finding = {"code": "phase_section_missing", "phase": "GPP"}
+    result = _structural_repair_result(
+        original_text, finding, extra_errors=[{"code": "restriction_violation", "line": "x"}]
+    )
+
+    stage2_module._apply_structural_source_repair_and_hold(
+        result, planning_brief=_structural_repair_brief(), source="test"
+    )
+
+    assert result["status"] == "review_required"
+    assert result["plan_text"] == ""
+    assert result["final_plan_text"] == original_text
+    assert result["stage2_status"] == "stage2_failed"
+    report = result["stage2_validator_report"]
+    assert report["release_decision"] == "hold"
+    assert report["is_publishable"] is False
+    assert report["errors"][-1]["code"] == "structural_integrity_failure"
+    # An unrelated failure is preserved, not erased by the repair.
+    assert any(err["code"] == "restriction_violation" for err in report["errors"])
+    audit = report["source_repair"]["structural_source_repair"]
+    assert audit["status"] == "unresolved_structural_loss"
+    assert audit["unresolved_count"] >= 1
+
+
+def test_structural_source_repair_holds_when_revalidation_still_structural(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original_text = _STRUCTURAL_REPAIR_RENDERED_WEEK_ONE + "\n## PHASE 2: SPP\n### Week 2\n"
+    finding = {"code": "missing_week_session_role", "week_index": 2, "role_key": "conditioning_day"}
+    result = _structural_repair_result(original_text, finding)
+
+    # The repair changes the text, but revalidation still reports structural loss:
+    # fail closed to a hold and keep the original plan.
+    monkeypatch.setattr(
+        stage2_module,
+        "review_stage2_output",
+        lambda **_: {
+            "status": "WARN",
+            "validator_report": {
+                "errors": [],
+                "warnings": [finding],
+                "review_flags": [finding],
+                "release_decision": "publish_with_flags",
+                "is_publishable": True,
+                "is_athlete_releasable": True,
+            },
+        },
+    )
+
+    stage2_module._apply_structural_source_repair_and_hold(
+        result, planning_brief=_structural_repair_brief(), source="test"
+    )
+
+    assert result["status"] == "review_required"
+    assert result["plan_text"] == ""
+    assert result["final_plan_text"] == original_text
+    report = result["stage2_validator_report"]
+    assert report["release_decision"] == "hold"
+    audit = report["source_repair"]["structural_source_repair"]
+    assert audit["status"] == "unresolved_after_repair"
+
+
+def test_structural_source_repair_holds_when_revalidation_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original_text = _STRUCTURAL_REPAIR_RENDERED_WEEK_ONE + "\n## PHASE 2: SPP\n### Week 2\n"
+    finding = {"code": "missing_week_session_role", "week_index": 2, "role_key": "conditioning_day"}
+    result = _structural_repair_result(original_text, finding)
+
+    def _boom(**_):
+        raise RuntimeError("revalidation exploded")
+
+    monkeypatch.setattr(stage2_module, "review_stage2_output", _boom)
+
+    stage2_module._apply_structural_source_repair_and_hold(
+        result, planning_brief=_structural_repair_brief(), source="test"
+    )
+
+    assert result["status"] == "review_required"
+    assert result["plan_text"] == ""
+    assert result["final_plan_text"] == original_text
+    report = result["stage2_validator_report"]
+    assert report["release_decision"] == "hold"
+    audit = report["source_repair"]["structural_source_repair"]
+    assert audit["status"] == "revalidation_failed"
+
+
+def test_structural_source_repair_noop_without_structural_findings() -> None:
+    original_text = "## PHASE 2: SPP\n### Week 2\n- Air Bike Sprint\n"
+    result = _structural_repair_result(original_text, {"code": "option_overload"})
+
+    stage2_module._apply_structural_source_repair_and_hold(
+        result, planning_brief=_structural_repair_brief(), source="test"
+    )
+
+    # No structural loss -> the repair is inert and the plan is untouched.
+    assert result["status"] == "publishable_with_flags"
+    assert result["plan_text"] == original_text
+    assert "source_repair" not in result["stage2_validator_report"]

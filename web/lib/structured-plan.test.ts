@@ -338,6 +338,38 @@ test("getWeeks splits a multi-calendar-week late-fight block into weeks", () => 
   assert.equal(new Set(weeks.map((week) => week.week_id)).size, 3);
 });
 
+test("calendar splitting derives display phase from each group's days", () => {
+  const plan = {
+    weeks: [
+      {
+        week_id: "wk-authority",
+        week_index: 1,
+        phase_label: "TAPER",
+        start_date: "2026-08-20",
+        end_date: "2026-08-30",
+        countdown_start: "D-28",
+        countdown_end: "D-18",
+        days: [
+          { date: "2026-08-20", countdown_label: "D-28", phase_label: "GPP" },
+          { date: "2026-08-23", countdown_label: "D-25", phase_label: "GPP" },
+          { date: "2026-08-27", countdown_label: "D-21", phase_label: "SPP", planning_week_index: 2 },
+          { date: "2026-08-30", countdown_label: "D-18", phase_label: "SPP", planning_week_index: 2 },
+        ],
+      },
+    ],
+  } as never;
+
+  const weeks = getWeeks(plan);
+
+  assert.equal(weeks.length, 2);
+  assert.equal(weeks[0].phase_label, "GPP");
+  assert.deepEqual(weeks[0].phase_coverage, ["GPP"]);
+  assert.equal(weeks[1].phase_label, "SPP");
+  assert.deepEqual(weeks[1].phase_coverage, ["SPP"]);
+  assert.equal(getDays(weeks[1])[0].phase_label, "SPP");
+  assert.equal(getDays(weeks[1])[0].planning_week_index, 2);
+});
+
 test("calendar splitting re-resolves deterministic late-fight titles but preserves custom legacy goals", () => {
   const sourceWeek = {
     week_id: "wk-late",

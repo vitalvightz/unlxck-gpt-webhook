@@ -1262,6 +1262,10 @@ def _normalize_day(value: Any) -> dict[str, Any]:
     out["date"] = _coerce_str(out.get("date"))
     out["countdown_label"] = _coerce_str(out.get("countdown_label"))
     out["phase_label"] = _normalize_phase(out.get("phase_label"))
+    out["planning_week_index"] = _coerce_optional_int(out.get("planning_week_index"))
+    planning_phase = _coerce_str(out.get("planning_week_phase")).strip().upper()
+    out["planning_week_phase"] = _normalize_phase(planning_phase) if planning_phase else None
+    out["planning_day_role_keys"] = _coerce_str_list(out.get("planning_day_role_keys"))
     out["today_card"] = _normalize_today_card(out.get("today_card"))
     out["sessions"] = [_normalize_session(session) for session in _as_dict_list(out.get("sessions"))]
     _fold_coach_led_sessions_into_today_card(out)
@@ -1293,6 +1297,13 @@ def _normalize_week(value: Any) -> dict[str, Any]:
     out["week_goal"] = _coerce_str(out.get("week_goal"))
     out["start_date"] = _coerce_str(out.get("start_date"))
     out["end_date"] = _coerce_str(out.get("end_date"))
+    out["display_week_kind"] = _coerce_str(out.get("display_week_kind")).strip() or None
+    out["planning_week_indices"] = [
+        item
+        for item in (_coerce_optional_int(v) for v in _as_list(out.get("planning_week_indices")))
+        if item is not None
+    ]
+    out["phase_coverage"] = _coerce_str_list(out.get("phase_coverage"))
     out["load_focus"] = _normalize_load_focus(out.get("load_focus"))
     out["progression"] = _normalize_progression(out.get("progression"))
     out["days"] = [_normalize_day(day) for day in _as_dict_list(out.get("days"))]

@@ -7,9 +7,12 @@ from typing import Any, Protocol
 
 from fightcamp.goal_preservation import validate_goal_preservation
 from fightcamp.stage2_pipeline import (
+    apply_structural_integrity_hold,
     build_stage2_package,
     build_stage2_retry,
+    repair_stage2_structural_text,
     review_stage2_output,
+    structural_integrity_findings,
 )
 from fightcamp.stage2_policy import (
     admin_review_blocking_findings,
@@ -621,6 +624,170 @@ def _apply_locked_tactical_watch_source_repair(
     )
 
 
+def _apply_structural_source_repair_and_hold(
+    result: dict[str, Any],
+    *,
+    planning_brief: Any,
+    source: str,
+) -> None:
+    """Repair known Stage 1 structural omissions before release/card conversion.
+
+    Missing phase/week/session-role structure is not an ordinary advisory flag:
+    the UI can otherwise present a complete-looking camp with the wrong owner.
+    Deterministic repair gets one chance to restore known role-map content in
+    place. The release handling is strictly fail-closed: a failed repair, any
+    unresolved mandatory role, a failed or invalid revalidation, or any
+    structural loss that survives the repair all preserve the ORIGINAL plan text
+    and produce a structural hold rather than continuing to publication. The
+    original validator report and a before/after repair record are retained so
+    the structural repair can never erase unrelated failures or silently upgrade
+    the Stage 2 audit.
+    """
+    if not isinstance(planning_brief, dict):
+        return
+
+    original_report = result.get("stage2_validator_report")
+    original_report = original_report if isinstance(original_report, dict) else {}
+
+    # A plan already held upstream stays held: a structural repair must never
+    # upgrade another layer's hold into a release.
+    if str(original_report.get("release_decision") or "").strip() == "hold":
+        return
+
+    # Only act when the plan actually carries Stage 1 structural loss.
+    if not structural_integrity_findings(original_report):
+        return
+
+    original_text = str(result.get("final_plan_text") or result.get("plan_text") or "")
+
+    def _repair_audit(
+        *,
+        status: str,
+        repaired: dict[str, Any] | None,
+        revalidated_report: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        return {
+            "status": status,
+            "applied": list((repaired or {}).get("applied") or []),
+            "unresolved": list((repaired or {}).get("unresolved") or []),
+            "unresolved_count": len((repaired or {}).get("unresolved") or []),
+            "previous_release_decision": original_report.get("release_decision"),
+            "previous_error_count": len(original_report.get("errors") or []),
+            "previous_blocking_warning_count": len(original_report.get("blocking_warnings") or []),
+            "revalidated_release_decision": (revalidated_report or {}).get("release_decision"),
+        }
+
+    def _hold(
+        *,
+        status: str,
+        repaired: dict[str, Any] | None,
+        revalidated_report: dict[str, Any] | None,
+    ) -> None:
+        # Fail-closed: keep the ORIGINAL plan text and failure history, append
+        # the structural hold, and never release. The rendered text is retained
+        # in final_plan_text for admin repair only.
+        held = apply_structural_integrity_hold(original_report)
+        audit = _repair_audit(
+            status=status, repaired=repaired, revalidated_report=revalidated_report
+        )
+        existing_audit = held.get("source_repair") if isinstance(held.get("source_repair"), dict) else {}
+        held = {**held, "source_repair": {**existing_audit, "structural_source_repair": audit}}
+        result["stage2_validator_report"] = held
+        result["final_plan_text"] = original_text
+        result["plan_text"] = ""
+        result["status"] = "review_required"
+        result["stage2_status"] = _STAGE2_FAILED
+        logger.warning(
+            "[stage2] structural integrity hold source=%s status=%s applied=%d unresolved=%d",
+            source,
+            status,
+            len(audit["applied"]),
+            audit["unresolved_count"],
+        )
+
+    try:
+        repaired = repair_stage2_structural_text(
+            planning_brief=planning_brief,
+            final_plan_text=original_text,
+            validator_report=original_report,
+        )
+    except Exception:
+        logger.exception("[stage2] structural source repair raised; holding")
+        _hold(status="repair_failed", repaired=None, revalidated_report=None)
+        return
+
+    repaired_text = str(repaired.get("text") or original_text)
+
+    # Unresolved mandatory loss, or nothing safely restorable, holds immediately.
+    if list(repaired.get("unresolved") or []) or repaired_text == original_text:
+        _hold(status="unresolved_structural_loss", repaired=repaired, revalidated_report=None)
+        return
+
+    # Revalidate the repaired text through the full review pipeline.
+    try:
+        review = review_stage2_output(
+            planning_brief=planning_brief,
+            final_plan_text=repaired_text,
+        )
+        revalidated_report = review.get("validator_report")
+    except Exception:
+        logger.exception("[stage2] structural source repair failed revalidation; holding")
+        _hold(status="revalidation_failed", repaired=repaired, revalidated_report=None)
+        return
+
+    if not isinstance(revalidated_report, dict):
+        _hold(status="revalidation_invalid", repaired=repaired, revalidated_report=None)
+        return
+
+    # The repair must actually clear the structural loss and the central policy
+    # must not itself hold; otherwise preserve the original plan and hold.
+    if (
+        structural_integrity_findings(revalidated_report)
+        or revalidated_report.get("release_decision") == "hold"
+    ):
+        _hold(status="unresolved_after_repair", repaired=repaired, revalidated_report=revalidated_report)
+        return
+
+    release_decision = str(revalidated_report.get("release_decision") or "").strip()
+    if release_decision not in {"publish", "publish_with_flags"}:
+        # Unknown decision -> fail closed.
+        _hold(status="unknown_release_decision", repaired=repaired, revalidated_report=revalidated_report)
+        return
+
+    # Success: the repaired text is structurally whole. Record a before/after
+    # audit (the central policy already recomputed the release decision inside
+    # review_stage2_output); unrelated failures in the revalidated report are
+    # preserved as-is and never erased by the repair.
+    audit = _repair_audit(
+        status="applied", repaired=repaired, revalidated_report=revalidated_report
+    )
+    audit["revalidated_status"] = review.get("status")
+    existing_audit = (
+        revalidated_report.get("source_repair")
+        if isinstance(revalidated_report.get("source_repair"), dict)
+        else {}
+    )
+    revalidated_report = {
+        **revalidated_report,
+        "source_repair": {**existing_audit, "structural_source_repair": audit},
+    }
+    result["final_plan_text"] = repaired_text
+    if str(result.get("plan_text") or "").strip():
+        result["plan_text"] = repaired_text
+    result["stage2_validator_report"] = revalidated_report
+    if release_decision == "publish_with_flags":
+        result["status"] = _APP_STATUS_PUBLISHABLE_WITH_FLAGS
+    else:
+        result["status"] = _APP_STATUS_READY
+    result["stage2_status"] = _STAGE2_PASS
+    logger.info(
+        "[stage2] structural source repair applied source=%s roles=%d decision=%s",
+        source,
+        len(repaired.get("applied") or []),
+        release_decision,
+    )
+
+
 def _log_stage2_prompt_budget(prompt: str, *, attempt_label: str, source: str, will_send: bool) -> None:
     estimated_tokens = _estimated_input_tokens(prompt)
     logger.info(
@@ -1067,6 +1234,12 @@ class OpenAIStage2Automator:
             attempt_count=attempt_count,
             retry_text=retry_text,
             stage2_cost=plan_text_cost,
+        )
+
+        _apply_structural_source_repair_and_hold(
+            result,
+            planning_brief=package["planning_brief"],
+            source=source,
         )
 
         # Structured-plan conversion is triggered by the canonical state-machine
