@@ -217,7 +217,8 @@ def test_unused_day_after_generation_stays_empty_when_recovery_rules_block_it():
     upgraded = _upgrade_unused_days_to_low_load_support(week, [], athlete_model)
 
     assert upgraded == []
-    assert week["intentionally_unused_days"][0]["day"] == "thursday"
+    assert week["intentionally_unused_days"][0]["role"] == "off_day"
+    assert week["intentionally_unused_days"][0]["low_aerobic_cap_skipped"] is True
 
 
 def test_weekly_role_map_roles_carry_countdown_labels_for_renderers():
