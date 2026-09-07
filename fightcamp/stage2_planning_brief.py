@@ -392,7 +392,10 @@ def _conditioning_priority_without_strength_power(training_context: TrainingCont
     weaknesses = _normalize_limiter_tokens(clean_list(training_context.weaknesses))
     selected = goals | weaknesses
     conditioning_tokens = {"conditioning", "conditioning_endurance", "endurance", "gas_tank", "work_capacity", "aerobic"}
-    strength_power_tokens = {"strength", "power", "explosive", "explosive_power", "speed", "strength_power", "s_c"}
+    # Match the intake's actual Strength and Power selections only. Speed and
+    # trunk strength have their own dedicated planning paths and must not block
+    # the narrow one-session conditioning priority shift.
+    strength_power_tokens = {"strength", "power"}
     return bool(selected & conditioning_tokens) and not bool(selected & strength_power_tokens)
 
 

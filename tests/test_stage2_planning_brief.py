@@ -1,6 +1,8 @@
 ﻿from datetime import datetime
 from types import SimpleNamespace
 
+import pytest
+
 import fightcamp.stage2_planning_brief as stage2_planning_brief_module
 from fightcamp.stage2_payload import (
     _apply_high_fatigue_week_compression,
@@ -326,6 +328,27 @@ def test_strength_or_power_priority_blocks_conditioning_ratio_shift():
 
     assert briefs["GPP"]["session_counts"] == {"strength": 2, "conditioning": 2, "recovery": 1}
     assert briefs["SPP"]["session_counts"] == {"strength": 2, "conditioning": 2, "recovery": 1}
+
+
+@pytest.mark.parametrize(("goals", "weaknesses"), [
+    (["conditioning", "speed"], ["gas_tank"]),
+    (["conditioning"], ["gas_tank", "trunk_strength"]),
+])
+def test_speed_and_trunk_strength_do_not_block_conditioning_priority_shift(goals, weaknesses):
+    training_context = _conditioning_shift_context(
+        42,
+        key_goals=goals,
+        weaknesses=weaknesses,
+        phase_weeks={"GPP": 1, "SPP": 1, "TAPER": 0, "days": {"GPP": 0, "SPP": 0, "TAPER": 0}},
+    )
+
+    briefs = stage2_planning_brief_module._build_phase_briefs(
+        training_context,
+        training_context.phase_weeks,
+    )
+
+    assert briefs["GPP"]["session_counts"] == {"strength": 1, "conditioning": 3, "recovery": 1}
+    assert briefs["SPP"]["session_counts"] == {"strength": 1, "conditioning": 3, "recovery": 1}
 
 
 def test_conditioning_priority_shift_allowed_for_clean_d18_pressure_floor():

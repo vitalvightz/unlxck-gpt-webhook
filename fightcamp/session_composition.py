@@ -19,6 +19,7 @@ from typing import Any
 
 from .normalization import normalize_fatigue_level
 from .planner_context import get_planner_athlete_model
+from .late_fight_phase_eligibility import scheduled_phase_for_role
 from .strength_session_quality import classify_strength_item
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 
@@ -292,6 +293,7 @@ def _candidate_records(slots: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "name": assignment["name"],
                 "families": families,
                 "support_only": bool(profile.get("support_only")),
+                "core_balance_support": bool(profile.get("core_balance_support")),
                 "sort_key": _slot_priority(slot, index),
                 "original_index": index,
             }
@@ -324,6 +326,7 @@ def _select_bounded_records(
     role_key: str,
     cap: int,
     pressure: int,
+    preserve_trunk_support: bool = False,
 ) -> tuple[list[dict[str, Any]], dict[str, str]]:
     family_limit = 2 if pressure == 0 else 1
     selected: list[dict[str, Any]] = []
@@ -355,6 +358,22 @@ def _select_bounded_records(
         unsatisfied_groups = [
             group for group in unsatisfied_groups if not (record["families"] & group)
         ]
+
+    # An explicitly selected trunk-strength limiter belongs inside the retained
+    # maintenance session when the conditioning priority shift leaves only one
+    # strength slot. Keep it inside the existing cap and bank membership.
+    if preserve_trunk_support and len(selected) < cap:
+        trunk_options = [
+            record
+            for record in records
+            if record not in selected
+            and record.get("core_balance_support")
+            and not _would_exceed_family_limit(
+                record["families"], family_counts, family_limit
+            )
+        ]
+        if trunk_options:
+            _add_record(trunk_options[0], selected, family_counts)
 
     # Preserve Stage 1 ranking as the authority. Support/accessory status is only
     # a drop preference when the session actually has to shrink; it is never a
@@ -401,6 +420,21 @@ def _pressure_context_from_map(weekly_role_map: dict[str, Any]) -> dict[str, Any
     if pressure not in {0, 1, 2, 3}:
         return None
     return dict(state)
+
+
+def _trunk_strength_selected(athlete_model: dict[str, Any] | None) -> bool:
+    model = athlete_model if isinstance(athlete_model, dict) else {}
+    values = [
+        *(model.get("key_goals") or []),
+        *(model.get("goals") or []),
+        *(model.get("weaknesses") or []),
+        *(model.get("weak_areas") or []),
+    ]
+    return any(
+        re.sub(r"[^a-z0-9]+", "_", str(value).strip().lower()).strip("_")
+        == "trunk_strength"
+        for value in values
+    )
 
 
 def _role_days_until_fight(role: dict[str, Any]) -> int | None:
@@ -468,6 +502,7 @@ def compose_normal_strength_assignments(
     )
     if pressure_context is None:
         pressure_context = _composition_context_from_model(None)
+    trunk_strength_selected = _trunk_strength_selected(athlete_model)
 
     weekly_role_map["strength_composition_context"] = dict(pressure_context)
 
@@ -530,6 +565,7 @@ def compose_normal_strength_assignments(
                 role_key=role_key,
                 cap=effective_cap,
                 pressure=pressure,
+                preserve_trunk_support=trunk_strength_selected,
             )
 
             assignments: list[dict[str, Any]] = []
@@ -576,6 +612,146 @@ def _conditioning_is_high_load(option: dict[str, Any]) -> bool:
     return bool((rpe is not None and rpe >= 8) or re.search(r"\b(?:high|max|maximal|all[- ]out)\b", load_tokens))
 
 
+def _conditioning_rounds(option: dict[str, Any]) -> int | None:
+    metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else {}
+    rounds = _float_or_none(metadata.get("rounds"))
+    if rounds is None or rounds <= 0 or not rounds.is_integer():
+        return None
+    return int(rounds)
+
+
+def _conditioning_prescription(option: dict[str, Any], *, rounds: int | None = None) -> str:
+    metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else {}
+    if rounds is not None:
+        work_sec = _float_or_none(metadata.get("work_sec"))
+        if work_sec is not None and work_sec > 0:
+            work_text = f"{work_sec:g} sec work"
+            parts = [f"{rounds} x {work_text}"]
+            rest_sec = _float_or_none(metadata.get("rest_sec"))
+            if rest_sec is not None and rest_sec > 0:
+                parts.append(f"{rest_sec:g} sec rest")
+            rpe = _float_or_none(metadata.get("rpe"))
+            if rpe is not None:
+                parts.append(f"RPE {rpe:g}")
+            return "; ".join(parts)
+    base = str(option.get("prescription") or metadata.get("timing") or metadata.get("duration") or "").strip()
+    if base:
+        return base
+    total_minutes = _float_or_none(metadata.get("total_minutes"))
+    return f"{total_minutes:g} min" if total_minutes is not None and total_minutes > 0 else ""
+
+
+def _conditioning_phase_workload_envelope(
+    *, phase: str, system: str
+) -> tuple[float | None, float | None]:
+    """Use the existing rendered phase dose guidance as the composition envelope.
+
+    These are not new global targets: they are the lower active-work edge and
+    elapsed cap already stated by ``render_conditioning_block`` for GPP/SPP.
+    A bank prescription, injury/recovery filtering, and role-level safety
+    remain authoritative; this only prevents a short first drill from defining
+    the whole multi-movement session.
+    """
+    phase = str(phase or "").upper()
+    if system == "glycolytic" and phase == "GPP":
+        # Existing GPP combat-pressure floor: 6-8 x 60 sec hard.
+        return 6 * 60.0, 30.0
+    if phase == "GPP":
+        # 3 x 3 min is the low edge of the existing GPP 3-5 x 3-5 min template.
+        return 9 * 60.0, 30.0
+    if phase == "SPP":
+        # 4 x 2 min is the low edge of the existing SPP 4-6 x 2-5 min template.
+        return 8 * 60.0, 25.0
+    return None, None
+
+
+def _conditioning_partition_high_load(
+    selected: list[tuple[dict[str, Any], dict[str, Any], bool]],
+    *,
+    phase: str,
+    system: str,
+) -> tuple[
+    list[tuple[dict[str, Any], dict[str, Any], bool]],
+    dict[str, int],
+    str | None,
+    dict[str, float | None],
+]:
+    """Partition one phase-appropriate workload across known high-load drills."""
+    high_load = [item for item in selected if _conditioning_is_high_load(item[1])]
+    if len(high_load) < 2:
+        return selected, {}, None, {}
+
+    dose_data: list[tuple[tuple[dict[str, Any], dict[str, Any], bool], float, float, int]] = []
+    for item in high_load:
+        metadata = item[1].get("selection_metadata") if isinstance(item[1].get("selection_metadata"), dict) else {}
+        work_sec = _float_or_none(metadata.get("work_sec"))
+        rest_sec = _float_or_none(metadata.get("rest_sec"))
+        rounds = _conditioning_rounds(item[1])
+        if (
+            work_sec is None
+            or work_sec <= 0
+            or rest_sec is None
+            or rest_sec < 0
+            or rounds is None
+        ):
+            retained = [candidate for candidate in selected if candidate not in high_load]
+            return retained, {}, "high_load_dose_unknown", {}
+        dose_data.append((item, work_sec, rest_sec, rounds))
+
+    target_active_work, elapsed_cap_minutes = _conditioning_phase_workload_envelope(
+        phase=phase, system=system
+    )
+    if target_active_work is None or elapsed_cap_minutes is None:
+        return selected, {}, None, {}
+
+    elapsed_cap_seconds = elapsed_cap_minutes * 60.0
+    minimum_required = sum(work_sec for _, work_sec, _, _ in dose_data)
+    minimum_elapsed = sum(work_sec for _, work_sec, _, _ in dose_data)
+    if minimum_required > target_active_work or minimum_elapsed > elapsed_cap_seconds:
+        retained = [candidate for candidate in selected if candidate not in high_load]
+        return retained, {}, "high_load_dose_underfilled", {
+            "target_active_work_seconds": target_active_work,
+            "elapsed_cap_seconds": elapsed_cap_seconds,
+        }
+
+    allocated = {str(item[1].get("name") or ""): 1 for item, _, _, _ in dose_data}
+    active_work = minimum_required
+    elapsed_work = minimum_elapsed
+    while True:
+        progressed = False
+        for item, work_sec, rest_sec, max_rounds in dose_data:
+            name = str(item[1].get("name") or "")
+            additional_elapsed = work_sec + rest_sec
+            if (
+                allocated[name] >= max_rounds
+                or active_work + work_sec > target_active_work
+                or elapsed_work + additional_elapsed > elapsed_cap_seconds
+            ):
+                continue
+            allocated[name] += 1
+            active_work += work_sec
+            elapsed_work += additional_elapsed
+            progressed = True
+        if not progressed:
+            break
+    underfill_reason = None if active_work >= target_active_work else "phase_system_dose_capacity_limited"
+    return selected, allocated, underfill_reason, {
+        "target_active_work_seconds": target_active_work,
+        "allocated_active_work_seconds": active_work,
+        "elapsed_cap_seconds": elapsed_cap_seconds,
+        "allocated_elapsed_seconds": elapsed_work,
+    }
+
+
+def _conditioning_phase_for_role(week: dict[str, Any], role: dict[str, Any]) -> str:
+    athlete_model = get_planner_athlete_model() or {}
+    return scheduled_phase_for_role(
+        role,
+        athlete_model=athlete_model,
+        spec_phase=week.get("phase"),
+    ) or str(week.get("phase") or "").strip().upper()
+
+
 def _conditioning_role_is_hard_spar_adjacent(week: dict[str, Any], role: dict[str, Any]) -> bool:
     weekday_order = {
         "monday": 0,
@@ -616,10 +792,6 @@ def compose_normal_conditioning_assignments(
     for week in weekly_role_map.get("weeks", []) or []:
         if not isinstance(week, dict):
             continue
-        phase = str(week.get("phase") or "").strip().upper()
-        pool = candidate_pools.get(phase) if isinstance(candidate_pools, dict) else None
-        slots = pool.get("conditioning_slots", []) if isinstance(pool, dict) else []
-
         for role in week.get("session_roles", []) or []:
             if (
                 not isinstance(role, dict)
@@ -627,6 +799,10 @@ def compose_normal_conditioning_assignments(
                 or str(role.get("category") or "").strip().lower() != "conditioning"
             ):
                 continue
+
+            phase = _conditioning_phase_for_role(week, role)
+            pool = candidate_pools.get(phase) if isinstance(candidate_pools, dict) else None
+            slots = pool.get("conditioning_slots", []) if isinstance(pool, dict) else []
 
             preferred_system = str(role.get("preferred_system") or "").strip().lower()
             matching_slots = [
@@ -657,47 +833,57 @@ def compose_normal_conditioning_assignments(
                 continue
 
             adjacent_hard_spar = _conditioning_role_is_hard_spar_adjacent(week, role)
-            primary_duration = _conditioning_duration_minutes(options[0][1])
-            long_aerobic = preferred_system == "aerobic" and primary_duration is not None and primary_duration >= 25
-            minimum = 1 if adjacent_hard_spar else (2 if long_aerobic else 3)
-
             selected: list[tuple[dict[str, Any], dict[str, Any], bool]] = []
             total_minutes = 0.0
-            high_load_count = 0
             for slot, option, is_selected in options:
                 duration = _conditioning_duration_minutes(option)
-                high_load = _conditioning_is_high_load(option)
                 if selected:
-                    if high_load and high_load_count:
-                        continue
                     if duration is not None and total_minutes + duration > 45:
                         continue
                 selected.append((slot, option, is_selected))
                 if duration is not None:
                     total_minutes += duration
-                if high_load:
-                    high_load_count += 1
-                if len(selected) >= minimum:
+                if adjacent_hard_spar:
                     break
+                if preferred_system == "aerobic" and len(selected) >= 2 and total_minutes >= 25:
+                    break
+                if len(selected) >= 3:
+                    break
+
+            selected, high_load_rounds, underfill_reason, high_load_budget = _conditioning_partition_high_load(
+                selected,
+                phase=phase,
+                system=preferred_system,
+            )
+            long_aerobic = preferred_system == "aerobic" and total_minutes >= 25
+            minimum = None if adjacent_hard_spar else (2 if long_aerobic else 3)
 
             assignments = []
             for slot, option, is_selected in selected:
+                name = str(option.get("name") or "")
+                allocated_rounds = high_load_rounds.get(name)
                 assignments.append(
                     {
                         "slot_id": slot.get("slot_id"),
-                        "name": option.get("name"),
+                        "name": name,
                         "source_phase": phase,
                         "slot_group": "conditioning_slots",
                         "selected_option": is_selected,
+                        "base_prescription": _conditioning_prescription(option),
+                        "effective_prescription": _conditioning_prescription(option, rounds=allocated_rounds),
+                        "effective_rounds": allocated_rounds,
                     }
                 )
             role["selected_exercise_assignments"] = assignments
             role["conditioning_composition_policy"] = {
-                "minimum_exercise_count": None if adjacent_hard_spar else minimum,
+                "minimum_exercise_count": minimum,
                 "selected_count": len(assignments),
                 "long_aerobic_session": long_aerobic,
                 "hard_sparring_adjacent": adjacent_hard_spar,
-                "workload_limited": len(assignments) < minimum,
+                "high_load_workload_envelope": high_load_budget,
+                "partitioned_high_load_rounds": high_load_rounds,
+                "underfill_reason": underfill_reason,
+                "workload_limited": bool(minimum is not None and len(assignments) < minimum),
             }
 
     return weekly_role_map

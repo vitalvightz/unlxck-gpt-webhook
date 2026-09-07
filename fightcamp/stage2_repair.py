@@ -21,7 +21,7 @@ REPAIR RULES:
 7. Remove raw HTML, code fences, and any non-athlete formatting artifacts.
 8. If an anchor session drifted into support work, restore a selected anchor when the role has selected_exercise_assignments. Only roles without selected_exercise_assignments may choose the strongest compliant anchor option available before accessories.
 9. In non-taper weeks, preserve a selected externally loaded high-transfer anchor when legal. Only roles without selected_exercise_assignments may restore or substitute a different externally loaded anchor; if none exists, label the week injury-limited and keep the safest force-preserving option already authorised by the planning brief.
-10. Resolve conditioning choices into one primary prescription and at most one explicit fallback without changing closed session membership.
+10. For a role with selected_exercise_assignments, render every selected conditioning exercise and its effective prescription. Do not collapse selected membership into one primary exercise or a fallback. Only roles without closed membership may resolve an open conditioning choice to one primary prescription and at most one explicit fallback.
 11. Collapse menu-like session templates into one final prescription whenever the athlete context already resolves the choice.
 12. Keep all primary drills, support drills, and fallbacks equipment-valid for the athlete profile. Equipment invalidity never authorises a substitute for a role with selected_exercise_assignments; remove/hold the invalid selected item instead.
 13. Keep every active week present and structurally complete, especially the late-camp weeks.
@@ -416,6 +416,22 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                 "effective_max_reps": finding.get("effective_max_reps"),
                 "effective_rpe_cap": finding.get("effective_rpe_cap"),
                 "effective_prescription": finding.get("effective_prescription"),
+            }
+        )
+
+    for finding in [
+        *(validator_report.get("errors", []) or []),
+        *(validator_report.get("blocking_warnings", []) or []),
+    ]:
+        if not isinstance(finding, dict) or str(finding.get("code") or "") != "missing_selected_conditioning_assignment":
+            continue
+        quality_fixes.append(
+            {
+                "action": "render_selected_conditioning_assignment",
+                "scheduled_d_day": finding.get("scheduled_d_day"),
+                "exercise": finding.get("exercise"),
+                "effective_prescription": finding.get("effective_prescription"),
+                "replacement_allowed": False,
             }
         )
 

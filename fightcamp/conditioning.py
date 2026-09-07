@@ -724,6 +724,9 @@ def _evaluate_conditioning_late_window(
     system: str,
     window: str | None,
     bridge_rules: dict | None,
+    phase: str = "",
+    conditioning_focus_requested: bool = False,
+    hard_sparring_declared: bool = False,
     source: str = "conditioning_bank.json",
 ) -> dict:
     if not is_active_late_selector_window(window):
@@ -792,6 +795,16 @@ def _evaluate_conditioning_late_window(
     generic_glycolytic = _conditioning_generic_glycolytic(system, tags) or (
         system == "glycolytic" and structured["high_lactate"]
     )
+    # D-21 -> D-14 can still be GPP/SPP. When conditioning is an explicit
+    # limiter and no hard sparring was declared, retain developmental candidates
+    # for the later calendar/composition owner to dose around real contact.
+    # TAPER, D-13 inward, and non-lactate safety constraints remain unchanged.
+    developmental_high_load_allowed = bool(
+        window == D21_TO_D14
+        and str(phase or "").strip().upper() in {"GPP", "SPP"}
+        and conditioning_focus_requested
+        and not hard_sparring_declared
+    )
     low_noise_sharpness = (
         system == "alactic"
         and not dense
@@ -846,13 +859,13 @@ def _evaluate_conditioning_late_window(
         adjustment += 0.35
         reason_codes.append("late_conditioning_boost_freshness")
 
-    if dense and multi_round:
+    if dense and multi_round and not developmental_high_load_allowed:
         adjustment -= 0.7 * severity
         reason_codes.append("late_conditioning_penalty_dense_multi_round")
-    if fight_pace:
+    if fight_pace and not developmental_high_load_allowed:
         adjustment -= 0.9 * severity
         reason_codes.append("late_conditioning_penalty_fight_pace_leak")
-    if structured["high_lactate"]:
+    if structured["high_lactate"] and not developmental_high_load_allowed:
         adjustment -= 0.9 * severity
         reason_codes.append("late_conditioning_penalty_high_lactate_metadata")
     if structured["high_impact"] or "high_impact_lower" in tags or ("mech_landing_impact" in tags and system == "alactic"):
@@ -864,15 +877,15 @@ def _evaluate_conditioning_late_window(
     if structured["freshness"]:
         adjustment += 0.25
         reason_codes.append("late_conditioning_boost_structured_freshness")
-    if developmental_taper:
+    if developmental_taper and not developmental_high_load_allowed:
         adjustment -= 0.8 * severity
         reason_codes.append("late_conditioning_penalty_developmental_taper")
     bridge_allows_glycolytic = bool((bridge_rules or {}).get("glycolytic_touch_max", 0) > 0)
-    if generic_glycolytic:
+    if generic_glycolytic and not developmental_high_load_allowed:
         adjustment -= (0.8 if bridge_allows_glycolytic and window == "d21_to_d14" else 1.5) * severity
         reason_codes.append("late_conditioning_penalty_generic_glycolytic")
 
-    if generic_glycolytic and not bridge_allows_glycolytic:
+    if generic_glycolytic and not bridge_allows_glycolytic and not developmental_high_load_allowed:
         block_codes.append("late_conditioning_block_bridge_glycolytic_cap")
 
     if late_windows:
@@ -2530,6 +2543,10 @@ def generate_conditioning_block(flags):
     technical = flags.get("style_technical") or []
     goals = flags.get("key_goals") or []
     weaknesses = flags.get("weaknesses") or []
+    conditioning_focus_requested = bool(
+        _normalize_focus_tokens([*goals, *weaknesses]) & _GAS_TANK_NORMALIZED_SIGNAL_TERMS
+    )
+    hard_sparring_declared = bool(clean_list(flags.get("hard_sparring_days") or []))
     priority_profile = build_priority_profile(
         SimpleNamespace(
             key_goals=goals,
@@ -2604,6 +2621,9 @@ def generate_conditioning_block(flags):
                 system=system,
                 window=late_window,
                 bridge_rules=bridge_rules,
+                phase=phase,
+                conditioning_focus_requested=conditioning_focus_requested,
+                hard_sparring_declared=hard_sparring_declared,
                 source=source,
             )
         return _late_eval_cache[key]

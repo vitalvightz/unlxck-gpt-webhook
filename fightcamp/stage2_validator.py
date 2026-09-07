@@ -346,7 +346,7 @@ _LATE_FIGHT_ANNOTATION_LABEL = re.compile(
     r"outputs?|results?|outcomes?|"
     r"notes?|coach(?:ing)?\s+(?:note|cue)s?|coach\s+calls?|cues?|"
     r"duration|prescriptions?|intensity|"
-    r"stop\s+rule|"
+    r"stop\s+rule|easier|"
     # "progression / regression / stop" style labels in any order or combination
     # (e.g. "Progression/regression/stop:", "Regression/stop:", "Stop/regress -").
     r"(?:progress(?:ion)s?|regress(?:ion)s?|stop)"
@@ -3393,6 +3393,70 @@ def _late_camp_effective_prescription_warnings(
     return warnings
 
 
+def _scheduled_role_d_day(week: dict[str, Any], role: dict[str, Any]) -> int | None:
+    for key in ("scheduled_countdown_label", "countdown_label"):
+        match = re.search(r"D-(\d+)", str(role.get(key) or ""), re.IGNORECASE)
+        if match:
+            return int(match.group(1))
+    scheduled_day = str(role.get("scheduled_day_hint") or "").strip().lower()
+    for calendar_day in week.get("calendar_days") or []:
+        if str(calendar_day.get("weekday") or "").strip().lower() != scheduled_day:
+            continue
+        try:
+            return int(calendar_day.get("d_day"))
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def _missing_selected_conditioning_assignment_warnings(
+    planning_brief: dict,
+    final_plan_text: str,
+) -> list[dict]:
+    """Require every closed conditioning assignment to appear on its planned D-day."""
+    blocks_by_day: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    for block in _countdown_blocks(final_plan_text):
+        blocks_by_day[int(block["day"])].append(block)
+    if not blocks_by_day:
+        return []
+
+    warnings: list[dict] = []
+    for week in (planning_brief.get("weekly_role_map") or {}).get("weeks") or []:
+        if not isinstance(week, dict):
+            continue
+        for role in week.get("session_roles") or []:
+            if not isinstance(role, dict) or str(role.get("category") or "").lower() != "conditioning":
+                continue
+            assignments = [
+                assignment
+                for assignment in (role.get("selected_exercise_assignments") or [])
+                if isinstance(assignment, dict) and str(assignment.get("name") or "").strip()
+            ]
+            if not assignments:
+                continue
+            d_day = _scheduled_role_d_day(week, role)
+            if d_day is None:
+                continue
+            rendered_lines = [line for block in blocks_by_day.get(d_day, []) for line in block.get("lines") or []]
+            for assignment in assignments:
+                name = str(assignment["name"]).strip()
+                if any(_line_has_exercise(line, name) for line in rendered_lines):
+                    continue
+                warnings.append(
+                    {
+                        "code": "missing_selected_conditioning_assignment",
+                        "message": f"D-{d_day} is missing selected conditioning exercise '{name}'.",
+                        "severity": "blocker",
+                        "confidence": "high",
+                        "scheduled_d_day": d_day,
+                        "exercise": name,
+                        "role_key": role.get("role_key"),
+                        "effective_prescription": assignment.get("effective_prescription"),
+                    }
+                )
+    return warnings
+
+
 def _goal_witness_rendered_doses(lines: list[str], witness: dict) -> list[str]:
     """Bind wrapped dose fields to this activity, never to the next exercise."""
     doses = []
@@ -3563,6 +3627,10 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         planning_brief, final_plan_text
     )
     errors.extend(_issue(**item) for item in late_camp_effective_prescription_warnings)
+    missing_selected_conditioning_assignments = _missing_selected_conditioning_assignment_warnings(
+        planning_brief, final_plan_text
+    )
+    errors.extend(_issue(**item) for item in missing_selected_conditioning_assignments)
 
     missing_required_elements = _find_missing_required_elements(planning_brief, final_plan_text)
     missing_phase_sections = _find_missing_phase_sections(planning_brief, phase_sections)
