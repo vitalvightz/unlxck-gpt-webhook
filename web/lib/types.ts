@@ -422,6 +422,9 @@ export type StructuredDay = {
   day_type?: string | null;
   countdown_label?: string | null;
   phase_label?: string | null;
+  planning_week_index?: number | null;
+  planning_week_phase?: string | null;
+  planning_day_role_keys?: string[] | null;
   today_card?: StructuredTodayCard | null;
   sessions?: StructuredSession[] | null;
 };
@@ -435,6 +438,9 @@ export type StructuredWeek = {
   end_date?: string | null;
   countdown_start?: string | null;
   countdown_end?: string | null;
+  display_week_kind?: string | null;
+  planning_week_indices?: number[] | null;
+  phase_coverage?: string[] | null;
   days?: StructuredDay[] | null;
 };
 

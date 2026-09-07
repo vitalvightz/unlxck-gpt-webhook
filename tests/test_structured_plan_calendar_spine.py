@@ -183,6 +183,35 @@ def _role_map(*, days_until_fight: int, sport: str = "mma", fight_date: str = FI
     )
 
 
+def _four_week_phase_boundary_role_map() -> dict:
+    phases = ["GPP", "SPP", "SPP", "TAPER"]
+    weeks: list[dict] = []
+    for idx, phase in enumerate(phases, start=1):
+        start = 28 - ((idx - 1) * 7)
+        end = max(start - 6, 0)
+        days = [
+            {"date": _iso(d_day), "weekday": _weekday(d_day), "d_day": d_day}
+            for d_day in range(start, end - 1, -1)
+        ]
+        role_d = start
+        weeks.append(
+            {
+                "week_index": idx,
+                "phase": phase,
+                "calendar_days": days,
+                "session_roles": [
+                    {
+                        "role_key": f"{phase.lower()}_role_{idx}",
+                        "category": "strength",
+                        "scheduled_day_hint": _weekday(role_d),
+                        "scheduled_countdown_label": f"D-{role_d}",
+                    }
+                ],
+            }
+        )
+    return {"weeks": weeks}
+
+
 def _brief(*, days_until_fight: int = 21, sport: str = "mma", fight_date: str = FIGHT_DATE) -> dict:
     return {
         "weekly_role_map": _role_map(days_until_fight=days_until_fight, sport=sport, fight_date=fight_date),
@@ -420,6 +449,33 @@ def test_invariant_holds_for_boxing_too():
     validate_structured_plan(out)
     _assert_mon_sun(out)
     _assert_continuous_to_fight(out, 28)
+
+
+def test_four_planning_weeks_can_render_as_five_calendar_weeks_without_rephasing_days():
+    # Four Thu-Wed planning weeks can occupy five Mon-Sun tabs. The display week
+    # may carry a majority phase, but individual days must keep Stage 1 ownership.
+    brief = {
+        "weekly_role_map": _four_week_phase_boundary_role_map(),
+        "fight_date": FIGHT_DATE,
+        "days_until_fight": 28,
+    }
+    mega = [_session_day(d_day, phase="TAPER") for d_day in [28, 21, 14, 7, 0]]
+
+    out = reconcile_calendar_spine(_plan([_week(mega, index=1, phase="TAPER")]), brief)
+
+    validate_structured_plan(out)
+    _assert_mon_sun(out)
+    _assert_continuous_to_fight(out, 28)
+    assert len(out["weeks"]) == 5
+    by_dday = {int(day["countdown_label"][2:]): day for week in out["weeks"] for day in week["days"]}
+    assert by_dday[21]["phase_label"] == "SPP"
+    assert by_dday[21]["planning_week_phase"] == "SPP"
+    assert by_dday[21]["planning_week_index"] == 2
+    assert by_dday[21]["planning_day_role_keys"] == ["spp_role_2"]
+    assert by_dday[22]["phase_label"] == "GPP"
+    crossing_week = next(week for week in out["weeks"] if week["countdown_start"] == "D-24")
+    assert crossing_week["phase_coverage"] == ["GPP", "SPP"]
+    assert crossing_week["planning_week_indices"] == [1, 2]
 
 
 def test_multiple_sparse_aligned_weeks_are_each_completed():

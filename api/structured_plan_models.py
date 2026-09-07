@@ -361,6 +361,12 @@ class Day(BaseModel):
     day_type: DayType
     countdown_label: str
     phase_label: PhaseLabel
+    # Stage 1 structural ownership. ``phase_label`` remains the athlete-facing
+    # day phase; these fields preserve the planning block that assigned the day
+    # when Mon-Sun display weeks straddle a phase boundary.
+    planning_week_index: int | None = None
+    planning_week_phase: PhaseLabel | None = None
+    planning_day_role_keys: list[str] = Field(default_factory=list)
     today_card: TodayCard
     sessions: list[Session] = Field(default_factory=list)
 
@@ -392,6 +398,11 @@ class Week(BaseModel):
     end_date: str
     countdown_start: str | None = None
     countdown_end: str | None = None
+    # Display weeks are Mon-Sun groups. They may contain days from more than one
+    # Stage 1 planning week/phase, so keep that ownership separate.
+    display_week_kind: str | None = None
+    planning_week_indices: list[int] = Field(default_factory=list)
+    phase_coverage: list[str] = Field(default_factory=list)
     load_focus: LoadFocus
     progression: Progression
     days: list[Day] = Field(default_factory=list)

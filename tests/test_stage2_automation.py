@@ -15,6 +15,13 @@ from fightcamp.stage2_policy import (
 )
 from support import FakeOpenAIClient as FakeClient
 
+STRUCTURAL_INTEGRITY_CODES = {
+    "phase_section_missing",
+    "missing_week_session_role",
+    "late_camp_session_incomplete",
+    "late_fight_missing_required_countdown_session",
+}
+
 
 @pytest.fixture(autouse=True)
 def _structured_plan_off(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -368,7 +375,7 @@ def test_first_pass_low_risk_quality_codes_publish_with_flags(
     assert result["stage2_validator_report"]["is_publishable"] is True
 
 
-@pytest.mark.parametrize("code", sorted(ADMIN_REVIEW_BLOCKING_CODES))
+@pytest.mark.parametrize("code", sorted(ADMIN_REVIEW_BLOCKING_CODES - STRUCTURAL_INTEGRITY_CODES))
 def test_first_pass_context_or_programme_codes_publish_with_flags(
     monkeypatch: pytest.MonkeyPatch,
     code: str,
@@ -403,6 +410,47 @@ def test_first_pass_context_or_programme_codes_publish_with_flags(
     assert report["is_athlete_releasable"] is True
     assert report["is_publishable"] is True
     assert report["admin_review_blocking_flags"] == [finding]
+
+
+@pytest.mark.parametrize("code", sorted(ADMIN_REVIEW_BLOCKING_CODES & STRUCTURAL_INTEGRITY_CODES))
+def test_first_pass_structural_integrity_codes_hold_after_unresolved_repair(
+    monkeypatch: pytest.MonkeyPatch,
+    code: str,
+) -> None:
+    finding = {"code": code, "phase": "SPP"}
+    monkeypatch.setattr(
+        stage2_module,
+        "review_stage2_output",
+        lambda **_: {
+            "status": "PASS",
+            "needs_retry": False,
+            "validator_report": {
+                "errors": [],
+                "warnings": [finding],
+                "review_flags": [finding],
+                "review_flag_count": 1,
+                "release_decision": "publish_with_flags",
+                "is_athlete_releasable": True,
+                "is_publishable": True,
+            },
+        },
+    )
+    automator = OpenAIStage2Automator(
+        client=FakeClient([_response("# structurally incomplete plan")]),
+        model="test-model",
+    )
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    assert result["status"] == "review_required"
+    assert result["plan_text"] == ""
+    assert result["final_plan_text"] == "# structurally incomplete plan"
+    assert result["stage2_status"] == "stage2_failed"
+    report = result["stage2_validator_report"]
+    assert report["release_decision"] == "hold"
+    assert report["is_athlete_releasable"] is False
+    assert report["is_publishable"] is False
+    assert report["errors"][-1]["code"] == "structural_integrity_failure"
 
 
 def test_first_pass_mixed_quality_and_blocking_codes_publish_with_flags(

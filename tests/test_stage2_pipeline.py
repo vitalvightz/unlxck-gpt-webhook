@@ -1,4 +1,10 @@
-from fightcamp.stage2_pipeline import build_stage2_package, build_stage2_retry, review_stage2_output
+from fightcamp.stage2_pipeline import (
+    apply_structural_integrity_hold,
+    build_stage2_package,
+    build_stage2_retry,
+    repair_stage2_structural_text,
+    review_stage2_output,
+)
 
 
 def _stage1_result_fixture() -> dict:
@@ -56,6 +62,135 @@ def _stage1_result_fixture() -> dict:
         "plan_text": "draft plan",
         "coach_notes": "notes",
     }
+
+
+def _structural_brief_fixture() -> dict:
+    return {
+        "athlete_model": {"sport": "boxing"},
+        "restrictions": [],
+        "phase_strategy": {},
+        "candidate_pools": {},
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "week_index": 1,
+                    "phase": "GPP",
+                    "calendar_days": [
+                        {"weekday": "Mon", "d_day": 28},
+                        {"weekday": "Tue", "d_day": 27},
+                    ],
+                    "session_roles": [
+                        {
+                            "role_key": "strength_day",
+                            "category": "strength",
+                            "athlete_facing_label": "Strength build",
+                            "scheduled_day_hint": "Mon",
+                            "scheduled_countdown_label": "D-28",
+                            "display_text": "- Landmine Press - 4x5",
+                        },
+                        {
+                            "role_key": "hard_sparring_day",
+                            "category": "sparring",
+                            "athlete_facing_label": "Hard sparring",
+                            "scheduled_day_hint": "Tue",
+                            "scheduled_countdown_label": "D-27",
+                            "coach_owned": True,
+                        },
+                    ],
+                },
+                {
+                    "week_index": 2,
+                    "phase": "SPP",
+                    "calendar_days": [
+                        {"weekday": "Mon", "d_day": 21},
+                        {"weekday": "Tue", "d_day": 20},
+                    ],
+                    "session_roles": [
+                        {
+                            "role_key": "conditioning_day",
+                            "category": "conditioning",
+                            "athlete_facing_label": "Alactic conditioning",
+                            "scheduled_day_hint": "Mon",
+                            "scheduled_countdown_label": "D-21",
+                            "selected_exercise_assignments": [
+                                {
+                                    "name": "Air Bike Sprint",
+                                    "effective_prescription": {"display": "6 x 6 sec / 90 sec easy"},
+                                }
+                            ],
+                        }
+                    ],
+                },
+            ]
+        },
+    }
+
+
+def test_repair_stage2_structural_text_appends_missing_week_and_roles():
+    brief = _structural_brief_fixture()
+    report = {
+        "blocking_warnings": [
+            {"code": "phase_section_missing", "phase": "GPP"},
+            {"code": "missing_week_session_role", "phase": "SPP", "week_index": 2, "role_key": "conditioning_day"},
+        ],
+        "review_flags": [],
+        "errors": [],
+    }
+
+    repaired = repair_stage2_structural_text(
+        planning_brief=brief,
+        final_plan_text="## PHASE 2: SPP\n### Week 2\n",
+        validator_report=report,
+    )
+
+    assert "## GPP — Week 1" in repaired["text"]
+    assert "### Mon (D-28) — Strength build" in repaired["text"]
+    assert "- Landmine Press - 4x5" in repaired["text"]
+    assert "### Tue (D-27) — Hard sparring" in repaired["text"]
+    assert "## SPP — Week 2" in repaired["text"]
+    assert "Air Bike Sprint" in repaired["text"]
+    assert repaired["unresolved"] == []
+
+
+def test_structural_integrity_hold_blocks_unresolved_missing_role_flags():
+    report = {
+        "release_decision": "publish_with_flags",
+        "is_athlete_releasable": True,
+        "is_publishable": True,
+        "errors": [],
+        "blocking_warnings": [],
+        "review_flags": [
+            {"code": "missing_week_session_role", "phase": "SPP", "week_index": 4, "role_key": "recovery_day"}
+        ],
+    }
+
+    held = apply_structural_integrity_hold(report)
+
+    assert held["release_decision"] == "hold"
+    assert held["is_athlete_releasable"] is False
+    assert held["is_publishable"] is False
+    assert held["errors"][-1]["code"] == "structural_integrity_failure"
+
+
+def test_repair_does_not_restore_safety_omitted_roles_outside_session_roles():
+    brief = _structural_brief_fixture()
+    brief["weekly_role_map"]["weeks"][0]["suppressed_roles"] = [
+        {"role_key": "max_effort_strength", "reason": "injury_restriction"}
+    ]
+    report = {
+        "blocking_warnings": [{"code": "phase_section_missing", "phase": "GPP"}],
+        "review_flags": [],
+        "errors": [],
+    }
+
+    repaired = repair_stage2_structural_text(
+        planning_brief=brief,
+        final_plan_text="## PHASE 2: SPP\n### Week 2\n- Air Bike Sprint\n",
+        validator_report=report,
+    )
+
+    assert "max_effort_strength" not in repaired["text"]
+    assert "Hard sparring" in repaired["text"]
 
 
 def test_build_stage2_package_returns_ready_bundle():

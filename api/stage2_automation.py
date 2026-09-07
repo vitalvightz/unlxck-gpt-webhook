@@ -7,8 +7,10 @@ from typing import Any, Protocol
 
 from fightcamp.goal_preservation import validate_goal_preservation
 from fightcamp.stage2_pipeline import (
+    apply_structural_integrity_hold,
     build_stage2_package,
     build_stage2_retry,
+    repair_stage2_structural_text,
     review_stage2_output,
 )
 from fightcamp.stage2_policy import (
@@ -621,6 +623,65 @@ def _apply_locked_tactical_watch_source_repair(
     )
 
 
+def _apply_structural_source_repair_and_hold(
+    result: dict[str, Any],
+    *,
+    planning_brief: Any,
+    source: str,
+) -> None:
+    """Repair known Stage 1 structural omissions before release/card conversion.
+
+    Missing phase/week/session-role structure is not an ordinary advisory flag:
+    the UI can otherwise present a complete-looking camp with the wrong owner.
+    Deterministic repair gets one chance to append known role-map structure. If
+    the repaired text still fails structural checks, hold the plan for admin
+    repair instead of publishing with flags.
+    """
+    if not isinstance(planning_brief, dict):
+        return
+    source_text = str(result.get("final_plan_text") or result.get("plan_text") or "")
+    report = result.get("stage2_validator_report")
+    report = report if isinstance(report, dict) else {}
+
+    repaired = repair_stage2_structural_text(
+        planning_brief=planning_brief,
+        final_plan_text=source_text,
+        validator_report=report,
+    )
+    repaired_text = str(repaired.get("text") or source_text)
+    if repaired_text != source_text:
+        try:
+            review = review_stage2_output(
+                planning_brief=planning_brief,
+                final_plan_text=repaired_text,
+            )
+            report = review.get("validator_report")
+            if not isinstance(report, dict):
+                return
+            result["final_plan_text"] = repaired_text
+            if str(result.get("plan_text") or "").strip():
+                result["plan_text"] = repaired_text
+            result["stage2_validator_report"] = report
+            logger.info(
+                "[stage2] structural source repair applied source=%s roles=%d unresolved=%d",
+                source,
+                len(repaired.get("applied") or []),
+                len(repaired.get("unresolved") or []),
+            )
+        except Exception:
+            logger.exception("[stage2] structural source repair failed revalidation")
+            return
+
+    held_report = apply_structural_integrity_hold(result["stage2_validator_report"])
+    if held_report is result["stage2_validator_report"]:
+        return
+    result["stage2_validator_report"] = held_report
+    result["status"] = "review_required"
+    result["stage2_status"] = _STAGE2_FAILED
+    result["plan_text"] = ""
+    logger.warning("[stage2] structural integrity hold source=%s", source)
+
+
 def _log_stage2_prompt_budget(prompt: str, *, attempt_label: str, source: str, will_send: bool) -> None:
     estimated_tokens = _estimated_input_tokens(prompt)
     logger.info(
@@ -1067,6 +1128,12 @@ class OpenAIStage2Automator:
             attempt_count=attempt_count,
             retry_text=retry_text,
             stage2_cost=plan_text_cost,
+        )
+
+        _apply_structural_source_repair_and_hold(
+            result,
+            planning_brief=package["planning_brief"],
+            source=source,
         )
 
         # Structured-plan conversion is triggered by the canonical state-machine

@@ -199,25 +199,31 @@ def _resolve_week_span(week: dict[str, Any]) -> tuple[int, int] | None:
     return None
 
 
-def _authoritative_phase_map(
+def _authoritative_ownership_maps(
     role_map: dict[str, Any],
-) -> tuple[dict[int, str], int | None, int | None]:
-    """Map each countdown D-day the planner covers to its phase.
+) -> tuple[dict[int, str], dict[int, int], dict[int, list[str]], int | None, int | None]:
+    """Map each countdown D-day the planner covers to its Stage 1 ownership.
 
     Reads the normal-camp ``calendar_days`` block (each entry carries its own
     D-day and after-fight flag) and the late-fight ``countdown_span`` /
-    ``countdown_range`` window. A D-day claimed by two weeks stays with the
-    furthest-out (first) week so a boundary day has one owner. Returns the map plus
-    the covered ``(max_d_day, min_d_day)``.
+    ``countdown_range`` window. A D-day claimed by two weeks stays with the first
+    owning planning week so a boundary day has one owner. Returns phase, planning
+    week and role-key maps plus the covered ``(max_d_day, min_d_day)``.
     """
     weeks = role_map.get("weeks")
     if not isinstance(weeks, list):
-        return {}, None, None
+        return {}, {}, {}, None, None
     phase_by_dday: dict[int, str] = {}
+    planning_week_by_dday: dict[int, int] = {}
+    role_keys_by_dday: dict[int, list[str]] = {}
     for week in weeks:
         if not isinstance(week, dict):
             continue
         phase = _valid_phase(week.get("phase"))
+        try:
+            week_index = int(week.get("week_index"))
+        except (TypeError, ValueError):
+            week_index = 0
         ddays: list[int] = []
         calendar_days = week.get("calendar_days")
         if isinstance(calendar_days, list) and calendar_days:
@@ -239,9 +245,51 @@ def _authoritative_phase_map(
                 ddays.extend(d for d in range(start_d, end_d - 1, -1) if d >= 0)
         for d_day in ddays:
             phase_by_dday.setdefault(d_day, phase)
+            if week_index > 0:
+                planning_week_by_dday.setdefault(d_day, week_index)
+        for role in week.get("session_roles") or []:
+            if not isinstance(role, dict):
+                continue
+            role_key = str(role.get("role_key") or "").strip()
+            if not role_key:
+                continue
+            role_d_day = _role_dday(week, role)
+            if role_d_day is None:
+                continue
+            bucket = role_keys_by_dday.setdefault(role_d_day, [])
+            if role_key not in bucket:
+                bucket.append(role_key)
     if not phase_by_dday:
-        return {}, None, None
-    return phase_by_dday, max(phase_by_dday), min(phase_by_dday)
+        return {}, {}, {}, None, None
+    return phase_by_dday, planning_week_by_dday, role_keys_by_dday, max(phase_by_dday), min(phase_by_dday)
+
+
+def _role_dday(week: dict[str, Any], role: dict[str, Any]) -> int | None:
+    for key in ("countdown_offset",):
+        value = role.get(key)
+        if isinstance(value, int) and value >= 0:
+            return value
+    parsed = _parse_dday(
+        role.get("scheduled_countdown_label")
+        or role.get("countdown_label")
+        or role.get("countdown_display_label")
+    )
+    if parsed is not None:
+        return parsed
+    weekday = str(role.get("scheduled_day_hint") or "").strip().lower()
+    if not weekday:
+        return None
+    for day in week.get("calendar_days") or []:
+        if not isinstance(day, dict):
+            continue
+        if str(day.get("weekday") or "").strip().lower() != weekday:
+            continue
+        try:
+            value = int(day.get("d_day"))
+        except (TypeError, ValueError):
+            return None
+        return value if value >= 0 else None
+    return None
 
 
 def _phase_for_dday(
@@ -273,6 +321,9 @@ def _rest_day(d_day: int, fight_date: date, phase: str) -> dict[str, Any]:
         "day_type": "competition" if is_fight else "rest",
         "countdown_label": f"D-{d_day}",
         "phase_label": phase or "TAPER",
+        "planning_week_phase": phase or "TAPER",
+        "planning_week_index": None,
+        "planning_day_role_keys": [],
         "today_card": {
             # Empty headline -> the web classifier renders a compact rest row; a
             # dropped fight day is named so it never reads as ordinary rest.
@@ -285,7 +336,13 @@ def _rest_day(d_day: int, fight_date: date, phase: str) -> dict[str, Any]:
 
 
 def _overlay_day(
-    existing: dict[str, Any], *, d_day: int, fight_date: date, phase: str
+    existing: dict[str, Any],
+    *,
+    d_day: int,
+    fight_date: date,
+    phase: str,
+    planning_week_index: int | None,
+    role_keys: list[str],
 ) -> dict[str, Any]:
     """A converter day's content under an authoritative calendar identity.
 
@@ -303,6 +360,9 @@ def _overlay_day(
     day["countdown_label"] = f"D-{d_day}"
     day["weekday"] = _WEEKDAY_SHORT[current.weekday()]
     day["phase_label"] = phase or "TAPER"
+    day["planning_week_phase"] = phase or "TAPER"
+    day["planning_week_index"] = planning_week_index
+    day["planning_day_role_keys"] = list(role_keys)
     if not isinstance(day.get("sessions"), list):
         day["sessions"] = []
     return day
@@ -354,8 +414,8 @@ def _assemble_week(
 ) -> dict[str, Any]:
     """A schema-valid Mon-Sun week from a complete day list, boundaries recomputed.
 
-    The week phase is its own days' authoritative majority; every day is stamped
-    with it so the week reads one phase. ``start_date`` / ``end_date`` /
+    The week phase is the display week's majority, while each day keeps its own
+    authoritative planning phase. ``start_date`` / ``end_date`` /
     ``countdown_start`` / ``countdown_end`` are derived from the days so they can
     never disagree with the calendar. Presentation metadata (goal, load focus,
     progression) is inherited from the best-matching converter week; the goal is
@@ -367,8 +427,6 @@ def _assemble_week(
         reverse=True,
     )
     phase = _week_phase(days_out)
-    for day in days_out:
-        day["phase_label"] = phase
 
     ddays = [
         parsed
@@ -379,6 +437,16 @@ def _assemble_week(
 
     source_phase = _valid_phase(source_week.get("phase_label"))
     week_goal = str(source_week.get("week_goal") or "").strip() if source_phase == phase else ""
+    planning_indices = []
+    for day in days_out:
+        value = day.get("planning_week_index")
+        if isinstance(value, int) and value > 0 and value not in planning_indices:
+            planning_indices.append(value)
+    phase_coverage = []
+    for day in days_out:
+        day_phase = _valid_phase(day.get("phase_label"))
+        if day_phase and day_phase not in phase_coverage:
+            phase_coverage.append(day_phase)
 
     load_focus = source_week.get("load_focus")
     if not isinstance(load_focus, dict) or not load_focus:
@@ -396,6 +464,9 @@ def _assemble_week(
         "end_date": max(dates) if dates else "",
         "countdown_start": f"D-{max(ddays)}" if ddays else "",
         "countdown_end": f"D-{min(ddays)}" if ddays else "",
+        "display_week_kind": "calendar_week",
+        "planning_week_indices": planning_indices,
+        "phase_coverage": phase_coverage,
         "load_focus": load_focus,
         "progression": progression,
         "days": days_out,
@@ -483,7 +554,7 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> Any:
     if fight_date is None:
         return structured_plan
 
-    phase_by_dday, role_map_max, role_map_min = _authoritative_phase_map(role_map)
+    phase_by_dday, planning_week_by_dday, role_keys_by_dday, role_map_max, role_map_min = _authoritative_ownership_maps(role_map)
     if role_map_max is None or role_map_min is None:
         return structured_plan
 
@@ -536,11 +607,25 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> Any:
     spine_days: list[dict[str, Any]] = []
     for d_day in range(camp_start, -1, -1):
         phase = _phase_for_dday(d_day, phase_by_dday, role_map_min, role_map_max)
+        planning_week_index = planning_week_by_dday.get(d_day)
+        role_keys = role_keys_by_dday.get(d_day, [])
         existing = llm_days_by_dday.get(d_day)
         if isinstance(existing, dict):
-            spine_days.append(_overlay_day(existing, d_day=d_day, fight_date=fight_date, phase=phase))
+            spine_days.append(
+                _overlay_day(
+                    existing,
+                    d_day=d_day,
+                    fight_date=fight_date,
+                    phase=phase,
+                    planning_week_index=planning_week_index,
+                    role_keys=role_keys,
+                )
+            )
         else:
-            spine_days.append(_rest_day(d_day, fight_date, phase))
+            day = _rest_day(d_day, fight_date, phase)
+            day["planning_week_index"] = planning_week_index
+            day["planning_day_role_keys"] = list(role_keys)
+            spine_days.append(day)
 
     # Group into the Mon-Sun calendar weeks the web view renders.
     groups: dict[str, list[dict[str, Any]]] = {}
@@ -561,8 +646,17 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> Any:
     )
     for d_day in leftover:
         phase = _phase_for_dday(d_day, phase_by_dday, role_map_min, role_map_max)
+        planning_week_index = planning_week_by_dday.get(d_day)
         groups[ordered_mondays[0]].insert(
-            0, _overlay_day(llm_days_by_dday[d_day], d_day=d_day, fight_date=fight_date, phase=phase)
+            0,
+            _overlay_day(
+                llm_days_by_dday[d_day],
+                d_day=d_day,
+                fight_date=fight_date,
+                phase=phase,
+                planning_week_index=planning_week_index,
+                role_keys=role_keys_by_dday.get(d_day, []),
+            )
         )
 
     new_weeks: list[dict[str, Any]] = []
