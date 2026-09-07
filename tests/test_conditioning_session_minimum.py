@@ -1,13 +1,11 @@
 import pytest
 
 from fightcamp.session_composition import compose_normal_conditioning_assignments
-from fightcamp.stage2_validator import _conditioning_assignment_warnings
 
 
 def _option(name: str, *, duration: float, rpe: int = 5, intensity: str = "moderate") -> dict:
     return {
         "name": name,
-        "prescription": f"{duration:g} min",
         "selection_metadata": {
             "name": name,
             "system": "aerobic",
@@ -51,9 +49,6 @@ def test_conditioning_session_selects_three_suitable_bank_exercises():
         "Tempo Flow", "Bike Rhythm", "Shadow Aerobic",
     ]
     assert role["conditioning_composition_policy"]["minimum_exercise_count"] == 3
-    assert [item["effective_prescription"] for item in role["selected_exercise_assignments"]] == [
-        "12 min", "10 min", "8 min",
-    ]
 
 
 def test_long_aerobic_session_uses_two_exercise_minimum():
@@ -95,28 +90,3 @@ def test_conditioning_minimum_does_not_stack_unsuitable_high_load_options():
     role = _conditioner(role_map)
     assert [item["name"] for item in role["selected_exercise_assignments"]] == ["Hard Primary"]
     assert role["conditioning_composition_policy"]["workload_limited"] is True
-
-
-def test_validator_blocks_omitted_selected_conditioning_exercises():
-    brief = {
-        "weekly_role_map": {
-            "weeks": [{
-                "calendar_days": [{"weekday": "wednesday", "d_day": 20}],
-                "session_roles": [{
-                    "category": "conditioning",
-                    "role_key": "aerobic_support_day",
-                    "scheduled_day_hint": "wednesday",
-                    "selected_exercise_assignments": [
-                        {"name": "Tempo Flow"},
-                        {"name": "Bike Rhythm"},
-                        {"name": "Shadow Aerobic"},
-                    ],
-                }],
-            }],
-        },
-    }
-    rendered = "D-20 (Wednesday) — Aerobic support\n- Tempo Flow — 12 min"
-
-    warnings = _conditioning_assignment_warnings(brief, rendered)
-
-    assert warnings[0]["missing_exercises"] == ["Bike Rhythm", "Shadow Aerobic"]

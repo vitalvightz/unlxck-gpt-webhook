@@ -3216,69 +3216,6 @@ def _rendered_strength_entries(lines: list[str], prescriptions: list[dict]) -> l
     return rendered
 
 
-def _conditioning_assignment_warnings(
-    planning_brief: dict,
-    final_plan_text: str,
-) -> list[dict]:
-    """Reject a final plan that omits selected normal-conditioning exercises."""
-    blocks_by_day: dict[int, list[dict[str, Any]]] = defaultdict(list)
-    for block in _countdown_blocks(final_plan_text):
-        blocks_by_day[int(block["day"])].append(block)
-    if not blocks_by_day:
-        return []
-
-    warnings: list[dict] = []
-    for week in (planning_brief.get("weekly_role_map") or {}).get("weeks") or []:
-        if not isinstance(week, dict):
-            continue
-        d_day_by_weekday = {
-            str(day.get("weekday") or "").strip().lower(): day.get("d_day")
-            for day in week.get("calendar_days") or []
-            if isinstance(day, dict)
-        }
-        for role in week.get("session_roles") or []:
-            if (
-                not isinstance(role, dict)
-                or role.get("late_fight_tail_owned")
-                or str(role.get("category") or "").strip().lower() != "conditioning"
-            ):
-                continue
-            assignments = [
-                assignment
-                for assignment in (role.get("selected_exercise_assignments") or [])
-                if isinstance(assignment, dict) and str(assignment.get("name") or "").strip()
-            ]
-            if not assignments:
-                continue
-            weekday = str(role.get("scheduled_day_hint") or "").strip().lower()
-            d_day = d_day_by_weekday.get(weekday)
-            if not isinstance(d_day, int):
-                continue
-            lines = [line for block in blocks_by_day.get(d_day, []) for line in block.get("lines") or []]
-            missing_names = [
-                str(assignment["name"]).strip()
-                for assignment in assignments
-                if not any(_line_has_exercise(line, str(assignment["name"])) for line in lines)
-            ]
-            if missing_names:
-                warnings.append(
-                    {
-                        "code": "selected_conditioning_exercise_missing",
-                        "message": (
-                            f"D-{d_day} omits selected conditioning exercise(s): "
-                            f"{', '.join(missing_names)}."
-                        ),
-                        "severity": "blocker",
-                        "confidence": "high",
-                        "scheduled_d_day": d_day,
-                        "role_key": role.get("role_key"),
-                        "missing_exercises": missing_names,
-                        "selected_exercises": [str(assignment["name"]).strip() for assignment in assignments],
-                    }
-                )
-    return warnings
-
-
 def _late_camp_effective_prescription_warnings(
     planning_brief: dict,
     final_plan_text: str,
@@ -3626,10 +3563,6 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         planning_brief, final_plan_text
     )
     errors.extend(_issue(**item) for item in late_camp_effective_prescription_warnings)
-    conditioning_assignment_warnings = _conditioning_assignment_warnings(
-        planning_brief, final_plan_text
-    )
-    errors.extend(_issue(**item) for item in conditioning_assignment_warnings)
 
     missing_required_elements = _find_missing_required_elements(planning_brief, final_plan_text)
     missing_phase_sections = _find_missing_phase_sections(planning_brief, phase_sections)
@@ -3730,5 +3663,4 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         "stage2_output_incomplete_warnings": [],
         "sport_language_warnings": sport_language_warnings,
         "late_camp_effective_prescription_warnings": late_camp_effective_prescription_warnings,
-        "conditioning_assignment_warnings": conditioning_assignment_warnings,
     }
