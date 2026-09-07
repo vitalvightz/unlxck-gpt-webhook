@@ -53,7 +53,11 @@ from .camp_week_fillers import apply_camp_week_fillers
 from .bank_authority import original_bank_entries
 from .late_camp_role_morph import apply_late_camp_role_morph
 from .prescription_resolver import apply_effective_strength_prescriptions
-from .session_composition import attach_late_fight_assignments, compose_normal_strength_assignments
+from .session_composition import (
+    attach_late_fight_assignments,
+    compose_normal_conditioning_assignments,
+    compose_normal_strength_assignments,
+)
 from .normal_calendar_placement import fill_missing_session_days
 from .late_selector_windows import classify_late_selector_window, late_window_allowed
 from .normalization import (  # noqa: F401  (phrase_in_text re-exported for back-compat)
@@ -1748,6 +1752,9 @@ def _build_planning_brief(
     # D-21→D-18 combat-pressure floor is untouched by construction.
     apply_late_camp_role_morph(weekly_role_map)
     compose_normal_strength_assignments(
+        weekly_role_map=weekly_role_map, candidate_pools=candidate_pools,
+    )
+    compose_normal_conditioning_assignments(
         weekly_role_map=weekly_role_map, candidate_pools=candidate_pools,
     )
     # The long-camp splice owns D-13 inward, but uses the same selector and
