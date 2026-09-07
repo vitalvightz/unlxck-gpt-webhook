@@ -652,6 +652,7 @@ def compose_normal_conditioning_assignments(
                             continue
                         seen_names.add(name)
                         options.append((slot, option, is_selected))
+
             if not options:
                 continue
 
@@ -688,7 +689,6 @@ def compose_normal_conditioning_assignments(
                         "source_phase": phase,
                         "slot_group": "conditioning_slots",
                         "selected_option": is_selected,
-                        "effective_prescription": str(option.get("prescription") or "").strip(),
                     }
                 )
             role["selected_exercise_assignments"] = assignments
