@@ -1,0 +1,50 @@
+name: PR1 Conditioning Integration
+
+on:
+  push:
+    branches:
+      - codex/repair-conditioning-render-retry
+    paths:
+      - .github/workflows/pr1-apply.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    if: github.repository == 'vitalvightz/unlxck-gpt-webhook'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/repair-conditioning-render-retry
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11.15'
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+      - name: Apply surgical source changes
+        run: python tools/pr1_apply.py
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Compile and lint changed Python
+        run: |
+          python -m compileall -q fightcamp api
+          ruff check fightcamp/closed_conditioning_render.py fightcamp/stage2_retry_contract.py api/stage2_conditioning_repair.py tests/test_closed_conditioning_repair_boundary.py
+      - name: Run focused regression tests
+        run: |
+          pytest -q tests/test_closed_conditioning_repair_boundary.py tests/test_conditioning_render_membership.py tests/test_closed_session_composition.py tests/test_stage2_repair.py tests/test_stage2_automation.py
+      - name: Inspect and commit verified changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/pr1-apply.yml tools/pr1_apply.py
+          git add fightcamp/stage2_pipeline.py fightcamp/stage2_policy.py fightcamp/stage2_payload.py fightcamp/stage2_repair.py api/stage2_automation.py fightcamp/closed_conditioning_render.py fightcamp/stage2_retry_contract.py api/stage2_conditioning_repair.py tests/test_closed_conditioning_repair_boundary.py
+          git diff --cached --check
+          git commit -m "Repair closed conditioning rendering and bounded retries"
+          git push origin HEAD:codex/repair-conditioning-render-retry
