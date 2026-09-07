@@ -34,6 +34,7 @@ Design rules (mirrors ``structured_plan_safety`` conventions):
 """
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 import re
 from typing import Any
 
@@ -45,6 +46,7 @@ COUNTDOWN = "COUNTDOWN"
 # the card (fail-closed) rather than letting an unverified card through.
 INTERNAL = "INTERNAL"
 LOCKED_CONTENT = "LOCKED_CONTENT"
+LOCKED_TACTICAL_WATCH_MISSING = "locked_tactical_watch_missing_from_stage2"
 
 # ``block_type`` values that name a specific, app-owned exercise we can hold to
 # the source text. Generic/contextual block types are deliberately excluded.
@@ -190,6 +192,53 @@ def _source_day_sections(markdown: str) -> dict[int, str]:
     return {day: "\n".join(lines).lower() for day, lines in sections.items()}
 
 
+def _source_day_section_lines(markdown: str) -> dict[int, list[str]]:
+    """Map each D-day number to its raw source lines."""
+    sections: dict[int, list[str]] = {}
+    current: int | None = None
+    for line in markdown.splitlines():
+        day = _day_header_dday(line)
+        if day is not None:
+            current = day
+            sections.setdefault(current, [])
+        if current is not None:
+            sections[current].append(line)
+    return sections
+
+
+def _source_day_header_indices(lines: list[str], day: int) -> list[int]:
+    return [
+        index
+        for index, line in enumerate(lines)
+        if _day_header_dday(line) == day
+    ]
+
+
+def _source_day_insert_index(lines: list[str], day: int) -> tuple[int | None, str | None]:
+    """Resolve where a same-day support session can be appended.
+
+    Multiple headers for the same D-day are valid when they represent separate
+    sessions on one contiguous calendar day. A repeated D-day split by another
+    D-day is treated as ambiguous because inserting into one island would guess
+    at calendar ownership.
+    """
+    indices = _source_day_header_indices(lines, day)
+    if not indices:
+        return None, "authoritative day missing from stage2"
+
+    start = indices[0]
+    end = len(lines)
+    for index in range(start + 1, len(lines)):
+        next_day = _day_header_dday(lines[index])
+        if next_day is not None and next_day != day:
+            end = index
+            break
+
+    if any(index >= end for index in indices):
+        return None, "authoritative day split across multiple calendar groups"
+    return end, None
+
+
 def _source_token_days(sections: dict[int, str]) -> dict[str, set[int]]:
     """Index: meaningful token -> the set of D-day sections it appears in."""
     index: dict[str, set[int]] = {}
@@ -292,6 +341,76 @@ def _locked_source_day(source: str, role: dict[str, Any], drill_name: str) -> in
     return matching_days[0] if len(matching_days) == 1 else None
 
 
+def _authoritative_locked_day(role: dict[str, Any]) -> int | None:
+    return next(
+        (
+            _dday_num(role.get(key))
+            for key in (
+                "scheduled_countdown_label",
+                "countdown_label",
+                "countdown_display_label",
+            )
+            if _dday_num(role.get(key)) is not None
+        ),
+        None,
+    )
+
+
+def _locked_source_drill_text(
+    source: str, role: dict[str, Any], drill_name: str
+) -> tuple[int | None, str, str | None]:
+    """Return the authoritative source text for one locked drill.
+
+    The check is intentionally scoped to the role's D-day and then to the named
+    drill block under that day. Repeated overlay wording elsewhere in the plan is
+    not evidence for this drill.
+    """
+    role_day = _authoritative_locked_day(role)
+    if role_day is None:
+        fallback_day = _locked_source_day(source, role, drill_name)
+        if fallback_day is None:
+            return None, "", "missing_authoritative_countdown_label"
+        role_day = fallback_day
+
+    sections = _source_day_section_lines(source)
+    if role_day not in sections:
+        return role_day, "", "authoritative_day_missing_from_stage2"
+
+    normalised_name = _normalise_locked_text(drill_name)
+    lines = sections[role_day]
+    name_index = next(
+        (
+            index
+            for index, line in enumerate(lines)
+            if normalised_name in _normalise_locked_text(line)
+        ),
+        None,
+    )
+    if name_index is None:
+        return role_day, "", LOCKED_TACTICAL_WATCH_MISSING
+
+    start = name_index
+    if name_index > 0 and _normalise_locked_text(lines[name_index - 1]).startswith("why:"):
+        start = name_index - 1
+
+    end = len(lines)
+    for index in range(name_index + 1, len(lines)):
+        stripped = lines[index].strip()
+        if not stripped:
+            continue
+        if _day_header_dday(stripped) is not None:
+            end = index
+            break
+        if stripped.lower().startswith("why:"):
+            end = index
+            break
+        if stripped.startswith("- ") and not lines[index].startswith((" ", "\t")):
+            end = index
+            break
+
+    return role_day, "\n".join(lines[start:end]), None
+
+
 def _locked_drill_card_strings(
     plan: dict[str, Any], source: str, role: dict[str, Any], drill_name: str
 ) -> list[str]:
@@ -333,7 +452,6 @@ def _locked_content_violations(
     plan: dict[str, Any], source: str, planning_brief: Any
 ) -> list[str]:
     """Require every authoritative locked-drill line to survive in card fields."""
-    source_text = _normalise_locked_text(source)
     violations: list[str] = []
     for role in _locked_roles(planning_brief):
         governance = role.get("governance") or {}
@@ -342,6 +460,18 @@ def _locked_content_violations(
             or (role.get("preferred_exercise_names") or [""])[0]
             or "locked drill"
         )
+        source_day, drill_source_text, drill_source_issue = _locked_source_drill_text(
+            source, role, drill_name
+        )
+        if drill_source_issue is not None:
+            if governance.get("mandatory") is True or role.get("mandatory_tactical_watch") is True:
+                day_label = f"D-{source_day}" if source_day is not None else "unknown day"
+                violations.append(
+                    f"{LOCKED_CONTENT}: {drill_name!r} {drill_source_issue} on {day_label}"
+                )
+            continue
+
+        scoped_source_text = _normalise_locked_text(drill_source_text)
         card_texts = [
             _normalise_locked_text(text)
             for text in _locked_drill_card_strings(plan, source, role, drill_name)
@@ -364,7 +494,7 @@ def _locked_content_violations(
             normalised = _normalise_locked_text(expected)
             # The approved plan text is the authority. A stale brief line that
             # did not reach it must not create a new requirement here.
-            if not normalised or normalised not in source_text:
+            if not normalised or normalised not in scoped_source_text:
                 continue
             if not any(normalised in card_text for card_text in card_texts):
                 missing.append(label)
@@ -374,6 +504,132 @@ def _locked_content_violations(
                 + ", ".join(missing)
             )
     return violations
+
+
+@dataclass(frozen=True)
+class LockedSourceRepairIssue:
+    countdown_label: str | None
+    block_name: str
+    reason: str
+
+
+@dataclass
+class LockedSourceRepairResult:
+    source_markdown: str
+    applied: list[str] = field(default_factory=list)
+    unresolved: list[LockedSourceRepairIssue] = field(default_factory=list)
+
+
+def _is_active_locked_tactical_watch_role(role: dict[str, Any]) -> tuple[bool, str | None]:
+    governance = role.get("governance") if isinstance(role.get("governance"), dict) else {}
+    if role.get("active") is False or role.get("is_active") is False:
+        return False, "locked role is inactive"
+    if role.get("skip") is True or role.get("omit") is True:
+        return False, "locked role is suppressed"
+    if governance.get("selected_drill_locked") is not True:
+        return False, "selected drill is not locked"
+    if governance.get("render_selected_drill_exactly") is not True:
+        return False, "selected drill is not exact-render locked"
+    if governance.get("mandatory") is not True and role.get("mandatory_tactical_watch") is not True:
+        return False, "locked role is not mandatory"
+
+    role_key = str(role.get("role_key") or "").strip().lower()
+    category = str(role.get("category") or "").strip().lower()
+    is_tactical_watch = (
+        role_key in {"", "tactical_watch"}
+        and (
+            role.get("mandatory_tactical_watch") is True
+            or isinstance(role.get("tactical_watch"), dict)
+            or category in {"", "tactical_watch", "mindset", "combat"}
+        )
+    )
+    if not is_tactical_watch:
+        return False, "locked role is not tactical_watch"
+    return True, None
+
+
+def repair_locked_tactical_watch_source_text(
+    source_markdown: str, planning_brief: Any
+) -> LockedSourceRepairResult:
+    """Insert missing mandatory locked Tactical Watches into Stage 2 text.
+
+    This keeps the existing source-of-truth model: structured conversion sees
+    the repaired Stage 2 text first, then the structured merge projects the same
+    governed role into JSON. Repair is intentionally narrow and fail-closed: it
+    only appends exact ``display_text`` to a uniquely resolved existing D-day.
+    """
+    source = str(source_markdown or "")
+    if not source.strip():
+        return LockedSourceRepairResult(source)
+    roles = [
+        role
+        for role in _locked_roles(planning_brief)
+        if (role.get("governance") or {}).get("mandatory") is True
+        or role.get("mandatory_tactical_watch") is True
+    ]
+    if not roles:
+        return LockedSourceRepairResult(source)
+
+    result = LockedSourceRepairResult(source)
+    for role in roles:
+        governance = role.get("governance") or {}
+        drill_name = str(
+            governance.get("selected_drill_name")
+            or (role.get("preferred_exercise_names") or [""])[0]
+            or "locked drill"
+        )
+        role_day = _authoritative_locked_day(role)
+        day_label = f"D-{role_day}" if role_day is not None else None
+        is_active_tactical_watch, role_issue = _is_active_locked_tactical_watch_role(role)
+        if not is_active_tactical_watch:
+            result.unresolved.append(LockedSourceRepairIssue(day_label, drill_name, role_issue or "invalid role"))
+            continue
+        if role_day is None:
+            result.unresolved.append(
+                LockedSourceRepairIssue(day_label, drill_name, "missing authoritative countdown label")
+            )
+            continue
+        tactical_watch = role.get("tactical_watch") if isinstance(role.get("tactical_watch"), dict) else {}
+        watch_name = str(tactical_watch.get("name") or "").strip()
+        if watch_name and _normalise_locked_text(watch_name) != _normalise_locked_text(drill_name):
+            result.unresolved.append(
+                LockedSourceRepairIssue(day_label, drill_name, "tactical_watch name conflicts with locked drill")
+            )
+            continue
+        display_text = str(role.get("display_text") or "").strip()
+        if not display_text:
+            result.unresolved.append(
+                LockedSourceRepairIssue(day_label, drill_name, "missing locked display_text")
+            )
+            continue
+        if _normalise_locked_text(drill_name) not in _normalise_locked_text(display_text):
+            result.unresolved.append(
+                LockedSourceRepairIssue(day_label, drill_name, "locked display_text does not contain drill name")
+            )
+            continue
+        _source_day, _drill_text, issue = _locked_source_drill_text(
+            result.source_markdown, role, drill_name
+        )
+        if issue is None:
+            continue
+        if issue != LOCKED_TACTICAL_WATCH_MISSING:
+            result.unresolved.append(LockedSourceRepairIssue(day_label, drill_name, issue))
+            continue
+
+        lines = result.source_markdown.splitlines()
+        insert_index, insert_issue = _source_day_insert_index(lines, role_day)
+        if insert_issue is not None or insert_index is None:
+            result.unresolved.append(LockedSourceRepairIssue(day_label, drill_name, insert_issue or "invalid day"))
+            continue
+
+        header_index = _source_day_header_indices(lines, role_day)[0]
+        day_prefix = re.search(r"\bD-\s*\d+\b(?:\s*\([^)]+\))?", lines[header_index], re.I)
+        header_prefix = day_prefix.group(0) if day_prefix else day_label
+        repair_block = ["", f"{header_prefix} — Fight Tactical Watch", display_text, ""]
+        lines[insert_index:insert_index] = repair_block
+        result.source_markdown = "\n".join(lines)
+        result.applied.append(f"{day_label}: {drill_name}")
+    return result
 
 
 def _check(structured_plan: Any, source_markdown: str, planning_brief: Any = None) -> list[str]:

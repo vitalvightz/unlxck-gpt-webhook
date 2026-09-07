@@ -371,6 +371,204 @@ def test_finalize_attaches_valid_structured_plan(monkeypatch: pytest.MonkeyPatch
     assert result["stage2_validator_report"]["structured_plan"]["status"] == "valid"
 
 
+def _locked_body_attack_repair_fixture():
+    source = """D-17 (Monday) - Strength
+- Sled Push (Speed). 3 x 2 pushes.
+
+D-16 (Tuesday) - Technical-only combat
+Technical-only contact today - no hard sparring.
+"""
+    display_text = """Why: Find safe body attacks that reward pressure without making the entry predictable.
+- Body Attack Opportunity: 10 minutes, tactical review only. No physical load.
+  Step 1: Identify the clearest body opening the opponent gives away.
+  Step 2: Choose the punch or feint that creates that opening.
+  Intent: Attack the body when the position earns it.
+  Focus: Watch for high guards, separated elbows and upright posture.
+  Reset: If the body line closes, go back upstairs rather than forcing it.
+  Anchor: Open it before you take it.
+  Purpose: SPP body-attack selection for a pressure fighter.
+  Progress: Use the body attack only after the chosen setup appears in technical work."""
+    brief = {
+        "weeks": [{
+            "session_roles": [{
+                "scheduled_countdown_label": "D-17",
+                "display_text": display_text,
+                "mandatory_tactical_watch": True,
+                "governance": {
+                    "selected_drill_locked": True,
+                    "selected_drill_name": "Body Attack Opportunity",
+                    "render_selected_drill_exactly": True,
+                    "mandatory": True,
+                },
+                "tactical_watch": {
+                    "name": "Body Attack Opportunity",
+                    "why": "Find safe body attacks that reward pressure without making the entry predictable.",
+                    "duration_min": 10,
+                    "instructions": [
+                        "Identify the clearest body opening the opponent gives away.",
+                        "Choose the punch or feint that creates that opening.",
+                    ],
+                    "mindset": {
+                        "intent": "Attack the body when the position earns it.",
+                        "focus": "Watch for high guards, separated elbows and upright posture.",
+                        "reset": "If the body line closes, go back upstairs rather than forcing it.",
+                        "anchor": "Open it before you take it.",
+                        "context": "SPP body-attack selection for a pressure fighter.",
+                    },
+                    "progress": "Use the body attack only after the chosen setup appears in technical work.",
+                },
+            }]
+        }]
+    }
+    return source, brief
+
+
+def test_structured_attempt_repairs_missing_locked_watch_source_before_model_call(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    source, brief = _locked_body_attack_repair_fixture()
+
+    def _pass_repair_review(**_):
+        return {
+            "status": "PASS",
+            "needs_retry": False,
+            "validator_report": {
+                "errors": [],
+                "warnings": [],
+                "blocking_warnings": [],
+                "review_flag_count": 0,
+                "release_decision": "publish",
+            },
+        }
+
+    monkeypatch.setattr(stage2_module, "review_stage2_output", _pass_repair_review)
+    result = {
+        "status": "ready",
+        "plan_text": source,
+        "final_plan_text": source,
+        "stage2_validator_report": {"errors": [], "warnings": []},
+    }
+    automator = _StructuredAutomator(StructuredPlanOutcome(status="invalid_fallback_used"))
+
+    asyncio.run(
+        attempt_structured_plan_for_result(
+            result,
+            planning_brief=brief,
+            automator=automator,
+            source="test",
+        )
+    )
+
+    assert len(automator.calls) == 1
+    sent_text = automator.calls[0]["final_plan_text"]
+    assert "D-17 (Monday) — Fight Tactical Watch" in sent_text
+    assert "Body Attack Opportunity" in sent_text
+    assert result["final_plan_text"] == sent_text
+    audit = result["stage2_validator_report"]["source_repair"]["locked_tactical_watch"]
+    assert audit["status"] == "applied"
+    assert audit["applied"] == ["D-17: Body Attack Opportunity"]
+    assert audit["unresolved_count"] == 0
+    assert audit["revalidated_status"] == "PASS"
+    assert audit["revalidated_release_decision"] == "publish"
+
+
+def test_structured_attempt_rejects_repair_when_revalidation_holds(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    source, brief = _locked_body_attack_repair_fixture()
+
+    def _hold_repair_review(**_):
+        return {
+            "status": "FAIL",
+            "needs_retry": True,
+            "validator_report": {
+                "errors": [{"code": "restriction_violation"}],
+                "warnings": [],
+                "blocking_warnings": [],
+                "review_flag_count": 0,
+                "release_decision": "hold",
+            },
+        }
+
+    monkeypatch.setattr(stage2_module, "review_stage2_output", _hold_repair_review)
+    result = {
+        "status": "ready",
+        "plan_text": source,
+        "final_plan_text": source,
+        "stage2_validator_report": {"errors": [], "warnings": []},
+    }
+    automator = _StructuredAutomator(StructuredPlanOutcome(status="invalid_fallback_used"))
+
+    asyncio.run(
+        attempt_structured_plan_for_result(
+            result,
+            planning_brief=brief,
+            automator=automator,
+            source="test",
+        )
+    )
+
+    assert len(automator.calls) == 1
+    assert automator.calls[0]["final_plan_text"] == source
+    assert result["final_plan_text"] == source
+    assert result["plan_text"] == source
+    assert "source_repair" not in result["stage2_validator_report"]
+
+
+def test_structured_attempt_preserves_failed_stage2_status_when_repair_still_not_publishable(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    source, brief = _locked_body_attack_repair_fixture()
+
+    def _nonpublishable_repair_review(**_):
+        return {
+            "status": "WARN",
+            "needs_retry": True,
+            "validator_report": {
+                "errors": [],
+                "warnings": [{"code": "weekly_session_overage"}],
+                "blocking_warnings": [{"code": "weekly_session_overage"}],
+                "review_flag_count": 0,
+                "release_decision": "manual_review",
+            },
+        }
+
+    monkeypatch.setattr(stage2_module, "review_stage2_output", _nonpublishable_repair_review)
+    result = {
+        "status": "ready",
+        "plan_text": source,
+        "final_plan_text": source,
+        "stage2_status": "stage2_failed",
+        "stage2_validator_report": {
+            "errors": [{"code": "prior_failure"}],
+            "blocking_warnings": [{"code": "prior_blocker"}],
+        },
+    }
+    automator = _StructuredAutomator(StructuredPlanOutcome(status="invalid_fallback_used"))
+
+    asyncio.run(
+        attempt_structured_plan_for_result(
+            result,
+            planning_brief=brief,
+            automator=automator,
+            source="test",
+        )
+    )
+
+    assert result["stage2_status"] == "stage2_failed"
+    assert result["status"] == "ready"
+    audit = result["stage2_validator_report"]["source_repair"]["locked_tactical_watch"]
+    assert audit["previous_stage2_status"] == "stage2_failed"
+    assert audit["previous_app_status"] == "ready"
+    assert audit["previous_error_count"] == 1
+    assert audit["previous_blocking_warning_count"] == 1
+    assert audit["revalidated_status"] == "WARN"
+    assert audit["revalidated_release_decision"] == "manual_review"
+
+
 def _fail_review(*codes: str):
     error_codes = codes or ("true_internal_system_leak",)
 
