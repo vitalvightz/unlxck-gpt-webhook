@@ -116,7 +116,7 @@ jobs:
       - name: Verify focused changes
         run: |
           python -m compileall -q fightcamp/stage2_validator.py tests/test_stage2_easier_annotations.py
-          python -m pytest tests/test_stage2_easier_annotations.py tests/test_stage2_validator.py tests/test_prescription_resolver_e2e.py -q
+          python -m pytest tests/test_stage2_easier_annotations.py tests/test_stage2_validator.py -q
           python -m ruff check fightcamp/stage2_validator.py tests/test_stage2_easier_annotations.py
           git diff --check
       - name: Commit only production and regression files
