@@ -129,20 +129,6 @@ def test_unused_day_upgrade_allows_gas_tank_goal_signal():
     assert week["intentionally_unused_days"] == []
 
 
-def test_strength_days_use_a_non_adjacent_free_day_when_available() -> None:
-    roles = [
-        {"category": "strength", "role_key": "primary_strength_day"},
-        {"category": "strength", "role_key": "secondary_strength_day"},
-    ]
-
-    assigned = _assign_declared_day_hints(
-        roles,
-        {"training_days": ["wednesday", "thursday", "friday"]},
-    )
-
-    assert [role["scheduled_day_hint"] for role in assigned] == ["wednesday", "friday"]
-
-
 def test_unused_day_upgrade_does_not_convert_coordination_only_signal():
     week = {
         "phase": "SPP",

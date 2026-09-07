@@ -652,6 +652,7 @@ def compose_normal_conditioning_assignments(
                             continue
                         seen_names.add(name)
                         options.append((slot, option, is_selected))
+
             if not options:
                 continue
 
