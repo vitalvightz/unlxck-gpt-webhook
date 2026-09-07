@@ -6,7 +6,10 @@ from types import SimpleNamespace
 import pytest
 from fastapi import HTTPException
 
-from api.generation.persistence import _apply_plan_contract_validation
+from api.generation.persistence import (
+    _apply_plan_contract_validation,
+    _release_held_plan_with_flags,
+)
 from api.services.admin_stage2_service import _manual_stage2_result
 
 
@@ -102,6 +105,54 @@ def test_unknown_contract_finding_is_recorded_without_holding_plan(monkeypatch):
     assert result["status"] == "ready"
     assert result["plan_text"] == "# Usable camp"
     assert result["why_log"]["plan_contract_validation"] == report
+
+
+@pytest.mark.parametrize("held_status", ["review_required", "held_for_review"])
+def test_held_plan_with_plan_text_is_released_with_flags(held_status):
+    result = _release_held_plan_with_flags(
+        {"status": held_status, "plan_text": "# Usable camp"},
+        athlete_id="a",
+        job_id="j",
+    )
+    assert result["status"] == "publishable_with_flags"
+    assert result["plan_text"] == "# Usable camp"
+
+
+def test_held_structural_plan_surfaces_final_text_on_release():
+    # Structural-integrity holds clear plan_text but keep final_plan_text; the
+    # override releases with flags and surfaces the rendered text.
+    result = _release_held_plan_with_flags(
+        {"status": "review_required", "plan_text": "", "final_plan_text": "# Rendered"},
+        athlete_id="a",
+        job_id="j",
+    )
+    assert result["status"] == "publishable_with_flags"
+    assert result["plan_text"] == "# Rendered"
+
+
+def test_empty_held_plan_is_left_untouched():
+    # Nothing to show -> no override; normal handling keeps it out of view.
+    result = _release_held_plan_with_flags(
+        {"status": "review_required", "plan_text": "", "final_plan_text": ""},
+        athlete_id="a",
+        job_id="j",
+    )
+    assert result["status"] == "review_required"
+
+
+def test_release_override_preserves_validator_findings():
+    finding = {"code": "goal_preservation_failed", "severity": "blocker"}
+    result = _release_held_plan_with_flags(
+        {
+            "status": "review_required",
+            "plan_text": "# Usable camp",
+            "stage2_validator_report": {"errors": [finding]},
+        },
+        athlete_id="a",
+        job_id="j",
+    )
+    assert result["status"] == "publishable_with_flags"
+    assert result["stage2_validator_report"]["errors"] == [finding]
 
 
 @pytest.mark.parametrize("source", ["review_required", "held_for_review"])
