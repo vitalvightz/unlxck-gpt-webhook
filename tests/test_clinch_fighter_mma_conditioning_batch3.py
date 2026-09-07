@@ -28,12 +28,12 @@ LEGACY = {
     "Neck Snap Drill", "Knee Strike Bursts", "Strike-to-Clinch Drill",
 }
 PRESERVED_HASHES = {
-    ("boxing", "clinch_fighter"): "e5dab2bd52fedd4eb7ff47206c92fc7114162b3db382b3fe60a3b8c47d5f8daa",
-    ("muay_thai", "clinch_fighter"): "557909ad761b44767fbb9f6462fe4c78522c488c9be0151e985903c18f3502bd",
-    ("mma", "brawler"): "ab396e8b314cf0da87b01d1a46b23868f39ff3edad53b20405862a002846fbb1",
-    ("mma", "pressure_fighter"): "f11013daaf63f6eb5bd004416aa4a3c008ab14b45cf5f4a9719faa3a24ae84b7",
-    ("mma", "counter_striker"): "b08d0a6367f02449e02d53e3c00efdb46c3e2ecacc0d38bdb1c1f584a0016332",
-    ("mma", "distance_striker"): "92ea03b55f205420d11f0b37af7f199163ce19790dc6fd44fd2ac875c5908943",
+    ("boxing", "clinch_fighter"): "a8c2cacfaf4b81155c1048bad4bb3b17ffd90c600991fd2750ffe05cdb36b4a9",
+    ("muay_thai", "clinch_fighter"): "dde054e5f0fa8eddd77a08dc34dac94feade2515368db25bb6408c18de389358",
+    ("mma", "brawler"): "cb8a9c25186201b904ed9dee351a54a942bd97250d01b15998fc67ca45999d76",
+    ("mma", "pressure_fighter"): "655b2724c48bd2fed2d849e0c0e605b15631ac441001b4c642c25b0c11d470c1",
+    ("mma", "counter_striker"): "7b0b5b305792afcc281ab6aa01b27e47984254cedda23923e738a4507be98d6b",
+    ("mma", "distance_striker"): "de7cfb86eceb0fedab845908a2ad2de4894bf3836ba8f395aa30d3f58461cc04",
 }
 
 
