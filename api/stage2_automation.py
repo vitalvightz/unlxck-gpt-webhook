@@ -52,6 +52,12 @@ logger = logging.getLogger(__name__)
 _DEFAULT_FIRST_PASS_CHAR_LIMIT = 180_000
 _DEFAULT_OPENAI_MAX_RETRIES = 0
 _DEFAULT_MAX_OUTPUT_TOKENS = 0
+_REPAIR_PRESERVED_FINDING_FIELDS = (
+    "errors",
+    "warnings",
+    "review_flags",
+    "blocking_warnings",
+)
 
 
 class Stage2AutomationError(RuntimeError):
@@ -565,7 +571,8 @@ def _apply_locked_tactical_watch_source_repair(
     if not isinstance(repaired_report, dict):
         logger.warning("[stage2] repaired locked Tactical Watch source produced malformed validator report")
         return
-    if repaired_report.get("release_decision") == "hold":
+    repaired_release_decision = str(repaired_report.get("release_decision") or "").strip()
+    if repaired_release_decision == "hold":
         logger.warning(
             "[stage2] rejected locked Tactical Watch source repair after revalidation status=%s applied=%d unresolved=%d",
             repaired_review.get("status") or "unknown",
@@ -577,10 +584,29 @@ def _apply_locked_tactical_watch_source_repair(
     original_stage2_status = str(result.get("stage2_status") or "").strip()
     original_app_status = str(result.get("status") or "").strip()
     original_report = result.get("stage2_validator_report")
+    original_release_decision = (
+        str(original_report.get("release_decision") or "").strip()
+        if isinstance(original_report, dict)
+        else ""
+    )
     prior_errors = list(original_report.get("errors") or []) if isinstance(original_report, dict) else []
     prior_blocking = (
         list(original_report.get("blocking_warnings") or []) if isinstance(original_report, dict) else []
     )
+    repaired_report = _merge_locked_watch_repair_report(
+        repaired_report,
+        original_report=original_report if isinstance(original_report, dict) else {},
+        applied_labels=repaired_source.applied,
+    )
+    if repaired_release_decision and repaired_release_decision not in {
+        "publish",
+        "publish_with_flags",
+    }:
+        repaired_report["release_decision"] = repaired_release_decision
+    if original_release_decision == "hold":
+        repaired_report["release_decision"] = "hold"
+        repaired_report["is_athlete_releasable"] = False
+        repaired_report["is_publishable"] = False
 
     repair_audit = {
         "locked_tactical_watch": {
@@ -619,6 +645,68 @@ def _apply_locked_tactical_watch_source_repair(
         len(repaired_source.applied),
         len(repaired_source.unresolved),
     )
+
+
+def _finding_key(item: dict[str, Any]) -> tuple[str, str, str, str, str, str, str]:
+    return (
+        str(item.get("code") or "").strip(),
+        str(item.get("phase") or "").strip(),
+        str(item.get("week_index") or "").strip(),
+        str(item.get("session_index") or "").strip(),
+        str(item.get("requirement") or "").strip(),
+        str(item.get("goal") or "").strip(),
+        str(item.get("line") or "").strip(),
+    )
+
+
+def _locked_watch_repair_finding(
+    finding: dict[str, Any], *, applied_labels: list[str]
+) -> bool:
+    code = str(finding.get("code") or "").strip()
+    if code not in {
+        "late_fight_missing_required_countdown_session",
+        "missing_week_session_role",
+        "late_camp_session_incomplete",
+    }:
+        return False
+    haystack = " ".join(str(value) for value in finding.values()).lower()
+    if "tactical watch" in haystack or "fight tactical watch" in haystack:
+        return True
+    for label in applied_labels:
+        drill = label.split(":", 1)[-1].strip().lower()
+        if drill and drill in haystack:
+            return True
+    return False
+
+
+def _merge_locked_watch_repair_report(
+    repaired_report: dict[str, Any],
+    *,
+    original_report: dict[str, Any],
+    applied_labels: list[str],
+) -> dict[str, Any]:
+    merged: dict[str, Any] = dict(repaired_report)
+    for field in _REPAIR_PRESERVED_FINDING_FIELDS:
+        items: list[dict[str, Any]] = []
+        seen: set[tuple[str, str, str, str, str, str, str]] = set()
+        for source_report in (repaired_report, original_report):
+            values = source_report.get(field) if isinstance(source_report, dict) else []
+            for value in values or []:
+                if not isinstance(value, dict):
+                    continue
+                item = dict(value)
+                if (
+                    source_report is original_report
+                    and _locked_watch_repair_finding(item, applied_labels=applied_labels)
+                ):
+                    continue
+                key = _finding_key(item)
+                if key in seen:
+                    continue
+                seen.add(key)
+                items.append(item)
+        merged[field] = items
+    return apply_stage2_release_policy(merged)
 
 
 def _log_stage2_prompt_budget(prompt: str, *, attempt_label: str, source: str, will_send: bool) -> None:
@@ -1067,6 +1155,12 @@ class OpenAIStage2Automator:
             attempt_count=attempt_count,
             retry_text=retry_text,
             stage2_cost=plan_text_cost,
+        )
+
+        _apply_locked_tactical_watch_source_repair(
+            result,
+            planning_brief=package["planning_brief"],
+            source=source,
         )
 
         # Structured-plan conversion is triggered by the canonical state-machine

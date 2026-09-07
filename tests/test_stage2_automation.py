@@ -79,6 +79,53 @@ def _stage1_result() -> dict:
     }
 
 
+def _d7_first_round_patience_brief() -> dict:
+    display_text = (
+        "Why: Stay patient enough to read the first exchange before forcing offence.\n"
+        "- First-Round Patience Script: 8 minutes, tactical review only. No physical load.\n"
+        "  Step 1: Identify the opponent's first committed entry.\n"
+        "  Step 2: Name the counter only after the entry is clear.\n"
+        "  Intent: Win the first round without chasing.\n"
+        "  Focus: Keep eyes calm through the first feint.\n"
+        "  Reset: If the read is unclear, exit and restart at range.\n"
+        "  Anchor: Read first, punish second.\n"
+        "  Purpose: D-7 first-round patience for a pressure fighter.\n"
+        "  Progress: Use the script only in tactical review and technical work."
+    )
+    return {
+        "schema_version": "planning_brief.v1",
+        "fight_date": "2026-06-13",
+        "weeks": [
+            {
+                "phase": "TAPER",
+                "session_roles": [
+                    {
+                        "scheduled_countdown_label": "D-7",
+                        "display_text": display_text,
+                        "mandatory_tactical_watch": True,
+                        "governance": {
+                            "selected_drill_locked": True,
+                            "selected_drill_name": "First-Round Patience Script",
+                            "render_selected_drill_exactly": True,
+                            "mandatory": True,
+                        },
+                        "tactical_watch": {"name": "First-Round Patience Script"},
+                    }
+                ],
+            }
+        ],
+    }
+
+
+def _d7_plan_without_watch() -> str:
+    return (
+        "D-7 (Saturday) - Technical Sharpen\n"
+        "- Shadow boxing: 3 x 2 min, easy rhythm only.\n\n"
+        "D-6 (Sunday) - Recovery Reset\n"
+        "- Walk and breathe."
+    )
+
+
 @pytest.mark.parametrize(
     "findings",
     [
@@ -163,6 +210,138 @@ def test_first_pass_pass_returns_ready_with_one_provider_call(
     assert result["stage2_status"] == "stage2_pass"
     assert result["stage2_attempt_count"] == 1
     assert result["stage2_retry_text"] == ""
+
+
+def test_locked_tactical_watch_repair_runs_before_structured_eligibility(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    brief = _d7_first_round_patience_brief()
+    stage1 = _stage1_result()
+    stage1["planning_brief"] = brief
+    review_calls: list[str] = []
+
+    def _review_d7(**kwargs: object) -> dict:
+        text = str(kwargs.get("final_plan_text") or "")
+        review_calls.append(text)
+        if "First-Round Patience Script" in text:
+            return _review("PASS")
+        missing = {
+            "code": "late_fight_missing_required_countdown_session",
+            "session": "Fight Tactical Watch",
+            "countdown_label": "D-7",
+        }
+        return {
+            "status": "WARN",
+            "needs_retry": True,
+            "validator_report": {
+                "errors": [],
+                "warnings": [missing],
+                "review_flags": [missing],
+                "review_flag_count": 1,
+            },
+        }
+
+    monkeypatch.setattr(stage2_module, "review_stage2_output", _review_d7)
+    client = FakeClient([_response(_d7_plan_without_watch())])
+
+    result = asyncio.run(
+        OpenAIStage2Automator(client=client, model="test-model").finalize(
+            stage1_result=stage1
+        )
+    )
+
+    assert len(client.responses.calls) == 1
+    assert len(review_calls) == 2
+    assert result["status"] == "ready"
+    assert "Fight Tactical Watch" in result["final_plan_text"]
+    assert "First-Round Patience Script" in result["final_plan_text"]
+    assert result["plan_text"] == result["final_plan_text"]
+    audit = result["stage2_validator_report"]["source_repair"]["locked_tactical_watch"]
+    assert audit["applied"] == ["D-7: First-Round Patience Script"]
+    assert result["stage2_validator_report"]["quality_review_flags"] == []
+
+
+def test_locked_tactical_watch_repair_preserves_unrelated_existing_hold(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    brief = _d7_first_round_patience_brief()
+    original_hold = {
+        "code": "phase_section_missing",
+        "phase": "TAPER",
+        "message": "TAPER phase section is missing.",
+    }
+    missing_watch = {
+        "code": "late_fight_missing_required_countdown_session",
+        "session": "Fight Tactical Watch",
+        "countdown_label": "D-7",
+    }
+    result = {
+        "status": "review_required",
+        "stage2_status": "stage2_failed",
+        "plan_text": "",
+        "final_plan_text": _d7_plan_without_watch(),
+        "stage2_validator_report": {
+            "errors": [original_hold],
+            "warnings": [missing_watch],
+            "review_flags": [missing_watch],
+            "blocking_warnings": [original_hold],
+            "release_decision": "hold",
+            "is_athlete_releasable": False,
+            "is_publishable": False,
+        },
+    }
+    monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("PASS"))
+
+    stage2_module._apply_locked_tactical_watch_source_repair(
+        result,
+        planning_brief=brief,
+        source="test",
+    )
+
+    assert result["status"] == "review_required"
+    assert result["stage2_status"] == "stage2_failed"
+    assert result["plan_text"] == ""
+    assert "First-Round Patience Script" in result["final_plan_text"]
+    report = result["stage2_validator_report"]
+    assert report["release_decision"] == "hold"
+    assert report["is_publishable"] is False
+    assert report["errors"] == [original_hold]
+    assert report["blocking_warnings"] == [original_hold]
+    assert missing_watch not in report["warnings"]
+    assert missing_watch not in report["review_flags"]
+
+
+def test_locked_tactical_watch_repair_leaves_already_complete_plan_unchanged(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    brief = _d7_first_round_patience_brief()
+    stage1 = _stage1_result()
+    stage1["planning_brief"] = brief
+    complete_plan = (
+        _d7_plan_without_watch()
+        + "\n\nD-7 (Saturday) - Fight Tactical Watch\n"
+        + brief["weeks"][0]["session_roles"][0]["display_text"]
+    )
+    review_calls: list[str] = []
+
+    def _review_complete(**kwargs: object) -> dict:
+        review_calls.append(str(kwargs.get("final_plan_text") or ""))
+        return _review("PASS")
+
+    monkeypatch.setattr(stage2_module, "review_stage2_output", _review_complete)
+    client = FakeClient([_response(complete_plan)])
+
+    result = asyncio.run(
+        OpenAIStage2Automator(client=client, model="test-model").finalize(
+            stage1_result=stage1
+        )
+    )
+
+    assert len(client.responses.calls) == 1
+    assert len(review_calls) == 1
+    assert result["status"] == "ready"
+    assert result["final_plan_text"] == complete_plan
+    assert "source_repair" not in result["stage2_validator_report"]
 
 
 def test_first_pass_omits_max_output_tokens_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
