@@ -4,7 +4,102 @@ from fightcamp.stage2_pipeline import (
     build_stage2_retry,
     repair_stage2_structural_text,
     review_stage2_output,
+    structural_integrity_findings,
 )
+from fightcamp.stage2_validator import validate_stage2_output
+
+
+_STRUCTURAL_INTEGRITY_CODES = {
+    "phase_section_missing",
+    "missing_week_session_role",
+    "late_camp_session_incomplete",
+    "late_fight_missing_required_countdown_session",
+}
+
+
+def _kickboxing_three_week_brief() -> dict:
+    """Latest three-week Kickboxing camp: GPP D-21..15, SPP D-14..7, TAPER D-6..0."""
+    return {
+        "athlete_model": {"sport": "kickboxing", "days_until_fight": 21},
+        "athlete_snapshot": {"sport": "kickboxing", "days_until_fight": 21},
+        "restrictions": [],
+        "phase_strategy": {},
+        "candidate_pools": {},
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "week_index": 1,
+                    "phase": "GPP",
+                    "calendar_days": [{"weekday": "Monday", "d_day": 21}],
+                    "session_roles": [
+                        {"role_key": "primary_strength_day", "category": "strength", "scheduled_day_hint": "Monday"}
+                    ],
+                },
+                {
+                    "week_index": 2,
+                    "phase": "SPP",
+                    "calendar_days": [{"weekday": "Monday", "d_day": 14}],
+                    "session_roles": [
+                        {"role_key": "fight_pace_repeatability_day", "category": "conditioning", "scheduled_day_hint": "Monday"}
+                    ],
+                },
+                {
+                    "week_index": 3,
+                    "phase": "TAPER",
+                    "calendar_days": [{"weekday": "Monday", "d_day": 6}, {"weekday": "Sunday", "d_day": 0}],
+                    "session_roles": [
+                        {"role_key": "fight_week_freshness_day", "category": "recovery", "scheduled_day_hint": "Monday"},
+                        {"role_key": "fight_day_protocol", "category": "recovery", "scheduled_day_hint": "Sunday"},
+                    ],
+                },
+            ]
+        },
+    }
+
+
+_KICKBOXING_THREE_WEEK_PLAN = """GPP — Week 1 (D-21 to D-15) — Base build
+Monday (D-21) — Strength
+- Slow-Lowered Pull-Up — 3 x 5, RPE 7
+
+SPP — Week 2 (D-14 to D-7) — Fight-pace repeatability
+Monday (D-14) — Fight-pace conditioning
+- Pressure Escape and Reset — 6 x 60 sec work, 45 sec rest
+
+TAPER — Week 3 (D-6 to D-0) — Freshness
+Monday (D-6) — Freshness reset
+- Easy shadowboxing — 3 x 2 min, RPE 4
+Sunday (D-0) — Fight day protocol
+- Fight day protocol only — follow coach warm-up and fight protocol."""
+
+
+def test_dated_three_week_camp_structure_present_without_repair():
+    # Regression for the Kickboxing conflict: a dated three-week camp rendered on
+    # the phase/week spine (Stage 1 owns week/phase/date/D-day) satisfies the
+    # calendar-structure validation with NO structural-integrity findings, so the
+    # structural repair/hold path never has to run.
+    brief = _kickboxing_three_week_brief()
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text=_KICKBOXING_THREE_WEEK_PLAN,
+    )
+
+    codes = {
+        item.get("code")
+        for key in ("errors", "warnings", "review_flags")
+        for item in report.get(key) or []
+        if isinstance(item, dict)
+    }
+    assert _STRUCTURAL_INTEGRITY_CODES & codes == set()
+
+    # The structure is genuinely present: the deterministic repair finds nothing
+    # to restore and is a no-op (no appended schedule, no unresolved loss).
+    assert structural_integrity_findings(report) == []
+    repaired = repair_stage2_structural_text(
+        planning_brief=brief,
+        final_plan_text=_KICKBOXING_THREE_WEEK_PLAN,
+        validator_report=report,
+    )
+    assert repaired == {"text": _KICKBOXING_THREE_WEEK_PLAN, "applied": [], "unresolved": []}
 
 
 def _stage1_result_fixture() -> dict:

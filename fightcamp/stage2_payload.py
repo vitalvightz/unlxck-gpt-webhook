@@ -2724,7 +2724,7 @@ If a drill repeats across sessions, the Why today must make the changed role exp
 RULE 13 — LATE-FIGHT LABEL DISCIPLINE
 Applies when render_guards.suppress_phase_toolbox_sections == true.
 
-Output is countdown-led. Lead every active day with countdown_display_label (D-N (Weekday)). Do not emit phase scaffolding: no "Week 1/2/3", no "PHASE N: GPP/SPP/TAPER", no "Phase Weeks", no "Phase Days", no "Phase must-keep", no "TAPER phase guidance", no "SPP insert", no "Mindset Focus" / "Strength & Power" / "Conditioning" sub-headers framed by phase.
+In late_fight_countdown_only mode (render_guards.render_mode == "late_fight_countdown_only") the output is countdown-led: lead every active day with countdown_display_label (D-N (Weekday)) and do not emit phase scaffolding — no "Week 1/2/3", no "PHASE N: GPP/SPP/TAPER", no "Phase Weeks", no "Phase Days", no "Phase must-keep", no "TAPER phase guidance", no "SPP insert", no "Mindset Focus" / "Strength & Power" / "Conditioning" sub-headers framed by phase. This no-week-header rule does not apply to camp_plan, which keeps the Stage 1 phase/week spine per the FINAL RENDER CONTRACT. The session-title translation and safety rules below apply regardless of mode.
 Do not expose internal role keys or internal system labels as session titles. Translate role keys into coach-voiced names from the intent, drills selected, and countdown day. Canonical mapping:
   strength_touch_day         -> "Power Transfer Touch"
   alactic_sharpness_day      -> "Fight-Speed Primer"
@@ -2745,13 +2745,16 @@ UNLXCK_FINAL_RENDER_CONTRACT = """UNLXCK FINAL RENDER CONTRACT
 
 Non-negotiable output contract:
 0. Lead notes come first when active injury, weight cut, freshness, or volume/compression logic exists. Use short coach-facing notes before the first week.
-1. Late-fight plans must use D-X countdown headers.
-2. Late-fight active-day headers must be: D-X (Weekday) — clear athlete-facing session role.
-3. Do not use raw system titles as athlete-facing session titles. Avoid as session titles only: Strength touch, Alactic sharpness, Neural primer, Glycolytic, Alactic, Aerobic. Phase headers may still use GPP, SPP, and TAPER for longer camps.
-4. Longer camps must use phase/week headers in this style:
-   GPP — Week 1 (D-X to D-X) — Objective
-   SPP — Week 2 (D-X to D-X) — Objective
-   TAPER — Week 3 (D-X to D-X) — Objective
+1. The top-level output structure is fixed by render_guards.render_mode. Stage 1 owns week, phase, date and D-day; never invent, merge, drop, or relabel them.
+   - camp_plan (a dated multi-week camp): you MUST render the Stage 1 phase/week spine as top-level headers — one header per active planning week in the finalizer packet / weekly_role_map — in this style:
+       GPP — Week 1 (D-X to D-X) — Objective
+       SPP — Week 2 (D-X to D-X) — Objective
+       TAPER — Week 3 (D-X to D-X) — Objective
+     Nest each active day under its owning week as a "D-X (Weekday) — session role" header. This holds through the fight-week/taper tail: the final week's D-days (including D-0) stay inside the TAPER week. Never flatten a multi-week camp into a bare countdown list and never omit or merge a week — late-camp and taper rules change session content and dose within this spine, they must not remove week/phase headers.
+   - late_fight_countdown_only (a short-notice camp that sits entirely inside the late-fight window): countdown-led with no week or phase headers.
+2. Active-day headers are always: D-X (Weekday) — clear athlete-facing session role.
+3. Do not use raw system titles as athlete-facing session titles. Avoid as session titles only: Strength touch, Alactic sharpness, Neural primer, Glycolytic, Alactic, Aerobic. Phase headers may still use GPP, SPP, and TAPER.
+4. In camp_plan mode, every planning week that is active in the finalizer packet / weekly_role_map must appear as its own week header; do not collapse multiple weeks into one or drop the earliest weeks.
 5. Every app-owned training day must clearly show:
    - why the session exists today
    - exact drill/exercise, sets/reps/duration, rest, and intensity/RPE
