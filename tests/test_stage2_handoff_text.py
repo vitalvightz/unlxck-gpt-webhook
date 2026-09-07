@@ -314,3 +314,88 @@ def test_build_stage2_handoff_text_keeps_structured_collision_details_in_packet(
 
     assert '"collision_details":[{"tag":"power","label":"Power","detail":"Power drops when tired"},{"tag":"conditioning","label":"Conditioning","detail":"Late-round fatigue"}]' in handoff
     assert '"derived_clarification_tags":["explosive","rate_of_force"]' in handoff
+
+
+def _kickboxing_three_week_camp() -> tuple[dict, dict]:
+    """The latest three-week Kickboxing camp: GPP D-21..15, SPP D-14..7, TAPER D-6..0."""
+    render_guards = {
+        "has_active_injury": False,
+        "suppress_rehab_headings": True,
+        "suppress_phase_toolbox_sections": False,
+        "render_mode": "camp_plan",
+    }
+    weeks = [
+        {"week_index": 1, "phase": "GPP", "session_roles": [
+            {"role_key": "primary_strength_day", "category": "strength", "scheduled_day_hint": "monday"}
+        ]},
+        {"week_index": 2, "phase": "SPP", "session_roles": [
+            {"role_key": "fight_pace_repeatability_day", "category": "conditioning", "scheduled_day_hint": "monday"}
+        ]},
+        {"week_index": 3, "phase": "TAPER", "session_roles": [
+            {"role_key": "fight_week_freshness_day", "category": "recovery", "scheduled_day_hint": "monday"}
+        ]},
+    ]
+    stage2_payload = {
+        "athlete_model": {"sport": "kickboxing", "days_until_fight": 21},
+        "rewrite_guidance": {"render_guards": dict(render_guards)},
+    }
+    planning_brief = {
+        "athlete_snapshot": {"sport": "kickboxing", "days_until_fight": 21},
+        "decision_rules": {"render_guards": dict(render_guards)},
+        "weekly_role_map": {"weeks": weeks},
+    }
+    return stage2_payload, planning_brief
+
+
+def test_dated_multiweek_camp_handoff_requires_phase_week_spine():
+    stage2_payload, planning_brief = _kickboxing_three_week_camp()
+    handoff = build_stage2_handoff_text(
+        stage2_payload=stage2_payload,
+        plan_text="GPP — Week 1\n- Slow-Lowered Pull-Up - 3x5",
+        planning_brief=planning_brief,
+    )
+
+    # Stage 1 owns the calendar spine and the camp renders in camp_plan mode.
+    assert '"render_mode":"camp_plan"' in handoff
+
+    # The contract now decisively requires the phase/week spine for camp_plan
+    # and scopes countdown-led output to late_fight_countdown_only only.
+    assert "camp_plan (a dated multi-week camp): you MUST render the Stage 1 phase/week spine" in handoff
+    assert "the final week's D-days (including D-0) stay inside the TAPER week" in handoff
+    assert "late_fight_countdown_only (a short-notice camp" in handoff
+
+    # The old, un-scoped instruction that let a multi-week camp flatten into a
+    # bare countdown list must be gone.
+    assert "Late-fight plans must use D-X countdown headers." not in handoff
+
+    # The fight-week tail is handled by the countdown-continuation map, which
+    # keeps the earlier camp days on the phase/week spine rather than flattening
+    # the whole camp into a countdown.
+    assert "Do not convert the earlier camp days into a late-fight countdown." in handoff
+
+    # Late-camp session rules remain intact: the D-13..D-0 tail still maps to the
+    # existing fight-week payload contracts inside the one camp spine.
+    assert "COUNTDOWN CONTINUATION MAP" in handoff
+    assert "pre_fight_compressed_payload" in handoff
+    assert "fight_day_protocol_payload" in handoff
+
+
+def test_late_fight_countdown_only_handoff_stays_countdown_led():
+    # A short-notice camp entirely inside the late-fight window keeps countdown-led
+    # rendering; the phase/week spine requirement is scoped to camp_plan only.
+    stage2_payload, planning_brief = _kickboxing_three_week_camp()
+    stage2_payload["athlete_model"]["days_until_fight"] = 6
+    stage2_payload["rewrite_guidance"]["render_guards"]["render_mode"] = "late_fight_countdown_only"
+    stage2_payload["rewrite_guidance"]["render_guards"]["suppress_phase_toolbox_sections"] = True
+    planning_brief["decision_rules"]["render_guards"]["render_mode"] = "late_fight_countdown_only"
+    planning_brief["decision_rules"]["render_guards"]["suppress_phase_toolbox_sections"] = True
+
+    handoff = build_stage2_handoff_text(
+        stage2_payload=stage2_payload,
+        plan_text="D-6\n- Freshness reset",
+        planning_brief=planning_brief,
+    )
+
+    assert '"render_mode":"late_fight_countdown_only"' in handoff
+    assert "late_fight_countdown_only (a short-notice camp" in handoff
+    assert "countdown-led with no week or phase headers" in handoff
