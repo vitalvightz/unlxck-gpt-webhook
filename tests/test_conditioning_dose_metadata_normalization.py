@@ -1,6 +1,7 @@
 """Regression tests for the conditioning dose-metadata normalisation pass.
 
-These guard the corrections applied to ``data/conditioning_bank.json`` by
+These guard the corrections applied to ``data/conditioning_bank.json`` and
+``data/style_conditioning_bank.json`` by
 ``tools/audit_conditioning_dose_metadata.py``.
 
 The dose contract under test:
@@ -25,17 +26,21 @@ import pytest
 
 from tools.audit_conditioning_dose_metadata import classify, elapsed_minutes
 
-_BANK = {
-    entry["name"]: entry
-    for entry in json.loads(
-        Path("data/conditioning_bank.json").read_text(encoding="utf-8")
-    )
-}
+def _load(name: str) -> dict:
+    return {
+        entry["name"]: entry
+        for entry in json.loads(Path(f"data/{name}").read_text(encoding="utf-8"))
+    }
 
-# Derived directly from the bank via the auditor's classifier so the tests do
+
+_BANK = _load("conditioning_bank.json")
+_STYLE_BANK = _load("style_conditioning_bank.json")
+
+# Derived directly from the banks via the auditor's classifier so the tests do
 # not depend on any generated report artifact.
 _CLEAN = [e for e in _BANK.values() if classify(e)[0] == "ok"]
 _AMBIGUOUS = {e["name"]: classify(e)[1] for e in _BANK.values() if classify(e)[0] == "ambiguous"}
+_STYLE_CLEAN = [e for e in _STYLE_BANK.values() if classify(e)[0] == "ok"]
 
 
 def _elapsed(work_sec: float, rest_sec: float, rounds: float) -> float:
@@ -91,10 +96,38 @@ def test_clean_timed_interval_units_are_valid(entry):
 
 
 def test_no_timed_interval_leaves_a_stated_rest_unencoded():
-    # After the pass no auto-correctable entry should remain: the auditor must
-    # report zero remaining ``fix`` actions against the bank.
-    remaining = [e["name"] for e in _BANK.values() if classify(e)[0] == "fix"]
+    # After the pass no auto-correctable entry should remain in either bank: the
+    # auditor must report zero remaining ``fix`` actions.
+    remaining = [
+        e["name"]
+        for bank in (_BANK, _STYLE_BANK)
+        for e in bank.values()
+        if classify(e)[0] == "fix"
+    ]
     assert remaining == []
+
+
+# --- style_conditioning_bank.json satisfies the same contract --------------
+
+
+def test_style_bank_clean_timed_intervals_satisfy_the_elapsed_contract():
+    # The style bank was normalised in the same pass; every clean timed interval
+    # must carry elapsed-convention total_minutes.
+    assert len(_STYLE_CLEAN) >= 150
+    for entry in _STYLE_CLEAN:
+        assert entry["total_minutes"] == elapsed_minutes(
+            entry["work_sec"], entry["rest_sec"], entry["rounds"]
+        )
+
+
+def test_style_bank_word_order_prescription_is_corrected():
+    # "5sec work, 60sec rest x 8 rounds" -> elapsed (40 + 7*60)/60 = 7.67, not 7.
+    drill = _STYLE_BANK["Entry-Exit Burst"]
+    assert drill["work_sec"] == 5
+    assert drill["rest_sec"] == 60
+    assert drill["rounds"] == 8
+    assert drill["total_minutes"] == 7.67
+    assert drill["total_minutes"] == elapsed_minutes(5, 60, 8)
 
 
 # --- Purpose retained: sample across systems -------------------------------

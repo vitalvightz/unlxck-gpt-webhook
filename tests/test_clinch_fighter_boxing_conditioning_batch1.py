@@ -25,9 +25,9 @@ REMOVED_FROM_BOXING = {
     "Corner Mauling Circuit", "Slip-Clinch Reaction",
 }
 PRESERVED_BOXING_SLICE_HASHES = {
-    "brawler": "611a8e4e826e2bcf992e46d5eed93403ea83523ac93430b01f5665f8741b8f89",
-    "pressure_fighter": "96f69a2d3808332456cb60839495d733792f5c3f25e0e81a02455add3c25abae",
-    "counter_striker": "2200f8da1b263bf0a429b3decb9aee88ca5142c5b5af9e66d4dc7bd1b912253a",
+    "brawler": "a66f0d6aef48a34a4a39bb7c3d2bd42c503ada507a25f93d08876ae4bf2cc75d",
+    "pressure_fighter": "679ea991668aacb51f6f097eb02bdf22a99118365342986ab2905ee68434e60e",
+    "counter_striker": "af158ff87e314b2c36f0de3607ecb70d0e1ea4688a14b9c30f708574ed136bd7",
     "distance_striker": "31183a60e03b3eb727a229a698da98ea205f1e9af3bd1291af89b061ab8cb35b",
 }
 
