@@ -341,7 +341,7 @@ _LATE_FIGHT_NEURAL_POWER_SIGNALS = (
 # new exercise selection and must not be treated as one even when they mention
 # dose tokens (e.g. "3 x 6") or exercise keywords (e.g. "punch", "carry").
 _LATE_FIGHT_ANNOTATION_LABEL = re.compile(
-    r"^\s*(?:"
+    r"^\s*(?:[-*•]\s*)?(?:\*\*)?(?:"
     r"purpose|why(?:\s+today)?|goals?|aims?|intent|objectives?|rationale|focus|"
     r"outputs?|results?|outcomes?|"
     r"notes?|coach(?:ing)?\s+(?:note|cue)s?|coach\s+calls?|cues?|"
@@ -349,13 +349,13 @@ _LATE_FIGHT_ANNOTATION_LABEL = re.compile(
     r"stop\s+rule|"
     # "progression / regression / stop" style labels in any order or combination
     # (e.g. "Progression/regression/stop:", "Regression/stop:", "Stop/regress -").
-    r"(?:progress(?:ion)s?|regress(?:ion)s?|stop)"
-    r"(?:\s*[\/\-]\s*(?:progress(?:ion)s?|regress(?:ion)s?|stop))*|"
+    r"(?:progress(?:ion)s?|regress(?:ion)s?|stop|easier)"
+    r"(?:\s*[\/\-]\s*(?:progress(?:ion)s?|regress(?:ion)s?|stop|easier))*|"
     r"setup|set[\s-]?up|tempo|load(?:ing)?|dose|dosage|rest|format|"
     r"equipment|targets?|scaling|adjust(?:ment)s?|modif(?:y|ication)s?"
     # Tolerate a parenthetical qualifier before the label punctuation, e.g.
     # "Regression/stop (D-13+ rule — regressions/stop only): ...".
-    r")\s*(?:\([^)]*\))?\s*[:\-–—]",
+    r")\s*(?:\([^)]*\))?\s*(?:\*\*)?\s*[:\-–—]",
     re.IGNORECASE,
 )
 
@@ -2323,7 +2323,7 @@ _LATE_FIGHT_PROGRESSION_ADVICE_PHRASES = (
 # "advance to close distance" would false-positive on the "advance" phrases.
 _LATE_FIGHT_PROGRESSION_LINE = re.compile(
     r"^\s*(?:[-*]\s*)?(?:\*\*)?\s*"
-    r"(?:progress(?:ion)?s?(?:\s*[\/\-]\s*regress(?:ion)?s?)?|regress(?:ion)?s?)"
+    r"(?:progress(?:ion)?s?(?:\s*[\/\-]\s*regress(?:ion)?s?)?|regress(?:ion)?s?|easier(?:\s*[\/-]\s*(?:regress(?:ion)?s?|stop))?)"
     r"\s*[:\-–—]",
     re.IGNORECASE,
 )
