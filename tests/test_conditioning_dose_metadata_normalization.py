@@ -1,8 +1,7 @@
-"""Regression tests for the conditioning dose-metadata normalisation pass.
+"""Regression tests for the conditioning dose-metadata normalisation.
 
 These guard the corrections applied to ``data/conditioning_bank.json`` and
-``data/style_conditioning_bank.json`` by
-``tools/audit_conditioning_dose_metadata.py``.
+``data/style_conditioning_bank.json``.
 
 The dose contract under test:
 
@@ -11,20 +10,132 @@ The dose contract under test:
     rounds         number of work intervals
     total_minutes  full elapsed block time = (rounds*work_sec + (rounds-1)*rest_sec)/60
 
-The pass fixes work-only / missing ``total_minutes`` and missing ``rest_sec`` for
-timed interval drills whose written prescription states an explicit discrete rest.
-It must NOT redose drills, and must NOT touch the rep-count / distance ``work_sec``
-entries that cannot be resolved from the prescription alone.
+Timed interval drills whose written prescription states an explicit discrete rest
+must carry ``rest_sec`` and elapsed-convention ``total_minutes``. Rep-count /
+distance ``work_sec`` entries cannot be resolved from the prescription alone and
+must be left untouched. The classifier below mirrors that rule so the tests can
+assert the contract straight from the bank data.
 """
 
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
 
-from tools.audit_conditioning_dose_metadata import classify, elapsed_minutes
+_DISTANCE = re.compile(r"\b\d+\s*(?:yd|yds|yard|yards|m|meter|meters|ft|feet)\b")
+_REPS = re.compile(r"\breps?\b|/side|per side")
+_REST_TOKEN = re.compile(r"\b(?:rest|off|recovery|reset)\b")
+_ACTIVE_RECOVERY = re.compile(r"\beasy\b|\btempo\b|\bgame-pace\b|\bpace\b|walk back")
+
+
+def _num(value):
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        return float(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+
+
+def _duration(entry: dict) -> str:
+    return str(entry.get("duration", "")).lower().replace("–", "-").replace("—", "-")
+
+
+def _parse_work(duration: str):
+    """Return ``(work_sec, rounds)`` when the work portion is genuine time."""
+    match = re.match(r"\s*(\d+)\s*x\s*(\d+)\s*(?:s|sec|secs|seconds)\b", duration)
+    if match:
+        return int(match.group(2)), int(match.group(1))
+    match = re.match(r"\s*(\d+)\s*x\s*(\d+)\s*(?:min|minute|minutes)\b", duration)
+    if match:
+        return int(match.group(2)) * 60, int(match.group(1))
+    match = re.match(r"\s*(\d+)\s*(?:s|sec|secs|seconds)\s*work\b", duration)
+    if match:
+        rounds = re.search(r"x\s*(\d+)\s*rounds?\b", duration)
+        if rounds:
+            return int(match.group(1)), int(rounds.group(1))
+    return None
+
+
+def _parse_rest(duration: str, work_sec: int):
+    """Return an explicit DISCRETE rest in seconds, or ``None``."""
+    match = re.search(r"(\d+):(\d{2})\s*(?:off|rest)", duration)
+    if match:
+        return int(match.group(1)) * 60 + int(match.group(2))
+    match = re.search(r"(\d+):1\s*(?:rest|off)", duration)
+    if match and work_sec:
+        return int(match.group(1)) * work_sec
+    match = re.search(r"1:(\d+)\s*(?:rest|off)", duration)
+    if match and work_sec:
+        return int(match.group(1)) * work_sec
+    match = re.search(r"(\d+)\s*(?:s|sec|secs|seconds)\s*(?:rest|off|recovery)\b", duration)
+    if match:
+        return int(match.group(1))
+    match = re.search(r"(\d+)\s*(?:min|minute|minutes)\s*(?:rest|recovery)\b", duration)
+    if match:
+        return int(match.group(1)) * 60
+    return None
+
+
+def elapsed_minutes(work_sec: float, rest_sec: float, rounds: float) -> float:
+    """Full elapsed block time for a timed interval drill, rounded to 2 dp."""
+    return round((work_sec * rounds + (rounds - 1) * rest_sec) / 60, 2)
+
+
+def classify(entry: dict):
+    """Return ``(action, reason)`` for one bank entry.
+
+    action: ``fix`` (auto-correctable but not yet correct), ``ambiguous`` (manual
+    review), ``ok`` (clean timed interval already consistent), ``skip`` (not a
+    timed multi-round interval).
+    """
+    duration = _duration(entry)
+    work = _num(entry.get("work_sec"))
+    rest = _num(entry.get("rest_sec"))
+    rounds = _num(entry.get("rounds"))
+    total = _num(entry.get("total_minutes"))
+
+    if rounds is None or rounds <= 1:
+        return "skip", None
+
+    parsed_work = _parse_work(duration)
+    reps_or_distance = bool(_DISTANCE.search(duration) or _REPS.search(duration))
+    has_rest_token = bool(_REST_TOKEN.search(duration))
+    one_round = work is not None and total is not None and abs(total - work / 60) < 0.02
+
+    if parsed_work is not None and parsed_work[1] == rounds and not reps_or_distance:
+        work_sec, round_count = parsed_work
+        rest_sec = _parse_rest(duration, work_sec)
+        if rest_sec is not None:
+            target = elapsed_minutes(work_sec, rest_sec, round_count)
+            if (
+                work == work_sec
+                and rest == rest_sec
+                and total is not None
+                and abs(total - target) <= 0.01
+            ):
+                return "ok", None
+            return "fix", None
+        if _ACTIVE_RECOVERY.search(duration):
+            return "ambiguous", "active-recovery interval; between-interval bout is work"
+        return "ambiguous", "no explicit discrete rest in prescription"
+
+    reasons = []
+    if reps_or_distance and (has_rest_token or rest is not None):
+        reasons.append("work portion encodes reps/distance")
+    if one_round and rounds > 1:
+        reasons.append("total_minutes counts a single round")
+    if has_rest_token and rest is None and not reps_or_distance:
+        reasons.append("prescription states a rest but rest_sec is unset")
+    if reasons:
+        return "ambiguous", "; ".join(dict.fromkeys(reasons))
+    return "skip", None
+
 
 def _load(name: str) -> dict:
     return {
@@ -36,8 +147,6 @@ def _load(name: str) -> dict:
 _BANK = _load("conditioning_bank.json")
 _STYLE_BANK = _load("style_conditioning_bank.json")
 
-# Derived directly from the banks via the auditor's classifier so the tests do
-# not depend on any generated report artifact.
 _CLEAN = [e for e in _BANK.values() if classify(e)[0] == "ok"]
 _AMBIGUOUS = {e["name"]: classify(e)[1] for e in _BANK.values() if classify(e)[0] == "ambiguous"}
 _STYLE_CLEAN = [e for e in _STYLE_BANK.values() if classify(e)[0] == "ok"]
@@ -74,7 +183,6 @@ def test_plyo_step_up_intervals_preserves_training_purpose():
 
 
 def test_every_clean_timed_interval_satisfies_the_elapsed_contract():
-    # The bank must contain a healthy number of contract-clean interval drills.
     assert len(_CLEAN) >= 50
     for entry in _CLEAN:
         assert entry["total_minutes"] == elapsed_minutes(
@@ -84,20 +192,16 @@ def test_every_clean_timed_interval_satisfies_the_elapsed_contract():
 
 @pytest.mark.parametrize("entry", _CLEAN, ids=[e["name"] for e in _CLEAN])
 def test_clean_timed_interval_units_are_valid(entry):
-    # rest_sec is whole seconds of genuine recovery.
     assert isinstance(entry["rest_sec"], int)
     assert entry["rest_sec"] > 0
-    # rounds is a positive whole number of intervals.
     assert isinstance(entry["rounds"], int)
     assert entry["rounds"] >= 2
-    # total_minutes is elapsed block time, strictly greater than work-only time.
     work_only = (entry["work_sec"] * entry["rounds"]) / 60
     assert entry["total_minutes"] > work_only
 
 
 def test_no_timed_interval_leaves_a_stated_rest_unencoded():
-    # After the pass no auto-correctable entry should remain in either bank: the
-    # auditor must report zero remaining ``fix`` actions.
+    # No auto-correctable entry should remain in either bank.
     remaining = [
         e["name"]
         for bank in (_BANK, _STYLE_BANK)
@@ -107,12 +211,46 @@ def test_no_timed_interval_leaves_a_stated_rest_unencoded():
     assert remaining == []
 
 
+# --- Purpose retained: sample across systems -------------------------------
+
+
+def test_corrected_entries_retain_energy_system_labels():
+    assert _BANK["Hill Sprint Repeats"]["system"] == "glycolytic"
+    assert _BANK["Pad Round Triples"]["system"] == "glycolytic"
+    assert _BANK["Sled Push Aerobic Intervals"]["system"] == "aerobic"
+
+
+# --- Ambiguous entries must be left untouched (no auto-redose) --------------
+
+
+def test_rep_encoded_plyo_entry_is_reported_not_modified():
+    # "Depth Jump to Sprint" prescribes 5x3 reps: work_sec=3 is a rep count, not
+    # seconds. The pass must leave it exactly as-is.
+    drill = _BANK["Depth Jump to Sprint"]
+    assert drill["work_sec"] == 3
+    assert drill["rest_sec"] == 120
+    assert drill["total_minutes"] == 0.25
+    assert "Depth Jump to Sprint" in _AMBIGUOUS
+    assert "reps/distance" in _AMBIGUOUS["Depth Jump to Sprint"]
+
+
+def test_active_recovery_interval_is_reported_not_modified():
+    # "Echo Bike Tempo Intervals" (4x3min hard, 2min easy) has no discrete rest.
+    drill = _BANK["Echo Bike Tempo Intervals"]
+    assert "rest_sec" not in drill or drill["rest_sec"] is None
+    assert drill["total_minutes"] == 12
+    assert "Echo Bike Tempo Intervals" in _AMBIGUOUS
+
+
+def test_ambiguous_entries_are_never_clean_timed_intervals():
+    clean_names = {entry["name"] for entry in _CLEAN}
+    assert clean_names.isdisjoint(_AMBIGUOUS)
+
+
 # --- style_conditioning_bank.json satisfies the same contract --------------
 
 
 def test_style_bank_clean_timed_intervals_satisfy_the_elapsed_contract():
-    # The style bank was normalised in the same pass; every clean timed interval
-    # must carry elapsed-convention total_minutes.
     assert len(_STYLE_CLEAN) >= 150
     for entry in _STYLE_CLEAN:
         assert entry["total_minutes"] == elapsed_minutes(
@@ -130,51 +268,10 @@ def test_style_bank_word_order_prescription_is_corrected():
     assert drill["total_minutes"] == elapsed_minutes(5, 60, 8)
 
 
-# --- Purpose retained: sample across systems -------------------------------
-
-
-def test_corrected_entries_retain_energy_system_labels():
-    # Spot-check that corrections spanned several energy systems and none were
-    # flipped by the metadata fix (systems come straight from the bank).
-    assert _BANK["Hill Sprint Repeats"]["system"] == "glycolytic"
-    assert _BANK["Pad Round Triples"]["system"] == "glycolytic"
-    assert _BANK["Sled Push Aerobic Intervals"]["system"] == "aerobic"
-
-
-# --- Ambiguous entries must be left untouched (no auto-redose) --------------
-
-
-def test_rep_encoded_plyo_entry_is_reported_not_modified():
-    # "Depth Jump to Sprint" prescribes 5x3 reps: work_sec=3 is a rep count, not
-    # seconds. The pass must leave it exactly as-is and flag it for manual review.
-    drill = _BANK["Depth Jump to Sprint"]
-    assert drill["work_sec"] == 3
-    assert drill["rest_sec"] == 120
-    assert drill["total_minutes"] == 0.25
-    assert "Depth Jump to Sprint" in _AMBIGUOUS
-    assert "reps/distance" in _AMBIGUOUS["Depth Jump to Sprint"]
-
-
-def test_active_recovery_interval_is_reported_not_modified():
-    # "Echo Bike Tempo Intervals" (4x3min hard, 2min easy) has no discrete rest;
-    # the easy bout is work, so rest_sec stays unset and total_minutes unchanged.
-    drill = _BANK["Echo Bike Tempo Intervals"]
-    assert "rest_sec" not in drill or drill["rest_sec"] is None
-    assert drill["total_minutes"] == 12
-    assert "Echo Bike Tempo Intervals" in _AMBIGUOUS
-
-
-def test_ambiguous_entries_are_never_clean_timed_intervals():
-    clean_names = {entry["name"] for entry in _CLEAN}
-    assert clean_names.isdisjoint(_AMBIGUOUS)
-
-
 # --- Prior corrections remain intact ---------------------------------------
 
 
 def test_previous_dose_corrections_are_preserved():
-    # From tests/test_conditioning_dose_metadata_corrections.py -- the earlier
-    # elapsed-convention entries must still satisfy the same contract.
     treadmill = _BANK["Treadmill Hill Sprints"]
     assert treadmill["total_minutes"] == _elapsed(
         treadmill["work_sec"], treadmill["rest_sec"], treadmill["rounds"]
