@@ -926,7 +926,12 @@ def build_stage2_retry(
         summary = "WARN: final plan has admin-review blocking issues and needs revision before release"
         summary_lines = [_warning_detail_line(warning) for warning in admin_blockers]
 
-    if validator_report.get("release_decision") != "hold":
+    missing_closed_conditioning = any(
+        isinstance(item, dict)
+        and str(item.get("code") or "") == "missing_selected_conditioning_assignment"
+        for item in validator_report.get("errors", []) or []
+    )
+    if validator_report.get("release_decision") != "hold" and not missing_closed_conditioning:
         return {
             "status": status,
             "validator_report": validator_report,

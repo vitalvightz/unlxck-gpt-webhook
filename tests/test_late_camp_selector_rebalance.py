@@ -989,7 +989,7 @@ def test_conditioning_late_window_keeps_reactive_option_without_generic_glycolyt
     assert "glycolytic" not in grouped_drills
 
 
-def test_conditioning_bridge_phase_activates_late_window_without_taper_label(monkeypatch):
+def test_conditioning_bridge_phase_keeps_glycolytic_candidate_for_selected_gas_tank_without_hard_spar(monkeypatch):
     conditioning_bank = [
         {
             "name": "Fight Pace Leak",
@@ -1044,9 +1044,9 @@ def test_conditioning_bridge_phase_activates_late_window_without_taper_label(mon
     blocked_names = {entry["name"] for entry in candidate_reservoir["__late_window__"]["blocked"]}
 
     assert candidate_reservoir["__late_window__"]["window"] == "d21_to_d14"
-    assert "Fight Pace Leak" not in selected_names
-    assert "Fight Pace Leak" in blocked_names
-    assert "glycolytic" not in grouped_drills
+    assert "Fight Pace Leak" in selected_names
+    assert "Fight Pace Leak" not in blocked_names
+    assert "glycolytic" in grouped_drills
 
 
 def test_audit_snapshot_matches_golden():

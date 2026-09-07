@@ -73,19 +73,12 @@ def test_unused_day_gas_tank_conversion_removes_day_from_intentionally_unused():
             {"day": "saturday", "role": "off_day"},
         ],
     }
-    athlete_model = {"key_goals": ["conditioning"]}
+    athlete_model = {"key_goals": ["conditioning"], "plan_creation_weekday": "wednesday"}
 
     upgraded = _upgrade_unused_days_to_low_load_support(week, [], athlete_model)
     assert len(upgraded) == 1
     assert all(role["role_key"] == "converted_low_aerobic_gas_tank_day" for role in upgraded)
-    assert week["intentionally_unused_days"] == [
-        {
-            "day": "saturday",
-            "role": "off_day",
-            "low_aerobic_cap_skipped": True,
-            "low_aerobic_cap_reason": "Low-aerobic support cap reached (1); cut severity, phase, fatigue, or readiness blocked the upgrade for saturday.",
-        }
-    ]
+    assert week["intentionally_unused_days"] == [{"day": "saturday", "role": "off_day"}]
 
 
 def test_unused_day_upgrade_protects_d_minus_1_and_d_minus_0():
@@ -121,7 +114,7 @@ def test_unused_day_upgrade_allows_gas_tank_goal_signal():
         "calendar_days": [{"weekday": "thursday", "d_day": 27}],
         "intentionally_unused_days": [{"day": "thursday", "role": "off_day"}],
     }
-    athlete_model = {"key_goals": ["conditioning"]}
+    athlete_model = {"key_goals": ["conditioning"], "plan_creation_weekday": "wednesday"}
 
     upgraded = _upgrade_unused_days_to_low_load_support(week, [], athlete_model)
     assert len(upgraded) == 1
@@ -148,7 +141,7 @@ def test_unused_day_upgrade_skips_days_with_existing_session_role():
         "intentionally_unused_days": [{"day": "thursday", "role": "off_day"}],
     }
     session_roles = [{"session_index": 1, "category": "sparring", "role_key": "hard_sparring_day", "scheduled_day_hint": "thursday"}]
-    athlete_model = {"weaknesses": ["conditioning"]}
+    athlete_model = {"weaknesses": ["conditioning"], "plan_creation_weekday": "wednesday"}
 
     upgraded = _upgrade_unused_days_to_low_load_support(week, session_roles, athlete_model)
     assert len(upgraded) == 1

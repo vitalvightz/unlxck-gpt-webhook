@@ -8,6 +8,7 @@ from fightcamp.late_fight_phase_eligibility import (
     scheduled_phase_for_role,
 )
 from fightcamp.prescription_resolver import apply_effective_strength_prescriptions
+from fightcamp.planner_context import planner_athlete_model_context
 from fightcamp.session_composition import attach_late_fight_assignments, compose_normal_strength_assignments
 from fightcamp.stage2_payload import _build_late_fight_allowed_exercises_by_day, _slot_matches_late_fight_role
 from fightcamp.stage2_payload_late_fight import _countdown_weekday_map
@@ -80,6 +81,25 @@ def test_normal_full_strength_composition_preserves_anchor_secondary_and_support
         "Trap Bar Deadlift", "Landmine Press", "Pallof Press"]
     assert [item["name"] for item in role["effective_strength_prescriptions"]] == [
         "Trap Bar Deadlift", "Landmine Press", "Pallof Press"]
+
+
+def test_retained_strength_maintenance_preserves_selected_trunk_support():
+    anchor = _slot("Trap Bar Deadlift", 1)
+    trunk = _slot("Pallof Press", 2, "support_isometric")
+    trunk["selected"].update({"tags": ["trunk_strength", "core"], "movement": "core"})
+    role_map = _map({"role_key": "strength_touch_day", "category": "strength"}, 17)
+    token = planner_athlete_model_context.set({"weaknesses": ["trunk_strength"]})
+    try:
+        compose_normal_strength_assignments(
+            weekly_role_map=role_map,
+            candidate_pools={"SPP": {"strength_slots": [anchor, trunk]}},
+        )
+    finally:
+        planner_athlete_model_context.reset(token)
+
+    assert [item["name"] for item in role_map["weeks"][0]["session_roles"][0]["selected_exercise_assignments"]] == [
+        "Trap Bar Deadlift", "Pallof Press"
+    ]
 
 
 def test_late_fight_selector_selects_one_fallback_candidate_for_reduced_touch():

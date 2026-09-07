@@ -779,32 +779,31 @@ def _upgrade_unused_days_to_low_load_support(
     }
 
     unused_day_entries = list(week_entry.get("intentionally_unused_days") or [])
+    following_day = ""
     if (
         support_profile["role_key"] == "converted_low_aerobic_gas_tank_day"
-        and (
-            week_entry.get("week_index") is None
-            or str(week_entry.get("week_index")).strip() == "1"
-        )
     ):
         creation_day = str(athlete_model.get("plan_creation_weekday") or "").strip().lower()
         creation_index = _WEEKDAY_ORDER.get(creation_day)
-        if creation_index is not None:
-            following_index = (creation_index + 1) % 7
-            following_day = next(
-                (day for day, index in _WEEKDAY_ORDER.items() if index == following_index),
-                "",
-            )
-            unused_day_entries.sort(
-                key=lambda entry: 0
-                if str(entry.get("day") or "").strip().lower() == following_day
-                else 1
-            )
+        if creation_index is None:
+            return session_roles
+        following_index = (creation_index + 1) % 7
+        following_day = next(
+            (day for day, index in _WEEKDAY_ORDER.items() if index == following_index),
+            "",
+        )
 
     for day_entry in unused_day_entries:
         day = str(day_entry.get("day") or "").strip()
         role = str(day_entry.get("role") or "").strip()
 
         if not day:
+            updated_unused_days.append(day_entry)
+            continue
+
+        # Gas-tank support is a single next-day post-generation upgrade, never
+        # a general search for another free day later in the week.
+        if following_day and day.lower() != following_day:
             updated_unused_days.append(day_entry)
             continue
 

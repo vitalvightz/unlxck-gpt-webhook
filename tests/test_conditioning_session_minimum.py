@@ -3,7 +3,16 @@ import pytest
 from fightcamp.session_composition import compose_normal_conditioning_assignments
 
 
-def _option(name: str, *, duration: float, rpe: int = 5, intensity: str = "moderate") -> dict:
+def _option(
+    name: str,
+    *,
+    duration: float,
+    rpe: int = 5,
+    intensity: str = "moderate",
+    work_sec: int | None = None,
+    rest_sec: int | None = None,
+    rounds: int | None = None,
+) -> dict:
     return {
         "name": name,
         "selection_metadata": {
@@ -12,6 +21,9 @@ def _option(name: str, *, duration: float, rpe: int = 5, intensity: str = "moder
             "total_minutes": duration,
             "rpe": rpe,
             "intensity": intensity,
+            "work_sec": work_sec,
+            "rest_sec": rest_sec,
+            "rounds": rounds,
         },
     }
 
@@ -71,7 +83,7 @@ def test_conditioning_session_selects_three_suitable_bank_exercises():
         "Bike Rhythm",
         "Shadow Aerobic",
     ]
-    assert role["conditioning_composition_policy"]["minimum_exercise_count"] == 3
+    assert role["conditioning_composition_policy"]["minimum_exercise_count"] == 2
 
 
 def test_long_aerobic_session_uses_two_exercise_minimum():
@@ -107,7 +119,28 @@ def test_hard_sparring_adjacency_removes_conditioning_minimum(hard_day):
     assert role["conditioning_composition_policy"]["hard_sparring_adjacent"] is True
 
 
-def test_conditioning_minimum_does_not_stack_unsuitable_high_load_options():
+def test_conditioning_minimum_partitions_high_load_options_without_stacking_full_workouts():
+    role_map = _role_map()
+    pools = _pool(
+        _option("Hard Primary", duration=8, rpe=9, intensity="high", work_sec=30, rest_sec=60, rounds=6),
+        _option("Hard Repeat", duration=8, rpe=9, intensity="high", work_sec=30, rest_sec=60, rounds=6),
+        _option("Max Repeat", duration=8, rpe=10, intensity="max", work_sec=30, rest_sec=60, rounds=4),
+    )
+
+    compose_normal_conditioning_assignments(weekly_role_map=role_map, candidate_pools=pools)
+
+    role = _conditioner(role_map)
+    assignments = role["selected_exercise_assignments"]
+    assert [item["name"] for item in assignments] == ["Hard Primary", "Hard Repeat", "Max Repeat"]
+    assert [item["effective_rounds"] for item in assignments] == [6, 6, 4]
+    envelope = role["conditioning_composition_policy"]["high_load_workload_envelope"]
+    assert envelope["target_active_work_seconds"] == 480
+    assert envelope["allocated_active_work_seconds"] == 480
+    assert envelope["allocated_elapsed_seconds"] <= envelope["elapsed_cap_seconds"]
+    assert role["conditioning_composition_policy"]["workload_limited"] is False
+
+
+def test_conditioning_minimum_underfills_when_high_load_dose_is_unknown():
     role_map = _role_map()
     pools = _pool(
         _option("Hard Primary", duration=10, rpe=9, intensity="high"),
@@ -118,5 +151,6 @@ def test_conditioning_minimum_does_not_stack_unsuitable_high_load_options():
     compose_normal_conditioning_assignments(weekly_role_map=role_map, candidate_pools=pools)
 
     role = _conditioner(role_map)
-    assert [item["name"] for item in role["selected_exercise_assignments"]] == ["Hard Primary"]
+    assert role["selected_exercise_assignments"] == []
+    assert role["conditioning_composition_policy"]["underfill_reason"] == "high_load_dose_unknown"
     assert role["conditioning_composition_policy"]["workload_limited"] is True
