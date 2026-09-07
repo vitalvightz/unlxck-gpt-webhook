@@ -2410,7 +2410,7 @@ def build_stage2_payload(
     rewrite_guidance = {
         "selection_rules": [
             "Prefer selected items first only if they remain strong and compliant.",
-            "If a selected item is removed, replace with the strongest compliant same-role option first.",
+            "Only for a role without selected_exercise_assignments, replace a removed item with the strongest compliant same-role option first.",
             "Do not let support drills take over anchor slots when stronger compliant options exist.",
             "Treat option mechanical_risk_tags plus restriction blocked_patterns/mechanical_equivalents as hard clues for mechanically equivalent matches.",
             "Do not invent new items when a strong compliant option already exists in the pool.",
@@ -2432,7 +2432,7 @@ def build_stage2_payload(
             "Do not use empty safety lines such as 'listen to your body', 'be careful', or 'avoid overtraining' unless they are followed by a concrete rule, symptom trigger, or plan change.",
             "Aim critique at the plan, load, or execution issue, never at the athlete's character.",
             "Keep high-value isometrics when they fit, but do not let them default to anchor status if a stronger compliant loaded option exists.",
-            "For conditioning, give one primary prescription and at most one explicit fallback.",
+            "Only for a conditioning role without selected_exercise_assignments, give one primary prescription and at most one explicit fallback. For closed membership, render every selected assignment as its own exercise line.",
             "Collapse internal template/menu options into one final prescription whenever the athlete context already resolves the choice.",
             "Keep every active week present and structurally complete, including late-camp weeks.",
             "For boxer weeks, keep the default rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a stronger planning rule forces a change.",
@@ -2607,7 +2607,7 @@ AUTHORITY ORDER
 4. Stage 1 draft text and unselected candidate material — not final authority. Deterministic selected_exercise_assignments in the FINALIZER PACKET are final session membership.
 
 RULE 1 — HARD FILTER
-Remove every exercise, drill, or prescription that violates any restriction, including synonyms and mechanical equivalents. Apply to strength, conditioning, rehab, warm-ups, and finishers. Do not modify a violating item into compliance — replace or drop it.
+Remove every exercise, drill, or prescription that violates any restriction, including synonyms and mechanical equivalents. Apply to strength, conditioning, rehab, warm-ups, and finishers. For a role with selected_exercise_assignments, drop/hold an illegal selected item and leave the gap; never replace it. Only open roles may replace or drop an item.
 
 RULE 2 — PLAN THE CAMP, DON'T JUST EDIT
 Build the best final plan from the FINALIZER PACKET. Use selected_plan, weekly_role_map, session_sequence, week_by_week_progression, and render_guards to sequence the camp. Reorganise and tighten — coherence over inertia.
@@ -2638,7 +2638,7 @@ RULE 7 — SUPPORT WORK STAYS SUPPORT
 Rehab, carries, trunk stability, and mobility support the plan — they do not lead it unless the packet clearly requires a protection-first camp. When cutting volume, cut accessory work first.
 
 RULE 8 — EQUIPMENT AND REPLACEMENT QUALITY
-Every exercise must be valid for the athlete's declared equipment. If the profile resolves an access question, render the resolved option only — no unresolved branches. Replace weak or violating Stage 1 items with stronger compliant options from compact candidate facts, selected_plan, or finalizer-safe substitutions, not softer invented options.
+Every exercise must be valid for the athlete's declared equipment. If the profile resolves an access question, render the resolved option only — no unresolved branches. Only roles without selected_exercise_assignments may replace weak or violating Stage 1 items with stronger compliant options from compact candidate facts, selected_plan, or finalizer-safe substitutions. Closed membership may only be reduced for a hard restriction, never replaced.
 
 RULE 9 — TAPER DISCIPLINE
 Cut novelty, reduce accessory volume, avoid density. Keep only sharpness, rhythm, confidence, and freshness. One final prescription per session — no option menus.

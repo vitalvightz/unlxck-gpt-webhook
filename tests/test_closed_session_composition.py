@@ -2,6 +2,7 @@
 
 from fightcamp.prescription_resolver import apply_effective_strength_prescriptions
 from fightcamp.stage2_finalizer_packet import build_stage2_finalizer_packet
+from fightcamp.stage2_payload import STAGE2_FINALIZER_PROMPT
 from fightcamp.stage2_repair import REPAIR_PROMPT_TEMPLATE, _build_revision_priorities
 from fightcamp.stage2_validator import _late_camp_effective_prescription_warnings
 
@@ -134,6 +135,25 @@ def test_finalizer_packet_exposes_selected_identity_and_closed_rule() -> None:
     assert any("complete session membership" in rule for rule in packet["hard_rules"])
     assert any("including Rules 4, 5, 6A, 7, and 8" in rule for rule in packet["hard_rules"])
     assert any("never choose a downstream replacement" in rule for rule in packet["hard_rules"])
+
+
+def test_conditioning_closed_membership_has_an_explicit_per_assignment_render_contract() -> None:
+    role = {
+        "role_key": "controlled_repeatability_day",
+        "category": "conditioning",
+        "scheduled_day_hint": "sunday",
+        "selected_exercise_assignments": [
+            {"name": "KB Swing Intervals", "effective_prescription": "4 x 30 sec work; 90 sec rest; RPE 8"},
+            {"name": "Burpee Broad Jumps", "effective_prescription": "4 x 30 sec work; 150 sec rest; RPE 8"},
+        ],
+    }
+    packet = build_stage2_finalizer_packet(stage2_payload={}, planning_brief=_brief(role))
+    compact_role = packet["selected_plan"]["weekly_role_map"]["weeks"][0]["session_roles"][0]
+
+    assert compact_role["selected_exercise_assignments"] == role["selected_exercise_assignments"]
+    assert any("one separate bullet for every assignment" in rule for rule in packet["hard_rules"])
+    assert "For a role with selected_exercise_assignments, drop/hold an illegal selected item" in STAGE2_FINALIZER_PROMPT
+    assert "Only roles without selected_exercise_assignments may replace weak or violating" in STAGE2_FINALIZER_PROMPT
 
 
 def test_repair_removes_unselected_exercise_instead_of_reducing_its_dose() -> None:
