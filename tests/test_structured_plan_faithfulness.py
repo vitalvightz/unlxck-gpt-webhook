@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import api.structured_plan_faithfulness as faithfulness
 from api.structured_plan_faithfulness import check_structured_faithfulness
+from api.structured_plan_faithfulness import repair_locked_tactical_watch_source_text
 from api.structured_plan_generation import build_structured_plan_outcome
 
 # A realistic Stage 2 plan source: countdown day headers + named exercises.
@@ -177,6 +178,262 @@ def test_locked_tactical_watch_missing_progress_is_rejected():
     plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]["progression_rule"] = None
     violations = check_structured_faithfulness(plan, LOCKED_WATCH_SOURCE, LOCKED_WATCH_BRIEF)
     assert any("Progress" in item for item in violations)
+
+
+OVERLAY_DANGER_CUE = "Name the opponent danger cue that tells you to protect, delay or reset."
+OVERLAY_ROUND_PHASE = "Choose the round phase where this cue is most likely to matter."
+
+
+def _body_attack_brief(day: str = "D-17") -> dict:
+    return {
+        "weeks": [{
+            "session_roles": [{
+                "scheduled_countdown_label": day,
+                "countdown_label": "D-99",
+                "display_text": "\n".join(
+                    [
+                        "Why: Find safe body attacks that reward pressure without making the entry predictable.",
+                        "- Body Attack Opportunity: 10 minutes, tactical review only. No physical load.",
+                        "  Step 1: Identify the clearest body opening the opponent gives away.",
+                        "  Step 2: Choose the punch or feint that creates that opening.",
+                        "  Step 3: Choose the body target you will attack.",
+                        "  Step 4: Choose the head follow-up that punishes their reaction.",
+                        f"  Step 5: {OVERLAY_DANGER_CUE}",
+                        f"  Step 6: {OVERLAY_ROUND_PHASE}",
+                        "  Intent: Attack the body when the position earns it.",
+                        "  Focus: Watch for high guards, separated elbows and upright posture.",
+                        "  Reset: If the body line closes, go back upstairs rather than forcing it.",
+                        "  Anchor: Open it before you take it.",
+                        "  Purpose: SPP body-attack selection for a pressure fighter.",
+                        "  Progress: Use the body attack only after the chosen setup appears in technical work.",
+                    ]
+                ),
+                "preferred_exercise_names": ["Body Attack Opportunity"],
+                "mandatory_tactical_watch": True,
+                "governance": {
+                    "selected_drill_locked": True,
+                    "selected_drill_name": "Body Attack Opportunity",
+                    "render_selected_drill_exactly": True,
+                    "experience_overlay_locked": True,
+                    "mandatory": True,
+                },
+                "tactical_watch": {
+                    "name": "Body Attack Opportunity",
+                    "why": "Find safe body attacks that reward pressure without making the entry predictable.",
+                    "duration_min": 10,
+                    "instructions": [
+                        "Identify the clearest body opening the opponent gives away.",
+                        "Choose the punch or feint that creates that opening.",
+                        "Choose the body target you will attack.",
+                        "Choose the head follow-up that punishes their reaction.",
+                        OVERLAY_DANGER_CUE,
+                        OVERLAY_ROUND_PHASE,
+                    ],
+                    "mindset": {
+                        "intent": "Attack the body when the position earns it.",
+                        "focus": "Watch for high guards, separated elbows and upright posture.",
+                        "reset": "If the body line closes, go back upstairs rather than forcing it.",
+                        "anchor": "Open it before you take it.",
+                        "context": "SPP body-attack selection for a pressure fighter.",
+                    },
+                    "progress": "Use the body attack only after the chosen setup appears in technical work.",
+                },
+            }]
+        }]
+    }
+
+
+def _body_attack_card() -> dict:
+    return {
+        "weeks": [{
+            "countdown_start": "D-17",
+            "countdown_end": "D-9",
+            "days": [{
+                "countdown_label": "D-17",
+                "sessions": [{
+                    "title": "Fight Tactical Watch",
+                    "objective": "Find safe body attacks that reward pressure without making the entry predictable.",
+                    "mindset_anchor": {
+                        "intent": "Attack the body when the position earns it.",
+                        "focus_cue": "Watch for high guards, separated elbows and upright posture.",
+                        "reset_cue": "If the body line closes, go back upstairs rather than forcing it.",
+                        "confidence_anchor": "Open it before you take it.",
+                    },
+                    "blocks": [{
+                        "block_type": "mindset",
+                        "display_name": "Body Attack Opportunity",
+                        "coaching_cues": [
+                            "Identify the clearest body opening the opponent gives away.",
+                            "Choose the punch or feint that creates that opening.",
+                            "Choose the body target you will attack.",
+                            "Choose the head follow-up that punishes their reaction.",
+                            OVERLAY_DANGER_CUE,
+                            OVERLAY_ROUND_PHASE,
+                        ],
+                        "purpose": "SPP body-attack selection for a pressure fighter.",
+                        "progression_rule": (
+                            "Use the body attack only after the chosen setup appears in technical work."
+                        ),
+                    }],
+                }],
+            }],
+        }]
+    }
+
+
+def test_repeated_overlay_elsewhere_does_not_create_locked_step_requirements():
+    source = f"""D-17 (Monday) - Strength
+- Sled Push (Speed). 3 x 2 pushes.
+
+D-9 (Tuesday) - Fight Tactical Watch
+Why: Know what happens after the first punches so pocket exchanges stay planned.
+- Pocket Exchange Map: 10 minutes, tactical review only. No physical load.
+  Step 1: Identify the opponent's most common pocket sequence.
+  Step 2: Choose your answer to that sequence.
+  Step 5: {OVERLAY_DANGER_CUE}
+  Step 6: {OVERLAY_ROUND_PHASE}
+"""
+
+    violations = check_structured_faithfulness(
+        _body_attack_card(),
+        source,
+        _body_attack_brief(),
+    )
+
+    assert violations == [
+        "LOCKED_CONTENT: 'Body Attack Opportunity' "
+        "locked_tactical_watch_missing_from_stage2 on D-17"
+    ]
+
+
+def test_locked_requirements_are_scoped_to_the_correct_drill_section():
+    source = f"""D-17 (Monday) - Fight Tactical Watch
+Why: Find safe body attacks that reward pressure without making the entry predictable.
+- Body Attack Opportunity: 10 minutes, tactical review only. No physical load.
+  Step 1: Identify the clearest body opening the opponent gives away.
+  Step 2: Choose the punch or feint that creates that opening.
+  Step 3: Choose the body target you will attack.
+  Step 4: Choose the head follow-up that punishes their reaction.
+  Intent: Attack the body when the position earns it.
+  Focus: Watch for high guards, separated elbows and upright posture.
+  Reset: If the body line closes, go back upstairs rather than forcing it.
+  Anchor: Open it before you take it.
+  Purpose: SPP body-attack selection for a pressure fighter.
+  Progress: Use the body attack only after the chosen setup appears in technical work.
+
+D-9 (Tuesday) - Fight Tactical Watch
+Why: Know what happens after the first punches so pocket exchanges stay planned.
+- Pocket Exchange Map: 10 minutes, tactical review only. No physical load.
+  Step 5: {OVERLAY_DANGER_CUE}
+  Step 6: {OVERLAY_ROUND_PHASE}
+"""
+    plan = _body_attack_card()
+    plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]["coaching_cues"] = [
+        cue
+        for cue in plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]["coaching_cues"]
+        if cue not in {OVERLAY_DANGER_CUE, OVERLAY_ROUND_PHASE}
+    ]
+
+    assert check_structured_faithfulness(plan, source, _body_attack_brief()) == []
+
+
+def test_missing_locked_tactical_watch_source_is_repaired_idempotently():
+    source = """D-17 (Monday) - Strength
+- Sled Push (Speed). 3 x 2 pushes.
+
+D-16 (Tuesday) - Technical-only combat
+Technical-only contact today - no hard sparring.
+
+D-9 (Tuesday) - Fight Tactical Watch
+Why: Know what happens after the first punches so pocket exchanges stay planned.
+- Pocket Exchange Map: 10 minutes, tactical review only. No physical load.
+"""
+    brief = _body_attack_brief()
+
+    repaired = repair_locked_tactical_watch_source_text(source, brief)
+    repaired_twice = repair_locked_tactical_watch_source_text(
+        repaired.source_markdown,
+        brief,
+    )
+
+    assert repaired.unresolved == []
+    assert repaired.applied == ["D-17: Body Attack Opportunity"]
+    assert repaired_twice.source_markdown == repaired.source_markdown
+    assert repaired_twice.applied == []
+    assert repaired.source_markdown.count("Body Attack Opportunity") == 1
+    assert check_structured_faithfulness(
+        _body_attack_card(),
+        repaired.source_markdown,
+        brief,
+    ) == []
+
+
+def test_missing_locked_tactical_watch_repair_allows_contiguous_multi_session_day():
+    source = """D-17 (Monday) - Strength
+- Sled Push (Speed). 3 x 2 pushes.
+
+D-17 (Monday) - Technical Sparring
+- Technical sparring: 4 x 3 min, coach-led only.
+
+D-16 (Tuesday) - Technical-only combat
+Technical-only contact today - no hard sparring.
+"""
+    repaired = repair_locked_tactical_watch_source_text(source, _body_attack_brief())
+
+    assert repaired.unresolved == []
+    assert repaired.applied == ["D-17: Body Attack Opportunity"]
+    assert "D-17 (Monday) — Fight Tactical Watch" in repaired.source_markdown
+    assert repaired.source_markdown.index("Technical Sparring") < repaired.source_markdown.index(
+        "Fight Tactical Watch"
+    )
+    assert repaired.source_markdown.index("Fight Tactical Watch") < repaired.source_markdown.index(
+        "D-16 (Tuesday)"
+    )
+
+
+def test_missing_locked_tactical_watch_repair_rejects_split_duplicate_day():
+    source = """D-17 (Monday) - Strength
+- Sled Push (Speed). 3 x 2 pushes.
+
+D-16 (Tuesday) - Technical-only combat
+Technical-only contact today - no hard sparring.
+
+D-17 (Monday) - Technical Sparring
+- Technical sparring: 4 x 3 min, coach-led only.
+"""
+    repaired = repair_locked_tactical_watch_source_text(source, _body_attack_brief())
+
+    assert repaired.source_markdown == source
+    assert repaired.applied == []
+    assert repaired.unresolved[0].reason == "authoritative day split across multiple calendar groups"
+
+
+def test_missing_locked_tactical_watch_repair_rejects_inactive_role():
+    brief = _body_attack_brief()
+    brief["weeks"][0]["session_roles"][0]["active"] = False
+    source = """D-17 (Monday) - Strength
+- Sled Push (Speed). 3 x 2 pushes.
+"""
+
+    repaired = repair_locked_tactical_watch_source_text(source, brief)
+
+    assert repaired.source_markdown == source
+    assert repaired.applied == []
+    assert repaired.unresolved[0].reason == "locked role is inactive"
+
+
+def test_missing_locked_tactical_watch_repair_rejects_conflicting_watch_identity():
+    brief = _body_attack_brief()
+    brief["weeks"][0]["session_roles"][0]["tactical_watch"]["name"] = "Pressure Route Scan"
+    source = """D-17 (Monday) - Strength
+- Sled Push (Speed). 3 x 2 pushes.
+"""
+
+    repaired = repair_locked_tactical_watch_source_text(source, brief)
+
+    assert repaired.source_markdown == source
+    assert repaired.applied == []
+    assert repaired.unresolved[0].reason == "tactical_watch name conflicts with locked drill"
 
 
 def test_unlocked_role_does_not_enable_locked_content_invariant():

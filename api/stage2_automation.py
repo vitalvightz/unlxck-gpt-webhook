@@ -30,6 +30,7 @@ from .structured_plan_generation import (
     parse_structured_json,
     should_attempt_structured_plan,
 )
+from .structured_plan_faithfulness import repair_locked_tactical_watch_source_text
 from .structured_plan_calendar_spine import reconcile_calendar_spine
 from .structured_plan_models import build_strict_structured_plan_schema
 from .structured_plan_sparring_reconcile import reconcile_coach_led_sparring_days
@@ -495,6 +496,11 @@ async def attempt_structured_plan_for_result(
             ),
         )
         return result, []
+    _apply_locked_tactical_watch_source_repair(
+        result,
+        planning_brief=planning_brief,
+        source=source,
+    )
     # The worker result is not persisted until finalization completes, but it
     # still carries the same lifecycle marker as existing-row conversions. This
     # keeps the canonical result contract consistent and guarantees that any
@@ -518,6 +524,101 @@ def _stage2_source(stage1_result: dict[str, Any]) -> str:
     if isinstance(why_log.get("injury_triage_resume_override"), dict):
         return "admin_triage_resume"
     return "unknown"
+
+
+def _apply_locked_tactical_watch_source_repair(
+    result: dict[str, Any],
+    *,
+    planning_brief: Any,
+    source: str,
+) -> None:
+    source_text = str(result.get("final_plan_text") or result.get("plan_text") or "")
+    repaired_source = repair_locked_tactical_watch_source_text(source_text, planning_brief)
+    if repaired_source.source_markdown == source_text:
+        if repaired_source.unresolved:
+            logger.warning(
+                "[stage2] locked Tactical Watch source repair unresolved source=%s count=%d",
+                source,
+                len(repaired_source.unresolved),
+            )
+        return
+
+    if repaired_source.unresolved:
+        logger.warning(
+            "[stage2] rejected partial locked Tactical Watch source repair source=%s applied=%d unresolved=%d",
+            source,
+            len(repaired_source.applied),
+            len(repaired_source.unresolved),
+        )
+        return
+
+    try:
+        repaired_review = review_stage2_output(
+            planning_brief=planning_brief,
+            final_plan_text=repaired_source.source_markdown,
+        )
+    except Exception:
+        logger.exception("[stage2] repaired locked Tactical Watch source failed Stage 2 revalidation")
+        return
+
+    repaired_report = repaired_review.get("validator_report")
+    if not isinstance(repaired_report, dict):
+        logger.warning("[stage2] repaired locked Tactical Watch source produced malformed validator report")
+        return
+    if repaired_report.get("release_decision") == "hold":
+        logger.warning(
+            "[stage2] rejected locked Tactical Watch source repair after revalidation status=%s applied=%d unresolved=%d",
+            repaired_review.get("status") or "unknown",
+            len(repaired_source.applied),
+            len(repaired_source.unresolved),
+        )
+        return
+
+    original_stage2_status = str(result.get("stage2_status") or "").strip()
+    original_app_status = str(result.get("status") or "").strip()
+    original_report = result.get("stage2_validator_report")
+    prior_errors = list(original_report.get("errors") or []) if isinstance(original_report, dict) else []
+    prior_blocking = (
+        list(original_report.get("blocking_warnings") or []) if isinstance(original_report, dict) else []
+    )
+
+    repair_audit = {
+        "locked_tactical_watch": {
+            "status": "applied",
+            "applied": list(repaired_source.applied),
+            "unresolved_count": len(repaired_source.unresolved),
+            "previous_stage2_status": original_stage2_status or None,
+            "previous_app_status": original_app_status or None,
+            "previous_error_count": len(prior_errors),
+            "previous_blocking_warning_count": len(prior_blocking),
+            "revalidated_status": repaired_review.get("status") or None,
+            "revalidated_release_decision": repaired_report.get("release_decision") or None,
+        }
+    }
+    repaired_report["source_repair"] = repair_audit
+
+    result["final_plan_text"] = repaired_source.source_markdown
+    if str(result.get("plan_text") or "").strip():
+        result["plan_text"] = repaired_source.source_markdown
+    result["stage2_validator_report"] = repaired_report
+    release_decision = str(repaired_report.get("release_decision") or "").strip()
+    if release_decision == "publish_with_flags":
+        result["status"] = _APP_STATUS_PUBLISHABLE_WITH_FLAGS
+        result["stage2_status"] = _STAGE2_PASS
+    elif release_decision == "publish":
+        result["status"] = _APP_STATUS_READY
+        result["stage2_status"] = _STAGE2_PASS
+    else:
+        if original_app_status:
+            result["status"] = original_app_status
+        if original_stage2_status:
+            result["stage2_status"] = original_stage2_status
+    logger.info(
+        "[stage2] repaired locked Tactical Watch source before structured conversion source=%s applied=%d unresolved=%d",
+        source,
+        len(repaired_source.applied),
+        len(repaired_source.unresolved),
+    )
 
 
 def _log_stage2_prompt_budget(prompt: str, *, attempt_label: str, source: str, will_send: bool) -> None:
