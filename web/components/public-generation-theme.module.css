@@ -12,9 +12,8 @@
   box-shadow: var(--shadow-standard);
 }
 
-:global(html[data-theme="light"]) .theme:global(.public-build) header h1,
-:global(html[data-theme="light"]) .theme:global(.public-build) :global(.public-build-status strong),
-:global(html[data-theme="light"]) .theme:global(.public-build) :global(.public-build-terminal h1) {
+:global(html[data-theme="light"]) .theme:global(.public-build) h1,
+:global(html[data-theme="light"]) .theme :global(.public-build-status strong) {
   color: var(--text-primary);
 }
 
