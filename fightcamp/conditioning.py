@@ -3906,10 +3906,60 @@ def generate_conditioning_block(flags):
             )["pool_treading_strong_case"]
         return _pool_treading_strong_case
 
+    def _target_hits(item) -> int:
+        reasons = item[2] if isinstance(item[2], dict) else {}
+        return int(reasons.get("goal_hits", 0) or 0) + int(reasons.get("weakness_hits", 0) or 0)
+
+    def _next_unselected(candidates):
+        return next(
+            (item for item in candidates if item[0].get("name") not in selected_drill_names),
+            None,
+        )
+
+    def _style_head_is_outranked_on_target(system: str) -> bool:
+        """Stop a style drill owning a system slot a better target match should have.
+
+        ``blended_pick`` spends its style quota first, so the style bank used to
+        take the aerobic/glycolytic/alactic slot unconditionally — a
+        conditioning-limited athlete could get the aerobic slot filled by a
+        footwork flow while tagged aerobic work sat unused in the general pool.
+
+        Style stays the preference *between suitable candidates*: the comparison
+        is the blended score, which already folds in style, sport, equipment and
+        target hits, so a sport-specific style drill that genuinely suits the
+        session objective still wins its slot. The style head only yields to a
+        general candidate that both matches the athlete's declared target and
+        outscores it. Ties keep the existing style-first order; quotas, caps,
+        dose and safety filtering are untouched.
+        """
+        if general_remaining <= 0 or style_remaining <= 0:
+            return False
+        base_head = _next_unselected(system_drills.get(system, []))
+        if base_head is None or not _target_hits(base_head):
+            return False
+        style_head = _next_unselected(
+            item
+            for style in sorted(style_counts, key=style_counts.get)
+            for item in style_drills_by_style.get(style, {}).get(system, [])
+        )
+        if style_head is None:
+            return False
+        style_reasons = style_head[2] if isinstance(style_head[2], dict) else {}
+        if float(style_reasons.get("preferred_exercise_name_match", 0) or 0):
+            # An explicitly requested exercise is a coach instruction, not a
+            # style default: never displace it on target grounds.
+            return False
+        return float(base_head[1] or 0) > float(style_head[1] or 0)
+
     def blended_pick(system: str):
         nonlocal style_remaining, general_remaining
         drill = None
         reasons = None
+        if _style_head_is_outranked_on_target(system):
+            drill, reasons = pop_drill(system_drills, system)
+            if drill:
+                general_remaining -= 1
+                return drill, reasons
         if _base_head_is_priority_pool_treading(system):
             drill, reasons = pop_drill(system_drills, system)
             if drill:

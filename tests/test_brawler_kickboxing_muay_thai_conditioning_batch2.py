@@ -90,9 +90,14 @@ def test_equipment_mechanics_and_phase_reachability_follow_conventions():
         assert reached and {x["system"] for x in reached} == {"ATP-PCr", "glycolytic", "aerobic"}
 
 def test_existing_selector_surfaces_slice_for_both_sports_and_phases():
+    # Conditioning selection now prefers the best physiological match for the
+    # slot, so a style drill no longer owns a system slot by default. This test
+    # covers bank *reachability* — sport, style, equipment, phase and safety
+    # filtering — so it names the slice explicitly; an explicitly requested
+    # exercise is a coach instruction and is never displaced on target grounds.
     names = set(EXPECTED)
     for sport, technical in (("kickboxing", "kickboxing"), ("muay_thai", "muay thai")):
-        flags = {"sport": sport, "style_technical": [technical], "style_tactical": ["Brawler"], "key_goals": ["conditioning"], "weaknesses": ["gas_tank"], "fatigue": "low", "equipment": ["heavy_bag", "partner", "thai_pads"], "training_frequency": 5, "days_available": 5, "days_until_fight": 35, "time_to_fight_days": 35, "injuries": [], "restrictions": []}
+        flags = {"sport": sport, "style_technical": [technical], "style_tactical": ["Brawler"], "key_goals": ["conditioning"], "weaknesses": ["gas_tank"], "fatigue": "low", "equipment": ["heavy_bag", "partner", "thai_pads"], "training_frequency": 5, "days_available": 5, "days_until_fight": 35, "time_to_fight_days": 35, "injuries": [], "restrictions": [], "preferred_exercise_names": sorted(EXPECTED)}
         for phase in ("GPP", "SPP"):
             result = conditioning.generate_conditioning_block({**flags, "phase": phase})
             selected = result[5]["__style_conditioning__"]["final_selected_style_conditioning_names"]
