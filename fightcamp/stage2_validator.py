@@ -3440,21 +3440,47 @@ def _missing_selected_conditioning_assignment_warnings(
             rendered_lines = [line for block in blocks_by_day.get(d_day, []) for line in block.get("lines") or []]
             for assignment in assignments:
                 name = str(assignment["name"]).strip()
-                if any(_line_has_exercise(line, name) for line in rendered_lines):
+                matching_lines = [line for line in rendered_lines if _line_has_exercise(line, name)]
+                if not matching_lines:
+                    warnings.append(
+                        {
+                            "code": "missing_selected_conditioning_assignment",
+                            "message": f"D-{d_day} is missing selected conditioning exercise '{name}'.",
+                            "severity": "blocker",
+                            "confidence": "high",
+                            "scheduled_d_day": d_day,
+                            "exercise": name,
+                            "role_key": role.get("role_key"),
+                            "effective_prescription": assignment.get("effective_prescription"),
+                        }
+                    )
                     continue
-                warnings.append(
-                    {
-                        "code": "missing_selected_conditioning_assignment",
-                        "message": f"D-{d_day} is missing selected conditioning exercise '{name}'.",
-                        "severity": "blocker",
-                        "confidence": "high",
-                        "scheduled_d_day": d_day,
-                        "exercise": name,
-                        "role_key": role.get("role_key"),
-                        "effective_prescription": assignment.get("effective_prescription"),
-                    }
-                )
+                expected = str(assignment.get("effective_prescription") or "").strip()
+                if expected and not any(
+                    _normalise_conditioning_dose(expected) in _normalise_conditioning_dose(line)
+                    for line in matching_lines
+                ):
+                    warnings.append(
+                        {
+                            "code": "selected_conditioning_effective_prescription_mismatch",
+                            "message": f"D-{d_day} conditioning exercise '{name}' does not match its authorised effective prescription.",
+                            "severity": "blocker",
+                            "confidence": "high",
+                            "scheduled_d_day": d_day,
+                            "exercise": name,
+                            "role_key": role.get("role_key"),
+                            "effective_prescription": expected,
+                            "rendered_line": matching_lines[0],
+                        }
+                    )
     return warnings
+
+
+def _normalise_conditioning_dose(value: str) -> str:
+    text = str(value or "").casefold().replace("×", "x").replace("–", "-").replace("—", "-")
+    text = re.sub(r"\bseconds?\b|\bsecs?\b", "sec", text)
+    text = re.sub(r"\bminutes?\b|\bmins?\b", "min", text)
+    return " ".join(re.findall(r"[a-z0-9]+(?:\.[0-9]+)?", text))
 
 
 def _goal_witness_rendered_doses(lines: list[str], witness: dict) -> list[str]:

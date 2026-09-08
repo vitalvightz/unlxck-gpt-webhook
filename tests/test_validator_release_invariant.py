@@ -50,7 +50,7 @@ def test_manual_goal_failure_releases_and_retains_report(monkeypatch):
     assert result["stage2_retry_text"] == ""
 
 
-def test_goal_failure_does_not_require_retry_or_planner_regeneration():
+def test_goal_failure_skips_render_retry_but_requires_planner_regeneration():
     from fightcamp.stage2_pipeline import build_stage2_retry
 
     finding = {
@@ -66,7 +66,7 @@ def test_goal_failure_does_not_require_retry_or_planner_regeneration():
     )
 
     assert result["needs_retry"] is False
-    assert result.get("requires_planner_regeneration") is not True
+    assert result.get("requires_planner_regeneration") is True
     assert result["repair_prompt"] is None
     assert result["validator_report"]["release_decision"] == "publish_with_flags"
 
