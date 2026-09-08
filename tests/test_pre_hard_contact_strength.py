@@ -175,7 +175,13 @@ def test_two_days_before_effective_hard_contact_does_not_trigger() -> None:
     )
     role = _role(weekly)
     assert "pre_hard_contact_managed_stress" not in role
-    assert "effective_strength_prescriptions" not in role
+    # The pre-hard-contact cap did not trigger, so the selected bank dose is
+    # carried forward unchanged: exercise-bank authority, no scheduled-day
+    # overlay and no dose cap.
+    assert "strength_dose_cap" not in role
+    presc = role["effective_strength_prescriptions"][0]
+    assert presc["effective_prescription"] == "3 x 10 @ 65% 1RM, tempo 3-1-1"
+    assert presc["dose_authority"] == "exercise_bank"
 
 
 def test_declared_contact_resolved_to_technical_does_not_trigger() -> None:
