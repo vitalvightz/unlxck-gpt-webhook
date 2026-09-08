@@ -2409,11 +2409,11 @@ def build_stage2_payload(
     )
     rewrite_guidance = {
         "selection_rules": [
-            "Prefer selected items first only if they remain strong and compliant.",
+            "Only for roles without selected_exercise_assignments, choose among compliant candidates. Closed membership is already selected and must not be reranked.",
             "Only for a role without selected_exercise_assignments, replace a removed item with the strongest compliant same-role option first.",
             "Do not let support drills take over anchor slots when stronger compliant options exist.",
             "Treat option mechanical_risk_tags plus restriction blocked_patterns/mechanical_equivalents as hard clues for mechanically equivalent matches.",
-            "Do not invent new items when a strong compliant option already exists in the pool.",
+            "For open roles, use authorised compliant candidates rather than inventing exercises. Never add an exercise to closed membership.",
             "Keep every final primary drill, support drill, and fallback equipment-valid for the athlete profile.",
             "Only keep an explicit fallback when a real unresolved access or availability contingency still exists.",
             "If declared hard sparring days exist, treat them as fixed collision points when placing the main glycolytic stressor or primary neural strength session.",
@@ -2431,15 +2431,15 @@ def build_stage2_payload(
             "Do not use generic motivation such as 'stay consistent', 'trust the process', 'push yourself', or 'you've got this'.",
             "Do not use empty safety lines such as 'listen to your body', 'be careful', or 'avoid overtraining' unless they are followed by a concrete rule, symptom trigger, or plan change.",
             "Aim critique at the plan, load, or execution issue, never at the athlete's character.",
-            "Keep high-value isometrics when they fit, but do not let them default to anchor status if a stronger compliant loaded option exists.",
+            "For open roles, keep high-value isometrics when they fit, but do not let them default to anchor status if a stronger compliant loaded option exists. Do not reselect a closed role.",
             "Only for a conditioning role without selected_exercise_assignments, give one primary prescription and at most one explicit fallback. For closed membership, render every selected assignment as its own exercise line.",
-            "Collapse internal template/menu options into one final prescription whenever the athlete context already resolves the choice.",
+            "Resolve an internal menu into one prescription per exercise, never one exercise per session. Every legal closed assignment remains a separate scheduled member.",
             "Keep every active week present and structurally complete, including late-camp weeks.",
             "For boxer weeks, keep the default rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a stronger planning rule forces a change.",
             "Do not echo Primary, Fallback, Drill, or option-menu labels across most session lines.",
             "Avoid low-trust filler such as 'listen to your body', 'stay consistent', 'stay motivated', or 'you've got this' unless it is immediately made specific and operational.",
             "Use simple session titles that match the phase and countdown window: Strength, Recovery, Aerobic support, Fight-pace conditioning, Alactic sharpness, or Neural primer in normal camp; Sharpness Session, Technical Touch, Freshness Session, Primer, Activation, or Fight-Day Warm-Up in late-fight windows.",
-            "In taper weeks, remove optional branches aggressively and keep the work short, final, and low-noise.",
+            "In taper weeks, remove unresolved optional branches, not selected exercises. Preserve the deterministic taper membership and effective dose caps.",
             "If the athlete's declared equipment already resolves the choice, do not show a fallback branch.",
             "If declared hard sparring or support work days exist, use them to make the weekly rhythm more concrete instead of writing generic sparring caveats.",
             "Treat declared hard sparring days in weekly_role_map as immutable hard_sparring_day slots except when final_week_sparring_cap.active is true. In final taper weeks, final_week_sparring_cap overrides the coach-declared hard-day lock: render at most one effective hard sparring day, and do not present capped_declared_hard_sparring_days as sparring.",
@@ -2596,9 +2596,9 @@ def build_stage2_payload(
         "rewrite_guidance": rewrite_guidance,
     }
 
-STAGE2_FINALIZER_PROMPT = """You are Stage 2 (planner/finalizer).
+STAGE2_FINALIZER_PROMPT = """You are Stage 2 (finalizer). Stage 1 has already made the training decisions. Your job is to render and coach the resolved plan, not redesign it.
 
-Input = FINALIZER PACKET + Stage 1 draft + athlete profile + optional injury context.
+Input = FINALIZER PACKET + LOCKED SESSION RENDER MANIFEST + Stage 1 draft + athlete profile + optional injury context.
 
 AUTHORITY ORDER
 1. FINALIZER PACKET — primary authority for calendar, render mode, countdown labels, restrictions, priorities, compact selected candidate facts, session-count metadata, and risks.
@@ -2609,17 +2609,18 @@ AUTHORITY ORDER
 RULE 1 — HARD FILTER
 Remove every exercise, drill, or prescription that violates any restriction, including synonyms and mechanical equivalents. Apply to strength, conditioning, rehab, warm-ups, and finishers. For a role with selected_exercise_assignments, drop/hold an illegal selected item and leave the gap; never replace it. Only open roles may replace or drop an item.
 
-RULE 2 — PLAN THE CAMP, DON'T JUST EDIT
-Build the best final plan from the FINALIZER PACKET. Use selected_plan, weekly_role_map, session_sequence, week_by_week_progression, and render_guards to sequence the camp. Reorganise and tighten — coherence over inertia.
+RULE 2 — FINALIZE THE RESOLVED CAMP
+Use the FINALIZER PACKET to render the already-decided calendar, sessions, exercise membership and effective prescriptions. Improve coaching clarity and remove redundant prose without changing training decisions. Do not reorganise, merge, suppress or reselect closed sessions to make the plan shorter or more coherent. Only explicitly open roles retain their existing bounded selection freedom. Safety restrictions and deterministic overrides remain authoritative.
 
 RULE 3 — SELECTION ORDER
+Build the first pass from the LOCKED SESSION RENDER MANIFEST wherever it is supplied. It is a source-backed view of the FINALIZER PACKET, not a separate planning authority. For each closed role, render the exact scheduled membership and every listed exercise line before writing coaching details. The exercise count is mandatory, not a target. A source selected_option=false means the exercise came from an alternate bank option; once promoted into selected_exercise_assignments it is a scheduled member, not an optional fallback. Never treat a shared source slot_id as one exercise. If a locked assignment is illegal or lacks an authoritative dose, leave the conflict unresolved for deterministic planning rather than inventing or substituting work.
 Preserve the calendar, declared days, coach-led ownership, session count, phase, and taper window from selected_plan / weekly_role_map. When a role has selected_exercise_assignments, render every assigned exercise and use only those exercises. That list is closed session membership from the deterministic planner. An empty selected_exercise_assignments list is not creative freedom: do not invent or add an exercise. Do not add, restore, or substitute candidates, alternates, or other S&C exercises, even when their dose would be legal. Use each selected exercise's effective prescription when supplied. Roles without selected_exercise_assignments keep their existing contract. Draft text is candidate material and cannot override the FINALIZER PACKET.
 
 RULE 4 — ANCHOR STANDARD
-Every anchor session must contain at least one serious high-transfer strength or power exercise if a compliant compact candidate or finalizer-safe substitution exists. Do not build anchors from bird dogs, dead bugs, planks, carries, or rehab-level work unless restrictions force it. Support work assists the anchor — it cannot become it.
+For an open anchor role, select a serious high-transfer strength or power exercise if a compliant compact candidate or finalizer-safe substitution exists. For a closed anchor, preserve its selected membership and do not reselect it. Do not build anchors from bird dogs, dead bugs, planks, carries, or rehab-level work unless restrictions force it. Support work assists the anchor — it cannot become it.
 
 RULE 5 — SAFE STRONG, NOT SAFE SOFT
-In GPP and SPP, choose the safest strong option, not the safest soft option. If a compliant loaded pattern exists in compact candidate facts or selected_plan, prefer it over low-output filler for key slots.
+In GPP and SPP, apply the safest-strong selection rule only to open roles; preserve the legal selected exercises in closed roles. If a compliant loaded pattern exists in compact candidate facts or selected_plan, prefer it over low-output filler for key slots.
 
 RULE 6 — SPORT SPECIFICITY
 The plan must read as a real combat-sport camp for this athlete. Conditioning, power work, weekly rhythm, and taper choices must match the athlete's sport, style, fight date, fatigue, injury context, weight cut, equipment, goals, weak areas, sparring/contact schedule, and phase.
@@ -2629,19 +2630,19 @@ Every app-owned session must include exact drill/exercise, sets/reps/duration, r
 If selected_plan.weekly_role_map.weeks[*].session_count_summary.reduced_from_planned is true, explain the smaller week once in the week lead using the provided reduction_reasons. Do not restore suppressed sessions to make the week look fuller.
 If a wrist sprain or wrist restriction exists, repeat the exact restrictions and include wrist-safe isometric or rehab exposure where appropriate; do not prescribe loaded wrist extension, gripping volume, catching, front-rack, or punch-volume work that violates the restriction.
 If a weight cut exists, reduce volume and noisy accessories, not specificity.
-If power or speed goals exist, include low-volume explosive, speed, or neural work unless explicitly blocked.
-If core, trunk, bracing, or anti-rotation is a weak area, include anti-rotation or bracing work.
+If power or speed goals exist, preserve the selected low-volume explosive, speed, or neural work unless explicitly blocked. Missing goal coverage requires deterministic planner repair, not a new LLM exercise.
+If core, trunk, bracing, or anti-rotation is a weak area, preserve the selected anti-rotation or bracing work. Do not add unselected work to a closed role.
 If the fight is close, prefer neural primers, isometrics, trunk stiffness, rhythm, and freshness over generic strength volume.
 Taper means reduce volume, not remove sharpness.
 
 RULE 7 — SUPPORT WORK STAYS SUPPORT
-Rehab, carries, trunk stability, and mobility support the plan — they do not lead it unless the packet clearly requires a protection-first camp. When cutting volume, cut accessory work first.
+Rehab, carries, trunk stability, and mobility support the plan — they do not lead it unless the packet clearly requires a protection-first camp. When cutting volume, cut optional accessory work first; a closed assignment can only be reduced within its authorised dose and safety constraints, never silently deleted for writing quality.
 
 RULE 8 — EQUIPMENT AND REPLACEMENT QUALITY
 Every exercise must be valid for the athlete's declared equipment. If the profile resolves an access question, render the resolved option only — no unresolved branches. Only roles without selected_exercise_assignments may replace weak or violating Stage 1 items with stronger compliant options from compact candidate facts, selected_plan, or finalizer-safe substitutions. Closed membership may only be reduced for a hard restriction, never replaced.
 
 RULE 9 — TAPER DISCIPLINE
-Cut novelty, reduce accessory volume, avoid density. Keep only sharpness, rhythm, confidence, and freshness. One final prescription per session — no option menus.
+Cut novelty, reduce accessory volume, avoid density. Keep only sharpness, rhythm, confidence, and freshness. One resolved prescription per selected exercise, not one exercise per session. Remove unresolved option menus without collapsing closed membership.
 If selected_plan.fight_week_override.active or selected_plan.weekly_role_map.fight_week_override.active is true:
 — 0–1 days: no training; coach note + readiness protocol only.
 — 2–3 days: one short primer max + one light mobility/recovery session.
@@ -2689,9 +2690,9 @@ Do not rely on generic motivation such as 'stay consistent', 'trust the process'
 Do not use empty safety boilerplate such as 'listen to your body', 'be careful', or 'avoid overtraining' unless the line adds a concrete rule, symptom trigger, or plan change.
 Never use the word "app" (or "the app", "this app", "the platform", "app-owned", "app-provided", "app S&C") in athlete-facing text. The athlete is reading their own plan — name the work directly ("your S&C and rehab inserts", "your programmed sessions", "your hard sparring/contact session") and never attribute anything to an app. Do not assume the athlete has a coach: never say "coach-led", "coach owns this session", "train with your coach", or "coach-owned" in athlete-facing text — name hard sparring / contact work as the athlete's own.
 Do not aim critique at the athlete's character.
-Collapse templates into one final prescription whenever the athlete context already resolves the choice.
+Resolve templates into one final prescription per exercise whenever the athlete context already resolves the choice. Never collapse a closed multi-exercise session into one movement.
 Do not repeat Primary, Fallback, Drill, or menu-style labels across most session lines.
-Allow at most one explicit fallback in a session, and only when absolutely necessary.
+Only open roles may contain an explicit fallback, at most one when absolutely necessary. A closed selected assignment is never a fallback.
 Treat declared hard sparring days in selected_plan.weekly_role_map as immutable hard_sparring_day slots except when final_week_sparring_cap.active is true. In final taper weeks, final_week_sparring_cap overrides the coach-declared hard-day lock: render at most one effective hard sparring day, and do not present capped_declared_hard_sparring_days as sparring.
 Hard sparring days are the athlete's own combat locks (run in their gym, with or without a coach). The app must not prescribe or lead the sparring itself, and it must respect resolved safety, readiness, and calendar restrictions on every declared hard sparring day. Only for a resolved hard-as-planned day render the label "Hard sparring — controlled hard contact" (or the equivalent sport-specific label such as "MMA — hard sparring / controlled hard contact") followed by exactly one short note: "Your declared hard-sparring/contact session — no extra S&C. Keep freshness priority." From D-14 normally, or D-17 with elevated risk, hard sparring is converted to technical work: render "Technical-only combat" (or sport-equivalent) — the same applies whenever the day carries reason code "d14_hard_sparring_ban" or "d17_hard_sparring_ban" — followed by exactly one short note: "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority." A technical-only day must never carry the hard-sparring note. A blocked/none contact status overrides all declarations and dates: no contact or sparring; surface medical evaluation/clearance guidance and do not restore contact. Do not output round counts, time-x-rounds formulas, intensity targets, dose, RPE, work:rest, or any sparring template wording. Do not narrate intent, do not add a "why today" line, do not list focus areas, do not suggest pad/bag/clinch volume — the athlete owns that contact work. Never schedule programmed S&C on a declared hard-sparring/contact day. Anything more than the label plus that one note is a violation of this rule.
 Do not exceed the weekly session count implied by selected_plan.weekly_role_map. If the athlete has extra available days, leave them off or clearly optional instead of turning them into extra active sessions.
@@ -2712,7 +2713,7 @@ In short camps, every rendered session must map to one compressed week-level pri
 Placement governs day assignment only; it does not change insert voice, ownership, or visible session count.
 
 RULE 12 — SURGICAL REHAB INTEGRATION
-Rehab must be intentional, not copy-pasted. Full authority to add, adjust, or remove any rehab item.
+Rehab must be intentional, not copy-pasted. Open rehab roles retain their existing bounded integration rules. When rehab membership is closed, preserve the selected exercises and authorised doses; do not add, replace or remove them for writing quality. Hard restrictions and safety overrides still apply.
 Use the function_class tags when present as scoring guidance — not hard constraints.
 — Each session: 1–2 rehab functions, 5–10 minutes total.
 — Spar days: 1 drill max — activation or brief post-session reset only.
@@ -2773,6 +2774,7 @@ Non-negotiable output contract:
      "Regression /", "Regression", or slash-separated structural label.
    - injury/rehab insert when relevant
    - coach call when needed
+5A. For every closed role, preserve every selected exercise as a separate line with its authoritative effective prescription. One prescription per exercise is not one exercise per session. A selected_option=false provenance flag does not make the assignment optional. The LOCKED SESSION RENDER MANIFEST is a copy of the selected membership; never use a draft, generic writing rule, candidate menu or shared slot_id to reduce its count. If a hard restriction makes an exercise illegal, leave the gap and retain the safety conflict; never substitute downstream.
 6. If session_count_summary.reduced_from_planned is true for a week, include one short reason tied to taper, weight cut, risk-adjusted hard-sparring cutoff, injury/cut management, hard sparring / contact load, fight-week override, or intentional compression.
 7. Hard sparring / technical-only combat days must stay minimal: the hard-sparring/contact label plus one freshness note only — no programmed S&C stacked on the day.
 8. D-0 must be fight day protocol only.
@@ -2827,6 +2829,100 @@ Rules:
 
 def _json_block(value: dict | list) -> str:
     return "```json\n" + json.dumps(value, separators=(",", ":"), ensure_ascii=False) + "\n```"
+
+
+
+def _closed_membership_render_manifest(finalizer_packet: dict) -> list[dict]:
+    """Expose every closed assignment as an exact first-pass rendering line.
+
+    This is a read-only projection of the finalizer packet. It does not choose
+    exercises, partition workload, infer missing prescriptions or alter the
+    calendar. Open/ongoing systems without a resolved calendar are unchanged.
+    """
+    selected = finalizer_packet.get("selected_plan") or {}
+    if not isinstance(selected, dict):
+        return []
+    mode = str(finalizer_packet.get("render_mode") or "")
+    if mode == "open_ongoing_system":
+        return []
+    role_map = selected.get("weekly_role_map") or {}
+    weeks = role_map.get("weeks") or [] if isinstance(role_map, dict) else []
+    sequence = selected.get("session_sequence") or []
+    source_roles: list[tuple[dict, dict]] = []
+    if mode == "late_fight_countdown_only" and sequence:
+        source_roles = [({}, role) for role in sequence if isinstance(role, dict)]
+    else:
+        for week in weeks:
+            if isinstance(week, dict):
+                source_roles.extend(
+                    (week, role) for role in week.get("session_roles") or []
+                    if isinstance(role, dict)
+                )
+        if not source_roles:
+            source_roles = [({}, role) for role in sequence if isinstance(role, dict)]
+
+    manifest: list[dict] = []
+    for week, role in source_roles:
+        if "selected_exercise_assignments" not in role:
+            continue
+        if role.get("render_mandatory") is False:
+            continue
+        assignments = role.get("selected_exercise_assignments")
+        if not isinstance(assignments, list):
+            continue
+        label = str(
+            role.get("scheduled_countdown_label")
+            or role.get("countdown_label")
+            or role.get("countdown_display_label")
+            or ""
+        ).strip()
+        match = re.search(r"\bD-(\d{1,2})\b", label, re.I)
+        if not match and isinstance(role.get("scheduled_d_day"), int):
+            label = f"D-{role['scheduled_d_day']}"
+        elif match:
+            label = f"D-{int(match.group(1))}"
+        if not label:
+            weekday = str(role.get("scheduled_day_hint") or "").strip().lower()
+            for day in week.get("calendar_days") or []:
+                if (isinstance(day, dict)
+                    and str(day.get("weekday") or "").strip().lower() == weekday
+                    and isinstance(day.get("d_day"), int)):
+                    label = f"D-{day['d_day']}"
+                    break
+
+        lines: list[str] = []
+        unresolved: list[dict] = []
+        for index, assignment in enumerate(assignments):
+            if not isinstance(assignment, dict):
+                unresolved.append({"index": index, "reason": "invalid_assignment"})
+                continue
+            name = str(assignment.get("name") or assignment.get("exercise_name") or "").strip()
+            prescription = assignment.get("effective_prescription")
+            if isinstance(prescription, dict):
+                prescription = (
+                    prescription.get("display") or prescription.get("dose")
+                    or prescription.get("text")
+                )
+            prescription = str(prescription or "").strip()
+            if not name or not prescription:
+                unresolved.append({
+                    "index": index, "name": name,
+                    "reason": "missing_name_or_effective_prescription",
+                })
+                continue
+            lines.append(f"- {name}: {prescription}")
+        manifest.append({
+            "week_index": week.get("week_index"),
+            "phase": week.get("phase"),
+            "scheduled_countdown_label": label,
+            "scheduled_day_hint": role.get("scheduled_day_hint"),
+            "role_key": role.get("role_key"),
+            "category": role.get("category"),
+            "selected_count": len(assignments),
+            "exercise_lines": lines,
+            "unresolved": unresolved,
+        })
+    return manifest
 
 
 def _athlete_profile_block(planning_brief: dict | None, stage2_payload: dict) -> dict:
@@ -3012,6 +3108,19 @@ def build_stage2_handoff_text(
     if render_mode == "open_ongoing_system":
         sections.append(_OPEN_ONGOING_RENDER_MODE_INSTRUCTIONS.strip())
 
+    locked_manifest = _closed_membership_render_manifest(finalizer_packet)
+    if locked_manifest:
+        sections.append(
+            "LOCKED SESSION RENDER MANIFEST\n"
+            "This is the exact selected exercise membership for the first pass. "
+            "Render every exercise_lines entry once under its owning day and role, "
+            "then add coaching details. selected_count is the required membership count. "
+            "Do not promote one member to primary and discard the others. "
+            "Do not invent a dose for unresolved entries; preserve the source conflict "
+            "for deterministic planning. Hard safety restrictions remain authoritative.\n"
+            + _json_block(locked_manifest)
+        )
+
     sections.append("FINALIZER PACKET\n" + _json_block(finalizer_packet))
     sections.append("ATHLETE PROFILE\n" + _json_block(athlete_profile))
 
@@ -3024,5 +3133,16 @@ def build_stage2_handoff_text(
         sections.append("COACH NOTES\n" + cleaned_notes)
 
     sections.append("STAGE 1 DRAFT PLAN\n" + (plan_text or "").strip())
+
+    if locked_manifest:
+        sections.append(
+            "FIRST-PASS COMPLETENESS CHECK\n"
+            "Before returning the plan, compare each closed role against the locked "
+            "manifest. Preserve the required exercise count, exact names, authorised "
+            "effective doses, and day ownership. Do not remove a legal member to "
+            "shorten prose, satisfy an open-role fallback rule, or improve perceived "
+            "session balance. If source or safety conflicts remain, do not invent "
+            "replacement work or claim missing goal coverage."
+        )
 
     return "\n\n---\n\n".join(section for section in sections if section.strip())
