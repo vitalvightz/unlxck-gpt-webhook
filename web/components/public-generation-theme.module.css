@@ -1,0 +1,64 @@
+/* Scoped theme overrides for the athlete generation screen.
+   The existing dark design and admin diagnostic screen remain unchanged. */
+.theme {
+  color: var(--text-primary);
+}
+
+/* Use the application's selected theme, not the operating-system preference. */
+:global(html[data-theme="light"]) .theme:global(.public-build) {
+  color: var(--text-primary);
+  border-color: var(--border-default);
+  background: radial-gradient(circle at 50% 32%, var(--brand-red-soft), transparent 38%), var(--bg-panel);
+  box-shadow: var(--shadow-standard);
+}
+
+:global(html[data-theme="light"]) .theme:global(.public-build) h1,
+:global(html[data-theme="light"]) .theme :global(.public-build-status strong) {
+  color: var(--text-primary);
+}
+
+:global(html[data-theme="light"]) .theme :global(.public-build-ring) {
+  border-color: var(--border-strong);
+  border-top-color: var(--brand-red);
+}
+
+:global(html[data-theme="light"]) .theme :global(.public-build-ring-two) {
+  border-color: var(--brand-red-soft);
+  border-right-color: var(--brand-red);
+}
+
+:global(html[data-theme="light"]) .theme :global(.public-build-core) {
+  box-shadow: 0 0 32px var(--brand-red-soft);
+}
+
+:global(html[data-theme="light"]) .theme :global(.public-build-bar) {
+  background: var(--border-default);
+}
+
+:global(html[data-theme="light"]) .theme :global(.public-build-milestone) {
+  color: var(--text-secondary);
+}
+
+:global(html[data-theme="light"]) .theme :global(.public-build-milestone-complete) {
+  color: var(--brand-red);
+}
+
+:global(html[data-theme="light"]) .theme :global(.public-build-milestone-active) {
+  color: var(--text-primary);
+}
+
+:global(html[data-theme="light"]) .theme :global(.public-build-milestone-active > span) {
+  color: #ffffff;
+}
+
+:global(html[data-theme="light"]) .theme :global(.public-build-milestone-future) {
+  opacity: 0.72;
+}
+
+:global(html[data-theme="light"]) .theme :global(.public-build-reassurance) {
+  border-top-color: var(--border-default);
+}
+
+:global(html[data-theme="light"]) .theme :global(.public-build-reassurance strong) {
+  color: var(--text-primary);
+}
