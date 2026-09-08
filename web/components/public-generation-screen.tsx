@@ -7,6 +7,7 @@ import type { GenerationFailureKind } from "@/lib/generation-failure";
 import type { GenerationUiPhase } from "@/lib/generation-controller";
 import { getPublicMilestoneIndex, getPublicProgress, PUBLIC_CAMP_MILESTONES } from "@/lib/public-generation-progress";
 import type { ProgressMilestone } from "@/lib/types";
+import styles from "./public-generation-theme.module.css";
 
 type Props = {
   phase: GenerationUiPhase;
@@ -56,11 +57,11 @@ export function PublicGenerationScreen({ phase, error = null, failureKind = null
   }, [jobId, progress, progressFloor]);
 
   if (failure) {
-    return <section className="public-build public-build-terminal"><p className="public-build-kicker">Build stopped</p><h1>{failure.headline}</h1><p>{failure.detail}</p><div className="public-build-actions">{canRetry && onRetry ? <button className="cta" onClick={onRetry}>{GENERATION_FAILURE_ACTION_LABELS.retry}</button> : null}{onRefineIntake ? <button className="cta ghost" onClick={onRefineIntake}>Fix my intake</button> : null}{onReturnToWorkspace ? <button className="cta ghost" onClick={onReturnToWorkspace}>Return to workspace</button> : null}</div></section>;
+    return <section className={`public-build public-build-terminal ${styles.theme}`}><p className="public-build-kicker">Build stopped</p><h1>{failure.headline}</h1><p>{failure.detail}</p><div className="public-build-actions">{canRetry && onRetry ? <button className="cta" onClick={onRetry}>{GENERATION_FAILURE_ACTION_LABELS.retry}</button> : null}{onRefineIntake ? <button className="cta ghost" onClick={onRefineIntake}>Fix my intake</button> : null}{onReturnToWorkspace ? <button className="cta ghost" onClick={onReturnToWorkspace}>Return to workspace</button> : null}</div></section>;
   }
 
   return (
-    <section className="public-build">
+    <section className={`public-build ${styles.theme}`}>
       <header><p className="public-build-kicker">Fight camp build</p><h1>YOUR CAMP IS TAKING SHAPE</h1><p className="public-build-estimate">Usually 3–10 minutes</p></header>
       <div className="public-build-mark" aria-hidden="true"><span className="public-build-ring public-build-ring-one"/><span className="public-build-ring public-build-ring-two"/><span className="public-build-core">U</span></div>
       <div className="public-build-status" aria-live="polite"><strong>{takingLonger ? "Taking longer than usual" : PUBLIC_CAMP_MILESTONES[activeIndex].title}</strong><span>{takingLonger ? "Final checks are still in progress." : PUBLIC_CAMP_MILESTONES[activeIndex].detail}</span></div>
