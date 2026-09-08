@@ -31,6 +31,19 @@ SELECTION_METADATA_DEFAULTS: dict[str, Any] = {
     "rounds": None,
     "total_minutes": None,
     "rpe": None,
+    # Preserve authored coaching evidence as well as selection/scoring data.
+    # The finalizer receives these only for the actual selected members, not
+    # the entire candidate bank. None of these fields is dose authority.
+    "notes": "",
+    "description": "",
+    "purpose": "",
+    "cue": "",
+    "cue_execution": "",
+    "side_instruction": "",
+    "quality_stop_rule": "",
+    "load": "",
+    "rest": "",
+    "timing": "",
 }
 
 LIST_METADATA_FIELDS = {
