@@ -63,13 +63,34 @@ def assignment_from_slot(phase: str, slot_group: str, slot: dict[str, Any]) -> d
     name = str(selected.get("name") or "").strip()
     if not name:
         return None
-    return {
+    assignment = {
         "slot_id": slot.get("slot_id"),
         "name": name,
         "source_phase": phase,
         "slot_group": slot_group,
         "source_session_index": slot.get("session_index"),
     }
+    notes = _selected_coaching_notes(selected)
+    if notes:
+        assignment["coaching_notes"] = notes
+    return assignment
+
+
+def _selected_coaching_notes(option: dict[str, Any] | None) -> str:
+    """Return the authored exercise-bank coaching note for a selected option.
+
+    The note travels with the selected assignment so Stage 2 keeps the bank's
+    execution guidance without a separate join back to the candidate pool. It is
+    coaching evidence only and never a dose authority.
+    """
+    if not isinstance(option, dict):
+        return ""
+    note = option.get("notes")
+    if not str(note or "").strip():
+        metadata = option.get("selection_metadata")
+        if isinstance(metadata, dict):
+            note = metadata.get("notes")
+    return str(note or "").strip()
 
 
 def _normalized_fatigue(athlete_model: dict[str, Any]) -> str:
@@ -862,18 +883,20 @@ def compose_normal_conditioning_assignments(
             for slot, option, is_selected in selected:
                 name = str(option.get("name") or "")
                 allocated_rounds = high_load_rounds.get(name)
-                assignments.append(
-                    {
-                        "slot_id": slot.get("slot_id"),
-                        "name": name,
-                        "source_phase": phase,
-                        "slot_group": "conditioning_slots",
-                        "selected_option": is_selected,
-                        "base_prescription": _conditioning_prescription(option),
-                        "effective_prescription": _conditioning_prescription(option, rounds=allocated_rounds),
-                        "effective_rounds": allocated_rounds,
-                    }
-                )
+                assignment = {
+                    "slot_id": slot.get("slot_id"),
+                    "name": name,
+                    "source_phase": phase,
+                    "slot_group": "conditioning_slots",
+                    "selected_option": is_selected,
+                    "base_prescription": _conditioning_prescription(option),
+                    "effective_prescription": _conditioning_prescription(option, rounds=allocated_rounds),
+                    "effective_rounds": allocated_rounds,
+                }
+                notes = _selected_coaching_notes(option)
+                if notes:
+                    assignment["coaching_notes"] = notes
+                assignments.append(assignment)
             role["selected_exercise_assignments"] = assignments
             role["conditioning_composition_policy"] = {
                 "minimum_exercise_count": minimum,

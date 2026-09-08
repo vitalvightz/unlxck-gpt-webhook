@@ -863,11 +863,17 @@ def apply_effective_strength_prescriptions(
                 role["scheduled_d_day"] = scheduled_d_day
                 envelope["scheduled_d_day"] = scheduled_d_day
             role["effective_strength_envelope"] = envelope
-        if not isinstance(role.get("strength_dose_cap"), dict):
-            continue
-        scheduled_d_day = role_d_day(week, role)
-        if scheduled_d_day is not None:
-            role["scheduled_d_day"] = scheduled_d_day
+        # A closed-membership strength role always carries its selected bank
+        # dose forward, whether or not a scheduled-day cap applies.  When a cap
+        # exists ``resolve_strength_slot_prescription`` reshapes the dose to the
+        # ceiling; with no cap it returns the exercise-bank dose unchanged.  The
+        # scheduled-day metadata below stays cap-only so a normal-camp role is
+        # never labelled as a countdown day.
+        has_dose_cap = isinstance(role.get("strength_dose_cap"), dict)
+        if has_dose_cap:
+            scheduled_d_day = role_d_day(week, role)
+            if scheduled_d_day is not None:
+                role["scheduled_d_day"] = scheduled_d_day
 
         if not isinstance(assignments, list):
             continue
@@ -904,7 +910,11 @@ def apply_effective_strength_prescriptions(
         if not resolved:
             continue
         role["effective_strength_prescriptions"] = resolved
-        envelope = _build_role_envelope(role, resolved)
-        if envelope:
-            role["effective_strength_envelope"] = envelope
+        # The numeric loaded-strength ceiling envelope is a scheduled-day cap
+        # artefact.  A normal-camp role has no cap to summarise and keeps the
+        # complete-allow-list envelope already built above.
+        if has_dose_cap:
+            envelope = _build_role_envelope(role, resolved)
+            if envelope:
+                role["effective_strength_envelope"] = envelope
     return weekly_role_map
