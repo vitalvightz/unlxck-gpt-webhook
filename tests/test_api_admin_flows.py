@@ -72,6 +72,8 @@ def test_admin_endpoints_require_admin_role():
 
     assert forbidden.status_code == 403
     assert allowed.status_code == 200
+    assert client.get("/api/me", headers={"Authorization": "Bearer athlete-token"}).json()["effective_admin"] is False
+    assert client.get("/api/me", headers={"Authorization": "Bearer admin-token"}).json()["effective_admin"] is True
 
 
 def test_admin_routes_require_stored_profile_role_even_when_email_is_allowlisted():
@@ -108,6 +110,7 @@ def test_admin_routes_require_stored_profile_role_even_when_email_is_allowlisted
     me_response = client.get("/api/me", headers={"Authorization": "Bearer demoted-admin-token"})
     assert me_response.status_code == 200
     assert me_response.json()["profile"]["role"] == "athlete"
+    assert me_response.json()["effective_admin"] is False
 
 
 def test_ensure_profile_preserves_demoted_existing_role_even_when_email_is_allowlisted():

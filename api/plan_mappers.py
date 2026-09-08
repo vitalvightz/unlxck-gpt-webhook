@@ -37,7 +37,7 @@ from .models import (
     UsernameRateLimitInfo,
     WeeklySchedule,
 )
-from .store import AppStore
+from .store import AppStore, is_effective_admin_profile
 from .structured_card_lifecycle import (
     STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY,
     STRUCTURED_CARD_BUILD_STALE_AFTER,
@@ -79,6 +79,7 @@ def _build_me_response(profile: ProfileRecord, store: AppStore) -> MeResponse:
     latest_plan = _map_plan_summary(plans[0], current_training_day=training_day) if plans else None
     return MeResponse(
         profile=profile,
+        effective_admin=is_effective_admin_profile(profile, store),
         latest_intake=latest_intake.get("intake") if latest_intake else None,
         latest_plan=latest_plan,
         plan_count=len(plans),
