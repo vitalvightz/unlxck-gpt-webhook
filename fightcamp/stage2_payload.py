@@ -2629,7 +2629,7 @@ RULE 2 — FINALIZE THE RESOLVED CAMP
 Use the FINALIZER PACKET to render the already-decided calendar, sessions, exercise membership and effective prescriptions. Improve coaching clarity and remove redundant prose without changing training decisions. Do not reorganise, merge, suppress or reselect closed sessions to make the plan shorter or more coherent. Only explicitly open roles retain their existing bounded selection freedom. Safety restrictions and deterministic overrides remain authoritative.
 
 RULE 3 — SELECTION ORDER
-Build the first pass from the LOCKED SESSION RENDER MANIFEST wherever it is supplied. It is a source-backed view of the FINALIZER PACKET, not a separate planning authority. For each closed role, render the exact scheduled membership and every listed exercise line before writing coaching details. The exercise count is mandatory, not a target. A source selected_option=false means the exercise came from an alternate bank option; once promoted into selected_exercise_assignments it is a scheduled member, not an optional fallback. Never treat a shared source slot_id as one exercise. If a locked assignment is illegal or lacks an authoritative dose, leave the conflict unresolved for deterministic planning rather than inventing or substituting work.
+Build the first pass from the LOCKED SESSION RENDER MANIFEST wherever it is supplied. It is a source-backed view of the FINALIZER PACKET, not a separate planning authority. For each closed role, render the exact scheduled membership and every listed exercise line before writing coaching details. The exercise count is mandatory, not a target. A source selected_option=false means the exercise came from an alternate bank option; once promoted into selected_exercise_assignments it is a scheduled member, not an optional fallback. Never treat a shared source slot_id as one exercise. If a locked assignment is illegal under a hard restriction, drop or hold it and leave the gap — never substitute another exercise. A missing dose is different: an assignment marked DOSE_UNRESOLVED is a scheduled exercise the planner did not dose, and you must prescribe one. Use the athlete profile — phase, countdown day, fatigue, weight cut, injury context, training age, status and equipment — to write a sets/reps/intensity or duration prescription appropriate to that exercise on that day, and never write the literal marker into the plan. Where the packet supplies a countdown or role dose cap, stay inside it. Authoring a dose is not authoring membership: still never add, restore or substitute an exercise.
 Preserve the calendar, declared days, coach-led ownership, session count, phase, and taper window from selected_plan / weekly_role_map. When a role has selected_exercise_assignments, render every assigned exercise and use only those exercises. That list is closed session membership from the deterministic planner. An empty selected_exercise_assignments list is not creative freedom: do not invent or add an exercise. Do not add, restore, or substitute candidates, alternates, or other S&C exercises, even when their dose would be legal. Use each selected exercise's effective prescription when supplied. Roles without selected_exercise_assignments keep their existing contract. Draft text is candidate material and cannot override the FINALIZER PACKET.
 
 RULE 4 — ANCHOR STANDARD
@@ -2848,6 +2848,12 @@ def _json_block(value: dict | list) -> str:
 
 
 
+# Rendered in place of a dose for a scheduled exercise the deterministic planner
+# left un-dosed. The finalizer resolves it from athlete context; it must never
+# reach athlete-facing text.
+_DOSE_UNRESOLVED_MARKER = "DOSE_UNRESOLVED"
+
+
 def _closed_membership_render_manifest(finalizer_packet: dict) -> list[dict]:
     """Expose every closed assignment as an exact first-pass rendering line.
 
@@ -2938,10 +2944,23 @@ def _closed_membership_render_manifest(finalizer_packet: dict) -> list[dict]:
                     or prescription.get("text")
                 )
             prescription = str(prescription or "").strip()
-            if not name or not prescription:
+            if not name:
+                unresolved.append({
+                    "index": index, "name": name, "reason": "missing_name",
+                })
+                continue
+            if not prescription:
+                # Membership is closed; dosing is not. Dropping the line here
+                # silently deleted a scheduled exercise from the render while
+                # selected_count still demanded it. The member is rendered and
+                # the finalizer authors a dose from athlete context instead.
+                # Deterministic caps still bind: where a countdown envelope
+                # exists the validator enforces it against the authored dose.
+                lines.append(f"- {name}: {_DOSE_UNRESOLVED_MARKER}")
                 unresolved.append({
                     "index": index, "name": name,
-                    "reason": "missing_name_or_effective_prescription",
+                    "reason": "missing_effective_prescription",
+                    "action": "finalizer_prescribes_from_athlete_context",
                 })
                 continue
             lines.append(f"- {name}: {prescription}")
@@ -3150,8 +3169,12 @@ def build_stage2_handoff_text(
             "Render every exercise_lines entry once under its owning day and role, "
             "then add coaching details. selected_count is the required membership count. "
             "Do not promote one member to primary and discard the others. "
-            "Do not invent a dose for unresolved entries; preserve the source conflict "
-            "for deterministic planning. Hard safety restrictions remain authoritative.\n"
+            "An entry whose dose reads DOSE_UNRESOLVED is a scheduled exercise the "
+            "planner did not dose: prescribe an appropriate dose for it from the athlete "
+            "profile and the scheduled day, stay inside any dose cap the packet supplies, "
+            "and never render the marker itself. This licenses dosing only — never adding, "
+            "restoring or substituting an exercise. Hard safety restrictions remain "
+            "authoritative.\n"
             + _json_block(locked_manifest)
         )
 

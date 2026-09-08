@@ -445,3 +445,109 @@ def test_late_fight_countdown_only_handoff_stays_countdown_led():
     assert '"render_mode":"late_fight_countdown_only"' in handoff
     assert "late_fight_countdown_only (a short-notice camp" in handoff
     assert "countdown-led with no week or phase headers" in handoff
+
+
+def _packet_with_undosed_member():
+    return build_stage2_finalizer_packet(
+        stage2_payload={
+            "athlete_model": {},
+            "render_mode": "camp_plan",
+            "rewrite_guidance": {"render_guards": {"render_mode": "camp_plan"}},
+            "weekly_role_map": {
+                "weeks": [{
+                    "week_index": 1,
+                    "phase": "SPP",
+                    "session_roles": [{
+                        "role_key": "primary_strength_day",
+                        "category": "strength",
+                        "selected_exercise_assignments": [
+                            {
+                                "slot_id": "strength-1",
+                                "name": "Trap Bar Deadlift",
+                                "source_phase": "SPP",
+                                "slot_group": "strength_slots",
+                            },
+                            {
+                                "slot_id": "strength-2",
+                                "name": "Med Ball Scoop Toss",
+                                "source_phase": "SPP",
+                                "slot_group": "strength_slots",
+                            },
+                        ],
+                        "effective_strength_prescriptions": [{
+                            "slot_id": "strength-1",
+                            "name": "Trap Bar Deadlift",
+                            "effective_prescription": "3 x 3; RPE 6-7",
+                        }],
+                    }],
+                }]
+            },
+        },
+        planning_brief={},
+    )
+
+
+def test_undosed_closed_member_is_rendered_for_finalizer_dosing():
+    """A scheduled exercise the planner did not dose must still reach the render.
+
+    Membership is closed, dosing is not. Dropping the line silently deleted a
+    scheduled exercise while selected_count still demanded it, so the model was
+    told to render N members and handed N-1 lines.
+    """
+    manifest = _closed_membership_render_manifest(_packet_with_undosed_member())[0]
+
+    assert manifest["selected_count"] == 2
+    # Every scheduled member gets a line; the count the prompt calls mandatory
+    # is actually satisfiable.
+    assert len(manifest["exercise_lines"]) == manifest["selected_count"]
+    assert manifest["exercise_lines"] == [
+        "- Trap Bar Deadlift: 3 x 3; RPE 6-7",
+        "- Med Ball Scoop Toss: DOSE_UNRESOLVED",
+    ]
+    assert manifest["unresolved"] == [{
+        "index": 1,
+        "name": "Med Ball Scoop Toss",
+        "reason": "missing_effective_prescription",
+        "action": "finalizer_prescribes_from_athlete_context",
+    }]
+
+
+def test_unnamed_assignment_is_still_dropped_and_reported():
+    """A nameless assignment has nothing to render or dose; it stays unresolved."""
+    packet = build_stage2_finalizer_packet(
+        stage2_payload={
+            "athlete_model": {},
+            "render_mode": "camp_plan",
+            "rewrite_guidance": {"render_guards": {"render_mode": "camp_plan"}},
+            "weekly_role_map": {
+                "weeks": [{
+                    "week_index": 1,
+                    "phase": "SPP",
+                    "session_roles": [{
+                        "role_key": "primary_strength_day",
+                        "category": "strength",
+                        "selected_exercise_assignments": [{"slot_id": "strength-1"}],
+                    }],
+                }]
+            },
+        },
+        planning_brief={},
+    )
+
+    manifest = _closed_membership_render_manifest(packet)[0]
+
+    assert manifest["exercise_lines"] == []
+    assert manifest["unresolved"] == [
+        {"index": 0, "name": "", "reason": "missing_name"}
+    ]
+
+
+def test_finalizer_instructions_authorise_dosing_but_not_membership_change():
+    """The prompt must license dose authorship without loosening membership."""
+    from fightcamp.stage2_payload import STAGE2_FINALIZER_PROMPT
+
+    assert "DOSE_UNRESOLVED" in STAGE2_FINALIZER_PROMPT
+    # Dosing is licensed...
+    assert "you must prescribe one" in STAGE2_FINALIZER_PROMPT
+    # ...and membership is still closed.
+    assert "never add, restore or substitute an exercise" in STAGE2_FINALIZER_PROMPT

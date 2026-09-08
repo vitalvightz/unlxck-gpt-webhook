@@ -31,12 +31,13 @@ Operational references:
 
 1. The API validates the athlete and creates a durable generation job.
 2. The worker claims the job and runs the Python planner in `fightcamp/`.
-3. Stage 1 builds a structured candidate plan from intake, goals, style, equipment, schedule, phase, and injury restrictions.
-4. Stage 2 finalizes the plan with OpenAI and, by default, converts it into the `StructuredTrainingPlan` schema.
-5. Stage 2 never blocks release. A validated plan publishes; a flagged one publishes as `publishable_with_flags` and stays visible to admins; a Stage 2 that fails technically (timeout, provider error, unavailable, incomplete) completes the job on the Stage 1 plan. A plan is withheld only when it cannot be used: Stage 1 injury triage, or an empty plan body. Post-generation contract findings about a degraded calendar flag the plan for admin audit and still release it.
-6. The app displays structured plan cards with raw-markdown fallback, so structured conversion failure does not leave the athlete with a blank plan.
+3. Stage 1 builds the whole deterministic plan — candidate selection, weekly role budget, day placement, countdown dosing, closed session membership, and the effective dose for each exercise — from intake, goals, style, equipment, schedule, phase, and injury restrictions.
+4. Stage 2 finalizes the wording with OpenAI (one pass, plus at most one repair call) and, by default, converts the result into the `StructuredTrainingPlan` schema.
+5. Validator findings do not block release. A clean plan publishes as `ready`; a flagged one publishes as `publishable_with_flags` and stays visible to admins; a Stage 2 that fails technically (timeout, provider error, unavailable, incomplete) completes the job on the Stage 1 plan.
+6. A plan is withheld only when it cannot be used: Stage 1 injury triage, or an empty result. Four deterministic planner holds exist (planner preflight, structural integrity, conditioning-render, goal-preservation regeneration) and they do blank the plan body and suppress the structured card — but persistence then releases any held plan that still has usable content as `publishable_with_flags` on the raw-markdown fallback, keeping `stage2_status = stage2_failed` for admin triage. Treat a hold as a signal to repair the deterministic planner, not as a release gate. Post-generation contract findings about a degraded calendar behave the same way.
+7. The app displays structured plan cards with raw-markdown fallback, so structured conversion failure does not leave the athlete with a blank plan.
 
-Plan and job statuses are deliberately separate. See [the state-machine contract](docs/state_machine.md) and [`STAGE2_PAYLOAD_SPEC.md`](STAGE2_PAYLOAD_SPEC.md).
+Plan and job statuses are deliberately separate. See [the state-machine contract](docs/state_machine.md), [`STAGE2_PAYLOAD_SPEC.md`](STAGE2_PAYLOAD_SPEC.md) for the handoff shapes, and [`PLANNER_ARCHITECTURE_CONTRACT.md`](PLANNER_ARCHITECTURE_CONTRACT.md) for who owns which decision.
 
 ## Daily athlete flow
 

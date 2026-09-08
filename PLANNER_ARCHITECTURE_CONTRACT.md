@@ -2,7 +2,13 @@
 
 Status: **closed and frozen** (Step 10). This document defines ownership boundaries for planner decisions and, as of Step 10, describes the architecture that exists in `Main` today rather than a migration target. The staged migration (Steps 0-9B) is complete: every planner decision listed below has exactly one canonical owner.
 
-Section 3 is the canonical ownership matrix. Section 9 records what the migration removed and the small non-blocking debt that remains. Section 12 states the architecture freeze rule that governs future change.
+Section 3 is the canonical ownership matrix and section 3.1 names the only layers that may withhold a plan. Section 9 records what the migration removed and the non-blocking debt that remains. Section 12 states the architecture freeze rule that governs future change.
+
+The contract covers the whole chain, not just the calendar: Stage 1 selection and
+placement, the closed session membership and effective dose built on top of it, the
+Stage 2 handoff and AI finalization, release policy, and the structured-card
+conversion that produces the athlete-facing view. `STAGE2_PAYLOAD_SPEC.md` describes
+the payload/brief *shapes*; this document owns the *authority* over them.
 
 This contract is documentation-only. It does not change runtime behaviour.
 
@@ -31,13 +37,23 @@ athlete input
   -> combat-contact load resolution
   -> role budget / survival
   -> day placement
-  -> scheduled-day countdown dose morph
   -> optional support inserts through shared legality checks
-  -> final calendar integrity check
-  -> read-only rendering
+  -> scheduled-day countdown dose morph
+  -> final calendar integrity check (the governor, invoked by the morph)
+  -> closed session membership (which selected exercises each role renders)
+  -> effective prescription resolution (the authoritative render dose)
+  -> athlete-facing label stamping
+  -> goal-preservation reconciliation (bounded restore; re-runs the governor)
+  -> read-only Stage 1 draft rendering
+  -> finalizer packet / Stage 2 handoff text
   -> AI finalization of wording / exact compliant coaching detail
   -> validation / release policy
+  -> structured-card conversion (the athlete-facing plan view)
 ```
+
+Support inserts run **before** the dose morph, not after it: the morph and the
+governor it invokes are the last layers that may touch the calendar. Membership,
+dose resolution and labels run after the governor but are calendar-read-only.
 
 No lower layer may silently override a higher layer's ownership.
 
@@ -49,7 +65,10 @@ No lower layer may silently override a higher layer's ownership.
 | Injury triage mode | `fightcamp/injury_triage.py`, `fightcamp/main.py` | `injury_triage.py` | Carry restrictions/triage state downstream | Renderer/finalizer independently deciding whether a blocked plan may proceed |
 | Canonical athlete/runtime model | `plan_pipeline_runtime.py`, `stage2_planning_brief.py`, `stage2_payload.py` | runtime + planning-brief model builders | Derive immutable planning facts from canonical input | Later scheduling code rebuilding conflicting athlete facts |
 | Phase mapping | `plan_pipeline_runtime.py`, phase helpers | phase/runtime layer | Consume phase and countdown context | Session renderer inventing a different phase interpretation |
-| Candidate exercise/drill selection pool | `plan_pipeline_blocks.py`, `strength.py`, `conditioning.py`, rehab modules | Stage 1 content-selection layer | Finalizer may choose a stronger compliant same-role candidate | Candidate-selection modules deciding calendar placement |
+| Candidate exercise/drill selection pool | `plan_pipeline_blocks.py`, `strength.py`, `conditioning.py`, rehab modules | Stage 1 content-selection layer | Composition draws final membership from this pool; the finalizer may choose a stronger compliant same-role candidate **only for a role with no `selected_exercise_assignments`** | Candidate-selection modules deciding calendar placement; treating the pool itself as session membership |
+| Closed session membership (which selected exercises a scheduled role actually renders) | `session_composition.py` (normal camp), `stage2_payload_late_fight.py` + `late_fight_tail.py` assignment attach (countdown) | `session_composition.py` for normal camp; the late-fight assignment builder for D-13 inward | Dose owners may reduce a member's dose; the finalizer renders every member exactly once; an illegal member may be dropped or held | Adding, restoring, replacing or substituting a member downstream; collapsing multi-member membership into one "primary" plus fallbacks |
+| Effective render prescription (authoritative dose per selected exercise) | `prescription_resolver.py` | `prescription_resolver.py` | Renderer/finalizer render `effective_prescription` verbatim; readiness/cut/injury state may only reduce it further | Reconciling `base_prescription` against role caps downstream; re-deriving a countdown band (that stays with `late_camp_role_morph.py`) |
+| Goal preservation: coverage verdict and bounded role restore | `goal_preservation.py` | `goal_preservation.py` | Restore a role **only** from that week's retained `goal_repair_candidates`, within the original category budget, onto a day the shared legality policy allows, at D-14 or earlier, re-running the morph/governor/composition/dose chain on a trial copy before committing | Inventing a new role, exercise, dose or session slot; overriding intentional compression, a hard suppression reason, a finished tail, or the late-fight path; restoring inside D-13 |
 | Athlete priorities / limiter | `stage2_planning_brief.py`, `priority_profile.py`, goal-priority helpers | `stage2_planning_brief.py` + priority profile | Calendar allocator consumes priorities | Renderer/filler re-ranking athlete goals independently |
 | Weekly stress intent | `stage2_planning_brief.py` | `stage2_planning_brief.py` | Role allocator converts intent to role slots | Fillers adding new meaningful stress because a week looks sparse |
 | Declared contact ownership | `sparring_dose_planner.py`, `stage2_role_map.py`, `stage2_payload_late_fight.py` | `sparring_dose_planner.py` | Calendar allocator consumes resolved contact state | Other layers inferring hard-vs-technical from raw declared weekday alone |
@@ -74,13 +93,111 @@ No lower layer may silently override a higher layer's ownership.
 | Athlete-facing role labels | `role_labels.py` | `role_labels.py` | Rename for display without changing semantic class | Labels changing load classification or placement |
 | Stage 1 draft rendering | `plan_pipeline_rendering.py` | renderer | Describe deterministic state | Encode independent training doctrine that conflicts with deterministic scheduling |
 | Finalizer packet | `stage2_finalizer_packet.py`, `_impl.py`, `stage2_llm_boundary.py` | finalizer boundary | Compact deterministic facts and hard rules | Omitting authoritative calendar facts then expecting the LLM to reconstruct them |
-| AI finalizer | Stage 2 prompt / model boundary | AI only for exact compliant exercise choice, wording, and presentation inside deterministic structure | Improve specificity, replace violating candidate with same-role compliant option | Change session count, day ownership, contact status, fight-week caps, or deterministic safety decisions |
-| Stage 2 validator | `stage2_validator.py`, `plan_contract_validator.py` | validator | Detect violations and report them | Becoming the primary scheduler or silently repairing calendar architecture |
-| Release / retry policy | `stage2_pipeline.py`, `stage2_policy.py`, `stage2_repair.py` | release-policy layer | Decide publish/retry/flags using validator result | Redefine planner architecture to make a failing plan pass |
+| AI finalizer | Stage 2 prompt / model boundary (`STAGE2_FINALIZER_PROMPT`, `UNLXCK_FINAL_RENDER_CONTRACT`) | AI only for wording, coaching detail, and presentation inside deterministic structure | Improve specificity; for a role **without** `selected_exercise_assignments`, replace a violating candidate with a same-role compliant option | Change session count, day ownership, contact status, fight-week caps, or deterministic safety decisions; add, restore, replace or substitute anything in a closed role (an illegal closed member is dropped or held and the gap is left) |
+| Stage 2 validator | `stage2_validator.py`, `stage2_validator_postprocess.py`, `plan_contract_validator.py` | validator | Detect violations and report them | Becoming the primary scheduler or silently repairing calendar architecture |
+| Planner-authority preflight (refuse to hand a structurally broken plan to the model) | `planner_authority_integrity.py`, called from `stage2_pipeline.build_stage2_package` | `planner_authority_integrity.py` | Hold the plan before the first model call and demand deterministic repair | Being used as a general validator, or as a way to let the model patch planner defects |
+| Release policy (publish / publish_with_flags) | `stage2_policy.apply_stage2_release_policy` (data in `shared/stage2-policy.json`) | `stage2_policy.py` | Classify findings and attach the release decision | Emitting a hold of its own — it never returns `hold`; deterministic holds are applied by the layers named in section 3.1 |
+| Repair-attempt ("retry payload") decision and prompt | `stage2_pipeline.build_stage2_retry`, `stage2_repair.build_stage2_repair_prompt`, `stage2_repair.reconcile_selected_conditioning_assignments` | `stage2_pipeline.py` decides whether a repair is warranted; `stage2_repair.py` builds the deterministic fix or the repair prompt | Prefer the deterministic conditioning reconciliation; fall back to at most one extra model call | Looping, or redefining planner architecture to make a failing plan pass |
+| Stage 2 orchestration (how many model calls actually happen) | `api/stage2_automation.py` (`OpenAIStage2Automator.finalize`) | `api/stage2_automation.py` | Run first pass, at most one plan-text repair, then the structured-card calls; apply the deterministic holds | Upgrading another layer's hold to a release; adding a second repair round |
+| Structured-card conversion (athlete-facing plan view) | `api/structured_plan_generation.py`, `api/structured_plan_models.py`, `api/stage2_automation.attempt_structured_plan_for_result` | `api/structured_plan_generation.py` | Convert approved `plan_text` into `StructuredTrainingPlan`; degrade to the raw markdown fallback on any failure | Holding or blocking a plan because a card failed; deciding any planner question during conversion |
+| Final release override (does a held plan reach the athlete?) | `api/generation/persistence._release_held_plan_with_flags` | `api/generation/persistence.py` | Release any held plan with usable content as `publishable_with_flags`, preserving every finding | Erasing findings or `stage2_status` while releasing; releasing a genuinely empty result |
+
+### 3.1 Holds, and what actually happens to them
+
+This is the part of the chain most easily misread, because two layers disagree by
+design and the *later* one wins.
+
+**Layer 1 — the release policy almost never holds.** `apply_stage2_release_policy`
+as written always returns `release_decision` of `publish` or `publish_with_flags`
+and always sets `is_athlete_releasable` / `is_publishable` true, so ordinary
+validator findings never block release. The one exception is invisible in its
+source: `planner_authority_integrity.install()` wraps this function at import time
+and adds `release_decision: "hold"` when planner-authority blockers are present.
+See section 3.2.
+
+**Layer 2 — four deterministic owners do hold.** Each says the deterministic plan
+itself is unusable, not that the wording is poor. Each applies its hold *after*
+the release policy has run:
+
+| Hold | Applied by | Meaning |
+| --- | --- | --- |
+| Planner preflight | `planner_authority_integrity.late_physical_planner_preflight`, via `build_stage2_package` | Stage 1 handed over a plan the finalizer must not be asked to render; held before the first model call |
+| Structural integrity | `stage2_pipeline.apply_structural_integrity_hold`, driven by `_apply_structural_source_repair_and_hold` | Phase/week/session-role structure is missing and deterministic repair could not restore it |
+| Conditioning-render | `api/stage2_automation.finalize` | Selected conditioning membership is missing from the render and neither the deterministic reconciliation nor the one repair call resolved it |
+| Goal-preservation regeneration | `goal_preservation.validate_goal_preservation` -> `requires_planner_regeneration` | Selected goal coverage is unmet; the fix is deterministic planner repair, never another model call |
+
+A hold sets `release_decision` to `hold`, moves the rendered text to
+`final_plan_text`, blanks `plan_text`, and sets plan status `review_required` with
+`stage2_status = stage2_failed`. Within Stage 2 the hold is final — nothing inside
+`api/stage2_automation.py` may upgrade it, and because
+`should_attempt_structured_plan` requires an athlete-displayable status, a held
+plan gets **no structured card**.
+
+**Layer 3 — persistence releases the hold anyway.**
+`api/generation/persistence._release_held_plan_with_flags` runs last, on every
+Stage 2 result. Any plan sitting at `review_required` / `held_for_review` that has
+usable text is rewritten to `publishable_with_flags`, and when the hold blanked
+`plan_text` it is restored from `final_plan_text`. The validator/contract findings
+are preserved untouched. Only a genuinely empty result (no plan text, no final
+text, no clean card) stays held. The same override also cancels the
+`review_required` downgrade that `_apply_plan_contract_validation` applies on the
+line immediately above it.
+
+**Net production behaviour, and how to read a held plan:**
+
+- A deterministic hold is an **audit signal and a card suppressor**, not a release
+  gate. The athlete still receives the plan, as `publishable_with_flags`, on the
+  raw markdown fallback.
+- `stage2_status = stage2_failed` survives the override, so a held-then-released
+  plan is still findable by admins.
+- The only outcomes that genuinely reach the athlete as *withheld* are Stage 1
+  injury triage — which takes a separate persistence path
+  (`persist_triage_review_required`) and is not overridden — and an empty result.
+
+The override is deliberate and test-locked (`tests/test_validator_release_invariant.py`).
+Do not "fix" a hold by weakening its owner; and do not assume a hold keeps a plan
+off the athlete's screen. If a defect must actually block release, that is a change
+to the override, argued under section 12.
+
+### 3.2 The import-time patch layer
+
+Reading a canonical owner's source does **not** always tell you what runs. Importing
+`fightcamp` executes three installers in `fightcamp/__init__.py`, each of which
+replaces module attributes on other modules at import time:
+
+| Installer | Replaces |
+| --- | --- |
+| `late_fight_dosage_policy.install()` | `conditioning.render_conditioning_block`, `conditioning._load_bank`, `conditioning.generate_conditioning_block` — installs canonical D-13..D-1 taper dosage and Style Taper governance |
+| `late_fight_phase_eligibility.install()` | `stage2_payload.build_planning_brief` (sets the `planner_athlete_model_context` ContextVar for the duration of planning), `stage2_payload._build_late_fight_allowed_exercises_by_day` (applies Stage 1 phase eligibility to late-tail selection) |
+| `planner_authority_integrity.install()` | `stage2_pipeline._validator_report_with_required_countdown_sessions`, `stage2_policy.apply_stage2_release_policy`, `stage2_pipeline.build_stage2_retry` |
+
+Each installer is idempotent (guarded by an `_..._INSTALLED` flag on the target
+module) and always runs in production.
+
+The consequence that matters most: **`apply_stage2_release_policy` can return
+`release_decision: "hold"` in production, even though its own source cannot.** The
+`planner_authority_integrity` wrapper adds that hold when planner-authority
+blockers are present. Section 3.1's "layer 1 never holds" is true of the unpatched
+function and of every ordinary validator finding; it is the patch that makes the
+authority hold possible. `stage2_pipeline` calls the policy through a module-global
+lookup, and the installer rebinds `pipeline.apply_stage2_release_policy` as well as
+the policy module's own attribute, so the patched version is what both use.
+
+This layer predates the freeze and is not new work. But it is the reason a reader
+can trace a decision to the "canonical owner", read that owner, and still be wrong.
+Treat these three modules as part of the owners they patch, and check
+`fightcamp/__init__.py` before concluding that a function's source is its
+behaviour. Extending the pattern to new modules is prohibited under section 12 —
+it is the `*_patch.py` / `*_integration.py` smell wearing a different filename.
 
 ## 4. Current normal-camp execution order
 
 Current Main executes the normal dated-camp planning brief as follows:
+
+`fightcamp/main.py` renders the phase-level Stage 1 draft (`render_plan_bundle`)
+*before* it builds the Stage 2 outputs. Everything below happens inside
+`build_stage2_outputs` -> `build_planning_brief`, and only the late-fight draft
+override and the lead summary write back into the already-rendered draft text.
 
 ```text
 build athlete model / candidate pools
@@ -89,23 +206,44 @@ build athlete model / candidate pools
   -> stage2_role_map._build_weekly_role_map
        (role budget/compression, then _assign_declared_day_hints placement
         through shared combat_load_policy legality)
+  -> stage2_payload._apply_boxing_crowded_week_post_processing
+       (day-identity governance decoration only; it deletes its athlete_model
+        argument so it cannot re-decide compression or role survival)
   -> normal_calendar_placement.fill_missing_session_days
        (placement completion, same shared legality)
-  -> apply_camp_week_fillers            (support inserts, gated by shared legality)
-  -> splice finished D-13 tail when applicable
+  -> apply_camp_week_fillers            (support inserts, gated by shared legality;
+                                         this is also where the finished D-13 tail
+                                         is spliced, via _splice_late_fight_tail)
   -> apply_late_camp_role_morph
        (countdown dose, then apply_final_calendar_integrity — the governor fixes
         the final calendar and re-runs dose-only morph if it relocates a role;
         only after that does the subordinate pre-hard-contact helper apply the
-        normal role-budget consequence on D-14+ days)
+        normal role-budget consequence on D-14+ days, followed by one last
+        dose/metadata-only morph pass over the surviving roles)
+  -> session_composition.compose_normal_strength_assignments
+     session_composition.compose_normal_conditioning_assignments
+       (closed session membership; reduce-only from Stage 1's selected slots)
+  -> attach late-fight assignments to any spliced tail roles
+  -> prescription_resolver.apply_effective_strength_prescriptions
+       (authoritative effective_prescription per selected strength exercise)
   -> stamp labels
-  -> build finalizer handoff
+  -> goal_preservation.reconcile_goal_preservation
+       (coverage verdict; a bounded restore re-runs morph + governor +
+        composition + dose resolution on a trial copy before committing)
+  -> [late-fight only] _render_late_fight_stage1_draft replaces the draft text
+  -> render_lead_summary inserted after the plan title
+  -> build_stage2_handoff_text (LLM-boundary projection + finalizer packet)
 ```
 
-The governor is deliberately the final deterministic stage: every layer that can
-mutate the calendar (placement, completion, fillers, dose morph) runs before it.
-Changes must still be reviewed against this whole chain, not only
-`stage2_role_map.py`.
+The governor is the last stage that may change the calendar: every layer that can
+mutate it (placement, completion, fillers, dose morph) runs before or through it.
+The stages after it — membership, dose resolution, labels — read the calendar and
+never move a role. Goal preservation is the single exception, and it is bounded:
+it may re-add a role the planner itself retained as a repair candidate, and it
+re-runs the morph and the governor on a trial copy before committing, so the
+finished calendar is still governor-verified.
+
+Changes must be reviewed against this whole chain, not only `stage2_role_map.py`.
 
 ## 5. Current late-fight execution ownership
 
@@ -138,7 +276,18 @@ Only the calendar allocator / placement layer may originate or relocate:
 - `real_weekday`
 - authoritative session ordering / day ownership
 
-Support inserts may create these fields only for the new support role they own, after a legality check. Renderers must be read-only.
+Support inserts may create these fields only for the new support role they own, after a legality check.
+
+`goal_preservation._restore_goal_roles` is the one further writer, and it is
+bounded to the same discipline: it may stamp `scheduled_day_hint` /
+`scheduled_countdown_label` / `session_index` on a role the planner itself
+retained in that week's `goal_repair_candidates`, only on a declared training day
+at D-14 or earlier that the shared legality policy allows, only within the
+original category budget and the athlete's session cap, and only after a trial
+copy re-runs the morph, the governor, composition and dose resolution and proves
+no other stimulus was lost. It never invents a role, a day, a dose or capacity.
+
+Renderers must be read-only.
 
 ### Load-owned fields
 
@@ -151,7 +300,22 @@ Combat-contact resolver and countdown dose policy own:
 - `meaningful_stress`
 - dose caps that arise from countdown safety
 
+`prescription_resolver.py` owns the derived render dose:
+- `effective_prescription` (authoritative) alongside the preserved `base_prescription`
+- `effective_strength_prescriptions` on the role
+
 Other modules may read these fields but must not infer replacements from raw labels.
+
+### Membership-owned fields
+
+`session_composition.py` (normal camp) and the late-fight assignment builder own:
+- `selected_exercise_assignments`
+
+A role that carries this list has **closed** membership. Downstream layers may
+render it, reduce a member's dose within its authorised envelope, or drop/hold an
+illegal member and leave the gap. They may never add, restore, replace or
+substitute a member. A role without the list keeps the older open contract, in
+which the finalizer may still substitute a compliant same-role candidate.
 
 ### Suppression-owned fields
 
@@ -187,6 +351,9 @@ These invariants apply to every future planner change.
 8. **The AI cannot repair deterministic architecture.** If the deterministic calendar is invalid, fix the deterministic planner.
 9. **Validator findings do not authorize hidden planner changes.** Validator/release policy remains QA/release logic.
 10. **No compatibility facade becomes a second source of truth.** Backward-compatible exports may delegate; they should not host divergent implementations of the same planning decision.
+11. **Closed membership is closed.** Once a role carries `selected_exercise_assignments`, no downstream layer — repair prompt, finalizer, card conversion — may add, restore, replace or substitute an exercise in it. An illegal member is dropped or held and the gap is left for deterministic planning.
+12. **A deterministic hold is a planner bug, not a release decision.** The four holds in section 3.1 exist because the deterministic plan is unusable, and in production the plan still ships (persistence releases it with flags). The hold is therefore a signal to fix the planner — never a reason to add another model call, tweak the prompt, or relax a policy so the broken plan validates.
+13. **The structured card cannot hold a plan.** Card conversion is downstream of release. A missing, invalid or rejected card degrades to the `plan_text` fallback and is recorded for admin audit.
 
 ## 8. New-code placement rules
 
@@ -197,8 +364,12 @@ Until the architecture is consolidated further:
 - New late-fight placement rules belong in `stage2_payload_late_fight.py` (the live late-fight placement owner).
 - New countdown dose-reduction rules belong in `late_camp_role_morph.py` / the canonical countdown dosage policy.
 - New filler types belong in the filler library, but their placement must use the shared legality contract.
+- New session-membership rules belong in `session_composition.py` (normal camp) or the late-fight assignment builder — never in the finalizer prompt.
+- New effective-dose resolution belongs in `prescription_resolver.py`; new countdown bands stay in `late_camp_role_morph.py`.
+- New goal-coverage rules belong in `goal_preservation.py`, inside its existing bounded-restore constraints.
 - New rendering copy belongs in rendering/label modules and must describe existing state only.
-- New finalizer rules may constrain wording or compliant exercise substitution but must not compensate for deterministic calendar defects.
+- New finalizer rules may constrain wording, or compliant substitution for roles without `selected_exercise_assignments`, but must not compensate for deterministic calendar defects.
+- New structured-card shape belongs in `api/structured_plan_models.py` + `api/structured_plan_generation.py`, and must stay non-blocking.
 
 Specifically prohibited as new architecture:
 - new planner behaviour in `weekly_plan_render.py`;
@@ -225,9 +396,15 @@ canonical owner in `Main` today:
 | Countdown dose morph | `late_camp_role_morph.py` |
 | Support inserts / fillers | `camp_week_fillers.py`, `gap_fill_inserts.py` — subordinate to shared legality |
 | Final deterministic calendar legality | `calendar_integrity.py` |
-| Rendering | `weekly_plan_render.py` — read only |
-| AI finalizer | wording / compliant exercise expression only |
-| Validation & release | validator / release layer — never repairs architecture |
+| Closed session membership | `session_composition.py`; late-fight assignment builder for D-13 inward |
+| Effective render prescription | `prescription_resolver.py` |
+| Goal coverage verdict + bounded restore | `goal_preservation.py` |
+| Stage 1 draft rendering | `plan_pipeline_rendering.py` — read only |
+| AI finalizer | wording / coaching detail; compliant substitution only for roles without closed membership |
+| Validation | `stage2_validator.py` (+ postprocess), `plan_contract_validator.py` — never repairs architecture |
+| Release policy | `stage2_policy.py` — publish / publish_with_flags only, never a hold |
+| Deterministic holds | the four owners in section 3.1 |
+| Structured-card conversion | `api/structured_plan_generation.py` — non-blocking |
 
 Both placement owners consume the same `combat_load_policy` legality through
 `calendar_context`, and both consume the sparring resolver's own resolved contact
@@ -281,14 +458,26 @@ not reintroduce it:
    the four production entry points, module-level code, and every name any module or test
    imports from `stage2_payload` — and were deleted, along with three then-orphaned
    constants. The follow-up ownership closure also removed the payload-owned
-   `_apply_boxing_crowded_week_*` path. Crowded-week policy, compression, suppression,
-   and unused-day state now live only in `stage2_role_map.py`; payload post-processing
-   reads that state only to add governance decoration.
+   crowded-week *compression* path. Crowded-week policy, compression, suppression,
+   and unused-day state now live only in `stage2_role_map.py`. What survives in
+   `stage2_payload.py` is `_apply_boxing_crowded_week_post_processing`, which is
+   decoration only: it discards its `athlete_model` argument, reads the role map's
+   already-final `intentional_compression` verdict, and stamps day-identity
+   governance onto the surviving roles. `_apply_high_fatigue_week_compression` in
+   `stage2_payload.py` still contains a full non-boxing compression implementation
+   but has no production caller (see 9.3.3); the live path delegates the boxing
+   crowded-week case to `stage2_role_map._apply_boxing_crowded_week_compression`.
 
 ### 9.3 Remaining non-blocking debt
 
 These are real but do not affect decision ownership, and are explicitly **not** scheduled
-work (see the freeze rule in section 12):
+work (see the freeze rule in section 12).
+
+Items 1-4 are structural shape. Items 5-7 were found in the September 2026 Stage 1 ->
+Stage 2 -> cards audit: they are dead code, an unreachable branch, and stale comments that
+had made their way into these docs as descriptions of live behaviour. They are recorded
+here so the docs stop asserting them; none is scheduled work either, and each would be a
+behaviour change to resolve.
 
 1. `camp_week_fillers.py` / `camp_week_fillers_impl.py` remain a facade/implementation
    pair. The facade holds real orchestration (tail splicing, tactical-watch insertion), so
@@ -306,6 +495,48 @@ work (see the freeze rule in section 12):
 4. `weekly_schedule_view.py` normalises resolver `status` -> display `effective_load` for
    the API/validator view layer. This is presentation-side normalisation of resolver
    output, downstream of every planner decision; it is not a second contact authority.
+5. **`weekly_plan_render.py` is not wired into the pipeline.** It renders a deterministic
+   `## Week N — PHASE (D-x -> D-y)` week/day/session spine, and earlier revisions of this
+   contract and of `STAGE2_PAYLOAD_SPEC.md` described it as the live Stage 1 renderer. It
+   is not: `render_weekly_schedule_section` has no production caller anywhere in `api/` or
+   `fightcamp/` — only tests import it. The live Stage 1 draft is still the phase-level
+   render in `plan_pipeline_rendering.py` (`## GPP` / `### Strength & Power` /
+   `### Conditioning`), with a deterministic countdown spine only on the late-fight path
+   (`_render_late_fight_stage1_draft`). This is why `missing_week_session_role` and
+   `late_camp_session_incomplete` are still in the Stage 1 parity baseline. Ownership is
+   not ambiguous — nothing else claims that rendering — so this is dead code, not a second
+   writer; wiring it in (or deleting it) is a behaviour change and needs its own argument
+   under the freeze rule.
+6. **`api/stage2_automation.py`'s "callers never upgrade HOLD to publication" comment is
+   false.** The comment sits directly above the `_reviewed_result` call in `finalize`. It is
+   true of Stage 2 itself, but the caller — `persist_plan_and_finalize` — does exactly that
+   via `_release_held_plan_with_flags` (section 3.1). The same applies to the fail-closed
+   language in `_apply_structural_source_repair_and_hold`'s docstring and to the
+   `_CONTRACT_REVIEW_PLAN_STATUS` comment in `api/generation/persistence.py`, which
+   describes a `review_required` routing the very next statement cancels. The behaviour is
+   deliberate and test-locked; the comments are what is stale.
+7. **The effective-dose repair never fires.** `build_stage2_retry` early-returns
+   `needs_retry: False` unless `release_decision == "hold"` or there is a
+   missing-closed-conditioning or `goal_preservation_failed` finding. Its own call to
+   `apply_stage2_release_policy` rewrites `release_decision` first, and that only yields
+   `"hold"` for planner-authority blockers (section 3.2) — in which case the same module's
+   `authority_build_stage2_retry` wrapper immediately forces `needs_retry: False` anyway.
+   So for `late_camp_effective_prescription_exceeded` or `goal_preservation_render_mismatch`
+   on their own, no repair prompt is ever produced. `api/stage2_automation.finalize` lists
+   both as repair triggers and labels the attempt `effective_dose_repair`; that label is
+   dead, and `build_stage2_repair_prompt` carries a purpose-built
+   `late_camp_effective_prescription_exceeded` repair block (remove unselected exercise vs
+   reduce dose to the effective cap) that nothing can reach. Only the two conditioning
+   codes actually reach a second model call.
+
+   This one looks unintended rather than deliberate: the trigger, the prompt block and the
+   `finalize` comment ("Effective-dose violations are deterministic safety failures ... so
+   an over-cap loaded prescription is not released without first asking the renderer to
+   conform to the scheduled-day source of truth") all describe a repair that does not
+   happen. The effect is athlete-facing: an over-cap loaded prescription inside the
+   countdown window ships with flags, unrepaired. Fixing it is a release-behaviour change
+   (it adds a model call to a case that currently ships), so it needs to be argued and
+   tested rather than slipped in — but it should be argued.
 
 
 ## 10. Required review checklist for planner PRs
@@ -320,6 +551,9 @@ Any PR changing planner behaviour should answer:
 - Does the change use resolved effective contact state rather than raw declared hard-spar weekdays?
 - Does it preserve the D-14 normal / D-13 late-fight ownership boundary?
 - Does rendering remain read-only?
+- Does closed membership (`selected_exercise_assignments`) stay closed everywhere downstream — prompt, repair prompt, card conversion?
+- If it changes dose, does it change `effective_prescription` at its owner rather than reconciling doses downstream?
+- Does it add, remove or change a deterministic hold (section 3.1)? If so, what is the deterministic repair, and why is a hold the right answer instead of releasing with flags?
 - Is the AI still subordinate to deterministic session count/day/safety state?
 - Which characterization/regression fixtures prove the behaviour across the full mutation chain?
 
@@ -352,11 +586,18 @@ support insert modules
 final calendar integrity
     verifies the finished deterministic calendar
 
-render/finalizer
+session_composition.py + prescription_resolver.py
+    close session membership and the effective dose on that verified calendar
+
+goal_preservation.py
+    judges coverage, and may only restore a planner-retained candidate back
+    through the same morph/governor chain
+
+render/finalizer/card conversion
     consume that calendar without rebuilding it
 ```
 
-The architectural success condition is simple: for any athlete-facing session, a developer should be able to answer **why this role exists, why it survived, why it is on this day, what its effective load is, and which file has authority for each answer** without tracing competing implementations.
+The architectural success condition is simple: for any athlete-facing session, a developer should be able to answer **why this role exists, why it survived, why it is on this day, what its effective load is, which exercises it contains, at what dose, and which file has authority for each answer** without tracing competing implementations.
 
 ## 12. Architecture freeze rule (Step 10)
 
@@ -389,6 +630,10 @@ New features enter through the existing owners:
 | New filler type | filler library + shared legality |
 | New rendering | renderer only, read-only |
 | New collision rule | `combat_load_policy` only |
+| New session-membership rule | `session_composition.py` / the late-fight assignment builder |
+| New effective-dose rule | `prescription_resolver.py` (bands stay in `late_camp_role_morph.py`) |
+| New goal-coverage rule | `goal_preservation.py`, inside its bounded-restore constraints |
+| New card field | `api/structured_plan_models.py` + `api/structured_plan_generation.py`, non-blocking |
 
 ### Specifically prohibited
 
@@ -400,7 +645,10 @@ New features enter through the existing owners:
 - re-deriving effective contact from declared weekdays, role keys, or countdown
   thresholds when resolved sparring state is available;
 - moving placement, contact, or role-survival authority into the renderer, the AI
-  finalizer, or the validator.
+  finalizer, the validator, or the structured-card converter;
+- a second repair round, or any path that lets the model resolve a deterministic hold;
+- granting the finalizer, the repair prompt, or the card converter permission to add,
+  restore, replace or substitute an exercise inside a closed role.
 
 The architecture regressions in `tests/test_step10_architecture_closure.py` and
 `tests/test_placement_ownership.py` enforce this. A change that requires editing the
