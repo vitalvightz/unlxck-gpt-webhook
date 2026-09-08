@@ -506,11 +506,11 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
                                 session_index=max((r.get("session_index", 0) for r in roles), default=0) + 1)
                 restored["goal_preservation_repair"] = {"goal": entry["goal"], "authority": VERSION}
                 trial_week["session_roles"].append(restored)
-                apply_late_camp_role_morph(trial["weekly_role_map"])
                 compose_normal_strength_assignments(
                     weekly_role_map=trial["weekly_role_map"],
                     candidate_pools=trial.get("candidate_pools") or {},
                 )
+                apply_late_camp_role_morph(trial["weekly_role_map"])
                 apply_effective_strength_prescriptions(weekly_role_map=trial["weekly_role_map"],
                                                       candidate_pools=trial.get("candidate_pools") or {}, athlete_model=_athlete(trial))
                 _, missing_before = _coverage(entry, brief, collect_goal_evidence(brief))

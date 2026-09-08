@@ -20,7 +20,11 @@ from typing import Any
 from .normalization import normalize_fatigue_level
 from .planner_context import get_planner_athlete_model
 from .late_fight_phase_eligibility import scheduled_phase_for_role
+from .calendar_context import role_d_day
+from .calendar_integrity import relocate_or_suppress_role_for_recovery
+from .prescription_resolver import has_verified_low_cost
 from .strength_session_quality import classify_strength_item
+from .training_context import normalize_equipment_list
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 
 
@@ -49,6 +53,16 @@ _CUT_PRESSURE = {
 _STRENGTH_FAMILIES = frozenset({"lower_strength", "upper_strength"})
 _POWER_FAMILIES = frozenset({"lower_power", "rotational_power", "upper_power"})
 
+_ADJACENT_STRENGTH_RECOVERY_COST_FIELDS = (
+    "movement_cost",
+    "impact_cost",
+    "eccentric_cost",
+    "landing_cost",
+    "cns_load",
+    "soreness_risk",
+)
+_ADJACENT_STRENGTH_RECOVERY_REASON = "substantial_repeated_mechanical_loading"
+
 _ROLE_REQUIRED_FAMILY_GROUPS: dict[str, tuple[frozenset[str], ...]] = {
     "primary_strength_day": (_STRENGTH_FAMILIES,),
     "structural_strength_day": (_STRENGTH_FAMILIES,),
@@ -70,6 +84,9 @@ def assignment_from_slot(phase: str, slot_group: str, slot: dict[str, Any]) -> d
         "slot_group": slot_group,
         "source_session_index": slot.get("session_index"),
     }
+    base_prescription = str(selected.get("prescription") or "").strip()
+    if base_prescription:
+        assignment["base_prescription"] = base_prescription
     notes = _selected_coaching_notes(selected)
     if notes:
         assignment["coaching_notes"] = notes
@@ -293,12 +310,92 @@ def _composition_families(slot: dict[str, Any]) -> tuple[set[str], dict[str, Any
     return families, effective_profile
 
 
+def _serialized_quality_class(slot: dict[str, Any]) -> str:
+    item = _slot_selected_item(slot)
+    return str(slot.get("quality_class") or item.get("quality_class") or "").strip()
+
+
+def _slot_uses_loaded_equipment(slot: dict[str, Any]) -> bool:
+    item = _slot_selected_item(slot)
+    equipment = normalize_equipment_list(item.get("equipment") or [])
+    return bool(
+        {
+            "barbell",
+            "trap_bar",
+            "dumbbell",
+            "dumbbells",
+            "kettlebell",
+            "kettlebells",
+            "cable",
+            "landmine",
+            "sandbag",
+            "bulgarian_bag",
+            "log",
+            "atlas_stone",
+            "water_jug",
+            "weight_vest",
+            "plate",
+            "partner",
+        }
+        & set(equipment)
+    )
+
+
+def _slot_has_core_balance_signal(slot: dict[str, Any]) -> bool:
+    item = _slot_selected_item(slot)
+    tags = {
+        re.sub(r"[^a-z0-9]+", "_", str(value).strip().lower()).strip("_")
+        for value in [
+            *(slot.get("tags") or []),
+            *(item.get("tags") or []),
+            *(slot.get("movement_patterns") or []),
+            *(item.get("movement_patterns") or []),
+            slot.get("movement"),
+            item.get("movement"),
+        ]
+        if str(value).strip()
+    }
+    return bool(
+        tags
+        & {
+            "core",
+            "core_stability",
+            "core_strength",
+            "trunk",
+            "trunk_strength",
+            "anti_rotation",
+            "balance",
+            "stability",
+            "proprioception",
+        }
+    )
+
+
 def _slot_priority(slot: dict[str, Any], original_index: int) -> tuple[int, int]:
     try:
         priority = int(slot.get("priority"))
     except (TypeError, ValueError):
         priority = 10_000
     return priority, original_index
+
+
+def _slot_mechanical_risk_tags(slot: dict[str, Any]) -> set[str]:
+    item = _slot_selected_item(slot)
+    metadata = item.get("selection_metadata")
+    nested_tags = (
+        metadata.get("mechanical_risk_tags", [])
+        if isinstance(metadata, dict)
+        else []
+    )
+    return {
+        str(value).strip().lower()
+        for value in [
+            *(slot.get("mechanical_risk_tags") or []),
+            *(item.get("mechanical_risk_tags") or []),
+            *nested_tags,
+        ]
+        if str(value).strip().lower().startswith("mech_")
+    }
 
 
 def _candidate_records(slots: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -308,13 +405,33 @@ def _candidate_records(slots: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if not assignment:
             continue
         families, profile = _composition_families(slot)
+        serialized_quality_class = _serialized_quality_class(slot)
+        serialized_support_only = serialized_quality_class in {"support_accessory", "support_isometric", "rehab_support"}
+        has_major_family = bool(families - {"support"})
+        support_only = bool(serialized_support_only or (profile.get("support_only") and not has_major_family))
         records.append(
             {
                 "slot": slot,
                 "name": assignment["name"],
                 "families": families,
-                "support_only": bool(profile.get("support_only")),
-                "core_balance_support": bool(profile.get("core_balance_support")),
+                "support_only": support_only,
+                "core_balance_support": bool(
+                    profile.get("core_balance_support")
+                    or (serialized_support_only and _slot_has_core_balance_signal(slot))
+                ),
+                "loaded_pattern": bool(profile.get("loaded_pattern") and (not serialized_support_only or _slot_uses_loaded_equipment(slot))),
+                "force_isometric": bool(profile.get("force_isometric")),
+                "power_pattern": bool(profile.get("power_pattern")),
+                "quality_class": serialized_quality_class or str(profile.get("quality_class") or ""),
+                "mechanical_risk_tags": _slot_mechanical_risk_tags(slot),
+                "verified_low_recovery_cost": has_verified_low_cost(
+                    slot,
+                    fields=_ADJACENT_STRENGTH_RECOVERY_COST_FIELDS,
+                ),
+                "material_movement_cost": not has_verified_low_cost(
+                    slot,
+                    fields=("movement_cost",),
+                ),
                 "sort_key": _slot_priority(slot, index),
                 "original_index": index,
             }
@@ -458,6 +575,21 @@ def _trunk_strength_selected(athlete_model: dict[str, Any] | None) -> bool:
     )
 
 
+def _low_load_trunk_support_records(slots: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    records = []
+    for record in _candidate_records(slots):
+        if (
+            record.get("support_only")
+            and record.get("core_balance_support")
+            and not record.get("loaded_pattern")
+            and not record.get("force_isometric")
+            and not record.get("power_pattern")
+            and record.get("quality_class") in {"support_accessory", "support_isometric"}
+        ):
+            records.append(record)
+    return records
+
+
 def _role_days_until_fight(role: dict[str, Any]) -> int | None:
     for key in ("countdown_offset", "scheduled_countdown_offset"):
         value = _int_or_none(role.get(key))
@@ -500,6 +632,170 @@ def _role_pressure_state(
     return state
 
 
+def _substantial_mechanical_tags(records: list[dict[str, Any]]) -> set[str]:
+    if not records:
+        return set()
+    return set().union(
+        *[
+            record["mechanical_risk_tags"]
+            for record in records
+            if record["material_movement_cost"]
+        ]
+    )
+
+
+def _all_mechanical_tags(records: list[dict[str, Any]]) -> set[str]:
+    return (
+        set().union(*(record["mechanical_risk_tags"] for record in records))
+        if records
+        else set()
+    )
+
+
+def _assign_selected_records(
+    entry: dict[str, Any], selected_records: list[dict[str, Any]]
+) -> None:
+    assignments = []
+    for record in selected_records:
+        assignment = assignment_from_slot(
+            entry["phase"], "strength_slots", record["slot"]
+        )
+        if assignment:
+            assignments.append(assignment)
+    entry["role"]["selected_exercise_assignments"] = assignments
+    policy = entry["role"]["strength_composition_policy"]
+    policy["selected_count"] = len(assignments)
+    policy["selected_names"] = [item["name"] for item in assignments]
+    entry["selected_records"] = selected_records
+
+
+def _apply_adjacent_strength_recovery(
+    weekly_role_map: dict[str, Any], entries: list[dict[str, Any]]
+) -> None:
+    scheduled = [
+        entry
+        for entry in entries
+        if role_d_day(entry["week"], entry["role"]) is not None
+        and entry["role"] in (entry["week"].get("session_roles") or [])
+    ]
+    scheduled.sort(
+        key=lambda entry: role_d_day(entry["week"], entry["role"]),
+        reverse=True,
+    )
+
+    for index, current in enumerate(scheduled):
+        current_d_day = role_d_day(current["week"], current["role"])
+        if current_d_day is None:
+            continue
+        previous = [
+            entry
+            for entry in scheduled[:index]
+            if role_d_day(entry["week"], entry["role"]) == current_d_day + 1
+            and entry["role"] in (entry["week"].get("session_roles") or [])
+        ]
+        if not previous:
+            continue
+
+        previous_records = [
+            record for entry in previous for record in entry["selected_records"]
+        ]
+        previous_substantial_tags = _substantial_mechanical_tags(previous_records)
+        shared_tags = _all_mechanical_tags(previous_records) & _all_mechanical_tags(
+            current["selected_records"]
+        )
+        conflicting_tags = previous_substantial_tags & _substantial_mechanical_tags(
+            current["selected_records"]
+        )
+        evidence = {
+            "consecutive": True,
+            "previous_d_day": current_d_day + 1,
+            "current_d_day": current_d_day,
+            "shared_mechanical_tags": sorted(shared_tags),
+            "substantial_overlap_tags": sorted(conflicting_tags),
+            "previous_material_items": [
+                record["name"]
+                for record in previous_records
+                if record["material_movement_cost"]
+            ],
+            "current_material_items": [
+                record["name"]
+                for record in current["selected_records"]
+                if record["material_movement_cost"]
+            ],
+            "current_verified_low_cost_items": [
+                record["name"]
+                for record in current["selected_records"]
+                if record["verified_low_recovery_cost"]
+            ],
+        }
+
+        if not conflicting_tags:
+            evidence["decision"] = "compatible"
+            current["role"]["strength_composition_policy"][
+                "adjacent_strength_recovery"
+            ] = evidence
+            continue
+
+        safe_records = [
+            record
+            for record in current["records"]
+            if not record["material_movement_cost"]
+            or not (record["mechanical_risk_tags"] & previous_substantial_tags)
+        ]
+        selected_records, dropped = _select_bounded_records(
+            safe_records,
+            role_key=current["role_key"],
+            cap=current["effective_cap"],
+            pressure=current["pressure"],
+            preserve_trunk_support=current["preserve_trunk_support"],
+        )
+        if selected_records:
+            _assign_selected_records(current, selected_records)
+            policy = current["role"]["strength_composition_policy"]
+            existing_dropped = {
+                str(item.get("name") or ""): str(item.get("reason") or "")
+                for item in policy.get("dropped") or []
+                if isinstance(item, dict) and str(item.get("name") or "")
+            }
+            existing_dropped.update(dropped)
+            for record in current["records"]:
+                if record not in safe_records:
+                    existing_dropped[record["name"]] = _ADJACENT_STRENGTH_RECOVERY_REASON
+            policy["dropped"] = [
+                {"name": name, "reason": reason}
+                for name, reason in existing_dropped.items()
+            ]
+            evidence["decision"] = "selection_modified"
+            policy["adjacent_strength_recovery"] = evidence
+            continue
+
+        current_substantial_tags = _substantial_mechanical_tags(current["selected_records"])
+        excluded_d_days: set[int] = set()
+        for other in scheduled:
+            if other is current:
+                continue
+            other_d_day = role_d_day(other["week"], other["role"])
+            if other_d_day is None:
+                continue
+            if current_substantial_tags & _substantial_mechanical_tags(other["selected_records"]):
+                excluded_d_days.update({other_d_day - 1, other_d_day, other_d_day + 1})
+
+        action = relocate_or_suppress_role_for_recovery(
+            weekly_role_map,
+            current["role"],
+            excluded_d_days=excluded_d_days,
+            reason_code=_ADJACENT_STRENGTH_RECOVERY_REASON,
+        )
+        evidence["decision"] = (
+            str(action.get("action")) if isinstance(action, dict) else "unchanged"
+        )
+        if isinstance(action, dict) and action.get("to_d_day") is not None:
+            evidence["relocated_to_d_day"] = action["to_d_day"]
+        current["role"]["strength_composition_policy"][
+            "adjacent_strength_recovery"
+        ] = evidence
+
+
 def compose_normal_strength_assignments(
     *, weekly_role_map: dict[str, Any], candidate_pools: dict[str, Any]
 ) -> dict[str, Any]:
@@ -526,6 +822,7 @@ def compose_normal_strength_assignments(
     trunk_strength_selected = _trunk_strength_selected(athlete_model)
 
     weekly_role_map["strength_composition_context"] = dict(pressure_context)
+    composed_roles: list[dict[str, Any]] = []
 
     first_strength_week_position = next(
         (
@@ -608,6 +905,20 @@ def compose_normal_strength_assignments(
                     for name, reason in dropped.items()
                 ],
             }
+            composed_roles.append(
+                {
+                    "week": week,
+                    "role": role,
+                    "phase": phase,
+                    "records": records,
+                    "selected_records": selected_records,
+                    "role_key": role_key,
+                    "effective_cap": effective_cap,
+                    "pressure": pressure,
+                    "preserve_trunk_support": trunk_strength_selected,
+                }
+            )
+    _apply_adjacent_strength_recovery(weekly_role_map, composed_roles)
     return weekly_role_map
 
 
@@ -817,9 +1128,14 @@ def compose_normal_conditioning_assignments(
     *, weekly_role_map: dict[str, Any], candidate_pools: dict[str, Any]
 ) -> dict[str, Any]:
     """Attach a safe bank-backed minimum composition to normal conditioning roles."""
+    athlete_model = get_planner_athlete_model()
+    pressure_context = _composition_context_from_model(athlete_model)
+    trunk_strength_selected = _trunk_strength_selected(athlete_model)
+
     for week in weekly_role_map.get("weeks", []) or []:
         if not isinstance(week, dict):
             continue
+        embedded_trunk_support_count = 0
         for role in week.get("session_roles", []) or []:
             if (
                 not isinstance(role, dict)
@@ -831,6 +1147,7 @@ def compose_normal_conditioning_assignments(
             phase = _conditioning_phase_for_role(week, role)
             pool = candidate_pools.get(phase) if isinstance(candidate_pools, dict) else None
             slots = pool.get("conditioning_slots", []) if isinstance(pool, dict) else []
+            strength_slots = pool.get("strength_slots", []) if isinstance(pool, dict) else []
 
             preferred_system = str(role.get("preferred_system") or "").strip().lower()
             matching_slots = [
@@ -887,8 +1204,11 @@ def compose_normal_conditioning_assignments(
             minimum = None if adjacent_hard_spar else (2 if long_aerobic else 3)
 
             assignments = []
+            selected_names: set[str] = set()
             for slot, option, is_selected in selected:
                 name = str(option.get("name") or "")
+                if name:
+                    selected_names.add(name)
                 allocated_rounds = high_load_rounds.get(name)
                 assignment = {
                     "slot_id": slot.get("slot_id"),
@@ -904,6 +1224,44 @@ def compose_normal_conditioning_assignments(
                 if notes:
                     assignment["coaching_notes"] = notes
                 assignments.append(assignment)
+
+            trunk_support_added = False
+            trunk_support_skip_reason = ""
+            pressure_state = _role_pressure_state(
+                pressure_context,
+                role=role,
+                fatigue_applied=True,
+            )
+            if trunk_strength_selected and not adjacent_hard_spar and int(pressure_state["pressure"]) < 2:
+                trunk_options = [
+                    record
+                    for record in _low_load_trunk_support_records(strength_slots)
+                    if record["name"] not in selected_names
+                ]
+                if embedded_trunk_support_count >= 2:
+                    trunk_support_skip_reason = "weekly_trunk_support_cap"
+                elif trunk_options:
+                    record = trunk_options[0]
+                    assignment = assignment_from_slot(phase, "strength_slots", record["slot"])
+                    if assignment:
+                        assignment.update(
+                            {
+                                "embedded_support": True,
+                                "support_dose_category": "low_load_trunk",
+                                "effective_prescription": "1-2 controlled sets; stop before fatigue",
+                            }
+                        )
+                        assignments.append(assignment)
+                        selected_names.add(record["name"])
+                        embedded_trunk_support_count += 1
+                        trunk_support_added = True
+            elif trunk_strength_selected:
+                trunk_support_skip_reason = (
+                    "hard_sparring_adjacent"
+                    if adjacent_hard_spar
+                    else "readiness_pressure"
+                )
+
             role["selected_exercise_assignments"] = assignments
             role["conditioning_composition_policy"] = {
                 "minimum_exercise_count": minimum,
@@ -914,6 +1272,9 @@ def compose_normal_conditioning_assignments(
                 "partitioned_high_load_rounds": high_load_rounds,
                 "underfill_reason": underfill_reason,
                 "workload_limited": bool(minimum is not None and len(assignments) < minimum),
+                "embedded_trunk_support": trunk_support_added,
+                "embedded_trunk_support_count": 1 if trunk_support_added else 0,
+                "embedded_trunk_support_skip_reason": trunk_support_skip_reason,
             }
 
     return weekly_role_map

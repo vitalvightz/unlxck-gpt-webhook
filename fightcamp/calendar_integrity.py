@@ -166,11 +166,14 @@ def _destination_occupancy_rank(events: list[CalendarEvent], d_day: int) -> int:
 
 
 def _best_destination(
-    weekly_role_map: dict[str, Any], ref: _RoleRef
+    weekly_role_map: dict[str, Any], ref: _RoleRef,
+    *, excluded_d_days: set[int] | None = None,
 ) -> tuple[str, int, PlacementDecision] | None:
     events = _build_events(weekly_role_map, exclude_role=ref.role)
     ranked: list[tuple[tuple[int, int, int, int], str, int, PlacementDecision]] = []
     for weekday, d_day in _available_destination_days(ref):
+        if excluded_d_days and d_day in excluded_d_days:
+            continue
         decision = evaluate_candidate_at_position(
             ref.profile,
             candidate_position=-d_day,
@@ -196,6 +199,60 @@ def _best_destination(
         return None
     _score, weekday, d_day, decision = min(ranked, key=lambda item: item[0])
     return weekday, d_day, decision
+
+
+def relocate_or_suppress_role_for_recovery(
+    weekly_role_map: dict[str, Any],
+    role: dict[str, Any],
+    *,
+    excluded_d_days: set[int],
+    reason_code: str,
+) -> dict[str, Any] | None:
+    """Reuse the canonical mover when exercise-level recovery blocks a day."""
+    ref = next((item for item in _role_refs(weekly_role_map) if item.role is role), None)
+    if ref is None or _is_immutable_role(ref):
+        return None
+
+    best = _best_destination(
+        weekly_role_map,
+        ref,
+        excluded_d_days=excluded_d_days,
+    )
+    if best is not None:
+        weekday, d_day, destination_decision = best
+        from_day = str(role.get("scheduled_day_hint") or role.get("real_weekday") or "")
+        _stamp_relocation(
+            role,
+            weekday=weekday,
+            d_day=d_day,
+            reason_code=reason_code,
+            directive=PlacementDirective.FORBID,
+        )
+        return {
+            "action": "relocated",
+            "from_day": from_day,
+            "from_d_day": ref.d_day,
+            "to_day": weekday.title(),
+            "to_d_day": d_day,
+            "reason_code": reason_code,
+            "destination_directive": destination_decision.directive.value,
+        }
+
+    decision = PlacementDecision(
+        PlacementDirective.FORBID,
+        reason_code,
+        "No compatible closed-membership strength workload or legal recovery-spaced day was available.",
+    )
+    suppression = _suppress_role(
+        ref,
+        decision=decision,
+        attempted_days=[
+            weekday.title()
+            for weekday, d_day in _available_destination_days(ref)
+            if d_day not in excluded_d_days
+        ],
+    )
+    return {"action": "suppressed", **suppression}
 
 
 def _stamp_relocation(
@@ -428,4 +485,8 @@ def apply_final_calendar_integrity(
     return weekly_role_map
 
 
-__all__ = ["CalendarIntegrityError", "apply_final_calendar_integrity"]
+__all__ = [
+    "CalendarIntegrityError",
+    "apply_final_calendar_integrity",
+    "relocate_or_suppress_role_for_recovery",
+]
