@@ -169,15 +169,16 @@ four codes:
 
 There is exactly one repair round. There is no loop.
 
-> **Known gap.** `build_stage2_retry` gates the repair on
-> `release_decision != "hold"`, but it re-runs `apply_stage2_release_policy` on the
-> incoming report first, which always overwrites `release_decision` with `publish`
-> or `publish_with_flags`. The `"hold"` branch is therefore unreachable, and the
-> function early-returns `needs_retry: False` for anything that is not a
-> conditioning-membership or goal-preservation finding. So the two dose codes above
-> reach `build_stage2_retry` but never produce a prompt, and the
-> `effective_dose_repair` attempt label in `api/stage2_automation.py` is currently
-> dead. Tracked as debt item 9.3.7 in
+> **Known gap.** `build_stage2_retry` early-returns `needs_retry: False` unless
+> `release_decision == "hold"` or there is a conditioning-membership or
+> `goal_preservation_failed` finding. It re-runs `apply_stage2_release_policy` on the
+> incoming report first, and that only yields `"hold"` for planner-authority
+> blockers — where the same module's wrapper then forces `needs_retry: False`
+> regardless. So the two dose codes above reach `build_stage2_retry` but never
+> produce a prompt: the `effective_dose_repair` attempt label in
+> `api/stage2_automation.py` is dead, and so is the purpose-built
+> `late_camp_effective_prescription_exceeded` block inside
+> `build_stage2_repair_prompt`. Tracked as debt item 9.3.7 in
 > [`PLANNER_ARCHITECTURE_CONTRACT.md`](PLANNER_ARCHITECTURE_CONTRACT.md).
 
 ### Holds, and the release override
