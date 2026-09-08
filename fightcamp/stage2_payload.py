@@ -2938,7 +2938,7 @@ def _closed_membership_render_manifest(finalizer_packet: dict) -> list[dict]:
                 resolved_doses = strength_doses.get(source_key) or []
                 if resolved_doses:
                     prescription = resolved_doses.pop(0)
-                else:
+                elif not isinstance(role.get("strength_dose_cap"), dict):
                     prescription = assignment.get("base_prescription")
             if isinstance(prescription, dict):
                 prescription = (
