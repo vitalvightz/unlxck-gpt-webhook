@@ -633,6 +633,13 @@ def _blocks_bridge_extra_glycolytic_touch(athlete_model: dict[str, Any]) -> bool
     return False
 
 
+def _conditioning_limiter_signal(athlete_model: dict) -> bool:
+    goals = {str(v).strip().lower().replace(" ", "_") for v in clean_list(athlete_model.get("key_goals") or athlete_model.get("goals", []))}
+    weaknesses = {str(v).strip().lower().replace(" ", "_") for v in clean_list(athlete_model.get("weaknesses", []))}
+    tokens = {"gas_tank", "conditioning", "conditioning_endurance", "endurance", "aerobic"}
+    return bool((goals | weaknesses) & tokens)
+
+
 def _suppress_standalone_glycolytic(active_hard_spar_days: list[str], athlete_model: dict[str, Any]) -> bool:
     if len(active_hard_spar_days) >= 2:
         return True
@@ -1435,14 +1442,31 @@ def resolve_late_fight_contacts(
     return contacts
 
 
+# The D-13..D-8 quota of 4 active roles / 3 meaningful stress exposures is spent
+# on two strength touches, one alactic sharpness touch and the freshness day, so
+# ``light_fight_pace_touch_day`` — the only conditioning-maintenance role legal in
+# this window — never fit, and the whole tail was identical whether or not
+# conditioning was the athlete's limiter. One extra slot lets it in beside the
+# alactic touch instead of in place of it. Both quotas move together because the
+# stress quota is the binding one: widening only the active quota still leaves
+# four meaningful exposures competing for three places. Every dose, RPE, contact
+# and suppression rule for the window is unchanged and still outranks this.
+_CONDITIONING_LIMITER_EXTRA_COMPRESSED_ROLES = 1
+
+
 def _late_fight_role_budget(days_until_fight: Any, athlete_model: dict[str, Any]) -> dict[str, Any]:
-    return {
+    budget = {
         "mode": _days_out_payload_mode(days_until_fight),
         "max_active_roles": _late_fight_max_active_roles(days_until_fight),
         "max_meaningful_stress_exposures": _late_fight_max_meaningful_stress_exposures(days_until_fight),
         "max_support_roles": _late_fight_max_support_roles(days_until_fight),
         "legal_countdown_labels": _late_fight_legal_countdown_labels(days_until_fight),
     }
+    if budget["mode"] == "pre_fight_compressed_payload" and _conditioning_limiter_signal(athlete_model):
+        for key in ("max_active_roles", "max_meaningful_stress_exposures"):
+            if isinstance(budget[key], int):
+                budget[key] += _CONDITIONING_LIMITER_EXTRA_COMPRESSED_ROLES
+    return budget
 
 
 def _late_fight_forbidden_blocks(days_until_fight: Any) -> list[str]:

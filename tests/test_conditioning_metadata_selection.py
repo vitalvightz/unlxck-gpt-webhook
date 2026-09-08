@@ -84,7 +84,42 @@ def _patch_conditioning_visibility_banks(
     monkeypatch.setattr(conditioning, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"conditioning": total_drills})
 
 
-def test_gpp_valid_style_conditioning_candidate_surfaces_when_conditioning_selected(monkeypatch):
+def test_gpp_style_conditioning_wins_its_slot_when_it_matches_the_target(monkeypatch):
+    """Style is the preference *between suitable candidates*.
+
+    A style drill that also matches the athlete's declared target keeps the
+    aerobic slot ahead of the generic pool: its style and sport bonuses put it
+    in front once both are judged on the same physiological footing.
+    """
+    style_drill = {
+        "name": "Counter Reactive Footwork",
+        "placement": "conditioning",
+        "system": "aerobic",
+        "phases": ["GPP"],
+        "tags": ["reactive", "footwork", "conditioning", "aerobic"],
+        "timing": "10 min technical tempo",
+        "rest": "",
+        "load": "moderate",
+    }
+    _patch_conditioning_visibility_banks(monkeypatch, style_bank=[style_drill])
+
+    _text, selected_names, _why, _grouped, _missing, reservoir = conditioning.generate_conditioning_block(
+        _style_visibility_flags("GPP")
+    )
+
+    diagnostics = reservoir["__style_conditioning__"]
+    assert "Counter Reactive Footwork" in selected_names
+    assert diagnostics["style_target"] >= 1
+    assert diagnostics["final_selected_style_conditioning_names"] == ["Counter Reactive Footwork"]
+
+
+def test_gpp_style_conditioning_yields_the_slot_when_it_matches_no_target(monkeypatch):
+    """A style drill must not own a system slot it does not physiologically fit.
+
+    The same drill without any conditioning/aerobic tag is not a suitable
+    candidate for a gas-tank athlete's aerobic slot, so the tagged generic drill
+    takes it. Zero style relevance in the generic pool does not block that.
+    """
     style_drill = {
         "name": "Counter Reactive Footwork",
         "placement": "conditioning",
@@ -101,20 +136,23 @@ def test_gpp_valid_style_conditioning_candidate_surfaces_when_conditioning_selec
         _style_visibility_flags("GPP")
     )
 
-    diagnostics = reservoir["__style_conditioning__"]
-    assert "Counter Reactive Footwork" in selected_names
-    assert diagnostics["style_target"] >= 1
-    assert diagnostics["entries_selected"] == 1
-    assert diagnostics["final_selected_style_conditioning_names"] == ["Counter Reactive Footwork"]
+    assert "Generic Boxing Tempo" in selected_names
+    assert "Counter Reactive Footwork" not in selected_names
+    assert reservoir["__style_conditioning__"]["final_selected_style_conditioning_names"] == []
 
 
-def test_spp_style_conditioning_is_picked_before_generic_system_fallback(monkeypatch):
+def test_spp_style_conditioning_is_picked_before_a_weaker_generic_match(monkeypatch):
+    """Style still leads the blend; it only yields to a better target match.
+
+    The style drill carries the athlete's target, so it takes the glycolytic
+    slot ahead of the generic fallback exactly as before.
+    """
     style_drill = {
         "name": "Counter Reactive Intervals",
         "placement": "conditioning",
         "system": "glycolytic",
         "phases": ["SPP"],
-        "tags": ["reactive", "timing"],
+        "tags": ["reactive", "timing", "conditioning", "glycolytic"],
         "timing": "4 x 45s",
         "rest": "75s",
         "load": "hard",
@@ -136,7 +174,9 @@ def test_style_conditioning_expanded_style_tag_match_does_not_need_raw_tactical_
         "placement": "conditioning",
         "system": "glycolytic",
         "phases": ["SPP"],
-        "tags": ["reactive"],
+        # Carries the athlete's target as well as the expanded style tag, so the
+        # assertion stays about style-tag expansion rather than slot precedence.
+        "tags": ["reactive", "conditioning", "glycolytic"],
         "timing": "4 x 40s",
         "rest": "80s",
         "load": "hard",

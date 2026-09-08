@@ -36,6 +36,7 @@ from .sparring_dose_planner import (
     sandwiched_training_days,
 )
 from .stage2_payload_late_fight import (
+    _conditioning_limiter_signal,
     _role_anchor,
     compute_bridge_rules,
 )
@@ -2193,13 +2194,6 @@ def _compression_floor_value(compression: int) -> int:
     if compression <= 2:
         return 1
     return 2  # compression >= 3
-
-
-def _conditioning_limiter_signal(athlete_model: dict) -> bool:
-    goals = {str(v).strip().lower().replace(" ", "_") for v in clean_list(athlete_model.get("key_goals") or athlete_model.get("goals", []))}
-    weaknesses = {str(v).strip().lower().replace(" ", "_") for v in clean_list(athlete_model.get("weaknesses", []))}
-    tokens = {"gas_tank", "conditioning", "conditioning_endurance", "endurance", "aerobic"}
-    return bool((goals | weaknesses) & tokens)
 
 
 def _can_keep_low_noise_conditioning(athlete_model: dict) -> bool:

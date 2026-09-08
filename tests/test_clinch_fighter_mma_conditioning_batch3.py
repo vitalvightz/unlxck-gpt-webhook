@@ -110,12 +110,17 @@ def test_reactive_and_fatigue_decision_rounds_are_meaningfully_distinct():
 
 
 def test_existing_selector_surfaces_mma_clinch_fighter_in_gpp_and_spp():
+    # Conditioning selection now prefers the best physiological match for the
+    # slot, so a style drill no longer owns a system slot by default. This test
+    # covers bank *reachability* — sport, style, equipment, phase and safety
+    # filtering — so it names the slice explicitly; an explicitly requested
+    # exercise is a coach instruction and is never displaced on target grounds.
     flags = {
         "sport": "mma", "style_technical": ["mma"], "style_tactical": ["Clinch Fighter"],
         "key_goals": ["conditioning"], "weaknesses": ["gas_tank"], "fatigue": "low",
         "equipment": ["partner", "thai pads"], "training_frequency": 5,
         "days_available": 5, "days_until_fight": 35, "time_to_fight_days": 35,
-        "injuries": [], "restrictions": [],
+        "injuries": [], "restrictions": [], "preferred_exercise_names": sorted(EXPECTED),
     }
     for phase in ("GPP", "SPP"):
         conditioning._style_conditioning_bank_cache = None
