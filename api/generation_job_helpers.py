@@ -159,13 +159,13 @@ _PUBLIC_MILESTONES = {
 
 def _public_milestone_group(code: str) -> str | None:
     """Collapse internal runtime events into non-technical athlete landmarks."""
-    if code in {"request_payload_parsed", "profile_update_started", "profile_update_finished"}:
+    if code == "profile_update_finished":
         return "profile"
-    if code.startswith("stage1_"):
-        if any(part in code for part in ("block", "schedule", "conditioning", "mobility", "recovery", "nutrition")):
-            return "sessions"
+    if code in {"stage1_planner_starting", "stage1_planner_invoked"}:
         return "design"
-    if code.startswith("stage2_") or code in {"final_result_persist_started", "final_result_persisted"}:
+    if code in {"stage1_planner_finished", "stage1_result_persisted"}:
+        return "sessions"
+    if code == "stage2_result_ready":
         return "checks"
     return None
 
@@ -318,6 +318,7 @@ def _job_response(
     }
     stage2_status = ""
     requires_admin_resume = False
+    linked_status = ""
     if plan_id and store is not None:
         linked_plan = store.get_plan(plan_id)
         linked_status = str(linked_plan.get("status") or "").strip().lower() if isinstance(linked_plan, dict) else ""
@@ -342,6 +343,11 @@ def _job_response(
         message = (
             "Planning paused. Admin review is required before generation can continue."
         )
+    ready_to_open = (
+        normalized_status == "completed"
+        and bool(plan_id)
+        and linked_status in {"ready", "publishable_with_flags"}
+    )
     return GenerationJobResponse(
         job_id=str(job["id"]),
         athlete_id=str(job["athlete_id"]),
@@ -362,13 +368,14 @@ def _job_response(
             if viewer_role == "admin"
             else _public_progress_milestones(
                 job.get("progress_milestones"),
-                completed=normalized_status in {"completed", "review_required"} and bool(plan_id),
+                completed=ready_to_open,
             )
         ),
         warnings=_job_warnings(job) if viewer_role == "admin" else [],
         can_retry=can_retry,
-        stage2_status=stage2_status or None,
+        stage2_status=(stage2_status or None) if viewer_role == "admin" else None,
         requires_admin_resume=requires_admin_resume,
+        ready_to_open=ready_to_open,
     )
 
 

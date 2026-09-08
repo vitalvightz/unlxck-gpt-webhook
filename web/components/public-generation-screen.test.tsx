@@ -17,3 +17,9 @@ test("public failure gives recovery actions without rendering raw errors", () =>
   assert.match(html, /Return to workspace/);
   assert.ok(!html.includes("traceback"));
 });
+
+test("finalizing does not mark the camp ready without server confirmation", () => {
+  const html = renderToStaticMarkup(<PublicGenerationScreen phase="finalizing" milestones={[{ code: "final_checks", label: "Final checks", detail: "", at: "" }]} />);
+  assert.match(html, /aria-valuenow="90"/);
+  assert.ok(!html.includes("public-build-milestone-complete\"><span>✓<\/span><div><strong>Camp ready"));
+});

@@ -1721,6 +1721,7 @@ class GenerationJobResponse(BaseModel):
     can_retry: bool = False
     stage2_status: str | None = None
     requires_admin_resume: bool = False
+    ready_to_open: bool = False
 
 
 class GenerationRequestPayloadSummary(BaseModel):
@@ -1764,6 +1765,7 @@ class AdminGenerationJobDiagnostic(BaseModel):
 
 class MeResponse(BaseModel):
     profile: ProfileRecord
+    effective_admin: bool = False
     latest_intake: dict[str, Any] | None = None
     latest_plan: PlanSummary | None = None
     plan_count: int = 0

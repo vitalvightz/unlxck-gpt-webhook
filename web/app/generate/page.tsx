@@ -221,7 +221,7 @@ export default function GeneratePage() {
 
   return (
     <RequireAuth>
-      {me?.profile.role === "admin" ? (
+      {me?.effective_admin === true ? (
         <PremiumLoadingScreen
           phase={controller.phase}
           error={controller.error}
@@ -245,6 +245,8 @@ export default function GeneratePage() {
           error={controller.error}
           startedAtMs={controller.startedAtMs}
           milestones={controller.milestones}
+          jobId={controller.currentJobId}
+          readyToOpen={controller.readyToOpen}
           failureKind={controller.failureKind}
           onRetry={() => {
             void controller.retryGeneration();

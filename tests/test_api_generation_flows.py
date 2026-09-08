@@ -2728,17 +2728,16 @@ def test_generate_plan_returns_review_required_when_stage2_needs_manual_review()
 
     _, job = _start_generation(client)
 
-    # A status that is not athlete-displayable is the one case that still routes
-    # to review, so this milestone must still fire here.
+    # The athlete response carries the review state without exposing the
+    # internal Stage 2 diagnostic milestones.
     assert job["status"] == "review_required"
     milestone_codes = [
         milestone["code"]
         for milestone in job["progress_milestones"]
         if milestone["code"].startswith("stage2_")
     ]
-    assert "stage2_review_required" in milestone_codes
-    assert "stage2_validated" not in milestone_codes
-    assert "stage2_flagged" not in milestone_codes
+    assert milestone_codes == []
+    assert job["ready_to_open"] is False
     saved = next(iter(store.plans.values()))
     assert saved["final_plan_text"] == "# Failed Stage 2 Output"
     assert saved["stage2_status"] == "stage2_failed"
@@ -2767,7 +2766,7 @@ def test_generation_fails_when_stage2_final_result_persistence_fails(monkeypatch
     _, job = _start_generation(client)
 
     assert job["status"] == "failed"
-    assert job["error"] == "Stage 2 result persistence failed after plan persistence."
+    assert job["error"] == "Plan generation didn't complete this time. Please try again in a few moments."
     assert job["completed_at"] is not None
     persisted_job = store.get_generation_job(job["job_id"])
     assert persisted_job is not None
@@ -3348,7 +3347,7 @@ def test_run_generation_job_warns_when_profile_refresh_fails_but_generation_cont
     assert len(warning_milestones) == 1
     assert warning_milestones[0]["detail"] == warning
     assert warning_milestones[0]["meta"] == {"warning": True}
-    response = app_module._job_response(refreshed_job, store=store)
+    response = app_module._job_response(refreshed_job, store=store, viewer_role="admin")
     diagnostic = app_module._admin_generation_job_diagnostic(refreshed_job, stale_after_seconds=90)
     assert response.warnings == [warning]
     assert diagnostic.warnings == [warning]
@@ -3366,7 +3365,7 @@ def test_run_generation_job_warns_when_profile_refresh_fails_but_generation_cont
     # Eviction resilience: even if every progress milestone is dropped (the list is
     # FIFO-capped), the durable marker keeps the warning on the job response.
     evicted_job = {**refreshed_job, "progress_milestones": []}
-    assert app_module._job_response(evicted_job, store=store).warnings == [warning]
+    assert app_module._job_response(evicted_job, store=store, viewer_role="admin").warnings == [warning]
     assert (
         app_module._admin_generation_job_diagnostic(evicted_job, stale_after_seconds=90).warnings
         == [warning]
@@ -4370,7 +4369,7 @@ def test_stage2_unavailable_fails_without_publishing_stage1():
 
     assert job["status"] == "failed"
     assert job["plan_id"] is None
-    assert "OPENAI_API_KEY" in job["error"]
+    assert job["error"] == "Plan generation didn't complete this time. Please try again in a few moments."
     assert store.plans == {}
 
 
@@ -4383,7 +4382,7 @@ def test_stage2_gateway_failure_fails_without_publishing_stage1():
 
     assert job["status"] == "failed"
     assert job["plan_id"] is None
-    assert "Stage 2 model request failed" in job["error"]
+    assert job["error"] == "Plan generation didn't complete this time. Please try again in a few moments."
     assert store.plans == {}
 
 def test_stale_running_job_is_failed_before_new_job_is_created():
@@ -4546,7 +4545,7 @@ def test_stage2_insufficient_quota_fails_without_publishing_stage1():
     assert job["status"] == "failed"
     assert job["plan_id"] is None
     assert store.plans == {}
-    assert "OpenAI quota exceeded" in job["error"]
+    assert job["error"] == "Generation is temporarily unavailable. Please try again later."
 
 def test_generate_plan_returns_existing_active_job_for_same_athlete():
     client, store, _ = _build_client()

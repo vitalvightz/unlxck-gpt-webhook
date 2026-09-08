@@ -10,7 +10,6 @@ export const PUBLIC_CAMP_MILESTONES = [
 ] as const;
 
 export function getPublicMilestoneIndex(phase: GenerationUiPhase, milestones: ProgressMilestone[]): number {
-  if (phase === "finalizing") return PUBLIC_CAMP_MILESTONES.length - 1;
   let index = 0;
   for (const milestone of milestones) {
     const found = PUBLIC_CAMP_MILESTONES.findIndex((item) => item.code === milestone.code);
@@ -24,10 +23,12 @@ export function getPublicProgress(
   milestones: ProgressMilestone[],
   startedAtMs: number | null,
   nowMs: number,
+  previousProgress = 0,
+  readyToOpen = false,
 ): number {
-  if (phase === "finalizing") return 100;
+  if (readyToOpen) return 100;
   if (phase === "failed" || phase === "review_paused" || phase === "already_generated") {
-    return PUBLIC_CAMP_MILESTONES[getPublicMilestoneIndex(phase, milestones)]?.anchor ?? 0;
+    return Math.max(previousProgress, PUBLIC_CAMP_MILESTONES[getPublicMilestoneIndex(phase, milestones)]?.anchor ?? 0);
   }
   const index = getPublicMilestoneIndex(phase, milestones);
   const anchor = PUBLIC_CAMP_MILESTONES[index].anchor;
@@ -36,5 +37,5 @@ export function getPublicProgress(
   // Time only interpolates within the current real milestone. It cannot complete
   // another landmark and deliberately slows to a hold below the next anchor.
   const eased = 1 - Math.exp(-elapsed / 75_000);
-  return Math.min(94, anchor + (nextAnchor - anchor) * 0.72 * eased);
+  return Math.max(previousProgress, Math.min(94, anchor + (nextAnchor - anchor) * 0.72 * eased));
 }

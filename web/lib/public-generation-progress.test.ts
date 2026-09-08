@@ -21,5 +21,24 @@ test("progress is monotonic across later polls and reconnect time", () => {
 
 test("live progress holds below completion and completion alone reaches 100", () => {
   assert.ok(getPublicProgress("running", [milestone("final_checks")], 1, 99_999_999) < 100);
-  assert.equal(getPublicProgress("finalizing", [milestone("camp_ready")], 1, 2), 100);
+  assert.ok(getPublicProgress("finalizing", [milestone("camp_ready")], 1, 2) < 100);
+  assert.equal(getPublicProgress("finalizing", [milestone("camp_ready")], 1, 2, 94, true), 100);
+});
+
+test("reconnect floor prevents a truncated milestone history from regressing", () => {
+  const restored = getPublicProgress("running", [milestone("profile_ready")], 1_000, 2_000, 72);
+  assert.equal(restored, 72);
+});
+
+test("a retry starts independently from the failed job floor", () => {
+  const failedJobFloor = getPublicProgress("failed", [milestone("final_checks")], 1_000, 2_000, 91);
+  const retry = getPublicProgress("running", [milestone("profile_ready")], 2_000, 2_000);
+  assert.equal(failedJobFloor, 91);
+  assert.equal(retry, 18);
+});
+
+test("a stalled final-check build holds below 100", () => {
+  const stalled = getPublicProgress("running", [milestone("final_checks")], 1, 60 * 60_000, 93);
+  assert.ok(stalled >= 93);
+  assert.ok(stalled < 100);
 });

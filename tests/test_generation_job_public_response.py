@@ -9,9 +9,9 @@ def _job(**overrides):
         "status": "running",
         "created_at": "2026-01-01T00:00:00+00:00",
         "progress_milestones": [
-            {"code": "request_payload_parsed", "label": "Request payload parsed", "detail": "internal", "at": "2026-01-01T00:01:00+00:00", "meta": {"secret": "value"}},
+            {"code": "profile_update_finished", "label": "Profile update finished", "detail": "internal", "at": "2026-01-01T00:01:00+00:00", "meta": {"secret": "value"}},
             {"code": "stage1_planner_invoked", "label": "Stage 1 planner invoked", "detail": "model detail", "at": "2026-01-01T00:02:00+00:00"},
-            {"code": "stage2_model_call_started", "label": "Stage 2 model call", "detail": "provider detail", "at": "2026-01-01T00:03:00+00:00"},
+            {"code": "stage2_result_ready", "label": "Stage 2 result ready", "detail": "provider detail", "at": "2026-01-01T00:03:00+00:00"},
         ],
     }
     job.update(overrides)
@@ -25,6 +25,7 @@ def test_athlete_response_groups_milestones_and_removes_diagnostics():
     ]
     assert all(item.meta == {} for item in response.progress_milestones)
     assert all("Stage" not in item.label for item in response.progress_milestones)
+    assert response.stage2_status is None
 
 
 def test_non_admin_response_sanitizes_error_and_warnings():
@@ -43,3 +44,25 @@ def test_admin_response_preserves_diagnostics_exactly():
     assert response.error == "internal detail"
     assert response.progress_milestones[1].code == "stage1_planner_invoked"
     assert response.progress_milestones[1].detail == "model detail"
+
+
+def test_started_events_do_not_claim_completed_public_landmarks():
+    response = _job_response(_job(progress_milestones=[
+        {"code": "profile_update_started", "label": "started"},
+        {"code": "stage2_drafting", "label": "drafting"},
+    ]), viewer_role="athlete")
+    assert response.progress_milestones == []
+
+
+class _PlanStore:
+    def get_plan(self, plan_id):
+        return {"id": plan_id, "status": "ready", "stage2_status": "internal_value"}
+
+
+def test_ready_requires_confirmed_publishable_saved_plan():
+    incomplete = _job_response(_job(status="completed", plan_id="plan-1"), viewer_role="athlete")
+    ready = _job_response(_job(status="completed", plan_id="plan-1"), store=_PlanStore(), viewer_role="athlete")
+    assert incomplete.ready_to_open is False
+    assert ready.ready_to_open is True
+    assert ready.stage2_status is None
+    assert ready.progress_milestones[-1].code == "camp_ready"
