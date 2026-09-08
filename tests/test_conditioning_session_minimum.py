@@ -1,6 +1,11 @@
+import json
+from pathlib import Path
+
 import pytest
 
 from fightcamp.session_composition import compose_normal_conditioning_assignments
+from fightcamp.stage2_payload import build_stage2_handoff_text
+from fightcamp.stage2_validator import validate_stage2_output
 
 
 def _option(
@@ -138,6 +143,74 @@ def test_conditioning_minimum_partitions_high_load_options_without_stacking_full
     assert envelope["allocated_active_work_seconds"] == 480
     assert envelope["allocated_elapsed_seconds"] <= envelope["elapsed_cap_seconds"]
     assert role["conditioning_composition_policy"]["workload_limited"] is False
+
+
+def test_real_bank_mixed_conditioning_doses_keep_their_own_modality_and_rest():
+    bank = {
+        item["name"]: item
+        for item in json.loads(Path("data/conditioning_bank.json").read_text(encoding="utf-8"))
+    }
+
+    def bank_option(name: str) -> dict:
+        item = bank[name]
+        return {
+            "name": name,
+            "prescription": item["duration"],
+            "selection_metadata": dict(item),
+        }
+
+    plyo = bank_option("Plyo Step-Up Jumps")
+    swings = bank_option("KB Swing Intervals")
+    broad_jumps = bank_option("Burpee Broad Jumps")
+    role_map = {
+        "weeks": [{
+            "phase": "GPP",
+            "session_roles": [{
+                "category": "conditioning",
+                "role_key": "glycolytic_capacity_day",
+                "preferred_system": "glycolytic",
+                "scheduled_day_hint": "wednesday",
+                "scheduled_countdown_label": "D-28",
+            }],
+            "calendar_days": [{"weekday": "wednesday", "d_day": 28}],
+        }]
+    }
+    pools = {"GPP": {"conditioning_slots": [{
+        "slot_id": "gpp-glycolytic-1",
+        "role": "glycolytic",
+        "selected": plyo,
+        "alternates": [swings, broad_jumps],
+    }]}}
+
+    compose_normal_conditioning_assignments(weekly_role_map=role_map, candidate_pools=pools)
+
+    assignments = role_map["weeks"][0]["session_roles"][0]["selected_exercise_assignments"]
+    effective = {item["name"]: item["effective_prescription"] for item in assignments}
+    assert effective == {
+        "Plyo Step-Up Jumps": "6x8/side, 90s rest",
+        "KB Swing Intervals": "6 x 30 sec work; 90 sec rest; RPE 8",
+        "Burpee Broad Jumps": "4 x 30 sec work; 150 sec rest; RPE 8",
+    }
+    brief = {
+        "athlete_snapshot": {"days_until_fight": 28, "sport": "boxing"},
+        "weekly_role_map": role_map,
+    }
+    handoff = build_stage2_handoff_text(
+        stage2_payload={"athlete_model": brief["athlete_snapshot"]},
+        planning_brief=brief,
+        plan_text="D-28 (Wednesday) - Conditioning",
+    )
+    for name, prescription in effective.items():
+        assert f"- {name}: {prescription}" in handoff
+
+    rendered = "D-28 (Wednesday) - Conditioning\n" + "\n".join(
+        f"- {name}: {prescription}" for name, prescription in effective.items()
+    )
+    report = validate_stage2_output(planning_brief=brief, final_plan_text=rendered)
+    assert not any(
+        item["code"] == "selected_conditioning_effective_prescription_mismatch"
+        for item in report["errors"]
+    )
 
 
 def test_conditioning_minimum_underfills_when_high_load_dose_is_unknown():
