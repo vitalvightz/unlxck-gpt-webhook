@@ -633,6 +633,13 @@ def _blocks_bridge_extra_glycolytic_touch(athlete_model: dict[str, Any]) -> bool
     return False
 
 
+def _conditioning_limiter_signal(athlete_model: dict) -> bool:
+    goals = {str(v).strip().lower().replace(" ", "_") for v in clean_list(athlete_model.get("key_goals") or athlete_model.get("goals", []))}
+    weaknesses = {str(v).strip().lower().replace(" ", "_") for v in clean_list(athlete_model.get("weaknesses", []))}
+    tokens = {"gas_tank", "conditioning", "conditioning_endurance", "endurance", "aerobic"}
+    return bool((goals | weaknesses) & tokens)
+
+
 def _suppress_standalone_glycolytic(active_hard_spar_days: list[str], athlete_model: dict[str, Any]) -> bool:
     if len(active_hard_spar_days) >= 2:
         return True
@@ -656,6 +663,24 @@ def _suppress_standalone_glycolytic(active_hard_spar_days: list[str], athlete_mo
             return True
     return False
 
+
+
+# ``light_fight_pace_touch_day`` is the only conditioning-maintenance role legal
+# in the D-13..D-8 compressed window, and at its default priority it always falls
+# below the allocator's active-role budget — so the tail was identical whether or
+# not conditioning was the athlete's limiter. Promoting it above the second
+# strength touch (108) but below the neural primer (110) spends an existing slot
+# differently; it never adds one, and every dose, RPE and suppression rule for the
+# window still applies.
+_RHYTHM_TOUCH_LIMITER_SELECTION_PRIORITY = 109
+
+
+def _rhythm_touch_selection_priority(
+    athlete_model: dict[str, Any], *, has_downgraded_hard_days: bool
+) -> int:
+    if _conditioning_limiter_signal(athlete_model):
+        return _RHYTHM_TOUCH_LIMITER_SELECTION_PRIORITY
+    return 96 if has_downgraded_hard_days else 100
 
 
 def _d3_alactic_suppression_reasons(athlete_model: dict[str, Any], days_until_fight: Any) -> list[str]:
@@ -2666,7 +2691,9 @@ def _late_fight_candidate_roles(
                         "Keep this light (RPE <= 5), never describe it as a conditioning build or progression, "
                         "and never place it between two hard sparring collisions."
                     ),
-                    selection_priority=96 if has_downgraded_hard_days else 100,
+                    selection_priority=_rhythm_touch_selection_priority(
+                        athlete_model, has_downgraded_hard_days=has_downgraded_hard_days
+                    ),
                     legal_countdown_labels=legal_countdown_labels,
                 )
             )

@@ -419,3 +419,73 @@ class TestProductionCalendarCollision:
         for _w, role, _d, wd in _placed_roles(brief):
             if _is_app_owned_visible_role(role.get("role_key")) and wd:
                 assert wd != "saturday"
+
+
+class TestConditioningLimiterReachesTheTail:
+    """The D-13..D-0 tail must respond to a declared conditioning limiter.
+
+    ``_splice_late_fight_tail`` hands the whole tail to the late-fight allocator,
+    whose active-role budget is 4. Its selection priorities used to be
+    limiter-blind, so ``light_fight_pace_touch_day`` — the only
+    conditioning-maintenance role legal in the compressed window — always fell
+    below the cut and the tail was byte-identical for a gas-tank athlete and a
+    power athlete. These tests pin the fix and the safety rules that still
+    outrank it.
+    """
+
+    GAS_TANK = {
+        "key_goals": "conditioning",
+        "primary_goal": "conditioning",
+        "weak": "gas tank, conditioning",
+        "primary_weak": "gas tank",
+    }
+
+    @staticmethod
+    def _tail_conditioning(brief: dict) -> list[str]:
+        return sorted(
+            str(role.get("role_key"))
+            for _w, role, d_day, _wd in _placed_roles(brief)
+            if str(role.get("category") or "") == "conditioning"
+            and d_day is not None
+            and 1 <= d_day <= 13
+        )
+
+    @pytest.mark.parametrize("days", [31, 21, 13])
+    def test_gas_tank_limiter_keeps_a_rhythm_touch_in_the_tail(self, days, monkeypatch):
+        brief = _run(days, monkeypatch, **self.GAS_TANK)
+        assert "light_fight_pace_touch_day" in self._tail_conditioning(brief)
+
+    def test_power_athlete_tail_is_unchanged(self, monkeypatch):
+        # No conditioning limiter, no rhythm touch: the promotion must not leak
+        # extra conditioning into every athlete's taper.
+        brief = _run(31, monkeypatch, key_goals="power, speed", primary_goal="power")
+        assert "light_fight_pace_touch_day" not in self._tail_conditioning(brief)
+
+    @pytest.mark.parametrize(
+        "override",
+        [
+            {"fatigue": "high"},
+            {"weight": "88", "target_weight": "78"},  # extreme cut
+        ],
+    )
+    def test_safety_suppression_still_outranks_the_limiter(self, override, monkeypatch):
+        # ``_suppress_standalone_glycolytic`` removes the candidate entirely, so
+        # the priority promotion never gets a chance to apply.
+        brief = _run(31, monkeypatch, **self.GAS_TANK, **override)
+        assert "light_fight_pace_touch_day" not in self._tail_conditioning(brief)
+
+    def test_promotion_spends_a_slot_rather_than_adding_one(self, monkeypatch):
+        # The allocator's active-role budget is fixed. A gas-tank athlete must
+        # not end up with MORE scheduled tail sessions than a power athlete.
+        def tail_sessions(brief: dict) -> int:
+            return sum(
+                1
+                for _w, role, d_day, _wd in _placed_roles(brief)
+                if _is_app_owned_visible_role(role.get("role_key"))
+                and d_day is not None
+                and 1 <= d_day <= 13
+            )
+
+        gas = _run(31, monkeypatch, **self.GAS_TANK)
+        power = _run(31, monkeypatch, key_goals="power, speed", primary_goal="power")
+        assert tail_sessions(gas) <= tail_sessions(power)
