@@ -698,7 +698,14 @@ def _conditioning_partition_high_load(
     dict[str, float | None],
 ]:
     """Partition one phase-appropriate workload across known high-load drills."""
-    high_load = [item for item in selected if _conditioning_is_high_load(item[1])]
+    high_load = []
+    for item in selected:
+        if not _conditioning_is_high_load(item[1]):
+            continue
+        metadata = item[1].get("selection_metadata") if isinstance(item[1].get("selection_metadata"), dict) else {}
+        dose_text = str(metadata.get("duration") or metadata.get("timing") or "").lower()
+        if not re.search(r"\b(?:reps?|per[-\s]?side|/side|yds?|yards?|meters?|feet|ft|m)\b", dose_text):
+            high_load.append(item)
     if len(high_load) < 2:
         return selected, {}, None, {}
 
