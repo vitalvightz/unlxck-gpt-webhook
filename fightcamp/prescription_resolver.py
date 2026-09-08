@@ -438,13 +438,20 @@ def _cost_value(slot: dict[str, Any], field: str) -> str:
     return str(value or "").strip().lower().replace("-", "_")
 
 
-def _pre_hard_verified_low_cost(slot: dict[str, Any]) -> bool:
-    """Require affirmative low/none cost metadata for the optional second item."""
+def has_verified_low_cost(
+    slot: dict[str, Any], *, fields: tuple[str, ...]
+) -> bool:
+    """Require affirmative low/none values from the existing cost metadata."""
     values = [
         _cost_value(slot, field).replace("_", " ")
-        for field in _PRE_HARD_COST_FIELDS
+        for field in fields
     ]
     return all(value and value in _VERIFIED_LOW_COST_LEVELS for value in values)
+
+
+def _pre_hard_verified_low_cost(slot: dict[str, Any]) -> bool:
+    """Require affirmative low/none cost metadata for the optional second item."""
+    return has_verified_low_cost(slot, fields=_PRE_HARD_COST_FIELDS)
 
 
 def _pre_hard_allowed_slots(owned_slots: list[dict[str, Any]]) -> list[dict[str, Any]]:

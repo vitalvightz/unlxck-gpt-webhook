@@ -1750,10 +1750,10 @@ def _build_planning_brief(
     # D-13 or closer softens to a low-cost rhythm touch. Runs last so no quota
     # or protected-slot rule can preserve hard glycolytic work inside D-13; the
     # D-21→D-18 combat-pressure floor is untouched by construction.
-    apply_late_camp_role_morph(weekly_role_map)
     compose_normal_strength_assignments(
         weekly_role_map=weekly_role_map, candidate_pools=candidate_pools,
     )
+    apply_late_camp_role_morph(weekly_role_map)
     compose_normal_conditioning_assignments(
         weekly_role_map=weekly_role_map, candidate_pools=candidate_pools,
     )
@@ -2916,6 +2916,8 @@ def _closed_membership_render_manifest(finalizer_packet: dict) -> list[dict]:
                 resolved_doses = strength_doses.get(source_key) or []
                 if resolved_doses:
                     prescription = resolved_doses.pop(0)
+                else:
+                    prescription = assignment.get("base_prescription")
             if isinstance(prescription, dict):
                 prescription = (
                     prescription.get("display") or prescription.get("dose")
