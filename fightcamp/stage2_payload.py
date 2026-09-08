@@ -54,6 +54,8 @@ from .bank_authority import original_bank_entries
 from .late_camp_role_morph import apply_late_camp_role_morph
 from .prescription_resolver import apply_effective_strength_prescriptions
 from .session_composition import (
+    _conditioning_prescription,
+    _selected_coaching_notes,
     attach_late_fight_assignments,
     compose_normal_conditioning_assignments,
     compose_normal_strength_assignments,
@@ -1383,16 +1385,28 @@ def _build_late_fight_allowed_exercises_by_day(
             if not _slot_countdown_labels(slot):
                 consumed_slot_ids.add(slot_id)
             allowed_by_day[day_label].append(name)
-            assignments_by_day[day_label].append(
-                {
-                    "name": name,
-                    "role_key": role.get("role_key"),
-                    "scheduled_countdown_label": day_label,
-                    "slot_id": slot.get("slot_id"),
-                    "slot_group": slot_group,
-                    "phase": phase,
-                }
-            )
+            option = _slot_selected_option(slot)
+            assignment = {
+                "name": name,
+                "role_key": role.get("role_key"),
+                "scheduled_countdown_label": day_label,
+                "slot_id": slot.get("slot_id"),
+                "slot_group": slot_group,
+                "phase": phase,
+            }
+            # Carry the selected bank dose forward for conditioning tail work so
+            # Stage 2 renders it directly, mirroring normal conditioning.  Loaded
+            # strength tail doses stay owned by the scheduled-day resolver
+            # (effective_strength_prescriptions) so a taper cap is never bypassed.
+            if slot_group == "conditioning_slots":
+                prescription = _conditioning_prescription(option)
+                if prescription:
+                    assignment["base_prescription"] = prescription
+                    assignment["effective_prescription"] = prescription
+            notes = _selected_coaching_notes(option)
+            if notes:
+                assignment["coaching_notes"] = notes
+            assignments_by_day[day_label].append(assignment)
 
     return (
         {day: dedupe_preserve_order(names) for day, names in allowed_by_day.items()},
@@ -1854,6 +1868,7 @@ def _serialize_strength_option(exercise: dict, why: str, score_evidence: dict | 
         "restriction_tags": _extract_restriction_tags(exercise),
         "mechanical_risk_tags": _extract_mechanical_risk_tags(exercise),
         "prescription": prescription or exercise.get("method") or "",
+        "notes": str(exercise.get("notes") or "").strip(),
         "real_strength_maintenance": exercise.get("real_strength_maintenance") is True,
         "why": why or "balanced selection",
         "quality_class": quality_profile["quality_class"],
@@ -1887,6 +1902,7 @@ def _serialize_conditioning_option(
         "movement_patterns": dedupe_preserve_order([system] + tags),
         "restriction_tags": _extract_restriction_tags(drill),
         "mechanical_risk_tags": _extract_mechanical_risk_tags(drill),
+        "notes": str(drill.get("notes") or "").strip(),
         "prescription": " | ".join(
             part for part in [drill.get("timing"), drill.get("rest"), drill.get("load")] if part
         ),
