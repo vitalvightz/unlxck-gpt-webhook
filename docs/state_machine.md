@@ -72,14 +72,21 @@ Self-transitions are allowed for idempotent updates.
 ## Stage 2 outcomes and release policy
 
 `fightcamp/stage2_policy.py` is the Stage 2 release-policy surface, but it is not
-a second planner. Once Stage 2 has produced non-empty usable athlete-facing plan
-text, **validator findings are observational only**.
+a second planner. Its `apply_stage2_release_policy` is structurally incapable of
+holding: it only ever returns `release_decision` of `publish` or
+`publish_with_flags`, and always sets `is_athlete_releasable` and `is_publishable`
+true. Once Stage 2 has produced non-empty usable athlete-facing plan text,
+**validator findings are observational only**.
 
 The invariant is:
 
 > **Planner decides. Validators report. Usable plans ship.**
 
-For a usable Stage 2 plan:
+Four deterministic owners do still apply a hold when the *deterministic planner
+output itself* is unusable — but persistence releases it again. See "Deterministic
+planner holds" below for what that actually means for the athlete.
+
+For a usable Stage 2 plan with a sound deterministic calendar:
 
 | Validator result | Plan status | `stage2_status` | Job status |
 |---|---|---|---|
@@ -88,7 +95,6 @@ For a usable Stage 2 plan:
 
 This includes findings labelled as:
 
-- `goal_preservation_failed`;
 - `goal_preservation_render_mismatch`;
 - restriction/safety or late-fight validator findings;
 - dose/evidence mismatches;
@@ -98,9 +104,59 @@ This includes findings labelled as:
 - malformed validator collections.
 
 The original finding remains in the validator/admin report. It may be surfaced
-for QA and asynchronous review, but it cannot blank `plan_text`, change a usable
-plan to `review_required`, force planner regeneration, or trigger another model
-call solely to make validation pass.
+for QA and asynchronous review. On its own — as a judgement about the quality of
+the rendered text — it cannot blank `plan_text`, change a usable plan to
+`review_required`, force planner regeneration, or trigger another model call
+solely to make validation pass.
+
+### Deterministic planner holds
+
+Four findings are not quality judgements: they say the deterministic plan handed to
+(or returned from) the model is structurally unusable. Each is applied by a named
+owner *after* the release policy has run — the release policy itself never holds.
+
+| Hold | Applied by | Trigger |
+|---|---|---|
+| Planner preflight | `fightcamp/planner_authority_integrity.py`, via `build_stage2_package` | Stage 1 handed over a plan the finalizer must not be asked to render. Held before the first model call. |
+| Structural integrity | `stage2_pipeline.apply_structural_integrity_hold` | `phase_section_missing`, `missing_week_session_role`, `late_camp_session_incomplete` or `late_fight_missing_required_countdown_session` survives deterministic repair. |
+| Conditioning-render | `api/stage2_automation.py` | `missing_selected_conditioning_assignment` / `selected_conditioning_effective_prescription_mismatch` unresolved after the deterministic reconciliation and the one repair call. |
+| Goal-preservation regeneration | `goal_preservation.validate_goal_preservation` | `goal_preservation_failed`: selected goal coverage is unmet and needs deterministic planner repair. |
+
+A hold sets `release_decision = "hold"`, `is_athlete_releasable = false`,
+`is_publishable = false` and `validator_findings_observational = false`; moves the
+rendered text to `final_plan_text`; blanks `plan_text`; and produces plan status
+`review_required` with `stage2_status = stage2_failed`. Inside Stage 2 that is
+final — nothing in `api/stage2_automation.py` may upgrade it, and because
+`should_attempt_structured_plan` requires an athlete-displayable status, a held
+plan gets **no structured card**.
+
+### The release override
+
+`api/generation/persistence._release_held_plan_with_flags` then runs last, on every
+Stage 2 result, and rewrites any `review_required` / `held_for_review` plan that has
+usable content to `publishable_with_flags` — restoring `plan_text` from
+`final_plan_text` when a hold blanked it. Every validator and contract finding is
+preserved. The same override also cancels the `review_required` downgrade
+`_apply_plan_contract_validation` applies immediately before it. Only a genuinely
+empty result (no plan text, no final text, no clean card) stays held.
+
+So in production:
+
+- **the invariant above holds end to end** — a plan with usable content ships;
+- a deterministic hold is an **audit signal and a card suppressor**, not a gate: the
+  athlete gets the plan as `publishable_with_flags` on the raw markdown fallback;
+- `stage2_status` stays `stage2_failed` through the override, so admins can still
+  find every held-then-released plan;
+- the only genuinely withheld outcomes are Stage 1 injury triage — which uses the
+  separate `persist_triage_review_required` path and is **not** overridden — and an
+  empty result.
+
+The override is deliberate and locked by `tests/test_validator_release_invariant.py`.
+
+Note that `goal_preservation_failed` and `goal_preservation_render_mismatch` are
+**not** the same finding. The render mismatch is a rendering discrepancy that ships
+with flags and never holds; `goal_preservation_failed` is a coverage failure that
+does apply a hold (and is then released with flags like any other).
 
 ### True terminal failures
 
@@ -113,6 +169,9 @@ release is technically impossible, for example:
 - an empty/unparseable response that yields no athlete-facing plan;
 - persistence/database failure; or
 - a Stage 1 triage/planner gate that stops generation before a usable plan exists.
+
+A deterministic planner hold is not in this category either: the job completes, the
+plan row exists, and the release override makes it athlete-displayable with flags.
 
 A provider response marked incomplete **with usable Stage 2 text** is not in this
 category. Its text ships as `publishable_with_flags` and the incomplete-response

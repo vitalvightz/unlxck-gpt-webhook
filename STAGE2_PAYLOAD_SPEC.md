@@ -1,30 +1,49 @@
 # Stage 2 Payload Spec
 
+This document describes the **shapes** Stage 1 hands to Stage 2 and what Stage 2
+does with them. Decision *authority* — who owns what, and who may withhold a plan
+— lives in [`PLANNER_ARCHITECTURE_CONTRACT.md`](PLANNER_ARCHITECTURE_CONTRACT.md).
+Where the two disagree, the contract wins.
+
 ## Purpose
 
-Stage 2 is a restriction-aware finalizer, not a full planner.
+Stage 2 is a restriction-aware finalizer, not a planner.
 
-Its current job is:
+Its job is:
 
-1. Remove anything that violates restrictions.
-2. Build the final athlete-facing plan only from the remaining Stage 1 items.
-3. Prefer alternatives already present in Stage 1 instead of inventing new work.
+1. Render the already-decided calendar, session membership and effective doses.
+2. Remove anything that violates a restriction.
+3. Improve coaching clarity and specificity without changing training decisions.
 
-Because of that, Stage 1 should produce a strong candidate set with clear intent and backup options.
+Substitution rights depend on whether the role is **closed** or **open**:
 
-## Recommended Return Contract
+- A role with `selected_exercise_assignments` is **closed**. That list is the
+  deterministic planner's final session membership. Stage 2 renders every member
+  once at its `effective_prescription`. An illegal member is dropped or held and
+  the gap is left; it is never replaced, and never collapsed into one "primary"
+  plus fallbacks.
+- A role without `selected_exercise_assignments` is **open** and keeps the older
+  contract: prefer the selected item, then same-slot alternates, and leave the
+  slot thin rather than inventing new work.
 
-For the current backend flow, Stage 1 should return a complete Stage 2 handoff package:
+Stage 1 still produces a strong candidate set with alternates, because composition
+draws closed membership from that pool — but the pool itself is planning evidence,
+not the plan.
 
-- `plan_text`
+## Stage 1 Return Contract
+
+Stage 1 returns a complete Stage 2 handoff package:
+
+- `plan_text` — the deterministic Stage 1 draft
 - `why_log`
 - `coach_notes`
 - `pdf_url` (legacy compatibility field; always `null` for new plans)
 - `stage2_payload`
 - `planning_brief`
-- `stage2_handoff_text`
+- `stage2_handoff_text` — the assembled Stage 2 prompt
+- `parsing_metadata`
 
-Suggested top-level shape:
+Top-level shape:
 
 ```json
 {
@@ -34,9 +53,30 @@ Suggested top-level shape:
   "plan_text": "string",
   "stage2_payload": {},
   "planning_brief": {},
-  "stage2_handoff_text": "string"
+  "stage2_handoff_text": "string",
+  "parsing_metadata": {}
 }
 ```
+
+`stage2_pipeline.build_stage2_package` requires `planning_brief`, `stage2_payload`
+and `stage2_handoff_text` and raises if any is missing.
+
+### What the model actually reads
+
+`stage2_payload` is **not** sent to the model as-is. `build_stage2_handoff_text`
+assembles the prompt from:
+
+1. `STAGE2_FINALIZER_PROMPT` + `UNLXCK_FINAL_RENDER_CONTRACT`,
+2. payload-mode instructions for the resolved `payload_mode`,
+3. the LOCKED SESSION RENDER MANIFEST (closed membership, when present),
+4. the FINALIZER PACKET — `stage2_finalizer_packet` built from the
+   `stage2_llm_boundary`-sanitised `planning_brief` plus `stage2_payload`,
+5. the athlete profile, optional injury context and coach notes,
+6. the Stage 1 draft `plan_text`, as candidate material only.
+
+The FINALIZER PACKET, not the raw candidate pools, is the model's primary
+authority. The validator likewise grades the final text against the
+`planning_brief`, not against `stage2_payload`.
 
 ## Structured plan (schema-first, additive)
 
@@ -44,16 +84,38 @@ Beside the raw `plan_text`, Stage 2 can also emit a machine-readable
 `StructuredTrainingPlan` (see `api/structured_plan_models.py`). This runs *next
 to* the legacy flow and never replaces it:
 
-- It is gated by `UNLXCK_STAGE2_STRUCTURED_PLAN` (**on by default** — structured
-  generation is a second model call). Set it to a falsey value (`0`/`false`/
-  `no`/`off`/empty) to disable it; the raw `plan_text` flow is then the fallback.
-- On a passing plan, the finalizer asks the model to convert the markdown plan
-  into a `StructuredTrainingPlan` JSON object (`build_structured_plan_prompt`),
-  then validates it (`validate → one repair retry → raw-markdown fallback`, via
+- It is gated by `UNLXCK_STAGE2_STRUCTURED_PLAN` (**on by default**). Set it to a
+  falsey value (`0`/`false`/`no`/`off`/empty) to disable it; the outcome is then
+  recorded as `not_attempted` and the raw `plan_text` flow is the fallback.
+- Conversion is triggered by `should_attempt_structured_plan`, which is driven by
+  the canonical state machine, not by a Stage 2 status string. It requires all of:
+  the env flag on, no `structured_plan` stored yet (idempotent), an approved
+  `plan_text` to convert, and an athlete-displayable plan status — `ready` **or**
+  `publishable_with_flags`. Held, blocked, medical-gated, review-required and
+  archived plans are excluded, so nothing is published merely to derive a card.
+- The finalizer asks the model to convert the markdown plan into a
+  `StructuredTrainingPlan` JSON object (`build_structured_plan_prompt`), then
+  validates it (`validate → one repair retry → raw-markdown fallback`, via
   `api/structured_plan_generation.py`).
 - A valid (or repaired) plan is saved to `plans.structured_plan` with its
   `plans.schema_version`. An invalid result is dropped, `plan_text` stays the
   fallback, and generation is never blocked.
+
+Model-call budget: the plan-text pass is one call plus **at most one** repair
+call; the card conversion adds one call plus at most one repair call. So Stage 2
+makes between one and four model calls, and the `max_model_calls=2` in the
+`[stage2] package ready` log line counts the plan-text pass only.
+
+Structured-card call behaviour is controlled by three further flags:
+
+| Env var | Default | Effect |
+|---|---|---|
+| `UNLXCK_STAGE2_STRUCTURED_REPAIR` | on | One repair retry after a failed first structured pass. The main lever on worst-case card latency. |
+| `UNLXCK_STAGE2_STRUCTURED_JSON_MODE` | on | Request `json_object` output mode, removing the "not valid JSON" failure class. |
+| `UNLXCK_STAGE2_STRUCTURED_SCHEMA_MODE` | **off** (opt-in) | Send the strict `json_schema` built from `StructuredTrainingPlan` instead. Validated in-repo for structural compliance only; confirm against the live endpoint in staging before enabling, then the repair retry can be dropped. |
+
+These apply only to the structured-card calls. The markdown plan-text pass never
+uses an output-format parameter.
 
 Result fields added to the Stage 2 return contract (all optional):
 
@@ -68,13 +130,86 @@ strings), self-report readiness only (no HRV/CNS/WHOOP/strain biometrics), and
 weight-cut guidance expressed as supervised risk, never direct acute-cut
 instructions.
 
+## Review, repair and release
+
+After the first pass, `review_stage2_output` validates the text against the
+`planning_brief` and `apply_stage2_release_policy` attaches the release decision.
+That policy is structurally incapable of holding — it only ever returns `publish`
+or `publish_with_flags`. Findings alone never block a plan.
+
+### The repair attempt (the "retry payload")
+
+`build_stage2_retry` decides whether one repair is warranted and, if so, returns a
+`repair_prompt` built by `stage2_repair.build_stage2_repair_prompt` from a
+`prompt_safe_validator_report` (the findings are filtered; `generic_filler_phrase`,
+`sport_language_leak` and `true_internal_system_leak` are never sent back to the
+model). Its return shape:
+
+```json
+{
+  "status": "PASS | WARN | FAIL",
+  "validator_report": {},
+  "summary": "string",
+  "summary_lines": [],
+  "needs_retry": true,
+  "requires_planner_regeneration": false,
+  "repair_prompt": "string or null"
+}
+```
+
+`api/stage2_automation.finalize` calls it only when the first pass reports one of
+four codes:
+
+| Code | What happens |
+|---|---|
+| `missing_selected_conditioning_assignment` | Deterministic `reconcile_selected_conditioning_assignments` first; a model `render_repair` call only if that cannot fix it |
+| `selected_conditioning_effective_prescription_mismatch` | Same |
+| `late_camp_effective_prescription_exceeded` | Currently no repair fires — see the caveat below |
+| `goal_preservation_render_mismatch` | Currently no repair fires — see the caveat below |
+
+There is exactly one repair round. There is no loop.
+
+> **Known gap.** `build_stage2_retry` gates the repair on
+> `release_decision != "hold"`, but it re-runs `apply_stage2_release_policy` on the
+> incoming report first, which always overwrites `release_decision` with `publish`
+> or `publish_with_flags`. The `"hold"` branch is therefore unreachable, and the
+> function early-returns `needs_retry: False` for anything that is not a
+> conditioning-membership or goal-preservation finding. So the two dose codes above
+> reach `build_stage2_retry` but never produce a prompt, and the
+> `effective_dose_repair` attempt label in `api/stage2_automation.py` is currently
+> dead. Tracked as debt item 9.3.7 in
+> [`PLANNER_ARCHITECTURE_CONTRACT.md`](PLANNER_ARCHITECTURE_CONTRACT.md).
+
+### Holds, and the release override
+
+Four deterministic holds exist, and none is a validator opinion — each says the
+deterministic plan itself is unusable. They are listed with their owners in
+[`PLANNER_ARCHITECTURE_CONTRACT.md`](PLANNER_ARCHITECTURE_CONTRACT.md) §3.1:
+planner preflight, structural integrity, conditioning-render, and goal-preservation
+regeneration. A hold blanks `plan_text`, keeps the rendered text in
+`final_plan_text`, and lands the plan in `review_required` with
+`stage2_status = stage2_failed`. Inside Stage 2 that is final, and because
+`should_attempt_structured_plan` requires an athlete-displayable status a held plan
+gets **no structured card**.
+
+`api/generation/persistence._release_held_plan_with_flags` then runs last and
+releases it anyway: a held plan with usable content becomes
+`publishable_with_flags`, with `plan_text` restored from `final_plan_text`. So the
+athlete sees the plan on the raw markdown fallback, `stage2_status` stays
+`stage2_failed` for admin triage, and the only genuinely withheld outcomes are
+Stage 1 injury triage (a separate persistence path, not overridden) and an empty
+result.
+
 ## `stage2_payload` Shape
+
+Dated normal camp:
 
 ```json
 {
   "schema_version": "stage2_payload.v1",
   "generator_mode": "restriction_aware_candidate_generator",
   "athlete_model": {},
+  "injury_context": {},
   "restrictions": [],
   "phase_briefs": {},
   "candidate_pools": {},
@@ -82,6 +217,43 @@ instructions.
   "rewrite_guidance": {}
 }
 ```
+
+Two variants replace `generator_mode` and add a `payload_variant` plus their own
+fields:
+
+| Path | `generator_mode` | `payload_variant` | Extra fields |
+|---|---|---|---|
+| Dated normal camp | `restriction_aware_candidate_generator` | *(absent)* | — |
+| D-13 inward | `restriction_aware_candidate_generator_late_fight` | `late_fight_stage2_payload` | `payload_mode`, `effective_stage2_mode`, `days_out_payload`, `late_fight_plan_spec`, `late_fight_session_sequence`, `rendering_rules`, `late_fight_permissions` |
+| Open / ongoing system | `restriction_aware_candidate_generator_open_ongoing` | `open_ongoing_stage2_payload` | `payload_mode`, `effective_stage2_mode`, `render_mode`, `open_plan_spec` |
+
+All three carry `athlete_model`, `injury_context`, `restrictions`, `phase_briefs`,
+`candidate_pools`, `omission_ledger` and `rewrite_guidance`.
+`build_stage2_handoff_text` resolves the prompt's mode instructions from
+`payload_mode` -> `effective_stage2_mode` -> `render_mode`, in that order, so the
+dated normal camp falls through to `camp_payload`.
+
+`fightcamp/main.py` then adds `input_parsing_metadata`, and
+`plan_pipeline_rendering.build_stage2_outputs` adds `stage1_selection_summary`, to
+whichever variant was produced.
+
+### `planning_brief` vs `stage2_payload`
+
+They are different objects and the field names differ. The brief is what the
+finalizer packet and the validator are actually built from:
+
+| `stage2_payload` | `planning_brief` |
+|---|---|
+| `schema_version: stage2_payload.v1` | `schema_version: planning_brief.v1` |
+| `athlete_model` | `athlete_snapshot` |
+| `rewrite_guidance` | `decision_rules` |
+| `candidate_pools`, `omission_ledger`, `restrictions`, `phase_briefs` | same names, carried through |
+| — | `weekly_role_map` (the resolved calendar, membership, doses and labels) |
+| — | `priority_focus`, `limiter_profile`, `sport_load_profile`, `weekly_stress_map`, `week_by_week_progression`, `phase_strategy`, `fight_week_override`, `computed_support`, `goal_preservation` |
+
+`weekly_role_map` is the part that matters for release: session count, day
+ownership, `selected_exercise_assignments` and `effective_prescription` all live
+there, and everything downstream treats it as authoritative.
 
 ## Field Definitions
 
@@ -182,7 +354,11 @@ Stage 2 should preserve phase intent even when dropping items.
 
 ### `candidate_pools`
 
-This is the core field. Stage 1 should emit slot-based option reservoirs.
+Slot-based option reservoirs. This is the richest field, but it is **planning
+evidence, not session membership**: `session_composition.py` reduces these slots
+to the closed `selected_exercise_assignments` carried on each role in the
+`planning_brief`'s `weekly_role_map`, and that list — not the pool — is what
+Stage 2 renders for a closed role.
 
 Each slot should expose:
 
@@ -320,9 +496,17 @@ Simple machine-readable notes for Stage 2.
 }
 ```
 
+These `selection_rules` apply to **open** roles only. For a role carrying
+`selected_exercise_assignments` they are overridden by closed-membership
+precedence: no replacement, no restoration, no substitution, no collapsing to a
+primary-plus-fallback. The live prompt (`STAGE2_FINALIZER_PROMPT` rules 1 and 3)
+and the repair prompt (`stage2_repair.py` rule 3A) both state this explicitly, and
+rule 3A is written to override every other repair rule that mentions pools,
+alternates, restoration or substitution.
+
 ## Minimum Viable Payload
 
-If implementation needs to stay small, start with:
+Historical note. When the payload was first introduced, the minimum useful set was:
 
 - `schema_version`
 - `athlete_model`
@@ -330,13 +514,16 @@ If implementation needs to stay small, start with:
 - `phase_briefs`
 - `candidate_pools`
 
-That is enough to materially improve Stage 2 selection quality.
+That is no longer sufficient. `build_stage2_package` requires `planning_brief`,
+`stage2_payload` and `stage2_handoff_text`, and the validator grades against the
+`planning_brief`'s `weekly_role_map`. A payload without a resolved role map cannot
+be released.
 
-## Recommended Stage 1 Changes
+## Stage 1 Content Conventions
 
 ### Build by slot, not only by section
 
-For Stage 2, Stage 1 should emit slot reservoirs with alternates.
+Stage 1 emits slot reservoirs with alternates.
 
 Examples:
 
@@ -351,7 +538,7 @@ Examples:
 
 ### Tag restriction-relevant movement patterns
 
-Every candidate should expose movement and risk tags that make hard filtering easier:
+Every candidate exposes movement and risk tags that make hard filtering easier:
 
 - `hinge`
 - `deep_knee_flexion`
@@ -366,7 +553,7 @@ Every candidate should expose movement and risk tags that make hard filtering ea
 
 ### Use athlete inputs to shape candidate pools
 
-These inputs should influence the pool, not only the prose:
+These inputs influence the pool, not only the prose:
 
 - `rounds_format`
 - `record`
@@ -403,16 +590,37 @@ countdown, fight week). Two invariants:
 - **No hard blockers** — Stage 1's draft produces zero validator errors and
   zero hard blocking warnings everywhere. This must never regress.
 - **Bounded soft gap** — every remaining soft review-flag code stays within
-  `BASELINE_REVIEW_FLAG_CODES`. The structural gap to close (the work the LLM
-  currently redoes) is dominated by `missing_week_session_role`,
-  `sport_language_leak`, `late_fight_unapproved_exercise_rendered`,
-  `late_camp_session_incomplete`, `template_like_session_render`, and the
-  `missing_{injury,weight_cut}_lead_summary` codes.
+  `BASELINE_REVIEW_FLAG_CODES` in `tests/test_stage1_parity.py`. That set is the
+  authoritative list; the codes in it today are:
 
-### Deterministic week-by-week schedule
+  - structural: `missing_week_session_role`, `late_camp_session_incomplete`,
+    `template_like_session_render`
+  - lead-in: `missing_injury_lead_summary`, `missing_weight_cut_lead_summary`
+  - wording: `generic_instruction_opener`, `sport_language_leak`,
+    `conditional_conditioning_choice`
+  - late-fight: `late_fight_missing_countdown_header`,
+    `late_fight_active_role_overage`, `late_fight_block_overage`,
+    `late_fight_meaningful_stress_overage`, `late_fight_forbidden_content`,
+    `late_fight_hard_sparring_overage`, `late_fight_neural_power_stacking`
+
+  The structural codes are the real gap — they are the week/day spine the
+  finalizer still has to build. Read the baseline in the test rather than this
+  list if the two ever disagree.
+
+### Deterministic week-by-week schedule (built, not wired in)
+
+> **Status: not in the production path.** `render_weekly_schedule_section` has no
+> caller in `api/` or `fightcamp/` — only tests import it. The live Stage 1 draft
+> is still the phase-level render produced by `plan_pipeline_rendering.py`
+> (`## GPP` / `### Strength & Power` / `### Conditioning`), and only the
+> late-fight path emits a deterministic day spine
+> (`_render_late_fight_stage1_draft`, `## Countdown Sessions`). That is why
+> `missing_week_session_role` and `late_camp_session_incomplete` are still in the
+> parity baseline above. The rest of this subsection describes what the module
+> does, so the design is not lost — it is not a description of current output.
 
 `fightcamp/weekly_plan_render.py` renders the week->day->session spine
-deterministically from data Stage 1 already owns, so the draft reads like the
+deterministically from data Stage 1 already owns, so the draft would read like the
 final article instead of a phase-level exercise pool the finalizer must
 restructure:
 
@@ -433,10 +641,14 @@ It places real selected work onto real days. The only exception: when the planne
 selected no drill for a required energy system, the slot renders a clearly
 labelled `Default ... option` template (instead of an empty, incomplete session)
 — these defaults are the one kind of rendered work that does not come from a
-selected drill. This first increment covers dated normal camps and eliminated the
-`missing_week_session_role` / `late_camp_session_incomplete` gap for them. Late-
-fight countdown weeks keep their existing path (they have their own strict
+selected drill. The increment was scoped to dated normal camps; late-fight
+countdown weeks were left on their existing path (they have their own strict
 allowed-exercise contracts).
+
+Wiring this in — or deleting it — is a behaviour change and needs its own
+argument under the freeze rule in
+[`PLANNER_ARCHITECTURE_CONTRACT.md`](PLANNER_ARCHITECTURE_CONTRACT.md) §12. It is
+tracked as debt item 9.3.5 there.
 
 ### Deterministic session labels
 
@@ -457,19 +669,19 @@ straight after the plan title, using the same active-injury / active-cut
 detection the validator reads, so the context leads the plan at the source
 instead of being lifted up by the LLM.
 
-## Suggested Adoption Path
+## Adoption Status
 
-### Phase 1
+The original three-phase adoption path is finished, and went further than it
+described:
 
-Emit `stage2_payload` without changing Stage 2 logic.
+| Phase | Original goal | Status |
+|---|---|---|
+| 1 | Emit `stage2_payload` without changing Stage 2 logic | Done |
+| 2 | Teach Stage 2 to read `candidate_pools` slot by slot instead of inferring structure from prose | Superseded — Stage 2 now reads the finalizer packet and, for closed roles, a locked membership manifest, so it does not select from pools at all |
+| 3 | Tighten Stage 1 selection so every high-priority slot has at least one viable alternate | Done for open roles; for closed roles the alternates feed `session_composition`, not Stage 2 |
 
-### Phase 2
-
-Teach Stage 2 to read `candidate_pools` slot by slot instead of inferring structure from prose.
-
-### Phase 3
-
-Tighten Stage 1 selection so every high-priority slot has at least one viable alternate when possible.
+The remaining known gap is the Stage 1 draft's week/day spine — see the parity
+baseline and the "not wired in" note above.
 
 ## Example Minimal Payload
 
