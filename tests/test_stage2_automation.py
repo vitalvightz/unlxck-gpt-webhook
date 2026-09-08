@@ -104,7 +104,7 @@ def _stage1_result() -> dict:
         ],
     ],
 )
-def test_goal_findings_release_usable_plan_without_renderer_retry(monkeypatch, findings):
+def test_goal_findings_require_planner_regeneration_without_renderer_retry(monkeypatch, findings):
     monkeypatch.setattr(stage2_module, "validate_goal_preservation", lambda _: findings)
     monkeypatch.setattr(
         stage2_module, "review_stage2_output", lambda **_: _review("PASS")
@@ -121,6 +121,7 @@ def test_goal_findings_release_usable_plan_without_renderer_retry(monkeypatch, f
     assert result["final_plan_text"] == "# Usable camp"
     assert result["stage2_status"] == "stage2_pass"
     assert result["stage2_retry_text"] == ""
+    assert result["requires_planner_regeneration"] is True
     report = result["stage2_validator_report"]
     assert report["errors"] == findings
     assert report["is_athlete_releasable"] is True
@@ -150,6 +151,150 @@ def test_goal_witness_loss_releases_without_validator_retry(monkeypatch):
     assert result["stage2_attempt_count"] == 1
     assert result["stage2_retry_text"] == ""
     assert result["stage2_validator_report"]["errors"] == [finding]
+
+
+def test_missing_conditioning_is_source_repaired_without_extra_model_call():
+    stage1 = _stage1_result()
+    stage1["planning_brief"] = {
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "phase": "SPP",
+                    "calendar_days": [{"weekday": "thursday", "d_day": 16}],
+                    "session_roles": [
+                        {
+                            "category": "conditioning",
+                            "role_key": "fight_pace_repeatability_day",
+                            "scheduled_day_hint": "thursday",
+                            "scheduled_countdown_label": "D-16",
+                            "selected_exercise_assignments": [
+                                {
+                                    "name": "Plyo Step-Up Intervals",
+                                    "effective_prescription": "2 x 30 sec work; 90 sec rest; RPE 8",
+                                },
+                                {
+                                    "name": "Kettlebell Swing Intervals",
+                                    "effective_prescription": "3 x 20 sec work; 100 sec rest; RPE 7",
+                                },
+                                {
+                                    "name": "Assault Bike Repeat",
+                                    "effective_prescription": "4 x 15 sec work; 75 sec rest; RPE 8",
+                                },
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+    }
+    client = FakeClient([
+        _response(
+            "D-16 (Thursday) — Conditioning\n"
+            "- Plyo Step-Up Intervals: 2 x 30 sec work; 90 sec rest; RPE 8\n"
+        )
+    ])
+
+    result = asyncio.run(OpenAIStage2Automator(client=client, model="test").finalize(stage1_result=stage1))
+
+    assert len(client.responses.calls) == 1
+    assert result["stage2_attempt_count"] == 1
+    assert result["stage2_retry_text"] == ""
+    assert "Kettlebell Swing Intervals: 3 x 20 sec work; 100 sec rest; RPE 7" in result["final_plan_text"]
+    assert "Assault Bike Repeat: 4 x 15 sec work; 75 sec rest; RPE 8" in result["final_plan_text"]
+    audit = result["stage2_validator_report"]["conditioning_render_repair"]
+    assert audit["status"] == "applied"
+    assert audit["model_call_used"] is False
+    assert result["stage2_validator_report"]["repair_source_report"]
+
+
+def test_conditioning_repair_preserves_goal_failure_and_holds_publication(monkeypatch):
+    goal_finding = {"code": "goal_preservation_failed", "goal": "conditioning"}
+    monkeypatch.setattr(stage2_module, "validate_goal_preservation", lambda _: [goal_finding])
+    stage1 = _stage1_result()
+    stage1["planning_brief"] = {
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "phase": "SPP",
+                    "calendar_days": [{"weekday": "thursday", "d_day": 16}],
+                    "session_roles": [
+                        {
+                            "category": "conditioning",
+                            "role_key": "fight_pace_repeatability_day",
+                            "scheduled_day_hint": "thursday",
+                            "scheduled_countdown_label": "D-16",
+                            "selected_exercise_assignments": [
+                                {"name": "Zone 2 Run", "effective_prescription": "20 min at RPE 4"},
+                                {"name": "Easy Bike", "effective_prescription": "15 min at RPE 3"},
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+    }
+    client = FakeClient([
+        _response("D-16 (Thursday) — Conditioning\n- Zone 2 Run: 20 min at RPE 4\n")
+    ])
+
+    result = asyncio.run(OpenAIStage2Automator(client=client, model="test").finalize(stage1_result=stage1))
+
+    assert len(client.responses.calls) == 1
+    assert "Easy Bike: 15 min at RPE 3" in result["final_plan_text"]
+    assert result["status"] == "review_required"
+    assert result["plan_text"] == ""
+    assert result["requires_planner_regeneration"] is True
+    report = result["stage2_validator_report"]
+    assert goal_finding in report["errors"]
+    assert report["release_decision"] == "hold"
+    assert report["conditioning_render_repair"]["status"] == "applied"
+
+
+def test_incomplete_conditioning_render_repair_is_held_and_not_retried_again(monkeypatch):
+    finding = {
+        "code": "missing_selected_conditioning_assignment",
+        "scheduled_d_day": 16,
+        "exercise": "Easy Bike",
+        "effective_prescription": "15 min at RPE 3",
+    }
+    monkeypatch.setattr(
+        stage2_module,
+        "review_stage2_output",
+        lambda **_: {
+            "status": "FAIL",
+            "needs_retry": True,
+            "validator_report": {"errors": [finding], "warnings": []},
+        },
+    )
+    monkeypatch.setattr(stage2_module, "validate_goal_preservation", lambda _: [])
+
+    def _failed_reconciliation(**_: object) -> dict:
+        raise RuntimeError("synthetic reconciliation failure")
+
+    monkeypatch.setattr(
+        stage2_module,
+        "reconcile_selected_conditioning_assignments",
+        _failed_reconciliation,
+    )
+    client = FakeClient([
+        _response("D-16 — Conditioning\n- Zone 2 Run: 20 min at RPE 4"),
+        _incomplete_response(),
+    ])
+
+    result = asyncio.run(OpenAIStage2Automator(client=client, model="test").finalize(
+        stage1_result=_stage1_result()
+    ))
+
+    assert len(client.responses.calls) == 2
+    assert result["stage2_attempt_count"] == 2
+    assert result["status"] == "review_required"
+    assert result["plan_text"] == ""
+    assert result["final_plan_text"] == "# Fight Camp Plan\n\nWeek 1 of a cut-off pl"
+    assert "D-16 — Conditioning" in result["stage2_retry_text"]
+    report = result["stage2_validator_report"]
+    assert report["conditioning_render_hold"] is True
+    assert report["repair_source_report"]
+    assert report["conditioning_render_repair"]["attempted_text"] == result["final_plan_text"]
 
 
 def test_first_pass_pass_returns_ready_with_one_provider_call(

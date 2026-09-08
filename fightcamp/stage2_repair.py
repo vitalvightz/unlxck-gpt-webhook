@@ -3,6 +3,8 @@ from .normalization import clean_list
 from .stage2_policy import prompt_safe_validator_report
 
 import json
+from difflib import SequenceMatcher
+import re
 
 
 REPAIR_PROMPT_TEMPLATE = """You are revising a Stage 2 final plan after validation.
@@ -29,7 +31,7 @@ REPAIR RULES:
 15. Do not create more active weekly sessions than the weekly_role_map allows. If the athlete has extra available days, leave them off or clearly optional rather than turning them into extra training days.
 16. If weekly_role_map or week_by_week_progression marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.
 17. If a week contains intentionally_unused_days entries with role off_day or recovery_only_day, leave those days as light recovery or completely off unless weekly_role_map.session_roles already includes an explicit converted low-load support role on that same day (for example recovery_aerobic_gas_tank_day or converted_low_aerobic_gas_tank_day). Do not invent new active sessions on unused days.
-18. Treat declared hard sparring days in weekly_role_map as immutable hard_sparring_day slots. Hard sparring days are the athlete's own combat locks (run in their gym, with or without a coach): the app does not prescribe or lead the sparring itself, and it must respect resolved safety, readiness, and calendar restrictions on every declared hard sparring day. Only for a resolved hard-as-planned day render the minimal label "Hard sparring — controlled hard contact" (or the equivalent sport-specific label such as "MMA — hard sparring / controlled hard contact") followed by exactly one short note: "Your declared hard-sparring/contact session — no extra S&C. Keep freshness priority." From D-14 normally, or D-17 with elevated risk, hard sparring is converted to technical work: render "Technical-only combat" (or sport-equivalent) — the same applies whenever the day carries reason code "d14_hard_sparring_ban" or "d17_hard_sparring_ban" — followed by exactly one short note: "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority." A technical-only day must never carry the hard-sparring note. A blocked/none contact status overrides all declarations and dates: no contact or sparring; surface medical evaluation/clearance guidance and do not restore contact. Do not output round counts, time-x-rounds formulas, intensity targets, dose, RPE, work:rest, or any sparring template wording (e.g. never "6-8 x 3-min rounds at set intensity", "X rounds technical sparring", "live rounds at moderate intensity"). Nothing else — no programmed S&C is scheduled on a declared hard-sparring/contact day. Never say "coach-led" or "coach-owned" in athlete-facing text. If the previous plan rendered rounds, intensity, dose, or template sparring detail, strip it down to this minimal form.
+18. Treat declared hard sparring days in weekly_role_map as immutable hard_sparring_day slots. Hard sparring days are the athlete's own combat locks (run in their gym, with or without a coach): the app does not prescribe or lead the sparring itself, and it must respect resolved safety, readiness, and calendar restrictions on every declared hard sparring day. The app never deloads, caps, or drops a declared hard sparring day merely to create S&C capacity; only the explicit safety conversion rules below may change contact status. Only for a resolved hard-as-planned day render the minimal label "Hard sparring — controlled hard contact" (or the equivalent sport-specific label such as "MMA — hard sparring / controlled hard contact") followed by exactly one short note: "Your declared hard-sparring/contact session — no extra S&C. Keep freshness priority." From D-14 normally, or D-17 with elevated risk, hard sparring is converted to technical work: render "Technical-only combat" (or sport-equivalent) — the same applies whenever the day carries reason code "d14_hard_sparring_ban" or "d17_hard_sparring_ban" — followed by exactly one short note: "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority." A technical-only day must never carry the hard-sparring note. A blocked/none contact status overrides all declarations and dates: no contact or sparring; surface medical evaluation/clearance guidance and do not restore contact. Do not output round counts, time-x-rounds formulas, intensity targets, dose, RPE, work:rest, or any sparring template wording (e.g. never "6-8 x 3-min rounds at set intensity", "X rounds technical sparring", "live rounds at moderate intensity"). Nothing else — no programmed S&C is scheduled on a declared hard-sparring/contact day. Never say "coach-led" or "coach-owned" in athlete-facing text. If the previous plan rendered rounds, intensity, dose, or template sparring detail, strip it down to this minimal form.
 19. If weekly_role_map.intentional_compression.policy is boxing_crowded_week, keep hard sparring as the week owner, preserve at most one anchor and one low-load support day, and cut accessory, transfer, glycolytic, and optional alactic extras before touching the anchor.
 20. In boxing crowded weeks, anchor days and recovery/support days cannot pick up a second meaningful stressor. Strip the extra stressor instead of redistributing it across the week.
 21. In taper weeks, keep the work short, direct, and low-noise with minimal branching.
@@ -62,6 +64,345 @@ Return only the revised athlete-facing final plan."""
 def _json_block_pretty(value: dict | list) -> str:
     """JSON block with indentation — used in repair prompts for human readability."""
     return "```json\n" + json.dumps(value, indent=2) + "\n```"
+
+
+def reconcile_selected_conditioning_assignments(
+    *,
+    planning_brief: dict,
+    failed_plan_text: str,
+    validator_report: dict,
+) -> dict:
+    """Restore omitted closed-membership conditioning lines in place.
+
+    The authoritative role assignment is the only source.  Reconciliation is
+    deliberately refused when the target day is absent/duplicated, the source
+    assignment is ambiguous or incomplete, or the selected line itself matches
+    an athlete restriction.  No calendar structure or substitute is invented.
+    """
+    from .planner_authority_integrity import (
+        PLANNER_AUTHORITY_BLOCKER_CODES,
+        planner_authority_findings,
+    )
+    from .stage2_pipeline import structural_integrity_findings
+    from .stage2_validator import (
+        _COUNTDOWN_LABEL_LINE,
+        _countdown_blocks,
+        _find_restricted_hits,
+        _is_countdown_block_boundary,
+    )
+
+    missing = [
+        dict(item)
+        for field in ("errors", "blocking_warnings")
+        for item in validator_report.get(field, []) or []
+        if isinstance(item, dict)
+        and str(item.get("code") or "") in {
+            "missing_selected_conditioning_assignment",
+            "selected_conditioning_effective_prescription_mismatch",
+        }
+    ]
+    if not missing:
+        return {"text": failed_plan_text, "applied": [], "unresolved": []}
+
+    if structural_integrity_findings(validator_report):
+        return {
+            "text": failed_plan_text,
+            "applied": [],
+            "unresolved": [
+                {
+                    "code": "conditioning_render_repair_structurally_unsafe",
+                    "message": "Canonical week/day structure is unresolved; conditioning was not restored.",
+                }
+            ],
+        }
+
+    authority_blockers = [
+        item
+        for item in planner_authority_findings(planning_brief)
+        if str(item.get("code") or "") in PLANNER_AUTHORITY_BLOCKER_CODES
+    ]
+    blocks_by_day: dict[int, list[dict]] = {}
+    for block in _countdown_blocks(failed_plan_text):
+        blocks_by_day.setdefault(int(block["day"]), []).append(block)
+
+    roles_by_identity: dict[tuple[int, str], list[tuple[dict, dict]]] = {}
+    from .stage2_validator import _scheduled_role_d_day
+
+    for week in (planning_brief.get("weekly_role_map") or {}).get("weeks") or []:
+        if not isinstance(week, dict):
+            continue
+        for role in week.get("session_roles") or []:
+            if not isinstance(role, dict) or str(role.get("category") or "").lower() != "conditioning":
+                continue
+            d_day = _scheduled_role_d_day(week, role)
+            if d_day is None:
+                continue
+            for assignment in role.get("selected_exercise_assignments") or []:
+                if not isinstance(assignment, dict):
+                    continue
+                name = str(assignment.get("name") or "").strip()
+                if name:
+                    roles_by_identity.setdefault((d_day, name.casefold()), []).append((role, assignment))
+
+    insertions: dict[str, list[str]] = {}
+    replacements: dict[str, str] = {}
+    applied: list[dict] = []
+    unresolved: list[dict] = []
+    seen: set[tuple[int, str]] = set()
+    for finding in missing:
+        try:
+            d_day = int(finding.get("scheduled_d_day"))
+        except (TypeError, ValueError):
+            d_day = -1
+        name = str(finding.get("exercise") or "").strip()
+        identity = (d_day, name.casefold())
+        if identity in seen:
+            continue
+        seen.add(identity)
+        sources = roles_by_identity.get(identity, [])
+        blocks = blocks_by_day.get(d_day, [])
+        if len(sources) != 1 or len(blocks) != 1:
+            unresolved.append({**finding, "reason": "ambiguous_or_missing_authoritative_day"})
+            continue
+        role, assignment = sources[0]
+        prescription = str(assignment.get("effective_prescription") or "").strip()
+        if not prescription:
+            unresolved.append({**finding, "reason": "missing_effective_prescription"})
+            continue
+        if any(
+            str(item.get("exercise") or "").casefold() == name.casefold()
+            and str(item.get("role_key") or "") == str(role.get("role_key") or "")
+            for item in authority_blockers
+        ):
+            unresolved.append({**finding, "reason": "planner_authority_failure"})
+            continue
+        line = f"- {name}: {prescription}"
+        if _find_restricted_hits(planning_brief, [line]):
+            unresolved.append({**finding, "reason": "selected_assignment_restricted"})
+            continue
+        header = str(blocks[0].get("header") or "")
+        if str(finding.get("code") or "") == "selected_conditioning_effective_prescription_mismatch":
+            rendered_line = str(finding.get("rendered_line") or "").strip()
+            if not rendered_line:
+                unresolved.append({**finding, "reason": "missing_rendered_dose_line"})
+                continue
+            replacements[rendered_line] = line
+        else:
+            insertions.setdefault(header, []).append(line)
+        applied.append(
+            {
+                "action": "render_selected_conditioning_assignment",
+                "scheduled_d_day": d_day,
+                "role_key": role.get("role_key"),
+                "exercise": name,
+                "effective_prescription": prescription,
+            }
+        )
+
+    if not insertions and not replacements:
+        return {"text": failed_plan_text, "applied": applied, "unresolved": unresolved}
+
+    lines = str(failed_plan_text or "").splitlines()
+    for rendered_line, replacement in replacements.items():
+        indexes = [index for index, line in enumerate(lines) if line.strip() == rendered_line]
+        if len(indexes) != 1:
+            unresolved.append(
+                {
+                    "code": "selected_conditioning_effective_prescription_mismatch",
+                    "rendered_line": rendered_line,
+                    "reason": "ambiguous_rendered_dose_line",
+                }
+            )
+            applied = [item for item in applied if item.get("exercise") not in replacement]
+            continue
+        lines[indexes[0]] = replacement
+    pending: list[tuple[int, list[str]]] = []
+    for header, new_lines in insertions.items():
+        header_indexes = [index for index, line in enumerate(lines) if line.strip() == header]
+        if len(header_indexes) != 1:
+            unresolved.extend(
+                {**item, "reason": "ambiguous_rendered_day_header"}
+                for item in applied
+                if item.get("scheduled_d_day") == int(re.search(r"D-(\d+)", header, re.I).group(1))
+            )
+            applied = [item for item in applied if item.get("scheduled_d_day") != int(re.search(r"D-(\d+)", header, re.I).group(1))]
+            continue
+        insert_at = header_indexes[0] + 1
+        while insert_at < len(lines):
+            stripped = lines[insert_at].strip()
+            if stripped and (_COUNTDOWN_LABEL_LINE.match(stripped) or _is_countdown_block_boundary(stripped)):
+                break
+            insert_at += 1
+        pending.append((insert_at, new_lines))
+
+    for insert_at, new_lines in sorted(pending, reverse=True):
+        lines[insert_at:insert_at] = new_lines
+    return {"text": "\n".join(lines), "applied": applied, "unresolved": unresolved}
+
+
+def conditioning_render_repair_integrity_findings(
+    *, planning_brief: dict, before_text: str, after_text: str
+) -> list[dict]:
+    """Allow only inserts/corrections of source-authorised conditioning lines."""
+    from .stage2_validator import (
+        _countdown_blocks,
+        _conditioning_dose_within_bounds,
+        _is_countdown_block_boundary,
+        _line_has_exercise,
+        _scheduled_role_d_day,
+        _COUNTDOWN_LABEL_LINE,
+    )
+
+    assignments_by_day: dict[int, list[dict]] = {}
+    for week in (planning_brief.get("weekly_role_map") or {}).get("weeks") or []:
+        if not isinstance(week, dict):
+            continue
+        for role in week.get("session_roles") or []:
+            if not isinstance(role, dict) or str(role.get("category") or "").lower() != "conditioning":
+                continue
+            assignments = [
+                item
+                for item in role.get("selected_exercise_assignments") or []
+                if isinstance(item, dict) and str(item.get("name") or "").strip()
+            ]
+            d_day = _scheduled_role_d_day(week, role)
+            if d_day is None or not assignments:
+                continue
+            assignments_by_day.setdefault(d_day, []).extend(assignments)
+
+    def day_context(lines: list[str]) -> dict[int, int | None]:
+        current_day: int | None = None
+        contexts: dict[int, int | None] = {}
+        for index, line in enumerate(lines):
+            stripped = line.strip()
+            match = _COUNTDOWN_LABEL_LINE.match(stripped)
+            if match:
+                current_day = int(match.group(2))
+            elif stripped and _is_countdown_block_boundary(stripped):
+                current_day = None
+            contexts[index] = current_day
+        return contexts
+
+    def authorised_assignment(line: str, d_day: int | None) -> dict | None:
+        if d_day is None:
+            return None
+        matches = [
+            assignment
+            for assignment in assignments_by_day.get(d_day, [])
+            if _line_has_exercise(line, str(assignment.get("name") or ""))
+        ]
+        return matches[0] if len(matches) == 1 else None
+
+    def permitted_new_line(line: str, d_day: int | None) -> tuple[bool, dict | None]:
+        assignment = authorised_assignment(line, d_day)
+        if not assignment:
+            return False, None
+        dose_ok, _, _, _ = _conditioning_dose_within_bounds(
+            str(assignment.get("effective_prescription") or ""), line
+        )
+        return dose_ok, assignment
+
+    before_lines = str(before_text or "").splitlines()
+    after_lines = str(after_text or "").splitlines()
+    before_context = day_context(before_lines)
+    after_context = day_context(after_lines)
+    findings: list[dict] = []
+
+    for tag, before_start, before_end, after_start, after_end in SequenceMatcher(
+        a=before_lines, b=after_lines, autojunk=False
+    ).get_opcodes():
+        if tag == "equal":
+            continue
+        before_chunk = before_lines[before_start:before_end]
+        after_chunk = after_lines[after_start:after_end]
+
+        if tag == "insert":
+            for offset, line in enumerate(after_chunk):
+                index = after_start + offset
+                allowed, _ = permitted_new_line(line, after_context[index])
+                if not allowed:
+                    findings.append(
+                        {
+                            "code": "conditioning_render_repair_unapproved_edit",
+                            "severity": "blocker",
+                            "edit": "insert",
+                            "scheduled_d_day": after_context[index],
+                            "line": line,
+                            "message": "Render repair inserted content outside authorised conditioning membership.",
+                        }
+                    )
+            continue
+
+        if tag == "delete":
+            for offset, line in enumerate(before_chunk):
+                index = before_start + offset
+                findings.append(
+                    {
+                        "code": "conditioning_render_repair_unapproved_edit",
+                        "severity": "blocker",
+                        "edit": "delete",
+                        "scheduled_d_day": before_context[index],
+                        "line": line,
+                        "message": "Render repair deleted existing plan content.",
+                    }
+                )
+            continue
+
+        # A correction must be one-for-one, stay on the same D-day, and retain
+        # the exact selected exercise identity. Any other rewrite is rejected.
+        if len(before_chunk) != len(after_chunk):
+            findings.append(
+                {
+                    "code": "conditioning_render_repair_unapproved_edit",
+                    "severity": "blocker",
+                    "edit": "replace",
+                    "before": before_chunk,
+                    "after": after_chunk,
+                    "message": "Render repair rewrote unrelated plan structure or content.",
+                }
+            )
+            continue
+        for offset, (old_line, new_line) in enumerate(zip(before_chunk, after_chunk)):
+            old_index = before_start + offset
+            new_index = after_start + offset
+            old_assignment = authorised_assignment(old_line, before_context[old_index])
+            allowed, new_assignment = permitted_new_line(new_line, after_context[new_index])
+            if (
+                not allowed
+                or not old_assignment
+                or before_context[old_index] != after_context[new_index]
+                or str(old_assignment.get("name") or "").casefold()
+                != str(new_assignment.get("name") or "").casefold()
+            ):
+                findings.append(
+                    {
+                        "code": "conditioning_render_repair_unapproved_edit",
+                        "severity": "blocker",
+                        "edit": "replace",
+                        "scheduled_d_day": after_context[new_index],
+                        "before": old_line,
+                        "after": new_line,
+                        "message": "Render repair changed content outside an authorised conditioning correction.",
+                    }
+                )
+
+    # Keep the existing parser-backed guard for accidental duplicate selected
+    # lines, including duplicates inserted outside a SequenceMatcher hunk.
+    for block in _countdown_blocks(after_text):
+        d_day = int(block["day"])
+        for assignment in assignments_by_day.get(d_day, []):
+            name = str(assignment.get("name") or "")
+            if sum(_line_has_exercise(line, name) for line in block.get("lines") or []) > 1:
+                findings.append(
+                    {
+                        "code": "duplicate_selected_conditioning_assignment",
+                        "severity": "blocker",
+                        "scheduled_d_day": d_day,
+                        "exercise": name,
+                        "message": "Render repair duplicated a selected conditioning assignment.",
+                    }
+                )
+    return findings
 
 
 def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
@@ -423,11 +764,18 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
         *(validator_report.get("errors", []) or []),
         *(validator_report.get("blocking_warnings", []) or []),
     ]:
-        if not isinstance(finding, dict) or str(finding.get("code") or "") != "missing_selected_conditioning_assignment":
+        if not isinstance(finding, dict) or str(finding.get("code") or "") not in {
+            "missing_selected_conditioning_assignment",
+            "selected_conditioning_effective_prescription_mismatch",
+        }:
             continue
         quality_fixes.append(
             {
-                "action": "render_selected_conditioning_assignment",
+                "action": (
+                    "render_selected_conditioning_assignment"
+                    if str(finding.get("code") or "") == "missing_selected_conditioning_assignment"
+                    else "restore_selected_conditioning_effective_prescription"
+                ),
                 "scheduled_d_day": finding.get("scheduled_d_day"),
                 "exercise": finding.get("exercise"),
                 "effective_prescription": finding.get("effective_prescription"),

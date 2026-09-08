@@ -19,6 +19,10 @@ from fightcamp.stage2_policy import (
     apply_stage2_release_policy,
     athlete_release_with_flags_findings,
 )
+from fightcamp.stage2_repair import (
+    conditioning_render_repair_integrity_findings,
+    reconcile_selected_conditioning_assignments,
+)
 
 from .generation.time_utils import utc_now_iso as _utc_now_iso
 from .structured_card_lifecycle import (
@@ -1169,20 +1173,93 @@ class OpenAIStage2Automator:
             if isinstance(item, dict)
         }
         original_review_report = dict(first_review["validator_report"])
+        repair_source_report: dict[str, Any] | None = None
+        conditioning_repair_audit: dict[str, Any] | None = None
+        requires_planner_regeneration = bool(
+            goal_errors or "goal_preservation_failed" in first_codes
+        )
         if first_codes & {
             "late_camp_effective_prescription_exceeded",
             "goal_preservation_render_mismatch",
+            "missing_selected_conditioning_assignment",
+            "selected_conditioning_effective_prescription_mismatch",
         }:
             retry = build_stage2_retry(
                 stage1_result=stage1_result,
                 final_plan_text=first_pass_text,
                 validator_report=first_review["validator_report"],
             )
+            requires_planner_regeneration = bool(
+                requires_planner_regeneration or retry.get("requires_planner_regeneration")
+            )
             retry_text = str(retry.get("repair_prompt") or "")
-            if retry.get("needs_retry") and retry_text:
+            missing_conditioning = bool(
+                first_codes
+                & {
+                    "missing_selected_conditioning_assignment",
+                    "selected_conditioning_effective_prescription_mismatch",
+                }
+            )
+            deterministic_repair = None
+            if missing_conditioning:
+                try:
+                    deterministic_repair = reconcile_selected_conditioning_assignments(
+                        planning_brief=package["planning_brief"],
+                        failed_plan_text=first_pass_text,
+                        validator_report=first_review["validator_report"],
+                    )
+                except Exception:
+                    logger.exception(
+                        "[stage2] deterministic conditioning render reconciliation failed; using bounded render retry"
+                    )
+                    deterministic_repair = {
+                        "text": first_pass_text,
+                        "applied": [],
+                        "unresolved": [],
+                    }
+                deterministic_text = str(deterministic_repair.get("text") or first_pass_text)
+                if deterministic_text != first_pass_text and deterministic_repair.get("applied"):
+                    deterministic_review = reviewed_report(
+                        review_stage2_output(
+                            planning_brief=package["planning_brief"],
+                            final_plan_text=deterministic_text,
+                        )
+                    )
+                    remaining_codes = {
+                        str(item.get("code") or "")
+                        for field in ("errors", "blocking_warnings")
+                        for item in deterministic_review["validator_report"].get(field, []) or []
+                        if isinstance(item, dict)
+                    }
+                    if not remaining_codes & {
+                        "missing_selected_conditioning_assignment",
+                        "selected_conditioning_effective_prescription_mismatch",
+                    }:
+                        final_text = deterministic_text
+                        first_review = deterministic_review
+                        repair_source_report = original_review_report
+                        retry_text = ""
+                        conditioning_repair_audit = {
+                            "status": "applied",
+                            "source": "authoritative_selected_assignments",
+                            "applied": list(deterministic_repair.get("applied") or []),
+                            "unresolved": list(deterministic_repair.get("unresolved") or []),
+                            "model_call_used": False,
+                        }
+
+            deterministic_complete = bool(
+                conditioning_repair_audit
+                and conditioning_repair_audit.get("status") == "applied"
+            )
+            deterministic_unsafe = bool(
+                missing_conditioning
+                and deterministic_repair
+                and deterministic_repair.get("unresolved")
+            )
+            if retry.get("needs_retry") and retry_text and not deterministic_complete and not deterministic_unsafe:
                 final_text, final_cost = await self._generate_text(
                     retry_text,
-                    attempt_label="effective_dose_repair",
+                    attempt_label="render_repair" if missing_conditioning else "effective_dose_repair",
                     source=source,
                     log_context=log_context,
                 )
@@ -1191,16 +1268,50 @@ class OpenAIStage2Automator:
                     planning_brief=package["planning_brief"], final_plan_text=final_text
                 )
                 first_review = reviewed_report(first_review)
+                repair_source_report = original_review_report
+                if missing_conditioning:
+                    conditioning_repair_audit = {
+                        "status": "model_repair_attempted",
+                        "source": "authoritative_selected_assignments",
+                        "applied": [],
+                        "unresolved": [],
+                        "model_call_used": True,
+                        "attempted_text": final_text,
+                    }
+            elif missing_conditioning and not deterministic_complete:
+                conditioning_repair_audit = {
+                    "status": "unresolved",
+                    "source": "authoritative_selected_assignments",
+                    "applied": list((deterministic_repair or {}).get("applied") or []),
+                    "unresolved": list((deterministic_repair or {}).get("unresolved") or []),
+                    "model_call_used": False,
+                }
         plan_text_cost = (
             _merge_stage2_costs(first_pass_cost, final_cost)
             if attempt_count == 2
             else first_pass_cost
         )
 
-        if attempt_count == 2:
-            first_review["validator_report"]["repair_source_report"] = (
-                original_review_report
+        conditioning_integrity_findings: list[dict[str, Any]] = []
+        if conditioning_repair_audit is not None and final_text != first_pass_text:
+            conditioning_integrity_findings = conditioning_render_repair_integrity_findings(
+                planning_brief=package["planning_brief"],
+                before_text=first_pass_text,
+                after_text=final_text,
             )
+            conditioning_repair_audit["integrity_findings"] = conditioning_integrity_findings
+            if conditioning_integrity_findings:
+                report = dict(first_review["validator_report"])
+                report["errors"] = [
+                    *(report.get("errors") or []),
+                    *conditioning_integrity_findings,
+                ]
+                first_review = reviewed_report({**first_review, "validator_report": report})
+
+        if repair_source_report is not None:
+            first_review["validator_report"]["repair_source_report"] = repair_source_report
+        if conditioning_repair_audit is not None:
+            first_review["validator_report"]["conditioning_render_repair"] = conditioning_repair_audit
 
         if final_cost.get("stage2_incomplete_response"):
             report = dict(first_review["validator_report"])
@@ -1212,6 +1323,50 @@ class OpenAIStage2Automator:
                 },
             ]
             first_review = reviewed_report({**first_review, "validator_report": report})
+
+        final_codes = {
+            str(item.get("code") or "")
+            for field in ("errors", "blocking_warnings")
+            for item in first_review["validator_report"].get(field, []) or []
+            if isinstance(item, dict)
+        }
+        unresolved_conditioning_render = bool(
+            final_codes
+            & {
+                "missing_selected_conditioning_assignment",
+                "selected_conditioning_effective_prescription_mismatch",
+            }
+        )
+        incomplete_conditioning_repair = bool(
+            conditioning_repair_audit
+            and final_cost.get("stage2_incomplete_response")
+        )
+        conditioning_repair_integrity_failure = bool(conditioning_integrity_findings)
+        if requires_planner_regeneration:
+            report = dict(first_review["validator_report"])
+            report["requires_planner_regeneration"] = True
+            first_review = {**first_review, "validator_report": report}
+        planner_hold_after_render_repair = bool(
+            requires_planner_regeneration and conditioning_repair_audit
+        )
+        if (
+            planner_hold_after_render_repair
+            or unresolved_conditioning_render
+            or incomplete_conditioning_repair
+            or conditioning_repair_integrity_failure
+        ):
+            report = dict(first_review["validator_report"])
+            if (
+                unresolved_conditioning_render
+                or incomplete_conditioning_repair
+                or conditioning_repair_integrity_failure
+            ):
+                report["conditioning_render_hold"] = True
+            report["release_decision"] = "hold"
+            report["is_athlete_releasable"] = False
+            report["is_publishable"] = False
+            report["validator_findings_observational"] = False
+            first_review = {**first_review, "status": "FAIL", "needs_retry": False, "validator_report": report}
 
         quality_findings = athlete_release_with_flags_findings(first_review["validator_report"])
         admin_blocking_findings = admin_review_blocking_findings(first_review["validator_report"])
@@ -1235,6 +1390,8 @@ class OpenAIStage2Automator:
             retry_text=retry_text,
             stage2_cost=plan_text_cost,
         )
+        if first_review["validator_report"].get("requires_planner_regeneration"):
+            result["requires_planner_regeneration"] = True
 
         _apply_structural_source_repair_and_hold(
             result,

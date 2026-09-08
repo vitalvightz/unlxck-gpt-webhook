@@ -3440,21 +3440,150 @@ def _missing_selected_conditioning_assignment_warnings(
             rendered_lines = [line for block in blocks_by_day.get(d_day, []) for line in block.get("lines") or []]
             for assignment in assignments:
                 name = str(assignment["name"]).strip()
-                if any(_line_has_exercise(line, name) for line in rendered_lines):
+                matching_lines = [line for line in rendered_lines if _line_has_exercise(line, name)]
+                if not matching_lines:
+                    warnings.append(
+                        {
+                            "code": "missing_selected_conditioning_assignment",
+                            "message": f"D-{d_day} is missing selected conditioning exercise '{name}'.",
+                            "severity": "blocker",
+                            "confidence": "high",
+                            "scheduled_d_day": d_day,
+                            "exercise": name,
+                            "role_key": role.get("role_key"),
+                            "effective_prescription": assignment.get("effective_prescription"),
+                        }
+                    )
                     continue
-                warnings.append(
-                    {
-                        "code": "missing_selected_conditioning_assignment",
-                        "message": f"D-{d_day} is missing selected conditioning exercise '{name}'.",
-                        "severity": "blocker",
-                        "confidence": "high",
-                        "scheduled_d_day": d_day,
-                        "exercise": name,
-                        "role_key": role.get("role_key"),
-                        "effective_prescription": assignment.get("effective_prescription"),
-                    }
+                expected = str(assignment.get("effective_prescription") or "").strip()
+                dose_ok, violations, expected_bounds, rendered_bounds = (
+                    _conditioning_dose_within_bounds(expected, matching_lines[0])
                 )
+                if expected and not dose_ok:
+                    warnings.append(
+                        {
+                            "code": "selected_conditioning_effective_prescription_mismatch",
+                            "message": f"D-{d_day} conditioning exercise '{name}' exceeds or omits its authorised effective dose.",
+                            "severity": "blocker",
+                            "confidence": "high",
+                            "scheduled_d_day": d_day,
+                            "exercise": name,
+                            "role_key": role.get("role_key"),
+                            "effective_prescription": expected,
+                            "rendered_line": matching_lines[0],
+                            "dose_violations": violations,
+                            "effective_dose_bounds": expected_bounds,
+                            "rendered_dose_bounds": rendered_bounds,
+                        }
+                    )
     return warnings
+
+
+_CONDITIONING_COUNT = r"(?P<low>\d+(?:\.\d+)?)(?:\s*[-–]\s*(?P<high>\d+(?:\.\d+)?))?"
+_CONDITIONING_INTERVAL = re.compile(
+    rf"\b{_CONDITIONING_COUNT}\s*(?:rounds?\s*)?[x×]\s*"
+    r"(?P<work>\d+(?:\.\d+)?)\s*(?P<unit>seconds?|secs?|s|minutes?|mins?|m)\b",
+    re.I,
+)
+_CONDITIONING_SETS = re.compile(
+    rf"\b{_CONDITIONING_COUNT}\s*(?:(?:[a-z-]+\s+){{0,2}}sets?\b|(?:sets?\s*)?(?:[x×]|of)\s*\d+\b)",
+    re.I,
+)
+_CONDITIONING_RPE = re.compile(
+    rf"\brpe\s*[~≈@]?\s*{_CONDITIONING_COUNT}\b",
+    re.I,
+)
+_CONDITIONING_REST = re.compile(
+    r"\b(?:rest|recovery)\s*[:=@]?\s*(?P<value>\d+(?:\.\d+)?)\s*"
+    r"(?P<unit>seconds?|secs?|s|minutes?|mins?|m)\b",
+    re.I,
+)
+_CONDITIONING_DURATION = re.compile(
+    r"\b(?P<value>\d+(?:\.\d+)?)\s*(?P<unit>minutes?|mins?|m)\b",
+    re.I,
+)
+
+
+def _conditioning_seconds(value: str, unit: str) -> float:
+    return float(value) * (60 if str(unit).casefold().startswith("m") else 1)
+
+
+def _conditioning_dose_bounds(value: str) -> dict[str, Any]:
+    """Extract only concrete dose ceilings from an athlete-facing prescription."""
+    text = str(value or "").replace("×", "x")
+    intervals = [
+        {
+            "count": float(match.group("high") or match.group("low")),
+            "work_sec": _conditioning_seconds(match.group("work"), match.group("unit")),
+        }
+        for match in _CONDITIONING_INTERVAL.finditer(text)
+    ]
+    sets = [
+        float(match.group("high") or match.group("low"))
+        for match in _CONDITIONING_SETS.finditer(text)
+    ]
+    rpes = [float(match.group("high") or match.group("low")) for match in _CONDITIONING_RPE.finditer(text)]
+    rests = [
+        _conditioning_seconds(match.group("value"), match.group("unit"))
+        for match in _CONDITIONING_REST.finditer(text)
+    ]
+    interval_spans = [match.span() for match in _CONDITIONING_INTERVAL.finditer(text)]
+    durations = [
+        _conditioning_seconds(match.group("value"), match.group("unit"))
+        for match in _CONDITIONING_DURATION.finditer(text)
+        if not any(start <= match.start() < end for start, end in interval_spans)
+        and not any(rest.start() <= match.start() < rest.end() for rest in _CONDITIONING_REST.finditer(text))
+    ]
+    return {
+        "intervals": intervals,
+        "sets": sets,
+        "rpe": rpes,
+        "rest_sec": rests,
+        "duration_sec": durations,
+    }
+
+
+def _conditioning_dose_within_bounds(expected: str, rendered: str) -> tuple[bool, list[str], dict[str, Any], dict[str, Any]]:
+    """Allow lower conditioning exposure, never higher or additional work."""
+    expected_bounds = _conditioning_dose_bounds(expected)
+    rendered_bounds = _conditioning_dose_bounds(rendered)
+    violations: list[str] = []
+
+    for key, label in (("intervals", "work interval"), ("sets", "set"), ("rpe", "RPE"), ("duration_sec", "duration")):
+        expected_values = expected_bounds[key]
+        rendered_values = rendered_bounds[key]
+        if not expected_values:
+            continue
+        if not rendered_values:
+            violations.append(f"missing {label} dose")
+            continue
+        if len(rendered_values) > len(expected_values):
+            violations.append(f"additional {label} dose")
+            continue
+        for index, rendered_value in enumerate(rendered_values):
+            expected_value = expected_values[min(index, len(expected_values) - 1)]
+            if key == "intervals":
+                if rendered_value["count"] > expected_value["count"]:
+                    violations.append("rounds exceed effective cap")
+                if rendered_value["work_sec"] > expected_value["work_sec"]:
+                    violations.append("work interval exceeds effective cap")
+            elif rendered_value > expected_value:
+                violations.append(f"{label} exceeds effective cap")
+
+    expected_rests = expected_bounds["rest_sec"]
+    rendered_rests = rendered_bounds["rest_sec"]
+    if expected_rests:
+        if not rendered_rests:
+            violations.append("missing rest dose")
+        elif len(rendered_rests) > len(expected_rests):
+            violations.append("additional rest structure")
+        else:
+            for index, rendered_rest in enumerate(rendered_rests):
+                expected_rest = expected_rests[min(index, len(expected_rests) - 1)]
+                if rendered_rest < expected_rest:
+                    violations.append("rest below effective floor")
+
+    return not violations, violations, expected_bounds, rendered_bounds
 
 
 def _goal_witness_rendered_doses(lines: list[str], witness: dict) -> list[str]:

@@ -928,10 +928,23 @@ def build_stage2_retry(
 
     missing_closed_conditioning = any(
         isinstance(item, dict)
-        and str(item.get("code") or "") == "missing_selected_conditioning_assignment"
+        and str(item.get("code") or "") in {
+            "missing_selected_conditioning_assignment",
+            "selected_conditioning_effective_prescription_mismatch",
+        }
         for item in validator_report.get("errors", []) or []
     )
-    if validator_report.get("release_decision") != "hold" and not missing_closed_conditioning:
+    has_goal_failure = any(
+        isinstance(item, dict)
+        and str(item.get("code") or "").strip() == "goal_preservation_failed"
+        for field in ("errors", "blocking_warnings")
+        for item in validator_report.get(field, []) or []
+    )
+    if (
+        validator_report.get("release_decision") != "hold"
+        and not missing_closed_conditioning
+        and not has_goal_failure
+    ):
         return {
             "status": status,
             "validator_report": validator_report,
@@ -948,7 +961,8 @@ def build_stage2_retry(
         if isinstance(item, dict)
         and str(item.get("code") or "").strip() == "goal_preservation_failed"
     ]
-    if goal_failures:
+    requires_planner_regeneration = bool(goal_failures)
+    if goal_failures and not missing_closed_conditioning:
         return {
             "status": _STATUS_FAIL,
             "validator_report": validator_report,
@@ -956,6 +970,17 @@ def build_stage2_retry(
             "summary_lines": summary_lines,
             "needs_retry": False,
             "requires_planner_regeneration": True,
+            "repair_prompt": None,
+        }
+
+    if missing_closed_conditioning and structural_integrity_findings(validator_report):
+        return {
+            "status": _STATUS_FAIL,
+            "validator_report": validator_report,
+            "summary": "FAIL: conditioning membership cannot be repaired without canonical week/day structure",
+            "summary_lines": summary_lines,
+            "needs_retry": False,
+            "requires_planner_regeneration": requires_planner_regeneration,
             "repair_prompt": None,
         }
 
@@ -971,5 +996,6 @@ def build_stage2_retry(
         "summary": summary,
         "summary_lines": summary_lines,
         "needs_retry": True,
+        "requires_planner_regeneration": requires_planner_regeneration,
         "repair_prompt": repair_prompt,
     }
