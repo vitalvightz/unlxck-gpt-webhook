@@ -47,7 +47,7 @@ from .late_selector_windows import (
     classify_late_selector_window,
     is_active_late_selector_window,
 )
-from .stage2_payload_late_fight import compute_bridge_rules
+from .stage2_payload_late_fight import _conditioning_limiter_signal, compute_bridge_rules
 from .selection_metadata import build_score_evidence, normalize_selection_metadata
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 from .priority_profile import (
@@ -175,6 +175,77 @@ def _conditioning_tag_is_collision(tag: str, priority_profile) -> bool:
         priority_profile
     )
     return tag in (primary_goal | secondary_goal) and tag in (primary_weak | secondary_weak)
+
+
+# --- Conditioning objective: mechanical cost at equal-or-better dose ---------
+#
+# A drill's recovery cost and its physiological target are both already recorded
+# (impact_cost plus the landing-impact mech_* tags, and system + work_sec/rounds).
+# Nothing consulted them when ordering a conditioning slot, so the highest-scoring
+# candidate won even when a lower-cost drill in the SAME system delivered at least
+# as much active work — e.g. a GPP glycolytic slot taking high-impact ladder
+# sprints (150 sec active) over a low-impact swing interval (180 sec active).
+# This is a pairwise preference between existing candidates, not a new score, not
+# a dose threshold, and not a rule that machines beat plyometrics: it only fires
+# for a declared conditioning objective, only inside the aerobic and glycolytic
+# systems, and only when the cheaper option is not a smaller dose.
+#
+# The comparison uses each candidate's prescribed ceiling. The Stage-2
+# partitioner then sets the delivered rounds inside the phase/system envelope,
+# and because that partition is capped by the ceiling, a candidate promoted on a
+# greater-or-equal ceiling can never deliver less than the one it displaced.
+
+_LANDING_IMPACT_TAGS = frozenset({"mech_landing_impact", "high_impact_lower", "high_impact_global"})
+
+
+def _float_or_none_conditioning(value):
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _conditioning_mechanical_cost_is_high(drill: dict) -> bool:
+    """True when the drill carries impact/landing cost beyond its energy demand."""
+    if str(drill.get("impact_cost") or "").strip().lower() == "high":
+        return True
+    return bool(_LANDING_IMPACT_TAGS & set(normalize_tags(drill.get("tags") or [])))
+
+
+def _conditioning_active_work_seconds(drill: dict) -> float | None:
+    """Prescribed active work, from the interval dose or a steady-state block."""
+    work_sec = _float_or_none_conditioning(drill.get("work_sec"))
+    rounds = _float_or_none_conditioning(drill.get("rounds"))
+    if work_sec and rounds:
+        return work_sec * rounds
+    total_minutes = _float_or_none_conditioning(drill.get("total_minutes"))
+    if total_minutes:
+        return total_minutes * 60.0
+    return None
+
+
+def _promote_lower_cost_conditioning_head(entries: list) -> bool:
+    """Move the cheapest equal-or-better-dosed candidate to the head of a pool."""
+    if len(entries) < 2:
+        return False
+    head_drill = entries[0][0]
+    if not _conditioning_mechanical_cost_is_high(head_drill):
+        return False
+    head_work = _conditioning_active_work_seconds(head_drill)
+    if head_work is None:
+        return False
+    for index in range(1, len(entries)):
+        candidate = entries[index][0]
+        if _conditioning_mechanical_cost_is_high(candidate):
+            continue
+        candidate_work = _conditioning_active_work_seconds(candidate)
+        if candidate_work is None or candidate_work < head_work:
+            continue
+        entries.insert(0, entries.pop(index))
+        return True
+    return False
 
 
 def _conditioning_goal_priority_bonus(tags: list[str], priority_profile) -> float:
@@ -3406,6 +3477,16 @@ def generate_conditioning_block(flags):
         style_system_drills["aerobic"].sort(key=_boxing_sort_key)
         for style_lists in style_drills_by_style.values():
             style_lists["aerobic"].sort(key=_boxing_sort_key)
+
+    # Runs last so it sees the final ordering of every pool, mirroring the
+    # boxing aerobic preference above. Only the aerobic and glycolytic systems:
+    # in an alactic slot the landing impact IS the training stimulus.
+    if _conditioning_limiter_signal({"key_goals": goals, "weaknesses": weaknesses}):
+        for system in ("aerobic", "glycolytic"):
+            _promote_lower_cost_conditioning_head(system_drills.get(system) or [])
+            _promote_lower_cost_conditioning_head(style_system_drills.get(system) or [])
+            for style_lists in style_drills_by_style.values():
+                _promote_lower_cost_conditioning_head(style_lists.get(system) or [])
 
     if injury_trace and restrictions:
         active_restrictions = sorted({r.get("restriction", "generic_constraint") for r in restrictions})
