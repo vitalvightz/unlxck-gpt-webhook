@@ -665,24 +665,6 @@ def _suppress_standalone_glycolytic(active_hard_spar_days: list[str], athlete_mo
 
 
 
-# ``light_fight_pace_touch_day`` is the only conditioning-maintenance role legal
-# in the D-13..D-8 compressed window, and at its default priority it always falls
-# below the allocator's active-role budget — so the tail was identical whether or
-# not conditioning was the athlete's limiter. Promoting it above the second
-# strength touch (108) but below the neural primer (110) spends an existing slot
-# differently; it never adds one, and every dose, RPE and suppression rule for the
-# window still applies.
-_RHYTHM_TOUCH_LIMITER_SELECTION_PRIORITY = 109
-
-
-def _rhythm_touch_selection_priority(
-    athlete_model: dict[str, Any], *, has_downgraded_hard_days: bool
-) -> int:
-    if _conditioning_limiter_signal(athlete_model):
-        return _RHYTHM_TOUCH_LIMITER_SELECTION_PRIORITY
-    return 96 if has_downgraded_hard_days else 100
-
-
 def _d3_alactic_suppression_reasons(athlete_model: dict[str, Any], days_until_fight: Any) -> list[str]:
     days = _coerce_days(days_until_fight)
     if days is None:
@@ -1460,14 +1442,31 @@ def resolve_late_fight_contacts(
     return contacts
 
 
+# The D-13..D-8 quota of 4 active roles / 3 meaningful stress exposures is spent
+# on two strength touches, one alactic sharpness touch and the freshness day, so
+# ``light_fight_pace_touch_day`` — the only conditioning-maintenance role legal in
+# this window — never fit, and the whole tail was identical whether or not
+# conditioning was the athlete's limiter. One extra slot lets it in beside the
+# alactic touch instead of in place of it. Both quotas move together because the
+# stress quota is the binding one: widening only the active quota still leaves
+# four meaningful exposures competing for three places. Every dose, RPE, contact
+# and suppression rule for the window is unchanged and still outranks this.
+_CONDITIONING_LIMITER_EXTRA_COMPRESSED_ROLES = 1
+
+
 def _late_fight_role_budget(days_until_fight: Any, athlete_model: dict[str, Any]) -> dict[str, Any]:
-    return {
+    budget = {
         "mode": _days_out_payload_mode(days_until_fight),
         "max_active_roles": _late_fight_max_active_roles(days_until_fight),
         "max_meaningful_stress_exposures": _late_fight_max_meaningful_stress_exposures(days_until_fight),
         "max_support_roles": _late_fight_max_support_roles(days_until_fight),
         "legal_countdown_labels": _late_fight_legal_countdown_labels(days_until_fight),
     }
+    if budget["mode"] == "pre_fight_compressed_payload" and _conditioning_limiter_signal(athlete_model):
+        for key in ("max_active_roles", "max_meaningful_stress_exposures"):
+            if isinstance(budget[key], int):
+                budget[key] += _CONDITIONING_LIMITER_EXTRA_COMPRESSED_ROLES
+    return budget
 
 
 def _late_fight_forbidden_blocks(days_until_fight: Any) -> list[str]:
@@ -2691,9 +2690,7 @@ def _late_fight_candidate_roles(
                         "Keep this light (RPE <= 5), never describe it as a conditioning build or progression, "
                         "and never place it between two hard sparring collisions."
                     ),
-                    selection_priority=_rhythm_touch_selection_priority(
-                        athlete_model, has_downgraded_hard_days=has_downgraded_hard_days
-                    ),
+                    selection_priority=96 if has_downgraded_hard_days else 100,
                     legal_countdown_labels=legal_countdown_labels,
                 )
             )
