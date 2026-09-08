@@ -3,6 +3,7 @@ from .normalization import clean_list
 from .stage2_policy import prompt_safe_validator_report
 
 import json
+from difflib import SequenceMatcher
 import re
 
 
@@ -242,36 +243,16 @@ def reconcile_selected_conditioning_assignments(
 def conditioning_render_repair_integrity_findings(
     *, planning_brief: dict, before_text: str, after_text: str
 ) -> list[dict]:
-    """Reject membership/session expansion introduced by a render repair."""
-    from collections import Counter
-
+    """Allow only inserts/corrections of source-authorised conditioning lines."""
     from .stage2_validator import (
         _countdown_blocks,
+        _conditioning_dose_within_bounds,
+        _is_countdown_block_boundary,
         _line_has_exercise,
-        _normalize_render_line,
         _scheduled_role_d_day,
+        _COUNTDOWN_LABEL_LINE,
     )
 
-    before_blocks = _countdown_blocks(before_text)
-    after_blocks = _countdown_blocks(after_text)
-    findings: list[dict] = []
-    if Counter(block["day"] for block in before_blocks) != Counter(block["day"] for block in after_blocks):
-        findings.append(
-            {
-                "code": "conditioning_render_repair_calendar_changed",
-                "severity": "blocker",
-                "message": "Render repair changed the scheduled countdown-session structure.",
-            }
-        )
-
-    before_lines_by_day = {
-        day: [line for block in before_blocks if block["day"] == day for line in block.get("lines") or []]
-        for day in {block["day"] for block in before_blocks}
-    }
-    after_lines_by_day = {
-        day: [line for block in after_blocks if block["day"] == day for line in block.get("lines") or []]
-        for day in {block["day"] for block in after_blocks}
-    }
     assignments_by_day: dict[int, list[dict]] = {}
     for week in (planning_brief.get("weekly_role_map") or {}).get("weeks") or []:
         if not isinstance(week, dict):
@@ -289,36 +270,129 @@ def conditioning_render_repair_integrity_findings(
                 continue
             assignments_by_day.setdefault(d_day, []).extend(assignments)
 
-    for d_day, assignments in assignments_by_day.items():
-        before_lines = before_lines_by_day.get(d_day, [])
-        after_lines = after_lines_by_day.get(d_day, [])
-        before_counts = Counter(_normalize_render_line(line) for line in before_lines)
-        seen_after = Counter()
-        for line in after_lines:
-            normalized = _normalize_render_line(line)
-            seen_after[normalized] += 1
-            if any(_line_has_exercise(line, str(item["name"])) for item in assignments):
-                continue
-            is_new = seen_after[normalized] > before_counts[normalized]
-            looks_prescribed = bool(re.search(r"\b\d+(?:\.\d+)?\s*(?:x|×|sec|min|round|rep|rpe)\b", line, re.I))
-            if is_new and looks_prescribed:
+    def day_context(lines: list[str]) -> dict[int, int | None]:
+        current_day: int | None = None
+        contexts: dict[int, int | None] = {}
+        for index, line in enumerate(lines):
+            stripped = line.strip()
+            match = _COUNTDOWN_LABEL_LINE.match(stripped)
+            if match:
+                current_day = int(match.group(2))
+            elif stripped and _is_countdown_block_boundary(stripped):
+                current_day = None
+            contexts[index] = current_day
+        return contexts
+
+    def authorised_assignment(line: str, d_day: int | None) -> dict | None:
+        if d_day is None:
+            return None
+        matches = [
+            assignment
+            for assignment in assignments_by_day.get(d_day, [])
+            if _line_has_exercise(line, str(assignment.get("name") or ""))
+        ]
+        return matches[0] if len(matches) == 1 else None
+
+    def permitted_new_line(line: str, d_day: int | None) -> tuple[bool, dict | None]:
+        assignment = authorised_assignment(line, d_day)
+        if not assignment:
+            return False, None
+        dose_ok, _, _, _ = _conditioning_dose_within_bounds(
+            str(assignment.get("effective_prescription") or ""), line
+        )
+        return dose_ok, assignment
+
+    before_lines = str(before_text or "").splitlines()
+    after_lines = str(after_text or "").splitlines()
+    before_context = day_context(before_lines)
+    after_context = day_context(after_lines)
+    findings: list[dict] = []
+
+    for tag, before_start, before_end, after_start, after_end in SequenceMatcher(
+        a=before_lines, b=after_lines, autojunk=False
+    ).get_opcodes():
+        if tag == "equal":
+            continue
+        before_chunk = before_lines[before_start:before_end]
+        after_chunk = after_lines[after_start:after_end]
+
+        if tag == "insert":
+            for offset, line in enumerate(after_chunk):
+                index = after_start + offset
+                allowed, _ = permitted_new_line(line, after_context[index])
+                if not allowed:
+                    findings.append(
+                        {
+                            "code": "conditioning_render_repair_unapproved_edit",
+                            "severity": "blocker",
+                            "edit": "insert",
+                            "scheduled_d_day": after_context[index],
+                            "line": line,
+                            "message": "Render repair inserted content outside authorised conditioning membership.",
+                        }
+                    )
+            continue
+
+        if tag == "delete":
+            for offset, line in enumerate(before_chunk):
+                index = before_start + offset
                 findings.append(
                     {
-                        "code": "unselected_conditioning_assignment_introduced",
+                        "code": "conditioning_render_repair_unapproved_edit",
                         "severity": "blocker",
-                        "scheduled_d_day": d_day,
+                        "edit": "delete",
+                        "scheduled_d_day": before_context[index],
                         "line": line,
-                        "message": "Render repair introduced conditioning work outside closed membership.",
+                        "message": "Render repair deleted existing plan content.",
                     }
                 )
-        seen_names: set[str] = set()
-        for assignment in assignments:
-            name = str(assignment["name"])
-            if name.casefold() in seen_names:
-                continue
-            seen_names.add(name.casefold())
-            count = sum(_line_has_exercise(line, name) for line in after_lines)
-            if count > 1:
+            continue
+
+        # A correction must be one-for-one, stay on the same D-day, and retain
+        # the exact selected exercise identity. Any other rewrite is rejected.
+        if len(before_chunk) != len(after_chunk):
+            findings.append(
+                {
+                    "code": "conditioning_render_repair_unapproved_edit",
+                    "severity": "blocker",
+                    "edit": "replace",
+                    "before": before_chunk,
+                    "after": after_chunk,
+                    "message": "Render repair rewrote unrelated plan structure or content.",
+                }
+            )
+            continue
+        for offset, (old_line, new_line) in enumerate(zip(before_chunk, after_chunk)):
+            old_index = before_start + offset
+            new_index = after_start + offset
+            old_assignment = authorised_assignment(old_line, before_context[old_index])
+            allowed, new_assignment = permitted_new_line(new_line, after_context[new_index])
+            if (
+                not allowed
+                or not old_assignment
+                or before_context[old_index] != after_context[new_index]
+                or str(old_assignment.get("name") or "").casefold()
+                != str(new_assignment.get("name") or "").casefold()
+            ):
+                findings.append(
+                    {
+                        "code": "conditioning_render_repair_unapproved_edit",
+                        "severity": "blocker",
+                        "edit": "replace",
+                        "scheduled_d_day": after_context[new_index],
+                        "before": old_line,
+                        "after": new_line,
+                        "message": "Render repair changed content outside an authorised conditioning correction.",
+                    }
+                )
+
+    # Keep the existing parser-backed guard for accidental duplicate selected
+    # lines, including duplicates inserted outside a SequenceMatcher hunk.
+    for block in _countdown_blocks(after_text):
+        d_day = int(block["day"])
+        for assignment in assignments_by_day.get(d_day, []):
+            name = str(assignment.get("name") or "")
+            if sum(_line_has_exercise(line, name) for line in block.get("lines") or []) > 1:
                 findings.append(
                     {
                         "code": "duplicate_selected_conditioning_assignment",

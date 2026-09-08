@@ -229,6 +229,36 @@ def test_increased_conditioning_dose_is_detected_and_restored_to_effective_sourc
     )
 
 
+def test_conditioning_dose_allows_safe_reduction_but_rejects_extra_interval_work():
+    brief = _brief(assignments=[
+        {"name": "Assault Bike Repeat", "effective_prescription": "4 x 15 sec work; 75 sec rest; RPE 8"},
+        {"name": "Zone 2 Run", "effective_prescription": "20 min at RPE 4"},
+    ])
+    reduced = (
+        "D-16 (Thursday) — Conditioning\n"
+        "- Assault Bike Repeat: 2 x 10 sec work; 120 sec rest; RPE 6\n"
+        "- Zone 2 Run: 15 min at RPE 3\n"
+    )
+    reduced_report = validate_stage2_output(planning_brief=brief, final_plan_text=reduced)
+    assert not any(
+        item["code"] == "selected_conditioning_effective_prescription_mismatch"
+        for item in reduced_report["errors"]
+    )
+
+    extra_work = (
+        "D-16 (Thursday) — Conditioning\n"
+        "- Assault Bike Repeat: 4 x 15 sec work; 75 sec rest; RPE 8; then 6 x 20 sec sprints\n"
+        "- Zone 2 Run: 20 min at RPE 4\n"
+    )
+    extra_report = validate_stage2_output(planning_brief=brief, final_plan_text=extra_work)
+    mismatch = next(
+        item
+        for item in extra_report["errors"]
+        if item["code"] == "selected_conditioning_effective_prescription_mismatch"
+    )
+    assert "additional work interval dose" in mismatch["dose_violations"]
+
+
 def test_repair_integrity_rejects_unselected_duplicate_and_extra_session():
     brief = _brief(assignments=[
         {"name": "Zone 2 Run", "effective_prescription": "20 min at RPE 4"},
@@ -250,9 +280,36 @@ def test_repair_integrity_rejects_unselected_duplicate_and_extra_session():
     )
     codes = {item["code"] for item in findings}
 
-    assert "conditioning_render_repair_calendar_changed" in codes
-    assert "unselected_conditioning_assignment_introduced" in codes
+    assert "conditioning_render_repair_unapproved_edit" in codes
     assert "duplicate_selected_conditioning_assignment" in codes
+
+
+def test_repair_integrity_rejects_unrelated_rewrite_and_deletion():
+    brief = _brief(assignments=[
+        {"name": "Easy Bike", "effective_prescription": "15 min at RPE 3"},
+    ])
+    before = (
+        "D-16 (Thursday) — Conditioning\n"
+        "- Easy Bike: 20 min at RPE 4\n"
+        "## Recovery\n"
+        "- Walk 20 min\n"
+    )
+    after = (
+        "D-16 (Thursday) — Conditioning\n"
+        "- Easy Bike: 15 min at RPE 3\n"
+        "## Recovery\n"
+        "- Walk 10 min\n"
+    )
+
+    findings = conditioning_render_repair_integrity_findings(
+        planning_brief=brief, before_text=before, after_text=after
+    )
+
+    assert any(
+        item["code"] == "conditioning_render_repair_unapproved_edit"
+        and item.get("before") == "- Walk 20 min"
+        for item in findings
+    )
 
 
 def test_easier_line_is_not_treated_as_an_unselected_exercise():
