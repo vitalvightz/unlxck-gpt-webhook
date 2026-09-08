@@ -13,6 +13,7 @@ from typing import Any
 
 from . import stage2_finalizer_packet_impl as _impl
 from .prescription_resolver import assert_late_camp_effective_strength_authority
+from .selected_assignment_context import enrich_selected_assignment_context
 from .stage2_payload_late_fight import _handoff_mode_instructions
 
 for _export_name in dir(_impl):
@@ -84,15 +85,19 @@ def build_stage2_finalizer_packet(
     stage2_payload: dict[str, Any],
     planning_brief: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Build the normal compact packet, then preserve tail render contracts."""
+    """Build a source-complete compact packet without mutating planner state."""
     source = planning_brief if isinstance(planning_brief, dict) else stage2_payload
+    # Resolve only already-selected members. The projection restores a missing
+    # normal bank dose, preserves scheduled caps, and carries selected bank notes.
+    # It must not reopen membership or silently publish an unresolved workout.
+    resolved_source = enrich_selected_assignment_context(source)
     weekly_role_map = (
-        source.get("weekly_role_map")
+        resolved_source.get("weekly_role_map")
         or stage2_payload.get("weekly_role_map")
         or {}
     )
     candidate_pools = (
-        source.get("candidate_pools")
+        resolved_source.get("candidate_pools")
         or stage2_payload.get("candidate_pools")
         or {}
     )
@@ -103,7 +108,15 @@ def build_stage2_finalizer_packet(
 
     packet = _impl.build_stage2_finalizer_packet(
         stage2_payload=stage2_payload,
-        planning_brief=planning_brief,
+        planning_brief=resolved_source,
+    )
+    packet.setdefault("hard_rules", []).append(
+        "For selected exercises, use coaching_context as source-backed execution "
+        "evidence. Choose the most relevant one or two clear cues for the athlete, "
+        "including specific technique or load guidance when useful. Preserve "
+        "important stop and quality rules. Do not dump every bank note or repeat "
+        "generic advice. Coaching notes never override the effective prescription, "
+        "scheduled-day caps, restrictions, or closed exercise membership."
     )
 
     tail_contracts = _late_fight_tail_contracts(weekly_role_map)
