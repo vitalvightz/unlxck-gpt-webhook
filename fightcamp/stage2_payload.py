@@ -190,25 +190,12 @@ from .stage2_role_map import (  # noqa: F401
 
 
 
-def _clean_list(values) -> list[str]:
-    if values is None:
-        return []
-    if isinstance(values, list):
-        return [str(value).strip() for value in values if str(value).strip()]
-    if isinstance(values, str):
-        return [values.strip()] if values.strip() else []
-    return [str(values).strip()]
-
-
-def _dedupe_preserve_order(values: list[str]) -> list[str]:
-    seen: set[str] = set()
-    result: list[str] = []
-    for value in values:
-        if value in seen:
-            continue
-        seen.add(value)
-        result.append(value)
-    return result
+# Compatibility aliases. ``clean_list`` and ``dedupe_preserve_order`` in
+# ``normalization`` are the canonical (and behaviourally broader) implementations;
+# these underscore names are retained so existing internal call sites and any
+# back-compat importers keep working without redefining the logic here.
+_clean_list = clean_list
+_dedupe_preserve_order = dedupe_preserve_order
 
 
 
