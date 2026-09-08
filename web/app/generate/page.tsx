@@ -23,6 +23,7 @@ import { hydratePlanRequest } from "@/lib/onboarding";
 import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
 import { stableStringify } from "@/lib/stable-stringify";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
+import { PublicGenerationScreen } from "@/components/public-generation-screen";
 
 const STORAGE_KEY = "unlxck:pending-generation:self";
 const ALLOWED_PLAN_SOURCES = new Set(["quick_build", "self_serve"]);
@@ -220,23 +221,39 @@ export default function GeneratePage() {
 
   return (
     <RequireAuth>
-      <PremiumLoadingScreen
-        phase={controller.phase}
-        error={controller.error}
-        statusMessage={controller.statusMessage}
-        startedAtMs={controller.startedAtMs}
-        endedAtMs={controller.endedAtMs}
-        milestones={controller.milestones}
-        intake={payload}
-        failureKind={controller.failureKind}
-        onRetry={() => {
-          void controller.retryGeneration();
-        }}
-        canRetry={controller.canRetry}
-        onOpenPlanHistory={() => router.push("/plans")}
-        onReturnToWorkspace={() => router.push("/")}
-        onRefineIntake={() => router.push("/onboarding")}
-      />
+      {me?.profile.role === "admin" ? (
+        <PremiumLoadingScreen
+          phase={controller.phase}
+          error={controller.error}
+          statusMessage={controller.statusMessage}
+          startedAtMs={controller.startedAtMs}
+          endedAtMs={controller.endedAtMs}
+          milestones={controller.milestones}
+          intake={payload}
+          failureKind={controller.failureKind}
+          onRetry={() => {
+            void controller.retryGeneration();
+          }}
+          canRetry={controller.canRetry}
+          onOpenPlanHistory={() => router.push("/plans")}
+          onReturnToWorkspace={() => router.push("/")}
+          onRefineIntake={() => router.push("/onboarding")}
+        />
+      ) : (
+        <PublicGenerationScreen
+          phase={controller.phase}
+          error={controller.error}
+          startedAtMs={controller.startedAtMs}
+          milestones={controller.milestones}
+          failureKind={controller.failureKind}
+          onRetry={() => {
+            void controller.retryGeneration();
+          }}
+          canRetry={controller.canRetry}
+          onReturnToWorkspace={() => router.push("/")}
+          onRefineIntake={() => router.push("/onboarding")}
+        />
+      )}
     </RequireAuth>
   );
 }

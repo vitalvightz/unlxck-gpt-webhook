@@ -148,6 +148,49 @@ def _normalize_progress_milestones(raw: Any) -> list[dict[str, Any]]:
     return normalized
 
 
+_PUBLIC_MILESTONES = {
+    "profile": ("profile_ready", "Profile ready", "Goals and training needs reviewed."),
+    "design": ("designing_camp", "Designing your camp", "Training phases and workload being organised."),
+    "sessions": ("building_sessions", "Building your sessions", "Exercises and session details being assembled."),
+    "checks": ("final_checks", "Final checks", "Safety and plan quality being verified."),
+    "ready": ("camp_ready", "Camp ready", "Your plan is ready to open."),
+}
+
+
+def _public_milestone_group(code: str) -> str | None:
+    """Collapse internal runtime events into non-technical athlete landmarks."""
+    if code in {"request_payload_parsed", "profile_update_started", "profile_update_finished"}:
+        return "profile"
+    if code.startswith("stage1_"):
+        if any(part in code for part in ("block", "schedule", "conditioning", "mobility", "recovery", "nutrition")):
+            return "sessions"
+        return "design"
+    if code.startswith("stage2_") or code in {"final_result_persist_started", "final_result_persisted"}:
+        return "checks"
+    return None
+
+
+def _public_progress_milestones(raw: Any, *, completed: bool) -> list[dict[str, Any]]:
+    """Return only athlete-safe landmarks; labels, metadata and codes stay private."""
+    grouped: dict[str, str] = {}
+    for milestone in _normalize_progress_milestones(raw):
+        group = _public_milestone_group(str(milestone["code"]))
+        if group:
+            grouped[group] = str(milestone.get("at") or "")
+
+    ordered_groups = ["profile", "design", "sessions", "checks"]
+    result: list[dict[str, Any]] = []
+    for group in ordered_groups:
+        if group not in grouped:
+            continue
+        code, label, detail = _PUBLIC_MILESTONES[group]
+        result.append({"code": code, "label": label, "detail": detail, "at": grouped[group], "meta": {}})
+    if completed:
+        code, label, detail = _PUBLIC_MILESTONES["ready"]
+        result.append({"code": code, "label": label, "detail": detail, "at": "", "meta": {}})
+    return result
+
+
 def _job_warnings_from_milestones(raw: Any) -> list[str]:
     warnings: list[str] = []
     seen: set[str] = set()
@@ -259,7 +302,7 @@ def _job_response(
             # would be wrong guidance when the actual fix is an admin restoring
             # the OpenAI billing/quota.
             error = _OPENAI_QUOTA_ATHLETE_ERROR
-        elif viewer_role != "athlete":
+        else:
             error = _GENERATION_FRIENDLY_RETRY_ERROR
     can_retry = (
         normalized_status == "failed"
@@ -314,8 +357,15 @@ def _job_response(
         latest_plan_id=resolved_latest_plan_id or plan_id,
         status_url=f"/api/generation-jobs/{job['id']}",
         message=message,
-        progress_milestones=_normalize_progress_milestones(job.get("progress_milestones")),
-        warnings=_job_warnings(job),
+        progress_milestones=(
+            _normalize_progress_milestones(job.get("progress_milestones"))
+            if viewer_role == "admin"
+            else _public_progress_milestones(
+                job.get("progress_milestones"),
+                completed=normalized_status in {"completed", "review_required"} and bool(plan_id),
+            )
+        ),
+        warnings=_job_warnings(job) if viewer_role == "admin" else [],
         can_retry=can_retry,
         stage2_status=stage2_status or None,
         requires_admin_resume=requires_admin_resume,
