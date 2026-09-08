@@ -200,7 +200,19 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
         "scheduled_d_day",
         "dose_adjustment_reason",
     )
-    return {key: role.get(key) for key in keep if role.get(key) not in (None, "", [])}
+    # ``selected_exercise_assignments=[]`` is an explicit closed-membership
+    # sentinel.  Dropping it would make an intentionally empty role appear open
+    # to the finalizer, incorrectly authorising downstream exercise selection.
+    return {
+        key: role.get(key)
+        for key in keep
+        if role.get(key) not in (None, "", [])
+        or (
+            key == "selected_exercise_assignments"
+            and key in role
+            and role.get(key) == []
+        )
+    }
 
 
 def _as_list(value: Any) -> list[Any]:

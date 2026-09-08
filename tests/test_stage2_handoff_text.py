@@ -1,4 +1,43 @@
-from fightcamp.stage2_payload import build_stage2_handoff_text
+from fightcamp.stage2_finalizer_packet import build_stage2_finalizer_packet
+from fightcamp.stage2_payload import _closed_membership_render_manifest, build_stage2_handoff_text
+
+
+def test_locked_manifest_joins_strength_membership_to_authoritative_dose():
+    packet = build_stage2_finalizer_packet(
+        stage2_payload={
+            "athlete_model": {},
+            "render_mode": "camp_plan",
+            "rewrite_guidance": {"render_guards": {"render_mode": "camp_plan"}},
+            "weekly_role_map": {
+                "weeks": [{
+                    "week_index": 1,
+                    "phase": "SPP",
+                    "session_roles": [{
+                        "role_key": "primary_strength_day",
+                        "category": "strength",
+                        "selected_exercise_assignments": [{
+                            "slot_id": "strength-1",
+                            "name": "Trap Bar Deadlift",
+                            "source_phase": "SPP",
+                            "slot_group": "strength_slots",
+                        }],
+                        "effective_strength_prescriptions": [{
+                            "slot_id": "strength-1",
+                            "name": "Trap Bar Deadlift",
+                            "effective_prescription": "3 x 3; RPE 6-7",
+                        }],
+                    }],
+                }]
+            },
+        },
+        planning_brief={},
+    )
+
+    manifest = _closed_membership_render_manifest(packet)
+
+    assert manifest[0]["selected_count"] == 1
+    assert manifest[0]["exercise_lines"] == ["- Trap Bar Deadlift: 3 x 3; RPE 6-7"]
+    assert manifest[0]["unresolved"] == []
 
 
 def test_build_stage2_handoff_text_uses_finalizer_packet_as_single_structured_context():
