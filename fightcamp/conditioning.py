@@ -53,6 +53,8 @@ from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 from .priority_profile import (
     PRIMARY_GOAL_WEIGHT,
     PRIMARY_WEAKNESS_WEIGHT,
+    SECONDARY_GOAL_WEIGHT,
+    SECONDARY_WEAKNESS_WEIGHT,
     build_priority_profile,
     goal_priority_weight,
     is_priority_collision_tag,
@@ -102,11 +104,84 @@ _RAW_FOOTWORK_GOAL_TOKENS = {
     "angle_exit",
 }
 
+# ``goal_priority_weight``/``weakness_priority_weight`` compare against the raw
+# intake wording the athlete submitted ("conditioning", "gas tank"). Every caller
+# below instead holds a *bank tag* produced by expanding that wording through the
+# tag maps ("aerobic", "glycolytic", "work_capacity"), so the two sides spoke
+# different vocabularies and the priority bonus collapsed to zero for all but the
+# handful of tags spelled identically to an intake word. A drill matching both the
+# primary goal and the primary weakness therefore scored below one carrying a
+# single style tag. Resolve the tier through the same expansion the tag match
+# already used, and return the canonical weights unchanged — the primary/secondary
+# doctrine still lives in ``priority_profile``.
+_PRIORITY_TAG_TIER_CACHE: dict[tuple, tuple[frozenset, frozenset, frozenset, frozenset]] = {}
+_PRIORITY_TAG_TIER_CACHE_MAXSIZE = 16
+
+
+def _conditioning_priority_tag_tiers(priority_profile):
+    key = (
+        priority_profile.primary_goal,
+        tuple(priority_profile.secondary_goals),
+        priority_profile.primary_weak_area,
+        tuple(priority_profile.secondary_weak_areas),
+    )
+    cached = _PRIORITY_TAG_TIER_CACHE.get(key)
+    if cached is None:
+        primary_goal = frozenset(
+            expand_tags([priority_profile.primary_goal], GOAL_TAG_MAP)
+            if priority_profile.primary_goal
+            else []
+        )
+        secondary_goal = frozenset(
+            expand_tags(priority_profile.secondary_goals, GOAL_TAG_MAP)
+        ) - primary_goal
+        primary_weak = frozenset(
+            expand_tags([priority_profile.primary_weak_area], WEAKNESS_TAG_MAP)
+            if priority_profile.primary_weak_area
+            else []
+        )
+        secondary_weak = frozenset(
+            expand_tags(priority_profile.secondary_weak_areas, WEAKNESS_TAG_MAP)
+        ) - primary_weak
+        cached = (primary_goal, secondary_goal, primary_weak, secondary_weak)
+        if len(_PRIORITY_TAG_TIER_CACHE) >= _PRIORITY_TAG_TIER_CACHE_MAXSIZE:
+            _PRIORITY_TAG_TIER_CACHE.clear()
+        _PRIORITY_TAG_TIER_CACHE[key] = cached
+    return cached
+
+
+def _conditioning_goal_weight_for_tag(tag: str, priority_profile) -> float:
+    primary_goal, secondary_goal, _pw, _sw = _conditioning_priority_tag_tiers(priority_profile)
+    if tag in primary_goal:
+        return PRIMARY_GOAL_WEIGHT
+    if tag in secondary_goal:
+        return SECONDARY_GOAL_WEIGHT
+    return goal_priority_weight(tag, priority_profile)
+
+
+def _conditioning_weakness_weight_for_tag(tag: str, priority_profile) -> float:
+    _pg, _sg, primary_weak, secondary_weak = _conditioning_priority_tag_tiers(priority_profile)
+    if tag in primary_weak:
+        return PRIMARY_WEAKNESS_WEIGHT
+    if tag in secondary_weak:
+        return SECONDARY_WEAKNESS_WEIGHT
+    return weakness_priority_weight(tag, priority_profile)
+
+
+def _conditioning_tag_is_collision(tag: str, priority_profile) -> bool:
+    if is_priority_collision_tag(tag, priority_profile):
+        return True
+    primary_goal, secondary_goal, primary_weak, secondary_weak = _conditioning_priority_tag_tiers(
+        priority_profile
+    )
+    return tag in (primary_goal | secondary_goal) and tag in (primary_weak | secondary_weak)
+
+
 def _conditioning_goal_priority_bonus(tags: list[str], priority_profile) -> float:
     unique_tags = list(dict.fromkeys(tags))
     total = 0.0
     for tag in unique_tags:
-        weight = goal_priority_weight(tag, priority_profile)
+        weight = _conditioning_goal_weight_for_tag(tag, priority_profile)
         if weight == PRIMARY_GOAL_WEIGHT:
             total += CONDITIONING_PRIMARY_GOAL_BONUS
         elif weight > 0:
@@ -118,7 +193,7 @@ def _conditioning_weakness_priority_bonus(tags: list[str], priority_profile) -> 
     unique_tags = list(dict.fromkeys(tags))
     total = 0.0
     for tag in unique_tags:
-        weight = weakness_priority_weight(tag, priority_profile)
+        weight = _conditioning_weakness_weight_for_tag(tag, priority_profile)
         if weight == PRIMARY_WEAKNESS_WEIGHT:
             total += CONDITIONING_PRIMARY_WEAKNESS_BONUS
         elif weight > 0:
@@ -127,10 +202,10 @@ def _conditioning_weakness_priority_bonus(tags: list[str], priority_profile) -> 
 
 
 def _conditioning_priority_value_for_tag(tag: str, priority_profile) -> float:
-    goal_weight = goal_priority_weight(tag, priority_profile)
-    weakness_weight = weakness_priority_weight(tag, priority_profile)
+    goal_weight = _conditioning_goal_weight_for_tag(tag, priority_profile)
+    weakness_weight = _conditioning_weakness_weight_for_tag(tag, priority_profile)
 
-    if is_priority_collision_tag(tag, priority_profile):
+    if _conditioning_tag_is_collision(tag, priority_profile):
         if goal_weight == PRIMARY_GOAL_WEIGHT and weakness_weight == PRIMARY_WEAKNESS_WEIGHT:
             return CONDITIONING_PRIMARY_COLLISION_BONUS
         return CONDITIONING_SECONDARY_COLLISION_BONUS
@@ -155,7 +230,7 @@ def _conditioning_collision_safe_priority_bonus(
     priority_profile,
 ) -> float:
     unique_tags = list(dict.fromkeys([*goal_tags, *weakness_tags]))
-    if not any(is_priority_collision_tag(tag, priority_profile) for tag in unique_tags):
+    if not any(_conditioning_tag_is_collision(tag, priority_profile) for tag in unique_tags):
         return _conditioning_goal_priority_bonus(goal_tags, priority_profile) + _conditioning_weakness_priority_bonus(
             weakness_tags,
             priority_profile,
@@ -172,19 +247,19 @@ def _add_conditioning_priority_reason_codes(
     priority_profile,
 ) -> None:
     for tag in matched_goal_tags:
-        goal_weight = goal_priority_weight(tag, priority_profile)
+        goal_weight = _conditioning_goal_weight_for_tag(tag, priority_profile)
         if goal_weight == PRIMARY_GOAL_WEIGHT:
             reasons["reason_codes"].append(f"priority_primary_goal_match:{tag}")
         elif goal_weight > 0:
             reasons["reason_codes"].append(f"priority_secondary_goal_match:{tag}")
     for tag in matched_weak_tags:
-        weakness_weight = weakness_priority_weight(tag, priority_profile)
+        weakness_weight = _conditioning_weakness_weight_for_tag(tag, priority_profile)
         if weakness_weight == PRIMARY_WEAKNESS_WEIGHT:
             reasons["reason_codes"].append(f"priority_primary_weakness_match:{tag}")
         elif weakness_weight > 0:
             reasons["reason_codes"].append(f"priority_secondary_weakness_match:{tag}")
     for tag in list(dict.fromkeys(matched_goal_tags + matched_weak_tags)):
-        if is_priority_collision_tag(tag, priority_profile):
+        if _conditioning_tag_is_collision(tag, priority_profile):
             reasons["reason_codes"].append(f"priority_collision_goal_weakness:{tag}")
 
 
@@ -1185,9 +1260,21 @@ def _is_drill_text_safe(
 
 # Relative emphasis of each energy system by training phase
 def expand_tags(input_list, tag_map):
+    """Expand intake goal/weakness terms into bank tags.
+
+    Intake spelling and map keys disagree for a handful of entries: the wording
+    the form sends ("gas tank") is absent from a map that only holds ``gas_tank``,
+    so the whole term used to expand to nothing and the athlete's declared
+    limiter never reached scoring. Try the literal key first — existing matches
+    are unaffected — then the space/underscore twin.
+    """
     expanded = []
     for item in input_list:
-        tags = tag_map.get(item.lower(), [])
+        key = str(item).lower()
+        tags = tag_map.get(key)
+        if tags is None:
+            alternate = key.replace(" ", "_") if " " in key else key.replace("_", " ")
+            tags = tag_map.get(alternate, [])
         expanded.extend(tags)
     return normalize_tags(expanded)
 
