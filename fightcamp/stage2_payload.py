@@ -2892,12 +2892,30 @@ def _closed_membership_render_manifest(finalizer_packet: dict) -> list[dict]:
 
         lines: list[str] = []
         unresolved: list[dict] = []
+        # Strength composition records selected membership separately from the
+        # scheduled-day dose resolver.  The resolver's records are authoritative
+        # and identify a source member by its slot id plus selected name.
+        strength_doses: dict[tuple[str, str], list[Any]] = {}
+        for resolved in role.get("effective_strength_prescriptions") or []:
+            if not isinstance(resolved, dict):
+                continue
+            slot_id = str(resolved.get("slot_id") or "").strip()
+            resolved_name = str(resolved.get("name") or "").strip()
+            if slot_id and resolved_name:
+                strength_doses.setdefault((slot_id, resolved_name), []).append(
+                    resolved.get("effective_prescription")
+                )
         for index, assignment in enumerate(assignments):
             if not isinstance(assignment, dict):
                 unresolved.append({"index": index, "reason": "invalid_assignment"})
                 continue
             name = str(assignment.get("name") or assignment.get("exercise_name") or "").strip()
             prescription = assignment.get("effective_prescription")
+            if not prescription:
+                source_key = (str(assignment.get("slot_id") or "").strip(), name)
+                resolved_doses = strength_doses.get(source_key) or []
+                if resolved_doses:
+                    prescription = resolved_doses.pop(0)
             if isinstance(prescription, dict):
                 prescription = (
                     prescription.get("display") or prescription.get("dose")

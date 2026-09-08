@@ -1,4 +1,4 @@
-from fightcamp.stage2_finalizer_packet import build_stage2_finalizer_packet
+from fightcamp.stage2_finalizer_packet import _compact_role, build_stage2_finalizer_packet
 
 
 def test_finalizer_packet_passes_open_plan_spec_and_render_mode():
@@ -96,6 +96,30 @@ def test_finalizer_packet_compact_role_omits_internal_selection_rationale():
     assert role["role_key"] == "primary_strength_day"
     assert role["scheduled_day_hint"] == "Wednesday"
     assert role["category"] == "strength"
+
+
+def test_finalizer_packet_preserves_empty_closed_exercise_membership():
+    packet = build_stage2_finalizer_packet(
+        stage2_payload={
+            "athlete_model": {},
+            "weekly_role_map": {
+                "weeks": [{
+                    "week_index": 1,
+                    "phase": "TAPER",
+                    "session_roles": [{
+                        "role_key": "neural_primer_day",
+                        "category": "strength",
+                        "selected_exercise_assignments": [],
+                    }],
+                }]
+            },
+        },
+        planning_brief={},
+    )
+
+    role = packet["selected_plan"]["weekly_role_map"]["weeks"][0]["session_roles"][0]
+    assert role["selected_exercise_assignments"] == []
+    assert "selected_exercise_assignments" not in _compact_role({"role_key": "open_role"})
 
 
 def test_finalizer_packet_strips_internal_late_fight_scaffolding():
