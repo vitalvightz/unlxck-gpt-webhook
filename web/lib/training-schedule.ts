@@ -53,7 +53,15 @@ export function getSparringConsistency(
   trainingAvailability: string[],
   hardSparringDays: string[],
   supportWorkDays: string[],
+  requireCombatSession = false,
 ): SparringConsistency {
+  if (requireCombatSession && !hardSparringDays.length && !supportWorkDays.length) {
+    return {
+      hardError: "Add at least one hard sparring or light/technical combat day to build a Fight Camp. If none is scheduled, use Open Plan.",
+      softWarning: null,
+    };
+  }
+
   const normalizedHardSparringDays = getSortedUniqueDays(hardSparringDays);
   if (normalizedHardSparringDays.length > HARD_SPARRING_DAY_CAP) {
     return {

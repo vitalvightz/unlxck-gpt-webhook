@@ -128,6 +128,107 @@ def test_generate_plan_persists_validated_final_plan_and_history():
     assert stage2.calls[0]["stage2_handoff_text"] == "handoff"
 
 
+@pytest.mark.parametrize(
+    ("hard_sparring_days", "support_work_days"),
+    [(["Tuesday"], []), ([], ["Monday"])],
+)
+def test_generate_fight_camp_accepts_either_existing_combat_session_type(
+    hard_sparring_days,
+    support_work_days,
+):
+    client, store, _ = _build_client()
+    request = _build_request(
+        {
+            "hard_sparring_days": hard_sparring_days,
+            "support_work_days": support_work_days,
+        }
+    )
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=request.model_dump(mode="json"),
+    )
+
+    assert response.status_code == 202
+    saved_intake = store.get_latest_intake("athlete-1")["intake"]
+    assert saved_intake["hard_sparring_days"] == hard_sparring_days
+    assert saved_intake["support_work_days"] == support_work_days
+
+
+def test_generate_fight_camp_rejects_zero_combat_sessions_before_persistence():
+    client, store, _ = _build_client()
+    request = _build_request(
+        {
+            "hard_sparring_days": [],
+            "support_work_days": [],
+        }
+    )
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=request.model_dump(mode="json"),
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == (
+        "A Fight Camp requires at least one scheduled hard sparring or "
+        "light/technical combat session. Use Open Plan if none is scheduled."
+    )
+    assert store.generation_jobs == {}
+    assert store.get_latest_intake("athlete-1") is None
+
+
+def test_generate_open_plan_allows_zero_combat_sessions():
+    client, store, _ = _build_client()
+    request = _build_request(
+        {
+            "fight_date": "",
+            "no_scheduled_fight": True,
+            "hard_sparring_days": [],
+            "support_work_days": [],
+        }
+    )
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=request.model_dump(mode="json"),
+    )
+
+    assert response.status_code == 202
+    saved_intake = store.get_latest_intake("athlete-1")["intake"]
+    assert saved_intake["no_scheduled_fight"] is True
+    assert saved_intake["hard_sparring_days"] == []
+    assert saved_intake["support_work_days"] == []
+
+
+def test_existing_fight_camp_without_combat_sessions_remains_readable():
+    client, store, _ = _build_client()
+    legacy_request = _build_request(
+        {
+            "hard_sparring_days": [],
+            "support_work_days": [],
+        }
+    )
+    intake = store.create_intake("athlete-1", legacy_request)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id=intake["id"],
+        request=legacy_request,
+        result=finalized_result(),
+    )
+
+    response = client.get(
+        f"/api/plans/{plan['id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["plan_id"] == plan["id"]
+
+
 def test_generate_plan_uses_submitted_request_over_stale_latest_intake():
     athlete = AuthenticatedUser(
         user_id="athlete-1",

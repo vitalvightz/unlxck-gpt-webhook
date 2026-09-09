@@ -425,7 +425,7 @@ function QuickBuildFormInner() {
       input.equipment_access.length > 0 &&
       !errors.training_availability &&
       !errors.weekly_training_frequency &&
-      !errors.hard_sparring_days &&
+      !errors.combat_sessions &&
       !errors.equipment_access;
     const focusComplete = input.key_goals.length > 0 && !errors.key_goals && !errors.weak_areas && !errors.focus_cap;
     const generateComplete = Object.keys(errors).length === 0;
@@ -475,7 +475,7 @@ function QuickBuildFormInner() {
     setInput((current) => ({ ...current, [key]: value }));
   }
 
-  function toggleField(key: keyof Pick<QuickBuildInput, "technical_style" | "tactical_style" | "training_availability" | "hard_sparring_days" | "equipment_access" | "key_goals" | "weak_areas">, value: string) {
+  function toggleField(key: keyof Pick<QuickBuildInput, "technical_style" | "tactical_style" | "training_availability" | "hard_sparring_days" | "support_work_days" | "equipment_access" | "key_goals" | "weak_areas">, value: string) {
     if (submitError) {
       setSubmitError(null);
     }
@@ -503,7 +503,24 @@ function QuickBuildFormInner() {
           hard_sparring_days: isRemoving
             ? current.hard_sparring_days.filter((day) => day !== value)
             : current.hard_sparring_days,
+          support_work_days: isRemoving
+            ? current.support_work_days.filter((day) => day !== value)
+            : current.support_work_days,
           weekly_training_frequency: nextFrequency,
+        };
+      }
+      if (key === "hard_sparring_days" && !current.hard_sparring_days.includes(value)) {
+        return {
+          ...current,
+          hard_sparring_days: nextValues,
+          support_work_days: current.support_work_days.filter((day) => day !== value),
+        };
+      }
+      if (key === "support_work_days" && !current.support_work_days.includes(value)) {
+        return {
+          ...current,
+          support_work_days: nextValues,
+          hard_sparring_days: current.hard_sparring_days.filter((day) => day !== value),
         };
       }
       return { ...current, [key]: nextValues };
@@ -558,6 +575,7 @@ function QuickBuildFormInner() {
       (
         input.training_availability.length > 0 ||
         input.hard_sparring_days.length > 0 ||
+        input.support_work_days.length > 0 ||
         input.equipment_access.length > 0 ||
         input.key_goals.length > 0 ||
         input.weak_areas.length > 0
@@ -572,6 +590,9 @@ function QuickBuildFormInner() {
       training_availability: [...trainingPreset.training_availability],
       weekly_training_frequency: trainingPreset.weekly_training_frequency,
       hard_sparring_days: currentInput.hard_sparring_days.filter((day) =>
+        trainingPreset.training_availability.includes(day),
+      ),
+      support_work_days: currentInput.support_work_days.filter((day) =>
         trainingPreset.training_availability.includes(day),
       ),
       equipment_access: [...equipmentPreset.equipment_access],
@@ -590,6 +611,7 @@ function QuickBuildFormInner() {
       training_availability: [],
       weekly_training_frequency: 4,
       hard_sparring_days: [],
+      support_work_days: [],
       equipment_access: [],
       key_goals: [],
       weak_areas: [],
@@ -622,6 +644,7 @@ function QuickBuildFormInner() {
       training_availability: [...preset.training_availability],
       weekly_training_frequency: preset.weekly_training_frequency,
       hard_sparring_days: currentInput.hard_sparring_days.filter((day) => preset.training_availability.includes(day)),
+      support_work_days: currentInput.support_work_days.filter((day) => preset.training_availability.includes(day)),
     }));
   }
 
@@ -634,6 +657,7 @@ function QuickBuildFormInner() {
       ...currentInput,
       training_availability: [],
       hard_sparring_days: [],
+      support_work_days: [],
     }));
   }
 
@@ -969,15 +993,51 @@ function QuickBuildFormInner() {
           options={TRAINING_AVAILABILITY_OPTIONS}
           selectedValues={input.hard_sparring_days}
           onToggle={(value) => toggleField("hard_sparring_days", value)}
-          disabledValues={TRAINING_AVAILABILITY_OPTIONS
-            .filter((option) => !input.training_availability.includes(option.value))
-            .map((option) => option.value)}
-          disabledValueReason="Add as a training day first"
+          getOptionDisabledReason={(option, checked) =>
+            checked
+              ? null
+              : !input.training_availability.includes(option.value)
+                ? "Add as a training day first"
+                : input.support_work_days.includes(option.value)
+                  ? "Already tagged as light or technical"
+                  : null
+          }
           disableAdditionalSelections={input.hard_sparring_days.length >= HARD_SPARRING_DAY_CAP}
           capDisabledReason={`Hard sparring cap (${HARD_SPARRING_DAY_CAP}) reached`}
         />
-        <p className="muted">Leave empty if you don&apos;t hard spar. Used to place S&amp;C around sparring.</p>
-        <FieldError message={visibleError("hard_sparring_days")} />
+        <p className="muted">Used to place S&amp;C around contact load.</p>
+        <ChipMultiSelect
+          label="Light or technical combat days"
+          options={TRAINING_AVAILABILITY_OPTIONS}
+          selectedValues={input.support_work_days}
+          onToggle={(value) => toggleField("support_work_days", value)}
+          getOptionDisabledReason={(option, checked) =>
+            checked
+              ? null
+              : !input.training_availability.includes(option.value)
+                ? "Add as a training day first"
+                : input.hard_sparring_days.includes(option.value)
+                  ? "Already tagged as hard sparring"
+                  : null
+          }
+        />
+        <p className="muted">Pads, drills, movement or other lower-intensity combat work.</p>
+        <FieldError message={visibleError("combat_sessions")} />
+        {!input.no_scheduled_fight && !input.hard_sparring_days.length && !input.support_work_days.length ? (
+          <div className="field">
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => {
+                setSubmitError(null);
+                setInput((current) => ({ ...current, no_scheduled_fight: true, fight_date: "" }));
+                setMessage("Open Plan selected. Continue with your available training schedule.");
+              }}
+            >
+              I don&apos;t currently have a scheduled combat session
+            </button>
+          </div>
+        ) : null}
         <div className="field">
           <label htmlFor="qb-weekly-frequency">Sessions per week</label>
           <CustomSelect
