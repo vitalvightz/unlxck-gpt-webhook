@@ -21,6 +21,7 @@ import pytest
 
 from fightcamp import late_camp_role_morph
 from fightcamp.planner_authority_integrity import (
+    AUTHORITY_RELEASE_HOLD_CODES,
     LATE_PHYSICAL_ROLE_SAFE_OMISSION_CODE,
     PLANNER_AUTHORITY_BLOCKER_CODES,
     planner_authority_findings,
@@ -233,3 +234,82 @@ def test_a_populated_role_produces_no_findings():
     codes = {f["code"] for f in found}
     assert "late_physical_role_missing_assignment" not in codes
     assert LATE_PHYSICAL_ROLE_SAFE_OMISSION_CODE not in codes
+
+
+# --- 3. A missing exposure never withholds an otherwise valid plan ----------
+#
+# Stage 2's release policy is deliberately observational once usable plan text
+# exists. The authority gate is the one thing that overrides it, and it should
+# only do so for a plan that SCHEDULED something unsafe -- not for one that is
+# simply missing a session.
+
+
+def _release(findings: list[dict]) -> dict:
+    import fightcamp.planner_authority_integrity as pai
+    from fightcamp.stage2_policy import apply_stage2_release_policy
+
+    pai.install()
+    return apply_stage2_release_policy(
+        {"errors": findings, "blocking_warnings": [], "warnings": [], "review_flags": []}
+    )
+
+
+@pytest.mark.parametrize(
+    "role_key,label",
+    [
+        ("light_fight_pace_touch_day", "D-11"),
+        ("alactic_sharpness_day", "D-6"),
+        ("strength_touch_day", "D-13"),
+    ],
+)
+def test_a_missing_exposure_releases_and_flags_for_admin(role_key, label):
+    report = _release(
+        [
+            {
+                "code": "late_physical_role_missing_assignment",
+                "role_key": role_key,
+                "countdown_label": label,
+            }
+        ]
+    )
+    assert report["release_decision"] == "publish_with_flags"
+    assert report["is_athlete_releasable"] is True
+    # The admin still sees it.
+    assert report["planner_authority_missing_exposure_count"] == 1
+    assert any(
+        f["code"] == "late_physical_role_missing_assignment"
+        for f in report["admin_review_blocking_flags"]
+    )
+
+
+@pytest.mark.parametrize("code", sorted(AUTHORITY_RELEASE_HOLD_CODES))
+def test_unsafe_output_still_holds_the_plan(code):
+    report = _release([{"code": code, "exercise": "Trap Bar Deadlift", "countdown_label": "D-5"}])
+    assert report["release_decision"] == "hold"
+    assert report["is_athlete_releasable"] is False
+
+
+def test_unsafe_output_wins_over_a_missing_exposure():
+    report = _release(
+        [
+            {"code": "selected_loaded_exercise_forbidden", "exercise": "Trap Bar Deadlift"},
+            {"code": "late_physical_role_missing_assignment", "role_key": "alactic_sharpness_day"},
+        ]
+    )
+    assert report["release_decision"] == "hold"
+    # The missing exposure is still recorded alongside the blocker.
+    assert report["planner_authority_missing_exposure_count"] == 1
+
+
+def test_only_the_absence_code_is_exempt_from_holding():
+    assert AUTHORITY_RELEASE_HOLD_CODES == PLANNER_AUTHORITY_BLOCKER_CODES - {
+        "late_physical_role_missing_assignment"
+    }
+    # Repair still treats it as worth fixing.
+    assert "late_physical_role_missing_assignment" in PLANNER_AUTHORITY_BLOCKER_CODES
+
+
+def test_a_clean_report_still_publishes_without_flags():
+    report = _release([])
+    assert report["release_decision"] == "publish"
+    assert report["is_athlete_releasable"] is True
