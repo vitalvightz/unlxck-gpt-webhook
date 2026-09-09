@@ -86,3 +86,62 @@ def late_window_allowed(entries: list[dict[str, Any]], *, offset: int) -> bool:
         if "all" in late_windows or window in late_windows:
             return True
     return False
+
+
+def required_late_windows(roles: list[dict[str, Any]]) -> set[str]:
+    """Late windows that a camp's own scheduled roles will actually ask for.
+
+    Stage 1 selects by phase, while the dated late-fight selector admits a
+    candidate only when the bank opts that exercise into the role's countdown
+    window. Nothing reconciled the two, so a camp could hand over a pool with no
+    legal candidate for a window it was certain to need and ship an empty
+    physical session. This derives the requirement from the roles that exist, so
+    only windows the camp actually reaches are ever demanded.
+    """
+    windows: set[str] = set()
+    for role in roles or []:
+        if not isinstance(role, dict):
+            continue
+        label = str(
+            role.get("scheduled_countdown_label") or role.get("countdown_label") or ""
+        ).strip()
+        offset: int | None = None
+        if label.upper().startswith("D-"):
+            try:
+                offset = int(label.upper().removeprefix("D-"))
+            except ValueError:
+                offset = None
+        if offset is None:
+            try:
+                offset = int(role.get("countdown_offset"))
+            except (TypeError, ValueError):
+                offset = None
+        if offset is None:
+            continue
+        window = classify_late_selector_window(offset)
+        if window:
+            windows.add(window)
+    return windows
+
+
+def late_windows_spanned(days_until_fight: Any) -> set[str]:
+    """Late windows a camp of this length actually reaches.
+
+    Derived from the countdown the camp spans, so a five-day camp never demands
+    coverage for a window it will never schedule, and a long camp demands every
+    window its tail will own. Used instead of the late-fight session sequence
+    because a long camp splices its tail separately and that sequence is empty
+    until the splice runs - long after the candidate handoff is built.
+    """
+    try:
+        days = int(days_until_fight)
+    except (TypeError, ValueError):
+        return set()
+    if days < 0:
+        return set()
+    windows: set[str] = set()
+    for offset in range(0, days + 1):
+        window = classify_late_selector_window(offset)
+        if window:
+            windows.add(window)
+    return windows
