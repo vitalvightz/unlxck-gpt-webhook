@@ -301,7 +301,7 @@ def test_admin_get_athlete_by_id_returns_profile():
     assert data["plan_count"] == 0
 
 
-def test_admin_can_list_and_open_review_required_plan_for_resolution():
+def test_admin_can_list_and_open_flagged_plan_for_resolution():
     review_result = _review_required_result(
         final_plan_text="## PHASE 2: SPP\n- Heavy Bag Sprint Rounds - 6 x 15 sec",
         warning_code="equipment_incongruent_selection",
@@ -322,7 +322,7 @@ def test_admin_can_list_and_open_review_required_plan_for_resolution():
     admin_list = client.get("/api/admin/plans", headers={"Authorization": "Bearer admin-token"})
     assert admin_list.status_code == 200
     listed_plan = next(plan for plan in admin_list.json() if plan["plan_id"] == plan_id)
-    assert listed_plan["status"] == "held_for_review"
+    assert listed_plan["status"] == "publishable_with_flags"
 
     admin_detail = client.get(f"/api/plans/{plan_id}", headers={"Authorization": "Bearer admin-token"})
     assert admin_detail.status_code == 200
@@ -483,7 +483,7 @@ def test_manual_stage2_submission_publishes_validated_admin_result():
     assert saved["stage2_retry_text"] == ""
 
 
-def test_manual_stage2_submission_holds_render_violations_with_repair_prompt():
+def test_manual_stage2_submission_flags_render_violations_with_repair_prompt():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(
         user_id="athlete-1",
@@ -539,10 +539,12 @@ def test_manual_stage2_submission_holds_render_violations_with_repair_prompt():
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "held_for_review"
-    assert body["outputs"]["plan_text"] == ""
-    assert body["admin_outputs"]["stage2_status"] == "stage2_failed"
-    assert body["admin_outputs"]["stage2_retry_text"]
+    assert body["status"] == "publishable_with_flags"
+    assert body["outputs"]["plan_text"] == "## PHASE 2: SPP\n- Push Press - 4x3"
+    assert body["admin_outputs"]["stage2_status"] == "stage2_pass"
+    # Observational release: the finding stays visible to admins on the report
+    # rather than holding the plan behind a repair prompt.
+    assert body["admin_outputs"]["stage2_validator_report"]["quality_review_flags"]
 
 
 def test_manual_stage2_submission_publishes_when_only_non_blocking_review_flags_exist():
@@ -582,13 +584,13 @@ def test_manual_stage2_submission_publishes_when_only_non_blocking_review_flags_
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "ready"
+    assert body["status"] == "publishable_with_flags"
     assert body["outputs"]["plan_text"]
     assert body["admin_outputs"]["stage2_status"] == "stage2_pass"
     assert body["admin_outputs"]["stage2_validator_report"]["review_flag_count"] >= 1
 
 
-def test_manual_stage2_submission_holds_admin_review_quality_flags():
+def test_manual_stage2_submission_routes_admin_review_quality_flags_without_holding():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(
         user_id="athlete-1",
@@ -638,10 +640,9 @@ def test_manual_stage2_submission_holds_admin_review_quality_flags():
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "held_for_review"
-    assert body["outputs"]["plan_text"] == ""
-    assert body["admin_outputs"]["stage2_status"] == "stage2_failed"
-    assert body["admin_outputs"]["stage2_retry_text"]
+    assert body["status"] == "publishable_with_flags"
+    assert body["outputs"]["plan_text"] == "## PHASE 2: SPP\n- Landmine Press - 4x5"
+    assert body["admin_outputs"]["stage2_status"] == "stage2_pass"
     assert body["admin_outputs"]["stage2_validator_report"]["admin_review_blocking_flags"][
         0
     ]["code"] == "missing_required_element"
@@ -833,7 +834,7 @@ def test_structured_card_rebuild_returns_not_found_for_unknown_plan(monkeypatch)
     assert response.status_code == 404
 
 
-def test_admin_can_reject_approved_plan_back_to_review():
+def test_admin_reject_records_rejection_without_holding_plan():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(
         user_id="athlete-1",
@@ -863,8 +864,7 @@ def test_admin_can_reject_approved_plan_back_to_review():
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "held_for_review"
-    assert body["outputs"]["plan_text"] == ""
+    assert body["status"] == "ready"
     assert body["admin_outputs"]["final_plan_text"] == "# Released Stage 2 Output"
     assert body["admin_outputs"]["stage2_status"] == "admin_review_rejected"
 

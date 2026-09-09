@@ -245,8 +245,13 @@ def _map_plan_summary(
             policy_report = apply_stage2_release_policy(report)
             has_errors = bool(policy_report.get("errors"))
             has_blocking = policy_report.get("release_decision") == "hold"
+            # A malformed report cannot clear a plan that was already held. The
+            # release policy is observational at generation time, but this is a
+            # stored review_required decision being re-derived: if the report is
+            # unreadable we cannot show that the hold is resolved, so it stands.
+            has_unreadable_report = bool(policy_report.get("release_policy_malformed_fields"))
             has_review_flags = bool(report.get("warnings") or report.get("review_flags"))
-            if has_errors or has_blocking:
+            if has_errors or has_blocking or has_unreadable_report:
                 normalized_status = "held_for_review"
             elif has_review_flags:
                 normalized_status = "publishable_with_flags"

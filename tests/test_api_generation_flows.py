@@ -2728,19 +2728,23 @@ def test_generate_plan_returns_review_required_when_stage2_needs_manual_review()
 
     _, job = _start_generation(client)
 
-    # The athlete response carries the review state without exposing the
-    # internal Stage 2 diagnostic milestones.
-    assert job["status"] == "review_required"
+    # Observational release: a Stage 2 hold that still produced usable content is
+    # released with flags rather than waiting for admin approval. The findings and
+    # the failed-stage bookkeeping are preserved, and the internal Stage 2
+    # diagnostic milestones stay hidden from the athlete.
+    assert job["status"] == "completed"
     milestone_codes = [
         milestone["code"]
         for milestone in job["progress_milestones"]
         if milestone["code"].startswith("stage2_")
     ]
     assert milestone_codes == []
-    assert job["ready_to_open"] is False
     saved = next(iter(store.plans.values()))
+    assert saved["status"] == "publishable_with_flags"
     assert saved["final_plan_text"] == "# Failed Stage 2 Output"
     assert saved["stage2_status"] == "stage2_failed"
+    # The validator finding that caused the hold is still recorded for audit.
+    assert saved["stage2_validator_report"]["errors"] == [{"code": "restriction_violation"}]
 
 
 def test_generation_fails_when_stage2_final_result_persistence_fails(monkeypatch: pytest.MonkeyPatch):
@@ -2774,7 +2778,14 @@ def test_generation_fails_when_stage2_final_result_persistence_fails(monkeypatch
 
 
 @pytest.mark.parametrize("scenario", SYSTEM_SCENARIOS, ids=lambda scenario: scenario.key)
-def test_curated_system_scenarios_cover_generation_and_hold_behavior(scenario: SystemScenario):
+def test_curated_system_scenarios_cover_generation_and_flagged_release(scenario: SystemScenario):
+    """Every curated scenario now reaches the athlete; findings still recorded.
+
+    The scenarios still describe genuinely flag-worthy outcomes -- their review
+    codes and admin resolutions are exercised by test_api_admin_flows -- but a
+    Stage 2 hold carrying usable content is released with flags rather than
+    withheld. See the release override in api/generation/persistence.py.
+    """
     client, store, _ = _build_client(FakeStage2Automator(result=scenario.automator_result))
     request = _build_request(scenario.request_overrides)
 
@@ -2783,7 +2794,7 @@ def test_curated_system_scenarios_cover_generation_and_hold_behavior(scenario: S
     saved = next(iter(store.plans.values()))
     latest_intake = store.get_latest_intake("athlete-1")["intake"]
 
-    assert job["status"] == ("completed" if scenario.expected_status == "ready" else scenario.expected_status)
+    assert job["status"] == "completed"
     assert latest_intake["fight_date"] == request.fight_date
     assert latest_intake["injuries"] == request.injuries
     assert latest_intake["equipment_access"] == request.equipment_access
@@ -2798,7 +2809,10 @@ def test_curated_system_scenarios_cover_generation_and_hold_behavior(scenario: S
         assert "Fallback:" not in saved["plan_text"]
         assert saved["stage2_status"] == "stage2_pass"
     else:
-        assert saved["plan_text"] == ""
+        # Released with flags: the rendered text is surfaced instead of blanked,
+        # and every diagnostic that would have held it is still stored.
+        assert saved["status"] == "publishable_with_flags"
+        assert scenario.support_marker in saved["plan_text"]
         warning_codes = [warning["code"] for warning in saved["stage2_validator_report"]["warnings"]]
         assert scenario.expected_review_code in warning_codes
         assert saved["stage2_status"] == "stage2_failed"
@@ -4099,7 +4113,7 @@ def test_runtime_generation_marks_review_required_job_terminal_after_final_resul
     milestone_codes = [entry.get("code") for entry in terminal_job.get("progress_milestones", []) if isinstance(entry, dict)]
     assert "plan_persisted" in milestone_codes
     assert "final_result_persisted" in milestone_codes
-    assert terminal_job["status"] == "review_required"
+    assert terminal_job["status"] == "completed"
     assert terminal_job["completed_at"] is not None
     assert terminal_job["error"] is None
 
@@ -5162,7 +5176,9 @@ def test_generation_job_status_reports_review_required_result():
     )
 
     assert job_response.status_code == 200
-    assert job_response.json()["status"] == "review_required"
+    # Released with flags rather than held; see the release override in
+    # api/generation/persistence.py.
+    assert job_response.json()["status"] == "completed"
 
 
 def _seed_failed_job(

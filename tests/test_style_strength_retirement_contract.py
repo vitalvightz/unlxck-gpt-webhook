@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from fightcamp import strength
-from fightcamp.injury_filtering import injury_match_details
+from fightcamp.injury_filtering import build_injury_exclusion_map, injury_match_details
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -64,7 +64,15 @@ def _exercise_bank() -> list[dict]:
 
 
 def _injury_map() -> dict[str, list[str]]:
-    return json.loads((ROOT / "data" / "injury_exclusion_map.json").read_text(encoding="utf-8"))
+    """Build the exclusion map from the live banks.
+
+    ``data/injury_exclusion_map.json`` is a generated artifact that nothing
+    commits or regenerates in CI -- it has never existed in the repository -- so
+    reading it raised FileNotFoundError. ``build_injury_exclusion_map`` is the
+    function that produces that file, so calling it tests the same mapping
+    against the current banks and cannot go stale against them.
+    """
+    return build_injury_exclusion_map()
 
 
 def test_every_legacy_style_strength_entry_has_an_explicit_resolution() -> None:
