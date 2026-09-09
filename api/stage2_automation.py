@@ -880,22 +880,8 @@ def _base_result(
     draft_plan_text: str,
     stage2_cost: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    # ``planning_brief`` is the canonical planner/validator authority and is
-    # already carried forward below. By the time this result is assembled, the
-    # full Stage-2 handoff has been sent and validated; persisting its duplicate
-    # candidate pool inside ``stage2_payload`` only inflates the plan JSON
-    # field. Keep every other payload field (including late-fight sequence and
-    # input parsing metadata) for existing persistence and display consumers.
-    persisted_stage2_payload = stage1_result.get("stage2_payload")
-    if isinstance(persisted_stage2_payload, dict):
-        persisted_stage2_payload = {
-            key: value
-            for key, value in persisted_stage2_payload.items()
-            if key != "candidate_pools"
-        }
     return {
         **stage1_result,
-        "stage2_payload": persisted_stage2_payload,
         "draft_plan_text": draft_plan_text,
         # Keep the legacy response field null; plans are displayed in-app, not exported.
         "pdf_url": None,
