@@ -184,6 +184,46 @@ def _plan_row(**overrides) -> dict:
     return row
 
 
+def test_parsing_metadata_comes_from_its_own_column_not_the_stage2_payload():
+    """The stage2_payload fallback for parsing_metadata was dead and is gone.
+
+    Stage 1 sets ``stage2_payload["input_parsing_metadata"]`` and the top-level
+    ``parsing_metadata`` from the same ``plan_input.parsing_metadata`` in the same
+    result (fightcamp/main.py), so the fallback could only ever repeat what the
+    column already held. Rows predating the column predate ``stage2_payload`` too
+    (both added by 20260427120000, neither backfilled), so there was no legacy era
+    where it supplied anything either.
+
+    Pinning it: a row whose column is empty maps to empty, even when the payload
+    carries a value. Anything relying on the old fallback was relying on a value
+    that, in production, was always equal to the column.
+    """
+    detail = _map_plan_detail(
+        _plan_row(
+            parsing_metadata={},
+            stage2_payload={"input_parsing_metadata": {"athlete_timezone": "stale"}},
+        ),
+        include_admin=True,
+    )
+
+    assert detail.admin_outputs.parsing_metadata == {}
+    # The payload itself is still surfaced verbatim for admin debugging.
+    assert detail.admin_outputs.stage2_payload == {
+        "input_parsing_metadata": {"athlete_timezone": "stale"}
+    }
+
+
+def test_parsing_metadata_column_is_surfaced_when_present():
+    detail = _map_plan_detail(
+        _plan_row(parsing_metadata={"athlete_timezone": {"source": "profile"}}),
+        include_admin=True,
+    )
+
+    assert detail.admin_outputs.parsing_metadata == {
+        "athlete_timezone": {"source": "profile"}
+    }
+
+
 # H (valid) + B mapping: structured plan surfaces in outputs.
 def test_map_plan_detail_returns_structured_plan_when_valid():
     detail = _map_plan_detail(
