@@ -1257,9 +1257,17 @@ class OpenAIStage2Automator:
                 and deterministic_repair.get("unresolved")
             )
             if retry.get("needs_retry") and retry_text and not deterministic_complete and not deterministic_unsafe:
+                # ``needs_retry`` is only ever True for missing closed conditioning
+                # membership. ``build_stage2_retry`` returns False for a goal failure
+                # on its own, and the one other route to True — release_decision
+                # "hold" — is unreachable here because a hold is raised solely by
+                # planner-authority blockers, which the same module's
+                # ``authority_build_stage2_retry`` wrapper then forces back to False.
+                # So this repair is always the conditioning render repair; the old
+                # "effective_dose_repair" branch of this label was dead.
                 final_text, final_cost = await self._generate_text(
                     retry_text,
-                    attempt_label="render_repair" if missing_conditioning else "effective_dose_repair",
+                    attempt_label="render_repair",
                     source=source,
                     log_context=log_context,
                 )
