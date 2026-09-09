@@ -3602,12 +3602,14 @@ def _normal_conditioning_composition_warnings(
     phase-system guidance remains an aggregate guard for multi-drill high-load
     sessions.
     """
-    from .session_composition import _conditioning_is_high_load, _conditioning_phase_workload_envelope
+    from .session_composition import _conditioning_phase_workload_envelope
+    # Reuse the canonical session-card parser already used to disambiguate
+    # same-day role ownership during post-processing. Day-wide blocks are too
+    # broad: a candidate mentioned in another card is not this role's choice.
+    from .stage2_validator_postprocess import _norm, _role_render_label, _session_blocks
 
-    blocks_by_day: dict[int, list[dict[str, Any]]] = defaultdict(list)
-    for block in _countdown_blocks(final_plan_text):
-        blocks_by_day[int(block["day"])].append(block)
-    if not blocks_by_day:
+    session_blocks = _session_blocks(final_plan_text)
+    if not session_blocks:
         return []
 
     pools = planning_brief.get("candidate_pools") or {}
@@ -3645,13 +3647,32 @@ def _normal_conditioning_composition_warnings(
             if not candidates:
                 continue
 
-            blocks = blocks_by_day.get(d_day, [])
-            rendered_lines = [line for block in blocks for line in block.get("lines") or []]
+            role_label = _role_render_label(role)
+            blocks = [
+                block
+                for block in session_blocks
+                if block.get("d_day") == d_day
+                and _norm(block.get("title")) == role_label
+            ]
+            if len(blocks) != 1:
+                warnings.append(
+                    {
+                        "code": "normal_conditioning_session_identity_unresolved",
+                        "message": f"D-{d_day} normal conditioning cannot be bound to exactly one rendered role card.",
+                        "severity": "blocker",
+                        "confidence": "high",
+                        "scheduled_d_day": d_day,
+                        "role_key": role.get("role_key"),
+                    }
+                )
+                continue
+            session_block = blocks[0]
+            rendered_lines = list(session_block.get("lines") or [])
             selected: list[tuple[str, str, dict[str, Any]]] = []
             for name, candidate in candidates.items():
-                matching = [line for line in rendered_lines if _line_has_exercise(line, name)]
-                if matching:
-                    selected.append((name, matching[0], candidate))
+                for line in rendered_lines:
+                    if _line_has_exercise(line, name):
+                        selected.append((name, line, candidate))
             if not selected:
                 warnings.append(
                     {
@@ -3671,32 +3692,28 @@ def _normal_conditioning_composition_warnings(
                 if isinstance(item, dict) and str(item.get("name") or "").strip()
             }
             permitted_names = [*candidates, *optional_names]
-            for block in blocks:
-                header = str(block.get("header") or "").lower()
-                if not re.search(r"\b(?:conditioning|aerobic|alactic|glycolytic|fight[- ]?pace|repeatability)\b", header):
+            for line in rendered_lines:
+                stripped = _BULLET_PREFIX.sub("", str(line)).strip()
+                if not stripped or ":" not in stripped or _line_is_instruction_only(stripped):
                     continue
-                for line in block.get("lines") or []:
-                    stripped = _BULLET_PREFIX.sub("", str(line)).strip()
-                    if not stripped or ":" not in stripped or _line_is_instruction_only(stripped):
-                        continue
-                    name = stripped.split(":", 1)[0].strip()
-                    if re.match(r"^(?:why|purpose|warm[- ]?up|cool[- ]?down|easier|stop|underfill|optional)\b", name, re.I):
-                        continue
-                    bounds = _conditioning_dose_bounds(stripped)
-                    if not (bounds["intervals"] or bounds["duration_sec"]):
-                        continue
-                    if not any(_line_has_exercise(stripped, permitted) for permitted in permitted_names):
-                        warnings.append(
-                            {
-                                "code": "normal_conditioning_unapproved_exercise",
-                                "message": f"D-{d_day} includes conditioning work outside its Stage-1 eligible bank surplus.",
-                                "severity": "blocker",
-                                "confidence": "high",
-                                "scheduled_d_day": d_day,
-                                "role_key": role.get("role_key"),
-                                "rendered_line": line,
-                            }
-                        )
+                name = stripped.split(":", 1)[0].strip()
+                if re.match(r"^(?:why|purpose|warm[- ]?up|cool[- ]?down|easier|stop|underfill|optional)\b", name, re.I):
+                    continue
+                bounds = _conditioning_dose_bounds(stripped)
+                if not (bounds["intervals"] or bounds["duration_sec"]):
+                    continue
+                if not any(_line_has_exercise(stripped, permitted) for permitted in permitted_names):
+                    warnings.append(
+                        {
+                            "code": "normal_conditioning_unapproved_exercise",
+                            "message": f"D-{d_day} includes conditioning work outside its Stage-1 eligible bank surplus.",
+                            "severity": "blocker",
+                            "confidence": "high",
+                            "scheduled_d_day": d_day,
+                            "role_key": role.get("role_key"),
+                            "rendered_line": line,
+                        }
+                    )
 
             for name, line, candidate in selected:
                 expected = str(candidate.get("prescription") or "").strip()
@@ -3720,15 +3737,14 @@ def _normal_conditioning_composition_warnings(
                         }
                     )
 
-            high_load = [item for item in selected if _conditioning_is_high_load(item[2])]
             target_active, elapsed_cap_minutes = _conditioning_phase_workload_envelope(
                 phase=phase,
                 system=system,
             )
-            if len(high_load) >= 2 and target_active is not None and elapsed_cap_minutes is not None:
+            if target_active is not None and elapsed_cap_minutes is not None:
                 active_work = 0.0
                 elapsed = 0.0
-                for _, line, _ in high_load:
+                for _, line, _ in selected:
                     bounds = _conditioning_dose_bounds(line)
                     active_work += sum(interval["count"] * interval["work_sec"] for interval in bounds["intervals"])
                     elapsed += sum(interval["count"] * interval["work_sec"] for interval in bounds["intervals"])
@@ -3752,7 +3768,10 @@ def _normal_conditioning_composition_warnings(
                             "elapsed_cap_seconds": elapsed_cap_minutes * 60.0,
                         }
                     )
-                elif active_work < target_active and not re.search(r"\bunderfill\s*:\s*\S", final_plan_text, re.I):
+                elif active_work < target_active and not any(
+                    re.search(r"\bunderfill\s*:\s*\S", line, re.I)
+                    for line in rendered_lines
+                ):
                     warnings.append(
                         {
                             "code": "normal_conditioning_underfill_reason_missing",
