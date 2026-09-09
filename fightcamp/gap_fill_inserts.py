@@ -1172,10 +1172,15 @@ def _select_role_key(
     coverage_state = coverage_state or []
     if force_tactical:
         candidates &= TACTICAL_INSERTS
-    elif force_conditioning and any(
-        state.target == "conditioning" and state.remaining_need > 0
-        for state in coverage_state
-    ):
+    elif force_conditioning:
+        # The caller owns the frequency decision: it knows the week, how many
+        # aerobic touches it already holds, and whether another is wanted.
+        # Coverage state cannot answer that — it reports whether a goal is
+        # represented at all, so one conditioning day marks conditioning
+        # satisfied for the rest of the week. ``candidates`` only contains
+        # aerobic inserts when the athlete actually selected a conditioning
+        # signal (see _allowed_inserts), so a non-conditioning athlete falls
+        # through untouched.
         aerobic = candidates & LOW_COST_AEROBIC_INSERTS
         if aerobic:
             candidates = aerobic

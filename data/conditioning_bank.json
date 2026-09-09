@@ -107,7 +107,8 @@
       "d21_to_d14"
     ],
     "block_if_fight_within_days": 10,
-    "rest_sec": 30
+    "rest_sec": 30,
+    "round_based": true
   },
   {
     "name": "Reaction Ball Drills",
@@ -350,7 +351,8 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "round_based": true
   },
   {
     "name": "Nasal Breathing Ruck March",
@@ -1831,7 +1833,8 @@
       "mech_upper_press"
     ],
     "rpe": 4,
-    "intensity": "low"
+    "intensity": "low",
+    "round_based": true
   },
   {
     "name": "Grappler Escape Chains",
@@ -2358,7 +2361,8 @@
       "mech_upper_press"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "round_based": true
   },
   {
     "name": "Sandbag Get-Up Complex",
@@ -2785,7 +2789,8 @@
       "mech_upper_press"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "round_based": true
   },
   {
     "name": "Tire Slam Intervals",
@@ -3151,7 +3156,8 @@
       "mech_upper_press"
     ],
     "rpe": 4,
-    "intensity": "low"
+    "intensity": "low",
+    "round_based": true
   },
   {
     "name": "Sled Drag Sprint Complex",
@@ -3257,7 +3263,8 @@
       "mech_upper_press"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "round_based": true
   },
   {
     "name": "Wrestler Chain Reaction Sparring",
@@ -4721,7 +4728,8 @@
       "mech_trunk_rotation",
       "mech_upper_press"
     ],
-    "rest_sec": 30
+    "rest_sec": 30,
+    "round_based": true
   },
   {
     "name": "Defensive Movement Flow",
@@ -4789,7 +4797,8 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "round_based": true
   },
   {
     "name": "Thai Clinch Walk (Light Resistance)",
@@ -7832,7 +7841,8 @@
       "mech_ballistic",
       "mech_systemic_fatigue",
       "mech_upper_press"
-    ]
+    ],
+    "round_based": true
   },
   {
     "name": "Speed Bag Precision Drill",

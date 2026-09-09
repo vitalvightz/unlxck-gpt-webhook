@@ -46,6 +46,8 @@ from .stage2_planning_brief import (
     _WEEKLY_STAGE_TEMPLATES,
     PLANNING_DECISION_HIERARCHY,
 )
+from .gap_fill_inserts import LOW_COST_AEROBIC_INSERTS
+from .goal_priority import goal_priority_scores
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 from .fight_day_override import apply_fight_day_override_to_weekly_role_map, compute_fight_weekday
 from .fight_date_utils import build_calendar_days
@@ -462,9 +464,17 @@ _LOW_AEROBIC_SUPPORT_ROLE_KEYS = {
 
 
 def _is_low_aerobic_support_role(role: dict) -> bool:
-    """Return True when the role qualifies as a low-aerobic support touch."""
+    """Return True when the role qualifies as a low-aerobic support touch.
+
+    Covers both shapes a low-aerobic touch can take: a conditioning role the
+    allocator created, and a low-cost aerobic support insert the filler layer
+    placed. Both spend the same weekly allowance, so both are counted here
+    rather than by a second frequency authority.
+    """
     if not isinstance(role, dict):
         return False
+    if str(role.get("role_key") or "").strip() in LOW_COST_AEROBIC_INSERTS:
+        return True
     category = str(role.get("category") or "").strip().lower()
     if category != "conditioning":
         return False
@@ -548,6 +558,32 @@ def _low_aerobic_support_cap_for_week(
             return 0 if (high_fatigue or red_flag) else 1
         if phase == "TAPER":
             return 1
+        # Frequent low-damage aerobic exposure is the point of the build phases
+        # when the athlete has actually stated a conditioning/gas-tank priority.
+        # A second easy touch needs no fatigue or red-flag blocker and a week
+        # that is not already carrying heavy hard-contact load.
+        hard_contact_days = len(
+            {
+                str(day).strip().lower()
+                for day in (week_entry.get("effective_hard_sparring_days") or [])
+                if str(day).strip()
+            }
+            or {
+                str(entry.get("day") or "").strip().lower()
+                for entry in (hard_sparring_plan or [])
+                if isinstance(entry, dict)
+                and entry.get("status") == "hard_as_planned"
+                and str(entry.get("day") or "").strip()
+            }
+        )
+        if (
+            phase in {"GPP", "SPP"}
+            and not high_fatigue
+            and not red_flag
+            and hard_contact_days <= 2
+            and goal_priority_scores(athlete_model).get("conditioning", 0) >= 10
+        ):
+            return 2
         return 1
 
     if bucket == "moderate":

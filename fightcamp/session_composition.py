@@ -25,6 +25,13 @@ from .calendar_integrity import relocate_or_suppress_role_for_recovery
 from .prescription_resolver import has_verified_low_cost
 from .strength_session_quality import classify_strength_item
 from .training_context import normalize_equipment_list
+from .config import (
+    athlete_round_seconds,
+    conditioning_effective_dose,
+    conditioning_dose_active_work_seconds,
+    conditioning_dose_minutes,
+    conditioning_phase_workload_envelope as _conditioning_phase_workload_envelope,
+)
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 
 
@@ -923,15 +930,7 @@ def compose_normal_strength_assignments(
 
 
 def _conditioning_duration_minutes(option: dict[str, Any]) -> float | None:
-    metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else {}
-    for key in ("total_minutes", "duration_min"):
-        value = metadata.get(key)
-        if isinstance(value, (int, float)) and not isinstance(value, bool):
-            return max(0.0, float(value))
-
-    text = str(metadata.get("duration") or metadata.get("timing") or "").lower()
-    match = re.search(r"(\d+(?:\.\d+)?)\s*(?:[-–]\s*\d+(?:\.\d+)?)?\s*min", text)
-    return float(match.group(1)) if match else None
+    return conditioning_dose_minutes(_conditioning_effective_dose(option))
 
 
 def _conditioning_is_high_load(option: dict[str, Any]) -> bool:
@@ -952,13 +951,52 @@ def _conditioning_rounds(option: dict[str, Any]) -> int | None:
     return int(rounds)
 
 
+def _conditioning_effective_dose(option: dict[str, Any]) -> dict[str, Any]:
+    """Bank dose for this option, resolved to the athlete's own round length."""
+    metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else {}
+    athlete_model = get_planner_athlete_model() or {}
+    return conditioning_effective_dose(
+        metadata, athlete_round_seconds(athlete_model.get("rounds_format"))
+    )
+
+
+def _conditioning_active_work_seconds(option: dict[str, Any]) -> float | None:
+    return conditioning_dose_active_work_seconds(_conditioning_effective_dose(option))
+
+
+def _conditioning_round_seconds(option: dict[str, Any]) -> float | None:
+    """Round duration for a round-based option, owned by the athlete's format.
+
+    Only an option the bank marks ``round_based`` is a fight round, so only
+    those re-anchor to the athlete's own "Rounds x Minutes" intake. Every other
+    dose — machine threshold blocks, EMOMs, carries, short interval drills —
+    keeps the work interval the bank authored. Round count, rest, RPE, exercise
+    identity, scoring and mechanical metadata are untouched either way.
+    """
+    metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else {}
+    if not metadata.get("round_based"):
+        return None
+    athlete_model = get_planner_athlete_model() or {}
+    return athlete_round_seconds(athlete_model.get("rounds_format"))
+
+
 def _conditioning_prescription(option: dict[str, Any], *, rounds: int | None = None) -> str:
     metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else {}
-    if rounds is not None:
-        work_sec = _float_or_none(metadata.get("work_sec"))
+    athlete_round_sec = _conditioning_round_seconds(option)
+    # A round-based option states its work interval in fight rounds, so it
+    # renders at the athlete's own round length even when nothing repartitioned
+    # it. The bank keeps the round count, rest and RPE.
+    effective_rounds = rounds if rounds is not None else (
+        _conditioning_rounds(option) if athlete_round_sec else None
+    )
+    if effective_rounds is not None:
+        work_sec = athlete_round_sec or _float_or_none(metadata.get("work_sec"))
         if work_sec is not None and work_sec > 0:
-            work_text = f"{work_sec:g} sec work"
-            parts = [f"{rounds} x {work_text}"]
+            if athlete_round_sec and work_sec % 60 == 0:
+                work_text = f"{work_sec / 60:g} min round"
+            else:
+                work_text = f"{work_sec:g} sec work"
+            parts = [f"{effective_rounds} x {work_text}"]
             rest_sec = _float_or_none(metadata.get("rest_sec"))
             if rest_sec is not None and rest_sec > 0:
                 parts.append(f"{rest_sec:g} sec rest")
@@ -971,30 +1009,6 @@ def _conditioning_prescription(option: dict[str, Any], *, rounds: int | None = N
         return base
     total_minutes = _float_or_none(metadata.get("total_minutes"))
     return f"{total_minutes:g} min" if total_minutes is not None and total_minutes > 0 else ""
-
-
-def _conditioning_phase_workload_envelope(
-    *, phase: str, system: str
-) -> tuple[float | None, float | None]:
-    """Use the existing rendered phase dose guidance as the composition envelope.
-
-    These are not new global targets: they are the lower active-work edge and
-    elapsed cap already stated by ``render_conditioning_block`` for GPP/SPP.
-    A bank prescription, injury/recovery filtering, and role-level safety
-    remain authoritative; this only prevents a short first drill from defining
-    the whole multi-movement session.
-    """
-    phase = str(phase or "").upper()
-    if system == "glycolytic" and phase == "GPP":
-        # Existing GPP combat-pressure floor: 6-8 x 60 sec hard.
-        return 6 * 60.0, 30.0
-    if phase == "GPP":
-        # 3 x 3 min is the low edge of the existing GPP 3-5 x 3-5 min template.
-        return 9 * 60.0, 30.0
-    if phase == "SPP":
-        # 4 x 2 min is the low edge of the existing SPP 4-6 x 2-5 min template.
-        return 8 * 60.0, 25.0
-    return None, None
 
 
 def _conditioning_partition_high_load(
@@ -1022,7 +1036,7 @@ def _conditioning_partition_high_load(
 
     dose_data: list[tuple[tuple[dict[str, Any], dict[str, Any], bool], float, float, int]] = []
     for item in high_load:
-        metadata = item[1].get("selection_metadata") if isinstance(item[1].get("selection_metadata"), dict) else {}
+        metadata = _conditioning_effective_dose(item[1])
         work_sec = _float_or_none(metadata.get("work_sec"))
         rest_sec = _float_or_none(metadata.get("rest_sec"))
         rounds = _conditioning_rounds(item[1])
@@ -1156,30 +1170,34 @@ def compose_normal_conditioning_assignments(
                 if isinstance(slot, dict)
                 and str(slot.get("role") or "").strip().lower() == preferred_system
             ]
+            # Membership is one member per Stage 1 slot. A slot's ``alternates``
+            # are its same-role substitution reservoir, not additional session
+            # members: drawing from them turns one selected drill plus its two
+            # backups into a fake three-exercise circuit.
             options: list[tuple[dict[str, Any], dict[str, Any], bool]] = []
             seen_names: set[str] = set()
-            for is_selected in (True, False):
-                for slot in matching_slots:
-                    candidates = (
-                        [slot.get("selected")]
-                        if is_selected
-                        else list(slot.get("alternates") or [])
-                    )
-                    for option in candidates:
-                        if not isinstance(option, dict):
-                            continue
-                        name = str(option.get("name") or "").strip()
-                        if not name or name in seen_names:
-                            continue
-                        seen_names.add(name)
-                        options.append((slot, option, is_selected))
+            for slot in matching_slots:
+                option = slot.get("selected")
+                if not isinstance(option, dict):
+                    continue
+                name = str(option.get("name") or "").strip()
+                if not name or name in seen_names:
+                    continue
+                seen_names.add(name)
+                options.append((slot, option, True))
 
             if not options:
                 continue
 
             adjacent_hard_spar = _conditioning_role_is_hard_spar_adjacent(week, role)
+            # Resolve the phase/system workload first: a session is complete
+            # when it carries that workload, not when it reaches three members.
+            target_active_work, _ = _conditioning_phase_workload_envelope(
+                phase=phase, system=preferred_system
+            )
             selected: list[tuple[dict[str, Any], dict[str, Any], bool]] = []
             total_minutes = 0.0
+            active_work_seconds = 0.0
             for slot, option, is_selected in options:
                 duration = _conditioning_duration_minutes(option)
                 if selected:
@@ -1188,20 +1206,40 @@ def compose_normal_conditioning_assignments(
                 selected.append((slot, option, is_selected))
                 if duration is not None:
                     total_minutes += duration
+                active_work = _conditioning_active_work_seconds(option)
+                if active_work is not None:
+                    active_work_seconds += active_work
                 if adjacent_hard_spar:
                     break
                 if preferred_system == "aerobic" and len(selected) >= 2 and total_minutes >= 25:
                     break
+                if target_active_work is not None and active_work_seconds >= target_active_work:
+                    break
                 if len(selected) >= 3:
                     break
 
+            # Count the members that delivered the workload before the
+            # partitioner may drop undoseable high-load drills, so a dropped
+            # session still reports as underfilled.
+            composed_count = len(selected)
             selected, high_load_rounds, underfill_reason, high_load_budget = _conditioning_partition_high_load(
                 selected,
                 phase=phase,
                 system=preferred_system,
             )
             long_aerobic = preferred_system == "aerobic" and total_minutes >= 25
-            minimum = None if adjacent_hard_spar else (2 if long_aerobic else 3)
+            # A session that already carries its phase/system workload is
+            # complete at whatever member count delivered it; the count floor
+            # only applies while the workload is still unmet or unknown.
+            workload_met = (
+                target_active_work is not None and active_work_seconds >= target_active_work
+            )
+            if adjacent_hard_spar:
+                minimum = None
+            elif workload_met:
+                minimum = composed_count
+            else:
+                minimum = 2 if long_aerobic else 3
 
             assignments = []
             selected_names: set[str] = set()

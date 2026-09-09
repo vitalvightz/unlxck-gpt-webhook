@@ -142,6 +142,7 @@ def _select_filler_for_day(
     week_ordinal: int,
     usage_ledger: dict[str, Any],
     allow_physical: bool,
+    prefer_conditioning: bool = False,
 ) -> tuple[dict[str, Any], int] | None:
     """Select the real generic filler candidate for one day without placing it."""
     d_day = _calendar_d_day(week, day)
@@ -158,6 +159,7 @@ def _select_filler_for_day(
         usage_ledger=usage_ledger,
         legality=legality,
         scheduled_roles=coverage_roles,
+        force_conditioning=prefer_conditioning,
     )
     if insert is None or (not allow_physical and insert.get("role_key") in PHYSICAL_INSERTS):
         return None
@@ -176,6 +178,7 @@ def _place_filler(
     week_ordinal: int,
     usage_ledger: dict[str, Any],
     allow_physical: bool,
+    prefer_conditioning: bool = False,
 ) -> dict[str, Any] | None:
     selected = _select_filler_for_day(
         week,
@@ -185,6 +188,7 @@ def _place_filler(
         week_ordinal=week_ordinal,
         usage_ledger=usage_ledger,
         allow_physical=allow_physical,
+        prefer_conditioning=prefer_conditioning,
     )
     if selected is None:
         return None
@@ -221,13 +225,44 @@ def _fill_week(
     if not isinstance(session_roles, list) or cap <= 0:
         return
 
+    # A build-phase week may spend one filler slot on the athlete's stated
+    # conditioning goal rather than an unrelated recovery/tactical filler. It is
+    # a ceiling, not a target: once the week holds an aerobic touch the
+    # preference stops, non-conditioning athletes never see one, and taper and
+    # fight-week filler behaviour is deliberately excluded.
+    build_phase = str(week.get("phase") or "").strip().upper() in {"GPP", "SPP"}
+    # Frequency is the role map's existing low-aerobic support allowance, not a
+    # filler-local rule: the same cap and the same total count that govern the
+    # allocator's aerobic touches also govern one placed here, so a week whose
+    # allowance is already spent by an aerobic conditioning role gets no extra
+    # filler touch.
+    from .stage2_role_map import (
+        _count_low_aerobic_support_roles,
+        _low_aerobic_support_cap_for_week,
+    )
+
+    aerobic_allowance = _low_aerobic_support_cap_for_week(
+        week,
+        athlete_model,
+        session_roles,
+        hard_sparring_plan=week.get("hard_sparring_plan"),
+    )
+
     added = 0
     kept_unused: list[Any] = []
+    # ``intentionally_unused_days`` is written before placement completes, so it
+    # can still name a day that a primary session now owns. The placed calendar
+    # is the authority on occupancy: an occupied day is not a free day here, and
+    # sharing one stays with the declared-day pass below.
+    placed_day_counts = _role_day_counts(session_roles)
     for day_entry in week.get("intentionally_unused_days") or []:
         if added >= cap or not _unused_day_is_fillable(day_entry):
             kept_unused.append(day_entry)
             continue
         day = str(day_entry.get("day") or "").strip()
+        if placed_day_counts.get(_canonical_day(day), 0) > 0:
+            kept_unused.append(day_entry)
+            continue
         unused_role = str(day_entry.get("role") or "").strip()
         insert = _place_filler(
             week,
@@ -238,6 +273,8 @@ def _fill_week(
             week_ordinal=week_ordinal,
             usage_ledger=usage_ledger,
             allow_physical=_week_physical_filler_count(session_roles) < 1,
+            prefer_conditioning=build_phase
+            and _count_low_aerobic_support_roles(session_roles) < aerobic_allowance,
         )
         if insert is None:
             kept_unused.append(day_entry)
@@ -266,6 +303,8 @@ def _fill_week(
             week_ordinal=week_ordinal,
             usage_ledger=usage_ledger,
             allow_physical=_week_physical_filler_count(session_roles) < 1,
+            prefer_conditioning=build_phase
+            and _count_low_aerobic_support_roles(session_roles) < aerobic_allowance,
         )
         if insert is None:
             continue
