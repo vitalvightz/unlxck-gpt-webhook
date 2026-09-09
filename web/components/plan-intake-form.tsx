@@ -1064,7 +1064,12 @@ export function PlanIntakeForm() {
         case "availabilityConsistencyAlert":
           return !getAvailabilityConsistency(form.training_availability, form.weekly_training_frequency).hardError;
         case "sparringConsistencyAlert":
-          return !getSparringConsistency(form.training_availability, form.hard_sparring_days, form.support_work_days).hardError;
+          return !getSparringConsistency(
+            form.training_availability,
+            form.hard_sparring_days,
+            form.support_work_days,
+            !noScheduledFight,
+          ).hardError;
         default:
           if (invalidFieldId.startsWith("guidedInjuryCard-")) {
             if (guidedInjuries.some((injury) => hasGuidedInjuryDescriptorWithoutArea(injury))) {
@@ -1588,6 +1593,7 @@ export function PlanIntakeForm() {
       nextForm.training_availability,
       nextForm.hard_sparring_days,
       nextForm.support_work_days,
+      action !== "save_draft" && nextForm.no_scheduled_fight !== true,
     );
     if (sparringConsistency.hardError) {
       return {
@@ -2085,6 +2091,7 @@ export function PlanIntakeForm() {
     form.training_availability,
     form.hard_sparring_days,
     form.support_work_days,
+    !noScheduledFight,
   );
   const hardSparringWarning = getHardSparringWarning(
     form.hard_sparring_days,
@@ -2892,6 +2899,24 @@ export function PlanIntakeForm() {
                     <p className={sparringConsistency.hardError ? "error-text" : "muted"}>
                       {sparringConsistency.hardError ?? sparringConsistency.softWarning}
                     </p>
+                  </div>
+                ) : null}
+                {!noScheduledFight && !form.hard_sparring_days.length && !form.support_work_days.length ? (
+                  <div className="field">
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={() => {
+                        setNoScheduledFight(true);
+                        setForm((current) => applyNoScheduledFightSnapshot(current, true));
+                        setError(null);
+                        setInvalidFieldId(null);
+                        setValidationFocusRequest(null);
+                        setMessage("Open Plan selected. Continue with your available training schedule.");
+                      }}
+                    >
+                      I don&apos;t currently have a scheduled combat session
+                    </button>
                   </div>
                 ) : null}
               </article>
