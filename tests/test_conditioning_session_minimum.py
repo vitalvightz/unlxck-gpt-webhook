@@ -268,3 +268,133 @@ def test_conditioning_minimum_underfills_when_high_load_dose_is_unknown():
     assert role["selected_exercise_assignments"] == []
     assert role["conditioning_composition_policy"]["underfill_reason"] == "high_load_dose_unknown"
     assert role["conditioning_composition_policy"]["workload_limited"] is True
+
+
+# ---------------------------------------------------------------------------
+# Athlete round duration owns round-based work
+# ---------------------------------------------------------------------------
+
+
+def _round_option(name: str, *, work_sec: int, rounds: int, round_based: bool) -> dict:
+    return {
+        "name": name,
+        "prescription": f"{rounds}x{work_sec // 60}min",
+        "selection_metadata": {
+            "name": name,
+            "system": "glycolytic",
+            "work_sec": work_sec,
+            "rest_sec": 60,
+            "rounds": rounds,
+            "rpe": 7,
+            "round_based": round_based,
+        },
+    }
+
+
+def _glycolytic_role_map() -> dict:
+    return {
+        "weeks": [
+            {
+                "phase": "SPP",
+                "session_roles": [
+                    {
+                        "category": "conditioning",
+                        "role_key": "fight_pace_repeatability_day",
+                        "preferred_system": "glycolytic",
+                        "scheduled_day_hint": "wednesday",
+                    }
+                ],
+            }
+        ]
+    }
+
+
+def _compose_with_athlete(role_map, pools, athlete):
+    from fightcamp.planner_context import planner_athlete_model_context
+
+    token = planner_athlete_model_context.set(athlete)
+    try:
+        compose_normal_conditioning_assignments(
+            weekly_role_map=role_map, candidate_pools=pools
+        )
+    finally:
+        planner_athlete_model_context.reset(token)
+
+
+@pytest.mark.parametrize(
+    "rounds_format,expected",
+    [
+        ("3 x 3", "5 x 3 min round; 60 sec rest; RPE 7"),
+        ("5 x 5", "5 x 5 min round; 60 sec rest; RPE 7"),
+        ("3 x 2", "5 x 2 min round; 60 sec rest; RPE 7"),
+    ],
+)
+def test_round_based_work_uses_the_athlete_round_duration(rounds_format, expected):
+    """The athlete's own "Rounds x Minutes" owns round length — never a fixed 3 min.
+
+    Round count, rest and RPE stay with the bank entry.
+    """
+    role_map = _glycolytic_role_map()
+    pools = {
+        "SPP": {
+            "conditioning_slots": [
+                {
+                    "slot_id": "spp-glyc-1",
+                    "role": "glycolytic",
+                    "selected": _round_option(
+                        "Pad Rounds", work_sec=300, rounds=5, round_based=True
+                    ),
+                    "alternates": [],
+                }
+            ]
+        }
+    }
+    _compose_with_athlete(role_map, pools, {"rounds_format": rounds_format})
+
+    assignments = _conditioner(role_map)["selected_exercise_assignments"]
+    assert [item["effective_prescription"] for item in assignments] == [expected]
+
+
+def test_non_round_based_work_keeps_its_authored_bank_dose():
+    """A threshold block or interval drill is not a fight round: bank dose stands."""
+    role_map = _glycolytic_role_map()
+    pools = {
+        "SPP": {
+            "conditioning_slots": [
+                {
+                    "slot_id": "spp-glyc-1",
+                    "role": "glycolytic",
+                    "selected": _round_option(
+                        "Bike Threshold Block", work_sec=480, rounds=2, round_based=False
+                    ),
+                    "alternates": [],
+                }
+            ]
+        }
+    }
+    _compose_with_athlete(role_map, pools, {"rounds_format": "3 x 3"})
+
+    assignments = _conditioner(role_map)["selected_exercise_assignments"]
+    assert [item["effective_prescription"] for item in assignments] == ["2x8min"]
+
+
+def test_round_based_work_without_an_athlete_format_keeps_the_bank_dose():
+    role_map = _glycolytic_role_map()
+    pools = {
+        "SPP": {
+            "conditioning_slots": [
+                {
+                    "slot_id": "spp-glyc-1",
+                    "role": "glycolytic",
+                    "selected": _round_option(
+                        "Pad Rounds", work_sec=300, rounds=5, round_based=True
+                    ),
+                    "alternates": [],
+                }
+            ]
+        }
+    }
+    _compose_with_athlete(role_map, pools, {"rounds_format": "not a format"})
+
+    assignments = _conditioner(role_map)["selected_exercise_assignments"]
+    assert [item["effective_prescription"] for item in assignments] == ["5x5min"]

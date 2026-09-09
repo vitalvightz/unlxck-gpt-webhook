@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 from .phases import PhaseEnum
@@ -29,6 +30,36 @@ PHASE_SYSTEM_RATIOS = {
     SPP: {"glycolytic": 0.5, "alactic": 0.3, "aerobic": 0.2},
     TAPER: {"alactic": 0.7, "aerobic": 0.3, "glycolytic": 0.0},
 }
+
+
+def conditioning_phase_workload_envelope(
+    *, phase: str, system: str
+) -> tuple[float | None, float | None]:
+    """Active-work target and elapsed cap for one phase/system conditioning dose.
+
+    These are not new global targets: they restate the lower active-work edge
+    and elapsed cap already published by the rendered GPP/SPP phase dose
+    guidance. Returned as ``(target_active_work_seconds, elapsed_cap_minutes)``,
+    or ``(None, None)`` where no phase guidance applies (notably TAPER, whose
+    dose stays with the countdown policy).
+
+    Single owner for the question "how much work does this session owe?", shared
+    by Stage 1 session resolution (how many drills a system keeps) and session
+    composition (when a session is complete). A bank prescription, injury and
+    recovery filtering, and role-level safety remain authoritative over it.
+    """
+    phase = str(phase or "").upper()
+    system = str(system or "").strip().lower()
+    if system == "glycolytic" and phase == GPP:
+        # Existing GPP combat-pressure floor: 6-8 x 60 sec hard.
+        return 6 * 60.0, 30.0
+    if phase == GPP:
+        # 3 x 3 min is the low edge of the existing GPP 3-5 x 3-5 min template.
+        return 9 * 60.0, 30.0
+    if phase == SPP:
+        # 4 x 2 min is the low edge of the existing SPP 4-6 x 2-5 min template.
+        return 8 * 60.0, 25.0
+    return None, None
 
 STAGE_1 = "STAGE_1"
 STAGE_2 = "STAGE_2"
@@ -85,3 +116,62 @@ def trim_to_injury_guard_shortlist(items: list) -> list:
         Trimmed list limited to INJURY_GUARD_SHORTLIST
     """
     return items[:INJURY_GUARD_SHORTLIST]
+
+
+
+_DOSE_MINUTES_PATTERN = re.compile(
+    r"(\d+(?:\.\d+)?)\s*(?:[-\u2013]\s*\d+(?:\.\d+)?)?\s*min"
+)
+
+
+def conditioning_dose_minutes(dose: dict) -> float | None:
+    """Elapsed minutes a conditioning dose states, from its own bank fields."""
+    if not isinstance(dose, dict):
+        return None
+    for key in ("total_minutes", "duration_min"):
+        value = dose.get(key)
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return max(0.0, float(value))
+    text = str(dose.get("duration") or dose.get("timing") or "").lower()
+    match = _DOSE_MINUTES_PATTERN.search(text)
+    return float(match.group(1)) if match else None
+
+
+def conditioning_dose_active_work_seconds(dose: dict) -> float | None:
+    """Active work a conditioning dose carries at its own bank prescription.
+
+    Interval drills state it as ``work_sec`` x ``rounds``; continuous work
+    states it as elapsed duration, which for continuous work is the same thing.
+    Single owner so Stage 1 session resolution and session composition measure a
+    dose the same way. Never alters a prescription — only measures one.
+    """
+    if not isinstance(dose, dict):
+        return None
+    try:
+        work_sec = float(dose.get("work_sec"))
+        rounds = float(dose.get("rounds"))
+    except (TypeError, ValueError):
+        work_sec = rounds = 0.0
+    if work_sec > 0 and rounds > 0:
+        return work_sec * rounds
+    minutes = conditioning_dose_minutes(dose)
+    return minutes * 60.0 if minutes is not None else None
+
+
+_ROUNDS_FORMAT_PATTERN = re.compile(r"^\s*(\d+)\s*[xX\u00d7]\s*(\d+(?:\.\d+)?)\s*$")
+
+
+def athlete_round_seconds(rounds_format: str | None) -> float | None:
+    """Seconds per round the athlete actually fights, from their own intake.
+
+    ``rounds_format`` is the canonical "<rounds> x <minutes>" intake value (the
+    "Rounds x Minutes" field). This is the single place that reads a round
+    duration from athlete input; there is no default and no assumed three-minute
+    round, so an unparseable or absent value returns ``None`` and every bank
+    prescription keeps its authored duration.
+    """
+    match = _ROUNDS_FORMAT_PATTERN.match(str(rounds_format or ""))
+    if not match:
+        return None
+    minutes = float(match.group(2))
+    return minutes * 60.0 if minutes > 0 else None

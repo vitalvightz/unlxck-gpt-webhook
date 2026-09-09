@@ -32,6 +32,8 @@ from .tagging import normalize_item_tags, normalize_tags
 from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP, WEAKNESS_TAG_MAP
 from .config import (
     PHASE_SYSTEM_RATIOS,
+    conditioning_dose_active_work_seconds,
+    conditioning_phase_workload_envelope,
     STYLE_CONDITIONING_RATIO,
     DATA_DIR,
     INJURY_GUARD_SHORTLIST,
@@ -1510,6 +1512,38 @@ def _conditioning_fallback_allowed(primary: dict, fallback: dict, *, phase: str)
     )
     return bool(str(contingency_reason).strip())
 
+def _conditioning_workload_primary_cap(
+    drills: list[dict], *, phase: str, system: str
+) -> int:
+    """How many primaries a system needs to carry its phase workload.
+
+    One drill is the norm. More are kept only while the accumulated active work
+    is short of the phase/system target, so a system whose best drill already
+    covers the target keeps exactly one.
+    """
+    target_active_work, _ = conditioning_phase_workload_envelope(
+        phase=phase, system=system
+    )
+    if not target_active_work:
+        return 1
+
+    accumulated = 0.0
+    cap = 0
+    for drill in drills:
+        if drill.get("render_as_fallback"):
+            continue
+        active_work = conditioning_dose_active_work_seconds(drill)
+        if active_work is None:
+            # An undosed drill cannot be shown to advance the workload; stop
+            # rather than stacking drills on an unknown dose.
+            break
+        cap += 1
+        accumulated += active_work
+        if accumulated >= target_active_work:
+            break
+    return max(1, cap)
+
+
 def _resolve_conditioning_sessions(
     grouped_drills: dict[str, list[dict]],
     *,
@@ -1525,6 +1559,13 @@ def _resolve_conditioning_sessions(
     not TAPER). Extra drills beyond that are dropped silently unless the caller
     explicitly allows a second alactic primary. Across all systems inside a
     single session, at most one fallback is surfaced.
+
+    A system keeps more than one primary only when its highest-ranked drill
+    cannot carry the phase/system workload on its own: further primaries are
+    added in rank order until the shared ``conditioning_phase_workload_envelope``
+    active-work target is met, and never beyond it. A single drill that already
+    meets the target stays a single drill, and where no drill states a dose (or
+    no phase guidance applies) the historical one-primary behaviour holds.
     """
 
     ordered_keys = ["aerobic", "glycolytic", "alactic"]
@@ -1537,7 +1578,12 @@ def _resolve_conditioning_sessions(
         if not drills:
             continue
 
-        primary_cap = max(1, int(alactic_primary_cap or 1)) if system == "alactic" else 1
+        if system == "alactic":
+            primary_cap = max(1, int(alactic_primary_cap or 1))
+        else:
+            primary_cap = _conditioning_workload_primary_cap(
+                drills, phase=phase, system=system
+            )
         explicit_primaries = [d for d in drills if not d.get("render_as_fallback")]
         primary_raws = explicit_primaries[:primary_cap]
         if len(primary_raws) < primary_cap:
@@ -1555,6 +1601,7 @@ def _resolve_conditioning_sessions(
         primary_entries = [
             {
                 "system": system,
+                "system_rank": rank,
                 "primary": _decorate_conditioning_drill(
                     primary_raw,
                     system=system,
@@ -1564,7 +1611,7 @@ def _resolve_conditioning_sessions(
                 ),
                 "fallback": None,
             }
-            for primary_raw in primary_raws
+            for rank, primary_raw in enumerate(primary_raws)
         ]
 
         # Fallback candidates must exclude the primary itself, otherwise an
@@ -1645,15 +1692,27 @@ def _resolve_conditioning_sessions(
     return sessions
 
 def _resolved_grouped_drills(resolved_sessions: list[dict]) -> dict[str, list[dict]]:
-    grouped: dict[str, list[dict]] = {}
-    for session in resolved_sessions:
+    """Rebuild grouped drills, preserving each system's selection rank.
+
+    Sessions are filled round-robin, so walking sessions in order would
+    interleave a system's drills and could promote a lower-ranked drill to the
+    head of its list. Downstream treats the head as that system's primary
+    winner, so rank is restored here.
+    """
+    ranked: dict[str, list[tuple[int, int, dict]]] = {}
+    for position, session in enumerate(resolved_sessions):
         for entry in session.get("entries", []):
             system = entry.get("system")
             primary = entry.get("primary")
             if not system or not primary:
                 continue
-            grouped.setdefault(system, []).append(primary)
-    return grouped
+            rank = entry.get("system_rank")
+            rank = rank if isinstance(rank, int) else position
+            ranked.setdefault(system, []).append((rank, position, primary))
+    return {
+        system: [primary for _, _, primary in sorted(items, key=lambda item: item[:2])]
+        for system, items in ranked.items()
+    }
 
 def _resolved_conditioning_names(resolved_sessions: list[dict]) -> list[str]:
     names: list[str] = []
