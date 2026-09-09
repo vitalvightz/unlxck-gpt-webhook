@@ -33,6 +33,7 @@ from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP, WEAKNESS_TAG_MAP
 from .config import (
     PHASE_SYSTEM_RATIOS,
     athlete_round_seconds,
+    conditioning_round_prescription,
     conditioning_dose_active_work_seconds,
     conditioning_effective_dose,
     conditioning_phase_workload_envelope,
@@ -85,6 +86,17 @@ CONDITIONING_PRIMARY_WEAKNESS_BONUS = 2.5
 CONDITIONING_SECONDARY_WEAKNESS_BONUS = 1.25
 CONDITIONING_MAX_COLLISION_SAFE_PRIORITY_BONUS = 5.0
 CONDITIONING_PRIMARY_COLLISION_BONUS = 3.0
+# A fight-format round session is the most specific answer there is to a declared
+# gas-tank/conditioning limiter, so when that limiter is the athlete's *primary*
+# priority it must clearly outrank a merely goal-tagged generic drill (a tagged
+# hill run already reaches CONDITIONING_MAX_COLLISION_SAFE_PRIORITY_BONUS). The
+# boost is awarded on the bank's own ``round_based`` marker rather than a
+# hand-applied tag, which six of the ten round-format entries are missing.
+CONDITIONING_FIGHT_FORMAT_PRIMARY_BONUS = 6.0
+# The energy-system families a conditioning / gas-tank priority expands into.
+_CONDITIONING_PRIORITY_SYSTEM_TAGS = frozenset(
+    {"conditioning", "glycolytic", "aerobic", "work_capacity"}
+)
 CONDITIONING_SECONDARY_COLLISION_BONUS = 1.5
 CONDITIONING_CLARIFICATION_TAG_BONUS = 0.75
 CONDITIONING_MAX_CLARIFICATION_TAG_BONUS = 2.0
@@ -348,20 +360,52 @@ def _conditioning_priority_value_for_tag(tag: str, priority_profile) -> float:
     return total
 
 
+def _conditioning_priority_is_primary_gas_tank(priority_profile) -> bool:
+    """Is conditioning / gas tank the athlete's PRIMARY goal or weakness?
+
+    Reads the existing primary tiers, so a secondary conditioning goal keeps its
+    ordinary secondary preference and a strength-primary athlete gets nothing.
+    """
+    primary_goal, _sg, primary_weak, _sw = _conditioning_priority_tag_tiers(priority_profile)
+    return bool(
+        (primary_goal & _CONDITIONING_PRIORITY_SYSTEM_TAGS)
+        or (primary_weak & _CONDITIONING_PRIORITY_SYSTEM_TAGS)
+    )
+
+
+def _conditioning_fight_format_priority_bonus(drill: dict, priority_profile) -> float:
+    """Dominant preference for fight-format round work on a primary gas-tank limiter.
+
+    Scoring runs after every eligibility filter - injury and medical
+    restrictions, equipment, contact and phase gating - so this can only reorder
+    candidates that are already legal for the session. It never makes an
+    ineligible drill selectable.
+    """
+    if not isinstance(drill, dict) or not drill.get("round_based"):
+        return 0.0
+    if not _conditioning_priority_is_primary_gas_tank(priority_profile):
+        return 0.0
+    return CONDITIONING_FIGHT_FORMAT_PRIMARY_BONUS
+
+
 def _conditioning_collision_safe_priority_bonus(
     goal_tags: list[str],
     weakness_tags: list[str],
     priority_profile,
+    *,
+    drill: dict | None = None,
 ) -> float:
+    fight_format_bonus = _conditioning_fight_format_priority_bonus(drill or {}, priority_profile)
     unique_tags = list(dict.fromkeys([*goal_tags, *weakness_tags]))
     if not any(_conditioning_tag_is_collision(tag, priority_profile) for tag in unique_tags):
-        return _conditioning_goal_priority_bonus(goal_tags, priority_profile) + _conditioning_weakness_priority_bonus(
-            weakness_tags,
-            priority_profile,
+        return (
+            _conditioning_goal_priority_bonus(goal_tags, priority_profile)
+            + _conditioning_weakness_priority_bonus(weakness_tags, priority_profile)
+            + fight_format_bonus
         )
 
     total = sum(_conditioning_priority_value_for_tag(tag, priority_profile) for tag in unique_tags)
-    return min(total, CONDITIONING_MAX_COLLISION_SAFE_PRIORITY_BONUS)
+    return min(total, CONDITIONING_MAX_COLLISION_SAFE_PRIORITY_BONUS) + fight_format_bonus
 
 
 def _add_conditioning_priority_reason_codes(
@@ -1435,11 +1479,17 @@ def is_banned_drill(
         "takedowns",
     }
 
-    joined_tags = " ".join(tags)
+    # Tags are matched on their own underscore-separated words, never as raw
+    # substrings. A tag names a technique ("low_kick") or an audience
+    # ("kickboxing", "kicker"), and substring matching could not tell the two
+    # apart: "kick" inside "kickboxing" removed every drill tagged for
+    # kickboxing athletes from a boxer's pool. Name and notes stay substring
+    # matched - they are prose, not tokens.
+    tag_words = {word for tag in tags for word in tag.split("_")} | set(tags)
 
     if fight_format in {"boxing", "kickboxing"}:
         for term in grappling_terms:
-            if term in name or term in joined_tags or term in details:
+            if term in name or term in tag_words or term in details:
                 return True
 
     if fight_format == "boxing":
@@ -1454,7 +1504,7 @@ def is_banned_drill(
             "elbow",
         }
         for term in boxing_terms:
-            if term in name or term in joined_tags or term in details:
+            if term in name or term in tag_words or term in details:
                 return True
 
     kick_terms = ["kick", "knee", "clinch knee strike", "teep"]
@@ -2523,9 +2573,12 @@ def render_conditioning_block(
     sport: str | None = None,
     stance: str | None = None,
     resolved_sessions: list[dict] | None = None,
+    round_seconds: float | None = None,
 ) -> str:
     phase = phase.upper()
     _diag = diagnostic_context or {}
+    # The athlete's own round length, resolved by each caller from the intake.
+    # Absent it, every bank prescription keeps the duration it authored.
     _days_until_fight = _diag.get("days_until_fight")
     try:
         _days_int = int(_days_until_fight)
@@ -2658,6 +2711,21 @@ def render_conditioning_block(
                 for d in [drill for drill in session_drills if drill]:
                     name = d.get("name", "Unnamed Drill")
                     timing = d.get("timing") or d.get("duration") or "—"
+                    # A round-based drill states its work interval in fight
+                    # rounds, so this block must show the athlete's own round
+                    # length rather than the length the bank happened to author.
+                    # Rendering is owned by config, shared with session
+                    # composition, so both surfaces say the same thing.
+                    if d.get("round_based") and round_seconds:
+                        rendered_rounds = conditioning_round_prescription(
+                            d.get("rounds"),
+                            round_seconds,
+                            work_sec=d.get("work_sec"),
+                            rest_sec=d.get("rest_sec"),
+                            rpe=d.get("rpe"),
+                        )
+                        if rendered_rounds:
+                            timing = rendered_rounds
                     load = d.get("load") or d.get("intensity") or "—"
                     equip_note = d.get("equipment_note") or d.get("equipment_notes")
                     purpose = (
@@ -3206,6 +3274,7 @@ def generate_conditioning_block(flags):
                     matched_goal_tags,
                     matched_weak_tags,
                     priority_profile,
+                    drill=d,
                 )
                 clarification_bonus, clarification_hits = _conditioning_clarification_bonus(tags, derived_clarification_tags)
                 base_score += clarification_bonus
@@ -3480,6 +3549,7 @@ def generate_conditioning_block(flags):
                     matched_goal_tags,
                     matched_weak_tags,
                     priority_profile,
+                    drill=d,
                 )
                 clarification_bonus, clarification_hits = _conditioning_clarification_bonus(tags, derived_clarification_tags)
                 score += clarification_bonus
@@ -4942,6 +5012,7 @@ def generate_conditioning_block(flags):
             sport=flags.get("sport"),
             stance=flags.get("stance"),
             resolved_sessions=resolved_sessions,
+            round_seconds=athlete_round_seconds(flags.get("rounds_format")),
         )
 
     output_lines = _run_conditioning_poststep("block_formatting", _format_conditioning_output)

@@ -61,7 +61,12 @@ from .session_composition import (
     compose_normal_strength_assignments,
 )
 from .normal_calendar_placement import fill_missing_session_days
-from .late_selector_windows import classify_late_selector_window, late_window_allowed
+from .late_selector_windows import (
+    _normalise_late_window_tokens,
+    classify_late_selector_window,
+    late_window_allowed,
+    late_windows_spanned,
+)
 from .normalization import (  # noqa: F401  (phrase_in_text re-exported for back-compat)
     clean_list,
     dedupe_preserve_order,
@@ -1436,23 +1441,51 @@ def _serialize_conditioning_option(
     return option
 
 
-def _build_late_tail_candidates(phase_block: dict | None, phase: str, *, stance=None) -> list[dict]:
-    """Serialize the existing qualified reservoir without phase-slot truncation."""
+def _build_late_tail_candidates(
+    phase_block: dict | None,
+    phase: str,
+    *,
+    stance=None,
+    required_windows: set[str] | None = None,
+) -> list[dict]:
+    """Serialize the existing qualified reservoir without phase-slot truncation.
+
+    Style-taper drills are always carried. Beyond those, a reservoir candidate is
+    also carried when it is legally usable in a late window this camp actually
+    reaches: Stage 1 had already qualified and scored it, but the handoff used to
+    drop it, so the dated selector could find no legal candidate and left the
+    session empty. Nothing new is selected here - this only stops the handoff
+    discarding coverage Stage 1 already produced.
+    """
+    required_windows = {w for w in (required_windows or set()) if w}
     slots = []
+    seen: set[str] = set()
     for system, candidates in ((phase_block or {}).get("candidate_reservoir") or {}).items():
-        if system not in {"alactic", "aerobic"}:
+        if str(system).startswith("__"):
             continue
         for candidate in candidates:
             drill = candidate.get("drill") or {}
-            if not str(drill.get("_schema_source") or "").endswith("style_taper_conditioning.json"):
+            name = str(drill.get("name") or "").strip()
+            if not name or name in seen:
                 continue
+            is_style_taper = str(drill.get("_schema_source") or "").endswith(
+                "style_taper_conditioning.json"
+            )
+            if is_style_taper:
+                if system not in {"alactic", "aerobic"}:
+                    continue
+            else:
+                drill_windows = _normalise_late_window_tokens(drill.get("late_windows"))
+                if "all" not in drill_windows and not (drill_windows & required_windows):
+                    continue
+            seen.add(name)
             option = _serialize_conditioning_option(
                 drill, system, candidate.get("explanation", ""),
                 score_evidence=candidate.get("score_evidence"), stance=stance,
             )
             option["relevance"] = {key: (candidate.get("reasons") or {}).get(key, 0)
                                    for key in ("style_hits", "goal_hits", "weakness_hits")}
-            slots.append({"slot_id": f"{phase.lower()}_late_{slugify(drill['name'])}",
+            slots.append({"slot_id": f"{phase.lower()}_late_{slugify(name)}",
                           "role": option["system"], "selected": option, "alternates": []})
     return slots
 
@@ -1879,13 +1912,23 @@ def build_stage2_payload(
         short_notice=short_notice,
     )
     has_active_injury = _has_active_injury_from_athlete_model(athlete_model)
+    # Which late windows will this camp's own scheduled roles actually ask for?
+    # The dated selector admits a candidate only when the bank opts it into the
+    # role's window, so the handoff must keep coverage for those windows instead
+    # of discarding it and leaving the session empty. Derived from the real
+    # sequence, so only windows this camp reaches are ever required.
+    required_windows = late_windows_spanned(athlete_model.get("days_until_fight"))
     candidate_pools: dict[str, dict] = {}
     for phase in ("GPP", "SPP", "TAPER"):
         if phase_weeks.get(phase, 0) <= 0 and phase_weeks.get("days", {}).get(phase, 0) < 1:
             continue
         candidate_pools[phase] = {
             "late_tail_candidates": _build_late_tail_candidates(
-                conditioning_blocks.get(phase), phase, stance=athlete_model.get("stance")),
+                conditioning_blocks.get(phase),
+                phase,
+                stance=athlete_model.get("stance"),
+                required_windows=required_windows,
+            ),
             "strength_slots": _build_strength_slots(strength_blocks.get(phase), phase),
             "conditioning_slots": _build_conditioning_slots(
                 conditioning_blocks.get(phase),

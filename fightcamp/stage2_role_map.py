@@ -1802,6 +1802,16 @@ def _assign_declared_day_hints(
 
 
 def _preferred_boxer_conditioning_sequence(phase: str, conditioning_sequence: list[str]) -> list[str]:
+    """Order the systems the athlete's limiter left unranked, boxer-first.
+
+    The limiter profile is the authority on relative priority: it already encodes
+    what this athlete most needs. Prepending a boxer preference overrode it, so a
+    boxer with only two conditioning slots in GPP lost the fight-pace exposure
+    their own conditioning limiter had ranked second and received an alactic day
+    instead - the 0.2 system displacing the 0.3 system for no safety or contact
+    reason. The preference now only orders systems the limiter did not rank, and
+    never demotes one it did.
+    """
     phase = str(phase or "").upper()
     if phase == "GPP":
         preferred = ["aerobic", "alactic", "glycolytic"]
@@ -1809,7 +1819,20 @@ def _preferred_boxer_conditioning_sequence(phase: str, conditioning_sequence: li
         preferred = ["aerobic", "glycolytic", "alactic"]
     else:
         preferred = ["alactic", "aerobic", "glycolytic"]
-    return dedupe_preserve_order(preferred + list(conditioning_sequence or []))
+
+    limiter_order = dedupe_preserve_order([str(s) for s in (conditioning_sequence or []) if s])
+    merged = dedupe_preserve_order(preferred + limiter_order)
+
+    # The only place the preference inverts the phase ratios is GPP, where it
+    # ranks alactic (0.2) above glycolytic (0.3). When the limiter itself ranked
+    # glycolytic higher, that inversion costs a two-slot week its fight-pace day,
+    # so the limiter's relative order wins. Every other ordering the preference
+    # expresses - including leading SPP with aerobic - is left alone.
+    if "glycolytic" in limiter_order and "alactic" in limiter_order:
+        if limiter_order.index("glycolytic") < limiter_order.index("alactic"):
+            merged = [system for system in merged if system != "glycolytic"]
+            merged.insert(merged.index("alactic"), "glycolytic")
+    return merged
 
 
 def _resequence_session_roles(
