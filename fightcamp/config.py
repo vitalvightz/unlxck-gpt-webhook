@@ -177,6 +177,46 @@ def athlete_round_seconds(rounds_format: str | None) -> float | None:
     return minutes * 60.0 if minutes > 0 else None
 
 
+def conditioning_round_prescription(
+    rounds: int | float,
+    round_seconds: float | None,
+    *,
+    work_sec: float | None = None,
+    rest_sec: float | None = None,
+    rpe: float | None = None,
+) -> str:
+    """Render a round-based conditioning dose at the athlete's own round length.
+
+    This is the single place the round prescription text is built, so Stage 1's
+    conditioning block and Stage 2's session composition cannot disagree about
+    what the athlete is told to do. ``round_seconds`` is the athlete's resolved
+    round duration from ``athlete_round_seconds``; when it is absent the caller
+    has no fight format to honour and the bank's own authored duration stands,
+    signalled here by an empty string.
+    """
+    if not round_seconds or round_seconds <= 0:
+        work_sec = work_sec if work_sec and work_sec > 0 else None
+        if work_sec is None:
+            return ""
+        work_text = f"{work_sec:g} sec work"
+    elif round_seconds % 60 == 0:
+        work_text = f"{round_seconds / 60:g} min round"
+    else:
+        work_text = f"{round_seconds:g} sec work"
+    try:
+        round_count = int(float(rounds))
+    except (TypeError, ValueError):
+        return ""
+    if round_count <= 0:
+        return ""
+    parts = [f"{round_count} x {work_text}"]
+    if rest_sec and rest_sec > 0:
+        parts.append(f"{rest_sec:g} sec rest")
+    if rpe is not None:
+        parts.append(f"RPE {rpe:g}")
+    return "; ".join(parts)
+
+
 def conditioning_effective_dose(dose: dict, round_seconds: float | None) -> dict:
     """The dose a round-based option will actually render, at the athlete's round.
 

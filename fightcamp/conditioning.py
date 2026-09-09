@@ -33,6 +33,7 @@ from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP, WEAKNESS_TAG_MAP
 from .config import (
     PHASE_SYSTEM_RATIOS,
     athlete_round_seconds,
+    conditioning_round_prescription,
     conditioning_dose_active_work_seconds,
     conditioning_effective_dose,
     conditioning_phase_workload_envelope,
@@ -2566,9 +2567,12 @@ def render_conditioning_block(
     sport: str | None = None,
     stance: str | None = None,
     resolved_sessions: list[dict] | None = None,
+    round_seconds: float | None = None,
 ) -> str:
     phase = phase.upper()
     _diag = diagnostic_context or {}
+    # The athlete's own round length, resolved by each caller from the intake.
+    # Absent it, every bank prescription keeps the duration it authored.
     _days_until_fight = _diag.get("days_until_fight")
     try:
         _days_int = int(_days_until_fight)
@@ -2701,6 +2705,21 @@ def render_conditioning_block(
                 for d in [drill for drill in session_drills if drill]:
                     name = d.get("name", "Unnamed Drill")
                     timing = d.get("timing") or d.get("duration") or "—"
+                    # A round-based drill states its work interval in fight
+                    # rounds, so this block must show the athlete's own round
+                    # length rather than the length the bank happened to author.
+                    # Rendering is owned by config, shared with session
+                    # composition, so both surfaces say the same thing.
+                    if d.get("round_based") and round_seconds:
+                        rendered_rounds = conditioning_round_prescription(
+                            d.get("rounds"),
+                            round_seconds,
+                            work_sec=d.get("work_sec"),
+                            rest_sec=d.get("rest_sec"),
+                            rpe=d.get("rpe"),
+                        )
+                        if rendered_rounds:
+                            timing = rendered_rounds
                     load = d.get("load") or d.get("intensity") or "—"
                     equip_note = d.get("equipment_note") or d.get("equipment_notes")
                     purpose = (
@@ -4987,6 +5006,7 @@ def generate_conditioning_block(flags):
             sport=flags.get("sport"),
             stance=flags.get("stance"),
             resolved_sessions=resolved_sessions,
+            round_seconds=athlete_round_seconds(flags.get("rounds_format")),
         )
 
     output_lines = _run_conditioning_poststep("block_formatting", _format_conditioning_output)

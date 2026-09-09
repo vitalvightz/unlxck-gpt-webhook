@@ -4892,7 +4892,8 @@
       "mech_upper_press"
     ],
     "rpe": 4,
-    "round_based": true
+    "round_based": true,
+    "rounds": 5
   },
   {
     "name": "EMOM Jab-Cross",

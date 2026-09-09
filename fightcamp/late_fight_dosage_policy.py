@@ -4,6 +4,7 @@ from contextvars import ContextVar
 from functools import wraps
 from typing import Iterable
 
+from .config import athlete_round_seconds
 from .sports import normalize_sport
 from .training_context import allocate_sessions
 
@@ -369,6 +370,7 @@ def _repair_taper_phase_winner_for_current_window(
         missing_systems=missing,
         num_sessions=allocate_sessions(training_frequency, phase).get("conditioning", 0),
         diagnostic_context=diagnostic_context,
+        round_seconds=athlete_round_seconds(flags.get("rounds_format")),
         sport=flags.get("sport"),
         stance=flags.get("stance"),
     )
@@ -398,6 +400,7 @@ def install() -> None:
         sport: str | None = None,
         stance: str | None = None,
         resolved_sessions: list[dict] | None = None,
+        round_seconds: float | None = None,
     ) -> str:
         context = dict(diagnostic_context or {})
         days_until_fight = context.get("days_until_fight")
@@ -420,6 +423,7 @@ def install() -> None:
             sport=sport,
             stance=stance,
             resolved_sessions=resolved_sessions,
+            round_seconds=round_seconds,
         )
 
         if str(phase or "").upper() == "TAPER" and window is not None:

@@ -28,6 +28,7 @@ from .training_context import normalize_equipment_list
 from .config import (
     athlete_round_seconds,
     conditioning_effective_dose,
+    conditioning_round_prescription,
     conditioning_dose_active_work_seconds,
     conditioning_dose_minutes,
     conditioning_phase_workload_envelope as _conditioning_phase_workload_envelope,
@@ -990,20 +991,15 @@ def _conditioning_prescription(option: dict[str, Any], *, rounds: int | None = N
         _conditioning_rounds(option) if athlete_round_sec else None
     )
     if effective_rounds is not None:
-        work_sec = athlete_round_sec or _float_or_none(metadata.get("work_sec"))
-        if work_sec is not None and work_sec > 0:
-            if athlete_round_sec and work_sec % 60 == 0:
-                work_text = f"{work_sec / 60:g} min round"
-            else:
-                work_text = f"{work_sec:g} sec work"
-            parts = [f"{effective_rounds} x {work_text}"]
-            rest_sec = _float_or_none(metadata.get("rest_sec"))
-            if rest_sec is not None and rest_sec > 0:
-                parts.append(f"{rest_sec:g} sec rest")
-            rpe = _float_or_none(metadata.get("rpe"))
-            if rpe is not None:
-                parts.append(f"RPE {rpe:g}")
-            return "; ".join(parts)
+        rendered = conditioning_round_prescription(
+            effective_rounds,
+            athlete_round_sec,
+            work_sec=_float_or_none(metadata.get("work_sec")),
+            rest_sec=_float_or_none(metadata.get("rest_sec")),
+            rpe=_float_or_none(metadata.get("rpe")),
+        )
+        if rendered:
+            return rendered
     base = str(option.get("prescription") or metadata.get("timing") or metadata.get("duration") or "").strip()
     if base:
         return base
