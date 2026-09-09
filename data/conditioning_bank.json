@@ -6954,7 +6954,7 @@
     "phases": [
       "SPP"
     ],
-    "system": "ATP-PCr",
+    "system": "glycolytic",
     "modality": "sled",
     "duration": "6x20s sprint, 2:1 rest",
     "intensity": "max",
@@ -6975,7 +6975,7 @@
     "total_minutes": 5.33,
     "rpe": 9,
     "impact_cost": "low",
-    "lactate_load": "low",
+    "lactate_load": "high",
     "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_ballistic",

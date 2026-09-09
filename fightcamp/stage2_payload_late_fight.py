@@ -2213,6 +2213,7 @@ def _late_fight_role_entry(
     declared_day_order: int | None = None,
     day_assignment_reason: str | None = None,
     coach_notes: list[str] | None = None,
+    rpe_cap: str | None = None,
 ) -> dict[str, Any]:
     entry = {
         "category": category,
@@ -2232,8 +2233,15 @@ def _late_fight_role_entry(
         # touch) rather than the static role-key fallback map.
         "selection_priority": selection_priority,
         "_selection_priority": selection_priority,
+        # Public mirror of _required, for the same reason as _selection_priority:
+        # downstream governance must be able to tell a required exposure from an
+        # optional touch without re-deriving that policy from role keys.
+        "required": required,
         "_required": required,
     }
+    if rpe_cap:
+        # Consumed by prescription_resolver as the role's effective ceiling.
+        entry["rpe_cap"] = rpe_cap
     if session_index is not None:
         entry["session_index"] = session_index
     if preferred_system:
@@ -2681,15 +2689,29 @@ def _late_fight_candidate_roles(
                     category="conditioning",
                     role_key="light_fight_pace_touch_day",
                     preferred_pool="conditioning_slots",
-                    preferred_system="glycolytic",
+                    # A late-camp rhythm touch is low-fatigue maintenance, not
+                    # glycolytic development -- as this entry's own selection rule
+                    # says. Declaring it glycolytic sent _slot_matches_role at the
+                    # SPP glycolytic pool, whose hard RPE-9 development work is
+                    # correctly rejected by late-window governance, leaving the day
+                    # unassignable. ``_morph_to_rhythm_touch`` already resolves the
+                    # identical role key as aerobic; match it rather than keep a
+                    # second definition of the same role.
+                    preferred_system="aerobic",
                     selection_rule=(
                         "Allow at most one rhythm/freshness touch only when sparring does not already own the window. "
                         "This cannot satisfy a hard conditioning, glycolytic, or combat-pressure quota."
                     ),
                     placement_rule=(
-                        "Keep this light (RPE <= 5), never describe it as a conditioning build or progression, "
+                        "Keep this light (RPE <= 6), never describe it as a conditioning build or progression, "
                         "and never place it between two hard sparring collisions."
                     ),
+                    # The role previously stated RPE <= 5 in prose while carrying no
+                    # rpe_cap at all, so nothing resolved or enforced it. Use the
+                    # ceiling ``_morph_to_rhythm_touch`` already assigns this role
+                    # key, which is the D13-D8 window maximum -- it constrains the
+                    # dose without loosening that window cap.
+                    rpe_cap="4-6",
                     selection_priority=96 if has_downgraded_hard_days else 100,
                     legal_countdown_labels=legal_countdown_labels,
                 )
