@@ -135,6 +135,11 @@ def reconcile_selected_conditioning_assignments(
         for role in week.get("session_roles") or []:
             if not isinstance(role, dict) or str(role.get("category") or "").lower() != "conditioning":
                 continue
+            if (role.get("conditioning_composition_policy") or {}).get("stage2_composes_membership"):
+                # Normal conditioning has an explicitly open, bounded Stage-2
+                # composition contract. Never turn an omitted candidate into a
+                # closed-member repair insertion.
+                continue
             d_day = _scheduled_role_d_day(week, role)
             if d_day is None:
                 continue
@@ -260,6 +265,8 @@ def conditioning_render_repair_integrity_findings(
             continue
         for role in week.get("session_roles") or []:
             if not isinstance(role, dict) or str(role.get("category") or "").lower() != "conditioning":
+                continue
+            if (role.get("conditioning_composition_policy") or {}).get("stage2_composes_membership"):
                 continue
             assignments = [
                 item
