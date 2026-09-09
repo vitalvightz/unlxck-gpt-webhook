@@ -46,6 +46,7 @@ from .stage2_planning_brief import (
     _WEEKLY_STAGE_TEMPLATES,
     PLANNING_DECISION_HIERARCHY,
 )
+from .goal_priority import goal_priority_scores
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 from .fight_day_override import apply_fight_day_override_to_weekly_role_map, compute_fight_weekday
 from .fight_date_utils import build_calendar_days
@@ -548,6 +549,32 @@ def _low_aerobic_support_cap_for_week(
             return 0 if (high_fatigue or red_flag) else 1
         if phase == "TAPER":
             return 1
+        # Frequent low-damage aerobic exposure is the point of the build phases
+        # when the athlete has actually stated a conditioning/gas-tank priority.
+        # A second easy touch needs no fatigue or red-flag blocker and a week
+        # that is not already carrying heavy hard-contact load.
+        hard_contact_days = len(
+            {
+                str(day).strip().lower()
+                for day in (week_entry.get("effective_hard_sparring_days") or [])
+                if str(day).strip()
+            }
+            or {
+                str(entry.get("day") or "").strip().lower()
+                for entry in (hard_sparring_plan or [])
+                if isinstance(entry, dict)
+                and entry.get("status") == "hard_as_planned"
+                and str(entry.get("day") or "").strip()
+            }
+        )
+        if (
+            phase in {"GPP", "SPP"}
+            and not high_fatigue
+            and not red_flag
+            and hard_contact_days <= 2
+            and goal_priority_scores(athlete_model).get("conditioning", 0) >= 10
+        ):
+            return 2
         return 1
 
     if bucket == "moderate":

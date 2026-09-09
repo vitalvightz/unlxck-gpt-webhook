@@ -34,16 +34,22 @@ def _option(
 
 
 def _pool(*options: dict) -> dict:
-    selected, *alternates = options
+    """One Stage 1 slot per option.
+
+    Session membership is one member per slot. A slot's ``alternates`` are its
+    same-role substitution reservoir and are never session members, so a
+    multi-exercise session must come from multiple selected slots.
+    """
     return {
         "SPP": {
             "conditioning_slots": [
                 {
-                    "slot_id": "spp-aerobic-1",
+                    "slot_id": f"spp-aerobic-{index}",
                     "role": "aerobic",
-                    "selected": selected,
-                    "alternates": alternates,
+                    "selected": option,
+                    "alternates": [],
                 }
+                for index, option in enumerate(options, start=1)
             ]
         }
     }
@@ -72,12 +78,13 @@ def _conditioner(role_map: dict) -> dict:
     return role_map["weeks"][0]["session_roles"][0]
 
 
-def test_conditioning_session_selects_three_suitable_bank_exercises():
+def test_conditioning_session_grows_across_slots_until_the_phase_workload_is_met():
+    """Short exposures keep stacking; the session closes on workload, not count."""
     role_map = _role_map()
     pools = _pool(
-        _option("Tempo Flow", duration=12),
-        _option("Bike Rhythm", duration=10),
-        _option("Shadow Aerobic", duration=8),
+        _option("Tempo Flow", duration=3),
+        _option("Bike Rhythm", duration=3),
+        _option("Shadow Aerobic", duration=3),
     )
 
     compose_normal_conditioning_assignments(weekly_role_map=role_map, candidate_pools=pools)
@@ -88,10 +95,42 @@ def test_conditioning_session_selects_three_suitable_bank_exercises():
         "Bike Rhythm",
         "Shadow Aerobic",
     ]
-    assert role["conditioning_composition_policy"]["minimum_exercise_count"] == 2
+    policy = role["conditioning_composition_policy"]
+    assert policy["minimum_exercise_count"] == 3
+    assert policy["workload_limited"] is False
 
 
-def test_long_aerobic_session_uses_two_exercise_minimum():
+def test_session_alternates_are_never_session_members():
+    """A slot's substitution reservoir must not become a fake circuit.
+
+    This is the D-18 regression: one selected drill plus its two same-role
+    backups was rendered as a three-exercise session.
+    """
+    role_map = _role_map()
+    pools = {
+        "SPP": {
+            "conditioning_slots": [
+                {
+                    "slot_id": "spp-aerobic-1",
+                    "role": "aerobic",
+                    "selected": _option("Selected Flow", duration=3),
+                    "alternates": [
+                        _option("Backup One", duration=3),
+                        _option("Backup Two", duration=3),
+                    ],
+                }
+            ]
+        }
+    }
+
+    compose_normal_conditioning_assignments(weekly_role_map=role_map, candidate_pools=pools)
+
+    role = _conditioner(role_map)
+    assert [item["name"] for item in role["selected_exercise_assignments"]] == ["Selected Flow"]
+
+
+def test_one_long_aerobic_exposure_completes_the_session_on_its_own():
+    """No count floor is forced once a single exposure carries the workload."""
     role_map = _role_map()
     pools = _pool(
         _option("Long Aerobic Base", duration=25),
@@ -102,9 +141,12 @@ def test_long_aerobic_session_uses_two_exercise_minimum():
     compose_normal_conditioning_assignments(weekly_role_map=role_map, candidate_pools=pools)
 
     role = _conditioner(role_map)
-    assert len(role["selected_exercise_assignments"]) == 2
-    assert role["conditioning_composition_policy"]["long_aerobic_session"] is True
-    assert role["conditioning_composition_policy"]["minimum_exercise_count"] == 2
+    assert [item["name"] for item in role["selected_exercise_assignments"]] == [
+        "Long Aerobic Base"
+    ]
+    policy = role["conditioning_composition_policy"]
+    assert policy["minimum_exercise_count"] == 1
+    assert policy["workload_limited"] is False
 
 
 @pytest.mark.parametrize("hard_day", ["tuesday", "thursday"])
@@ -175,12 +217,11 @@ def test_real_bank_mixed_conditioning_doses_keep_their_own_modality_and_rest():
             "calendar_days": [{"weekday": "wednesday", "d_day": 28}],
         }]
     }
-    pools = {"GPP": {"conditioning_slots": [{
-        "slot_id": "gpp-glycolytic-1",
-        "role": "glycolytic",
-        "selected": plyo,
-        "alternates": [swings, broad_jumps],
-    }]}}
+    pools = {"GPP": {"conditioning_slots": [
+        {"slot_id": "gpp-glycolytic-1", "role": "glycolytic", "selected": plyo, "alternates": []},
+        {"slot_id": "gpp-glycolytic-2", "role": "glycolytic", "selected": swings, "alternates": []},
+        {"slot_id": "gpp-glycolytic-3", "role": "glycolytic", "selected": broad_jumps, "alternates": []},
+    ]}}
 
     compose_normal_conditioning_assignments(weekly_role_map=role_map, candidate_pools=pools)
 
@@ -216,9 +257,9 @@ def test_real_bank_mixed_conditioning_doses_keep_their_own_modality_and_rest():
 def test_conditioning_minimum_underfills_when_high_load_dose_is_unknown():
     role_map = _role_map()
     pools = _pool(
-        _option("Hard Primary", duration=10, rpe=9, intensity="high"),
-        _option("Hard Repeat", duration=10, rpe=9, intensity="high"),
-        _option("Max Repeat", duration=10, rpe=10, intensity="max"),
+        _option("Hard Primary", duration=3, rpe=9, intensity="high"),
+        _option("Hard Repeat", duration=3, rpe=9, intensity="high"),
+        _option("Max Repeat", duration=3, rpe=10, intensity="max"),
     )
 
     compose_normal_conditioning_assignments(weekly_role_map=role_map, candidate_pools=pools)

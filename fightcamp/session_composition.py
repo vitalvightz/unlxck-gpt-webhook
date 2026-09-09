@@ -952,6 +952,22 @@ def _conditioning_rounds(option: dict[str, Any]) -> int | None:
     return int(rounds)
 
 
+def _conditioning_active_work_seconds(option: dict[str, Any]) -> float | None:
+    """Active work a bank option carries at its own prescription.
+
+    Interval drills state it as ``work_sec`` x ``rounds``; continuous work
+    states it as elapsed duration, which is the same thing. Used only to decide
+    when a session already carries its phase workload, never to alter a dose.
+    """
+    metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else {}
+    work_sec = _float_or_none(metadata.get("work_sec"))
+    rounds = _conditioning_rounds(option)
+    if work_sec is not None and work_sec > 0 and rounds is not None:
+        return work_sec * rounds
+    minutes = _conditioning_duration_minutes(option)
+    return minutes * 60.0 if minutes is not None else None
+
+
 def _conditioning_prescription(option: dict[str, Any], *, rounds: int | None = None) -> str:
     metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else {}
     if rounds is not None:
@@ -1156,30 +1172,34 @@ def compose_normal_conditioning_assignments(
                 if isinstance(slot, dict)
                 and str(slot.get("role") or "").strip().lower() == preferred_system
             ]
+            # Membership is one member per Stage 1 slot. A slot's ``alternates``
+            # are its same-role substitution reservoir, not additional session
+            # members: drawing from them turns one selected drill plus its two
+            # backups into a fake three-exercise circuit.
             options: list[tuple[dict[str, Any], dict[str, Any], bool]] = []
             seen_names: set[str] = set()
-            for is_selected in (True, False):
-                for slot in matching_slots:
-                    candidates = (
-                        [slot.get("selected")]
-                        if is_selected
-                        else list(slot.get("alternates") or [])
-                    )
-                    for option in candidates:
-                        if not isinstance(option, dict):
-                            continue
-                        name = str(option.get("name") or "").strip()
-                        if not name or name in seen_names:
-                            continue
-                        seen_names.add(name)
-                        options.append((slot, option, is_selected))
+            for slot in matching_slots:
+                option = slot.get("selected")
+                if not isinstance(option, dict):
+                    continue
+                name = str(option.get("name") or "").strip()
+                if not name or name in seen_names:
+                    continue
+                seen_names.add(name)
+                options.append((slot, option, True))
 
             if not options:
                 continue
 
             adjacent_hard_spar = _conditioning_role_is_hard_spar_adjacent(week, role)
+            # Resolve the phase/system workload first: a session is complete
+            # when it carries that workload, not when it reaches three members.
+            target_active_work, _ = _conditioning_phase_workload_envelope(
+                phase=phase, system=preferred_system
+            )
             selected: list[tuple[dict[str, Any], dict[str, Any], bool]] = []
             total_minutes = 0.0
+            active_work_seconds = 0.0
             for slot, option, is_selected in options:
                 duration = _conditioning_duration_minutes(option)
                 if selected:
@@ -1188,20 +1208,40 @@ def compose_normal_conditioning_assignments(
                 selected.append((slot, option, is_selected))
                 if duration is not None:
                     total_minutes += duration
+                active_work = _conditioning_active_work_seconds(option)
+                if active_work is not None:
+                    active_work_seconds += active_work
                 if adjacent_hard_spar:
                     break
                 if preferred_system == "aerobic" and len(selected) >= 2 and total_minutes >= 25:
                     break
+                if target_active_work is not None and active_work_seconds >= target_active_work:
+                    break
                 if len(selected) >= 3:
                     break
 
+            # Count the members that delivered the workload before the
+            # partitioner may drop undoseable high-load drills, so a dropped
+            # session still reports as underfilled.
+            composed_count = len(selected)
             selected, high_load_rounds, underfill_reason, high_load_budget = _conditioning_partition_high_load(
                 selected,
                 phase=phase,
                 system=preferred_system,
             )
             long_aerobic = preferred_system == "aerobic" and total_minutes >= 25
-            minimum = None if adjacent_hard_spar else (2 if long_aerobic else 3)
+            # A session that already carries its phase/system workload is
+            # complete at whatever member count delivered it; the count floor
+            # only applies while the workload is still unmet or unknown.
+            workload_met = (
+                target_active_work is not None and active_work_seconds >= target_active_work
+            )
+            if adjacent_hard_spar:
+                minimum = None
+            elif workload_met:
+                minimum = composed_count
+            else:
+                minimum = 2 if long_aerobic else 3
 
             assignments = []
             selected_names: set[str] = set()
