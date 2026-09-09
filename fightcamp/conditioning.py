@@ -1479,11 +1479,17 @@ def is_banned_drill(
         "takedowns",
     }
 
-    joined_tags = " ".join(tags)
+    # Tags are matched on their own underscore-separated words, never as raw
+    # substrings. A tag names a technique ("low_kick") or an audience
+    # ("kickboxing", "kicker"), and substring matching could not tell the two
+    # apart: "kick" inside "kickboxing" removed every drill tagged for
+    # kickboxing athletes from a boxer's pool. Name and notes stay substring
+    # matched - they are prose, not tokens.
+    tag_words = {word for tag in tags for word in tag.split("_")} | set(tags)
 
     if fight_format in {"boxing", "kickboxing"}:
         for term in grappling_terms:
-            if term in name or term in joined_tags or term in details:
+            if term in name or term in tag_words or term in details:
                 return True
 
     if fight_format == "boxing":
@@ -1498,7 +1504,7 @@ def is_banned_drill(
             "elbow",
         }
         for term in boxing_terms:
-            if term in name or term in joined_tags or term in details:
+            if term in name or term in tag_words or term in details:
                 return True
 
     kick_terms = ["kick", "knee", "clinch knee strike", "teep"]
