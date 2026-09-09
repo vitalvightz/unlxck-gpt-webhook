@@ -481,6 +481,29 @@ not reintroduce it:
    `combat_load_policy` legality, which actually owns that verdict), so they now assert
    what ships. Weekly role budget, compression and suppression are `stage2_role_map`'s
    alone.
+10. **Second day-ownership resolver in the conditioning validator (removed, Step 12).**
+   `stage2_validator._scheduled_role_d_day` was a local resolver with its own field
+   precedence: `scheduled_countdown_label`, then `countdown_label`, then the weekday.
+   It never read `scheduled_d_day` or `countdown_offset` — the two fields
+   `calendar_integrity._stamp_relocation` always writes when the final governor moves
+   a role, while `countdown_label` is never refreshed there and is stale after a
+   relocation. So it ranked a field the governor abandons above the two it keeps
+   current: for a role carrying `scheduled_d_day` without a fresh
+   `scheduled_countdown_label`, it returned the pre-relocation day. `stage2_repair`
+   resolves days through this same helper, so the conditioning reconciler inherited
+   the same wrong answer when re-inserting a dropped closed member.
+
+   It now delegates to `calendar_context.role_d_day`, the canonical representation
+   owner (section 9.1), which orders the same fields correctly — final placement
+   metadata first, the stale label last. `prescription_resolver` already resolved
+   through that adapter, so the validator was the outlier, not the adapter.
+
+   `stage2_validator_postprocess._role_d_day` keeps its own order, reading
+   `effective_strength_envelope.scheduled_d_day` first. That is not a competing
+   authority: `prescription_resolver` stamps the envelope's `scheduled_d_day` and the
+   role's from the *same* `role_d_day()` call, so the two are equal by construction.
+   It is redundant rather than contradictory, and is left alone.
+
 ### 9.3 Remaining non-blocking debt
 
 These are real but do not affect decision ownership, and are explicitly **not** scheduled
