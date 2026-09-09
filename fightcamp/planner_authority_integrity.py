@@ -485,7 +485,12 @@ def _authority_findings_from_report(
     findings: list[dict[str, Any]] = []
     seen: set[tuple[str, str, str]] = set()
     for field in ("errors", "blocking_warnings", "warnings", "review_flags"):
-        for item in report.get(field, []) or []:
+        # A malformed collection (anything but a list) must not crash the gate.
+        # The release policy already records it via release_policy_malformed_fields.
+        collection = report.get(field)
+        if not isinstance(collection, list):
+            continue
+        for item in collection:
             if not isinstance(item, dict):
                 continue
             code = str(item.get("code") or "").strip()

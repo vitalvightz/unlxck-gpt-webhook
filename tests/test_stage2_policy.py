@@ -147,23 +147,31 @@ def test_low_risk_quality_code_releases_with_flags(code: str) -> None:
     assert report["release_decision"] == "publish_with_flags"
     assert report["is_athlete_releasable"] is True
     assert report["is_publishable"] is True
-    assert report["blocking_warnings"] == []
+    # The collection is preserved verbatim for telemetry; the release decision
+    # simply no longer reads it as a hold.
+    assert report["blocking_warnings"] == [{"code": code}]
     assert report["quality_review_flags"] == [{"code": code}]
 
 
 @pytest.mark.parametrize("code", sorted(stage2_policy.ADMIN_REVIEW_BLOCKING_CODES))
-def test_context_or_programme_failure_holds(code: str) -> None:
+def test_context_or_programme_failure_routes_to_admin_without_holding(code: str) -> None:
+    """Observational release: the admin is told, the athlete still gets the plan.
+
+    These codes describe a context or programme shortfall, not unsafe output.
+    They remain routed to ``admin_review_blocking_flags`` so review still sees
+    every one of them, but they no longer withhold usable plan text.
+    """
     report = stage2_policy.apply_stage2_release_policy(
         {"errors": [], "warnings": [{"code": code}], "blocking_warnings": []}
     )
 
-    assert report["release_decision"] == "hold"
-    assert report["is_athlete_releasable"] is False
-    assert report["is_publishable"] is False
+    assert report["release_decision"] == "publish_with_flags"
+    assert report["is_athlete_releasable"] is True
+    assert report["is_publishable"] is True
     assert report["admin_review_blocking_flags"] == [{"code": code}]
 
 
-def test_mixed_release_and_blocking_codes_hold() -> None:
+def test_mixed_release_and_blocking_codes_route_to_both_channels() -> None:
     report = stage2_policy.apply_stage2_release_policy(
         {
             "errors": [],
@@ -175,13 +183,19 @@ def test_mixed_release_and_blocking_codes_hold() -> None:
         }
     )
 
-    assert report["release_decision"] == "hold"
-    assert report["is_publishable"] is False
-    assert report["quality_review_flags"] == [{"code": "option_overload"}]
+    assert report["release_decision"] == "publish_with_flags"
+    assert report["is_publishable"] is True
+    # Each code still reaches the surface it belongs to.
+    assert {"code": "option_overload"} in report["quality_review_flags"]
     assert report["admin_review_blocking_flags"] == [{"code": "missing_required_element"}]
 
 
-def test_unknown_blocking_code_fails_closed() -> None:
+def test_unknown_code_is_flagged_without_holding() -> None:
+    """An unrecognised code is an audit signal, not a licence to withhold.
+
+    Failing closed on unknown codes meant any new validator code silently
+    started withholding plans until it was classified.
+    """
     report = stage2_policy.apply_stage2_release_policy(
         {
             "errors": [],
@@ -191,9 +205,10 @@ def test_unknown_blocking_code_fails_closed() -> None:
         }
     )
 
-    assert report["release_decision"] == "hold"
-    assert report["is_athlete_releasable"] is False
-    assert report["is_publishable"] is False
+    assert report["release_decision"] == "publish_with_flags"
+    assert report["is_athlete_releasable"] is True
+    assert report["is_publishable"] is True
+    assert {"code": "brand_new_warning_code"} in report["quality_review_flags"]
 
 
 @pytest.mark.parametrize(
@@ -208,10 +223,16 @@ def test_unknown_blocking_code_fails_closed() -> None:
         pytest.param(object(), id="object"),
     ],
 )
-def test_malformed_release_collection_fails_closed(
+def test_malformed_release_collection_is_recorded_without_holding(
     field: str,
     malformed_value: object,
 ) -> None:
+    """A malformed collection is an audit finding at generation time.
+
+    ``_map_plan_summary`` still refuses to clear an already-stored
+    review_required plan on an unreadable report -- see
+    ``test_plan_mapper_keeps_malformed_review_required_report_held``.
+    """
     validator_report: dict[str, object] = {
         "errors": [],
         "warnings": [],
@@ -223,9 +244,13 @@ def test_malformed_release_collection_fails_closed(
     report = stage2_policy.apply_stage2_release_policy(validator_report)
 
     assert report["release_policy_malformed_fields"] == [field]
-    assert report["release_decision"] == "hold"
-    assert report["is_athlete_releasable"] is False
-    assert report["is_publishable"] is False
+    assert report["release_decision"] == "publish_with_flags"
+    assert report["is_athlete_releasable"] is True
+    assert report["is_publishable"] is True
+    assert any(
+        finding["code"] == "validator_report_malformed" and finding["field"] == field
+        for finding in report["quality_review_flags"]
+    )
 
 
 def test_plan_mapper_keeps_malformed_review_required_report_held() -> None:
