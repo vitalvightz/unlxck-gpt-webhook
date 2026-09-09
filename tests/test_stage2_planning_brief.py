@@ -5,16 +5,22 @@ import pytest
 
 import fightcamp.stage2_planning_brief as stage2_planning_brief_module
 from fightcamp.stage2_payload import (
-    _apply_high_fatigue_week_compression,
     _build_weekly_role_map,
-    _compute_readiness_compression,
     _derive_competitive_maturity,
     _high_fatigue_compression_reason_codes,
     _is_meaningful_stressor,
-    _non_spar_role_priority_rank,
     _parse_record,
     build_planning_brief,
     build_stage2_payload,
+)
+
+# Weekly role budget / compression is owned by stage2_role_map. stage2_payload
+# used to carry a diverged fork of this engine with no production caller; these
+# tests now assert against the live owner.
+from fightcamp.stage2_role_map import (
+    _apply_high_fatigue_week_compression,
+    _compute_readiness_compression,
+    _non_spar_role_priority_rank,
 )
 from fightcamp.nutrition import generate_nutrition_block
 from fightcamp.recovery import generate_recovery_block
@@ -3071,12 +3077,17 @@ def test_spar_first_spp_glycolytic_is_below_anchor_and_support_when_crowded():
         "preferred_system": "aerobic",
     }
 
-    assert _non_spar_role_priority_rank(
-        fight_pace_role, "SPP", True, True, crowded_week=True
-    ) < _non_spar_role_priority_rank(neural_plus_role, "SPP", True, True, crowded_week=True)
-    assert _non_spar_role_priority_rank(
-        fight_pace_role, "SPP", True, True, crowded_week=True
-    ) < _non_spar_role_priority_rank(repeatability_role, "SPP", True, True, crowded_week=True)
+    # Crowded-week survival is its own ladder, owned by stage2_role_map's boxing
+    # crowded-week selector — not a `crowded_week=True` branch of the generic rank.
+    # (stage2_payload used to carry such a branch in a fork with no production
+    # caller; the live owner ranks crowded weeks through _boxing_crowded_role_priority.)
+    from fightcamp.stage2_role_map import _boxing_crowded_role_priority
+
+    must_keep: set[str] = set()
+    assert _boxing_crowded_role_priority(fight_pace_role, must_keep) < \
+        _boxing_crowded_role_priority(neural_plus_role, must_keep)
+    assert _boxing_crowded_role_priority(fight_pace_role, must_keep) < \
+        _boxing_crowded_role_priority(repeatability_role, must_keep)
 
 
 def test_spar_first_spp_glycolytic_is_first_cut_with_meaningful_weight_cut():
@@ -3266,6 +3277,12 @@ def test_readiness_compression_uses_weight_cut_risk_as_fallback_when_numeric_mis
 def test_sandwiched_glycolytic_suppressed_for_boxing_athlete():
     # Boxing athlete with Mon + Wed hard spar and glycolytic on Tuesday (sandwiched).
     # The pre-step must fire before the boxing early-exit so the glycolytic is dropped.
+    #
+    # Step 9B contract: placement leaves a forbidden glycolytic dayless rather than
+    # committing it to a between-hard day, so the role-budget owner suppresses it only
+    # when *no* declared training day is legal for it. Mon/Tue/Wed only — Monday and
+    # Wednesday are hard contacts and Tuesday is between them — so there is no escape
+    # day and the suppression fires.
     session_roles = [
         {
             "category": "sparring",
@@ -3299,7 +3316,7 @@ def test_sandwiched_glycolytic_suppressed_for_boxing_athlete():
             "sport": "boxing",
             "fatigue": "low",
             "hard_sparring_days": ["Monday", "Wednesday"],
-            "training_days": ["Monday", "Tuesday", "Wednesday", "Friday"],
+            "training_days": ["Monday", "Tuesday", "Wednesday"],
         },
         hard_sparring_plan=[
             {"day": "Monday", "status": "hard_as_planned"},
@@ -3312,6 +3329,51 @@ def test_sandwiched_glycolytic_suppressed_for_boxing_athlete():
     assert "fight_pace_repeatability_day" not in kept_keys
     assert "fight_pace_repeatability_day" in suppressed_keys
     assert any("sandwiched_hard_days" in (item.get("compression_reason_codes") or []) for item in suppressed)
+
+
+def test_sandwiched_glycolytic_kept_when_a_legal_day_remains():
+    """A glycolytic with an escape day is relocated by placement, not suppressed.
+
+    Same contact structure as above, but Friday is a free legal day. The role-budget
+    owner's no-legal-slot contract does not fire, so the session survives; keeping it
+    is placement's job, not a second suppression doctrine's.
+    """
+    session_roles = [
+        {"category": "sparring", "role_key": "hard_sparring_day", "scheduled_day_hint": "Monday", "governance": {}},
+        {"category": "sparring", "role_key": "hard_sparring_day", "scheduled_day_hint": "Wednesday", "governance": {}},
+        {
+            "category": "conditioning",
+            "role_key": "fight_pace_repeatability_day",
+            "preferred_system": "glycolytic",
+            "scheduled_day_hint": "Tuesday",
+            "governance": {},
+        },
+    ]
+    kept_roles, suppressed = _apply_high_fatigue_week_compression(
+        {
+            "phase": "SPP",
+            "week_index": 1,
+            "declared_hard_sparring_days": ["Monday", "Wednesday"],
+        },
+        session_roles,
+        [],
+        {
+            "sport": "boxing",
+            "fatigue": "low",
+            "hard_sparring_days": ["Monday", "Wednesday"],
+            "training_days": ["Monday", "Tuesday", "Wednesday", "Friday"],
+        },
+        hard_sparring_plan=[
+            {"day": "Monday", "status": "hard_as_planned"},
+            {"day": "Wednesday", "status": "hard_as_planned"},
+        ],
+    )
+
+    assert "fight_pace_repeatability_day" in [role["role_key"] for role in kept_roles]
+    assert not any(
+        "sandwiched_hard_days" in (item.get("compression_reason_codes") or [])
+        for item in suppressed
+    )
 
 
 def test_sandwiched_glycolytic_preserved_when_must_keep_glycolytic():
@@ -3357,40 +3419,56 @@ def test_sandwiched_glycolytic_preserved_when_must_keep_glycolytic():
 
 
 def test_sandwiched_day_rejects_primary_strength_but_keeps_low_aerobic_support():
-    session_roles = [
-        {"category": "sparring", "role_key": "hard_sparring_day", "scheduled_day_hint": "Monday", "governance": {}},
-        {"category": "sparring", "role_key": "hard_sparring_day", "scheduled_day_hint": "Wednesday", "governance": {}},
-        {"category": "strength", "role_key": "primary_strength_day", "scheduled_day_hint": "Tuesday", "governance": {}},
-        {
-            "category": "conditioning",
-            "role_key": "recovery_aerobic_gas_tank_day",
-            "preferred_system": "aerobic",
-            "scheduled_day_hint": "Tuesday",
-            "allowed_on_recovery_day": True,
-            "governance": {},
-        },
-    ]
-    kept_roles, suppressed = _apply_high_fatigue_week_compression(
-        {"phase": "SPP", "week_index": 1, "declared_hard_sparring_days": ["Monday", "Wednesday"]},
-        session_roles,
-        [],
-        {
-            "sport": "boxing",
-            "fatigue": "low",
-            "hard_sparring_days": ["Monday", "Wednesday"],
-            "training_days": ["Monday", "Tuesday", "Wednesday", "Friday"],
-        },
-        hard_sparring_plan=[
+    """Between two hard contacts, heavy strength is FORBID and low aerobic support is not.
+
+    Ownership: this is a ``combat_load_policy`` verdict, queried through the shared
+    ``calendar_context`` adapter — it is not a role-budget suppression. The role-budget
+    owner's own sandwiched step is scoped to glycolytic conditioning with no legal day;
+    a forbidden strength role is left dayless by placement instead. stage2_payload used
+    to carry a fork that suppressed any role on a sandwiched day, but it had no
+    production caller.
+    """
+    from fightcamp.calendar_context import (
+        PlacementDirective,
+        classify_role,
+        normal_week_legality,
+        week_scope,
+        weekday_position,
+    )
+
+    primary_strength = {
+        "category": "strength",
+        "role_key": "primary_strength_day",
+        "governance": {},
+    }
+    low_aerobic_support = {
+        "category": "conditioning",
+        "role_key": "recovery_aerobic_gas_tank_day",
+        "preferred_system": "aerobic",
+        "allowed_on_recovery_day": True,
+        "governance": {},
+    }
+
+    legality = normal_week_legality(
+        [
             {"day": "Monday", "status": "hard_as_planned"},
             {"day": "Wednesday", "status": "hard_as_planned"},
         ],
+        ["Monday", "Wednesday"],
+        scope=week_scope(
+            {"phase": "SPP", "week_index": 1, "declared_hard_sparring_days": ["Monday", "Wednesday"]}
+        ),
     )
+    tuesday = weekday_position("Tuesday")
 
-    kept_keys = [role["role_key"] for role in kept_roles]
-    suppressed_keys = [item["role_key"] for item in suppressed]
-    assert "primary_strength_day" not in kept_keys
-    assert "primary_strength_day" in suppressed_keys
-    assert "recovery_aerobic_gas_tank_day" in kept_keys
+    assert (
+        legality.decision_at_position(classify_role(primary_strength), tuesday).directive
+        is PlacementDirective.FORBID
+    )
+    assert (
+        legality.decision_at_position(classify_role(low_aerobic_support), tuesday).directive
+        is not PlacementDirective.FORBID
+    )
 
 
 def test_sandwiched_low_load_physical_kept_by_shared_policy():

@@ -463,11 +463,24 @@ not reintroduce it:
    `stage2_payload.py` is `_apply_boxing_crowded_week_post_processing`, which is
    decoration only: it discards its `athlete_model` argument, reads the role map's
    already-final `intentional_compression` verdict, and stamps day-identity
-   governance onto the surviving roles. `_apply_high_fatigue_week_compression` in
-   `stage2_payload.py` still contains a full non-boxing compression implementation
-   but has no production caller (see 9.3.3); the live path delegates the boxing
-   crowded-week case to `stage2_role_map._apply_boxing_crowded_week_compression`.
-
+   governance onto the surviving roles.
+9. **Duplicate readiness-compression engine (removed, Step 11).** `stage2_payload.py`
+   still carried a full fork of the spar-first weekly allocation path —
+   `_apply_high_fatigue_week_compression`, `_apply_legacy_high_fatigue_compression`,
+   `_compute_readiness_compression`, `_non_spar_role_priority_rank`,
+   `_suppress_sandwiched_glycolytic` and their private helpers (14 functions, ~460
+   lines). None was in the transitive closure of any production root; only tests
+   imported them, as "independent oracles" for a live owner they had **diverged**
+   from. Two divergences mattered: the fork ranked crowded weeks through a
+   `crowded_week=True` branch the live owner replaced with
+   `_boxing_crowded_role_priority`, and it suppressed *any* role sitting on a
+   sandwiched day, which is the pre-Step-9B doctrine — the live owner suppresses only
+   glycolytic conditioning with no legal day in the week, because placement now leaves
+   a forbidden role dayless instead of committing it to a between-hard day. The tests
+   were repointed at the live owners (the sandwiched-strength case at
+   `combat_load_policy` legality, which actually owns that verdict), so they now assert
+   what ships. Weekly role budget, compression and suppression are `stage2_role_map`'s
+   alone.
 ### 9.3 Remaining non-blocking debt
 
 These are real but do not affect decision ownership, and are explicitly **not** scheduled
@@ -486,12 +499,12 @@ behaviour change to resolve.
 2. `stage2_finalizer_packet.py` / `_impl.py` are likewise a facade/implementation pair
    holding real packet-building logic. Same conclusion.
 3. `stage2_payload.py` remains a compatibility/orchestration surface. Its dead placement
-   policy (Step 9A) and its dead duplicate role-budget engine (Step 10) are gone; what
-   remains is orchestration, re-exports, and four helpers live tests import as independent
-   oracles. Two of those (`_apply_high_fatigue_week_compression`,
-   `_compute_readiness_compression`) have **diverged** from their `stage2_role_map`
-   counterparts, so they are not interchangeable; repointing those tests at the live owner
-   would change what they assert and is deliberately left as separate work.
+   policy (Step 9A), its dead duplicate role-budget engine (Step 10) and its dead
+   readiness-compression fork (Step 11) are gone; what remains is orchestration,
+   re-exports, and two helpers live tests import as independent oracles
+   (`_is_meaningful_stressor`, `_active_injury_affects_generic_compression`), neither of
+   which has a `stage2_role_map` counterpart to diverge from. The two that *had*
+   diverged were removed in Step 11 and their tests repointed at the live owners.
 4. `weekly_schedule_view.py` normalises resolver `status` -> display `effective_load` for
    the API/validator view layer. This is presentation-side normalisation of resolver
    output, downstream of every planner decision; it is not a second contact authority.
@@ -522,12 +535,18 @@ behaviour change to resolve.
    `"hold"` for planner-authority blockers (section 3.2) — in which case the same module's
    `authority_build_stage2_retry` wrapper immediately forces `needs_retry: False` anyway.
    So for `late_camp_effective_prescription_exceeded` or `goal_preservation_render_mismatch`
-   on their own, no repair prompt is ever produced. `api/stage2_automation.finalize` lists
-   both as repair triggers and labels the attempt `effective_dose_repair`; that label is
-   dead, and `build_stage2_repair_prompt` carries a purpose-built
-   `late_camp_effective_prescription_exceeded` repair block (remove unselected exercise vs
-   reduce dose to the effective cap) that nothing can reach. Only the two conditioning
-   codes actually reach a second model call.
+   on their own, no repair prompt is ever produced. Only the two conditioning codes
+   actually reach a second model call.
+
+   Step 11 correction, from re-deriving this in code rather than from this note: the
+   `effective_dose_repair` attempt label in `api/stage2_automation.finalize` was indeed
+   dead and has been removed — `needs_retry: True` implies missing closed conditioning,
+   so the branch always took the `render_repair` label. But `build_stage2_repair_prompt`'s
+   `late_camp_effective_prescription_exceeded` block is **not** unreachable, as this item
+   previously claimed: `build_stage2_repair_prompt` is reached whenever
+   `missing_closed_conditioning` holds, and the block is then included for any
+   `late_camp_effective_prescription_exceeded` finding present in the same report. It is
+   only the *standalone* effective-dose trigger that never fires. The block was kept.
 
    This one looks unintended rather than deliberate: the trigger, the prompt block and the
    `finalize` comment ("Effective-dose violations are deterministic safety failures ... so
