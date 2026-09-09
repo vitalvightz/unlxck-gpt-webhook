@@ -20,12 +20,17 @@ PLANNER_AUTHORITY_BLOCKER_CODES = frozenset(
 )
 
 # The blocker above means "we cannot explain why this day is empty", which is a
-# corrupt or incomplete pipeline state. It is NOT the same as governance having
-# considered candidates and correctly refused every one of them: that is a safe,
-# explained omission, and holding an otherwise-valid plan for it strands the
-# whole plan over a day that was legitimately left empty. The explained case is
-# reported under its own code, carrying the same rejection diagnostics, and is
-# deliberately absent from PLANNER_AUTHORITY_BLOCKER_CODES.
+# corrupt or incomplete pipeline state. One narrow case is different: an
+# allocator role the existing policy marks OPTIONAL (``required`` False), whose
+# selection was genuinely exhausted because governance rejected every candidate
+# it considered. Holding an otherwise-valid plan for that strands the whole plan
+# over a day that was legitimately left empty. It is reported under its own code,
+# carrying the same rejection diagnostics, and is deliberately absent from
+# PLANNER_AUTHORITY_BLOCKER_CODES.
+#
+# Everything else still blocks: required exposures (strength touch, alactic
+# sharpness, neural primer, freshness), roles carrying no ``required`` verdict at
+# all, and any absence governance cannot account for.
 LATE_PHYSICAL_ROLE_SAFE_OMISSION_CODE = "late_physical_role_safely_omitted"
 
 _ASSIGNMENT_REJECTION_KEYS = (
@@ -35,8 +40,13 @@ _ASSIGNMENT_REJECTION_KEYS = (
 )
 
 
-def _assignment_absence_is_explained(role: dict[str, Any]) -> bool:
-    """True when governance recorded rejecting at least one candidate."""
+def _selection_was_exhausted(role: dict[str, Any]) -> bool:
+    """True when governance recorded rejecting every candidate it considered.
+
+    The assignment list is empty by the time this is asked, so any recorded
+    rejection means nothing survived. No recorded rejection means no candidate
+    was ever considered, which is a pipeline failure rather than an explanation.
+    """
     diagnostics = role.get("late_assignment_diagnostics")
     if not isinstance(diagnostics, dict):
         return False
@@ -47,6 +57,11 @@ def _assignment_absence_is_explained(role: dict[str, Any]) -> bool:
         except (TypeError, ValueError):
             continue
     return False
+
+
+def _is_safely_omittable_role(role: dict[str, Any]) -> bool:
+    """Optional by the allocator's own policy, and genuinely out of candidates."""
+    return role.get("required") is False and _selection_was_exhausted(role)
 
 
 # Clearly external-loaded strength equipment. This intentionally does not include
@@ -263,7 +278,7 @@ def planner_authority_findings(planning_brief: dict[str, Any]) -> list[dict[str,
             and category in {"strength", "conditioning"}
             and (not isinstance(assignments, list) or not assignments)
         ):
-            explained = _assignment_absence_is_explained(role)
+            explained = _is_safely_omittable_role(role)
             findings.append(
                 {
                     "code": (
@@ -273,8 +288,8 @@ def planner_authority_findings(planning_brief: dict[str, Any]) -> list[dict[str,
                     ),
                     "severity": "info" if explained else "blocker",
                     "message": (
-                        "Every candidate for a dated app-owned physical role was rejected by "
-                        "phase, window, sport or day-safety governance; the day is left empty."
+                        "An optional dated role exhausted its candidates: every one was rejected "
+                        "by phase, window, sport or day-safety governance, so the day is empty."
                         if explained
                         else "A dated app-owned physical role has no deterministic exercise assignment."
                     ),

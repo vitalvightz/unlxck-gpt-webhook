@@ -25,6 +25,7 @@ from fightcamp.planner_authority_integrity import (
     PLANNER_AUTHORITY_BLOCKER_CODES,
     planner_authority_findings,
 )
+from fightcamp.stage2_payload_late_fight import _late_fight_role_entry
 
 
 def _role(**over) -> dict:
@@ -34,6 +35,8 @@ def _role(**over) -> dict:
         "late_fight_tail_owned": True,
         "selected_exercise_assignments": [],
         "scheduled_countdown_label": "D-11",
+        # The allocator's own optional/required verdict for this role.
+        "required": False,
     }
     role.update(over)
     return role
@@ -81,6 +84,33 @@ def test_true_glycolytic_development_roles_are_unchanged():
     assert _conditioning_role_key("TAPER", "glycolytic", "aerobic_repeatability") == "light_fight_pace_touch_day"
 
 
+def test_the_rhythm_touch_carries_an_enforceable_rpe_ceiling():
+    """The role stated RPE <= 5 in prose while carrying no rpe_cap at all.
+
+    It now carries the ceiling ``_morph_to_rhythm_touch`` already assigns this
+    role key, which prescription_resolver resolves as the effective cap. That
+    ceiling equals the D13-D8 window maximum, so it constrains the dose without
+    loosening the window.
+    """
+    from fightcamp.late_camp_role_morph import _morph_to_rhythm_touch
+    from fightcamp.prescription_resolver import _rpe_ceiling
+    from fightcamp.style_taper_governance import D13_TO_D8, RPE_MAX_BY_WINDOW
+
+    entry = _late_fight_role_entry(
+        category="conditioning", role_key="light_fight_pace_touch_day",
+        selection_rule="", preferred_pool="conditioning_slots", placement_rule="",
+        rpe_cap="4-6",
+    )
+    morphed = {"role_key": "x", "category": "conditioning"}
+    _morph_to_rhythm_touch(morphed, 11)
+
+    assert entry["rpe_cap"] == morphed["rpe_cap"] == "4-6"
+    assert _rpe_ceiling(entry["rpe_cap"]) == 6
+    # The window cap itself is untouched, and the role never exceeds it.
+    assert RPE_MAX_BY_WINDOW[D13_TO_D8] == 6.0
+    assert _rpe_ceiling(entry["rpe_cap"]) <= RPE_MAX_BY_WINDOW[D13_TO_D8]
+
+
 # --- 2. Safe omission releases; unsafe or unexplained state does not --------
 
 
@@ -92,7 +122,7 @@ def test_true_glycolytic_development_roles_are_unchanged():
         {"phase_window_rejected": 0, "sport_rejected": 0, "day_safety_rejected": 1},
     ],
 )
-def test_governance_rejecting_every_candidate_is_a_safe_omission(diagnostics):
+def test_an_optional_role_out_of_candidates_is_a_safe_omission(diagnostics):
     found, blockers = _findings(_role(late_assignment_diagnostics=diagnostics))
     assert blockers == []
     assert [f["code"] for f in found] == [LATE_PHYSICAL_ROLE_SAFE_OMISSION_CODE]
@@ -116,6 +146,50 @@ def test_an_unexplained_empty_assignment_still_blocks(diagnostics):
     found, blockers = _findings(role)
     assert [f["code"] for f in blockers] == ["late_physical_role_missing_assignment"]
     assert found[0]["severity"] == "blocker"
+
+
+@pytest.mark.parametrize(
+    "role_key",
+    ["strength_touch_day", "alactic_sharpness_day", "neural_primer_day", "fight_week_freshness_day"],
+)
+def test_a_required_exposure_still_blocks_even_when_explained(role_key):
+    """Only explicitly omittable roles may release empty.
+
+    These four are marked required=True by the allocator, so an exhausted
+    selection is a missing exposure, not a safe omission.
+    """
+    found, blockers = _findings(
+        _role(
+            role_key=role_key,
+            required=True,
+            late_assignment_diagnostics={"phase_window_rejected": 5},
+        )
+    )
+    assert [f["code"] for f in blockers] == ["late_physical_role_missing_assignment"]
+    assert found[0]["severity"] == "blocker"
+
+
+def test_a_role_with_no_required_verdict_still_blocks():
+    # Absent policy is not permission: fail closed.
+    role = _role(late_assignment_diagnostics={"phase_window_rejected": 5})
+    role.pop("required")
+    _found, blockers = _findings(role)
+    assert [f["code"] for f in blockers] == ["late_physical_role_missing_assignment"]
+
+
+def test_the_allocator_marks_the_rhythm_touch_optional_and_exposures_required():
+    """The optional/required split comes from the existing allocator policy."""
+    optional = _late_fight_role_entry(
+        category="conditioning", role_key="light_fight_pace_touch_day",
+        selection_rule="", preferred_pool="conditioning_slots", placement_rule="",
+    )
+    required = _late_fight_role_entry(
+        category="strength", role_key="strength_touch_day",
+        selection_rule="", preferred_pool="strength_slots", placement_rule="",
+        required=True,
+    )
+    assert optional["required"] is False
+    assert required["required"] is True
 
 
 def test_safe_omission_code_is_not_a_release_blocker():
