@@ -177,25 +177,46 @@ def _conditioning_tag_is_collision(tag: str, priority_profile) -> bool:
     return tag in (primary_goal | secondary_goal) and tag in (primary_weak | secondary_weak)
 
 
-# --- Conditioning objective: mechanical cost at equal-or-better dose ---------
+# --- Conditioning objective: mechanical cost at a verified equivalent dose ---
 #
-# A drill's recovery cost and its physiological target are both already recorded
-# (impact_cost plus the landing-impact mech_* tags, and system + work_sec/rounds).
-# Nothing consulted them when ordering a conditioning slot, so the highest-scoring
-# candidate won even when a lower-cost drill in the SAME system delivered at least
-# as much active work — e.g. a GPP glycolytic slot taking high-impact ladder
-# sprints (150 sec active) over a low-impact swing interval (180 sec active).
-# This is a pairwise preference between existing candidates, not a new score, not
-# a dose threshold, and not a rule that machines beat plyometrics: it only fires
-# for a declared conditioning objective, only inside the aerobic and glycolytic
-# systems, and only when the cheaper option is not a smaller dose.
+# Recovery cost and prescribed dose are both already recorded (impact_cost plus
+# the landing-impact mech_* tags; work_sec/rest_sec/rounds). Nothing consulted
+# them when ordering a conditioning slot, so the highest-scoring candidate won
+# even when a same-system drill with the identical prescription cost the athlete
+# less to recover from -- a GPP glycolytic slot took high-impact ladder sprints
+# over a low-impact burst interval, both 10 x 15 sec with 45 sec rest.
 #
-# The comparison uses each candidate's prescribed ceiling. The Stage-2
-# partitioner then sets the delivered rounds inside the phase/system envelope,
-# and because that partition is capped by the ceiling, a candidate promoted on a
-# greater-or-equal ceiling can never deliver less than the one it displaced.
+# The comparison is deliberately unable to invent equivalence:
+#
+#   * The dose must be VERIFIED, not assumed. ``work_sec`` is only read as
+#     seconds when the written prescription independently says so -- the bank
+#     also stores rep counts and distances in that field ("5x3 reps",
+#     "4x200m"), and a blacklist of unit words cannot catch them ("4x200m" has
+#     no word boundary before the number). Parsing the prescription and
+#     requiring it to agree with the numeric fields refuses those entries
+#     instead of reading 200 metres as 200 seconds.
+#   * ``total_minutes`` is never used as active work. Since the dose contract
+#     made it full elapsed time, it includes rest.
+#   * Work and rest must MATCH and rounds must be no lower. Equal active
+#     seconds are not equal stimulus, so a 10 x 15 sec drill is never compared
+#     against a 2 x 100 sec one. This is also what makes the delivered dose
+#     safe: the Stage-2 partitioner allocates rounds round-robin against a
+#     shared budget, where a larger ceiling alone does NOT guarantee a larger
+#     allocation -- but with identical work and rest the two drills are
+#     interchangeable to that algorithm, so equal-or-more rounds cannot deliver
+#     less.
+#   * Intensity must be no lower, by the recorded RPE on both entries.
+#   * An explicitly requested exercise is a coach instruction and is never
+#     displaced on mechanical-cost grounds.
+#
+# When the metadata cannot establish all of that, the existing ranking stands.
 
 _LANDING_IMPACT_TAGS = frozenset({"mech_landing_impact", "high_impact_lower", "high_impact_global"})
+
+# Same parsing convention as the bank dose contract: a work portion is seconds
+# only when the prescription spells the unit out.
+_VERIFIED_WORK_SECONDS = re.compile(r"^\s*(\d+)\s*x\s*(\d+)\s*(?:s|sec|secs|seconds)\b")
+_VERIFIED_WORK_MINUTES = re.compile(r"^\s*(\d+)\s*x\s*(\d+)\s*(?:min|minute|minutes)\b")
 
 
 def _float_or_none_conditioning(value):
@@ -214,34 +235,62 @@ def _conditioning_mechanical_cost_is_high(drill: dict) -> bool:
     return bool(_LANDING_IMPACT_TAGS & set(normalize_tags(drill.get("tags") or [])))
 
 
-def _conditioning_active_work_seconds(drill: dict) -> float | None:
-    """Prescribed active work, from the interval dose or a steady-state block."""
+def _conditioning_verified_interval_dose(drill: dict) -> tuple[float, float, float] | None:
+    """Return ``(work_sec, rest_sec, rounds)`` only when the units are verified.
+
+    The written prescription must independently state a seconds or minutes work
+    portion that agrees with the numeric fields. Rep- and distance-encoded
+    entries, and any entry whose text and numbers disagree, return ``None``.
+    """
+    duration = str(drill.get("duration") or "").lower().replace("\u2013", "-").replace("\u2014", "-")
+    match = _VERIFIED_WORK_SECONDS.match(duration)
+    if match:
+        parsed_rounds, parsed_work = int(match.group(1)), float(match.group(2))
+    else:
+        match = _VERIFIED_WORK_MINUTES.match(duration)
+        if not match:
+            return None
+        parsed_rounds, parsed_work = int(match.group(1)), float(match.group(2)) * 60.0
+
     work_sec = _float_or_none_conditioning(drill.get("work_sec"))
+    rest_sec = _float_or_none_conditioning(drill.get("rest_sec"))
     rounds = _float_or_none_conditioning(drill.get("rounds"))
-    if work_sec and rounds:
-        return work_sec * rounds
-    total_minutes = _float_or_none_conditioning(drill.get("total_minutes"))
-    if total_minutes:
-        return total_minutes * 60.0
-    return None
+    if work_sec != parsed_work or rounds != parsed_rounds:
+        return None
+    if not rest_sec or rest_sec <= 0 or not rounds or rounds <= 0:
+        return None
+    return work_sec, rest_sec, rounds
 
 
 def _promote_lower_cost_conditioning_head(entries: list) -> bool:
-    """Move the cheapest equal-or-better-dosed candidate to the head of a pool."""
+    """Swap in a lower-cost drill carrying the same verified prescription."""
     if len(entries) < 2:
         return False
-    head_drill = entries[0][0]
+    head_drill, _head_score, head_reasons = entries[0]
+    if isinstance(head_reasons, dict) and float(
+        head_reasons.get("preferred_exercise_name_match", 0) or 0
+    ):
+        return False
     if not _conditioning_mechanical_cost_is_high(head_drill):
         return False
-    head_work = _conditioning_active_work_seconds(head_drill)
-    if head_work is None:
+    head_dose = _conditioning_verified_interval_dose(head_drill)
+    head_rpe = _float_or_none_conditioning(head_drill.get("rpe"))
+    if head_dose is None or head_rpe is None:
         return False
+    head_work, head_rest, head_rounds = head_dose
+
     for index in range(1, len(entries)):
         candidate = entries[index][0]
         if _conditioning_mechanical_cost_is_high(candidate):
             continue
-        candidate_work = _conditioning_active_work_seconds(candidate)
-        if candidate_work is None or candidate_work < head_work:
+        candidate_dose = _conditioning_verified_interval_dose(candidate)
+        if candidate_dose is None:
+            continue
+        work, rest, rounds = candidate_dose
+        if work != head_work or rest != head_rest or rounds < head_rounds:
+            continue
+        candidate_rpe = _float_or_none_conditioning(candidate.get("rpe"))
+        if candidate_rpe is None or candidate_rpe < head_rpe:
             continue
         entries.insert(0, entries.pop(index))
         return True
