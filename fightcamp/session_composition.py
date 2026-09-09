@@ -929,8 +929,7 @@ def compose_normal_strength_assignments(
 
 
 def _conditioning_duration_minutes(option: dict[str, Any]) -> float | None:
-    metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else {}
-    return conditioning_dose_minutes(metadata)
+    return conditioning_dose_minutes(_conditioning_effective_dose(option))
 
 
 def _conditioning_is_high_load(option: dict[str, Any]) -> bool:
@@ -951,9 +950,35 @@ def _conditioning_rounds(option: dict[str, Any]) -> int | None:
     return int(rounds)
 
 
-def _conditioning_active_work_seconds(option: dict[str, Any]) -> float | None:
+def _conditioning_effective_dose(option: dict[str, Any]) -> dict[str, Any]:
+    """The dose this option will actually render, not the one the bank authored.
+
+    For a round-based option the athlete's round length replaces the bank work
+    interval, so the bank's own ``work_sec``/``total_minutes``/``duration`` no
+    longer describe the session. Workload, elapsed time and partitioning must
+    all measure what the athlete is actually prescribed, otherwise a shortened
+    round still counts as the bank's longer one. Every other option is measured
+    exactly as before.
+    """
     metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else {}
-    return conditioning_dose_active_work_seconds(metadata)
+    round_seconds = _conditioning_round_seconds(option)
+    rounds = _conditioning_rounds(option)
+    if round_seconds is None or rounds is None:
+        return metadata
+
+    effective = dict(metadata)
+    effective["work_sec"] = round_seconds
+    rest_sec = _float_or_none(metadata.get("rest_sec")) or 0.0
+    effective["total_minutes"] = rounds * (round_seconds + rest_sec) / 60.0
+    # These describe the bank's round length; drop them so no measurer reads a
+    # stale duration in preference to the resolved one.
+    for stale in ("duration_min", "duration", "timing"):
+        effective.pop(stale, None)
+    return effective
+
+
+def _conditioning_active_work_seconds(option: dict[str, Any]) -> float | None:
+    return conditioning_dose_active_work_seconds(_conditioning_effective_dose(option))
 
 
 def _conditioning_round_seconds(option: dict[str, Any]) -> float | None:
@@ -1032,7 +1057,7 @@ def _conditioning_partition_high_load(
 
     dose_data: list[tuple[tuple[dict[str, Any], dict[str, Any], bool], float, float, int]] = []
     for item in high_load:
-        metadata = item[1].get("selection_metadata") if isinstance(item[1].get("selection_metadata"), dict) else {}
+        metadata = _conditioning_effective_dose(item[1])
         work_sec = _float_or_none(metadata.get("work_sec"))
         rest_sec = _float_or_none(metadata.get("rest_sec"))
         rounds = _conditioning_rounds(item[1])

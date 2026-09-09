@@ -15,9 +15,10 @@ Two corrections are covered here:
 """
 import pytest
 
-from fightcamp.camp_week_fillers_impl import (
-    _FIGHT_PHASE_CAPS,
-    _week_aerobic_filler_count,
+from fightcamp.camp_week_fillers_impl import _FIGHT_PHASE_CAPS
+from fightcamp.stage2_role_map import (
+    _count_low_aerobic_support_roles,
+    _low_aerobic_support_cap_for_week,
 )
 from fightcamp.gap_fill_inserts import (
     LOW_COST_AEROBIC_INSERTS,
@@ -37,14 +38,51 @@ def test_gpp_retains_discretionary_filler_budget():
     assert _FIGHT_PHASE_CAPS["SPP"] >= 1
 
 
-def test_week_aerobic_filler_count_reads_placed_roles():
-    roles = [
-        {"role_key": "aerobic_shadow_flow"},
-        {"role_key": "breathing_reset"},
-        {"role_key": "primary_strength_day"},
-    ]
-    assert _week_aerobic_filler_count(roles) == 1
-    assert _week_aerobic_filler_count([]) == 0
+def _allocator_aerobic_role():
+    return {
+        "role_key": "aerobic_base_day",
+        "category": "conditioning",
+        "preferred_system": "aerobic",
+    }
+
+
+def test_support_count_covers_allocator_roles_and_filler_inserts():
+    """One total count, so the filler cannot add on top of a spent allowance."""
+    assert _count_low_aerobic_support_roles([_allocator_aerobic_role()]) == 1
+    assert _count_low_aerobic_support_roles([{"role_key": "aerobic_shadow_flow"}]) == 1
+    assert (
+        _count_low_aerobic_support_roles(
+            [_allocator_aerobic_role(), {"role_key": "aerobic_shadow_flow"}]
+        )
+        == 2
+    )
+    assert _count_low_aerobic_support_roles([{"role_key": "breathing_reset"}]) == 0
+
+
+@pytest.mark.parametrize(
+    "overrides,expected_room",
+    [
+        ({}, True),                                   # fresh: cap 2, one used
+        ({"cut_severity_bucket": "high"}, False),     # cap 1, already spent
+        ({"fatigue": "high"}, False),                 # cap 1, already spent
+    ],
+)
+def test_filler_shares_the_allocator_low_aerobic_allowance(overrides, expected_room):
+    week = {"phase": "GPP", "calendar_days": [{"weekday": "tuesday", "d_day": 40}]}
+    athlete = {"key_goals": ["conditioning"], "weaknesses": ["gas_tank"], **overrides}
+    roles = [_allocator_aerobic_role()]
+
+    cap = _low_aerobic_support_cap_for_week(week, athlete, roles)
+    assert (_count_low_aerobic_support_roles(roles) < cap) is expected_room
+
+
+def test_allowance_is_exhausted_once_the_filler_touch_is_placed():
+    week = {"phase": "GPP", "calendar_days": [{"weekday": "tuesday", "d_day": 40}]}
+    athlete = {"key_goals": ["conditioning"], "weaknesses": ["gas_tank"]}
+    roles = [_allocator_aerobic_role(), {"role_key": "aerobic_shadow_flow"}]
+
+    cap = _low_aerobic_support_cap_for_week(week, athlete, roles)
+    assert _count_low_aerobic_support_roles(roles) >= cap
 
 
 def test_forced_conditioning_prefers_an_aerobic_insert_over_recovery_filler():

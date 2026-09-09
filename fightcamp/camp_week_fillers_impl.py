@@ -13,7 +13,6 @@ from .coordination_support_library import (
     select_coordination_support,
 )
 from .gap_fill_inserts import (
-    LOW_COST_AEROBIC_INSERTS,
     PHYSICAL_INSERTS,
     _new_usage_ledger,
     _priority_contribution,
@@ -201,16 +200,6 @@ def _place_filler(
     return insert
 
 
-def _week_aerobic_filler_count(session_roles: list[dict[str, Any]]) -> int:
-    """Low-cost aerobic support inserts already placed in this week."""
-    return sum(
-        1
-        for role in session_roles
-        if isinstance(role, dict)
-        and str(role.get("role_key") or "") in LOW_COST_AEROBIC_INSERTS
-    )
-
-
 def _unused_day_is_fillable(day_entry: Any) -> bool:
     if not isinstance(day_entry, dict):
         return False
@@ -242,6 +231,22 @@ def _fill_week(
     # preference stops, non-conditioning athletes never see one, and taper and
     # fight-week filler behaviour is deliberately excluded.
     build_phase = str(week.get("phase") or "").strip().upper() in {"GPP", "SPP"}
+    # Frequency is the role map's existing low-aerobic support allowance, not a
+    # filler-local rule: the same cap and the same total count that govern the
+    # allocator's aerobic touches also govern one placed here, so a week whose
+    # allowance is already spent by an aerobic conditioning role gets no extra
+    # filler touch.
+    from .stage2_role_map import (
+        _count_low_aerobic_support_roles,
+        _low_aerobic_support_cap_for_week,
+    )
+
+    aerobic_allowance = _low_aerobic_support_cap_for_week(
+        week,
+        athlete_model,
+        session_roles,
+        hard_sparring_plan=week.get("hard_sparring_plan"),
+    )
 
     added = 0
     kept_unused: list[Any] = []
@@ -269,7 +274,7 @@ def _fill_week(
             usage_ledger=usage_ledger,
             allow_physical=_week_physical_filler_count(session_roles) < 1,
             prefer_conditioning=build_phase
-            and _week_aerobic_filler_count(session_roles) < 1,
+            and _count_low_aerobic_support_roles(session_roles) < aerobic_allowance,
         )
         if insert is None:
             kept_unused.append(day_entry)
@@ -299,7 +304,7 @@ def _fill_week(
             usage_ledger=usage_ledger,
             allow_physical=_week_physical_filler_count(session_roles) < 1,
             prefer_conditioning=build_phase
-            and _week_aerobic_filler_count(session_roles) < 1,
+            and _count_low_aerobic_support_roles(session_roles) < aerobic_allowance,
         )
         if insert is None:
             continue

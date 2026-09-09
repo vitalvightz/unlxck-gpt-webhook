@@ -398,3 +398,79 @@ def test_round_based_work_without_an_athlete_format_keeps_the_bank_dose():
 
     assignments = _conditioner(role_map)["selected_exercise_assignments"]
     assert [item["effective_prescription"] for item in assignments] == ["5x5min"]
+
+
+def test_workload_is_measured_from_the_effective_round_length():
+    """Shortening a round shortens the real dose, so completion must follow it.
+
+    A 3x3min round-based option clears the 480s SPP target on its own; the same
+    option for a two-minute-round athlete delivers 360s and must not be treated
+    as complete.
+    """
+    from fightcamp.session_composition import (
+        _conditioning_active_work_seconds,
+        _conditioning_duration_minutes,
+    )
+
+    option = _round_option("Shadow Rounds", work_sec=180, rounds=3, round_based=True)
+    from fightcamp.planner_context import planner_athlete_model_context
+
+    measured = {}
+    for fmt in ("3 x 3", "3 x 2"):
+        token = planner_athlete_model_context.set({"rounds_format": fmt})
+        try:
+            measured[fmt] = (
+                _conditioning_active_work_seconds(option),
+                _conditioning_duration_minutes(option),
+            )
+        finally:
+            planner_athlete_model_context.reset(token)
+
+    assert measured["3 x 3"][0] == 540.0
+    assert measured["3 x 2"][0] == 360.0
+    # elapsed must shrink with the round too (60s rest x 3 rounds stays)
+    assert measured["3 x 2"][1] < measured["3 x 3"][1]
+
+
+def test_non_round_work_is_measured_from_its_own_bank_dose():
+    from fightcamp.session_composition import _conditioning_active_work_seconds
+    from fightcamp.planner_context import planner_athlete_model_context
+
+    option = _round_option("Bike Block", work_sec=480, rounds=2, round_based=False)
+    seen = set()
+    for fmt in ("3 x 3", "3 x 2", "5 x 5"):
+        token = planner_athlete_model_context.set({"rounds_format": fmt})
+        try:
+            seen.add(_conditioning_active_work_seconds(option))
+        finally:
+            planner_athlete_model_context.reset(token)
+    assert seen == {960.0}
+
+
+def test_shorter_rounds_stack_a_second_exposure_instead_of_finishing_early():
+    role_map = _glycolytic_role_map()
+    pools = {
+        "SPP": {
+            "conditioning_slots": [
+                {
+                    "slot_id": "a",
+                    "role": "glycolytic",
+                    "selected": _round_option(
+                        "Shadow Rounds", work_sec=180, rounds=3, round_based=True
+                    ),
+                    "alternates": [],
+                },
+                {
+                    "slot_id": "b",
+                    "role": "glycolytic",
+                    "selected": _round_option(
+                        "Sprawl Circuit", work_sec=30, rounds=5, round_based=False
+                    ),
+                    "alternates": [],
+                },
+            ]
+        }
+    }
+    _compose_with_athlete(role_map, pools, {"rounds_format": "3 x 2"})
+    names = [i["name"] for i in _conditioner(role_map)["selected_exercise_assignments"]]
+    assert names == ["Shadow Rounds", "Sprawl Circuit"]
