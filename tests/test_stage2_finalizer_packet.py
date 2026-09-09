@@ -395,3 +395,58 @@ def test_finalizer_packet_explains_reduced_count_for_bad_boxing_profile():
     assert "injury" in joined_reasons
     assert "hard sparring / contact" in joined_reasons
     assert "intentional compression" in joined_reasons
+
+
+def test_finalizer_packet_compact_role_omits_internal_governance_hierarchy():
+    # Stage 1's decision-hierarchy declaration is a constant block stamped on
+    # every role that no render rule or contract text references. It is dropped
+    # from the LLM-facing role; the governance fields the finalizer acts on stay.
+    stage2_payload = {
+        "athlete_model": {},
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "week_index": 1,
+                    "phase": "SPP",
+                    "session_roles": [
+                        {
+                            "session_index": 1,
+                            "role_key": "primary_strength_day",
+                            "category": "strength",
+                            "governance": {
+                                "authority": "execution_layer_only",
+                                "execution_only": True,
+                                "governed_by": ["safety_and_readiness", "main_limiter"],
+                                "cannot_override": ["session_counts", "must_keep"],
+                                "resolved_authority": {"cut_first_driver": "main_limiter"},
+                                "selected_drill_locked": True,
+                                "main_job": "anchor",
+                                "support_cap": "light_only",
+                                "forbidden_secondary_stressors": ["jumps"],
+                                "suppression_rules": ["Hard sparring owns the day."],
+                            },
+                        }
+                    ],
+                }
+            ]
+        },
+    }
+    packet = build_stage2_finalizer_packet(stage2_payload=stage2_payload, planning_brief={})
+    governance = packet["selected_plan"]["weekly_role_map"]["weeks"][0]["session_roles"][0][
+        "governance"
+    ]
+
+    for dropped in (
+        "authority",
+        "execution_only",
+        "governed_by",
+        "cannot_override",
+        "resolved_authority",
+    ):
+        assert dropped not in governance
+    # Everything the finalizer's own hard rules act on survives.
+    assert governance["selected_drill_locked"] is True
+    assert governance["main_job"] == "anchor"
+    assert governance["support_cap"] == "light_only"
+    assert governance["forbidden_secondary_stressors"] == ["jumps"]
+    assert governance["suppression_rules"] == ["Hard sparring owns the day."]
