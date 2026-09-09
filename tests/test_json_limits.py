@@ -21,6 +21,7 @@ from api.models import (
     OnboardingDraftSaveRequest,
     ProfileUpdateRequest,
 )
+from api.stage2_automation import _base_result
 from api.store import SupabaseAppStore
 from support import _build_request
 
@@ -180,6 +181,40 @@ def test_create_plan_accepts_large_candidate_pools_for_20_plus_equipment_selecti
     assert inserted["athlete_model"]["equipment_access"] == equipment
     assert inserted["candidate_pools"] == candidates
     assert MAX_SERVER_JSON_BYTES < json_byte_size(payload) < MAX_STAGE2_PAYLOAD_BYTES
+
+
+def test_stage2_result_persists_no_duplicate_candidate_pool_after_finalization():
+    store = _make_store()
+    store.client.table.return_value.insert.return_value.execute.return_value.data = [{"id": "plan-1"}]
+    candidate_pool = {"conditioning": [{"name": f"Option {index}", "notes": "x" * 2_000} for index in range(240)]}
+    stage1_result = {
+        "stage2_payload": {
+            "payload_variant": "normal_stage2_payload",
+            "input_parsing_metadata": {"source": "intake"},
+            "candidate_pools": candidate_pool,
+        },
+        # The planning brief remains the canonical source used by validation,
+        # structured rendering, athlete-display reconstruction and admin audit.
+        "planning_brief": {"candidate_pools": candidate_pool},
+    }
+
+    finalized = _base_result(stage1_result, draft_plan_text="# Stage 1")
+
+    assert "candidate_pools" in stage1_result["stage2_payload"]
+    assert finalized["planning_brief"]["candidate_pools"] == candidate_pool
+    assert "candidate_pools" not in finalized["stage2_payload"]
+    assert finalized["stage2_payload"]["input_parsing_metadata"] == {"source": "intake"}
+    assert json_byte_size(stage1_result["stage2_payload"]) > MAX_STAGE2_PAYLOAD_BYTES
+    assert json_byte_size(finalized["stage2_payload"]) < MAX_SERVER_JSON_BYTES
+
+    store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake-1",
+        request=_build_request(),
+        result={"status": "generated", **finalized},
+    )
+    inserted = store.client.table.return_value.insert.call_args.args[0]
+    assert "candidate_pools" not in inserted["stage2_payload"]
 
 
 def test_create_plan_rejects_stage2_payload_above_dedicated_limit():
