@@ -418,8 +418,22 @@ def _requirements(entry: dict, brief: dict) -> list[dict]:
     cutoff = 14 if entry["state"] == "build" else (8 if entry["goal"] == "strength" else 2)
     width = 7 if entry["state"] == "build" else 14
     span = max(1, days - cutoff + 1)
-    return [{"min_d_day": cutoff + index * width, "max_d_day": min(days, cutoff + (index + 1) * width - 1)}
-            for index in range(ceil(span / width))]
+    # Windows are anchored at the cutoff and counted outward, so any remainder
+    # falls at the far end - the opening days of camp. Rounding up turned that
+    # remainder into its own requirement, demanding a full development-week
+    # exposure from a sliver that can be a single day (a 21-day camp yields a
+    # D-21..D-21 window). The earliest window absorbs the remainder instead, so
+    # every requirement covers a real development week.
+    count = max(1, span // width)
+    return [
+        {
+            "min_d_day": cutoff + index * width,
+            "max_d_day": days
+            if index == count - 1
+            else min(days, cutoff + (index + 1) * width - 1),
+        }
+        for index in range(count)
+    ]
 
 
 def _coverage(entry: dict, brief: dict, evidence: list[dict]) -> tuple[list[dict], list[dict]]:
