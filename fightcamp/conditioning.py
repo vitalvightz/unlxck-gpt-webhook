@@ -32,7 +32,9 @@ from .tagging import normalize_item_tags, normalize_tags
 from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP, WEAKNESS_TAG_MAP
 from .config import (
     PHASE_SYSTEM_RATIOS,
+    athlete_round_seconds,
     conditioning_dose_active_work_seconds,
+    conditioning_effective_dose,
     conditioning_phase_workload_envelope,
     STYLE_CONDITIONING_RATIO,
     DATA_DIR,
@@ -1513,13 +1515,19 @@ def _conditioning_fallback_allowed(primary: dict, fallback: dict, *, phase: str)
     return bool(str(contingency_reason).strip())
 
 def _conditioning_workload_primary_cap(
-    drills: list[dict], *, phase: str, system: str
+    drills: list[dict], *, phase: str, system: str, round_seconds: float | None = None
 ) -> int:
     """How many primaries a system needs to carry its phase workload.
 
     One drill is the norm. More are kept only while the accumulated active work
     is short of the phase/system target, so a system whose best drill already
     covers the target keeps exactly one.
+
+    Round-based drills are measured at the athlete's own round length, the same
+    view session composition renders. Measuring the bank length here would let a
+    shorter-round athlete lose the second drill to a target their session never
+    actually reaches, leaving composition to detect the shortfall with no
+    remaining slot to spend.
     """
     target_active_work, _ = conditioning_phase_workload_envelope(
         phase=phase, system=system
@@ -1532,7 +1540,9 @@ def _conditioning_workload_primary_cap(
     for drill in drills:
         if drill.get("render_as_fallback"):
             continue
-        active_work = conditioning_dose_active_work_seconds(drill)
+        active_work = conditioning_dose_active_work_seconds(
+            conditioning_effective_dose(drill, round_seconds)
+        )
         if active_work is None:
             # An undosed drill cannot be shown to advance the workload; stop
             # rather than stacking drills on an unknown dose.
@@ -1550,6 +1560,7 @@ def _resolve_conditioning_sessions(
     phase: str,
     num_sessions: int,
     alactic_primary_cap: int = 1,
+    round_seconds: float | None = None,
 ) -> list[dict]:
     """Distribute already-selected conditioning drills into sessions.
 
@@ -1582,7 +1593,7 @@ def _resolve_conditioning_sessions(
             primary_cap = max(1, int(alactic_primary_cap or 1))
         else:
             primary_cap = _conditioning_workload_primary_cap(
-                drills, phase=phase, system=system
+                drills, phase=phase, system=system, round_seconds=round_seconds
             )
         explicit_primaries = [d for d in drills if not d.get("render_as_fallback")]
         primary_raws = explicit_primaries[:primary_cap]
@@ -4871,6 +4882,7 @@ def generate_conditioning_block(flags):
         phase=phase,
         num_sessions=num_conditioning_sessions,
         alactic_primary_cap=alactic_primary_cap,
+        round_seconds=athlete_round_seconds(flags.get("rounds_format")),
     )
     grouped_drills = _resolved_grouped_drills(resolved_sessions)
     selected_drill_names = _resolved_conditioning_names(resolved_sessions)

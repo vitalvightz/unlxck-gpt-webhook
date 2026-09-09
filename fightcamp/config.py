@@ -175,3 +175,46 @@ def athlete_round_seconds(rounds_format: str | None) -> float | None:
         return None
     minutes = float(match.group(2))
     return minutes * 60.0 if minutes > 0 else None
+
+
+def conditioning_effective_dose(dose: dict, round_seconds: float | None) -> dict:
+    """The dose a round-based option will actually render, at the athlete's round.
+
+    For an option the bank marks ``round_based``, the athlete's own round length
+    replaces the authored work interval, so the bank's ``work_sec`` and its
+    derived duration no longer describe the session. Stage 1 selection and
+    session composition both measure workload through this view, so a shortened
+    round is never counted as the bank's longer one by either layer.
+
+    Elapsed time follows the prescription's rest convention: rest falls between
+    rounds, never after the last one.
+
+    Any other dose - and any athlete with no usable rounds format - is returned
+    unchanged.
+    """
+    if not isinstance(dose, dict):
+        return {}
+    if not round_seconds or round_seconds <= 0 or not dose.get("round_based"):
+        return dose
+    try:
+        rounds = int(float(dose.get("rounds")))
+    except (TypeError, ValueError):
+        return dose
+    if rounds <= 0:
+        return dose
+
+    try:
+        rest_sec = max(0.0, float(dose.get("rest_sec")))
+    except (TypeError, ValueError):
+        rest_sec = 0.0
+
+    effective = dict(dose)
+    effective["work_sec"] = round_seconds
+    effective["total_minutes"] = (
+        rounds * round_seconds + (rounds - 1) * rest_sec
+    ) / 60.0
+    # These describe the bank's round length; drop them so no measurer prefers a
+    # stale duration over the resolved one.
+    for stale in ("duration_min", "duration", "timing"):
+        effective.pop(stale, None)
+    return effective

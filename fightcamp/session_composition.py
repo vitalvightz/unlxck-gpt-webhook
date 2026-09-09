@@ -27,6 +27,7 @@ from .strength_session_quality import classify_strength_item
 from .training_context import normalize_equipment_list
 from .config import (
     athlete_round_seconds,
+    conditioning_effective_dose,
     conditioning_dose_active_work_seconds,
     conditioning_dose_minutes,
     conditioning_phase_workload_envelope as _conditioning_phase_workload_envelope,
@@ -951,30 +952,12 @@ def _conditioning_rounds(option: dict[str, Any]) -> int | None:
 
 
 def _conditioning_effective_dose(option: dict[str, Any]) -> dict[str, Any]:
-    """The dose this option will actually render, not the one the bank authored.
-
-    For a round-based option the athlete's round length replaces the bank work
-    interval, so the bank's own ``work_sec``/``total_minutes``/``duration`` no
-    longer describe the session. Workload, elapsed time and partitioning must
-    all measure what the athlete is actually prescribed, otherwise a shortened
-    round still counts as the bank's longer one. Every other option is measured
-    exactly as before.
-    """
+    """Bank dose for this option, resolved to the athlete's own round length."""
     metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else {}
-    round_seconds = _conditioning_round_seconds(option)
-    rounds = _conditioning_rounds(option)
-    if round_seconds is None or rounds is None:
-        return metadata
-
-    effective = dict(metadata)
-    effective["work_sec"] = round_seconds
-    rest_sec = _float_or_none(metadata.get("rest_sec")) or 0.0
-    effective["total_minutes"] = rounds * (round_seconds + rest_sec) / 60.0
-    # These describe the bank's round length; drop them so no measurer reads a
-    # stale duration in preference to the resolved one.
-    for stale in ("duration_min", "duration", "timing"):
-        effective.pop(stale, None)
-    return effective
+    athlete_model = get_planner_athlete_model() or {}
+    return conditioning_effective_dose(
+        metadata, athlete_round_seconds(athlete_model.get("rounds_format"))
+    )
 
 
 def _conditioning_active_work_seconds(option: dict[str, Any]) -> float | None:
@@ -990,15 +973,11 @@ def _conditioning_round_seconds(option: dict[str, Any]) -> float | None:
     keeps the work interval the bank authored. Round count, rest, RPE, exercise
     identity, scoring and mechanical metadata are untouched either way.
     """
-    if not metadata_is_round_based(option):
+    metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else {}
+    if not metadata.get("round_based"):
         return None
     athlete_model = get_planner_athlete_model() or {}
     return athlete_round_seconds(athlete_model.get("rounds_format"))
-
-
-def metadata_is_round_based(option: dict[str, Any]) -> bool:
-    metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else {}
-    return bool(metadata.get("round_based"))
 
 
 def _conditioning_prescription(option: dict[str, Any], *, rounds: int | None = None) -> str:

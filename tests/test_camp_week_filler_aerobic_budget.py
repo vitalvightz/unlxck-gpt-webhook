@@ -108,3 +108,28 @@ def test_without_forcing_the_selection_is_unchanged():
         {}, 20, allowed, usage_ledger=None, force_conditioning=False, coverage_state=[]
     )
     assert chosen in allowed
+
+
+def test_effective_dose_counts_rest_between_rounds_only():
+    """Elapsed time follows the prescription's rest convention: no trailing rest."""
+    from fightcamp.config import conditioning_effective_dose
+
+    dose = {"work_sec": 300, "rounds": 5, "rest_sec": 30, "round_based": True}
+    effective = conditioning_effective_dose(dose, 300.0)
+    # 5 x 300s work + 4 x 30s rest = 1620s = 27 min, not 27.5.
+    assert effective["total_minutes"] == 27.0
+
+    single = conditioning_effective_dose(
+        {"work_sec": 180, "rounds": 1, "rest_sec": 60, "round_based": True}, 180.0
+    )
+    assert single["total_minutes"] == 3.0
+
+
+def test_effective_dose_leaves_other_doses_untouched():
+    from fightcamp.config import conditioning_effective_dose
+
+    dose = {"work_sec": 480, "rounds": 2, "rest_sec": 180}
+    assert conditioning_effective_dose(dose, 120.0) is dose
+    assert conditioning_effective_dose(dict(dose, round_based=True), None) == dict(
+        dose, round_based=True
+    )

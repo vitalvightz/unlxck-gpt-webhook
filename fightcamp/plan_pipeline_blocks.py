@@ -157,6 +157,9 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext, *, progress_callb
                 **base_flags,
                 "phase": phase,
                 "sport": context.canonical_sport,
+                # Round-based conditioning is dosed at the athlete's own round
+                # length, so selection must measure the workload it will render.
+                "rounds_format": context.plan_input.rounds_format,
                 "random_seed": context.random_seed,
                 "time_to_fight_days": context.plan_input.days_until_fight,
                 "weeks_out": context.plan_input.weeks_out,

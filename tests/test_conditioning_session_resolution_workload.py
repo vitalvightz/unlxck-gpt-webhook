@@ -69,3 +69,60 @@ def test_explicit_fallbacks_never_count_as_primaries():
 def test_never_returns_zero_when_only_fallbacks_exist():
     drills = [_drill("Backup", duration="20min continuous", fallback=True)]
     assert _conditioning_workload_primary_cap(drills, phase="SPP", system="aerobic") == 1
+
+
+# ---------------------------------------------------------------------------
+# Stage 1 measures the dose the athlete will actually receive
+# ---------------------------------------------------------------------------
+
+
+def _round_drill(name, *, work_sec, rounds, rest_sec=60):
+    return {
+        "name": name,
+        "work_sec": work_sec,
+        "rounds": rounds,
+        "rest_sec": rest_sec,
+        "round_based": True,
+    }
+
+
+def test_stage1_keeps_a_second_primary_when_the_athlete_round_is_short():
+    """A 3x3min drill covers the 480s SPP target; the same drill at 2min rounds
+    delivers 360s, so Stage 1 must not discard the slot composition will need."""
+    drills = [
+        _round_drill("Shadow Rounds", work_sec=180, rounds=3),
+        _drill("Sprawl Circuit", work_sec=30, rounds=5),
+    ]
+    long_round = _conditioning_workload_primary_cap(
+        drills, phase="SPP", system="glycolytic", round_seconds=180.0
+    )
+    short_round = _conditioning_workload_primary_cap(
+        drills, phase="SPP", system="glycolytic", round_seconds=120.0
+    )
+    assert long_round == 1
+    assert short_round == 2
+
+
+def test_stage1_without_a_rounds_format_measures_the_bank_dose():
+    drills = [
+        _round_drill("Shadow Rounds", work_sec=180, rounds=3),
+        _drill("Sprawl Circuit", work_sec=30, rounds=5),
+    ]
+    assert (
+        _conditioning_workload_primary_cap(
+            drills, phase="SPP", system="glycolytic", round_seconds=None
+        )
+        == 1
+    )
+
+
+def test_stage1_leaves_non_round_drills_on_their_own_dose():
+    """A long round length must not inflate a drill that is not round-based."""
+    drills = [_drill("Bike Block", work_sec=240, rounds=2), _drill("Filler", work_sec=30, rounds=4)]
+    for round_seconds in (None, 120.0, 300.0):
+        assert (
+            _conditioning_workload_primary_cap(
+                drills, phase="SPP", system="glycolytic", round_seconds=round_seconds
+            )
+            == 1
+        )
