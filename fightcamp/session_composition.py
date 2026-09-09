@@ -1127,13 +1127,7 @@ def _conditioning_role_is_hard_spar_adjacent(week: dict[str, Any], role: dict[st
 def compose_normal_conditioning_assignments(
     *, weekly_role_map: dict[str, Any], candidate_pools: dict[str, Any]
 ) -> dict[str, Any]:
-    """Mark normal conditioning as Stage-2-composed and retain optional trunk support.
-
-    Stage 1 owns the eligible, ranked conditioning reservoir; normal-session
-    membership and dose partitioning are coaching decisions for Stage 2.  This
-    deliberately does not apply to late-fight-tail roles, whose allocator keeps
-    their existing closed assignment contract.
-    """
+    """Attach a safe bank-backed minimum composition to normal conditioning roles."""
     athlete_model = get_planner_athlete_model()
     pressure_context = _composition_context_from_model(athlete_model)
     trunk_strength_selected = _trunk_strength_selected(athlete_model)
@@ -1152,11 +1146,84 @@ def compose_normal_conditioning_assignments(
 
             phase = _conditioning_phase_for_role(week, role)
             pool = candidate_pools.get(phase) if isinstance(candidate_pools, dict) else None
+            slots = pool.get("conditioning_slots", []) if isinstance(pool, dict) else []
             strength_slots = pool.get("strength_slots", []) if isinstance(pool, dict) else []
+
+            preferred_system = str(role.get("preferred_system") or "").strip().lower()
+            matching_slots = [
+                slot
+                for slot in slots
+                if isinstance(slot, dict)
+                and str(slot.get("role") or "").strip().lower() == preferred_system
+            ]
+            options: list[tuple[dict[str, Any], dict[str, Any], bool]] = []
+            seen_names: set[str] = set()
+            for is_selected in (True, False):
+                for slot in matching_slots:
+                    candidates = (
+                        [slot.get("selected")]
+                        if is_selected
+                        else list(slot.get("alternates") or [])
+                    )
+                    for option in candidates:
+                        if not isinstance(option, dict):
+                            continue
+                        name = str(option.get("name") or "").strip()
+                        if not name or name in seen_names:
+                            continue
+                        seen_names.add(name)
+                        options.append((slot, option, is_selected))
+
+            if not options:
+                continue
+
             adjacent_hard_spar = _conditioning_role_is_hard_spar_adjacent(week, role)
-            # A prior planner run may have put normal conditioning membership on
-            # the role.  It is obsolete authority, not a fallback contract.
-            role.pop("selected_exercise_assignments", None)
+            selected: list[tuple[dict[str, Any], dict[str, Any], bool]] = []
+            total_minutes = 0.0
+            for slot, option, is_selected in options:
+                duration = _conditioning_duration_minutes(option)
+                if selected:
+                    if duration is not None and total_minutes + duration > 45:
+                        continue
+                selected.append((slot, option, is_selected))
+                if duration is not None:
+                    total_minutes += duration
+                if adjacent_hard_spar:
+                    break
+                if preferred_system == "aerobic" and len(selected) >= 2 and total_minutes >= 25:
+                    break
+                if len(selected) >= 3:
+                    break
+
+            selected, high_load_rounds, underfill_reason, high_load_budget = _conditioning_partition_high_load(
+                selected,
+                phase=phase,
+                system=preferred_system,
+            )
+            long_aerobic = preferred_system == "aerobic" and total_minutes >= 25
+            minimum = None if adjacent_hard_spar else (2 if long_aerobic else 3)
+
+            assignments = []
+            selected_names: set[str] = set()
+            for slot, option, is_selected in selected:
+                name = str(option.get("name") or "")
+                if name:
+                    selected_names.add(name)
+                allocated_rounds = high_load_rounds.get(name)
+                assignment = {
+                    "slot_id": slot.get("slot_id"),
+                    "name": name,
+                    "source_phase": phase,
+                    "slot_group": "conditioning_slots",
+                    "selected_option": is_selected,
+                    "base_prescription": _conditioning_prescription(option),
+                    "effective_prescription": _conditioning_prescription(option, rounds=allocated_rounds),
+                    "effective_rounds": allocated_rounds,
+                }
+                notes = _selected_coaching_notes(option)
+                if notes:
+                    assignment["coaching_notes"] = notes
+                assignments.append(assignment)
 
             trunk_support_added = False
             trunk_support_skip_reason = ""
@@ -1169,6 +1236,7 @@ def compose_normal_conditioning_assignments(
                 trunk_options = [
                     record
                     for record in _low_load_trunk_support_records(strength_slots)
+                    if record["name"] not in selected_names
                 ]
                 if embedded_trunk_support_count >= 2:
                     trunk_support_skip_reason = "weekly_trunk_support_cap"
@@ -1183,7 +1251,8 @@ def compose_normal_conditioning_assignments(
                                 "effective_prescription": "1-2 controlled sets; stop before fatigue",
                             }
                         )
-                        optional_support = [assignment]
+                        assignments.append(assignment)
+                        selected_names.add(record["name"])
                         embedded_trunk_support_count += 1
                         trunk_support_added = True
             elif trunk_strength_selected:
@@ -1193,14 +1262,16 @@ def compose_normal_conditioning_assignments(
                     else "readiness_pressure"
                 )
 
-            if trunk_support_added:
-                role["optional_conditioning_support_assignments"] = optional_support
-            else:
-                role.pop("optional_conditioning_support_assignments", None)
+            role["selected_exercise_assignments"] = assignments
             role["conditioning_composition_policy"] = {
-                "stage2_composes_membership": True,
-                "source_phase": phase,
+                "minimum_exercise_count": minimum,
+                "selected_count": len(assignments),
+                "long_aerobic_session": long_aerobic,
                 "hard_sparring_adjacent": adjacent_hard_spar,
+                "high_load_workload_envelope": high_load_budget,
+                "partitioned_high_load_rounds": high_load_rounds,
+                "underfill_reason": underfill_reason,
+                "workload_limited": bool(minimum is not None and len(assignments) < minimum),
                 "embedded_trunk_support": trunk_support_added,
                 "embedded_trunk_support_count": 1 if trunk_support_added else 0,
                 "embedded_trunk_support_skip_reason": trunk_support_skip_reason,

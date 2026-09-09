@@ -18,7 +18,6 @@ from copy import deepcopy
 from typing import Any
 
 from .fight_day_override import FIGHT_DAY_PROTOCOL_TEXT
-from .selection_metadata import BOOLEAN_METADATA_FIELDS, SELECTION_METADATA_DEFAULTS
 from .stage2_render_guards import _all_active_injuries_surface_only, _render_guard_flags
 
 
@@ -195,8 +194,6 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
         "strength_dose_cap",
         "rpe_cap",
         "selected_exercise_assignments",
-        "conditioning_composition_policy",
-        "optional_conditioning_support_assignments",
         "effective_strength_prescriptions",
         "effective_strength_envelope",
         "strength_session_index",
@@ -216,162 +213,6 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
             and role.get(key) == []
         )
     }
-
-
-_NORMAL_CONDITIONING_CANDIDATE_KEYS = (
-    "name",
-    "source",
-    "system",
-    "prescription",
-    "why",
-    "notes",
-    "movement_patterns",
-    "restriction_tags",
-    "mechanical_risk_tags",
-    "required_equipment",
-    "availability_contingency_reason",
-    "athlete_facing_system_label",
-    "reason_codes",
-    "bank_order",
-    "technical_footwork_prescription",
-)
-
-_NORMAL_CONDITIONING_METADATA_KEYS = tuple(
-    dict.fromkeys(
-        (
-            # Existing normalized selector metadata is the compact authoritative
-            # physiological/fatigue contract for an option.
-            *SELECTION_METADATA_DEFAULTS,
-            *BOOLEAN_METADATA_FIELDS,
-            # These bank fields supplement the normalized contract with the
-            # actual prescription and equipment context that the composer sees.
-            "system",
-            "phases",
-            "tags",
-            "modality",
-            "purpose",
-            "description",
-            "notes",
-            "timing",
-            "duration",
-            "rest",
-            "load",
-            "intensity",
-            "work_sec",
-            "rest_sec",
-            "rounds",
-            "total_minutes",
-            "rpe",
-            "impact_cost",
-            "lactate_load",
-            "movement_cost",
-            "mechanical_risk_tags",
-            "equipment",
-            "required_equipment",
-            "equipment_note",
-            "quality_stop_rule",
-        )
-    )
-)
-
-
-def _compact_normal_conditioning_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
-    """Keep the bank facts Stage 2 needs, without repeating raw scorer payloads.
-
-    ``selection_metadata`` is the authoritative bank record in the full
-    planning brief. The finalizer only needs its prescription, physiological,
-    equipment and mechanical evidence; raw score breakdowns and schema/source
-    bookkeeping are planner diagnostics, not coaching input.
-    """
-    compact = {
-        key: deepcopy(candidate[key])
-        for key in _NORMAL_CONDITIONING_CANDIDATE_KEYS
-        if candidate.get(key) not in (None, "", [], {})
-    }
-    metadata = candidate.get("selection_metadata")
-    if isinstance(metadata, dict):
-        compact_metadata = {
-            key: deepcopy(metadata[key])
-            for key in _NORMAL_CONDITIONING_METADATA_KEYS
-            if metadata.get(key) not in (None, "", [], {})
-        }
-        if compact_metadata:
-            compact["selection_metadata"] = compact_metadata
-    return compact
-
-
-def _normal_conditioning_composition_options(source: dict[str, Any]) -> list[dict[str, Any]]:
-    """Project the existing Stage-1 conditioning surplus for open normal roles.
-
-    This is deliberately a packet projection, not another selector: ordering,
-    eligibility, prescriptions, equipment and mechanical evidence all remain
-    the authoritative objects already emitted in ``candidate_pools``.
-    """
-    from .session_composition import _conditioning_phase_workload_envelope
-
-    pools = source.get("candidate_pools") or {}
-    role_map = source.get("weekly_role_map") or {}
-    options: list[dict[str, Any]] = []
-    for week in role_map.get("weeks") or []:
-        if not isinstance(week, dict):
-            continue
-        phase = str(week.get("phase") or "").upper()
-        phase_pool = pools.get(phase) if isinstance(pools, dict) else None
-        slots = phase_pool.get("conditioning_slots") if isinstance(phase_pool, dict) else []
-        for role in week.get("session_roles") or []:
-            if not isinstance(role, dict):
-                continue
-            policy = role.get("conditioning_composition_policy") or {}
-            if (
-                str(role.get("category") or "").lower() != "conditioning"
-                or role.get("late_fight_tail_owned")
-                or not policy.get("stage2_composes_membership")
-            ):
-                continue
-            phase = str(policy.get("source_phase") or phase).upper()
-            phase_pool = pools.get(phase) if isinstance(pools, dict) else None
-            slots = phase_pool.get("conditioning_slots") if isinstance(phase_pool, dict) else []
-            system = str(role.get("preferred_system") or "").lower()
-            candidates: list[dict[str, Any]] = []
-            seen: set[str] = set()
-            for slot in slots or []:
-                if not isinstance(slot, dict) or str(slot.get("role") or "").lower() != system:
-                    continue
-                for candidate in [slot.get("selected"), *(slot.get("alternates") or [])]:
-                    if not isinstance(candidate, dict):
-                        continue
-                    name = str(candidate.get("name") or "").strip()
-                    if not name or name in seen:
-                        continue
-                    seen.add(name)
-                    candidates.append(_compact_normal_conditioning_candidate(candidate))
-            target_active_work, elapsed_cap_minutes = _conditioning_phase_workload_envelope(
-                phase=phase,
-                system=system,
-            )
-            options.append(
-                {
-                    "week_index": week.get("week_index"),
-                    "phase": phase,
-                    "scheduled_countdown_label": role.get("scheduled_countdown_label")
-                    or role.get("countdown_label"),
-                    "role_key": role.get("role_key"),
-                    "athlete_facing_label": role.get("athlete_facing_label"),
-                    "system": system,
-                    "hard_sparring_adjacent": bool(policy.get("hard_sparring_adjacent")),
-                    "phase_system_workload_guidance": {
-                        "target_active_work_seconds": target_active_work,
-                        "elapsed_cap_seconds": (
-                            elapsed_cap_minutes * 60.0 if elapsed_cap_minutes is not None else None
-                        ),
-                    },
-                    "eligible_candidates_ranked": candidates,
-                    "optional_trunk_support": deepcopy(
-                        role.get("optional_conditioning_support_assignments") or []
-                    ),
-                }
-            )
-    return options
 
 
 def _as_list(value: Any) -> list[Any]:
@@ -647,9 +488,8 @@ def build_stage2_finalizer_packet(
 ) -> dict[str, Any]:
     """Return the compact LLM-facing Stage 2 packet.
 
-    This function must not mutate the original Stage 2 payload. It excludes
-    generic candidate pools, except for the bounded Stage-1 surplus explicitly
-    authorised for normal conditioning composition.
+    This function must not mutate the original Stage 2 payload.
+    It intentionally excludes full candidate pools and internal scoring data.
 
     planning_brief is optional but preferred when available because it can carry
     richer late-fight/session sequencing data than the raw Stage 2 payload.
@@ -741,7 +581,6 @@ def build_stage2_finalizer_packet(
             "Use session_count_summary to explain reduced weeks; do not restore suppressed roles to match the athlete's planned weekly frequency.",
             "Stage 1 draft exercise text is candidate material only. For a role with selected_exercise_assignments, those assignments are the deterministic planner's complete session membership: render every assigned exercise and do not add candidates, alternates, substitutes, or other S&C exercises. Render each assignment's effective_prescription when present; it is the dose authority. Final exercise rendering must obey weekly_role_map role, count, day ownership, restrictions, and taper rules first.",
             "For a conditioning role with selected_exercise_assignments, render one separate bullet for every assignment: `- exact assignment name: effective_prescription`. Do not merge assignments into a single conditioning block, promote one assignment to the only primary drill, turn another assignment into an optional fallback, or replace it with a Stage 1 draft/candidate exercise.",
-            "For each selected_plan.normal_conditioning_composition entry, Stage 2 is the bounded coach: choose the final one, two, or three eligible_candidates_ranked drills (or another count only when the existing role guidance permits), their order, and a coherent bank-backed dose. These are the only conditioning drills that may be selected for that role; do not invent or substitute. Preserve each bank work/rest/RPE ceiling, never shorten required rest, and do not stack full prescriptions merely to reach three drills. Use phase_system_workload_guidance across the whole selected session, not the first drill. Account for combined mechanical_risk_tags, local fatigue, hard_sparring_adjacent, nearby work, sport specificity, and the athlete's stated limiter. A single drill is valid when it safely delivers the intended dose. If no adequate safe composition is available, use the existing underfill path and state `Underfill: <specific reason>`. optional_trunk_support is optional and never required session membership.",
             "For every role with selected_exercise_assignments, closed membership overrides all Stage 2 prompt, writing-rule, decision-rule, anchor-standard, safe-strong, goal-support, accessory, equipment-replacement, and substitution guidance, including Rules 4, 5, 6A, 7, and 8. Those rules may change wording or reduce dose only within the selected set. If a hard restriction makes a selected exercise illegal, remove/hold that selected exercise and leave the gap; never choose a downstream replacement. Exercise selection must return upstream to deterministic composition.",
             # Late-camp effective strength dose is authoritative over the bank dose.
             "If a session role carries effective_strength_prescriptions, each entry's effective_prescription is the authoritative dose for that exercise on that day. Render effective_prescription, never the base_prescription, and never a dose above it. Its base_prescription is the original exercise-bank dose kept only for provenance — do not render it as the prescription.",
@@ -801,7 +640,6 @@ def build_stage2_finalizer_packet(
             "session_sequence": _compact_session_sequence(source)
             or _compact_session_sequence(stage2_payload),
             "weekly_role_map": _compact_weekly_role_map(weekly_role_map, athlete_model),
-            "normal_conditioning_composition": _normal_conditioning_composition_options(source),
             "late_fight_plan_spec": late_fight_plan_spec,
             "open_plan_spec": open_plan_spec,
             "fight_week_override": (
