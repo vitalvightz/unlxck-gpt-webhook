@@ -11,6 +11,7 @@ from .normalization import clean_list, phrase_in_text, dedupe_preserve_order
 from .late_selector_windows import classify_late_selector_window
 from .fight_day_override import FIGHT_DAY_PROTOCOL_TEXT
 from .stage2_render_guards import _has_active_injury_from_athlete_model
+from .calendar_context import role_d_day
 
 _BULLET_PREFIX = compile_regex("stage2_validator", "bullet_prefix")
 _PHASE_HEADER = PHASE_HEADER_PATTERN
@@ -3394,19 +3395,22 @@ def _late_camp_effective_prescription_warnings(
 
 
 def _scheduled_role_d_day(week: dict[str, Any], role: dict[str, Any]) -> int | None:
-    for key in ("scheduled_countdown_label", "countdown_label"):
-        match = re.search(r"D-(\d+)", str(role.get(key) or ""), re.IGNORECASE)
-        if match:
-            return int(match.group(1))
-    scheduled_day = str(role.get("scheduled_day_hint") or "").strip().lower()
-    for calendar_day in week.get("calendar_days") or []:
-        if str(calendar_day.get("weekday") or "").strip().lower() != scheduled_day:
-            continue
-        try:
-            return int(calendar_day.get("d_day"))
-        except (TypeError, ValueError):
-            return None
-    return None
+    """Which countdown day owns this role — resolved by the canonical adapter.
+
+    This used to be a local resolver that read ``countdown_label`` second and
+    never read ``scheduled_d_day`` or ``countdown_offset`` at all. Those are the
+    two fields ``calendar_integrity._stamp_relocation`` always writes when the
+    final governor moves a role, while ``countdown_label`` is never refreshed
+    there and is therefore stale after a relocation. Trusting it above the
+    authoritative integers meant the conditioning validator — and
+    ``stage2_repair``, which resolves days through this same helper — could
+    attribute a closed member to a day the governor had already moved it off.
+
+    ``calendar_context.role_d_day`` is the canonical representation owner named
+    by the architecture contract, and it orders the same fields correctly:
+    final placement metadata first, the stale label only as a last resort.
+    """
+    return role_d_day(week, role)
 
 
 def _missing_selected_conditioning_assignment_warnings(
