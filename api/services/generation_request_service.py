@@ -72,6 +72,18 @@ async def generate_plan_for_current_user(
     is_exempt_from_daily_generation_cap: Callable[[str], bool],
 ) -> GenerationJobResponse:
     require_onboarding_compliance(profile)
+    if (
+        not request_body.no_scheduled_fight
+        and not request_body.hard_sparring_days
+        and not request_body.support_work_days
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                "A Fight Camp requires at least one scheduled hard sparring or "
+                "light/technical combat session. Use Open Plan if none is scheduled."
+            ),
+        )
     if profile.is_minor and request_body.athlete.target_weight_kg is not None:
         # Data minimisation, not just output suppression: an under-18 has no
         # weight-cut feature, so the field that sizes one has no purpose to be
