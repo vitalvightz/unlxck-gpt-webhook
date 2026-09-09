@@ -115,6 +115,34 @@ def _compact_restrictions(restrictions: Any) -> list[dict[str, Any]]:
     return compact
 
 
+# Stage 1's own decision-hierarchy declaration. Every role carries the same
+# constant block (only a handful of distinct values across a whole camp), no
+# render rule or contract text names any of these fields, and the finalizer has
+# no use for which internal driver won a Stage 1 argument. They are dropped from
+# the packet for the same reason selection_rule / placement_rule are, below --
+# the planning brief and the role map keep them for validation and audit. The
+# governance fields the finalizer does act on (selected_drill_locked, main_job,
+# support_cap, forbidden_secondary_stressors, suppression_rules, locked_day,
+# late_fight_payload, ...) are preserved untouched.
+_INTERNAL_GOVERNANCE_FIELDS = (
+    "authority",
+    "execution_only",
+    "governed_by",
+    "cannot_override",
+    "resolved_authority",
+)
+
+
+def _compact_governance(governance: Any) -> Any:
+    if not isinstance(governance, dict):
+        return governance
+    return {
+        key: value
+        for key, value in governance.items()
+        if key not in _INTERNAL_GOVERNANCE_FIELDS
+    }
+
+
 def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
     keep = (
         "session_index",
@@ -203,7 +231,7 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
     # ``selected_exercise_assignments=[]`` is an explicit closed-membership
     # sentinel.  Dropping it would make an intentionally empty role appear open
     # to the finalizer, incorrectly authorising downstream exercise selection.
-    return {
+    compact = {
         key: role.get(key)
         for key in keep
         if role.get(key) not in (None, "", [])
@@ -213,6 +241,13 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
             and role.get(key) == []
         )
     }
+    if "governance" in compact:
+        governance = _compact_governance(compact["governance"])
+        if governance:
+            compact["governance"] = governance
+        else:
+            compact.pop("governance")
+    return compact
 
 
 def _as_list(value: Any) -> list[Any]:

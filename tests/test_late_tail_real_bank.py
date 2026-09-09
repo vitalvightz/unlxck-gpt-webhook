@@ -130,22 +130,33 @@ def test_all_sports_real_bank(sport, mma_brief):
     print(sport, [(r["scheduled_countdown_label"], [a["name"] for a in r["selected_exercise_assignments"]]) for r in physical])
 
 
-def test_empty_membership_stops_before_openai(mma_brief):
+def test_empty_membership_still_renders_stage2(mma_brief):
+    """A missing exposure is admin-review material, not a reason to skip Stage 2.
+
+    Only AUTHORITY_RELEASE_HOLD_CODES (genuinely unsafe scheduled output) may
+    prevent the model call. Skipping it here produced a plan that reported
+    stage2_pass with no Stage 2 attempt and no Stage 2 text.
+    """
     from api.stage2_automation import OpenAIStage2Automator
     brief = deepcopy(mma_brief)
     role = next(role for role in late_roles(brief) if role["role_key"] == "alactic_sharpness_day")
     role["selected_exercise_assignments"] = []
     client = AsyncMock()
     automator = OpenAIStage2Automator(client=client, model="test")
-    automator._generate_text = AsyncMock(side_effect=AssertionError("must not call OpenAI"))
+    automator._generate_text = AsyncMock(return_value=("# Stage 2 plan", {}))
     result = asyncio.run(automator.finalize(stage1_result={
         "planning_brief": brief, "stage2_payload": {}, "stage2_handoff_text": "test", "plan_text": "draft",
     }))
-    automator._generate_text.assert_not_called()
-    assert result["status"] == "review_required"
-    assert result["stage2_attempt_count"] == 0
-    assert not result["plan_text"] and not result["stage2_retry_text"]
-    assert result["stage2_validator_report"]["errors"][0]["code"] == "late_physical_role_missing_assignment"
+    automator._generate_text.assert_called_once()
+    assert result["stage2_attempt_count"] == 1
+    assert result["final_plan_text"] == "# Stage 2 plan"
+    assert result["draft_plan_text"] == "draft"
+    codes = {
+        str(item.get("code"))
+        for key in ("errors", "review_flags", "warnings", "blocking_warnings")
+        for item in result["stage2_validator_report"].get(key) or []
+    }
+    assert "late_physical_role_missing_assignment" in codes
 
 
 @pytest.mark.parametrize("day", [13, 7, 5, 2, 1])
