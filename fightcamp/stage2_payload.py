@@ -2059,8 +2059,6 @@ def _build_conditioning_alternates(
             )
         )
         seen.add(name)
-        if len(alternates) >= 2:
-            break
     return alternates
 
 
@@ -2596,7 +2594,7 @@ def build_stage2_payload(
         "rewrite_guidance": rewrite_guidance,
     }
 
-STAGE2_FINALIZER_PROMPT = """You are Stage 2 (finalizer). Stage 1 has already made the training decisions. Your job is to render and coach the resolved plan, not redesign it.
+STAGE2_FINALIZER_PROMPT = """You are Stage 2 (finalizer). Stage 1 has made the calendar and safety decisions. Your job is to render and coach the resolved plan; only explicitly supplied normal-conditioning roles retain bounded session-composition authority.
 
 Input = FINALIZER PACKET + LOCKED SESSION RENDER MANIFEST + Stage 1 draft + athlete profile + optional injury context.
 
@@ -2604,7 +2602,7 @@ AUTHORITY ORDER
 1. FINALIZER PACKET — primary authority for calendar, render mode, countdown labels, restrictions, priorities, compact selected candidate facts, session-count metadata, and risks.
 2. Render guards and restrictions — hard constraints. Non-negotiable.
 3. Weekly role map / hard-sparring days — source of truth for visible session count, day ownership, declared days, and protected hard-sparring/contact slots.
-4. Stage 1 draft text and unselected candidate material — not final authority. Deterministic selected_exercise_assignments in the FINALIZER PACKET are final session membership.
+4. Stage 1 draft text — not final authority. Deterministic selected_exercise_assignments are final session membership; selected_plan.normal_conditioning_composition is the bounded candidate authority for normal conditioning only.
 
 RULE 1 — HARD FILTER
 Remove every exercise, drill, or prescription that violates any restriction, including synonyms and mechanical equivalents. Apply to strength, conditioning, rehab, warm-ups, and finishers. For a role with selected_exercise_assignments, drop/hold an illegal selected item and leave the gap; never replace it. Only open roles may replace or drop an item.
@@ -2614,7 +2612,7 @@ Use the FINALIZER PACKET to render the already-decided calendar, sessions, exerc
 
 RULE 3 — SELECTION ORDER
 Build the first pass from the LOCKED SESSION RENDER MANIFEST wherever it is supplied. It is a source-backed view of the FINALIZER PACKET, not a separate planning authority. For each closed role, render the exact scheduled membership and every listed exercise line before writing coaching details. The exercise count is mandatory, not a target. A source selected_option=false means the exercise came from an alternate bank option; once promoted into selected_exercise_assignments it is a scheduled member, not an optional fallback. Never treat a shared source slot_id as one exercise. If a locked assignment is illegal or lacks an authoritative dose, leave the conflict unresolved for deterministic planning rather than inventing or substituting work.
-Preserve the calendar, declared days, coach-led ownership, session count, phase, and taper window from selected_plan / weekly_role_map. When a role has selected_exercise_assignments, render every assigned exercise and use only those exercises. That list is closed session membership from the deterministic planner. An empty selected_exercise_assignments list is not creative freedom: do not invent or add an exercise. Do not add, restore, or substitute candidates, alternates, or other S&C exercises, even when their dose would be legal. Use each selected exercise's effective prescription when supplied. Roles without selected_exercise_assignments keep their existing contract. Draft text is candidate material and cannot override the FINALIZER PACKET.
+Preserve the calendar, declared days, coach-led ownership, session count, phase, and taper window from selected_plan / weekly_role_map. When a role has selected_exercise_assignments, render every assigned exercise and use only those exercises. That list is closed session membership from the deterministic planner. An empty selected_exercise_assignments list is not creative freedom: do not invent or add an exercise. The sole exception is a matching selected_plan.normal_conditioning_composition entry: compose that normal conditioning session only from its eligible_candidates_ranked, within its bank evidence and workload guidance. Do not add, restore, or substitute candidates or other S&C exercises, even when their dose would be legal. Use each closed selected exercise's effective prescription when supplied. Draft text is candidate material and cannot override the FINALIZER PACKET.
 
 RULE 4 — ANCHOR STANDARD
 For an open anchor role, select a serious high-transfer strength or power exercise if a compliant compact candidate or finalizer-safe substitution exists. For a closed anchor, preserve its selected membership and do not reselect it. Do not build anchors from bird dogs, dead bugs, planks, carries, or rehab-level work unless restrictions force it. Support work assists the anchor — it cannot become it.

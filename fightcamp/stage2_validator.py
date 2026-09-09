@@ -3427,6 +3427,10 @@ def _missing_selected_conditioning_assignment_warnings(
         for role in week.get("session_roles") or []:
             if not isinstance(role, dict) or str(role.get("category") or "").lower() != "conditioning":
                 continue
+            if (role.get("conditioning_composition_policy") or {}).get("stage2_composes_membership"):
+                # Normal conditioning is intentionally validated from Stage 2's
+                # chosen candidates below, never against a stale closed list.
+                continue
             assignments = [
                 assignment
                 for assignment in (role.get("selected_exercise_assignments") or [])
@@ -3584,6 +3588,182 @@ def _conditioning_dose_within_bounds(expected: str, rendered: str) -> tuple[bool
                     violations.append("rest below effective floor")
 
     return not violations, violations, expected_bounds, rendered_bounds
+
+
+def _normal_conditioning_composition_warnings(
+    planning_brief: dict,
+    final_plan_text: str,
+) -> list[dict[str, Any]]:
+    """Validate Stage 2's actual normal-conditioning choices against Stage 1.
+
+    Normal conditioning deliberately has no ``selected_exercise_assignments``:
+    that closed contract belongs to strength and the late-fight allocator.  The
+    candidate reservoir is still a hard identity/dose boundary, and the existing
+    phase-system guidance remains an aggregate guard for multi-drill high-load
+    sessions.
+    """
+    from .session_composition import _conditioning_is_high_load, _conditioning_phase_workload_envelope
+
+    blocks_by_day: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    for block in _countdown_blocks(final_plan_text):
+        blocks_by_day[int(block["day"])].append(block)
+    if not blocks_by_day:
+        return []
+
+    pools = planning_brief.get("candidate_pools") or {}
+    warnings: list[dict[str, Any]] = []
+    for week in (planning_brief.get("weekly_role_map") or {}).get("weeks") or []:
+        if not isinstance(week, dict):
+            continue
+        phase = str(week.get("phase") or "").upper()
+        phase_pool = pools.get(phase) if isinstance(pools, dict) else None
+        slots = phase_pool.get("conditioning_slots") if isinstance(phase_pool, dict) else []
+        for role in week.get("session_roles") or []:
+            if not isinstance(role, dict):
+                continue
+            policy = role.get("conditioning_composition_policy") or {}
+            if (
+                str(role.get("category") or "").lower() != "conditioning"
+                or role.get("late_fight_tail_owned")
+                or not policy.get("stage2_composes_membership")
+            ):
+                continue
+            d_day = _scheduled_role_d_day(week, role)
+            if d_day is None:
+                continue
+            phase = str(policy.get("source_phase") or phase).upper()
+            phase_pool = pools.get(phase) if isinstance(pools, dict) else None
+            slots = phase_pool.get("conditioning_slots") if isinstance(phase_pool, dict) else []
+            system = str(role.get("preferred_system") or "").lower()
+            candidates: dict[str, dict[str, Any]] = {}
+            for slot in slots or []:
+                if not isinstance(slot, dict) or str(slot.get("role") or "").lower() != system:
+                    continue
+                for candidate in [slot.get("selected"), *(slot.get("alternates") or [])]:
+                    if isinstance(candidate, dict) and str(candidate.get("name") or "").strip():
+                        candidates.setdefault(str(candidate["name"]).strip(), candidate)
+            if not candidates:
+                continue
+
+            blocks = blocks_by_day.get(d_day, [])
+            rendered_lines = [line for block in blocks for line in block.get("lines") or []]
+            selected: list[tuple[str, str, dict[str, Any]]] = []
+            for name, candidate in candidates.items():
+                matching = [line for line in rendered_lines if _line_has_exercise(line, name)]
+                if matching:
+                    selected.append((name, matching[0], candidate))
+            if not selected:
+                warnings.append(
+                    {
+                        "code": "normal_conditioning_candidate_missing",
+                        "message": f"D-{d_day} has no Stage-1 eligible conditioning drill selected by Stage 2.",
+                        "severity": "blocker",
+                        "confidence": "high",
+                        "scheduled_d_day": d_day,
+                        "role_key": role.get("role_key"),
+                    }
+                )
+                continue
+
+            optional_names = {
+                str(item.get("name") or "").strip()
+                for item in (role.get("optional_conditioning_support_assignments") or [])
+                if isinstance(item, dict) and str(item.get("name") or "").strip()
+            }
+            permitted_names = [*candidates, *optional_names]
+            for block in blocks:
+                header = str(block.get("header") or "").lower()
+                if not re.search(r"\b(?:conditioning|aerobic|alactic|glycolytic|fight[- ]?pace|repeatability)\b", header):
+                    continue
+                for line in block.get("lines") or []:
+                    stripped = _BULLET_PREFIX.sub("", str(line)).strip()
+                    if not stripped or ":" not in stripped or _line_is_instruction_only(stripped):
+                        continue
+                    name = stripped.split(":", 1)[0].strip()
+                    if re.match(r"^(?:why|purpose|warm[- ]?up|cool[- ]?down|easier|stop|underfill|optional)\b", name, re.I):
+                        continue
+                    bounds = _conditioning_dose_bounds(stripped)
+                    if not (bounds["intervals"] or bounds["duration_sec"]):
+                        continue
+                    if not any(_line_has_exercise(stripped, permitted) for permitted in permitted_names):
+                        warnings.append(
+                            {
+                                "code": "normal_conditioning_unapproved_exercise",
+                                "message": f"D-{d_day} includes conditioning work outside its Stage-1 eligible bank surplus.",
+                                "severity": "blocker",
+                                "confidence": "high",
+                                "scheduled_d_day": d_day,
+                                "role_key": role.get("role_key"),
+                                "rendered_line": line,
+                            }
+                        )
+
+            for name, line, candidate in selected:
+                expected = str(candidate.get("prescription") or "").strip()
+                dose_ok, violations, expected_bounds, rendered_bounds = _conditioning_dose_within_bounds(
+                    expected, line
+                )
+                if expected and not dose_ok:
+                    warnings.append(
+                        {
+                            "code": "normal_conditioning_bank_dose_violation",
+                            "message": f"D-{d_day} conditioning drill '{name}' exceeds or omits its bank-backed dose.",
+                            "severity": "blocker",
+                            "confidence": "high",
+                            "scheduled_d_day": d_day,
+                            "exercise": name,
+                            "role_key": role.get("role_key"),
+                            "rendered_line": line,
+                            "dose_violations": violations,
+                            "bank_dose_bounds": expected_bounds,
+                            "rendered_dose_bounds": rendered_bounds,
+                        }
+                    )
+
+            high_load = [item for item in selected if _conditioning_is_high_load(item[2])]
+            target_active, elapsed_cap_minutes = _conditioning_phase_workload_envelope(
+                phase=phase,
+                system=system,
+            )
+            if len(high_load) >= 2 and target_active is not None and elapsed_cap_minutes is not None:
+                active_work = 0.0
+                elapsed = 0.0
+                for _, line, _ in high_load:
+                    bounds = _conditioning_dose_bounds(line)
+                    active_work += sum(interval["count"] * interval["work_sec"] for interval in bounds["intervals"])
+                    elapsed += sum(interval["count"] * interval["work_sec"] for interval in bounds["intervals"])
+                    elapsed += sum(
+                        max(interval["count"] - 1, 0) * bounds["rest_sec"][min(index, len(bounds["rest_sec"]) - 1)]
+                        for index, interval in enumerate(bounds["intervals"])
+                        if bounds["rest_sec"]
+                    )
+                if active_work > target_active or elapsed > elapsed_cap_minutes * 60.0:
+                    warnings.append(
+                        {
+                            "code": "normal_conditioning_combined_workload_exceeded",
+                            "message": f"D-{d_day} combines high-load conditioning drills beyond existing phase/system guidance.",
+                            "severity": "blocker",
+                            "confidence": "high",
+                            "scheduled_d_day": d_day,
+                            "role_key": role.get("role_key"),
+                            "active_work_seconds": active_work,
+                            "target_active_work_seconds": target_active,
+                            "elapsed_seconds": elapsed,
+                            "elapsed_cap_seconds": elapsed_cap_minutes * 60.0,
+                        }
+                    )
+                elif active_work < target_active and not re.search(r"\bunderfill\s*:\s*\S", final_plan_text, re.I):
+                    warnings.append(
+                        {
+                            "code": "normal_conditioning_underfill_reason_missing",
+                            "message": f"D-{d_day} is below the existing phase/system dose guidance without an explicit underfill reason.",
+                            "severity": "blocker",
+                            "confidence": "high",
+                            "scheduled_d_day": d_day,
+                            "role_key": role.get("role_key"),
+                        }
+                    )
+    return warnings
 
 
 def _goal_witness_rendered_doses(lines: list[str], witness: dict) -> list[str]:
@@ -3760,6 +3940,10 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         planning_brief, final_plan_text
     )
     errors.extend(_issue(**item) for item in missing_selected_conditioning_assignments)
+    normal_conditioning_composition_warnings = _normal_conditioning_composition_warnings(
+        planning_brief, final_plan_text
+    )
+    errors.extend(_issue(**item) for item in normal_conditioning_composition_warnings)
 
     missing_required_elements = _find_missing_required_elements(planning_brief, final_plan_text)
     missing_phase_sections = _find_missing_phase_sections(planning_brief, phase_sections)
