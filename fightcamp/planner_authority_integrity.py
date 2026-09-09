@@ -33,6 +33,25 @@ PLANNER_AUTHORITY_BLOCKER_CODES = frozenset(
 # all, and any absence governance cannot account for.
 LATE_PHYSICAL_ROLE_SAFE_OMISSION_CODE = "late_physical_role_safely_omitted"
 
+# Only a plan that SCHEDULED something unsafe is worth withholding from the
+# athlete. The four codes below each describe exactly that: an exercise placed
+# outside its permitted phase or late window, loaded work on a no-load day, or a
+# dated exercise that cannot be mapped to a phase at all.
+#
+# A missing exposure is not in that class. An empty D-11, or a speed touch that
+# found no legal candidate, leaves the rest of the plan correct and safe; holding
+# the whole plan over it helps nobody and buries the real signal. Those findings
+# still travel to the admin review surface -- they are simply not a reason to
+# withhold an otherwise valid plan. This keeps the deliberate Stage-2 release
+# policy ("validators are observational once usable plan text exists") intact for
+# everything except genuinely unsafe output.
+AUTHORITY_RELEASE_HOLD_CODES = frozenset(
+    PLANNER_AUTHORITY_BLOCKER_CODES - {"late_physical_role_missing_assignment"}
+)
+_AUTHORITY_ADMIN_FLAG_CODES = frozenset(
+    PLANNER_AUTHORITY_BLOCKER_CODES - AUTHORITY_RELEASE_HOLD_CODES
+)
+
 _ASSIGNMENT_REJECTION_KEYS = (
     "phase_window_rejected",
     "sport_rejected",
@@ -458,7 +477,11 @@ def late_physical_planner_preflight(planning_brief: dict[str, Any]) -> list[dict
     return planner_authority_findings({**planning_brief, "weekly_role_map": {"weeks": weeks}})
 
 
-def _authority_findings_from_report(report: dict[str, Any]) -> list[dict[str, Any]]:
+def _authority_findings_from_report(
+    report: dict[str, Any],
+    *,
+    codes: frozenset[str] = PLANNER_AUTHORITY_BLOCKER_CODES,
+) -> list[dict[str, Any]]:
     findings: list[dict[str, Any]] = []
     seen: set[tuple[str, str, str]] = set()
     for field in ("errors", "blocking_warnings", "warnings", "review_flags"):
@@ -466,7 +489,7 @@ def _authority_findings_from_report(report: dict[str, Any]) -> list[dict[str, An
             if not isinstance(item, dict):
                 continue
             code = str(item.get("code") or "").strip()
-            if code not in PLANNER_AUTHORITY_BLOCKER_CODES:
+            if code not in codes:
                 continue
             identity = (
                 code,
@@ -538,10 +561,34 @@ def install() -> None:
         # Capture integrity blockers before the ordinary policy transforms the
         # report, then also inspect its result. This gate must not depend on the
         # observational policy preserving a particular field layout.
-        blockers = _authority_findings_from_report(validator_report)
+        blockers = _authority_findings_from_report(
+            validator_report, codes=AUTHORITY_RELEASE_HOLD_CODES
+        )
         report = original_release_policy(validator_report)
         if not blockers:
-            blockers = _authority_findings_from_report(report)
+            blockers = _authority_findings_from_report(
+                report, codes=AUTHORITY_RELEASE_HOLD_CODES
+            )
+
+        # Missing exposures are surfaced for admin review, never held.
+        missing = _authority_findings_from_report(
+            validator_report, codes=_AUTHORITY_ADMIN_FLAG_CODES
+        ) or _authority_findings_from_report(report, codes=_AUTHORITY_ADMIN_FLAG_CODES)
+        if missing:
+            admin_flags = [
+                *(report.get("admin_review_blocking_flags") or []),
+                *missing,
+            ]
+            report = {
+                **report,
+                "admin_review_blocking_flags": admin_flags,
+                "admin_review_blocking_flag_count": len(admin_flags),
+                "planner_authority_missing_exposure_findings": missing,
+                "planner_authority_missing_exposure_count": len(missing),
+            }
+            if not blockers and report.get("release_decision") == "publish":
+                report = {**report, "release_decision": "publish_with_flags"}
+
         if not blockers:
             return report
 
