@@ -87,7 +87,27 @@ def assignment_from_slot(phase: str, slot_group: str, slot: dict[str, Any]) -> d
     base_prescription = str(selected.get("prescription") or "").strip()
     if base_prescription:
         assignment["base_prescription"] = base_prescription
+    notes = _selected_coaching_notes(selected)
+    if notes:
+        assignment["coaching_notes"] = notes
     return assignment
+
+
+def _selected_coaching_notes(option: dict[str, Any] | None) -> str:
+    """Return the authored exercise-bank coaching note for a selected option.
+
+    The note travels with the selected assignment so Stage 2 keeps the bank's
+    execution guidance without a separate join back to the candidate pool. It is
+    coaching evidence only and never a dose authority.
+    """
+    if not isinstance(option, dict):
+        return ""
+    note = option.get("notes")
+    if not str(note or "").strip():
+        metadata = option.get("selection_metadata")
+        if isinstance(metadata, dict):
+            note = metadata.get("notes")
+    return str(note or "").strip()
 
 
 def _normalized_fatigue(athlete_model: dict[str, Any]) -> str:

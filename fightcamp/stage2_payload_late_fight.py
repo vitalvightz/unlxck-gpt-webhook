@@ -633,6 +633,13 @@ def _blocks_bridge_extra_glycolytic_touch(athlete_model: dict[str, Any]) -> bool
     return False
 
 
+def _conditioning_limiter_signal(athlete_model: dict) -> bool:
+    goals = {str(v).strip().lower().replace(" ", "_") for v in clean_list(athlete_model.get("key_goals") or athlete_model.get("goals", []))}
+    weaknesses = {str(v).strip().lower().replace(" ", "_") for v in clean_list(athlete_model.get("weaknesses", []))}
+    tokens = {"gas_tank", "conditioning", "conditioning_endurance", "endurance", "aerobic"}
+    return bool((goals | weaknesses) & tokens)
+
+
 def _suppress_standalone_glycolytic(active_hard_spar_days: list[str], athlete_model: dict[str, Any]) -> bool:
     if len(active_hard_spar_days) >= 2:
         return True
@@ -1435,14 +1442,31 @@ def resolve_late_fight_contacts(
     return contacts
 
 
+# The D-13..D-8 quota of 4 active roles / 3 meaningful stress exposures is spent
+# on two strength touches, one alactic sharpness touch and the freshness day, so
+# ``light_fight_pace_touch_day`` — the only conditioning-maintenance role legal in
+# this window — never fit, and the whole tail was identical whether or not
+# conditioning was the athlete's limiter. One extra slot lets it in beside the
+# alactic touch instead of in place of it. Both quotas move together because the
+# stress quota is the binding one: widening only the active quota still leaves
+# four meaningful exposures competing for three places. Every dose, RPE, contact
+# and suppression rule for the window is unchanged and still outranks this.
+_CONDITIONING_LIMITER_EXTRA_COMPRESSED_ROLES = 1
+
+
 def _late_fight_role_budget(days_until_fight: Any, athlete_model: dict[str, Any]) -> dict[str, Any]:
-    return {
+    budget = {
         "mode": _days_out_payload_mode(days_until_fight),
         "max_active_roles": _late_fight_max_active_roles(days_until_fight),
         "max_meaningful_stress_exposures": _late_fight_max_meaningful_stress_exposures(days_until_fight),
         "max_support_roles": _late_fight_max_support_roles(days_until_fight),
         "legal_countdown_labels": _late_fight_legal_countdown_labels(days_until_fight),
     }
+    if budget["mode"] == "pre_fight_compressed_payload" and _conditioning_limiter_signal(athlete_model):
+        for key in ("max_active_roles", "max_meaningful_stress_exposures"):
+            if isinstance(budget[key], int):
+                budget[key] += _CONDITIONING_LIMITER_EXTRA_COMPRESSED_ROLES
+    return budget
 
 
 def _late_fight_forbidden_blocks(days_until_fight: Any) -> list[str]:
@@ -2189,6 +2213,7 @@ def _late_fight_role_entry(
     declared_day_order: int | None = None,
     day_assignment_reason: str | None = None,
     coach_notes: list[str] | None = None,
+    rpe_cap: str | None = None,
 ) -> dict[str, Any]:
     entry = {
         "category": category,
@@ -2208,8 +2233,15 @@ def _late_fight_role_entry(
         # touch) rather than the static role-key fallback map.
         "selection_priority": selection_priority,
         "_selection_priority": selection_priority,
+        # Public mirror of _required, for the same reason as _selection_priority:
+        # downstream governance must be able to tell a required exposure from an
+        # optional touch without re-deriving that policy from role keys.
+        "required": required,
         "_required": required,
     }
+    if rpe_cap:
+        # Consumed by prescription_resolver as the role's effective ceiling.
+        entry["rpe_cap"] = rpe_cap
     if session_index is not None:
         entry["session_index"] = session_index
     if preferred_system:
@@ -2657,15 +2689,29 @@ def _late_fight_candidate_roles(
                     category="conditioning",
                     role_key="light_fight_pace_touch_day",
                     preferred_pool="conditioning_slots",
-                    preferred_system="glycolytic",
+                    # A late-camp rhythm touch is low-fatigue maintenance, not
+                    # glycolytic development -- as this entry's own selection rule
+                    # says. Declaring it glycolytic sent _slot_matches_role at the
+                    # SPP glycolytic pool, whose hard RPE-9 development work is
+                    # correctly rejected by late-window governance, leaving the day
+                    # unassignable. ``_morph_to_rhythm_touch`` already resolves the
+                    # identical role key as aerobic; match it rather than keep a
+                    # second definition of the same role.
+                    preferred_system="aerobic",
                     selection_rule=(
                         "Allow at most one rhythm/freshness touch only when sparring does not already own the window. "
                         "This cannot satisfy a hard conditioning, glycolytic, or combat-pressure quota."
                     ),
                     placement_rule=(
-                        "Keep this light (RPE <= 5), never describe it as a conditioning build or progression, "
+                        "Keep this light (RPE <= 6), never describe it as a conditioning build or progression, "
                         "and never place it between two hard sparring collisions."
                     ),
+                    # The role previously stated RPE <= 5 in prose while carrying no
+                    # rpe_cap at all, so nothing resolved or enforced it. Use the
+                    # ceiling ``_morph_to_rhythm_touch`` already assigns this role
+                    # key, which is the D13-D8 window maximum -- it constrains the
+                    # dose without loosening that window cap.
+                    rpe_cap="4-6",
                     selection_priority=96 if has_downgraded_hard_days else 100,
                     legal_countdown_labels=legal_countdown_labels,
                 )

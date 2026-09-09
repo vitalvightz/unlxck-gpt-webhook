@@ -19,6 +19,70 @@ PLANNER_AUTHORITY_BLOCKER_CODES = frozenset(
     }
 )
 
+# The blocker above means "we cannot explain why this day is empty", which is a
+# corrupt or incomplete pipeline state. One narrow case is different: an
+# allocator role the existing policy marks OPTIONAL (``required`` False), whose
+# selection was genuinely exhausted because governance rejected every candidate
+# it considered. Holding an otherwise-valid plan for that strands the whole plan
+# over a day that was legitimately left empty. It is reported under its own code,
+# carrying the same rejection diagnostics, and is deliberately absent from
+# PLANNER_AUTHORITY_BLOCKER_CODES.
+#
+# Everything else still blocks: required exposures (strength touch, alactic
+# sharpness, neural primer, freshness), roles carrying no ``required`` verdict at
+# all, and any absence governance cannot account for.
+LATE_PHYSICAL_ROLE_SAFE_OMISSION_CODE = "late_physical_role_safely_omitted"
+
+# Only a plan that SCHEDULED something unsafe is worth withholding from the
+# athlete. The four codes below each describe exactly that: an exercise placed
+# outside its permitted phase or late window, loaded work on a no-load day, or a
+# dated exercise that cannot be mapped to a phase at all.
+#
+# A missing exposure is not in that class. An empty D-11, or a speed touch that
+# found no legal candidate, leaves the rest of the plan correct and safe; holding
+# the whole plan over it helps nobody and buries the real signal. Those findings
+# still travel to the admin review surface -- they are simply not a reason to
+# withhold an otherwise valid plan. This keeps the deliberate Stage-2 release
+# policy ("validators are observational once usable plan text exists") intact for
+# everything except genuinely unsafe output.
+AUTHORITY_RELEASE_HOLD_CODES = frozenset(
+    PLANNER_AUTHORITY_BLOCKER_CODES - {"late_physical_role_missing_assignment"}
+)
+_AUTHORITY_ADMIN_FLAG_CODES = frozenset(
+    PLANNER_AUTHORITY_BLOCKER_CODES - AUTHORITY_RELEASE_HOLD_CODES
+)
+
+_ASSIGNMENT_REJECTION_KEYS = (
+    "phase_window_rejected",
+    "sport_rejected",
+    "day_safety_rejected",
+)
+
+
+def _selection_was_exhausted(role: dict[str, Any]) -> bool:
+    """True when governance recorded rejecting every candidate it considered.
+
+    The assignment list is empty by the time this is asked, so any recorded
+    rejection means nothing survived. No recorded rejection means no candidate
+    was ever considered, which is a pipeline failure rather than an explanation.
+    """
+    diagnostics = role.get("late_assignment_diagnostics")
+    if not isinstance(diagnostics, dict):
+        return False
+    for key in _ASSIGNMENT_REJECTION_KEYS:
+        try:
+            if int(diagnostics.get(key) or 0) > 0:
+                return True
+        except (TypeError, ValueError):
+            continue
+    return False
+
+
+def _is_safely_omittable_role(role: dict[str, Any]) -> bool:
+    """Optional by the allocator's own policy, and genuinely out of candidates."""
+    return role.get("required") is False and _selection_was_exhausted(role)
+
+
 # Clearly external-loaded strength equipment. This intentionally does not include
 # bands: late-camp support work may legitimately use light band resistance even
 # when loaded lifting is disabled.
@@ -233,11 +297,21 @@ def planner_authority_findings(planning_brief: dict[str, Any]) -> list[dict[str,
             and category in {"strength", "conditioning"}
             and (not isinstance(assignments, list) or not assignments)
         ):
+            explained = _is_safely_omittable_role(role)
             findings.append(
                 {
-                    "code": "late_physical_role_missing_assignment",
-                    "severity": "blocker",
-                    "message": "A dated app-owned physical role has no deterministic exercise assignment.",
+                    "code": (
+                        LATE_PHYSICAL_ROLE_SAFE_OMISSION_CODE
+                        if explained
+                        else "late_physical_role_missing_assignment"
+                    ),
+                    "severity": "info" if explained else "blocker",
+                    "message": (
+                        "An optional dated role exhausted its candidates: every one was rejected "
+                        "by phase, window, sport or day-safety governance, so the day is empty."
+                        if explained
+                        else "A dated app-owned physical role has no deterministic exercise assignment."
+                    ),
                     "countdown_label": str(
                         role.get("scheduled_countdown_label")
                         or role.get("countdown_label")
@@ -403,15 +477,24 @@ def late_physical_planner_preflight(planning_brief: dict[str, Any]) -> list[dict
     return planner_authority_findings({**planning_brief, "weekly_role_map": {"weeks": weeks}})
 
 
-def _authority_findings_from_report(report: dict[str, Any]) -> list[dict[str, Any]]:
+def _authority_findings_from_report(
+    report: dict[str, Any],
+    *,
+    codes: frozenset[str] = PLANNER_AUTHORITY_BLOCKER_CODES,
+) -> list[dict[str, Any]]:
     findings: list[dict[str, Any]] = []
     seen: set[tuple[str, str, str]] = set()
     for field in ("errors", "blocking_warnings", "warnings", "review_flags"):
-        for item in report.get(field, []) or []:
+        # A malformed collection (anything but a list) must not crash the gate.
+        # The release policy already records it via release_policy_malformed_fields.
+        collection = report.get(field)
+        if not isinstance(collection, list):
+            continue
+        for item in collection:
             if not isinstance(item, dict):
                 continue
             code = str(item.get("code") or "").strip()
-            if code not in PLANNER_AUTHORITY_BLOCKER_CODES:
+            if code not in codes:
                 continue
             identity = (
                 code,
@@ -483,10 +566,34 @@ def install() -> None:
         # Capture integrity blockers before the ordinary policy transforms the
         # report, then also inspect its result. This gate must not depend on the
         # observational policy preserving a particular field layout.
-        blockers = _authority_findings_from_report(validator_report)
+        blockers = _authority_findings_from_report(
+            validator_report, codes=AUTHORITY_RELEASE_HOLD_CODES
+        )
         report = original_release_policy(validator_report)
         if not blockers:
-            blockers = _authority_findings_from_report(report)
+            blockers = _authority_findings_from_report(
+                report, codes=AUTHORITY_RELEASE_HOLD_CODES
+            )
+
+        # Missing exposures are surfaced for admin review, never held.
+        missing = _authority_findings_from_report(
+            validator_report, codes=_AUTHORITY_ADMIN_FLAG_CODES
+        ) or _authority_findings_from_report(report, codes=_AUTHORITY_ADMIN_FLAG_CODES)
+        if missing:
+            admin_flags = [
+                *(report.get("admin_review_blocking_flags") or []),
+                *missing,
+            ]
+            report = {
+                **report,
+                "admin_review_blocking_flags": admin_flags,
+                "admin_review_blocking_flag_count": len(admin_flags),
+                "planner_authority_missing_exposure_findings": missing,
+                "planner_authority_missing_exposure_count": len(missing),
+            }
+            if not blockers and report.get("release_decision") == "publish":
+                report = {**report, "release_decision": "publish_with_flags"}
+
         if not blockers:
             return report
 

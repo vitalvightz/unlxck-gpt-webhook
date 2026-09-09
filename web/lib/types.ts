@@ -719,10 +719,12 @@ export type GenerationJobResponse = {
   message?: string | null;
   stage2_status?: string | null;
   requires_admin_resume?: boolean;
+  ready_to_open?: boolean;
 };
 
 export type MeResponse = {
   profile: ProfileRecord;
+  effective_admin?: boolean;
   latest_intake?: PlanRequest | null;
   latest_plan?: PlanSummary | null;
   plan_count: number;

@@ -419,3 +419,98 @@ class TestProductionCalendarCollision:
         for _w, role, _d, wd in _placed_roles(brief):
             if _is_app_owned_visible_role(role.get("role_key")) and wd:
                 assert wd != "saturday"
+
+
+class TestConditioningLimiterReachesTheTail:
+    """The D-13..D-0 tail must respond to a declared conditioning limiter.
+
+    ``_splice_late_fight_tail`` hands the whole tail to the late-fight allocator.
+    Its D-13..D-8 quota (4 active roles / 3 meaningful stress exposures) was fully
+    spent on two strength touches, an alactic sharpness touch and the freshness
+    day, so ``light_fight_pace_touch_day`` — the only conditioning-maintenance
+    role legal in that window — never fit and the tail was byte-identical for a
+    gas-tank athlete and a power athlete. A declared conditioning limiter now
+    widens both quotas by one. These tests pin that, and the safety rules that
+    still outrank it.
+    """
+
+    GAS_TANK = {
+        "key_goals": "conditioning",
+        "primary_goal": "conditioning",
+        "weak": "gas tank, conditioning",
+        "primary_weak": "gas tank",
+    }
+    POWER = {"key_goals": "power, speed", "primary_goal": "power"}
+
+    # Only the categories the allocator's role budget actually governs. Support
+    # inserts (tactical watch, shadow flow, breathing) are added by a separate
+    # low-load path and legitimately differ between these two athletes.
+    _BUDGETED = {"strength", "conditioning", "recovery"}
+
+    @classmethod
+    def _tail_roles(cls, brief: dict) -> list[str]:
+        return sorted(
+            str(role.get("role_key"))
+            for _w, role, d_day, _wd in _placed_roles(brief)
+            if str(role.get("category") or "") in cls._BUDGETED
+            and _is_app_owned_visible_role(role.get("role_key"))
+            and d_day is not None
+            and 1 <= d_day <= 13
+        )
+
+    @pytest.mark.parametrize("days", [31, 21, 13])
+    def test_gas_tank_limiter_keeps_a_rhythm_touch_in_the_tail(self, days, monkeypatch):
+        assert "light_fight_pace_touch_day" in self._tail_roles(
+            _run(days, monkeypatch, **self.GAS_TANK)
+        )
+
+    @pytest.mark.parametrize("days", [31, 21])
+    def test_rhythm_touch_is_added_beside_the_alactic_touch_not_instead_of_it(
+        self, days, monkeypatch
+    ):
+        # The extra slot must not be paid for by the fight-week sharpness primer,
+        # and it must not cost the strength retention touches either.
+        gas = self._tail_roles(_run(days, monkeypatch, **self.GAS_TANK))
+        power = self._tail_roles(_run(days, monkeypatch, **self.POWER))
+        assert "alactic_sharpness_day" in gas
+        # Exactly one added role: everything the power athlete gets is still there.
+        assert sorted(power + ["light_fight_pace_touch_day"]) == gas
+
+    def test_power_athlete_tail_is_unchanged(self, monkeypatch):
+        # No conditioning limiter, no widened quota, no rhythm touch.
+        assert "light_fight_pace_touch_day" not in self._tail_roles(
+            _run(31, monkeypatch, **self.POWER)
+        )
+
+    @pytest.mark.parametrize(
+        "override",
+        [
+            {"fatigue": "high"},
+            {"weight": "88", "target_weight": "78"},  # extreme cut
+        ],
+    )
+    def test_safety_suppression_still_outranks_the_limiter(self, override, monkeypatch):
+        # ``_suppress_standalone_glycolytic`` removes the candidate entirely, so a
+        # widened quota buys nothing: the tail collapses back to the power-athlete
+        # shape rather than spending the extra slot on something else.
+        gas = self._tail_roles(_run(31, monkeypatch, **self.GAS_TANK, **override))
+        assert "light_fight_pace_touch_day" not in gas
+        assert gas == self._tail_roles(_run(31, monkeypatch, **self.POWER, **override))
+
+    def test_quota_widens_only_the_compressed_window(self, monkeypatch):
+        # The +1 is scoped to pre_fight_compressed_payload (D-13..D-8). Fight-week
+        # and fight-day budgets must be untouched by a conditioning limiter.
+        from fightcamp.stage2_payload_late_fight import _late_fight_role_budget
+
+        gas = {"key_goals": ["conditioning"], "weaknesses": ["gas tank"]}
+        for days in (21, 7, 5, 3, 1, 0):
+            assert _late_fight_role_budget(days, gas) == _late_fight_role_budget(days, {})
+        for days in (8, 13):
+            widened = _late_fight_role_budget(days, gas)
+            baseline = _late_fight_role_budget(days, {})
+            assert widened["max_active_roles"] == baseline["max_active_roles"] + 1
+            assert (
+                widened["max_meaningful_stress_exposures"]
+                == baseline["max_meaningful_stress_exposures"] + 1
+            )
+            assert widened["max_support_roles"] == baseline["max_support_roles"]

@@ -99,13 +99,18 @@ def test_equipment_mechanical_tags_and_phase_reachability_follow_conventions():
 
 
 def test_existing_selector_surfaces_clinch_fighter_in_gpp_and_spp():
+    # Conditioning selection now prefers the best physiological match for the
+    # slot, so a style drill no longer owns a system slot by default. This test
+    # covers bank *reachability* — sport, style, equipment, phase and safety
+    # filtering — so it names the slice explicitly; an explicitly requested
+    # exercise is a coach instruction and is never displaced on target grounds.
     flags = {
         "sport": "boxing", "style_technical": ["boxing"],
         "style_tactical": ["Clinch Fighter"], "key_goals": ["conditioning"],
         "weaknesses": ["gas_tank"], "fatigue": "low",
         "equipment": ["partner", "partner_mitts", "focus_mitts"],
         "training_frequency": 5, "days_available": 5, "days_until_fight": 35,
-        "time_to_fight_days": 35, "injuries": [], "restrictions": [],
+        "time_to_fight_days": 35, "injuries": [], "restrictions": [], "preferred_exercise_names": sorted(EXPECTED),
     }
     for phase in ("GPP", "SPP"):
         result = conditioning.generate_conditioning_block({**flags, "phase": phase})

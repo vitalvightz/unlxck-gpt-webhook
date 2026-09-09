@@ -47,12 +47,14 @@ from .late_selector_windows import (
     classify_late_selector_window,
     is_active_late_selector_window,
 )
-from .stage2_payload_late_fight import compute_bridge_rules
+from .stage2_payload_late_fight import _conditioning_limiter_signal, compute_bridge_rules
 from .selection_metadata import build_score_evidence, normalize_selection_metadata
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 from .priority_profile import (
     PRIMARY_GOAL_WEIGHT,
     PRIMARY_WEAKNESS_WEIGHT,
+    SECONDARY_GOAL_WEIGHT,
+    SECONDARY_WEAKNESS_WEIGHT,
     build_priority_profile,
     goal_priority_weight,
     is_priority_collision_tag,
@@ -102,11 +104,204 @@ _RAW_FOOTWORK_GOAL_TOKENS = {
     "angle_exit",
 }
 
+# ``goal_priority_weight``/``weakness_priority_weight`` compare against the raw
+# intake wording the athlete submitted ("conditioning", "gas tank"). Every caller
+# below instead holds a *bank tag* produced by expanding that wording through the
+# tag maps ("aerobic", "glycolytic", "work_capacity"), so the two sides spoke
+# different vocabularies and the priority bonus collapsed to zero for all but the
+# handful of tags spelled identically to an intake word. A drill matching both the
+# primary goal and the primary weakness therefore scored below one carrying a
+# single style tag. Resolve the tier through the same expansion the tag match
+# already used, and return the canonical weights unchanged — the primary/secondary
+# doctrine still lives in ``priority_profile``.
+_PRIORITY_TAG_TIER_CACHE: dict[tuple, tuple[frozenset, frozenset, frozenset, frozenset]] = {}
+_PRIORITY_TAG_TIER_CACHE_MAXSIZE = 16
+
+
+def _conditioning_priority_tag_tiers(priority_profile):
+    key = (
+        priority_profile.primary_goal,
+        tuple(priority_profile.secondary_goals),
+        priority_profile.primary_weak_area,
+        tuple(priority_profile.secondary_weak_areas),
+    )
+    cached = _PRIORITY_TAG_TIER_CACHE.get(key)
+    if cached is None:
+        primary_goal = frozenset(
+            expand_tags([priority_profile.primary_goal], GOAL_TAG_MAP)
+            if priority_profile.primary_goal
+            else []
+        )
+        secondary_goal = frozenset(
+            expand_tags(priority_profile.secondary_goals, GOAL_TAG_MAP)
+        ) - primary_goal
+        primary_weak = frozenset(
+            expand_tags([priority_profile.primary_weak_area], WEAKNESS_TAG_MAP)
+            if priority_profile.primary_weak_area
+            else []
+        )
+        secondary_weak = frozenset(
+            expand_tags(priority_profile.secondary_weak_areas, WEAKNESS_TAG_MAP)
+        ) - primary_weak
+        cached = (primary_goal, secondary_goal, primary_weak, secondary_weak)
+        if len(_PRIORITY_TAG_TIER_CACHE) >= _PRIORITY_TAG_TIER_CACHE_MAXSIZE:
+            _PRIORITY_TAG_TIER_CACHE.clear()
+        _PRIORITY_TAG_TIER_CACHE[key] = cached
+    return cached
+
+
+def _conditioning_goal_weight_for_tag(tag: str, priority_profile) -> float:
+    primary_goal, secondary_goal, _pw, _sw = _conditioning_priority_tag_tiers(priority_profile)
+    if tag in primary_goal:
+        return PRIMARY_GOAL_WEIGHT
+    if tag in secondary_goal:
+        return SECONDARY_GOAL_WEIGHT
+    return goal_priority_weight(tag, priority_profile)
+
+
+def _conditioning_weakness_weight_for_tag(tag: str, priority_profile) -> float:
+    _pg, _sg, primary_weak, secondary_weak = _conditioning_priority_tag_tiers(priority_profile)
+    if tag in primary_weak:
+        return PRIMARY_WEAKNESS_WEIGHT
+    if tag in secondary_weak:
+        return SECONDARY_WEAKNESS_WEIGHT
+    return weakness_priority_weight(tag, priority_profile)
+
+
+def _conditioning_tag_is_collision(tag: str, priority_profile) -> bool:
+    if is_priority_collision_tag(tag, priority_profile):
+        return True
+    primary_goal, secondary_goal, primary_weak, secondary_weak = _conditioning_priority_tag_tiers(
+        priority_profile
+    )
+    return tag in (primary_goal | secondary_goal) and tag in (primary_weak | secondary_weak)
+
+
+# --- Conditioning objective: mechanical cost at a verified equivalent dose ---
+#
+# Recovery cost and prescribed dose are both already recorded (impact_cost plus
+# the landing-impact mech_* tags; work_sec/rest_sec/rounds). Nothing consulted
+# them when ordering a conditioning slot, so the highest-scoring candidate won
+# even when a same-system drill with the identical prescription cost the athlete
+# less to recover from -- a GPP glycolytic slot took high-impact ladder sprints
+# over a low-impact burst interval, both 10 x 15 sec with 45 sec rest.
+#
+# The comparison is deliberately unable to invent equivalence:
+#
+#   * The dose must be VERIFIED, not assumed. ``work_sec`` is only read as
+#     seconds when the written prescription independently says so -- the bank
+#     also stores rep counts and distances in that field ("5x3 reps",
+#     "4x200m"), and a blacklist of unit words cannot catch them ("4x200m" has
+#     no word boundary before the number). Parsing the prescription and
+#     requiring it to agree with the numeric fields refuses those entries
+#     instead of reading 200 metres as 200 seconds.
+#   * ``total_minutes`` is never used as active work. Since the dose contract
+#     made it full elapsed time, it includes rest.
+#   * Work and rest must MATCH and rounds must be no lower. Equal active
+#     seconds are not equal stimulus, so a 10 x 15 sec drill is never compared
+#     against a 2 x 100 sec one. This is also what makes the delivered dose
+#     safe: the Stage-2 partitioner allocates rounds round-robin against a
+#     shared budget, where a larger ceiling alone does NOT guarantee a larger
+#     allocation -- but with identical work and rest the two drills are
+#     interchangeable to that algorithm, so equal-or-more rounds cannot deliver
+#     less.
+#   * Intensity must be no lower, by the recorded RPE on both entries.
+#   * An explicitly requested exercise is a coach instruction and is never
+#     displaced on mechanical-cost grounds.
+#
+# When the metadata cannot establish all of that, the existing ranking stands.
+
+_LANDING_IMPACT_TAGS = frozenset({"mech_landing_impact", "high_impact_lower", "high_impact_global"})
+
+# Same parsing convention as the bank dose contract: a work portion is seconds
+# only when the prescription spells the unit out.
+_VERIFIED_WORK_SECONDS = re.compile(r"^\s*(\d+)\s*x\s*(\d+)\s*(?:s|sec|secs|seconds)\b")
+_VERIFIED_WORK_MINUTES = re.compile(r"^\s*(\d+)\s*x\s*(\d+)\s*(?:min|minute|minutes)\b")
+
+
+def _float_or_none_conditioning(value):
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _conditioning_mechanical_cost_is_high(drill: dict) -> bool:
+    """True when the drill carries impact/landing cost beyond its energy demand."""
+    if str(drill.get("impact_cost") or "").strip().lower() == "high":
+        return True
+    return bool(_LANDING_IMPACT_TAGS & set(normalize_tags(drill.get("tags") or [])))
+
+
+def _conditioning_verified_interval_dose(drill: dict) -> tuple[float, float, float] | None:
+    """Return ``(work_sec, rest_sec, rounds)`` only when the units are verified.
+
+    The written prescription must independently state a seconds or minutes work
+    portion that agrees with the numeric fields. Rep- and distance-encoded
+    entries, and any entry whose text and numbers disagree, return ``None``.
+    """
+    duration = str(drill.get("duration") or "").lower().replace("\u2013", "-").replace("\u2014", "-")
+    match = _VERIFIED_WORK_SECONDS.match(duration)
+    if match:
+        parsed_rounds, parsed_work = int(match.group(1)), float(match.group(2))
+    else:
+        match = _VERIFIED_WORK_MINUTES.match(duration)
+        if not match:
+            return None
+        parsed_rounds, parsed_work = int(match.group(1)), float(match.group(2)) * 60.0
+
+    work_sec = _float_or_none_conditioning(drill.get("work_sec"))
+    rest_sec = _float_or_none_conditioning(drill.get("rest_sec"))
+    rounds = _float_or_none_conditioning(drill.get("rounds"))
+    if work_sec != parsed_work or rounds != parsed_rounds:
+        return None
+    if not rest_sec or rest_sec <= 0 or not rounds or rounds <= 0:
+        return None
+    return work_sec, rest_sec, rounds
+
+
+def _promote_lower_cost_conditioning_head(entries: list) -> bool:
+    """Swap in a lower-cost drill carrying the same verified prescription."""
+    if len(entries) < 2:
+        return False
+    head_drill, _head_score, head_reasons = entries[0]
+    if isinstance(head_reasons, dict) and float(
+        head_reasons.get("preferred_exercise_name_match", 0) or 0
+    ):
+        return False
+    if not _conditioning_mechanical_cost_is_high(head_drill):
+        return False
+    head_dose = _conditioning_verified_interval_dose(head_drill)
+    head_rpe = _float_or_none_conditioning(head_drill.get("rpe"))
+    if head_dose is None or head_rpe is None:
+        return False
+    head_work, head_rest, head_rounds = head_dose
+
+    for index in range(1, len(entries)):
+        candidate = entries[index][0]
+        if _conditioning_mechanical_cost_is_high(candidate):
+            continue
+        candidate_dose = _conditioning_verified_interval_dose(candidate)
+        if candidate_dose is None:
+            continue
+        work, rest, rounds = candidate_dose
+        if work != head_work or rest != head_rest or rounds < head_rounds:
+            continue
+        candidate_rpe = _float_or_none_conditioning(candidate.get("rpe"))
+        if candidate_rpe is None or candidate_rpe < head_rpe:
+            continue
+        entries.insert(0, entries.pop(index))
+        return True
+    return False
+
+
 def _conditioning_goal_priority_bonus(tags: list[str], priority_profile) -> float:
     unique_tags = list(dict.fromkeys(tags))
     total = 0.0
     for tag in unique_tags:
-        weight = goal_priority_weight(tag, priority_profile)
+        weight = _conditioning_goal_weight_for_tag(tag, priority_profile)
         if weight == PRIMARY_GOAL_WEIGHT:
             total += CONDITIONING_PRIMARY_GOAL_BONUS
         elif weight > 0:
@@ -118,7 +313,7 @@ def _conditioning_weakness_priority_bonus(tags: list[str], priority_profile) -> 
     unique_tags = list(dict.fromkeys(tags))
     total = 0.0
     for tag in unique_tags:
-        weight = weakness_priority_weight(tag, priority_profile)
+        weight = _conditioning_weakness_weight_for_tag(tag, priority_profile)
         if weight == PRIMARY_WEAKNESS_WEIGHT:
             total += CONDITIONING_PRIMARY_WEAKNESS_BONUS
         elif weight > 0:
@@ -127,10 +322,10 @@ def _conditioning_weakness_priority_bonus(tags: list[str], priority_profile) -> 
 
 
 def _conditioning_priority_value_for_tag(tag: str, priority_profile) -> float:
-    goal_weight = goal_priority_weight(tag, priority_profile)
-    weakness_weight = weakness_priority_weight(tag, priority_profile)
+    goal_weight = _conditioning_goal_weight_for_tag(tag, priority_profile)
+    weakness_weight = _conditioning_weakness_weight_for_tag(tag, priority_profile)
 
-    if is_priority_collision_tag(tag, priority_profile):
+    if _conditioning_tag_is_collision(tag, priority_profile):
         if goal_weight == PRIMARY_GOAL_WEIGHT and weakness_weight == PRIMARY_WEAKNESS_WEIGHT:
             return CONDITIONING_PRIMARY_COLLISION_BONUS
         return CONDITIONING_SECONDARY_COLLISION_BONUS
@@ -155,7 +350,7 @@ def _conditioning_collision_safe_priority_bonus(
     priority_profile,
 ) -> float:
     unique_tags = list(dict.fromkeys([*goal_tags, *weakness_tags]))
-    if not any(is_priority_collision_tag(tag, priority_profile) for tag in unique_tags):
+    if not any(_conditioning_tag_is_collision(tag, priority_profile) for tag in unique_tags):
         return _conditioning_goal_priority_bonus(goal_tags, priority_profile) + _conditioning_weakness_priority_bonus(
             weakness_tags,
             priority_profile,
@@ -172,19 +367,19 @@ def _add_conditioning_priority_reason_codes(
     priority_profile,
 ) -> None:
     for tag in matched_goal_tags:
-        goal_weight = goal_priority_weight(tag, priority_profile)
+        goal_weight = _conditioning_goal_weight_for_tag(tag, priority_profile)
         if goal_weight == PRIMARY_GOAL_WEIGHT:
             reasons["reason_codes"].append(f"priority_primary_goal_match:{tag}")
         elif goal_weight > 0:
             reasons["reason_codes"].append(f"priority_secondary_goal_match:{tag}")
     for tag in matched_weak_tags:
-        weakness_weight = weakness_priority_weight(tag, priority_profile)
+        weakness_weight = _conditioning_weakness_weight_for_tag(tag, priority_profile)
         if weakness_weight == PRIMARY_WEAKNESS_WEIGHT:
             reasons["reason_codes"].append(f"priority_primary_weakness_match:{tag}")
         elif weakness_weight > 0:
             reasons["reason_codes"].append(f"priority_secondary_weakness_match:{tag}")
     for tag in list(dict.fromkeys(matched_goal_tags + matched_weak_tags)):
-        if is_priority_collision_tag(tag, priority_profile):
+        if _conditioning_tag_is_collision(tag, priority_profile):
             reasons["reason_codes"].append(f"priority_collision_goal_weakness:{tag}")
 
 
@@ -1185,9 +1380,21 @@ def _is_drill_text_safe(
 
 # Relative emphasis of each energy system by training phase
 def expand_tags(input_list, tag_map):
+    """Expand intake goal/weakness terms into bank tags.
+
+    Intake spelling and map keys disagree for a handful of entries: the wording
+    the form sends ("gas tank") is absent from a map that only holds ``gas_tank``,
+    so the whole term used to expand to nothing and the athlete's declared
+    limiter never reached scoring. Try the literal key first — existing matches
+    are unaffected — then the space/underscore twin.
+    """
     expanded = []
     for item in input_list:
-        tags = tag_map.get(item.lower(), [])
+        key = str(item).lower()
+        tags = tag_map.get(key)
+        if tags is None:
+            alternate = key.replace(" ", "_") if " " in key else key.replace("_", " ")
+            tags = tag_map.get(alternate, [])
         expanded.extend(tags)
     return normalize_tags(expanded)
 
@@ -3320,6 +3527,16 @@ def generate_conditioning_block(flags):
         for style_lists in style_drills_by_style.values():
             style_lists["aerobic"].sort(key=_boxing_sort_key)
 
+    # Runs last so it sees the final ordering of every pool, mirroring the
+    # boxing aerobic preference above. Only the aerobic and glycolytic systems:
+    # in an alactic slot the landing impact IS the training stimulus.
+    if _conditioning_limiter_signal({"key_goals": goals, "weaknesses": weaknesses}):
+        for system in ("aerobic", "glycolytic"):
+            _promote_lower_cost_conditioning_head(system_drills.get(system) or [])
+            _promote_lower_cost_conditioning_head(style_system_drills.get(system) or [])
+            for style_lists in style_drills_by_style.values():
+                _promote_lower_cost_conditioning_head(style_lists.get(system) or [])
+
     if injury_trace and restrictions:
         active_restrictions = sorted({r.get("restriction", "generic_constraint") for r in restrictions})
         top_blocks = sorted(
@@ -3819,10 +4036,60 @@ def generate_conditioning_block(flags):
             )["pool_treading_strong_case"]
         return _pool_treading_strong_case
 
+    def _target_hits(item) -> int:
+        reasons = item[2] if isinstance(item[2], dict) else {}
+        return int(reasons.get("goal_hits", 0) or 0) + int(reasons.get("weakness_hits", 0) or 0)
+
+    def _next_unselected(candidates):
+        return next(
+            (item for item in candidates if item[0].get("name") not in selected_drill_names),
+            None,
+        )
+
+    def _style_head_is_outranked_on_target(system: str) -> bool:
+        """Stop a style drill owning a system slot a better target match should have.
+
+        ``blended_pick`` spends its style quota first, so the style bank used to
+        take the aerobic/glycolytic/alactic slot unconditionally — a
+        conditioning-limited athlete could get the aerobic slot filled by a
+        footwork flow while tagged aerobic work sat unused in the general pool.
+
+        Style stays the preference *between suitable candidates*: the comparison
+        is the blended score, which already folds in style, sport, equipment and
+        target hits, so a sport-specific style drill that genuinely suits the
+        session objective still wins its slot. The style head only yields to a
+        general candidate that both matches the athlete's declared target and
+        outscores it. Ties keep the existing style-first order; quotas, caps,
+        dose and safety filtering are untouched.
+        """
+        if general_remaining <= 0 or style_remaining <= 0:
+            return False
+        base_head = _next_unselected(system_drills.get(system, []))
+        if base_head is None or not _target_hits(base_head):
+            return False
+        style_head = _next_unselected(
+            item
+            for style in sorted(style_counts, key=style_counts.get)
+            for item in style_drills_by_style.get(style, {}).get(system, [])
+        )
+        if style_head is None:
+            return False
+        style_reasons = style_head[2] if isinstance(style_head[2], dict) else {}
+        if float(style_reasons.get("preferred_exercise_name_match", 0) or 0):
+            # An explicitly requested exercise is a coach instruction, not a
+            # style default: never displace it on target grounds.
+            return False
+        return float(base_head[1] or 0) > float(style_head[1] or 0)
+
     def blended_pick(system: str):
         nonlocal style_remaining, general_remaining
         drill = None
         reasons = None
+        if _style_head_is_outranked_on_target(system):
+            drill, reasons = pop_drill(system_drills, system)
+            if drill:
+                general_remaining -= 1
+                return drill, reasons
         if _base_head_is_priority_pool_treading(system):
             drill, reasons = pop_drill(system_drills, system)
             if drill:
