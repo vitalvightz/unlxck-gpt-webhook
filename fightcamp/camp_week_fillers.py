@@ -335,7 +335,12 @@ def apply_camp_week_fillers(
                 used_watch_keys,
                 usage_ledger,
             )
-            discretionary_cap = max(0, _FIGHT_PHASE_CAPS[phase] - 1)
+            # Tactical Watch is a zero-load informational insert (it sits in
+            # ZERO_COST_INSERTS and coexists with physical sessions), so it does
+            # not spend the week's physical filler budget. The legacy path below
+            # already only charges the coordination insert; charging the watch
+            # here left GPP with no discretionary budget at all.
+            discretionary_cap = max(0, _FIGHT_PHASE_CAPS[phase])
             coordination_added = False
             if discretionary_cap > 0:
                 coordination_added = _ensure_coordination_support(
