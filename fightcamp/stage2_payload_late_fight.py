@@ -2681,7 +2681,15 @@ def _late_fight_candidate_roles(
                     category="conditioning",
                     role_key="light_fight_pace_touch_day",
                     preferred_pool="conditioning_slots",
-                    preferred_system="glycolytic",
+                    # A late-camp rhythm touch is low-fatigue maintenance, not
+                    # glycolytic development -- as this entry's own selection rule
+                    # says. Declaring it glycolytic sent _slot_matches_role at the
+                    # SPP glycolytic pool, whose hard RPE-9 development work is
+                    # correctly rejected by late-window governance, leaving the day
+                    # unassignable. ``_morph_to_rhythm_touch`` already resolves the
+                    # identical role key as aerobic; match it rather than keep a
+                    # second definition of the same role.
+                    preferred_system="aerobic",
                     selection_rule=(
                         "Allow at most one rhythm/freshness touch only when sparring does not already own the window. "
                         "This cannot satisfy a hard conditioning, glycolytic, or combat-pressure quota."

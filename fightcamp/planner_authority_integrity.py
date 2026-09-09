@@ -19,6 +19,36 @@ PLANNER_AUTHORITY_BLOCKER_CODES = frozenset(
     }
 )
 
+# The blocker above means "we cannot explain why this day is empty", which is a
+# corrupt or incomplete pipeline state. It is NOT the same as governance having
+# considered candidates and correctly refused every one of them: that is a safe,
+# explained omission, and holding an otherwise-valid plan for it strands the
+# whole plan over a day that was legitimately left empty. The explained case is
+# reported under its own code, carrying the same rejection diagnostics, and is
+# deliberately absent from PLANNER_AUTHORITY_BLOCKER_CODES.
+LATE_PHYSICAL_ROLE_SAFE_OMISSION_CODE = "late_physical_role_safely_omitted"
+
+_ASSIGNMENT_REJECTION_KEYS = (
+    "phase_window_rejected",
+    "sport_rejected",
+    "day_safety_rejected",
+)
+
+
+def _assignment_absence_is_explained(role: dict[str, Any]) -> bool:
+    """True when governance recorded rejecting at least one candidate."""
+    diagnostics = role.get("late_assignment_diagnostics")
+    if not isinstance(diagnostics, dict):
+        return False
+    for key in _ASSIGNMENT_REJECTION_KEYS:
+        try:
+            if int(diagnostics.get(key) or 0) > 0:
+                return True
+        except (TypeError, ValueError):
+            continue
+    return False
+
+
 # Clearly external-loaded strength equipment. This intentionally does not include
 # bands: late-camp support work may legitimately use light band resistance even
 # when loaded lifting is disabled.
@@ -233,11 +263,21 @@ def planner_authority_findings(planning_brief: dict[str, Any]) -> list[dict[str,
             and category in {"strength", "conditioning"}
             and (not isinstance(assignments, list) or not assignments)
         ):
+            explained = _assignment_absence_is_explained(role)
             findings.append(
                 {
-                    "code": "late_physical_role_missing_assignment",
-                    "severity": "blocker",
-                    "message": "A dated app-owned physical role has no deterministic exercise assignment.",
+                    "code": (
+                        LATE_PHYSICAL_ROLE_SAFE_OMISSION_CODE
+                        if explained
+                        else "late_physical_role_missing_assignment"
+                    ),
+                    "severity": "info" if explained else "blocker",
+                    "message": (
+                        "Every candidate for a dated app-owned physical role was rejected by "
+                        "phase, window, sport or day-safety governance; the day is left empty."
+                        if explained
+                        else "A dated app-owned physical role has no deterministic exercise assignment."
+                    ),
                     "countdown_label": str(
                         role.get("scheduled_countdown_label")
                         or role.get("countdown_label")
