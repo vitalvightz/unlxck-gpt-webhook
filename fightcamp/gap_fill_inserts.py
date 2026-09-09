@@ -96,6 +96,25 @@ _ALL_INSERTS = (
     | LOW_COST_AEROBIC_INSERTS
 )
 TACTICAL_INSERTS = {"tactical_watch", "tactical_cue_card", "self_review"}
+
+
+def consumes_insert_budget(role_key: Any) -> bool:
+    """Whether an insert spends the camp's support-insert allowance.
+
+    Zero-cost inserts (Tactical Watch, cue card, self review, visualization) are
+    informational: they carry no physical load, coexist with real sessions and
+    do not fill a training day. Counting them against the allowance let a week
+    of tactical reading crowd out the physical support the athlete's goals need.
+    """
+    return str(role_key or "") not in ZERO_COST_INSERTS
+
+
+def budgeted_insert_count(inserts: list[dict[str, Any]]) -> int:
+    return sum(
+        1
+        for insert in inserts
+        if isinstance(insert, dict) and consumes_insert_budget(insert.get("role_key"))
+    )
 CONDITIONING_MAINTENANCE_INSERTS = LOW_COST_AEROBIC_INSERTS
 
 _LOWER_LEG_LOAD_MARKERS = (
@@ -1860,7 +1879,7 @@ def apply_gap_fill_inserts(
         # resolved contact set, not raw declared weekday names.
         on_hard_sparring_day = target_offset in contact_offsets
         force_tactical = tactical_required and not tactical_present
-        if len(inserts) >= MAX_INSERTS_TOTAL_D21_TO_D0 and not force_tactical:
+        if budgeted_insert_count(inserts) >= MAX_INSERTS_TOTAL_D21_TO_D0 and not force_tactical:
             break
         insert = select_gap_fill_insert(
             athlete_model,
@@ -1902,14 +1921,11 @@ def apply_gap_fill_inserts(
             insert["real_weekday"] = weekday
             insert["countdown_display_label"] = f"D-{target_offset} ({weekday.title()})"
 
-        projected = ordered + inserts + [insert]
-        mandatory_watch_slots = (
-            _missing_mandatory_watch_count(projected)
-            if _is_fight_sport(athlete_model)
-            else 0
-        )
-        if len(inserts) + 1 + mandatory_watch_slots > MAX_INSERTS_TOTAL_D21_TO_D0:
-            continue
+        # A zero-cost insert spends nothing, so it needs no allowance and no
+        # reserved slot for the mandatory watches that are themselves zero-cost.
+        if consumes_insert_budget(insert.get("role_key")):
+            if budgeted_insert_count(inserts) + 1 > MAX_INSERTS_TOTAL_D21_TO_D0:
+                continue
 
         if insert["role_key"] in PHYSICAL_INSERTS:
             segment = _segment_for_offset(target_offset)
