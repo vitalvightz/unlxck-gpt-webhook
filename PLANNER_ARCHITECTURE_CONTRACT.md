@@ -468,6 +468,27 @@ not reintroduce it:
    but has no production caller (see 9.3.3); the live path delegates the boxing
    crowded-week case to `stage2_role_map._apply_boxing_crowded_week_compression`.
 
+9. **Closed spine handed over as markdown, not JSON (Step 11).** The LOCKED SESSION
+   RENDER MANIFEST was a JSON projection of closed membership that the finalizer was
+   asked to *construct* the document from. It is now the LOCKED SESSION RENDER
+   SKELETON: `stage2_payload._closed_membership_render_skeleton` renders the same
+   manifest as the markdown session spine — an internal `SCHEDULED DAY:` locator,
+   the membership count, and the authoritative `- Name: dose` lines — so the first
+   pass copies it through rather than rebuilding it.
+   `_closed_membership_render_manifest` is unchanged and remains the single source;
+   the skeleton is presentation only, and emits no internal role keys.
+
+   The skeleton is a strict *subset* of the packet's `selected_exercise_assignments`,
+   not a replacement for them: the manifest skips every role with
+   `render_mandatory: False` and returns nothing for `open_ongoing_system`, and the
+   packet's assignments additionally carry `coaching_notes`, `slot_id`,
+   `base_prescription` and the `effective_strength_envelope` join. The packet copy
+   therefore stays.
+
+   This removes no validator or repair path: the deterministic reconciliation, the
+   one repair call and the conditioning-render hold all still stand behind it.
+   Retiring those becomes arguable only once this is proven in production.
+
 ### 9.3 Remaining non-blocking debt
 
 These are real but do not affect decision ownership, and are explicitly **not** scheduled

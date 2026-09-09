@@ -68,7 +68,11 @@ assembles the prompt from:
 
 1. `STAGE2_FINALIZER_PROMPT` + `UNLXCK_FINAL_RENDER_CONTRACT`,
 2. payload-mode instructions for the resolved `payload_mode`,
-3. the LOCKED SESSION RENDER MANIFEST (closed membership, when present),
+3. the LOCKED SESSION RENDER SKELETON (closed membership, when present) — the
+   deterministic session spine rendered as markdown by
+   `stage2_payload._closed_membership_render_skeleton`, so the model copies the
+   already-written exercise lines through rather than reconstructing them from a
+   JSON membership record,
 4. the FINALIZER PACKET — `stage2_finalizer_packet` built from the
    `stage2_llm_boundary`-sanitised `planning_brief` plus `stage2_payload`,
 5. the athlete profile, optional injury context and coach notes,

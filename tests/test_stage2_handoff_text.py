@@ -544,6 +544,50 @@ def test_unnamed_assignment_is_still_dropped_and_reported():
     ]
 
 
+def test_render_skeleton_is_the_document_spine_not_a_json_spec():
+    """The closed spine reaches the finalizer already written, as markdown to copy.
+
+    Every dropped-member repair path downstream exists because the model was asked
+    to reconstruct the document from a JSON membership record. Handing it the lines
+    themselves makes "render exactly this" a copy rather than a transformation.
+    """
+    from fightcamp.stage2_payload import _closed_membership_render_skeleton
+
+    manifest = _closed_membership_render_manifest(_packet_with_undosed_member())
+    skeleton = _closed_membership_render_skeleton(manifest)
+
+    # The authoritative exercise lines appear verbatim, under a day heading.
+    assert "- Trap Bar Deadlift: 3 x 3; RPE 6-7" in skeleton
+    assert "- Med Ball Scoop Toss: DOSE_UNRESOLVED" in skeleton
+    # The mandatory membership count travels with the block, on a locator line
+    # shaped as internal metadata rather than as a copyable heading.
+    assert "SCHEDULED DAY:" in skeleton
+    assert "required membership: 2" in skeleton
+    # Internal role keys stay out: role headings remain the packet's to own.
+    assert "primary_strength_day" not in skeleton
+
+
+def test_render_skeleton_reaches_the_handoff_instead_of_a_json_manifest():
+    from fightcamp.stage2_payload import build_stage2_handoff_text
+
+    handoff = build_stage2_handoff_text(
+        stage2_payload={
+            "athlete_model": {"sport": "boxing"},
+            "render_mode": "camp_plan",
+            "rewrite_guidance": {"render_guards": {"render_mode": "camp_plan"}},
+            "weekly_role_map": _packet_with_undosed_member()["selected_plan"]["weekly_role_map"],
+        },
+        planning_brief={},
+        plan_text="draft",
+    )
+
+    assert "LOCKED SESSION RENDER SKELETON" in handoff
+    assert "LOCKED SESSION RENDER MANIFEST" not in handoff
+    assert "- Trap Bar Deadlift: 3 x 3; RPE 6-7" in handoff
+    # The skeleton ships as markdown, not as a second JSON copy of the membership.
+    assert '"exercise_lines"' not in handoff
+
+
 def test_finalizer_instructions_authorise_dosing_but_not_membership_change():
     """The prompt must license dose authorship without loosening membership."""
     from fightcamp.stage2_payload import STAGE2_FINALIZER_PROMPT

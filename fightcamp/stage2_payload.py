@@ -2614,7 +2614,7 @@ def build_stage2_payload(
 
 STAGE2_FINALIZER_PROMPT = """You are Stage 2 (finalizer). Stage 1 has already made the training decisions. Your job is to render and coach the resolved plan, not redesign it.
 
-Input = FINALIZER PACKET + LOCKED SESSION RENDER MANIFEST + Stage 1 draft + athlete profile + optional injury context.
+Input = FINALIZER PACKET + LOCKED SESSION RENDER SKELETON + Stage 1 draft + athlete profile + optional injury context.
 
 AUTHORITY ORDER
 1. FINALIZER PACKET — primary authority for calendar, render mode, countdown labels, restrictions, priorities, compact selected candidate facts, session-count metadata, and risks.
@@ -2629,7 +2629,7 @@ RULE 2 — FINALIZE THE RESOLVED CAMP
 Use the FINALIZER PACKET to render the already-decided calendar, sessions, exercise membership and effective prescriptions. Improve coaching clarity and remove redundant prose without changing training decisions. Do not reorganise, merge, suppress or reselect closed sessions to make the plan shorter or more coherent. Only explicitly open roles retain their existing bounded selection freedom. Safety restrictions and deterministic overrides remain authoritative.
 
 RULE 3 — SELECTION ORDER
-Build the first pass from the LOCKED SESSION RENDER MANIFEST wherever it is supplied. It is a source-backed view of the FINALIZER PACKET, not a separate planning authority. For each closed role, render the exact scheduled membership and every listed exercise line before writing coaching details. The exercise count is mandatory, not a target. A source selected_option=false means the exercise came from an alternate bank option; once promoted into selected_exercise_assignments it is a scheduled member, not an optional fallback. Never treat a shared source slot_id as one exercise. If a locked assignment is illegal under a hard restriction, drop or hold it and leave the gap — never substitute another exercise. A missing dose is different: an assignment marked DOSE_UNRESOLVED is a scheduled exercise the planner did not dose, and you must prescribe one. Use the athlete profile — phase, countdown day, fatigue, weight cut, injury context, training age, status and equipment — to write a sets/reps/intensity or duration prescription appropriate to that exercise on that day, and never write the literal marker into the plan. Where the packet supplies a countdown or role dose cap, stay inside it. Authoring a dose is not authoring membership: still never add, restore or substitute an exercise.
+Build the first pass from the LOCKED SESSION RENDER SKELETON wherever it is supplied. It is the already-written session spine of your own output — a source-backed view of the FINALIZER PACKET, not a separate planning authority. For each closed role, carry every listed exercise line through unchanged, then write the coaching details around it. The exercise count is mandatory, not a target. A source selected_option=false means the exercise came from an alternate bank option; once promoted into selected_exercise_assignments it is a scheduled member, not an optional fallback. Never treat a shared source slot_id as one exercise. If a locked assignment is illegal under a hard restriction, drop or hold it and leave the gap — never substitute another exercise. A missing dose is different: an assignment marked DOSE_UNRESOLVED is a scheduled exercise the planner did not dose, and you must prescribe one. Use the athlete profile — phase, countdown day, fatigue, weight cut, injury context, training age, status and equipment — to write a sets/reps/intensity or duration prescription appropriate to that exercise on that day, and never write the literal marker into the plan. Where the packet supplies a countdown or role dose cap, stay inside it. Authoring a dose is not authoring membership: still never add, restore or substitute an exercise.
 Preserve the calendar, declared days, coach-led ownership, session count, phase, and taper window from selected_plan / weekly_role_map. When a role has selected_exercise_assignments, render every assigned exercise and use only those exercises. That list is closed session membership from the deterministic planner. An empty selected_exercise_assignments list is not creative freedom: do not invent or add an exercise. Do not add, restore, or substitute candidates, alternates, or other S&C exercises, even when their dose would be legal. Use each selected exercise's effective prescription when supplied. Roles without selected_exercise_assignments keep their existing contract. Draft text is candidate material and cannot override the FINALIZER PACKET.
 
 RULE 4 — ANCHOR STANDARD
@@ -2790,7 +2790,7 @@ Non-negotiable output contract:
      "Regression /", "Regression", or slash-separated structural label.
    - injury/rehab insert when relevant
    - coach call when needed
-5A. For every closed role, preserve every selected exercise as a separate line with its authoritative effective prescription. One prescription per exercise is not one exercise per session. A selected_option=false provenance flag does not make the assignment optional. The LOCKED SESSION RENDER MANIFEST is a copy of the selected membership; never use a draft, generic writing rule, candidate menu or shared slot_id to reduce its count. If a hard restriction makes an exercise illegal, leave the gap and retain the safety conflict; never substitute downstream.
+5A. For every closed role, preserve every selected exercise as a separate line with its authoritative effective prescription. One prescription per exercise is not one exercise per session. A selected_option=false provenance flag does not make the assignment optional. The LOCKED SESSION RENDER SKELETON is a copy of the selected membership; never use a draft, generic writing rule, candidate menu or shared slot_id to reduce its count. If a hard restriction makes an exercise illegal, leave the gap and retain the safety conflict; never substitute downstream.
 6. If session_count_summary.reduced_from_planned is true for a week, include one short reason tied to taper, weight cut, risk-adjusted hard-sparring cutoff, injury/cut management, hard sparring / contact load, fight-week override, or intentional compression.
 7. Hard sparring / technical-only combat days must stay minimal: the hard-sparring/contact label plus one freshness note only — no programmed S&C stacked on the day.
 8. D-0 must be fight day protocol only.
@@ -2980,6 +2980,45 @@ def _closed_membership_render_manifest(finalizer_packet: dict) -> list[dict]:
     return manifest
 
 
+def _closed_membership_render_skeleton(manifest: list[dict]) -> str:
+    """Render the locked manifest as the markdown spine the first pass must fill.
+
+    Pure presentation of :func:`_closed_membership_render_manifest` — it chooses
+    nothing, and reads only fields that function already resolved. The finalizer
+    was previously handed this membership as JSON and asked to construct the
+    document from it; every dropped-member repair path downstream exists because
+    that reconstruction is unreliable. Handing over the document itself, with the
+    exercise lines already written, makes "render exactly this" a copy rather
+    than a transformation.
+
+    Internal role keys are deliberately not emitted: role headings stay the
+    packet's and ``role_labels``' to own, so nothing here can leak a slot key
+    into athlete-facing text.
+    """
+    blocks: list[str] = []
+    for entry in manifest:
+        lines = [line for line in (entry.get("exercise_lines") or []) if str(line).strip()]
+        if not lines:
+            continue
+        label = str(entry.get("scheduled_countdown_label") or "").strip()
+        day = str(entry.get("scheduled_day_hint") or "").strip()
+        week_index = entry.get("week_index")
+        locator_parts = [part for part in (label, day) if part]
+        if not locator_parts and week_index is not None:
+            locator_parts = [f"Week {week_index}"]
+        locator = " / ".join(locator_parts) or "unlabelled scheduled session"
+        # A metadata locator, not a heading: it names which day owns the lines
+        # below. Athlete-facing day headings and role labels stay the packet's,
+        # so this line is deliberately shaped to read as internal and is never
+        # printed (see the instruction block in build_stage2_handoff_text).
+        count = entry.get("selected_count")
+        locator_line = f"SCHEDULED DAY: {locator}"
+        if isinstance(count, int):
+            locator_line = f"{locator_line} — required membership: {count}"
+        blocks.append("\n".join([locator_line, *lines]))
+    return "\n\n".join(blocks)
+
+
 def _athlete_profile_block(planning_brief: dict | None, stage2_payload: dict) -> dict:
     if isinstance(planning_brief, dict):
         athlete_snapshot = planning_brief.get("athlete_snapshot")
@@ -3164,20 +3203,30 @@ def build_stage2_handoff_text(
         sections.append(_OPEN_ONGOING_RENDER_MODE_INSTRUCTIONS.strip())
 
     locked_manifest = _closed_membership_render_manifest(finalizer_packet)
-    if locked_manifest:
+    locked_skeleton = _closed_membership_render_skeleton(locked_manifest)
+    if locked_skeleton:
         sections.append(
-            "LOCKED SESSION RENDER MANIFEST\n"
-            "This is the exact selected exercise membership for the first pass. "
-            "Render every exercise_lines entry once under its owning day and role, "
-            "then add coaching details. selected_count is the required membership count. "
-            "Do not promote one member to primary and discard the others. "
+            "LOCKED SESSION RENDER SKELETON\n"
+            "This is the deterministic session spine of the plan you are returning, "
+            "already written out: one block per scheduled day, and under it the exact "
+            "selected exercise membership with its authoritative dose. Copy every line "
+            "through to your output under its owning day and role, then add the coaching "
+            "detail around it. This is a copy, not a source to rebuild from: do not "
+            "re-order, merge, re-title or re-select these lines, and do not promote one "
+            "member to primary and discard the others. Each block opens with a "
+            "SCHEDULED DAY locator line: that line is internal metadata naming which "
+            "day owns the lines under it and how many members it requires — never "
+            "print it, and never turn it into a heading. Only the exercise lines are "
+            "copied through. "
             "An entry whose dose reads DOSE_UNRESOLVED is a scheduled exercise the "
             "planner did not dose: prescribe an appropriate dose for it from the athlete "
             "profile and the scheduled day, stay inside any dose cap the packet supplies, "
             "and never render the marker itself. This licenses dosing only — never adding, "
             "restoring or substituting an exercise. Hard safety restrictions remain "
-            "authoritative.\n"
-            + _json_block(locked_manifest)
+            "authoritative: an illegal member is dropped or held and the gap is left, "
+            "never substituted. Role headings and athlete-facing labels come from the "
+            "FINALIZER PACKET, not from this block.\n\n"
+            + locked_skeleton
         )
 
     sections.append("FINALIZER PACKET\n" + _json_block(finalizer_packet))
@@ -3193,11 +3242,12 @@ def build_stage2_handoff_text(
 
     sections.append("STAGE 1 DRAFT PLAN\n" + (plan_text or "").strip())
 
-    if locked_manifest:
+    if locked_skeleton:
         sections.append(
             "FIRST-PASS COMPLETENESS CHECK\n"
             "Before returning the plan, compare each closed role against the locked "
-            "manifest. Preserve the required exercise count, exact names, authorised "
+            "skeleton. Every line in it must appear in your output. Preserve the "
+            "required exercise count, exact names, authorised "
             "effective doses, and day ownership. Do not remove a legal member to "
             "shorten prose, satisfy an open-role fallback rule, or improve perceived "
             "session balance. If source or safety conflicts remain, do not invent "
