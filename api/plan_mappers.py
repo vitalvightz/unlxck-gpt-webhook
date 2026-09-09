@@ -579,12 +579,14 @@ def _map_plan_detail(
     summary = _map_plan_summary(row, current_training_day=current_training_day)
     planning_brief = _decode_structured_text(row.get("planning_brief"))
     raw_stage2_payload = row.get("stage2_payload")
-    fallback_parsing_metadata = (
-        raw_stage2_payload.get("input_parsing_metadata")
-        if isinstance(raw_stage2_payload, dict)
-        else {}
-    )
-    parsing_metadata = row.get("parsing_metadata") or fallback_parsing_metadata or {}
+    # No fallback to stage2_payload["input_parsing_metadata"]: Stage 1 sets it and
+    # the top-level parsing_metadata from the same plan_input.parsing_metadata in
+    # the same result (fightcamp/main.py), so the fallback could only ever repeat
+    # the value the column already holds — and when the column is falsy, so is it.
+    # Rows predating the column predate stage2_payload too (both were added by
+    # 20260427120000_stabilize_generation_runtime.sql, neither backfilled), so
+    # there is no legacy era where the fallback supplied anything either.
+    parsing_metadata = row.get("parsing_metadata") or {}
     display_plan_text = str(row.get("plan_text") or "")
     if not display_plan_text and summary.status == "archived" and not include_admin:
         display_plan_text = str(row.get("final_plan_text") or row.get("draft_plan_text") or "")
