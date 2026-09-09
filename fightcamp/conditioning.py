@@ -85,6 +85,17 @@ CONDITIONING_PRIMARY_WEAKNESS_BONUS = 2.5
 CONDITIONING_SECONDARY_WEAKNESS_BONUS = 1.25
 CONDITIONING_MAX_COLLISION_SAFE_PRIORITY_BONUS = 5.0
 CONDITIONING_PRIMARY_COLLISION_BONUS = 3.0
+# A fight-format round session is the most specific answer there is to a declared
+# gas-tank/conditioning limiter, so when that limiter is the athlete's *primary*
+# priority it must clearly outrank a merely goal-tagged generic drill (a tagged
+# hill run already reaches CONDITIONING_MAX_COLLISION_SAFE_PRIORITY_BONUS). The
+# boost is awarded on the bank's own ``round_based`` marker rather than a
+# hand-applied tag, which six of the ten round-format entries are missing.
+CONDITIONING_FIGHT_FORMAT_PRIMARY_BONUS = 6.0
+# The energy-system families a conditioning / gas-tank priority expands into.
+_CONDITIONING_PRIORITY_SYSTEM_TAGS = frozenset(
+    {"conditioning", "glycolytic", "aerobic", "work_capacity"}
+)
 CONDITIONING_SECONDARY_COLLISION_BONUS = 1.5
 CONDITIONING_CLARIFICATION_TAG_BONUS = 0.75
 CONDITIONING_MAX_CLARIFICATION_TAG_BONUS = 2.0
@@ -348,20 +359,52 @@ def _conditioning_priority_value_for_tag(tag: str, priority_profile) -> float:
     return total
 
 
+def _conditioning_priority_is_primary_gas_tank(priority_profile) -> bool:
+    """Is conditioning / gas tank the athlete's PRIMARY goal or weakness?
+
+    Reads the existing primary tiers, so a secondary conditioning goal keeps its
+    ordinary secondary preference and a strength-primary athlete gets nothing.
+    """
+    primary_goal, _sg, primary_weak, _sw = _conditioning_priority_tag_tiers(priority_profile)
+    return bool(
+        (primary_goal & _CONDITIONING_PRIORITY_SYSTEM_TAGS)
+        or (primary_weak & _CONDITIONING_PRIORITY_SYSTEM_TAGS)
+    )
+
+
+def _conditioning_fight_format_priority_bonus(drill: dict, priority_profile) -> float:
+    """Dominant preference for fight-format round work on a primary gas-tank limiter.
+
+    Scoring runs after every eligibility filter - injury and medical
+    restrictions, equipment, contact and phase gating - so this can only reorder
+    candidates that are already legal for the session. It never makes an
+    ineligible drill selectable.
+    """
+    if not isinstance(drill, dict) or not drill.get("round_based"):
+        return 0.0
+    if not _conditioning_priority_is_primary_gas_tank(priority_profile):
+        return 0.0
+    return CONDITIONING_FIGHT_FORMAT_PRIMARY_BONUS
+
+
 def _conditioning_collision_safe_priority_bonus(
     goal_tags: list[str],
     weakness_tags: list[str],
     priority_profile,
+    *,
+    drill: dict | None = None,
 ) -> float:
+    fight_format_bonus = _conditioning_fight_format_priority_bonus(drill or {}, priority_profile)
     unique_tags = list(dict.fromkeys([*goal_tags, *weakness_tags]))
     if not any(_conditioning_tag_is_collision(tag, priority_profile) for tag in unique_tags):
-        return _conditioning_goal_priority_bonus(goal_tags, priority_profile) + _conditioning_weakness_priority_bonus(
-            weakness_tags,
-            priority_profile,
+        return (
+            _conditioning_goal_priority_bonus(goal_tags, priority_profile)
+            + _conditioning_weakness_priority_bonus(weakness_tags, priority_profile)
+            + fight_format_bonus
         )
 
     total = sum(_conditioning_priority_value_for_tag(tag, priority_profile) for tag in unique_tags)
-    return min(total, CONDITIONING_MAX_COLLISION_SAFE_PRIORITY_BONUS)
+    return min(total, CONDITIONING_MAX_COLLISION_SAFE_PRIORITY_BONUS) + fight_format_bonus
 
 
 def _add_conditioning_priority_reason_codes(
@@ -3206,6 +3249,7 @@ def generate_conditioning_block(flags):
                     matched_goal_tags,
                     matched_weak_tags,
                     priority_profile,
+                    drill=d,
                 )
                 clarification_bonus, clarification_hits = _conditioning_clarification_bonus(tags, derived_clarification_tags)
                 base_score += clarification_bonus
@@ -3480,6 +3524,7 @@ def generate_conditioning_block(flags):
                     matched_goal_tags,
                     matched_weak_tags,
                     priority_profile,
+                    drill=d,
                 )
                 clarification_bonus, clarification_hits = _conditioning_clarification_bonus(tags, derived_clarification_tags)
                 score += clarification_bonus
