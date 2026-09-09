@@ -18,6 +18,7 @@ from copy import deepcopy
 from typing import Any
 
 from .fight_day_override import FIGHT_DAY_PROTOCOL_TEXT
+from .selection_metadata import BOOLEAN_METADATA_FIELDS, SELECTION_METADATA_DEFAULTS
 from .stage2_render_guards import _all_active_injuries_surface_only, _render_guard_flags
 
 
@@ -217,6 +218,88 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+_NORMAL_CONDITIONING_CANDIDATE_KEYS = (
+    "name",
+    "source",
+    "system",
+    "prescription",
+    "why",
+    "notes",
+    "movement_patterns",
+    "restriction_tags",
+    "mechanical_risk_tags",
+    "required_equipment",
+    "availability_contingency_reason",
+    "athlete_facing_system_label",
+    "reason_codes",
+    "bank_order",
+    "technical_footwork_prescription",
+)
+
+_NORMAL_CONDITIONING_METADATA_KEYS = tuple(
+    dict.fromkeys(
+        (
+            # Existing normalized selector metadata is the compact authoritative
+            # physiological/fatigue contract for an option.
+            *SELECTION_METADATA_DEFAULTS,
+            *BOOLEAN_METADATA_FIELDS,
+            # These bank fields supplement the normalized contract with the
+            # actual prescription and equipment context that the composer sees.
+            "system",
+            "phases",
+            "tags",
+            "modality",
+            "purpose",
+            "description",
+            "notes",
+            "timing",
+            "duration",
+            "rest",
+            "load",
+            "intensity",
+            "work_sec",
+            "rest_sec",
+            "rounds",
+            "total_minutes",
+            "rpe",
+            "impact_cost",
+            "lactate_load",
+            "movement_cost",
+            "mechanical_risk_tags",
+            "equipment",
+            "required_equipment",
+            "equipment_note",
+            "quality_stop_rule",
+        )
+    )
+)
+
+
+def _compact_normal_conditioning_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
+    """Keep the bank facts Stage 2 needs, without repeating raw scorer payloads.
+
+    ``selection_metadata`` is the authoritative bank record in the full
+    planning brief. The finalizer only needs its prescription, physiological,
+    equipment and mechanical evidence; raw score breakdowns and schema/source
+    bookkeeping are planner diagnostics, not coaching input.
+    """
+    compact = {
+        key: deepcopy(candidate[key])
+        for key in _NORMAL_CONDITIONING_CANDIDATE_KEYS
+        if candidate.get(key) not in (None, "", [], {})
+    }
+    metadata = candidate.get("selection_metadata")
+    if isinstance(metadata, dict):
+        compact_metadata = {
+            key: deepcopy(metadata[key])
+            for key in _NORMAL_CONDITIONING_METADATA_KEYS
+            if metadata.get(key) not in (None, "", [], {})
+        }
+        if compact_metadata:
+            compact["selection_metadata"] = compact_metadata
+    return compact
+
+
 def _normal_conditioning_composition_options(source: dict[str, Any]) -> list[dict[str, Any]]:
     """Project the existing Stage-1 conditioning surplus for open normal roles.
 
@@ -261,7 +344,7 @@ def _normal_conditioning_composition_options(source: dict[str, Any]) -> list[dic
                     if not name or name in seen:
                         continue
                     seen.add(name)
-                    candidates.append(deepcopy(candidate))
+                    candidates.append(_compact_normal_conditioning_candidate(candidate))
             target_active_work, elapsed_cap_minutes = _conditioning_phase_workload_envelope(
                 phase=phase,
                 system=system,
