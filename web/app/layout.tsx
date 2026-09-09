@@ -2,10 +2,13 @@ import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import type { Viewport } from "next";
 import { headers } from "next/headers";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale } from "next-intl/server";
 
 import { AppNav } from "@/components/app-nav";
 import { AuthProvider } from "@/components/auth-provider";
 import { GenerationStatusShell } from "@/components/generation-status-shell";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { PasswordRecoveryRedirect } from "@/components/password-recovery-redirect";
 import { PrivateBetaNutritionGate } from "@/components/private-beta-nutrition-link";
 import { PwaRegister } from "@/components/pwa-register";
@@ -21,6 +24,7 @@ import "./xp-interface.css";
 import "./xp-overview-card.css";
 import "./xp-progress-page.css";
 import "./plan-display-polish.css";
+import "../components/language-switcher.css";
 
 const THEME_INIT_SCRIPT = `(function(){try{var m=localStorage.getItem(${JSON.stringify(
   APPEARANCE_STORAGE_KEY,
@@ -68,6 +72,7 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   const requestHeaders = await headers();
+  const locale = await getLocale();
   const rawNonce = requestHeaders.get("x-nonce");
   const nonce = rawNonce && /^[A-Za-z0-9+/]{48}$/.test(rawNonce) ? rawNonce : undefined;
   const serverSurface = getServerShellSurface(requestHeaders.get("x-pathname"));
@@ -79,7 +84,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 
   return (
     <html
-      lang="en"
+      lang={locale}
       data-theme="dark"
       data-app-surface={serverSurface ?? undefined}
       style={{ colorScheme: "dark" }}
@@ -95,31 +100,34 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         />
       </head>
       <body>
-        <AuthProvider>
-          <XpProvider>
-            <PasswordRecoveryRedirect />
-            <PrivateBetaNutritionGate />
-            <ToastProvider>
-              <XpAwardFeedback />
-              <PwaRegister buildVersion={pwaBuildVersion}>
-                <GenerationStatusShell>
-                  <div className="app-shell">
-                    <AppNav />
-                    <div className="app-content">
-                      <main className="app-main">
-                        <div className="page">{children}</div>
-                      </main>
-                      <footer className="app-safety-footer" role="contentinfo">
-                        <span className="app-safety-footer-wide">{SAFETY_DISCLAIMER_SHORT}</span>
-                        <span className="app-safety-footer-tight">{SAFETY_DISCLAIMER_TIGHT}</span>
-                      </footer>
+        <NextIntlClientProvider>
+          <AuthProvider>
+            <XpProvider>
+              <PasswordRecoveryRedirect />
+              <PrivateBetaNutritionGate />
+              <ToastProvider>
+                <XpAwardFeedback />
+                <LanguageSwitcher />
+                <PwaRegister buildVersion={pwaBuildVersion}>
+                  <GenerationStatusShell>
+                    <div className="app-shell">
+                      <AppNav />
+                      <div className="app-content">
+                        <main className="app-main">
+                          <div className="page">{children}</div>
+                        </main>
+                        <footer className="app-safety-footer" role="contentinfo">
+                          <span className="app-safety-footer-wide">{SAFETY_DISCLAIMER_SHORT}</span>
+                          <span className="app-safety-footer-tight">{SAFETY_DISCLAIMER_TIGHT}</span>
+                        </footer>
+                      </div>
                     </div>
-                  </div>
-                </GenerationStatusShell>
-              </PwaRegister>
-            </ToastProvider>
-          </XpProvider>
-        </AuthProvider>
+                  </GenerationStatusShell>
+                </PwaRegister>
+              </ToastProvider>
+            </XpProvider>
+          </AuthProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

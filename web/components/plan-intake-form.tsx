@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import { RequireAuth } from "@/components/auth-guard";
@@ -889,6 +890,7 @@ type TrainingGateDecision =
   | { kind: "warning_ack_required"; message: string; shouldRedirectToTraining: boolean };
 
 export function PlanIntakeForm() {
+  const t = useTranslations("Onboarding");
   const router = useRouter();
   const searchParams = useSearchParams();
   const refiningFromQuickBuild = searchParams.get("from") === "quick_build";
@@ -1064,7 +1066,12 @@ export function PlanIntakeForm() {
         case "availabilityConsistencyAlert":
           return !getAvailabilityConsistency(form.training_availability, form.weekly_training_frequency).hardError;
         case "sparringConsistencyAlert":
-          return !getSparringConsistency(form.training_availability, form.hard_sparring_days, form.support_work_days).hardError;
+          return !getSparringConsistency(
+            form.training_availability,
+            form.hard_sparring_days,
+            form.support_work_days,
+            !noScheduledFight,
+          ).hardError;
         default:
           if (invalidFieldId.startsWith("guidedInjuryCard-")) {
             if (guidedInjuries.some((injury) => hasGuidedInjuryDescriptorWithoutArea(injury))) {
@@ -1588,6 +1595,7 @@ export function PlanIntakeForm() {
       nextForm.training_availability,
       nextForm.hard_sparring_days,
       nextForm.support_work_days,
+      action !== "save_draft" && nextForm.no_scheduled_fight !== true,
     );
     if (sparringConsistency.hardError) {
       return {
@@ -2085,6 +2093,7 @@ export function PlanIntakeForm() {
     form.training_availability,
     form.hard_sparring_days,
     form.support_work_days,
+    !noScheduledFight,
   );
   const hardSparringWarning = getHardSparringWarning(
     form.hard_sparring_days,
@@ -2379,8 +2388,8 @@ export function PlanIntakeForm() {
       <section className="panel onboarding-panel">
         <div className="section-heading onboarding-heading-desktop">
           <div className="athlete-motion-slot athlete-motion-header">
-            <p className="kicker">Advanced Intake</p>
-            <h1>Build your camp profile.</h1>
+            <p className="kicker">{t("eyebrow")}</p>
+            <h1>{t("title")}</h1>
             <p className="muted">Saved, resumable athlete intake.</p>
             <Link href="/quick-build" className="ghost-button onboarding-quick-build-link">
               Use Quick Build instead
@@ -2435,7 +2444,7 @@ export function PlanIntakeForm() {
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Identity</p>
-                  <h2 className="form-section-title">Core athlete details</h2>
+                  <h2 className="form-section-title">{t("coreDetails")}</h2>
                 </div>
                 <p className="muted">Only your name and combat sport are required here. Everything else is optional.</p>
                 <div className="form-grid onboarding-profile-core-grid">
@@ -2561,7 +2570,7 @@ export function PlanIntakeForm() {
                     {invalidFieldId === "record" && error ? (
                       <p id="record-error" className="error-text" role="alert">{error}</p>
                     ) : recordHasError ? (
-                      <p className="error-text">Enter record as x-x or x-x-x.</p>
+                      <p className="error-text">{t("recordHint")}</p>
                     ) : null}
                   </div>
                 </div>
@@ -2572,7 +2581,7 @@ export function PlanIntakeForm() {
               <div className="support-panel">
                 <div className="form-section-header">
                   <p className="kicker">Profile snapshot</p>
-                  <h2 className="form-section-title">Current selections</h2>
+                  <h2 className="form-section-title">{t("currentSelections")}</h2>
                 </div>
                 <ul className="summary-list">
                   <li>Name: {formatValue(form.athlete.full_name)}</li>
@@ -2593,7 +2602,7 @@ export function PlanIntakeForm() {
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Fight context</p>
-                  <h2 className="form-section-title">Camp timing and load</h2>
+                  <h2 className="form-section-title">{t("timingLoad")}</h2>
                 </div>
                 <div className="form-grid onboarding-fight-grid">
                   <div className={`field${invalidFieldId === "fightDate" ? " field-invalid" : ""}`}>
@@ -2719,7 +2728,7 @@ export function PlanIntakeForm() {
               <div className="support-panel">
                 <div className="form-section-header">
                   <p className="kicker">Context snapshot</p>
-                  <h2 className="form-section-title">Current camp setup</h2>
+                  <h2 className="form-section-title">{t("currentSetup")}</h2>
                 </div>
                 <ul className="summary-list">
                   <li>Fight date: {formatFightDateValue(form.fight_date)}</li>
@@ -2742,7 +2751,7 @@ export function PlanIntakeForm() {
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Schedule</p>
-                  <h2 className="form-section-title">Training Availability</h2>
+                  <h2 className="form-section-title">{t("trainingAvailability")}</h2>
                 </div>
                 {shouldHideField(daysOutCtx, "training_availability") ? (
                   <div className="field">
@@ -2782,7 +2791,7 @@ export function PlanIntakeForm() {
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Combat load</p>
-                  <h2 className="form-section-title">Combat load tags</h2>
+                  <h2 className="form-section-title">{t("combatLoad")}</h2>
                 </div>
                 <p className="muted">
                   Mark which combat days are hard sparring and which are light or technical. These still count within your weekly session total.
@@ -2905,11 +2914,29 @@ export function PlanIntakeForm() {
                     </p>
                   </div>
                 ) : null}
+                {!noScheduledFight && !form.hard_sparring_days.length && !form.support_work_days.length ? (
+                  <div className="field">
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={() => {
+                        setNoScheduledFight(true);
+                        setForm((current) => applyNoScheduledFightSnapshot(current, true));
+                        setError(null);
+                        setInvalidFieldId(null);
+                        setValidationFocusRequest(null);
+                        setMessage("Open Plan selected. Continue with your available training schedule.");
+                      }}
+                    >
+                      I don&apos;t currently have a scheduled combat session
+                    </button>
+                  </div>
+                ) : null}
               </article>
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Resources</p>
-                  <h2 className="form-section-title">Equipment access</h2>
+                  <h2 className="form-section-title">{t("equipment")}</h2>
                 </div>
                 <EquipmentSelector
                   selectedValues={form.equipment_access}
@@ -2944,7 +2971,7 @@ export function PlanIntakeForm() {
               <div className="support-panel">
                 <div className="form-section-header">
                   <p className="kicker">Current input</p>
-                  <h2 className="form-section-title">Selected availability</h2>
+                  <h2 className="form-section-title">{t("selectedAvailability")}</h2>
                 </div>
                 <ul className="summary-list">
                   <li>Training Availability: {selectedTrainingAvailability}</li>
@@ -2967,7 +2994,7 @@ export function PlanIntakeForm() {
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Restrictions</p>
-                  <h2 className="form-section-title">Injuries or restrictions</h2>
+                  <h2 className="form-section-title">{t("injuries")}</h2>
                 </div>
                 {healthConsentGranted ? <SafetyNote showRedFlags>{INJURY_INTAKE_SAFETY}</SafetyNote> : null}
                 {!healthConsentGranted ? (
@@ -2991,8 +3018,8 @@ export function PlanIntakeForm() {
                         <p className="gi-clear-confirm-title">Clear injury cards?</p>
                         <p className="muted">This will remove current injury entries from this intake.</p>
                         <div className="gi-clear-confirm-actions">
-                          <button type="button" className="secondary-button" onClick={() => setShowClearInjuriesConfirm(false)}>Keep injuries</button>
-                          <button type="button" className="danger-button" onClick={handleConfirmClearInjuries}>Clear injuries</button>
+                          <button type="button" className="secondary-button" onClick={() => setShowClearInjuriesConfirm(false)}>{t("keepInjuries")}</button>
+                          <button type="button" className="danger-button" onClick={handleConfirmClearInjuries}>{t("clearInjuries")}</button>
                         </div>
                       </div>
                     ) : null}
@@ -3001,8 +3028,8 @@ export function PlanIntakeForm() {
                         <p className="gi-clear-confirm-title">Remove injury?</p>
                         <p className="muted">This injury has details filled in. Removing will delete them.</p>
                         <div className="gi-clear-confirm-actions">
-                          <button type="button" className="secondary-button" onClick={handleCancelRemovePendingInjury}>Keep injury</button>
-                          <button type="button" className="danger-button" onClick={handleConfirmRemovePendingInjury}>Remove injury</button>
+                          <button type="button" className="secondary-button" onClick={handleCancelRemovePendingInjury}>{t("keepInjury")}</button>
+                          <button type="button" className="danger-button" onClick={handleConfirmRemovePendingInjury}>{t("removeInjury")}</button>
                         </div>
                       </div>
                     ) : null}
@@ -3093,7 +3120,7 @@ export function PlanIntakeForm() {
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Target outcomes</p>
-                  <h2 className="form-section-title">Key goals</h2>
+                  <h2 className="form-section-title">{t("goals")}</h2>
                 </div>
                 <p className="muted" style={{ opacity: 0.5 }}>Goal selection is not used for planning at this stage.</p>
               </article>
@@ -3101,7 +3128,7 @@ export function PlanIntakeForm() {
               <article className="step-card" style={shouldDeEmphasizeField(daysOutCtx, "key_goals") ? { opacity: 0.55 } : undefined}>
                 <div className="form-section-header">
                   <p className="kicker">Target outcomes</p>
-                  <h2 className="form-section-title">Key goals</h2>
+                  <h2 className="form-section-title">{t("goals")}</h2>
                 </div>
                 <CheckboxGroup
                   id="keyGoalsGroup"
@@ -3142,7 +3169,7 @@ export function PlanIntakeForm() {
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Performance gaps</p>
-                  <h2 className="form-section-title">Weak areas</h2>
+                  <h2 className="form-section-title">{t("weakAreas")}</h2>
                 </div>
                 <p className="muted" style={{ opacity: 0.5 }}>Weak area selection is not used for planning at this stage.</p>
               </article>
@@ -3150,7 +3177,7 @@ export function PlanIntakeForm() {
               <article className="step-card" style={shouldDeEmphasizeField(daysOutCtx, "weak_areas") ? { opacity: 0.55 } : undefined}>
                 <div className="form-section-header">
                   <p className="kicker">Performance gaps</p>
-                  <h2 className="form-section-title">Weak areas</h2>
+                  <h2 className="form-section-title">{t("weakAreas")}</h2>
                 </div>
                 <CheckboxGroup
                   label="Weak Areas"
@@ -3186,7 +3213,7 @@ export function PlanIntakeForm() {
                 <article className="step-card priority-clarification-card">
                   <div className="form-section-header">
                     <p className="kicker">Clarification</p>
-                    <h2 className="form-section-title">Priority detail</h2>
+                    <h2 className="form-section-title">{t("priorityDetail")}</h2>
                   </div>
                   <div className="priority-clarification-copy">
                     <p>{overlapClarificationPrompt}</p>
@@ -3264,7 +3291,7 @@ export function PlanIntakeForm() {
               <div className="support-panel">
                 <div className="form-section-header">
                   <p className="kicker">Performance snapshot</p>
-                  <h2 className="form-section-title">Selected focus</h2>
+                  <h2 className="form-section-title">{t("selectedFocus")}</h2>
                 </div>
                 <ul className="summary-list">
                   <li>Key Goals: {selectedGoals}</li>
@@ -3282,21 +3309,21 @@ export function PlanIntakeForm() {
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Review</p>
-                  <h2 className="form-section-title">Captured athlete input</h2>
+                  <h2 className="form-section-title">{t("capturedInput")}</h2>
                 </div>
                 <div className="review-columns">
                   <div className="review-column">
                     <article className="review-card">
                       <div className="review-card-header">
                         <p className="kicker">Profile</p>
-                        <h3 className="review-card-title">Athlete profile</h3>
+                        <h3 className="review-card-title">{t("athleteProfile")}</h3>
                       </div>
                       <ReviewDetailList items={profileReviewItems} />
                     </article>
                     <article className="review-card">
                       <div className="review-card-header">
                         <p className="kicker">Training</p>
-                        <h3 className="review-card-title">Availability and equipment</h3>
+                        <h3 className="review-card-title">{t("availabilityEquipment")}</h3>
                       </div>
                       <ReviewDetailList items={trainingReviewItems} />
                     </article>
@@ -3305,21 +3332,21 @@ export function PlanIntakeForm() {
                     <article className="review-card">
                       <div className="review-card-header">
                         <p className="kicker">Fight context</p>
-                        <h3 className="review-card-title">Camp setup</h3>
+                        <h3 className="review-card-title">{t("campSetup")}</h3>
                       </div>
                       <ReviewDetailList items={campSetupReviewItems} />
                     </article>
                     <article className="review-card">
                       <div className="review-card-header">
                         <p className="kicker">Performance</p>
-                        <h3 className="review-card-title">Goals and weak areas</h3>
+                        <h3 className="review-card-title">{t("goalsWeakAreas")}</h3>
                       </div>
                       <ReviewDetailList items={performanceReviewItems} />
                     </article>
                     <article className="review-card">
                       <div className="review-card-header">
                         <p className="kicker">Constraints</p>
-                        <h3 className="review-card-title">Constraints and risks</h3>
+                        <h3 className="review-card-title">{t("constraintsRisks")}</h3>
                       </div>
                       <ReviewDetailList items={constraintsReviewItems} />
                     </article>
@@ -3365,21 +3392,21 @@ export function PlanIntakeForm() {
           </div>
           <div className="onboarding-action-buttons">
             <button type="button" className="ghost-button onboarding-action-secondary" onClick={handleSaveDraft} disabled={formActionPending}>
-              {isPending ? "Saving..." : "Save draft"}
+              {isPending ? t("saving") : t("saveDraft")}
             </button>
             {currentStep > 0 ? (
               <button type="button" className="ghost-button onboarding-action-secondary" onClick={handleBack}>
-                Back
+                {t("back")}
               </button>
             ) : null}
             {currentStep < steps.length - 1 ? (
               <button type="button" className="cta onboarding-action-primary" onClick={handleNext} disabled={formActionPending}>
-                Continue
+                {t("next")}
               </button>
             ) : (
               <>
                 <button type="button" className="cta onboarding-action-primary" onClick={handleGenerate} disabled={formActionPending}>
-                  Generate plan
+                  {t("generate")}
                 </button>
               </>
             )}

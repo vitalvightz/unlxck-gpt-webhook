@@ -1,6 +1,9 @@
 import path from "node:path";
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
+import createNextIntlPlugin from "next-intl/plugin";
+
+const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
 // The Next app lives in `web/` but imports the shared Stage 2 policy from
 // `../shared/stage2-policy.json` (the single source of truth shared with the
@@ -112,7 +115,7 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig, {
+export default withSentryConfig(withNextIntl(nextConfig), {
   org: process.env.SENTRY_ORG ?? "unlxck",
   project: process.env.SENTRY_PROJECT ?? "javascript-nextjs",
   authToken: process.env.SENTRY_AUTH_TOKEN,

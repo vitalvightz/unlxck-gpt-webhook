@@ -130,6 +130,12 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
+The web app uses local `next-intl` dictionaries in `web/i18n/messages.ts`. English is
+the source language; Spanish, Brazilian Portuguese, and Italian are currently supported.
+Adding a language requires a complete local dictionary and an entry in
+`web/i18n/config.ts`. No translation-platform key or recurring subscription is
+required.
+
 On Windows, `tools/start-local-preview.ps1` starts the API and web application with local-safe overrides.
 
 ## Production deployment

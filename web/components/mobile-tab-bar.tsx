@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useEffect, type ReactNode } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
@@ -45,6 +46,7 @@ function isActive(pathname: string, href: string): boolean {
 }
 
 export function MobileTabBar() {
+  const t = useTranslations("Navigation");
   const pathname = usePathname();
   const { isReady, session } = useAppSession();
   const { isActive: generationActive } = useGenerationStatus();
@@ -69,7 +71,7 @@ export function MobileTabBar() {
   }
 
   return (
-    <nav className="mobile-tab-bar" aria-label="Primary">
+    <nav className="mobile-tab-bar" aria-label={t("primary")}>
       {BOTTOM_NAV_ITEMS.map((tab) => {
         const active = isActive(pathname, tab.href);
         return (
@@ -82,7 +84,15 @@ export function MobileTabBar() {
             <span className="mobile-tab-bar-icon" aria-hidden="true">
               {TAB_ICONS[tab.href]}
             </span>
-            <span className="mobile-tab-bar-label">{tab.label}</span>
+            <span className="mobile-tab-bar-label">
+              {tab.href === "/"
+                ? t("overview")
+                : tab.href === "/today"
+                  ? t("today")
+                  : tab.href === "/plans"
+                    ? t("plan")
+                    : t("campSetup")}
+            </span>
           </Link>
         );
       })}

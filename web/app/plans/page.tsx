@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -977,6 +978,7 @@ function PlansSyncState() {
 }
 
 export default function PlansPage() {
+  const t = useTranslations("Workspace");
   const router = useRouter();
   const { showToast } = useToast();
   const { isMeHydrated, me, session } = useAppSession();
@@ -1122,9 +1124,9 @@ export default function PlansPage() {
       <section className="panel">
         <div className="section-heading">
           <div className="athlete-motion-slot athlete-motion-header">
-            <p className="kicker">Plan Dashboard</p>
-            <h1>Your plan workspace</h1>
-            <p className="muted">Open the active camp, review your current intake, or generate a new version from the current profile.</p>
+            <p className="kicker">{t("planDashboard")}</p>
+            <h1>{t("planWorkspace")}</h1>
+            <p className="muted">{t("planSummary")}</p>
           </div>
         </div>
 
@@ -1138,7 +1140,7 @@ export default function PlansPage() {
                 onClick={() => void loadPlans()}
                 disabled={isLoading}
               >
-                {isLoading ? "Retrying..." : "Retry"}
+                {isLoading ? t("retrying") : t("retry")}
               </button>
             )}
           </div>
@@ -1166,11 +1168,11 @@ export default function PlansPage() {
           <div className="plans-history-block athlete-motion-slot athlete-motion-main" aria-busy="true">
             <div className="plans-history-header">
               <div className="plans-history-header-copy">
-                <p className="kicker">Plan Manager</p>
-                <h2>Syncing plan history</h2>
-                <p className="muted">Saved versions will appear here once the plan feed responds.</p>
+                <p className="kicker">{t("planManager")}</p>
+                <h2>{t("syncingHistory")}</h2>
+                <p className="muted">{t("savedVersions")}</p>
               </div>
-              <span className="badge status-badge-neutral">Loading</span>
+              <span className="badge status-badge-neutral">{t("loading")}</span>
             </div>
             <div className="plan-history-list plans-history-list">
               <PlanHistoryRowSkeleton />
@@ -1183,9 +1185,9 @@ export default function PlansPage() {
           <div className="plans-history-block athlete-motion-slot athlete-motion-main">
             <div className="plans-history-header">
               <div className="plans-history-header-copy">
-                <p className="kicker">Plan Manager</p>
-                <h2>Other saved plans</h2>
-                <p className="muted">Compare previous versions by fight date, build time, and status before making one active.</p>
+                <p className="kicker">{t("planManager")}</p>
+                <h2>{t("otherPlans")}</h2>
+                <p className="muted">{t("comparePlans")}</p>
               </div>
               {archivedPlans.length ? (
                 <button
@@ -1197,7 +1199,7 @@ export default function PlansPage() {
                   aria-label={isArchiveOpen ? "Hide older saved plans" : "Show older saved plans"}
                 >
                   <span className="plans-history-toggle-copy">
-                    {isArchiveOpen ? "Hide archive" : "View archive"}
+                    {isArchiveOpen ? t("hideArchive") : t("viewArchive")}
                   </span>
                   <span className="plans-history-toggle-meta">
                     <span className="plans-history-toggle-count">{archiveCountLabel}</span>
@@ -1205,7 +1207,7 @@ export default function PlansPage() {
                   </span>
                 </button>
               ) : (
-                <span className="badge status-badge-neutral">No earlier plans</span>
+                <span className="badge status-badge-neutral">{t("noEarlierPlans")}</span>
               )}
             </div>
 
@@ -1213,7 +1215,7 @@ export default function PlansPage() {
                 visible right where the control is — not appended far below the
                 always-shown recent plans, where it read as "not working". */}
             {archivedPlans.length > 0 && isArchiveOpen ? (
-              <div id="plans-history-dropdown" className="plans-history-dropdown" role="region" aria-label="Older saved plans">
+              <div id="plans-history-dropdown" className="plans-history-dropdown" role="region" aria-label={t("olderPlans")}>
                 <div className="plan-history-list plans-history-list">
                   {archivedPlans.map((plan) => (
                     <PlanCard
