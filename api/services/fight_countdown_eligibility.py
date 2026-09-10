@@ -8,6 +8,7 @@ an active-plan switch or a bout-date change.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date
 from typing import Any, Mapping
 
@@ -20,6 +21,16 @@ from api.store import AppStore
 LATE_FIGHT_COUNTDOWN_DAYS = {
     "fc-d03": 3,
     "fc-d01": 1,
+}
+LATE_FIGHT_COUNTDOWN_COPY = {
+    "fc-d03": (
+        "D-3. FRESHNESS WINS NOW.",
+        "No added conditioning, extra rounds or fatigue. Touch the sharpness, then leave it.",
+    ),
+    "fc-d01": (
+        "D-1. THE WORK IS DONE. KEEP TODAY LIGHT",
+        "and sharp. No extra conditioning or unnecessary rounds. Follow your coach's plan.",
+    ),
 }
 _COMBAT_SPORTS = frozenset(SUPPORTED_SPORTS)
 
@@ -101,16 +112,23 @@ def filter_late_fight_countdown_candidates(
     store: AppStore,
     candidates: list[NotificationCandidate],
 ) -> list[NotificationCandidate]:
-    """Return only deliverable candidates, failing closed for stale D-3/D-1 events."""
+    """Filter stale late-countdown events and enforce the approved bounded copy."""
 
-    return [
-        candidate
-        for candidate in candidates
-        if late_fight_countdown_candidate_is_eligible(store, candidate)
-    ]
+    filtered: list[NotificationCandidate] = []
+    for candidate in candidates:
+        if not late_fight_countdown_candidate_is_eligible(store, candidate):
+            continue
+        copy = LATE_FIGHT_COUNTDOWN_COPY.get(str(candidate.variant_id or "").strip())
+        filtered.append(
+            replace(candidate, title=copy[0], body=copy[1])
+            if copy is not None and candidate.intent == "fight_countdown"
+            else candidate
+        )
+    return filtered
 
 
 __all__ = [
+    "LATE_FIGHT_COUNTDOWN_COPY",
     "LATE_FIGHT_COUNTDOWN_DAYS",
     "filter_late_fight_countdown_candidates",
     "late_fight_countdown_candidate_is_eligible",
