@@ -548,8 +548,13 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> Any:
     if not isinstance(role_map, dict):
         return structured_plan
     plan_weeks = structured_plan.get("weeks")
-    if not isinstance(plan_weeks, list) or not plan_weeks:
+    if not isinstance(plan_weeks, list):
         return structured_plan
+    # An empty week list is not "leave it alone": it is a plan with no converter
+    # content at all, which is exactly the fallback case where the deterministic
+    # calendar has to stand on its own. The content-preservation invariant below
+    # is trivially satisfied when the converter contributed nothing.
+    converter_had_content = bool(plan_weeks)
     fight_date = parse_fight_date(_resolve_fight_date(planning_brief))
     if fight_date is None:
         return structured_plan
@@ -587,8 +592,9 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> Any:
 
     # A dated camp with content but no resolvable calendar identity on any day
     # cannot be safely mapped onto the spine — leave it exactly as the converter
-    # produced it rather than risk replacing sessions with rest days.
-    if not llm_days_by_dday:
+    # produced it rather than risk replacing sessions with rest days. With no
+    # converter content there is nothing to risk, so the spine is built alone.
+    if converter_had_content and not llm_days_by_dday:
         return structured_plan
 
     # Camp start (D-N): the planner spine, extended to the athlete's real

@@ -553,3 +553,45 @@ def test_blank_countdown_label_day_is_recovered_from_its_date():
     kept = next(d for w in out["weeks"] for d in w["days"] if d["date"] == _iso(14))
     assert kept["sessions"][0]["title"] == "Bench"
     assert kept["countdown_label"] == "D-14"
+
+
+def test_spine_builds_the_deterministic_calendar_with_no_converter_content():
+    """An empty week list is the fallback case, not a reason to stand down.
+
+    When Stage 2 produced nothing usable there is no converter content to
+    protect, so the authoritative spine is built on its own. This is the base a
+    deterministic fallback assembly needs; the guards are unchanged when the
+    converter did produce content.
+    """
+    import pytest
+
+    generate_plan_sync = pytest.importorskip("fightcamp.main").generate_plan_sync
+    from support import _build_request
+
+    fight_date = (date.today() + timedelta(days=56)).isoformat()
+    request = _build_request({"fight_date": fight_date}).to_payload()
+    request["random_seed"] = 3
+    planning_brief = generate_plan_sync(request)["planning_brief"]
+
+    built = reconcile_calendar_spine({"weeks": []}, planning_brief)
+    days = [day for week in built.get("weeks") or [] for day in week.get("days") or []]
+
+    assert days, "the deterministic spine must be able to stand on its own"
+    labels = [day["countdown_label"] for day in days]
+    assert labels[-1] == "D-0"
+    ddays = [int(label.split("-")[1]) for label in labels]
+    assert ddays == sorted(range(min(ddays), max(ddays) + 1), reverse=True)
+    # It supplies calendar identity only; it invents no sessions.
+    assert all(not day.get("sessions") for day in days)
+
+
+def test_spine_still_stands_down_when_content_has_no_calendar_identity():
+    """The protective guard is unchanged for a plan that actually has content."""
+    plan = {
+        "weeks": [
+            {"week_index": 1, "days": [{"countdown_label": "", "date": "", "sessions": []}]}
+        ]
+    }
+    brief = {"weekly_role_map": {"weeks": []}}
+
+    assert reconcile_calendar_spine(plan, brief) is plan
