@@ -112,7 +112,12 @@ def filter_late_fight_countdown_candidates(
     store: AppStore,
     candidates: list[NotificationCandidate],
 ) -> list[NotificationCandidate]:
-    """Filter stale late-countdown events and enforce the approved bounded copy."""
+    """Filter stale late-countdown events in-place and enforce approved copy.
+
+    The in-place update is intentional: the fight-camp orchestrator reports the
+    same candidate list's length after dispatch, so rejected D-3/D-1 events do
+    not falsely suppress later fallback notification paths.
+    """
 
     filtered: list[NotificationCandidate] = []
     for candidate in candidates:
@@ -124,7 +129,8 @@ def filter_late_fight_countdown_candidates(
             if copy is not None and candidate.intent == "fight_countdown"
             else candidate
         )
-    return filtered
+    candidates[:] = filtered
+    return candidates
 
 
 __all__ = [
