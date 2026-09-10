@@ -414,8 +414,17 @@ def _locked_source_drill_text(
 def _locked_drill_card_strings(
     plan: dict[str, Any], source: str, role: dict[str, Any], drill_name: str
 ) -> list[str]:
-    """Collect only the matching block and its owning session's mapped fields."""
-    source_day = _locked_source_day(source, role, drill_name)
+    """Collect only the matching block and its owning session's mapped fields.
+
+    The day is taken from the role's own authoritative countdown label, falling
+    back to the Stage 2 text only when the role carries none. Locating a
+    server-owned card by searching model prose would make the card invisible
+    precisely when Stage 2 omitted the drill -- which is the case the deterministic
+    merge exists to cover.
+    """
+    source_day = _authoritative_locked_day(role)
+    if source_day is None:
+        source_day = _locked_source_day(source, role, drill_name)
     if source_day is None:
         return []
     normalised_name = _normalise_locked_text(drill_name)
@@ -463,15 +472,23 @@ def _locked_content_violations(
         source_day, drill_source_text, drill_source_issue = _locked_source_drill_text(
             source, role, drill_name
         )
-        if drill_source_issue is not None:
+        if drill_source_issue == "missing_authoritative_countdown_label":
+            # Without a day there is nothing to verify against on either side.
             if governance.get("mandatory") is True or role.get("mandatory_tactical_watch") is True:
-                day_label = f"D-{source_day}" if source_day is not None else "unknown day"
                 violations.append(
-                    f"{LOCKED_CONTENT}: {drill_name!r} {drill_source_issue} on {day_label}"
+                    f"{LOCKED_CONTENT}: {drill_name!r} {drill_source_issue} on unknown day"
                 )
             continue
 
-        scoped_source_text = _normalise_locked_text(drill_source_text)
+        if drill_source_issue is not None:
+            # Stage 2 did not author this drill, and it was never its job to:
+            # the deterministic role is the owner and merge_locked_structured_content
+            # projects it into the card before this check runs. So verify the card
+            # against the role itself. A genuinely missing card still fails below --
+            # the requirement moves to the real owner, it does not disappear.
+            scoped_source_text = _normalise_locked_text(role["display_text"])
+        else:
+            scoped_source_text = _normalise_locked_text(drill_source_text)
         card_texts = [
             _normalise_locked_text(text)
             for text in _locked_drill_card_strings(plan, source, role, drill_name)
