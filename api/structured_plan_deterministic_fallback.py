@@ -115,6 +115,48 @@ def _effective_prescription(role: dict[str, Any], assignment: dict[str, Any]) ->
     return str(assignment.get("base_prescription") or "").strip()
 
 
+# The weekly priority exposure floor attaches a microdose to the host role, not
+# to its selected_exercise_assignments, so a renderer that reads only the
+# assignment list drops it. Stage 2 is not allowed to be the only path that
+# surfaces it: when Stage 2 fails there is no structured_plan and this fallback
+# is the athlete-facing plan.
+_MICRODOSE_BLOCK_TYPE_BY_GOAL = {
+    "power": "plyometric_power",
+    "speed": "speed",
+    "strength": "strength",
+    "footwork": "skill",
+    "mobility": "mobility_activation",
+}
+
+
+def _microdose_block(role: dict[str, Any], d_day: int, role_key: str) -> dict[str, Any] | None:
+    """The host's priority microdose, as subordinate work inside its session.
+
+    Never its own session or card: it is rendered as the first block of the host
+    the floor chose, and the host keeps its own identity, title and session type.
+    """
+    microdose = role.get("priority_microdose")
+    if not isinstance(microdose, dict):
+        return None
+    name = str(microdose.get("name") or "").strip()
+    if not name:
+        return None
+    goal = str(microdose.get("goal") or "").strip().lower()
+    prescription = str(microdose.get("prescription") or "").strip()
+    label = f"{goal.replace('_', ' ').title()} microdose" if goal else "Priority microdose"
+    return {
+        "block_id": f"deterministic-{d_day}-{role_key}-microdose",
+        "block_type": _MICRODOSE_BLOCK_TYPE_BY_GOAL.get(goal, "accessory"),
+        # The label travels in the display name so the athlete can see this is a
+        # small priority touch rather than the session's main work.
+        "display_name": f"{label} - {name}",
+        "order_index": 0,
+        "coaching_cues": [prescription] if prescription else [],
+        "regression_options": [],
+        "substitutions": [],
+    }
+
+
 def _blocks(role: dict[str, Any], d_day: int, role_key: str) -> list[dict[str, Any]]:
     category = _category(role)
     block_type = _BLOCK_TYPE_BY_CATEGORY.get(category, "accessory")
@@ -139,6 +181,14 @@ def _blocks(role: dict[str, Any], d_day: int, role_key: str) -> list[dict[str, A
                 "substitutions": [],
             }
         )
+    # Only ever attached to a host that already renders. A role with no selected
+    # exercise renders no session at all here, and a microdose must not be the
+    # thing that brings one into existence - that would be a new session.
+    microdose = _microdose_block(role, d_day, role_key) if blocks else None
+    if microdose is not None:
+        for block in blocks:
+            block["order_index"] = int(block.get("order_index") or 0) + 1
+        blocks.insert(0, microdose)
     return blocks
 
 
