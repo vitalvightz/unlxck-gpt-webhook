@@ -7,7 +7,6 @@ can discharge this contract; neither role names nor LLM prose are evidence.
 from __future__ import annotations
 
 from copy import deepcopy
-from math import ceil
 import re
 from typing import Any
 
