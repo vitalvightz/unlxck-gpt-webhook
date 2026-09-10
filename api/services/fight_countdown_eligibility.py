@@ -4,6 +4,11 @@ Late countdown pushes must come from the athlete's currently active combat plan,
 not from a profile-level sport tag or a stale saved plan. Re-resolving the active
 plan immediately before delivery also prevents a deferred notification surviving
 an active-plan switch or a bout-date change.
+
+The approved copy itself is owned by :mod:`api.services.notification_templates`,
+which is also what the Supabase ``notification_templates`` v2 rows carry. This
+module re-applies it at the last mile so the approved wording ships even if the
+data migration has not run yet, but it never introduces a second wording.
 """
 
 from __future__ import annotations
@@ -12,27 +17,23 @@ from dataclasses import replace
 from datetime import date
 from typing import Any, Mapping
 
-from fightcamp.sports import SUPPORTED_SPORTS, normalize_sport
+from fightcamp.sports import PLANNING_FAMILIES, normalize_sport
 
 from api.services.active_plan import resolve_active_plan
 from api.services.notification_foundation import NotificationCandidate
+from api.services.notification_templates import LATE_FIGHT_COUNTDOWN_COPY
 from api.store import AppStore
 
 LATE_FIGHT_COUNTDOWN_DAYS = {
     "fc-d03": 3,
     "fc-d01": 1,
 }
-LATE_FIGHT_COUNTDOWN_COPY = {
-    "fc-d03": (
-        "D-3. FRESHNESS WINS NOW.",
-        "No added conditioning, extra rounds or fatigue. Touch the sharpness, then leave it.",
-    ),
-    "fc-d01": (
-        "D-1. THE WORK IS DONE. KEEP TODAY LIGHT",
-        "and sharp. No extra conditioning or unnecessary rounds. Follow your coach's plan.",
-    ),
-}
-_COMBAT_SPORTS = frozenset(SUPPORTED_SPORTS)
+
+# Every canonical sport that runs a bout camp, not just the identities in
+# ``SUPPORTED_SPORTS``. ``technical_style`` is free-form on the athlete model, so
+# a persisted ``karate`` or ``grappling`` plan is reachable and must not be
+# silently excluded from its own fight countdown.
+LATE_FIGHT_COUNTDOWN_SPORTS = frozenset(PLANNING_FAMILIES)
 
 
 def _styles(plan: Mapping[str, Any]) -> set[str]:
@@ -48,6 +49,12 @@ def _styles(plan: Mapping[str, Any]) -> set[str]:
         for value in values
         if str(value or "").strip()
     }
+
+
+def _candidate_intent(candidate: NotificationCandidate) -> str:
+    """One resolved intent for both the gate and the copy enforcement."""
+
+    return str(candidate.intent or candidate.notification_type or "").strip()
 
 
 def _candidate_plan_id(candidate: NotificationCandidate) -> str:
@@ -70,9 +77,8 @@ def late_fight_countdown_candidate_is_eligible(
 ) -> bool:
     """Fail closed for D-3/D-1 unless the source is still the active combat camp."""
 
-    intent = str(candidate.intent or candidate.notification_type or "").strip()
     expected_days = LATE_FIGHT_COUNTDOWN_DAYS.get(str(candidate.variant_id or "").strip())
-    if intent != "fight_countdown" or expected_days is None:
+    if _candidate_intent(candidate) != "fight_countdown" or expected_days is None:
         return True
 
     training_day_text = str(candidate.training_day or "").strip()
@@ -94,7 +100,7 @@ def late_fight_countdown_candidate_is_eligible(
     if not active_plan_id or _candidate_plan_id(candidate) != active_plan_id:
         return False
 
-    if not (_styles(plan) & _COMBAT_SPORTS):
+    if not (_styles(plan) & LATE_FIGHT_COUNTDOWN_SPORTS):
         return False
 
     fight_date_text = str(plan.get("fight_date") or "").strip()
@@ -114,9 +120,10 @@ def filter_late_fight_countdown_candidates(
 ) -> list[NotificationCandidate]:
     """Filter stale late-countdown events in-place and enforce approved copy.
 
-    The in-place update is intentional: the fight-camp orchestrator reports the
-    same candidate list's length after dispatch, so rejected D-3/D-1 events do
-    not falsely suppress later fallback notification paths.
+    The in-place update is intentional and load-bearing: ``morning_push`` gates
+    its streak and session-timing fallbacks on the orchestrator's reported
+    candidate count, so a rejected D-3/D-1 event must shrink that count rather
+    than silently suppressing every later notification path for the day.
     """
 
     filtered: list[NotificationCandidate] = []
@@ -124,10 +131,22 @@ def filter_late_fight_countdown_candidates(
         if not late_fight_countdown_candidate_is_eligible(store, candidate):
             continue
         copy = LATE_FIGHT_COUNTDOWN_COPY.get(str(candidate.variant_id or "").strip())
+        if copy is None or _candidate_intent(candidate) != "fight_countdown":
+            filtered.append(candidate)
+            continue
+        # Record that delivery, not template selection, settled these bytes, so
+        # the ledger's template_version stays honest about where copy came from.
+        metadata = {
+            **dict(candidate.source_event_metadata or {}),
+            "late_countdown_copy_enforced": True,
+        }
         filtered.append(
-            replace(candidate, title=copy[0], body=copy[1])
-            if copy is not None and candidate.intent == "fight_countdown"
-            else candidate
+            replace(
+                candidate,
+                title=copy[0],
+                body=copy[1],
+                source_event_metadata=metadata,
+            )
         )
     candidates[:] = filtered
     return candidates
@@ -136,6 +155,7 @@ def filter_late_fight_countdown_candidates(
 __all__ = [
     "LATE_FIGHT_COUNTDOWN_COPY",
     "LATE_FIGHT_COUNTDOWN_DAYS",
+    "LATE_FIGHT_COUNTDOWN_SPORTS",
     "filter_late_fight_countdown_candidates",
     "late_fight_countdown_candidate_is_eligible",
 ]

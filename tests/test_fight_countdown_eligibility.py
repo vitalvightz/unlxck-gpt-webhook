@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 
+import api.services.push_notifications as push_notifications
 from api.services.fight_countdown_eligibility import (
     LATE_FIGHT_COUNTDOWN_COPY,
     filter_late_fight_countdown_candidates,
     late_fight_countdown_candidate_is_eligible,
 )
 from api.services.notification_foundation import NotificationCandidate
+from api.services.notification_templates import (
+    LATE_FIGHT_COUNTDOWN_COPY as TEMPLATE_COPY,
+)
 
 
 class CountdownStore:
@@ -134,3 +139,55 @@ def test_other_notification_variants_are_untouched() -> None:
     candidate = _candidate(variant_id="fc-d07")
     filtered = filter_late_fight_countdown_candidates(store, [candidate])
     assert filtered == [candidate]
+
+
+def test_bundled_template_copy_is_the_same_source_as_the_delivery_guard() -> None:
+    # One owner for the approved strings: the bundled catalogue, the Supabase v2
+    # rows and the last-mile enforcement cannot drift apart.
+    assert LATE_FIGHT_COUNTDOWN_COPY is TEMPLATE_COPY
+
+
+def test_non_supported_sports_combat_disciplines_still_qualify() -> None:
+    store = CountdownStore()
+    for style in ("karate", "Grappler", "wrestling"):
+        store.plans["plan-active"]["technical_style"] = [style]
+        assert late_fight_countdown_candidate_is_eligible(store, _candidate()) is True
+
+
+def test_candidate_carrying_only_notification_type_is_gated_and_recopied() -> None:
+    store = CountdownStore()
+    candidate = replace(_candidate(plan_id="plan-old"), intent="")
+    assert late_fight_countdown_candidate_is_eligible(store, candidate) is False
+
+    eligible = replace(_candidate(), intent="")
+    filtered = filter_late_fight_countdown_candidates(store, [eligible])
+    assert filtered[0].title == LATE_FIGHT_COUNTDOWN_COPY["fc-d03"][0]
+
+
+def test_enforced_copy_is_recorded_in_source_metadata() -> None:
+    store = CountdownStore()
+    filtered = filter_late_fight_countdown_candidates(store, [_candidate()])
+    assert filtered[0].source_event_metadata["late_countdown_copy_enforced"] is True
+
+
+def test_ineligible_candidate_never_reaches_the_delivery_ledger(monkeypatch) -> None:
+    """The ordering the whole guard depends on: filter before any claim."""
+
+    store = CountdownStore()
+    prepared_with: list[list[NotificationCandidate]] = []
+
+    monkeypatch.setattr(
+        push_notifications, "push_notifications_configured", lambda: True
+    )
+    monkeypatch.setattr(
+        push_notifications,
+        "prepare_notification_delivery",
+        lambda _store, candidates, **_kwargs: prepared_with.append(list(candidates)),
+    )
+
+    candidates = [_candidate(plan_id="plan-old")]
+    assert push_notifications.dispatch_push_candidates(store, candidates) == 0
+    assert prepared_with == []
+    # The caller's list shrinks so morning_push does not treat a rejected
+    # countdown as a delivered candidate and skip its fallbacks.
+    assert candidates == []
