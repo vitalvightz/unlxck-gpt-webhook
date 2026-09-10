@@ -138,6 +138,42 @@ def weakness_priority_weight(weakness: str, profile: PriorityProfile) -> float:
     return 0.0
 
 
+# Allocation doctrine, kept next to the canonical weights it defers to.
+#
+# The numeric weights above rank *scoring* pressure, where the primary weak area
+# deliberately edges out the primary goal (0.9 vs 0.8) so a limiter biases drill
+# choice. Allocating a whole developmental slot is a different question: the
+# primary goal is the athlete's main intended adaptation and the primary weak
+# area is the main limiter on it. Ordering free capacity by the raw numbers would
+# quietly make every spare developmental slot train the limiter instead of the
+# adaptation. This rank expresses that product doctrine once; it does not restate
+# or override the weights, which remain the tie-break inside a rank.
+_ALLOCATION_SOURCE_RANK = {
+    "primary_goal": 0,
+    "primary_weakness": 1,
+    "secondary_goal": 2,
+    "secondary_weakness": 2,
+}
+_LOWEST_ALLOCATION_RANK = max(_ALLOCATION_SOURCE_RANK.values()) + 1
+
+
+def priority_allocation_rank(sources: Iterable[str]) -> int:
+    """Rank one selected target for *allocation* of developmental capacity.
+
+    Lower ranks are allocated first. A target selected through several sources
+    (a goal that is also a weakness) takes its strongest source. Consumers must
+    order capacity through this function rather than sorting on the raw weights.
+    """
+    return min(
+        (
+            _ALLOCATION_SOURCE_RANK[source]
+            for source in sources
+            if source in _ALLOCATION_SOURCE_RANK
+        ),
+        default=_LOWEST_ALLOCATION_RANK,
+    )
+
+
 def selected_priority_targets(plan_input: Any) -> list[SelectedPriority]:
     """Return selected targets ordered by the canonical profile weights.
 

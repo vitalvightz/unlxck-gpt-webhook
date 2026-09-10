@@ -1447,11 +1447,19 @@ def test_build_planning_brief_adds_weekly_role_map_from_progression():
     # so the combat pressure conditioning floor guarantees one controlled hard
     # exposure. The must_keep aerobic base survives; the non-protected alactic
     # slot is upgraded into a controlled fight-pace / gas-tank exposure.
+    # The strength anchor resolves to ``neural_plus_strength_day`` rather than
+    # ``primary_strength_day``: this athlete selected power as a goal, the aerobic
+    # base day already covers their conditioning priority, and no other scheduled
+    # role can build power. Coverage-aware allocation therefore spends the anchor
+    # on the identity that carries both power and strength families. It is still a
+    # primary strength anchor (the key is in ``_PRIMARY_STRENGTH_ROLE_KEYS`` and
+    # keeps the ``highest_neural_day`` anchor asserted below), so the
+    # ``primary_strength`` must_keep guardrail holds and the week is still 5 roles.
     assert [role["role_key"] for role in first_week_roles] == [
         "secondary_strength_day",
         "aerobic_base_day",
         "recovery_reset_day",
-        "primary_strength_day",
+        "neural_plus_strength_day",
         "controlled_repeatability_day",
     ]
     assert first_week_roles[2]["category"] == "recovery"
