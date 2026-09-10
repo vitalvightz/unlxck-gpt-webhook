@@ -143,6 +143,41 @@ def _compact_governance(governance: Any) -> Any:
     }
 
 
+# Fields the progression object republishes verbatim from the same week's entry in
+# weekly_role_map. Measured on a real 8-week camp, both are byte-identical in
+# EVERY week, so the finalizer received one calendar twice and had to decide which
+# copy was authoritative. weekly_role_map is that authority, so the copies are
+# dropped from the progression view here -- at the handoff boundary only. Stage 1
+# keeps the whole object for planning, validators, diagnostics and persistence.
+#
+# Deliberately NOT listed: hard_sparring_plan and intentionally_unused_days. They
+# match the role map in most weeks but not all (7/8 and 6/8 measured), so removing
+# them would silently drop real per-week information.
+_PROGRESSION_FIELDS_OWNED_BY_ROLE_MAP = ("calendar_days", "intentional_compression")
+
+
+def _compact_week_progression(progression: Any) -> Any:
+    """Drop the calendar fields weekly_role_map already owns."""
+    if not isinstance(progression, dict):
+        return progression
+    weeks = progression.get("weeks")
+    if not isinstance(weeks, list):
+        return progression
+    return {
+        **progression,
+        "weeks": [
+            {
+                key: value
+                for key, value in week.items()
+                if key not in _PROGRESSION_FIELDS_OWNED_BY_ROLE_MAP
+            }
+            if isinstance(week, dict)
+            else week
+            for week in weeks
+        ],
+    }
+
+
 def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
     keep = (
         "session_index",
@@ -682,7 +717,7 @@ def build_stage2_finalizer_packet(
                 or stage2_payload.get("fight_week_override")
                 or {}
             ),
-            "week_by_week_progression": (
+            "week_by_week_progression": _compact_week_progression(
                 source.get("week_by_week_progression")
                 or stage2_payload.get("week_by_week_progression")
                 or {}
