@@ -3680,6 +3680,94 @@ def _goal_preservation_render_errors(planning_brief: dict, final_plan_text: str)
     return errors
 
 
+# Wording that asserts a host carries no programmed S&C. Harmless on a bare
+# technical day; a direct contradiction on a day the planner gave a physical
+# microdose, which is how a live plan told the athlete to do med-ball throws and
+# that the day had none.
+_MICRODOSE_CONTRADICTION_PHRASES = (
+    "no programmed s&c",
+    "no extra s&c",
+    "technical polish",
+    "technical work only",
+    "no s&c",
+)
+
+# Non-physical exposures cannot be contradicted by a "no S&C" line.
+_PHYSICAL_MICRODOSE_GOALS = {"power", "speed", "strength"}
+
+
+def _priority_microdoses(planning_brief: dict) -> list[dict]:
+    """Every microdose the planner attached, with its host day."""
+    out: list[dict] = []
+    role_map = planning_brief.get("weekly_role_map") or {}
+    for week in role_map.get("weeks") or []:
+        if not isinstance(week, dict):
+            continue
+        for role in week.get("session_roles") or []:
+            if not isinstance(role, dict):
+                continue
+            microdose = role.get("priority_microdose")
+            if not isinstance(microdose, dict) or not str(microdose.get("name") or "").strip():
+                continue
+            d_day = role_d_day(week, role)
+            if isinstance(d_day, int):
+                out.append({"microdose": microdose, "d_day": d_day, "role": role})
+    return out
+
+
+def _priority_microdose_render_errors(planning_brief: dict, final_plan_text: str) -> list[dict]:
+    """The planner's microdose must survive rendering, once, on its host day.
+
+    Render fidelity only. Whether the exposure should exist was already decided
+    by goal preservation; this never re-opens that.
+    """
+    errors: list[dict] = []
+    blocks = _countdown_blocks(final_plan_text)
+    for entry in _priority_microdoses(planning_brief):
+        microdose = entry["microdose"]
+        d_day = entry["d_day"]
+        name = str(microdose["name"]).strip()
+        goal = str(microdose.get("goal") or "").strip().lower()
+        prescription = str(microdose.get("prescription") or "").strip()
+        base = {
+            "goal": goal,
+            "exercise": name,
+            "scheduled_d_day": d_day,
+            "severity": "blocker",
+            "confidence": "high",
+            "effective_prescription": prescription,
+        }
+        day_lines = [
+            line
+            for block in blocks
+            if block["day"] == d_day
+            for line in block.get("lines", [])
+        ]
+        if not day_lines:
+            errors.append({**base, "code": "missing_priority_microdose",
+                "message": "The microdose host day is absent from the rendered plan."})
+            continue
+        occurrences = sum(1 for line in day_lines if name.lower() in line.lower())
+        if occurrences == 0:
+            errors.append({**base, "code": "missing_priority_microdose",
+                "message": "A planner-attached priority microdose disappeared during rendering."})
+            continue
+        if occurrences > 1:
+            errors.append({**base, "code": "duplicate_priority_microdose",
+                "message": "A priority microdose was rendered more than once on its host day."})
+        day_text = " ".join(day_lines).lower()
+        if prescription and prescription.lower() not in day_text:
+            errors.append({**base, "code": "missing_priority_microdose",
+                "message": "A priority microdose rendered without its prescribed dose."})
+        if goal in _PHYSICAL_MICRODOSE_GOALS and any(
+            phrase in day_text for phrase in _MICRODOSE_CONTRADICTION_PHRASES
+        ):
+            errors.append({**base, "code": "priority_microdose_contradiction",
+                "message": "The host day claims it carries no programmed S&C while also "
+                           "carrying a physical priority microdose."})
+    return errors
+
+
 def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dict:
     from .goal_preservation import validate_goal_preservation
     plan_lines = _extract_plan_lines(final_plan_text)
@@ -3690,6 +3778,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     errors: list[dict[str, Any]] = validate_goal_preservation(planning_brief)
     if not errors:
         errors.extend(_goal_preservation_render_errors(planning_brief, final_plan_text))
+    errors.extend(_priority_microdose_render_errors(planning_brief, final_plan_text))
     warnings: list[dict[str, Any]] = []
     if not plan_lines:
         errors.append(_issue(code="stage2_output_empty", message="Stage 2 output is empty.", severity="blocker", confidence="high"))
