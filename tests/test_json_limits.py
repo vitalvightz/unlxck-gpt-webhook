@@ -136,7 +136,7 @@ def test_update_profile_rejects_oversized_onboarding_draft_at_store_layer():
 def test_json_limit_constants_keep_stage2_headroom_field_specific():
     assert MAX_CLIENT_JSON_BYTES == 100 * 1024
     assert MAX_SERVER_JSON_BYTES == 256 * 1024
-    assert MAX_STAGE2_PAYLOAD_BYTES == 384 * 1024
+    assert MAX_STAGE2_PAYLOAD_BYTES == 768 * 1024
     assert MAX_JSON_DEPTH == 32
 
 
@@ -196,3 +196,43 @@ def test_create_plan_rejects_stage2_payload_above_dedicated_limit():
         )
     assert exc_info.value.status_code == 413
     store.client.table.assert_not_called()
+
+
+def test_equipment_rich_camp_stage2_payload_fits_persistence_ceiling():
+    """A fully equipped athlete's real Stage 2 payload must be persistable.
+
+    The candidate pools are sized by equipment access, not camp length, so this
+    is the shape that overran the old 384 KB ceiling in production -- after
+    Stage 2 had already paid for the model call.
+    """
+    import datetime
+
+    generate_plan_sync = pytest.importorskip("fightcamp.main").generate_plan_sync
+    equipment = [
+        "barbell", "dumbbell", "kettlebell", "heavy_bag", "resistance_bands",
+        "pull_up_bar", "medicine_ball", "sled", "rower", "assault_bike",
+        "treadmill", "cable_machine", "trap_bar", "plyo_box", "jump_rope",
+        "landmine", "sandbag", "weighted_vest", "bench", "squat_rack",
+        "mat", "battle_ropes",
+    ]
+    fight_date = (datetime.date.today() + datetime.timedelta(days=58)).isoformat()
+    request = _build_request(
+        {
+            "fight_date": fight_date,
+            "equipment_access": equipment,
+            "key_goals": ["power", "conditioning", "speed"],
+            "weekly_training_frequency": 6,
+            "training_availability": [
+                "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
+            ],
+        }
+    ).to_payload()
+    request["random_seed"] = 3
+
+    stage2_payload = generate_plan_sync(request)["stage2_payload"]
+    size = json_byte_size(stage2_payload)
+
+    # Guards against both regressions: a payload that grows past the ceiling
+    # again, and a ceiling raised far beyond what generation actually needs.
+    assert size > 384 * 1024, f"expected the equipment-rich payload to exceed the old ceiling, got {size}"
+    assert size <= MAX_STAGE2_PAYLOAD_BYTES, f"stage2_payload no longer fits: {size} > {MAX_STAGE2_PAYLOAD_BYTES}"
