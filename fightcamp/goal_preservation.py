@@ -288,30 +288,50 @@ def _strength_stimuli(role: dict, slots: list[dict], brief: dict) -> list[dict]:
 # services them.
 _MICRODOSE_SPECS: dict[str, dict[str, Any]] = {
     "power": {
+        # Honest collision class for this exposure. Only genuinely low-cost /
+        # neural work may coexist with a coach-owned light-combat day; the
+        # strength touch is MEANINGFUL_STRENGTH and stays forbidden there.
+        "load_class": "NEURAL_MICRODOSE",
         "name": "Med-Ball Rotational Throw",
         "prescription": "2 x 3/side @ RPE 7",
         "sets": 2,
         "intents": ["ballistic_power"],
     },
     "speed": {
+        # Honest collision class for this exposure. Only genuinely low-cost /
+        # neural work may coexist with a coach-owned light-combat day; the
+        # strength touch is MEANINGFUL_STRENGTH and stays forbidden there.
+        "load_class": "NEURAL_MICRODOSE",
         "name": "Reactive Start Burst",
         "prescription": "3 x 4 sec @ RPE 7, full rest",
         "sets": 3,
         "intents": ["speed_quality"],
     },
     "strength": {
+        # Honest collision class for this exposure. Only genuinely low-cost /
+        # neural work may coexist with a coach-owned light-combat day; the
+        # strength touch is MEANINGFUL_STRENGTH and stays forbidden there.
+        "load_class": "MEANINGFUL_STRENGTH",
         "name": "Loaded Carry Touch",
         "prescription": "2 x 20 m @ RPE 7",
         "sets": 2,
         "intents": ["meaningful_strength"],
     },
     "footwork": {
+        # Honest collision class for this exposure. Only genuinely low-cost /
+        # neural work may coexist with a coach-owned light-combat day; the
+        # strength touch is MEANINGFUL_STRENGTH and stays forbidden there.
+        "load_class": "LOW_LOAD_PHYSICAL",
         "name": "Reactive Footwork Walkthrough",
         "prescription": "2 x 60 sec",
         "sets": 2,
         "intents": ["footwork_practice"],
     },
     "mobility": {
+        # Honest collision class for this exposure. Only genuinely low-cost /
+        # neural work may coexist with a coach-owned light-combat day; the
+        # strength touch is MEANINGFUL_STRENGTH and stays forbidden there.
+        "load_class": "LOW_LOAD_PHYSICAL",
         "name": "Targeted Mobility Touch",
         "prescription": "2 x 60 sec/side",
         "sets": 2,
@@ -364,6 +384,55 @@ def _carries_hard_sparring_provenance(role: dict) -> bool:
     if str(role.get("preferred_pool") or "").strip() == "declared_hard_sparring_days":
         return True
     return any(role.get(key) for key in _HARD_SPARRING_PROVENANCE_KEYS)
+
+
+def _microdose_coexists_on_protected_day(role: dict, spec: dict) -> bool:
+    """May this exposure share a day that generic bookkeeping marked unused?
+
+    A weekday can appear in ``intentionally_unused_days`` while still carrying a
+    real coach-owned session - a declared light-combat day is planner bookkeeping
+    "unused" and an actual scheduled physical session at the same time. Rejecting
+    the host on the weekday alone skipped a legal technical host and let a
+    conditioning day win.
+
+    The answer is not ours to invent: ask `combat_load_policy`, which is the sole
+    authority on what may share a combat day and which already grants the
+    low-load / neural-microdose exception only to a provenance-stamped declared
+    light-combat appointment.
+    """
+    from .combat_load_policy import (
+        CalendarCollisionContext,
+        LoadClass,
+        _profile,
+        evaluate_calendar_candidate,
+        role_load_profile,
+    )
+
+    existing = role_load_profile(role)
+    if existing is None:
+        # No canonical profile means no coach-owned session to coexist with, so
+        # the day stays protected.
+        return False
+    load_class = getattr(LoadClass, str(spec.get("load_class") or ""), None)
+    if load_class is None:
+        return False
+    # `_profile` picks the occupancy the policy itself pairs with this load
+    # class. Choosing one here would be restating its doctrine, and it rejects a
+    # physical load stamped as coexistable support anyway.
+    candidate = _profile(load_class)
+    decision = evaluate_calendar_candidate(
+        candidate,
+        CalendarCollisionContext(
+            candidate_position=0,
+            candidate_scope=None,
+            same_day_profiles=(existing,),
+            previous_hard_distance=None,
+            next_hard_distance=None,
+            between_effective_hard_contacts=False,
+            hard_contact_gap_intervening_days=None,
+        ),
+    )
+    return decision.allowed
 
 
 def _microdose_host_roles(week: dict) -> list[dict]:
@@ -665,7 +734,12 @@ def _attach_goal_microdose(brief: dict, ordinal: int, entry: dict) -> dict | Non
             # inside the taper / fight-week tail.
             continue
         if str(host.get("scheduled_day_hint") or "").lower() in protected_days:
-            continue
+            # A truly unused / rest / recovery day stays protected. A day marked
+            # unused by generic bookkeeping that nevertheless holds a real
+            # coach-owned session is decided by the canonical collision policy,
+            # not by the bookkeeping flag.
+            if not _microdose_coexists_on_protected_day(host, spec):
+                continue
         trial = deepcopy(brief)
         trial_host = trial["weekly_role_map"]["weeks"][ordinal]["session_roles"][
             (week.get("session_roles") or []).index(host)
