@@ -1254,6 +1254,18 @@ def compose_normal_conditioning_assignments(
                     "effective_prescription": _conditioning_prescription(option, rounds=allocated_rounds),
                     "effective_rounds": allocated_rounds,
                 }
+                # Carry the canonical structured dose alongside the rendered
+                # text. The assignment is what persists; the candidate pool it
+                # was resolved from is compacted, so a downstream reader that
+                # only sees the assignment had no numeric dose at all and could
+                # not tell 8 x 5 sec / 60 sec alactic work from anything else.
+                # Structured recognition must never depend on parsing the
+                # human-readable prescription back out.
+                effective_dose = _conditioning_effective_dose(option)
+                for field in ("work_sec", "rest_sec", "rounds"):
+                    value = _float_or_none(effective_dose.get(field))
+                    if value is not None:
+                        assignment[field] = value
                 notes = _selected_coaching_notes(option)
                 if notes:
                     assignment["coaching_notes"] = notes
