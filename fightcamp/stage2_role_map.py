@@ -211,6 +211,85 @@ def _strength_role_key(phase: str, stage_key: str, limiter_key: str, idx: int) -
     return "small_strength_touch_day"
 
 
+# Coverage-aware developmental allocation.
+#
+# A developmental slot the weekly budget has already granted still has to decide
+# WHICH adaptation it builds. ``_strength_role_key`` answers that from phase,
+# stage and limiter alone, so a Power-primary athlete's GPP anchor resolves to
+# ``primary_strength_day`` - a role ``_ROLE_REQUIRED_FAMILY_GROUPS`` restricts to
+# strength families - and the athlete's main selected adaptation goes unbuilt for
+# the whole GPP block even though the session exists.
+#
+# This table lists the legal alternative identity for such a slot. Every entry
+# must keep the anchor semantics of the key it replaces (``neural_plus_strength_day``
+# is a primary strength anchor exactly like ``primary_strength_day``) and must
+# declare a capability SUPERSET, so an upgrade can only ever add coverage. It
+# never creates, moves, or lengthens a session: the weekly frequency, contact,
+# recovery and unused-day authorities all decided the slot exists before this
+# runs. ``structural_strength_day`` is deliberately absent - a tissue-state
+# limiter owns that identity for medical reasons.
+_DEVELOPMENTAL_ROLE_UPGRADES: dict[str, tuple[str, ...]] = {
+    "primary_strength_day": ("neural_plus_strength_day",),
+    "secondary_strength_day": ("transfer_strength_day",),
+}
+
+# Development is a build-phase decision. Taper and fight week are governed by
+# freshness, so a coverage gap is never a reason to add adaptation work there.
+_COVERAGE_ALLOCATION_PHASES = {"GPP", "SPP"}
+
+
+def _coverage_aware_role_key(
+    role_key: str,
+    *,
+    phase: str,
+    athlete_model: dict,
+    scheduled_roles: list[dict],
+) -> str:
+    """Spend an already-budgeted developmental slot on an unresolved priority.
+
+    Answers "given one unit of legal developmental capacity, which unresolved
+    athlete priority is the highest-value legal use of it" - not "there is a
+    space, add something". Returns ``role_key`` unchanged unless a listed
+    alternative both covers an unresolved selected target and keeps everything
+    the original already covered.
+
+    Targets are considered in allocation order, and the first one the original
+    key cannot serve but a candidate can wins. A higher-ranked target that no strength identity can
+    build - a technical limiter such as footwork - does not veto the slot: it is
+    honestly covered by the low-cost support machinery instead, which is why it
+    must not also consume a full physical development session.
+    """
+    from .gap_fill_inserts import (
+        _MEANINGFUL_ROLE_CAPABILITIES,
+        unresolved_developmental_targets,
+    )
+
+    candidates = _DEVELOPMENTAL_ROLE_UPGRADES.get(role_key)
+    if not candidates or str(phase or "").upper() not in _COVERAGE_ALLOCATION_PHASES:
+        return role_key
+
+    unresolved = unresolved_developmental_targets(athlete_model, scheduled_roles)
+    if not unresolved:
+        return role_key
+
+    current = _MEANINGFUL_ROLE_CAPABILITIES.get(role_key, frozenset())
+    legal = [
+        candidate
+        for candidate in candidates
+        if _MEANINGFUL_ROLE_CAPABILITIES.get(candidate, frozenset()) >= current
+    ]
+    for target in unresolved:
+        if target in current:
+            # Instantiating the original key already resolves this one, so it is
+            # not a reason to change identity. Without this an athlete whose main
+            # adaptation the slot already builds would still be "upgraded".
+            continue
+        for candidate in legal:
+            if target in _MEANINGFUL_ROLE_CAPABILITIES.get(candidate, frozenset()):
+                return candidate
+    return role_key
+
+
 def _conditioning_role_key(phase: str, system: str, limiter_key: str) -> str:
     if system == "aerobic":
         if phase == "GPP":
@@ -3332,6 +3411,12 @@ def _build_weekly_role_map(
                 week_entry.get("stage_key", ""),
                 limiter_key,
                 idx,
+            )
+            role_key = _coverage_aware_role_key(
+                role_key,
+                phase=week_entry.get("phase", ""),
+                athlete_model=athlete_model,
+                scheduled_roles=session_roles,
             )
             anchor = _role_anchor(role_key)
             governance = _role_governance(
