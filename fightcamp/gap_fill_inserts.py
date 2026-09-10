@@ -12,7 +12,7 @@ from .calendar_context import (
 from .camp_phases import calculate_phase_weeks
 from .combat_load_policy import PlacementDirective, role_load_profile
 from .normalization import clean_list, normalize_fatigue_level
-from .priority_profile import priority_allocation_rank, selected_priority_targets
+from .priority_profile import selected_priority_targets
 from .conditioning import (
     TECHNICAL_FOOTWORK_GROUP,
     select_technical_footwork_candidates,
@@ -589,38 +589,6 @@ def build_target_coverage_state(
     return sorted(
         states,
         key=lambda state: (-state.priority_weight, order_index[state.target]),
-    )
-
-
-def unresolved_developmental_targets(
-    athlete_model: dict[str, Any],
-    scheduled_roles: list[dict[str, Any]] | None = None,
-) -> tuple[str, ...]:
-    """Selected targets with no meaningful coverage yet, in allocation order.
-
-    The developmental counterpart to ``highest_priority_remaining_target``. That
-    one answers "what can a cheap filler still help with" and is therefore
-    filtered to ``low_cost_addressable`` targets; this one answers "what
-    adaptation is still genuinely unbuilt", which is the question a real
-    programme slot can act on. Both read the same coverage ledger, so there is
-    still exactly one authority for what counts as meaningful coverage.
-
-    Ordering comes from ``priority_allocation_rank`` — the main adaptation before
-    the main limiter — with the canonical weight only breaking ties inside a
-    rank. Support coverage is ignored on purpose: a low-cost touch never
-    discharges a developmental need.
-    """
-    states = build_target_coverage_state(athlete_model, scheduled_roles or [])
-    return tuple(
-        state.target
-        for state in sorted(
-            states,
-            key=lambda state: (
-                priority_allocation_rank(state.sources),
-                -state.priority_weight,
-            ),
-        )
-        if not state.meaningful_coverage
     )
 
 
