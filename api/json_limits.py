@@ -28,7 +28,19 @@ MAX_SERVER_JSON_BYTES = 256 * 1024
 # Stage 2 includes legitimate, equipment-dependent candidate pools. Keep its
 # persistence ceiling separate so other server and client JSON limits do not
 # inherit the additional headroom.
-MAX_STAGE2_PAYLOAD_BYTES = 384 * 1024
+#
+# The pools are sized by the athlete's equipment access, not by camp length: the
+# same athlete produces an identically sized payload for a 21-day and a 58-day
+# camp, while a fully equipped gym roughly doubles it. Measured on real
+# generations, candidate_pools is ~89% of the payload (selection_metadata alone
+# is ~38%), and an athlete with 22 equipment items reaches ~435 KB -- which the
+# old 384 KB ceiling rejected after Stage 2 had already paid for the model call.
+# The column is admin-audit data (read back only into AdminPlanOutputs, never by
+# plan rendering or by Stage 2, which uses the in-memory payload), so the pools
+# are trimmed nowhere: a persistence-only projection would be a second
+# representation of the payload and would make the admin view misreport what
+# Stage 1 actually built.
+MAX_STAGE2_PAYLOAD_BYTES = 768 * 1024
 # Reject structures nested deeper than this regardless of byte size.
 MAX_JSON_DEPTH = 32
 # Coarse ceiling for the entire HTTP request body, enforced at the middleware
