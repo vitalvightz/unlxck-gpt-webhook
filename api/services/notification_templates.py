@@ -22,6 +22,22 @@ class NotificationTemplate:
     minimum_timing_confidence: str = "low"
 
 
+# Approved D-3 / D-1 copy. This module owns the strings; the Supabase
+# ``notification_templates`` v2 rows and the last-mile delivery guard in
+# ``fight_countdown_eligibility`` both resolve to these exact values, so the
+# bundled fallback, the database and the enforced copy cannot drift apart.
+LATE_FIGHT_COUNTDOWN_COPY: dict[str, tuple[str, str]] = {
+    "fc-d03": (
+        "D-3. FRESHNESS WINS NOW.",
+        "No added conditioning, extra rounds or fatigue. Touch the sharpness, then leave it.",
+    ),
+    "fc-d01": (
+        "D-1. THE WORK IS DONE. KEEP TODAY LIGHT",
+        "and sharp. No extra conditioning or unnecessary rounds. Follow your coach's plan.",
+    ),
+}
+
+
 _CORE_VARIANTS: dict[str, tuple[tuple[str, str, str], ...]] = {
     "morning_readiness": (
         ("mr-01", "CAMP CHECK. REPORT IN.", "Sleep, body, pain. Give me the read before we set today's work."),
@@ -140,8 +156,8 @@ _CORE_VARIANTS: dict[str, tuple[tuple[str, str, str], ...]] = {
     "fight_countdown": (
         ("fc-d14", "D-14. TWO WEEKS.", "The final build starts now. Protect quality, recovery and every decision."),
         ("fc-d07", "D-7. FIGHT WEEK.", "Freshness, timing, discipline. Nothing outside the mission."),
-        ("fc-d03", "D-3. STAY SHARP.", "The work is banked. Keep the body calm and the decisions clean."),
-        ("fc-d01", "D-1. READY.", "No chasing fitness now. Stay calm and follow the plan."),
+        ("fc-d03", *LATE_FIGHT_COUNTDOWN_COPY["fc-d03"]),
+        ("fc-d01", *LATE_FIGHT_COUNTDOWN_COPY["fc-d01"]),
     ),
 }
 
