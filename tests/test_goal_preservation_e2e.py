@@ -43,7 +43,13 @@ def _run(monkeypatch, **fixture_overrides):
 
 def test_sheyi_like_full_planner_never_credits_a_power_touch_as_strength(monkeypatch):
     payload, brief, handoff = _run(monkeypatch)
-    assert {entry["goal"] for entry in brief["goal_preservation"]} == {"speed", "strength"}
+    # The primary weak area is a build obligation beside the primary goal, and
+    # the fixture's footwork weakness is already covered by real technical work:
+    # the floor recognises existing exposure rather than adding anything.
+    assert {entry["goal"] for entry in brief["goal_preservation"]} == {"speed", "strength", "footwork"}
+    footwork = next(entry for entry in brief["goal_preservation"] if entry["goal"] == "footwork")
+    assert (footwork["priority"], footwork["state"]) == ("primary_weakness", "build")
+    assert footwork["satisfied"] and footwork["evidence"]
     strength = next(entry for entry in brief["goal_preservation"] if entry["goal"] == "strength")
     # It must be an honest, independently revalidated state, even if current
     # safety/compression policy makes this particular camp impossible to cover.

@@ -19,7 +19,11 @@ from .prescription_resolver import (
     _strength_role_slot_groups,
     athlete_dose_state,
 )
-from .priority_profile import build_priority_profile, normalize_priority_values
+from .priority_profile import (
+    _SELECTED_PRIORITY_TARGET_ALIASES,
+    build_priority_profile,
+    normalize_priority_values,
+)
 from .role_labels import athlete_facing_label_for, stamp_role_label
 from .tagging import normalize_tag
 
@@ -47,6 +51,17 @@ _COMPRESSION_REASONS = {
     "fight_week_override": "fight_proximity",
     "pre_hard_contact_strength_exposure_cap": "pre_hard_contact_managed_stress",
 }
+# Weekly floor precedence: safety and phase authority already gate everything
+# below, then existing exposure, then primary goal, then primary weakness, then
+# secondaries. Obligations are repaired in this list order, so when goal and
+# weakness genuinely compete for the only safe capacity the goal takes it and
+# the weakness records that it found none.
+_BUILD_PRIORITIES = {"primary", "primary_weakness"}
+_PRIORITY_REASON_CODES = {
+    "primary": "primary_goal",
+    "primary_weakness": "primary_weakness",
+    "secondary": "secondary_goal",
+}
 _SPEED_TAGS = {"speed", "reactive", "reaction", "acceleration", "max_velocity", "speed_reaction"}
 _TECHNICAL_TAGS = {"technical", "skill_refinement", "technical_footwork", "footwork", "coordination"}
 
@@ -60,8 +75,34 @@ def _athlete(brief: dict) -> dict:
     return brief.get("athlete_snapshot") or brief.get("athlete_model") or {}
 
 
+def _primary_weakness(athlete: dict, focus: dict | None = None) -> str:
+    """The primary weak area as a floor obligation target, or "" when it is none.
+
+    Selection vocabulary (``reactive``, ``explosive``, ...) is projected onto the
+    adaptation families this contract reasons about through the same canonical
+    map ``selected_priority_targets`` uses, so the weakness is recognised in the
+    vocabulary the profile already owns rather than a second one invented here.
+
+    Only a weakness that names a known adaptation becomes an obligation. Weak
+    areas are free text at intake; a target this contract has no required intent,
+    role match or evidence path for could never be discharged, and admitting it
+    would turn an unrecognised word into a permanent blocking obligation.
+    """
+    focus = focus or {}
+    profile = build_priority_profile(athlete)
+    raw = normalize_tag(str(focus.get("primary_weak_area") or profile.primary_weak_area or "")) or ""
+    target = _goal(_SELECTED_PRIORITY_TARGET_ALIASES.get(raw, raw))
+    return target if target in INTENTS else ""
+
+
 def selected_goals(athlete: dict, focus: dict | None = None) -> list[tuple[str, str]]:
-    """Retain every selection, including profiles supplied without PlanInput."""
+    """Retain every selection, including profiles supplied without PlanInput.
+
+    The primary weak area is a build obligation alongside the primary goal, in
+    the weekly floor's order: primary goal, primary weakness, then secondaries.
+    A target selected as both is one obligation, satisfied once - the profile
+    already treats such a collision as a single canonical priority target.
+    """
     focus = focus or {}
     profile = build_priority_profile(athlete)
     primary = _goal(focus.get("primary_goal") or profile.primary_goal or athlete.get("primary_goal"))
@@ -69,7 +110,15 @@ def selected_goals(athlete: dict, focus: dict | None = None) -> list[tuple[str, 
               *normalize_priority_values(athlete.get("secondary_goals")),
               *normalize_priority_values(focus.get("secondary_goals"))]
     goals = list(dict.fromkeys(_goal(value) for value in values if _goal(value)))
-    return [(goal, "primary" if goal == primary else "secondary") for goal in goals]
+    selections = [(goal, "primary" if goal == primary else "secondary") for goal in goals]
+    weakness = _primary_weakness(athlete, focus)
+    if not weakness or weakness == primary:
+        # Merged: one exposure discharges the goal and the weakness together.
+        return selections
+    # A weakness also named among the goals is still the primary weakness; it is
+    # promoted out of the secondary tier rather than carried twice.
+    selections = [row for row in selections if row[0] != weakness]
+    return [*selections[:1], (weakness, "primary_weakness"), *selections[1:]]
 
 
 def classify_goal_preservation(athlete: dict, focus: dict | None = None) -> list[dict]:
@@ -85,8 +134,11 @@ def classify_goal_preservation(athlete: dict, focus: dict | None = None) -> list
         limits.append("weight_cut_pressure")
     return [
         {"goal": goal, "priority": priority,
-         "state": "build" if priority == "primary" and not limits else "maintain",
-         "reason_codes": [f"{priority}_goal", *limits],
+         # Primary goal and primary weakness are both build obligations: each
+         # earns one meaningful exposure per build week. Secondaries stay
+         # opportunistic maintenance.
+         "state": "build" if priority in _BUILD_PRIORITIES and not limits else "maintain",
+         "reason_codes": [_PRIORITY_REASON_CODES[priority], *limits],
          "required_intent": INTENTS.get(goal, f"selected_goal:{goal}"),
          "evidence": []}
         for goal, priority in selected_goals(athlete, focus)
@@ -767,6 +819,23 @@ def _attach_goal_microdose(brief: dict, ordinal: int, entry: dict) -> dict | Non
                 "role_key": host.get("role_key"), "goal": entry["goal"],
                 "result": "microdose_attached", "reason_codes": ["weekly_priority_exposure_floor"]}
 
+    # An earlier obligation in the same week may already hold the only session
+    # that could have hosted this one - `_microdose_host_roles` excludes a role
+    # that already carries a microdose, and stacking a second touch on it is not
+    # this tier's call to make. Say that plainly instead of reporting it as "no
+    # compatible session": the capacity existed, a higher-precedence priority
+    # spent it, and this obligation waits for another legal host rather than
+    # forcing more work onto the week.
+    taken = [
+        role.get("priority_microdose", {}).get("goal")
+        for role in week.get("session_roles") or []
+        if isinstance(role, dict) and isinstance(role.get("priority_microdose"), dict)
+    ]
+    if any(goal and goal != entry["goal"] for goal in taken):
+        return {"week_index": week.get("week_index"), "goal": entry["goal"],
+                "result": "floor_no_safe_capacity",
+                "reason_codes": ["priority_capacity_spent"],
+                "held_by": [goal for goal in taken if goal and goal != entry["goal"]]}
     return {"week_index": week.get("week_index"), "result": "floor_no_safe_host",
             "reason_codes": ["no_compatible_existing_session"]}
 

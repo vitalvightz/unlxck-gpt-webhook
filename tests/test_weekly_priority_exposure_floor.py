@@ -564,3 +564,136 @@ def test_neural_microdose_already_coexists_with_declared_light_combat():
     assert LoadClass.NEURAL_MICRODOSE in _LIGHT_COMBAT_COEXIST_LOADS
     assert LoadClass.MEANINGFUL_STRENGTH not in _LIGHT_COMBAT_COEXIST_LOADS
     assert LoadClass.HARD_CONTACT not in _LIGHT_COMBAT_COEXIST_LOADS
+
+
+# ---------------------------------------------------------------------------
+# The primary weakness is the floor's second build obligation
+#
+# It reuses this same machinery - required_intent, coverage windows, evidence
+# recognition, whole-role repair, microdose fallback - rather than a second,
+# competing weakness planner.
+# ---------------------------------------------------------------------------
+
+
+def _athlete(**kw):
+    athlete = {
+        "key_goals": ["power"],
+        "primary_goal": "power",
+        "weak_areas": ["footwork"],
+        "primary_weak_area": "footwork",
+    }
+    athlete.update(kw)
+    return athlete
+
+
+_FOOTWORK_ENTRY = {
+    "goal": "footwork",
+    "priority": "primary_weakness",
+    "state": "build",
+    "required_intent": "footwork_practice",
+    "evidence": [],
+}
+
+
+def test_primary_weakness_is_an_obligation_ranked_under_the_primary_goal():
+    from fightcamp.goal_preservation import selected_goals
+
+    assert selected_goals(_athlete(key_goals=["power", "speed"])) == [
+        ("power", "primary"),
+        ("footwork", "primary_weakness"),
+        ("speed", "secondary"),
+    ]
+
+
+def test_a_target_selected_as_both_goal_and_weakness_is_one_obligation():
+    """The profile already merges such a collision into one canonical priority
+    target; one exposure satisfies both, and it must not be demanded twice."""
+    from fightcamp.goal_preservation import selected_goals
+
+    assert selected_goals(_athlete(weak_areas=["power"], primary_weak_area="power")) == [
+        ("power", "primary")
+    ]
+
+
+def test_a_weakness_also_named_among_the_goals_is_promoted_not_duplicated():
+    from fightcamp.goal_preservation import selected_goals
+
+    assert selected_goals(_athlete(key_goals=["power", "footwork"])) == [
+        ("power", "primary"),
+        ("footwork", "primary_weakness"),
+    ]
+
+
+def test_selection_vocabulary_is_projected_onto_the_adaptation_family():
+    from fightcamp.goal_preservation import selected_goals
+
+    assert ("speed", "primary_weakness") in selected_goals(
+        _athlete(weak_areas=["reactive"], primary_weak_area="reactive")
+    )
+
+
+def test_an_unrecognised_weak_area_creates_no_obligation():
+    """Weak areas are free text at intake. A target with no required intent,
+    role match or evidence path could never be discharged, so admitting it
+    would be a permanent blocking obligation rather than a floor."""
+    from fightcamp.goal_preservation import selected_goals
+
+    assert selected_goals(_athlete(weak_areas=["chin"], primary_weak_area="chin")) == [
+        ("power", "primary")
+    ]
+
+
+def test_the_weakness_obligation_is_a_build_obligation():
+    from fightcamp.goal_preservation import classify_goal_preservation
+
+    entry = next(e for e in classify_goal_preservation(_athlete()) if e["goal"] == "footwork")
+    assert entry["state"] == "build"
+    assert entry["required_intent"] == "footwork_practice"
+    assert entry["reason_codes"] == ["primary_weakness"]
+
+
+def test_a_cold_primary_weakness_gets_the_same_microdose_fallback():
+    brief = _brief(roles=[_technical_host()])
+    audit = _attach(brief, _FOOTWORK_ENTRY)
+    assert audit["result"] == "microdose_attached"
+    assert audit["goal"] == "footwork"
+    host = brief["weekly_role_map"]["weeks"][0]["session_roles"][0]
+    assert host["priority_microdose"]["intents"] == ["footwork_practice"]
+
+
+def test_goal_and_weakness_each_get_their_own_host_when_capacity_allows():
+    strength_day = {
+        "category": "strength",
+        "role_key": "strength_day",
+        "scheduled_day_hint": "Wednesday",
+        "session_index": 2,
+    }
+    brief = _brief(roles=[_technical_host(), strength_day])
+    assert _attach(brief)["result"] == "microdose_attached"
+    assert _attach(brief, _FOOTWORK_ENTRY)["result"] == "microdose_attached"
+    hosted = {
+        role["role_key"]: role["priority_microdose"]["goal"]
+        for role in brief["weekly_role_map"]["weeks"][0]["session_roles"]
+    }
+    assert hosted == {"strength_day": "power", "light_technical_combat_day": "footwork"}
+
+
+def test_when_they_compete_for_the_only_capacity_the_primary_goal_wins():
+    """Not a forced second touch: the weakness records that the week's only
+    safe capacity was already spent and waits for another legal host."""
+    brief = _brief(roles=[_technical_host()])
+    assert _attach(brief)["result"] == "microdose_attached"
+    audit = _attach(brief, _FOOTWORK_ENTRY)
+    assert audit["result"] == "floor_no_safe_capacity"
+    assert audit["reason_codes"] == ["priority_capacity_spent"]
+    assert audit["held_by"] == ["power"]
+    host = brief["weekly_role_map"]["weeks"][0]["session_roles"][0]
+    assert host["priority_microdose"]["goal"] == "power"
+
+
+def test_existing_weakness_exposure_is_recognised_before_anything_is_added():
+    """Recognition first: a week that already trains the weakness meaningfully
+    gets no microdose at all."""
+    brief = _brief(roles=[_technical_host()])
+    _attach(brief, _FOOTWORK_ENTRY)
+    assert _attach(brief, _FOOTWORK_ENTRY)["result"] == "floor_already_met"
