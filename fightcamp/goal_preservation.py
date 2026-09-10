@@ -374,6 +374,20 @@ def _microdose_host_roles(week: dict) -> list[dict]:
     return sorted(hosts, key=lambda role: order.get(str(role.get("category") or "").lower(), 3))
 
 
+def _assignment_for_slot(role: dict, slot: dict, selected: dict) -> dict:
+    """The composed assignment this pool slot became, if the role kept one."""
+    slot_id = slot.get("slot_id")
+    name = str(selected.get("name") or "").strip()
+    for assignment in role.get("selected_exercise_assignments") or []:
+        if not isinstance(assignment, dict):
+            continue
+        if slot_id is not None and assignment.get("slot_id") == slot_id:
+            return assignment
+        if name and str(assignment.get("name") or "").strip() == name:
+            return assignment
+    return {}
+
+
 def _other_stimuli(role: dict, pool: dict, brief: dict) -> list[dict]:
     # Reuse the payload layer's canonical role-to-slot matcher. Weekly role-map
     # session_index and candidate-pool session_index are separate namespaces and
@@ -401,6 +415,15 @@ def _other_stimuli(role: dict, pool: dict, brief: dict) -> list[dict]:
         ):
             if metadata.get(field) is not None:
                 dose_source[field] = metadata[field]
+        # The candidate pool is compacted in persistence, so a replayed brief can
+        # reach here with no numeric dose even though the role is legitimate
+        # structured work. The composed assignment carries the same canonical
+        # fields from `_conditioning_effective_dose`, so fall back to it rather
+        # than reading the dose back out of the rendered prescription text.
+        assignment = _assignment_for_slot(role, slot, selected)
+        for field in ("work_sec", "rest_sec", "rounds"):
+            if dose_source.get(field) is None and assignment.get(field) is not None:
+                dose_source[field] = assignment[field]
         # A recovery morph / support flush does not become energy-system work
         # through its old pool identity. Positive work metadata is required.
         if (role.get("late_camp_role_morph") or role.get("counts_toward_conditioning_cap") is False
