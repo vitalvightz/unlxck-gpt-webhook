@@ -62,6 +62,42 @@ _PRIORITY_REASON_CODES = {
     "primary_weakness": "primary_weakness",
     "secondary": "secondary_goal",
 }
+# Every official intake weak area resolves deliberately - never by falling off
+# the end of a lookup. `web/lib/intake-options.ts::WEAK_AREA_OPTIONS` is the
+# source of truth for this list, and `test_weekly_priority_exposure_floor`
+# asserts one disposition per option, so a new intake choice cannot be added
+# without deciding what services it.
+#
+# Tier 1: the weekly floor speaks for these directly.
+_WEAKNESS_FLOOR_TARGETS = {
+    "strength": "strength",
+    "power": "power",
+    "speed": "speed",
+    "footwork": "footwork",
+    "mobility": "mobility",
+    # The Gas Tank preset pairs a conditioning goal with a gas_tank weakness, so
+    # gas_tank is a real floor obligation on the conditioning family: it is
+    # recognised, repaired and deferred like any other. It is deliberately NOT
+    # microdose-expandable - `_MICRODOSE_SPECS` holds no conditioning spec, so
+    # the fallback tier declines it and the conditioning workload-envelope
+    # architecture stays the sole authority on conditioning volume.
+    "gas_tank": "conditioning",
+}
+
+# Tier 2: a canonical subsystem already owns these, and it services them from
+# the same weak-area selection this contract reads. Making them floor
+# obligations would demand development evidence the coverage ledger has no path
+# to observe - a support insert is explicitly not session capacity - so the
+# obligation could never be discharged and would block every plan that selects
+# them. They are delegated on purpose, and the delegation is recorded.
+_WEAKNESS_DELEGATED_SUBSYSTEMS = {
+    "balance": "coordination_support_library",
+    "coordination": "coordination_support_library",
+    "trunk_strength": "session_composition.trunk_support",
+    # Defensive: some surfaces submit the option label rather than its value.
+    "core_/_trunk_strength": "session_composition.trunk_support",
+    "core_trunk_strength": "session_composition.trunk_support",
+}
 _SPEED_TAGS = {"speed", "reactive", "reaction", "acceleration", "max_velocity", "speed_reaction"}
 _TECHNICAL_TAGS = {"technical", "skill_refinement", "technical_footwork", "footwork", "coordination"}
 
@@ -75,24 +111,52 @@ def _athlete(brief: dict) -> dict:
     return brief.get("athlete_snapshot") or brief.get("athlete_model") or {}
 
 
-def _primary_weakness(athlete: dict, focus: dict | None = None) -> str:
-    """The primary weak area as a floor obligation target, or "" when it is none.
+def primary_weakness_disposition(athlete: dict, focus: dict | None = None) -> dict:
+    """How the selected primary weak area is serviced, decided explicitly.
 
-    Selection vocabulary (``reactive``, ``explosive``, ...) is projected onto the
-    adaptation families this contract reasons about through the same canonical
-    map ``selected_priority_targets`` uses, so the weakness is recognised in the
+    Every official intake weak area lands in exactly one of these resolutions:
+
+    ``weekly_floor``
+        A build obligation on ``target``, carried by the same pipeline the
+        primary goal uses.
+    ``delegated``
+        A canonical subsystem named by ``subsystem`` already services this weak
+        area from the same selection, and does it better than a generic
+        exposure floor could.
+    ``unrecognised``
+        Free text that names no known adaptation. It creates no obligation: the
+        coverage ledger has no required intent, role match or evidence path for
+        it, so an obligation could never be discharged and would block the plan
+        forever rather than floor anything.
+    ``none``
+        No primary weak area was selected.
+
+    Selection vocabulary (``reactive``, ``explosive``, ...) is projected onto
+    adaptation families through the same canonical map
+    ``selected_priority_targets`` uses, so the weakness is read in the
     vocabulary the profile already owns rather than a second one invented here.
-
-    Only a weakness that names a known adaptation becomes an obligation. Weak
-    areas are free text at intake; a target this contract has no required intent,
-    role match or evidence path for could never be discharged, and admitting it
-    would turn an unrecognised word into a permanent blocking obligation.
     """
     focus = focus or {}
     profile = build_priority_profile(athlete)
-    raw = normalize_tag(str(focus.get("primary_weak_area") or profile.primary_weak_area or "")) or ""
-    target = _goal(_SELECTED_PRIORITY_TARGET_ALIASES.get(raw, raw))
-    return target if target in INTENTS else ""
+    selected = str(focus.get("primary_weak_area") or profile.primary_weak_area or "")
+    raw = normalize_tag(selected) or ""
+    if not raw:
+        return {"weakness": "", "resolution": "none"}
+    record = {"weakness": raw, "selected_label": selected.strip()}
+    if raw in _WEAKNESS_DELEGATED_SUBSYSTEMS:
+        return {**record, "resolution": "delegated",
+                "subsystem": _WEAKNESS_DELEGATED_SUBSYSTEMS[raw]}
+    target = _WEAKNESS_FLOOR_TARGETS.get(raw) or _goal(_SELECTED_PRIORITY_TARGET_ALIASES.get(raw, raw))
+    if target in INTENTS:
+        return {**record, "resolution": "weekly_floor", "target": target,
+                "required_intent": INTENTS[target]}
+    return {**record, "resolution": "unrecognised"}
+
+
+def _primary_weakness(athlete: dict, focus: dict | None = None) -> str:
+    """The primary weak area as a floor obligation target, or "" when it is none."""
+    disposition = primary_weakness_disposition(athlete, focus)
+    return disposition.get("target", "") if disposition["resolution"] == "weekly_floor" else ""
 
 
 def selected_goals(athlete: dict, focus: dict | None = None) -> list[tuple[str, str]]:
@@ -1011,6 +1075,12 @@ def reconcile_goal_preservation(brief: dict) -> dict:
                      satisfied=not missing and entry["state"] != "defer")
     brief["goal_preservation_version"] = VERSION
     brief["goal_preservation"] = entries
+    # A weak area serviced elsewhere must still be auditable here: without this
+    # record, "delegated to a canonical subsystem" and "silently dropped" look
+    # identical from the outside.
+    brief["primary_weakness_disposition"] = primary_weakness_disposition(
+        _athlete(brief), brief.get("priority_focus")
+    )
     compressed = deepcopy(brief.get("compressed_priorities") or _athlete(brief).get("compressed_priorities") or {})
     compressed["goal_preservation"] = entries
     brief["compressed_priorities"] = compressed

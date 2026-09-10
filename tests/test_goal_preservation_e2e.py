@@ -100,3 +100,35 @@ def test_dense_three_hard_week_full_planner_respects_three_session_budget(monkey
             role.get("category") == "strength" and role.get("compression_reason_codes")
             for role in week["suppressed_roles"]
         )
+
+
+def test_a_gas_tank_weakness_enters_the_obligation_set_through_the_full_planner(monkeypatch):
+    """The UI's Gas Tank preset pairs a conditioning goal with a gas_tank
+    weakness. Through the real intake -> planner path that weakness must become
+    a conditioning build obligation, honestly stated and independently
+    revalidated - not quietly dropped before the contract is built."""
+    _, brief, _ = _run(monkeypatch, weaknesses=["gas_tank"], primary_weak_area="gas_tank")
+    assert brief["primary_weakness_disposition"] == {
+        "weakness": "gas_tank",
+        "selected_label": "gas_tank",
+        "resolution": "weekly_floor",
+        "target": "conditioning",
+        "required_intent": "energy_system_training",
+    }
+    entry = next(e for e in brief["goal_preservation"] if e["goal"] == "conditioning")
+    assert (entry["priority"], entry["state"]) == ("primary_weakness", "build")
+    if entry["state"] == "defer":
+        assert entry["constraints"]
+    else:
+        assert entry["satisfied"] and entry["evidence"]
+    assert not any(e["goal"] == "conditioning" for e in validate_goal_preservation(brief))
+
+
+@pytest.mark.parametrize("weak_area", ["balance", "coordination", "trunk_strength"])
+def test_a_delegated_weakness_is_recorded_rather_than_silently_dropped(monkeypatch, weak_area):
+    _, brief, _ = _run(monkeypatch, weaknesses=[weak_area], primary_weak_area=weak_area)
+    disposition = brief["primary_weakness_disposition"]
+    assert (disposition["weakness"], disposition["resolution"]) == (weak_area, "delegated")
+    assert disposition["subsystem"]
+    # A delegated weak area adds no obligation to this contract, by design.
+    assert not any(e.get("priority") == "primary_weakness" for e in brief["goal_preservation"])
