@@ -348,6 +348,24 @@ def _microdose_stimuli(role: dict) -> list[dict]:
     ]
 
 
+# Provenance, not rendered text. A declared hard-sparring appointment keeps
+# these markers after the contact resolver reduces its effective load, which is
+# exactly the case `combat_load_policy` holds strict.
+_HARD_SPARRING_PROVENANCE_KEYS = (
+    "declared_hard_sparring",
+    "hard_sparring_locked",
+    "capped_declared_hard_sparring_days",
+)
+
+
+def _carries_hard_sparring_provenance(role: dict) -> bool:
+    if str(role.get("role_key") or "").strip().lower() == "hard_sparring_day":
+        return True
+    if str(role.get("preferred_pool") or "").strip() == "declared_hard_sparring_days":
+        return True
+    return any(role.get(key) for key in _HARD_SPARRING_PROVENANCE_KEYS)
+
+
 def _microdose_host_roles(week: dict) -> list[dict]:
     """Existing sessions in this week that may host a microdose, best first."""
     hosts = []
@@ -356,6 +374,17 @@ def _microdose_host_roles(week: dict) -> list[dict]:
             continue
         category = str(role.get("category") or "").strip().lower()
         if category in _MICRODOSE_FORBIDDEN_HOST_CATEGORIES:
+            continue
+        if _carries_hard_sparring_provenance(role):
+            # Declared hard sparring keeps its strict collision treatment even
+            # after the canonical resolver converts its effective contact down
+            # to technical-only. `combat_load_policy` grants the low-load /
+            # neural-microdose coexistence exception ONLY to a
+            # provenance-stamped declared light-combat appointment, never to a
+            # hard appointment that merely renders as technical. Category alone
+            # would not catch a converted day if it were ever recategorised, so
+            # check provenance directly rather than bypassing that authority
+            # from inside goal preservation.
             continue
         if category not in _MICRODOSE_HOST_CATEGORIES:
             continue
@@ -704,11 +733,6 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
             frequency = _number(_athlete(brief).get("training_frequency"))
             if current >= original_cap or (frequency and total >= frequency):
                 audit.append({"week_index": week.get("week_index"), "result": "session_cap", "reason_codes": ["calendar_capacity"]})
-                # No session capacity left, but an existing session may still be
-                # able to host the smallest legal exposure for this goal.
-                floor_audit = _attach_goal_microdose(brief, ordinal, entry)
-                if floor_audit is not None:
-                    audit.append(floor_audit)
                 continue
             declared = {str(d).lower() for d in week.get("declared_training_days") or []}
             protected_days = {str(d.get("day") or "").lower() for d in week.get("intentionally_unused_days") or []}
@@ -755,6 +779,21 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
                 stamp_role_label(restored)
                 audit.append({"week_index": week.get("week_index"), "d_day": d_day, "result": "restored", "reason_codes": []})
                 return audit + _restore_goal_roles(brief, entry) if missing_after else audit
+        # Reaching here means no candidate could be restored into this week -
+        # for ANY reason: no candidate matched the goal, the week held its
+        # authority (compression, hard suppression, contact rules), the session
+        # or category budget was full, the calendar forbade every day, or the
+        # trial regressed another stimulus. A restore returns above, so this is
+        # the single "the full repair did not happen" exit.
+        #
+        # Whichever reason it was, the weekly requirement may still be missing
+        # and the week may still hold a session that can safely carry the
+        # smallest exposure. Gating this on one specific failure reason made the
+        # fallback unreachable for every other one, including a week that has no
+        # repair candidates at all and never enters the loop above.
+        floor_audit = _attach_goal_microdose(brief, ordinal, entry)
+        if floor_audit is not None:
+            audit.append(floor_audit)
     return audit
 
 

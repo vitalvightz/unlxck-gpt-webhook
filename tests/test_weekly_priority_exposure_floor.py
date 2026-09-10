@@ -384,3 +384,183 @@ def test_the_floor_does_not_duplicate_legitimate_existing_speed_work():
     roles = brief["weekly_role_map"]["weeks"][0]["session_roles"]
     assert len(roles) == 1
     assert all("priority_microdose" not in role for role in roles)
+
+
+# ---------------------------------------------------------------------------
+# The fallback must run whenever the full repair fails - for ANY reason
+# ---------------------------------------------------------------------------
+
+
+def _blocked_week_brief(*, block="authority_preserved", hosts=None):
+    """Week 2 of the live repro: the only repair candidate is blocked.
+
+    `authority_preserved` (two hard spar days) is the live failure. The
+    fallback must not be gated on the failure happening to be `session_cap`.
+    """
+    light_combat = {
+        "category": "technical",
+        "role_key": "light_technical_combat_day",
+        "scheduled_day_hint": "Monday",
+        "session_index": 1,
+    }
+    spar = {
+        "category": "sparring",
+        "role_key": "hard_sparring_day",
+        "preferred_pool": "declared_hard_sparring_days",
+        "scheduled_day_hint": "Thursday",
+        "session_index": 2,
+    }
+    week = {
+        "week_index": 2,
+        "phase": "SPP",
+        "calendar_days": [
+            {"weekday": "monday", "d_day": 26},
+            {"weekday": "thursday", "d_day": 23},
+        ],
+        "declared_training_days": ["monday", "thursday"],
+        "session_roles": list(hosts if hosts is not None else [light_combat, spar]),
+        "goal_repair_candidates": [
+            {"category": "strength", "role_key": "primary_strength_day", "strength_session_index": 1}
+        ],
+    }
+    if block == "authority_preserved":
+        week["suppressed_roles"] = [
+            {
+                "role_key": "primary_strength_day",
+                "governance": {"hard_suppression_reasons": ["two_hard_spar_days"]},
+            }
+        ]
+    elif block == "no_candidates":
+        week["goal_repair_candidates"] = []
+    return {
+        "athlete_snapshot": {
+            "sport": "boxing",
+            "days_until_fight": 27,
+            "training_frequency": 4,
+            "key_goals": ["power"],
+            "primary_goal": "power",
+            "weak_areas": ["footwork"],
+            "primary_weak_area": "footwork",
+        },
+        "weekly_role_map": {"weeks": [week]},
+        "candidate_pools": {},
+    }
+
+
+def _repair(brief):
+    from fightcamp.goal_preservation import _restore_goal_roles
+
+    return _restore_goal_roles(brief, _POWER_ENTRY)
+
+
+def _results(audit):
+    return [entry.get("result") for entry in audit]
+
+
+def test_authority_preserved_still_reaches_the_microdose_fallback():
+    """The live bug: a full repair blocked by week authority skipped the
+    fallback entirely, so Power went cold for the whole build week."""
+    brief = _blocked_week_brief()
+    audit = _repair(brief)
+    assert "authority_preserved" in _results(audit)
+    assert "microdose_attached" in _results(audit)
+    host = brief["weekly_role_map"]["weeks"][0]["session_roles"][0]
+    assert host["role_key"] == "light_technical_combat_day"
+    assert host["priority_microdose"]["goal"] == "power"
+
+
+def test_a_week_with_no_repair_candidates_still_reaches_the_fallback():
+    """Such a week never enters the candidate loop at all."""
+    assert "microdose_attached" in _results(_repair(_blocked_week_brief(block="no_candidates")))
+
+
+def test_the_fallback_is_not_special_cased_to_a_reason_code():
+    """No blocking reason string appears in the fallback's control flow."""
+    import inspect
+
+    from fightcamp import goal_preservation
+
+    source = inspect.getsource(goal_preservation._restore_goal_roles)
+    fallback = source.split("floor_audit = ")[0].rsplit("for candidate", 1)[-1]
+    assert "two_hard_spar" not in fallback
+
+
+def test_the_blocked_week_gains_no_session_and_no_training_day():
+    brief = _blocked_week_brief()
+    before = len(brief["weekly_role_map"]["weeks"][0]["session_roles"])
+    _repair(brief)
+    week = brief["weekly_role_map"]["weeks"][0]
+    assert len(week["session_roles"]) == before
+    assert week["declared_training_days"] == ["monday", "thursday"]
+
+
+def test_hard_sparring_days_are_untouched_by_the_repair():
+    brief = _blocked_week_brief()
+    _repair(brief)
+    spar = [r for r in brief["weekly_role_map"]["weeks"][0]["session_roles"] if r["category"] == "sparring"]
+    assert spar and all("priority_microdose" not in role for role in spar)
+
+
+def test_the_blocked_week_repair_is_idempotent():
+    brief = _blocked_week_brief()
+    _repair(brief)
+    second = _repair(brief)
+    assert "floor_already_met" in _results(second)
+    roles = brief["weekly_role_map"]["weeks"][0]["session_roles"]
+    assert sum(1 for role in roles if role.get("priority_microdose")) == 1
+
+
+def test_a_blocked_week_with_no_compatible_host_records_an_honest_reason():
+    only_sparring = [
+        {
+            "category": "sparring",
+            "role_key": "hard_sparring_day",
+            "preferred_pool": "declared_hard_sparring_days",
+            "scheduled_day_hint": "Thursday",
+            "session_index": 1,
+        }
+    ]
+    brief = _blocked_week_brief(hosts=only_sparring)
+    audit = _repair(brief)
+    assert "floor_no_safe_host" in _results(audit)
+    assert "microdose_attached" not in _results(audit)
+
+
+# ---------------------------------------------------------------------------
+# Converted hard sparring keeps its strict collision treatment
+# ---------------------------------------------------------------------------
+
+
+def test_a_converted_hard_spar_day_is_never_a_host_even_if_recategorised():
+    """`combat_load_policy` grants the neural-microdose coexistence exception
+    only to a provenance-stamped declared LIGHT-combat appointment. A hard
+    appointment whose effective contact resolved down to technical stays
+    strict, and goal preservation must not bypass that by reading category."""
+    converted = {
+        "category": "technical",  # as if recategorised by a resolver
+        "role_key": "hard_sparring_day",
+        "preferred_pool": "declared_hard_sparring_days",
+        "scheduled_day_hint": "Monday",
+        "session_index": 1,
+    }
+    assert _microdose_host_roles(_week(converted)) == []
+
+
+def test_provenance_is_detected_from_role_key_pool_or_marker():
+    from fightcamp.goal_preservation import _carries_hard_sparring_provenance
+
+    assert _carries_hard_sparring_provenance({"role_key": "hard_sparring_day"})
+    assert _carries_hard_sparring_provenance({"preferred_pool": "declared_hard_sparring_days"})
+    assert _carries_hard_sparring_provenance({"declared_hard_sparring": True})
+    assert not _carries_hard_sparring_provenance({"role_key": "light_technical_combat_day"})
+
+
+def test_neural_microdose_already_coexists_with_declared_light_combat():
+    """The canonical policy is unchanged by this work: it already permits a
+    true microdose on a declared light-combat day, which is why the repro
+    needs no collision-policy change."""
+    from fightcamp.combat_load_policy import _LIGHT_COMBAT_COEXIST_LOADS, LoadClass
+
+    assert LoadClass.NEURAL_MICRODOSE in _LIGHT_COMBAT_COEXIST_LOADS
+    assert LoadClass.MEANINGFUL_STRENGTH not in _LIGHT_COMBAT_COEXIST_LOADS
+    assert LoadClass.HARD_CONTACT not in _LIGHT_COMBAT_COEXIST_LOADS
