@@ -175,3 +175,139 @@ def test_goal_preservation_and_priority_focus_survive(packet):
     selected = packet["selected_plan"]
     assert selected.get("goal_preservation")
     assert selected.get("priority_focus")
+
+
+# ---------------------------------------------------------------------------
+# weekly_role_map projection
+# ---------------------------------------------------------------------------
+
+
+def _roles(packet: dict) -> list[dict]:
+    return [
+        role
+        for week in packet["selected_plan"]["weekly_role_map"]["weeks"]
+        for role in week.get("session_roles") or []
+    ]
+
+
+def test_selection_hints_are_gone_but_closed_membership_is_not(packet):
+    """Membership is closed, so the pool/system hints are stale noise.
+
+    preferred_tags is deliberately kept: the tactical-identity boundary
+    sanitizes it before the handoff, so it is delivered on purpose.
+    """
+    for role in _roles(packet):
+        for dropped in ("preferred_pool", "preferred_system"):
+            assert dropped not in role
+    assert any(role.get("selected_exercise_assignments") for role in _roles(packet))
+
+
+def test_assignment_provenance_is_gone_but_identity_and_dose_are_not(packet):
+    seen = 0
+    for role in _roles(packet):
+        for item in role.get("selected_exercise_assignments") or []:
+            seen += 1
+            for dropped in ("slot_group", "source_phase", "source_session_index", "dose_authority"):
+                assert dropped not in item
+            assert item.get("name"), "exercise identity must survive"
+    assert seen, "fixture must carry selected assignments"
+
+
+def test_every_selected_exercise_and_effective_dose_survives(generated, packet):
+    """Parity: identity and authoritative dose, exercise by exercise."""
+    source: dict[str, str] = {}
+    for week in (generated["planning_brief"].get("weekly_role_map") or {}).get("weeks") or []:
+        for role in week.get("session_roles") or []:
+            for item in role.get("effective_strength_prescriptions") or []:
+                if isinstance(item, dict) and item.get("name"):
+                    source[str(item["name"])] = str(item.get("effective_prescription") or "")
+
+    delivered: dict[str, str] = {}
+    for role in _roles(packet):
+        for item in role.get("effective_strength_prescriptions") or []:
+            if isinstance(item, dict) and item.get("name"):
+                delivered[str(item["name"])] = str(item.get("effective_prescription") or "")
+
+    assert source, "fixture must resolve prescriptions"
+    for name, prescription in source.items():
+        assert name in delivered, f"{name!r} lost its prescription entry"
+        assert delivered[name] == prescription, f"{name!r} dose drifted"
+
+
+def test_a_capped_dose_keeps_both_prescriptions():
+    """base_prescription is dropped ONLY when it repeats the effective dose."""
+    from fightcamp.stage2_finalizer_packet_impl import _compact_prescribed_items
+
+    items = [
+        {"slot_id": "a", "name": "Same", "base_prescription": "3x5", "effective_prescription": "3x5"},
+        {"slot_id": "b", "name": "Capped", "base_prescription": "5x5 @ RPE 9", "effective_prescription": "2x3 @ RPE 6"},
+    ]
+    compact = _compact_prescribed_items(items, effective_by_slot={"a": "3x5", "b": "2x3 @ RPE 6"})
+
+    assert "base_prescription" not in compact[0]
+    assert compact[0]["effective_prescription"] == "3x5"
+    # The capped exercise keeps both, so the raw bank dose can never be mistaken
+    # for the authorised one.
+    assert compact[1]["base_prescription"] == "5x5 @ RPE 9"
+    assert compact[1]["effective_prescription"] == "2x3 @ RPE 6"
+
+
+def test_calendar_identity_and_same_day_multi_role_survive(generated, packet):
+    """Distinct roles sharing a D-day are never collapsed."""
+    def by_day(weeks):
+        days: dict[str, set] = {}
+        for week in weeks:
+            for role in week.get("session_roles") or []:
+                label = str(
+                    role.get("scheduled_countdown_label") or role.get("countdown_label") or ""
+                )
+                if label:
+                    days.setdefault(label, set()).add(str(role.get("role_key") or ""))
+        return days
+
+    source = by_day((generated["planning_brief"].get("weekly_role_map") or {}).get("weeks") or [])
+    delivered = by_day(packet["selected_plan"]["weekly_role_map"]["weeks"])
+
+    multi = {day: keys for day, keys in source.items() if len(keys) > 1}
+    assert multi, "fixture must contain at least one multi-role day"
+    for day, keys in source.items():
+        assert day in delivered, f"{day} disappeared from the calendar"
+        assert keys <= delivered[day], f"{day} lost role(s) {keys - delivered[day]}"
+
+
+def test_combat_status_and_safety_envelopes_survive(generated, packet):
+    source_weeks = (generated["planning_brief"].get("weekly_role_map") or {}).get("weeks") or []
+    source_combat = {
+        (
+            str(role.get("scheduled_countdown_label") or role.get("countdown_label") or ""),
+            str(role.get("role_key") or ""),
+            str(role.get("hard_sparring_status") or ""),
+        )
+        for week in source_weeks
+        for role in week.get("session_roles") or []
+        if str(role.get("role_key") or "") in {"hard_sparring_day", "light_combat_day"}
+    }
+    delivered_combat = {
+        (
+            str(role.get("scheduled_countdown_label") or role.get("countdown_label") or ""),
+            str(role.get("role_key") or ""),
+            str(role.get("hard_sparring_status") or ""),
+        )
+        for role in _roles(packet)
+        if str(role.get("role_key") or "") in {"hard_sparring_day", "light_combat_day"}
+    }
+    assert source_combat, "fixture must declare combat days"
+    assert source_combat <= delivered_combat
+
+    envelopes = [role for role in _roles(packet) if role.get("effective_strength_envelope")]
+    assert envelopes, "strength envelopes must still reach Stage 2"
+
+
+def test_suppressed_roles_still_name_what_cannot_be_restored(packet):
+    suppressed = [
+        role
+        for week in packet["selected_plan"]["weekly_role_map"]["weeks"]
+        for role in week.get("suppressed_roles") or []
+    ]
+    assert suppressed
+    assert all(role.get("role_key") for role in suppressed)

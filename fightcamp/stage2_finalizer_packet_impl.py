@@ -178,14 +178,59 @@ def _compact_week_progression(progression: Any) -> Any:
     }
 
 
+# Per-exercise bookkeeping that names where Stage 1 found a slot. No finalizer
+# prompt, render contract or rule names any of them, and membership is already
+# closed by selected_exercise_assignments, so they only add tokens between the
+# model and the fields it must act on (name and effective_prescription). They stay
+# on the rich Stage 1 object for validators, diagnostics and persistence.
+_ASSIGNMENT_PROVENANCE_FIELDS = (
+    "slot_group",
+    "source_phase",
+    "source_session_index",
+    "dose_authority",
+)
+
+
+def _compact_prescribed_items(
+    items: Any, *, effective_by_slot: dict[str, str]
+) -> Any:
+    """Drop provenance, and the base dose when it repeats the effective one.
+
+    ``base_prescription`` is only dropped where it is character-identical to the
+    authoritative ``effective_prescription`` for the same slot. Where the planner
+    capped a dose the two differ, and both survive so the finalizer can never
+    mistake the raw bank dose for the authorised one.
+    """
+    if not isinstance(items, list):
+        return items
+    compact: list[Any] = []
+    for item in items:
+        if not isinstance(item, dict):
+            compact.append(item)
+            continue
+        trimmed = {
+            key: value
+            for key, value in item.items()
+            if key not in _ASSIGNMENT_PROVENANCE_FIELDS
+        }
+        base = trimmed.get("base_prescription")
+        slot_id = str(trimmed.get("slot_id") or "")
+        effective = trimmed.get("effective_prescription") or effective_by_slot.get(slot_id)
+        if base and effective and base == effective:
+            trimmed.pop("base_prescription", None)
+        compact.append(trimmed)
+    return compact
+
+
 def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
     keep = (
         "session_index",
         "category",
         "role_key",
         "scheduled_day_hint",
-        "preferred_pool",
-        "preferred_system",
+        # preferred_tags stays: the tactical-identity boundary sanitizes it before
+        # the handoff (a competing declared style is stripped), so it is delivered
+        # deliberately rather than incidentally.
         "preferred_tags",
         "preferred_exercise_names",
         "anchor",
@@ -276,6 +321,16 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
             and role.get(key) == []
         )
     }
+    effective_by_slot = {
+        str(item.get("slot_id") or ""): str(item.get("effective_prescription") or "")
+        for item in role.get("effective_strength_prescriptions") or []
+        if isinstance(item, dict) and item.get("effective_prescription")
+    }
+    for key in ("selected_exercise_assignments", "effective_strength_prescriptions"):
+        if key in compact:
+            compact[key] = _compact_prescribed_items(
+                compact[key], effective_by_slot=effective_by_slot
+            )
     if "governance" in compact:
         governance = _compact_governance(compact["governance"])
         if governance:
