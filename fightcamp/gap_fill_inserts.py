@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any, Literal
 
@@ -1407,9 +1408,23 @@ def _apply_bank_footwork(
     fields = technical_footwork_prescription_fields(drill, stance=stance)
     name = fields["name"]
     notes = str(drill.get("notes") or "").strip()
+    timing_lower = fields["timing"].lower()
+    rest_lower = fields["rest"].lower()
+    rest_seconds = re.match(r"(\d+)\s*sec", rest_lower)
+    rest_already_stated = rest_lower in timing_lower
+    if rest_seconds:
+        rest_already_stated = rest_already_stated or bool(
+            re.search(
+                rf"\b{re.escape(rest_seconds.group(1))}\s*sec(?:ond)?s?\s+(?:rest|reset)\b",
+                timing_lower,
+            )
+        )
     dose = " ".join(
         part
-        for part in (fields["timing"], f"Rest: {fields['rest']}." if fields["rest"] and not any(marker in fields["timing"].lower() for marker in ("rest", "reset")) else "")
+        for part in (
+            fields["timing"],
+            f"Rest: {fields['rest']}." if fields["rest"] and not rest_already_stated else "",
+        )
         if part
     )
     # Same shared "Why: / bulleted activity / indented detail lines" contract as

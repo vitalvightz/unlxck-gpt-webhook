@@ -807,13 +807,18 @@ def test_compressed_fight_week_keeps_zero_load_tactical_watch():
     ]
 
 
-def test_support_caps_hold_per_phase():
+def test_discretionary_support_caps_exclude_zero_load_tactical_watch():
     role_map = {"weeks": [_week("GPP", 35), _week("SPP", 21), _week("TAPER", 7)]}
     apply_camp_week_fillers(role_map, _athlete(tactical_styles=["out-boxer"]))
     caps = {"GPP": 1, "SPP": 2, "TAPER": 1}
     for week in role_map["weeks"]:
         fillers = [role for role in week["session_roles"] if role.get("camp_week_filler")]
-        assert len(fillers) <= caps[week["phase"]]
+        watches = [role for role in fillers if role.get("role_key") == "tactical_watch"]
+        discretionary_fillers = [
+            role for role in fillers if role.get("role_key") != "tactical_watch"
+        ]
+        assert len(watches) == 1
+        assert len(discretionary_fillers) <= caps[week["phase"]]
 
 
 def test_mandatory_watch_shares_a_scheduled_day_and_never_takes_a_rest_day():
