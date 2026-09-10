@@ -649,6 +649,58 @@ def repair_locked_tactical_watch_source_text(
     return result
 
 
+# Sessions and blocks the server assembles from deterministic state. Their ids are
+# stamped by the assemblers that own them (structured_plan_locked_merge,
+# structured_plan_deterministic_fallback), so a card can say which content the
+# model authored and which the server did.
+_SERVER_ASSEMBLED_ID_PREFIXES = ("locked-", "deterministic-")
+
+# Roles whose existence and content the server owns end to end: it inserts them
+# into the structured card, restores them in the deterministic fallback, and
+# repairs them into the plan text. Stage 2 is not their author.
+_SERVER_OWNED_ROLE_KEYS = frozenset(
+    {
+        "hard_sparring_day",
+        "light_combat_day",
+        "tactical_watch",
+        "fight_day_protocol",
+    }
+)
+
+
+def _server_owned_ddays(planning_brief: Any) -> set[int]:
+    """Countdown days carrying a deterministic, server-owned role.
+
+    Read from the same role map the assemblers use, so this introduces no second
+    classification. A day here may legitimately appear in the card without
+    appearing in Stage 2's text: the server put it there.
+    """
+    days: set[int] = set()
+    if not isinstance(planning_brief, dict):
+        return days
+    role_map = planning_brief.get("weekly_role_map")
+    if not isinstance(role_map, dict):
+        return days
+    for week in role_map.get("weeks") or []:
+        if not isinstance(week, dict):
+            continue
+        for role in week.get("session_roles") or []:
+            if not isinstance(role, dict):
+                continue
+            if str(role.get("role_key") or "").strip() not in _SERVER_OWNED_ROLE_KEYS:
+                continue
+            day = _authoritative_locked_day(role)
+            if day is not None:
+                days.add(day)
+    return days
+
+
+def _is_server_assembled(entry: Any, key: str) -> bool:
+    if not isinstance(entry, dict):
+        return False
+    return str(entry.get(key) or "").startswith(_SERVER_ASSEMBLED_ID_PREFIXES)
+
+
 def _check(structured_plan: Any, source_markdown: str, planning_brief: Any = None) -> list[str]:
     plan = structured_plan if isinstance(structured_plan, dict) else {}
     source = str(source_markdown or "")
@@ -683,6 +735,7 @@ def _check(structured_plan: Any, source_markdown: str, planning_brief: Any = Non
             source_ddays.add(num)
 
     violations: list[str] = list(locked_violations)
+    server_owned_ddays = _server_owned_ddays(planning_brief)
 
     weeks = plan.get("weeks") if isinstance(plan.get("weeks"), list) else []
     for week in weeks:
@@ -697,7 +750,13 @@ def _check(structured_plan: Any, source_markdown: str, planning_brief: Any = Non
             if not isinstance(day, dict):
                 continue
             day_num = _dday_num(day.get("countdown_label"))
-            if day_num is not None and day_num not in source_ddays:
+            if (
+                day_num is not None
+                and day_num not in source_ddays
+                and day_num not in server_owned_ddays
+            ):
+                # A server-owned day is exempt: the deterministic assemblers place
+                # it from the role map, so Stage 2's text is not its authority.
                 violations.append(
                     f"{COUNTDOWN}: day countdown {day.get('countdown_label')!r} absent from source text"
                 )
@@ -705,8 +764,14 @@ def _check(structured_plan: Any, source_markdown: str, planning_brief: Any = Non
             for session in day.get("sessions") or []:
                 if not isinstance(session, dict):
                     continue
+                if _is_server_assembled(session, "session_id"):
+                    # The server wrote this session from deterministic state; it is
+                    # verified against that state, never against model prose.
+                    continue
                 for block in session.get("blocks") or []:
                     if not isinstance(block, dict):
+                        continue
+                    if _is_server_assembled(block, "block_id"):
                         continue
                     if str(block.get("block_type")) not in _EXERCISE_BLOCK_TYPES:
                         continue
