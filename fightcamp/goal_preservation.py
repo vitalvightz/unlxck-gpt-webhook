@@ -272,6 +272,108 @@ def _strength_stimuli(role: dict, slots: list[dict], brief: dict) -> list[dict]:
     return stimuli
 
 
+# Weekly priority exposure floor - the microdose tier.
+#
+# ``_restore_goal_roles`` can only restore a WHOLE role from the week's
+# ``goal_repair_candidates``. When the session or category cap blocks that, a
+# primary goal could go cold for an entire build week even though an existing
+# physical session that day could safely host a few sets. These specs are that
+# fallback: the smallest exposure that still produces honest development
+# evidence for the goal.
+#
+# Conditioning is deliberately absent. It owns its own system/workload
+# architecture (including the gas-tank workload-envelope gate), and letting this
+# tier add conditioning would re-open exactly the spillover that gate closed.
+# Recovery and weight_cut are absent because deterministic daily support already
+# services them.
+_MICRODOSE_SPECS: dict[str, dict[str, Any]] = {
+    "power": {
+        "name": "Med-Ball Rotational Throw",
+        "prescription": "2 x 3/side @ RPE 7",
+        "sets": 2,
+        "intents": ["ballistic_power"],
+    },
+    "speed": {
+        "name": "Reactive Start Burst",
+        "prescription": "3 x 4 sec @ RPE 7, full rest",
+        "sets": 3,
+        "intents": ["speed_quality"],
+    },
+    "strength": {
+        "name": "Loaded Carry Touch",
+        "prescription": "2 x 20 m @ RPE 7",
+        "sets": 2,
+        "intents": ["meaningful_strength"],
+    },
+    "footwork": {
+        "name": "Reactive Footwork Walkthrough",
+        "prescription": "2 x 60 sec",
+        "sets": 2,
+        "intents": ["footwork_practice"],
+    },
+    "mobility": {
+        "name": "Targeted Mobility Touch",
+        "prescription": "2 x 60 sec/side",
+        "sets": 2,
+        "intents": ["mobility_dose"],
+    },
+}
+
+# A microdose attaches only to a session that is already a physical training
+# day and can absorb a few quality sets without changing what the session is.
+# Sparring, recovery, fight day and zero-cost tactical roles are never hosts:
+# hard contact owns its own freshness, recovery-only stays recovery-only, and a
+# Tactical Watch day is not physical capacity just because it sits on the
+# calendar.
+_MICRODOSE_HOST_CATEGORIES = {"strength", "technical", "conditioning"}
+_MICRODOSE_FORBIDDEN_HOST_CATEGORIES = {"sparring", "recovery", "fight_day", "mobility"}
+
+
+def _microdose_stimuli(role: dict) -> list[dict]:
+    """Evidence for a microdose already attached to this role."""
+    microdose = role.get("priority_microdose")
+    if not isinstance(microdose, dict) or not microdose.get("intents"):
+        return []
+    return [
+        {
+            "name": microdose.get("name"),
+            "intents": list(microdose["intents"]),
+            "effective_prescription": str(microdose.get("prescription") or ""),
+            "dose_authority": "weekly_priority_exposure_floor",
+            "sets": _number(microdose.get("sets")),
+            # Two quality sets is the same development bar _strength_stimuli
+            # applies; below it the touch is maintenance, not development.
+            "development_capable": _number(microdose.get("sets")) >= 2,
+        }
+    ]
+
+
+def _microdose_host_roles(week: dict) -> list[dict]:
+    """Existing sessions in this week that may host a microdose, best first."""
+    hosts = []
+    for role in week.get("session_roles") or []:
+        if not isinstance(role, dict):
+            continue
+        category = str(role.get("category") or "").strip().lower()
+        if category in _MICRODOSE_FORBIDDEN_HOST_CATEGORIES:
+            continue
+        if category not in _MICRODOSE_HOST_CATEGORIES:
+            continue
+        if role.get("priority_microdose") is not None:
+            continue
+        if (role.get("governance") or {}).get("hard_suppression_reasons"):
+            continue
+        # A support insert is not a session; it cannot host development.
+        if role.get("support_insert_category") or role.get("support_kind"):
+            continue
+        hosts.append(role)
+    # An S&C session absorbs quality work most cleanly, then technical work;
+    # a conditioning session is the last resort because the added sets compete
+    # with its energy-system purpose.
+    order = {"strength": 0, "technical": 1, "conditioning": 2}
+    return sorted(hosts, key=lambda role: order.get(str(role.get("category") or "").lower(), 3))
+
+
 def _other_stimuli(role: dict, pool: dict, brief: dict) -> list[dict]:
     # Reuse the payload layer's canonical role-to-slot matcher. Weekly role-map
     # session_index and candidate-pool session_index are separate namespaces and
@@ -375,6 +477,7 @@ def collect_goal_evidence(brief: dict) -> list[dict]:
                 continue
             stimuli = _strength_stimuli(role, strength.get(id(role), []), brief)
             stimuli += _other_stimuli(role, pools.get(week.get("phase"), {}), brief)
+            stimuli += _microdose_stimuli(role)
             for stimulus in stimuli:
                 # D-1 protocol can support readiness; never training adaptations.
                 if day <= 1:
@@ -462,6 +565,86 @@ def _role_matches_goal(role: dict, goal: str) -> bool:
     return category == {"mobility": "mobility", "recovery": "recovery", "skill_refinement": "technical"}.get(goal)
 
 
+def _attach_goal_microdose(brief: dict, ordinal: int, entry: dict) -> dict | None:
+    """Weekly exposure floor: smallest legal exposure on an existing session.
+
+    Reached only when ``_restore_goal_roles`` has already established that a
+    whole role cannot be restored inside the week's session/category budget.
+    Adds no session, no training day and no frequency: it hangs a few sets off a
+    session the athlete is already doing, and the host keeps its own identity.
+
+    Returns an audit record, or None when the goal is not floor-eligible at all.
+    """
+    spec = _MICRODOSE_SPECS.get(entry["goal"])
+    if spec is None:
+        # Conditioning and support-serviced goals are owned elsewhere.
+        return None
+    if entry["state"] != "build":
+        # A maintenance obligation has a 14-day window; it does not need a
+        # weekly floor and must not spend capacity as if it did.
+        return None
+
+    week = brief["weekly_role_map"]["weeks"][ordinal]
+    if str(week.get("phase") or "").upper() == "TAPER":
+        return {"week_index": week.get("week_index"), "result": "floor_not_applied",
+                "reason_codes": ["taper_no_developmental_floor"]}
+
+    # Already covered somewhere in this week: the floor is a floor, not a bonus.
+    week_days = {
+        day.get("d_day")
+        for day in week.get("calendar_days") or []
+        if isinstance(day.get("d_day"), int)
+    }
+    covered = any(
+        e.get("d_day") in week_days
+        and entry["required_intent"] in e["intents"]
+        and e.get("development_quality")
+        for e in collect_goal_evidence(brief)
+    )
+    if covered:
+        return {"week_index": week.get("week_index"), "result": "floor_already_met",
+                "reason_codes": ["existing_weekly_exposure"]}
+
+    protected_days = {str(d.get("day") or "").lower() for d in week.get("intentionally_unused_days") or []}
+    for host in _microdose_host_roles(week):
+        host_day = role_d_day(week, host)
+        if not isinstance(host_day, int) or host_day <= 13:
+            # Reuse the established developmental cutoff: no new development
+            # inside the taper / fight-week tail.
+            continue
+        if str(host.get("scheduled_day_hint") or "").lower() in protected_days:
+            continue
+        trial = deepcopy(brief)
+        trial_host = trial["weekly_role_map"]["weeks"][ordinal]["session_roles"][
+            (week.get("session_roles") or []).index(host)
+        ]
+        trial_host["priority_microdose"] = {
+            "goal": entry["goal"],
+            "name": spec["name"],
+            "prescription": spec["prescription"],
+            "sets": spec["sets"],
+            "intents": list(spec["intents"]),
+            "authority": VERSION,
+        }
+        _, missing_before = _coverage(entry, brief, collect_goal_evidence(brief))
+        _, missing_after = _coverage(entry, trial, collect_goal_evidence(trial))
+        retained = {(e.get("d_day"), e.get("name"), tuple(e["intents"])) for e in collect_goal_evidence(trial)}
+        # Same no-regression guard the role repair uses: a floor exposure may
+        # not pay for this goal by erasing another stimulus.
+        if len(missing_after) >= len(missing_before) or any(
+            (e.get("d_day"), e.get("name"), tuple(e["intents"])) not in retained
+            for e in collect_goal_evidence(brief)
+        ):
+            continue
+        brief["weekly_role_map"] = trial["weekly_role_map"]
+        return {"week_index": week.get("week_index"), "d_day": host_day,
+                "role_key": host.get("role_key"), "goal": entry["goal"],
+                "result": "microdose_attached", "reason_codes": ["weekly_priority_exposure_floor"]}
+
+    return {"week_index": week.get("week_index"), "result": "floor_no_safe_host",
+            "reason_codes": ["no_compatible_existing_session"]}
+
+
 def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
     """Try retained planner candidates within their original week and budget.
 
@@ -498,6 +681,11 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
             frequency = _number(_athlete(brief).get("training_frequency"))
             if current >= original_cap or (frequency and total >= frequency):
                 audit.append({"week_index": week.get("week_index"), "result": "session_cap", "reason_codes": ["calendar_capacity"]})
+                # No session capacity left, but an existing session may still be
+                # able to host the smallest legal exposure for this goal.
+                floor_audit = _attach_goal_microdose(brief, ordinal, entry)
+                if floor_audit is not None:
+                    audit.append(floor_audit)
                 continue
             declared = {str(d).lower() for d in week.get("declared_training_days") or []}
             protected_days = {str(d.get("day") or "").lower() for d in week.get("intentionally_unused_days") or []}
