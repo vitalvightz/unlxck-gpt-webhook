@@ -17,6 +17,7 @@ import {
   getDays,
   getDisplayableRedFlags,
   getFallbackSafetyNotes,
+  getPriorityMicrodose,
   getRehabOrMobilityBlocks,
   isDeEmphasisedWeightCutSafety,
   planNoteLabel,
@@ -111,6 +112,20 @@ const DECLARED_LIGHT_COMBAT_DESCRIPTION =
 
 function isDeclaredLightCombatTitle(title: string): boolean {
   return /\blight\s+(?:technical\s+)?combat\b/i.test(title);
+}
+
+function PriorityMicrodoseCard({ day }: { day: StructuredDay }) {
+  const dose = getPriorityMicrodose(day);
+  if (!dose) {
+    return null;
+  }
+  return (
+    <div className="sp-priority-microdose">
+      <p className="sp-eyebrow">{titleize(dose.goal)} microdose</p>
+      <p className="sp-priority-microdose-name">{dose.name}</p>
+      <p className="sp-priority-microdose-prescription">{dose.prescription}</p>
+    </div>
+  );
 }
 
 // A sessionless contact day carries no app S&C. The note must match the day kind.
@@ -636,6 +651,8 @@ export function SessionCard({
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
       {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
 
+      {showDayContext && day ? <PriorityMicrodoseCard day={day} /> : null}
+
       <MindsetAnchorCard
         anchor={sessionMindset}
         dedupeContext={
@@ -775,6 +792,7 @@ export function SessionlessDayCard({
       ) : coachLed ? (
         <p className="sp-today-note">{HARD_SPARRING_SESSIONLESS_NOTE}</p>
       ) : null}
+      <PriorityMicrodoseCard day={day} />
       {warning ? <p className="sp-warning">{warning}</p> : null}
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
       {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
@@ -852,6 +870,7 @@ export function DaySessionContext({ day }: { day: StructuredDay }) {
   const warning = cleanText(card?.primary_warning);
   const nutrition = cleanText(card?.nutrition_summary);
   const weightCut = cleanText(card?.weight_cut_warning);
+  const priorityMicrodose = getPriorityMicrodose(day);
   const sessionlessDay = classifySessionlessDay(day);
   const lightTechnicalContext = sessionlessDay.kind === "light_combat";
   const coachLedContact = getCoachLedContactView(day);
@@ -870,7 +889,13 @@ export function DaySessionContext({ day }: { day: StructuredDay }) {
   // below it (same sentence, twice on screen); drop it against those.
   const dayObjectives = getSessions(day).map((session) => cleanText(session.objective));
   const hasDayContext = Boolean(
-    warning || nutrition || weightCut || showLightTechnicalContext || coachLedContact || hasDayMindset,
+    warning ||
+      nutrition ||
+      weightCut ||
+      priorityMicrodose ||
+      showLightTechnicalContext ||
+      coachLedContact ||
+      hasDayMindset,
   );
   if (!hasDayContext) {
     return null;
@@ -888,6 +913,7 @@ export function DaySessionContext({ day }: { day: StructuredDay }) {
           kind={coachLedContact.kind}
         />
       ) : null}
+      {priorityMicrodose ? <PriorityMicrodoseCard day={day} /> : null}
       {warning ? <p className="sp-warning">{warning}</p> : null}
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
       {weightCut ? <p className="sp-warning">{weightCut}</p> : null}

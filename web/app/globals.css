@@ -19145,6 +19145,25 @@ html[data-theme="light"] .loading-operational-item {
   font-size: 0.85rem;
   line-height: 1.5;
 }
+.sp-priority-microdose {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--brand-red);
+  border-radius: var(--radius-stat);
+  background: var(--bg-support);
+}
+.sp-priority-microdose-name {
+  margin: 0;
+  color: var(--text-primary);
+  font-weight: 650;
+}
+.sp-priority-microdose-prescription {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
 .sp-warning {
   margin: 6px 0 0;
   color: var(--danger-ink);

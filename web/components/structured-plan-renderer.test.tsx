@@ -956,6 +956,90 @@ test("renders a coach-led / sparring day with no app blocks as its own card", ()
   assert.equal(html.includes("Rest day."), false);
 });
 
+test("renders a planner microdose inside its sessionless technical-combat host day", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [{
+      week_id: "wk-1",
+      week_index: 1,
+      phase_label: "SPP",
+      days: [{
+        date: "2026-08-15",
+        countdown_label: "D-26",
+        day_type: "low",
+        today_card: { headline: "Light technical combat" },
+        sessions: [],
+        priority_microdose: {
+          goal: "power",
+          name: "Med-Ball Rotational Throw",
+          prescription: "2 x 3/side @ RPE 7",
+        },
+      }],
+    }],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+
+  assert.equal(countOccurrences(html, "Technical Combat"), 1);
+  assert.equal(countOccurrences(html, "Power microdose"), 1);
+  assert.equal(countOccurrences(html, "Med-Ball Rotational Throw"), 1);
+  assert.equal(countOccurrences(html, "2 x 3/side @ RPE 7"), 1);
+  assert.equal(countOccurrences(html, '<article class="sp-session'), 1);
+  assert.ok(html.indexOf("Technical Combat") < html.indexOf("Power microdose"));
+});
+
+test("uses the same microdose card path for every supported planner goal", () => {
+  for (const goal of ["power", "speed", "strength", "footwork", "mobility"]) {
+    const plan = {
+      schema_version: "1.0",
+      plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+      weeks: [{
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "SPP",
+        days: [{
+          date: "2026-08-15",
+          countdown_label: "D-26",
+          day_type: "low",
+          today_card: { headline: "Light technical combat" },
+          sessions: [],
+          priority_microdose: { goal, name: `${goal} drill`, prescription: "2 x 3" },
+        }],
+      }],
+    } satisfies StructuredPlan;
+
+    const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+    assert.equal(countOccurrences(html, `${formatPlanLabel(goal)} microdose`), 1);
+    assert.equal(countOccurrences(html, "sp-priority-microdose"), 3);
+  }
+});
+
+test("renders a microdose before an app session without suppressing either", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [{
+      week_id: "wk-1",
+      week_index: 1,
+      phase_label: "SPP",
+      days: [{
+        date: "2026-08-15",
+        countdown_label: "D-26",
+        day_type: "low",
+        today_card: { headline: "Light technical combat" },
+        priority_microdose: { goal: "speed", name: "Fast-feet primer", prescription: "2 x 5 sec" },
+        sessions: [{ session_id: "s1", session_type: "strength_power", title: "Tactical Watch", blocks: [] }],
+      }],
+    }],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+  assert.equal(countOccurrences(html, "Fast-feet primer"), 1);
+  assert.equal(countOccurrences(html, "Tactical Watch"), 1);
+  assert.ok(html.indexOf("Fast-feet primer") < html.indexOf("Tactical Watch"));
+});
+
 test("a hard-sparring day carries the hard-sparring note, not the technical note", () => {
   const plan = {
     schema_version: "1.0",

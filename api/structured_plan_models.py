@@ -350,6 +350,14 @@ class TodayCard(BaseModel):
     coach_led_contact: str | None = None
 
 
+class PriorityMicrodose(BaseModel):
+    """A small planner-owned dose attached to its host calendar day."""
+
+    goal: str
+    name: str
+    prescription: str
+
+
 class Day(BaseModel):
     """A calendar day in the plan (Section J)."""
 
@@ -367,6 +375,7 @@ class Day(BaseModel):
     planning_week_index: int | None = None
     planning_week_phase: PhaseLabel | None = None
     planning_day_role_keys: list[str] = Field(default_factory=list)
+    priority_microdose: PriorityMicrodose | None = None
     today_card: TodayCard
     sessions: list[Session] = Field(default_factory=list)
 

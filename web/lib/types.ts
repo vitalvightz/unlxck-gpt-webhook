@@ -416,6 +416,12 @@ export type StructuredTodayCard = {
   coach_led_contact?: string | null;
 };
 
+export type PriorityMicrodose = {
+  goal?: string | null;
+  name?: string | null;
+  prescription?: string | null;
+};
+
 export type StructuredDay = {
   date?: string | null;
   weekday?: "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun" | null;
@@ -425,6 +431,7 @@ export type StructuredDay = {
   planning_week_index?: number | null;
   planning_week_phase?: string | null;
   planning_day_role_keys?: string[] | null;
+  priority_microdose?: PriorityMicrodose | null;
   today_card?: StructuredTodayCard | null;
   sessions?: StructuredSession[] | null;
 };
