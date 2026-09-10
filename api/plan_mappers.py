@@ -49,6 +49,9 @@ from .structured_plan_generation import (
     reconcile_late_fight_week_context,
     reconcile_rehab_drill_ids,
 )
+from .structured_plan_deterministic_fallback import (
+    build_deterministic_structured_plan,
+)
 from .structured_plan_locked_merge import merge_locked_structured_content
 from .services.open_plan_timeline import project_open_structured_plan
 from .services.active_plan import get_plan_activation_state
@@ -601,6 +604,26 @@ def _map_plan_detail(
         row.get("structured_plan"),
         raw_markdown=display_plan_text,
     )
+    if structured_plan is None:
+        # Stage 2 failed or its card never validated. Without a structured plan
+        # the athlete client rebuilds its calendar from plan_text, which lets a
+        # model omission delete a declared sparring day, a declared light-combat
+        # day or a Tactical Watch. Assemble the canonical plan from deterministic
+        # planner state instead; plan_text stays stored for admin/diagnostics but
+        # is no longer a schedule authority.
+        fallback = build_deterministic_structured_plan(planning_brief)
+        if fallback is not None:
+            fallback_result = safe_parse_structured_plan(
+                fallback,
+                raw_markdown=display_plan_text or None,
+            )
+            if fallback_result.ok and fallback_result.plan is not None:
+                structured_plan = fallback_result.plan
+                structured_schema_version = fallback_result.plan.schema_version
+                logger.info(
+                    "[plan_mappers] deterministic structured fallback assembled plan_id=%s",
+                    row.get("id"),
+                )
     structured_payload = (
         structured_plan.model_dump(mode="json") if structured_plan is not None else {}
     )
