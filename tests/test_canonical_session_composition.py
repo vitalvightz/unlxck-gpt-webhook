@@ -9,8 +9,16 @@ from fightcamp.late_fight_phase_eligibility import (
 )
 from fightcamp.prescription_resolver import apply_effective_strength_prescriptions
 from fightcamp.planner_context import planner_athlete_model_context
-from fightcamp.session_composition import attach_late_fight_assignments, compose_normal_strength_assignments
-from fightcamp.stage2_payload import _build_late_fight_allowed_exercises_by_day, _slot_matches_late_fight_role
+from fightcamp.session_composition import (
+    attach_late_fight_assignments,
+    compose_normal_rehab_assignments,
+    compose_normal_strength_assignments,
+)
+from fightcamp.stage2_payload import (
+    _build_late_fight_allowed_exercises_by_day,
+    _closed_membership_render_manifest,
+    _slot_matches_late_fight_role,
+)
 from fightcamp.stage2_payload_late_fight import _countdown_weekday_map
 
 
@@ -42,9 +50,85 @@ def _conditioning_slot(name, priority, system="alactic", late_windows=None):
     }
 
 
+def _rehab_slot(name, priority, rehab_role="rehab_left_shin_splint"):
+    return {
+        "slot_id": f"rehab-slot-{priority}-{name}",
+        "role": rehab_role,
+        "priority": "critical" if priority == 1 else "high",
+        "selected": {
+            "name": name,
+            "source": "rehab_block",
+            "prescription": f"{name} - 2 x 10 controlled reps",
+            "why": "Builds left shin tolerance on this low-load day.",
+            "function_class": "tissue_capacity",
+            "rehab_function_label": "Tissue Capacity",
+            "rehab_drill_id": f"shin-{priority}",
+            "restriction_tags": ["rehab", rehab_role],
+        },
+    }
+
+
 def _map(role, d_day=10):
     return {"weeks": [{"phase": "SPP", "calendar_days": [{"weekday": "tuesday", "d_day": d_day}],
                         "session_roles": [{**role, "scheduled_day_hint": "tuesday"}]}]}
+
+
+def test_normal_rehab_composition_closes_mobility_rehab_role_for_rendering():
+    slots = [_rehab_slot("Heel Walks", 1), _rehab_slot("Isometric Toe Lift Holds", 2)]
+    role_map = _map({
+        "role_key": "mobility_rehab",
+        "category": "support_insert",
+    }, 24)
+
+    compose_normal_rehab_assignments(
+        weekly_role_map=role_map,
+        candidate_pools={"SPP": {"rehab_slots": slots}},
+    )
+
+    role = role_map["weeks"][0]["session_roles"][0]
+    assert [item["name"] for item in role["selected_exercise_assignments"]] == [
+        "Heel Walks",
+        "Isometric Toe Lift Holds",
+    ]
+    assert role["selected_exercise_assignments"][0]["rehab_drill_id"] == "shin-1"
+    assert role["selected_exercise_assignments"][0]["function_class"] == "tissue_capacity"
+
+    manifest = _closed_membership_render_manifest({
+        "render_mode": "camp_plan",
+        "selected_plan": {"weekly_role_map": role_map},
+    })
+    assert manifest[0]["selected_count"] == 2
+    assert manifest[0]["exercise_lines"] == [
+        "- Heel Walks: Heel Walks - 2 x 10 controlled reps",
+        "- Isometric Toe Lift Holds: Isometric Toe Lift Holds - 2 x 10 controlled reps",
+    ]
+
+
+def test_normal_rehab_composition_does_not_fill_non_recovery_or_late_tail_roles():
+    role_map = {
+        "weeks": [{
+            "phase": "SPP",
+            "session_roles": [
+                {"role_key": "aerobic_support_day", "category": "conditioning"},
+                {
+                    "role_key": "fight_week_freshness_day",
+                    "category": "recovery",
+                    "preferred_pool": "rehab_slots_or_recovery_only",
+                    "late_fight_tail_owned": True,
+                },
+            ],
+        }],
+    }
+
+    compose_normal_rehab_assignments(
+        weekly_role_map=role_map,
+        candidate_pools={"SPP": {"rehab_slots": [_rehab_slot("Heel Walks", 1)]}},
+    )
+
+    assert all(
+        "selected_exercise_assignments" not in role
+        for role in role_map["weeks"][0]["session_roles"]
+    )
 
 
 def test_resolver_requires_explicit_selection_not_shared_session_index():

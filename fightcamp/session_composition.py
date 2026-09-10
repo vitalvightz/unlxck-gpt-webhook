@@ -90,6 +90,65 @@ def assignment_from_slot(phase: str, slot_group: str, slot: dict[str, Any]) -> d
     return assignment
 
 
+def _rehab_assignment_from_slot(phase: str, slot: dict[str, Any]) -> dict[str, Any] | None:
+    """Preserve the rehab identity needed by final rendering and completion."""
+    assignment = assignment_from_slot(phase, "rehab_slots", slot)
+    if assignment is None:
+        return None
+
+    selected = slot.get("selected") if isinstance(slot.get("selected"), dict) else {}
+    for key in (
+        "source",
+        "function_class",
+        "rehab_function_label",
+        "rehab_drill_id",
+        "movement_patterns",
+        "restriction_tags",
+        "mechanical_risk_tags",
+    ):
+        value = selected.get(key)
+        if value not in (None, "", []):
+            assignment[key] = value
+
+    purpose = str(selected.get("why") or slot.get("purpose") or "").strip()
+    if purpose:
+        assignment["purpose"] = purpose
+    rehab_role = str(slot.get("role") or "").strip()
+    if rehab_role:
+        assignment["rehab_role"] = rehab_role
+    return assignment
+
+
+def _bounded_rehab_slots(slots: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Choose at most two selected drills while representing separate injuries first."""
+    valid = [
+        slot
+        for slot in slots
+        if isinstance(slot, dict)
+        and isinstance(slot.get("selected"), dict)
+        and str(slot["selected"].get("name") or "").strip()
+    ]
+    selected: list[dict[str, Any]] = []
+    represented_roles: set[str] = set()
+
+    for slot in valid:
+        rehab_role = str(slot.get("role") or slot.get("slot_id") or "").strip()
+        if rehab_role in represented_roles:
+            continue
+        represented_roles.add(rehab_role)
+        selected.append(slot)
+        if len(selected) == 2:
+            return selected
+
+    for slot in valid:
+        if slot in selected:
+            continue
+        selected.append(slot)
+        if len(selected) == 2:
+            break
+    return selected
+
+
 def _normalized_fatigue(athlete_model: dict[str, Any]) -> str:
     return normalize_fatigue_level(athlete_model)
 
@@ -1185,6 +1244,58 @@ def compose_normal_conditioning_assignments(
                 "embedded_trunk_support_count": 1 if trunk_support_added else 0,
                 "embedded_trunk_support_skip_reason": trunk_support_skip_reason,
             }
+
+    return weekly_role_map
+
+
+def compose_normal_rehab_assignments(
+    *, weekly_role_map: dict[str, Any], candidate_pools: dict[str, Any]
+) -> dict[str, Any]:
+    """Attach selected Stage 1 rehab drills to normal recovery roles.
+
+    Rehab candidates previously remained outside the authoritative role map, so
+    the compact finalizer packet could not render them. Keep the existing
+    surgical-rehab limit of at most two drills per session and never pull from
+    another phase or from alternates.
+    """
+    for week in weekly_role_map.get("weeks", []) or []:
+        if not isinstance(week, dict):
+            continue
+        phase = str(week.get("phase") or "").strip().upper()
+        pool = candidate_pools.get(phase) if isinstance(candidate_pools, dict) else None
+        rehab_slots = pool.get("rehab_slots", []) if isinstance(pool, dict) else []
+        if not rehab_slots:
+            continue
+
+        remaining_slots = [slot for slot in rehab_slots if isinstance(slot, dict)]
+        for role in week.get("session_roles", []) or []:
+            role_key = str(role.get("role_key") or "").strip().lower() if isinstance(role, dict) else ""
+            category = str(role.get("category") or "").strip().lower() if isinstance(role, dict) else ""
+            preferred_pool = (
+                str(role.get("preferred_pool") or "").strip().lower()
+                if isinstance(role, dict)
+                else ""
+            )
+            is_rehab_role = role_key == "mobility_rehab" or (
+                category == "recovery"
+                and preferred_pool == "rehab_slots_or_recovery_only"
+            )
+            if (
+                not isinstance(role, dict)
+                or role.get("late_fight_tail_owned")
+                or not is_rehab_role
+            ):
+                continue
+
+            owned_slots = _bounded_rehab_slots(remaining_slots)
+            assignments = [
+                assignment
+                for slot in owned_slots
+                if (assignment := _rehab_assignment_from_slot(phase, slot)) is not None
+            ]
+            role["selected_exercise_assignments"] = assignments
+            selected_slot_ids = {id(slot) for slot in owned_slots}
+            remaining_slots = [slot for slot in remaining_slots if id(slot) not in selected_slot_ids]
 
     return weekly_role_map
 
