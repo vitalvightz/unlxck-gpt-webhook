@@ -222,6 +222,24 @@ def _compact_prescribed_items(
     return compact
 
 
+def _drops_locked_display_text(role: dict[str, Any]) -> bool:
+    """True when this role's body is written by the server, not the finalizer.
+
+    A ``selected_drill_locked`` role (in practice the deterministic Fight Tactical
+    Watch) is rendered from its own ``tactical_watch`` object by the structured
+    locked merge, by the deterministic fallback and by the source repair. Shipping
+    the full multi-line script to a model that must not author it spends attention
+    on content it cannot change. The drill's identity still reaches the finalizer
+    via ``governance.selected_drill_name`` and ``preferred_exercise_names``, which
+    is what it needs to plan the surrounding day.
+
+    Stage 1 keeps ``display_text`` on the rich role: the faithfulness gate reads it
+    from the planning brief, not from this packet.
+    """
+    governance = role.get("governance")
+    return isinstance(governance, dict) and governance.get("selected_drill_locked") is True
+
+
 def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
     keep = (
         "session_index",
@@ -331,6 +349,8 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
             compact[key] = _compact_prescribed_items(
                 compact[key], effective_by_slot=effective_by_slot
             )
+    if _drops_locked_display_text(role):
+        compact.pop("display_text", None)
     if "governance" in compact:
         governance = _compact_governance(compact["governance"])
         if governance:
@@ -715,18 +735,17 @@ def build_stage2_finalizer_packet(
             "If selected_plan.session_sequence is present, render every entry in selected_plan.session_sequence as its own athlete-facing countdown card.",
             "Each selected_plan.session_sequence entry with scheduled_countdown_label/countdown_display_label must appear as a visible D-X header in the final output.",
             "Do not omit selected support, recovery, freshness, mobility, reset, or technical roles because they are low stress or short duration.",
-            # Generic locked-drill contract. Stage 1 sometimes selects a specific
-            # activity for a role rather than leaving the choice open. When it
-            # does, the selection is a decision, not a suggestion, and the
-            # finalizer must not re-open it.
-            "If a session role has governance.selected_drill_locked=true, Stage 1 has already chosen that role's activity: preferred_exercise_names[0] is the authoritative activity name. Render that exact name as the activity title.",
-            "For a governance.selected_drill_locked=true role, render the supplied display_text content as that activity's own prescription. Do not rename it, do not substitute a different activity, do not merge it into another session, and do not restate it as generic category language.",
-            # display_text for a locked drill is already written in the session-body
-            # contract. Reshuffling it (promoting a detail line to its own bullet, or
-            # letting the activity name and duration drift above the first bullet)
-            # makes the card parse as several load-less exercises instead of one.
-            "A governance.selected_drill_locked=true display_text is already in final session-body shape: keep its line order exactly. Its leading `Why:` line is that session's objective, its single bulleted line is the activity heading, and every indented line below that bullet is a detail line of that same activity. Do not re-order those lines, do not promote an indented line to its own bullet, and never let the activity name, its duration, or a bare section header render as a session-level note above the bullet.",
-            "A governance.selected_drill_locked=true role is authoritative, must render, and must never be moved to suppressed_roles.",
+            # Locked-drill contract, reduced to context. Stage 1 selects the
+            # activity AND the server now writes its body into every athlete-facing
+            # surface: merge_locked_structured_content builds the card from the
+            # deterministic tactical_watch object, the deterministic fallback
+            # rebuilds it when Stage 2 fails, and the source repair inserts it into
+            # the plan text. The finalizer used to be told to reproduce that body
+            # verbatim, so the whole multi-line script had to be shipped to it; it
+            # no longer authors any of it. What remains is the one thing only the
+            # finalizer can get wrong: the day must exist and must stay free of
+            # adaptive S&C.
+            "A session role with governance.selected_drill_locked=true is a deterministic, server-rendered session. Keep its D-X card in the plan so the day exists, but do not author, rename, expand or restate its content: the server writes that session's own body. Never move it to suppressed_roles, and do not place additional S&C work on it beyond what its own role allows.",
             "Do not collapse a selected countdown session into Lead notes, another day, movement prep, mobility finisher, rationale, or a generic note. It must keep its own D-X card.",
             "If selected_plan.session_sequence contains D-3 fight_week_freshness_day, render a D-3 freshness/reset card even when it is support-class and low RPE.",
             "Render selected countdown cards in descending countdown order, then append D-0 last.",
