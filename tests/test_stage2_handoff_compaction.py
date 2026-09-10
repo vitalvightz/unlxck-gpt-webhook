@@ -311,3 +311,107 @@ def test_suppressed_roles_still_name_what_cannot_be_restored(packet):
     ]
     assert suppressed
     assert all(role.get("role_key") for role in suppressed)
+
+
+# ---------------------------------------------------------------------------
+# ownership: context without authorship
+# ---------------------------------------------------------------------------
+
+
+def test_locked_drill_body_is_not_shipped_but_its_identity_is(packet):
+    """Stage 2 must know the Watch is there; it must not be handed the script."""
+    locked = [
+        role
+        for role in _roles(packet)
+        if (role.get("governance") or {}).get("selected_drill_locked") is True
+    ]
+    assert locked, "fixture must produce deterministic locked drills"
+    for role in locked:
+        assert "display_text" not in role, "the server writes this body, not Stage 2"
+        governance = role.get("governance") or {}
+        # Identity and calendar position survive, so surrounding work is planned
+        # around a day the finalizer can still see.
+        assert governance.get("selected_drill_name") or role.get("preferred_exercise_names")
+        assert role.get("scheduled_countdown_label") or role.get("countdown_label")
+
+
+def test_adaptive_roles_keep_their_display_text(packet):
+    """Only server-owned bodies go: Stage 2-owned roles are untouched."""
+    adaptive = [
+        role
+        for role in _roles(packet)
+        if role.get("display_text")
+        and not (role.get("governance") or {}).get("selected_drill_locked")
+    ]
+    assert adaptive, "adaptive roles must keep the text Stage 2 renders"
+
+
+def test_the_locked_rule_asks_for_the_day_not_the_content(packet):
+    rules = [str(rule) for rule in packet.get("hard_rules") or []]
+    locked_rules = [rule for rule in rules if "selected_drill_locked" in rule]
+    # One context rule replaced three authorship rules.
+    assert len(locked_rules) == 1
+    rule = locked_rules[0]
+    assert "do not author" in rule.lower()
+    assert "suppressed_roles" in rule
+    assert "display_text" not in rule
+
+
+def test_faithfulness_still_reads_the_body_from_the_planning_brief(generated):
+    """The gate's authority is the brief, so packet slimming cannot blind it."""
+    from api.structured_plan_faithfulness import _locked_roles
+
+    roles = _locked_roles(generated["planning_brief"])
+    assert roles
+    assert all(isinstance(role.get("display_text"), str) and role["display_text"] for role in roles)
+
+
+def test_tactical_watch_reaches_the_card_even_if_stage2_omits_the_whole_day(generated):
+    """Context survives without authorship: the server still places the Watch."""
+    from api.structured_plan_calendar_spine import reconcile_calendar_spine
+    from api.structured_plan_faithfulness import _authoritative_locked_day, _locked_roles
+    from api.structured_plan_locked_merge import merge_locked_structured_content
+
+    brief = generated["planning_brief"]
+    watch_days = {
+        day
+        for role in _locked_roles(brief)
+        if (day := _authoritative_locked_day(role)) is not None
+    }
+    assert watch_days
+
+    # Stage 2 renders S&C days only and never mentions a Watch day at all.
+    plan = {
+        "weeks": [
+            {
+                "week_index": 1,
+                "days": [
+                    {
+                        "countdown_label": f"D-{dday}",
+                        "date": "",
+                        "sessions": [
+                            {
+                                "session_id": f"s{dday}",
+                                "session_type": "strength",
+                                "title": "Strength",
+                                "objective": "Build force",
+                                "blocks": [
+                                    {
+                                        "block_id": f"b{dday}",
+                                        "block_type": "exercise",
+                                        "display_name": "Squat",
+                                        "duration": {"value": 30, "unit": "minutes"},
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                    for dday in range(56, -1, -1)
+                    if dday not in watch_days
+                ],
+            }
+        ]
+    }
+    merged = merge_locked_structured_content(reconcile_calendar_spine(plan, brief), brief)
+    assert not merged.unresolved
+    assert len(merged.applied) == len(_locked_roles(brief))

@@ -888,9 +888,13 @@ def test_selected_drill_identity_survives_finalizer_compaction():
     assert compact["role_key"] == "tactical_watch"
     assert compact["athlete_facing_label"] == "Fight Tactical Watch"
     assert compact["preferred_exercise_names"] == ["Intercept the Entry"]
-    # Session objective first, then the selected watch as the one activity bullet
-    # with its own indented detail lines.
-    lines = compact["display_text"].splitlines()
+    # The body is no longer shipped to the finalizer: the server renders the watch
+    # from its own tactical_watch object (structured locked merge, deterministic
+    # fallback, source repair), and every consumer of display_text reads it from
+    # the planning brief rather than from this packet. Identity still travels so
+    # the finalizer can plan the surrounding day.
+    assert "display_text" not in compact
+    lines = role["display_text"].splitlines()
     assert lines[0].startswith("Why: ")
     assert lines[1].startswith("- Intercept the Entry: ")
     assert [line for line in lines if line.startswith("- ")] == [lines[1]]
@@ -903,7 +907,7 @@ def test_selected_drill_identity_survives_finalizer_compaction():
     assert compact["governance"]["render_selected_drill_exactly"] is True
     assert compact["governance"]["do_not_reselect_or_generalize"] is True
     for instruction in role["tactical_watch"]["instructions"]:
-        assert instruction in compact["display_text"]
+        assert instruction in role["display_text"]
 
 
 # --- athlete-facing card shape ------------------------------------------------
