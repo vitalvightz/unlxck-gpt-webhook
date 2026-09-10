@@ -309,3 +309,78 @@ def test_an_intentionally_unused_day_is_never_used_as_a_host():
     brief = _brief(roles=[_technical_host()])
     brief["weekly_role_map"]["weeks"][0]["intentionally_unused_days"] = [{"day": "monday"}]
     assert _attach(brief)["result"] == "floor_no_safe_host"
+
+
+# ---------------------------------------------------------------------------
+# Interaction with recovered structured-dose recognition
+# ---------------------------------------------------------------------------
+
+
+def _speed_entry():
+    return {
+        "goal": "speed",
+        "priority": "primary",
+        "state": "build",
+        "required_intent": "speed_quality",
+        "evidence": [],
+    }
+
+
+def _alactic_speed_role(*, structured: bool):
+    """Repro B's role: legitimate 8 x 5 sec / 60 sec alactic speed work."""
+    assignment = {
+        "slot_id": "spp-alactic-1",
+        "name": "Backstep Counter Reset",
+        "effective_prescription": "8 x 5 sec / 60 sec rest",
+        "effective_rounds": 8,
+    }
+    if structured:
+        assignment.update({"work_sec": 5.0, "rest_sec": 60.0, "rounds": 8.0})
+    return {
+        "category": "conditioning",
+        "role_key": "alactic_speed_day",
+        "preferred_system": "alactic",
+        "scheduled_day_hint": "Monday",
+        "session_index": 1,
+        "selected_exercise_assignments": [assignment],
+    }
+
+
+def _brief_with_pool(role):
+    brief = _brief(roles=[role])
+    brief["candidate_pools"] = {
+        "GPP": {
+            "conditioning_slots": [
+                {
+                    "slot_id": "spp-alactic-1",
+                    "session_index": 1,
+                    "selected": {
+                        "name": "Backstep Counter Reset",
+                        "system": "ATP-PCr",
+                        "prescription": "8 x 5 sec / 60 sec rest",
+                        "selection_metadata": {},
+                    },
+                }
+            ]
+        }
+    }
+    return brief
+
+
+def test_recognised_speed_work_makes_the_floor_a_no_op():
+    """Repro B's whole point: once the structured dose survives, the existing
+    alactic speed day satisfies the weekly floor and nothing is added."""
+    brief = _brief_with_pool(_alactic_speed_role(structured=True))
+    audit = _attach(brief, _speed_entry())
+    assert audit["result"] == "floor_already_met"
+    assert audit["reason_codes"] == ["existing_weekly_exposure"]
+    assert "priority_microdose" not in brief["weekly_role_map"]["weeks"][0]["session_roles"][0]
+
+
+def test_the_floor_does_not_duplicate_legitimate_existing_speed_work():
+    brief = _brief_with_pool(_alactic_speed_role(structured=True))
+    _attach(brief, _speed_entry())
+    _attach(brief, _speed_entry())
+    roles = brief["weekly_role_map"]["weeks"][0]["session_roles"]
+    assert len(roles) == 1
+    assert all("priority_microdose" not in role for role in roles)
