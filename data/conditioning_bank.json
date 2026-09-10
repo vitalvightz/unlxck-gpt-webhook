@@ -5173,7 +5173,8 @@
       "mech_trunk_rotation",
       "mech_upper_press"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "round_based": true
   },
   {
     "name": "Kettlebell Swings (EMOM Aerobic)",
@@ -8640,7 +8641,8 @@
       "d7",
       "d6_to_d5",
       "d4_to_d2"
-    ]
+    ],
+    "round_based": true
   },
   {
     "name": "Assault Bike Rhythm Primer",
