@@ -1611,6 +1611,7 @@ def _resolve_conditioning_sessions(
     num_sessions: int,
     alactic_primary_cap: int = 1,
     round_seconds: float | None = None,
+    workload_expansion_allowed: bool = False,
 ) -> list[dict]:
     """Distribute already-selected conditioning drills into sessions.
 
@@ -1621,12 +1622,19 @@ def _resolve_conditioning_sessions(
     explicitly allows a second alactic primary. Across all systems inside a
     single session, at most one fallback is surfaced.
 
-    A system keeps more than one primary only when its highest-ranked drill
-    cannot carry the phase/system workload on its own: further primaries are
-    added in rank order until the shared ``conditioning_phase_workload_envelope``
-    active-work target is met, and never beyond it. A single drill that already
-    meets the target stays a single drill, and where no drill states a dose (or
-    no phase guidance applies) the historical one-primary behaviour holds.
+    A system keeps more than one primary only when ``workload_expansion_allowed``
+    is set *and* its highest-ranked drill cannot carry the phase/system workload
+    on its own: further primaries are added in rank order until the shared
+    ``conditioning_phase_workload_envelope`` active-work target is met, and never
+    beyond it. A single drill that already meets the target stays a single drill,
+    and where no drill states a dose (or no phase guidance applies) the historical
+    one-primary behaviour holds.
+
+    ``workload_expansion_allowed`` carries the athlete's conditioning priority:
+    the developmental envelope is a gas-tank *development* target, so an athlete
+    whose primary goal or primary weak area is not conditioning keeps the normal
+    one-primary maintenance dose rather than spending Power/Speed/Strength
+    capacity closing an envelope they never asked for.
     """
 
     ordered_keys = ["aerobic", "glycolytic", "alactic"]
@@ -1641,10 +1649,12 @@ def _resolve_conditioning_sessions(
 
         if system == "alactic":
             primary_cap = max(1, int(alactic_primary_cap or 1))
-        else:
+        elif workload_expansion_allowed:
             primary_cap = _conditioning_workload_primary_cap(
                 drills, phase=phase, system=system, round_seconds=round_seconds
             )
+        else:
+            primary_cap = 1
         explicit_primaries = [d for d in drills if not d.get("render_as_fallback")]
         primary_raws = explicit_primaries[:primary_cap]
         if len(primary_raws) < primary_cap:
@@ -4953,6 +4963,9 @@ def generate_conditioning_block(flags):
         num_sessions=num_conditioning_sessions,
         alactic_primary_cap=alactic_primary_cap,
         round_seconds=athlete_round_seconds(flags.get("rounds_format")),
+        workload_expansion_allowed=_conditioning_priority_is_primary_gas_tank(
+            priority_profile
+        ),
     )
     grouped_drills = _resolved_grouped_drills(resolved_sessions)
     selected_drill_names = _resolved_conditioning_names(resolved_sessions)
