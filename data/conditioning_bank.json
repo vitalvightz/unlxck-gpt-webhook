@@ -529,9 +529,9 @@
       "mech_systemic_fatigue"
     ],
     "notes": "Focus on technique, not intensity",
-    "work_sec": 600,
+    "work_sec": 300,
     "rounds": 3,
-    "total_minutes": 30.0,
+    "total_minutes": 15.0,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
@@ -546,7 +546,8 @@
       "d6_to_d5"
     ],
     "rpe": 4,
-    "intensity": "low"
+    "intensity": "low",
+    "round_based": true
   },
   {
     "name": "Rowing (Zone 2)",
