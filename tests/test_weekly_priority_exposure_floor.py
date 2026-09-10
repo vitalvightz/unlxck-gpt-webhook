@@ -564,3 +564,301 @@ def test_neural_microdose_already_coexists_with_declared_light_combat():
     assert LoadClass.NEURAL_MICRODOSE in _LIGHT_COMBAT_COEXIST_LOADS
     assert LoadClass.MEANINGFUL_STRENGTH not in _LIGHT_COMBAT_COEXIST_LOADS
     assert LoadClass.HARD_CONTACT not in _LIGHT_COMBAT_COEXIST_LOADS
+
+
+# ---------------------------------------------------------------------------
+# The primary weakness is the floor's second build obligation
+#
+# It reuses this same machinery - required_intent, coverage windows, evidence
+# recognition, whole-role repair, microdose fallback - rather than a second,
+# competing weakness planner.
+# ---------------------------------------------------------------------------
+
+
+def _athlete(**kw):
+    athlete = {
+        "key_goals": ["power"],
+        "primary_goal": "power",
+        "weak_areas": ["footwork"],
+        "primary_weak_area": "footwork",
+    }
+    athlete.update(kw)
+    return athlete
+
+
+_FOOTWORK_ENTRY = {
+    "goal": "footwork",
+    "priority": "primary_weakness",
+    "state": "build",
+    "required_intent": "footwork_practice",
+    "evidence": [],
+}
+
+
+def test_primary_weakness_is_an_obligation_ranked_under_the_primary_goal():
+    from fightcamp.goal_preservation import selected_goals
+
+    assert selected_goals(_athlete(key_goals=["power", "speed"])) == [
+        ("power", "primary"),
+        ("footwork", "primary_weakness"),
+        ("speed", "secondary"),
+    ]
+
+
+def test_a_target_selected_as_both_goal_and_weakness_is_one_obligation():
+    """The profile already merges such a collision into one canonical priority
+    target; one exposure satisfies both, and it must not be demanded twice."""
+    from fightcamp.goal_preservation import selected_goals
+
+    assert selected_goals(_athlete(weak_areas=["power"], primary_weak_area="power")) == [
+        ("power", "primary")
+    ]
+
+
+def test_a_weakness_also_named_among_the_goals_is_promoted_not_duplicated():
+    from fightcamp.goal_preservation import selected_goals
+
+    assert selected_goals(_athlete(key_goals=["power", "footwork"])) == [
+        ("power", "primary"),
+        ("footwork", "primary_weakness"),
+    ]
+
+
+def test_selection_vocabulary_is_projected_onto_the_adaptation_family():
+    from fightcamp.goal_preservation import selected_goals
+
+    assert ("speed", "primary_weakness") in selected_goals(
+        _athlete(weak_areas=["reactive"], primary_weak_area="reactive")
+    )
+
+
+def test_an_unrecognised_weak_area_creates_no_obligation():
+    """Weak areas are free text at intake. A target with no required intent,
+    role match or evidence path could never be discharged, so admitting it
+    would be a permanent blocking obligation rather than a floor."""
+    from fightcamp.goal_preservation import selected_goals
+
+    assert selected_goals(_athlete(weak_areas=["chin"], primary_weak_area="chin")) == [
+        ("power", "primary")
+    ]
+
+
+def test_the_weakness_obligation_is_a_build_obligation():
+    from fightcamp.goal_preservation import classify_goal_preservation
+
+    entry = next(e for e in classify_goal_preservation(_athlete()) if e["goal"] == "footwork")
+    assert entry["state"] == "build"
+    assert entry["required_intent"] == "footwork_practice"
+    assert entry["reason_codes"] == ["primary_weakness"]
+
+
+def test_a_cold_primary_weakness_gets_the_same_microdose_fallback():
+    brief = _brief(roles=[_technical_host()])
+    audit = _attach(brief, _FOOTWORK_ENTRY)
+    assert audit["result"] == "microdose_attached"
+    assert audit["goal"] == "footwork"
+    host = brief["weekly_role_map"]["weeks"][0]["session_roles"][0]
+    assert host["priority_microdose"]["intents"] == ["footwork_practice"]
+
+
+def test_goal_and_weakness_each_get_their_own_host_when_capacity_allows():
+    strength_day = {
+        "category": "strength",
+        "role_key": "strength_day",
+        "scheduled_day_hint": "Wednesday",
+        "session_index": 2,
+    }
+    brief = _brief(roles=[_technical_host(), strength_day])
+    assert _attach(brief)["result"] == "microdose_attached"
+    assert _attach(brief, _FOOTWORK_ENTRY)["result"] == "microdose_attached"
+    hosted = {
+        role["role_key"]: role["priority_microdose"]["goal"]
+        for role in brief["weekly_role_map"]["weeks"][0]["session_roles"]
+    }
+    assert hosted == {"strength_day": "power", "light_technical_combat_day": "footwork"}
+
+
+def test_when_they_compete_for_the_only_capacity_the_primary_goal_wins():
+    """Not a forced second touch: the weakness records that the week's only
+    safe capacity was already spent and waits for another legal host."""
+    brief = _brief(roles=[_technical_host()])
+    assert _attach(brief)["result"] == "microdose_attached"
+    audit = _attach(brief, _FOOTWORK_ENTRY)
+    assert audit["result"] == "floor_no_safe_capacity"
+    assert audit["reason_codes"] == ["priority_capacity_spent"]
+    assert audit["held_by"] == ["power"]
+    host = brief["weekly_role_map"]["weeks"][0]["session_roles"][0]
+    assert host["priority_microdose"]["goal"] == "power"
+
+
+def test_existing_weakness_exposure_is_recognised_before_anything_is_added():
+    """Recognition first: a week that already trains the weakness meaningfully
+    gets no microdose at all."""
+    brief = _brief(roles=[_technical_host()])
+    _attach(brief, _FOOTWORK_ENTRY)
+    assert _attach(brief, _FOOTWORK_ENTRY)["result"] == "floor_already_met"
+
+
+# ---------------------------------------------------------------------------
+# Every official intake weak area is serviced deliberately
+#
+# `WEAK_AREA_OPTIONS` in web/lib/intake-options.ts is the source of truth. A
+# weak area must either be an obligation this floor carries or a documented
+# delegation to a canonical subsystem - never a value that quietly falls off
+# the end of a lookup. The options are read from the intake file itself so a
+# new choice cannot be added on the web side without failing here.
+# ---------------------------------------------------------------------------
+
+import re
+from pathlib import Path
+
+_OFFICIAL_WEAK_AREAS = {
+    "gas_tank",
+    "strength",
+    "power",
+    "speed",
+    "footwork",
+    "balance",
+    "mobility",
+    "coordination",
+    "trunk_strength",
+}
+
+
+def _intake_weak_area_options():
+    source = (Path(__file__).parents[1] / "web/lib/intake-options.ts").read_text()
+    block = re.search(r"WEAK_AREA_OPTIONS[^=]*=\s*\[(.*?)\];", source, re.S)
+    assert block, "WEAK_AREA_OPTIONS not found in web/lib/intake-options.ts"
+    return re.findall(r'value:\s*"([^"]+)"', block.group(1))
+
+
+def _disposition(weak_area):
+    from fightcamp.goal_preservation import primary_weakness_disposition
+
+    return primary_weakness_disposition(
+        _athlete(weak_areas=[weak_area], primary_weak_area=weak_area)
+    )
+
+
+def test_the_official_weak_area_list_has_not_drifted():
+    assert set(_intake_weak_area_options()) == _OFFICIAL_WEAK_AREAS
+
+
+@pytest.mark.parametrize("weak_area", sorted(_OFFICIAL_WEAK_AREAS))
+def test_every_official_weak_area_resolves_deliberately(weak_area):
+    """Serviced by the weekly floor, or delegated to a named subsystem. Never
+    ignored, and never left to an unrecognised-free-text fallback."""
+    disposition = _disposition(weak_area)
+    assert disposition["resolution"] in {"weekly_floor", "delegated"}, disposition
+    if disposition["resolution"] == "weekly_floor":
+        from fightcamp.goal_preservation import INTENTS
+
+        assert INTENTS[disposition["target"]] == disposition["required_intent"]
+    else:
+        assert disposition["subsystem"]
+
+
+@pytest.mark.parametrize(
+    "weak_area,target",
+    [
+        ("strength", "strength"),
+        ("power", "power"),
+        ("speed", "speed"),
+        ("footwork", "footwork"),
+        ("mobility", "mobility"),
+        ("gas_tank", "conditioning"),
+    ],
+)
+def test_floor_serviced_weak_areas_become_build_obligations(weak_area, target):
+    from fightcamp.goal_preservation import classify_goal_preservation
+
+    entries = classify_goal_preservation(
+        _athlete(key_goals=["skill_refinement"], primary_goal="skill_refinement",
+                 weak_areas=[weak_area], primary_weak_area=weak_area)
+    )
+    entry = next(e for e in entries if e["goal"] == target)
+    assert (entry["priority"], entry["state"]) == ("primary_weakness", "build")
+
+
+def test_gas_tank_is_a_conditioning_obligation_the_floor_never_microdoses():
+    """The Gas Tank preset pairs a conditioning goal with a gas_tank weakness,
+    so gas_tank must enter the obligation set. Expanding it with a generic
+    microdose would re-open the conditioning spillover the workload-envelope
+    gate closed, so the fallback tier declines it and the conditioning
+    architecture keeps sole authority over conditioning volume."""
+    assert _disposition("gas_tank")["target"] == "conditioning"
+    assert "conditioning" not in _MICRODOSE_SPECS
+    entry = {
+        "goal": "conditioning",
+        "priority": "primary_weakness",
+        "state": "build",
+        "required_intent": "energy_system_training",
+        "evidence": [],
+    }
+    assert _attach(_brief(roles=[_technical_host()]), entry) is None
+
+
+@pytest.mark.parametrize("weak_area", ["balance", "coordination"])
+def test_balance_and_coordination_really_do_reach_their_subsystem(weak_area):
+    """The delegation is only honest if the named subsystem actually triggers
+    on this same weak-area selection."""
+    from fightcamp.coordination_support_library import has_coordination_target
+
+    assert _disposition(weak_area)["subsystem"] == "coordination_support_library"
+    assert has_coordination_target(_athlete(weak_areas=[weak_area], primary_weak_area=weak_area))
+
+
+def test_trunk_strength_really_does_reach_its_subsystem():
+    from fightcamp.session_composition import _trunk_strength_selected
+
+    assert _disposition("trunk_strength")["subsystem"] == "session_composition.trunk_support"
+    assert _trunk_strength_selected(
+        _athlete(weak_areas=["trunk_strength"], primary_weak_area="trunk_strength")
+    )
+
+
+def test_the_option_label_spelling_resolves_the_same_way():
+    """Some surfaces submit the option label rather than its value."""
+    assert _disposition("Core / Trunk Strength")["resolution"] == "delegated"
+
+
+def test_free_text_stays_unrecognised_and_is_reported_as_such():
+    disposition = _disposition("chin")
+    assert disposition["resolution"] == "unrecognised"
+    assert "target" not in disposition and "subsystem" not in disposition
+
+
+def test_no_selected_weak_area_is_its_own_resolution():
+    from fightcamp.goal_preservation import primary_weakness_disposition
+
+    assert primary_weakness_disposition(
+        _athlete(weak_areas=[], primary_weak_area="")
+    ) == {"weakness": "", "resolution": "none"}
+
+
+def test_the_disposition_is_recorded_on_the_brief():
+    """A delegated weak area must be auditable: without the record, "serviced
+    elsewhere" and "silently dropped" look identical from the outside."""
+    from fightcamp.goal_preservation import reconcile_goal_preservation
+
+    brief = _brief(roles=[_technical_host()])
+    brief["athlete_snapshot"].update(weak_areas=["balance"], primary_weak_area="balance")
+    reconcile_goal_preservation(brief)
+    assert brief["primary_weakness_disposition"] == {
+        "weakness": "balance",
+        "selected_label": "balance",
+        "resolution": "delegated",
+        "subsystem": "coordination_support_library",
+    }
+
+
+def test_the_gas_tank_preset_is_one_obligation_not_two():
+    """The UI preset selects a conditioning goal AND a gas_tank weakness. Both
+    resolve to the conditioning family, so they merge: one exposure satisfies
+    the pair, and the athlete is not billed twice for the same adaptation."""
+    from fightcamp.goal_preservation import selected_goals
+
+    assert selected_goals(
+        _athlete(key_goals=["conditioning"], primary_goal="conditioning",
+                 weak_areas=["gas_tank"], primary_weak_area="gas_tank")
+    ) == [("conditioning", "primary")]

@@ -19,7 +19,11 @@ from .prescription_resolver import (
     _strength_role_slot_groups,
     athlete_dose_state,
 )
-from .priority_profile import build_priority_profile, normalize_priority_values
+from .priority_profile import (
+    _SELECTED_PRIORITY_TARGET_ALIASES,
+    build_priority_profile,
+    normalize_priority_values,
+)
 from .role_labels import athlete_facing_label_for, stamp_role_label
 from .tagging import normalize_tag
 
@@ -47,6 +51,53 @@ _COMPRESSION_REASONS = {
     "fight_week_override": "fight_proximity",
     "pre_hard_contact_strength_exposure_cap": "pre_hard_contact_managed_stress",
 }
+# Weekly floor precedence: safety and phase authority already gate everything
+# below, then existing exposure, then primary goal, then primary weakness, then
+# secondaries. Obligations are repaired in this list order, so when goal and
+# weakness genuinely compete for the only safe capacity the goal takes it and
+# the weakness records that it found none.
+_BUILD_PRIORITIES = {"primary", "primary_weakness"}
+_PRIORITY_REASON_CODES = {
+    "primary": "primary_goal",
+    "primary_weakness": "primary_weakness",
+    "secondary": "secondary_goal",
+}
+# Every official intake weak area resolves deliberately - never by falling off
+# the end of a lookup. `web/lib/intake-options.ts::WEAK_AREA_OPTIONS` is the
+# source of truth for this list, and `test_weekly_priority_exposure_floor`
+# asserts one disposition per option, so a new intake choice cannot be added
+# without deciding what services it.
+#
+# Tier 1: the weekly floor speaks for these directly.
+_WEAKNESS_FLOOR_TARGETS = {
+    "strength": "strength",
+    "power": "power",
+    "speed": "speed",
+    "footwork": "footwork",
+    "mobility": "mobility",
+    # The Gas Tank preset pairs a conditioning goal with a gas_tank weakness, so
+    # gas_tank is a real floor obligation on the conditioning family: it is
+    # recognised, repaired and deferred like any other. It is deliberately NOT
+    # microdose-expandable - `_MICRODOSE_SPECS` holds no conditioning spec, so
+    # the fallback tier declines it and the conditioning workload-envelope
+    # architecture stays the sole authority on conditioning volume.
+    "gas_tank": "conditioning",
+}
+
+# Tier 2: a canonical subsystem already owns these, and it services them from
+# the same weak-area selection this contract reads. Making them floor
+# obligations would demand development evidence the coverage ledger has no path
+# to observe - a support insert is explicitly not session capacity - so the
+# obligation could never be discharged and would block every plan that selects
+# them. They are delegated on purpose, and the delegation is recorded.
+_WEAKNESS_DELEGATED_SUBSYSTEMS = {
+    "balance": "coordination_support_library",
+    "coordination": "coordination_support_library",
+    "trunk_strength": "session_composition.trunk_support",
+    # Defensive: some surfaces submit the option label rather than its value.
+    "core_/_trunk_strength": "session_composition.trunk_support",
+    "core_trunk_strength": "session_composition.trunk_support",
+}
 _SPEED_TAGS = {"speed", "reactive", "reaction", "acceleration", "max_velocity", "speed_reaction"}
 _TECHNICAL_TAGS = {"technical", "skill_refinement", "technical_footwork", "footwork", "coordination"}
 
@@ -60,8 +111,62 @@ def _athlete(brief: dict) -> dict:
     return brief.get("athlete_snapshot") or brief.get("athlete_model") or {}
 
 
+def primary_weakness_disposition(athlete: dict, focus: dict | None = None) -> dict:
+    """How the selected primary weak area is serviced, decided explicitly.
+
+    Every official intake weak area lands in exactly one of these resolutions:
+
+    ``weekly_floor``
+        A build obligation on ``target``, carried by the same pipeline the
+        primary goal uses.
+    ``delegated``
+        A canonical subsystem named by ``subsystem`` already services this weak
+        area from the same selection, and does it better than a generic
+        exposure floor could.
+    ``unrecognised``
+        Free text that names no known adaptation. It creates no obligation: the
+        coverage ledger has no required intent, role match or evidence path for
+        it, so an obligation could never be discharged and would block the plan
+        forever rather than floor anything.
+    ``none``
+        No primary weak area was selected.
+
+    Selection vocabulary (``reactive``, ``explosive``, ...) is projected onto
+    adaptation families through the same canonical map
+    ``selected_priority_targets`` uses, so the weakness is read in the
+    vocabulary the profile already owns rather than a second one invented here.
+    """
+    focus = focus or {}
+    profile = build_priority_profile(athlete)
+    selected = str(focus.get("primary_weak_area") or profile.primary_weak_area or "")
+    raw = normalize_tag(selected) or ""
+    if not raw:
+        return {"weakness": "", "resolution": "none"}
+    record = {"weakness": raw, "selected_label": selected.strip()}
+    if raw in _WEAKNESS_DELEGATED_SUBSYSTEMS:
+        return {**record, "resolution": "delegated",
+                "subsystem": _WEAKNESS_DELEGATED_SUBSYSTEMS[raw]}
+    target = _WEAKNESS_FLOOR_TARGETS.get(raw) or _goal(_SELECTED_PRIORITY_TARGET_ALIASES.get(raw, raw))
+    if target in INTENTS:
+        return {**record, "resolution": "weekly_floor", "target": target,
+                "required_intent": INTENTS[target]}
+    return {**record, "resolution": "unrecognised"}
+
+
+def _primary_weakness(athlete: dict, focus: dict | None = None) -> str:
+    """The primary weak area as a floor obligation target, or "" when it is none."""
+    disposition = primary_weakness_disposition(athlete, focus)
+    return disposition.get("target", "") if disposition["resolution"] == "weekly_floor" else ""
+
+
 def selected_goals(athlete: dict, focus: dict | None = None) -> list[tuple[str, str]]:
-    """Retain every selection, including profiles supplied without PlanInput."""
+    """Retain every selection, including profiles supplied without PlanInput.
+
+    The primary weak area is a build obligation alongside the primary goal, in
+    the weekly floor's order: primary goal, primary weakness, then secondaries.
+    A target selected as both is one obligation, satisfied once - the profile
+    already treats such a collision as a single canonical priority target.
+    """
     focus = focus or {}
     profile = build_priority_profile(athlete)
     primary = _goal(focus.get("primary_goal") or profile.primary_goal or athlete.get("primary_goal"))
@@ -69,7 +174,15 @@ def selected_goals(athlete: dict, focus: dict | None = None) -> list[tuple[str, 
               *normalize_priority_values(athlete.get("secondary_goals")),
               *normalize_priority_values(focus.get("secondary_goals"))]
     goals = list(dict.fromkeys(_goal(value) for value in values if _goal(value)))
-    return [(goal, "primary" if goal == primary else "secondary") for goal in goals]
+    selections = [(goal, "primary" if goal == primary else "secondary") for goal in goals]
+    weakness = _primary_weakness(athlete, focus)
+    if not weakness or weakness == primary:
+        # Merged: one exposure discharges the goal and the weakness together.
+        return selections
+    # A weakness also named among the goals is still the primary weakness; it is
+    # promoted out of the secondary tier rather than carried twice.
+    selections = [row for row in selections if row[0] != weakness]
+    return [*selections[:1], (weakness, "primary_weakness"), *selections[1:]]
 
 
 def classify_goal_preservation(athlete: dict, focus: dict | None = None) -> list[dict]:
@@ -85,8 +198,11 @@ def classify_goal_preservation(athlete: dict, focus: dict | None = None) -> list
         limits.append("weight_cut_pressure")
     return [
         {"goal": goal, "priority": priority,
-         "state": "build" if priority == "primary" and not limits else "maintain",
-         "reason_codes": [f"{priority}_goal", *limits],
+         # Primary goal and primary weakness are both build obligations: each
+         # earns one meaningful exposure per build week. Secondaries stay
+         # opportunistic maintenance.
+         "state": "build" if priority in _BUILD_PRIORITIES and not limits else "maintain",
+         "reason_codes": [_PRIORITY_REASON_CODES[priority], *limits],
          "required_intent": INTENTS.get(goal, f"selected_goal:{goal}"),
          "evidence": []}
         for goal, priority in selected_goals(athlete, focus)
@@ -767,6 +883,23 @@ def _attach_goal_microdose(brief: dict, ordinal: int, entry: dict) -> dict | Non
                 "role_key": host.get("role_key"), "goal": entry["goal"],
                 "result": "microdose_attached", "reason_codes": ["weekly_priority_exposure_floor"]}
 
+    # An earlier obligation in the same week may already hold the only session
+    # that could have hosted this one - `_microdose_host_roles` excludes a role
+    # that already carries a microdose, and stacking a second touch on it is not
+    # this tier's call to make. Say that plainly instead of reporting it as "no
+    # compatible session": the capacity existed, a higher-precedence priority
+    # spent it, and this obligation waits for another legal host rather than
+    # forcing more work onto the week.
+    taken = [
+        role.get("priority_microdose", {}).get("goal")
+        for role in week.get("session_roles") or []
+        if isinstance(role, dict) and isinstance(role.get("priority_microdose"), dict)
+    ]
+    if any(goal and goal != entry["goal"] for goal in taken):
+        return {"week_index": week.get("week_index"), "goal": entry["goal"],
+                "result": "floor_no_safe_capacity",
+                "reason_codes": ["priority_capacity_spent"],
+                "held_by": [goal for goal in taken if goal and goal != entry["goal"]]}
     return {"week_index": week.get("week_index"), "result": "floor_no_safe_host",
             "reason_codes": ["no_compatible_existing_session"]}
 
@@ -942,6 +1075,12 @@ def reconcile_goal_preservation(brief: dict) -> dict:
                      satisfied=not missing and entry["state"] != "defer")
     brief["goal_preservation_version"] = VERSION
     brief["goal_preservation"] = entries
+    # A weak area serviced elsewhere must still be auditable here: without this
+    # record, "delegated to a canonical subsystem" and "silently dropped" look
+    # identical from the outside.
+    brief["primary_weakness_disposition"] = primary_weakness_disposition(
+        _athlete(brief), brief.get("priority_focus")
+    )
     compressed = deepcopy(brief.get("compressed_priorities") or _athlete(brief).get("compressed_priorities") or {})
     compressed["goal_preservation"] = entries
     brief["compressed_priorities"] = compressed
