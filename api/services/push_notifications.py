@@ -17,6 +17,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from api.services.fight_countdown_eligibility import filter_late_fight_countdown_candidates
 from api.services.notification_foundation import (
     NotificationCandidate,
     finalize_notification_delivery,
@@ -238,6 +239,9 @@ def dispatch_push_candidates(
     if not push_notifications_configured():
         return 0
     reference = now_utc or datetime.now(timezone.utc)
+    candidates = filter_late_fight_countdown_candidates(store, candidates)
+    if not candidates:
+        return 0
     prepared = prepare_notification_delivery(store, candidates, now_utc=reference)
     if prepared is None:
         return 0
