@@ -8,6 +8,8 @@ a card that reflects the validated text, otherwise the raw text fallback.
 """
 from __future__ import annotations
 
+import copy
+
 import api.structured_plan_faithfulness as faithfulness
 from api.structured_plan_faithfulness import check_structured_faithfulness
 from api.structured_plan_faithfulness import repair_locked_tactical_watch_source_text
@@ -294,15 +296,24 @@ Why: Know what happens after the first punches so pocket exchanges stay planned.
   Step 6: {OVERLAY_ROUND_PHASE}
 """
 
-    violations = check_structured_faithfulness(
+    # Stage 2 authored no Tactical Watch prose on D-17, and it was never its job
+    # to: the locked role owns the drill and the deterministic merge projects it
+    # into the card. The card carries the authoritative content, so there is no
+    # violation -- the requirement is checked against the role, not the prose.
+    assert check_structured_faithfulness(
         _body_attack_card(),
         source,
         _body_attack_brief(),
-    )
+    ) == []
 
-    assert violations == [
-        "LOCKED_CONTENT: 'Body Attack Opportunity' "
-        "locked_tactical_watch_missing_from_stage2 on D-17"
+    # The requirement did not disappear, it moved to the real owner: a card that
+    # drops the locked block still fails, even though the prose is unchanged.
+    stripped = copy.deepcopy(_body_attack_card())
+    stripped["weeks"][0]["days"][0]["sessions"][0]["blocks"] = []
+    assert check_structured_faithfulness(stripped, source, _body_attack_brief()) == [
+        "LOCKED_CONTENT: 'Body Attack Opportunity' lost required source content: "
+        "selected drill name, Why, Step 1, Step 2, Step 3, Step 4, Step 5, Step 6, "
+        "Intent, Focus, Reset, Anchor, Purpose, Progress"
     ]
 
 
