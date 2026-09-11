@@ -58,6 +58,7 @@ from .session_composition import (
     _selected_coaching_notes,
     attach_late_fight_assignments,
     compose_normal_conditioning_assignments,
+    compose_normal_rehab_assignments,
     compose_normal_strength_assignments,
 )
 from .normal_calendar_placement import fill_missing_session_days
@@ -1256,6 +1257,9 @@ def _build_planning_brief(
     )
     apply_late_camp_role_morph(weekly_role_map)
     compose_normal_conditioning_assignments(
+        weekly_role_map=weekly_role_map, candidate_pools=candidate_pools,
+    )
+    compose_normal_rehab_assignments(
         weekly_role_map=weekly_role_map, candidate_pools=candidate_pools,
     )
     # The long-camp splice owns D-13 inward, but uses the same selector and
