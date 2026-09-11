@@ -28,8 +28,31 @@ from fightcamp.combat_load_policy import (
 )
 from fightcamp.session_composition import (
     apply_realised_load_calendar_revalidation,
+    assignment_from_slot,
+    compose_normal_conditioning_assignments,
+    realised_role_stress,
     realised_session_stress,
 )
+
+
+def _bank_slot(name, prescription, mechanical_risk_tags, *, system="alactic"):
+    """A candidate slot shaped the way the production pools shape one."""
+    return {
+        "slot_id": f"slot-{name.lower().replace(' ', '-')}",
+        "session_index": 1,
+        "priority": 1,
+        "purpose": name,
+        "role": system,
+        "selected": {
+            "name": name,
+            "role": system,
+            "prescription": prescription,
+            "selection_metadata": {
+                "mechanical_risk_tags": list(mechanical_risk_tags),
+                "duration": prescription,
+            },
+        },
+    }
 
 
 def _profile(load_class, stress=None, occupancy=None):
@@ -197,42 +220,106 @@ def test_role_key_promise_is_overridden_by_the_realised_stamp():
 
 
 def test_realised_stress_measures_the_composed_plyometric_session():
-    stress = realised_session_stress(
-        [
-            {
-                "name": "Alternating Bounds",
-                "effective_prescription": "4x5/side, 2min rest",
-                "mechanical_risk_tags": ["mech_ballistic", "mech_lower_jump"],
-            },
-            {
-                "name": "Single-Leg Hop (Stabilize)",
-                "effective_prescription": "4x5/side, 90s rest",
-                "mechanical_risk_tags": ["mech_landing_impact", "mech_lower_jump"],
-            },
-        ]
-    )
+    """Measured from assignments as the real composition builder emits them."""
+    assignments = [
+        assignment_from_slot("SPP", "conditioning_slots", _bank_slot(
+            "Alternating Bounds", "4x5/side, 2min rest",
+            ["mech_ballistic", "mech_lower_jump"],
+        )),
+        assignment_from_slot("SPP", "conditioning_slots", _bank_slot(
+            "Single-Leg Hop (Stabilize)", "4x5/side, 90s rest",
+            ["mech_landing_impact", "mech_lower_jump"],
+        )),
+    ]
+    stress = realised_session_stress(assignments)
     assert stress.neural_mechanical is StressLevel.HIGH
     assert BodyRegion.LOWER in stress.regions
+
+
+def test_authored_mechanical_tags_survive_onto_production_assignments():
+    """Regression: the assignment is the only surviving record of what a session
+    mechanically is, because the candidate pool it came from is compacted.
+
+    Dropping the tags here made body region permanently unknown downstream,
+    which silently disabled the region-gated cross-day rule entirely.
+    """
+    slot = _bank_slot(
+        "Trap Bar Deadlift", "3 x 5 @ RPE 7",
+        ["mech_lower_hip_hinge", "mech_trunk_stability"],
+    )
+    assignment = assignment_from_slot("SPP", "strength_slots", slot)
+    assert assignment["mechanical_risk_tags"] == [
+        "mech_lower_hip_hinge", "mech_trunk_stability",
+    ]
+
+    # The bank also states them on the item itself rather than in metadata.
+    bare = {"slot_id": "s2", "selected": {
+        "name": "Broad Jump", "prescription": "5x4",
+        "mechanical_risk_tags": ["mech_ballistic", "mech_lower_jump"],
+    }}
+    assert assignment_from_slot("SPP", "strength_slots", bare)[
+        "mechanical_risk_tags"
+    ] == ["mech_ballistic", "mech_lower_jump"]
+
+
+def test_realised_stress_uses_the_resolved_strength_dose_not_the_bank_dose():
+    """Strength membership and strength dose are separate authorities.
+
+    A strength assignment carries only the raw bank dose until
+    ``prescription_resolver`` writes the role's scheduled-day answer. Measuring
+    off the bank dose scores a capped primer at the dose it was capped away from.
+    """
+    role = {
+        "role_key": "primary_strength_day",
+        "category": "strength",
+        "selected_exercise_assignments": [
+            {
+                "slot_id": "s1",
+                "name": "Back Squat",
+                "slot_group": "strength_slots",
+                # Uncapped bank dose: 5 x 8 = 40 reps, above the microdose ceiling.
+                "base_prescription": "5 sets x 8 reps @ RPE 8",
+                "mechanical_risk_tags": ["mech_lower_squat"],
+            }
+        ],
+        "effective_strength_prescriptions": [
+            {
+                "slot_id": "s1",
+                "name": "Back Squat",
+                # Resolver's authoritative answer: 2 x 3 = 6 reps.
+                "effective_prescription": "2 x 3 @ RPE 6",
+            }
+        ],
+    }
+    # Measured off the bank dose this reads as a meaningful session.
+    assert realised_session_stress(
+        role["selected_exercise_assignments"]
+    ).neural_mechanical is StressLevel.MODERATE
+    # Measured off the authoritative dose it is correctly a small one.
+    assert realised_role_stress(role).neural_mechanical is StressLevel.LOW
 
 
 def test_embedded_support_does_not_inflate_realised_stress():
     """A dose-capped embedded support item is not the session's cost."""
     stress = realised_session_stress(
         [
+            assignment_from_slot("SPP", "conditioning_slots", _bank_slot(
+                "Pogo Hops", "2x5", ["mech_lower_jump"],
+            )),
             {
-                "name": "Pogo Hops",
-                "effective_prescription": "2x5",
-                "mechanical_risk_tags": ["mech_ballistic", "mech_lower_jump"],
-            },
-            {
-                "name": "Overhead Carry (Single Arm)",
+                **assignment_from_slot("SPP", "strength_slots", _bank_slot(
+                    "Overhead Carry (Single Arm)",
+                    "2-4 sets x 6-10 reps or 20-40s tempo (3-1-3), RPE 6-8",
+                    ["mech_shoulder_overhead", "mech_upper_carry"],
+                )),
                 "embedded_support": True,
                 "effective_prescription": "1-2 controlled sets; stop before fatigue",
-                "mechanical_risk_tags": ["mech_shoulder_overhead", "mech_upper_carry"],
             },
         ]
     )
-    assert stress.neural_mechanical is StressLevel.MODERATE
+    # A small pogo session is genuinely low, and stays low: the capped upper-body
+    # support neither raises the level nor contributes its UPPER region.
+    assert stress.neural_mechanical is StressLevel.LOW
     assert stress.regions == frozenset({BodyRegion.LOWER})
 
 
@@ -491,3 +578,79 @@ def test_a_relocated_role_is_re_morphed_for_its_new_countdown_day():
         # The role's own countdown metadata agrees with where it now sits.
         assert role["scheduled_d_day"] == relocation["to_d_day"]
         assert role["scheduled_countdown_label"] == f"D-{relocation['to_d_day']}"
+
+
+def test_end_to_end_through_the_real_conditioning_composition_builder():
+    """Drive the production composition path, not hand-built assignments.
+
+    The earlier version of this regression injected ``mechanical_risk_tags``
+    directly onto assignments. Production assignments did not carry them at all,
+    so body region was permanently unknown and the region-gated rule could never
+    fire on a real plan. This test fails if that seam regresses, because the
+    assignments here are built only by ``compose_normal_conditioning_assignments``.
+    """
+    from fightcamp.planner_context import planner_athlete_model_context
+
+    week = _spp_week()
+    glycolytic = {
+        "role_key": "fight_pace_repeatability_day",
+        "category": "conditioning",
+        "preferred_system": "glycolytic",
+        "meaningful_stress": True,
+        "scheduled_day_hint": "Sunday",
+        "scheduled_countdown_label": "D-26",
+        "scheduled_d_day": 26,
+    }
+    plyo = {
+        "role_key": "alactic_speed_day",
+        "category": "conditioning",
+        "preferred_system": "alactic",
+        "scheduled_day_hint": "Monday",
+        "scheduled_countdown_label": "D-25",
+        "scheduled_d_day": 25,
+    }
+    week["session_roles"] = [glycolytic, plyo]
+    weekly_role_map = {"weeks": [week]}
+    pools = {
+        "SPP": {
+            "conditioning_slots": [
+                _bank_slot(
+                    "Assault Bike Capacity Builder", "20min EMOM: 12 cal",
+                    ["mech_systemic_fatigue"], system="glycolytic",
+                ),
+                _bank_slot(
+                    "Alternating Bounds", "4x5/side, 2min rest",
+                    ["mech_ballistic", "mech_lower_jump"],
+                ),
+                _bank_slot(
+                    "Single-Leg Hop (Stabilize)", "4x5/side, 90s rest",
+                    ["mech_landing_impact", "mech_lower_jump"],
+                ),
+            ],
+            "strength_slots": [],
+        }
+    }
+
+    token = planner_athlete_model_context.set({})
+    try:
+        compose_normal_conditioning_assignments(
+            weekly_role_map=weekly_role_map, candidate_pools=pools,
+        )
+    finally:
+        planner_athlete_model_context.reset(token)
+
+    # The composition builder itself must carry the authored tags through.
+    composed = plyo["selected_exercise_assignments"]
+    assert composed, "the real builder composed nothing"
+    assert any(item.get("mechanical_risk_tags") for item in composed)
+
+    # And the realised measurement must then see a lower-body session.
+    stress = realised_role_stress(plyo)
+    assert BodyRegion.LOWER in stress.regions, (
+        "body region is unknown on a real composed session"
+    )
+
+    apply_realised_load_calendar_revalidation(weekly_role_map)
+    assert not _adjacent_load_conflicts(weekly_role_map)
+    assert not week.get("suppressed_roles")
+    assert len(week["session_roles"]) == 2

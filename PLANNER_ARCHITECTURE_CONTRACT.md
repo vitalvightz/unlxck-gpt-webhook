@@ -223,18 +223,23 @@ build athlete model / candidate pools
   -> session_composition.compose_normal_strength_assignments
      session_composition.compose_normal_conditioning_assignments
        (closed session membership; reduce-only from Stage 1's selected slots)
-  -> session_composition.apply_realised_load_calendar_revalidation
-       (composition is the first point at which a session's real cross-day cost
-        is knowable, so the calendar is re-asked here. Until this pass every
-        calendar verdict judged a role by the promise its role key makes — an
-        alactic_speed_day is NEURAL_MICRODOSE from its key alone, whatever the
-        composed dose turns out to be. Measures in combat_load_policy's
-        SessionStress vocabulary, stamps the role, and relocates through the
-        canonical calendar_integrity mover. DEPRIORITIZE only: a role moves to a
-        strictly cleaner slot or stays put, and is never suppressed here)
   -> attach late-fight assignments to any spliced tail roles
   -> prescription_resolver.apply_effective_strength_prescriptions
        (authoritative effective_prescription per selected strength exercise)
+  -> session_composition.apply_realised_load_calendar_revalidation
+       (composition PLUS dose resolution is the first point at which a session's
+        real cross-day cost is knowable, so the calendar is re-asked here. Until
+        this pass every calendar verdict judged a role by the promise its role
+        key makes — an alactic_speed_day is NEURAL_MICRODOSE from its key alone,
+        whatever the composed dose turns out to be. It must run after the dose
+        resolver: a strength assignment carries only its raw bank dose until the
+        resolver writes effective_strength_prescriptions, so measuring earlier
+        scores a capped primer at the dose it was capped away from. Measures in
+        combat_load_policy's SessionStress vocabulary, stamps the role, and
+        relocates through the canonical calendar_integrity mover. DEPRIORITIZE
+        only: a role moves to a strictly cleaner slot or stays put, and is never
+        suppressed here. A relocated role is re-morphed and re-dosed, because
+        both were resolved for the day it left)
   -> stamp labels
   -> goal_preservation.reconcile_goal_preservation
        (coverage verdict; a bounded restore re-runs morph + governor +
@@ -402,7 +407,8 @@ canonical owner in `Main` today:
 | Late-fight countdown placement | `stage2_payload_late_fight.py` |
 | Combat collision legality (ALLOW / DEPRIORITIZE / FORBID) | `combat_load_policy.py` |
 | Cross-day S&C load legality (adjacent-day systemic / neural-mechanical cost) | `combat_load_policy.py` — same authority, extended vocabulary (`SessionStress`), not a second policy |
-| Realised-load measurement of a composed session | `session_composition.py` (`realised_session_stress`) — measurement only, never a verdict |
+| Realised-load measurement of a composed session | `session_composition.py` (`realised_role_stress`) — measurement only, never a verdict; reads the resolver's dose, not the bank dose |
+| Authored mechanical vocabulary on an assignment | `session_composition.assignment_from_slot` / the conditioning builder must carry `mechanical_risk_tags`; the assignment is the only surviving record once candidate pools are compacted |
 | Canonical calendar-event representation | `calendar_context.py` (representation only — never a verdict) |
 | Countdown dose morph | `late_camp_role_morph.py` |
 | Support inserts / fillers | `camp_week_fillers.py`, `gap_fill_inserts.py` — subordinate to shared legality |

@@ -15,6 +15,7 @@ Normal strength composition is deliberately reduce-only:
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from typing import Any
 
 from .normalization import normalize_fatigue_level
@@ -96,6 +97,13 @@ def assignment_from_slot(phase: str, slot_group: str, slot: dict[str, Any]) -> d
     base_prescription = str(selected.get("prescription") or "").strip()
     if base_prescription:
         assignment["base_prescription"] = base_prescription
+    # Authored mechanical tags travel with the assignment. Without them a
+    # composed session's realised body-region and impact cost is unknowable
+    # downstream: the candidate pool the slot came from is compacted, so the
+    # assignment is the only surviving record of what the session mechanically is.
+    tags = option_mechanical_risk_tags(selected)
+    if tags:
+        assignment["mechanical_risk_tags"] = sorted(tags)
     notes = _selected_coaching_notes(selected)
     if notes:
         assignment["coaching_notes"] = notes
@@ -447,23 +455,34 @@ def _slot_priority(slot: dict[str, Any], original_index: int) -> tuple[int, int]
     return priority, original_index
 
 
-def _slot_mechanical_risk_tags(slot: dict[str, Any]) -> set[str]:
-    item = _slot_selected_item(slot)
-    metadata = item.get("selection_metadata")
+def option_mechanical_risk_tags(option: dict[str, Any] | None) -> set[str]:
+    """Authored ``mech_*`` tags for one selected bank option.
+
+    The bank states them on the item and the selector mirrors them into
+    ``selection_metadata``; both shapes occur, so both are read. This is the one
+    item-level extraction, shared by the slot-level helper and by the assignment
+    builders, so a tag can never survive into one view of a session and be
+    missing from another.
+    """
+    if not isinstance(option, dict):
+        return set()
+    metadata = option.get("selection_metadata")
     nested_tags = (
-        metadata.get("mechanical_risk_tags", [])
-        if isinstance(metadata, dict)
-        else []
+        metadata.get("mechanical_risk_tags", []) if isinstance(metadata, dict) else []
     )
     return {
         str(value).strip().lower()
-        for value in [
-            *(slot.get("mechanical_risk_tags") or []),
-            *(item.get("mechanical_risk_tags") or []),
-            *nested_tags,
-        ]
+        for value in [*(option.get("mechanical_risk_tags") or []), *nested_tags]
         if str(value).strip().lower().startswith("mech_")
     }
+
+
+def _slot_mechanical_risk_tags(slot: dict[str, Any]) -> set[str]:
+    return {
+        str(value).strip().lower()
+        for value in (slot.get("mechanical_risk_tags") or [])
+        if str(value).strip().lower().startswith("mech_")
+    } | option_mechanical_risk_tags(_slot_selected_item(slot))
 
 
 def _candidate_records(slots: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -778,13 +797,68 @@ def _prescription_total_reps(text: str) -> float:
     return total
 
 
-def realised_session_stress(assignments: list[dict[str, Any]]) -> SessionStress | None:
+def _authoritative_dose(
+    assignment: dict[str, Any], resolved_strength: dict[tuple[str, str], str]
+) -> str:
+    """The dose this exercise will actually be performed at.
+
+    Strength membership and strength *dose* are separate authorities: a
+    ``strength_slots`` assignment carries only the raw bank ``base_prescription``
+    until ``prescription_resolver`` resolves its scheduled-day dose into the
+    role's ``effective_strength_prescriptions``. Measuring realised load off the
+    bank dose would score a capped 2x3 primer as the uncapped 5x5 the bank
+    authored, so the resolver's answer wins wherever it exists.
+    """
+    key = (str(assignment.get("slot_id") or ""), str(assignment.get("name") or ""))
+    if resolved := resolved_strength.get(key):
+        return resolved
+    return str(
+        assignment.get("effective_prescription")
+        or assignment.get("base_prescription")
+        or ""
+    )
+
+
+def _resolved_strength_doses(role: dict[str, Any]) -> dict[tuple[str, str], str]:
+    resolved: dict[tuple[str, str], str] = {}
+    for item in role.get("effective_strength_prescriptions") or []:
+        if not isinstance(item, dict):
+            continue
+        slot_id = str(item.get("slot_id") or "").strip()
+        name = str(item.get("name") or "").strip()
+        dose = str(item.get("effective_prescription") or "").strip()
+        if slot_id and name and dose:
+            resolved[(slot_id, name)] = dose
+    return resolved
+
+
+def realised_role_stress(role: dict[str, Any]) -> SessionStress | None:
+    """Measure a composed *role*'s cross-day cost in the canonical vocabulary.
+
+    Role-level rather than assignment-level because the authoritative strength
+    dose lives on the role (``effective_strength_prescriptions``), not on the
+    assignment it applies to.
+    """
+    if not isinstance(role, dict):
+        return None
+    return realised_session_stress(
+        role.get("selected_exercise_assignments"),
+        resolved_strength=_resolved_strength_doses(role),
+    )
+
+
+def realised_session_stress(
+    assignments: list[dict[str, Any]] | None,
+    *,
+    resolved_strength: dict[tuple[str, str], str] | None = None,
+) -> SessionStress | None:
     """Measure a composed session's cross-day cost, or ``None`` if unmeasurable.
 
     ``None`` means "no evidence" and leaves the role's planned vector in place;
     it never means "free".
     """
     assignments = [item for item in assignments or [] if isinstance(item, dict)]
+    resolved_strength = resolved_strength or {}
     if not assignments:
         return None
 
@@ -802,7 +876,7 @@ def realised_session_stress(assignments: list[dict[str, Any]]) -> SessionStress 
             if any(tag.startswith(prefix) for tag in item_tags):
                 regions.add(region)
         total_reps += _prescription_total_reps(
-            assignment.get("effective_prescription") or assignment.get("base_prescription") or ""
+            _authoritative_dose(assignment, resolved_strength)
         )
 
     if not tags and not total_reps:
@@ -1457,6 +1531,11 @@ def compose_normal_conditioning_assignments(
                     value = _float_or_none(effective_dose.get(field))
                     if value is not None:
                         assignment[field] = value
+                # Same reason as the strength path: the realised mechanical
+                # identity of the session must survive onto the assignment.
+                conditioning_tags = option_mechanical_risk_tags(option)
+                if conditioning_tags:
+                    assignment["mechanical_risk_tags"] = sorted(conditioning_tags)
                 notes = _selected_coaching_notes(option)
                 if notes:
                     assignment["coaching_notes"] = notes
@@ -1519,6 +1598,8 @@ def compose_normal_conditioning_assignments(
 
 def apply_realised_load_calendar_revalidation(
     weekly_role_map: dict[str, Any],
+    *,
+    redose_callback: Callable[[dict[str, Any]], Any] | None = None,
 ) -> dict[str, Any]:
     """Re-judge composed sessions on their realised load, not their planned role.
 
@@ -1541,6 +1622,13 @@ def apply_realised_load_calendar_revalidation(
     A conflict here is ``DEPRIORITIZE``, never ``FORBID``: the role moves only
     when a genuinely cleaner slot exists, and otherwise stays put. There is no
     mandatory rest day.
+
+    Ordering requirement: this must run after ``prescription_resolver``, because
+    a strength assignment carries only the raw bank dose until the resolver has
+    written the role's ``effective_strength_prescriptions``. Measuring before
+    that scores a capped primer at its uncapped bank dose. Relocation then
+    invalidates both the countdown morph and that resolved dose, so both owners
+    are re-run.
     """
     if not isinstance(weekly_role_map, dict):
         return weekly_role_map
@@ -1554,7 +1642,7 @@ def apply_realised_load_calendar_revalidation(
         for role in week.get("session_roles", []) or []:
             if not isinstance(role, dict) or role.get("late_fight_tail_owned"):
                 continue
-            stress = realised_session_stress(role.get("selected_exercise_assignments"))
+            stress = realised_role_stress(role)
             if stress is None:
                 continue
             role["calendar_stress"] = _stress_stamp(stress)
@@ -1597,6 +1685,12 @@ def apply_realised_load_calendar_revalidation(
         from .late_camp_role_morph import _apply_late_camp_role_morph_once
 
         _apply_late_camp_role_morph_once(weekly_role_map)
+        # The scheduled-day strength dose was resolved for the day the role has
+        # just left, so the dose owner is re-run too. Supplied by the pipeline
+        # rather than imported here: resolution needs the candidate pools and
+        # athlete model, which are the caller's to hold.
+        if redose_callback is not None:
+            redose_callback(weekly_role_map)
 
     if actions:
         weekly_role_map["realised_load_revalidation"] = {

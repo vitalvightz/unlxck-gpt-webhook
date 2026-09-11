@@ -1263,11 +1263,6 @@ def _build_planning_brief(
     compose_normal_rehab_assignments(
         weekly_role_map=weekly_role_map, candidate_pools=candidate_pools,
     )
-    # Composition is the first point at which a session's real cross-day cost is
-    # knowable. Until here the calendar has only judged roles by the promise their
-    # role key makes, so re-ask the canonical policy now that exercises and doses
-    # exist. Relocation only, to a strictly cleaner slot; never a forced rest day.
-    apply_realised_load_calendar_revalidation(weekly_role_map)
     # The long-camp splice owns D-13 inward, but uses the same selector and
     # assignment schema as direct late-fight generation.
     tail_roles = [
@@ -1285,10 +1280,23 @@ def _build_planning_brief(
     # authoritative effective prescription per selected strength exercise so
     # Stage 2 never has to reconcile the exercise-bank dose against the role caps.
     # Runs AFTER the morph (which owns dose shaping) and BEFORE label stamping.
-    apply_effective_strength_prescriptions(
-        weekly_role_map=weekly_role_map,
-        candidate_pools=candidate_pools,
-        athlete_model=athlete_model,
+    def _resolve_strength_doses(role_map: dict) -> dict:
+        return apply_effective_strength_prescriptions(
+            weekly_role_map=role_map,
+            candidate_pools=candidate_pools,
+            athlete_model=athlete_model,
+        )
+
+    _resolve_strength_doses(weekly_role_map)
+    # Composition plus dose resolution is the first point at which a session's
+    # real cross-day cost is knowable. Until here the calendar has only judged
+    # roles by the promise their role key makes, and a strength assignment
+    # carried only its raw bank dose. Re-ask the canonical policy now that both
+    # exercises and authoritative doses exist. Relocation only, to a strictly
+    # cleaner slot; never a forced rest day. A relocated role is re-morphed and
+    # re-dosed for the day it lands on.
+    apply_realised_load_calendar_revalidation(
+        weekly_role_map, redose_callback=_resolve_strength_doses,
     )
     weekly_role_map = stamp_weekly_role_map_labels(weekly_role_map)
     return {

@@ -188,6 +188,10 @@ _ASSIGNMENT_PROVENANCE_FIELDS = (
     "source_phase",
     "source_session_index",
     "dose_authority",
+    # Authored mechanical vocabulary the deterministic planner uses to measure a
+    # composed session's realised cross-day cost. No finalizer rule names it and
+    # the model must not act on it, so it stays on the rich Stage 1 object.
+    "mechanical_risk_tags",
 )
 
 
