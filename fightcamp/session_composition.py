@@ -15,6 +15,7 @@ Normal strength composition is deliberately reduce-only:
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from typing import Any
 
 from .normalization import normalize_fatigue_level
@@ -22,6 +23,7 @@ from .planner_context import get_planner_athlete_model
 from .late_fight_phase_eligibility import scheduled_phase_for_role
 from .calendar_context import role_d_day
 from .calendar_integrity import relocate_or_suppress_role_for_recovery
+from .combat_load_policy import BodyRegion, SessionStress, StressLevel
 from .prescription_resolver import has_verified_low_cost
 from .strength_session_quality import classify_strength_item
 from .training_context import normalize_equipment_list
@@ -95,6 +97,13 @@ def assignment_from_slot(phase: str, slot_group: str, slot: dict[str, Any]) -> d
     base_prescription = str(selected.get("prescription") or "").strip()
     if base_prescription:
         assignment["base_prescription"] = base_prescription
+    # Authored mechanical tags travel with the assignment. Without them a
+    # composed session's realised body-region and impact cost is unknowable
+    # downstream: the candidate pool the slot came from is compacted, so the
+    # assignment is the only surviving record of what the session mechanically is.
+    tags = option_mechanical_risk_tags(selected)
+    if tags:
+        assignment["mechanical_risk_tags"] = sorted(tags)
     notes = _selected_coaching_notes(selected)
     if notes:
         assignment["coaching_notes"] = notes
@@ -446,23 +455,34 @@ def _slot_priority(slot: dict[str, Any], original_index: int) -> tuple[int, int]
     return priority, original_index
 
 
-def _slot_mechanical_risk_tags(slot: dict[str, Any]) -> set[str]:
-    item = _slot_selected_item(slot)
-    metadata = item.get("selection_metadata")
+def option_mechanical_risk_tags(option: dict[str, Any] | None) -> set[str]:
+    """Authored ``mech_*`` tags for one selected bank option.
+
+    The bank states them on the item and the selector mirrors them into
+    ``selection_metadata``; both shapes occur, so both are read. This is the one
+    item-level extraction, shared by the slot-level helper and by the assignment
+    builders, so a tag can never survive into one view of a session and be
+    missing from another.
+    """
+    if not isinstance(option, dict):
+        return set()
+    metadata = option.get("selection_metadata")
     nested_tags = (
-        metadata.get("mechanical_risk_tags", [])
-        if isinstance(metadata, dict)
-        else []
+        metadata.get("mechanical_risk_tags", []) if isinstance(metadata, dict) else []
     )
     return {
         str(value).strip().lower()
-        for value in [
-            *(slot.get("mechanical_risk_tags") or []),
-            *(item.get("mechanical_risk_tags") or []),
-            *nested_tags,
-        ]
+        for value in [*(option.get("mechanical_risk_tags") or []), *nested_tags]
         if str(value).strip().lower().startswith("mech_")
     }
+
+
+def _slot_mechanical_risk_tags(slot: dict[str, Any]) -> set[str]:
+    return {
+        str(value).strip().lower()
+        for value in (slot.get("mechanical_risk_tags") or [])
+        if str(value).strip().lower().startswith("mech_")
+    } | option_mechanical_risk_tags(_slot_selected_item(slot))
 
 
 def _candidate_records(slots: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -697,6 +717,192 @@ def _role_pressure_state(
     state["fatigue_applied"] = fatigue_applied
     state["role_days_until_fight"] = role_d_day
     return state
+
+
+# --- Realised cross-day load -------------------------------------------------
+#
+# A role's planned load class is a promise made before any exercise exists: an
+# ``alactic_speed_day`` is stamped NEURAL_MICRODOSE from its role key alone. Once
+# composition has chosen exercises and doses, the session's real cross-day cost
+# is knowable, and it may be nothing like the promise. These helpers translate a
+# composed session into the canonical ``SessionStress`` vocabulary owned by
+# ``combat_load_policy`` so the calendar can be re-judged on what was actually
+# composed.
+#
+# Nothing here decides legality. It only measures, in the shared vocabulary.
+
+# Mechanical tags are an authored bank vocabulary (``mech_*``), so region mapping
+# is a prefix rule over that vocabulary rather than a list of exercise names.
+_REGION_TAG_PREFIXES = (
+    ("mech_lower", BodyRegion.LOWER),
+    ("mech_upper", BodyRegion.UPPER),
+    ("mech_shoulder", BodyRegion.UPPER),
+    ("mech_grip", BodyRegion.UPPER),
+    ("mech_trunk", BodyRegion.TRUNK),
+    ("mech_hip", BodyRegion.LOWER),
+    ("mech_plantarflexion", BodyRegion.LOWER),
+)
+# Tags that describe how the tissue is loaded rather than where. Impact and
+# ballistic work is the mechanical cost a following day has to absorb.
+_HIGH_MECHANICAL_TAGS = frozenset(
+    {
+        "mech_ballistic",
+        "mech_landing_impact",
+        "mech_reactive",
+        "mech_reactive_rebound",
+        "mech_max_velocity",
+        "mech_deceleration",
+        "mech_change_of_direction",
+        "mech_acceleration",
+        "mech_axial_heavy",
+    }
+)
+_HIGH_NEURAL_TAGS = frozenset({"mech_cns_high"})
+_HIGH_SYSTEMIC_TAGS = frozenset({"mech_systemic_fatigue"})
+
+# A microdose is a handful of quality contacts, not a training block. Above this
+# many total reps the session is no longer expressing a microdose promise,
+# whatever its role key says. Chosen to sit well above a genuine 2x3 primer and
+# well below the ~80-rep session that motivated this rule.
+_MICRODOSE_REP_CEILING = 30
+
+
+def _assignment_mechanical_tags(assignment: dict[str, Any]) -> set[str]:
+    metadata = assignment.get("selection_metadata")
+    nested = metadata.get("mechanical_risk_tags", []) if isinstance(metadata, dict) else []
+    return {
+        str(value).strip().lower()
+        for value in [*(assignment.get("mechanical_risk_tags") or []), *nested]
+        if str(value).strip().lower().startswith("mech_")
+    }
+
+
+def _prescription_total_reps(text: str) -> float:
+    """Total reps a rendered prescription commits to, ``0.0`` when it states none.
+
+    Handles the authored forms that actually appear: ``4x5``, ``4 x 5/side``,
+    ``3 sets x 8 reps``. ``/side`` doubles the count because both limbs pay. A
+    duration-only or unparseable dose contributes no rep count; the tag-based
+    signals above still apply to it.
+    """
+    total = 0.0
+    for match in re.finditer(
+        r"(?<![\d.])(\d+)\s*(?:sets?\s*)?[x\u00d7]\s*(\d+)", str(text or ""), re.I
+    ):
+        reps = float(match.group(1)) * float(match.group(2))
+        tail = text[match.end():match.end() + 12].lower()
+        if "side" in tail or "/s" in tail or "each" in tail:
+            reps *= 2
+        total += reps
+    return total
+
+
+def _authoritative_dose(
+    assignment: dict[str, Any], resolved_strength: dict[tuple[str, str], str]
+) -> str:
+    """The dose this exercise will actually be performed at.
+
+    Strength membership and strength *dose* are separate authorities: a
+    ``strength_slots`` assignment carries only the raw bank ``base_prescription``
+    until ``prescription_resolver`` resolves its scheduled-day dose into the
+    role's ``effective_strength_prescriptions``. Measuring realised load off the
+    bank dose would score a capped 2x3 primer as the uncapped 5x5 the bank
+    authored, so the resolver's answer wins wherever it exists.
+    """
+    key = (str(assignment.get("slot_id") or ""), str(assignment.get("name") or ""))
+    if resolved := resolved_strength.get(key):
+        return resolved
+    return str(
+        assignment.get("effective_prescription")
+        or assignment.get("base_prescription")
+        or ""
+    )
+
+
+def _resolved_strength_doses(role: dict[str, Any]) -> dict[tuple[str, str], str]:
+    resolved: dict[tuple[str, str], str] = {}
+    for item in role.get("effective_strength_prescriptions") or []:
+        if not isinstance(item, dict):
+            continue
+        slot_id = str(item.get("slot_id") or "").strip()
+        name = str(item.get("name") or "").strip()
+        dose = str(item.get("effective_prescription") or "").strip()
+        if slot_id and name and dose:
+            resolved[(slot_id, name)] = dose
+    return resolved
+
+
+def realised_role_stress(role: dict[str, Any]) -> SessionStress | None:
+    """Measure a composed *role*'s cross-day cost in the canonical vocabulary.
+
+    Role-level rather than assignment-level because the authoritative strength
+    dose lives on the role (``effective_strength_prescriptions``), not on the
+    assignment it applies to.
+    """
+    if not isinstance(role, dict):
+        return None
+    return realised_session_stress(
+        role.get("selected_exercise_assignments"),
+        resolved_strength=_resolved_strength_doses(role),
+    )
+
+
+def realised_session_stress(
+    assignments: list[dict[str, Any]] | None,
+    *,
+    resolved_strength: dict[tuple[str, str], str] | None = None,
+) -> SessionStress | None:
+    """Measure a composed session's cross-day cost, or ``None`` if unmeasurable.
+
+    ``None`` means "no evidence" and leaves the role's planned vector in place;
+    it never means "free".
+    """
+    assignments = [item for item in assignments or [] if isinstance(item, dict)]
+    resolved_strength = resolved_strength or {}
+    if not assignments:
+        return None
+
+    tags: set[str] = set()
+    regions: set[BodyRegion] = set()
+    total_reps = 0.0
+    for assignment in assignments:
+        # An embedded support item is explicitly dose-capped to stay below the
+        # session's own cost and must not inflate it.
+        if assignment.get("embedded_support"):
+            continue
+        item_tags = _assignment_mechanical_tags(assignment)
+        tags |= item_tags
+        for prefix, region in _REGION_TAG_PREFIXES:
+            if any(tag.startswith(prefix) for tag in item_tags):
+                regions.add(region)
+        total_reps += _prescription_total_reps(
+            _authoritative_dose(assignment, resolved_strength)
+        )
+
+    if not tags and not total_reps:
+        return None
+
+    high_mechanical = bool(tags & _HIGH_MECHANICAL_TAGS)
+    if high_mechanical and total_reps > _MICRODOSE_REP_CEILING:
+        neural_mechanical = StressLevel.HIGH
+    elif high_mechanical or tags & _HIGH_NEURAL_TAGS or total_reps > _MICRODOSE_REP_CEILING:
+        neural_mechanical = StressLevel.MODERATE
+    else:
+        neural_mechanical = StressLevel.LOW
+
+    systemic = StressLevel.HIGH if tags & _HIGH_SYSTEMIC_TAGS else StressLevel.NONE
+    return SessionStress(
+        systemic=systemic, neural_mechanical=neural_mechanical, regions=frozenset(regions)
+    )
+
+
+def _stress_stamp(stress: SessionStress) -> dict[str, Any]:
+    return {
+        "systemic": int(stress.systemic),
+        "neural_mechanical": int(stress.neural_mechanical),
+        "regions": sorted(region.value for region in stress.regions),
+        "authority": "realised_session_composition",
+    }
 
 
 def _substantial_mechanical_tags(records: list[dict[str, Any]]) -> set[str]:
@@ -1194,9 +1400,19 @@ def _conditioning_role_is_hard_spar_adjacent(week: dict[str, Any], role: dict[st
 
 
 def compose_normal_conditioning_assignments(
-    *, weekly_role_map: dict[str, Any], candidate_pools: dict[str, Any]
+    *,
+    weekly_role_map: dict[str, Any],
+    candidate_pools: dict[str, Any],
+    only_roles: set[int] | None = None,
 ) -> dict[str, Any]:
-    """Attach a safe bank-backed minimum composition to normal conditioning roles."""
+    """Attach a safe bank-backed minimum composition to normal conditioning roles.
+
+    ``only_roles`` restricts composition to the given roles, addressed by
+    ``id()``. It exists so a caller that has invalidated a *specific* role's
+    membership can reconcile exactly that role through this authority, rather
+    than recomposing every conditioning session in the plan and churning
+    membership that is still correct.
+    """
     athlete_model = get_planner_athlete_model()
     pressure_context = _composition_context_from_model(athlete_model)
     trunk_strength_selected = _trunk_strength_selected(athlete_model)
@@ -1210,6 +1426,7 @@ def compose_normal_conditioning_assignments(
                 not isinstance(role, dict)
                 or role.get("late_fight_tail_owned")
                 or str(role.get("category") or "").strip().lower() != "conditioning"
+                or (only_roles is not None and id(role) not in only_roles)
             ):
                 continue
 
@@ -1325,6 +1542,11 @@ def compose_normal_conditioning_assignments(
                     value = _float_or_none(effective_dose.get(field))
                     if value is not None:
                         assignment[field] = value
+                # Same reason as the strength path: the realised mechanical
+                # identity of the session must survive onto the assignment.
+                conditioning_tags = option_mechanical_risk_tags(option)
+                if conditioning_tags:
+                    assignment["mechanical_risk_tags"] = sorted(conditioning_tags)
                 notes = _selected_coaching_notes(option)
                 if notes:
                     assignment["coaching_notes"] = notes
@@ -1382,6 +1604,319 @@ def compose_normal_conditioning_assignments(
                 "embedded_trunk_support_skip_reason": trunk_support_skip_reason,
             }
 
+    return weekly_role_map
+
+
+# A relocation changes the role's scheduled day, which re-morphs and re-doses it,
+# which changes its realised load, which can in principle change where it belongs.
+# That is a fixpoint search, and it is deliberately not run to convergence: two
+# rounds (an initial move plus one verification round that may correct it) is the
+# bound. Anything unresolved after that is recorded as a residual conflict rather
+# than chased, so this pass can never loop or oscillate.
+_MAX_REVALIDATION_ROUNDS = 2
+
+
+def _refresh_stress_stamps(weekly_role_map: dict[str, Any]) -> list[dict[str, Any]]:
+    """Re-stamp every composed role from its *current* authoritative dose.
+
+    Called once per round, and once more after the final round, because a
+    relocation re-morphs and re-doses the role it moved: a stamp written before
+    that describes the dose the role had on the day it left. The stamp persists
+    on the role, so a stale one would be a lie to every later reader, not just to
+    this pass.
+
+    Neighbours are re-stamped too, not only the relocated role: a move changes
+    which days sit next to which, and the morph owner may re-dose more than the
+    role that moved.
+    """
+    stamped: list[dict[str, Any]] = []
+    for week in weekly_role_map.get("weeks", []) or []:
+        if not isinstance(week, dict):
+            continue
+        for role in week.get("session_roles", []) or []:
+            if not isinstance(role, dict) or role.get("late_fight_tail_owned"):
+                continue
+            stress = realised_role_stress(role)
+            if stress is None:
+                # No longer measurable: drop any stamp from an earlier round
+                # rather than leave one describing a dose that no longer exists.
+                role.pop("calendar_stress", None)
+                continue
+            role["calendar_stress"] = _stress_stamp(stress)
+            stamped.append(role)
+    return stamped
+
+
+def _physically_occupied_d_days(
+    weekly_role_map: dict[str, Any], mover: dict[str, Any]
+) -> set[int]:
+    """Days already carrying a physical session, excluding the mover's own.
+
+    This pass exists to relieve concentrated load, so it must not relieve an
+    adjacency by stacking: moving a substantial session onto a day that already
+    holds one concentrates the very load being spread out. The shared policy
+    legitimately permits two physical sessions to share a day (strength plus an
+    easy aerobic flush, say) and that judgement is not this pass's to change --
+    so this constrains only where *this* pass is willing to move a role, via the
+    mover's excluded days, and leaves ``_same_day_decision`` untouched.
+    """
+    from .calendar_context import role_refs
+    from .combat_load_policy import DayOccupancy
+
+    return {
+        ref.d_day
+        for ref in role_refs(weekly_role_map)
+        if ref.role is not mover
+        and ref.profile.occupancy
+        in {DayOccupancy.PHYSICAL, DayOccupancy.EXCLUSIVE_PHYSICAL}
+    }
+
+
+# The fields that decide *what kind of session* a role is, and therefore which
+# bank membership is valid for it. The countdown morph can rewrite all three at
+# once (``_morph_to_rhythm_touch`` turns a hard glycolytic fight-pace role into an
+# aerobic rhythm touch), which strands any membership composed for the old
+# identity. Dose fields are deliberately not included: a re-dosed role keeps its
+# membership, and only its prescription changes.
+_ROLE_IDENTITY_FIELDS = ("role_key", "category", "preferred_system")
+
+
+def _role_identity(role: dict[str, Any]) -> tuple[str, ...]:
+    return tuple(
+        str(role.get(field) or "").strip().lower() for field in _ROLE_IDENTITY_FIELDS
+    )
+
+
+def _conditioning_identities(weekly_role_map: dict[str, Any]) -> dict[int, tuple[str, ...]]:
+    return {
+        id(role): _role_identity(role)
+        for week in weekly_role_map.get("weeks", []) or []
+        if isinstance(week, dict)
+        for role in week.get("session_roles", []) or []
+        if isinstance(role, dict)
+        and not role.get("late_fight_tail_owned")
+        and str(role.get("category") or "").strip().lower() == "conditioning"
+    }
+
+
+def _realised_load_conflicts(
+    weekly_role_map: dict[str, Any], roles: list[dict[str, Any]]
+) -> list[tuple[dict[str, Any], Any, Any]]:
+    """``(role, ref, decision)`` for each role the policy does not ALLOW."""
+    from .calendar_context import build_events, role_refs
+    from .combat_load_policy import PlacementDirective, evaluate_candidate_at_position
+
+    refs = {id(ref.role): ref for ref in role_refs(weekly_role_map)}
+    conflicts = []
+    for role in roles:
+        ref = refs.get(id(role))
+        if ref is None:
+            continue
+        decision = evaluate_candidate_at_position(
+            ref.profile,
+            candidate_position=-ref.d_day,
+            events=build_events(weekly_role_map, exclude_role=role),
+            candidate_scope=ref.scope,
+        )
+        if decision.directive is not PlacementDirective.ALLOW:
+            conflicts.append((role, ref, decision))
+    return conflicts
+
+
+def apply_realised_load_calendar_revalidation(
+    weekly_role_map: dict[str, Any],
+    *,
+    redose_callback: Callable[[dict[str, Any]], Any] | None = None,
+    recompose_conditioning_callback: Callable[[dict[str, Any], set[int]], Any] | None = None,
+) -> dict[str, Any]:
+    """Re-judge composed sessions on their realised load, not their planned role.
+
+    Placement and the final governor both run before conditioning composition, so
+    they judge a role by the promise its role key makes. An
+    ``alactic_speed_day`` is stamped ``NEURAL_MICRODOSE`` from its key alone; the
+    session that is actually composed onto it may be two substantial unilateral
+    plyometric blocks. Nothing downstream ever re-asked the calendar.
+
+    This closes that sequence — role placement, exercise composition, realised
+    load classification, calendar revalidation — for composed S&C roles.
+
+    It is representation plus the canonical mover, not a second policy:
+    ``realised_role_stress`` measures in ``combat_load_policy``'s vocabulary, the
+    stamp goes on the role, and the legality verdict and any relocation come from
+    ``combat_load_policy`` through
+    ``calendar_integrity.relocate_or_suppress_role_for_recovery`` — the same
+    canonical mover the adjacent-strength-recovery pass already uses.
+
+    A conflict here is ``DEPRIORITIZE``, never ``FORBID``: the role moves only
+    when a genuinely cleaner slot exists, and otherwise stays put. There is no
+    mandatory rest day.
+
+    Ordering requirement: this must run after ``prescription_resolver``, because
+    a strength assignment carries only the raw bank dose until the resolver has
+    written the role's ``effective_strength_prescriptions``. Measuring before
+    that scores a capped primer at its uncapped bank dose.
+
+    Relocation invalidates the countdown morph and the resolved dose for the role
+    that moved, so both owners are re-run and the destination is then re-judged
+    against the *refreshed* load. That verification is bounded at
+    ``_MAX_REVALIDATION_ROUNDS``; a conflict surviving the bound is recorded in
+    ``residual_conflicts`` and the role is left where it is, never chased.
+    """
+    if not isinstance(weekly_role_map, dict):
+        return weekly_role_map
+
+    from .late_camp_role_morph import _apply_late_camp_role_morph_once
+
+    def _reconcile_changed_conditioning(before: dict[int, tuple[str, ...]]) -> list[dict[str, Any]]:
+        """Re-reconcile membership for any conditioning role the morph rewrote.
+
+        The morph can change a role's *identity*, not just its dose: a hard
+        glycolytic fight-pace role crossing into the fight-pace morph band comes
+        back as an aerobic rhythm touch. Its ``selected_exercise_assignments``
+        were composed for the session it used to be, so leaving them is stale
+        hard glycolytic work sitting on a low-cost recovery role.
+
+        Only roles whose identity actually changed are reconciled, through the
+        existing conditioning composition authority. Every other conditioning
+        session keeps its closed membership untouched.
+
+        Stale membership is cleared first and unconditionally, because
+        recomposition may legitimately produce nothing: the composer skips a role
+        whose pool holds no candidate for its new system. The outcome recorded
+        per role is therefore whatever actually resulted — ``recomposed`` only
+        when a replacement session exists, ``membership_cleared`` otherwise.
+        """
+        changed = [
+            role
+            for week in weekly_role_map.get("weeks", []) or []
+            if isinstance(week, dict)
+            for role in week.get("session_roles", []) or []
+            if isinstance(role, dict)
+            and id(role) in before
+            and _role_identity(role) != before[id(role)]
+            and role.get("selected_exercise_assignments")
+        ]
+        if not changed:
+            return []
+        notes = [
+            {
+                "role_key": role.get("role_key"),
+                "previous_role_key": before[id(role)][0],
+                "previous_system": before[id(role)][2],
+                "d_day": role.get("scheduled_d_day"),
+                "stale_membership": [
+                    str(item.get("name") or "")
+                    for item in role.get("selected_exercise_assignments") or []
+                    if isinstance(item, dict)
+                ],
+            }
+            for role in changed
+        ]
+        # Clear before recomposing, never after. The composition authority skips a
+        # role for which no compliant candidate exists, so recomposition is not
+        # guaranteed to overwrite anything: without clearing first, a glycolytic
+        # session whose pool holds no aerobic option would keep its pre-morph
+        # membership on an aerobic role even though reconciliation ran. Clearing
+        # here rather than inside the composer also leaves ordinary, non-targeted
+        # composition behaviour untouched.
+        for role in changed:
+            role["selected_exercise_assignments"] = []
+            # This block reports selected_count and the composition decisions for
+            # membership that no longer exists, so it goes with it.
+            role.pop("conditioning_composition_policy", None)
+        if recompose_conditioning_callback is not None:
+            recompose_conditioning_callback(weekly_role_map, {id(r) for r in changed})
+        for note, role in zip(notes, changed):
+            membership = [
+                str(item.get("name") or "")
+                for item in role.get("selected_exercise_assignments") or []
+                if isinstance(item, dict)
+            ]
+            note["membership"] = membership
+            # Report what actually happened. "recomposed" claims a replacement
+            # session exists; when the pool offered nothing compliant the honest
+            # outcome is an explicitly empty closed membership.
+            note["action"] = "recomposed" if membership else "membership_cleared"
+        return notes
+
+    def _remorph_and_redose() -> None:
+        # The morph and the strength dose were both resolved for the day the role
+        # has just left (strength morphs through D-17, so a D-20 -> D-16 move
+        # changes the applicable cap). Both canonical owners are re-run, exactly
+        # as the final governor re-runs the morph after it relocates a role. The
+        # dose owner needs the candidate pools and athlete model, which are the
+        # pipeline's to hold, so it arrives as a callback rather than an import.
+        identities_before = _conditioning_identities(weekly_role_map)
+        _apply_late_camp_role_morph_once(weekly_role_map)
+        # Membership before dose: the resolver and the next stress refresh must
+        # both see the session the role actually is now.
+        reconciliations.extend(_reconcile_changed_conditioning(identities_before))
+        if redose_callback is not None:
+            redose_callback(weekly_role_map)
+
+    actions: list[dict[str, Any]] = []
+    reconciliations: list[dict[str, Any]] = []
+    # Days a role has already been moved off. Excluding them stops a role being
+    # sent back to a day it just left when the refreshed dose flips the verdict.
+    vacated: dict[int, set[int]] = {}
+    rounds_run = 0
+
+    for _round in range(_MAX_REVALIDATION_ROUNDS):
+        rounds_run += 1
+        # Re-stamp from current doses so each round judges the calendar as it now
+        # actually is, not as it was before the previous round's re-dose.
+        stamped = _refresh_stress_stamps(weekly_role_map)
+        round_actions: list[dict[str, Any]] = []
+        for role, _ref, decision in _realised_load_conflicts(weekly_role_map, stamped):
+            action = relocate_or_suppress_role_for_recovery(
+                weekly_role_map,
+                role,
+                excluded_d_days=(
+                    vacated.get(id(role), set())
+                    | _physically_occupied_d_days(weekly_role_map, role)
+                ),
+                reason_code=decision.reason_code,
+                require_clean_destination=True,
+            )
+            if not isinstance(action, dict):
+                continue
+            if action.get("from_d_day") is not None:
+                vacated.setdefault(id(role), set()).add(int(action["from_d_day"]))
+            round_actions.append(
+                {"round": rounds_run, "role_key": role.get("role_key"), **action}
+            )
+        if not round_actions:
+            break
+        actions.extend(round_actions)
+        _remorph_and_redose()
+
+    # The last round may have re-dosed after its final stamp, so refresh once more:
+    # the stamp that persists must describe the dose the role actually ends with.
+    final_roles = _refresh_stress_stamps(weekly_role_map)
+    residual = [
+        {
+            "role_key": role.get("role_key"),
+            "d_day": ref.d_day,
+            "reason_code": decision.reason_code,
+            "directive": decision.directive.value,
+        }
+        for role, ref, decision in _realised_load_conflicts(weekly_role_map, final_roles)
+    ]
+
+    if actions or residual or reconciliations:
+        weekly_role_map["realised_load_revalidation"] = {
+            "schema_version": "realised_load_revalidation.v3",
+            "rounds_run": rounds_run,
+            "max_rounds": _MAX_REVALIDATION_ROUNDS,
+            "actions": actions,
+            # Roles whose canonical identity the morph rewrote, and whose
+            # membership therefore had to be reconciled for the session they now
+            # are. Empty in the overwhelmingly common case.
+            "membership_reconciliations": reconciliations,
+            # Legal but not ideal, and deliberately not chased further. Present
+            # so a residual conflict is visible rather than silently accepted.
+            "residual_conflicts": residual,
+        }
     return weekly_role_map
 
 

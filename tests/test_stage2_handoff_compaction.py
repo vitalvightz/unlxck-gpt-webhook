@@ -415,3 +415,33 @@ def test_tactical_watch_reaches_the_card_even_if_stage2_omits_the_whole_day(gene
     merged = merge_locked_structured_content(reconcile_calendar_spine(plan, brief), brief)
     assert not merged.unresolved
     assert len(merged.applied) == len(_locked_roles(brief))
+
+
+def test_embedded_support_dose_never_ships_its_uncapped_bank_dose():
+    """An embedded support item sends only its authorised dose.
+
+    Regression: a ``strength_slots`` assignment composed into a *conditioning*
+    role (the low-load trunk support embedded by
+    ``compose_normal_conditioning_assignments``) carried both its capped
+    ``effective_prescription`` and the uncapped bank ``base_prescription``. A
+    conditioning role never carries ``effective_strength_prescriptions``, so the
+    strength-scoped "render effective, never base" packet rule did not cover it
+    and the finalizer could render the bank dose. Supabase stored the capped
+    dose while the UI displayed the uncapped one.
+    """
+    from fightcamp.stage2_finalizer_packet_impl import _compact_prescribed_items
+
+    items = [
+        {
+            "slot_id": "trunk-1",
+            "name": "Overhead Carry (Single Arm)",
+            "embedded_support": True,
+            "base_prescription": "2-4 sets x 6-10 reps or 20-40s tempo (3-1-3), RPE 6-8",
+            "effective_prescription": "1-2 controlled sets; stop before fatigue",
+        }
+    ]
+    # A conditioning role resolves no strength doses, so the map is empty.
+    compact = _compact_prescribed_items(items, effective_by_slot={})
+
+    assert "base_prescription" not in compact[0]
+    assert compact[0]["effective_prescription"] == "1-2 controlled sets; stop before fatigue"

@@ -207,8 +207,16 @@ def relocate_or_suppress_role_for_recovery(
     *,
     excluded_d_days: set[int],
     reason_code: str,
+    require_clean_destination: bool = False,
 ) -> dict[str, Any] | None:
-    """Reuse the canonical mover when exercise-level recovery blocks a day."""
+    """Reuse the canonical mover when exercise-level recovery blocks a day.
+
+    ``require_clean_destination`` is for a caller whose conflict is
+    ``DEPRIORITIZE`` rather than ``FORBID``: the placement is legal, so the role
+    moves only to a strictly ``ALLOW`` destination and is never suppressed. With
+    no such destination it stays where it is and this returns ``None``. That is
+    what keeps a graded cross-day rule from becoming a mandatory rest day.
+    """
     ref = next((item for item in _role_refs(weekly_role_map) if item.role is role), None)
     if ref is None or _is_immutable_role(ref):
         return None
@@ -218,6 +226,10 @@ def relocate_or_suppress_role_for_recovery(
         ref,
         excluded_d_days=excluded_d_days,
     )
+    if require_clean_destination and (
+        best is None or best[2].directive is not PlacementDirective.ALLOW
+    ):
+        return None
     if best is not None:
         weekday, d_day, destination_decision = best
         from_day = str(role.get("scheduled_day_hint") or role.get("real_weekday") or "")

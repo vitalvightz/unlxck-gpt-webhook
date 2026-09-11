@@ -226,6 +226,34 @@ build athlete model / candidate pools
   -> attach late-fight assignments to any spliced tail roles
   -> prescription_resolver.apply_effective_strength_prescriptions
        (authoritative effective_prescription per selected strength exercise)
+  -> session_composition.apply_realised_load_calendar_revalidation
+       (composition PLUS dose resolution is the first point at which a session's
+        real cross-day cost is knowable, so the calendar is re-asked here. Until
+        this pass every calendar verdict judged a role by the promise its role
+        key makes — an alactic_speed_day is NEURAL_MICRODOSE from its key alone,
+        whatever the composed dose turns out to be. It must run after the dose
+        resolver: a strength assignment carries only its raw bank dose until the
+        resolver writes effective_strength_prescriptions, so measuring earlier
+        scores a capped primer at the dose it was capped away from. Measures in
+        combat_load_policy's SessionStress vocabulary, stamps the role, and
+        relocates through the canonical calendar_integrity mover. DEPRIORITIZE
+        only: a role moves to a strictly cleaner slot or stays put, and is never
+        suppressed here, and never moved onto a day that already carries a
+        physical session -- relieving an adjacency by stacking would concentrate
+        the very load being spread out. A relocated role is re-morphed and
+        re-dosed, because both were resolved for the day it left, and is then
+        re-stamped and re-judged against that refreshed load. That verification
+        is bounded at _MAX_REVALIDATION_ROUNDS (2): relocation changes the day,
+        which changes the dose, which changes the load, which can change where
+        the role belongs, and that fixpoint is deliberately not run to
+        convergence. A conflict surviving the bound is recorded in
+        residual_conflicts and left alone, never chased. If the remorph rewrites
+        a conditioning role's canonical identity -- role_key/category/system, as
+        _morph_to_rhythm_touch does -- its membership was composed for the
+        session it used to be, so exactly those roles are reconciled through
+        compose_normal_conditioning_assignments(only_roles=...). Every other
+        closed membership is left untouched: a move that changes only the day
+        has no authority to reselect exercises)
   -> stamp labels
   -> goal_preservation.reconcile_goal_preservation
        (coverage verdict; a bounded restore re-runs morph + governor +
@@ -392,6 +420,10 @@ canonical owner in `Main` today:
 | Normal-camp day placement | `stage2_role_map.py` (`_assign_declared_day_hints`) + `normal_calendar_placement.py` (completion) |
 | Late-fight countdown placement | `stage2_payload_late_fight.py` |
 | Combat collision legality (ALLOW / DEPRIORITIZE / FORBID) | `combat_load_policy.py` |
+| Cross-day S&C load legality (adjacent-day systemic / neural-mechanical cost) | `combat_load_policy.py` — same authority, extended vocabulary (`SessionStress`), not a second policy |
+| Membership reconciliation after an identity morph | `session_composition.compose_normal_conditioning_assignments(only_roles=...)` — scoped to roles whose canonical identity changed; never a blanket recompose |
+| Realised-load measurement of a composed session | `session_composition.py` (`realised_role_stress`) — measurement only, never a verdict; reads the resolver's dose, not the bank dose |
+| Authored mechanical vocabulary on an assignment | `session_composition.assignment_from_slot` / the conditioning builder must carry `mechanical_risk_tags`; the assignment is the only surviving record once candidate pools are compacted |
 | Canonical calendar-event representation | `calendar_context.py` (representation only — never a verdict) |
 | Countdown dose morph | `late_camp_role_morph.py` |
 | Support inserts / fillers | `camp_week_fillers.py`, `gap_fill_inserts.py` — subordinate to shared legality |
@@ -672,6 +704,7 @@ New features enter through the existing owners:
 | New filler type | filler library + shared legality |
 | New rendering | renderer only, read-only |
 | New collision rule | `combat_load_policy` only |
+| New cross-day load rule | `combat_load_policy` only — extend `SessionStress` / `_adjacent_stress_decision`; never a parallel load system |
 | New session-membership rule | `session_composition.py` / the late-fight assignment builder |
 | New effective-dose rule | `prescription_resolver.py` (bands stay in `late_camp_role_morph.py`) |
 | New goal-coverage rule | `goal_preservation.py`, inside its bounded-restore constraints |
