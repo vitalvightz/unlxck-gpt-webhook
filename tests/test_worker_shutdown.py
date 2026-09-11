@@ -122,3 +122,43 @@ def test_run_claimed_job_sanitizes_pre_runtime_error(monkeypatch: pytest.MonkeyP
     assert "user@example.com" not in stored_error
     assert "abcdef1234567890" not in stored_error
     assert active_tasks == set()
+
+
+def test_completed_generation_schedules_structured_card_conversion(monkeypatch: pytest.MonkeyPatch):
+    """A newly released plan must not be stranded on the raw-text renderer."""
+    import api.worker as worker
+    from api.services import admin_stage2_service
+
+    scheduled: list[dict[str, object]] = []
+
+    class _CompletedStore:
+        def get_generation_job(self, job_id):
+            return {"id": job_id, "status": "completed", "plan_id": "plan-1"}
+
+    async def _complete_generation(**kwargs):
+        kwargs["active_tasks"].discard(kwargs["job_id"])
+
+    async def _convert(**kwargs):
+        scheduled.append(kwargs)
+
+    monkeypatch.setattr(worker, "build_default_stage2_automator", lambda: "stage2")
+    monkeypatch.setattr(worker, "run_generation_job", _complete_generation)
+    monkeypatch.setattr(admin_stage2_service, "run_structured_plan_post_processing", _convert)
+
+    async def scenario() -> None:
+        active_tasks = {"job-1"}
+        detached_tasks: set[asyncio.Task[None]] = set()
+        await worker._run_claimed_job(
+            job_id="job-1",
+            store=_CompletedStore(),
+            active_tasks=active_tasks,
+            detached_tasks=detached_tasks,
+        )
+        await asyncio.gather(*detached_tasks)
+        assert active_tasks == set()
+
+    asyncio.run(scenario())
+    assert len(scheduled) == 1
+    assert scheduled[0]["plan_id"] == "plan-1"
+    assert scheduled[0]["stage2"] == "stage2"
+    assert scheduled[0]["notify"] is False
