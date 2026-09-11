@@ -22,6 +22,7 @@ from .planner_context import get_planner_athlete_model
 from .late_fight_phase_eligibility import scheduled_phase_for_role
 from .calendar_context import role_d_day
 from .calendar_integrity import relocate_or_suppress_role_for_recovery
+from .combat_load_policy import BodyRegion, SessionStress, StressLevel
 from .prescription_resolver import has_verified_low_cost
 from .strength_session_quality import classify_strength_item
 from .training_context import normalize_equipment_list
@@ -697,6 +698,137 @@ def _role_pressure_state(
     state["fatigue_applied"] = fatigue_applied
     state["role_days_until_fight"] = role_d_day
     return state
+
+
+# --- Realised cross-day load -------------------------------------------------
+#
+# A role's planned load class is a promise made before any exercise exists: an
+# ``alactic_speed_day`` is stamped NEURAL_MICRODOSE from its role key alone. Once
+# composition has chosen exercises and doses, the session's real cross-day cost
+# is knowable, and it may be nothing like the promise. These helpers translate a
+# composed session into the canonical ``SessionStress`` vocabulary owned by
+# ``combat_load_policy`` so the calendar can be re-judged on what was actually
+# composed.
+#
+# Nothing here decides legality. It only measures, in the shared vocabulary.
+
+# Mechanical tags are an authored bank vocabulary (``mech_*``), so region mapping
+# is a prefix rule over that vocabulary rather than a list of exercise names.
+_REGION_TAG_PREFIXES = (
+    ("mech_lower", BodyRegion.LOWER),
+    ("mech_upper", BodyRegion.UPPER),
+    ("mech_shoulder", BodyRegion.UPPER),
+    ("mech_grip", BodyRegion.UPPER),
+    ("mech_trunk", BodyRegion.TRUNK),
+    ("mech_hip", BodyRegion.LOWER),
+    ("mech_plantarflexion", BodyRegion.LOWER),
+)
+# Tags that describe how the tissue is loaded rather than where. Impact and
+# ballistic work is the mechanical cost a following day has to absorb.
+_HIGH_MECHANICAL_TAGS = frozenset(
+    {
+        "mech_ballistic",
+        "mech_landing_impact",
+        "mech_reactive",
+        "mech_reactive_rebound",
+        "mech_max_velocity",
+        "mech_deceleration",
+        "mech_change_of_direction",
+        "mech_acceleration",
+        "mech_axial_heavy",
+    }
+)
+_HIGH_NEURAL_TAGS = frozenset({"mech_cns_high"})
+_HIGH_SYSTEMIC_TAGS = frozenset({"mech_systemic_fatigue"})
+
+# A microdose is a handful of quality contacts, not a training block. Above this
+# many total reps the session is no longer expressing a microdose promise,
+# whatever its role key says. Chosen to sit well above a genuine 2x3 primer and
+# well below the ~80-rep session that motivated this rule.
+_MICRODOSE_REP_CEILING = 30
+
+
+def _assignment_mechanical_tags(assignment: dict[str, Any]) -> set[str]:
+    metadata = assignment.get("selection_metadata")
+    nested = metadata.get("mechanical_risk_tags", []) if isinstance(metadata, dict) else []
+    return {
+        str(value).strip().lower()
+        for value in [*(assignment.get("mechanical_risk_tags") or []), *nested]
+        if str(value).strip().lower().startswith("mech_")
+    }
+
+
+def _prescription_total_reps(text: str) -> float:
+    """Total reps a rendered prescription commits to, ``0.0`` when it states none.
+
+    Handles the authored forms that actually appear: ``4x5``, ``4 x 5/side``,
+    ``3 sets x 8 reps``. ``/side`` doubles the count because both limbs pay. A
+    duration-only or unparseable dose contributes no rep count; the tag-based
+    signals above still apply to it.
+    """
+    total = 0.0
+    for match in re.finditer(
+        r"(?<![\d.])(\d+)\s*(?:sets?\s*)?[x\u00d7]\s*(\d+)", str(text or ""), re.I
+    ):
+        reps = float(match.group(1)) * float(match.group(2))
+        tail = text[match.end():match.end() + 12].lower()
+        if "side" in tail or "/s" in tail or "each" in tail:
+            reps *= 2
+        total += reps
+    return total
+
+
+def realised_session_stress(assignments: list[dict[str, Any]]) -> SessionStress | None:
+    """Measure a composed session's cross-day cost, or ``None`` if unmeasurable.
+
+    ``None`` means "no evidence" and leaves the role's planned vector in place;
+    it never means "free".
+    """
+    assignments = [item for item in assignments or [] if isinstance(item, dict)]
+    if not assignments:
+        return None
+
+    tags: set[str] = set()
+    regions: set[BodyRegion] = set()
+    total_reps = 0.0
+    for assignment in assignments:
+        # An embedded support item is explicitly dose-capped to stay below the
+        # session's own cost and must not inflate it.
+        if assignment.get("embedded_support"):
+            continue
+        item_tags = _assignment_mechanical_tags(assignment)
+        tags |= item_tags
+        for prefix, region in _REGION_TAG_PREFIXES:
+            if any(tag.startswith(prefix) for tag in item_tags):
+                regions.add(region)
+        total_reps += _prescription_total_reps(
+            assignment.get("effective_prescription") or assignment.get("base_prescription") or ""
+        )
+
+    if not tags and not total_reps:
+        return None
+
+    high_mechanical = bool(tags & _HIGH_MECHANICAL_TAGS)
+    if high_mechanical and total_reps > _MICRODOSE_REP_CEILING:
+        neural_mechanical = StressLevel.HIGH
+    elif high_mechanical or tags & _HIGH_NEURAL_TAGS or total_reps > _MICRODOSE_REP_CEILING:
+        neural_mechanical = StressLevel.MODERATE
+    else:
+        neural_mechanical = StressLevel.LOW
+
+    systemic = StressLevel.HIGH if tags & _HIGH_SYSTEMIC_TAGS else StressLevel.NONE
+    return SessionStress(
+        systemic=systemic, neural_mechanical=neural_mechanical, regions=frozenset(regions)
+    )
+
+
+def _stress_stamp(stress: SessionStress) -> dict[str, Any]:
+    return {
+        "systemic": int(stress.systemic),
+        "neural_mechanical": int(stress.neural_mechanical),
+        "regions": sorted(region.value for region in stress.regions),
+        "authority": "realised_session_composition",
+    }
 
 
 def _substantial_mechanical_tags(records: list[dict[str, Any]]) -> set[str]:
@@ -1382,6 +1514,95 @@ def compose_normal_conditioning_assignments(
                 "embedded_trunk_support_skip_reason": trunk_support_skip_reason,
             }
 
+    return weekly_role_map
+
+
+def apply_realised_load_calendar_revalidation(
+    weekly_role_map: dict[str, Any],
+) -> dict[str, Any]:
+    """Re-judge composed sessions on their realised load, not their planned role.
+
+    Placement and the final governor both run before conditioning composition, so
+    they judge a role by the promise its role key makes. An
+    ``alactic_speed_day`` is stamped ``NEURAL_MICRODOSE`` from its key alone; the
+    session that is actually composed onto it may be two substantial unilateral
+    plyometric blocks. Nothing downstream ever re-asked the calendar.
+
+    This closes that sequence — role placement, exercise composition, realised
+    load classification, calendar revalidation — for composed S&C roles.
+
+    It is representation plus the canonical mover, not a second policy:
+    ``realised_session_stress`` measures in ``combat_load_policy``'s vocabulary,
+    the stamp goes on the role, and the legality verdict and any relocation come
+    from ``combat_load_policy`` through
+    ``calendar_integrity.relocate_or_suppress_role_for_recovery`` — the same
+    canonical mover the adjacent-strength-recovery pass already uses.
+
+    A conflict here is ``DEPRIORITIZE``, never ``FORBID``: the role moves only
+    when a genuinely cleaner slot exists, and otherwise stays put. There is no
+    mandatory rest day.
+    """
+    if not isinstance(weekly_role_map, dict):
+        return weekly_role_map
+
+    # Stamp every composed role first, so each role is judged against its
+    # neighbours' realised load rather than a mix of realised and planned.
+    stamped: list[dict[str, Any]] = []
+    for week in weekly_role_map.get("weeks", []) or []:
+        if not isinstance(week, dict):
+            continue
+        for role in week.get("session_roles", []) or []:
+            if not isinstance(role, dict) or role.get("late_fight_tail_owned"):
+                continue
+            stress = realised_session_stress(role.get("selected_exercise_assignments"))
+            if stress is None:
+                continue
+            role["calendar_stress"] = _stress_stamp(stress)
+            stamped.append(role)
+
+    from .calendar_context import build_events, classify_role, role_refs
+    from .combat_load_policy import PlacementDirective, evaluate_candidate_at_position
+
+    actions: list[dict[str, Any]] = []
+    for role in stamped:
+        ref = next(
+            (item for item in role_refs(weekly_role_map) if item.role is role), None
+        )
+        if ref is None:
+            continue
+        decision = evaluate_candidate_at_position(
+            ref.profile,
+            candidate_position=-ref.d_day,
+            events=build_events(weekly_role_map, exclude_role=role),
+            candidate_scope=ref.scope,
+        )
+        if decision.directive is PlacementDirective.ALLOW:
+            continue
+        action = relocate_or_suppress_role_for_recovery(
+            weekly_role_map,
+            role,
+            excluded_d_days=set(),
+            reason_code=decision.reason_code,
+            require_clean_destination=True,
+        )
+        if isinstance(action, dict):
+            actions.append({"role_key": role.get("role_key"), **action})
+
+    # This pass runs *after* the countdown dose morph, and relocation may cross a
+    # morph band boundary (strength morphs through D-17, so a D-20 -> D-16 move
+    # changes the applicable cap). The canonical morph owner is therefore called
+    # again, exactly as the final governor does after it relocates a role, so a
+    # moved role can never keep a dose resolved for the day it left.
+    if any(action.get("action") == "relocated" for action in actions):
+        from .late_camp_role_morph import _apply_late_camp_role_morph_once
+
+        _apply_late_camp_role_morph_once(weekly_role_map)
+
+    if actions:
+        weekly_role_map["realised_load_revalidation"] = {
+            "schema_version": "realised_load_revalidation.v1",
+            "actions": actions,
+        }
     return weekly_role_map
 
 

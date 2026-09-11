@@ -57,6 +57,7 @@ from .session_composition import (
     _conditioning_prescription,
     _selected_coaching_notes,
     attach_late_fight_assignments,
+    apply_realised_load_calendar_revalidation,
     compose_normal_conditioning_assignments,
     compose_normal_rehab_assignments,
     compose_normal_strength_assignments,
@@ -1262,6 +1263,11 @@ def _build_planning_brief(
     compose_normal_rehab_assignments(
         weekly_role_map=weekly_role_map, candidate_pools=candidate_pools,
     )
+    # Composition is the first point at which a session's real cross-day cost is
+    # knowable. Until here the calendar has only judged roles by the promise their
+    # role key makes, so re-ask the canonical policy now that exercises and doses
+    # exist. Relocation only, to a strictly cleaner slot; never a forced rest day.
+    apply_realised_load_calendar_revalidation(weekly_role_map)
     # The long-camp splice owns D-13 inward, but uses the same selector and
     # assignment schema as direct late-fight generation.
     tail_roles = [

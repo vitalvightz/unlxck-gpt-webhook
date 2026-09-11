@@ -223,6 +223,15 @@ build athlete model / candidate pools
   -> session_composition.compose_normal_strength_assignments
      session_composition.compose_normal_conditioning_assignments
        (closed session membership; reduce-only from Stage 1's selected slots)
+  -> session_composition.apply_realised_load_calendar_revalidation
+       (composition is the first point at which a session's real cross-day cost
+        is knowable, so the calendar is re-asked here. Until this pass every
+        calendar verdict judged a role by the promise its role key makes — an
+        alactic_speed_day is NEURAL_MICRODOSE from its key alone, whatever the
+        composed dose turns out to be. Measures in combat_load_policy's
+        SessionStress vocabulary, stamps the role, and relocates through the
+        canonical calendar_integrity mover. DEPRIORITIZE only: a role moves to a
+        strictly cleaner slot or stays put, and is never suppressed here)
   -> attach late-fight assignments to any spliced tail roles
   -> prescription_resolver.apply_effective_strength_prescriptions
        (authoritative effective_prescription per selected strength exercise)
@@ -392,6 +401,8 @@ canonical owner in `Main` today:
 | Normal-camp day placement | `stage2_role_map.py` (`_assign_declared_day_hints`) + `normal_calendar_placement.py` (completion) |
 | Late-fight countdown placement | `stage2_payload_late_fight.py` |
 | Combat collision legality (ALLOW / DEPRIORITIZE / FORBID) | `combat_load_policy.py` |
+| Cross-day S&C load legality (adjacent-day systemic / neural-mechanical cost) | `combat_load_policy.py` — same authority, extended vocabulary (`SessionStress`), not a second policy |
+| Realised-load measurement of a composed session | `session_composition.py` (`realised_session_stress`) — measurement only, never a verdict |
 | Canonical calendar-event representation | `calendar_context.py` (representation only — never a verdict) |
 | Countdown dose morph | `late_camp_role_morph.py` |
 | Support inserts / fillers | `camp_week_fillers.py`, `gap_fill_inserts.py` — subordinate to shared legality |
@@ -672,6 +683,7 @@ New features enter through the existing owners:
 | New filler type | filler library + shared legality |
 | New rendering | renderer only, read-only |
 | New collision rule | `combat_load_policy` only |
+| New cross-day load rule | `combat_load_policy` only — extend `SessionStress` / `_adjacent_stress_decision`; never a parallel load system |
 | New session-membership rule | `session_composition.py` / the late-fight assignment builder |
 | New effective-dose rule | `prescription_resolver.py` (bands stay in `late_camp_role_morph.py`) |
 | New goal-coverage rule | `goal_preservation.py`, inside its bounded-restore constraints |

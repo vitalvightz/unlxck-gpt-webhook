@@ -194,12 +194,30 @@ _ASSIGNMENT_PROVENANCE_FIELDS = (
 def _compact_prescribed_items(
     items: Any, *, effective_by_slot: dict[str, str]
 ) -> Any:
-    """Drop provenance, and the base dose when it repeats the effective one.
+    """Drop provenance, and the base dose the finalizer must not choose from.
 
-    ``base_prescription`` is only dropped where it is character-identical to the
-    authoritative ``effective_prescription`` for the same slot. Where the planner
-    capped a dose the two differ, and both survive so the finalizer can never
-    mistake the raw bank dose for the authorised one.
+    ``base_prescription`` is the raw exercise-bank dose, never the authorised
+    one. It is dropped where it is character-identical to the authoritative
+    ``effective_prescription`` for the same slot, and also wherever the item has
+    an effective dose that the scheduled-day strength resolver does not own.
+
+    The distinction is which packet rule defends the pairing. A slot present in
+    ``effective_by_slot`` belongs to a role carrying
+    ``effective_strength_prescriptions``, and an explicit packet rule tells the
+    finalizer to render that entry's ``effective_prescription`` and never its
+    ``base_prescription`` — so a capped strength dose keeps both, and the raw
+    bank dose stays visible as provenance.
+
+    An item with no resolver-owned dose has no such rule. In practice that is an
+    embedded support item: a ``strength_slots`` assignment composed into a
+    *conditioning* role, which never carries ``effective_strength_prescriptions``
+    and so falls outside the strength-scoped rule entirely. Shipping its capped
+    ``effective_prescription`` next to the uncapped bank dose left the finalizer
+    two competing doses with nothing to separate them, and it could render the
+    bank dose. Only the authorised dose is sent.
+
+    Provenance is unaffected: ``base_prescription`` stays on the rich Stage 1
+    object, in the validator's view and in persistence.
     """
     if not isinstance(items, list):
         return items
@@ -215,8 +233,9 @@ def _compact_prescribed_items(
         }
         base = trimmed.get("base_prescription")
         slot_id = str(trimmed.get("slot_id") or "")
+        resolver_owned = slot_id in effective_by_slot
         effective = trimmed.get("effective_prescription") or effective_by_slot.get(slot_id)
-        if base and effective and base == effective:
+        if base and effective and (base == effective or not resolver_owned):
             trimmed.pop("base_prescription", None)
         compact.append(trimmed)
     return compact

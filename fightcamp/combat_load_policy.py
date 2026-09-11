@@ -43,6 +43,23 @@ class LoadClass(str, Enum):
     MEANINGFUL_CONDITIONING = "meaningful_conditioning"
 
 
+class StressLevel(int, Enum):
+    """Graded load on one axis. Ordinal: comparisons are meaningful."""
+
+    NONE = 0
+    LOW = 1
+    MODERATE = 2
+    HIGH = 3
+
+
+class BodyRegion(str, Enum):
+    """Where a session's mechanical/tissue cost lands."""
+
+    LOWER = "lower"
+    UPPER = "upper"
+    TRUNK = "trunk"
+
+
 class DayOccupancy(str, Enum):
     COEXISTABLE = "coexistable"
     PHYSICAL = "physical"
@@ -56,6 +73,37 @@ class PlacementDirective(str, Enum):
 
 
 @dataclass(frozen=True)
+class SessionStress:
+    """Graded cross-day cost of one session, on two independent axes.
+
+    ``systemic`` is metabolic/global fatigue — the cost a hard glycolytic block
+    leaves on the whole athlete regardless of which limb did the work.
+    ``neural_mechanical`` is neural drive plus mechanical/tissue cost, which
+    lands somewhere specific: ``regions`` says where.
+
+    Two axes plus a region is deliberately the smallest model that separates the
+    cases that matter. An empty ``regions`` means *unknown*, never *nowhere*, so
+    a region-gated rule stays silent rather than guessing.
+
+    A profile carrying no ``SessionStress`` at all is unclassified: every
+    cross-day stress rule below abstains on it, so an owner that has not yet
+    supplied a vector keeps its existing behaviour exactly.
+    """
+
+    systemic: StressLevel = StressLevel.NONE
+    neural_mechanical: StressLevel = StressLevel.NONE
+    regions: frozenset[BodyRegion] = frozenset()
+
+    def shares_region_with(self, other: "SessionStress") -> bool:
+        """Do both vectors name a region, and do those regions overlap?
+
+        Unknown regions never satisfy this: an absent vector is not evidence of
+        a shared region.
+        """
+        return bool(self.regions and other.regions and (self.regions & other.regions))
+
+
+@dataclass(frozen=True)
 class CalendarLoadProfile:
     load_class: LoadClass
     occupancy: DayOccupancy
@@ -63,6 +111,10 @@ class CalendarLoadProfile:
     # ``light_combat_day`` role may set this. Resolved hard-sparring contact stays
     # strict even when its effective load is downgraded to technical-only.
     allows_light_combat_stack: bool = False
+    # Cross-day S&C cost. ``None`` means the owner supplied no vector and every
+    # stress rule abstains. A role stamp supplies the planned vector; composition
+    # restamps it with the realised one once exercises and doses are known.
+    stress: SessionStress | None = None
 
 
 @dataclass(frozen=True)
@@ -97,6 +149,12 @@ class CalendarCollisionContext:
     between_effective_hard_contacts: bool
     # Always the nearest global pair; scope must not hide a tighter hard gap.
     hard_contact_gap_intervening_days: int | None
+    # Profiles occupying the immediately adjacent days. Cross-day S&C cost is not
+    # expressible as a hard-contact distance, so the adjacent days are carried in
+    # full rather than reduced to one. Default empty so every existing caller that
+    # builds a context positionally keeps working unchanged.
+    previous_day_profiles: tuple[CalendarLoadProfile, ...] = ()
+    next_day_profiles: tuple[CalendarLoadProfile, ...] = ()
 
 
 _CONTACT_EFFECTIVE_LOAD_TO_CLASS = {
@@ -269,11 +327,37 @@ def _validate_profile_compatibility(
         raise ValueError("Physical training load cannot be stamped as coexistable support.")
 
 
+# Planned cross-day cost implied by a load class alone, before any exercise is
+# known. Deliberately conservative: it states only what the class itself promises.
+# A class absent here contributes no vector, and contact classes are excluded
+# because the contact rules already own their spacing.
+#
+# This is consulted at evaluation time rather than stamped onto every profile, so
+# a profile built by hand and the same profile built by ``_profile`` stay equal.
+# ``CalendarLoadProfile.stress`` is therefore an *override*: set it only where the
+# realised or system-specific cost differs from what the class alone implies.
+_LOAD_CLASS_STRESS = {
+    LoadClass.OFF: SessionStress(),
+    LoadClass.ZERO_LOAD: SessionStress(),
+    LoadClass.RECOVERY_ONLY: SessionStress(),
+    LoadClass.LOW_LOAD_AEROBIC: SessionStress(),
+    LoadClass.LOW_LOAD_PHYSICAL: SessionStress(neural_mechanical=StressLevel.LOW),
+    # The promise a microdose makes. Composition must restamp this if the
+    # realised session turns out larger than a microdose.
+    LoadClass.NEURAL_MICRODOSE: SessionStress(neural_mechanical=StressLevel.LOW),
+    LoadClass.MEANINGFUL_STRENGTH: SessionStress(
+        systemic=StressLevel.LOW, neural_mechanical=StressLevel.MODERATE
+    ),
+    LoadClass.MEANINGFUL_CONDITIONING: SessionStress(systemic=StressLevel.MODERATE),
+}
+
+
 def _profile(
     load_class: LoadClass,
     occupancy: DayOccupancy | None = None,
     *,
     allows_light_combat_stack: bool = False,
+    stress: SessionStress | None = None,
 ) -> CalendarLoadProfile:
     occupancy = occupancy or _default_occupancy(load_class)
     _validate_profile_compatibility(load_class, occupancy)
@@ -281,6 +365,54 @@ def _profile(
         load_class=load_class,
         occupancy=occupancy,
         allows_light_combat_stack=allows_light_combat_stack,
+        stress=stress,
+    )
+
+
+def _parse_stress_stamp(value: Any) -> SessionStress | None:
+    """Read a canonical ``calendar_stress`` stamp, or ``None`` when absent.
+
+    This is the seam composition uses to replace a role's *planned* vector with
+    its *realised* one once exercises and doses are known. Bad stamps fail loudly
+    rather than silently degrading to "no cross-day cost", which would make a
+    malformed stamp quietly more permissive than no stamp at all.
+    """
+    if value is None:
+        return None
+    if isinstance(value, SessionStress):
+        return value
+    if not isinstance(value, Mapping):
+        raise ValueError(f"Invalid calendar_stress: {value!r}")
+
+    def _level(key: str) -> StressLevel:
+        raw = value.get(key)
+        if raw is None:
+            return StressLevel.NONE
+        if isinstance(raw, StressLevel):
+            return raw
+        try:
+            return StressLevel(int(raw))
+        except (TypeError, ValueError):
+            pass
+        try:
+            return StressLevel[str(raw).strip().upper()]
+        except KeyError:
+            raise ValueError(f"Invalid calendar_stress.{key}: {raw!r}") from None
+
+    regions: set[BodyRegion] = set()
+    for region in value.get("regions") or ():
+        if isinstance(region, BodyRegion):
+            regions.add(region)
+            continue
+        try:
+            regions.add(BodyRegion(str(region).strip().lower()))
+        except ValueError:
+            raise ValueError(f"Invalid calendar_stress region: {region!r}") from None
+
+    return SessionStress(
+        systemic=_level("systemic"),
+        neural_mechanical=_level("neural_mechanical"),
+        regions=frozenset(regions),
     )
 
 
@@ -384,6 +516,11 @@ def _conditioning_role_profile(role: Mapping[str, Any]) -> CalendarLoadProfile:
     # Current late-fight roles explicitly stamp meaningful/medium cost. Preserve
     # that before applying normal-camp low-noise alactic semantics.
     if meaningful is True or stress_class == "meaningful_stress" or cost_class in {"medium", "high"}:
+        if system == "glycolytic":
+            return _profile(
+                LoadClass.MEANINGFUL_CONDITIONING,
+                stress=SessionStress(systemic=StressLevel.HIGH),
+            )
         return _profile(LoadClass.MEANINGFUL_CONDITIONING)
 
     if role_key in _LOW_LOAD_AEROBIC_ROLE_KEYS or system == "aerobic":
@@ -392,8 +529,13 @@ def _conditioning_role_profile(role: Mapping[str, Any]) -> CalendarLoadProfile:
         return _profile(LoadClass.LOW_LOAD_PHYSICAL)
     if role_key in _NEURAL_ALACTIC_ROLE_KEYS or system in {"alactic", "atp-pcr", "atp_pcr"}:
         return _profile(LoadClass.NEURAL_MICRODOSE)
+    # Glycolytic density is the archetypal whole-athlete metabolic cost: it is
+    # what a following day has to be able to express work against.
     if system == "glycolytic":
-        return _profile(LoadClass.MEANINGFUL_CONDITIONING)
+        return _profile(
+            LoadClass.MEANINGFUL_CONDITIONING,
+            stress=SessionStress(systemic=StressLevel.HIGH),
+        )
     return _profile(LoadClass.MEANINGFUL_CONDITIONING)
 
 
@@ -465,6 +607,28 @@ def _reconcile_role_stamp(
     return _profile(explicit_load, explicit_occupancy)
 
 
+def _with_role_stress(
+    role: Mapping[str, Any], profile: CalendarLoadProfile | None
+) -> CalendarLoadProfile | None:
+    """Overlay a role's realised ``calendar_stress`` stamp onto its profile.
+
+    Load class and occupancy stay owned by the derivation above — a stamp can
+    never change what kind of session this is, only how much it actually costs.
+    That keeps realised-dose information from becoming a second classifier.
+    """
+    if profile is None:
+        return None
+    realised = _parse_stress_stamp(role.get("calendar_stress"))
+    if realised is None:
+        return profile
+    return CalendarLoadProfile(
+        load_class=profile.load_class,
+        occupancy=profile.occupancy,
+        allows_light_combat_stack=profile.allows_light_combat_stack,
+        stress=realised,
+    )
+
+
 def role_load_profile(role: Mapping[str, Any] | None) -> CalendarLoadProfile | None:
     if not isinstance(role, Mapping):
         return None
@@ -493,7 +657,7 @@ def role_load_profile(role: Mapping[str, Any] | None) -> CalendarLoadProfile | N
             raise ValueError("Technical contact role has conflicting day occupancy.")
         return canonical
 
-    return _reconcile_role_stamp(role, _derived_role_profile(role))
+    return _with_role_stress(role, _reconcile_role_stamp(role, _derived_role_profile(role)))
 
 
 def role_load_class(role: Mapping[str, Any] | None) -> LoadClass | None:
@@ -517,6 +681,12 @@ def build_calendar_context(
         _validate_profile_compatibility(event.profile.load_class, event.profile.occupancy)
 
     same_day = tuple(event.profile for event in snapshot if int(event.position) == position)
+    previous_day = tuple(
+        event.profile for event in snapshot if int(event.position) == position - 1
+    )
+    next_day = tuple(
+        event.profile for event in snapshot if int(event.position) == position + 1
+    )
     hard_positions = sorted(
         {
             int(event.position)
@@ -562,6 +732,8 @@ def build_calendar_context(
             if previous_distance is not None and next_distance is not None
             else None
         ),
+        previous_day_profiles=previous_day,
+        next_day_profiles=next_day,
     )
 
 
@@ -629,6 +801,87 @@ def _same_day_decision(
                 if existing_contact
                 else "exclusive_day_extra_physical_conflict",
                 "An exclusive physical/contact session owns this day; only coexistable support may be added.",
+            )
+    return None
+
+
+# One graded threshold, shared by both directions of the adjacency rule, so
+# "meaningful" means the same thing whichever day is being judged.
+_MEANINGFUL_STRESS = StressLevel.MODERATE
+_DOMINATING_STRESS = StressLevel.HIGH
+
+
+def session_stress(profile: CalendarLoadProfile) -> SessionStress | None:
+    """Effective cross-day cost of ``profile``: its override, else its class default.
+
+    Contact classes have no entry and return ``None``, so the contact rules stay
+    the sole authority on contact spacing.
+    """
+    if profile.stress is not None:
+        return profile.stress
+    return _LOAD_CLASS_STRESS.get(profile.load_class)
+
+
+def _adjacent_stress_decision(
+    candidate: CalendarLoadProfile,
+    context: CalendarCollisionContext,
+) -> PlacementDecision | None:
+    """Cross-day S&C cost between a candidate and the days either side of it.
+
+    The contact rules above answer "does this collide with sparring?". This
+    answers the independent question "is the athlete able to express this
+    session, given what the neighbouring day already costs?" — the case with no
+    contact anywhere in the week.
+
+    Two generic conflicts, both ``DEPRIORITIZE`` rather than ``FORBID``: the work
+    is legal when nothing cleaner exists, and relocation to a cleaner slot is the
+    preferred outcome. Never a mandatory rest day.
+
+    1. Systemic then mechanical (either order). A day of high metabolic/global
+       fatigue sits next to a day demanding meaningful neural or mechanical
+       output. Systemic fatigue is global, so this is *not* region-gated — the
+       legs do not recover from a hard glycolytic block because the arms did it.
+    2. Repeated regional mechanical load. Both days demand meaningful
+       neural/mechanical output *and* name an overlapping body region. Region
+       overlap is required here, and unknown regions abstain, so this fires on
+       evidence rather than on a guess.
+
+    Both sides must carry a ``SessionStress`` vector. An unstamped profile
+    abstains entirely, which is what keeps every existing caller unchanged.
+    """
+    candidate_stress = session_stress(candidate)
+    if candidate_stress is None:
+        return None
+
+    for neighbour in (*context.previous_day_profiles, *context.next_day_profiles):
+        neighbour_stress = session_stress(neighbour)
+        if neighbour_stress is None:
+            continue
+
+        if (
+            neighbour_stress.systemic >= _DOMINATING_STRESS
+            and candidate_stress.neural_mechanical >= _MEANINGFUL_STRESS
+        ) or (
+            candidate_stress.systemic >= _DOMINATING_STRESS
+            and neighbour_stress.neural_mechanical >= _MEANINGFUL_STRESS
+        ):
+            return _decision(
+                PlacementDirective.DEPRIORITIZE,
+                "adjacent_day_systemic_then_mechanical",
+                "High systemic conditioning and meaningful neural/mechanical work "
+                "on adjacent days should lose to a cleaner slot.",
+            )
+
+        if (
+            candidate_stress.neural_mechanical >= _MEANINGFUL_STRESS
+            and neighbour_stress.neural_mechanical >= _MEANINGFUL_STRESS
+            and candidate_stress.shares_region_with(neighbour_stress)
+        ):
+            return _decision(
+                PlacementDirective.DEPRIORITIZE,
+                "adjacent_day_repeat_regional_mechanical_load",
+                "Meaningful mechanical load on the same body region two days "
+                "running should lose to a cleaner slot.",
             )
     return None
 
@@ -743,10 +996,16 @@ def evaluate_calendar_candidate(
             "Low-cost or technical work may precede hard contact.",
         )
 
+    # Contact spacing is settled. The remaining cross-day question is S&C cost,
+    # which no hard-contact distance can express.
+    adjacent_stress = _adjacent_stress_decision(candidate, context)
+    if adjacent_stress:
+        return adjacent_stress
+
     return _decision(
         PlacementDirective.ALLOW,
         "no_calendar_collision",
-        "No day-ownership or hard-contact spacing rule blocks this candidate.",
+        "No day-ownership, hard-contact spacing, or adjacent-day load rule blocks this candidate.",
     )
 
 
@@ -784,6 +1043,9 @@ def placement_rank(decision: PlacementDecision | PlacementDirective) -> int:
 
 __all__ = [
     "CONTACT_LOAD_CLASSES",
+    "BodyRegion",
+    "SessionStress",
+    "StressLevel",
     "CalendarCollisionContext",
     "CalendarEvent",
     "CalendarLoadProfile",
@@ -800,4 +1062,5 @@ __all__ = [
     "placement_rank",
     "role_load_class",
     "role_load_profile",
+    "session_stress",
 ]
