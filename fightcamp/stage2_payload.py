@@ -1295,8 +1295,17 @@ def _build_planning_brief(
     # exercises and authoritative doses exist. Relocation only, to a strictly
     # cleaner slot; never a forced rest day. A relocated role is re-morphed and
     # re-dosed for the day it lands on.
+    def _recompose_conditioning(role_map: dict, only_roles: set) -> dict:
+        return compose_normal_conditioning_assignments(
+            weekly_role_map=role_map,
+            candidate_pools=candidate_pools,
+            only_roles=only_roles,
+        )
+
     apply_realised_load_calendar_revalidation(
-        weekly_role_map, redose_callback=_resolve_strength_doses,
+        weekly_role_map,
+        redose_callback=_resolve_strength_doses,
+        recompose_conditioning_callback=_recompose_conditioning,
     )
     weekly_role_map = stamp_weekly_role_map_labels(weekly_role_map)
     return {

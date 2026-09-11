@@ -247,7 +247,13 @@ build athlete model / candidate pools
         which changes the dose, which changes the load, which can change where
         the role belongs, and that fixpoint is deliberately not run to
         convergence. A conflict surviving the bound is recorded in
-        residual_conflicts and left alone, never chased)
+        residual_conflicts and left alone, never chased. If the remorph rewrites
+        a conditioning role's canonical identity -- role_key/category/system, as
+        _morph_to_rhythm_touch does -- its membership was composed for the
+        session it used to be, so exactly those roles are reconciled through
+        compose_normal_conditioning_assignments(only_roles=...). Every other
+        closed membership is left untouched: a move that changes only the day
+        has no authority to reselect exercises)
   -> stamp labels
   -> goal_preservation.reconcile_goal_preservation
        (coverage verdict; a bounded restore re-runs morph + governor +
@@ -415,6 +421,7 @@ canonical owner in `Main` today:
 | Late-fight countdown placement | `stage2_payload_late_fight.py` |
 | Combat collision legality (ALLOW / DEPRIORITIZE / FORBID) | `combat_load_policy.py` |
 | Cross-day S&C load legality (adjacent-day systemic / neural-mechanical cost) | `combat_load_policy.py` — same authority, extended vocabulary (`SessionStress`), not a second policy |
+| Membership reconciliation after an identity morph | `session_composition.compose_normal_conditioning_assignments(only_roles=...)` — scoped to roles whose canonical identity changed; never a blanket recompose |
 | Realised-load measurement of a composed session | `session_composition.py` (`realised_role_stress`) — measurement only, never a verdict; reads the resolver's dose, not the bank dose |
 | Authored mechanical vocabulary on an assignment | `session_composition.assignment_from_slot` / the conditioning builder must carry `mechanical_risk_tags`; the assignment is the only surviving record once candidate pools are compacted |
 | Canonical calendar-event representation | `calendar_context.py` (representation only — never a verdict) |

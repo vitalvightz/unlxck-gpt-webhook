@@ -1400,9 +1400,19 @@ def _conditioning_role_is_hard_spar_adjacent(week: dict[str, Any], role: dict[st
 
 
 def compose_normal_conditioning_assignments(
-    *, weekly_role_map: dict[str, Any], candidate_pools: dict[str, Any]
+    *,
+    weekly_role_map: dict[str, Any],
+    candidate_pools: dict[str, Any],
+    only_roles: set[int] | None = None,
 ) -> dict[str, Any]:
-    """Attach a safe bank-backed minimum composition to normal conditioning roles."""
+    """Attach a safe bank-backed minimum composition to normal conditioning roles.
+
+    ``only_roles`` restricts composition to the given roles, addressed by
+    ``id()``. It exists so a caller that has invalidated a *specific* role's
+    membership can reconcile exactly that role through this authority, rather
+    than recomposing every conditioning session in the plan and churning
+    membership that is still correct.
+    """
     athlete_model = get_planner_athlete_model()
     pressure_context = _composition_context_from_model(athlete_model)
     trunk_strength_selected = _trunk_strength_selected(athlete_model)
@@ -1416,6 +1426,7 @@ def compose_normal_conditioning_assignments(
                 not isinstance(role, dict)
                 or role.get("late_fight_tail_owned")
                 or str(role.get("category") or "").strip().lower() != "conditioning"
+                or (only_roles is not None and id(role) not in only_roles)
             ):
                 continue
 
@@ -1661,6 +1672,33 @@ def _physically_occupied_d_days(
     }
 
 
+# The fields that decide *what kind of session* a role is, and therefore which
+# bank membership is valid for it. The countdown morph can rewrite all three at
+# once (``_morph_to_rhythm_touch`` turns a hard glycolytic fight-pace role into an
+# aerobic rhythm touch), which strands any membership composed for the old
+# identity. Dose fields are deliberately not included: a re-dosed role keeps its
+# membership, and only its prescription changes.
+_ROLE_IDENTITY_FIELDS = ("role_key", "category", "preferred_system")
+
+
+def _role_identity(role: dict[str, Any]) -> tuple[str, ...]:
+    return tuple(
+        str(role.get(field) or "").strip().lower() for field in _ROLE_IDENTITY_FIELDS
+    )
+
+
+def _conditioning_identities(weekly_role_map: dict[str, Any]) -> dict[int, tuple[str, ...]]:
+    return {
+        id(role): _role_identity(role)
+        for week in weekly_role_map.get("weeks", []) or []
+        if isinstance(week, dict)
+        for role in week.get("session_roles", []) or []
+        if isinstance(role, dict)
+        and not role.get("late_fight_tail_owned")
+        and str(role.get("category") or "").strip().lower() == "conditioning"
+    }
+
+
 def _realised_load_conflicts(
     weekly_role_map: dict[str, Any], roles: list[dict[str, Any]]
 ) -> list[tuple[dict[str, Any], Any, Any]]:
@@ -1689,6 +1727,7 @@ def apply_realised_load_calendar_revalidation(
     weekly_role_map: dict[str, Any],
     *,
     redose_callback: Callable[[dict[str, Any]], Any] | None = None,
+    recompose_conditioning_callback: Callable[[dict[str, Any], set[int]], Any] | None = None,
 ) -> dict[str, Any]:
     """Re-judge composed sessions on their realised load, not their planned role.
 
@@ -1728,6 +1767,64 @@ def apply_realised_load_calendar_revalidation(
 
     from .late_camp_role_morph import _apply_late_camp_role_morph_once
 
+    def _reconcile_changed_conditioning(before: dict[int, tuple[str, ...]]) -> list[dict[str, Any]]:
+        """Re-reconcile membership for any conditioning role the morph rewrote.
+
+        The morph can change a role's *identity*, not just its dose: a hard
+        glycolytic fight-pace role crossing into the fight-pace morph band comes
+        back as an aerobic rhythm touch. Its ``selected_exercise_assignments``
+        were composed for the session it used to be, so leaving them is stale
+        hard glycolytic work sitting on a low-cost recovery role.
+
+        Only roles whose identity actually changed are reconciled, through the
+        existing conditioning composition authority. Every other conditioning
+        session keeps its closed membership untouched.
+        """
+        changed = [
+            role
+            for week in weekly_role_map.get("weeks", []) or []
+            if isinstance(week, dict)
+            for role in week.get("session_roles", []) or []
+            if isinstance(role, dict)
+            and id(role) in before
+            and _role_identity(role) != before[id(role)]
+            and role.get("selected_exercise_assignments")
+        ]
+        if not changed:
+            return []
+        notes = [
+            {
+                "role_key": role.get("role_key"),
+                "previous_role_key": before[id(role)][0],
+                "previous_system": before[id(role)][2],
+                "d_day": role.get("scheduled_d_day"),
+                "stale_membership": [
+                    str(item.get("name") or "")
+                    for item in role.get("selected_exercise_assignments") or []
+                    if isinstance(item, dict)
+                ],
+            }
+            for role in changed
+        ]
+        if recompose_conditioning_callback is not None:
+            recompose_conditioning_callback(weekly_role_map, {id(r) for r in changed})
+            for note, role in zip(notes, changed):
+                note["action"] = "recomposed"
+                note["membership"] = [
+                    str(item.get("name") or "")
+                    for item in role.get("selected_exercise_assignments") or []
+                    if isinstance(item, dict)
+                ]
+            return notes
+        # No composition authority available to this caller. Membership composed
+        # for the old identity is still wrong, so it is dropped rather than
+        # rendered: an empty closed membership is an explicit "nothing selected",
+        # which downstream already understands, while stale membership is a lie.
+        for note, role in zip(notes, changed):
+            role["selected_exercise_assignments"] = []
+            note["action"] = "membership_cleared"
+        return notes
+
     def _remorph_and_redose() -> None:
         # The morph and the strength dose were both resolved for the day the role
         # has just left (strength morphs through D-17, so a D-20 -> D-16 move
@@ -1735,11 +1832,16 @@ def apply_realised_load_calendar_revalidation(
         # as the final governor re-runs the morph after it relocates a role. The
         # dose owner needs the candidate pools and athlete model, which are the
         # pipeline's to hold, so it arrives as a callback rather than an import.
+        identities_before = _conditioning_identities(weekly_role_map)
         _apply_late_camp_role_morph_once(weekly_role_map)
+        # Membership before dose: the resolver and the next stress refresh must
+        # both see the session the role actually is now.
+        reconciliations.extend(_reconcile_changed_conditioning(identities_before))
         if redose_callback is not None:
             redose_callback(weekly_role_map)
 
     actions: list[dict[str, Any]] = []
+    reconciliations: list[dict[str, Any]] = []
     # Days a role has already been moved off. Excluding them stops a role being
     # sent back to a day it just left when the refreshed dose flips the verdict.
     vacated: dict[int, set[int]] = {}
@@ -1787,12 +1889,16 @@ def apply_realised_load_calendar_revalidation(
         for role, ref, decision in _realised_load_conflicts(weekly_role_map, final_roles)
     ]
 
-    if actions or residual:
+    if actions or residual or reconciliations:
         weekly_role_map["realised_load_revalidation"] = {
-            "schema_version": "realised_load_revalidation.v2",
+            "schema_version": "realised_load_revalidation.v3",
             "rounds_run": rounds_run,
             "max_rounds": _MAX_REVALIDATION_ROUNDS,
             "actions": actions,
+            # Roles whose canonical identity the morph rewrote, and whose
+            # membership therefore had to be reconciled for the session they now
+            # are. Empty in the overwhelmingly common case.
+            "membership_reconciliations": reconciliations,
             # Legal but not ideal, and deliberately not chased further. Present
             # so a residual conflict is visible rather than silently accepted.
             "residual_conflicts": residual,

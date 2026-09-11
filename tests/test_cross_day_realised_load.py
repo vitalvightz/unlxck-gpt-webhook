@@ -12,6 +12,8 @@ revalidation).
 
 from __future__ import annotations
 
+import copy
+
 import pytest
 
 from fightcamp.combat_load_policy import (
@@ -915,3 +917,185 @@ def test_revalidation_is_bounded_and_records_what_it_did_not_chase():
     assert all(
         item["directive"] == "deprioritize" for item in report["residual_conflicts"]
     )
+
+
+def _hard_glycolytic_pool():
+    return {
+        "SPP": {
+            "conditioning_slots": [
+                _bank_slot(
+                    "Assault Bike Capacity Builder", "20min EMOM: 12 cal",
+                    ["mech_systemic_fatigue"], system="glycolytic",
+                ),
+                _bank_slot(
+                    "Aerobic Skip Flush", "12 min easy", [], system="aerobic",
+                ),
+            ],
+            "strength_slots": [],
+        }
+    }
+
+
+def test_relocation_across_a_role_identity_morph_reconciles_membership(monkeypatch):
+    """A role the morph rewrites must not keep the old session's membership.
+
+    ``_morph_to_rhythm_touch`` changes role_key, category and preferred_system
+    together: a hard glycolytic fight-pace role comes back an aerobic rhythm
+    touch. Its ``selected_exercise_assignments`` were composed for the session it
+    used to be, so leaving them puts a 20-minute glycolytic EMOM on a low-cost
+    recovery role.
+
+    The fight-pace morph band is widened here rather than the calendar guard
+    being faked: production relocation cannot reach D-13 (see
+    ``test_relocation_can_never_reach_the_fight_pace_morph_band``), so this
+    exercises the reconciliation on the boundary crossing itself.
+    """
+    import fightcamp.late_camp_role_morph as morph
+    from fightcamp.planner_context import planner_athlete_model_context
+
+    # Make the fight-pace morph band reachable by relocation.
+    monkeypatch.setattr(morph, "FIGHT_PACE_MORPH_MAX_D", 16)
+
+    week = {
+        "week_index": 1,
+        "phase": "SPP",
+        "declared_training_days": ["sunday", "monday", "tuesday"],
+        "calendar_days": [
+            {"weekday": "sunday", "d_day": 20},
+            {"weekday": "monday", "d_day": 19},
+            {"weekday": "tuesday", "d_day": 16},
+        ],
+        "session_roles": [],
+    }
+    # A fixed neighbour: no composed assignments, so it is never itself a
+    # relocation candidate, but its MEANINGFUL_STRENGTH class default still
+    # carries enough neural/mechanical cost to conflict with the glycolytic day.
+    # D-20 is outside the strength morph band, so its identity stays stable.
+    neighbour = {
+        "role_key": "primary_strength_day",
+        "category": "strength",
+        "scheduled_day_hint": "Sunday",
+        "scheduled_countdown_label": "D-20",
+        "scheduled_d_day": 20,
+    }
+    glycolytic = {
+        "role_key": "fight_pace_repeatability_day",
+        "category": "conditioning",
+        "preferred_system": "glycolytic",
+        "meaningful_stress": True,
+        "scheduled_day_hint": "Monday",
+        "scheduled_countdown_label": "D-19",
+        "scheduled_d_day": 19,
+    }
+    week["session_roles"] = [neighbour, glycolytic]
+    weekly_role_map = {"weeks": [week]}
+    pools = _hard_glycolytic_pool()
+
+    def _recompose(role_map, only_roles):
+        return compose_normal_conditioning_assignments(
+            weekly_role_map=role_map, candidate_pools=pools, only_roles=only_roles,
+        )
+
+    token = planner_athlete_model_context.set({})
+    try:
+        # Compose the genuinely hard glycolytic session at D-19, outside the band.
+        compose_normal_conditioning_assignments(
+            weekly_role_map=weekly_role_map, candidate_pools=pools,
+        )
+        assert [a["name"] for a in glycolytic["selected_exercise_assignments"]] == [
+            "Assault Bike Capacity Builder"
+        ]
+        assert glycolytic["selected_exercise_assignments"][0][
+            "effective_prescription"
+        ] == "20min EMOM: 12 cal"
+
+        apply_realised_load_calendar_revalidation(
+            weekly_role_map, recompose_conditioning_callback=_recompose,
+        )
+    finally:
+        planner_athlete_model_context.reset(token)
+
+    # It crossed the band and the morph rewrote its identity.
+    assert glycolytic["scheduled_d_day"] <= 16
+    assert glycolytic["role_key"] == "light_fight_pace_touch_day"
+    assert glycolytic["preferred_system"] == "aerobic"
+
+    # The stale hard glycolytic membership is gone, replaced by rhythm-touch work.
+    names = [a["name"] for a in glycolytic["selected_exercise_assignments"]]
+    assert "Assault Bike Capacity Builder" not in names, (
+        "stale hard glycolytic membership survived an identity morph"
+    )
+    for assignment in glycolytic["selected_exercise_assignments"]:
+        assert "EMOM" not in str(assignment.get("effective_prescription") or "")
+
+    report = weekly_role_map["realised_load_revalidation"]
+    reconciled = report["membership_reconciliations"]
+    assert reconciled and reconciled[0]["previous_role_key"] == (
+        "fight_pace_repeatability_day"
+    )
+    assert reconciled[0]["previous_system"] == "glycolytic"
+    assert reconciled[0]["action"] == "recomposed"
+
+
+def test_ordinary_relocation_keeps_closed_membership_unchanged():
+    """A relocation that crosses no morph boundary must not churn membership.
+
+    Closed membership is the deterministic planner's session; a move that only
+    changes the day has no authority to reselect exercises.
+    """
+    week = _spp_week()
+    week["session_roles"] = [_glycolytic_role(), _plyometric_role()]
+    weekly_role_map = {"weeks": [week]}
+    plyo = week["session_roles"][1]
+    before = copy.deepcopy(plyo["selected_exercise_assignments"])
+    glyco_before = copy.deepcopy(week["session_roles"][0]["selected_exercise_assignments"])
+
+    def _fail(*_args, **_kwargs):  # pragma: no cover - must never be called
+        raise AssertionError("membership was reconciled on an identity-stable move")
+
+    apply_realised_load_calendar_revalidation(
+        weekly_role_map, recompose_conditioning_callback=_fail,
+    )
+
+    # Something moved, so this is a real relocation and not a no-op test.
+    report = weekly_role_map["realised_load_revalidation"]
+    assert any(a.get("action") == "relocated" for a in report["actions"])
+    assert not report["membership_reconciliations"]
+    # And every closed membership is byte-identical.
+    assert plyo["selected_exercise_assignments"] == before
+    assert week["session_roles"][0]["selected_exercise_assignments"] == glyco_before
+
+
+def test_relocation_can_never_reach_the_fight_pace_morph_band():
+    """Pin the constraint that makes the identity morph unreachable in production.
+
+    Relocation destinations are D-14+ and roles at D-13 or closer are immutable,
+    so the fight-pace morph band cannot be entered by a move. If that filter is
+    ever relaxed, this fails and points at the membership-staleness hazard the
+    reconciliation above exists to absorb.
+    """
+    from fightcamp.calendar_integrity import _available_destination_days, _role_refs
+    from fightcamp.late_camp_role_morph import FIGHT_PACE_MORPH_MAX_D
+
+    week = _spp_week()
+    # Every free day sits inside the morph band.
+    week["declared_training_days"] = ["sunday", "monday", "tuesday", "wednesday"]
+    week["calendar_days"] = [
+        {"weekday": "sunday", "d_day": 16},
+        {"weekday": "monday", "d_day": 15},
+        {"weekday": "tuesday", "d_day": 13},
+        {"weekday": "wednesday", "d_day": 11},
+    ]
+    role = _glycolytic_role()
+    role.update({
+        "scheduled_day_hint": "Sunday",
+        "scheduled_countdown_label": "D-16",
+        "scheduled_d_day": 16,
+    })
+    week["session_roles"] = [role]
+    weekly_role_map = {"weeks": [week]}
+
+    ref = next(item for item in _role_refs(weekly_role_map))
+    offered = [d_day for _weekday, d_day in _available_destination_days(ref)]
+    assert offered, "fixture must offer some destination"
+    assert all(d_day > FIGHT_PACE_MORPH_MAX_D for d_day in offered), offered
