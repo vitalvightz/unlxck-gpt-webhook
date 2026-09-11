@@ -30,6 +30,7 @@ from fightcamp.session_composition import (
     apply_realised_load_calendar_revalidation,
     assignment_from_slot,
     compose_normal_conditioning_assignments,
+    _stress_stamp,
     realised_role_stress,
     realised_session_stress,
 )
@@ -654,3 +655,263 @@ def test_end_to_end_through_the_real_conditioning_composition_builder():
     assert not _adjacent_load_conflicts(weekly_role_map)
     assert not week.get("suppressed_roles")
     assert len(week["session_roles"]) == 2
+
+
+def test_relocation_across_a_morph_boundary_restamps_from_the_new_days_dose():
+    """A relocated role's persisted stress must describe the dose it ends with.
+
+    Relocation re-morphs and re-doses the role for its new day. D-18+ is
+    uncapped; D-17 and closer caps strength to 3x3. A role moved across that
+    boundary is a materially smaller session than the one that was moved, and
+    the stamp written before the move describes the dose on the day it left.
+    A stale stamp is a lie to every later reader, not just to this pass.
+
+    Drives the real morph and the real prescription resolver, not stand-ins.
+    """
+    from fightcamp.prescription_resolver import apply_effective_strength_prescriptions
+
+    # Declared days deliberately skip D-18/D-17, so the only legal destinations
+    # sit on the far side of the morph boundary.
+    week = {
+        "week_index": 1,
+        "phase": "SPP",
+        "declared_training_days": ["sunday", "monday", "tuesday", "wednesday"],
+        "calendar_days": [
+            {"weekday": "sunday", "d_day": 20},
+            {"weekday": "monday", "d_day": 19},
+            {"weekday": "tuesday", "d_day": 16},
+            {"weekday": "wednesday", "d_day": 15},
+        ],
+        "session_roles": [],
+    }
+    glycolytic = {
+        "role_key": "fight_pace_repeatability_day",
+        "category": "conditioning",
+        "preferred_system": "glycolytic",
+        "meaningful_stress": True,
+        "scheduled_day_hint": "Sunday",
+        "scheduled_countdown_label": "D-20",
+        "scheduled_d_day": 20,
+        # Deliberately unmeasurable (no mechanical tags, no rep count), so this
+        # role gets no realised stamp and is never itself a relocation
+        # candidate. It still contributes systemic=HIGH from its glycolytic
+        # class derivation, so it is a *fixed* neighbour and the strength role
+        # is unambiguously the one that has to move. Without this the two roles
+        # simply swap days and nothing crosses the boundary under test.
+        "selected_exercise_assignments": [
+            {
+                "name": "Assault Bike Capacity Builder",
+                "effective_prescription": "20min EMOM: 12 cal",
+            }
+        ],
+    }
+    strength = {
+        "role_key": "primary_strength_day",
+        "category": "strength",
+        "scheduled_day_hint": "Monday",
+        "scheduled_countdown_label": "D-19",
+        "scheduled_d_day": 19,
+        "selected_exercise_assignments": [
+            {
+                "slot_id": "st1",
+                "name": "Back Squat",
+                "slot_group": "strength_slots",
+                "source_phase": "SPP",
+                # Uncapped bank dose: 5 x 8 = 40 reps.
+                "base_prescription": "5 sets x 8 reps @ RPE 8",
+                "mechanical_risk_tags": ["mech_lower_squat", "mech_axial_heavy"],
+            }
+        ],
+    }
+    week["session_roles"] = [glycolytic, strength]
+    weekly_role_map = {"weeks": [week]}
+    pools = {
+        "SPP": {
+            "strength_slots": [
+                {
+                    "slot_id": "st1",
+                    "session_index": 1,
+                    "priority": 1,
+                    "quality_class": "anchor_loaded",
+                    "selected": {
+                        "name": "Back Squat",
+                        "prescription": "5 sets x 8 reps @ RPE 8",
+                        "quality_class": "anchor_loaded",
+                    },
+                }
+            ]
+        }
+    }
+
+    def _redose(role_map):
+        return apply_effective_strength_prescriptions(
+            weekly_role_map=role_map, candidate_pools=pools, athlete_model={},
+        )
+
+    _redose(weekly_role_map)
+    # Before the move: uncapped at D-19, so heavy axial work at full bank volume.
+    assert realised_role_stress(strength).neural_mechanical is StressLevel.HIGH
+
+    apply_realised_load_calendar_revalidation(
+        weekly_role_map, redose_callback=_redose,
+    )
+
+    # It crossed the boundary.
+    assert strength["scheduled_d_day"] <= 17
+    assert strength["scheduled_countdown_label"] == f"D-{strength['scheduled_d_day']}"
+
+    # The authoritative dose is the new day's, not the day it left.
+    resolved = strength["effective_strength_prescriptions"][0]["effective_prescription"]
+    assert resolved == "3 x 3 @ RPE 6-7 max"
+    assert "5 sets x 8 reps" not in resolved
+
+    # And the persisted stamp reflects that smaller dose rather than the old one.
+    stamp = strength["calendar_stress"]
+    assert stamp == _stress_stamp(realised_role_stress(strength))
+    # Still heavy axial work, but at 3x3 rather than 5x8 it is no longer a
+    # top-end session — the stamp tracks the dose, which is the whole point.
+    assert stamp["neural_mechanical"] == int(StressLevel.MODERATE)
+
+    # Bounded, and the destination is legal under the refreshed load.
+    report = weekly_role_map["realised_load_revalidation"]
+    assert report["rounds_run"] <= report["max_rounds"] == 2
+    assert not report["residual_conflicts"]
+    assert not _adjacent_load_conflicts(weekly_role_map)
+
+
+def test_stamps_are_fresh_even_when_the_last_round_relocates(monkeypatch):
+    """At the round cap there is no next round to re-stamp, so the pass must.
+
+    Each round re-stamps at its start, which covers every relocation except one:
+    a move made by the *final* round is followed by a re-dose and then by nothing.
+    Without the closing refresh that role would persist a stamp describing the
+    dose it had on the day it left. Forcing the cap to one round isolates exactly
+    that boundary.
+    """
+    import fightcamp.session_composition as composition
+    from fightcamp.prescription_resolver import apply_effective_strength_prescriptions
+
+    monkeypatch.setattr(composition, "_MAX_REVALIDATION_ROUNDS", 1)
+
+    week = {
+        "week_index": 1,
+        "phase": "SPP",
+        "declared_training_days": ["sunday", "monday", "tuesday", "wednesday"],
+        "calendar_days": [
+            {"weekday": "sunday", "d_day": 20},
+            {"weekday": "monday", "d_day": 19},
+            {"weekday": "tuesday", "d_day": 16},
+            {"weekday": "wednesday", "d_day": 15},
+        ],
+        "session_roles": [],
+    }
+    glycolytic = {
+        "role_key": "fight_pace_repeatability_day",
+        "category": "conditioning",
+        "preferred_system": "glycolytic",
+        "meaningful_stress": True,
+        "scheduled_day_hint": "Sunday",
+        "scheduled_countdown_label": "D-20",
+        "scheduled_d_day": 20,
+        "selected_exercise_assignments": [
+            {"name": "Assault Bike Capacity Builder",
+             "effective_prescription": "20min EMOM: 12 cal"}
+        ],
+    }
+    strength = {
+        "role_key": "primary_strength_day",
+        "category": "strength",
+        "scheduled_day_hint": "Monday",
+        "scheduled_countdown_label": "D-19",
+        "scheduled_d_day": 19,
+        "selected_exercise_assignments": [
+            {
+                "slot_id": "st1", "name": "Back Squat",
+                "slot_group": "strength_slots", "source_phase": "SPP",
+                "base_prescription": "5 sets x 8 reps @ RPE 8",
+                "mechanical_risk_tags": ["mech_lower_squat", "mech_axial_heavy"],
+            }
+        ],
+    }
+    week["session_roles"] = [glycolytic, strength]
+    weekly_role_map = {"weeks": [week]}
+    pools = {"SPP": {"strength_slots": [{
+        "slot_id": "st1", "session_index": 1, "priority": 1,
+        "quality_class": "anchor_loaded",
+        "selected": {"name": "Back Squat",
+                     "prescription": "5 sets x 8 reps @ RPE 8",
+                     "quality_class": "anchor_loaded"},
+    }]}}
+
+    def _redose(role_map):
+        return apply_effective_strength_prescriptions(
+            weekly_role_map=role_map, candidate_pools=pools, athlete_model={},
+        )
+
+    _redose(weekly_role_map)
+    composition.apply_realised_load_calendar_revalidation(
+        weekly_role_map, redose_callback=_redose,
+    )
+
+    assert strength["scheduled_d_day"] <= 17, "the fixture did not cross the boundary"
+    report = weekly_role_map["realised_load_revalidation"]
+    assert report["rounds_run"] == 1 == report["max_rounds"]
+
+    # Every persisted stamp still equals a fresh measurement of the final dose.
+    for role in week["session_roles"]:
+        fresh = realised_role_stress(role)
+        if fresh is None:
+            assert "calendar_stress" not in role
+        else:
+            assert role["calendar_stress"] == _stress_stamp(fresh)
+
+
+def test_revalidation_is_bounded_and_records_what_it_did_not_chase():
+    """The pass must terminate even when every day it can reach is in conflict.
+
+    Relocation changes a role's day, which re-doses it, which changes its load,
+    which can change where it belongs — a fixpoint search that is deliberately
+    not run to convergence. The bound must hold and the leftover must be visible
+    rather than silently accepted.
+    """
+    week = _spp_week()
+    # Three substantial lower-body sessions on consecutive days: whichever way
+    # they are shuffled some adjacency remains, so relocation cannot settle.
+    roles = []
+    for offset, day in ((26, "Sunday"), (25, "Monday"), (24, "Tuesday")):
+        roles.append({
+            "role_key": "alactic_speed_day",
+            "category": "conditioning",
+            "preferred_system": "alactic",
+            "scheduled_day_hint": day,
+            "scheduled_countdown_label": f"D-{offset}",
+            "scheduled_d_day": offset,
+            "selected_exercise_assignments": [
+                assignment_from_slot("SPP", "conditioning_slots", _bank_slot(
+                    f"Bounds {offset}", "5x6/side",
+                    ["mech_ballistic", "mech_landing_impact", "mech_lower_jump"],
+                ))
+            ],
+        })
+    week["session_roles"] = roles
+    # Only these three days exist, so there is nowhere clean to escape to.
+    week["declared_training_days"] = ["sunday", "monday", "tuesday"]
+    week["calendar_days"] = [
+        {"weekday": "sunday", "d_day": 26},
+        {"weekday": "monday", "d_day": 25},
+        {"weekday": "tuesday", "d_day": 24},
+    ]
+    weekly_role_map = {"weeks": [week]}
+
+    apply_realised_load_calendar_revalidation(weekly_role_map)
+
+    report = weekly_role_map["realised_load_revalidation"]
+    assert report["rounds_run"] <= report["max_rounds"] == 2
+    # Nothing was destroyed to force a resolution.
+    assert len(week["session_roles"]) == 3
+    assert not week.get("suppressed_roles")
+    # What could not be resolved is reported, not hidden.
+    assert report["residual_conflicts"]
+    assert all(
+        item["directive"] == "deprioritize" for item in report["residual_conflicts"]
+    )

@@ -1596,6 +1596,95 @@ def compose_normal_conditioning_assignments(
     return weekly_role_map
 
 
+# A relocation changes the role's scheduled day, which re-morphs and re-doses it,
+# which changes its realised load, which can in principle change where it belongs.
+# That is a fixpoint search, and it is deliberately not run to convergence: two
+# rounds (an initial move plus one verification round that may correct it) is the
+# bound. Anything unresolved after that is recorded as a residual conflict rather
+# than chased, so this pass can never loop or oscillate.
+_MAX_REVALIDATION_ROUNDS = 2
+
+
+def _refresh_stress_stamps(weekly_role_map: dict[str, Any]) -> list[dict[str, Any]]:
+    """Re-stamp every composed role from its *current* authoritative dose.
+
+    Called once per round, and once more after the final round, because a
+    relocation re-morphs and re-doses the role it moved: a stamp written before
+    that describes the dose the role had on the day it left. The stamp persists
+    on the role, so a stale one would be a lie to every later reader, not just to
+    this pass.
+
+    Neighbours are re-stamped too, not only the relocated role: a move changes
+    which days sit next to which, and the morph owner may re-dose more than the
+    role that moved.
+    """
+    stamped: list[dict[str, Any]] = []
+    for week in weekly_role_map.get("weeks", []) or []:
+        if not isinstance(week, dict):
+            continue
+        for role in week.get("session_roles", []) or []:
+            if not isinstance(role, dict) or role.get("late_fight_tail_owned"):
+                continue
+            stress = realised_role_stress(role)
+            if stress is None:
+                # No longer measurable: drop any stamp from an earlier round
+                # rather than leave one describing a dose that no longer exists.
+                role.pop("calendar_stress", None)
+                continue
+            role["calendar_stress"] = _stress_stamp(stress)
+            stamped.append(role)
+    return stamped
+
+
+def _physically_occupied_d_days(
+    weekly_role_map: dict[str, Any], mover: dict[str, Any]
+) -> set[int]:
+    """Days already carrying a physical session, excluding the mover's own.
+
+    This pass exists to relieve concentrated load, so it must not relieve an
+    adjacency by stacking: moving a substantial session onto a day that already
+    holds one concentrates the very load being spread out. The shared policy
+    legitimately permits two physical sessions to share a day (strength plus an
+    easy aerobic flush, say) and that judgement is not this pass's to change --
+    so this constrains only where *this* pass is willing to move a role, via the
+    mover's excluded days, and leaves ``_same_day_decision`` untouched.
+    """
+    from .calendar_context import role_refs
+    from .combat_load_policy import DayOccupancy
+
+    return {
+        ref.d_day
+        for ref in role_refs(weekly_role_map)
+        if ref.role is not mover
+        and ref.profile.occupancy
+        in {DayOccupancy.PHYSICAL, DayOccupancy.EXCLUSIVE_PHYSICAL}
+    }
+
+
+def _realised_load_conflicts(
+    weekly_role_map: dict[str, Any], roles: list[dict[str, Any]]
+) -> list[tuple[dict[str, Any], Any, Any]]:
+    """``(role, ref, decision)`` for each role the policy does not ALLOW."""
+    from .calendar_context import build_events, role_refs
+    from .combat_load_policy import PlacementDirective, evaluate_candidate_at_position
+
+    refs = {id(ref.role): ref for ref in role_refs(weekly_role_map)}
+    conflicts = []
+    for role in roles:
+        ref = refs.get(id(role))
+        if ref is None:
+            continue
+        decision = evaluate_candidate_at_position(
+            ref.profile,
+            candidate_position=-ref.d_day,
+            events=build_events(weekly_role_map, exclude_role=role),
+            candidate_scope=ref.scope,
+        )
+        if decision.directive is not PlacementDirective.ALLOW:
+            conflicts.append((role, ref, decision))
+    return conflicts
+
+
 def apply_realised_load_calendar_revalidation(
     weekly_role_map: dict[str, Any],
     *,
@@ -1613,9 +1702,9 @@ def apply_realised_load_calendar_revalidation(
     load classification, calendar revalidation — for composed S&C roles.
 
     It is representation plus the canonical mover, not a second policy:
-    ``realised_session_stress`` measures in ``combat_load_policy``'s vocabulary,
-    the stamp goes on the role, and the legality verdict and any relocation come
-    from ``combat_load_policy`` through
+    ``realised_role_stress`` measures in ``combat_load_policy``'s vocabulary, the
+    stamp goes on the role, and the legality verdict and any relocation come from
+    ``combat_load_policy`` through
     ``calendar_integrity.relocate_or_suppress_role_for_recovery`` — the same
     canonical mover the adjacent-strength-recovery pass already uses.
 
@@ -1626,76 +1715,87 @@ def apply_realised_load_calendar_revalidation(
     Ordering requirement: this must run after ``prescription_resolver``, because
     a strength assignment carries only the raw bank dose until the resolver has
     written the role's ``effective_strength_prescriptions``. Measuring before
-    that scores a capped primer at its uncapped bank dose. Relocation then
-    invalidates both the countdown morph and that resolved dose, so both owners
-    are re-run.
+    that scores a capped primer at its uncapped bank dose.
+
+    Relocation invalidates the countdown morph and the resolved dose for the role
+    that moved, so both owners are re-run and the destination is then re-judged
+    against the *refreshed* load. That verification is bounded at
+    ``_MAX_REVALIDATION_ROUNDS``; a conflict surviving the bound is recorded in
+    ``residual_conflicts`` and the role is left where it is, never chased.
     """
     if not isinstance(weekly_role_map, dict):
         return weekly_role_map
 
-    # Stamp every composed role first, so each role is judged against its
-    # neighbours' realised load rather than a mix of realised and planned.
-    stamped: list[dict[str, Any]] = []
-    for week in weekly_role_map.get("weeks", []) or []:
-        if not isinstance(week, dict):
-            continue
-        for role in week.get("session_roles", []) or []:
-            if not isinstance(role, dict) or role.get("late_fight_tail_owned"):
-                continue
-            stress = realised_role_stress(role)
-            if stress is None:
-                continue
-            role["calendar_stress"] = _stress_stamp(stress)
-            stamped.append(role)
+    from .late_camp_role_morph import _apply_late_camp_role_morph_once
 
-    from .calendar_context import build_events, classify_role, role_refs
-    from .combat_load_policy import PlacementDirective, evaluate_candidate_at_position
-
-    actions: list[dict[str, Any]] = []
-    for role in stamped:
-        ref = next(
-            (item for item in role_refs(weekly_role_map) if item.role is role), None
-        )
-        if ref is None:
-            continue
-        decision = evaluate_candidate_at_position(
-            ref.profile,
-            candidate_position=-ref.d_day,
-            events=build_events(weekly_role_map, exclude_role=role),
-            candidate_scope=ref.scope,
-        )
-        if decision.directive is PlacementDirective.ALLOW:
-            continue
-        action = relocate_or_suppress_role_for_recovery(
-            weekly_role_map,
-            role,
-            excluded_d_days=set(),
-            reason_code=decision.reason_code,
-            require_clean_destination=True,
-        )
-        if isinstance(action, dict):
-            actions.append({"role_key": role.get("role_key"), **action})
-
-    # This pass runs *after* the countdown dose morph, and relocation may cross a
-    # morph band boundary (strength morphs through D-17, so a D-20 -> D-16 move
-    # changes the applicable cap). The canonical morph owner is therefore called
-    # again, exactly as the final governor does after it relocates a role, so a
-    # moved role can never keep a dose resolved for the day it left.
-    if any(action.get("action") == "relocated" for action in actions):
-        from .late_camp_role_morph import _apply_late_camp_role_morph_once
-
+    def _remorph_and_redose() -> None:
+        # The morph and the strength dose were both resolved for the day the role
+        # has just left (strength morphs through D-17, so a D-20 -> D-16 move
+        # changes the applicable cap). Both canonical owners are re-run, exactly
+        # as the final governor re-runs the morph after it relocates a role. The
+        # dose owner needs the candidate pools and athlete model, which are the
+        # pipeline's to hold, so it arrives as a callback rather than an import.
         _apply_late_camp_role_morph_once(weekly_role_map)
-        # The scheduled-day strength dose was resolved for the day the role has
-        # just left, so the dose owner is re-run too. Supplied by the pipeline
-        # rather than imported here: resolution needs the candidate pools and
-        # athlete model, which are the caller's to hold.
         if redose_callback is not None:
             redose_callback(weekly_role_map)
 
-    if actions:
+    actions: list[dict[str, Any]] = []
+    # Days a role has already been moved off. Excluding them stops a role being
+    # sent back to a day it just left when the refreshed dose flips the verdict.
+    vacated: dict[int, set[int]] = {}
+    rounds_run = 0
+
+    for _round in range(_MAX_REVALIDATION_ROUNDS):
+        rounds_run += 1
+        # Re-stamp from current doses so each round judges the calendar as it now
+        # actually is, not as it was before the previous round's re-dose.
+        stamped = _refresh_stress_stamps(weekly_role_map)
+        round_actions: list[dict[str, Any]] = []
+        for role, _ref, decision in _realised_load_conflicts(weekly_role_map, stamped):
+            action = relocate_or_suppress_role_for_recovery(
+                weekly_role_map,
+                role,
+                excluded_d_days=(
+                    vacated.get(id(role), set())
+                    | _physically_occupied_d_days(weekly_role_map, role)
+                ),
+                reason_code=decision.reason_code,
+                require_clean_destination=True,
+            )
+            if not isinstance(action, dict):
+                continue
+            if action.get("from_d_day") is not None:
+                vacated.setdefault(id(role), set()).add(int(action["from_d_day"]))
+            round_actions.append(
+                {"round": rounds_run, "role_key": role.get("role_key"), **action}
+            )
+        if not round_actions:
+            break
+        actions.extend(round_actions)
+        _remorph_and_redose()
+
+    # The last round may have re-dosed after its final stamp, so refresh once more:
+    # the stamp that persists must describe the dose the role actually ends with.
+    final_roles = _refresh_stress_stamps(weekly_role_map)
+    residual = [
+        {
+            "role_key": role.get("role_key"),
+            "d_day": ref.d_day,
+            "reason_code": decision.reason_code,
+            "directive": decision.directive.value,
+        }
+        for role, ref, decision in _realised_load_conflicts(weekly_role_map, final_roles)
+    ]
+
+    if actions or residual:
         weekly_role_map["realised_load_revalidation"] = {
-            "schema_version": "realised_load_revalidation.v1",
+            "schema_version": "realised_load_revalidation.v2",
+            "rounds_run": rounds_run,
+            "max_rounds": _MAX_REVALIDATION_ROUNDS,
             "actions": actions,
+            # Legal but not ideal, and deliberately not chased further. Present
+            # so a residual conflict is visible rather than silently accepted.
+            "residual_conflicts": residual,
         }
     return weekly_role_map
 

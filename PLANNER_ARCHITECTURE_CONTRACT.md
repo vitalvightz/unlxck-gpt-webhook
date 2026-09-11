@@ -238,8 +238,16 @@ build athlete model / candidate pools
         combat_load_policy's SessionStress vocabulary, stamps the role, and
         relocates through the canonical calendar_integrity mover. DEPRIORITIZE
         only: a role moves to a strictly cleaner slot or stays put, and is never
-        suppressed here. A relocated role is re-morphed and re-dosed, because
-        both were resolved for the day it left)
+        suppressed here, and never moved onto a day that already carries a
+        physical session -- relieving an adjacency by stacking would concentrate
+        the very load being spread out. A relocated role is re-morphed and
+        re-dosed, because both were resolved for the day it left, and is then
+        re-stamped and re-judged against that refreshed load. That verification
+        is bounded at _MAX_REVALIDATION_ROUNDS (2): relocation changes the day,
+        which changes the dose, which changes the load, which can change where
+        the role belongs, and that fixpoint is deliberately not run to
+        convergence. A conflict surviving the bound is recorded in
+        residual_conflicts and left alone, never chased)
   -> stamp labels
   -> goal_preservation.reconcile_goal_preservation
        (coverage verdict; a bounded restore re-runs morph + governor +
