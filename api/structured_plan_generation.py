@@ -303,6 +303,20 @@ _SESSION_TYPE_ALIASES = {
     "warmup": "primer",
     "warm-up": "primer",
 }
+
+
+def _raw_session_type_is_rehab(value: Any) -> bool:
+    """Recognise legacy rehab labels before unknown enums fall back to mixed.
+
+    Earlier raw-plan conversion can emit a session label such as
+    ``Rehab-friendly low-load support`` in ``session_type`` rather than the
+    structured ``rehab`` enum. This remains deliberately narrow: a canonical
+    session type always wins, and only rehab/prehab wording gets this fallback.
+    """
+    text = _coerce_str(value).strip().lower()
+    return bool(re.search(r"\b(?:prehab|rehab)\b", text))
+
+
 _EFFORT_METHOD_ALIASES = {
     "rpe": "RPE",
     "rir": "RIR",
@@ -1050,7 +1064,15 @@ def _normalize_block(value: Any) -> dict[str, Any]:
 def _normalize_session(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
     out["session_id"] = _coerce_nonempty_str(out.get("session_id"), "session")
-    out["session_type"] = _enum(out.get("session_type"), _SESSION_TYPE_VALUES, "mixed", _SESSION_TYPE_ALIASES)
+    raw_session_type = out.get("session_type")
+    normalized_session_type = _enum(
+        raw_session_type, _SESSION_TYPE_VALUES, "mixed", _SESSION_TYPE_ALIASES
+    )
+    out["session_type"] = (
+        "rehab"
+        if normalized_session_type == "mixed" and _raw_session_type_is_rehab(raw_session_type)
+        else normalized_session_type
+    )
     out["title"] = _coerce_str(out.get("title"))
     out["objective"] = _coerce_str(out.get("objective"))
     out["mindset_anchor"] = _normalize_mindset(out.get("mindset_anchor"))
