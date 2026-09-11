@@ -1099,3 +1099,95 @@ def test_relocation_can_never_reach_the_fight_pace_morph_band():
     offered = [d_day for _weekday, d_day in _available_destination_days(ref)]
     assert offered, "fixture must offer some destination"
     assert all(d_day > FIGHT_PACE_MORPH_MAX_D for d_day in offered), offered
+
+
+def test_identity_morph_with_no_compliant_candidate_clears_stale_membership(monkeypatch):
+    """Reconciliation that produces nothing must still not leave the old session.
+
+    The composition authority skips a role whose pool holds no candidate for its
+    system, so recomposition is not guaranteed to overwrite anything. A hard
+    glycolytic role morphed to aerobic, against a pool with no aerobic option,
+    would otherwise keep its pre-morph glycolytic membership on a low-cost
+    recovery role even though reconciliation was requested and reported success.
+    """
+    import fightcamp.late_camp_role_morph as morph
+    from fightcamp.planner_context import planner_athlete_model_context
+
+    monkeypatch.setattr(morph, "FIGHT_PACE_MORPH_MAX_D", 16)
+
+    week = {
+        "week_index": 1,
+        "phase": "SPP",
+        "declared_training_days": ["sunday", "monday", "tuesday"],
+        "calendar_days": [
+            {"weekday": "sunday", "d_day": 20},
+            {"weekday": "monday", "d_day": 19},
+            {"weekday": "tuesday", "d_day": 16},
+        ],
+        "session_roles": [],
+    }
+    neighbour = {
+        "role_key": "primary_strength_day",
+        "category": "strength",
+        "scheduled_day_hint": "Sunday",
+        "scheduled_countdown_label": "D-20",
+        "scheduled_d_day": 20,
+    }
+    glycolytic = {
+        "role_key": "fight_pace_repeatability_day",
+        "category": "conditioning",
+        "preferred_system": "glycolytic",
+        "meaningful_stress": True,
+        "scheduled_day_hint": "Monday",
+        "scheduled_countdown_label": "D-19",
+        "scheduled_d_day": 19,
+    }
+    week["session_roles"] = [neighbour, glycolytic]
+    weekly_role_map = {"weeks": [week]}
+    # Glycolytic only: after the morph to aerobic there is nothing compliant left.
+    pools = {
+        "SPP": {
+            "conditioning_slots": [
+                _bank_slot(
+                    "Assault Bike Capacity Builder", "20min EMOM: 12 cal",
+                    ["mech_systemic_fatigue"], system="glycolytic",
+                )
+            ],
+            "strength_slots": [],
+        }
+    }
+
+    def _recompose(role_map, only_roles):
+        return compose_normal_conditioning_assignments(
+            weekly_role_map=role_map, candidate_pools=pools, only_roles=only_roles,
+        )
+
+    token = planner_athlete_model_context.set({})
+    try:
+        compose_normal_conditioning_assignments(
+            weekly_role_map=weekly_role_map, candidate_pools=pools,
+        )
+        assert [a["name"] for a in glycolytic["selected_exercise_assignments"]] == [
+            "Assault Bike Capacity Builder"
+        ]
+        apply_realised_load_calendar_revalidation(
+            weekly_role_map, recompose_conditioning_callback=_recompose,
+        )
+    finally:
+        planner_athlete_model_context.reset(token)
+
+    assert glycolytic["role_key"] == "light_fight_pace_touch_day"
+    assert glycolytic["preferred_system"] == "aerobic"
+
+    # No stale glycolytic work survives anywhere on the role.
+    assert glycolytic["selected_exercise_assignments"] == []
+    assert "conditioning_composition_policy" not in glycolytic
+
+    # And the report says what actually happened, not that it recomposed.
+    reconciled = weekly_role_map["realised_load_revalidation"][
+        "membership_reconciliations"
+    ]
+    assert len(reconciled) == 1
+    assert reconciled[0]["action"] == "membership_cleared"
+    assert reconciled[0]["membership"] == []
+    assert reconciled[0]["stale_membership"] == ["Assault Bike Capacity Builder"]

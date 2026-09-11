@@ -1779,6 +1779,12 @@ def apply_realised_load_calendar_revalidation(
         Only roles whose identity actually changed are reconciled, through the
         existing conditioning composition authority. Every other conditioning
         session keeps its closed membership untouched.
+
+        Stale membership is cleared first and unconditionally, because
+        recomposition may legitimately produce nothing: the composer skips a role
+        whose pool holds no candidate for its new system. The outcome recorded
+        per role is therefore whatever actually resulted — ``recomposed`` only
+        when a replacement session exists, ``membership_cleared`` otherwise.
         """
         changed = [
             role
@@ -1806,23 +1812,31 @@ def apply_realised_load_calendar_revalidation(
             }
             for role in changed
         ]
+        # Clear before recomposing, never after. The composition authority skips a
+        # role for which no compliant candidate exists, so recomposition is not
+        # guaranteed to overwrite anything: without clearing first, a glycolytic
+        # session whose pool holds no aerobic option would keep its pre-morph
+        # membership on an aerobic role even though reconciliation ran. Clearing
+        # here rather than inside the composer also leaves ordinary, non-targeted
+        # composition behaviour untouched.
+        for role in changed:
+            role["selected_exercise_assignments"] = []
+            # This block reports selected_count and the composition decisions for
+            # membership that no longer exists, so it goes with it.
+            role.pop("conditioning_composition_policy", None)
         if recompose_conditioning_callback is not None:
             recompose_conditioning_callback(weekly_role_map, {id(r) for r in changed})
-            for note, role in zip(notes, changed):
-                note["action"] = "recomposed"
-                note["membership"] = [
-                    str(item.get("name") or "")
-                    for item in role.get("selected_exercise_assignments") or []
-                    if isinstance(item, dict)
-                ]
-            return notes
-        # No composition authority available to this caller. Membership composed
-        # for the old identity is still wrong, so it is dropped rather than
-        # rendered: an empty closed membership is an explicit "nothing selected",
-        # which downstream already understands, while stale membership is a lie.
         for note, role in zip(notes, changed):
-            role["selected_exercise_assignments"] = []
-            note["action"] = "membership_cleared"
+            membership = [
+                str(item.get("name") or "")
+                for item in role.get("selected_exercise_assignments") or []
+                if isinstance(item, dict)
+            ]
+            note["membership"] = membership
+            # Report what actually happened. "recomposed" claims a replacement
+            # session exists; when the pool offered nothing compliant the honest
+            # outcome is an explicitly empty closed membership.
+            note["action"] = "recomposed" if membership else "membership_cleared"
         return notes
 
     def _remorph_and_redose() -> None:
