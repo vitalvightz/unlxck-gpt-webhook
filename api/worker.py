@@ -180,6 +180,7 @@ async def _run_claimed_job(
     job_id: str,
     store: AppStore,
     active_tasks: set[str],
+    detached_tasks: set[asyncio.Task[None]] | None = None,
 ) -> None:
     try:
         stage2 = build_default_stage2_automator()
@@ -190,6 +191,35 @@ async def _run_claimed_job(
             stage2=stage2,
             active_tasks=active_tasks,
         )
+        # Generation persistence intentionally releases the raw plan first, so a
+        # slow structured-card conversion can never block an athlete from seeing
+        # their plan. The worker was missing the equivalent of the admin
+        # approval path's deferred conversion, leaving every newly generated plan
+        # on the text fallback. Start that conversion only after the generation
+        # job is terminal and keep it outside ``active_tasks``: it is presentation
+        # enrichment, not capacity-consuming plan generation.
+        completed_job = await asyncio.to_thread(store.get_generation_job, job_id)
+        plan_id = str((completed_job or {}).get("plan_id") or "").strip()
+        is_completed = str((completed_job or {}).get("status") or "").strip().lower() == "completed"
+        if is_completed and plan_id:
+            from .services.admin_stage2_service import run_structured_plan_post_processing
+
+            card_task = asyncio.create_task(
+                run_structured_plan_post_processing(
+                    plan_id=plan_id,
+                    store=store,
+                    stage2=stage2,
+                    notify=False,
+                )
+            )
+            if detached_tasks is not None:
+                detached_tasks.add(card_task)
+                card_task.add_done_callback(
+                    lambda completed_task: _cleanup_worker_task(
+                        completed_task,
+                        detached_tasks=detached_tasks,
+                    )
+                )
     except Exception as exc:
         logger.exception("[worker] job failed before generation runtime job_id=%s", job_id)
         # The full traceback is in the server log above. The stored job error is
@@ -280,6 +310,7 @@ async def _tick(
                     job_id=job_id,
                     store=store,
                     active_tasks=active_tasks,
+                    detached_tasks=detached_tasks,
                 )
             )
         except Exception:
