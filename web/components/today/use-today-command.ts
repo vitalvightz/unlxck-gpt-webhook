@@ -6,12 +6,20 @@ import { getPlan, getPlanCompletions, getToday } from "@/lib/api";
 import { resolveCurrentDay, resolveOpenPlanWeekNumber } from "@/lib/camp-map";
 import { isOpenOngoingPlan } from "@/lib/plan-format";
 import { buildStructuredPlanFromText } from "@/lib/plan-text-adapter";
-import { shouldRenderStructuredPlan } from "@/lib/structured-plan";
+import {
+  classifySessionlessDay,
+  getDays,
+  getSessions,
+  getWeeks,
+  shouldRenderStructuredPlan,
+} from "@/lib/structured-plan";
 import type {
   PlanDetail,
   PlanScheduleContext,
   RehabLabelPolicy,
+  StructuredDay,
   StructuredPlan,
+  StructuredSession,
   TodayCommandView,
   TodaySession,
   TodaySessionCompletionRecord,
@@ -71,6 +79,45 @@ function localDateFromISO(value: string): Date | null {
   return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12);
 }
 
+function completionForSession(
+  completions: readonly TodaySessionCompletionRecord[],
+  planId: string,
+  sessionId: string,
+  trainingDay: string,
+): TodaySessionCompletionRecord | undefined {
+  return completions.find(
+    (row) =>
+      row.plan_id === planId &&
+      row.session_id === sessionId &&
+      row.training_day === trainingDay,
+  );
+}
+
+function toTodaySession(
+  session: StructuredSession,
+  day: StructuredDay,
+  relation: "today" | "next",
+  trainingDay: string,
+): TodaySession | null {
+  const sessionId = session.session_id?.trim();
+  if (!sessionId) {
+    return null;
+  }
+  return {
+    session_id: sessionId,
+    session_relation: relation,
+    session_type: session.session_type,
+    title: session.title?.trim() || day.today_card?.headline?.trim() || "Today's session",
+    calendar_date: relation === "today" ? day.date || trainingDay : day.date,
+    weekday: day.weekday || undefined,
+    weekday_with_label: [day.weekday, day.countdown_label].filter(Boolean).join(" "),
+    day_label: day.countdown_label || undefined,
+    coach_note: session.objective || undefined,
+    planned_duration: session.planned_duration,
+    blocks: session.blocks,
+  };
+}
+
 /**
  * Legacy plans can have a usable plan_text card but no persisted structured
  * payload. Plan Detail reconstructs that card; the Today backend cannot, so it
@@ -110,47 +157,105 @@ export function reconcileTodayWithPlanCard(
     if (!sessionId) {
       return false;
     }
-    const completion = completions.find(
-      (row) =>
-        row.plan_id === planId &&
-        row.session_id === sessionId &&
-        row.training_day === state.today.training_day,
+    const completion = completionForSession(
+      completions,
+      planId,
+      sessionId,
+      state.today.training_day,
     );
     return !completion || !TERMINAL_COMPLETION_STATUSES.has(completion.status);
   });
   const sessionId = pendingSession?.session_id?.trim();
-  if (!pendingSession || !sessionId) {
-    return state;
+  if (pendingSession && sessionId) {
+    const completion = completionForSession(
+      completions,
+      planId,
+      sessionId,
+      state.today.training_day,
+    );
+    const reconciledSession = toTodaySession(
+      pendingSession,
+      current.day,
+      "today",
+      state.today.training_day,
+    );
+    if (!reconciledSession) {
+      return state;
+    }
+
+    return {
+      ...state,
+      today: {
+        ...state.today,
+        next_session: reconciledSession,
+        session_scope: "today",
+        session_label: "Today's session",
+        completion_status: completion?.status ?? "not_started",
+      },
+    };
   }
 
-  const completion = completions.find(
-    (row) =>
-      row.plan_id === planId &&
-      row.session_id === sessionId &&
-      row.training_day === state.today.training_day,
-  );
-  const reconciledSession: TodaySession = {
-    session_id: sessionId,
-    session_relation: "today",
-    session_type: pendingSession.session_type,
-    title: pendingSession.title?.trim() || current.day.today_card?.headline?.trim() || "Today's session",
-    calendar_date: current.day.date || state.today.training_day,
-    weekday: current.day.weekday || undefined,
-    weekday_with_label: [current.day.weekday, current.day.countdown_label].filter(Boolean).join(" "),
-    day_label: current.day.countdown_label || undefined,
-    coach_note: pendingSession.objective || undefined,
-    planned_duration: pendingSession.planned_duration,
-    blocks: pendingSession.blocks,
-  };
+  // Every app session on the matched day is terminal. Derive the next card
+  // from the same ordered plan the athlete sees instead of handing control back
+  // to the stale schedule projection that caused the original mismatch.
+  const weeks = getWeeks(structuredPlan);
+  for (let weekPos = current.weekPos ?? 0; weekPos < weeks.length; weekPos += 1) {
+    const days = getDays(weeks[weekPos]);
+    const startDayPos = weekPos === current.weekPos ? (current.dayPos ?? -1) + 1 : 0;
+    for (let dayPos = startDayPos; dayPos < days.length; dayPos += 1) {
+      const nextDay = days[dayPos];
+      const nextDayDate = nextDay.date?.slice(0, 10);
+      const nextSession = getSessions(nextDay).find((candidate) => {
+        const candidateId = candidate.session_id?.trim();
+        if (!candidateId) {
+          return false;
+        }
+        const completion = nextDayDate
+          ? completionForSession(completions, planId, candidateId, nextDayDate)
+          : undefined;
+        return !completion || !TERMINAL_COMPLETION_STATUSES.has(completion.status);
+      });
+      const sessionless = classifySessionlessDay(nextDay);
+      const reconciledSession = nextSession
+        ? toTodaySession(nextSession, nextDay, "next", state.today.training_day)
+        : sessionless.kind !== "rest"
+          ? {
+              session_relation: "next" as const,
+              title: sessionless.title,
+              status: sessionless.kind,
+              calendar_date: nextDay.date,
+              weekday: nextDay.weekday || undefined,
+              weekday_with_label: [nextDay.weekday, nextDay.countdown_label]
+                .filter(Boolean)
+                .join(" "),
+              day_label: nextDay.countdown_label || undefined,
+              coach_led_contact: sessionless.coachLed ? sessionless.title : undefined,
+            }
+          : null;
+      if (!reconciledSession) {
+        continue;
+      }
+      return {
+        ...state,
+        today: {
+          ...state.today,
+          next_session: reconciledSession,
+          session_scope: "next",
+          session_label: "Next session",
+          completion_status: "not_started",
+        },
+      };
+    }
+  }
 
   return {
     ...state,
     today: {
       ...state.today,
-      next_session: reconciledSession,
-      session_scope: "today",
-      session_label: "Today's session",
-      completion_status: completion?.status ?? "not_started",
+      next_session: {},
+      session_scope: "none",
+      session_label: "No upcoming session",
+      completion_status: "not_started",
     },
   };
 }
