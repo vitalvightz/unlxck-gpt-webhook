@@ -6,6 +6,7 @@ from typing import Any
 
 _POLICY_FLAG = "_CONDITIONING_COMPOSITION_INTEGRITY_INSTALLED"
 _UNDERFILL_REASON = "phase_system_workload_unmet"
+_UNDERFILL_CODE = "conditioning_role_workload_underfilled"
 
 
 def _number(value: Any) -> float | None:
@@ -181,7 +182,7 @@ def _underfilled_conditioning_errors(planning_brief: dict[str, Any]) -> list[dic
                 continue
             errors.append(
                 {
-                    "code": "conditioning_role_workload_underfilled",
+                    "code": _UNDERFILL_CODE,
                     "message": (
                         f"{str(role.get('athlete_facing_label') or role.get('role_key') or 'Conditioning session')} "
                         "does not contain enough genuine conditioning work to satisfy its phase/system workload."
@@ -201,6 +202,16 @@ def _underfilled_conditioning_errors(planning_brief: dict[str, Any]) -> list[dic
                 }
             )
     return errors
+
+
+def _report_has_underfill(report: dict[str, Any] | None) -> bool:
+    if not isinstance(report, dict):
+        return False
+    return any(
+        isinstance(item, dict) and str(item.get("code") or "") == _UNDERFILL_CODE
+        for field in ("errors", "blocking_warnings", "warnings")
+        for item in report.get(field, []) or []
+    )
 
 
 def install() -> None:
@@ -267,4 +278,58 @@ def install() -> None:
         return {**report, "errors": errors, "is_valid": False}
 
     validator_module.validate_stage2_output = validate_stage2_output
+
+    # Import the release path only after the validator wrapper is installed so
+    # stage2_pipeline binds the wrapped validator rather than the stale original.
+    from . import stage2_pipeline as pipeline_module
+    from . import stage2_policy as policy_module
+
+    original_release_policy = policy_module.apply_stage2_release_policy
+    original_build_retry = pipeline_module.build_stage2_retry
+
+    @wraps(original_release_policy)
+    def conditioning_release_policy(validator_report: dict):
+        underfilled = _report_has_underfill(validator_report)
+        report = original_release_policy(validator_report)
+        if not underfilled:
+            underfilled = _report_has_underfill(report)
+        if not underfilled:
+            return report
+        # This is an upstream deterministic composition failure. Do not let the
+        # ordinary observational release policy publish it with flags.
+        return {
+            **report,
+            "conditioning_workload_integrity_hold": True,
+            "release_decision": "hold",
+            "is_athlete_releasable": False,
+            "is_publishable": False,
+        }
+
+    @wraps(original_build_retry)
+    def conditioning_build_stage2_retry(*args, **kwargs):
+        result = original_build_retry(*args, **kwargs)
+        report = result.get("validator_report") if isinstance(result, dict) else None
+        if not _report_has_underfill(report):
+            return result
+        # Renderer repair cannot invent planner-owned conditioning volume. Route
+        # the failure back to the deterministic planner instead of asking the LLM
+        # to rewrite an under-dosed closed session.
+        return {
+            **result,
+            "status": "FAIL",
+            "needs_retry": False,
+            "requires_planner_regeneration": True,
+            "repair_prompt": None,
+            "summary": "FAIL: conditioning workload requires deterministic planner regeneration.",
+            "summary_lines": [
+                str(item.get("message") or "Conditioning workload is underfilled.")
+                for item in (report.get("errors", []) if isinstance(report, dict) else [])
+                if isinstance(item, dict) and item.get("code") == _UNDERFILL_CODE
+            ],
+        }
+
+    policy_module.apply_stage2_release_policy = conditioning_release_policy
+    # stage2_pipeline imported the policy function by value.
+    pipeline_module.apply_stage2_release_policy = conditioning_release_policy
+    pipeline_module.build_stage2_retry = conditioning_build_stage2_retry
     setattr(composition_module, _POLICY_FLAG, True)
