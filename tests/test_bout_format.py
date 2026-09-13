@@ -65,7 +65,7 @@ def test_same_round_length_different_total_fight_work():
 )
 def test_unresolved_formats_do_not_assume_3x3(rounds_format):
     assert parse_bout_format(rounds_format) is None
-    assert bout_format_metadata(rounds_format) is None
+    assert bout_format_metadata(rounds_format) == {}
 
 
 # TEST 4 - separators the intake actually produces all parse the same.
@@ -152,7 +152,7 @@ def test_planner_metadata_exposes_the_bout_format():
 
 def test_planner_metadata_stays_unresolved_without_a_format():
     *_rest, reservoir = conditioning.generate_conditioning_block(_flags(rounds_format=""))
-    assert reservoir["__bout_format__"] is None
+    assert reservoir["__bout_format__"] == {}
 
 
 # TEST 8 - a representative 3 x 3 conditioning plan is byte-identical to the
