@@ -1,5 +1,7 @@
 from fightcamp.planner_context import planner_athlete_model_context
 from fightcamp.session_composition import compose_normal_conditioning_assignments
+from fightcamp.stage2_pipeline import build_stage2_retry
+from fightcamp.stage2_policy import apply_stage2_release_policy
 from fightcamp.stage2_validator import validate_stage2_output
 
 
@@ -49,12 +51,14 @@ def _role_map() -> dict:
     return {
         "weeks": [
             {
+                "week_index": 1,
                 "phase": "SPP",
                 "effective_hard_sparring_days": [],
                 "session_roles": [
                     {
                         "category": "conditioning",
                         "role_key": "aerobic_support_day",
+                        "athlete_facing_label": "Aerobic support",
                         "preferred_system": "aerobic",
                         "scheduled_day_hint": "wednesday",
                     }
@@ -182,3 +186,47 @@ def test_validator_blocks_underfilled_conditioning_role():
         for error in report["errors"]
     )
     assert report["is_valid"] is False
+
+
+def test_underfilled_conditioning_forces_release_hold():
+    report = apply_stage2_release_policy(
+        {
+            "errors": [
+                {
+                    "code": "conditioning_role_workload_underfilled",
+                    "message": "Aerobic support is underfilled.",
+                }
+            ],
+            "warnings": [],
+            "is_valid": False,
+        }
+    )
+
+    assert report["release_decision"] == "hold"
+    assert report["is_publishable"] is False
+    assert report["is_athlete_releasable"] is False
+    assert report["conditioning_workload_integrity_hold"] is True
+
+
+def test_underfilled_conditioning_routes_to_deterministic_planner_regeneration():
+    validator_report = {
+        "errors": [
+            {
+                "code": "conditioning_role_workload_underfilled",
+                "message": "Aerobic support is underfilled.",
+            }
+        ],
+        "warnings": [],
+        "is_valid": False,
+    }
+
+    retry = build_stage2_retry(
+        stage1_result={"planning_brief": {"weekly_role_map": {"weeks": []}}},
+        final_plan_text="Aerobic support",
+        validator_report=validator_report,
+    )
+
+    assert retry["status"] == "FAIL"
+    assert retry["needs_retry"] is False
+    assert retry["requires_planner_regeneration"] is True
+    assert retry["repair_prompt"] is None
