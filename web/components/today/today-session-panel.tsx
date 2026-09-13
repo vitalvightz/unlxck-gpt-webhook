@@ -374,8 +374,10 @@ export function TodaySessionPanel({
     : decisionBlocksCurrentSession
       ? "Follow the recommendation above. Do not start this session from Today."
       : isSessionPreview
-      ? "Preview only. Completion opens on the matched training day."
-      : "Session details available, but completion is unavailable for this entry.";
+        ? "Preview only. Completion opens on the matched training day."
+        : resolvedDecision.authoritativeTier === "not_checked_in"
+          ? "Submit today's check-in to unlock session actions."
+          : "Session details available, but completion is unavailable for this entry.";
 
   async function saveCompletion(
     nextStatus: TodayCompletionStatus,
