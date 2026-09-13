@@ -757,6 +757,14 @@ test("tier meta gives the coach-facing labels and tones", () => {
 test("isSessionToday prefers the session relation, then the scope", () => {
   assert.equal(isSessionToday({ session_relation: "today" }), true);
   assert.equal(isSessionToday({ session_relation: "next" }), false);
+  assert.equal(
+    isSessionToday(
+      { session_relation: "next", calendar_date: "2026-09-13" },
+      "next",
+      "2026-09-13",
+    ),
+    true,
+  );
   assert.equal(isSessionToday({}, "today"), true);
   assert.equal(isSessionToday({}, "next"), false);
   assert.equal(isSessionToday(null), false);
