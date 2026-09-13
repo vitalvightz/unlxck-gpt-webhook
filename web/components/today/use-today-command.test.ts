@@ -63,7 +63,9 @@ const PLAN_CARD: StructuredPlan = {
         {
           date: "2026-09-15",
           weekday: "Tue",
-          sessions: [{ session_id: "text-session-2", title: "Hard sparring" }],
+          countdown_label: "D-30",
+          today_card: { headline: "Hard sparring" },
+          sessions: [],
         },
       ],
     },
@@ -109,7 +111,7 @@ test("today's reconstructed session restores its durable started state", () => {
   assert.equal(reconciled.today.completion_status, "started");
 });
 
-test("a completed reconstructed session lets Today advance to the backend's next entry", () => {
+test("a completed reconstructed session advances to the next plan-card entry", () => {
   const completion: TodaySessionCompletionRecord = {
     id: "completion-1",
     athlete_id: "athlete-1",
@@ -126,6 +128,11 @@ test("a completed reconstructed session lets Today advance to the backend's next
     [completion],
   );
 
-  assert.equal(reconciled, STALE_FUTURE_STATE);
+  assert.notEqual(reconciled, STALE_FUTURE_STATE);
+  assert.equal(reconciled.today.next_session.session_id, undefined);
   assert.equal(reconciled.today.next_session.title, "Hard sparring");
+  assert.equal(reconciled.today.next_session.calendar_date, "2026-09-15");
+  assert.equal(reconciled.today.next_session.session_relation, "next");
+  assert.equal(reconciled.today.session_scope, "next");
+  assert.equal(reconciled.today.session_label, "Next session");
 });
