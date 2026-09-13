@@ -5,10 +5,9 @@ only for its round duration, so a 3 x 5 bout and a 5 x 5 bout looked
 physiologically identical to the planner even though one is 900 seconds of
 scheduled fight work and the other is 1500.
 
-These tests pin the demand facts themselves. They deliberately do NOT assert
-any change in selection: this foundation is observable in planner metadata and
-nothing reads it yet, and the snapshot test at the bottom proves a 3 x 3 plan
-renders exactly as it did before.
+These tests pin the demand facts and their conservative quota integration. The
+snapshot test at the bottom proves a 3 x 3 plan still renders exactly as it did
+before.
 """
 import json
 from pathlib import Path
@@ -19,6 +18,7 @@ from fightcamp import conditioning
 from fightcamp.bout_format import (
     BASELINE_WORK_SECONDS,
     BoutFormat,
+    bout_energy_modifiers,
     bout_format_metadata,
     parse_bout_format,
 )
@@ -93,6 +93,27 @@ def test_exposed_demand_facts_and_neutral_baseline_ratio():
     }
 
 
+@pytest.mark.parametrize(
+    "rounds_format,expected",
+    [
+        ("3 x 2", {"aerobic": 0.94, "glycolytic": 1.03, "alactic": 1.06}),
+        ("3 x 3", {"aerobic": 1.0, "glycolytic": 1.0, "alactic": 1.0}),
+        ("5 x 3", {"aerobic": 1.08, "glycolytic": 1.03, "alactic": 0.96}),
+        ("3 x 5", {"aerobic": 1.10, "glycolytic": 1.06, "alactic": 0.94}),
+        ("5 x 5", {"aerobic": 1.18, "glycolytic": 1.05, "alactic": 0.90}),
+    ],
+)
+def test_known_bout_energy_modifiers_are_explicit_and_bounded(rounds_format, expected):
+    assert bout_energy_modifiers(parse_bout_format(rounds_format)) == expected
+
+
+def test_unknown_valid_format_uses_a_conservative_non_linear_derivation():
+    modifiers = bout_energy_modifiers(parse_bout_format("12 x 3"))
+    assert all(0.90 <= value <= 1.18 for value in modifiers.values())
+    assert modifiers["aerobic"] == 1.12
+    assert modifiers["aerobic"] != pytest.approx(4.0)
+
+
 # TEST 6 - athlete_round_seconds() keeps its exact public behaviour while
 # delegating to the one canonical parser.
 @pytest.mark.parametrize(
@@ -153,6 +174,68 @@ def test_planner_metadata_exposes_the_bout_format():
 def test_planner_metadata_stays_unresolved_without_a_format():
     *_rest, reservoir = conditioning.generate_conditioning_block(_flags(rounds_format=""))
     assert reservoir["__bout_format__"] == {}
+
+
+def _energy_demand(rounds_format, **over):
+    *_rest, reservoir = conditioning.generate_conditioning_block(
+        _flags(rounds_format=rounds_format, **over)
+    )
+    return reservoir["__energy_demand__"]
+
+
+def test_3x3_demand_and_quota_keep_the_historical_phase_owner():
+    for phase in ("GPP", "SPP", "TAPER"):
+        demand = _energy_demand("3 x 3", phase=phase)
+        assert demand["bout_format_modifiers"] == {
+            "aerobic": 1.0,
+            "glycolytic": 1.0,
+            "alactic": 1.0,
+        }
+        assert demand["effective_system_demand"] == conditioning.PHASE_SYSTEM_RATIOS[phase]
+
+
+def test_only_bout_format_changes_effective_demand_without_adding_sessions():
+    formats = {
+        rounds_format: _energy_demand(rounds_format)
+        for rounds_format in ("3 x 2", "3 x 3", "5 x 3", "3 x 5", "5 x 5")
+    }
+    aerobic = {
+        rounds_format: demand["effective_system_demand"]["aerobic"]
+        for rounds_format, demand in formats.items()
+    }
+    assert aerobic["3 x 2"] < aerobic["5 x 3"] < aerobic["5 x 5"]
+    assert aerobic["3 x 3"] < aerobic["5 x 3"]
+    assert formats["3 x 5"]["effective_system_demand"] != formats["3 x 3"]["effective_system_demand"]
+    assert formats["5 x 3"]["system_quota"] != formats["3 x 3"]["system_quota"]
+    assert all(
+        value > 0
+        for value in formats["5 x 5"]["effective_system_demand"].values()
+    )
+    assert all(
+        sum(demand["system_quota"].values()) == demand["total_conditioning_drills"]
+        for rounds_format, demand in formats.items()
+        if rounds_format != "3 x 3"
+    )
+    assert {demand["conditioning_sessions"] for demand in formats.values()} == {2}
+
+
+def test_missing_or_malformed_format_preserves_existing_phase_demand():
+    for rounds_format in (None, "", "not a format"):
+        demand = _energy_demand(rounds_format)
+        assert demand["bout_format_modifiers"] == {}
+        assert demand["effective_system_demand"] == conditioning.PHASE_SYSTEM_RATIOS["SPP"]
+
+
+def test_muay_thai_energy_profile_is_consumed_without_changing_drill_family(monkeypatch):
+    weights = {
+        "kickboxing": {"aerobic": 0.1, "glycolytic": 0.8, "alactic": 0.1},
+        "muay_thai": {"aerobic": 0.5, "glycolytic": 0.35, "alactic": 0.15},
+    }
+    monkeypatch.setattr(conditioning, "get_format_weights", lambda: weights)
+    demand = _energy_demand(
+        "5 x 3", sport="muay_thai", style_technical=["muay_thai"]
+    )
+    assert demand["sport_energy_weights"] == weights["muay_thai"]
 
 
 # TEST 8 - a representative 3 x 3 conditioning plan is byte-identical to the
