@@ -2519,11 +2519,11 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
     `Step 1`/`Step 2`/…, `Intent`, `Focus`, `Reset`, `Anchor`, `Context`,
     and `Coach call`. An INDENTED line always belongs to the bullet above it —
     it is never a block of its own, however imperative it reads.
-  * Short late-camp support days like `Fight Tactical Watch`, `Tactical Cue
+  * Short late-camp support days like `Tactical Focus`, `Tactical Cue
     Card`, `Breathing Reset`, `Freshness Reset`, and `Final Neural Cue` are real
     sessions when the plan gives Duration/Prescription/Purpose lines. Do not
     collapse them into rest days just because they are low-load. A
-    `Fight Tactical Watch` day is ONE block: the single bulleted drill name
+    `Tactical Focus` day is ONE block: the single bulleted drill name
     (e.g. `- Pocket Exchange Map: 10 minutes...`) is the block, its dose is the
     duration, and every `Step N` / `Intent` / `Focus` / `Reset` / `Anchor` /
     `Purpose` / `Progress` line below it is that block's own detail. Never emit

@@ -1,4 +1,4 @@
-"""Fight Tactical Watch: JSON bank integrity, selection, and placement.
+"""Tactical Focus: JSON bank integrity, selection, and placement.
 
 The athlete-facing Tactical Watch library lives in ``data/tactical_watch_bank.json``.
 These tests protect the JSON itself (structure, and genuine task differentiation
@@ -739,7 +739,7 @@ def test_normal_fight_camp_gets_one_named_watch_every_week():
     ]
     assert all(watch["mandatory_tactical_watch"] is True for watch in watches)
     assert all(watch["weekly_requirement"] == "fight_tactical_watch" for watch in watches)
-    assert all(watch["athlete_facing_label"] == "Fight Tactical Watch" for watch in watches)
+    assert all(watch["athlete_facing_label"] == "Tactical Focus" for watch in watches)
 
 
 def test_consecutive_weeks_change_the_whole_visible_card_not_just_the_title():
@@ -891,7 +891,7 @@ def test_selected_drill_identity_survives_finalizer_compaction():
     )
     compact = _compact_role(role)
     assert compact["role_key"] == "tactical_watch"
-    assert compact["athlete_facing_label"] == "Fight Tactical Watch"
+    assert compact["athlete_facing_label"] == "Tactical Focus"
     assert compact["preferred_exercise_names"] == ["Intercept the Entry"]
     # The body is no longer shipped to the finalizer: the server renders the watch
     # from its own tactical_watch object (structured locked merge, deterministic

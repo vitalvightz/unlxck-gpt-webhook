@@ -729,7 +729,7 @@ const LOADED_SESSION_TYPES = new Set([
   "mixed",
 ]);
 const SUPPORT_SESSION_TITLE_RE =
-  /\b(?:cue card|fight tactical watch|self-review cues?|neural visualization|breathing reset|recovery reset|sleep downshift|mobility|movement quality check|technical shadow rhythm|footwork walkthrough|joint prep|walk flush|shadowboxing aerobic flow|footwork rhythm flush|skipping flush|jog flush)\b/;
+  /\b(?:cue card|tactical focus|self-review cues?|neural visualization|breathing reset|recovery reset|sleep downshift|mobility|movement quality check|technical shadow rhythm|footwork walkthrough|joint prep|walk flush|shadowboxing aerobic flow|footwork rhythm flush|skipping flush|jog flush)\b/;
 
 /** True when a session is a low-cost filler or mobility/recovery-only touch. */
 function isLowLoadSupportSession(session: StructuredSession | null | undefined): boolean {

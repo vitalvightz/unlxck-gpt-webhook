@@ -125,7 +125,7 @@ def test_bulleted_tactical_anchor_is_whitelisted():
     # triggered the blocking false positive the PR exists to eliminate.
     line = "Anchor: Make them cross your range before they can attack."
     text = """GPP — Week 1 (D-23 to D-16)
-D-17 (Wednesday) — Fight Tactical Watch.
+D-17 (Wednesday) — Tactical Focus.
 - Range Map: 10 minutes, tactical review only. No physical load.
 - Anchor: Make them cross your range before they can attack.
 """
@@ -146,7 +146,7 @@ def test_anchor_leaked_outside_a_session_block_is_not_whitelisted():
     # suppress a genuine internal-contract leak.
     line = "Anchor: Make them cross your range before they can attack."
     text = """GPP — Week 1 (D-23 to D-16)
-D-17 (Wednesday) — Fight Tactical Watch.
+D-17 (Wednesday) — Tactical Focus.
 - Range Map: 10 minutes, tactical review only. No physical load.
   Anchor: Make them cross your range before they can attack.
 

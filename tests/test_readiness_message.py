@@ -409,7 +409,7 @@ def test_tactical_review_text_does_not_read_as_physical_loading():
     # fallback must only scan physical entry NAMES, and must skip an entry that
     # is structurally tactical/mental regardless of its wording.
     session = {
-        "title": "Fight Tactical Watch",
+        "title": "Tactical Focus",
         "session_type": "support_insert",
         "category": "support_insert",
         "support_insert_category": "tactical",
@@ -433,7 +433,7 @@ def test_physical_block_name_still_flagged_when_tactical_wrapper_present():
         "session_type": "support_insert",
         "stress_class": "support",
         "blocks": [
-            {"title": "Fight Tactical Watch", "support_insert_category": "tactical"},
+            {"title": "Tactical Focus", "support_insert_category": "tactical"},
             {"title": "Band Row Speed Focus"},
         ],
     }

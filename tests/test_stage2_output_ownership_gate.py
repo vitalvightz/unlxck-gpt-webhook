@@ -66,7 +66,7 @@ def _server_session(countdown: int, name: str) -> dict:
     return {
         "session_id": f"locked-{countdown}-tactical-watch",
         "session_type": "skill",
-        "title": "Fight Tactical Watch",
+        "title": "Tactical Focus",
         "objective": "Review the tactical plan.",
         "blocks": [
             {

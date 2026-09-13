@@ -17,7 +17,7 @@ D-22 (Friday): Hard sparring - controlled hard contact.
 D-18 (Tuesday): Hard sparring - controlled hard contact.
 - Your declared hard-sparring/contact session. No extra S&C. Keep freshness priority.
 
-D-17 (Wednesday) — Fight Tactical Watch.
+D-17 (Wednesday) — Tactical Focus.
 Why: Establish the ranges where you can score without staying available for the return.
 - Range Map: 10 minutes, tactical review only. No physical load.
   Intent: Control the space before increasing output.
@@ -39,7 +39,7 @@ D-12 (Monday) — Neural speed touch.
 D-11 (Tuesday): Technical-only combat.
 - Technical-only contact today.
 
-D-11 (Tuesday) — Fight Tactical Watch.
+D-11 (Tuesday) — Tactical Focus.
 - Intercept the Entry: 10 minutes, tactical review only. No physical load.
   Anchor: Make the entry pay before it gets close.
 
@@ -56,7 +56,7 @@ D-8 (Friday) — Tactical Cue Card.
 - Write one fight cue only.
 
 TAPER — Week 3 (D-7 to D-0) — Maintain sharpness and freshness.
-D-5 (Monday): Fight Tactical Watch.
+D-5 (Monday): Tactical Focus.
 - First-Round Range Script: 8 minutes, tactical review only. No physical load.
   Anchor: Simple first, sharp second.
 

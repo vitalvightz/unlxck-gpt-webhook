@@ -1,7 +1,7 @@
 """Deterministic locked content survives without Stage 2 reproducing it.
 
 The invariant: input- or rule-owned content (declared hard sparring, declared
-light technical combat, Fight Tactical Watch) may inform Stage 2, but its
+light technical combat, Tactical Focus) may inform Stage 2, but its
 survival must never depend on Stage 2 echoing it back. These tests drive the
 real generation path, not helper stubs.
 """

@@ -642,7 +642,7 @@ def repair_locked_tactical_watch_source_text(
         header_index = _source_day_header_indices(lines, role_day)[0]
         day_prefix = re.search(r"\bD-\s*\d+\b(?:\s*\([^)]+\))?", lines[header_index], re.I)
         header_prefix = day_prefix.group(0) if day_prefix else day_label
-        repair_block = ["", f"{header_prefix} — Fight Tactical Watch", display_text, ""]
+        repair_block = ["", f"{header_prefix} — Tactical Focus", display_text, ""]
         lines[insert_index:insert_index] = repair_block
         result.source_markdown = "\n".join(lines)
         result.applied.append(f"{day_label}: {drill_name}")
