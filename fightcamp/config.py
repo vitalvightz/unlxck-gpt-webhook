@@ -1,6 +1,7 @@
 import re
 from pathlib import Path
 
+from .bout_format import parse_bout_format
 from .phases import PhaseEnum
 
 GPP = PhaseEnum.GPP.value
@@ -158,23 +159,19 @@ def conditioning_dose_active_work_seconds(dose: dict) -> float | None:
     return minutes * 60.0 if minutes is not None else None
 
 
-_ROUNDS_FORMAT_PATTERN = re.compile(r"^\s*(\d+)\s*[xX\u00d7]\s*(\d+(?:\.\d+)?)\s*$")
-
-
 def athlete_round_seconds(rounds_format: str | None) -> float | None:
     """Seconds per round the athlete actually fights, from their own intake.
 
     ``rounds_format`` is the canonical "<rounds> x <minutes>" intake value (the
-    "Rounds x Minutes" field). This is the single place that reads a round
-    duration from athlete input; there is no default and no assumed three-minute
-    round, so an unparseable or absent value returns ``None`` and every bank
-    prescription keeps its authored duration.
+    "Rounds x Minutes" field). Parsing is owned by
+    :mod:`fightcamp.bout_format`; this stays the round-duration accessor the
+    conditioning and session-composition callers already use. There is no
+    default and no assumed three-minute round, so an unparseable or absent
+    value returns ``None`` and every bank prescription keeps its authored
+    duration.
     """
-    match = _ROUNDS_FORMAT_PATTERN.match(str(rounds_format or ""))
-    if not match:
-        return None
-    minutes = float(match.group(2))
-    return minutes * 60.0 if minutes > 0 else None
+    bout = parse_bout_format(rounds_format)
+    return bout.round_seconds if bout else None
 
 
 def conditioning_round_prescription(

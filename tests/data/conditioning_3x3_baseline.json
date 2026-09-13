@@ -1,0 +1,57 @@
+{
+  "GPP": {
+    "block": "\n#### Conditioning\n**Intent:** Build aerobic base, improve repeatability, low damage.\n**Dosage Template:** 3\u20135 rounds of 3\u20135 min @ RPE 6\u20137, work:rest 1:1\u20131:0.5 (cap 20\u201330 min). Template applies unless a drill lists its own structure.\n**Combat Pressure Floor:** one gas-tank / repeatability touch \u2014 6-8 x 60 sec hard / 60-90 sec easy @ RPE 8. Controlled discomfort, not punishment. Stop when output or technique drops.\n**Weekly Progression:** Add 1 round or ~5\u201310% volume weekly; deload final week by ~20%.\n**If Time Short:** Keep 2 aerobic rounds + 1 alactic pop.\n**If Fatigue High:** If fatigue high: drop 1\u20132 rounds, keep intensity easy.\n\n**Aerobic**\n- **Shadowboxing (Light Pace)**\n  - Load: low\n  - Rest: \u2014\n  - Timing: 3 x 3 min round; RPE 4\n  - Purpose: Focus on technique, not intensity\n  - Red Flags: None\n\n\n**Glycolytic**\n- **KB Swing Intervals**\n  - Load: high\n  - Rest: 90 sec between sets\n  - Timing: 6x30s on/1:30 off\n  - Purpose: 24-32kg. Focus on hip snap, not arm pull (RPE 8)\n  - Red Flags: None\n\n\n#### Conditioning\n**Intent:** Build aerobic base, improve repeatability, low damage.\n**Dosage Template:** 3\u20135 rounds of 3\u20135 min @ RPE 6\u20137, work:rest 1:1\u20131:0.5 (cap 20\u201330 min). Template applies unless a drill lists its own structure.\n**Combat Pressure Floor:** one gas-tank / repeatability touch \u2014 6-8 x 60 sec hard / 60-90 sec easy @ RPE 8. Controlled discomfort, not punishment. Stop when output or technique drops.\n**Weekly Progression:** Add 1 round or ~5\u201310% volume weekly; deload final week by ~20%.\n**If Time Short:** Keep 2 aerobic rounds + 1 alactic pop.\n**If Fatigue High:** If fatigue high: drop 1\u20132 rounds, keep intensity easy.\n\n**Glycolytic**\n- **Heavy Bag Power Intervals**\n  - Load: high (Requires: Heavy Bag)\n  - Rest: 90 sec between sets\n  - Timing: 8x30s on/1:30 off\n  - Purpose: 16oz gloves. Power shots only (RPE 8)\n  - Red Flags: None\n\n\n**Footwork Speed Repeatability**\n- **Broad Jump Repeats**\n  - Load: max\n  - Rest: 120 sec between sets\n  - Timing: 6x3 reps, 2min rest\n  - Purpose: Stick landings. Full reset between reps (max effort)\n  - Red Flags: None\n",
+    "grouped": {
+      "aerobic": [
+        "Shadowboxing (Light Pace)"
+      ],
+      "alactic": [
+        "Broad Jump Repeats"
+      ],
+      "glycolytic": [
+        "Heavy Bag Power Intervals",
+        "KB Swing Intervals"
+      ]
+    },
+    "missing_systems": [],
+    "names": [
+      "Shadowboxing (Light Pace)",
+      "KB Swing Intervals",
+      "Heavy Bag Power Intervals",
+      "Broad Jump Repeats"
+    ]
+  },
+  "SPP": {
+    "block": "AEROBIC (Status: Not prescribed)\nReason: System deprioritized by current phase emphasis.\nCoach option: Add a minimal maintenance dose if needed.\n\n#### Fight-pace conditioning\n**Intent:** Match fight demands with intervals and skill-relevant density.\n**Dosage Template:** 4\u20136 rounds of 2\u20135 min @ RPE 7\u20138, work:rest 1:1\u20131:0.5 (cap 18\u201325 min). Template applies unless a drill lists its own structure.\n**Combat Pressure Floor:** 4-6 x 2-3 min fight-pace on / 60 sec off @ RPE 8-9. Repeat high output under fatigue and hold technique while breathing hard \u2014 hard enough to breathe, not sloppy. Stop the round when output or technique drops.\n**Weekly Progression:** Increase density or intensity weekly; keep volume flat; deload final week by ~20%.\n**If Time Short:** Keep 2 fight-pace rounds (system priority).\n**If Fatigue High:** If fatigue high: drop volume, keep rest longer.\n- **Striking Combos Under Fatigue**\n  - Load: moderate\n  - Rest: 60 sec between sets\n  - Timing: 6 x 3 min round; 60 sec rest; RPE 6\n  - Purpose: Glove weight 12-16oz. Hold technique as fatigue builds.\n  - Red Flags: None\n\n\n#### Alactic sharpness\n**Intent:** Match fight demands with intervals and skill-relevant density.\n**Dosage Template:** 4\u20136 rounds of 2\u20135 min @ RPE 7\u20138, work:rest 1:1\u20131:0.5 (cap 18\u201325 min). Template applies unless a drill lists its own structure.\n**Weekly Progression:** Increase density or intensity weekly; keep volume flat; deload final week by ~20%.\n**If Time Short:** Keep 2 fight-pace rounds (system priority).\n**If Fatigue High:** If fatigue high: drop volume, keep rest longer.\n- **Alternating Bounds**\n  - Load: moderate\n  - Rest: 120 sec between sets\n  - Timing: 4x5/side, 2min rest\n  - Purpose: ANKLE STABILITY: Not for acute sprains. SURFACE: Grass preferred\n  - Red Flags: None\n",
+    "grouped": {
+      "alactic": [
+        "Alternating Bounds"
+      ],
+      "glycolytic": [
+        "Striking Combos Under Fatigue"
+      ]
+    },
+    "missing_systems": [
+      "aerobic"
+    ],
+    "names": [
+      "Striking Combos Under Fatigue",
+      "Alternating Bounds"
+    ]
+  },
+  "TAPER": {
+    "block": "AEROBIC (Status: Not prescribed)\nReason: Tapering; volume reduced to preserve freshness.\nCoach option: Optional 1 early-week exposure at 60\u201370% volume if athlete needs confidence.\n\nGLYCOLYTIC (Status: Not prescribed)\nReason: Tapering; volume reduced to preserve freshness.\nCoach option: Optional 1 early-week exposure at 60\u201370% volume if athlete needs confidence.\n\n#### Alactic sharpness\n**Intent:** Speed + alactic sharpness, neural freshness, low damage.\n**Dosage Template:** 6\u201310 rounds of 6\u201312 sec @ RPE 8\u20139, rest 60\u2013120 sec (cap 8\u201312 min). Template applies unless a drill lists its own structure.\n- **Standing Stance-Set Cue**\n  - Load: relaxed technical crisp\n  - Rest: 120 sec between sets\n  - Timing: 2x3s with 120s rest\n  - Purpose: From a relaxed standing stance, respond to a visual or self cue with one small stance adjustment and freeze in balance. No strikes, jumps, level changes or contact; fully relax between cues.\n  - Red Flags: None\n",
+    "grouped": {
+      "alactic": [
+        "Standing Stance-Set Cue"
+      ]
+    },
+    "missing_systems": [
+      "aerobic",
+      "glycolytic"
+    ],
+    "names": [
+      "Standing Stance-Set Cue"
+    ]
+  }
+}
