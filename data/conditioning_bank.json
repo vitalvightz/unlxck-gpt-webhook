@@ -5307,36 +5307,6 @@
     ]
   },
   {
-    "name": "Calf Raise Walk",
-    "equipment": [],
-    "phases": [
-      "SPP"
-    ],
-    "system": "aerobic",
-    "modality": "walk",
-    "duration": "10min continuous",
-    "intensity": "low",
-    "tags": [
-      "aerobic",
-      "unilateral",
-      "rehab_friendly",
-      "low_impact",
-      "mech_systemic_fatigue",
-      "mech_lower_lunge"
-    ],
-    "notes": "Tibialis/calf endurance for kick defense",
-    "total_minutes": 10,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_lower_lunge",
-      "mech_systemic_fatigue"
-    ]
-  },
-
-  {
     "name": "Low Box Jump (Fast Reset)",
     "equipment": [
       "box"
