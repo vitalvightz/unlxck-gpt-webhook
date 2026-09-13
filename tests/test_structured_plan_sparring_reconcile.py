@@ -219,20 +219,20 @@ def test_inserts_dropped_sparring_day_into_covering_week():
 
 
 def test_surfaces_coach_led_contact_alongside_real_app_sessions():
-    real_session = [{"title": "Fight Tactical Watch", "blocks": []}]
-    plan = _structured_plan([_day("D-31", headline="Fight Tactical Watch", sessions=real_session)])
+    real_session = [{"title": "Tactical Focus", "blocks": []}]
+    plan = _structured_plan([_day("D-31", headline="Tactical Focus", sessions=real_session)])
     notes = reconcile_coach_led_sparring_days(plan, _planning_brief(_hard_thursday()))
 
     day = plan["weeks"][0]["days"][0]
-    assert day["today_card"]["headline"] == "Fight Tactical Watch"
+    assert day["today_card"]["headline"] == "Tactical Focus"
     assert day["sessions"] == real_session
     assert day["today_card"]["coach_led_contact"] == "Hard sparring"
     assert any("surfaced coach-led contact" in note for note in notes)
 
 
 def test_does_not_double_surface_coach_led_contact():
-    real_session = [{"title": "Fight Tactical Watch", "blocks": []}]
-    day = _day("D-31", headline="Fight Tactical Watch", sessions=real_session)
+    real_session = [{"title": "Tactical Focus", "blocks": []}]
+    day = _day("D-31", headline="Tactical Focus", sessions=real_session)
     day["today_card"]["coach_led_contact"] = "Hard sparring"
     plan = _structured_plan([day])
     notes = reconcile_coach_led_sparring_days(plan, _planning_brief(_hard_thursday()))
@@ -256,12 +256,12 @@ def test_surfaces_coach_led_contact_even_when_app_headline_already_coach_led():
 
 
 def test_d9_declared_technical_day_keeps_tactical_watch_as_attached_filler():
-    tactical_watch = [{"title": "Fight Tactical Watch", "duration": "8-12 min", "blocks": []}]
-    plan = _structured_plan([_day("D-9", headline="Fight Tactical Watch", sessions=tactical_watch)])
+    tactical_watch = [{"title": "Tactical Focus", "duration": "8-12 min", "blocks": []}]
+    plan = _structured_plan([_day("D-9", headline="Tactical Focus", sessions=tactical_watch)])
     notes = reconcile_coach_led_sparring_days(plan, _late_context_brief(d_day=9, downgraded=True))
 
     day = plan["weeks"][0]["days"][0]
-    assert day["today_card"]["headline"] == "Fight Tactical Watch"
+    assert day["today_card"]["headline"] == "Tactical Focus"
     assert day["today_card"]["coach_led_contact"] == "Controlled fight-speed technical rounds"
     assert day["sessions"] == tactical_watch
     assert any("surfaced coach-led contact" in note for note in notes)
@@ -290,12 +290,12 @@ def test_declared_technical_day_preserves_app_work_alongside_contact():
 def test_allowed_filler_ignores_blocked_words_in_free_text_notes():
     tactical_watch = [
         {
-            "title": "Fight Tactical Watch",
+            "title": "Tactical Focus",
             "description": "Visualize maintaining fight pace without chasing strength recovery.",
             "notes": "Keep it calm.",
         }
     ]
-    plan = _structured_plan([_day("D-9", headline="Fight Tactical Watch", sessions=tactical_watch)])
+    plan = _structured_plan([_day("D-9", headline="Tactical Focus", sessions=tactical_watch)])
     reconcile_coach_led_sparring_days(plan, _late_context_brief(d_day=9, downgraded=True))
 
     day = plan["weeks"][0]["days"][0]
@@ -517,8 +517,8 @@ def test_noop_on_malformed_inputs():
 
 
 def test_does_not_double_insert_when_day_present_with_sessions():
-    real_session = [{"title": "Fight Tactical Watch", "blocks": []}]
-    plan = _structured_plan([_day("D-31", headline="Fight Tactical Watch", sessions=real_session)])
+    real_session = [{"title": "Tactical Focus", "blocks": []}]
+    plan = _structured_plan([_day("D-31", headline="Tactical Focus", sessions=real_session)])
     reconcile_coach_led_sparring_days(plan, _planning_brief(_hard_thursday()))
     assert len(plan["weeks"][0]["days"]) == 1
     assert plan["weeks"][0]["days"][0]["today_card"]["coach_led_contact"] == "Hard sparring"

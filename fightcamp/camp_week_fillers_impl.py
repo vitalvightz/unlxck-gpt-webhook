@@ -465,7 +465,7 @@ def _ensure_tactical_watch(
     role = existing if existing is not None else {
         "category": "support_insert",
         "role_key": "tactical_watch",
-        "athlete_facing_label": "Fight Tactical Watch",
+        "athlete_facing_label": "Tactical Focus",
         "rpe_max": 1,
         "support_insert_category": "tactical",
         "support_insert_cost_category": "zero_cost",

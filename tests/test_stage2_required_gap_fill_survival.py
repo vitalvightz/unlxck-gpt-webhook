@@ -3,7 +3,7 @@ from fightcamp.stage2_pipeline import _required_countdown_session_warnings
 
 _ROLE_LABELS = {
     "strength_touch_day": "Strength Touch",
-    "tactical_watch": "Fight Tactical Watch",
+    "tactical_watch": "Tactical Focus",
     "recovery_reset": "Recovery Reset",
     "neural_power_day": "Neural Power",
 }
@@ -60,7 +60,7 @@ def test_final_plan_accepts_gap_fill_sessions_when_they_survive_rendering():
         planning_brief=_planning_brief(),
         final_plan_text="""
 D-14 (Friday) — Strength touch
-D-11 (Monday) — Fight Tactical Watch
+D-11 (Monday) — Tactical Focus
 D-9 (Wednesday) — Recovery Reset
 D-8 (Thursday) — Neural power
 """,
@@ -82,7 +82,7 @@ def test_same_day_header_does_not_hide_a_missing_required_role():
     warnings = _required_countdown_session_warnings(
         planning_brief=planning_brief,
         final_plan_text="""
-D-9 (Wednesday) — Fight Tactical Watch
+D-9 (Wednesday) — Tactical Focus
 - Review the selected tactical cue.
 """,
     )
@@ -101,7 +101,7 @@ def test_same_day_roles_both_pass_when_both_survive():
     warnings = _required_countdown_session_warnings(
         planning_brief=planning_brief,
         final_plan_text="""
-D-9 (Wednesday) — Fight Tactical Watch
+D-9 (Wednesday) — Tactical Focus
 - Review the selected tactical cue.
 
 Recovery Reset

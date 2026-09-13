@@ -256,7 +256,7 @@ _STRUCTURED_TARGET_FIELDS = (
 
 _INSERT_META = {
     "tactical_watch": {
-        "label": "Fight Tactical Watch",
+        "label": "Tactical Focus",
         "duration_min": [8, 12],
         "rpe_max": 1,
         "insert_category": "tactical",
@@ -1664,7 +1664,7 @@ def _has_tactical_support(session_sequence: list[dict[str, Any]]) -> bool:
 
 
 def _missing_mandatory_watch_count(session_sequence: list[dict[str, Any]]) -> int:
-    """Count represented D-21..D-1 segments that still need a Fight Tactical Watch."""
+    """Count represented D-21..D-1 segments that still need a Tactical Focus."""
     segments = {
         _segment_for_offset(offset)
         for role in session_sequence
