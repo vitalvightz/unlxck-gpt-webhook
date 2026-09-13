@@ -179,6 +179,10 @@ def apply_stage2_release_policy(validator_report: dict) -> dict:
     ]
     quality_findings = _dedupe_findings([*all_findings, *malformed_findings])
     admin_findings = admin_review_blocking_findings(collections)
+    conditioning_underfilled = any(
+        item.get("code") == "conditioning_role_workload_underfilled"
+        for item in collections["errors"]
+    )
     release_decision = "publish_with_flags" if quality_findings else "publish"
 
     return {
@@ -191,9 +195,9 @@ def apply_stage2_release_policy(validator_report: dict) -> dict:
         "admin_review_blocking_flag_count": len(admin_findings),
         "release_policy_malformed_fields": malformed_fields,
         "validator_findings_observational": True,
-        "release_decision": release_decision,
-        "is_athlete_releasable": True,
-        "is_publishable": True,
+        "release_decision": "hold" if conditioning_underfilled else release_decision,
+        "is_athlete_releasable": not conditioning_underfilled,
+        "is_publishable": not conditioning_underfilled,
     }
 
 

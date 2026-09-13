@@ -1209,6 +1209,15 @@ def _conditioning_is_high_load(option: dict[str, Any]) -> bool:
     return bool((rpe is not None and rpe >= 8) or re.search(r"\b(?:high|max|maximal|all[- ]out)\b", load_tokens))
 
 
+def _conditioning_high_load_dose_known(option: dict[str, Any]) -> bool:
+    dose = _conditioning_effective_dose(option)
+    return bool(
+        (_float_or_none(dose.get("work_sec")) or 0) > 0
+        and (_float_or_none(dose.get("rest_sec")) or -1) >= 0
+        and _conditioning_rounds(option) is not None
+    )
+
+
 def _conditioning_rounds(option: dict[str, Any]) -> int | None:
     metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else {}
     rounds = _float_or_none(metadata.get("rounds"))
@@ -1228,6 +1237,29 @@ def _conditioning_effective_dose(option: dict[str, Any]) -> dict[str, Any]:
 
 def _conditioning_active_work_seconds(option: dict[str, Any]) -> float | None:
     return conditioning_dose_active_work_seconds(_conditioning_effective_dose(option))
+
+
+def _conditioning_selected_active_work_seconds(
+    selected: list[tuple[dict[str, Any], dict[str, Any], bool]],
+    allocated_rounds: dict[str, int],
+) -> float:
+    """Measure the retained conditioning workload after high-load partitioning."""
+    active_work = 0.0
+    for _slot, option, _is_selected in selected:
+        dose = _conditioning_effective_dose(option)
+        work_sec = _float_or_none(dose.get("work_sec"))
+        allocated = allocated_rounds.get(str(option.get("name") or ""))
+        if allocated is not None and work_sec is not None and work_sec > 0:
+            active_work += work_sec * allocated
+        else:
+            active_work += _conditioning_active_work_seconds(option) or 0.0
+    return active_work
+
+
+def _conditioning_selected_minutes(
+    selected: list[tuple[dict[str, Any], dict[str, Any], bool]],
+) -> float:
+    return sum(_conditioning_duration_minutes(option) or 0.0 for _, option, _ in selected)
 
 
 def _conditioning_round_seconds(option: dict[str, Any]) -> float | None:
@@ -1462,63 +1494,98 @@ def compose_normal_conditioning_assignments(
                 seen_names.add(name)
                 options.append((slot, option, True))
 
-            if not options:
-                continue
-
             adjacent_hard_spar = _conditioning_role_is_hard_spar_adjacent(week, role)
-            # Resolve the phase/system workload first: a session is complete
-            # when it carries that workload, not when it reaches three members.
             target_active_work, _ = _conditioning_phase_workload_envelope(
                 phase=phase,
                 system=preferred_system,
                 rounds_format=rounds_format,
             )
+            if not options:
+                role["selected_exercise_assignments"] = []
+                # A targeted recomposition can follow a countdown morph that
+                # deliberately turns a former conditioning role into a light
+                # touch with no matching bank membership. Preserve that explicit
+                # reduction path instead of converting it into an underfill.
+                if only_roles is not None:
+                    role.pop("conditioning_composition_policy", None)
+                    continue
+                role["conditioning_composition_policy"] = {
+                    "minimum_exercise_count": None if adjacent_hard_spar else 0,
+                    "selected_count": 0,
+                    "long_aerobic_session": False,
+                    "hard_sparring_adjacent": adjacent_hard_spar,
+                    "high_load_workload_envelope": {},
+                    "partitioned_high_load_rounds": {},
+                    "conditioning_target_active_work_seconds": target_active_work,
+                    "conditioning_active_work_seconds": 0.0,
+                    "conditioning_workload_met": None if adjacent_hard_spar else False,
+                    "underfill_reason": None if adjacent_hard_spar else "phase_system_workload_unmet",
+                    "workload_limited": not adjacent_hard_spar,
+                    "embedded_trunk_support": False,
+                    "embedded_trunk_support_count": 0,
+                    "embedded_trunk_support_skip_reason": "conditioning_workload_unmet",
+                }
+                continue
+
+            # The workload envelope, not the number of selected exercises,
+            # closes a normal conditioning role.
             selected: list[tuple[dict[str, Any], dict[str, Any], bool]] = []
             total_minutes = 0.0
             active_work_seconds = 0.0
+            high_load_rounds: dict[str, int] = {}
+            high_load_budget: dict[str, float | None] = {}
+            underfill_reason: str | None = None
             for slot, option, is_selected in options:
                 duration = _conditioning_duration_minutes(option)
-                if selected:
-                    if duration is not None and total_minutes + duration > 45:
-                        continue
+                if selected and duration is not None and total_minutes + duration > 45:
+                    continue
                 selected.append((slot, option, is_selected))
-                if duration is not None:
-                    total_minutes += duration
-                active_work = _conditioning_active_work_seconds(option)
-                if active_work is not None:
-                    active_work_seconds += active_work
+                (
+                    selected,
+                    high_load_rounds,
+                    partition_reason,
+                    high_load_budget,
+                ) = _conditioning_partition_high_load(
+                    selected,
+                    phase=phase,
+                    system=preferred_system,
+                    rounds_format=rounds_format,
+                )
+                # Partitioning can remove high-load candidates. From this point
+                # on the retained list owns both elapsed budget and workload.
+                total_minutes = _conditioning_selected_minutes(selected)
+                active_work_seconds = _conditioning_selected_active_work_seconds(
+                    selected, high_load_rounds
+                )
+                underfill_reason = partition_reason or underfill_reason
                 if adjacent_hard_spar:
                     break
-                if preferred_system == "aerobic" and len(selected) >= 2 and total_minutes >= 25:
-                    break
                 if target_active_work is not None and active_work_seconds >= target_active_work:
+                    underfill_reason = None
                     break
-                if len(selected) >= 3:
-                    break
-
-            # Count the members that delivered the workload before the
-            # partitioner may drop undoseable high-load drills, so a dropped
-            # session still reports as underfilled.
-            composed_count = len(selected)
-            selected, high_load_rounds, underfill_reason, high_load_budget = _conditioning_partition_high_load(
-                selected,
-                phase=phase,
-                system=preferred_system,
-                rounds_format=rounds_format,
-            )
+            if underfill_reason == "high_load_dose_unknown":
+                selected = [
+                    item
+                    for item in selected
+                    if not (
+                        _conditioning_is_high_load(item[1])
+                        and not _conditioning_high_load_dose_known(item[1])
+                    )
+                ]
+                total_minutes = _conditioning_selected_minutes(selected)
+                active_work_seconds = _conditioning_selected_active_work_seconds(
+                    selected, high_load_rounds
+                )
             long_aerobic = preferred_system == "aerobic" and total_minutes >= 25
-            # A session that already carries its phase/system workload is
-            # complete at whatever member count delivered it; the count floor
-            # only applies while the workload is still unmet or unknown.
             workload_met = (
                 target_active_work is not None and active_work_seconds >= target_active_work
             )
             if adjacent_hard_spar:
                 minimum = None
             elif workload_met:
-                minimum = composed_count
+                minimum = len(selected)
             else:
-                minimum = 2 if long_aerobic else 3
+                minimum = None
 
             assignments = []
             selected_names: set[str] = set()
@@ -1566,7 +1633,12 @@ def compose_normal_conditioning_assignments(
                 role=role,
                 fatigue_applied=True,
             )
-            if trunk_strength_selected and not adjacent_hard_spar and int(pressure_state["pressure"]) < 2:
+            if (
+                workload_met
+                and trunk_strength_selected
+                and not adjacent_hard_spar
+                and int(pressure_state["pressure"]) < 2
+            ):
                 trunk_options = [
                     record
                     for record in _low_load_trunk_support_records(strength_slots)
@@ -1593,6 +1665,8 @@ def compose_normal_conditioning_assignments(
                 trunk_support_skip_reason = (
                     "hard_sparring_adjacent"
                     if adjacent_hard_spar
+                    else "conditioning_workload_unmet"
+                    if not workload_met
                     else "readiness_pressure"
                 )
 
@@ -1604,8 +1678,15 @@ def compose_normal_conditioning_assignments(
                 "hard_sparring_adjacent": adjacent_hard_spar,
                 "high_load_workload_envelope": high_load_budget,
                 "partitioned_high_load_rounds": high_load_rounds,
-                "underfill_reason": underfill_reason,
-                "workload_limited": bool(minimum is not None and len(assignments) < minimum),
+                "conditioning_target_active_work_seconds": target_active_work,
+                "conditioning_active_work_seconds": active_work_seconds,
+                "conditioning_workload_met": None if adjacent_hard_spar else workload_met,
+                "underfill_reason": (
+                    None
+                    if adjacent_hard_spar or workload_met
+                    else underfill_reason or "phase_system_workload_unmet"
+                ),
+                "workload_limited": not adjacent_hard_spar and not workload_met,
                 "embedded_trunk_support": trunk_support_added,
                 "embedded_trunk_support_count": 1 if trunk_support_added else 0,
                 "embedded_trunk_support_skip_reason": trunk_support_skip_reason,

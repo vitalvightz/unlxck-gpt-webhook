@@ -3768,6 +3768,26 @@ def _priority_microdose_render_errors(planning_brief: dict, final_plan_text: str
     return errors
 
 
+def _underfilled_conditioning_errors(planning_brief: dict) -> list[dict]:
+    errors: list[dict] = []
+    for week in (planning_brief.get("weekly_role_map") or {}).get("weeks", []) or []:
+        if not isinstance(week, dict):
+            continue
+        for role in week.get("session_roles", []) or []:
+            policy = role.get("conditioning_composition_policy") if isinstance(role, dict) else None
+            if not isinstance(policy, dict) or policy.get("conditioning_workload_met") is not False:
+                continue
+            errors.append(_issue(
+                code="conditioning_role_workload_underfilled",
+                message="Conditioning role is short of its required phase/system workload.",
+                severity="blocker",
+                confidence="high",
+                phase=week.get("phase"),
+                role_key=role.get("role_key"),
+            ))
+    return errors
+
+
 def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dict:
     from .goal_preservation import validate_goal_preservation
     plan_lines = _extract_plan_lines(final_plan_text)
@@ -3779,6 +3799,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     if not errors:
         errors.extend(_goal_preservation_render_errors(planning_brief, final_plan_text))
     errors.extend(_priority_microdose_render_errors(planning_brief, final_plan_text))
+    errors.extend(_underfilled_conditioning_errors(planning_brief))
     warnings: list[dict[str, Any]] = []
     if not plan_lines:
         errors.append(_issue(code="stage2_output_empty", message="Stage 2 output is empty.", severity="blocker", confidence="high"))
