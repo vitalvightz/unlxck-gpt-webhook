@@ -4,6 +4,7 @@ import logging
 import re
 from time import perf_counter
 
+from .bout_format import bout_format_metadata
 from .coach_review import run_coach_review
 from .conditioning import generate_conditioning_block
 from .injury_location import canonicalize_location
@@ -184,6 +185,7 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext, *, progress_callb
                 "fatigue_level": context.training_context.fatigue,
                 "injuries": context.training_context.injuries,
                 "fight_format": context.training_context.fight_format,
+                "bout_format": bout_format_metadata(context.plan_input.rounds_format),
             },
             "sport": context.canonical_sport,
             # Preserve the canonical stance in conditioning metadata so any
@@ -199,6 +201,9 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext, *, progress_callb
             "grouped_drills": grouped_drills,
             "missing_systems": missing_systems,
             "candidate_reservoir": candidate_reservoir,
+            # Canonical bout-format demand facts, available to later consumers
+            # without reparsing the intake string. Observability only.
+            "bout_format": bout_format_metadata(context.plan_input.rounds_format),
             "phase_color": PHASE_COLORS[phase],
             "num_sessions": render_metadata.get("num_sessions", 1),
             "diagnostic_context": render_metadata.get("diagnostic_context", {}),

@@ -27,6 +27,7 @@ from .injury_guard import Decision, choose_injury_replacement, injury_decision, 
 from .coordination_support_library import extract_coordination_style
 from .sports import normalize_sport, planning_format
 from .restriction_filtering import evaluate_restriction_impact
+from .bout_format import bout_format_metadata
 from .diagnostics import format_missing_system_block
 from .tagging import normalize_item_tags, normalize_tags
 from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP, WEAKNESS_TAG_MAP
@@ -5010,6 +5011,10 @@ def generate_conditioning_block(flags):
         "fatigue_level": fatigue,
         "injuries": injuries,
         "fight_format": fight_format,
+        # Canonical bout-format demand facts (rounds, round length, total fight
+        # work). Observability only in this pass: nothing in selection or
+        # rendering reads it.
+        "bout_format": bout_format_metadata(flags.get("rounds_format")),
         "speed_goal_requested": speed_goal_requested,
         "speed_dose_allowed": speed_dose_allowed,
         "alactic_primary_cap": alactic_primary_cap,
@@ -5123,6 +5128,11 @@ def generate_conditioning_block(flags):
         } if bridge_rules else {},
     }
     candidate_reservoir["__style_conditioning__"] = style_conditioning_diagnostics.copy()
+    # Canonical bout-format demand, exposed so later work can consume it
+    # without reparsing the intake string. Does not affect selection.
+    candidate_reservoir["__bout_format__"] = bout_format_metadata(
+        flags.get("rounds_format")
+    )
 
     return output_lines, selected_drill_names, why_log, grouped_drills, missing_systems, candidate_reservoir
 # Map for tactical styles
