@@ -107,7 +107,7 @@ def test_v2_bank_is_small_deliberate_and_split():
         assert drill.raw["meaningful_stress"] is False
         assert drill.raw["stress_class"] == "support"
         assert drill.raw["cost_class"] == "low"
-        assert set(drill.equipment) <= {"bodyweight", "partner"}
+        assert set(drill.equipment) <= {"bodyweight", "partner", "hurdles"}
 
 
 def test_v2_bank_covers_every_sport_and_tactical_style_with_overlap():
