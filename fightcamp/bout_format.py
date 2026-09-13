@@ -88,7 +88,12 @@ def parse_bout_format(rounds_format: str | None) -> BoutFormat | None:
     )
 
 
-def bout_format_metadata(rounds_format: str | None) -> dict[str, float | int] | None:
-    """Metadata view straight from the intake string, or ``None`` if unresolved."""
+def bout_format_metadata(rounds_format: str | None) -> dict[str, float | int]:
+    """Metadata view of the intake string; empty when the format is unresolved.
+
+    The parser still returns ``None`` for unresolved input. Metadata uses an
+    empty mapping so it remains safe inside diagnostic containers whose values
+    are expected to support ``len()`` and other mapping operations.
+    """
     bout = parse_bout_format(rounds_format)
-    return bout.as_metadata() if bout else None
+    return bout.as_metadata() if bout else {}
