@@ -844,8 +844,11 @@ export function isSessionToday(
 ): boolean {
   const sessionDate = session?.calendar_date?.match(/^\d{4}-\d{2}-\d{2}/)?.[0];
   const currentDate = trainingDay?.match(/^\d{4}-\d{2}-\d{2}/)?.[0];
-  if (sessionDate && currentDate && sessionDate !== currentDate) {
-    return false;
+  if (sessionDate && currentDate) {
+    // The canonical dates outrank a stale relation stamp. This can occur after
+    // check-in refresh when the backend labels a same-day structured session as
+    // "next"; keeping it locked leaves an athlete unable to start today's work.
+    return sessionDate === currentDate;
   }
   if (session?.session_relation === "today") {
     return true;
