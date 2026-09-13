@@ -14657,7 +14657,7 @@
     "eccentric_cost": "moderate",
     "landing_cost": "none",
     "cns_load": "high",
-    "soreness_risk": "low",
+    "soreness_risk": "moderate",
     "mechanical_risk_tags": [
       "mech_grip_support",
       "mech_shoulder_overhead",
