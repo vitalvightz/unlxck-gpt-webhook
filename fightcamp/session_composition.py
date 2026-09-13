@@ -1277,6 +1277,7 @@ def _conditioning_partition_high_load(
     *,
     phase: str,
     system: str,
+    rounds_format: str | None = None,
 ) -> tuple[
     list[tuple[dict[str, Any], dict[str, Any], bool]],
     dict[str, int],
@@ -1313,7 +1314,7 @@ def _conditioning_partition_high_load(
         dose_data.append((item, work_sec, rest_sec, rounds))
 
     target_active_work, elapsed_cap_minutes = _conditioning_phase_workload_envelope(
-        phase=phase, system=system
+        phase=phase, system=system, rounds_format=rounds_format
     )
     if target_active_work is None or elapsed_cap_minutes is None:
         return selected, {}, None, {}
@@ -1414,6 +1415,9 @@ def compose_normal_conditioning_assignments(
     membership that is still correct.
     """
     athlete_model = get_planner_athlete_model()
+    rounds_format = (
+        athlete_model.get("rounds_format") if isinstance(athlete_model, dict) else None
+    )
     pressure_context = _composition_context_from_model(athlete_model)
     trunk_strength_selected = _trunk_strength_selected(athlete_model)
 
@@ -1465,7 +1469,9 @@ def compose_normal_conditioning_assignments(
             # Resolve the phase/system workload first: a session is complete
             # when it carries that workload, not when it reaches three members.
             target_active_work, _ = _conditioning_phase_workload_envelope(
-                phase=phase, system=preferred_system
+                phase=phase,
+                system=preferred_system,
+                rounds_format=rounds_format,
             )
             selected: list[tuple[dict[str, Any], dict[str, Any], bool]] = []
             total_minutes = 0.0
@@ -1498,6 +1504,7 @@ def compose_normal_conditioning_assignments(
                 selected,
                 phase=phase,
                 system=preferred_system,
+                rounds_format=rounds_format,
             )
             long_aerobic = preferred_system == "aerobic" and total_minutes >= 25
             # A session that already carries its phase/system workload is

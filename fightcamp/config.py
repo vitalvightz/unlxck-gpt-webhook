@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
 
-from .bout_format import parse_bout_format
+from .bout_format import bout_workload_depth_modifier, parse_bout_format
 from .phases import PhaseEnum
 
 GPP = PhaseEnum.GPP.value
@@ -34,15 +34,17 @@ PHASE_SYSTEM_RATIOS = {
 
 
 def conditioning_phase_workload_envelope(
-    *, phase: str, system: str
+    *, phase: str, system: str, rounds_format: str | None = None
 ) -> tuple[float | None, float | None]:
     """Active-work target and elapsed cap for one phase/system conditioning dose.
 
     These are not new global targets: they restate the lower active-work edge
     and elapsed cap already published by the rendered GPP/SPP phase dose
-    guidance. Returned as ``(target_active_work_seconds, elapsed_cap_minutes)``,
-    or ``(None, None)`` where no phase guidance applies (notably TAPER, whose
-    dose stays with the countdown policy).
+    guidance. A resolved non-neutral bout format may conservatively scale the
+    aerobic target; the elapsed cap and non-aerobic targets stay unchanged.
+    Returned as ``(target_active_work_seconds, elapsed_cap_minutes)``, or
+    ``(None, None)`` where no phase guidance applies (notably TAPER, whose dose
+    stays with the countdown policy).
 
     Single owner for the question "how much work does this session owe?", shared
     by Stage 1 session resolution (how many drills a system keeps) and session
@@ -53,14 +55,20 @@ def conditioning_phase_workload_envelope(
     system = str(system or "").strip().lower()
     if system == "glycolytic" and phase == GPP:
         # Existing GPP combat-pressure floor: 6-8 x 60 sec hard.
-        return 6 * 60.0, 30.0
-    if phase == GPP:
+        target_active_work, elapsed_cap = 6 * 60.0, 30.0
+    elif phase == GPP:
         # 3 x 3 min is the low edge of the existing GPP 3-5 x 3-5 min template.
-        return 9 * 60.0, 30.0
-    if phase == SPP:
+        target_active_work, elapsed_cap = 9 * 60.0, 30.0
+    elif phase == SPP:
         # 4 x 2 min is the low edge of the existing SPP 4-6 x 2-5 min template.
-        return 8 * 60.0, 25.0
-    return None, None
+        target_active_work, elapsed_cap = 8 * 60.0, 25.0
+    else:
+        return None, None
+
+    bout = parse_bout_format(rounds_format)
+    if system == "aerobic" and bout:
+        target_active_work *= bout_workload_depth_modifier(bout)
+    return round(target_active_work, 4), elapsed_cap
 
 STAGE_1 = "STAGE_1"
 STAGE_2 = "STAGE_2"

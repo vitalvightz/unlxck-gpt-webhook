@@ -5,10 +5,11 @@ that needs to know how long a round lasts, how many rounds the athlete is
 scheduled to fight, or how much total fight work that adds up to, resolves it
 here so there is exactly one parser in the codebase.
 
-This module states facts only. It does not infer a format from amateur/pro
-status, does not assume a 3 x 3 default, and does not convert the demand into
-energy-system modifiers — an unresolved format is reported as ``None`` so
-callers keep their existing behaviour instead of planning against a guess.
+This module does not infer a format from amateur/pro status or assume a 3 x 3
+default. It owns both the parsed facts and the deliberately conservative
+planning modifiers derived from those facts; an unresolved format is reported
+as ``None`` so callers keep their existing behaviour instead of planning
+against a guess.
 """
 
 from __future__ import annotations
@@ -19,6 +20,8 @@ from dataclasses import dataclass
 __all__ = [
     "BASELINE_WORK_SECONDS",
     "BoutFormat",
+    "bout_energy_modifiers",
+    "bout_workload_depth_modifier",
     "bout_format_metadata",
     "parse_bout_format",
 ]
@@ -28,6 +31,35 @@ __all__ = [
 BASELINE_WORK_SECONDS = 540.0
 
 _BOUT_FORMAT_PATTERN = re.compile(r"^\s*(\d+)\s*[xX×]\s*(\d+(?:\.\d+)?)\s*$")
+
+_NEUTRAL_ENERGY_MODIFIERS = {
+    "aerobic": 1.0,
+    "glycolytic": 1.0,
+    "alactic": 1.0,
+}
+
+# Planning weights, not physiological percentages. The explicit map keeps the
+# supported formats auditable while retaining every energy system. Values are
+# intentionally narrow: format shapes demand depth; it never dictates a
+# session or scales training volume in proportion to total bout duration.
+_KNOWN_ENERGY_MODIFIERS = {
+    (3, 120.0): {"aerobic": 0.94, "glycolytic": 1.03, "alactic": 1.06},
+    (3, 180.0): _NEUTRAL_ENERGY_MODIFIERS,
+    (5, 180.0): {"aerobic": 1.08, "glycolytic": 1.03, "alactic": 0.96},
+    (3, 300.0): {"aerobic": 1.10, "glycolytic": 1.06, "alactic": 0.94},
+    (5, 300.0): {"aerobic": 1.18, "glycolytic": 1.05, "alactic": 0.90},
+}
+
+_MIN_ENERGY_MODIFIER = 0.90
+_MAX_ENERGY_MODIFIER = 1.18
+
+_KNOWN_WORKLOAD_DEPTH_MODIFIERS = {
+    (3, 120.0): 0.96,
+    (3, 180.0): 1.0,
+    (5, 180.0): 1.08,
+    (3, 300.0): 1.08,
+    (5, 300.0): 1.15,
+}
 
 
 @dataclass(frozen=True)
@@ -50,8 +82,8 @@ class BoutFormat:
     def total_work_ratio_vs_baseline(self) -> float:
         """Total fight work relative to a 3 x 3 bout (540 sec).
 
-        A plain ratio of two measured durations. It is deliberately not turned
-        into an aerobic/glycolytic/alactic modifier here.
+        A plain ratio of two measured durations. The modifier model deliberately
+        does not scale linearly from this value.
         """
         return self.total_work_seconds / BASELINE_WORK_SECONDS
 
@@ -64,6 +96,47 @@ class BoutFormat:
             "total_work_minutes": round(self.total_work_minutes, 4),
             "total_work_ratio_vs_3x3": round(self.total_work_ratio_vs_baseline, 4),
         }
+
+
+def bout_energy_modifiers(bout: BoutFormat) -> dict[str, float]:
+    """Return bounded energy-system planning weights for ``bout``.
+
+    Known competition formats use an explicit mapping. Other valid formats use
+    a small saturating adjustment from round duration and total scheduled work;
+    the result is bounded to the same conservative range and deliberately does
+    not scale linearly with total work.
+    """
+    known = _KNOWN_ENERGY_MODIFIERS.get((bout.rounds, bout.round_seconds))
+    if known is not None:
+        return dict(known)
+
+    round_signal = max(-1.0, min(1.0, (bout.round_minutes - 3.0) / 2.0))
+    work_signal = max(-1.0, min(1.0, (bout.total_work_minutes - 9.0) / 16.0))
+    derived = {
+        "aerobic": 1.0 + (0.06 * round_signal) + (0.12 * work_signal),
+        "glycolytic": 1.0 + (0.05 * round_signal) + (0.03 * work_signal),
+        "alactic": 1.0 - (0.04 * round_signal) - (0.06 * work_signal),
+    }
+    return {
+        system: round(
+            max(_MIN_ENERGY_MODIFIER, min(_MAX_ENERGY_MODIFIER, value)), 4
+        )
+        for system, value in derived.items()
+    }
+
+
+def bout_workload_depth_modifier(bout: BoutFormat) -> float:
+    """Return a bounded aerobic-workload depth signal for ``bout``.
+
+    This survives integer system-quota rounding without adding sessions or
+    changing authored prescriptions. It scales the existing aerobic workload
+    target only, reflecting accumulated repeatability demand.
+    """
+    known = _KNOWN_WORKLOAD_DEPTH_MODIFIERS.get((bout.rounds, bout.round_seconds))
+    if known is not None:
+        return known
+    work_signal = max(-1.0, min(1.0, (bout.total_work_minutes - 9.0) / 16.0))
+    return round(max(0.95, min(1.15, 1.0 + (0.15 * work_signal))), 4)
 
 
 def parse_bout_format(rounds_format: str | None) -> BoutFormat | None:
