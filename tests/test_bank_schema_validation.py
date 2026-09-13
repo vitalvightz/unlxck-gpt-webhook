@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from fightcamp import bank_schema
+from fightcamp import bank_schema, conditioning
 
 
 @pytest.fixture(autouse=True)
@@ -103,6 +103,24 @@ def test_validate_training_item_backfills_conditioning_bank_schema_defaults():
     assert item["total_minutes"] is None
     assert item["rpe"] is None
     assert item["lactate_load"] == ""
+
+
+def test_conditioning_bank_keeps_support_work_out_of_primary_aerobic_authority():
+    bank = conditioning.get_conditioning_bank()
+    aerobic_names = {item["name"] for item in bank if item.get("system") == "aerobic"}
+
+    assert {"Turkish Get-Up Skill Flow", "Wrist/Finger Activation Micro-Reset"}.isdisjoint(aerobic_names)
+    assert "Bike Zone 2 (Nasal Only)" in aerobic_names
+    assert not [
+        item["name"]
+        for item in bank
+        if item.get("support_only") is True
+        or item.get("meaningful_stress") is False
+        or item.get("stress_class") == "support"
+    ]
+    assert not {
+        item.get("system") for item in bank
+    }.intersection(bank_schema.SUPPORT_ONLY_SYSTEM_ALIASES)
 
 
 def test_validate_training_item_classifies_loaded_bank_source_names_by_family():

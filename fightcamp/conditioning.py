@@ -1288,7 +1288,6 @@ _conditioning_bank_cache = None
 _style_conditioning_bank_cache = None
 
 TAPER_CONDITIONING_SAFE_NAMES = {
-    "Shadowboxing Technical Rhythm",
     "Breath Control Drills",
     "Explosive Boxing Burst Intervals",
     "Reactive Shuffle Repeats",
@@ -4418,7 +4417,6 @@ def generate_conditioning_block(flags):
             aerobic_candidates: list[tuple[dict, float, dict, int]] = []
             preferred_names = (
                 "Rower Gas-Tank Flush",
-                "Assault Bike Rhythm Primer",
             )
             for drill, score, reasons in system_drills.get("aerobic", []):
                 if _is_low_noise_aerobic_maintenance_drill(drill, system="aerobic"):

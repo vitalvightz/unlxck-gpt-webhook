@@ -748,38 +748,7 @@
     "rpe": 6,
     "intensity": "zone 2"
   },
-  {
-    "name": "Yoga Flow (Dynamic)",
-    "equipment": [],
-    "phases": [
-      "GPP",
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "duration": "45min",
-    "tags": [
-      "mobility",
-      "mech_trunk_stability",
-      "mech_shoulder_overhead"
-    ],
-    "notes": "Emphasize hip/shoulder ROM",
-    "work_sec": 2700,
-    "total_minutes": 45,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_shoulder_overhead",
-      "mech_trunk_stability"
-    ],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5"
-    ],
-    "rpe": 4,
-    "intensity": "low"
-  },
+
   {
     "name": "Farmers Walk (Light)",
     "equipment": [
@@ -903,34 +872,7 @@
     "rpe": 6,
     "intensity": "zone 2"
   },
-  {
-    "name": "Breath Control Drills",
-    "equipment": [],
-    "phases": [
-      "GPP",
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "duration": "15min",
-    "tags": [
-      "recovery"
-    ],
-    "notes": "Diaphragmatic focus",
-    "work_sec": 900,
-    "total_minutes": 15,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
-    ],
-    "rpe": 6,
-    "intensity": "low"
-  },
+
   {
     "name": "Sandbag Carry (Light)",
     "equipment": [
@@ -3444,67 +3386,8 @@
     "rpe": 6,
     "intensity": "moderate"
   },
-  {
-    "name": "Dynamic Visual Tracking Drills",
-    "equipment": [],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "cognitive",
-    "duration": "3x3min (track moving objects)",
-    "tags": [
-      "visual_processing",
-      "reaction",
-      "mech_reactive"
-    ],
-    "notes": "OBJECTS: Use 2-3 colored balls. SPEED: Progress from slow to fast",
-    "work_sec": 180,
-    "rounds": 3,
-    "total_minutes": 9,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "moderate",
-    "mechanical_risk_tags": [
-      "mech_reactive"
-    ],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5"
-    ],
-    "rpe": 6,
-    "intensity": "low"
-  },
-  {
-    "name": "Tactical Breathing Recovery",
-    "equipment": [],
-    "phases": [
-      "GPP",
-      "TAPER"
-    ],
-    "system": "cognitive",
-    "duration": "5x1min (4-7-8 pattern)",
-    "tags": [
-      "parasympathetic",
-      "recovery"
-    ],
-    "notes": "POST-SESSION: Use after high-CNS workouts. POSITION: Supine preferred",
-    "work_sec": 60,
-    "rounds": 5,
-    "total_minutes": 5,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "moderate",
-    "mechanical_risk_tags": [],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
-    ],
-    "rpe": 6,
-    "intensity": "low"
-  },
+
+
   {
     "name": "KB Swing Intervals",
     "equipment": [
@@ -4928,45 +4811,7 @@
       "mech_upper_press"
     ]
   },
-  {
-    "name": "Dynamic Yoga for Fighters",
-    "equipment": [
-      "mat"
-    ],
-    "phases": [
-      "SPP",
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "mobility",
-    "duration": "30min",
-    "intensity": "low",
-    "tags": [
-      "aerobic",
-      "mobility",
-      "recovery",
-      "parasympathetic",
-      "mech_trunk_stability",
-      "mech_shoulder_overhead"
-    ],
-    "notes": "Hip/shoulder focus for combat athletes",
-    "work_sec": 1800,
-    "total_minutes": 30,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_shoulder_overhead",
-      "mech_trunk_stability"
-    ],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
-    ]
-  },
+
   {
     "name": "Breathwork + Slow Shadowboxing",
     "equipment": [],
@@ -5283,42 +5128,7 @@
       "mech_reactive_rebound"
     ]
   },
-  {
-    "name": "Striking Combos @ 20% Effort",
-    "equipment": [],
-    "phases": [
-      "SPP",
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "shadowbox",
-    "duration": "15min continuous",
-    "intensity": "very low",
-    "tags": [
-      "aerobic",
-      "skill",
-      "striking",
-      "parasympathetic",
-      "mech_upper_press",
-      "mech_trunk_rotation"
-    ],
-    "notes": "Cooldown flow; zero fatigue",
-    "total_minutes": 15,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
-    ]
-  },
+
   {
     "name": "BJJ Flow Rolling (No Submissions)",
     "equipment": [
@@ -5525,41 +5335,7 @@
       "mech_systemic_fatigue"
     ]
   },
-  {
-    "name": "Cooldown Flow (Striking + Mobility)",
-    "equipment": [],
-    "phases": [
-      "SPP",
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "shadowbox",
-    "duration": "15min",
-    "intensity": "zone 1",
-    "tags": [
-      "aerobic",
-      "mobility",
-      "recovery",
-      "parasympathetic",
-      "mech_upper_press"
-    ],
-    "notes": "Post-training flush only (RPE 2)",
-    "work_sec": 900,
-    "total_minutes": 15,
-    "rpe": 2,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_upper_press"
-    ],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
-    ]
-  },
+
   {
     "name": "Low Box Jump (Fast Reset)",
     "equipment": [
@@ -5709,46 +5485,7 @@
     "intensity": "high",
     "rest_sec": 60
   },
-  {
-    "name": "Mini Hurdle Quick Steps",
-    "equipment": [
-      "hurdles"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "duration": "4x10s, 30s rest",
-    "tags": [
-      "plyometric",
-      "speed",
-      "footwork",
-      "reactive",
-      "coordination",
-      "mech_reactive",
-      "mech_lower_jump",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_lower_lunge"
-    ],
-    "notes": "Fast taps over 4–6” hurdles. Emphasize light contacts.",
-    "work_sec": 10,
-    "rest_sec": 30,
-    "rounds": 4,
-    "total_minutes": 2.17,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_jump",
-      "mech_lower_lunge",
-      "mech_reactive"
-    ],
-    "rpe": 4,
-    "intensity": "low"
-  },
+
   {
     "name": "Med Ball Drop Catch to Jump",
     "equipment": [
@@ -7990,37 +7727,7 @@
       "mech_trunk_rotation"
     ]
   },
-  {
-    "name": "Turkish Get-Up Skill Flow",
-    "equipment": [
-      "kettlebell"
-    ],
-    "phases": [
-      "GPP"
-    ],
-    "system": "aerobic",
-    "modality": "kettlebell",
-    "duration": "5x5 reps per side slow tempo",
-    "intensity": "low",
-    "tags": [
-      "stability",
-      "upper_body",
-      "core",
-      "skill",
-      "mech_trunk_stability"
-    ],
-    "notes": "Skill-based conditioning without metabolic tax",
-    "work_sec": 5,
-    "rounds": 5,
-    "total_minutes": 0.42,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_trunk_stability"
-    ]
-  },
+
   {
     "name": "Farmer Carry + Battle Rope Combo",
     "equipment": [
@@ -8087,177 +7794,12 @@
     ],
     "rpe": 6
   },
-  {
-    "name": "Foam Rolling Mobility Circuit",
-    "equipment": [],
-    "phases": [
-      "GPP",
-      "TAPER"
-    ],
-    "system": "recovery",
-    "modality": "mobility",
-    "duration": "15-20min full body",
-    "intensity": "low",
-    "tags": [
-      "recovery",
-      "mobility",
-      "rehab_friendly",
-      "cns_freshness",
-      "parasympathetic",
-      "mech_trunk_rotation"
-    ],
-    "notes": "Tissue care; zero training stimulus",
-    "work_sec": 1200,
-    "total_minutes": 20,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "moderate",
-    "mechanical_risk_tags": [
-      "mech_trunk_rotation"
-    ],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5"
-    ]
-  },
-  {
-    "name": "Breathing Protocol Deep Work",
-    "equipment": [],
-    "phases": [
-      "GPP"
-    ],
-    "system": "recovery",
-    "modality": "breathing",
-    "duration": "10-15min box breathing cycles",
-    "intensity": "low",
-    "tags": [
-      "recovery",
-      "parasympathetic",
-      "mental_toughness",
-      "cns_freshness",
-      "cognitive"
-    ],
-    "notes": "Autonomic nervous system balancing",
-    "rest_sec": 900,
-    "total_minutes": 15,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "moderate",
-    "mechanical_risk_tags": []
-  },
-  {
-    "name": "Cold Plunge Recovery Routine",
-    "equipment": [],
-    "phases": [
-      "GPP"
-    ],
-    "system": "recovery",
-    "modality": "recovery",
-    "duration": "3-5min cold exposure",
-    "intensity": "low",
-    "tags": [
-      "recovery",
-      "resilience",
-      "parasympathetic",
-      "endurance",
-      "cns_freshness",
-      "mech_lower_lunge"
-    ],
-    "notes": "Post-session recovery flush",
-    "rest_sec": 300,
-    "total_minutes": 5,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "moderate",
-    "mechanical_risk_tags": [
-      "mech_lower_lunge"
-    ]
-  },
-  {
-    "name": "Gentle Movement Flow",
-    "equipment": [],
-    "phases": [
-      "GPP"
-    ],
-    "system": "recovery",
-    "modality": "mobility",
-    "duration": "30min continuous flow",
-    "intensity": "low",
-    "tags": [
-      "mobility",
-      "recovery",
-      "parasympathetic",
-      "balance",
-      "coordination"
-    ],
-    "notes": "Mobility + breathing integration",
-    "rest_sec": 1800,
-    "total_minutes": 30,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": []
-  },
-  {
-    "name": "PVC Pipe Mobility Prep",
-    "equipment": [],
-    "phases": [
-      "GPP"
-    ],
-    "system": "recovery",
-    "modality": "mobility",
-    "duration": "10-15min shoulder/hip",
-    "intensity": "low",
-    "tags": [
-      "mobility",
-      "recovery",
-      "rehab_friendly",
-      "cns_freshness",
-      "stability",
-      "mech_shoulder_overhead"
-    ],
-    "notes": "Joint-by-joint mobility work",
-    "work_sec": 900,
-    "total_minutes": 15,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "moderate",
-    "mechanical_risk_tags": [
-      "mech_shoulder_overhead"
-    ]
-  },
-  {
-    "name": "Sauna Session Recovery",
-    "equipment": [],
-    "phases": [
-      "GPP"
-    ],
-    "system": "recovery",
-    "modality": "recovery",
-    "duration": "15-20min session",
-    "intensity": "low",
-    "tags": [
-      "recovery",
-      "parasympathetic",
-      "endurance",
-      "resilience",
-      "cns_freshness"
-    ],
-    "notes": "Passive heat recovery tool",
-    "rest_sec": 1200,
-    "total_minutes": 20,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "moderate",
-    "mechanical_risk_tags": []
-  },
+
+
+
+
+
+
   {
     "name": "Double-End Bag Snap Singles",
     "equipment": [
@@ -8489,194 +8031,11 @@
       "mech_upper_press"
     ]
   },
-  {
-    "name": "Mobility Reset: Breathing + T-Spine + Ankle Flow",
-    "equipment": [],
-    "phases": [
-      "SPP",
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "mobility",
-    "duration": "1–2 rounds, 5–10 min total",
-    "intensity": "low",
-    "tags": [
-      "recovery",
-      "mobility",
-      "low_impact",
-      "rehab_friendly",
-      "cns_freshness",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Breathing-led reset with thoracic and ankle flow for late-fight freshness.",
-    "late_windows": [
-      "d21_to_d14",
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2",
-      "d1"
-    ],
-    "work_sec": 600,
-    "total_minutes": 10,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_systemic_fatigue"
-    ]
-  },
-  {
-    "name": "Scapular Wall Slide + Band External Rotation Reset",
-    "equipment": [
-      "wall",
-      "bands"
-    ],
-    "equipment_note": "Requires: Wall + Bands",
-    "phases": [
-      "SPP",
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "mobility",
-    "duration": "1-2 x 6-10 reps",
-    "intensity": "low",
-    "tags": [
-      "rehab_friendly",
-      "shoulders",
-      "recovery",
-      "low_impact",
-      "cns_freshness",
-      "coordination",
-      "mech_shoulder_overhead",
-      "mech_trunk_rotation"
-    ],
-    "notes": "Keep ribs down and shoulder blade smooth. Use to keep shoulder rhythm fresh.",
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
-    ],
-    "work_sec": 6,
-    "rounds": 2,
-    "total_minutes": 0.2,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_shoulder_overhead",
-      "mech_trunk_rotation"
-    ]
-  },
-  {
-    "name": "Wrist/Finger Activation Micro-Reset",
-    "equipment": [],
-    "phases": [
-      "SPP",
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "mobility",
-    "duration": "1-2 x 10-12 light reps or 30-45s",
-    "intensity": "low",
-    "tags": [
-      "rehab_friendly",
-      "grip",
-      "recovery",
-      "low_impact",
-      "cns_freshness",
-      "boxing",
-      "kickboxing",
-      "mma"
-    ],
-    "notes": "Light hand and wrist activation only. No fatigue. Good for D-3 and D-1.",
-    "late_windows": [
-      "d4_to_d2",
-      "d1"
-    ],
-    "work_sec": 10,
-    "rounds": 2,
-    "total_minutes": 0.33,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": []
-  },
-  {
-    "name": "Shadowboxing Technical Rhythm",
-    "equipment": [],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "shadowbox",
-    "duration": "2x2min RPE 4-5",
-    "intensity": "low",
-    "tags": [
-      "skill",
-      "coordination",
-      "cns_freshness",
-      "mech_upper_press",
-      "mech_trunk_rotation"
-    ],
-    "notes": "Light technical rhythm only; keep it sharp and easy.",
-    "work_sec": 120,
-    "rounds": 2,
-    "total_minutes": 4,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ],
-    "late_windows": [
-      "d21_to_d14",
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
-    ],
-    "round_based": true
-  },
-  {
-    "name": "Assault Bike Rhythm Primer",
-    "equipment": [
-      "assault_bike"
-    ],
-    "phases": [
-      "SPP",
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "bike",
-    "duration": "6-8 x 10s moderate-fast / 60s easy",
-    "intensity": "moderate",
-    "tags": [
-      "low_impact",
-      "aerobic",
-      "cns_freshness",
-      "recovery"
-    ],
-    "work_sec": 10,
-    "rest_sec": 60,
-    "rounds": 8,
-    "rpe": 6,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "late_windows": [
-      "d21_to_d14",
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5"
-    ]
-  },
+
+
+
+
+
   {
     "name": "Rower Gas-Tank Flush",
     "equipment": [
