@@ -20,6 +20,7 @@ from fightcamp.bout_format import (
     BoutFormat,
     bout_energy_modifiers,
     bout_format_metadata,
+    bout_workload_depth_modifier,
     parse_bout_format,
 )
 from fightcamp.config import athlete_round_seconds
@@ -114,6 +115,20 @@ def test_unknown_valid_format_uses_a_conservative_non_linear_derivation():
     assert modifiers["aerobic"] != pytest.approx(4.0)
 
 
+@pytest.mark.parametrize(
+    "rounds_format,expected",
+    [
+        ("3 x 2", 0.96),
+        ("3 x 3", 1.0),
+        ("5 x 3", 1.08),
+        ("3 x 5", 1.08),
+        ("5 x 5", 1.15),
+    ],
+)
+def test_known_formats_expose_bounded_aerobic_workload_depth(rounds_format, expected):
+    assert bout_workload_depth_modifier(parse_bout_format(rounds_format)) == expected
+
+
 # TEST 6 - athlete_round_seconds() keeps its exact public behaviour while
 # delegating to the one canonical parser.
 @pytest.mark.parametrize(
@@ -203,10 +218,12 @@ def test_only_bout_format_changes_effective_demand_without_adding_sessions():
         rounds_format: demand["effective_system_demand"]["aerobic"]
         for rounds_format, demand in formats.items()
     }
-    assert aerobic["3 x 2"] < aerobic["5 x 3"] < aerobic["5 x 5"]
-    assert aerobic["3 x 3"] < aerobic["5 x 3"]
+    assert aerobic["3 x 2"] < aerobic["3 x 3"] < aerobic["5 x 3"] < aerobic["5 x 5"]
     assert formats["3 x 5"]["effective_system_demand"] != formats["3 x 3"]["effective_system_demand"]
-    assert formats["5 x 3"]["system_quota"] != formats["3 x 3"]["system_quota"]
+    assert (
+        formats["5 x 5"]["effective_workload_targets_seconds"]["aerobic"]
+        > formats["3 x 5"]["effective_workload_targets_seconds"]["aerobic"]
+    )
     assert all(
         value > 0
         for value in formats["5 x 5"]["effective_system_demand"].values()
@@ -224,6 +241,40 @@ def test_missing_or_malformed_format_preserves_existing_phase_demand():
         demand = _energy_demand(rounds_format)
         assert demand["bout_format_modifiers"] == {}
         assert demand["effective_system_demand"] == conditioning.PHASE_SYSTEM_RATIOS["SPP"]
+
+
+def test_taper_phase_owned_glycolytic_zero_stays_zero_for_long_bouts():
+    for rounds_format in ("5 x 3", "3 x 5", "5 x 5"):
+        demand = _energy_demand(rounds_format, phase="TAPER")
+        assert demand["effective_system_demand"]["glycolytic"] == 0.0
+        assert demand["system_quota"]["glycolytic"] == 0
+
+
+def test_total_bout_depth_survives_equal_integer_quotas_in_actual_programming():
+    assert _energy_demand("3 x 5", phase="SPP")["system_quota"] == _energy_demand(
+        "5 x 5", phase="SPP"
+    )["system_quota"]
+    drills = [
+        {"name": "Aerobic Primary", "work_sec": 106, "rounds": 5},
+        {"name": "Aerobic Depth", "work_sec": 30, "rounds": 4},
+    ]
+
+    def selected_names(rounds_format):
+        sessions = conditioning._resolve_conditioning_sessions(
+            {"aerobic": drills},
+            phase="SPP",
+            num_sessions=2,
+            workload_expansion_allowed=True,
+            rounds_format=rounds_format,
+        )
+        return [
+            entry["primary"]["name"]
+            for session in sessions
+            for entry in session["entries"]
+        ]
+
+    assert selected_names("3 x 5") == ["Aerobic Primary"]
+    assert selected_names("5 x 5") == ["Aerobic Primary", "Aerobic Depth"]
 
 
 def test_muay_thai_energy_profile_is_consumed_without_changing_drill_family(monkeypatch):

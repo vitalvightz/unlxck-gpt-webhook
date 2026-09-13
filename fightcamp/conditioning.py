@@ -30,6 +30,7 @@ from .restriction_filtering import evaluate_restriction_impact
 from .bout_format import (
     bout_energy_modifiers,
     bout_format_metadata,
+    bout_workload_depth_modifier,
     parse_bout_format,
 )
 from .diagnostics import format_missing_system_block
@@ -1333,7 +1334,7 @@ def get_format_weights():
 
 def _effective_system_demand(
     *, phase: str, sport: str | None, rounds_format: str | None
-) -> tuple[dict[str, float], dict[str, dict[str, float]]]:
+) -> tuple[dict[str, float], dict[str, object]]:
     """Combine phase, canonical sport and bout demand without changing 3 x 3.
 
     Phase remains the dominant owner. Missing, malformed and neutral 3 x 3
@@ -1354,17 +1355,25 @@ def _effective_system_demand(
         bout and bout.rounds == 3 and bout.round_seconds == 180.0
     )
 
+    sport_adjusted_modifiers: dict[str, float] = {}
     if not bout or is_neutral:
         effective = phase_ratio
+        if bout:
+            sport_adjusted_modifiers = modifiers.copy()
     else:
-        blended = {
-            system: (0.7 * phase_value)
-            + (0.3 * sport_weights.get(system, phase_value))
-            for system, phase_value in phase_ratio.items()
-        }
+        # Sport changes only the size of the bout-format delta. It never acts as
+        # a second baseline, so moving away from 3 x 3 cannot suddenly drag a
+        # phase ratio toward the raw sport profile.
+        for system in phase_ratio:
+            sport_weight = sport_weights.get(system, 1 / 3)
+            sport_delta_scale = 1.0 + (0.225 * (sport_weight - (1 / 3)))
+            format_delta = modifiers.get(system, 1.0) - 1.0
+            sport_adjusted_modifiers[system] = round(
+                1.0 + (format_delta * sport_delta_scale), 6
+            )
         adjusted = {
-            system: value * modifiers.get(system, 1.0)
-            for system, value in blended.items()
+            system: phase_value * sport_adjusted_modifiers.get(system, 1.0)
+            for system, phase_value in phase_ratio.items()
         }
         total = sum(adjusted.values())
         effective = (
@@ -1373,10 +1382,23 @@ def _effective_system_demand(
             else phase_ratio
         )
 
-    diagnostics = {
+    workload_depth_modifier = bout_workload_depth_modifier(bout) if bout else None
+    effective_workload_targets = {}
+    if bout:
+        for system in phase_ratio:
+            target, _ = conditioning_phase_workload_envelope(
+                phase=phase, system=system, rounds_format=rounds_format
+            )
+            if target is not None:
+                effective_workload_targets[system] = target
+
+    diagnostics: dict[str, object] = {
         "sport_energy_weights": sport_weights,
         "bout_format_modifiers": modifiers,
+        "sport_adjusted_bout_modifiers": sport_adjusted_modifiers,
         "effective_system_demand": effective.copy(),
+        "aerobic_workload_depth_modifier": workload_depth_modifier,
+        "effective_workload_targets_seconds": effective_workload_targets,
     }
     return effective, diagnostics
 
@@ -1647,7 +1669,12 @@ def _conditioning_fallback_allowed(primary: dict, fallback: dict, *, phase: str)
     return bool(str(contingency_reason).strip())
 
 def _conditioning_workload_primary_cap(
-    drills: list[dict], *, phase: str, system: str, round_seconds: float | None = None
+    drills: list[dict],
+    *,
+    phase: str,
+    system: str,
+    round_seconds: float | None = None,
+    rounds_format: str | None = None,
 ) -> int:
     """How many primaries a system needs to carry its phase workload.
 
@@ -1662,7 +1689,7 @@ def _conditioning_workload_primary_cap(
     remaining slot to spend.
     """
     target_active_work, _ = conditioning_phase_workload_envelope(
-        phase=phase, system=system
+        phase=phase, system=system, rounds_format=rounds_format
     )
     if not target_active_work:
         return 1
@@ -1693,6 +1720,7 @@ def _resolve_conditioning_sessions(
     num_sessions: int,
     alactic_primary_cap: int = 1,
     round_seconds: float | None = None,
+    rounds_format: str | None = None,
     workload_expansion_allowed: bool = False,
 ) -> list[dict]:
     """Distribute already-selected conditioning drills into sessions.
@@ -1733,7 +1761,11 @@ def _resolve_conditioning_sessions(
             primary_cap = max(1, int(alactic_primary_cap or 1))
         elif workload_expansion_allowed:
             primary_cap = _conditioning_workload_primary_cap(
-                drills, phase=phase, system=system, round_seconds=round_seconds
+                drills,
+                phase=phase,
+                system=system,
+                round_seconds=round_seconds,
+                rounds_format=rounds_format,
             )
         else:
             primary_cap = 1
@@ -5058,6 +5090,7 @@ def generate_conditioning_block(flags):
         num_sessions=num_conditioning_sessions,
         alactic_primary_cap=alactic_primary_cap,
         round_seconds=athlete_round_seconds(flags.get("rounds_format")),
+        rounds_format=flags.get("rounds_format"),
         workload_expansion_allowed=_conditioning_priority_is_primary_gas_tank(
             priority_profile
         ),

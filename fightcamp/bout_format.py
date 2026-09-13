@@ -21,6 +21,7 @@ __all__ = [
     "BASELINE_WORK_SECONDS",
     "BoutFormat",
     "bout_energy_modifiers",
+    "bout_workload_depth_modifier",
     "bout_format_metadata",
     "parse_bout_format",
 ]
@@ -51,6 +52,14 @@ _KNOWN_ENERGY_MODIFIERS = {
 
 _MIN_ENERGY_MODIFIER = 0.90
 _MAX_ENERGY_MODIFIER = 1.18
+
+_KNOWN_WORKLOAD_DEPTH_MODIFIERS = {
+    (3, 120.0): 0.96,
+    (3, 180.0): 1.0,
+    (5, 180.0): 1.08,
+    (3, 300.0): 1.08,
+    (5, 300.0): 1.15,
+}
 
 
 @dataclass(frozen=True)
@@ -114,6 +123,20 @@ def bout_energy_modifiers(bout: BoutFormat) -> dict[str, float]:
         )
         for system, value in derived.items()
     }
+
+
+def bout_workload_depth_modifier(bout: BoutFormat) -> float:
+    """Return a bounded aerobic-workload depth signal for ``bout``.
+
+    This survives integer system-quota rounding without adding sessions or
+    changing authored prescriptions. It scales the existing aerobic workload
+    target only, reflecting accumulated repeatability demand.
+    """
+    known = _KNOWN_WORKLOAD_DEPTH_MODIFIERS.get((bout.rounds, bout.round_seconds))
+    if known is not None:
+        return known
+    work_signal = max(-1.0, min(1.0, (bout.total_work_minutes - 9.0) / 16.0))
+    return round(max(0.95, min(1.15, 1.0 + (0.15 * work_signal))), 4)
 
 
 def parse_bout_format(rounds_format: str | None) -> BoutFormat | None:
