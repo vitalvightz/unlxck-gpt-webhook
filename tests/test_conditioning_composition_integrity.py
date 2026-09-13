@@ -113,6 +113,38 @@ def test_embedded_trunk_support_cannot_make_underfilled_aerobic_role_complete():
     assert policy["embedded_trunk_support_skip_reason"] == "conditioning_workload_unmet"
 
 
+def test_conditioning_keeps_selecting_past_three_members_until_workload_is_met():
+    role = _compose(
+        _role_map(),
+        {
+            "SPP": {
+                "conditioning_slots": [
+                    _conditioning_slot(1, "Tempo Flow", 2),
+                    _conditioning_slot(2, "Bike Rhythm", 2),
+                    _conditioning_slot(3, "Shadow Aerobic", 2),
+                    _conditioning_slot(4, "Footwork Tempo", 2),
+                ],
+                "strength_slots": [_tgu_slot()],
+            }
+        },
+    )
+
+    assignments = role["selected_exercise_assignments"]
+    assert [item["name"] for item in assignments] == [
+        "Tempo Flow",
+        "Bike Rhythm",
+        "Shadow Aerobic",
+        "Footwork Tempo",
+        "Turkish Get-Up",
+    ]
+    policy = role["conditioning_composition_policy"]
+    assert policy["conditioning_selected_count"] == 4
+    assert policy["conditioning_active_work_seconds"] == 480
+    assert policy["conditioning_workload_met"] is True
+    assert policy["workload_limited"] is False
+    assert assignments[-1]["embedded_support"] is True
+
+
 def test_embedded_trunk_support_remains_optional_after_aerobic_workload_is_met():
     role = _compose(
         _role_map(),
