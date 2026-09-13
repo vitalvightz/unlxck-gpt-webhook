@@ -142,6 +142,7 @@ def _flags(**over):
 def test_planner_metadata_exposes_the_bout_format():
     *_rest, reservoir = conditioning.generate_conditioning_block(_flags(rounds_format="5 x 5"))
     assert reservoir["__bout_format__"] == {
+        "resolved": True,
         "rounds": 5,
         "round_seconds": 300.0,
         "total_work_seconds": 1500.0,
@@ -152,7 +153,7 @@ def test_planner_metadata_exposes_the_bout_format():
 
 def test_planner_metadata_stays_unresolved_without_a_format():
     *_rest, reservoir = conditioning.generate_conditioning_block(_flags(rounds_format=""))
-    assert reservoir["__bout_format__"] is None
+    assert reservoir["__bout_format__"] == {"resolved": False}
 
 
 # TEST 8 - a representative 3 x 3 conditioning plan is byte-identical to the

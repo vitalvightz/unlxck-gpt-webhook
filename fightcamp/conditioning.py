@@ -5129,9 +5129,15 @@ def generate_conditioning_block(flags):
     }
     candidate_reservoir["__style_conditioning__"] = style_conditioning_diagnostics.copy()
     # Canonical bout-format demand, exposed so later work can consume it
-    # without reparsing the intake string. Does not affect selection.
-    candidate_reservoir["__bout_format__"] = bout_format_metadata(
-        flags.get("rounds_format")
+    # without reparsing the intake string. Does not affect selection. Kept
+    # dict-shaped like the other ``__``-prefixed diagnostics so reservoir-wide
+    # accounting can size every entry; an unresolved format says so rather
+    # than standing in for a 3 x 3 bout.
+    _bout_format_metadata = bout_format_metadata(flags.get("rounds_format"))
+    candidate_reservoir["__bout_format__"] = (
+        {"resolved": True, **_bout_format_metadata}
+        if _bout_format_metadata
+        else {"resolved": False}
     )
 
     return output_lines, selected_drill_names, why_log, grouped_drills, missing_systems, candidate_reservoir
