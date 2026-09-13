@@ -56,6 +56,166 @@ def _assignment_active_work_seconds(
     return max(0.0, float(active or 0.0))
 
 
+def _matching_conditioning_options(
+    candidate_pools: dict[str, Any], *, phase: str, preferred_system: str
+) -> list[tuple[dict[str, Any], dict[str, Any], bool]]:
+    pool = candidate_pools.get(phase) if isinstance(candidate_pools, dict) else None
+    slots = pool.get("conditioning_slots", []) if isinstance(pool, dict) else []
+    options: list[tuple[dict[str, Any], dict[str, Any], bool]] = []
+    seen_names: set[str] = set()
+    for slot in slots:
+        if not isinstance(slot, dict):
+            continue
+        if str(slot.get("role") or "").strip().lower() != preferred_system:
+            continue
+        option = slot.get("selected")
+        if not isinstance(option, dict):
+            continue
+        name = str(option.get("name") or "").strip()
+        if not name or name in seen_names:
+            continue
+        seen_names.add(name)
+        options.append((slot, option, True))
+    return options
+
+
+def _selected_tuple_active_work_seconds(
+    composition_module,
+    selected: list[tuple[dict[str, Any], dict[str, Any], bool]],
+    *,
+    allocated_rounds: dict[str, int],
+) -> float:
+    total = 0.0
+    for _slot, option, _is_selected in selected:
+        name = str(option.get("name") or "")
+        effective = composition_module._conditioning_effective_dose(option)
+        work_sec = _number(effective.get("work_sec"))
+        rounds = allocated_rounds.get(name)
+        if rounds is not None and work_sec is not None and work_sec > 0:
+            total += work_sec * rounds
+            continue
+        active = composition_module._conditioning_active_work_seconds(option)
+        if active is not None:
+            total += max(0.0, float(active))
+    return total
+
+
+def _rebuild_conditioning_assignments(
+    composition_module,
+    selected: list[tuple[dict[str, Any], dict[str, Any], bool]],
+    *,
+    phase: str,
+    allocated_rounds: dict[str, int],
+) -> list[dict[str, Any]]:
+    assignments: list[dict[str, Any]] = []
+    for slot, option, is_selected in selected:
+        name = str(option.get("name") or "")
+        allocated = allocated_rounds.get(name)
+        assignment: dict[str, Any] = {
+            "slot_id": slot.get("slot_id"),
+            "name": name,
+            "source_phase": phase,
+            "slot_group": "conditioning_slots",
+            "selected_option": is_selected,
+            "base_prescription": composition_module._conditioning_prescription(option),
+            "effective_prescription": composition_module._conditioning_prescription(
+                option, rounds=allocated
+            ),
+            "effective_rounds": allocated,
+        }
+        effective_dose = composition_module._conditioning_effective_dose(option)
+        for field in ("work_sec", "rest_sec", "rounds"):
+            value = composition_module._float_or_none(effective_dose.get(field))
+            if value is not None:
+                assignment[field] = value
+        tags = composition_module.option_mechanical_risk_tags(option)
+        if tags:
+            assignment["mechanical_risk_tags"] = sorted(tags)
+        notes = composition_module._selected_coaching_notes(option)
+        if notes:
+            assignment["coaching_notes"] = notes
+        assignments.append(assignment)
+    return assignments
+
+
+def _expand_conditioning_to_workload(
+    composition_module,
+    *,
+    candidate_pools: dict[str, Any],
+    phase: str,
+    preferred_system: str,
+    target_active_work: float,
+    rounds_format: str | None,
+) -> tuple[list[dict[str, Any]], float, dict[str, int], str | None, dict[str, Any], float]:
+    """Keep Stage 1-selected conditioning slots until the real workload is met.
+
+    The old composer stopped at three members even when three short exposures did
+    not satisfy the shared phase/system workload envelope. This reuses the same
+    selected slots, dose helpers and high-load partitioner, but makes workload --
+    not exercise count -- the stopping condition. The existing 45-minute cap is
+    preserved.
+    """
+    options = _matching_conditioning_options(
+        candidate_pools,
+        phase=phase,
+        preferred_system=preferred_system,
+    )
+    if not options:
+        return [], 0.0, {}, _UNDERFILL_REASON, {}, 0.0
+
+    selected: list[tuple[dict[str, Any], dict[str, Any], bool]] = []
+    raw_total_minutes = 0.0
+    final_selected: list[tuple[dict[str, Any], dict[str, Any], bool]] = []
+    allocated_rounds: dict[str, int] = {}
+    partition_reason: str | None = None
+    high_load_budget: dict[str, Any] = {}
+    delivered_active_work = 0.0
+
+    for item in options:
+        duration = composition_module._conditioning_duration_minutes(item[1])
+        if selected and duration is not None and raw_total_minutes + duration > 45:
+            continue
+        selected.append(item)
+        if duration is not None:
+            raw_total_minutes += duration
+
+        (
+            final_selected,
+            allocated_rounds,
+            partition_reason,
+            high_load_budget,
+        ) = composition_module._conditioning_partition_high_load(
+            list(selected),
+            phase=phase,
+            system=preferred_system,
+            rounds_format=rounds_format,
+        )
+        delivered_active_work = _selected_tuple_active_work_seconds(
+            composition_module,
+            final_selected,
+            allocated_rounds=allocated_rounds,
+        )
+        if delivered_active_work + 1e-9 >= float(target_active_work):
+            break
+
+    assignments = _rebuild_conditioning_assignments(
+        composition_module,
+        final_selected,
+        phase=phase,
+        allocated_rounds=allocated_rounds,
+    )
+    if delivered_active_work + 1e-9 < float(target_active_work) and not partition_reason:
+        partition_reason = _UNDERFILL_REASON
+    return (
+        assignments,
+        delivered_active_work,
+        allocated_rounds,
+        partition_reason,
+        high_load_budget,
+        raw_total_minutes,
+    )
+
+
 def _enforce_conditioning_workload_before_support(
     composition_module,
     *,
@@ -113,6 +273,9 @@ def _enforce_conditioning_workload_before_support(
                 for item in (role.get("selected_exercise_assignments") or [])
                 if isinstance(item, dict)
             ]
+            support_assignments = [
+                item for item in assignments if item.get("embedded_support")
+            ]
             conditioning_assignments = [
                 item
                 for item in assignments
@@ -129,8 +292,34 @@ def _enforce_conditioning_workload_before_support(
                 )
                 for item in conditioning_assignments
             )
-            workload_met = delivered_active_work + 1e-9 >= float(target_active_work)
 
+            # If the original count-capped composition stopped early, continue
+            # through the remaining Stage 1-selected conditioning slots first.
+            if delivered_active_work + 1e-9 < float(target_active_work):
+                (
+                    conditioning_assignments,
+                    delivered_active_work,
+                    allocated_rounds,
+                    expansion_underfill_reason,
+                    high_load_budget,
+                    raw_total_minutes,
+                ) = _expand_conditioning_to_workload(
+                    composition_module,
+                    candidate_pools=candidate_pools,
+                    phase=phase,
+                    preferred_system=preferred_system,
+                    target_active_work=float(target_active_work),
+                    rounds_format=rounds_format,
+                )
+                policy["partitioned_high_load_rounds"] = allocated_rounds
+                policy["high_load_workload_envelope"] = high_load_budget
+                policy["long_aerobic_session"] = bool(
+                    preferred_system == "aerobic" and raw_total_minutes >= 25
+                )
+                if expansion_underfill_reason:
+                    policy["underfill_reason"] = expansion_underfill_reason
+
+            workload_met = delivered_active_work + 1e-9 >= float(target_active_work)
             policy["conditioning_selected_count"] = len(conditioning_assignments)
             policy["conditioning_target_active_work_seconds"] = float(target_active_work)
             policy["conditioning_active_work_seconds"] = round(delivered_active_work, 4)
@@ -138,23 +327,24 @@ def _enforce_conditioning_workload_before_support(
 
             if workload_met:
                 # Support is genuinely optional only after the conditioning job is done.
+                role["selected_exercise_assignments"] = [
+                    *conditioning_assignments,
+                    *support_assignments,
+                ]
+                policy["selected_count"] = len(role["selected_exercise_assignments"])
                 policy["workload_limited"] = False
-                if policy.get("underfill_reason") == _UNDERFILL_REASON:
-                    policy["underfill_reason"] = None
+                policy["underfill_reason"] = None
                 continue
 
             # A TGU / trunk microdose is support, never evidence that an aerobic or
-            # fight-pace role is complete. Strip embedded support from an underfilled
-            # conditioning role so it cannot satisfy count-based completion logic.
-            retained = [item for item in assignments if not item.get("embedded_support")]
-            removed_support = len(assignments) - len(retained)
-            role["selected_exercise_assignments"] = retained
-
-            policy["selected_count"] = len(retained)
+            # fight-pace role is complete. Keep only genuine conditioning members
+            # and expose the underfill to validation/planner regeneration.
+            role["selected_exercise_assignments"] = conditioning_assignments
+            policy["selected_count"] = len(conditioning_assignments)
             policy["workload_limited"] = True
             if not policy.get("underfill_reason"):
                 policy["underfill_reason"] = _UNDERFILL_REASON
-            if removed_support:
+            if support_assignments:
                 policy["embedded_trunk_support"] = False
                 policy["embedded_trunk_support_count"] = 0
                 policy["embedded_trunk_support_skip_reason"] = (
