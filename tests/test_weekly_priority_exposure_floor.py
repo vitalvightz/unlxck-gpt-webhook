@@ -13,6 +13,9 @@ doing. It adds no session, no training day and no frequency.
 
 from __future__ import annotations
 
+import re
+from pathlib import Path
+
 import pytest
 
 from fightcamp.goal_preservation import (
@@ -708,9 +711,6 @@ def test_existing_weakness_exposure_is_recognised_before_anything_is_added():
 # the end of a lookup. The options are read from the intake file itself so a
 # new choice cannot be added on the web side without failing here.
 # ---------------------------------------------------------------------------
-
-import re
-from pathlib import Path
 
 _OFFICIAL_WEAK_AREAS = {
     "gas_tank",
