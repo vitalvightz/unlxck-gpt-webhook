@@ -470,18 +470,95 @@ def _microdose_stimuli(role: dict) -> list[dict]:
     microdose = role.get("priority_microdose")
     if not isinstance(microdose, dict) or not microdose.get("intents"):
         return []
+    prescription = str(microdose.get("prescription") or "")
+    # The witness carries reps as well as sets, exactly as `_strength_stimuli`
+    # does, and from its own prescription via the same parser. A sets-only
+    # witness cannot be checked against a rendered dose downstream.
+    _, reps = _sets_reps(prescription)
     return [
         {
             "name": microdose.get("name"),
             "intents": list(microdose["intents"]),
-            "effective_prescription": str(microdose.get("prescription") or ""),
+            "effective_prescription": prescription,
             "dose_authority": "weekly_priority_exposure_floor",
             "sets": _number(microdose.get("sets")),
+            "reps": reps,
             # Two quality sets is the same development bar _strength_stimuli
             # applies; below it the touch is maintenance, not development.
             "development_capable": _number(microdose.get("sets")) >= 2,
         }
     ]
+
+
+_MICRODOSE_SLOT_GROUP = "priority_microdose"
+
+
+def _microdose_slot_id(microdose: dict) -> str:
+    return f"priority_microdose::{microdose.get('goal')}"
+
+
+def _sync_microdose_membership(role: dict, microdose: dict) -> None:
+    """Carry an attached microdose into the host's closed-membership contract.
+
+    ``priority_microdose`` on its own is goal evidence, not a renderable session
+    member. Stage 2 renders a role from ``selected_exercise_assignments``, prices
+    it from ``effective_strength_prescriptions`` and is held to the complete
+    allow-list in ``effective_strength_envelope``. A microdose that reaches none
+    of the three is legally unrenderable, which is exactly how an attached touch
+    became a ``goal_preservation_render_mismatch``.
+
+    Mirror the SAME microdose into those three structures. The floor's own
+    prescription stays the dose authority: no bank lookup, no second dose, no new
+    rendering path. Idempotent - re-running replaces only this microdose's own
+    entries and leaves selected membership otherwise untouched.
+    """
+    name = str(microdose.get("name") or "").strip()
+    prescription = str(microdose.get("prescription") or "").strip()
+    if not name or not prescription:
+        return
+    slot_id = _microdose_slot_id(microdose)
+
+    def _without_microdose(items: list) -> list:
+        return [
+            item for item in items or []
+            if not isinstance(item, dict)
+            or (item.get("slot_id") != slot_id and str(item.get("name") or "").strip() != name)
+        ]
+
+    role["selected_exercise_assignments"] = _without_microdose(
+        role.get("selected_exercise_assignments")
+    ) + [{
+        "slot_id": slot_id,
+        "name": name,
+        "slot_group": _MICRODOSE_SLOT_GROUP,
+        "base_prescription": prescription,
+        "effective_prescription": prescription,
+        "dose_authority": "weekly_priority_exposure_floor",
+        "goal": microdose.get("goal"),
+    }]
+    role["effective_strength_prescriptions"] = _without_microdose(
+        role.get("effective_strength_prescriptions")
+    ) + [{
+        "slot_id": slot_id,
+        "name": name,
+        "effective_prescription": prescription,
+        "dose_authority": "weekly_priority_exposure_floor",
+        "effective_loaded": False,
+        "dose_role_kind": "support",
+    }]
+    envelope = role.get("effective_strength_envelope")
+    if not isinstance(envelope, dict):
+        envelope = {}
+    allowed = [
+        str(item.get("name") or "").strip()
+        for item in role["selected_exercise_assignments"]
+        if isinstance(item, dict) and str(item.get("name") or "").strip()
+    ]
+    envelope.update(
+        allowed_exercise_names=list(dict.fromkeys(allowed)),
+        complete_exercise_allow_list=True,
+    )
+    role["effective_strength_envelope"] = envelope
 
 
 # Provenance, not rendered text. A declared hard-sparring appointment keeps
@@ -868,6 +945,10 @@ def _attach_goal_microdose(brief: dict, ordinal: int, entry: dict) -> dict | Non
             "intents": list(spec["intents"]),
             "authority": VERSION,
         }
+        # ``microdose_attached`` must mean renderable on the host, not merely
+        # visible as goal evidence. Synchronise the host's closed membership
+        # with this same microdose before the no-regression trial is judged.
+        _sync_microdose_membership(trial_host, trial_host["priority_microdose"])
         _, missing_before = _coverage(entry, brief, collect_goal_evidence(brief))
         _, missing_after = _coverage(entry, trial, collect_goal_evidence(trial))
         retained = {(e.get("d_day"), e.get("name"), tuple(e["intents"])) for e in collect_goal_evidence(trial)}
