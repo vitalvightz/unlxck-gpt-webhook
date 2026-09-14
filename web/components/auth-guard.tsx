@@ -4,13 +4,16 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useAppSession } from "@/components/auth-provider";
+import { useTranslations as useAppTranslations } from "next-intl";
+
 
 function LoadingCard({ label }: { label: string }) {
+    const appText = useAppTranslations("AppText");
   return (
     <section className="panel loading-card">
-      <p className="kicker">Loading</p>
+      <p className="kicker">{appText("text_dc380888c4e2")}</p>
       <h1>{label}</h1>
-      <p className="muted">We are checking your session and restoring the correct athlete workspace.</p>
+      <p className="muted">{appText("text_de45d47694da")}</p>
     </section>
   );
 }
@@ -22,11 +25,12 @@ function ConnectionLostBanner({
   isRetrying: boolean;
   onRetry: () => void;
 }) {
+    const appText = useAppTranslations("AppText");
   return (
     <div className="connection-lost-banner" role="status" aria-live="polite">
       <span className="connection-lost-dot" aria-hidden="true" />
       <span className="connection-lost-text">
-        {isRetrying ? "Reconnecting…" : "No internet connection"}
+        {isRetrying ? appText("text_27b80374e115") : appText("text_c4184bd7daac")}
       </span>
       <button
         type="button"
@@ -34,7 +38,7 @@ function ConnectionLostBanner({
         onClick={onRetry}
         disabled={isRetrying}
       >
-        {isRetrying ? "Retrying…" : "Retry"}
+        {isRetrying ? appText("text_a16c8b1c9595") : appText("text_942087cc2d41")}
       </button>
     </div>
   );
@@ -44,6 +48,7 @@ export function RequireAuth({
   children,
   adminOnly = false,
 }: Readonly<{ children: React.ReactNode; adminOnly?: boolean }>) {
+    const appText = useAppTranslations("AppText");
   const router = useRouter();
   const { isReady, isMeHydrated, hasTransientMeError, isAccessPending, session, me, refreshMe, signOut } = useAppSession();
   const [isRetryingRecovery, setIsRetryingRecovery] = useState(false);
@@ -101,28 +106,27 @@ export function RequireAuth({
 
   let body: React.ReactNode;
   if (!isReady) {
-    body = <LoadingCard label="Checking your access" />;
+    body = <LoadingCard label={appText("text_d788caa307df")} />;
   } else if (!session) {
-    body = <LoadingCard label="Redirecting to login" />;
+    body = <LoadingCard label={appText("text_b8e9fb2876fb")} />;
   } else if (isAccessPending) {
     body = (
       <section className="panel loading-card">
-        <p className="kicker">Access pending</p>
-        <h1>Your account is in the approval queue.</h1>
-        <p className="muted">An UNLXCK admin must approve your account before you can enter the app.</p>
+        <p className="kicker">{appText("text_9c1014e1daa5")}</p>
+        <h1>{appText("text_13bda74671f3")}</h1>
+        <p className="muted">{appText("text_ae7d5d58beeb")}</p>
         <button type="button" className="ghost-button" onClick={() => void signOut()}>
-          Sign out
-        </button>
+          {appText("text_48f0d3d397d4")}</button>
       </section>
     );
   } else if (adminOnly && hasTransientMeError && !me) {
-    body = <LoadingCard label="Restoring admin access" />;
+    body = <LoadingCard label={appText("text_03a90f0be8d9")} />;
   } else if (adminOnly && !isMeHydrated) {
-    body = <LoadingCard label="Restoring admin access" />;
+    body = <LoadingCard label={appText("text_03a90f0be8d9")} />;
   } else if (isMeHydrated && !me) {
-    body = <LoadingCard label="Redirecting to login" />;
+    body = <LoadingCard label={appText("text_b8e9fb2876fb")} />;
   } else if (adminOnly && role !== "admin") {
-    body = <LoadingCard label="Redirecting to your athlete view" />;
+    body = <LoadingCard label={appText("text_1765426315d7")} />;
   } else {
     body = children;
   }

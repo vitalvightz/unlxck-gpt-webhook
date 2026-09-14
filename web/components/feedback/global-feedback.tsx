@@ -6,6 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import { submitGlobalFeedback } from "@/lib/api";
 import type { GlobalFeedbackRequest } from "@/lib/types";
 import { requestXpRefresh } from "@/lib/xp-events";
+import { useTranslations as useAppTranslations } from "next-intl";
+
 
 const CATEGORIES: Array<{ value: GlobalFeedbackRequest["category"]; label: string }> = [
   { value: "bug_report", label: "Report a bug" },
@@ -20,6 +22,7 @@ function formatFileSize(bytes: number): string {
 }
 
 export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
+    const appText = useAppTranslations("AppText");
   const [category, setCategory] = useState<GlobalFeedbackRequest["category"]>("bug_report");
   const [description, setDescription] = useState("");
   const [contactAllowed, setContactAllowed] = useState(false);
@@ -87,7 +90,7 @@ export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
 
   return (
     <form className="global-feedback-form" onSubmit={submit}>
-      <div className="feedback-category-grid" role="radiogroup" aria-label="Feedback category">
+      <div className="feedback-category-grid" role="radiogroup" aria-label={appText("text_5aee0db8fd40")}>
         {CATEGORIES.map((item) => (
           <button
             key={item.value}
@@ -102,7 +105,7 @@ export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
         ))}
       </div>
       <div className="field">
-        <label htmlFor="global-feedback-description">Description</label>
+        <label htmlFor="global-feedback-description">{appText("text_526e0087cc3f")}</label>
         <textarea
           id="global-feedback-description"
           value={description}
@@ -110,10 +113,10 @@ export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
           maxLength={500}
           rows={4}
         />
-        <span className="muted feedback-counter">{description.length}/500</span>
+        <span className="muted feedback-counter">{description.length}{appText("text_c17579733f80")}</span>
       </div>
       <div className="field">
-        <label htmlFor="global-feedback-screenshot">Screenshot</label>
+        <label htmlFor="global-feedback-screenshot">{appText("text_029320ad166c")}</label>
         <input
           ref={fileInputRef}
           id="global-feedback-screenshot"
@@ -121,18 +124,16 @@ export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
           accept="image/png,image/jpeg,image/webp"
           onChange={(event) => selectScreenshot(event.target.files?.[0] ?? null)}
         />
-        <p className="feedback-privacy-copy">Add a description or screenshot before sending feedback.</p>
+        <p className="feedback-privacy-copy">{appText("text_9899f05d1541")}</p>
         <p className="feedback-privacy-copy">
-          Avoid uploading screenshots containing private messages, contact details, payment information, or unrelated health information.
-        </p>
+          {appText("text_c8309eb3bc9d")}</p>
         <p className="feedback-privacy-copy">
-          Sanitisation removes metadata. It does not remove sensitive information visible inside the image.
-        </p>
+          {appText("text_aa0201ca60d5")}</p>
         {screenshot && previewUrl ? (
           <div className="feedback-attachment-preview">
             <Image
               src={previewUrl}
-              alt="Selected screenshot preview"
+              alt={appText("text_979e3eff63e0")}
               width={640}
               height={360}
               unoptimized
@@ -143,16 +144,15 @@ export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
                 <span className="muted">{formatFileSize(screenshot.size)}</span>
               </span>
               <button type="button" className="ghost-button" onClick={removeScreenshot}>
-                Remove image
-              </button>
+                {appText("text_da7acac19683")}</button>
             </div>
           </div>
         ) : null}
       </div>
       <label className="settings-toggle-row feedback-contact-row">
         <span>
-          <span className="settings-toggle-title">You may contact me about this</span>
-          <span className="settings-toggle-detail">Allow the beta team to follow up.</span>
+          <span className="settings-toggle-title">{appText("text_570767cd9366")}</span>
+          <span className="settings-toggle-detail">{appText("text_ab0ae1897998")}</span>
         </span>
         <input
           type="checkbox"
@@ -162,7 +162,7 @@ export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
       </label>
       <div className="feedback-submit-row">
         <button type="submit" className="cta" disabled={submitting || !hasSubmission}>
-          {submitting ? "Sending…" : "Send feedback"}
+          {submitting ? appText("text_b8ed5279e897") : appText("text_8235980b80ad")}
         </button>
       </div>
       {message ? <p className="success-banner" role="status">{message}</p> : null}

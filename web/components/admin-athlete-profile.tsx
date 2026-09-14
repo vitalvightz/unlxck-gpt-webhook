@@ -12,6 +12,8 @@ import {
   WEAK_AREA_OPTIONS,
 } from "@/lib/intake-options";
 import type { AdminAthleteRecord, PlanRequest } from "@/lib/types";
+import { useTranslations as useAppTranslations } from "next-intl";
+
 
 const FATIGUE_LEVEL_OPTIONS = [
   { value: "low", label: "Low" },
@@ -282,32 +284,33 @@ function buildOverviewSections(athlete: AdminAthleteRecord): OverviewSection[] {
 }
 
 export function AthleteProfileHero({ athlete }: { athlete: AdminAthleteRecord }) {
+    const appText = useAppTranslations("AppText");
   return (
     <div className="section-heading athlete-profile-hero">
       <div className="athlete-profile-hero-copy">
         <div className="athlete-profile-title-row">
           <div>
-            <p className="kicker">Athlete Profile</p>
+            <p className="kicker">{appText("text_a121ff101a02")}</p>
             <h1>{athlete.full_name || athlete.email}</h1>
           </div>
-          <span className="athlete-profile-role-badge">{athlete.role === "admin" ? "Admin view" : "Athlete"}</span>
+          <span className="athlete-profile-role-badge">{athlete.role === "admin" ? appText("text_5dbfc76de9a6") : appText("text_374d1c582c2a")}</span>
         </div>
         <p className="muted">{athlete.email}</p>
       </div>
 
       <div className="athlete-profile-metric-strip">
         <article className="athlete-profile-metric">
-          <p className="plan-meta-label">Saved plans</p>
+          <p className="plan-meta-label">{appText("text_6d7f7de4980c")}</p>
           <p className="athlete-profile-metric-value">{athlete.plan_count}</p>
         </article>
         <article className="athlete-profile-metric athlete-profile-metric-accent">
-          <p className="plan-meta-label">Latest activity</p>
+          <p className="plan-meta-label">{appText("text_08ee9e0b3d0b")}</p>
           <p className="athlete-profile-metric-value athlete-profile-metric-value-small">
             {formatTimestamp(athlete.latest_plan_created_at || athlete.updated_at)}
           </p>
         </article>
         <article className="athlete-profile-metric">
-          <p className="plan-meta-label">Combat sports</p>
+          <p className="plan-meta-label">{appText("text_9f00f74896ba")}</p>
           <p className="athlete-profile-metric-copy">
             {formatList(getOptionLabels(TECHNICAL_STYLE_OPTIONS, athlete.technical_style), "No style saved")}
           </p>
@@ -318,18 +321,18 @@ export function AthleteProfileHero({ athlete }: { athlete: AdminAthleteRecord })
 }
 
 export function AthleteProfileOverviewCard({ athlete }: { athlete: AdminAthleteRecord }) {
+    const appText = useAppTranslations("AppText");
   const sections = buildOverviewSections(athlete);
 
   return (
     <section className="plan-summary-card athlete-profile-overview-card">
       <div className="plan-summary-header athlete-profile-overview-header">
         <div>
-          <p className="kicker">Overview</p>
-          <h2 className="plan-summary-title">Captured athlete profile</h2>
+          <p className="kicker">{appText("text_d4b1ea5708dd")}</p>
+          <h2 className="plan-summary-title">{appText("text_61ac6b43d063")}</h2>
         </div>
         <p className="muted">
-          The athlete account, latest saved intake, and planner context are grouped into one faster reading surface.
-        </p>
+          {appText("text_67fa377dc072")}</p>
       </div>
 
       <div className="athlete-profile-overview-grid">

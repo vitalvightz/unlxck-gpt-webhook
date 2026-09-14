@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useTranslations, useTranslations as useAppTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import { RequireAuth } from "@/components/auth-guard";
@@ -300,9 +300,10 @@ function SettingsNav({
   activeSection: string;
   sections: SettingsSection[];
 }>) {
+    const appText = useAppTranslations("AppText");
   return (
-    <nav className="settings-section-nav" aria-label="Settings sections">
-      <p className="settings-section-nav-label">Sections</p>
+    <nav className="settings-section-nav" aria-label={appText("text_e26d51d36781")}>
+      <p className="settings-section-nav-label">{appText("text_9bae918add9a")}</p>
       <div className="settings-section-nav-list">
         {sections.map((section) => (
           <a
@@ -329,6 +330,7 @@ function SettingsSummaryItem({ label, value }: Readonly<{ label: string; value: 
 }
 
 export default function SettingsPage() {
+    const appText = useAppTranslations("AppText");
   const t = useTranslations("Workspace");
   const { isMeHydrated, me, previewAppearanceMode, replaceMe, session, signOut } = useAppSession();
 
@@ -781,7 +783,7 @@ export default function SettingsPage() {
           type="file"
           accept="image/*"
           className="avatar-file-input"
-          aria-label="Upload profile photo"
+          aria-label={appText("text_a2a1fbe6ab45")}
           onChange={handleFileChange}
           disabled={isAvatarProcessing}
         />
@@ -790,13 +792,13 @@ export default function SettingsPage() {
           <button
             type="button"
             className="avatar-upload-trigger"
-            aria-label="Choose profile photo"
+            aria-label={appText("text_92e2e04b0227")}
             onClick={() => fileInputRef.current?.click()}
             disabled={isAvatarProcessing}
           >
             <div className="avatar-upload-circle">
               {isSafeAvatarImageUrl(avatarUrl) ? (
-                <img src={avatarUrl.trim()} alt="Profile" className="avatar-preview-img" />
+                <img src={avatarUrl.trim()} alt={appText("text_d696a35bdd18")} className="avatar-preview-img" />
               ) : (
                 <span className="avatar-preview-initials">{initials}</span>
               )}
@@ -830,7 +832,7 @@ export default function SettingsPage() {
               onClick={() => fileInputRef.current?.click()}
               disabled={isAvatarProcessing}
             >
-              {isAvatarProcessing ? "Processing photo…" : hasAvatar ? "Change photo" : "Upload photo"}
+              {isAvatarProcessing ? appText("text_094dcbe67866") : hasAvatar ? appText("text_c5fbcb8b00ea") : appText("text_32258ba63e80")}
             </button>
 
             {hasAvatar ? (
@@ -840,12 +842,11 @@ export default function SettingsPage() {
                 onClick={handleRemoveAvatar}
                 disabled={isAvatarProcessing}
               >
-                Remove
-              </button>
+                {appText("text_c3812fc4acb8")}</button>
             ) : null}
 
             <div className="field avatar-url-field">
-              <label htmlFor="settingsAvatarUrl">Or paste image URL</label>
+              <label htmlFor="settingsAvatarUrl">{appText("text_68bcafd9bc3f")}</label>
               <input
                 id="settingsAvatarUrl"
                 type="url"
@@ -855,7 +856,7 @@ export default function SettingsPage() {
                   setAvatarUrl(event.target.value);
                 }}
                 maxLength={AVATAR_URL_MAX}
-                placeholder="https://example.com/photo.jpg"
+                placeholder={appText("text_5cd76d96bc2f")}
                 disabled={isAvatarProcessing}
               />
             </div>
@@ -870,7 +871,7 @@ export default function SettingsPage() {
       <>
         <div className="form-grid settings-identity-grid">
           <div className="field">
-            <label htmlFor="settingsFullName">Name</label>
+            <label htmlFor="settingsFullName">{appText("text_dcd1d5223f73")}</label>
             <input
               id="settingsFullName"
               name="name"
@@ -881,26 +882,25 @@ export default function SettingsPage() {
             />
           </div>
           <div className="field">
-            <label>Email</label>
+            <label>{appText("text_969ccbd3cf63")}</label>
             <div className="readonly-field">{me?.profile.email || "Unavailable"}</div>
           </div>
         </div>
 
         <form className="settings-subsection" onSubmit={handleUsernameSubmit}>
           <div className="settings-subsection-header">
-            <h3 className="settings-subsection-title">Username</h3>
+            <h3 className="settings-subsection-title">{appText("text_e3b89e9d33f8")}</h3>
             <span
               className={`badge ${usernameRemaining > 0 ? "status-badge-neutral" : "status-badge-danger"}`}
               aria-live="polite"
             >
-              {usernameRemaining} of {usernameMax} changes left
-            </span>
+              {usernameRemaining} {appText("text_28391d3bc64e")}{usernameMax} {appText("text_e3519261f26c")}</span>
           </div>
 
           <div className="field settings-username-field">
-            <label htmlFor="settingsUsername">Handle</label>
+            <label htmlFor="settingsUsername">{appText("text_fa04ae3d5198")}</label>
             <div className="settings-username-input">
-              <span className="settings-username-prefix" aria-hidden="true">@</span>
+              <span className="settings-username-prefix" aria-hidden="true">{appText("text_c3641f8544d7")}</span>
               <input
                 id="settingsUsername"
                 name="username"
@@ -911,7 +911,7 @@ export default function SettingsPage() {
                   setUsernameError(null);
                   setUsernameMessage(null);
                 }}
-                placeholder="your-fight-handle"
+                placeholder={appText("text_d1f4b6c0b6f2")}
                 minLength={USERNAME_MIN}
                 maxLength={USERNAME_MAX}
                 spellCheck={false}
@@ -919,7 +919,7 @@ export default function SettingsPage() {
               />
             </div>
             {usernameRemaining === 0 && nextAvailableLabel ? (
-              <p className="warning-text">Next change available on {nextAvailableLabel}.</p>
+              <p className="warning-text">{appText("text_1765174dcff7")}{nextAvailableLabel}{appText("text_cdb4ee2aea69")}</p>
             ) : null}
             {usernameError ? <p className="error-text">{usernameError}</p> : null}
             {usernameMessage ? <p className="success-text">{usernameMessage}</p> : null}
@@ -927,7 +927,7 @@ export default function SettingsPage() {
 
           <div className="form-actions settings-subsection-actions">
             <button type="submit" className="cta" disabled={usernameSubmitDisabled}>
-              {isUsernamePending ? "Saving..." : currentUsername ? "Update username" : "Set username"}
+              {isUsernamePending ? appText("text_dc85af8f2b1d") : currentUsername ? appText("text_08253a852fec") : appText("text_e3160a4682a1")}
             </button>
             {currentUsername && usernameDraft.trim().toLowerCase() !== currentUsername.toLowerCase() ? (
               <button
@@ -939,28 +939,27 @@ export default function SettingsPage() {
                   setUsernameMessage(null);
                 }}
               >
-                Cancel
-              </button>
+                {appText("text_19766ed6ccb2")}</button>
             ) : null}
           </div>
         </form>
 
         <form className="settings-subsection" onSubmit={handlePasswordSubmit}>
           <div className="settings-subsection-header">
-            <h3 className="settings-subsection-title">Password</h3>
+            <h3 className="settings-subsection-title">{appText("text_e7cf3ef4f17c")}</h3>
             <button
               type="button"
               className="password-toggle settings-password-toggle"
               onClick={() => setShowPasswords((prev) => !prev)}
               aria-pressed={showPasswords}
             >
-              {showPasswords ? "Hide" : "Show"}
+              {showPasswords ? appText("text_ac20a57bfde0") : appText("text_0df6f1cad36c")}
             </button>
           </div>
 
           <div className="form-grid settings-password-grid">
             <div className="field">
-              <label htmlFor="settingsCurrentPassword">Current password</label>
+              <label htmlFor="settingsCurrentPassword">{appText("text_72ed2bd767ce")}</label>
               <input
                 id="settingsCurrentPassword"
                 type={showPasswords ? "text" : "password"}
@@ -970,7 +969,7 @@ export default function SettingsPage() {
               />
             </div>
             <div className="field">
-              <label htmlFor="settingsNewPassword">New password</label>
+              <label htmlFor="settingsNewPassword">{appText("text_3dd9df4441fb")}</label>
               <input
                 id="settingsNewPassword"
                 type={showPasswords ? "text" : "password"}
@@ -982,7 +981,7 @@ export default function SettingsPage() {
               {newPassword ? <PasswordStrengthMeter strength={passwordStrength} /> : null}
             </div>
             <div className="field">
-              <label htmlFor="settingsConfirmPassword">Confirm new password</label>
+              <label htmlFor="settingsConfirmPassword">{appText("text_bf000421aeb3")}</label>
               <input
                 id="settingsConfirmPassword"
                 type={showPasswords ? "text" : "password"}
@@ -1003,19 +1002,18 @@ export default function SettingsPage() {
               className="cta"
               disabled={isPasswordPending || !currentPassword || !newPassword || !confirmPassword}
             >
-              {isPasswordPending ? "Updating..." : "Update password"}
+              {isPasswordPending ? appText("text_0a4e0b71b7f3") : appText("text_fe45b4014135")}
             </button>
             <Link href="/forgot-password" className="ghost-button">
-              Forgot password?
-            </Link>
+              {appText("text_30c1d8d3e912")}</Link>
           </div>
         </form>
 
         <div className="settings-subsection">
           <div className="settings-subsection-header">
-            <h3 className="settings-subsection-title">Workspace theme</h3>
+            <h3 className="settings-subsection-title">{appText("text_e80a5935ba7e")}</h3>
           </div>
-          <div className="appearance-mode-grid" role="radiogroup" aria-label="Workspace theme">
+          <div className="appearance-mode-grid" role="radiogroup" aria-label={appText("text_e80a5935ba7e")}>
             {APPEARANCE_OPTIONS.map((option) => {
               const isSelected = appearanceMode === option.value;
               return (
@@ -1043,7 +1041,7 @@ export default function SettingsPage() {
                   <span className="appearance-mode-copy">
                     <span className="appearance-mode-title-row">
                       <span className="appearance-mode-title">{option.label}</span>
-                      {isSelected ? <span className="appearance-mode-state">Selected</span> : null}
+                      {isSelected ? <span className="appearance-mode-state">{appText("text_57fd7a0cf33f")}</span> : null}
                     </span>
                     <span className="appearance-mode-description">{option.description}</span>
                   </span>
@@ -1057,13 +1055,12 @@ export default function SettingsPage() {
 
         <div ref={accountActionsRef} className="settings-account-actions">
           <p className="settings-account-actions-status" aria-live="polite">
-            {hasUnsavedAccountChanges ? "Unsaved changes to your name or photo." : `Last saved ${lastUpdatedLabel}`}
+            {hasUnsavedAccountChanges ? appText("text_77d7df3868eb") : `Last saved ${lastUpdatedLabel}`}
           </p>
           <div className="form-actions settings-account-actions-buttons">
             {hasUnsavedAccountChanges ? (
               <button type="button" className="ghost-button" onClick={handleDiscardAccountChanges} disabled={isPending}>
-                Discard
-              </button>
+                {appText("text_eb1a70e39274")}</button>
             ) : null}
             <button
               type="button"
@@ -1071,7 +1068,7 @@ export default function SettingsPage() {
               onClick={handleSaveAccount}
               disabled={isPending || isAvatarProcessing || !hasUnsavedAccountChanges}
             >
-              {isAvatarProcessing ? "Processing photo…" : isPending ? "Saving..." : "Save account"}
+              {isAvatarProcessing ? appText("text_094dcbe67866") : isPending ? appText("text_dc85af8f2b1d") : appText("text_657e335e42a9")}
             </button>
           </div>
         </div>
@@ -1084,8 +1081,8 @@ export default function SettingsPage() {
       <div className="settings-stack athlete-motion-slot athlete-motion-main">
         <article id="account" className="step-card settings-card">
           <div className="form-section-header">
-            <p className="kicker">Account</p>
-            <h2 className="form-section-title">Profile and sign-in</h2>
+            <p className="kicker">{appText("text_7e1b0d5641f2")}</p>
+            <h2 className="form-section-title">{appText("text_d8445cc3a779")}</h2>
           </div>
           {renderAvatarEditor()}
           {renderAccountControls()}
@@ -1094,12 +1091,11 @@ export default function SettingsPage() {
         <article id="training-profile" className="step-card settings-card">
           <div className="settings-card-header-row">
             <div className="form-section-header">
-              <p className="kicker">Training Profile</p>
-              <h2 className="form-section-title">Current athlete context</h2>
+              <p className="kicker">{appText("text_0173d3992383")}</p>
+              <h2 className="form-section-title">{appText("text_3a1a2ef03c15")}</h2>
             </div>
             <Link href="/onboarding?mode=edit" className="cta">
-              Update Training Profile
-            </Link>
+              {appText("text_034d2042bab1")}</Link>
           </div>
           <div className="settings-profile-summary-grid">
             {trainingProfileSummary.map((item) => (
@@ -1110,54 +1106,52 @@ export default function SettingsPage() {
 
         <article id="notifications" className="step-card settings-card">
           <div className="form-section-header">
-            <p className="kicker">Notifications</p>
-            <h2 className="form-section-title">Reminders and messages</h2>
+            <p className="kicker">{appText("text_788011833a5a")}</p>
+            <h2 className="form-section-title">{appText("text_218a225ed5be")}</h2>
           </div>
           {session?.access_token ? (
             <PushNotificationSettings token={session.access_token} />
           ) : (
-            <p className="muted">Sign in again to manage notification preferences.</p>
+            <p className="muted">{appText("text_0886f71a998d")}</p>
           )}
         </article>
 
         <article id="subscription" className="step-card settings-card">
           <div className="form-section-header">
-            <p className="kicker">Subscription</p>
-            <h2 className="form-section-title">Plan and billing access</h2>
+            <p className="kicker">{appText("text_4999c6c6c7ba")}</p>
+            <h2 className="form-section-title">{appText("text_88e7a7e09984")}</h2>
           </div>
           <div className="settings-profile-summary-grid">
-            <SettingsSummaryItem label="Current plan" value="Beta athlete access" />
-            <SettingsSummaryItem label="Payment method" value="Not connected" />
-            <SettingsSummaryItem label="Invoices" value="No invoices yet" />
+            <SettingsSummaryItem label={appText("text_37ca715f53b6")} value="Beta athlete access" />
+            <SettingsSummaryItem label={appText("text_b948ac04b854")} value="Not connected" />
+            <SettingsSummaryItem label={appText("text_b80355750958")} value="No invoices yet" />
           </div>
-          <p className="settings-coming-soon">Billing controls will be available after subscriptions launch.</p>
+          <p className="settings-coming-soon">{appText("text_4322072b8467")}</p>
         </article>
 
         <article id="privacy" className="step-card settings-card">
           <div className="form-section-header">
-            <p className="kicker">Privacy</p>
-            <h2 className="form-section-title">Data and consent</h2>
+            <p className="kicker">{appText("text_54a57c3147c4")}</p>
+            <h2 className="form-section-title">{appText("text_4bad33a13225")}</h2>
           </div>
           {/* "Account required data only" was not true: UNLXCK processes
               injuries, readiness and bodyweight, which is special-category
               health data. The summary now states the actual consent record. */}
           <div className="settings-profile-summary-grid">
-            <SettingsSummaryItem label="Terms of Use" value={termsSummary(me)} />
-            <SettingsSummaryItem label="Health-data consent" value={healthConsentSummary(me)} />
-            <SettingsSummaryItem label="Last profile update" value={lastUpdatedLabel} />
-            <SettingsSummaryItem label="Detected time zone" value={detectedTimeZone} />
+            <SettingsSummaryItem label={appText("text_12a0015fa322")} value={termsSummary(me)} />
+            <SettingsSummaryItem label={appText("text_47c375e7eeef")} value={healthConsentSummary(me)} />
+            <SettingsSummaryItem label={appText("text_d2d8d0f38b3c")} value={lastUpdatedLabel} />
+            <SettingsSummaryItem label={appText("text_fa591b2c3cc5")} value={detectedTimeZone} />
           </div>
           <p className="muted">{consentCopy.privacySummary}</p>
           <ul className="summary-list">
             <li>
               <Link href={PRIVACY_HREF} className="auth-text-link">
-                Privacy Notice
-              </Link>
+                {appText("text_840b0e9da5da")}</Link>
             </li>
             <li>
               <Link href={TERMS_HREF} className="auth-text-link">
-                Terms of Use
-              </Link>
+                {appText("text_12a0015fa322")}</Link>
             </li>
           </ul>
           {privacyMessage ? (
@@ -1172,10 +1166,7 @@ export default function SettingsPage() {
           ) : null}
           {healthConsentGranted ? (
             <p className="muted">
-              Withdrawing stops UNLXCK using your health information for new personalised
-              guidance. Plans already generated stay readable, and you can give consent again at
-              any time.
-            </p>
+              {appText("text_59c43bbb9fc8")}</p>
           ) : (
             <p className="muted">{consentCopy.declineNote}</p>
           )}
@@ -1187,25 +1178,21 @@ export default function SettingsPage() {
               disabled={isConsentSaving}
             >
               {isConsentSaving
-                ? "Saving…"
+                ? appText("text_23e39291d613")
                 : healthConsentGranted
-                  ? "Withdraw health-data consent"
-                  : "Give health-data consent"}
+                  ? appText("text_6c87a47504fa")
+                  : appText("text_91b59ed708dd")}
             </button>
             {deletionRequestHref ? (
               <a className="ghost-button" href={deletionRequestHref}>
-                Request account & data deletion
-              </a>
+                {appText("text_a17f118f9b1f")}</a>
             ) : null}
             <button type="button" className="ghost-button" onClick={() => void signOut()}>
-              Sign out
-            </button>
+              {appText("text_48f0d3d397d4")}</button>
           </div>
           {deletionRequestHref ? null : (
             <p className="muted">
-              To request access to your data or deletion of your account, send a request using
-              Send feedback below and we will action it under our retention policy.
-            </p>
+              {appText("text_7c0dd956bf5c")}</p>
           )}
         </article>
 
@@ -1214,20 +1201,19 @@ export default function SettingsPage() {
             the one-time screen. */}
         <article id="private-trial" className="step-card settings-card">
           <div className="form-section-header">
-            <p className="kicker">Private trial</p>
+            <p className="kicker">{appText("text_e70b108ca4a7")}</p>
             <h2 className="form-section-title" id="settings-private-trial-heading">
-              Private Trial Guide
-            </h2>
+              {appText("text_6481d7e5106e")}</h2>
           </div>
           <PrivateTrialGuide headingId="settings-private-trial-heading" showTitle={false} />
         </article>
 
         <article id="send-feedback" className="step-card settings-card">
           <div className="form-section-header">
-            <p className="kicker">Beta feedback</p>
-            <h2 className="form-section-title">Send feedback</h2>
+            <p className="kicker">{appText("text_96ee62af6b18")}</p>
+            <h2 className="form-section-title">{appText("text_8235980b80ad")}</h2>
           </div>
-          <p className="muted">Report a bug, request a feature, flag a safety issue, or share general feedback.</p>
+          <p className="muted">{appText("text_9aeb9cc162cb")}</p>
           {session?.access_token ? <GlobalFeedback token={session.access_token} /> : null}
         </article>
       </div>
@@ -1239,8 +1225,8 @@ export default function SettingsPage() {
       <div className="settings-stack athlete-motion-slot athlete-motion-main">
         <article id="admin-account" className="step-card settings-card">
           <div className="form-section-header">
-            <p className="kicker">Admin Account</p>
-            <h2 className="form-section-title">Profile and sign-in</h2>
+            <p className="kicker">{appText("text_fe0c27ce0fe8")}</p>
+            <h2 className="form-section-title">{appText("text_d8445cc3a779")}</h2>
           </div>
           {renderAvatarEditor()}
           {renderAccountControls()}
@@ -1248,43 +1234,43 @@ export default function SettingsPage() {
 
         <article id="organisation" className="step-card settings-card">
           <div className="form-section-header">
-            <p className="kicker">Organisation</p>
-            <h2 className="form-section-title">Branding and contact defaults</h2>
+            <p className="kicker">{appText("text_350be3643ce7")}</p>
+            <h2 className="form-section-title">{appText("text_6d0dbfa4aa3f")}</h2>
           </div>
           <div className="settings-profile-summary-grid">
-            <SettingsSummaryItem label="Brand name" value="Not connected" />
-            <SettingsSummaryItem label="Logo" value="Not connected" />
-            <SettingsSummaryItem label="Contact email" value="Not connected" />
+            <SettingsSummaryItem label={appText("text_3cfd0ef82258")} value="Not connected" />
+            <SettingsSummaryItem label={appText("text_d707dc2f1936")} value="Not connected" />
+            <SettingsSummaryItem label={appText("text_6d7fce11ae00")} value="Not connected" />
           </div>
-          <p className="settings-coming-soon">Organisation settings will appear here once backend organisation records are connected.</p>
+          <p className="settings-coming-soon">{appText("text_74acdfe69508")}</p>
         </article>
 
         <article id="coaches-roles" className="step-card settings-card">
           <div className="form-section-header">
-            <p className="kicker">Coaches & Roles</p>
-            <h2 className="form-section-title">Access control</h2>
+            <p className="kicker">{appText("text_5f4814047d11")}</p>
+            <h2 className="form-section-title">{appText("text_0bf1d245547b")}</h2>
           </div>
           <div className="settings-profile-summary-grid">
-            <SettingsSummaryItem label="Primary admin" value={me?.profile.email || "Unavailable"} />
-            <SettingsSummaryItem label="Role" value="Admin" />
-            <SettingsSummaryItem label="Coach seats" value="Not configured" />
+            <SettingsSummaryItem label={appText("text_6dd6e35c165c")} value={me?.profile.email || "Unavailable"} />
+            <SettingsSummaryItem label={appText("text_14736a2eb9f4")} value="Admin" />
+            <SettingsSummaryItem label={appText("text_d67f8b37c7da")} value="Not configured" />
           </div>
-          <p className="settings-coming-soon">Coach invites and role permissions will be available after team management is connected.</p>
+          <p className="settings-coming-soon">{appText("text_83b387bc603e")}</p>
         </article>
 
         <article id="programme-controls" className="step-card settings-card">
           <div className="form-section-header">
-            <p className="kicker">Programme Defaults</p>
-            <h2 className="form-section-title">Coming soon</h2>
+            <p className="kicker">{appText("text_689426a79b27")}</p>
+            <h2 className="form-section-title">{appText("text_4f7d64017689")}</h2>
           </div>
-          <p className="settings-coming-soon">These controls are saved as local preview preferences only. They do not yet change backend plan generation.</p>
+          <p className="settings-coming-soon">{appText("text_085bb8b06d2d")}</p>
           <div className="settings-control-grid">
             <div className="settings-subsection">
               <div className="settings-subsection-header">
-                <h3 className="settings-subsection-title">Injury filtering</h3>
+                <h3 className="settings-subsection-title">{appText("text_a5634af2aea6")}</h3>
                 <span className="badge status-badge-neutral">{programmeControls.injuryFiltering}</span>
               </div>
-              <div className="settings-segmented-control" role="radiogroup" aria-label="Injury filtering">
+              <div className="settings-segmented-control" role="radiogroup" aria-label={appText("text_a5634af2aea6")}>
                 {(["light", "strict"] as const).map((value) => (
                   <button
                     key={value}
@@ -1299,10 +1285,10 @@ export default function SettingsPage() {
             </div>
             <div className="settings-subsection">
               <div className="settings-subsection-header">
-                <h3 className="settings-subsection-title">Fatigue adjustment</h3>
+                <h3 className="settings-subsection-title">{appText("text_2d253a631870")}</h3>
                 <span className="badge status-badge-neutral">{programmeControls.fatigueAdjustment}</span>
               </div>
-              <div className="settings-segmented-control" role="radiogroup" aria-label="Fatigue adjustment">
+              <div className="settings-segmented-control" role="radiogroup" aria-label={appText("text_2d253a631870")}>
                 {(["light", "strict"] as const).map((value) => (
                   <button
                     key={value}
@@ -1317,8 +1303,8 @@ export default function SettingsPage() {
             </div>
             <label className="settings-toggle-row">
               <span>
-                <span className="settings-toggle-title">Require coach review for risky athletes</span>
-                <span className="settings-toggle-detail">Manual review gate</span>
+                <span className="settings-toggle-title">{appText("text_787d6ae78b3a")}</span>
+                <span className="settings-toggle-detail">{appText("text_c0a91019fb18")}</span>
               </span>
               <input
                 type="checkbox"
@@ -1330,8 +1316,8 @@ export default function SettingsPage() {
             </label>
             <label className="settings-toggle-row">
               <span>
-                <span className="settings-toggle-title">Auto-generate plans</span>
-                <span className="settings-toggle-detail">Use latest completed intake</span>
+                <span className="settings-toggle-title">{appText("text_142ccc4f08ea")}</span>
+                <span className="settings-toggle-detail">{appText("text_e29826402dc5")}</span>
               </span>
               <input
                 type="checkbox"
@@ -1346,12 +1332,12 @@ export default function SettingsPage() {
 
         <article id="templates-billing" className="step-card settings-card">
           <div className="form-section-header">
-            <p className="kicker">Templates & Billing</p>
-            <h2 className="form-section-title">Reusable copy, layouts, and payments</h2>
+            <p className="kicker">{appText("text_c5ae7b720500")}</p>
+            <h2 className="form-section-title">{appText("text_d788adc8566f")}</h2>
           </div>
           <div className="form-grid settings-template-grid">
             <div className="field">
-              <label htmlFor="settingsWelcomeMessage">Welcome message</label>
+              <label htmlFor="settingsWelcomeMessage">{appText("text_797389fc28b4")}</label>
               <textarea
                 id="settingsWelcomeMessage"
                 value={adminTemplates.welcomeMessage}
@@ -1360,7 +1346,7 @@ export default function SettingsPage() {
               />
             </div>
             <div className="field">
-              <label htmlFor="settingsPlanEmail">Plan email</label>
+              <label htmlFor="settingsPlanEmail">{appText("text_ff87b1b6af57")}</label>
               <textarea
                 id="settingsPlanEmail"
                 value={adminTemplates.planEmail}
@@ -1369,7 +1355,7 @@ export default function SettingsPage() {
               />
             </div>
             <div className="field">
-              <label htmlFor="settingsCoachNotes">Coach notes</label>
+              <label htmlFor="settingsCoachNotes">{appText("text_71b2dd43804a")}</label>
               <textarea
                 id="settingsCoachNotes"
                 value={adminTemplates.coachNotes}
@@ -1378,26 +1364,25 @@ export default function SettingsPage() {
               />
             </div>
           </div>
-          <p className="settings-coming-soon">Template changes are local drafts until template storage is connected.</p>
+          <p className="settings-coming-soon">{appText("text_36ddd8d068e0")}</p>
           <div className="settings-profile-summary-grid">
-            <SettingsSummaryItem label="Plan" value="Admin beta access" />
-            <SettingsSummaryItem label="Active users" value="Not connected" />
-            <SettingsSummaryItem label="Failed payments" value="None" />
+            <SettingsSummaryItem label={appText("text_fa8ed0bdabdd")} value="Admin beta access" />
+            <SettingsSummaryItem label={appText("text_d8fc11b03820")} value="Not connected" />
+            <SettingsSummaryItem label={appText("text_809f28971ddf")} value="None" />
           </div>
           <div className="plan-summary-actions settings-action-row">
             <button type="button" className="ghost-button" onClick={() => void signOut()}>
-              Sign out
-            </button>
+              {appText("text_48f0d3d397d4")}</button>
           </div>
-          <p className="settings-coming-soon">Billing controls will be available after subscriptions launch.</p>
+          <p className="settings-coming-soon">{appText("text_4322072b8467")}</p>
         </article>
 
         <article id="send-feedback" className="step-card settings-card">
           <div className="form-section-header">
-            <p className="kicker">Beta feedback</p>
-            <h2 className="form-section-title">Send feedback</h2>
+            <p className="kicker">{appText("text_96ee62af6b18")}</p>
+            <h2 className="form-section-title">{appText("text_8235980b80ad")}</h2>
           </div>
-          <p className="muted">Report a bug, request a feature, flag a safety issue, or share general feedback.</p>
+          <p className="muted">{appText("text_9aeb9cc162cb")}</p>
           {session?.access_token ? <GlobalFeedback token={session.access_token} /> : null}
         </article>
       </div>

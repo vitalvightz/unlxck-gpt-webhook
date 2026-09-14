@@ -82,6 +82,7 @@ import {
   stripSafetyOwnedStopRules,
 } from "@/lib/block-display-guardrails";
 import type {
+
   DeterministicNutritionPhase,
   DeterministicRecoveryPhase,
   MindsetAnchor,
@@ -94,6 +95,7 @@ import type {
   StructuredWeek,
   TodaySessionCompletionRecord,
 } from "@/lib/types";
+import { useTranslations as useAppTranslations } from "next-intl";
 
 /** Live logging info CampDayCard resolves per session and hands to SessionCard:
  * the display status (tone + label), the stored row (for RPE/reason lines) and
@@ -115,13 +117,14 @@ function isDeclaredLightCombatTitle(title: string): boolean {
 }
 
 function PriorityMicrodoseCard({ day }: { day: StructuredDay }) {
+    const appText = useAppTranslations("AppText");
   const dose = getPriorityMicrodose(day);
   if (!dose) {
     return null;
   }
   return (
     <div className="sp-priority-microdose">
-      <p className="sp-eyebrow">{titleize(dose.goal)} microdose</p>
+      <p className="sp-eyebrow">{titleize(dose.goal)} {appText("text_707975549e9a")}</p>
       <p className="sp-priority-microdose-name">{dose.name}</p>
       <p className="sp-priority-microdose-prescription">{dose.prescription}</p>
     </div>
@@ -182,6 +185,7 @@ function CollapsibleSection({
   className?: string;
   children: ReactNode;
 }) {
+    const appText = useAppTranslations("AppText");
   const [open, setOpen] = useState<boolean>(Boolean(defaultOpen));
   // Reset-on-key-change during render (React's recommended pattern): re-open to
   // the new default when the sync key changes, without an effect or a flash.
@@ -199,7 +203,7 @@ function CollapsibleSection({
     >
       <summary className="sp-collapse-summary">
         <span className="sp-collapse-title">{title}</span>
-        <span className="sp-collapse-action">{open ? "Hide" : "Show"} {actionTarget}</span>
+        <span className="sp-collapse-action">{open ? appText("text_ac20a57bfde0") : appText("text_0df6f1cad36c")} {actionTarget}</span>
       </summary>
       <div className="sp-collapse-body">{children}</div>
     </details>
@@ -342,6 +346,7 @@ export function BlockCard({
   openWeekIntent?: OpenBlockWeekIntent | null;
   sourceCountdown?: string | null;
 }) {
+    const appText = useAppTranslations("AppText");
   const rehabLabelPolicy = useContext(RehabLabelContext);
   const sourceText = useContext(PlanSourceTextContext);
   const planSafetyTexts = useContext(PlanSafetyTextContext);
@@ -409,29 +414,29 @@ export function BlockCard({
           ))}
           {work ? (
             <span className="sp-stat">
-              <span className="sp-stat-label">Work</span>
+              <span className="sp-stat-label">{appText("text_104ab9213e28")}</span>
               {work}
             </span>
           ) : null}
           {load ? (
             <span className="sp-stat">
               <span className="sp-stat-head">
-                <span className="sp-stat-label">Load</span>
-                <GlossaryTooltip term="Load" />
+                <span className="sp-stat-label">{appText("text_8a6bdb6b18da")}</span>
+                <GlossaryTooltip term={appText("text_8a6bdb6b18da")} />
               </span>
               {load}
             </span>
           ) : null}
           {rest ? (
             <span className="sp-stat">
-              <span className="sp-stat-label">Rest</span>
+              <span className="sp-stat-label">{appText("text_05863ec2c378")}</span>
               {rest}
             </span>
           ) : null}
           {effort ? (
             <span className="sp-stat">
               <span className="sp-stat-head">
-                <span className="sp-stat-label">Effort</span>
+                <span className="sp-stat-label">{appText("text_4387e5d3966f")}</span>
                 {/* The value reads "RPE 1.5" / "intent max" with no scale
                     attached, so the gloss explains whichever scale is in play. */}
                 <GlossaryTooltip term={effortMethod} />
@@ -456,13 +461,13 @@ export function BlockCard({
       ) : null}
       {substitutions.length > 0 ? (
         <p className="sp-block-aside">
-          <span className="sp-stat-label">Swaps</span>
+          <span className="sp-stat-label">{appText("text_6c2a89ca3cde")}</span>
           {substitutions.join(", ")}
         </p>
       ) : null}
       {regressions.length > 0 ? (
         <p className="sp-block-aside">
-          <span className="sp-stat-label">Easier</span>
+          <span className="sp-stat-label">{appText("text_67636e7895c7")}</span>
           {regressions.join(", ")}
         </p>
       ) : null}
@@ -479,6 +484,7 @@ export function BlockCard({
 }
 
 function RehabSummary({ blocks }: { blocks: StructuredBlock[] }) {
+    const appText = useAppTranslations("AppText");
   const rehabLabelPolicy = useContext(RehabLabelContext);
   if (blocks.length === 0) {
     return null;
@@ -490,8 +496,7 @@ function RehabSummary({ blocks }: { blocks: StructuredBlock[] }) {
   return (
     <div className="sp-rehab-summary">
       <p className="sp-eyebrow">
-        {summaryLabel} / Mobility
-        <GlossaryTooltip term={summaryLabel} />
+        {summaryLabel} {appText("text_81b876a2817b")}<GlossaryTooltip term={summaryLabel} />
       </p>
       <ul className="sp-rehab-list">
         {blocks.map((block, index) => {
@@ -539,6 +544,7 @@ export function SessionCard({
    * every block card. */
   openWeekIntent?: OpenBlockWeekIntent | null;
 }) {
+    const appText = useAppTranslations("AppText");
   const detailsId = useId();
   const [showDetails, setShowDetails] = useState(Boolean(defaultOpenBlocks));
   const userToggledDetails = useRef(false);
@@ -601,14 +607,14 @@ export function SessionCard({
             <TechnicalCombatRationale />
           ) : objective ? (
             <p className="sp-session-objective">
-              <span className="sp-session-why-label">Why</span>
+              <span className="sp-session-why-label">{appText("text_d3ae14a50bfe")}</span>
               {objective}
             </p>
           ) : null}
         </div>
         <div className="sp-session-meta">
           {isDeclaredLightCombat ? (
-            <span className="sp-tag sp-accent">Light combat</span>
+            <span className="sp-tag sp-accent">{appText("text_b6be4e072172")}</span>
           ) : isTechnicalSession ? (
             <span className="sp-tag sp-accent">{TECHNICAL_COMBAT_TAG}</span>
           ) : sessionType ? (
@@ -629,7 +635,7 @@ export function SessionCard({
           {completionInfo.completion.session_rpe != null ? (
             <>
               {`RPE ${completionInfo.completion.session_rpe}/10`}
-              <GlossaryTooltip term="RPE" />
+              <GlossaryTooltip term={appText("text_3a95f8f4dddd")} />
             </>
           ) : null}
           {completionInfo.completion.session_rpe != null && completionInfo.completion.modification_reason
@@ -643,8 +649,7 @@ export function SessionCard({
 
       {completionInfo?.onLog ? (
         <button type="button" className="secondary-button sp-log-session" onClick={completionInfo.onLog}>
-          Log this session
-        </button>
+          {appText("text_3f95e7c42afe")}</button>
       ) : null}
 
       {warning ? <p className="sp-warning">{warning}</p> : null}
@@ -676,13 +681,13 @@ export function SessionCard({
             className="sp-more-toggle sp-session-toggle"
             aria-expanded={showDetails}
             aria-controls={detailsId}
-            aria-label={showDetails ? "Show less session detail" : `Show more session detail: ${blocksLabel}`}
+            aria-label={showDetails ? appText("text_3ddc54e34b42") : `Show more session detail: ${blocksLabel}`}
             onClick={() => {
               userToggledDetails.current = true;
               setShowDetails((prev) => !prev);
             }}
           >
-            {showDetails ? "Show less" : `Show more (${blocksLabel})`}
+            {showDetails ? appText("text_94ea9b1d33a0") : `Show more (${blocksLabel})`}
           </button>
 
           {showDetails ? (
@@ -750,6 +755,7 @@ export function SessionlessDayCard({
    * countdown/date; the Today tab keeps the default. */
   showDayLabels?: boolean;
 }) {
+    const appText = useAppTranslations("AppText");
   const date = cleanText(day.date);
   const countdown = formatCountdownLabel(day.countdown_label);
   const card = day.today_card;
@@ -800,7 +806,7 @@ export function SessionlessDayCard({
         anchor={card?.mindset_anchor}
         dedupeContext={[cleanText(card?.headline), displayTitle]}
       />
-      {isRest ? <p className="sp-muted">Rest day.</p> : null}
+      {isRest ? <p className="sp-muted">{appText("text_11372a0637bd")}</p> : null}
     </article>
   );
 }
@@ -1108,6 +1114,7 @@ function RestDayRow({
 }
 
 function CompletionTag({ completion }: { completion: Completion }) {
+    const appText = useAppTranslations("AppText");
   if (completion.total === 0) {
     return null;
   }
@@ -1119,8 +1126,8 @@ function CompletionTag({ completion }: { completion: Completion }) {
   return (
     <span className={`cm-day-count${done ? " cm-day-count-done" : ""}`}>
       {done ? "✓ " : ""}
-      {completion.done}/{completion.total}
-      <span className="sr-only"> sessions done</span>
+      {completion.done}{appText("text_8a5edab28263")}{completion.total}
+      <span className="sr-only"> {appText("text_a1d392732b03")}</span>
     </span>
   );
 }
@@ -1288,6 +1295,7 @@ function getSafetyPriorityTexts(plan: StructuredPlan): string[] {
 // as a standalone card near the top so this context is not lost in the
 // structured view the way it would be if it only existed in the raw text.
 export function ActiveNotesCard({ plan }: { plan: StructuredPlan }) {
+    const appText = useAppTranslations("AppText");
   // Drop any note that just restates a red-flag rule — the Red Flags card is the
   // single home for stop/report rules, so Active Notes stays context-only.
   const safetyPriorityTexts = getSafetyPriorityTexts(plan);
@@ -1308,10 +1316,9 @@ export function ActiveNotesCard({ plan }: { plan: StructuredPlan }) {
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
       <summary className="sp-collapse-summary">
-        <span className="sp-collapse-title">Active notes</span>
+        <span className="sp-collapse-title">{appText("text_9cc2fa7cad84")}</span>
         <span className="sp-collapse-action">
-          {open ? "Hide" : "Show"} ({notes.length})
-        </span>
+          {open ? appText("text_ac20a57bfde0") : appText("text_0df6f1cad36c")} {appText("text_32ebb1abcc1c")}{notes.length}{appText("text_ba5ec51d07a4")}</span>
       </summary>
       <div className="sp-collapse-body">
         <ul className="sp-note-list">
@@ -1347,6 +1354,7 @@ function severityToneClass(label: string | null): string {
 }
 
 export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
+    const appText = useAppTranslations("AppText");
   const rules = getDisplayableRedFlags(plan);
   const fallbackNotes = rules.length === 0 ? getFallbackSafetyNotes(plan) : [];
   const hasStopRules = rules.length > 0 || fallbackNotes.length > 0;
@@ -1359,16 +1367,16 @@ export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
   return (
     <details
       className="sp-collapse sp-redflags"
-      aria-label="Red flags and safety actions"
+      aria-label={appText("text_0b2a5b0f81e8")}
       open={open}
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
       <summary className="sp-collapse-summary sp-redflags-summary">
         <span className="sp-redflags-summary-text">
-          <span className="sp-eyebrow">Safety priority</span>
-          <span className="sp-collapse-title">Red flags - stop &amp; report</span>
+          <span className="sp-eyebrow">{appText("text_236837aa441f")}</span>
+          <span className="sp-collapse-title">{appText("text_5c274748876a")}</span>
         </span>
-        <span className="sp-collapse-action">{open ? "Hide" : "Show"}</span>
+        <span className="sp-collapse-action">{open ? appText("text_ac20a57bfde0") : appText("text_0df6f1cad36c")}</span>
       </summary>
       <div className="sp-collapse-body">
       {hasStopRules ? (
@@ -1387,7 +1395,7 @@ export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
               className={`sp-redflag${deEmphasised ? " sp-redflag-deemphasised" : ""}`}
             >
               <div className="sp-redflag-head">
-                <span className="sp-redflag-kicker">Stop signal</span>
+                <span className="sp-redflag-kicker">{appText("text_7d017a25b053")}</span>
                 {severityLabel ? (
                   <span
                     className={`sp-tag sp-redflag-badge ${severityToneClass(severityLabel)}`.trim()}
@@ -1408,7 +1416,7 @@ export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
             className={`sp-redflag${deEmphasised ? " sp-redflag-deemphasised" : ""}`}
           >
             <div className="sp-redflag-head">
-              <span className="sp-redflag-kicker">Safety note</span>
+              <span className="sp-redflag-kicker">{appText("text_2dd6d99aaec3")}</span>
               <span className="sp-tag sp-redflag-badge">{planNoteLabel(note)}</span>
             </div>
             <span className="sp-redflag-text">{note.text}</span>
@@ -1429,19 +1437,21 @@ function DeterministicWeightCutLine({
 }: {
   weightCut: { band: string; supervisionRequired: boolean } | null;
 }) {
+    const appText = useAppTranslations("AppText");
   if (!weightCut) {
     return null;
   }
   return (
     <p className="sp-warning">
-      <span className="sp-tag">{titleize(weightCut.band)} weight-cut risk</span>
-      {weightCut.supervisionRequired ? " — qualified supervision required." : ""}
+      <span className="sp-tag">{titleize(weightCut.band)} {appText("text_78737c976028")}</span>
+      {weightCut.supervisionRequired ? appText("text_f3366df68845") : ""}
     </p>
   );
 }
 
 /** Plan nutrition prose (the legacy LLM/string fields) — fallback only. */
 function NutritionProse({ plan }: { plan: StructuredPlan }) {
+    const appText = useAppTranslations("AppText");
   const nutrition = plan.nutrition;
   const rows: Array<{
     label: string;
@@ -1471,11 +1481,11 @@ function NutritionProse({ plan }: { plan: StructuredPlan }) {
         <p className="sp-warning">
           {cutRisk && cutRisk !== "none" ? (
             <>
-              <span className="sp-tag">{titleize(cutRisk)} risk</span>{" "}
+              <span className="sp-tag">{titleize(cutRisk)} {appText("text_2c6ef0f0d0e4")}</span>{" "}
             </>
           ) : null}
           {weightCut}
-          {needsSupport ? " — qualified supervision required." : ""}
+          {needsSupport ? appText("text_f3366df68845") : ""}
         </p>
       ) : null}
     </>
@@ -1553,11 +1563,12 @@ function NutritionPhaseCard({
   syncKey?: string | null;
   displayLabel?: string;
 }) {
+    const appText = useAppTranslations("AppText");
   const phaseLabel = displayLabel || titleize(item.phase);
   return (
     <section className="sp-card sp-support-card sp-nutrition">
       <div className="sp-support-head">
-        <p className="sp-eyebrow">Nutrition</p>
+        <p className="sp-eyebrow">{appText("text_7ab78b7058dd")}</p>
         <span className="sp-tag">{phaseLabel}</span>
       </div>
       <CollapsibleSection
@@ -1592,11 +1603,12 @@ function RecoveryPhaseCard({
   syncKey?: string | null;
   displayLabel?: string;
 }) {
+    const appText = useAppTranslations("AppText");
   const phaseLabel = displayLabel || titleize(item.phase);
   return (
     <section className="sp-card sp-support-card sp-recovery">
       <div className="sp-support-head">
-        <p className="sp-eyebrow">Recovery</p>
+        <p className="sp-eyebrow">{appText("text_48f6a8d5688b")}</p>
         <span className="sp-tag">{phaseLabel}</span>
       </div>
       <CollapsibleSection
@@ -1609,7 +1621,7 @@ function RecoveryPhaseCard({
         <ul className="sp-kv-list">
           {item.view.sleep ? (
             <li>
-              <span className="sp-kv-label">Sleep</span>
+              <span className="sp-kv-label">{appText("text_d466bcf52eb6")}</span>
               <span>{item.view.sleep}</span>
             </li>
           ) : null}
@@ -1640,6 +1652,7 @@ export function NutritionCard({
   activePhaseKey?: string | null;
   openOngoing?: boolean;
 }) {
+    const appText = useAppTranslations("AppText");
   const items = getNutritionPhaseItems(plan);
   if (items.length === 0 && !hasNutrition(plan)) {
     return null;
@@ -1647,7 +1660,7 @@ export function NutritionCard({
   if (items.length === 0) {
     return (
       <section className="sp-card sp-nutrition">
-        <p className="sp-eyebrow">Nutrition</p>
+        <p className="sp-eyebrow">{appText("text_7ab78b7058dd")}</p>
         <NutritionProse plan={plan} />
       </section>
     );
@@ -1737,6 +1750,7 @@ function WeekStrip({
   completionIndex?: CompletionIndex;
   openOngoing: boolean;
 }) {
+    const appText = useAppTranslations("AppText");
   const stripRef = useRef<HTMLElement>(null);
   const scrollable = weeks.length > WEEK_STRIP_FIT_LIMIT;
   // Centre on the week being viewed. `selectedPos` (the parent's `safePos`)
@@ -1767,7 +1781,7 @@ function WeekStrip({
       ref={stripRef}
       className="cm-week-strip"
       data-scroll={scrollable ? "true" : undefined}
-      aria-label={openOngoing ? "Training block weeks" : "Camp weeks"}
+      aria-label={openOngoing ? appText("text_bdeb3f0e20f2") : appText("text_06ebdefa404e")}
     >
       {weeks.map((week, pos) => {
         const completion = weekCompletion(week, completionIndex);
@@ -1794,7 +1808,7 @@ function WeekStrip({
             onClick={() => onSelect(pos)}
           >
             <span className="cm-week-pill-head">
-              <span className="cm-week-pill-index">W{index}</span>
+              <span className="cm-week-pill-index">{appText("text_fcb5f40df9be")}{index}</span>
               {current ? <span className="cm-week-pill-dot" aria-hidden="true" /> : null}
             </span>
             {phaseLabel ? (
@@ -1804,11 +1818,11 @@ function WeekStrip({
             ) : null}
             {completion.total > 0 ? (
               <span className="cm-week-pill-completion">
-                {completion.done}/{completion.total}
-                <span className="sr-only"> sessions completed</span>
+                {completion.done}{appText("text_8a5edab28263")}{completion.total}
+                <span className="sr-only"> {appText("text_80bef57ed1b5")}</span>
               </span>
             ) : null}
-            {current ? <span className="sr-only">Current week</span> : null}
+            {current ? <span className="sr-only">{appText("text_a1b52c899f36")}</span> : null}
           </button>
         );
       })}
@@ -1833,6 +1847,7 @@ function WeekOverview({
   openOngoing: boolean;
   scheduleContext?: PlanScheduleContext | null;
 }) {
+    const appText = useAppTranslations("AppText");
   const completion = weekCompletion(week, completionIndex);
   const sessionSummary = weekSessionSummary(week);
   const countdownStart = formatCountdownLabel(week.countdown_start);
@@ -1884,7 +1899,7 @@ function WeekOverview({
   return (
     <section className="sp-card cm-week-overview">
       <div className="cm-week-overview-head">
-        <p className="sp-eyebrow">Week overview</p>
+        <p className="sp-eyebrow">{appText("text_9220569056e1")}</p>
         <h2 className="sp-redflags-title">{heading}</h2>
       </div>
 
@@ -1967,6 +1982,7 @@ export function StructuredPlanRenderer({
    * Omitted → every rehab block keeps reading "Rehab". */
   rehabLabelPolicy?: RehabLabelPolicy | null;
 }) {
+    const appText = useAppTranslations("AppText");
   const weeks = getWeeks(plan);
   const completionIndex = useMemo(
     () => (completions ? buildCompletionIndex(completions) : undefined),
@@ -2144,11 +2160,9 @@ export function StructuredPlanRenderer({
         <>
           {openOngoing && scheduleContext?.projection_status === "unavailable" ? (
             <section className="sp-card cm-schedule-unavailable" role="status">
-              <p className="sp-eyebrow">Schedule unavailable</p>
+              <p className="sp-eyebrow">{appText("text_2d7efbe611a0")}</p>
               <p className="sp-block-purpose">
-                This legacy plan could not be matched safely to weekdays. Use the original plan
-                below until the schedule is rebuilt.
-              </p>
+                {appText("text_cf900c9d6831")}</p>
             </section>
           ) : null}
           <WeekStrip
@@ -2220,7 +2234,7 @@ export function StructuredPlanRenderer({
                       key={restDate || `day-${index}`}
                       countdown={formatCountdownLabel(day.countdown_label)}
                       weekday={weekdayLabel(restDate)}
-                      label="Rest"
+                      label={appText("text_05863ec2c378")}
                       isCurrent={isCurrent}
                       currentLabel={currentDayLabel}
                     />
@@ -2249,7 +2263,7 @@ export function StructuredPlanRenderer({
                 );
               })
             ) : (
-              <p className="sp-muted">No days scheduled this week.</p>
+              <p className="sp-muted">{appText("text_673c8bdbb060")}</p>
             )}
           </div>
         </>
@@ -2257,8 +2271,8 @@ export function StructuredPlanRenderer({
 
       {progressionNotes ? (
         <CollapsibleSection
-          title="Progression notes"
-          detailLabel="notes"
+          title={appText("text_aaa428d3b08c")}
+          detailLabel={appText("text_ab5aa97074c4")}
           className="sp-progression"
         >
           <p className="sp-block-purpose">{progressionNotes}</p>
@@ -2267,8 +2281,8 @@ export function StructuredPlanRenderer({
 
       {hasRecoverySupport ? (
         <CollapsibleSection
-          title="Recovery"
-          detailLabel="recovery"
+          title={appText("text_48f6a8d5688b")}
+          detailLabel={appText("text_8c585378513f")}
           className="cm-support-section"
         >
           <RecoveryCard
@@ -2281,8 +2295,8 @@ export function StructuredPlanRenderer({
 
       {hasNutritionSupport ? (
         <CollapsibleSection
-          title="Nutrition"
-          detailLabel="nutrition"
+          title={appText("text_7ab78b7058dd")}
+          detailLabel={appText("text_257c4a121ae5")}
           className="cm-support-section"
         >
           <NutritionCard
@@ -2296,8 +2310,8 @@ export function StructuredPlanRenderer({
       {showRawFallback ? (
         <details className="sp-collapse cm-raw-fallback">
           <summary className="sp-collapse-summary">
-            <span className="sp-collapse-title">Original plan text</span>
-            <span className="sp-collapse-action">Show original</span>
+            <span className="sp-collapse-title">{appText("text_3f0d15a25d2e")}</span>
+            <span className="sp-collapse-action">{appText("text_16194a69c43d")}</span>
           </summary>
           <div className="sp-collapse-body">
             <pre className="cm-raw-pre">{rawFallback}</pre>

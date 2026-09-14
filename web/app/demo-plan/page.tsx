@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { useTranslations as useAppTranslations } from "next-intl";
+
 
 const demoMeta = [
   { label: "Athlete", value: "Sample Fighter" },
@@ -61,36 +63,32 @@ const demoCoachNotes = [
 ];
 
 export default function DemoPlanPage() {
+    const appText = useAppTranslations("AppText");
   return (
     <>
       <section className="hero-panel welcome-panel">
         <div className="hero-panel-copy welcome-copy">
-          <p className="eyebrow">Demo plan</p>
-          <h1 className="hero-title">This is what a generated camp looks like.</h1>
+          <p className="eyebrow">{appText("text_9763d47db810")}</p>
+          <h1 className="hero-title">{appText("text_97e498d171af")}</h1>
           <p className="overview-command-summary">
-            A static sample of one week from a structured camp. No data is generated and nothing is saved.
-          </p>
+            {appText("text_0b38b929f662")}</p>
           <p className="muted welcome-context">
-            When you build your own, the planner uses your fight date, training days, restrictions, and goals to shape every week.
-          </p>
+            {appText("text_6945b8635a34")}</p>
           <div className="hero-actions welcome-actions">
             <Link href="/onboarding" className="cta">
-              Start Advanced Intake
-            </Link>
+              {appText("text_6b72880a3020")}</Link>
             <Link href="/quick-build" className="secondary-button">
-              Use Quick Build
-            </Link>
+              {appText("text_d3916772f715")}</Link>
             <Link href="/" className="ghost-button">
-              Back to dashboard
-            </Link>
+              {appText("text_b59e0c1cc1e1")}</Link>
           </div>
         </div>
       </section>
 
       <section className="support-panel">
         <div className="form-section-header">
-          <p className="kicker">Camp context</p>
-          <h2 className="form-section-title">Sample athlete setup</h2>
+          <p className="kicker">{appText("text_582cd02b9c74")}</p>
+          <h2 className="form-section-title">{appText("text_ec02fff20ee0")}</h2>
         </div>
         <div className="overview-detail-grid">
           <div className="overview-detail-column">
@@ -110,8 +108,8 @@ export default function DemoPlanPage() {
 
       <section className="support-panel">
         <div className="form-section-header">
-          <p className="kicker">Week 4 of 8 - SPP</p>
-          <h2 className="form-section-title">Sample weekly structure</h2>
+          <p className="kicker">{appText("text_c706a522ada2")}</p>
+          <h2 className="form-section-title">{appText("text_ec13f8eb67c7")}</h2>
         </div>
         <div className="demo-week-grid">
           {demoWeek.map((day) => (
@@ -129,8 +127,8 @@ export default function DemoPlanPage() {
 
       <section className="support-panel">
         <div className="form-section-header">
-          <p className="kicker">Why this layout</p>
-          <h2 className="form-section-title">Planner reasoning</h2>
+          <p className="kicker">{appText("text_573c5bc7b999")}</p>
+          <h2 className="form-section-title">{appText("text_0f821af72d93")}</h2>
         </div>
         <ul className="demo-coach-notes">
           {demoCoachNotes.map((note) => (
@@ -141,11 +139,9 @@ export default function DemoPlanPage() {
         </ul>
         <div className="hero-actions welcome-actions">
           <Link href="/onboarding" className="cta">
-            Start Advanced Intake
-          </Link>
+            {appText("text_6b72880a3020")}</Link>
           <Link href="/quick-build" className="secondary-button">
-            Use Quick Build
-          </Link>
+            {appText("text_d3916772f715")}</Link>
         </div>
       </section>
     </>

@@ -12,6 +12,9 @@ import {
 import { createPortal } from "react-dom";
 
 import type { IntakeOption } from "@/lib/intake-options";
+import { translateUiText } from "@/i18n/ui-text";
+import { useTranslations as useAppTranslations } from "next-intl";
+
 
 type CustomSelectProps = {
   id: string;
@@ -42,6 +45,7 @@ export function CustomSelect({
   invalid = false,
   describedBy,
 }: CustomSelectProps) {
+    const appText = useAppTranslations("AppText");
   const menuId = `${useId().replace(/:/g, "")}-listbox`;
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -347,8 +351,8 @@ export function CustomSelect({
                           }
                         }}
                       >
-                        <span className="custom-select-option-label">{option.label}</span>
-                        {option.disabled ? <span className="badge role-card-badge">🚫 Coming soon</span> : null}
+                        <span className="custom-select-option-label">{translateUiText(appText, option.label)}</span>
+                        {option.disabled ? <span className="badge role-card-badge">{appText("text_6ca9ebfa5a4a")}</span> : null}
                       </button>
                     );
                   })}

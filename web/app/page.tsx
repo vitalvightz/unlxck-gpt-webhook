@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useTranslations as useAppTranslations } from "next-intl";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
@@ -131,6 +131,7 @@ function OverviewDisclosure({
 }
 
 function WorkspaceOverviewSkeleton() {
+    const appText = useAppTranslations("AppText");
   return (
     <>
       <section
@@ -154,7 +155,7 @@ function WorkspaceOverviewSkeleton() {
         </div>
       </section>
       <section className="panel overview-secondary athlete-motion-slot athlete-motion-status" aria-busy="true">
-        <div className="overview-operational-strip" aria-label="Workspace status loading">
+        <div className="overview-operational-strip" aria-label={appText("text_0d5115da8dcd")}>
           {[0, 1, 2, 3].map((index) => (
             <div key={index} className="overview-operational-item">
               <Skeleton variant="text" width={72} height={10} />
@@ -195,11 +196,12 @@ function enrichConfirmedActivePlan(
  * that actionable surface.
  */
 function OverviewRiskWatch({ risks = [] }: { risks?: TodayCommandView["risk_watch"] }) {
+    const appText = useAppTranslations("AppText");
   if (!risks.length) {
     return (
       <article className="status-card overview-command-card overview-risk-card">
-        <p className="status-label">Risk watch</p>
-        <p className="muted">No active warnings.</p>
+        <p className="status-label">{appText("text_58c83cf6d3cb")}</p>
+        <p className="muted">{appText("text_392470a30027")}</p>
       </article>
     );
   }
@@ -210,7 +212,7 @@ function OverviewRiskWatch({ risks = [] }: { risks?: TodayCommandView["risk_watc
 
   return (
     <article className="status-card overview-command-card overview-risk-card">
-      <p className="status-label">Risk watch</p>
+      <p className="status-label">{appText("text_58c83cf6d3cb")}</p>
       <div className="overview-risk-list">
         {visible.map((risk, index) => {
           const timeframe = getRiskTimeframeLabel(risk.timeframe);
@@ -225,14 +227,14 @@ function OverviewRiskWatch({ risks = [] }: { risks?: TodayCommandView["risk_watc
       </div>
       {overflow > 0 ? (
         <Link href="/today" className="overview-risk-more">
-          Review {overflow} more on Today
-        </Link>
+          {appText("text_aff0766a5290")} {overflow} {appText("text_5331449eee0b")}</Link>
       ) : null}
     </article>
   );
 }
 
 export default function HomePage() {
+    const appText = useAppTranslations("AppText");
   const publicT = useTranslations("PublicHome");
   const landingOutcomePoints = [1, 2, 3].map((index) => ({
     label: publicT(`outcome${index}Label`),
@@ -355,16 +357,14 @@ export default function HomePage() {
   if (session && hasTransientMeError) {
     return (
       <section className="panel loading-card">
-        <p className="kicker">Overview</p>
-        <h1>Workspace temporarily unavailable</h1>
-        <p className="muted">We couldn&apos;t load your athlete profile. Please try again.</p>
+        <p className="kicker">{appText("text_d4b1ea5708dd")}</p>
+        <h1>{appText("text_f7bb482e7444")}</h1>
+        <p className="muted">{appText("text_5236a76bc075")}</p>
         <div className="hero-actions">
           <button type="button" className="cta" onClick={() => void refreshMe()}>
-            Retry
-          </button>
+            {appText("text_942087cc2d41")}</button>
           <button type="button" className="secondary-button" onClick={() => void signOut()}>
-            Sign out
-          </button>
+            {appText("text_48f0d3d397d4")}</button>
         </div>
       </section>
     );
@@ -373,9 +373,9 @@ export default function HomePage() {
   if (!isReady) {
     return (
       <section className="panel loading-card">
-        <p className="kicker">Overview</p>
-        <h1>Loading your athlete workspace</h1>
-        <p className="muted">Checking saved intake and plan history.</p>
+        <p className="kicker">{appText("text_d4b1ea5708dd")}</p>
+        <h1>{appText("text_fa76758076a6")}</h1>
+        <p className="muted">{appText("text_752df877697d")}</p>
       </section>
     );
   }
@@ -387,9 +387,9 @@ export default function HomePage() {
   if (session && isMeHydrated && !me) {
     return (
       <section className="panel loading-card">
-        <p className="kicker">Overview</p>
-        <h1>Redirecting to login</h1>
-        <p className="muted">Session expired. Sign in again.</p>
+        <p className="kicker">{appText("text_d4b1ea5708dd")}</p>
+        <h1>{appText("text_b8e9fb2876fb")}</h1>
+        <p className="muted">{appText("text_95f5b7d0dc11")}</p>
       </section>
     );
   }
@@ -408,24 +408,19 @@ export default function HomePage() {
       return (
         <section className="hero-panel welcome-panel athlete-motion-slot athlete-motion-header">
           <div className="hero-panel-copy welcome-copy">
-            <p className="eyebrow">Welcome to UNLXCK</p>
-            <h1 className="hero-title">Build your fight camp in minutes.</h1>
+            <p className="eyebrow">{appText("text_920005a82047")}</p>
+            <h1 className="hero-title">{appText("text_03cd4d0c961b")}</h1>
             <p className="overview-command-summary">
-              Create your athlete profile, generate a structured camp plan, and manage your setup from one dashboard.
-            </p>
+              {appText("text_bec4afb46941")}</p>
             <p className="muted welcome-context">
-              Designed for fighters and combat athletes. Quick Build takes about 2 minutes. Advanced Intake gives more control.
-            </p>
+              {appText("text_dec2911eff93")}</p>
             <div className="hero-actions welcome-actions">
               <Link href="/onboarding" className="cta">
-                Start Advanced Intake
-              </Link>
+                {appText("text_6b72880a3020")}</Link>
               <Link href="/quick-build" className="secondary-button">
-                Use Quick Build
-              </Link>
+                {appText("text_d3916772f715")}</Link>
               <Link href="/demo-plan" className="ghost-button">
-                View Demo Plan
-              </Link>
+                {appText("text_c6242b8c6c14")}</Link>
             </div>
             <InstallUnlxck variant="inline" />
           </div>
@@ -440,16 +435,14 @@ export default function HomePage() {
     if (!commandState && commandError) {
       return (
         <section className="panel loading-card">
-          <p className="kicker">Overview</p>
-          <h1>Camp command view unavailable</h1>
+          <p className="kicker">{appText("text_d4b1ea5708dd")}</p>
+          <h1>{appText("text_3fab2b4de3cd")}</h1>
           <p className="muted">{commandError}</p>
           <div className="hero-actions">
             <button type="button" className="cta" onClick={() => window.location.reload()}>
-              Retry
-            </button>
+              {appText("text_942087cc2d41")}</button>
             <Link href="/plans" className="secondary-button">
-              View plans
-            </Link>
+              {appText("text_a72e2bd3e148")}</Link>
           </div>
         </section>
       );
@@ -546,9 +539,9 @@ export default function HomePage() {
               <div className="plan-summary-actions overview-primary-actions">
                 <Link href={primaryHref} className="cta overview-primary-action">{primaryLabel}</Link>
                 {hasActivePlan ? (
-                  <Link href={`/plans/${activePlan.id}`} className="secondary-button">Camp plan</Link>
+                  <Link href={`/plans/${activePlan.id}`} className="secondary-button">{appText("text_38e0d581c5a5")}</Link>
                 ) : (
-                  <Link href="/quick-build" className="secondary-button">Quick Build</Link>
+                  <Link href="/quick-build" className="secondary-button">{appText("text_383a2e3c84f6")}</Link>
                 )}
               </div>
             </div>
@@ -565,7 +558,7 @@ export default function HomePage() {
                 onClick={() => void loadCommandState()}
                 disabled={isReloadingCommand}
               >
-                {isReloadingCommand ? "Retrying..." : "Retry"}
+                {isReloadingCommand ? appText("text_84a657bcf3d9") : appText("text_942087cc2d41")}
               </button>
             </div>
           ) : null}
@@ -574,12 +567,12 @@ export default function HomePage() {
         {/* Secondary — camp context, progress, full risk watch, disclaimer.
             Available but visually reduced so it never competes with the command. */}
         <section className="panel overview-secondary athlete-motion-slot athlete-motion-status">
-          <p className="kicker overview-secondary-eyebrow">{openOngoing ? "Training context" : "Camp context"}</p>
-          <div className="overview-operational-strip" aria-label={openOngoing ? "Training status" : "Camp status"}>
-            <div className="overview-operational-item"><span className="overview-operational-label">Plan</span><span className="overview-operational-value">{String(activePlan.name || "No active plan")}</span></div>
-            <div className="overview-operational-item"><span className="overview-operational-label">{openOngoing ? "Cycle" : "Camp day"}</span><span className="overview-operational-value">{openOngoing ? "Renewable 4-week block" : campDay || "Not set"}</span></div>
-            <div className="overview-operational-item"><span className="overview-operational-label">{openOngoing ? "Mode" : "Phase"}</span><span className="overview-operational-value">{openOngoing ? "Ongoing" : humanizeIfRawEnum(activePlan.phase) || "Not set"}</span></div>
-            <div className="overview-operational-item"><span className="overview-operational-label">Fight date</span><span className="overview-operational-value">{openOngoing ? "Not scheduled" : formatPlanFightDate(String(activePlan.fight_date || ""))}</span></div>
+          <p className="kicker overview-secondary-eyebrow">{openOngoing ? appText("text_e654782036c3") : appText("text_582cd02b9c74")}</p>
+          <div className="overview-operational-strip" aria-label={openOngoing ? appText("text_69801072c634") : appText("text_7469690d23b2")}>
+            <div className="overview-operational-item"><span className="overview-operational-label">{appText("text_fa8ed0bdabdd")}</span><span className="overview-operational-value">{String(activePlan.name || "No active plan")}</span></div>
+            <div className="overview-operational-item"><span className="overview-operational-label">{openOngoing ? appText("text_518653530449") : appText("text_d6594338fc6d")}</span><span className="overview-operational-value">{openOngoing ? appText("text_fb7f5a8dae6b") : campDay || "Not set"}</span></div>
+            <div className="overview-operational-item"><span className="overview-operational-label">{openOngoing ? appText("text_5e23ec6a300d") : appText("text_46342ec1eec9")}</span><span className="overview-operational-value">{openOngoing ? appText("text_a90620097624") : humanizeIfRawEnum(activePlan.phase) || "Not set"}</span></div>
+            <div className="overview-operational-item"><span className="overview-operational-label">{appText("text_86a6123f76f8")}</span><span className="overview-operational-value">{openOngoing ? appText("text_b3e24789bf8d") : formatPlanFightDate(String(activePlan.fight_date || ""))}</span></div>
           </div>
           <CampProgressBar plan={structuredPlan} trainingDay={trainingDay} variant="overview" />
           <OverviewRiskWatch risks={risks} />
@@ -594,7 +587,7 @@ export default function HomePage() {
         <div className="public-hero-grid">
           <div className="hero-panel-copy public-hero-copy">
             <p className="public-hero-motto" aria-label={publicT("motto")}>
-              <span>UNLXCK</span>
+              <span>{appText("text_3a8b686fee0a")}</span>
               <span>{publicT("motto").replace(/^UNLXCK\s+/i, "")}</span>
             </p>
             <h1 className="hero-title public-hero-title" aria-label={publicT("heroTitle")}>
@@ -644,7 +637,7 @@ export default function HomePage() {
                   <span>{publicT("intake")}</span>
                 </aside>
               <div className="public-workspace-list">
-                <article className="public-today-preview" aria-label="Today, modified session">
+                <article className="public-today-preview" aria-label={appText("text_fe4ebe18ac56")}>
                   <div className="public-today-preview-head">
                       <span className="public-today-preview-eyebrow">{publicT("today")}</span>
                       <span className="public-today-preview-status">{publicT("modifiedSession")}</span>

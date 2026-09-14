@@ -3,6 +3,8 @@
 import Link from "next/link";
 
 import { RequireAuth } from "@/components/auth-guard";
+import { useTranslations as useAppTranslations } from "next-intl";
+
 
 // Protected placeholder for roles that are not live yet (coach, gym_owner).
 // Wrapped in RequireAuth so anonymous visitors are sent to login, and no role
@@ -16,6 +18,7 @@ export function RoleComingSoon({
   title: string;
   message: string;
 }) {
+    const appText = useAppTranslations("AppText");
   return (
     <RequireAuth>
       <section className="panel loading-card" role="status">
@@ -24,8 +27,7 @@ export function RoleComingSoon({
         <p className="muted">{message}</p>
         <div className="hero-actions">
           <Link href="/plans" className="cta">
-            Back to your workspace
-          </Link>
+            {appText("text_8382ef3d7c18")}</Link>
         </div>
       </section>
     </RequireAuth>

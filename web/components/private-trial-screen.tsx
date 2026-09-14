@@ -9,6 +9,8 @@ import { PrivateTrialGuide } from "@/components/private-trial-guide";
 import { updateMe } from "@/lib/api";
 import { getAthleteWorkspaceHref } from "@/lib/auth-routing";
 import { PRIVATE_TRIAL_ACKNOWLEDGE_LABEL, requiresPrivateTrialAcknowledgement } from "@/lib/private-trial";
+import { useTranslations as useAppTranslations } from "next-intl";
+
 
 /**
  * The one-time trial briefing, shown after account creation and before
@@ -20,6 +22,7 @@ import { PRIVATE_TRIAL_ACKNOWLEDGE_LABEL, requiresPrivateTrialAcknowledgement } 
  * does not silently re-open the gate.
  */
 function PrivateTrialAcknowledgement() {
+    const appText = useAppTranslations("AppText");
   const router = useRouter();
   const { me, session, refreshMe } = useAppSession();
   const headingId = useId();
@@ -74,7 +77,7 @@ function PrivateTrialAcknowledgement() {
 
   return (
     <section className="panel private-trial-panel" aria-labelledby={headingId}>
-      <p className="kicker">Private trial</p>
+      <p className="kicker">{appText("text_e70b108ca4a7")}</p>
       <PrivateTrialGuide headingId={headingId} />
       {error ? (
         <p className="error-banner" role="alert">
@@ -84,17 +87,15 @@ function PrivateTrialAcknowledgement() {
       <div className="private-trial-actions">
         {isPending ? (
           <button type="button" className="cta" onClick={() => void acknowledge()} disabled={isSubmitting}>
-            {isSubmitting ? "Saving…" : PRIVATE_TRIAL_ACKNOWLEDGE_LABEL}
+            {isSubmitting ? appText("text_23e39291d613") : PRIVATE_TRIAL_ACKNOWLEDGE_LABEL}
           </button>
         ) : (
           <button type="button" className="cta" onClick={() => router.replace(continueHref)}>
-            CONTINUE
-          </button>
+            {appText("text_628db0c75988")}</button>
         )}
       </div>
       <p className="private-trial-settings-note muted">
-        You can read this again at any time in Settings under Private Trial Guide.
-      </p>
+        {appText("text_865e59e618fd")}</p>
     </section>
   );
 }

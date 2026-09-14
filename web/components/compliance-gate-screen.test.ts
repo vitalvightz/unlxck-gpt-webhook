@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const SOURCE = readFileSync(new URL("./compliance-gate-screen.tsx", import.meta.url), "utf8");
+const ENGLISH_MESSAGES = JSON.parse(readFileSync(new URL("../messages/en.json", import.meta.url), "utf8")) as { AppText: Record<string, string> };
+const ENGLISH_COPY = Object.values(ENGLISH_MESSAGES.AppText);
 
 test("profile verification uses the concise approved copy and legal links", () => {
   for (const text of [
@@ -11,7 +13,7 @@ test("profile verification uses the concise approved copy and legal links", () =
     "I accept the",
     "Allow UNLXCK to process health and recovery metrics to adapt my camp.",
   ]) {
-    assert.ok(SOURCE.includes(text), text);
+    assert.ok(SOURCE.includes(text) || ENGLISH_COPY.includes(text), text);
   }
   assert.ok(SOURCE.includes('href="/terms"'));
   assert.ok(SOURCE.includes('href="/privacy"'));

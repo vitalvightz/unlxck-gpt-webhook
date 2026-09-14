@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useTranslations as useAppTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -162,6 +162,7 @@ function summarizeIntake(me: MeResponse | null): SummaryLine[] {
 }
 
 function HeldPlansReviewNotice({ plans }: { plans: PlanSummary[] }) {
+    const appText = useAppTranslations("AppText");
   const visibleHeldPlans = plans.slice(0, 3);
   const remainingCount = Math.max(0, plans.length - visibleHeldPlans.length);
 
@@ -169,13 +170,12 @@ function HeldPlansReviewNotice({ plans }: { plans: PlanSummary[] }) {
     <article className="list-card plans-dashboard-card athlete-motion-slot athlete-motion-status">
       <div className="plans-dashboard-card-header">
         <div className="plans-dashboard-card-copy">
-          <p className="kicker">Admin review hold</p>
-          <h2>{plans.length === 1 ? "A plan is held for review" : `${plans.length} plans are held for review`}</h2>
+          <p className="kicker">{appText("text_3913e9f3b004")}</p>
+          <h2>{plans.length === 1 ? appText("text_f6fa09defada") : `${plans.length} plans are held for review`}</h2>
           <p className="muted">
-            These plans are saved, but they are not released to Overview or Today until admin approval clears the hold.
-          </p>
+            {appText("text_c61b33f3a2f9")}</p>
         </div>
-        <span className="badge">HELD</span>
+        <span className="badge">{appText("text_0b6463c43302")}</span>
       </div>
 
       <div className="plan-history-list plans-history-list">
@@ -190,8 +190,7 @@ function HeldPlansReviewNotice({ plans }: { plans: PlanSummary[] }) {
             </div>
             <div className="plan-history-meta">
               <Link href={`/plans/${plan.plan_id}?review_required=1`} className="ghost-button">
-                Review hold
-              </Link>
+                {appText("text_06c73a110c8d")}</Link>
             </div>
           </div>
         ))}
@@ -199,8 +198,7 @@ function HeldPlansReviewNotice({ plans }: { plans: PlanSummary[] }) {
 
       {remainingCount > 0 ? (
         <p className="muted">
-          {remainingCount} more held plan{remainingCount === 1 ? "" : "s"} shown in saved plan history.
-        </p>
+          {remainingCount} {appText("text_fcc4ec9969fc")}{remainingCount === 1 ? "" : appText("text_043a718774c5")} {appText("text_48681c8fd8c8")}</p>
       ) : null}
     </article>
   );
@@ -223,6 +221,7 @@ function PlanCard({
   onSetActive: (plan: PlanSummary) => Promise<void>;
   isSettingActive: boolean;
 }) {
+    const appText = useAppTranslations("AppText");
   const { showToast } = useToast();
   const [pendingAction, setPendingAction] = useState<"rename" | "delete" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -373,8 +372,7 @@ function PlanCard({
   const inlineRenameForm = isRenaming ? (
     <form className="plan-inline-rename" onSubmit={handleRenameSubmit}>
       <label className="plan-inline-rename-label" htmlFor={renameInputId}>
-        Rename plan
-      </label>
+        {appText("text_3448258b1fbd")}</label>
       <div className="plan-inline-rename-row">
         <input
           ref={renameInputRef}
@@ -387,11 +385,10 @@ function PlanCard({
         />
         <div className="plan-inline-rename-actions">
           <button type="submit" className="secondary-button" disabled={isActionPending}>
-            {pendingAction === "rename" ? "Saving..." : "Save"}
+            {pendingAction === "rename" ? appText("text_dc85af8f2b1d") : appText("text_1509f561f241")}
           </button>
           <button type="button" className="ghost-button" onClick={handleRenameCancel} disabled={isActionPending}>
-            Cancel
-          </button>
+            {appText("text_19766ed6ccb2")}</button>
         </div>
       </div>
     </form>
@@ -409,21 +406,18 @@ function PlanCard({
           onClick={(event) => event.stopPropagation()}
         >
           <div className="plan-dialog-header">
-            <p className="kicker">Archive plan</p>
+            <p className="kicker">{appText("text_978244186546")}</p>
             <h2 id={`delete-plan-title-${plan.plan_id}`} className="plan-dialog-title">
-              Archive {getPlanDisplayName(plan)}?
-            </h2>
+              {appText("text_66f4804ee23d")}{getPlanDisplayName(plan)}{appText("text_8a8de823d5ed")}</h2>
           </div>
           <p id={`delete-plan-body-${plan.plan_id}`} className="muted">
-            This moves the plan to your archived list. You can still view it later.
-          </p>
+            {appText("text_8affd0d4d884")}</p>
           {error ? <div className="error-banner">{error}</div> : null}
           <div className="plan-dialog-actions">
             <button type="button" className="ghost-button" onClick={handleDeleteDismiss} disabled={pendingAction === "delete"}>
-              Cancel
-            </button>
+              {appText("text_19766ed6ccb2")}</button>
             <button type="button" className="secondary-button" onClick={handleDeleteConfirm} disabled={pendingAction === "delete"}>
-              {pendingAction === "delete" ? "Archiving..." : "Archive"}
+              {pendingAction === "delete" ? appText("text_6f3407113f07") : appText("text_66f4804ee23d")}
             </button>
           </div>
         </div>
@@ -442,41 +436,40 @@ function PlanCard({
           </Link>
           {inlineRenameForm}
           <div className="plan-card-meta">
-            {plan.fight_date ? <span className="muted">Fight {fightDateLabel}</span> : null}
+            {plan.fight_date ? <span className="muted">{appText("text_1ef142c8213e")}{fightDateLabel}</span> : null}
             <span className="muted">{styleSummary}</span>
-            <span className="muted">Built {createdLabel}</span>
+            <span className="muted">{appText("text_cfe0e6cbcf5c")}{createdLabel}</span>
           </div>
           {reviewReason ? <p className="muted">{reviewReason}</p> : null}
         </div>
         <div className="plan-history-meta">
           <span className={`badge${archived || completed ? " status-badge-neutral plan-archived-badge" : ""}`}>
-            {active ? "ACTIVE" : archived ? "ARCHIVED" : completed ? "COMPLETED" : statusLabel}
+            {active ? appText("text_630c2f1c0ee1") : archived ? appText("text_24e132330784") : completed ? appText("text_c48179f5246e") : statusLabel}
           </span>
-          {!active && completed ? <span className="muted">Camp complete</span> : null}
-          {!active && !completed && !eligibleForActive ? <span className="muted">Cannot be active</span> : null}
+          {!active && completed ? <span className="muted">{appText("text_a761ce901255")}</span> : null}
+          {!active && !completed && !eligibleForActive ? <span className="muted">{appText("text_72c68b0adbc9")}</span> : null}
           <div className="plan-card-actions plans-history-actions">
             <Link href={`/plans/${plan.plan_id}`} className="ghost-button">
-              {archived ? "Preview" : "Open"}
+              {archived ? appText("text_324b134f57c7") : appText("text_ed077f3d8125")}
             </Link>
             {archived ? (
               <Link href="/onboarding" className="ghost-button">
-                Create New Plan
-              </Link>
+                {appText("text_255aec73f85a")}</Link>
             ) : null}
             {!archived && !active && eligibleForActive ? (
               <button type="button" className="secondary-button" onClick={() => void onSetActive(plan)} disabled={isActionPending || isRenaming}>
-                {isSettingActive ? "Setting..." : "Activate"}
+                {isSettingActive ? appText("text_48fcb6854990") : appText("text_24433c70eba5")}
               </button>
             ) : null}
             {!archived ? (
               <details className="plan-action-menu plans-history-menu">
-                <summary className="ghost-button">Manage</summary>
+                <summary className="ghost-button">{appText("text_5a23444828db")}</summary>
                 <div className="plan-action-menu-popover">
                   <button type="button" className="ghost-button" onClick={handleRenameStart} disabled={isActionPending || isRenaming}>
-                    {pendingAction === "rename" ? "Saving..." : isRenaming ? "Editing name" : "Rename"}
+                    {pendingAction === "rename" ? appText("text_dc85af8f2b1d") : isRenaming ? appText("text_3f698ede035f") : appText("text_3064d79a295c")}
                   </button>
                   <button type="button" className="ghost-button danger-button" onClick={handleDeleteRequest} disabled={isActionPending || isRenaming}>
-                    {pendingAction === "delete" ? "Archiving..." : "Archive"}
+                    {pendingAction === "delete" ? appText("text_6f3407113f07") : appText("text_66f4804ee23d")}
                   </button>
                 </div>
               </details>
@@ -508,6 +501,7 @@ function PlanActivationConflictDialog({
   onStartAfter: () => void;
   onCancel: () => void;
 }) {
+    const appText = useAppTranslations("AppText");
   if (typeof document === "undefined") {
     return null;
   }
@@ -523,7 +517,7 @@ function PlanActivationConflictDialog({
         onClick={(event) => event.stopPropagation()}
       >
         <div className="plan-dialog-header">
-          <p className="kicker">Active plan conflict</p>
+          <p className="kicker">{appText("text_938ca3ac3e5b")}</p>
           <h2 id={`activate-conflict-title-${plan.plan_id}`} className="plan-dialog-title">
             {getPlanDisplayName(plan)}
           </h2>
@@ -538,32 +532,28 @@ function PlanActivationConflictDialog({
             onClick={() => void onConfirm("replace")}
             disabled={isPending}
           >
-            Replace current plan
-          </button>
+            {appText("text_1ed300e8dd25")}</button>
           <button
             type="button"
             className="secondary-button active-conflict-button"
             onClick={() => void onConfirm("pause")}
             disabled={isPending}
           >
-            Pause current plan
-          </button>
+            {appText("text_e4442a988e6d")}</button>
           <button
             type="button"
             className="ghost-button active-conflict-button active-conflict-button-wide"
             onClick={onStartAfter}
             disabled={isPending}
           >
-            Start after current plan ends
-          </button>
+            {appText("text_a88e0234c719")}</button>
           <button
             type="button"
             className="ghost-button active-conflict-button active-conflict-button-cancel"
             onClick={onCancel}
             disabled={isPending}
           >
-            Cancel
-          </button>
+            {appText("text_19766ed6ccb2")}</button>
         </div>
       </div>
     </div>,
@@ -614,6 +604,7 @@ function LatestPlanCard({
   onPlanDeleted: (planId: string) => void;
   onPlanRenamed: (updatedPlan: PlanSummary) => void;
 }) {
+    const appText = useAppTranslations("AppText");
   const { showToast } = useToast();
   const [pendingAction, setPendingAction] = useState<"rename" | "delete" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -772,8 +763,7 @@ function LatestPlanCard({
   const inlineRenameForm = plan && isRenaming ? (
     <form className="plan-inline-rename" onSubmit={handleRenameSubmit}>
       <label className="plan-inline-rename-label" htmlFor={renameInputId}>
-        Rename latest plan
-      </label>
+        {appText("text_58a73698329f")}</label>
       <div className="plan-inline-rename-row">
         <input
           ref={renameInputRef}
@@ -786,11 +776,10 @@ function LatestPlanCard({
         />
         <div className="plan-inline-rename-actions">
           <button type="submit" className="secondary-button" disabled={isActionPending}>
-            {pendingAction === "rename" ? "Saving..." : "Save"}
+            {pendingAction === "rename" ? appText("text_dc85af8f2b1d") : appText("text_1509f561f241")}
           </button>
           <button type="button" className="ghost-button" onClick={handleRenameCancel} disabled={isActionPending}>
-            Cancel
-          </button>
+            {appText("text_19766ed6ccb2")}</button>
         </div>
       </div>
     </form>
@@ -808,21 +797,18 @@ function LatestPlanCard({
           onClick={(event) => event.stopPropagation()}
         >
           <div className="plan-dialog-header">
-            <p className="kicker">Archive latest plan</p>
+            <p className="kicker">{appText("text_d35bfdc67670")}</p>
             <h2 id={`delete-latest-plan-title-${plan.plan_id}`} className="plan-dialog-title">
-              Archive {getPlanDisplayName(plan)}?
-            </h2>
+              {appText("text_66f4804ee23d")}{getPlanDisplayName(plan)}{appText("text_8a8de823d5ed")}</h2>
           </div>
           <p id={`delete-latest-plan-body-${plan.plan_id}`} className="muted">
-            This moves the plan to your archived list. You can still view it later.
-          </p>
+            {appText("text_8affd0d4d884")}</p>
           {error ? <div className="error-banner">{error}</div> : null}
           <div className="plan-dialog-actions">
             <button type="button" className="ghost-button" onClick={handleDeleteDismiss} disabled={pendingAction === "delete"}>
-              Cancel
-            </button>
+              {appText("text_19766ed6ccb2")}</button>
             <button type="button" className="secondary-button" onClick={handleDeleteConfirm} disabled={pendingAction === "delete"}>
-              {pendingAction === "delete" ? "Archiving..." : "Archive"}
+              {pendingAction === "delete" ? appText("text_6f3407113f07") : appText("text_66f4804ee23d")}
             </button>
           </div>
         </div>
@@ -836,31 +822,30 @@ function LatestPlanCard({
       <article className="list-card plans-dashboard-card plans-dashboard-primary-card">
         <div className="plans-dashboard-card-header">
           <div className="plans-dashboard-card-copy">
-            <p className="kicker">Active Plan</p>
-            <h2>{plan ? getPlanDisplayName(plan) : "No active plan"}</h2>
+            <p className="kicker">{appText("text_340baae8d262")}</p>
+            <h2>{plan ? getPlanDisplayName(plan) : appText("text_637ae3d9e272")}</h2>
             <p className="muted">
               {plan
-                ? "This plan controls Overview and Today."
+                ? appText("text_55974c130fa6")
                 : hasSavedIntake
-                  ? "No active plan is selected. Activate one of your saved plans."
-                  : "Complete Intake or Quick Build to create your first active plan."}
+                  ? appText("text_c081cb9060f3")
+                  : appText("text_3cf62a8b076f")}
             </p>
             {!plan ? (
               <div className="empty-state-example plans-dashboard-empty-example">
-                <p className="label">What appears here next</p>
+                <p className="label">{appText("text_017fd22c1e13")}</p>
                 <p className="empty-state-example-body">
-                  Once a plan is active, it opens here with fight date, status, and management actions.
-                </p>
+                  {appText("text_c9aba0169e6e")}</p>
               </div>
             ) : null}
           </div>
-          {plan?.status ? <span className="badge">ACTIVE</span> : null}
+          {plan?.status ? <span className="badge">{appText("text_630c2f1c0ee1")}</span> : null}
         </div>
 
         <DashboardSummary
-          title="Current snapshot"
+          title={appText("text_6d3657e552a8")}
           lines={latestPlanLines}
-          emptyLabel="No active plan metadata yet."
+          emptyLabel={appText("text_354ca0dd5314")}
           compact
         />
 
@@ -870,8 +855,7 @@ function LatestPlanCard({
           {plan ? (
             <>
               <Link href={`/plans/${plan.plan_id}`} className="cta">
-                Open plan
-              </Link>
+                {appText("text_9e70b18d5255")}</Link>
               <Link
                 href={intake ? "/generate" : "/onboarding"}
                 className="ghost-button"
@@ -881,23 +865,22 @@ function LatestPlanCard({
                   }
                 }}
               >
-                New version
-              </Link>
+                {appText("text_7246e01bf5dc")}</Link>
               <details className="plan-action-menu plans-dashboard-management-actions">
-                <summary className="ghost-button">Manage</summary>
+                <summary className="ghost-button">{appText("text_5a23444828db")}</summary>
                 <div className="plan-action-menu-popover">
                   <button type="button" className="ghost-button" onClick={handleRenameStart} disabled={isActionPending || isRenaming}>
-                    {pendingAction === "rename" ? "Saving..." : isRenaming ? "Editing name" : "Rename"}
+                    {pendingAction === "rename" ? appText("text_dc85af8f2b1d") : isRenaming ? appText("text_3f698ede035f") : appText("text_3064d79a295c")}
                   </button>
                   <button type="button" className="ghost-button danger-button" onClick={handleDeleteRequest} disabled={isActionPending || isRenaming}>
-                    {pendingAction === "delete" ? "Archiving..." : "Archive"}
+                    {pendingAction === "delete" ? appText("text_6f3407113f07") : appText("text_66f4804ee23d")}
                   </button>
                 </div>
               </details>
             </>
           ) : (
             <Link href={hasSavedIntake ? "/onboarding" : "/quick-build"} className="cta">
-              {hasSavedIntake ? "Resume Advanced Intake" : "Quick Build New Plan"}
+              {hasSavedIntake ? appText("text_f9f11b3f2f2f") : appText("text_004feb71bbd7")}
             </Link>
           )}
         </div>
@@ -914,6 +897,7 @@ function IntakeCard({
 }: {
   me: MeResponse | null;
 }) {
+    const appText = useAppTranslations("AppText");
   const profileLines = summarizeProfile(me);
   const intake = getIntakeSource(me);
   const intakeLines = summarizeIntake(me);
@@ -924,12 +908,12 @@ function IntakeCard({
     <article className="list-card plans-dashboard-card plans-source-card">
       <div className="plans-dashboard-card-header">
         <div className="plans-dashboard-card-copy">
-          <p className="kicker">Plan source</p>
+          <p className="kicker">{appText("text_995d74d7974c")}</p>
           <h2>{profileLines[0]?.value || "Athlete profile"}</h2>
-          <p className="muted">Profile and intake details used for your next build.</p>
+          <p className="muted">{appText("text_e44c11f1b9b3")}</p>
         </div>
         <span className={`badge ${hasIntake ? "status-badge-success" : "status-badge-neutral"}`}>
-          {hasIntake ? "Intake ready" : "Profile only"}
+          {hasIntake ? appText("text_d18ca7852333") : appText("text_28c8508c2541")}
         </span>
       </div>
 
@@ -943,12 +927,12 @@ function IntakeCard({
           ))}
         </dl>
       ) : (
-        <p className="muted">No plan source details saved yet.</p>
+        <p className="muted">{appText("text_6576c97ed653")}</p>
       )}
 
       <div className="plan-card-actions plans-dashboard-actions">
         <Link href="/onboarding" className="ghost-button">
-          {hasIntake ? "Review & edit intake" : "Complete Advanced Intake"}
+          {hasIntake ? appText("text_5fc7125dc9ec") : appText("text_5a0ddd65c6e3")}
         </Link>
       </div>
     </article>
@@ -956,17 +940,17 @@ function IntakeCard({
 }
 
 function PlansSyncState() {
+    const appText = useAppTranslations("AppText");
   return (
     <article className="list-card plans-sync-card" aria-busy="true">
       <div className="plans-dashboard-card-header">
         <div className="plans-dashboard-card-copy">
-          <p className="kicker">Plan sync</p>
-          <h2>Loading saved fight camps</h2>
+          <p className="kicker">{appText("text_d138c7912580")}</p>
+          <h2>{appText("text_88ceaccd4702")}</h2>
           <p className="muted">
-            Pulling the active camp, plan history, and current intake from the athlete record.
-          </p>
+            {appText("text_2a8a270db701")}</p>
         </div>
-        <span className="badge status-badge-neutral">Syncing</span>
+        <span className="badge status-badge-neutral">{appText("text_5c8b9e1ce0a2")}</span>
       </div>
       <div className="plans-sync-grid" aria-hidden="true">
         <div className="plans-sync-line plans-sync-line-short" />
@@ -978,6 +962,7 @@ function PlansSyncState() {
 }
 
 export default function PlansPage() {
+    const appText = useAppTranslations("AppText");
   const t = useTranslations("Workspace");
   const router = useRouter();
   const { showToast } = useToast();
@@ -1196,7 +1181,7 @@ export default function PlansPage() {
                   onClick={() => setIsArchiveOpen((current) => !current)}
                   aria-expanded={isArchiveOpen}
                   aria-controls="plans-history-dropdown"
-                  aria-label={isArchiveOpen ? "Hide older saved plans" : "Show older saved plans"}
+                  aria-label={isArchiveOpen ? appText("text_b23f8f717e99") : appText("text_b2f59ebc6326")}
                 >
                   <span className="plans-history-toggle-copy">
                     {isArchiveOpen ? t("hideArchive") : t("viewArchive")}
@@ -1249,7 +1234,7 @@ export default function PlansPage() {
                 ))}
               </div>
             ) : (
-              <p className="muted">No other saved plans.</p>
+              <p className="muted">{appText("text_313749b7f694")}</p>
             )}
           </div>
         ) : null}

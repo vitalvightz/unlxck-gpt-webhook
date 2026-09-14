@@ -7,6 +7,8 @@ import {
   formatWeight,
 } from "@/lib/nutrition-bodyweight";
 import type { NutritionBodyweightLogEntry } from "@/lib/types";
+import { useTranslations as useAppTranslations } from "next-intl";
+
 
 const RANGE_OPTIONS: BodyweightRange[] = ["7D", "30D", "All"];
 
@@ -42,6 +44,7 @@ export function NutritionBodyweightChart({
   targetWeightKg,
   onRangeChange,
 }: NutritionBodyweightChartProps) {
+    const appText = useAppTranslations("AppText");
   const uid = useId().replace(/:/g, "");
   const gradientId = `bw-area-${uid}`;
   const filteredDescending = filterBodyweightEntriesByRange(entries, range);
@@ -52,11 +55,11 @@ export function NutritionBodyweightChart({
       <article className={styles.chartShell}>
         <div className={styles.chartHeader}>
           <div className={styles.chartHeaderCopy}>
-            <p className="kicker">Trend chart</p>
-            <h2 className="form-section-title">Weight trace</h2>
-            <p className="muted">This surface will map your daily drift, target line, and recent change as soon as the first weigh-in lands.</p>
+            <p className="kicker">{appText("text_bde546e8675a")}</p>
+            <h2 className="form-section-title">{appText("text_7e3293bbbd58")}</h2>
+            <p className="muted">{appText("text_f955a9832d67")}</p>
           </div>
-          <div className={styles.rangeRail} aria-label="Bodyweight chart range">
+          <div className={styles.rangeRail} aria-label={appText("text_d474e8230937")}>
             {RANGE_OPTIONS.map((option) => (
               <button
                 key={option}
@@ -72,10 +75,9 @@ export function NutritionBodyweightChart({
         </div>
         <div className={styles.chartFrame}>
           <div className={styles.chartEmpty}>
-            <p className={styles.chartEmptyTitle}>No trendline yet</p>
+            <p className={styles.chartEmptyTitle}>{appText("text_68f7804bf1f3")}</p>
             <p className={styles.chartEmptyBody}>
-              Log the first weigh-in below to start the red trace, unlock recent-change context, and turn this panel into a useful cut monitor.
-            </p>
+              {appText("text_10a743b91847")}</p>
           </div>
         </div>
       </article>
@@ -136,11 +138,11 @@ export function NutritionBodyweightChart({
     <article className={styles.chartShell}>
       <div className={styles.chartHeader}>
         <div className={styles.chartHeaderCopy}>
-          <p className="kicker">Trend chart</p>
-          <h2 className="form-section-title">Weight trace</h2>
-          <p className="muted">Actual log entries drive the red trend line. The target line stays subtle so the data keeps first priority.</p>
+          <p className="kicker">{appText("text_bde546e8675a")}</p>
+          <h2 className="form-section-title">{appText("text_7e3293bbbd58")}</h2>
+          <p className="muted">{appText("text_9e7317bbce05")}</p>
         </div>
-        <div className={styles.rangeRail} aria-label="Bodyweight chart range">
+        <div className={styles.rangeRail} aria-label={appText("text_d474e8230937")}>
           {RANGE_OPTIONS.map((option) => (
             <button
               key={option}
@@ -189,8 +191,7 @@ export function NutritionBodyweightChart({
                 textAnchor="end"
                 letterSpacing="0.14em"
               >
-                TARGET
-              </text>
+                {appText("text_3dc0db889344")}</text>
             </>
           ) : null}
 
@@ -202,8 +203,7 @@ export function NutritionBodyweightChart({
             fontFamily="var(--font-mono)"
             letterSpacing="0.14em"
           >
-            {highestWeight.toFixed(1)} KG
-          </text>
+            {highestWeight.toFixed(1)} {appText("text_88ed32099fc7")}</text>
           <text
             x={paddingLeft}
             y={chartBottom - 8}
@@ -212,8 +212,7 @@ export function NutritionBodyweightChart({
             fontFamily="var(--font-mono)"
             letterSpacing="0.14em"
           >
-            {lowestWeight.toFixed(1)} KG
-          </text>
+            {lowestWeight.toFixed(1)} {appText("text_88ed32099fc7")}</text>
 
           <path d={areaPath} fill={`url(#${gradientId})`} />
           <path
@@ -274,28 +273,28 @@ export function NutritionBodyweightChart({
         <div className={styles.chartLegend}>
           <div className={styles.chartLegendItem}>
             <span className={styles.chartLegendSwatch} aria-hidden="true" />
-            <p className={styles.chartLegendLabel}>Logged weight</p>
+            <p className={styles.chartLegendLabel}>{appText("text_1dd32631174d")}</p>
           </div>
           {targetY != null ? (
             <div className={styles.chartLegendItem}>
               <span className={styles.chartLegendSwatchMuted} aria-hidden="true" />
-              <p className={styles.chartLegendLabel}>Target weight</p>
+              <p className={styles.chartLegendLabel}>{appText("text_f65b5154311e")}</p>
             </div>
           ) : null}
         </div>
 
         <div className={styles.chartStats}>
           <div className={styles.chartStat}>
-            <p className={styles.chartLegendLabel}>Latest in range</p>
+            <p className={styles.chartLegendLabel}>{appText("text_0e0871876615")}</p>
             <p className={styles.chartStatValue}>{formatWeight(latestEntry?.weight_kg)}</p>
           </div>
           <div className={styles.chartStat}>
-            <p className={styles.chartLegendLabel}>High / low</p>
-            <p className={styles.chartStatValue}>{highestWeight.toFixed(1)} / {lowestWeight.toFixed(1)} kg</p>
+            <p className={styles.chartLegendLabel}>{appText("text_819a07578fac")}</p>
+            <p className={styles.chartStatValue}>{highestWeight.toFixed(1)} {appText("text_8a5edab28263")}{lowestWeight.toFixed(1)} {appText("text_131ed734290d")}</p>
           </div>
           <div className={styles.chartStat}>
-            <p className={styles.chartLegendLabel}>Span</p>
-            <p className={styles.chartStatValue}>{formatBodyweightDate(firstDate)} - {formatBodyweightDate(lastDate)}</p>
+            <p className={styles.chartLegendLabel}>{appText("text_5b0e83c19eb4")}</p>
+            <p className={styles.chartStatValue}>{formatBodyweightDate(firstDate)} {appText("text_3973e022e932")}{formatBodyweightDate(lastDate)}</p>
           </div>
         </div>
       </div>

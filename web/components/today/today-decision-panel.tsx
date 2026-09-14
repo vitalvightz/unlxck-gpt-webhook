@@ -2,6 +2,9 @@
 
 import { type TodayDecisionBanner, type TodayDecisionTier } from "@/lib/today";
 import type { TodaySafetyCheck } from "@/lib/types";
+import { useTranslations as useAppTranslations } from "next-intl";
+import { translateUiText } from "@/i18n/ui-text";
+
 
 function isSupersededReadinessMessage(value?: string): boolean {
   return value?.trim() ===
@@ -55,6 +58,7 @@ export function TodayDecisionPanel({
   sources?: string[];
   confidenceNote?: string;
 }) {
+    const appText = useAppTranslations("AppText");
   if (!banner) {
     return null;
   }
@@ -110,11 +114,11 @@ export function TodayDecisionPanel({
       </div>
       {hasEvidence ? (
         <details className="today-decision-disclosure" open>
-          <summary>{isSafetyNotice ? "Why this message?" : "Why this decision?"}</summary>
+          <summary>{isSafetyNotice ? appText("text_b925939d6b9a") : appText("text_e2a446045020")}</summary>
         <dl className="today-decision-evidence" data-evidence-count={evidenceCount}>
           {triggerLabels.length ? (
             <div className="today-decision-row">
-              <dt>Trigger</dt>
+              <dt>{appText("text_8b9c643731c9")}</dt>
               <dd>
                 <ul className="today-decision-values">
                   {triggerLabels.map((trigger) => (
@@ -126,11 +130,11 @@ export function TodayDecisionPanel({
           ) : null}
           {checks.length ? (
             <div className="today-decision-row">
-              <dt>Checked</dt>
+              <dt>{appText("text_0efd92a33590")}</dt>
               <dd>
                 <ul className="today-decision-values">
                   {checks.map((check) => (
-                    <li key={check.code}>{`${check.label} — ${check.result_label}`}</li>
+                    <li key={check.code}>{`${translateUiText(appText, check.label)} — ${translateUiText(appText, check.result_label)}`}</li>
                   ))}
                 </ul>
               </dd>
@@ -138,7 +142,7 @@ export function TodayDecisionPanel({
           ) : null}
           {contextLabels.length ? (
             <div className="today-decision-row">
-              <dt>Context</dt>
+              <dt>{appText("text_a6e600a10fed")}</dt>
               <dd>
                 <ul className="today-decision-values">
                   {contextLabels.map((contextLabel) => (
@@ -150,7 +154,7 @@ export function TodayDecisionPanel({
           ) : null}
           {usedSources.length || note ? (
             <div className="today-decision-row">
-              <dt>{isSafetyNotice ? "Message based on" : "Decision based on"}</dt>
+              <dt>{isSafetyNotice ? appText("text_6a2498e3d1db") : appText("text_53edd1768a1e")}</dt>
               <dd>
                 {usedSources.length ? (
                   <ul className="today-decision-inputs">

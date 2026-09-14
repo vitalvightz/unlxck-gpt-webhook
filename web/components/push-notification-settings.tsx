@@ -10,11 +10,14 @@ import {
   type NotificationPreferences,
 } from "@/lib/notification-preferences";
 import {
+
   getPushOptInState,
   subscribeToPushNotifications,
   unsubscribeFromPushNotifications,
   type PushOptInState,
 } from "@/lib/push";
+import { useTranslations as useAppTranslations } from "next-intl";
+import { translateUiText } from "@/i18n/ui-text";
 
 type BooleanPreferenceKey = Exclude<
   keyof NotificationPreferences,
@@ -65,6 +68,7 @@ const PREFERENCE_ROWS: Array<{
 ];
 
 export function PushNotificationSettings({ token }: { token: string }) {
+    const appText = useAppTranslations("AppText");
   const [state, setState] = useState<PushOptInState | "loading" | "working">("loading");
   const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
   const [quietStart, setQuietStart] = useState(DEFAULT_NOTIFICATION_PREFERENCES.quiet_hours_start);
@@ -194,7 +198,7 @@ export function PushNotificationSettings({ token }: { token: string }) {
     <div className="settings-push-block">
       <div className="settings-toggle-row settings-push-row">
         <span>
-          <span className="settings-toggle-title">Push notifications on this device</span>
+          <span className="settings-toggle-title">{appText("text_0e8c99e2907d")}</span>
           <span className="settings-toggle-detail">{detail}</span>
         </span>
         {canToggle ? (
@@ -205,10 +209,10 @@ export function PushNotificationSettings({ token }: { token: string }) {
             disabled={state === "working"}
           >
             {state === "working"
-              ? "Updating…"
+              ? appText("text_dfe40efe921f")
               : state === "subscribed"
-                ? "Turn off"
-                : "Turn on"}
+                ? appText("text_06f0e210b27d")
+                : appText("text_5a1f096a0d8d")}
           </button>
         ) : null}
       </div>
@@ -217,7 +221,7 @@ export function PushNotificationSettings({ token }: { token: string }) {
         <div className="settings-toggle-list settings-server-notification-list">
           <label className="settings-toggle-row">
             <span>
-              <span className="settings-toggle-title">{MASTER_ROW.title}</span>
+              <span className="settings-toggle-title">{translateUiText(appText, MASTER_ROW.title)}</span>
               <span className="settings-toggle-detail">{MASTER_ROW.detail}</span>
             </span>
             <input
@@ -231,7 +235,7 @@ export function PushNotificationSettings({ token }: { token: string }) {
           {PREFERENCE_ROWS.map((row) => (
             <label key={row.key} className="settings-toggle-row">
               <span>
-                <span className="settings-toggle-title">{row.title}</span>
+                <span className="settings-toggle-title">{translateUiText(appText, row.title)}</span>
                 <span className="settings-toggle-detail">{row.detail}</span>
               </span>
               <input
@@ -245,18 +249,18 @@ export function PushNotificationSettings({ token }: { token: string }) {
 
           <div className="settings-subsection">
             <div className="settings-subsection-header">
-              <h3 className="settings-subsection-title">Session timing</h3>
+              <h3 className="settings-subsection-title">{appText("text_e7924729faca")}</h3>
             </div>
             <div className="settings-control-grid">
               <label className="field">
-                <span>Usual training time</span>
+                <span>{appText("text_c7a7f97b77db")}</span>
                 <input
                   type="time"
                   value={trainingTime}
                   disabled={paused || !preferences.session_reminders || workingPreference !== null}
                   onChange={(event) => setTrainingTime(event.target.value)}
                 />
-                <small>Optional. Without a time, UNLXCK will not guess when you train.</small>
+                <small>{appText("text_3948edaa5ec0")}</small>
               </label>
             </div>
             <div className="form-actions settings-subsection-actions">
@@ -271,21 +275,20 @@ export function PushNotificationSettings({ token }: { token: string }) {
                 }
                 onClick={() => void saveTrainingTime()}
               >
-                {workingPreference === "training-time" ? "Saving…" : "Save training time"}
+                {workingPreference === "training-time" ? appText("text_23e39291d613") : appText("text_ff9c89a22b84")}
               </button>
             </div>
           </div>
 
           <div className="settings-subsection">
             <div className="settings-subsection-header">
-              <h3 className="settings-subsection-title">Quiet hours</h3>
+              <h3 className="settings-subsection-title">{appText("text_bf0671dd69c6")}</h3>
             </div>
             <label className="settings-toggle-row">
               <span>
-                <span className="settings-toggle-title">Hold routine notifications</span>
+                <span className="settings-toggle-title">{appText("text_0720fc0f5836")}</span>
                 <span className="settings-toggle-detail">
-                  Routine coaching notifications wait outside this window.
-                </span>
+                  {appText("text_98c3cac3003b")}</span>
               </span>
               <input
                 type="checkbox"
@@ -296,7 +299,7 @@ export function PushNotificationSettings({ token }: { token: string }) {
             </label>
             <div className="settings-control-grid">
               <label className="field">
-                <span>Start</span>
+                <span>{appText("text_e4bb9f1ece9a")}</span>
                 <input
                   type="time"
                   value={quietStart}
@@ -305,7 +308,7 @@ export function PushNotificationSettings({ token }: { token: string }) {
                 />
               </label>
               <label className="field">
-                <span>End</span>
+                <span>{appText("text_f4db1e48476f")}</span>
                 <input
                   type="time"
                   value={quietEnd}
@@ -325,7 +328,7 @@ export function PushNotificationSettings({ token }: { token: string }) {
                 }
                 onClick={() => void saveQuietHours()}
               >
-                {workingPreference === "quiet-hours" ? "Saving…" : "Save quiet hours"}
+                {workingPreference === "quiet-hours" ? appText("text_23e39291d613") : appText("text_884998ab25e8")}
               </button>
             </div>
           </div>

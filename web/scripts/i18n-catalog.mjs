@@ -149,7 +149,9 @@ async function translateBatch({ endpoint, key, region, language, items, fetchImp
   });
   if (!response.ok) {
     const detail = (await response.text()).slice(0, 500);
-    throw new Error(`Azure Translator returned ${response.status}: ${detail}`);
+    const error = new Error(`Azure Translator returned ${response.status}: ${detail}`);
+    if (response.status === 429) error.retryAfter = response.headers.get("retry-after");
+    throw error;
   }
   const body = await response.json();
   if (!Array.isArray(body) || body.length !== items.length) {
@@ -162,6 +164,20 @@ async function translateBatch({ endpoint, key, region, language, items, fetchImp
     }
     return masked[index].restore(translated);
   });
+}
+
+const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+async function translateBatchWithRetry(options, sleepImpl) {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await translateBatch(options);
+    } catch (error) {
+      if (attempt >= 2 || !/returned 429:/.test(error instanceof Error ? error.message : String(error))) throw error;
+      const retryAfter = Number(error.retryAfter);
+      await sleepImpl(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1_000 : 60_000 * (attempt + 1));
+    }
+  }
 }
 
 function azureBatches(items) {
@@ -202,6 +218,8 @@ export async function syncCatalogs({
   region = "",
   endpoint = "https://api.cognitive.microsofttranslator.com",
   fetchImpl = globalThis.fetch,
+  charactersPerMinute = 30_000,
+  sleepImpl = sleep,
 } = {}) {
   if (!key) throw new Error("AZURE_TRANSLATOR_KEY is required");
   if (!messagesDirectory) throw new Error("messagesDirectory is required");
@@ -212,6 +230,7 @@ export async function syncCatalogs({
   const state = await readJson(stateFile, { version: 1, locales: {} });
   const drafts = [];
   let translatedCount = 0;
+  let nextRequestAt = 0;
 
   for (const [locale, language] of Object.entries(TARGET_LOCALES)) {
     const file = path.join(messagesDirectory, `${locale}.json`);
@@ -225,7 +244,11 @@ export async function syncCatalogs({
     const work = translationWork(sourceFlat, targetFlat, localeState);
 
     for (const items of azureBatches(work)) {
-      const translations = await translateBatch({ endpoint, key, region, language, items, fetchImpl });
+      const batchCharacters = items.reduce((total, item) => total + item.source.length, 0);
+      const delay = Math.max(0, nextRequestAt - Date.now());
+      if (delay) await sleepImpl(delay);
+      nextRequestAt = Date.now() + Math.ceil(batchCharacters * 60_000 / charactersPerMinute);
+      const translations = await translateBatchWithRetry({ endpoint, key, region, language, items, fetchImpl }, sleepImpl);
       translations.forEach((translated, index) => {
         const item = items[index];
         assertPlaceholders(item.source, translated, item.keyPath, locale);

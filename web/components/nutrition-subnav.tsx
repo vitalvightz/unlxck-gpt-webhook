@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import styles from "@/components/nutrition-pages.module.css";
+import { useTranslations as useAppTranslations } from "next-intl";
 
 const LINKS = [
   { href: "/nutrition", label: "Workspace" },
@@ -18,10 +19,11 @@ function isActive(pathname: string, href: string): boolean {
 }
 
 export function NutritionSubnav() {
+    const appText = useAppTranslations("AppText");
   const pathname = usePathname();
 
   return (
-    <nav className={styles.subnav} aria-label="Nutrition sections">
+    <nav className={styles.subnav} aria-label={appText("text_04f9bceeee41")}>
       {LINKS.map((link) => (
         <Link
           key={link.href}

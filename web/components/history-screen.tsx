@@ -25,10 +25,12 @@ import {
 } from "@/lib/history";
 import { formatInjuryDetail, normalizeInjuryLabel } from "@/lib/injury-display";
 import type {
+
   InjuryFlagRecord,
   TodayCheckinHistoryRecord,
   TodaySessionCompletionRecord,
 } from "@/lib/types";
+import { useTranslations as useAppTranslations } from "next-intl";
 
 type HistoryTab = "sessions" | "checkins" | "injuries";
 
@@ -62,13 +64,14 @@ function ListSkeleton() {
 }
 
 function SessionRows({ rows }: { rows: TodaySessionCompletionRecord[] }) {
+    const appText = useAppTranslations("AppText");
   if (rows.length === 0) {
     return (
       <EmptyState
-        eyebrow="Session history"
-        title="No sessions logged yet."
-        description="Every session you mark done, modified, or skipped on Today is recorded here with its RPE and reason."
-        example="Thu 02 Jul 2026 — Done · RPE 7/10"
+        eyebrow={appText("text_c1c80b037867")}
+        title={appText("text_612e14b1712f")}
+        description={appText("text_34ee5d207ab5")}
+        example={appText("text_1aa03009d120")}
         primaryAction={{ label: "Open Today", href: "/today" }}
       />
     );
@@ -84,16 +87,15 @@ function SessionRows({ rows }: { rows: TodaySessionCompletionRecord[] }) {
           <div className="history-row-meta">
             {row.session_rpe != null ? (
               <span>
-                RPE {row.session_rpe}/10
-                <GlossaryTooltip term="RPE" />
+                {appText("text_3a95f8f4dddd")}{row.session_rpe}{appText("text_00970dc27263")}<GlossaryTooltip term={appText("text_3a95f8f4dddd")} />
               </span>
             ) : null}
-            {row.pain_after != null ? <span>Pain after {row.pain_after}/10</span> : null}
+            {row.pain_after != null ? <span>{appText("text_ff3440ed93c4")}{row.pain_after}{appText("text_00970dc27263")}</span> : null}
           </div>
           {row.modification_reason ? (
-            <p className="muted history-row-note">Reason: {row.modification_reason}</p>
+            <p className="muted history-row-note">{appText("text_3425d1086921")}{row.modification_reason}</p>
           ) : null}
-          {row.notes ? <p className="muted history-row-note">Notes: {row.notes}</p> : null}
+          {row.notes ? <p className="muted history-row-note">{appText("text_da4f7ea58d96")}{row.notes}</p> : null}
         </li>
       ))}
     </ul>
@@ -101,13 +103,14 @@ function SessionRows({ rows }: { rows: TodaySessionCompletionRecord[] }) {
 }
 
 function CheckinRows({ rows }: { rows: TodayCheckinHistoryRecord[] }) {
+    const appText = useAppTranslations("AppText");
   if (rows.length === 0) {
     return (
       <EmptyState
-        eyebrow="Check-in history"
-        title="No check-ins yet."
-        description="Your daily readiness check-ins and the training recommendation each one produced appear here."
-        example="Thu 02 Jul 2026 — Train as planned · Sleep good · Body normal · Pain none"
+        eyebrow={appText("text_7fb8eca7cfd4")}
+        title={appText("text_84c28deeba54")}
+        description={appText("text_b8fcb3285cee")}
+        example={appText("text_6a220d58f6f2")}
         primaryAction={{ label: "Check in on Today", href: "/today" }}
       />
     );
@@ -129,7 +132,7 @@ function CheckinRows({ rows }: { rows: TodayCheckinHistoryRecord[] }) {
               <span>{checkinSummary(row)}</span>
             </div>
             {flags.length > 0 ? (
-              <p className="muted history-row-note">Flags: {flags.join(", ")}</p>
+              <p className="muted history-row-note">{appText("text_2df88939ccfe")}{flags.join(", ")}</p>
             ) : null}
             {row.recommendation_reason ? (
               <p className="muted history-row-note">{row.recommendation_reason.split("\n")[0]}</p>
@@ -142,13 +145,14 @@ function CheckinRows({ rows }: { rows: TodayCheckinHistoryRecord[] }) {
 }
 
 function InjuryRows({ rows }: { rows: InjuryFlagRecord[] }) {
+    const appText = useAppTranslations("AppText");
   if (rows.length === 0) {
     return (
       <EmptyState
-        eyebrow="Injury history"
-        title="No injuries reported."
-        description="Injuries you report during check-ins stay here — including resolved ones — so your full injury record is auditable."
-        example="Left knee — Moderate · Open since Mon 15 Jun 2026"
+        eyebrow={appText("text_fae2bbe2970a")}
+        title={appText("text_c79cc4bc220d")}
+        description={appText("text_a6e277549e9d")}
+        example={appText("text_348a07bd2ff4")}
         primaryAction={{ label: "Report on Today", href: "/today" }}
       />
     );
@@ -172,10 +176,10 @@ function InjuryRows({ rows }: { rows: InjuryFlagRecord[] }) {
               </span>
             </div>
             <div className="history-row-meta">
-              <span>Reported {formatAppDate(row.created_at)}</span>
-              {row.resolved_at ? <span>Resolved {formatAppDate(row.resolved_at)}</span> : null}
+              <span>{appText("text_34540bb7b089")}{formatAppDate(row.created_at)}</span>
+              {row.resolved_at ? <span>{appText("text_5be3c2c8354e")}{formatAppDate(row.resolved_at)}</span> : null}
               {!row.resolved_at && row.latest_reported_status ? (
-                <span>Latest: {row.latest_reported_status}</span>
+                <span>{appText("text_983fbfe22297")}{row.latest_reported_status}</span>
               ) : null}
             </div>
             {note && note !== title ? (
@@ -189,6 +193,7 @@ function InjuryRows({ rows }: { rows: InjuryFlagRecord[] }) {
 }
 
 export function HistoryScreen() {
+    const appText = useAppTranslations("AppText");
   const { session } = useAppSession();
   const token = session?.access_token ?? null;
 
@@ -262,14 +267,13 @@ export function HistoryScreen() {
   return (
     <section className="panel history-screen">
       <header className="form-section-header">
-        <p className="kicker">Training record</p>
-        <h1 className="form-section-title">History</h1>
+        <p className="kicker">{appText("text_095eea84c2cd")}</p>
+        <h1 className="form-section-title">{appText("text_0e7696009337")}</h1>
         <p className="muted">
-          Every logged session, daily check-in, and injury report — including resolved injuries.
-        </p>
+          {appText("text_ecf003cec6c3")}</p>
       </header>
 
-      <div className="history-tabs" role="tablist" aria-label="History sections">
+      <div className="history-tabs" role="tablist" aria-label={appText("text_ec0498815374")}>
         {TABS.map((item) => (
           <button
             key={item.id}

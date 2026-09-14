@@ -1,6 +1,9 @@
 "use client";
 
 import type { StageOnePreview } from "@/lib/stage-one-preview";
+import { useTranslations as useAppTranslations } from "next-intl";
+import { translateUiText } from "@/i18n/ui-text";
+
 
 interface StageOnePreviewCardProps {
   preview: StageOnePreview | null;
@@ -71,6 +74,7 @@ function formatSafety(notes: StageOnePreview["safetyNotes"]): string {
 }
 
 export function StageOnePreviewCard({ preview }: StageOnePreviewCardProps) {
+    const appText = useAppTranslations("AppText");
   if (!preview) return null;
 
   const rows: { label: string; value: string }[] = [
@@ -83,26 +87,23 @@ export function StageOnePreviewCard({ preview }: StageOnePreviewCardProps) {
   ];
 
   return (
-    <section className="loading-stage1-preview" aria-label="Draft structure preview">
+    <section className="loading-stage1-preview" aria-label={appText("text_407f220ae8dc")}>
       <header className="loading-stage1-preview-header">
-        <p className="loading-eyebrow loading-stage1-preview-eyebrow">Draft structure ready</p>
-        <h3 className="loading-stage1-preview-title">Camp shape locked in</h3>
+        <p className="loading-eyebrow loading-stage1-preview-eyebrow">{appText("text_4dd3e205126d")}</p>
+        <h3 className="loading-stage1-preview-title">{appText("text_25282520ba1a")}</h3>
         <p className="loading-stage1-preview-copy">
-          We&rsquo;ve built the camp structure from your intake. The final coach review is still running, so details
-          may change before completion.
-        </p>
+          {appText("text_e73cf3359b02")}</p>
       </header>
       <dl className="loading-stage1-preview-rows">
         {rows.map((row) => (
           <div key={row.label} className="loading-stage1-preview-row">
-            <dt className="loading-stage1-preview-row-label">{row.label}</dt>
+            <dt className="loading-stage1-preview-row-label">{translateUiText(appText, row.label)}</dt>
             <dd className="loading-stage1-preview-row-value">{row.value}</dd>
           </div>
         ))}
       </dl>
       <p className="loading-stage1-preview-chip" aria-live="polite">
-        Preview &mdash; final plan still generating
-      </p>
+        {appText("text_85df69ee67db")}</p>
     </section>
   );
 }

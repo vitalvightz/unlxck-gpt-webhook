@@ -8,6 +8,8 @@ import { useAppSession } from "@/components/auth-provider";
 import { PlanViewer } from "@/components/plan-viewer";
 import { ApiError, getPlan } from "@/lib/api";
 import type { PlanDetail } from "@/lib/types";
+import { useTranslations as useAppTranslations } from "next-intl";
+
 
 // Right after generation completes the app redirects straight to
 // `/plans/{planId}`, but the saved plan row can briefly lag behind the
@@ -49,6 +51,7 @@ function PlanDetailStateCard({
   statusMessage,
   error = null,
 }: PlanDetailStateCardProps) {
+    const appText = useAppTranslations("AppText");
   return (
     <section className={`panel loading-shell loading-phase-${phase}`}>
       <div className="split-layout">
@@ -75,7 +78,7 @@ function PlanDetailStateCard({
         <aside className="step-aside athlete-motion-slot athlete-motion-rail">
           <div className="support-panel loading-secondary-panel">
             <div className="form-section-header">
-              <p className="loading-eyebrow">Workspace state</p>
+              <p className="loading-eyebrow">{appText("text_3d999d388e9b")}</p>
               <h2 className="form-section-title">{railTitle}</h2>
             </div>
             <p className="muted">{railCopy}</p>
@@ -87,6 +90,7 @@ function PlanDetailStateCard({
 }
 
 export function PlanDetailScreen({ planId }: { planId: string }) {
+    const appText = useAppTranslations("AppText");
   const { me, session, refreshMe } = useAppSession();
   const searchParams = useSearchParams();
 
@@ -143,10 +147,9 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
       {recovered ? (
         <section className="panel loading-card loading-shell loading-phase-finalizing athlete-motion-slot athlete-motion-status">
           <article className="status-card loading-context-panel loading-context-panel-compact">
-            <p className="loading-eyebrow">Plan synced</p>
+            <p className="loading-eyebrow">{appText("text_a7070b5dac29")}</p>
             <div className="loading-status-strip">
-              Plan was restored after a timeout and synced back into your workspace.
-            </div>
+              {appText("text_c8ed85c0c102")}</div>
           </article>
         </section>
       ) : null}
@@ -154,20 +157,19 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
       {protectedTriage ? (
         <section className="panel loading-card loading-shell loading-phase-finalizing athlete-motion-slot athlete-motion-status">
           <article className="status-card loading-context-panel loading-context-panel-compact">
-            <p className="loading-eyebrow">Protected triage plan restored</p>
+            <p className="loading-eyebrow">{appText("text_f57b6f4ebfb6")}</p>
             <div className="loading-status-strip">
               {isAdminViewer
-                ? "Use Admin Review → Resume Generation."
-                : "This plan is protected and still requires review before release."}
+                ? appText("text_cc3313a53e21")
+                : appText("text_e59b1291f675")}
               {isAdminViewer && showResumeFailureHint
-                ? " Previous resume failed or did not complete. Submit a new resume request."
+                ? appText("text_d8d211bc96b4")
                 : ""}
             </div>
 
             {isAdminViewer && resolvedPlanId ? (
               <a className="button button-secondary" href={`#admin-review-${resolvedPlanId}`}>
-                Open Admin Review
-              </a>
+                {appText("text_2d2985d13079")}</a>
             ) : null}
           </article>
         </section>
@@ -176,11 +178,11 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
       {error ? (
         <PlanDetailStateCard
           phase="failed"
-          eyebrow="Plan detail"
-          title="We could not restore this saved plan."
-          copy="The workspace could not pull the requested plan state. Review the error below, then retry from history."
-          railTitle="Recovery route"
-          railCopy="The saved plan itself is not deleted by this error. Returning to plan history and reopening the plan is safe."
+          eyebrow={appText("text_32ff80227550")}
+          title={appText("text_e0f9a30ff968")}
+          copy={appText("text_e4881350c774")}
+          railTitle={appText("text_bf8076e9df1d")}
+          railCopy={appText("text_b44d07570988")}
           error={error}
         />
       ) : plan ? (
@@ -195,12 +197,12 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
       ) : (
         <PlanDetailStateCard
           phase="finalizing"
-          eyebrow="Plan detail"
-          title="Restoring saved plan."
-          copy="We are rebuilding the saved output and athlete-safe view now."
-          railTitle="Current action"
-          railCopy="Pulling the latest saved version from your workspace before the plan viewer opens."
-          statusMessage="Restoring the latest saved plan output now."
+          eyebrow={appText("text_32ff80227550")}
+          title={appText("text_dad2d711221d")}
+          copy={appText("text_2fd5ed9e4bbe")}
+          railTitle={appText("text_5fb3b2eaedcc")}
+          railCopy={appText("text_22a692ac0006")}
+          statusMessage={appText("text_28221e00d198")}
         />
       )}
     </RequireAuth>

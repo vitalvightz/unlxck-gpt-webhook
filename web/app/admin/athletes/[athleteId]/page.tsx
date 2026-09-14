@@ -33,12 +33,14 @@ import {
   hasProfileRefreshFailedWarning,
 } from "@/lib/profile-refresh-warning";
 import type {
+
   AdminAthleteRecord,
   AdminGenerationJobDiagnostic,
   AdminPlanSummary,
   NutritionWorkspaceState,
   NutritionWorkspaceUpdateRequest,
 } from "@/lib/types";
+import { useTranslations as useAppTranslations } from "next-intl";
 
 function humanizeEnumValue(value: string | null | undefined, fallback: string): string {
   if (!value?.trim()) {
@@ -99,6 +101,7 @@ function AthletePlanAccessCard({
   accessToken: string | null;
   onPlansDeleted: (deletedPlanIds: string[]) => void;
 }) {
+    const appText = useAppTranslations("AppText");
   const archivedIds = plans.filter(isArchivedPlan).map((plan) => plan.plan_id);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -158,10 +161,10 @@ function AthletePlanAccessCard({
     <article className="step-card admin-athlete-plan-access">
       <div className="form-section-header">
         <div>
-          <p className="kicker">Athlete plans</p>
-          <h2 className="form-section-title">Saved plan history</h2>
+          <p className="kicker">{appText("text_5ab748873f5f")}</p>
+          <h2 className="form-section-title">{appText("text_bde6b1d26531")}</h2>
         </div>
-        <span className="badge">{plans.length} plan{plans.length === 1 ? "" : "s"}</span>
+        <span className="badge">{plans.length} {appText("text_64879f7d6b96")}{plans.length === 1 ? "" : appText("text_043a718774c5")}</span>
       </div>
       {warning ? <p className="error-text">{warning}</p> : null}
       {archivedIds.length ? (
@@ -172,7 +175,7 @@ function AthletePlanAccessCard({
               checked={allArchivedSelected}
               onChange={toggleSelectAll}
               disabled={isDeleting}
-              aria-label="Select all archived plans"
+              aria-label={appText("text_5dcf451bbb87")}
             />
             <span className="muted">
               {selectedCount > 0 ? `${selectedCount} selected` : `Select archived (${archivedIds.length})`}
@@ -184,14 +187,14 @@ function AthletePlanAccessCard({
             onClick={() => void handleBulkDelete()}
             disabled={selectedCount === 0 || isDeleting || !accessToken}
           >
-            {isDeleting ? "Deleting..." : `Delete selected${selectedCount ? ` (${selectedCount})` : ""}`}
+            {isDeleting ? appText("text_685ecb984ac2") : `Delete selected${selectedCount ? ` (${selectedCount})` : ""}`}
           </button>
         </div>
       ) : null}
       {error ? <p className="error-text">{error}</p> : null}
       {message ? <p className="success-banner">{message}</p> : null}
       {plans.length === 0 ? (
-        <p className="muted">No saved plans were found for this athlete.</p>
+        <p className="muted">{appText("text_a8cde06b86df")}</p>
       ) : (
         <div className="admin-athlete-plan-list">
           {plans.map((plan) => {
@@ -213,7 +216,7 @@ function AthletePlanAccessCard({
                 <Link href={`/plans/${plan.plan_id}`} className="admin-athlete-plan-row">
                   <span>
                     <strong>{getPlanDisplayName(plan)}</strong>
-                    <small>{formatDateTime(plan.created_at)} - fight date {plan.fight_date ? formatAppDate(plan.fight_date) : "not set"}</small>
+                    <small>{formatDateTime(plan.created_at)} {appText("text_3aa9a00c0d74")}{plan.fight_date ? formatAppDate(plan.fight_date) : appText("text_1aef93991721")}</small>
                   </span>
                   <span className="badge">{statusLabel(plan.status)}</span>
                 </Link>
@@ -252,6 +255,7 @@ function GenerationDiagnosticCard({
   onRetry: (jobId: string) => void;
   onApproveAndResume: (jobId: string) => void;
 }) {
+    const appText = useAppTranslations("AppText");
   const summary = job.request_payload_summary ?? {};
   const showProfileRefreshWarning = hasProfileRefreshFailedWarning(job);
   const canCancel = job.status === "queued" || job.status === "running";
@@ -260,59 +264,58 @@ function GenerationDiagnosticCard({
     <article className="admin-diagnostic-card">
       <div className="admin-diagnostic-card-header">
         <div>
-          <p className="kicker">Job {job.job_id}</p>
+          <p className="kicker">{appText("text_ad617a0fdd57")}{job.job_id}</p>
           <h3 className="review-card-title">{statusLabel(job.status)}</h3>
         </div>
         <div className="admin-diagnostic-badges">
           <span className="badge">{job.source || "unknown source"}</span>
           {job.stage2_status ? <span className="badge">{statusLabel(job.stage2_status)}</span> : null}
-          {job.is_stale ? <span className="badge admin-diagnostic-badge-warning">Stale</span> : null}
+          {job.is_stale ? <span className="badge admin-diagnostic-badge-warning">{appText("text_40c9e59c5e15")}</span> : null}
         </div>
       </div>
 
-      <div className="admin-diagnostic-meta-grid" aria-label="Generation job timeline">
-        <DiagnosticMetaItem label="Created" value={formatDateTime(job.created_at)} />
-        <DiagnosticMetaItem label="Started" value={formatDateTime(job.started_at)} />
-        <DiagnosticMetaItem label="Heartbeat" value={formatDateTime(job.heartbeat_at)} />
-        <DiagnosticMetaItem label="Completed" value={formatDateTime(job.completed_at)} />
+      <div className="admin-diagnostic-meta-grid" aria-label={appText("text_a0b870990832")}>
+        <DiagnosticMetaItem label={appText("text_d70b9e24bca2")} value={formatDateTime(job.created_at)} />
+        <DiagnosticMetaItem label={appText("text_ecbc89cd37a0")} value={formatDateTime(job.started_at)} />
+        <DiagnosticMetaItem label={appText("text_9df89427a7c8")} value={formatDateTime(job.heartbeat_at)} />
+        <DiagnosticMetaItem label={appText("text_22a970d2e5b1")} value={formatDateTime(job.completed_at)} />
       </div>
 
       <div className="admin-diagnostic-section">
-        <p className="admin-diagnostic-section-title">Request summary</p>
+        <p className="admin-diagnostic-section-title">{appText("text_84d7e2bb8fbd")}</p>
         <div className="admin-diagnostic-summary-grid">
-          <DiagnosticMetaItem label="Athlete" value={summary.athlete_name} />
-          <DiagnosticMetaItem label="Fight date" value={summary.fight_date ? formatAppDate(summary.fight_date) : summary.fight_date} />
-          <DiagnosticMetaItem label="Phase" value={humanizeEnumValue(summary.phase, "-")} />
-          <DiagnosticMetaItem label="Format" value={humanizeEnumValue(summary.fight_format, "-")} />
-          <DiagnosticMetaItem label="Fatigue" value={humanizeEnumValue(summary.fatigue_level, "-")} />
-          <DiagnosticMetaItem label="Availability" value={humanizeEnumValue(summary.training_availability, "-")} />
+          <DiagnosticMetaItem label={appText("text_374d1c582c2a")} value={summary.athlete_name} />
+          <DiagnosticMetaItem label={appText("text_86a6123f76f8")} value={summary.fight_date ? formatAppDate(summary.fight_date) : summary.fight_date} />
+          <DiagnosticMetaItem label={appText("text_46342ec1eec9")} value={humanizeEnumValue(summary.phase, "-")} />
+          <DiagnosticMetaItem label={appText("text_2f343666aaa8")} value={humanizeEnumValue(summary.fight_format, "-")} />
+          <DiagnosticMetaItem label={appText("text_c83bec1f0284")} value={humanizeEnumValue(summary.fatigue_level, "-")} />
+          <DiagnosticMetaItem label={appText("text_12f67f8539c4")} value={humanizeEnumValue(summary.training_availability, "-")} />
         </div>
       </div>
 
       <div className="admin-diagnostic-pill-groups">
         <div>
-          <p className="review-detail-label">Goals</p>
+          <p className="review-detail-label">{appText("text_116cd3982a9b")}</p>
           <p className="review-detail-value">{formatListOrDash(summary.goals)}</p>
         </div>
         <div>
-          <p className="review-detail-label">Weaknesses</p>
+          <p className="review-detail-label">{appText("text_af393b754ae3")}</p>
           <p className="review-detail-value">{formatListOrDash(summary.weaknesses)}</p>
         </div>
         <div>
-          <p className="review-detail-label">Injuries</p>
+          <p className="review-detail-label">{appText("text_7fba05f2e12c")}</p>
           <p className="review-detail-value">{formatListOrDash(summary.injuries)}</p>
         </div>
       </div>
 
       <div className="admin-diagnostic-technical">
-        <DiagnosticMetaItem label="Client request" value={job.client_request_id} />
-        {job.retry_of ? <DiagnosticMetaItem label="Retry of" value={job.retry_of} /> : null}
+        <DiagnosticMetaItem label={appText("text_4e83876b2568")} value={job.client_request_id} />
+        {job.retry_of ? <DiagnosticMetaItem label={appText("text_17d90ce4743f")} value={job.retry_of} /> : null}
       </div>
 
       {job.requires_admin_resume && !job.plan_id ? (
         <div className="admin-diagnostic-alert">
-          Protected triage: no plan row was created. Approve and resume to create a plan if Stage 2 succeeds.
-        </div>
+          {appText("text_9405b9c810fd")}</div>
       ) : null}
       {showProfileRefreshWarning ? (
         <div className="admin-profile-refresh-warning" role="alert">
@@ -320,20 +323,19 @@ function GenerationDiagnosticCard({
           <p>{PROFILE_REFRESH_FAILED_BANNER_BODY}</p>
         </div>
       ) : null}
-      {job.error ? <div className="error-banner" role="alert">Error: {job.error}</div> : null}
+      {job.error ? <div className="error-banner" role="alert">{appText("text_617062906764")}{job.error}</div> : null}
       {job.is_stale ? (
-        <div className="error-banner" role="alert">Stale warning: {job.stale_reason || "Job appears stale."}</div>
+        <div className="error-banner" role="alert">{appText("text_d0c8ece8c375")}{job.stale_reason || "Job appears stale."}</div>
       ) : null}
 
       <div className="plan-summary-actions">
         {job.plan_id ? (
           <Link href={`/plans/${job.plan_id}`} className="ghost-button">
-            Open plan
-          </Link>
+            {appText("text_9e70b18d5255")}</Link>
         ) : null}
         {job.status === "failed" ? (
           <button type="button" className="ghost-button" onClick={() => onRetry(job.job_id)} disabled={retryingJobId === job.job_id}>
-            {retryingJobId === job.job_id ? "Retrying..." : "Retry job"}
+            {retryingJobId === job.job_id ? appText("text_84a657bcf3d9") : appText("text_61d9e1d5480c")}
           </button>
         ) : null}
         {canCancel ? (
@@ -343,7 +345,7 @@ function GenerationDiagnosticCard({
             onClick={() => onCancel(job)}
             disabled={cancellingJobId !== null}
           >
-            {cancellingJobId === job.job_id ? "Cancelling..." : "Cancel generation"}
+            {cancellingJobId === job.job_id ? appText("text_7b26131098bb") : appText("text_12ad4ee6d948")}
           </button>
         ) : null}
         {job.requires_admin_resume && !job.plan_id ? (
@@ -353,7 +355,7 @@ function GenerationDiagnosticCard({
             onClick={() => onApproveAndResume(job.job_id)}
             disabled={resumingJobId === job.job_id}
           >
-            {resumingJobId === job.job_id ? "Approving..." : "Approve & Resume"}
+            {resumingJobId === job.job_id ? appText("text_cee0e61bdf8c") : appText("text_e2a9cd45af93")}
           </button>
         ) : null}
       </div>
@@ -362,6 +364,7 @@ function GenerationDiagnosticCard({
 }
 
 export default function AdminAthletePage() {
+    const appText = useAppTranslations("AppText");
   const { session } = useAppSession();
   const params = useParams();
   const athleteId = typeof params?.athleteId === "string" ? params.athleteId : null;
@@ -619,27 +622,26 @@ export default function AdminAthletePage() {
     <RequireAuth adminOnly>
       {loadError && !athlete ? (
         <section className="panel loading-card">
-          <p className="kicker">Athlete Profile</p>
+          <p className="kicker">{appText("text_a121ff101a02")}</p>
           <div className="error-banner" role="alert">{loadError}</div>
           <div className="plan-summary-actions">
             <Link href="/admin" className="ghost-button">
-              Back to admin
-            </Link>
+              {appText("text_d6ac2209460b")}</Link>
             <button
               type="button"
               className="cta"
               onClick={handleRetry}
               disabled={isReloading}
             >
-              {isReloading ? "Retrying..." : "Try again"}
+              {isReloading ? appText("text_84a657bcf3d9") : appText("text_d8b8392e2c54")}
             </button>
           </div>
         </section>
       ) : !athlete ? (
         <section className="panel loading-card">
-          <p className="kicker">Athlete Profile</p>
-          <h1>Loading profile</h1>
-          <p className="muted">Fetching athlete record now.</p>
+          <p className="kicker">{appText("text_a121ff101a02")}</p>
+          <h1>{appText("text_3535ababfaeb")}</h1>
+          <p className="muted">{appText("text_1668b1b48750")}</p>
         </section>
       ) : (
         <section className="panel athlete-profile-panel">
@@ -647,15 +649,14 @@ export default function AdminAthletePage() {
 
           <div className="plan-summary-actions">
             <Link href="/admin" className="ghost-button">
-              Back to admin
-            </Link>
+              {appText("text_d6ac2209460b")}</Link>
             <button
               type="button"
               className="cta"
               onClick={handleGenerateNewPlan}
               disabled={!athlete.latest_intake || controller.isGenerating || Boolean(latestIntakeFocusError)}
             >
-              {controller.isGenerating ? "Generating..." : "Generate new plan"}
+              {controller.isGenerating ? appText("text_49286f33b674") : appText("text_55e94c4a5913")}
             </button>
           </div>
           {controller.statusMessage ? <p className="muted">{controller.statusMessage}</p> : null}
@@ -668,7 +669,7 @@ export default function AdminAthletePage() {
                 onClick={handleRetry}
                 disabled={isReloading}
               >
-                {isReloading ? "Retrying..." : "Try again"}
+                {isReloading ? appText("text_84a657bcf3d9") : appText("text_d8b8392e2c54")}
               </button>
             </div>
           ) : null}
@@ -679,32 +680,30 @@ export default function AdminAthletePage() {
           {latestIntakeFocusError && intakeDraft && athlete.latest_intake ? (
             <article className="step-card">
               <div className="form-section-header">
-                <h2 className="form-section-title">Resolve intake issues</h2>
-                <p className="muted">This saved intake needs a small update before a new plan can be generated.</p>
+                <h2 className="form-section-title">{appText("text_c848a9db901a")}</h2>
+                <p className="muted">{appText("text_a97cee832579")}</p>
               </div>
               <p className="error-text">
-                Focus cap exceeded. This camp allows {latestIntakeFocusValidation?.cap?.maxSelections} total focus picks. Current intake has {draftFocusValidation?.totalSelections ?? 0}.
-              </p>
-              <p><strong>Key goals</strong></p>
+                {appText("text_79a2581cdfcf")}{latestIntakeFocusValidation?.cap?.maxSelections} {appText("text_f4e69d121184")}{draftFocusValidation?.totalSelections ?? 0}{appText("text_cdb4ee2aea69")}</p>
+              <p><strong>{appText("text_5a721e0a4152")}</strong></p>
               <div className="athlete-profile-inline-pills">
-                {intakeDraft.key_goals.map((goal) => <button key={goal} type="button" className="athlete-profile-pill athlete-profile-pill-compact" onClick={() => setIntakeDraft((c) => c ? { ...c, key_goals: c.key_goals.filter((g) => g !== goal) } : c)}>{goal} ✕</button>)}
+                {intakeDraft.key_goals.map((goal) => <button key={goal} type="button" className="athlete-profile-pill athlete-profile-pill-compact" onClick={() => setIntakeDraft((c) => c ? { ...c, key_goals: c.key_goals.filter((g) => g !== goal) } : c)}>{goal} {appText("text_be64f28a8d0a")}</button>)}
               </div>
-              <p><strong>Weak areas</strong></p>
+              <p><strong>{appText("text_ce2cd86d6c71")}</strong></p>
               <div className="athlete-profile-inline-pills">
-                {intakeDraft.weak_areas.map((area) => <button key={area} type="button" className="athlete-profile-pill athlete-profile-pill-compact athlete-profile-pill-warning" onClick={() => setIntakeDraft((c) => c ? { ...c, weak_areas: c.weak_areas.filter((g) => g !== area) } : c)}>{area} ✕</button>)}
+                {intakeDraft.weak_areas.map((area) => <button key={area} type="button" className="athlete-profile-pill athlete-profile-pill-compact athlete-profile-pill-warning" onClick={() => setIntakeDraft((c) => c ? { ...c, weak_areas: c.weak_areas.filter((g) => g !== area) } : c)}>{area} {appText("text_be64f28a8d0a")}</button>)}
               </div>
               <p className={draftFocusValidation?.isOverCap ? "error-text" : "muted"}>
-                {draftFocusValidation?.totalSelections ?? 0} / {draftFocusValidation?.cap?.maxSelections ?? latestIntakeFocusValidation?.cap?.maxSelections ?? 0} selected
-              </p>
+                {draftFocusValidation?.totalSelections ?? 0} {appText("text_8a5edab28263")}{draftFocusValidation?.cap?.maxSelections ?? latestIntakeFocusValidation?.cap?.maxSelections ?? 0} {appText("text_d7cbbb688b2e")}</p>
               <div className="plan-summary-actions">
-                <button type="button" className="ghost-button" onClick={() => setIntakeDraft({ key_goals: athlete.latest_intake?.key_goals ?? [], weak_areas: athlete.latest_intake?.weak_areas ?? [] })}>Cancel changes</button>
-                <button type="button" className="ghost-button" disabled={Boolean(draftFocusValidation?.isOverCap) || isSavingIntake} onClick={() => void handleSaveIntake(false)}>Save updated intake</button>
-                <button type="button" className="cta" disabled={Boolean(draftFocusValidation?.isOverCap) || isSavingIntake || controller.isGenerating} onClick={() => void handleSaveIntake(true)}>Save and generate</button>
+                <button type="button" className="ghost-button" onClick={() => setIntakeDraft({ key_goals: athlete.latest_intake?.key_goals ?? [], weak_areas: athlete.latest_intake?.weak_areas ?? [] })}>{appText("text_f0714b3053e2")}</button>
+                <button type="button" className="ghost-button" disabled={Boolean(draftFocusValidation?.isOverCap) || isSavingIntake} onClick={() => void handleSaveIntake(false)}>{appText("text_690aba60985f")}</button>
+                <button type="button" className="cta" disabled={Boolean(draftFocusValidation?.isOverCap) || isSavingIntake || controller.isGenerating} onClick={() => void handleSaveIntake(true)}>{appText("text_ed7de9a4c494")}</button>
               </div>
             </article>
           ) : null}
           {!athlete.latest_intake ? (
-            <p className="muted">Generate is available after this athlete has at least one saved intake.</p>
+            <p className="muted">{appText("text_c805e08aaeec")}</p>
           ) : null}
 
           <AthleteProfileOverviewCard athlete={athlete} />
@@ -717,15 +716,15 @@ export default function AdminAthletePage() {
           <article className="step-card">
             <div className="form-section-header">
               <div>
-                <p className="kicker">Generation diagnosis</p>
-                <h2 className="form-section-title">Recent generation jobs</h2>
+                <p className="kicker">{appText("text_a1b2e1a99d33")}</p>
+                <h2 className="form-section-title">{appText("text_f7ab18495077")}</h2>
               </div>
-              <span className="badge">{jobs.length} job{jobs.length === 1 ? "" : "s"}</span>
+              <span className="badge">{jobs.length} {appText("text_5e8c9902207a")}{jobs.length === 1 ? "" : appText("text_043a718774c5")}</span>
             </div>
             {jobsLoadWarning ? <p className="error-text">{jobsLoadWarning}</p> : null}
             {resumeError ? <p className="error-text">{resumeError}</p> : null}
             {!jobs.length ? (
-              <p className="muted">No generation jobs found.</p>
+              <p className="muted">{appText("text_1e6a893b2f6f")}</p>
             ) : (
               <div className="admin-diagnostic-list">
                 {jobs.map((job) => (
@@ -747,8 +746,8 @@ export default function AdminAthletePage() {
             <div className="split-layout nutrition-admin-split">
               <article className="step-card">
                 <div className="form-section-header">
-                  <p className="kicker">Nutrition summary</p>
-                  <h2 className="form-section-title">Current weight and readiness</h2>
+                  <p className="kicker">{appText("text_aaaca671ee66")}</p>
+                  <h2 className="form-section-title">{appText("text_f4488b15b1d5")}</h2>
                 </div>
                 <div className="review-detail-list nutrition-review-list">
                   {[
@@ -774,8 +773,8 @@ export default function AdminAthletePage() {
               <aside className="step-aside athlete-motion-slot athlete-motion-rail">
                 <div className="support-panel">
                 <div className="form-section-header">
-                  <p className="kicker">Coach controls</p>
-                  <h2 className="form-section-title">Admin-only overrides</h2>
+                  <p className="kicker">{appText("text_d50bfbb470c9")}</p>
+                  <h2 className="form-section-title">{appText("text_61a0ff51de2a")}</h2>
                 </div>
                 {nutritionLoadWarning ? <p className="error-text">{nutritionLoadWarning}</p> : null}
                 <div className="nutrition-admin-controls">
@@ -798,7 +797,7 @@ export default function AdminAthletePage() {
                         }
                       />
                       <span className="checkbox-card-copy">
-                        <span className="checkbox-card-title">Coach override enabled</span>
+                        <span className="checkbox-card-title">{appText("text_544a658c62cc")}</span>
                       </span>
                     </label>
                     <label className="checkbox-card">
@@ -820,7 +819,7 @@ export default function AdminAthletePage() {
                         }
                       />
                       <span className="checkbox-card-copy">
-                        <span className="checkbox-card-title">Athlete override enabled</span>
+                        <span className="checkbox-card-title">{appText("text_45fb6dac893a")}</span>
                       </span>
                     </label>
                     <label className="checkbox-card">
@@ -842,7 +841,7 @@ export default function AdminAthletePage() {
                         }
                       />
                       <span className="checkbox-card-copy">
-                        <span className="checkbox-card-title">Fight week manual mode</span>
+                        <span className="checkbox-card-title">{appText("text_d93d12d3608f")}</span>
                       </span>
                     </label>
                     <label className="checkbox-card">
@@ -864,11 +863,11 @@ export default function AdminAthletePage() {
                         }
                       />
                       <span className="checkbox-card-copy">
-                        <span className="checkbox-card-title">Water cut locked to manual</span>
+                        <span className="checkbox-card-title">{appText("text_7df13111e608")}</span>
                       </span>
                     </label>
                     <div className="field">
-                      <label htmlFor="coachCalorieFloor">Minimum calories</label>
+                      <label htmlFor="coachCalorieFloor">{appText("text_33d417c624e3")}</label>
                       <input
                         id="coachCalorieFloor"
                         type="number"
@@ -890,7 +889,7 @@ export default function AdminAthletePage() {
                       />
                     </div>
                     <div className="field">
-                      <label htmlFor="coachProteinFloor">Protein floor (g/kg)</label>
+                      <label htmlFor="coachProteinFloor">{appText("text_7d4016c06a8d")}</label>
                       <input
                         id="coachProteinFloor"
                         type="number"
@@ -914,7 +913,7 @@ export default function AdminAthletePage() {
                     </div>
                     <div className="plan-summary-actions">
                       <button type="button" className="cta" onClick={handleSaveCoachControls} disabled={isSavingControls}>
-                        {isSavingControls ? "Saving..." : "Save coach controls"}
+                        {isSavingControls ? appText("text_dc85af8f2b1d") : appText("text_77974eeca353")}
                       </button>
                     </div>
                   </div>
@@ -924,8 +923,8 @@ export default function AdminAthletePage() {
           ) : nutritionLoadWarning ? (
             <article className="step-card">
               <div className="form-section-header">
-                <p className="kicker">Coach controls</p>
-                <h2 className="form-section-title">Admin-only overrides</h2>
+                <p className="kicker">{appText("text_d50bfbb470c9")}</p>
+                <h2 className="form-section-title">{appText("text_61a0ff51de2a")}</h2>
               </div>
               <p className="error-text">{nutritionLoadWarning}</p>
             </article>

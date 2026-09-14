@@ -32,11 +32,14 @@ import {
 } from "@/lib/nutrition-workspace";
 import { TRAINING_AVAILABILITY_OPTIONS } from "@/lib/intake-options";
 import type {
+
   NutritionProfileInput,
   NutritionWorkspaceState,
   NutritionWorkspaceUpdateRequest,
   SessionDayType,
 } from "@/lib/types";
+import { useTranslations as useAppTranslations } from "next-intl";
+import { translateUiText } from "@/i18n/ui-text";
 
 const ACTIVITY_OPTIONS = [
   { value: "low", label: "Desk / low movement" },
@@ -167,6 +170,7 @@ function StatusRows({ workspace }: { workspace: NutritionWorkspaceState }) {
 }
 
 export function NutritionWorkspaceScreen() {
+    const appText = useAppTranslations("AppText");
   const { session, me, refreshMe } = useAppSession();
   // Server-derived age band. Under-18s get no weight-cut feature, so the target
   // weight and the gap-to-target derived from it are not shown; the backend
@@ -277,8 +281,8 @@ export function NutritionWorkspaceScreen() {
       <section className="panel">
         <NutritionWorkspaceHeader
           athleteName={athleteName}
-          title="Nutrition workspace"
-          description="Keep camp setup, readiness, and nutrition parameters here. Restrictions stay anchored to Advanced Intake, and the dedicated bodyweight log now lives on its own fight-lab screen."
+          title={appText("text_02207fbaeaef")}
+          description={appText("text_33c9db35137d")}
         />
         <NutritionSubnav />
         <SafetyNote tone="warning">{WEIGHT_CUT_SAFETY}</SafetyNote>
@@ -291,15 +295,15 @@ export function NutritionWorkspaceScreen() {
 
               {/* ── Group 1: Athlete foundation ───────────────────── */}
               <div className="nutrition-group">
-                <p className="nutrition-group-label">Athlete foundation</p>
+                <p className="nutrition-group-label">{appText("text_6939d7817a61")}</p>
                 <article className="step-card nutrition-section">
                   <div className="form-section-header">
-                    <p className="kicker">Overview</p>
-                    <h2 className="form-section-title">Status</h2>
+                    <p className="kicker">{appText("text_d4b1ea5708dd")}</p>
+                    <h2 className="form-section-title">{appText("text_920e413c7d41")}</h2>
                   </div>
                   <StatusRows workspace={workspace} />
                   <p className="muted">
-                    Foundation status: <strong>{workspace.derived.foundation_status}</strong>
+                    {appText("text_e8baf392f100")}<strong>{workspace.derived.foundation_status}</strong>
                     {workspace.derived.missing_required_fields.length
                       ? ` - Missing: ${workspace.derived.missing_required_fields.join(", ")}`
                       : ""}
@@ -308,8 +312,8 @@ export function NutritionWorkspaceScreen() {
 
                 <article className="step-card nutrition-section">
                   <div className="form-section-header">
-                    <p className="kicker">Basics</p>
-                    <h2 className="form-section-title">Athlete details</h2>
+                    <p className="kicker">{appText("text_8fdd2ee8475e")}</p>
+                    <h2 className="form-section-title">{appText("text_39ae4d0ac9cc")}</h2>
                   </div>
                   <div className="review-detail-list nutrition-review-list">
                     {[
@@ -332,21 +336,20 @@ export function NutritionWorkspaceScreen() {
                       </div>
                     ))}
                   </div>
-                  <p className="muted">These details come from Advanced Intake so you only have to enter them once.</p>
+                  <p className="muted">{appText("text_a8dbc22b8ae3")}</p>
                   {coreMissingFields.length ? (
                     <p className="muted">
-                      Still missing in Advanced Intake: {coreMissingFields.map((field) => CORE_FIELD_LABELS[field]).join(", ")}.
-                    </p>
+                      {appText("text_e29a6e2dda5d")}{coreMissingFields.map((field) => CORE_FIELD_LABELS[field]).join(", ")}{appText("text_cdb4ee2aea69")}</p>
                   ) : null}
                   <div className="plan-summary-actions">
-                    <Link href="/onboarding" className="ghost-button">Edit in Advanced Intake</Link>
+                    <Link href="/onboarding" className="ghost-button">{appText("text_efa187b19e60")}</Link>
                   </div>
                 </article>
 
                 <article className="step-card nutrition-section">
                   <div className="form-section-header">
-                    <p className="kicker">Basics</p>
-                    <h2 className="form-section-title">Restrictions</h2>
+                    <p className="kicker">{appText("text_8fdd2ee8475e")}</p>
+                    <h2 className="form-section-title">{appText("text_25ed77282d99")}</h2>
                   </div>
                   <div className="review-detail-list nutrition-review-list">
                     {[
@@ -359,41 +362,41 @@ export function NutritionWorkspaceScreen() {
                       </div>
                     ))}
                   </div>
-                  <p className="muted">Restrictions live in Advanced Intake so your nutrition workspace stays aligned with the core athlete profile.</p>
+                  <p className="muted">{appText("text_55337493f70b")}</p>
                   <div className="plan-summary-actions">
-                    <Link href="/onboarding" className="ghost-button">Edit in Advanced Intake</Link>
+                    <Link href="/onboarding" className="ghost-button">{appText("text_efa187b19e60")}</Link>
                   </div>
                 </article>
               </div>
 
               {/* ── Group 2: Bodyweight ───────────────────────────── */}
               <div className="nutrition-group">
-                <p className="nutrition-group-label">Bodyweight</p>
+                <p className="nutrition-group-label">{appText("text_581d1b4da4c0")}</p>
                 <article className={`step-card nutrition-section ${styles.previewCard}`}>
                   <div className={styles.previewHeader}>
                     <div className={styles.previewHeaderCopy}>
-                      <p className="kicker">Bodyweight</p>
-                      <h2 className="form-section-title">Preview</h2>
-                      <p className="muted">Latest readout lives here. Full logging, trend review, and history edits now happen in the dedicated bodyweight lab.</p>
+                      <p className="kicker">{appText("text_581d1b4da4c0")}</p>
+                      <h2 className="form-section-title">{appText("text_324b134f57c7")}</h2>
+                      <p className="muted">{appText("text_cd386873cb9f")}</p>
                     </div>
-                    <Link href="/nutrition/bodyweight-log" className="cta">Open bodyweight log</Link>
+                    <Link href="/nutrition/bodyweight-log" className="cta">{appText("text_952703665385")}</Link>
                   </div>
 
                   <div className={styles.previewGrid}>
                     <div className={styles.previewMetric}>
-                      <p className={styles.previewMetricLabel}>Latest logged weight</p>
+                      <p className={styles.previewMetricLabel}>{appText("text_dd40bf3eb6d2")}</p>
                       <p className={styles.previewMetricValue}>{formatWeight(latestEntry?.weight_kg)}</p>
                     </div>
                     <div className={styles.previewMetric}>
-                      <p className={styles.previewMetricLabel}>Target gap</p>
+                      <p className={styles.previewMetricLabel}>{appText("text_066bc4277daf")}</p>
                       <p className={styles.previewMetricValue}>{formatTargetGapLabel(targetGap)}</p>
                     </div>
                     <div className={styles.previewMetric}>
-                      <p className={styles.previewMetricLabel}>7-day average</p>
+                      <p className={styles.previewMetricLabel}>{appText("text_f7da9e525d6f")}</p>
                       <p className={styles.previewMetricValue}>{formatWeight(rollingAverage)}</p>
                     </div>
                     <div className={styles.previewMetric}>
-                      <p className={styles.previewMetricLabel}>Last entry</p>
+                      <p className={styles.previewMetricLabel}>{appText("text_ffe191a34207")}</p>
                       <p className={styles.previewMetricValue}>{formatBodyweightDate(latestEntry?.date ?? null)}</p>
                     </div>
                   </div>
@@ -401,8 +404,8 @@ export function NutritionWorkspaceScreen() {
                   <div className={styles.previewFooter}>
                     <p className="muted">
                       {latestEntry
-                        ? "Use the dedicated log for fast entry, trend review, and deliberate inline edits."
-                        : "No weigh-ins logged yet. Start with the dedicated log to establish your trend line."}
+                        ? appText("text_d9997ba36bd0")
+                        : appText("text_f1e8717f9e26")}
                     </p>
                   </div>
                 </article>
@@ -410,15 +413,15 @@ export function NutritionWorkspaceScreen() {
 
               {/* ── Group 3: Fight setup ──────────────────────────── */}
               <div className="nutrition-group">
-                <p className="nutrition-group-label">Fight setup</p>
+                <p className="nutrition-group-label">{appText("text_b05560b31ea5")}</p>
                 <article className="step-card nutrition-section">
                   <div className="form-section-header">
-                    <p className="kicker">Weight</p>
-                    <h2 className="form-section-title">Fight setup</h2>
+                    <p className="kicker">{appText("text_81d27ef6d503")}</p>
+                    <h2 className="form-section-title">{appText("text_b05560b31ea5")}</h2>
                   </div>
                   <div className="form-grid">
                     <div className="field">
-                      <label>Fight date</label>
+                      <label>{appText("text_86a6123f76f8")}</label>
                       <input
                         type="date"
                         value={form.shared_camp_context.fight_date ?? ""}
@@ -426,19 +429,19 @@ export function NutritionWorkspaceScreen() {
                       />
                     </div>
                     <div className="field">
-                      <label>Weigh-in type</label>
+                      <label>{appText("text_b026c8c436cc")}</label>
                       <select
                         value={form.shared_camp_context.weigh_in_type ?? ""}
                         onChange={(event) => setSharedField("weigh_in_type", event.target.value || null)}
                       >
-                        <option value="">Select</option>
+                        <option value="">{appText("text_2a78025de6aa")}</option>
                         {WEIGH_IN_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>{option.label}</option>
+                          <option key={option.value} value={option.value}>{translateUiText(appText, option.label)}</option>
                         ))}
                       </select>
                     </div>
                     <div className="field">
-                      <label>Weigh-in time</label>
+                      <label>{appText("text_d940e1045bec")}</label>
                       <input
                         type="time"
                         value={form.shared_camp_context.weigh_in_time ?? ""}
@@ -446,7 +449,7 @@ export function NutritionWorkspaceScreen() {
                       />
                     </div>
                     <div className="field">
-                      <label>Current weight source</label>
+                      <label>{appText("text_d9b276f147dc")}</label>
                       <select
                         value={form.shared_camp_context.current_weight_source ?? ""}
                         onChange={(event) => handleWeightSourceChange(event.target.value)}
@@ -455,10 +458,10 @@ export function NutritionWorkspaceScreen() {
                           <option key={value || "empty"} value={value}>{value || "Select"}</option>
                         ))}
                       </select>
-                      <p className="muted">This stays tied to intake/current weight data and still respects latest-log matching behavior.</p>
+                      <p className="muted">{appText("text_b31f0c9607bb")}</p>
                     </div>
                     <div className="field">
-                      <label>Weight recorded at</label>
+                      <label>{appText("text_78f0ccf55ef4")}</label>
                       <input
                         type="datetime-local"
                         value={form.shared_camp_context.current_weight_recorded_at ?? ""}
@@ -466,7 +469,7 @@ export function NutritionWorkspaceScreen() {
                       />
                     </div>
                     <div className="field">
-                      <label>Rounds format</label>
+                      <label>{appText("text_b462980141b0")}</label>
                       <input
                         value={form.shared_camp_context.rounds_format ?? ""}
                         onChange={(event) => setSharedField("rounds_format", event.target.value)}
@@ -478,15 +481,15 @@ export function NutritionWorkspaceScreen() {
 
               {/* ── Group 4: Readiness & nutrition ───────────────── */}
               <div className="nutrition-group">
-                <p className="nutrition-group-label">Readiness &amp; nutrition</p>
+                <p className="nutrition-group-label">{appText("text_477ce386a7c2")}</p>
                 <article className="step-card nutrition-section">
                   <div className="form-section-header">
-                    <p className="kicker">Readiness</p>
-                    <h2 className="form-section-title">Schedule and readiness</h2>
+                    <p className="kicker">{appText("text_d53d98c17749")}</p>
+                    <h2 className="form-section-title">{appText("text_c302af01c71a")}</h2>
                   </div>
                   <div className="form-grid">
                     <div className="field">
-                      <label>Sessions per week</label>
+                      <label>{appText("text_effe0fc0491c")}</label>
                       <input
                         type="number"
                         min="1"
@@ -498,32 +501,31 @@ export function NutritionWorkspaceScreen() {
                     </div>
                     <div className="field">
                       <div className="level-field-header">
-                        <label htmlFor="nutritionFatigueLevel">Fatigue level</label>
+                        <label htmlFor="nutritionFatigueLevel">{appText("text_cf260a4f2c6e")}</label>
                         {form.shared_camp_context.fatigue_level ? (
                           <button
                             type="button"
                             className="level-slider-clear"
                             onClick={() => setSharedField("fatigue_level", null)}
                           >
-                            Clear
-                          </button>
+                            {appText("text_83b12c2216ef")}</button>
                         ) : null}
                       </div>
                       <LevelSlider
                         id="nutritionFatigueLevel"
-                        ariaLabel="Fatigue level"
+                        ariaLabel={appText("text_cf260a4f2c6e")}
                         value={(form.shared_camp_context.fatigue_level as LevelValue | null) ?? null}
                         onChange={(value) => setSharedField("fatigue_level", value)}
                       />
                     </div>
                     <div className="field">
-                      <label>Sleep quality</label>
+                      <label>{appText("text_646543197fec")}</label>
                       <select
                         value={form.nutrition_readiness.sleep_quality ?? ""}
                         onChange={(event) => setSleepQuality(event.target.value || null)}
                       >
                         {SLEEP_OPTIONS.map((option) => (
-                          <option key={option.value || "empty"} value={option.value}>{option.label}</option>
+                          <option key={option.value || "empty"} value={option.value}>{translateUiText(appText, option.label)}</option>
                         ))}
                       </select>
                     </div>
@@ -531,12 +533,12 @@ export function NutritionWorkspaceScreen() {
                   <div className="nutrition-daytype-grid">
                     {TRAINING_AVAILABILITY_OPTIONS.map((option) => (
                       <div key={option.value} className="field">
-                        <label>{option.label} day type</label>
+                        <label>{translateUiText(appText, option.label)} {appText("text_ca93e08b46db")}</label>
                         <select
                           value={form.shared_camp_context.session_types_by_day[option.value] ?? ""}
                           onChange={(event) => setDayType(option.value, event.target.value)}
                         >
-                          <option value="">Off / not scheduled</option>
+                          <option value="">{appText("text_466c9d7bc6a7")}</option>
                           {DAY_TYPE_OPTIONS.map((dayTypeOption) => (
                             <option key={dayTypeOption.value} value={dayTypeOption.value}>{dayTypeOption.label}</option>
                           ))}
@@ -544,36 +546,36 @@ export function NutritionWorkspaceScreen() {
                       </div>
                     ))}
                   </div>
-                  <p className="muted">Pick the day type directly for each weekday. Hard sparring and Support Work Days (non-hard training / S&C-compatible slots) still feed the saved planning fields automatically, while conditioning and recovery stay available here too.</p>
+                  <p className="muted">{appText("text_b8e84b6d8949")}</p>
                 </article>
 
                 <article className="step-card nutrition-section">
                   <div className="form-section-header">
-                    <p className="kicker">Nutrition</p>
-                    <h2 className="form-section-title">Nutrition parameters</h2>
+                    <p className="kicker">{appText("text_7ab78b7058dd")}</p>
+                    <h2 className="form-section-title">{appText("text_d831da0f3e20")}</h2>
                   </div>
                   <div className="form-grid">
                     <div className="field">
-                      <label>Daily activity</label>
+                      <label>{appText("text_561d7c9e90be")}</label>
                       <select
                         value={form.nutrition_profile.daily_activity_level ?? ""}
                         onChange={(event) => setProfileField("daily_activity_level", event.target.value || null)}
                       >
-                        <option value="">Select</option>
+                        <option value="">{appText("text_2a78025de6aa")}</option>
                         {ACTIVITY_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>{option.label}</option>
+                          <option key={option.value} value={option.value}>{translateUiText(appText, option.label)}</option>
                         ))}
                       </select>
                     </div>
                     <div className="field">
-                      <label>Dietary restrictions</label>
+                      <label>{appText("text_e9ed443a4b55")}</label>
                       <input
                         value={toCsv(form.nutrition_profile.dietary_restrictions)}
                         onChange={(event) => setProfileField("dietary_restrictions", toList(event.target.value))}
                       />
                     </div>
                     <div className="field">
-                      <label>Meals per day</label>
+                      <label>{appText("text_daa3eadd18c1")}</label>
                       <input
                         type="number"
                         min="1"
@@ -584,25 +586,25 @@ export function NutritionWorkspaceScreen() {
                       />
                     </div>
                     <div className="field">
-                      <label>Caffeine use</label>
+                      <label>{appText("text_0faeadc4eac9")}</label>
                       <select
                         value={form.nutrition_profile.caffeine_use == null ? "" : form.nutrition_profile.caffeine_use ? "yes" : "no"}
                         onChange={(event) => setProfileField("caffeine_use", event.target.value ? event.target.value === "yes" : null)}
                       >
-                        <option value="">Select</option>
-                        <option value="yes">Yes</option>
-                        <option value="no">No</option>
+                        <option value="">{appText("text_2a78025de6aa")}</option>
+                        <option value="yes">{appText("text_85a39ab345d6")}</option>
+                        <option value="no">{appText("text_1ea442a134b2")}</option>
                       </select>
                     </div>
                     <div className="field">
-                      <label>Supplements</label>
+                      <label>{appText("text_2ce6523021b1")}</label>
                       <input
                         value={toCsv(form.nutrition_profile.supplement_use)}
                         onChange={(event) => setProfileField("supplement_use", toList(event.target.value))}
                       />
                     </div>
                   </div>
-                  <p className="muted">This workspace supports macro and micro planning inputs, not meal-by-meal food choices. We can add athlete food-level controls later if needed.</p>
+                  <p className="muted">{appText("text_be9b0338c46c")}</p>
                 </article>
               </div>
 
@@ -610,13 +612,13 @@ export function NutritionWorkspaceScreen() {
 
             <aside className="nutrition-side-column">
               <article className="support-panel">
-                <p className="kicker">Flags</p>
-                <p className="muted">{workspace.derived.readiness_flags.length ? workspace.derived.readiness_flags.join(", ") : "No active readiness flags."}</p>
+                <p className="kicker">{appText("text_f38d9950af4f")}</p>
+                <p className="muted">{workspace.derived.readiness_flags.length ? workspace.derived.readiness_flags.join(", ") : appText("text_ca7fcba73355")}</p>
               </article>
               <article className="support-panel">
-                <p className="kicker">Bodyweight</p>
-                <p className="muted">Open the dedicated log for premium trend review, quick add, and historical edits without leaving the Nutrition workspace.</p>
-                <Link href="/nutrition/bodyweight-log" className="ghost-button">Go to log</Link>
+                <p className="kicker">{appText("text_581d1b4da4c0")}</p>
+                <p className="muted">{appText("text_6abc55f3ebc4")}</p>
+                <Link href="/nutrition/bodyweight-log" className="ghost-button">{appText("text_99c115ccf9f4")}</Link>
               </article>
             </aside>
           </div>
@@ -627,7 +629,7 @@ export function NutritionWorkspaceScreen() {
 
         <div className="nutrition-sticky-save">
           <button type="button" className="cta" onClick={handleSave} disabled={isPending || !workspace}>
-            {isPending ? "Saving..." : "Save nutrition workspace"}
+            {isPending ? appText("text_dc85af8f2b1d") : appText("text_4ce6dffa4a18")}
           </button>
         </div>
       </section>

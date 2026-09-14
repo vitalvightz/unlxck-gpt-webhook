@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useTranslations as useAppTranslations } from "next-intl";
 import {
   useCallback,
   useEffect,
@@ -53,6 +53,7 @@ export function AuthForm({
   onChangeRole?: () => void;
   footerSlot?: ReactNode;
 }) {
+    const appText = useAppTranslations("AppText");
   const t = useTranslations("Auth");
   const router = useRouter();
   const { isReady, session, me } = useAppSession();
@@ -425,8 +426,7 @@ export function AuthForm({
                     <Link href={TERMS_HREF} className="auth-text-link" target="_blank">
                       {TERMS_LINK_LABEL}
                     </Link>
-                    .
-                  </span>
+                    {appText("text_cdb4ee2aea69")}</span>
                 </label>
               </div>
 
@@ -451,7 +451,7 @@ export function AuthForm({
                     lives in the Privacy Notice linked here and in Settings →
                     Privacy. Repeating it inline buried the form on a phone. */}
                 <p id="healthDataConsentHelp" className="muted auth-consent-help auth-consent-meta">
-                  {consentCopy.signupHealthConsentHelp} ·{" "}
+                  {consentCopy.signupHealthConsentHelp} {appText("text_a137f17a19a0")}{" "}
                   <Link href={PRIVACY_HREF} className="auth-text-link" target="_blank">
                     {t("privacyNotice")}
                   </Link>

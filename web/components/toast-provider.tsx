@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useTranslations as useAppTranslations } from "next-intl";
 
 export type ToastTone = "info" | "success" | "error";
 
@@ -28,6 +29,7 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 const DEFAULT_DURATION_MS = 4_500;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+    const appText = useAppTranslations("AppText");
   const [toasts, setToasts] = useState<Toast[]>([]);
   const idRef = useRef(0);
   const timersRef = useRef<Map<number, number>>(new Map());
@@ -70,7 +72,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="toast-region" role="region" aria-live="polite" aria-label="Notifications">
+      <div className="toast-region" role="region" aria-live="polite" aria-label={appText("text_788011833a5a")}>
         {toasts.map((toast) => (
           <div key={toast.id} className={`toast toast-${toast.tone ?? "info"}`} role="status">
             <span className="toast-dot" aria-hidden="true" />
@@ -90,7 +92,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <button
               type="button"
               className="toast-dismiss"
-              aria-label="Dismiss notification"
+              aria-label={appText("text_b7bb3f342402")}
               onClick={() => dismissToast(toast.id)}
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">

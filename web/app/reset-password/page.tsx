@@ -10,12 +10,15 @@ import { AUTH_LINK_FEEDBACK, clearAuthLinkParams, readAuthLinkStatus } from "@/l
 import { clearPasswordRecovery, hasPasswordRecoveryFor } from "@/lib/password-recovery";
 import { evaluatePasswordStrength } from "@/lib/password-strength";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { useTranslations as useAppTranslations } from "next-intl";
+
 
 // How long to wait for Supabase to judge a PKCE recovery code before telling
 // the athlete we could not reach it.
 const CODE_EXCHANGE_TIMEOUT_MS = 8_000;
 
 export default function ResetPasswordPage() {
+    const appText = useAppTranslations("AppText");
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -221,16 +224,16 @@ export default function ResetPasswordPage() {
     <section className="auth-layout">
       <div className="auth-rail">
         <div className="hero-panel-copy">
-          <p className="eyebrow">Account recovery</p>
-          <h1>Choose a new password.</h1>
-          <p>Pick a strong password to keep your athlete workspace secure.</p>
+          <p className="eyebrow">{appText("text_2b291cd5cd2f")}</p>
+          <h1>{appText("text_5a5fc919d36d")}</h1>
+          <p>{appText("text_ee7e8b107d88")}</p>
         </div>
         <div className="support-panel">
-          <p className="kicker">Tips</p>
+          <p className="kicker">{appText("text_3838a4d8cb8c")}</p>
           <ul className="auth-flow">
-            <li>Use at least 8 characters.</li>
-            <li>Longer uncommon phrases are stronger than predictable patterns.</li>
-            <li>Avoid reusing a previous password.</li>
+            <li>{appText("text_9b15ce9e25e9")}</li>
+            <li>{appText("text_1e30f1ded024")}</li>
+            <li>{appText("text_fbe37ada1119")}</li>
           </ul>
         </div>
       </div>
@@ -238,10 +241,10 @@ export default function ResetPasswordPage() {
       <div className="auth-card">
         <div className="auth-header">
           <div>
-            <p className="kicker">New password</p>
-            <h2>Reset your password</h2>
+            <p className="kicker">{appText("text_3dd9df4441fb")}</p>
+            <h2>{appText("text_59fa4379be1f")}</h2>
           </div>
-          <span className="badge status-badge-neutral">Secure</span>
+          <span className="badge status-badge-neutral">{appText("text_1bced1d0ce55")}</span>
         </div>
 
         {message ? (
@@ -261,22 +264,18 @@ export default function ResetPasswordPage() {
                     to someone who still knows their current password, which is
                     not the athlete who asked for a reset. */}
                 <Link href="/forgot-password" className="cta">
-                  Request a new reset link
-                </Link>
+                  {appText("text_6ff84c62212a")}</Link>
                 {canChangeInSettings ? (
                   <p className="muted">
-                    Know your current password?{" "}
+                    {appText("text_2b0a695c1787")}{" "}
                     <Link href="/settings" className="auth-text-link">
-                      Change it in Settings
-                    </Link>
-                    .
-                  </p>
+                      {appText("text_05d498390ef7")}</Link>
+                    {appText("text_cdb4ee2aea69")}</p>
                 ) : null}
               </>
             ) : (
               <p className="muted" role="status" aria-live="polite">
-                Verifying your reset link...
-              </p>
+                {appText("text_7eb0e90ba88e")}</p>
             )}
           </div>
         ) : (
@@ -297,7 +296,7 @@ export default function ResetPasswordPage() {
                 aria-hidden="true"
               />
               <div className="field">
-                <label htmlFor="password">New password</label>
+                <label htmlFor="password">{appText("text_3dd9df4441fb")}</label>
                 <input
                   id="password"
                   name="newPassword"
@@ -311,7 +310,7 @@ export default function ResetPasswordPage() {
                 <PasswordStrengthMeter strength={passwordStrength} />
               </div>
               <div className="field">
-                <label htmlFor="confirmPassword">Confirm new password</label>
+                <label htmlFor="confirmPassword">{appText("text_bf000421aeb3")}</label>
                 <input
                   id="confirmPassword"
                   name="confirmPassword"
@@ -322,7 +321,7 @@ export default function ResetPasswordPage() {
                   required
                   minLength={8}
                 />
-                {confirmPassword && !passwordsMatch ? <p className="error-text">Passwords do not match.</p> : null}
+                {confirmPassword && !passwordsMatch ? <p className="error-text">{appText("text_6c6e178ad2a8")}</p> : null}
               </div>
 
               <div className="form-actions">
@@ -331,7 +330,7 @@ export default function ResetPasswordPage() {
                   className="cta"
                   disabled={isPending || !passwordStrength.isAcceptable || !passwordsMatch}
                 >
-                  {isPending ? "Updating..." : "Update password"}
+                  {isPending ? appText("text_0a4e0b71b7f3") : appText("text_fe45b4014135")}
                 </button>
               </div>
             </form>

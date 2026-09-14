@@ -8,6 +8,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { XpProgressCardView } from "./xp-progress-card";
 import { createFreshXpProgress, type XpProgress } from "../lib/xp-progress";
 
+const ENGLISH_MESSAGES = JSON.parse(readFileSync(new URL("../messages/en.json", import.meta.url), "utf8")) as { AppText: Record<string, string> };
+const ENGLISH_COPY = Object.values(ENGLISH_MESSAGES.AppText);
+
 function progress(overrides: Partial<XpProgress> = {}): XpProgress {
   const fresh = createFreshXpProgress();
   return {
@@ -183,7 +186,9 @@ test("XP notifications use colons rather than em dashes", () => {
   const feedback = readFileSync(new URL("./xp-award-feedback.tsx", import.meta.url), "utf8");
 
   assert.match(feedback, /XP: \$\{feedback\.label\}/);
-  assert.match(feedback, /LEVEL \{feedback\.level\}: \{feedback\.title\.toUpperCase\(\)\}/);
+  assert.match(feedback, /appText\("text_d81674b2bdd5"\)\}\s*\{feedback\.level\}\{appText\("text_e7ac0786668e"\)\}/);
+  assert.ok(ENGLISH_COPY.includes("LEVEL"));
+  assert.ok(ENGLISH_COPY.includes(":"));
   assert.doesNotMatch(feedback, /—/);
 });
 
@@ -204,15 +209,15 @@ test("Progress route keeps the compact card, athlete identity and latest-three h
   assert.match(page, /profile\.tactical_style/);
   assert.match(page, /profile\.stance/);
   assert.match(page, /recentAwards\.slice\(0, 3\)/);
-  assert.match(page, /Latest 3/);
+  assert.ok(ENGLISH_COPY.includes("Latest 3"));
   assert.doesNotMatch(page, /Show all|showAllAwards|hiddenAwardCount/);
   assert.doesNotMatch(pageCss, /xp-award-toggle/);
   assert.match(page, /<details className="xp-page-panel xp-explanation xp-explanation-disclosure">/);
-  assert.match(page, /UNLXCK XP tracks your progress inside the app\./);
-  assert.match(page, /Earn XP by completing training, check-ins and plan milestones\./);
-  assert.match(page, /Your rank reflects personal progress, not your official amateur or professional status\./);
-  assert.match(page, /In future, XP may also unlock discounts, rewards and opportunities through UNLXCK\./);
-  assert.match(page, /Public leaderboards are not available during private beta\./);
+  assert.ok(ENGLISH_COPY.includes("UNLXCK XP tracks your progress inside the app."));
+  assert.ok(ENGLISH_COPY.some((copy) => copy.startsWith("Earn XP by completing training, check-ins and plan milestones.")));
+  assert.ok(ENGLISH_COPY.includes("Your rank reflects personal progress, not your official amateur or professional status."));
+  assert.ok(ENGLISH_COPY.includes("In future, XP may also unlock discounts, rewards and opportunities through UNLXCK."));
+  assert.ok(ENGLISH_COPY.includes("Public leaderboards are not available during private beta."));
   assert.doesNotMatch(page, /Work banked\. Level earned\./);
   assert.doesNotMatch(page, /Available XP actions/);
   assert.doesNotMatch(page, /global leaderboard/i);

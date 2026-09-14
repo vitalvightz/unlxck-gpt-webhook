@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useTranslations as useAppTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState, type TransitionEvent } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
@@ -42,6 +42,7 @@ function MenuIcon() {
 }
 
 export function AppNav() {
+    const appText = useAppTranslations("AppText");
   const t = useTranslations("Navigation");
   const pathname = usePathname();
   const router = useRouter();
@@ -312,7 +313,7 @@ export function AppNav() {
       {showBrandTopbar ? (
         <header className="brand-topbar" aria-label={t("entryNavigation")}>
           <Link href="/" className="brand-topbar-mark">
-            <span className="eyebrow">UNLXCK</span>
+            <span className="eyebrow">{appText("text_3a8b686fee0a")}</span>
             <span>{t("fightCamp")}</span>
           </Link>
           <nav className="brand-topbar-actions" aria-label={t("accountAccess")}>
@@ -381,7 +382,7 @@ export function AppNav() {
         <div className="sidebar-shell">
           <div className="sidebar-brand">
             <div className="sidebar-brand-header">
-              <p className="eyebrow">UNLXCK</p>
+              <p className="eyebrow">{appText("text_3a8b686fee0a")}</p>
               <button
                 type="button"
                 className="sidebar-drawer-close"

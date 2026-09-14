@@ -1,10 +1,13 @@
 "use client";
 
 import {
+
   useId,
   type KeyboardEvent,
   type PointerEvent,
 } from "react";
+import { useTranslations as useAppTranslations } from "next-intl";
+import { translateUiText } from "@/i18n/ui-text";
 
 /* ------------------------------------------------------------------ *
  * EffortSlider — Session RPE
@@ -39,6 +42,7 @@ export function EffortSlider({
   id?: string;
   ariaLabel?: string;
 }) {
+    const appText = useAppTranslations("AppText");
   const reactId = useId();
   const sliderId = id ?? reactId;
   const isSet = value !== null;
@@ -75,7 +79,7 @@ export function EffortSlider({
           step={1}
           value={current}
           aria-label={ariaLabel}
-          aria-valuetext={isSet ? descriptor : "Not set"}
+          aria-valuetext={isSet ? descriptor : appText("text_4895f73177ab")}
           onChange={(event) => onChange(Number.parseInt(event.target.value, 10))}
           onClick={(event) => {
             // First tap may land on the parked thumb and fire no change
@@ -104,8 +108,8 @@ export function EffortSlider({
         </div>
       </div>
       <div className="effort-slider-anchors" aria-hidden="true">
-        <span>Very Light</span>
-        <span>Max Effort</span>
+        <span>{appText("text_e604912d30ab")}</span>
+        <span>{appText("text_867e3f7d6b07")}</span>
       </div>
     </div>
   );
@@ -133,6 +137,7 @@ export function FaceScale({
   value: number | null;
   onChange: (value: number) => void;
 }) {
+    const appText = useAppTranslations("AppText");
   const controlId = useId();
   const selectedIndex = PAIN_LEVELS.findIndex((level) => level.value === value);
 
@@ -165,7 +170,7 @@ export function FaceScale({
       <div
         className="face-scale-row"
         role="radiogroup"
-        aria-label="Pain after session"
+        aria-label={appText("text_c9ddf22d6c4c")}
         tabIndex={0}
         aria-activedescendant={selectedIndex !== -1 ? `${controlId}-pain-${selectedIndex}` : undefined}
         onKeyDown={handleKeyDown}
@@ -179,14 +184,14 @@ export function FaceScale({
               type="button"
               role="radio"
               aria-checked={selected}
-              aria-label={level.label}
+              aria-label={translateUiText(appText, level.label)}
               tabIndex={-1}
               className="face-scale-face"
               data-selected={selected ? "true" : undefined}
               onClick={() => onChange(level.value)}
             >
               <FaceIcon level={index} />
-              <span className="face-scale-caption">{level.label}</span>
+              <span className="face-scale-caption">{translateUiText(appText, level.label)}</span>
             </button>
           );
         })}
@@ -252,6 +257,7 @@ const LEVEL_OPTIONS = [
   { value: "moderate", label: "Moderate" },
   { value: "high", label: "High" },
 ] as const;
+const UNSET_LEVEL_LABEL = { label: "Not set" };
 
 export type LevelValue = (typeof LEVEL_OPTIONS)[number]["value"];
 
@@ -266,9 +272,10 @@ export function LevelSlider({
   ariaLabel?: string;
   id?: string;
 }) {
+  const appText = useAppTranslations("AppText");
   const selectedIndex = LEVEL_OPTIONS.findIndex((option) => option.value === value);
   const currentIndex = selectedIndex === -1 ? 1 : selectedIndex;
-  const activeLabel = selectedIndex === -1 ? "Not set" : LEVEL_OPTIONS[selectedIndex].label;
+  const activeLabel = selectedIndex === -1 ? translateUiText(appText, UNSET_LEVEL_LABEL.label) : translateUiText(appText, LEVEL_OPTIONS[selectedIndex].label);
 
   function selectLevelFromPointer(event: PointerEvent<HTMLInputElement>) {
     if (selectedIndex !== -1) {
@@ -327,7 +334,7 @@ export function LevelSlider({
             data-selected={selected ? "true" : undefined}
             aria-hidden="true"
           >
-            {option.label}
+            {translateUiText(appText, option.label)}
           </span>
         );
       })}

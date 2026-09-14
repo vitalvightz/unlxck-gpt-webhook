@@ -23,6 +23,7 @@ import {
   limitInjuryEntryText,
 } from "@/lib/today-injury-input";
 import type {
+
   Coverable,
   Drainage,
   FrictionOrContactProblem,
@@ -33,6 +34,7 @@ import type {
   TodayInjuryCheckinStatus,
   TodayInjuryDeclaration,
 } from "@/lib/types";
+import { useTranslations as useAppTranslations } from "next-intl";
 
 // "Same" is deliberately NOT an option. An injury left untouched stays exactly
 // where it is (the backend keeps it "ongoing"), so a per-day "nothing changed"
@@ -311,6 +313,7 @@ export function TodayInjuryManager({
   token: string;
   onRefresh: () => Promise<void>;
 }) {
+    const appText = useAppTranslations("AppText");
   const { showToast } = useToast();
   const [pendingFlagId, setPendingFlagId] = useState<string | null>(null);
   const [selectedStatusByFlagId, setSelectedStatusByFlagId] = useState<
@@ -586,8 +589,8 @@ export function TodayInjuryManager({
     <section id="today-injury" className="today-card today-injury-card" aria-labelledby="today-injury-heading">
       <div className="today-card-head">
         <div>
-          <p className="kicker">Injury check-in</p>
-          <h2 id="today-injury-heading">Track today&apos;s injuries</h2>
+          <p className="kicker">{appText("text_27cb3ffc31b2")}</p>
+          <h2 id="today-injury-heading">{appText("text_0fa4279073e4")}</h2>
         </div>
       </div>
       {openInjuries.length ? (
@@ -611,7 +614,7 @@ export function TodayInjuryManager({
                     {injuryType ? <small>{injuryType}</small> : null}
                   </span>
                   <span className="badge status-badge-neutral">{injury.severity}</span>
-                  {injury.status === "monitoring" ? <span className="badge">Monitoring</span> : null}
+                  {injury.status === "monitoring" ? <span className="badge">{appText("text_1dc83f605edf")}</span> : null}
                 </div>
                 {surfaceGuidance ? (
                   <div
@@ -623,10 +626,9 @@ export function TodayInjuryManager({
                     <p>{surfaceGuidance.message}</p>
                   </div>
                 ) : null}
-                <p className="today-field-label today-injury-status-label">How is it today?</p>
+                <p className="today-field-label today-injury-status-label">{appText("text_9804abec97aa")}</p>
                 <p className="today-field-hint today-injury-status-hint">
-                  Only tap if it changed — we keep tracking it otherwise.
-                </p>
+                  {appText("text_4402ef5ad234")}</p>
                 <div
                   className="today-segment-row today-injury-status-row"
                   role="group"
@@ -669,8 +671,7 @@ export function TodayInjuryManager({
                 </div>
                 {confirmingClearId === injury.id || surfaceFollowUpId === injury.id ? (
                   <p id={`${injury.id}-pending-hint`} className="today-injury-pending-hint">
-                    Not saved yet — confirm below.
-                  </p>
+                    {appText("text_5907dfba7fb5")}</p>
                 ) : null}
                 {surfaceFollowUpId === injury.id ? (
                   <div
@@ -687,19 +688,19 @@ export function TodayInjuryManager({
                   >
                     <div className="today-injury-followup-head">
                       <p className="today-injury-followup-eyebrow">
-                        {isSurfaceRecheck ? "Skin recheck" : "Skin check"}
-                        <span aria-hidden="true"> · 5 quick questions</span>
+                        {isSurfaceRecheck ? appText("text_4d7fd222e8a2") : appText("text_5cc4a766183a")}
+                        <span aria-hidden="true"> {appText("text_1dce1f602bae")}</span>
                       </p>
                       <p className="today-injury-confirm-text">
                         {isSurfaceRecheck
-                          ? "Quick recheck so we can lift what no longer applies."
+                          ? appText("text_2856f957f32c")
                           : isSurfaceInitial
-                            ? "Quick check so we protect the right thing from the start."
-                            : "Quick check so we only change what we need to."}
+                            ? appText("text_5cec85b97c04")
+                            : appText("text_9695dec9ce9b")}
                       </p>
                     </div>
                     <SegmentGroup
-                      label={isSurfaceRecheck ? "Is the skin closed now?" : "Is it open or burst?"}
+                      label={isSurfaceRecheck ? appText("text_89c26dbc51c6") : appText("text_ad2f1b2636fb")}
                       value={surfaceAnswers.skin_integrity}
                       options={SKIN_INTEGRITY_OPTIONS}
                       onChange={(value) =>
@@ -707,21 +708,21 @@ export function TodayInjuryManager({
                       }
                     />
                     <SegmentGroup
-                      label="Bleeding or weeping?"
+                      label={appText("text_fb2df3b1b48a")}
                       value={surfaceAnswers.bleed}
                       options={BLEED_OPTIONS}
                       onChange={(value) => setSurfaceAnswers((current) => ({ ...current, bleed: value }))}
                       columns={2}
                     />
                     <div className="today-field-group">
-                      <p className="today-field-label">Any infection signs?</p>
+                      <p className="today-field-label">{appText("text_72f0acf6412a")}</p>
                       {/* Multi-select, unlike every other control in this panel — say
                           so and keep a live count, so "none picked" reads as an
                           answered question rather than a skipped one. */}
                       <p className="today-field-hint" aria-live="polite">
                         {surfaceAnswers.infection_signs.length
                           ? `${surfaceAnswers.infection_signs.length} selected`
-                          : "Tap any that apply — none is fine"}
+                          : appText("text_653a429a791d")}
                       </p>
                       {/* One per row: these labels are the longest in the panel
                           and will not share a line on a phone without being
@@ -746,7 +747,7 @@ export function TodayInjuryManager({
                       </div>
                     </div>
                     <SegmentGroup
-                      label="Can it stay covered?"
+                      label={appText("text_db4de2671f77")}
                       value={surfaceAnswers.coverable}
                       options={COVERABLE_OPTIONS}
                       onChange={(value) =>
@@ -756,8 +757,8 @@ export function TodayInjuryManager({
                     <SegmentGroup
                       label={
                         isSurfaceRecheck
-                          ? "Is rubbing or contact still the problem?"
-                          : "Is rubbing or contact the problem?"
+                          ? appText("text_db75793c7197")
+                          : appText("text_a74dfc0cae39")
                       }
                       value={surfaceAnswers.friction_or_contact_problem}
                       options={FRICTION_OPTIONS}
@@ -775,7 +776,7 @@ export function TodayInjuryManager({
                         disabled={pendingFlagId !== null}
                         onClick={() => void submitSurfaceFollowUp(injury.id)}
                       >
-                        {isPending ? "Saving..." : "Save update"}
+                        {isPending ? appText("text_dc85af8f2b1d") : appText("text_6a3fb5abbd14")}
                       </button>
                       <button
                         type="button"
@@ -783,8 +784,7 @@ export function TodayInjuryManager({
                         disabled={pendingFlagId !== null}
                         onClick={() => setSurfaceFollowUpId(null)}
                       >
-                        Cancel
-                      </button>
+                        {appText("text_19766ed6ccb2")}</button>
                     </div>
                   </div>
                 ) : null}
@@ -795,8 +795,7 @@ export function TodayInjuryManager({
                     aria-label={`Clear ${getInjuryLabel(injury)}?`}
                   >
                     <span className="today-injury-confirm-text">
-                      Clear this injury? It will be removed from today&apos;s tracking.
-                    </span>
+                      {appText("text_ebc69179eef2")}</span>
                     <div className="today-injury-confirm-actions">
                       <button
                         type="button"
@@ -804,7 +803,7 @@ export function TodayInjuryManager({
                         disabled={pendingFlagId !== null}
                         onClick={() => void confirmClear(injury.id)}
                       >
-                        {pendingFlagId === injury.id ? "Clearing..." : "Yes, clear"}
+                        {pendingFlagId === injury.id ? appText("text_07a82437cd44") : appText("text_b71926374569")}
                       </button>
                       <button
                         type="button"
@@ -812,8 +811,7 @@ export function TodayInjuryManager({
                         disabled={pendingFlagId !== null}
                         onClick={() => setConfirmingClearId(null)}
                       >
-                        Cancel
-                      </button>
+                        {appText("text_19766ed6ccb2")}</button>
                     </div>
                   </div>
                 ) : null}
@@ -822,7 +820,7 @@ export function TodayInjuryManager({
           })}
         </ul>
       ) : (
-        <p className="muted">No injuries are being tracked. Add one below if something is bothering you.</p>
+        <p className="muted">{appText("text_31f0b21afbb3")}</p>
       )}
 
       <button
@@ -835,7 +833,7 @@ export function TodayInjuryManager({
       >
         <span>
           {isAddFormOpen ? "" : "+ "}
-          {openInjuries.length ? "Add another injury" : "Add injury"}
+          {openInjuries.length ? appText("text_85290ffc8690") : appText("text_85ff678f680e")}
         </span>
         <span className="today-injury-add-chevron" aria-hidden="true" />
       </button>
@@ -847,14 +845,14 @@ export function TodayInjuryManager({
         onSubmit={addInjury}
       >
         <div className="today-injury-add-toolbar">
-          <p className="today-injury-add-title">Add injury</p>
+          <p className="today-injury-add-title">{appText("text_85ff678f680e")}</p>
           <div className="field today-injury-map-control">
-            <label htmlFor={bodyMapVisibilityId}>Body map</label>
+            <label htmlFor={bodyMapVisibilityId}>{appText("text_0a2e15e0fc75")}</label>
             <CustomSelect
               id={bodyMapVisibilityId}
               value={bodyMapVisibility}
               options={BODY_MAP_VISIBILITY_OPTIONS}
-              placeholder="Body map"
+              placeholder={appText("text_0a2e15e0fc75")}
               onChange={(value) => setBodyMapVisibility(value === "hidden" ? "hidden" : "shown")}
             />
           </div>
@@ -869,7 +867,7 @@ export function TodayInjuryManager({
         ) : null}
         {newArea.trim() ? (
           <div className="today-injury-selection" aria-live="polite">
-            <span>Selected</span>
+            <span>{appText("text_57fd7a0cf33f")}</span>
             <strong>{newArea.trim()}</strong>
             <button
               type="button"
@@ -878,22 +876,20 @@ export function TodayInjuryManager({
               disabled={isAdding}
               aria-label={`Clear selected area, ${newArea.trim()}`}
             >
-              Clear
-            </button>
-            <small>Tap the same zone to raise severity, or Clear to start over.</small>
+              {appText("text_83b12c2216ef")}</button>
+            <small>{appText("text_37888f59b8ad")}</small>
           </div>
         ) : null}
         <div className="field">
           <label htmlFor="today-injury-area">
-            Where is it?
-            <span className="today-field-required">Required</span>
+            {appText("text_26dc5e5265ed")}<span className="today-field-required">{appText("text_4850b174b713")}</span>
           </label>
           <input
             id="today-injury-area"
             ref={areaInputRef}
             value={newArea}
             spellCheck
-            placeholder="e.g. left shoulder"
+            placeholder={appText("text_24d50f5d49b8")}
             aria-invalid={addMissing === "area" || undefined}
             aria-describedby={addMissing === "area" ? addErrorId : undefined}
             onChange={(event) => {
@@ -920,7 +916,7 @@ export function TodayInjuryManager({
         </div>
         <div ref={typeGroupRef}>
           <SegmentGroup
-            label="Type"
+            label={appText("text_baaddf70fb5d")}
             value={newType}
             options={TODAY_INJURY_TYPE_OPTIONS}
             onChange={(value) => {
@@ -933,12 +929,12 @@ export function TodayInjuryManager({
           />
         </div>
         <div className="field today-injury-detail">
-          <label htmlFor="today-injury-detail">Anything else? — optional</label>
+          <label htmlFor="today-injury-detail">{appText("text_0c782b57bff9")}</label>
           <input
             id="today-injury-detail"
             value={newDetail}
             spellCheck
-            placeholder="e.g. worse when sprinting"
+            placeholder={appText("text_32feac786e53")}
             onChange={(event) => {
               const raw = event.target.value;
               setDetailLimited(isInjuryEntryLimited(raw));
@@ -956,7 +952,7 @@ export function TodayInjuryManager({
           </small>
         </div>
         <SegmentGroup
-          label="Severity"
+          label={appText("text_5e9f98120dbe")}
           value={newSeverity}
           options={INJURY_SEVERITY_OPTIONS}
           onChange={setNewSeverity}
@@ -964,8 +960,8 @@ export function TodayInjuryManager({
         {addMissing ? (
           <p id={addErrorId} className="today-inline-error" role="alert">
             {addMissing === "area"
-              ? "Say where it is first — tap a spot on the body map, or type the area."
-              : "Pick a type first. If none of these fit, tap “Other”."}
+              ? appText("text_8a2d0cad7086")
+              : appText("text_fbfa55a9652f")}
           </p>
         ) : null}
         {/* Deliberately not disabled on an incomplete form. A disabled submit is
@@ -973,7 +969,7 @@ export function TodayInjuryManager({
             feedback was a button that would not respond. Let the tap land, then
             name what is missing. */}
         <button type="submit" className="secondary-button" disabled={isAdding}>
-          {isAdding ? "Adding..." : "Add injury"}
+          {isAdding ? appText("text_913a8849b60d") : appText("text_85ff678f680e")}
         </button>
       </form>
     </section>

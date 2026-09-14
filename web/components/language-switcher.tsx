@@ -1,6 +1,6 @@
 "use client";
 
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale, useTranslations, useTranslations as useAppTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAppSession } from "@/components/auth-provider";
@@ -16,6 +16,7 @@ function readLocaleCookie() {
 }
 
 export function LanguageSwitcher() {
+    const appText = useAppTranslations("AppText");
   const router = useRouter();
   const t = useTranslations("LanguageSwitcher");
   const locale = resolveLocale(useLocale());
@@ -54,7 +55,7 @@ export function LanguageSwitcher() {
   }
   return <div ref={rootRef} className="unlxck-language-switcher">
     <button type="button" className="unlxck-language-switcher-trigger" aria-label={t("current", { language: current.label })} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((value) => !value)} disabled={pending !== null}>
-      <span aria-hidden="true">◎</span><span>{current.shortLabel}</span><span aria-hidden="true">⌄</span>
+      <span aria-hidden="true">{appText("text_16370ff5bac8")}</span><span>{current.shortLabel}</span><span aria-hidden="true">{appText("text_641b9bedb453")}</span>
     </button>
     {open ? <div className="unlxck-language-menu" role="menu" aria-label={t("choose")}>
       <p>{t("choose")}</p>{LOCALE_OPTIONS.map((option) => <button key={option.code} type="button" role="menuitemradio" aria-checked={option.code === locale} onClick={() => void selectLocale(option.code)}><span>{option.label}</span><span>{option.shortLabel}</span></button>)}

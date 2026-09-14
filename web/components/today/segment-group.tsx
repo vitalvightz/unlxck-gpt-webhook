@@ -1,4 +1,8 @@
+
 "use client";
+
+import { useTranslations as useAppTranslations } from "next-intl";
+import { translateUiText } from "@/i18n/ui-text";
 
 /** Shared segmented control used by the readiness and injury check-in forms.
  * `columns` sets the grid width: 3-up by default; pass 2 for a 2-column (e.g.
@@ -25,11 +29,12 @@ export function SegmentGroup<T extends string>({
   required?: boolean;
   invalid?: boolean;
 }) {
+    const appText = useAppTranslations("AppText");
   return (
     <div className="today-field-group">
       <p className="today-field-label">
         {label}
-        {required ? <span className="today-field-required">Required</span> : null}
+        {required ? <span className="today-field-required">{appText("text_4850b174b713")}</span> : null}
       </p>
       <div
         className={columns === 2 ? "today-segment-row today-segment-row-2col" : "today-segment-row"}
@@ -46,7 +51,7 @@ export function SegmentGroup<T extends string>({
             aria-pressed={option.value === value}
             onClick={() => onChange(option.value)}
           >
-            {option.label}
+            {translateUiText(appText, option.label)}
           </button>
         ))}
       </div>
