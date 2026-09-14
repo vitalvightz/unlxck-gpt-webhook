@@ -88,12 +88,24 @@ _VERIFIED_LOW_COST_LEVELS = frozenset(
 _PRE_HARD_COST_FIELDS = ("impact_cost", "landing_cost", "eccentric_cost", "soreness_risk")
 
 
+# "2 x 20 m", "3 x 30s", "4 x 20 km" — the second number carries a distance or
+# time unit, so it is NOT a rep count. A goal-preservation microdose is written
+# this way ("2 x 20 m @ RPE 7"); reading its 20 metres as 20 reps let the
+# countdown overlay rewrite the dose to "2 x 3" and silently drop the unit.
+_NON_REP_SECOND_TERM = re.compile(
+    r"\s*(?:m|km|s|sec|secs|second|seconds|min|mins|minute|minutes)\b", re.I
+)
+
+
 def _parse_sets_reps(prescription: str) -> tuple[int | None, int | None]:
     text = str(prescription or "")
-    match = re.search(r"\b(\d+)\s*[xX×]\s*(\d+)\b", text)
-    if not match:
-        return None, None
-    return int(match.group(1)), int(match.group(2))
+    for match in re.finditer(r"\b(\d+)\s*[xX×]\s*(\d+)\b", text):
+        if _NON_REP_SECOND_TERM.match(text[match.end():]):
+            # Distance/time dose: leave it to the non-rep handling, which keeps
+            # the unit and reduces the leading count instead.
+            continue
+        return int(match.group(1)), int(match.group(2))
+    return None, None
 
 
 def _rpe_ceiling(rpe_cap: Any) -> int | None:

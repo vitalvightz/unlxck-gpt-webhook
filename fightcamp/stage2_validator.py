@@ -3609,6 +3609,24 @@ def _goal_witness_rendered_doses(lines: list[str], witness: dict) -> list[str]:
     return doses
 
 
+# "4x5/side", "4 x 5 reps", "3 x 8" — a set x rep dose with NO time unit on the
+# work term. A trailing time unit ("4 x 30 sec") is deliberately excluded: that
+# is a timed interval and keeps the timed matching below.
+_AUTHORED_REP_DOSE = re.compile(
+    r"\b(?P<sets>\d+)\s*[x\u00d7]\s*(?P<reps>\d+)\s*"
+    r"(?!\s*(?:s\b|sec|second|m\b|min|minute))(?:reps?\b|/\s*side|per\s+side|\b)",
+    re.I,
+)
+
+
+def _authored_rep_dose(dose: object) -> tuple[int, int] | None:
+    """Return ``(sets, reps)`` when ``dose`` is a rep-shaped set x rep dose."""
+    match = _AUTHORED_REP_DOSE.search(str(dose or ""))
+    if not match:
+        return None
+    return int(match.group("sets")), int(match.group("reps"))
+
+
 def _goal_witness_dose_matches(witness: dict, dose: str) -> bool:
     from .goal_preservation import _sets_reps, strength_intensity
     if witness.get("sets"):
@@ -3624,6 +3642,20 @@ def _goal_witness_dose_matches(witness: dict, dose: str) -> bool:
                 and all(strength_intensity(dose).get(key, 0) >= witness[key]
                         for key in ("minimum_rpe", "minimum_load_percent") if key in witness))
     if witness.get("work_sec") and witness.get("rounds"):
+        # A drill whose OWN authored bank dose is rep-shaped ("4x5/side, 2min
+        # rest") is not a timed interval: its work_sec is an energy-system
+        # accounting estimate, not a prescription. Demanding a time unit in the
+        # rendering made a correctly rendered "4 x 5/side" read as a missing
+        # witness. Check the authored shape first and, when it is rep-shaped,
+        # hold the rendering to that same authored set x rep count.
+        authored = _authored_rep_dose(witness.get("effective_prescription"))
+        if authored:
+            rendered = _authored_rep_dose(dose)
+            return bool(
+                rendered
+                and rendered[0] >= authored[0]
+                and rendered[1] >= authored[1]
+            )
         # Parse common structured timed forms — "3 rounds x 2 min", "3 rounds of
         # 2 minutes", "4 x 30 sec" — in consistent units, normalising minutes to
         # seconds before comparing with work_sec. On any parse failure return a
