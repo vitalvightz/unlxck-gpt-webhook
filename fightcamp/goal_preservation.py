@@ -624,7 +624,7 @@ def _other_stimuli(role: dict, pool: dict, brief: dict) -> list[dict]:
         metadata = selected.get("selection_metadata") if isinstance(selected.get("selection_metadata"), dict) else {}
         dose_source = dict(selected)
         for field in (
-            "work_sec", "rest_sec", "rounds", "total_minutes", "rpe",
+            "work_sec", "rest_sec", "rounds", "total_minutes", "rpe", "rpe_max",
             "impact_cost", "lactate_load", "movement_cost",
         ):
             if metadata.get(field) is not None:

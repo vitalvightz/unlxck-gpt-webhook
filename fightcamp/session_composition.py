@@ -35,6 +35,7 @@ from .config import (
     conditioning_dose_minutes,
     conditioning_phase_workload_envelope as _conditioning_phase_workload_envelope,
 )
+from .bank_schema import has_meaningful_fulfillment_authority
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 
 
@@ -94,6 +95,9 @@ def assignment_from_slot(phase: str, slot_group: str, slot: dict[str, Any]) -> d
         "slot_group": slot_group,
         "source_session_index": slot.get("session_index"),
     }
+    for key in ("support_only", "meaningful_stress", "fulfillment_authority"):
+        if key in selected:
+            assignment[key] = selected[key]
     base_prescription = str(selected.get("prescription") or "").strip()
     if base_prescription:
         assignment["base_prescription"] = base_prescription
@@ -1236,6 +1240,14 @@ def _conditioning_effective_dose(option: dict[str, Any]) -> dict[str, Any]:
 
 
 def _conditioning_active_work_seconds(option: dict[str, Any]) -> float | None:
+    metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else option
+    if not has_meaningful_fulfillment_authority(
+        metadata,
+        source_kind="conditioning",
+        source=str(metadata.get("_schema_source") or ""),
+        allow_legacy_unstamped=True,
+    ):
+        return 0.0
     return conditioning_dose_active_work_seconds(_conditioning_effective_dose(option))
 
 
@@ -1246,6 +1258,14 @@ def _conditioning_selected_active_work_seconds(
     """Measure the retained conditioning workload after high-load partitioning."""
     active_work = 0.0
     for _slot, option, _is_selected in selected:
+        metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else option
+        if not has_meaningful_fulfillment_authority(
+            metadata,
+            source_kind="conditioning",
+            source=str(metadata.get("_schema_source") or ""),
+            allow_legacy_unstamped=True,
+        ):
+            continue
         dose = _conditioning_effective_dose(option)
         work_sec = _float_or_none(dose.get("work_sec"))
         allocated = allocated_rounds.get(str(option.get("name") or ""))
@@ -1472,12 +1492,26 @@ def compose_normal_conditioning_assignments(
             strength_slots = pool.get("strength_slots", []) if isinstance(pool, dict) else []
 
             preferred_system = str(role.get("preferred_system") or "").strip().lower()
-            matching_slots = [
-                slot
-                for slot in slots
-                if isinstance(slot, dict)
-                and str(slot.get("role") or "").strip().lower() == preferred_system
-            ]
+            matching_slots = []
+            for slot in slots:
+                if not isinstance(slot, dict) or str(slot.get("role") or "").strip().lower() != preferred_system:
+                    continue
+                option = slot.get("selected")
+                if not isinstance(option, dict):
+                    continue
+                metadata = option.get("selection_metadata") if isinstance(option.get("selection_metadata"), dict) else option
+                authority = option.get("fulfillment_authority")
+                if authority is not True and not (
+                    authority is None
+                    and has_meaningful_fulfillment_authority(
+                        metadata,
+                        source_kind="conditioning",
+                        source=str(metadata.get("_schema_source") or ""),
+                        allow_legacy_unstamped=True,
+                    )
+                ):
+                    continue
+                matching_slots.append(slot)
             # Membership is one member per Stage 1 slot. A slot's ``alternates``
             # are its same-role substitution reservoir, not additional session
             # members: drawing from them turns one selected drill plus its two
@@ -1603,6 +1637,9 @@ def compose_normal_conditioning_assignments(
                     "base_prescription": _conditioning_prescription(option),
                     "effective_prescription": _conditioning_prescription(option, rounds=allocated_rounds),
                     "effective_rounds": allocated_rounds,
+                    "support_only": option.get("support_only") is True,
+                    "meaningful_stress": option.get("meaningful_stress") is True,
+                    "fulfillment_authority": option.get("fulfillment_authority") is True,
                 }
                 # Carry the canonical structured dose alongside the rendered
                 # text. The assignment is what persists; the candidate pool it

@@ -19,6 +19,7 @@ from .bank_schema import (
     KNOWN_SYSTEMS,
     NON_EQUIPMENT_TOKENS,
     SYSTEM_ALIASES,
+    has_meaningful_fulfillment_authority,
     is_late_fight_metadata_safe,
     validate_training_item,
 )
@@ -257,6 +258,16 @@ def _conditioning_mechanical_cost_is_high(drill: dict) -> bool:
     return bool(_LANDING_IMPACT_TAGS & set(normalize_tags(drill.get("tags") or [])))
 
 
+def _has_primary_conditioning_authority(drill: dict) -> bool:
+    source = str(drill.get("_schema_source") or "")
+    return has_meaningful_fulfillment_authority(
+        drill,
+        source_kind="conditioning",
+        source=source,
+        allow_legacy_unstamped=True,
+    )
+
+
 def _conditioning_verified_interval_dose(drill: dict) -> tuple[float, float, float] | None:
     """Return ``(work_sec, rest_sec, rounds)`` only when the units are verified.
 
@@ -303,6 +314,8 @@ def _promote_lower_cost_conditioning_head(entries: list) -> bool:
 
     for index in range(1, len(entries)):
         candidate = entries[index][0]
+        if _has_primary_conditioning_authority(candidate) != _has_primary_conditioning_authority(head_drill):
+            continue
         if _conditioning_mechanical_cost_is_high(candidate):
             continue
         candidate_dose = _conditioning_verified_interval_dose(candidate)
@@ -3762,18 +3775,23 @@ def generate_conditioning_block(flags):
 
     _run_conditioning_poststep("style_bank_score", _load_and_score_style_conditioning_bank)
 
+    def _generic_fulfillment_sort_key(item: tuple[dict, float, dict]) -> tuple[int, float]:
+        drill, score, _ = item
+        return (0 if _has_primary_conditioning_authority(drill) else 1, -score)
+
     for drills in system_drills.values():
-        drills.sort(key=lambda x: x[1], reverse=True)
+        drills.sort(key=_generic_fulfillment_sort_key)
     for drills in style_system_drills.values():
-        drills.sort(key=lambda x: x[1], reverse=True)
+        drills.sort(key=_generic_fulfillment_sort_key)
     for style_lists in style_drills_by_style.values():
         for drills in style_lists.values():
-            drills.sort(key=lambda x: x[1], reverse=True)
+            drills.sort(key=_generic_fulfillment_sort_key)
 
     if selection_format == "boxing":
-        def _boxing_sort_key(item: tuple[dict, float, dict]) -> tuple[int, float]:
+        def _boxing_sort_key(item: tuple[dict, float, dict]) -> tuple[int, int, float]:
             drill, score, _ = item
             return (
+                0 if _has_primary_conditioning_authority(drill) else 1,
                 _boxing_aerobic_preference_rank(
                     drill,
                     injuries=injuries,
@@ -3944,6 +3962,8 @@ def generate_conditioning_block(flags):
     def pop_drill(source: dict, system: str):
         drills = source.get(system, [])
         for idx, (drill, _, reasons) in enumerate(drills):
+            if not _has_primary_conditioning_authority(drill):
+                continue
             if _delay_pool_treading(drill, drills[idx + 1 :], system):
                 continue
             name = drill.get("name")
@@ -3965,6 +3985,8 @@ def generate_conditioning_block(flags):
         for style in sorted(style_counts, key=style_counts.get):
             drills = style_drills_by_style.get(style, {}).get(system, [])
             for idx, (drill, _, reasons) in enumerate(drills):
+                if not _has_primary_conditioning_authority(drill):
+                    continue
                 if _delay_pool_treading(drill, drills[idx + 1 :], system):
                     continue
                 name = drill.get("name")
@@ -4176,7 +4198,10 @@ def generate_conditioning_block(flags):
                     ),
                 }
 
-        return _append_drill(group_key or system, drill, reasons)
+        destination = group_key or (
+            system if _has_primary_conditioning_authority(drill) else "conditioning_support"
+        )
+        return _append_drill(destination, drill, reasons)
 
     style_taper_ranked = None
 
@@ -4272,7 +4297,6 @@ def generate_conditioning_block(flags):
             return False
         for _relevance, _bank_index, drill, system, reasons in _rank_style_taper_candidates():
             if _try_append_conditioning_drill(system, drill, reasons, source="style_taper"):
-                selected_counts[system] += 1
                 return True
         return False
 
@@ -4373,6 +4397,13 @@ def generate_conditioning_block(flags):
                 return drill, reasons
         if style_remaining > 0:
             drill, reasons = pop_style_drill(system)
+            if drill:
+                style_remaining -= 1
+                return drill, reasons
+            # A style quota cannot reserve a mandatory system slot for a
+            # support-only style candidate. Spend that quota on a meaningful
+            # general candidate before considering the requirement unfilled.
+            drill, reasons = pop_drill(system_drills, system)
             if drill:
                 style_remaining -= 1
                 return drill, reasons

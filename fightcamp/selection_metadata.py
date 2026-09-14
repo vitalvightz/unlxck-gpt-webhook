@@ -31,6 +31,7 @@ SELECTION_METADATA_DEFAULTS: dict[str, Any] = {
     "rounds": None,
     "total_minutes": None,
     "rpe": None,
+    "rpe_max": None,
 }
 
 LIST_METADATA_FIELDS = {
@@ -113,7 +114,7 @@ def normalize_selection_metadata(item: dict | None) -> dict[str, Any]:
     for field in SCALAR_METADATA_FIELDS:
         default = metadata[field]
         value = item.get(field, default)
-        if field in {"work_sec", "rest_sec", "rounds", "total_minutes", "rpe"}:
+        if field in {"work_sec", "rest_sec", "rounds", "total_minutes", "rpe", "rpe_max"}:
             metadata[field] = _number_or_default(value, default)
         elif value is None or value == "":
             metadata[field] = default

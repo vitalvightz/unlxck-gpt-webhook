@@ -331,6 +331,11 @@ def _positive_number(value: Any) -> bool:
     return number is not None and number > 0
 
 
+def has_valid_rpe_metadata(item: dict) -> bool:
+    """Return whether the item authors either supported RPE field."""
+    return any(_positive_number(item.get(field)) for field in CONDITIONING_RPE_FIELDS)
+
+
 def _technical_footwork_dose_ok(item: dict) -> bool:
     """True when the drill carries a valid technical-footwork dose contract.
 
@@ -358,6 +363,49 @@ def _technical_footwork_dose_ok(item: dict) -> bool:
     return bool(timed or quality_rep)
 
 
+def conditioning_dose_shape(item: dict, *, source: str = "") -> str | None:
+    """Resolve the authored conditioning dose without inventing other fields.
+
+    Continuous work owns ``total_minutes``. Interval work owns positive
+    ``work_sec`` and ``rounds`` plus an authored non-negative ``rest_sec``.
+    Technical footwork additionally owns its existing quality-rep contract.
+    """
+    if _is_technical_footwork(item, source):
+        if _technical_footwork_dose_ok(item):
+            return "technical_footwork"
+        return None
+    if _positive_number(item.get("total_minutes")):
+        return "continuous"
+    rest = _number_or_none(item.get("rest_sec"))
+    if _positive_number(item.get("work_sec")) and _positive_number(item.get("rounds")) and rest is not None and rest >= 0:
+        return "interval"
+    return None
+
+
+def has_meaningful_fulfillment_authority(
+    item: dict,
+    *,
+    source_kind: SourceKind = "generic",
+    source: str = "",
+    allow_legacy_unstamped: bool = False,
+) -> bool:
+    """Return explicit authority to satisfy a mandatory training requirement.
+
+    Bank membership and an energy-system tag are never authority by themselves.
+    Missing or contradictory governance fails closed. Conditioning authority
+    also requires a valid authored dose and one supported RPE field.
+    """
+    governance_fields = ("stress_class", "cost_class", "support_only", "meaningful_stress")
+    if allow_legacy_unstamped and not source and not any(field in item for field in governance_fields):
+        return True
+    governed = item.get("support_only") is False and item.get("meaningful_stress") is True
+    if not governed:
+        return False
+    if source_kind == "conditioning":
+        return bool(conditioning_dose_shape(item, source=source) and has_valid_rpe_metadata(item))
+    return True
+
+
 def _metadata_missing_issues(item: dict, *, source: str, source_kind: str | None = None) -> list[str]:
     kind = _resolve_source_kind(source, source_kind)
     if kind == "generic":
@@ -375,7 +423,7 @@ def _metadata_missing_issues(item: dict, *, source: str, source_kind: str | None
             issue = "missing_late_windows" if field == "late_windows" else f"missing_{field}"
             issues.append(issue)
 
-    if kind == "conditioning" and not any(_has_value(item, field) for field in CONDITIONING_RPE_FIELDS):
+    if kind == "conditioning" and not has_valid_rpe_metadata(item):
         issues.append("missing_rpe")
 
     return list(dict.fromkeys(issues))
@@ -971,18 +1019,21 @@ def validate_training_item(
     )
     for key, default in defaults.items():
         if key not in item:
-            issue = "missing_late_windows" if key == "late_windows" else f"missing_{key}"
-            _record_issue(item, issue)
             if mode == "audit":
                 item[key] = default.copy() if isinstance(default, list) else default
 
     for issue in _metadata_missing_issues(item, source=source_key):
         _record_issue(item, issue)
 
+    if _source_kind(source_key) == "strength" and not _has_value(item, "phase_role"):
+        _record_issue(item, "missing_phase_role")
+
     # Validate the technical-footwork dose contract in its own terms instead of
     # requiring conditioning timed metadata.
     if technical_footwork and not _technical_footwork_dose_ok(item):
         _record_issue(item, "missing_technical_footwork_dose")
+    elif _source_kind(source_key) == "conditioning" and conditioning_dose_shape(item, source=source_key) is None:
+        _record_issue(item, "missing_conditioning_dose")
 
     late_windows = item.get("late_windows")
     if "late_windows" in item and (not isinstance(late_windows, list) or not late_windows):

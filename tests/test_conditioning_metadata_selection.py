@@ -822,7 +822,7 @@ def test_generated_boxing_d6_taper_uses_low_impact_alactic_not_jump_or_sprint_st
         }
     )
 
-    plan_text, selected_names, *_rest, candidate_reservoir = result
+    plan_text, selected_names, _why, grouped_drills, _missing, candidate_reservoir = result
     blocked: dict[str, set[str]] = {}
     for entry in candidate_reservoir["__late_window__"]["blocked"]:
         blocked.setdefault(entry["name"], set()).update(entry["reason_codes"])
@@ -832,9 +832,20 @@ def test_generated_boxing_d6_taper_uses_low_impact_alactic_not_jump_or_sprint_st
     }
 
     assert "Explosive Boxing Burst Intervals" not in selected_names
-    assert "Reactive Shuffle Repeats" in selected_names
-    assert "late_penalty_missing_governance_metadata" in penalized["Explosive Boxing Burst Intervals"]
-    assert "late_penalty_missing_governance_metadata" in penalized["Reactive Shuffle Repeats"]
+    assert not any(
+        "late_penalty_missing_governance_metadata" in codes
+        for name, codes in penalized.items()
+        if name in {"Explosive Boxing Burst Intervals", "Reactive Shuffle Repeats"}
+    )
+    assert grouped_drills["alactic"]
+    assert all(
+        drill.get("meaningful_stress") is True and drill.get("support_only") is False
+        for drill in grouped_drills["alactic"]
+    )
+    assert all(
+        drill.get("support_only") is True and drill.get("meaningful_stress") is False
+        for drill in grouped_drills.get("conditioning_support", [])
+    )
     assert "Band-Assisted Jump Reset" not in plan_text
     assert "Band-Resisted Sprint Start" not in plan_text
 
@@ -845,8 +856,8 @@ def test_final_week_taper_caps_keep_primers_submaximal():
 
     assert "RPE 8" not in d6
     assert "RPE 8" not in d1
-    assert "2-3 bursts max (5-6 sec @ RPE 6-7" in d6
-    assert "RPE 3-5" in d1
+    assert "2-3 bursts max (5-6 sec @ RPE ≤5" in d6
+    assert "RPE ≤3" in d1
 
 
 def test_late_fight_generation_keeps_safe_support_available_across_windows():
@@ -883,7 +894,7 @@ def test_late_fight_generation_keeps_safe_support_available_across_windows():
             for drill in selected_drills:
                 tags = set(conditioning.normalize_tags(drill.get("tags", [])))
                 assert tags & {"breathing", "visualization", "tactical", "readiness_check"}
-                assert not drill.get("equipment")
+                assert set(drill.get("equipment") or []).issubset({"bodyweight"})
                 assert float(drill.get("rpe_max", drill.get("rpe", 0)) or 0) <= 3
             assert any(
                 "late_support_fallback" in entry.get("reasons", {}).get("reason_codes", [])
@@ -934,7 +945,7 @@ def test_taper_d19_gas_tank_signal_keeps_one_low_noise_aerobic_machine_dose():
         for name, reason_codes in blocked.items()
         if any(term in name.lower() for term in ("rower", "bike"))
     )
-    assert "late_penalty_missing_governance_metadata" in penalized["Easy Assault Bike"]
+    assert "late_penalty_missing_governance_metadata" not in penalized.get("Easy Assault Bike", set())
 
 
 def test_machine_biased_gas_tank_helper_detects_bike_and_rower():
@@ -968,7 +979,7 @@ def test_focus_token_normalization_matches_ui_labels():
     assert "work capacity" in values
 
 
-def test_d16_profile_keeps_low_aerobic_machine_and_rejects_dense_machine_work(monkeypatch):
+def test_d16_missing_windows_fail_closed_even_for_low_aerobic_machine(monkeypatch):
     safe_machine = {
         "name": "Assault Bike Easy Gas Tank Ride",
         "placement": "conditioning",
@@ -977,7 +988,12 @@ def test_d16_profile_keeps_low_aerobic_machine_and_rejects_dense_machine_work(mo
         "equipment": ["assault_bike"],
         "tags": ["conditioning", "aerobic", "low_impact", "recovery"],
         "rpe": 5,
+        "total_minutes": 15,
         "lactate_load": "low",
+        "stress_class": "anchor",
+        "cost_class": "low",
+        "support_only": False,
+        "meaningful_stress": True,
         "notes": "12-18 min easy nasal breathing",
     }
     unsafe_machine = {
@@ -988,7 +1004,14 @@ def test_d16_profile_keeps_low_aerobic_machine_and_rejects_dense_machine_work(mo
         "equipment": ["assault_bike"],
         "tags": ["conditioning", "work_capacity"],
         "rpe": 9,
+        "work_sec": 20,
+        "rest_sec": 10,
+        "rounds": 8,
         "lactate_load": "high",
+        "stress_class": "anchor",
+        "cost_class": "high",
+        "support_only": False,
+        "meaningful_stress": True,
         "notes": "8 x 20s hard / 10s easy",
     }
     monkeypatch.setattr(conditioning, "get_conditioning_bank", lambda: [unsafe_machine, safe_machine])
@@ -998,7 +1021,7 @@ def test_d16_profile_keeps_low_aerobic_machine_and_rejects_dense_machine_work(mo
     monkeypatch.setattr(conditioning, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"conditioning": 1})
     monkeypatch.setattr(conditioning, "_load_bank", lambda *_args, **_kwargs: [])
 
-    _text, selected_names, _why, grouped_drills, _missing, _reservoir = conditioning.generate_conditioning_block(
+    _text, _selected_names, _why, grouped_drills, missing, _reservoir = conditioning.generate_conditioning_block(
         {
             "phase": "SPP",
             "sport": "boxing",
@@ -1015,9 +1038,10 @@ def test_d16_profile_keeps_low_aerobic_machine_and_rejects_dense_machine_work(mo
             "restrictions": [],
         }
     )
-    blob = " ".join(selected_names + [d.get("name", "") for d in grouped_drills.get("aerobic", [])]).lower()
-    assert "assault bike" in blob or "rower" in blob
-    assert "tabata" not in blob
+    aerobic_blob = " ".join(d.get("name", "") for d in grouped_drills.get("aerobic", [])).lower()
+    assert not aerobic_blob
+    assert "tabata" not in aerobic_blob
+    assert "aerobic" in missing
 
 
 def test_taper_d16_profile_allows_only_low_noise_machine_gas_tank(monkeypatch):
