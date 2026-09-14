@@ -55,6 +55,7 @@ from api.contracts.rehab_completion import (
 from api.contracts.rehab_exposure import RehabExposureEvent
 
 from .open_plan_timeline import project_open_structured_plan
+from .effective_structured_plan import resolve_effective_structured_plan
 
 __all__ = [
     "build_rehab_response_contexts",
@@ -144,8 +145,8 @@ def _legacy_occurrence_base(block: Mapping[str, Any], drill_id: str) -> str:
 def _structured_weeks(
     plan_row: Mapping[str, Any], *, training_day: str
 ) -> list[Mapping[str, Any]]:
-    structured_plan = plan_row.get("structured_plan")
-    if not isinstance(structured_plan, Mapping):
+    structured_plan = resolve_effective_structured_plan(plan_row)
+    if structured_plan is None:
         return []
     projected, _context = project_open_structured_plan(
         plan_row,

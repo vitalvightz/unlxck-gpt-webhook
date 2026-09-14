@@ -15,6 +15,7 @@ from api.services.progress_notifications import (
 )
 from api.services.push_notifications import dispatch_push_candidate
 from api.services.week_progress import evaluate_week_completion
+from api.services.effective_structured_plan import resolve_effective_structured_plan
 from api.store import AppStore
 
 logger = logging.getLogger(__name__)
@@ -29,8 +30,7 @@ def _mapping_rows(value: object) -> list[Mapping[str, Any]]:
 
 
 def _structured(plan: Mapping[str, Any]) -> Mapping[str, Any]:
-    value = plan.get("structured_plan")
-    return value if isinstance(value, Mapping) else {}
+    return resolve_effective_structured_plan(plan) or {}
 
 
 def _ordered_weeks(plan: Mapping[str, Any]) -> list[Mapping[str, Any]]:

@@ -60,6 +60,7 @@ from api.contracts.readiness_message import (
 from api.contracts.training_day import resolve_training_day_str
 from api.store import AppStore
 from api.services.active_plan import resolve_active_plan
+from api.services.effective_structured_plan import resolve_effective_structured_plan
 from api.services.plan_schedule import (
     has_scheduled_day_content,
     parse_iso_date,
@@ -1563,8 +1564,8 @@ def _select_structured_primary_session(sessions: list[Mapping[str, Any]]) -> Map
 def _projected_structured_plan(
     plan_row: Mapping[str, Any], *, training_day: str | None = None
 ) -> tuple[list[Mapping[str, Any]], Mapping[str, Any]]:
-    structured_plan = plan_row.get("structured_plan")
-    if not isinstance(structured_plan, Mapping):
+    structured_plan = resolve_effective_structured_plan(plan_row)
+    if structured_plan is None:
         return [], {}
     projected, context = project_open_structured_plan(
         plan_row,
@@ -1692,6 +1693,11 @@ def _structured_session_entry_for_day(
     # a second vocabulary that answers the same question differently.
     if first_session is None and not has_scheduled_day_content(entry):
         return None
+    if first_session is None:
+        # Deterministic calendar rows can prescribe a headline-only support
+        # session. Its dated day is the canonical legacy identity; this keeps it
+        # completable without consulting the recurring weekly metadata.
+        entry["session_id"] = day_date
     return entry
 
 
