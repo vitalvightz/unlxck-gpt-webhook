@@ -6,6 +6,7 @@ import json
 import logging
 from collections.abc import Mapping
 from collections.abc import Sequence
+from datetime import date
 from typing import Any
 
 from api.structured_plan_deterministic_fallback import build_deterministic_structured_plan
@@ -26,6 +27,53 @@ def _mapping(value: Any) -> Mapping[str, Any] | None:
     return None
 
 
+def _has_usable_dated_calendar(plan: Mapping[str, Any]) -> bool:
+    weeks = plan.get("weeks")
+    if not isinstance(weeks, Sequence) or isinstance(weeks, (str, bytes, bytearray)):
+        return False
+    for week in weeks:
+        if not isinstance(week, Mapping):
+            continue
+        days = week.get("days")
+        if not isinstance(days, Sequence) or isinstance(days, (str, bytes, bytearray)):
+            continue
+        for day in days:
+            if not isinstance(day, Mapping):
+                continue
+            try:
+                date.fromisoformat(str(day.get("date") or "")[:10])
+            except ValueError:
+                continue
+            return True
+    return False
+
+
+def _has_usable_open_weekly_calendar(
+    plan_row: Mapping[str, Any], plan: Mapping[str, Any]
+) -> bool:
+    """Recognise the older renewable cards whose rows are weekday templates."""
+
+    if str(plan_row.get("fight_date") or "").strip():
+        return False
+    weeks = plan.get("weeks")
+    if not isinstance(weeks, Sequence) or not weeks:
+        return False
+    valid_weekdays = {"mon", "tue", "wed", "thu", "fri", "sat", "sun"}
+    for week in weeks:
+        if not isinstance(week, Mapping):
+            return False
+        days = week.get("days")
+        if not isinstance(days, Sequence) or len(days) < 2:
+            return False
+        if any(
+            not isinstance(day, Mapping)
+            or str(day.get("weekday") or "").strip().lower()[:3] not in valid_weekdays
+            for day in days
+        ):
+            return False
+    return True
+
+
 def resolve_effective_structured_plan(
     plan_row: Mapping[str, Any], *, raw_markdown: str | None = None
 ) -> dict[str, Any] | None:
@@ -35,6 +83,7 @@ def resolve_effective_structured_plan(
     not derive a calendar from broad recurring metadata.
     """
 
+    legacy_open_calendar: dict[str, Any] | None = None
     stored = _mapping(plan_row.get("structured_plan"))
     if stored:
         parsed = safe_parse_structured_plan(stored, raw_markdown=raw_markdown or None)
@@ -44,9 +93,12 @@ def resolve_effective_structured_plan(
         # carry the dated ``weeks`` calendar consumed by session services. Keep
         # their established behaviour; absence of that calendar is what permits
         # deterministic reconstruction.
-        weeks = stored.get("weeks")
-        if isinstance(weeks, Sequence) and not isinstance(weeks, (str, bytes, bytearray)):
+        if _has_usable_dated_calendar(stored):
             return dict(stored)
+        if _has_usable_open_weekly_calendar(plan_row, stored):
+            # Try planner reconstruction first. This is retained only for old
+            # renewable plans whose canonical cards are weekday templates.
+            legacy_open_calendar = dict(stored)
         logger.warning(
             "stored structured_plan failed validation; trying deterministic fallback plan_id=%s",
             plan_row.get("id"),
@@ -55,7 +107,7 @@ def resolve_effective_structured_plan(
     planning_brief = _mapping(plan_row.get("planning_brief"))
     fallback = build_deterministic_structured_plan(planning_brief)
     if fallback is None:
-        return None
+        return legacy_open_calendar
     parsed = safe_parse_structured_plan(fallback, raw_markdown=raw_markdown or None)
     if not parsed.ok or parsed.plan is None:
         logger.warning(

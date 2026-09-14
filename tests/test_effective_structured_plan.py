@@ -72,6 +72,12 @@ def test_effective_resolver_prefers_stored_then_reconstructs_and_fails_safe(monk
     ) == rebuilt
     assert calls == [brief]
 
+    for unusable in ({"weeks": []}, {"weeks": [{"days": [{"weekday": "Monday"}]}]}):
+        assert resolve_effective_structured_plan(
+            {"structured_plan": unusable, "planning_brief": brief}
+        ) == rebuilt
+    assert calls == [brief, brief, brief]
+
     monkeypatch.setattr(
         "api.services.effective_structured_plan.build_deterministic_structured_plan",
         lambda _brief: None,
