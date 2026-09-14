@@ -1073,6 +1073,34 @@ def _apply_adjacent_strength_recovery(
         ] = evidence
 
 
+def _strength_phase_for_role(week: dict[str, Any], role: dict[str, Any]) -> str:
+    """Return the Stage 1 phase that owns this role's scheduled D-day.
+
+    A planner week is a calendar container, not a phase: its label is the phase
+    the week *starts* in, so a week spanning a phase boundary carries roles that
+    belong to the next phase. Composing every role in the container from
+    ``week["phase"]``'s pool put GPP-only exercises on an SPP day, which the
+    authority validator - which deliberately recomputes phase from the D-day so a
+    stale week label cannot hide a bad selection - then rejected as
+    ``selected_exercise_phase_ineligible``.
+
+    Reuse the canonical resolver conditioning composition already uses. The week
+    label remains the fallback for an undated role or a camp with no Stage 1
+    phase-day allocation to resolve against, so weeks wholly inside one phase and
+    the late-fight selector are unaffected.
+    """
+    athlete_model = get_planner_athlete_model() or {}
+    d_day = role_d_day(week, role)
+    # ``role_d_day`` also resolves placement recorded only as a weekday against
+    # the week's calendar; the phase resolver reads countdown fields.
+    lookup = dict(role, countdown_offset=d_day) if isinstance(d_day, int) else role
+    return scheduled_phase_for_role(
+        lookup,
+        athlete_model=athlete_model,
+        spec_phase=week.get("phase"),
+    ) or str(week.get("phase") or "").strip().upper()
+
+
 def compose_normal_strength_assignments(
     *, weekly_role_map: dict[str, Any], candidate_pools: dict[str, Any]
 ) -> dict[str, Any]:
@@ -1122,9 +1150,7 @@ def compose_normal_strength_assignments(
     for week_position, week in enumerate(weekly_role_map.get("weeks", []) or []):
         if not isinstance(week, dict):
             continue
-        phase = str(week.get("phase") or "").strip().upper()
-        pool = candidate_pools.get(phase) if isinstance(candidate_pools, dict) else None
-        slots = pool.get("strength_slots", []) if isinstance(pool, dict) else []
+        week_phase = str(week.get("phase") or "").strip().upper()
         strength_index = 0
         for role in week.get("session_roles", []) or []:
             if not isinstance(role, dict):
@@ -1145,6 +1171,12 @@ def compose_normal_strength_assignments(
                 fatigue_applied=week_position == first_strength_week_position,
             )
             pressure = int(pressure_state["pressure"])
+
+            # Exercise authority follows the role's own D-day, not the weekly
+            # container it happens to sit in.
+            phase = _strength_phase_for_role(week, role) or week_phase
+            pool = candidate_pools.get(phase) if isinstance(candidate_pools, dict) else None
+            slots = pool.get("strength_slots", []) if isinstance(pool, dict) else []
 
             session_index = role.get("strength_session_index") or strength_index
             owned_slots = [
