@@ -221,6 +221,14 @@ def classify_strength_item(item: dict[str, Any]) -> dict[str, Any]:
     else:
         quality_class = "support_accessory"
 
+    # Authored governance is the final fulfilment authority. A loaded movement
+    # may still be present for durability or recovery support, but explicit
+    # support_only/meaningful_stress metadata prevents its name, tags, or bank
+    # membership from turning it back into a strength anchor.
+    governed_support = item.get("support_only") is True or item.get("meaningful_stress") is False
+    if governed_support and quality_class in ANCHOR_CAPABLE_CLASSES:
+        quality_class = "support_isometric" if is_isometric else "support_accessory"
+
     core_balance_support = (
         quality_class in SUPPORT_ONLY_CLASSES
         and quality_class != "rehab_support"

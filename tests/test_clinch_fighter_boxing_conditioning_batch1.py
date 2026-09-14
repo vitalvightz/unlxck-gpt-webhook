@@ -25,10 +25,10 @@ REMOVED_FROM_BOXING = {
     "Corner Mauling Circuit", "Slip-Clinch Reaction",
 }
 PRESERVED_BOXING_SLICE_HASHES = {
-    "brawler": "a66f0d6aef48a34a4a39bb7c3d2bd42c503ada507a25f93d08876ae4bf2cc75d",
-    "pressure_fighter": "679ea991668aacb51f6f097eb02bdf22a99118365342986ab2905ee68434e60e",
-    "counter_striker": "af158ff87e314b2c36f0de3607ecb70d0e1ea4688a14b9c30f708574ed136bd7",
-    "distance_striker": "31183a60e03b3eb727a229a698da98ea205f1e9af3bd1291af89b061ab8cb35b",
+    "brawler": "5babae91985da17f1fa63ef1d611b71ccba32c9d002a82a1fb5debb684d193bc",
+    "pressure_fighter": "de0dfdc245d903e5830bd90133199bb9b63f163e331c02a3fe94bc6e510688dd",
+    "counter_striker": "8bbdb45bfaea8e9dc4a1a6db6c8c6f1fa92fd3ea437bf7a99bb45d2742b6d93e",
+    "distance_striker": "800ab4b7e1248a3a5efc289a6ba6be2dcab8aa5a993c733fcea473248bf26951",
 }
 
 
@@ -98,7 +98,7 @@ def test_equipment_mechanical_tags_and_phase_reachability_follow_conventions():
         assert {item["system"] for item in reached} == {"ATP-PCr", "glycolytic", "aerobic"}
 
 
-def test_existing_selector_surfaces_clinch_fighter_in_gpp_and_spp():
+def test_existing_selector_does_not_promote_support_to_clinch_fulfillment():
     # Conditioning selection now prefers the best physiological match for the
     # slot, so a style drill no longer owns a system slot by default. This test
     # covers bank *reachability* — sport, style, equipment, phase and safety
@@ -112,10 +112,15 @@ def test_existing_selector_surfaces_clinch_fighter_in_gpp_and_spp():
         "training_frequency": 5, "days_available": 5, "days_until_fight": 35,
         "time_to_fight_days": 35, "injuries": [], "restrictions": [], "preferred_exercise_names": sorted(EXPECTED),
     }
+    selected_by_phase = {}
     for phase in ("GPP", "SPP"):
         result = conditioning.generate_conditioning_block({**flags, "phase": phase})
-        selected = result[5]["__style_conditioning__"]["final_selected_style_conditioning_names"]
-        assert set(selected) & set(EXPECTED)
+        selected_by_phase[phase] = result[5]["__style_conditioning__"]["final_selected_style_conditioning_names"]
+
+    assert not selected_by_phase["GPP"]
+    assert set(selected_by_phase["SPP"]) & {
+        name for name, item in _slice().items() if item["meaningful_stress"] is True
+    }
 
 
 def test_rebuilt_boxing_archetype_blocks_remain_byte_for_byte_equivalent():

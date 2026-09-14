@@ -51,6 +51,7 @@ from .fight_day_override import apply_fight_day_override_to_weekly_role_map
 from .role_labels import stamp_weekly_role_map_labels
 from .camp_week_fillers import apply_camp_week_fillers
 from .bank_authority import original_bank_entries
+from .bank_schema import has_meaningful_fulfillment_authority
 from .late_camp_role_morph import apply_late_camp_role_morph
 from .prescription_resolver import apply_effective_strength_prescriptions
 from .session_composition import (
@@ -583,12 +584,27 @@ def _slot_countdown_labels(slot: dict[str, Any]) -> list[str]:
 
 def _slot_support_only(slot: dict[str, Any]) -> bool:
     selected = _slot_selected_option(slot)
-    return bool(slot.get("support_only") or selected.get("support_only"))
+    metadata = selected.get("selection_metadata") if isinstance(selected.get("selection_metadata"), dict) else {}
+    return bool(slot.get("support_only") or selected.get("support_only") or metadata.get("support_only"))
+
+
+def _slot_has_meaningful_authority(slot: dict[str, Any], *, source_kind: str) -> bool:
+    selected = _slot_selected_option(slot)
+    metadata = selected.get("selection_metadata") if isinstance(selected.get("selection_metadata"), dict) else selected
+    return has_meaningful_fulfillment_authority(
+        metadata,
+        source_kind=source_kind,
+        source=str(metadata.get("_schema_source") or ""),
+        allow_legacy_unstamped=True,
+    )
 
 
 def _slot_anchor_capable(slot: dict[str, Any]) -> bool:
     selected = _slot_selected_option(slot)
-    return bool(slot.get("anchor_capable") or selected.get("anchor_capable"))
+    return bool(
+        (slot.get("anchor_capable") or selected.get("anchor_capable"))
+        and _slot_has_meaningful_authority(slot, source_kind="strength")
+    )
 
 
 def _slot_is_low_load_reset(slot: dict[str, Any]) -> bool:
@@ -642,7 +658,9 @@ def _slot_matches_late_fight_role(
                 return False
             return slot_role == "alactic" and _slot_selected_option(slot).get("source") != "style_taper"
         if preferred_system:
-            return slot_role == preferred_system
+            return slot_role == preferred_system and _slot_has_meaningful_authority(
+                slot, source_kind="conditioning"
+            )
         return role_key in {"alactic_sharpness_day", "light_fight_pace_touch_day", "technical_touch_day"}
     if slot_group != "strength_slots":
         return False
@@ -892,6 +910,13 @@ def _build_late_fight_allowed_exercises_by_day(
                 if prescription:
                     assignment["base_prescription"] = prescription
                     assignment["effective_prescription"] = prescription
+                assignment.update(
+                    {
+                        "support_only": option.get("support_only") is True,
+                        "meaningful_stress": option.get("meaningful_stress") is True,
+                        "fulfillment_authority": option.get("fulfillment_authority") is True,
+                    }
+                )
             notes = _selected_coaching_notes(option)
             if notes:
                 assignment["coaching_notes"] = notes
@@ -1368,6 +1393,12 @@ def _serialize_strength_option(exercise: dict, why: str, score_evidence: dict | 
     movement_patterns = [movement] if movement else []
     movement_patterns.extend(clean_list(exercise.get("tags", [])))
     quality_profile = classify_strength_item(exercise)
+    meaningful_authority = has_meaningful_fulfillment_authority(
+        exercise,
+        source_kind="strength",
+        source=str(exercise.get("_schema_source") or ""),
+        allow_legacy_unstamped=True,
+    )
     required_equipment = clean_list(exercise.get("required_equipment") or exercise.get("equipment", []))
     prescription = exercise.get("prescription") or ""
     if not prescription and phase:
@@ -1386,8 +1417,10 @@ def _serialize_strength_option(exercise: dict, why: str, score_evidence: dict | 
         "real_strength_maintenance": exercise.get("real_strength_maintenance") is True,
         "why": why or "balanced selection",
         "quality_class": quality_profile["quality_class"],
-        "anchor_capable": quality_profile["anchor_capable"],
-        "support_only": quality_profile["support_only"],
+        "anchor_capable": quality_profile["anchor_capable"] and meaningful_authority,
+        "support_only": exercise.get("support_only") if isinstance(exercise.get("support_only"), bool) else quality_profile["support_only"],
+        "meaningful_stress": exercise.get("meaningful_stress"),
+        "fulfillment_authority": meaningful_authority,
         "base_categories": quality_profile["base_categories"],
         "required_equipment": required_equipment,
         "universally_available": not required_equipment or set(required_equipment).issubset({"bodyweight"}),
@@ -1427,6 +1460,14 @@ def _serialize_conditioning_option(
         "availability_contingency_reason": drill.get("availability_contingency_reason") or "",
         "session_index": drill.get("session_index"),
         "athlete_facing_system_label": athlete_facing_system_label(drill, late_window=late_window),
+        "support_only": drill.get("support_only") is True,
+        "meaningful_stress": drill.get("meaningful_stress") is True,
+        "fulfillment_authority": has_meaningful_fulfillment_authority(
+            drill,
+            source_kind="conditioning",
+            source=str(drill.get("_schema_source") or ""),
+            allow_legacy_unstamped=True,
+        ),
     }
     if drill.get("modality") == "technical_footwork":
         prescription_fields = technical_footwork_prescription_fields(drill, stance=stance)
@@ -1601,6 +1642,17 @@ def _build_conditioning_alternates(
         name = drill.get("name")
         if not name or name == current_name or name in selected_names or name in seen:
             continue
+        # A same-system alternate can replace a mandatory system slot only when
+        # it carries the same explicit fulfilment authority. Support work stays
+        # available in its own support slot; it is not a hidden fallback for a
+        # developmental aerobic/glycolytic/alactic assignment.
+        if system in {"aerobic", "glycolytic", "alactic"} and not has_meaningful_fulfillment_authority(
+            drill,
+            source_kind="conditioning",
+            source=str(drill.get("_schema_source") or ""),
+            allow_legacy_unstamped=True,
+        ):
+            continue
         alternates.append(
             _serialize_conditioning_option(
                 drill,
@@ -1679,6 +1731,12 @@ def _build_strength_slots(strength_block: dict | None, phase: str) -> list[dict]
         # movement resolves to "unknown".
         role = movement if movement and movement != "unknown" else "strength_support"
         quality_profile = classify_strength_item(exercise)
+        meaningful_authority = has_meaningful_fulfillment_authority(
+            exercise,
+            source_kind="strength",
+            source=str(exercise.get("_schema_source") or ""),
+            allow_legacy_unstamped=True,
+        )
         slots.append(
             {
                 "slot_id": f"{phase.lower()}_strength_{idx}_{slugify(name)}",
@@ -1701,8 +1759,10 @@ def _build_strength_slots(strength_block: dict | None, phase: str) -> list[dict]
                 "priority": _strength_slot_priority(phase, role, idx),
                 "session_index": position_to_session.get(idx - 1, 1),
                 "quality_class": quality_profile["quality_class"],
-                "anchor_capable": quality_profile["anchor_capable"],
-                "support_only": quality_profile["support_only"],
+                "anchor_capable": quality_profile["anchor_capable"] and meaningful_authority,
+                "support_only": exercise.get("support_only") if isinstance(exercise.get("support_only"), bool) else quality_profile["support_only"],
+                "meaningful_stress": exercise.get("meaningful_stress"),
+                "fulfillment_authority": meaningful_authority,
                 "base_categories": quality_profile["base_categories"],
             }
         )

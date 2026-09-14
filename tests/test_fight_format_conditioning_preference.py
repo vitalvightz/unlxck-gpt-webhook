@@ -25,7 +25,7 @@ from fightcamp.config import (
 from fightcamp.priority_profile import build_priority_profile
 
 
-BANK = json.loads((Path("data/conditioning_bank.json")).read_text())
+BANK = json.loads((Path("data/conditioning_bank.json")).read_text(encoding="utf-8"))
 ROUND_BASED = [entry for entry in BANK if entry.get("round_based")]
 
 

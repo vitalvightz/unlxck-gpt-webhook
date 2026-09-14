@@ -105,22 +105,125 @@ def test_validate_training_item_backfills_conditioning_bank_schema_defaults():
     assert item["lactate_load"] == ""
 
 
-def test_conditioning_bank_keeps_support_work_out_of_primary_aerobic_authority():
+def test_conditioning_bank_membership_does_not_grant_primary_aerobic_authority():
     bank = conditioning.get_conditioning_bank()
     aerobic_names = {item["name"] for item in bank if item.get("system") == "aerobic"}
+    by_name = {item["name"]: item for item in bank}
 
     assert {"Turkish Get-Up Skill Flow", "Wrist/Finger Activation Micro-Reset"}.isdisjoint(aerobic_names)
     assert "Bike Zone 2 (Nasal Only)" in aerobic_names
-    assert not [
-        item["name"]
-        for item in bank
-        if item.get("support_only") is True
-        or item.get("meaningful_stress") is False
-        or item.get("stress_class") == "support"
-    ]
+    assert "Agility Ladder (Recovery)" in aerobic_names
+    assert not bank_schema.has_meaningful_fulfillment_authority(
+        by_name["Agility Ladder (Recovery)"],
+        source_kind="conditioning",
+        source="conditioning_bank.json",
+    )
+    assert bank_schema.has_meaningful_fulfillment_authority(
+        by_name["Bike Zone 2 (Nasal Only)"],
+        source_kind="conditioning",
+        source="conditioning_bank.json",
+    )
     assert not {
         item.get("system") for item in bank
     }.intersection(bank_schema.SUPPORT_ONLY_SYSTEM_ALIASES)
+
+
+def _governed_conditioning_item(**overrides):
+    item = {
+        "name": "Governed aerobic",
+        "tags": ["aerobic"],
+        "phases": ["GPP"],
+        "system": "aerobic",
+        "late_windows": [bank_schema.D21_TO_D14],
+        "impact_cost": "low",
+        "movement_cost": "low",
+        "lactate_load": "low",
+        "stress_class": "anchor",
+        "cost_class": "low",
+        "support_only": False,
+        "meaningful_stress": True,
+    }
+    item.update(overrides)
+    return item
+
+
+@pytest.mark.parametrize("rpe_field", ["rpe", "rpe_max"])
+def test_conditioning_rpe_contract_accepts_either_supported_shape(rpe_field):
+    item = _governed_conditioning_item(total_minutes=20, **{rpe_field: 5})
+
+    validated = bank_schema.validate_training_item(
+        item, source="conditioning_bank.json", mode="runtime"
+    )
+
+    assert "missing_rpe" not in validated.get("_schema_issues", [])
+    assert "missing_rpe_max" not in validated.get("_schema_issues", [])
+
+
+@pytest.mark.parametrize(
+    "dose",
+    [
+        {"total_minutes": 20},
+        {"work_sec": 60, "rest_sec": 30, "rounds": 6},
+    ],
+)
+def test_conditioning_dose_contract_accepts_continuous_or_interval_shape(dose):
+    validated = bank_schema.validate_training_item(
+        _governed_conditioning_item(rpe=5, **dose),
+        source="conditioning_bank.json",
+        mode="runtime",
+    )
+
+    assert "missing_conditioning_dose" not in validated.get("_schema_issues", [])
+
+
+def test_conditioning_dose_contract_rejects_an_empty_dose():
+    validated = bank_schema.validate_training_item(
+        _governed_conditioning_item(rpe=5),
+        source="conditioning_bank.json",
+        mode="runtime",
+    )
+
+    assert "missing_conditioning_dose" in validated["_schema_issues"]
+    assert not bank_schema.has_meaningful_fulfillment_authority(
+        validated,
+        source_kind="conditioning",
+        source="conditioning_bank.json",
+    )
+
+
+def test_technical_footwork_quality_rep_dose_is_valid_without_fake_intervals():
+    item = _governed_conditioning_item(
+        name="Quality pivots",
+        modality="technical_footwork",
+        rpe_max=4,
+        sets=3,
+        reps_per_side=4,
+        rest_sec=30,
+        quality_stop_rule="Stop when balance degrades",
+    )
+
+    validated = bank_schema.validate_training_item(
+        item, source="technical_footwork_bank.json", mode="runtime"
+    )
+
+    assert "missing_technical_footwork_dose" not in validated.get("_schema_issues", [])
+    assert "missing_conditioning_dose" not in validated.get("_schema_issues", [])
+
+
+def test_explicit_support_governance_wins_over_system_and_dose():
+    item = _governed_conditioning_item(
+        total_minutes=45,
+        rpe=4,
+        stress_class="support",
+        support_only=True,
+        meaningful_stress=False,
+    )
+
+    assert not bank_schema.has_meaningful_fulfillment_authority(
+        item,
+        source_kind="conditioning",
+        source="conditioning_bank.json",
+    )
 
 
 def test_validate_training_item_classifies_loaded_bank_source_names_by_family():
