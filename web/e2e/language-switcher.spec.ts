@@ -15,6 +15,7 @@ async function chooseLanguage(page: Page, label: string) {
 
 for (const locale of [
   { code: "es", label: "Español", heading: "Tu campamento. Totalmente enfocado." },
+  { code: "fr", label: "Français", heading: "Ton camp de combat. Connecté." },
   { code: "it", label: "Italiano", heading: "Il tuo camp. Bloccato dentro." },
 ]) {
   test(`switching to ${locale.label} persists through a reload`, async ({ page, baseURL, context }) => {

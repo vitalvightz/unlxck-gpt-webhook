@@ -132,7 +132,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
 The web app uses local `next-intl` dictionaries in `web/messages`. English is the
-source language; Spanish, Brazilian Portuguese, and Italian are currently supported.
+source language; Spanish, Brazilian Portuguese, French, and Italian are currently supported.
 Run `npm run i18n:check` from `web` to verify that every advertised locale has the
 same structure as English.
 

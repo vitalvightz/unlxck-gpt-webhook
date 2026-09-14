@@ -30,8 +30,9 @@ test("sync sends only missing strings and preserves existing translations", asyn
 
   const result = await syncCatalogs({ messagesDirectory: directory, key: "test-key", fetchImpl });
 
-  assert.equal(result.translatedCount, 3);
-  assert.equal(requests.length, 3);
+  const targetLocaleCount = Object.keys(TARGET_LOCALES).length;
+  assert.equal(result.translatedCount, targetLocaleCount);
+  assert.equal(requests.length, targetLocaleCount);
   assert.ok(requests.every(({ body }) => body.length === 1 && body[0].Text === 'Welcome, <span class="notranslate" data-unlxck-placeholder="0">{name}</span>'));
   for (const locale of Object.keys(TARGET_LOCALES)) {
     const target = JSON.parse(await readFile(path.join(directory, `${locale}.json`), "utf8"));

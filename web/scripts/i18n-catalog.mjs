@@ -5,6 +5,7 @@ import path from "node:path";
 export const TARGET_LOCALES = {
   es: "es",
   "pt-BR": "pt",
+  fr: "fr",
   it: "it",
 };
 
