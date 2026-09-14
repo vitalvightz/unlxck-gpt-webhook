@@ -187,19 +187,6 @@ _DISPLAY_NAME_MAP = {
     "trap_bar": "Trap Bar",
 }
 
-
-def _log_export_error(code: str, **context: object) -> None:
-    context_str = " ".join(
-        f"{key}={value}"
-        for key, value in context.items()
-        if value is not None and value != ""
-    )
-    message = f"[export-error] code={code}"
-    if context_str:
-        message = f"{message} {context_str}"
-    logger.error(message)
-
-
 def _clean_text(text: str) -> str:
     """Return UTF-8 cleaned text without unwanted emoji."""
     cleaned = text.translate(_CHAR_MAP)

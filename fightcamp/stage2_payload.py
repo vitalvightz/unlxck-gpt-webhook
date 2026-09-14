@@ -48,7 +48,7 @@ from .stage2_payload_late_fight import (  # noqa: F401  (re-exported for tests/b
 from .gap_fill_inserts import apply_gap_fill_inserts
 from .conditioning import athlete_facing_system_label, technical_footwork_prescription_fields
 from .fight_day_override import apply_fight_day_override_to_weekly_role_map
-from .role_labels import stamp_weekly_role_map_labels
+from .role_labels import PRIMARY_STRENGTH_ROLE_KEYS, stamp_weekly_role_map_labels
 from .camp_week_fillers import apply_camp_week_fillers
 from .bank_authority import original_bank_entries
 from .bank_schema import has_meaningful_fulfillment_authority
@@ -252,12 +252,6 @@ def _build_phase_briefs(training_context: TrainingContext, phase_weeks: dict) ->
 
 
 
-_PRIMARY_STRENGTH_ROLE_KEYS = {
-    "primary_strength_day",
-    "structural_strength_day",
-    "neural_plus_strength_day",
-    "neural_primer_day",
-}
 _LOW_LOAD_SUPPORT_ROLE_KEYS = {
     "recovery_reset_day",
     "tissue_recovery_day",
@@ -291,7 +285,7 @@ def _normalized_fatigue_level(athlete_model: dict) -> str:
 
 
 def _is_anchor_role(role: dict[str, Any]) -> bool:
-    return role.get("category") == "strength" and role.get("role_key") in _PRIMARY_STRENGTH_ROLE_KEYS
+    return role.get("category") == "strength" and role.get("role_key") in PRIMARY_STRENGTH_ROLE_KEYS
 
 
 def _is_low_load_support_role(role: dict[str, Any]) -> bool:

@@ -15,12 +15,6 @@ def _resolved_effective_hard_count(week: dict[str, Any]) -> int | None:
     return len(clean_list(week.get("effective_hard_sparring_days")))
 
 
-def _effective_hard_count_is_resolved_below_two(week: dict[str, Any]) -> bool:
-    """Return True only when resolved effective contact is explicitly below two."""
-    count = _resolved_effective_hard_count(week)
-    return count is not None and count < 2
-
-
 def effective_goal_repair_compression_state(
     week: dict[str, Any],
     suppressed: list[dict[str, Any]],

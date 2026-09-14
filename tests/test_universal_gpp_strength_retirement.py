@@ -95,7 +95,6 @@ def test_gpp_generation_works_using_only_the_main_exercise_bank():
             "random_seed": 11,
         },
         weaknesses=[],
-        mindset_cue=None,
     )
     exercises = block["exercises"]
     assert exercises, "GPP strength generation must still yield exercises"

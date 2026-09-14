@@ -282,17 +282,6 @@ def normalize_triage_category(category: str | None) -> str:
     return TRIAGE_CATEGORY_ALIASES.get(normalized, normalized)
 
 
-def _normalize_triage_categories(categories: set[str]) -> tuple[set[str], set[str]]:
-    normalized_categories: set[str] = set()
-    raw_aliases: set[str] = set()
-    for category in categories:
-        normalized_category = normalize_triage_category(category)
-        normalized_categories.add(normalized_category)
-        if normalized_category != category:
-            raw_aliases.add(category)
-    return normalized_categories, raw_aliases
-
-
 def _has_injury_location_context(text: str) -> bool:
     if not text:
         return False

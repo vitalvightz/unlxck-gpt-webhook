@@ -97,7 +97,6 @@ def _generate_gpp(equipment: list[str], *, explosive_priority: bool = False) -> 
             "random_seed": 11,
         },
         weaknesses=weaknesses,
-        mindset_cue=None,
     )
     return block["exercises"]
 
