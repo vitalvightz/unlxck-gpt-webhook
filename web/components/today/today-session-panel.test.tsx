@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { ToastProvider } from "@/components/toast-provider";
+import { AuthProvider } from "@/components/auth-provider";
 import { TodaySessionBlocks, TodaySessionPanel } from "./today-session-panel";
 import { resolveCurrentDay } from "@/lib/camp-map";
 import type { StructuredPlan, TodayCommandView } from "@/lib/types";
@@ -112,6 +113,89 @@ test("a future-dated session is a locked preview even when the payload calls it 
   assert.match(html, /Sat 08 Aug 2026/);
   assert.match(html, /Preview only/);
   assert.doesNotMatch(html, />Start session<|>Mark skipped</);
+});
+
+test("today's session actions stay locked until check-in is submitted", () => {
+  const state: TodayCommandView = {
+    active_plan: { id: "plan-1", name: "Camp", phase: "GPP" },
+    today: {
+      training_day: "2026-08-01",
+      recommendation_state: "not_checked_in",
+      decision_tier: "not_checked_in",
+      warnings: [],
+      next_session: {
+        session_id: "session-1",
+        title: "Turkish Get-Up Skill Flow",
+        session_relation: "today",
+        effective_load: "technical",
+      },
+      session_scope: "today",
+      session_label: "Today's session",
+      completion_status: "not_started",
+    },
+    risk_watch: [],
+    open_injuries: [],
+    week_summary: {},
+    quick_actions: [],
+  };
+
+  const html = renderToStaticMarkup(
+    <ToastProvider>
+      <TodaySessionPanel
+        state={state}
+        structuredPlan={null}
+        token="token"
+        onRefresh={async () => {}}
+      />
+    </ToastProvider>,
+  );
+
+  assert.match(html, /Submit today&#x27;s check-in to unlock session actions\./);
+  assert.doesNotMatch(html, />Start session<|>Mark skipped</);
+});
+
+test("a checked-in same-day session unlocks despite a stale next relation", () => {
+  const state: TodayCommandView = {
+    active_plan: { id: "plan-1", name: "Active fight camp", phase: "GPP" },
+    today: {
+      training_day: "2026-09-13",
+      recommendation_state: "train_as_planned",
+      decision_tier: "green",
+      warnings: [],
+      next_session: {
+        session_id: "2026-09-13-strength",
+        title: "Strength",
+        calendar_date: "2026-09-13",
+        session_relation: "next",
+        effective_load: "moderate",
+      },
+      session_scope: "next",
+      session_label: "Next session",
+      completion_status: "not_started",
+    },
+    risk_watch: [],
+    open_injuries: [],
+    week_summary: {},
+    quick_actions: [],
+  };
+
+  const html = renderToStaticMarkup(
+    <AuthProvider>
+      <ToastProvider>
+        <TodaySessionPanel
+          state={state}
+          structuredPlan={null}
+          token="token"
+          onRefresh={async () => {}}
+        />
+      </ToastProvider>
+    </AuthProvider>,
+  );
+
+  assert.match(html, /Today&#x27;s session/);
+  assert.match(html, />Start session</);
+  assert.match(html, />Mark skipped</);
+  assert.doesNotMatch(html, /Preview only|Check in on the day/);
 });
 
 test("safe replacement renders without blocked terminal or completion controls", () => {

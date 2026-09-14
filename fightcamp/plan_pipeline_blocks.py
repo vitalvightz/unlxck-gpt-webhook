@@ -4,10 +4,11 @@ import logging
 import re
 from time import perf_counter
 
+from .bout_format import bout_format_metadata
 from .coach_review import run_coach_review
 from .conditioning import generate_conditioning_block
 from .injury_location import canonicalize_location
-from .mindset_module import get_mindset_by_phase, get_phase_mindset_cues
+from .mindset_module import get_mindset_by_phase
 from .nutrition import generate_nutrition_block
 from .plan_pipeline_runtime import (
     PHASES,
@@ -27,6 +28,7 @@ from .rehab_protocols import (
     generate_support_notes,
 )
 from .strength import generate_strength_block
+from .strength_session_quality import classify_strength_item
 from .training_context import TrainingContext, allocate_sessions
 
 def _run_stage1_module(
@@ -52,27 +54,33 @@ def _run_stage1_module(
     _emit_progress(progress_callback, finished_code, f"{label_prefix} finished")
     return result
 
-def _build_phase_mindsets(training_context: TrainingContext) -> tuple[dict[str, str], dict[str, str]]:
-    phase_mindset_cues = get_phase_mindset_cues(training_context.mental_block)
-    phase_mindsets: dict[str, str] = {}
-    # Compute once; reused for every non-generic phase below.
+def _build_phase_mindsets(training_context: TrainingContext) -> dict[str, str]:
+    # Compute once; the mental-block classification is invariant across phases.
     base_flags = training_context.to_flags()
+    blocks = training_context.mental_block
+    if isinstance(blocks, str):
+        blocks = [blocks]
+    generic = not blocks or blocks[0].lower() == "generic"
+    mindset_flags = {"mental_block": ["generic"]} if generic else base_flags
 
-    for phase in PHASES:
-        blocks = training_context.mental_block
-        if isinstance(blocks, str):
-            blocks = [blocks]
-        if blocks and blocks[0].lower() != "generic":
-            phase_mindsets[phase] = get_mindset_by_phase(phase, base_flags)
-        else:
-            phase_mindsets[phase] = get_mindset_by_phase(phase, {"mental_block": ["generic"]})
+    return {phase: get_mindset_by_phase(phase, mindset_flags) for phase in PHASES}
 
-    return phase_mindset_cues, phase_mindsets
+
+def _is_rotational_power_anchor(exercise: dict) -> bool:
+    """Does this selection count as real rotational-power exposure?
+
+    Matches the definition the selection boost uses: a rotational-power
+    *anchor*. Authored governance can leave the rotational base category on an
+    item it has demoted to support, and a support twist is not the exposure the
+    camp-level gap is about — treating it as such would close the gap and stop
+    a genuine rotational throw from ever being favoured.
+    """
+    profile = classify_strength_item(exercise)
+    return bool(profile["anchor_capable"]) and "rotational_power" in profile["base_categories"]
 
 
 def _generate_strength_blocks(
     context: PlanRuntimeContext,
-    phase_mindset_cues: dict[str, str],
     *,
     progress_callback: ProgressCallback | None = None,
 ) -> tuple[dict[str, dict | None], dict[str, list[dict]]]:
@@ -80,6 +88,11 @@ def _generate_strength_blocks(
     strength_reason_log: dict[str, list[dict]] = {}
     previous_names: list[str] = []
     previous_movements: set[str] = set()
+    # Camp-level rotational-power coverage. Rotational power is a distinct power
+    # family, so a camp whose development phases never touch it has a hole the
+    # per-phase rules cannot see. Once any phase selects a rotational-power
+    # anchor the gap closes and later phases score normally.
+    rotational_power_seen = False
     # Compute once per request; spread into per-phase flags dict below.
     base_flags = context.training_context.to_flags()
     logger = logging.getLogger(__name__)
@@ -100,7 +113,9 @@ def _generate_strength_blocks(
         }
         if previous_names:
             flags["prev_exercises"] = previous_names
-            flags["recent_exercises"] = list(previous_movements)
+            flags["recent_exercises"] = sorted(previous_movements)
+        if not rotational_power_seen:
+            flags["rotational_power_camp_gap"] = True
         phase_step = f"phase_{phase.lower()}"
         _emit_strength_substep(f"stage1_strength_{phase_step}_started", f"Stage 1 strength {phase} started")
         phase_started = perf_counter()
@@ -108,7 +123,6 @@ def _generate_strength_blocks(
             block = generate_strength_block(
                 flags=flags,
                 weaknesses=context.training_context.weaknesses,
-                mindset_cue=phase_mindset_cues.get(phase),
             )
         finally:
             phase_elapsed = perf_counter() - phase_started
@@ -124,8 +138,13 @@ def _generate_strength_blocks(
             for exercise in block.get("exercises", [])
             if exercise.get("movement")
         }
-        previous_names = list({*previous_names, *phase_names})
+        previous_names = list(dict.fromkeys([*previous_names, *phase_names]))
         previous_movements |= phase_movements
+        if not rotational_power_seen:
+            rotational_power_seen = any(
+                _is_rotational_power_anchor(exercise)
+                for exercise in block.get("exercises", [])
+            )
 
     return strength_blocks, strength_reason_log
 
@@ -157,6 +176,9 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext, *, progress_callb
                 **base_flags,
                 "phase": phase,
                 "sport": context.canonical_sport,
+                # Round-based conditioning is dosed at the athlete's own round
+                # length, so selection must measure the workload it will render.
+                "rounds_format": context.plan_input.rounds_format,
                 "random_seed": context.random_seed,
                 "time_to_fight_days": context.plan_input.days_until_fight,
                 "weeks_out": context.plan_input.weeks_out,
@@ -181,6 +203,7 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext, *, progress_callb
                 "fatigue_level": context.training_context.fatigue,
                 "injuries": context.training_context.injuries,
                 "fight_format": context.training_context.fight_format,
+                "bout_format": bout_format_metadata(context.plan_input.rounds_format),
             },
             "sport": context.canonical_sport,
             # Preserve the canonical stance in conditioning metadata so any
@@ -196,6 +219,9 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext, *, progress_callb
             "grouped_drills": grouped_drills,
             "missing_systems": missing_systems,
             "candidate_reservoir": candidate_reservoir,
+            # Canonical bout-format demand facts, available to later consumers
+            # without reparsing the intake string. Observability only.
+            "bout_format": bout_format_metadata(context.plan_input.rounds_format),
             "phase_color": PHASE_COLORS[phase],
             "num_sessions": render_metadata.get("num_sessions", 1),
             "diagnostic_context": render_metadata.get("diagnostic_context", {}),
@@ -347,9 +373,11 @@ def _infer_rehab_day_type(*, phase: str) -> str | None:
     return None
 
 
-def _generate_rehab_support_bundle(context: PlanRuntimeContext) -> tuple[dict[str, str], dict[str, str], str, bool, str, str, str]:
+def _generate_rehab_support_bundle(
+    context: PlanRuntimeContext,
+    rehab_injury_string: str,
+) -> tuple[dict[str, str], dict[str, str], str, bool, str, str, str]:
     rehab_blocks = {phase: "" for phase in PHASES}
-    rehab_injury_string = _build_rehab_injury_string(context)
 
     if context.phase_active("GPP"):
         rehab_blocks["GPP"], _ = generate_rehab_protocols(
@@ -461,8 +489,12 @@ def generate_plan_blocks(
     progress_callback: ProgressCallback | None = None,
 ) -> PlanBlocksBundle:
     timer_start = perf_counter()
-    phase_mindset_cues, phase_mindsets = _build_phase_mindsets(context.training_context)
+    phase_mindsets = _build_phase_mindsets(context.training_context)
     record_timing("mindset", timer_start)
+
+    # Derived once per request: both the rehab/support bundle and the coach
+    # review read the same normalised injury phrase list.
+    rehab_injury_string = _build_rehab_injury_string(context)
 
     logger.info(
         "[stage] selection_ignore_restrictions=%s restrictions_present=%s restrictions_count=%d",
@@ -482,7 +514,6 @@ def generate_plan_blocks(
         timing_label="strength",
         fn=lambda: _generate_strength_blocks(
             context,
-            phase_mindset_cues,
             progress_callback=progress_callback,
         ),
     )
@@ -536,7 +567,7 @@ def generate_plan_blocks(
         progress_callback=progress_callback,
         record_timing=record_timing,
         timing_label="rehab_support_bundle",
-        fn=lambda: _generate_rehab_support_bundle(context),
+        fn=lambda: _generate_rehab_support_bundle(context, rehab_injury_string),
     )
     if has_injuries:
         rehab_detail = "Rehab protocols and injury guardrails added to every active phase."
@@ -559,7 +590,6 @@ def generate_plan_blocks(
     _emit_progress(progress_callback, "stage1_weekly_schedule_started", "Stage 1 weekly schedule started")
     _emit_progress(progress_callback, "stage1_weekly_schedule_finished", "Stage 1 weekly schedule finished")
 
-    rehab_injury_string = _build_rehab_injury_string(context)
     coach_review_notes, strength_blocks, conditioning_blocks, substitutions = _run_stage1_module(
         module_name="coach_notes",
         started_code="stage1_coach_notes_started",

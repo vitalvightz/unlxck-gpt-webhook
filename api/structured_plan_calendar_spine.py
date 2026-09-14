@@ -292,6 +292,54 @@ def _role_dday(week: dict[str, Any], role: dict[str, Any]) -> int | None:
     return None
 
 
+def _priority_microdoses_by_dday(role_map: dict[str, Any]) -> dict[int, dict[str, str]]:
+    """Return complete planner-owned microdoses keyed by their host D-day."""
+    doses: dict[int, dict[str, str]] = {}
+    for week in role_map.get("weeks") or []:
+        if not isinstance(week, dict):
+            continue
+        for role in week.get("session_roles") or []:
+            if not isinstance(role, dict):
+                continue
+            d_day = _role_dday(week, role)
+            raw = role.get("priority_microdose")
+            if d_day is None or not isinstance(raw, dict):
+                continue
+            dose = {
+                key: str(raw.get(key) or "").strip()
+                for key in ("goal", "name", "prescription")
+            }
+            if all(dose.values()):
+                doses.setdefault(d_day, dose)
+    return doses
+
+
+def _day_already_contains_microdose(day: dict[str, Any], dose: dict[str, str]) -> bool:
+    """Avoid a second card when the deterministic fallback made it a block."""
+    wanted_name = dose["name"].casefold()
+    for session in day.get("sessions") or []:
+        if not isinstance(session, dict):
+            continue
+        for block in session.get("blocks") or []:
+            if not isinstance(block, dict):
+                continue
+            block_id = str(block.get("block_id") or "").strip().casefold()
+            display_name = str(block.get("display_name") or "").strip().casefold()
+            if block_id.endswith("-microdose") or display_name == wanted_name:
+                return True
+    return False
+
+
+def _attach_priority_microdose(
+    day: dict[str, Any], dose: dict[str, str] | None
+) -> dict[str, Any]:
+    if dose and not _day_already_contains_microdose(day, dose):
+        day["priority_microdose"] = dict(dose)
+    else:
+        day.pop("priority_microdose", None)
+    return day
+
+
 def _phase_for_dday(
     d_day: int, phase_by_dday: dict[int, str], lo: int, hi: int
 ) -> str:
@@ -509,7 +557,16 @@ def _plan_signature(weeks: Any, fight_date: date) -> tuple:
             weekday = str(day.get("weekday") or "").strip()[:3].title()
             phase = _valid_phase(day.get("phase_label"))
             has_sessions = bool(day.get("sessions"))
-            day_sig.append((d_day, iso, weekday, phase, has_sessions))
+            microdose = day.get("priority_microdose")
+            microdose_sig = (
+                tuple(
+                    str(microdose.get(key) or "").strip()
+                    for key in ("goal", "name", "prescription")
+                )
+                if isinstance(microdose, dict)
+                else ()
+            )
+            day_sig.append((d_day, iso, weekday, phase, has_sessions, microdose_sig))
         signature.append(
             (
                 _valid_phase(week.get("phase_label")),
@@ -548,8 +605,13 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> Any:
     if not isinstance(role_map, dict):
         return structured_plan
     plan_weeks = structured_plan.get("weeks")
-    if not isinstance(plan_weeks, list) or not plan_weeks:
+    if not isinstance(plan_weeks, list):
         return structured_plan
+    # An empty week list is not "leave it alone": it is a plan with no converter
+    # content at all, which is exactly the fallback case where the deterministic
+    # calendar has to stand on its own. The content-preservation invariant below
+    # is trivially satisfied when the converter contributed nothing.
+    converter_had_content = bool(plan_weeks)
     fight_date = parse_fight_date(_resolve_fight_date(planning_brief))
     if fight_date is None:
         return structured_plan
@@ -557,6 +619,7 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> Any:
     phase_by_dday, planning_week_by_dday, role_keys_by_dday, role_map_max, role_map_min = _authoritative_ownership_maps(role_map)
     if role_map_max is None or role_map_min is None:
         return structured_plan
+    priority_microdoses = _priority_microdoses_by_dday(role_map)
 
     # Index every converter day by its athlete-facing D-day (its label, or its date
     # as a fallback), merging two rows that land on one calendar day so no session
@@ -587,8 +650,9 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> Any:
 
     # A dated camp with content but no resolvable calendar identity on any day
     # cannot be safely mapped onto the spine — leave it exactly as the converter
-    # produced it rather than risk replacing sessions with rest days.
-    if not llm_days_by_dday:
+    # produced it rather than risk replacing sessions with rest days. With no
+    # converter content there is nothing to risk, so the spine is built alone.
+    if converter_had_content and not llm_days_by_dday:
         return structured_plan
 
     # Camp start (D-N): the planner spine, extended to the athlete's real
@@ -612,20 +676,25 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> Any:
         existing = llm_days_by_dday.get(d_day)
         if isinstance(existing, dict):
             spine_days.append(
-                _overlay_day(
-                    existing,
-                    d_day=d_day,
-                    fight_date=fight_date,
-                    phase=phase,
-                    planning_week_index=planning_week_index,
-                    role_keys=role_keys,
+                _attach_priority_microdose(
+                    _overlay_day(
+                        existing,
+                        d_day=d_day,
+                        fight_date=fight_date,
+                        phase=phase,
+                        planning_week_index=planning_week_index,
+                        role_keys=role_keys,
+                    ),
+                    priority_microdoses.get(d_day),
                 )
             )
         else:
             day = _rest_day(d_day, fight_date, phase)
             day["planning_week_index"] = planning_week_index
             day["planning_day_role_keys"] = list(role_keys)
-            spine_days.append(day)
+            spine_days.append(
+                _attach_priority_microdose(day, priority_microdoses.get(d_day))
+            )
 
     # Group into the Mon-Sun calendar weeks the web view renders.
     groups: dict[str, list[dict[str, Any]]] = {}
@@ -649,14 +718,17 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> Any:
         planning_week_index = planning_week_by_dday.get(d_day)
         groups[ordered_mondays[0]].insert(
             0,
-            _overlay_day(
-                llm_days_by_dday[d_day],
-                d_day=d_day,
-                fight_date=fight_date,
-                phase=phase,
-                planning_week_index=planning_week_index,
-                role_keys=role_keys_by_dday.get(d_day, []),
-            )
+            _attach_priority_microdose(
+                _overlay_day(
+                    llm_days_by_dday[d_day],
+                    d_day=d_day,
+                    fight_date=fight_date,
+                    phase=phase,
+                    planning_week_index=planning_week_index,
+                    role_keys=role_keys_by_dday.get(d_day, []),
+                ),
+                priority_microdoses.get(d_day),
+            ),
         )
 
     new_weeks: list[dict[str, Any]] = []

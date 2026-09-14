@@ -184,6 +184,46 @@ def _plan_row(**overrides) -> dict:
     return row
 
 
+def test_parsing_metadata_comes_from_its_own_column_not_the_stage2_payload():
+    """The stage2_payload fallback for parsing_metadata was dead and is gone.
+
+    Stage 1 sets ``stage2_payload["input_parsing_metadata"]`` and the top-level
+    ``parsing_metadata`` from the same ``plan_input.parsing_metadata`` in the same
+    result (fightcamp/main.py), so the fallback could only ever repeat what the
+    column already held. Rows predating the column predate ``stage2_payload`` too
+    (both added by 20260427120000, neither backfilled), so there was no legacy era
+    where it supplied anything either.
+
+    Pinning it: a row whose column is empty maps to empty, even when the payload
+    carries a value. Anything relying on the old fallback was relying on a value
+    that, in production, was always equal to the column.
+    """
+    detail = _map_plan_detail(
+        _plan_row(
+            parsing_metadata={},
+            stage2_payload={"input_parsing_metadata": {"athlete_timezone": "stale"}},
+        ),
+        include_admin=True,
+    )
+
+    assert detail.admin_outputs.parsing_metadata == {}
+    # The payload itself is still surfaced verbatim for admin debugging.
+    assert detail.admin_outputs.stage2_payload == {
+        "input_parsing_metadata": {"athlete_timezone": "stale"}
+    }
+
+
+def test_parsing_metadata_column_is_surfaced_when_present():
+    detail = _map_plan_detail(
+        _plan_row(parsing_metadata={"athlete_timezone": {"source": "profile"}}),
+        include_admin=True,
+    )
+
+    assert detail.admin_outputs.parsing_metadata == {
+        "athlete_timezone": {"source": "profile"}
+    }
+
+
 # H (valid) + B mapping: structured plan surfaces in outputs.
 def test_map_plan_detail_returns_structured_plan_when_valid():
     detail = _map_plan_detail(
@@ -199,7 +239,7 @@ def test_map_plan_detail_collapses_a_stale_tactical_watch_shell_on_read():
     structured = _valid_plan()
     day = structured["weeks"][0]["days"][0]
     canonical = day["sessions"][0]
-    canonical["title"] = "Fight Tactical Watch"
+    canonical["title"] = "Tactical Focus"
     day["sessions"].insert(
         0,
         {
@@ -212,7 +252,7 @@ def test_map_plan_detail_collapses_a_stale_tactical_watch_shell_on_read():
     planning_brief = {
         "weeks": [{"session_roles": [{
             "scheduled_countdown_label": "D-15",
-            "athlete_facing_label": "Fight Tactical Watch",
+            "athlete_facing_label": "Tactical Focus",
             "governance": {
                 "selected_drill_locked": True,
                 "selected_drill_name": "Barbell Back Squat",
@@ -239,13 +279,13 @@ def test_map_plan_detail_collapses_a_stale_tactical_watch_shell_on_read():
     )
 
     sessions = detail.outputs.structured_plan.weeks[0].days[0].sessions
-    assert [session.title for session in sessions] == ["Fight Tactical Watch"]
+    assert [session.title for session in sessions] == ["Tactical Focus"]
     assert sessions[0].blocks[0].display_name == "Barbell Back Squat"
     # The read repair is intentionally non-persistent: it changes only the
     # returned card, never the stored training-plan payload.
     assert [session["title"] for session in day["sessions"]] == [
         "Barbell Back Squat",
-        "Fight Tactical Watch",
+        "Tactical Focus",
     ]
 
 
@@ -462,7 +502,7 @@ def test_structured_attempt_repairs_missing_locked_watch_source_before_model_cal
 
     assert len(automator.calls) == 1
     sent_text = automator.calls[0]["final_plan_text"]
-    assert "D-17 (Monday) — Fight Tactical Watch" in sent_text
+    assert "D-17 (Monday) — Tactical Focus" in sent_text
     assert "Body Attack Opportunity" in sent_text
     assert result["final_plan_text"] == sent_text
     audit = result["stage2_validator_report"]["source_repair"]["locked_tactical_watch"]

@@ -7,7 +7,6 @@ can discharge this contract; neither role names nor LLM prose are evidence.
 from __future__ import annotations
 
 from copy import deepcopy
-from math import ceil
 import re
 from typing import Any
 
@@ -20,7 +19,11 @@ from .prescription_resolver import (
     _strength_role_slot_groups,
     athlete_dose_state,
 )
-from .priority_profile import build_priority_profile, normalize_priority_values
+from .priority_profile import (
+    _SELECTED_PRIORITY_TARGET_ALIASES,
+    build_priority_profile,
+    normalize_priority_values,
+)
 from .role_labels import athlete_facing_label_for, stamp_role_label
 from .tagging import normalize_tag
 
@@ -48,6 +51,53 @@ _COMPRESSION_REASONS = {
     "fight_week_override": "fight_proximity",
     "pre_hard_contact_strength_exposure_cap": "pre_hard_contact_managed_stress",
 }
+# Weekly floor precedence: safety and phase authority already gate everything
+# below, then existing exposure, then primary goal, then primary weakness, then
+# secondaries. Obligations are repaired in this list order, so when goal and
+# weakness genuinely compete for the only safe capacity the goal takes it and
+# the weakness records that it found none.
+_BUILD_PRIORITIES = {"primary", "primary_weakness"}
+_PRIORITY_REASON_CODES = {
+    "primary": "primary_goal",
+    "primary_weakness": "primary_weakness",
+    "secondary": "secondary_goal",
+}
+# Every official intake weak area resolves deliberately - never by falling off
+# the end of a lookup. `web/lib/intake-options.ts::WEAK_AREA_OPTIONS` is the
+# source of truth for this list, and `test_weekly_priority_exposure_floor`
+# asserts one disposition per option, so a new intake choice cannot be added
+# without deciding what services it.
+#
+# Tier 1: the weekly floor speaks for these directly.
+_WEAKNESS_FLOOR_TARGETS = {
+    "strength": "strength",
+    "power": "power",
+    "speed": "speed",
+    "footwork": "footwork",
+    "mobility": "mobility",
+    # The Gas Tank preset pairs a conditioning goal with a gas_tank weakness, so
+    # gas_tank is a real floor obligation on the conditioning family: it is
+    # recognised, repaired and deferred like any other. It is deliberately NOT
+    # microdose-expandable - `_MICRODOSE_SPECS` holds no conditioning spec, so
+    # the fallback tier declines it and the conditioning workload-envelope
+    # architecture stays the sole authority on conditioning volume.
+    "gas_tank": "conditioning",
+}
+
+# Tier 2: a canonical subsystem already owns these, and it services them from
+# the same weak-area selection this contract reads. Making them floor
+# obligations would demand development evidence the coverage ledger has no path
+# to observe - a support insert is explicitly not session capacity - so the
+# obligation could never be discharged and would block every plan that selects
+# them. They are delegated on purpose, and the delegation is recorded.
+_WEAKNESS_DELEGATED_SUBSYSTEMS = {
+    "balance": "coordination_support_library",
+    "coordination": "coordination_support_library",
+    "trunk_strength": "session_composition.trunk_support",
+    # Defensive: some surfaces submit the option label rather than its value.
+    "core_/_trunk_strength": "session_composition.trunk_support",
+    "core_trunk_strength": "session_composition.trunk_support",
+}
 _SPEED_TAGS = {"speed", "reactive", "reaction", "acceleration", "max_velocity", "speed_reaction"}
 _TECHNICAL_TAGS = {"technical", "skill_refinement", "technical_footwork", "footwork", "coordination"}
 
@@ -61,8 +111,62 @@ def _athlete(brief: dict) -> dict:
     return brief.get("athlete_snapshot") or brief.get("athlete_model") or {}
 
 
+def primary_weakness_disposition(athlete: dict, focus: dict | None = None) -> dict:
+    """How the selected primary weak area is serviced, decided explicitly.
+
+    Every official intake weak area lands in exactly one of these resolutions:
+
+    ``weekly_floor``
+        A build obligation on ``target``, carried by the same pipeline the
+        primary goal uses.
+    ``delegated``
+        A canonical subsystem named by ``subsystem`` already services this weak
+        area from the same selection, and does it better than a generic
+        exposure floor could.
+    ``unrecognised``
+        Free text that names no known adaptation. It creates no obligation: the
+        coverage ledger has no required intent, role match or evidence path for
+        it, so an obligation could never be discharged and would block the plan
+        forever rather than floor anything.
+    ``none``
+        No primary weak area was selected.
+
+    Selection vocabulary (``reactive``, ``explosive``, ...) is projected onto
+    adaptation families through the same canonical map
+    ``selected_priority_targets`` uses, so the weakness is read in the
+    vocabulary the profile already owns rather than a second one invented here.
+    """
+    focus = focus or {}
+    profile = build_priority_profile(athlete)
+    selected = str(focus.get("primary_weak_area") or profile.primary_weak_area or "")
+    raw = normalize_tag(selected) or ""
+    if not raw:
+        return {"weakness": "", "resolution": "none"}
+    record = {"weakness": raw, "selected_label": selected.strip()}
+    if raw in _WEAKNESS_DELEGATED_SUBSYSTEMS:
+        return {**record, "resolution": "delegated",
+                "subsystem": _WEAKNESS_DELEGATED_SUBSYSTEMS[raw]}
+    target = _WEAKNESS_FLOOR_TARGETS.get(raw) or _goal(_SELECTED_PRIORITY_TARGET_ALIASES.get(raw, raw))
+    if target in INTENTS:
+        return {**record, "resolution": "weekly_floor", "target": target,
+                "required_intent": INTENTS[target]}
+    return {**record, "resolution": "unrecognised"}
+
+
+def _primary_weakness(athlete: dict, focus: dict | None = None) -> str:
+    """The primary weak area as a floor obligation target, or "" when it is none."""
+    disposition = primary_weakness_disposition(athlete, focus)
+    return disposition.get("target", "") if disposition["resolution"] == "weekly_floor" else ""
+
+
 def selected_goals(athlete: dict, focus: dict | None = None) -> list[tuple[str, str]]:
-    """Retain every selection, including profiles supplied without PlanInput."""
+    """Retain every selection, including profiles supplied without PlanInput.
+
+    The primary weak area is a build obligation alongside the primary goal, in
+    the weekly floor's order: primary goal, primary weakness, then secondaries.
+    A target selected as both is one obligation, satisfied once - the profile
+    already treats such a collision as a single canonical priority target.
+    """
     focus = focus or {}
     profile = build_priority_profile(athlete)
     primary = _goal(focus.get("primary_goal") or profile.primary_goal or athlete.get("primary_goal"))
@@ -70,7 +174,15 @@ def selected_goals(athlete: dict, focus: dict | None = None) -> list[tuple[str, 
               *normalize_priority_values(athlete.get("secondary_goals")),
               *normalize_priority_values(focus.get("secondary_goals"))]
     goals = list(dict.fromkeys(_goal(value) for value in values if _goal(value)))
-    return [(goal, "primary" if goal == primary else "secondary") for goal in goals]
+    selections = [(goal, "primary" if goal == primary else "secondary") for goal in goals]
+    weakness = _primary_weakness(athlete, focus)
+    if not weakness or weakness == primary:
+        # Merged: one exposure discharges the goal and the weakness together.
+        return selections
+    # A weakness also named among the goals is still the primary weakness; it is
+    # promoted out of the secondary tier rather than carried twice.
+    selections = [row for row in selections if row[0] != weakness]
+    return [*selections[:1], (weakness, "primary_weakness"), *selections[1:]]
 
 
 def classify_goal_preservation(athlete: dict, focus: dict | None = None) -> list[dict]:
@@ -86,8 +198,11 @@ def classify_goal_preservation(athlete: dict, focus: dict | None = None) -> list
         limits.append("weight_cut_pressure")
     return [
         {"goal": goal, "priority": priority,
-         "state": "build" if priority == "primary" and not limits else "maintain",
-         "reason_codes": [f"{priority}_goal", *limits],
+         # Primary goal and primary weakness are both build obligations: each
+         # earns one meaningful exposure per build week. Secondaries stay
+         # opportunistic maintenance.
+         "state": "build" if priority in _BUILD_PRIORITIES and not limits else "maintain",
+         "reason_codes": [_PRIORITY_REASON_CODES[priority], *limits],
          "required_intent": INTENTS.get(goal, f"selected_goal:{goal}"),
          "evidence": []}
         for goal, priority in selected_goals(athlete, focus)
@@ -273,6 +388,297 @@ def _strength_stimuli(role: dict, slots: list[dict], brief: dict) -> list[dict]:
     return stimuli
 
 
+# Weekly priority exposure floor - the microdose tier.
+#
+# ``_restore_goal_roles`` can only restore a WHOLE role from the week's
+# ``goal_repair_candidates``. When the session or category cap blocks that, a
+# primary goal could go cold for an entire build week even though an existing
+# physical session that day could safely host a few sets. These specs are that
+# fallback: the smallest exposure that still produces honest development
+# evidence for the goal.
+#
+# Conditioning is deliberately absent. It owns its own system/workload
+# architecture (including the gas-tank workload-envelope gate), and letting this
+# tier add conditioning would re-open exactly the spillover that gate closed.
+# Recovery and weight_cut are absent because deterministic daily support already
+# services them.
+_MICRODOSE_SPECS: dict[str, dict[str, Any]] = {
+    "power": {
+        # Honest collision class for this exposure. Only genuinely low-cost /
+        # neural work may coexist with a coach-owned light-combat day; the
+        # strength touch is MEANINGFUL_STRENGTH and stays forbidden there.
+        "load_class": "NEURAL_MICRODOSE",
+        "name": "Med-Ball Rotational Throw",
+        "prescription": "2 x 3/side @ RPE 7",
+        "sets": 2,
+        "intents": ["ballistic_power"],
+    },
+    "speed": {
+        # Honest collision class for this exposure. Only genuinely low-cost /
+        # neural work may coexist with a coach-owned light-combat day; the
+        # strength touch is MEANINGFUL_STRENGTH and stays forbidden there.
+        "load_class": "NEURAL_MICRODOSE",
+        "name": "Reactive Start Burst",
+        "prescription": "3 x 4 sec @ RPE 7, full rest",
+        "sets": 3,
+        "intents": ["speed_quality"],
+    },
+    "strength": {
+        # Honest collision class for this exposure. Only genuinely low-cost /
+        # neural work may coexist with a coach-owned light-combat day; the
+        # strength touch is MEANINGFUL_STRENGTH and stays forbidden there.
+        "load_class": "MEANINGFUL_STRENGTH",
+        "name": "Loaded Carry Touch",
+        "prescription": "2 x 20 m @ RPE 7",
+        "sets": 2,
+        "intents": ["meaningful_strength"],
+    },
+    "footwork": {
+        # Honest collision class for this exposure. Only genuinely low-cost /
+        # neural work may coexist with a coach-owned light-combat day; the
+        # strength touch is MEANINGFUL_STRENGTH and stays forbidden there.
+        "load_class": "LOW_LOAD_PHYSICAL",
+        "name": "Reactive Footwork Walkthrough",
+        "prescription": "2 x 60 sec",
+        "sets": 2,
+        "intents": ["footwork_practice"],
+    },
+    "mobility": {
+        # Honest collision class for this exposure. Only genuinely low-cost /
+        # neural work may coexist with a coach-owned light-combat day; the
+        # strength touch is MEANINGFUL_STRENGTH and stays forbidden there.
+        "load_class": "LOW_LOAD_PHYSICAL",
+        "name": "Targeted Mobility Touch",
+        "prescription": "2 x 60 sec/side",
+        "sets": 2,
+        "intents": ["mobility_dose"],
+    },
+}
+
+# A microdose attaches only to a session that is already a physical training
+# day and can absorb a few quality sets without changing what the session is.
+# Sparring, recovery, fight day and zero-cost tactical roles are never hosts:
+# hard contact owns its own freshness, recovery-only stays recovery-only, and a
+# Tactical Watch day is not physical capacity just because it sits on the
+# calendar.
+_MICRODOSE_HOST_CATEGORIES = {"strength", "technical", "conditioning"}
+_MICRODOSE_FORBIDDEN_HOST_CATEGORIES = {"sparring", "recovery", "fight_day", "mobility"}
+
+
+def _microdose_stimuli(role: dict) -> list[dict]:
+    """Evidence for a microdose already attached to this role."""
+    microdose = role.get("priority_microdose")
+    if not isinstance(microdose, dict) or not microdose.get("intents"):
+        return []
+    prescription = str(microdose.get("prescription") or "")
+    # The witness carries reps as well as sets, exactly as `_strength_stimuli`
+    # does, and from its own prescription via the same parser. A sets-only
+    # witness cannot be checked against a rendered dose downstream.
+    _, reps = _sets_reps(prescription)
+    return [
+        {
+            "name": microdose.get("name"),
+            "intents": list(microdose["intents"]),
+            "effective_prescription": prescription,
+            "dose_authority": "weekly_priority_exposure_floor",
+            "sets": _number(microdose.get("sets")),
+            "reps": reps,
+            # Two quality sets is the same development bar _strength_stimuli
+            # applies; below it the touch is maintenance, not development.
+            "development_capable": _number(microdose.get("sets")) >= 2,
+        }
+    ]
+
+
+_MICRODOSE_SLOT_GROUP = "priority_microdose"
+
+
+def _microdose_slot_id(microdose: dict) -> str:
+    return f"priority_microdose::{microdose.get('goal')}"
+
+
+def _sync_microdose_membership(role: dict, microdose: dict) -> None:
+    """Carry an attached microdose into the host's closed-membership contract.
+
+    ``priority_microdose`` on its own is goal evidence, not a renderable session
+    member. Stage 2 renders a role from ``selected_exercise_assignments``, prices
+    it from ``effective_strength_prescriptions`` and is held to the complete
+    allow-list in ``effective_strength_envelope``. A microdose that reaches none
+    of the three is legally unrenderable, which is exactly how an attached touch
+    became a ``goal_preservation_render_mismatch``.
+
+    Mirror the SAME microdose into those three structures. The floor's own
+    prescription stays the dose authority: no bank lookup, no second dose, no new
+    rendering path. Idempotent - re-running replaces only this microdose's own
+    entries and leaves selected membership otherwise untouched.
+    """
+    name = str(microdose.get("name") or "").strip()
+    prescription = str(microdose.get("prescription") or "").strip()
+    if not name or not prescription:
+        return
+    slot_id = _microdose_slot_id(microdose)
+
+    def _without_microdose(items: list) -> list:
+        return [
+            item for item in items or []
+            if not isinstance(item, dict)
+            or (item.get("slot_id") != slot_id and str(item.get("name") or "").strip() != name)
+        ]
+
+    role["selected_exercise_assignments"] = _without_microdose(
+        role.get("selected_exercise_assignments")
+    ) + [{
+        "slot_id": slot_id,
+        "name": name,
+        "slot_group": _MICRODOSE_SLOT_GROUP,
+        "base_prescription": prescription,
+        "effective_prescription": prescription,
+        "dose_authority": "weekly_priority_exposure_floor",
+        "goal": microdose.get("goal"),
+    }]
+    role["effective_strength_prescriptions"] = _without_microdose(
+        role.get("effective_strength_prescriptions")
+    ) + [{
+        "slot_id": slot_id,
+        "name": name,
+        "effective_prescription": prescription,
+        "dose_authority": "weekly_priority_exposure_floor",
+        "effective_loaded": False,
+        "dose_role_kind": "support",
+    }]
+    envelope = role.get("effective_strength_envelope")
+    if not isinstance(envelope, dict):
+        envelope = {}
+    allowed = [
+        str(item.get("name") or "").strip()
+        for item in role["selected_exercise_assignments"]
+        if isinstance(item, dict) and str(item.get("name") or "").strip()
+    ]
+    envelope.update(
+        allowed_exercise_names=list(dict.fromkeys(allowed)),
+        complete_exercise_allow_list=True,
+    )
+    role["effective_strength_envelope"] = envelope
+
+
+# Provenance, not rendered text. A declared hard-sparring appointment keeps
+# these markers after the contact resolver reduces its effective load, which is
+# exactly the case `combat_load_policy` holds strict.
+_HARD_SPARRING_PROVENANCE_KEYS = (
+    "declared_hard_sparring",
+    "hard_sparring_locked",
+    "capped_declared_hard_sparring_days",
+)
+
+
+def _carries_hard_sparring_provenance(role: dict) -> bool:
+    if str(role.get("role_key") or "").strip().lower() == "hard_sparring_day":
+        return True
+    if str(role.get("preferred_pool") or "").strip() == "declared_hard_sparring_days":
+        return True
+    return any(role.get(key) for key in _HARD_SPARRING_PROVENANCE_KEYS)
+
+
+def _microdose_coexists_on_protected_day(role: dict, spec: dict) -> bool:
+    """May this exposure share a day that generic bookkeeping marked unused?
+
+    A weekday can appear in ``intentionally_unused_days`` while still carrying a
+    real coach-owned session - a declared light-combat day is planner bookkeeping
+    "unused" and an actual scheduled physical session at the same time. Rejecting
+    the host on the weekday alone skipped a legal technical host and let a
+    conditioning day win.
+
+    The answer is not ours to invent: ask `combat_load_policy`, which is the sole
+    authority on what may share a combat day and which already grants the
+    low-load / neural-microdose exception only to a provenance-stamped declared
+    light-combat appointment.
+    """
+    from .combat_load_policy import (
+        CalendarCollisionContext,
+        LoadClass,
+        _profile,
+        evaluate_calendar_candidate,
+        role_load_profile,
+    )
+
+    existing = role_load_profile(role)
+    if existing is None:
+        # No canonical profile means no coach-owned session to coexist with, so
+        # the day stays protected.
+        return False
+    load_class = getattr(LoadClass, str(spec.get("load_class") or ""), None)
+    if load_class is None:
+        return False
+    # `_profile` picks the occupancy the policy itself pairs with this load
+    # class. Choosing one here would be restating its doctrine, and it rejects a
+    # physical load stamped as coexistable support anyway.
+    candidate = _profile(load_class)
+    decision = evaluate_calendar_candidate(
+        candidate,
+        CalendarCollisionContext(
+            candidate_position=0,
+            candidate_scope=None,
+            same_day_profiles=(existing,),
+            previous_hard_distance=None,
+            next_hard_distance=None,
+            between_effective_hard_contacts=False,
+            hard_contact_gap_intervening_days=None,
+        ),
+    )
+    return decision.allowed
+
+
+def _microdose_host_roles(week: dict) -> list[dict]:
+    """Existing sessions in this week that may host a microdose, best first."""
+    hosts = []
+    for role in week.get("session_roles") or []:
+        if not isinstance(role, dict):
+            continue
+        category = str(role.get("category") or "").strip().lower()
+        if category in _MICRODOSE_FORBIDDEN_HOST_CATEGORIES:
+            continue
+        if _carries_hard_sparring_provenance(role):
+            # Declared hard sparring keeps its strict collision treatment even
+            # after the canonical resolver converts its effective contact down
+            # to technical-only. `combat_load_policy` grants the low-load /
+            # neural-microdose coexistence exception ONLY to a
+            # provenance-stamped declared light-combat appointment, never to a
+            # hard appointment that merely renders as technical. Category alone
+            # would not catch a converted day if it were ever recategorised, so
+            # check provenance directly rather than bypassing that authority
+            # from inside goal preservation.
+            continue
+        if category not in _MICRODOSE_HOST_CATEGORIES:
+            continue
+        if role.get("priority_microdose") is not None:
+            continue
+        if (role.get("governance") or {}).get("hard_suppression_reasons"):
+            continue
+        # A support insert is not a session; it cannot host development.
+        if role.get("support_insert_category") or role.get("support_kind"):
+            continue
+        hosts.append(role)
+    # An S&C session absorbs quality work most cleanly, then technical work;
+    # a conditioning session is the last resort because the added sets compete
+    # with its energy-system purpose.
+    order = {"strength": 0, "technical": 1, "conditioning": 2}
+    return sorted(hosts, key=lambda role: order.get(str(role.get("category") or "").lower(), 3))
+
+
+def _assignment_for_slot(role: dict, slot: dict, selected: dict) -> dict:
+    """The composed assignment this pool slot became, if the role kept one."""
+    slot_id = slot.get("slot_id")
+    name = str(selected.get("name") or "").strip()
+    for assignment in role.get("selected_exercise_assignments") or []:
+        if not isinstance(assignment, dict):
+            continue
+        if slot_id is not None and assignment.get("slot_id") == slot_id:
+            return assignment
+        if name and str(assignment.get("name") or "").strip() == name:
+            return assignment
+    return {}
+
+
 def _other_stimuli(role: dict, pool: dict, brief: dict) -> list[dict]:
     # Reuse the payload layer's canonical role-to-slot matcher. Weekly role-map
     # session_index and candidate-pool session_index are separate namespaces and
@@ -295,11 +701,20 @@ def _other_stimuli(role: dict, pool: dict, brief: dict) -> list[dict]:
         metadata = selected.get("selection_metadata") if isinstance(selected.get("selection_metadata"), dict) else {}
         dose_source = dict(selected)
         for field in (
-            "work_sec", "rest_sec", "rounds", "total_minutes", "rpe",
+            "work_sec", "rest_sec", "rounds", "total_minutes", "rpe", "rpe_max",
             "impact_cost", "lactate_load", "movement_cost",
         ):
             if metadata.get(field) is not None:
                 dose_source[field] = metadata[field]
+        # The candidate pool is compacted in persistence, so a replayed brief can
+        # reach here with no numeric dose even though the role is legitimate
+        # structured work. The composed assignment carries the same canonical
+        # fields from `_conditioning_effective_dose`, so fall back to it rather
+        # than reading the dose back out of the rendered prescription text.
+        assignment = _assignment_for_slot(role, slot, selected)
+        for field in ("work_sec", "rest_sec", "rounds"):
+            if dose_source.get(field) is None and assignment.get(field) is not None:
+                dose_source[field] = assignment[field]
         # A recovery morph / support flush does not become energy-system work
         # through its old pool identity. Positive work metadata is required.
         if (role.get("late_camp_role_morph") or role.get("counts_toward_conditioning_cap") is False
@@ -376,6 +791,7 @@ def collect_goal_evidence(brief: dict) -> list[dict]:
                 continue
             stimuli = _strength_stimuli(role, strength.get(id(role), []), brief)
             stimuli += _other_stimuli(role, pools.get(week.get("phase"), {}), brief)
+            stimuli += _microdose_stimuli(role)
             for stimulus in stimuli:
                 # D-1 protocol can support readiness; never training adaptations.
                 if day <= 1:
@@ -418,8 +834,22 @@ def _requirements(entry: dict, brief: dict) -> list[dict]:
     cutoff = 14 if entry["state"] == "build" else (8 if entry["goal"] == "strength" else 2)
     width = 7 if entry["state"] == "build" else 14
     span = max(1, days - cutoff + 1)
-    return [{"min_d_day": cutoff + index * width, "max_d_day": min(days, cutoff + (index + 1) * width - 1)}
-            for index in range(ceil(span / width))]
+    # Windows are anchored at the cutoff and counted outward, so any remainder
+    # falls at the far end - the opening days of camp. Rounding up turned that
+    # remainder into its own requirement, demanding a full development-week
+    # exposure from a sliver that can be a single day (a 21-day camp yields a
+    # D-21..D-21 window). The earliest window absorbs the remainder instead, so
+    # every requirement covers a real development week.
+    count = max(1, span // width)
+    return [
+        {
+            "min_d_day": cutoff + index * width,
+            "max_d_day": days
+            if index == count - 1
+            else min(days, cutoff + (index + 1) * width - 1),
+        }
+        for index in range(count)
+    ]
 
 
 def _coverage(entry: dict, brief: dict, evidence: list[dict]) -> tuple[list[dict], list[dict]]:
@@ -447,6 +877,112 @@ def _role_matches_goal(role: dict, goal: str) -> bool:
     if goal == "footwork":
         return category == "technical" or (category == "conditioning" and role.get("preferred_system") == "technical_footwork")
     return category == {"mobility": "mobility", "recovery": "recovery", "skill_refinement": "technical"}.get(goal)
+
+
+def _attach_goal_microdose(brief: dict, ordinal: int, entry: dict) -> dict | None:
+    """Weekly exposure floor: smallest legal exposure on an existing session.
+
+    Reached only when ``_restore_goal_roles`` has already established that a
+    whole role cannot be restored inside the week's session/category budget.
+    Adds no session, no training day and no frequency: it hangs a few sets off a
+    session the athlete is already doing, and the host keeps its own identity.
+
+    Returns an audit record, or None when the goal is not floor-eligible at all.
+    """
+    spec = _MICRODOSE_SPECS.get(entry["goal"])
+    if spec is None:
+        # Conditioning and support-serviced goals are owned elsewhere.
+        return None
+    if entry["state"] != "build":
+        # A maintenance obligation has a 14-day window; it does not need a
+        # weekly floor and must not spend capacity as if it did.
+        return None
+
+    week = brief["weekly_role_map"]["weeks"][ordinal]
+    if str(week.get("phase") or "").upper() == "TAPER":
+        return {"week_index": week.get("week_index"), "result": "floor_not_applied",
+                "reason_codes": ["taper_no_developmental_floor"]}
+
+    # Already covered somewhere in this week: the floor is a floor, not a bonus.
+    week_days = {
+        day.get("d_day")
+        for day in week.get("calendar_days") or []
+        if isinstance(day.get("d_day"), int)
+    }
+    covered = any(
+        e.get("d_day") in week_days
+        and entry["required_intent"] in e["intents"]
+        and e.get("development_quality")
+        for e in collect_goal_evidence(brief)
+    )
+    if covered:
+        return {"week_index": week.get("week_index"), "result": "floor_already_met",
+                "reason_codes": ["existing_weekly_exposure"]}
+
+    protected_days = {str(d.get("day") or "").lower() for d in week.get("intentionally_unused_days") or []}
+    for host in _microdose_host_roles(week):
+        host_day = role_d_day(week, host)
+        if not isinstance(host_day, int) or host_day <= 13:
+            # Reuse the established developmental cutoff: no new development
+            # inside the taper / fight-week tail.
+            continue
+        if str(host.get("scheduled_day_hint") or "").lower() in protected_days:
+            # A truly unused / rest / recovery day stays protected. A day marked
+            # unused by generic bookkeeping that nevertheless holds a real
+            # coach-owned session is decided by the canonical collision policy,
+            # not by the bookkeeping flag.
+            if not _microdose_coexists_on_protected_day(host, spec):
+                continue
+        trial = deepcopy(brief)
+        trial_host = trial["weekly_role_map"]["weeks"][ordinal]["session_roles"][
+            (week.get("session_roles") or []).index(host)
+        ]
+        trial_host["priority_microdose"] = {
+            "goal": entry["goal"],
+            "name": spec["name"],
+            "prescription": spec["prescription"],
+            "sets": spec["sets"],
+            "intents": list(spec["intents"]),
+            "authority": VERSION,
+        }
+        # ``microdose_attached`` must mean renderable on the host, not merely
+        # visible as goal evidence. Synchronise the host's closed membership
+        # with this same microdose before the no-regression trial is judged.
+        _sync_microdose_membership(trial_host, trial_host["priority_microdose"])
+        _, missing_before = _coverage(entry, brief, collect_goal_evidence(brief))
+        _, missing_after = _coverage(entry, trial, collect_goal_evidence(trial))
+        retained = {(e.get("d_day"), e.get("name"), tuple(e["intents"])) for e in collect_goal_evidence(trial)}
+        # Same no-regression guard the role repair uses: a floor exposure may
+        # not pay for this goal by erasing another stimulus.
+        if len(missing_after) >= len(missing_before) or any(
+            (e.get("d_day"), e.get("name"), tuple(e["intents"])) not in retained
+            for e in collect_goal_evidence(brief)
+        ):
+            continue
+        brief["weekly_role_map"] = trial["weekly_role_map"]
+        return {"week_index": week.get("week_index"), "d_day": host_day,
+                "role_key": host.get("role_key"), "goal": entry["goal"],
+                "result": "microdose_attached", "reason_codes": ["weekly_priority_exposure_floor"]}
+
+    # An earlier obligation in the same week may already hold the only session
+    # that could have hosted this one - `_microdose_host_roles` excludes a role
+    # that already carries a microdose, and stacking a second touch on it is not
+    # this tier's call to make. Say that plainly instead of reporting it as "no
+    # compatible session": the capacity existed, a higher-precedence priority
+    # spent it, and this obligation waits for another legal host rather than
+    # forcing more work onto the week.
+    taken = [
+        role.get("priority_microdose", {}).get("goal")
+        for role in week.get("session_roles") or []
+        if isinstance(role, dict) and isinstance(role.get("priority_microdose"), dict)
+    ]
+    if any(goal and goal != entry["goal"] for goal in taken):
+        return {"week_index": week.get("week_index"), "goal": entry["goal"],
+                "result": "floor_no_safe_capacity",
+                "reason_codes": ["priority_capacity_spent"],
+                "held_by": [goal for goal in taken if goal and goal != entry["goal"]]}
+    return {"week_index": week.get("week_index"), "result": "floor_no_safe_host",
+            "reason_codes": ["no_compatible_existing_session"]}
 
 
 def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
@@ -531,6 +1067,21 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
                 stamp_role_label(restored)
                 audit.append({"week_index": week.get("week_index"), "d_day": d_day, "result": "restored", "reason_codes": []})
                 return audit + _restore_goal_roles(brief, entry) if missing_after else audit
+        # Reaching here means no candidate could be restored into this week -
+        # for ANY reason: no candidate matched the goal, the week held its
+        # authority (compression, hard suppression, contact rules), the session
+        # or category budget was full, the calendar forbade every day, or the
+        # trial regressed another stimulus. A restore returns above, so this is
+        # the single "the full repair did not happen" exit.
+        #
+        # Whichever reason it was, the weekly requirement may still be missing
+        # and the week may still hold a session that can safely carry the
+        # smallest exposure. Gating this on one specific failure reason made the
+        # fallback unreachable for every other one, including a week that has no
+        # repair candidates at all and never enters the loop above.
+        floor_audit = _attach_goal_microdose(brief, ordinal, entry)
+        if floor_audit is not None:
+            audit.append(floor_audit)
     return audit
 
 
@@ -605,6 +1156,12 @@ def reconcile_goal_preservation(brief: dict) -> dict:
                      satisfied=not missing and entry["state"] != "defer")
     brief["goal_preservation_version"] = VERSION
     brief["goal_preservation"] = entries
+    # A weak area serviced elsewhere must still be auditable here: without this
+    # record, "delegated to a canonical subsystem" and "silently dropped" look
+    # identical from the outside.
+    brief["primary_weakness_disposition"] = primary_weakness_disposition(
+        _athlete(brief), brief.get("priority_focus")
+    )
     compressed = deepcopy(brief.get("compressed_priorities") or _athlete(brief).get("compressed_priorities") or {})
     compressed["goal_preservation"] = entries
     brief["compressed_priorities"] = compressed

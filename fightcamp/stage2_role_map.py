@@ -36,6 +36,7 @@ from .sparring_dose_planner import (
     sandwiched_training_days,
 )
 from .stage2_payload_late_fight import (
+    _conditioning_limiter_signal,
     _role_anchor,
     compute_bridge_rules,
 )
@@ -45,11 +46,13 @@ from .stage2_planning_brief import (
     _WEEKLY_STAGE_TEMPLATES,
     PLANNING_DECISION_HIERARCHY,
 )
+from .gap_fill_inserts import LOW_COST_AEROBIC_INSERTS
+from .goal_priority import goal_priority_scores
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 from .fight_day_override import apply_fight_day_override_to_weekly_role_map, compute_fight_weekday
 from .fight_date_utils import build_calendar_days
 from .stage2_render_guards import _all_active_injuries_surface_only
-from .role_labels import stamp_weekly_role_map_labels
+from .role_labels import PRIMARY_STRENGTH_ROLE_KEYS, stamp_weekly_role_map_labels
 from .allocator_priority import (
     allocation_sort_key,
     late_camp_week_reference_d_day,
@@ -461,9 +464,17 @@ _LOW_AEROBIC_SUPPORT_ROLE_KEYS = {
 
 
 def _is_low_aerobic_support_role(role: dict) -> bool:
-    """Return True when the role qualifies as a low-aerobic support touch."""
+    """Return True when the role qualifies as a low-aerobic support touch.
+
+    Covers both shapes a low-aerobic touch can take: a conditioning role the
+    allocator created, and a low-cost aerobic support insert the filler layer
+    placed. Both spend the same weekly allowance, so both are counted here
+    rather than by a second frequency authority.
+    """
     if not isinstance(role, dict):
         return False
+    if str(role.get("role_key") or "").strip() in LOW_COST_AEROBIC_INSERTS:
+        return True
     category = str(role.get("category") or "").strip().lower()
     if category != "conditioning":
         return False
@@ -547,6 +558,32 @@ def _low_aerobic_support_cap_for_week(
             return 0 if (high_fatigue or red_flag) else 1
         if phase == "TAPER":
             return 1
+        # Frequent low-damage aerobic exposure is the point of the build phases
+        # when the athlete has actually stated a conditioning/gas-tank priority.
+        # A second easy touch needs no fatigue or red-flag blocker and a week
+        # that is not already carrying heavy hard-contact load.
+        hard_contact_days = len(
+            {
+                str(day).strip().lower()
+                for day in (week_entry.get("effective_hard_sparring_days") or [])
+                if str(day).strip()
+            }
+            or {
+                str(entry.get("day") or "").strip().lower()
+                for entry in (hard_sparring_plan or [])
+                if isinstance(entry, dict)
+                and entry.get("status") == "hard_as_planned"
+                and str(entry.get("day") or "").strip()
+            }
+        )
+        if (
+            phase in {"GPP", "SPP"}
+            and not high_fatigue
+            and not red_flag
+            and hard_contact_days <= 2
+            and goal_priority_scores(athlete_model).get("conditioning", 0) >= 10
+        ):
+            return 2
         return 1
 
     if bucket == "moderate":
@@ -1036,12 +1073,6 @@ def _role_governance(
     }
 
 
-_PRIMARY_STRENGTH_ROLE_KEYS = {
-    "primary_strength_day",
-    "structural_strength_day",
-    "neural_plus_strength_day",
-    "neural_primer_day",
-}
 _WEEKDAY_ORDER = {
     "monday": 0,
     "tuesday": 1,
@@ -1367,7 +1398,7 @@ def _replaceable_role_priority(role: dict, *, day: str) -> tuple[int, int]:
         if role.get("gas_tank_recovery_touch") or role.get("allowed_on_recovery_day"):
             return (3, 3)
         return (0 if role.get("preferred_system") == "glycolytic" else 1, 1)
-    if category == "strength" and role_key not in _PRIMARY_STRENGTH_ROLE_KEYS:
+    if category == "strength" and role_key not in PRIMARY_STRENGTH_ROLE_KEYS:
         return (2, 2)
     if category == "recovery":
         return (3, 3)
@@ -1577,7 +1608,7 @@ def _assign_declared_day_hints(
 
     recovery_idx = next((idx for idx, role in enumerate(ordered) if role.get("category") == "recovery"), None)
     primary_idx = next(
-        (idx for idx, role in enumerate(ordered) if role.get("category") == "strength" and role.get("role_key") in _PRIMARY_STRENGTH_ROLE_KEYS),
+        (idx for idx, role in enumerate(ordered) if role.get("category") == "strength" and role.get("role_key") in PRIMARY_STRENGTH_ROLE_KEYS),
         None,
     )
     glycolytic_idx = next(
@@ -1765,6 +1796,16 @@ def _assign_declared_day_hints(
 
 
 def _preferred_boxer_conditioning_sequence(phase: str, conditioning_sequence: list[str]) -> list[str]:
+    """Order the systems the athlete's limiter left unranked, boxer-first.
+
+    The limiter profile is the authority on relative priority: it already encodes
+    what this athlete most needs. Prepending a boxer preference overrode it, so a
+    boxer with only two conditioning slots in GPP lost the fight-pace exposure
+    their own conditioning limiter had ranked second and received an alactic day
+    instead - the 0.2 system displacing the 0.3 system for no safety or contact
+    reason. The preference now only orders systems the limiter did not rank, and
+    never demotes one it did.
+    """
     phase = str(phase or "").upper()
     if phase == "GPP":
         preferred = ["aerobic", "alactic", "glycolytic"]
@@ -1772,7 +1813,20 @@ def _preferred_boxer_conditioning_sequence(phase: str, conditioning_sequence: li
         preferred = ["aerobic", "glycolytic", "alactic"]
     else:
         preferred = ["alactic", "aerobic", "glycolytic"]
-    return dedupe_preserve_order(preferred + list(conditioning_sequence or []))
+
+    limiter_order = dedupe_preserve_order([str(s) for s in (conditioning_sequence or []) if s])
+    merged = dedupe_preserve_order(preferred + limiter_order)
+
+    # The only place the preference inverts the phase ratios is GPP, where it
+    # ranks alactic (0.2) above glycolytic (0.3). When the limiter itself ranked
+    # glycolytic higher, that inversion costs a two-slot week its fight-pace day,
+    # so the limiter's relative order wins. Every other ordering the preference
+    # expresses - including leading SPP with aerobic - is left alone.
+    if "glycolytic" in limiter_order and "alactic" in limiter_order:
+        if limiter_order.index("glycolytic") < limiter_order.index("alactic"):
+            merged = [system for system in merged if system != "glycolytic"]
+            merged.insert(merged.index("alactic"), "glycolytic")
+    return merged
 
 
 def _resequence_session_roles(
@@ -1790,7 +1844,7 @@ def _resequence_session_roles(
     phase = str(week_entry.get("phase", "")).upper()
 
     def _is_primary_strength(role: dict) -> bool:
-        return role.get("category") == "strength" and role.get("role_key") in _PRIMARY_STRENGTH_ROLE_KEYS
+        return role.get("category") == "strength" and role.get("role_key") in PRIMARY_STRENGTH_ROLE_KEYS
 
     def _is_support_strength(role: dict) -> bool:
         return role.get("category") == "strength" and not _is_primary_strength(role)
@@ -2195,13 +2249,6 @@ def _compression_floor_value(compression: int) -> int:
     return 2  # compression >= 3
 
 
-def _conditioning_limiter_signal(athlete_model: dict) -> bool:
-    goals = {str(v).strip().lower().replace(" ", "_") for v in clean_list(athlete_model.get("key_goals") or athlete_model.get("goals", []))}
-    weaknesses = {str(v).strip().lower().replace(" ", "_") for v in clean_list(athlete_model.get("weaknesses", []))}
-    tokens = {"gas_tank", "conditioning", "conditioning_endurance", "endurance", "aerobic"}
-    return bool((goals | weaknesses) & tokens)
-
-
 def _can_keep_low_noise_conditioning(athlete_model: dict) -> bool:
     fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
     if fatigue == "high":
@@ -2333,7 +2380,7 @@ def _build_spar_allocation_reason_codes(
 
 
 def _is_boxing_crowded_anchor_role(role: dict[str, Any]) -> bool:
-    return role.get("category") == "strength" and role.get("role_key") in _PRIMARY_STRENGTH_ROLE_KEYS
+    return role.get("category") == "strength" and role.get("role_key") in PRIMARY_STRENGTH_ROLE_KEYS
 
 
 def _is_boxing_crowded_low_load_support_role(role: dict[str, Any]) -> bool:
@@ -2836,7 +2883,7 @@ def _apply_legacy_high_fatigue_compression(
         removable_role = next(
             (
                 role for role in kept_roles
-                if role.get("category") == "strength" and role.get("role_key") not in _PRIMARY_STRENGTH_ROLE_KEYS
+                if role.get("category") == "strength" and role.get("role_key") not in PRIMARY_STRENGTH_ROLE_KEYS
             ),
             None,
         )

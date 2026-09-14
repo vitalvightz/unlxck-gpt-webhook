@@ -221,6 +221,14 @@ def classify_strength_item(item: dict[str, Any]) -> dict[str, Any]:
     else:
         quality_class = "support_accessory"
 
+    # Authored governance is the final fulfilment authority. A loaded movement
+    # may still be present for durability or recovery support, but explicit
+    # support_only/meaningful_stress metadata prevents its name, tags, or bank
+    # membership from turning it back into a strength anchor.
+    governed_support = item.get("support_only") is True or item.get("meaningful_stress") is False
+    if governed_support and quality_class in ANCHOR_CAPABLE_CLASSES:
+        quality_class = "support_isometric" if is_isometric else "support_accessory"
+
     core_balance_support = (
         quality_class in SUPPORT_ONLY_CLASSES
         and quality_class != "rehab_support"
@@ -311,11 +319,6 @@ def session_starts_with_support_only(session_items: list[dict[str, Any]]) -> boo
         return False
     return all(classify_strength_item(exercise)["support_only"] for exercise in first_two)
 
-
-def has_anchor_capable_option(exercises: list[dict[str, Any]]) -> bool:
-    return any(classify_strength_item(exercise)["anchor_capable"] for exercise in exercises)
-
-
 def count_support_only(exercises: list[dict[str, Any]]) -> int:
     return sum(1 for exercise in exercises if classify_strength_item(exercise)["support_only"])
 
@@ -359,11 +362,6 @@ def missing_base_categories(
     if require_lower_body_explosive_anchor:
         ordered.append("lower_body_explosive_anchor")
     return [category for category in ordered if category not in present]
-
-
-def normalize_line_name(text: str) -> str:
-    return re.sub(r"\s+", " ", (text or "").strip().lower())
-
 
 def strength_quality_adjustment(item: dict[str, Any], *, phase: str) -> tuple[float, dict[str, Any]]:
     profile = classify_strength_item(item)

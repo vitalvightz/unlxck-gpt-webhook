@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from typing import Any, Iterable, Mapping
 
 
-_TACTICAL_WATCH_SESSION_TITLE = "Fight Tactical Watch"
+_TACTICAL_WATCH_SESSION_TITLE = "Tactical Focus"
 
 
 @dataclass(frozen=True)

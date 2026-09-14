@@ -414,8 +414,17 @@ def _locked_source_drill_text(
 def _locked_drill_card_strings(
     plan: dict[str, Any], source: str, role: dict[str, Any], drill_name: str
 ) -> list[str]:
-    """Collect only the matching block and its owning session's mapped fields."""
-    source_day = _locked_source_day(source, role, drill_name)
+    """Collect only the matching block and its owning session's mapped fields.
+
+    The day is taken from the role's own authoritative countdown label, falling
+    back to the Stage 2 text only when the role carries none. Locating a
+    server-owned card by searching model prose would make the card invisible
+    precisely when Stage 2 omitted the drill -- which is the case the deterministic
+    merge exists to cover.
+    """
+    source_day = _authoritative_locked_day(role)
+    if source_day is None:
+        source_day = _locked_source_day(source, role, drill_name)
     if source_day is None:
         return []
     normalised_name = _normalise_locked_text(drill_name)
@@ -463,15 +472,23 @@ def _locked_content_violations(
         source_day, drill_source_text, drill_source_issue = _locked_source_drill_text(
             source, role, drill_name
         )
-        if drill_source_issue is not None:
+        if drill_source_issue == "missing_authoritative_countdown_label":
+            # Without a day there is nothing to verify against on either side.
             if governance.get("mandatory") is True or role.get("mandatory_tactical_watch") is True:
-                day_label = f"D-{source_day}" if source_day is not None else "unknown day"
                 violations.append(
-                    f"{LOCKED_CONTENT}: {drill_name!r} {drill_source_issue} on {day_label}"
+                    f"{LOCKED_CONTENT}: {drill_name!r} {drill_source_issue} on unknown day"
                 )
             continue
 
-        scoped_source_text = _normalise_locked_text(drill_source_text)
+        if drill_source_issue is not None:
+            # Stage 2 did not author this drill, and it was never its job to:
+            # the deterministic role is the owner and merge_locked_structured_content
+            # projects it into the card before this check runs. So verify the card
+            # against the role itself. A genuinely missing card still fails below --
+            # the requirement moves to the real owner, it does not disappear.
+            scoped_source_text = _normalise_locked_text(role["display_text"])
+        else:
+            scoped_source_text = _normalise_locked_text(drill_source_text)
         card_texts = [
             _normalise_locked_text(text)
             for text in _locked_drill_card_strings(plan, source, role, drill_name)
@@ -625,11 +642,63 @@ def repair_locked_tactical_watch_source_text(
         header_index = _source_day_header_indices(lines, role_day)[0]
         day_prefix = re.search(r"\bD-\s*\d+\b(?:\s*\([^)]+\))?", lines[header_index], re.I)
         header_prefix = day_prefix.group(0) if day_prefix else day_label
-        repair_block = ["", f"{header_prefix} — Fight Tactical Watch", display_text, ""]
+        repair_block = ["", f"{header_prefix} — Tactical Focus", display_text, ""]
         lines[insert_index:insert_index] = repair_block
         result.source_markdown = "\n".join(lines)
         result.applied.append(f"{day_label}: {drill_name}")
     return result
+
+
+# Sessions and blocks the server assembles from deterministic state. Their ids are
+# stamped by the assemblers that own them (structured_plan_locked_merge,
+# structured_plan_deterministic_fallback), so a card can say which content the
+# model authored and which the server did.
+_SERVER_ASSEMBLED_ID_PREFIXES = ("locked-", "deterministic-")
+
+# Roles whose existence and content the server owns end to end: it inserts them
+# into the structured card, restores them in the deterministic fallback, and
+# repairs them into the plan text. Stage 2 is not their author.
+_SERVER_OWNED_ROLE_KEYS = frozenset(
+    {
+        "hard_sparring_day",
+        "light_combat_day",
+        "tactical_watch",
+        "fight_day_protocol",
+    }
+)
+
+
+def _server_owned_ddays(planning_brief: Any) -> set[int]:
+    """Countdown days carrying a deterministic, server-owned role.
+
+    Read from the same role map the assemblers use, so this introduces no second
+    classification. A day here may legitimately appear in the card without
+    appearing in Stage 2's text: the server put it there.
+    """
+    days: set[int] = set()
+    if not isinstance(planning_brief, dict):
+        return days
+    role_map = planning_brief.get("weekly_role_map")
+    if not isinstance(role_map, dict):
+        return days
+    for week in role_map.get("weeks") or []:
+        if not isinstance(week, dict):
+            continue
+        for role in week.get("session_roles") or []:
+            if not isinstance(role, dict):
+                continue
+            if str(role.get("role_key") or "").strip() not in _SERVER_OWNED_ROLE_KEYS:
+                continue
+            day = _authoritative_locked_day(role)
+            if day is not None:
+                days.add(day)
+    return days
+
+
+def _is_server_assembled(entry: Any, key: str) -> bool:
+    if not isinstance(entry, dict):
+        return False
+    return str(entry.get(key) or "").startswith(_SERVER_ASSEMBLED_ID_PREFIXES)
 
 
 def _check(structured_plan: Any, source_markdown: str, planning_brief: Any = None) -> list[str]:
@@ -666,6 +735,7 @@ def _check(structured_plan: Any, source_markdown: str, planning_brief: Any = Non
             source_ddays.add(num)
 
     violations: list[str] = list(locked_violations)
+    server_owned_ddays = _server_owned_ddays(planning_brief)
 
     weeks = plan.get("weeks") if isinstance(plan.get("weeks"), list) else []
     for week in weeks:
@@ -680,7 +750,13 @@ def _check(structured_plan: Any, source_markdown: str, planning_brief: Any = Non
             if not isinstance(day, dict):
                 continue
             day_num = _dday_num(day.get("countdown_label"))
-            if day_num is not None and day_num not in source_ddays:
+            if (
+                day_num is not None
+                and day_num not in source_ddays
+                and day_num not in server_owned_ddays
+            ):
+                # A server-owned day is exempt: the deterministic assemblers place
+                # it from the role map, so Stage 2's text is not its authority.
                 violations.append(
                     f"{COUNTDOWN}: day countdown {day.get('countdown_label')!r} absent from source text"
                 )
@@ -688,8 +764,14 @@ def _check(structured_plan: Any, source_markdown: str, planning_brief: Any = Non
             for session in day.get("sessions") or []:
                 if not isinstance(session, dict):
                     continue
+                if _is_server_assembled(session, "session_id"):
+                    # The server wrote this session from deterministic state; it is
+                    # verified against that state, never against model prose.
+                    continue
                 for block in session.get("blocks") or []:
                     if not isinstance(block, dict):
+                        continue
+                    if _is_server_assembled(block, "block_id"):
                         continue
                     if str(block.get("block_type")) not in _EXERCISE_BLOCK_TYPES:
                         continue

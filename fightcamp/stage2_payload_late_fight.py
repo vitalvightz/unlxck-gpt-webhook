@@ -7,7 +7,7 @@ from .fight_date_utils import resolve_fight_weekday
 from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_days, hard_sparring_cutoff, contact_safety_reasons
 from .late_camp_role_morph import late_fight_strength_dose_cap
 from .calendar_context import LATE_FIGHT_SCOPE, sequence_legality
-from .combat_load_policy import placement_rank
+from .combat_load_policy import DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS, placement_rank
 from .declared_combat_ownership import build_declared_light_combat_role
 
 from collections import OrderedDict
@@ -150,13 +150,7 @@ _COEXISTABLE_FILLER_ROLE_KEYS = {
     "technical_shadow_rhythm",
     "footwork_walkthrough",
 }
-_DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS = {
-    "strength_touch_day",
-    "neural_primer_day",
-    "alactic_sharpness_day",
-    "light_fight_pace_touch_day",
-}
-_DAY_SLOT_SESSION_ROLE_KEYS = _DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS | {
+_DAY_SLOT_SESSION_ROLE_KEYS = DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS | {
     "hard_sparring_day",
     "technical_touch_day",
     "fight_week_freshness_day",
@@ -263,35 +257,6 @@ def _classify_declared_hard_days_for_late_window(
             }
         )
     return classified
-
-
-def _protected_collision_owner_day(athlete_model: dict[str, Any]) -> str | None:
-    for key in ("primary_collision_owner_day", "main_fight_pace_day", "collision_owner_day", "planned_collision_owner_day"):
-        day = str(athlete_model.get(key) or "").strip().lower()
-        if day in _WEEKDAY_ORDER:
-            return day
-    return None
-
-
-def _select_capped_declared_hard_day_instances(
-    hard_allowed_days: list[dict[str, Any]],
-    cap: int | None,
-    protected_day: str | None = None,
-) -> list[dict[str, Any]]:
-    ordered = sorted(hard_allowed_days, key=lambda entry: int(entry.get("offset", -1)), reverse=True)
-    if cap is None or len(ordered) <= cap:
-        return ordered
-    if cap <= 0:
-        return []
-    if cap == 1:
-        if protected_day:
-            protected = next((entry for entry in ordered if entry.get("weekday") == protected_day), None)
-            if protected is not None:
-                return [protected]
-        return ordered[:1]
-    if cap == 2:
-        return [ordered[0], ordered[-1]]
-    return ordered[:cap]
 
 
 def _select_spaced_hard_days(declared_hard_days: list[str], cap: int | None) -> list[str]:
@@ -606,31 +571,11 @@ def _weight_cut_is_extreme(athlete_model: dict[str, Any], flags: set[str]) -> bo
     return risk and pct >= 5.0
 
 
-def _active_weight_cut_present(athlete_model: dict[str, Any], flags: set[str]) -> bool:
-    if flags & {"active_weight_cut", "aggressive_weight_cut", "extreme_weight_cut"}:
-        return True
-    if bool(athlete_model.get("weight_cut_risk")):
-        return True
-    try:
-        return float(athlete_model.get("weight_cut_pct") or 0.0) > 0.0
-    except (TypeError, ValueError):
-        return True
-
-
-def _blocks_bridge_extra_glycolytic_touch(athlete_model: dict[str, Any]) -> bool:
-    flags = _readiness_flags(athlete_model)
-    fatigue = _normalized_fatigue(athlete_model)
-    if fatigue in {"moderate", "high", "critical", "extreme"}:
-        return True
-    # A moderate/routine cut keeps the D-20..D-18 controlled pressure touch;
-    # only a high/extreme cut removes it.
-    if _weight_cut_is_extreme(athlete_model, flags):
-        return True
-    if clean_list(athlete_model.get("injuries", [])):
-        return True
-    if flags & {"injury_management", "medical_hold", "restricted_rehab", "restricted_rehab_only", "needs_review"}:
-        return True
-    return False
+def _conditioning_limiter_signal(athlete_model: dict) -> bool:
+    goals = {str(v).strip().lower().replace(" ", "_") for v in clean_list(athlete_model.get("key_goals") or athlete_model.get("goals", []))}
+    weaknesses = {str(v).strip().lower().replace(" ", "_") for v in clean_list(athlete_model.get("weaknesses", []))}
+    tokens = {"gas_tank", "conditioning", "conditioning_endurance", "endurance", "aerobic"}
+    return bool((goals | weaknesses) & tokens)
 
 
 def _suppress_standalone_glycolytic(active_hard_spar_days: list[str], athlete_model: dict[str, Any]) -> bool:
@@ -1435,14 +1380,31 @@ def resolve_late_fight_contacts(
     return contacts
 
 
+# The D-13..D-8 quota of 4 active roles / 3 meaningful stress exposures is spent
+# on two strength touches, one alactic sharpness touch and the freshness day, so
+# ``light_fight_pace_touch_day`` — the only conditioning-maintenance role legal in
+# this window — never fit, and the whole tail was identical whether or not
+# conditioning was the athlete's limiter. One extra slot lets it in beside the
+# alactic touch instead of in place of it. Both quotas move together because the
+# stress quota is the binding one: widening only the active quota still leaves
+# four meaningful exposures competing for three places. Every dose, RPE, contact
+# and suppression rule for the window is unchanged and still outranks this.
+_CONDITIONING_LIMITER_EXTRA_COMPRESSED_ROLES = 1
+
+
 def _late_fight_role_budget(days_until_fight: Any, athlete_model: dict[str, Any]) -> dict[str, Any]:
-    return {
+    budget = {
         "mode": _days_out_payload_mode(days_until_fight),
         "max_active_roles": _late_fight_max_active_roles(days_until_fight),
         "max_meaningful_stress_exposures": _late_fight_max_meaningful_stress_exposures(days_until_fight),
         "max_support_roles": _late_fight_max_support_roles(days_until_fight),
         "legal_countdown_labels": _late_fight_legal_countdown_labels(days_until_fight),
     }
+    if budget["mode"] == "pre_fight_compressed_payload" and _conditioning_limiter_signal(athlete_model):
+        for key in ("max_active_roles", "max_meaningful_stress_exposures"):
+            if isinstance(budget[key], int):
+                budget[key] += _CONDITIONING_LIMITER_EXTRA_COMPRESSED_ROLES
+    return budget
 
 
 def _late_fight_forbidden_blocks(days_until_fight: Any) -> list[str]:
@@ -2189,6 +2151,7 @@ def _late_fight_role_entry(
     declared_day_order: int | None = None,
     day_assignment_reason: str | None = None,
     coach_notes: list[str] | None = None,
+    rpe_cap: str | None = None,
 ) -> dict[str, Any]:
     entry = {
         "category": category,
@@ -2208,8 +2171,15 @@ def _late_fight_role_entry(
         # touch) rather than the static role-key fallback map.
         "selection_priority": selection_priority,
         "_selection_priority": selection_priority,
+        # Public mirror of _required, for the same reason as _selection_priority:
+        # downstream governance must be able to tell a required exposure from an
+        # optional touch without re-deriving that policy from role keys.
+        "required": required,
         "_required": required,
     }
+    if rpe_cap:
+        # Consumed by prescription_resolver as the role's effective ceiling.
+        entry["rpe_cap"] = rpe_cap
     if session_index is not None:
         entry["session_index"] = session_index
     if preferred_system:
@@ -2657,15 +2627,29 @@ def _late_fight_candidate_roles(
                     category="conditioning",
                     role_key="light_fight_pace_touch_day",
                     preferred_pool="conditioning_slots",
-                    preferred_system="glycolytic",
+                    # A late-camp rhythm touch is low-fatigue maintenance, not
+                    # glycolytic development -- as this entry's own selection rule
+                    # says. Declaring it glycolytic sent _slot_matches_role at the
+                    # SPP glycolytic pool, whose hard RPE-9 development work is
+                    # correctly rejected by late-window governance, leaving the day
+                    # unassignable. ``_morph_to_rhythm_touch`` already resolves the
+                    # identical role key as aerobic; match it rather than keep a
+                    # second definition of the same role.
+                    preferred_system="aerobic",
                     selection_rule=(
                         "Allow at most one rhythm/freshness touch only when sparring does not already own the window. "
                         "This cannot satisfy a hard conditioning, glycolytic, or combat-pressure quota."
                     ),
                     placement_rule=(
-                        "Keep this light (RPE <= 5), never describe it as a conditioning build or progression, "
+                        "Keep this light (RPE <= 6), never describe it as a conditioning build or progression, "
                         "and never place it between two hard sparring collisions."
                     ),
+                    # The role previously stated RPE <= 5 in prose while carrying no
+                    # rpe_cap at all, so nothing resolved or enforced it. Use the
+                    # ceiling ``_morph_to_rhythm_touch`` already assigns this role
+                    # key, which is the D13-D8 window maximum -- it constrains the
+                    # dose without loosening that window cap.
+                    rpe_cap="4-6",
                     selection_priority=96 if has_downgraded_hard_days else 100,
                     legal_countdown_labels=legal_countdown_labels,
                 )
@@ -3147,7 +3131,7 @@ def _late_fight_best_assignment(
             for scored_role in scored_roles:
                 if not _is_app_owned_visible_role(scored_role.get("role_key")):
                     continue
-                if str(scored_role.get("role_key") or "").strip().lower() not in _DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS:
+                if str(scored_role.get("role_key") or "").strip().lower() not in DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS:
                     continue
                 assigned_weekday = str(scored_role.get("real_weekday") or "").strip().lower()
                 if assigned_weekday in hard_weekdays:
@@ -3445,13 +3429,6 @@ def _declared_hard_weekdays(athlete_model: dict[str, Any]) -> set[str]:
     }
 
 
-def _meaningful_app_owned_role(role: dict[str, Any]) -> bool:
-    return (
-        _is_app_owned_visible_role(role.get("role_key"))
-        and str(role.get("stress_class") or "").strip() == "meaningful_stress"
-    )
-
-
 def _role_has_non_hard_weekday_option(
     role: dict[str, Any],
     label_to_weekday: dict[str, str],
@@ -3471,7 +3448,7 @@ def _prefer_non_hard_weekday_labels(
 ) -> list[str]:
     if not hard_weekdays or not _is_app_owned_visible_role(role.get("role_key")):
         return labels
-    if str(role.get("role_key") or "").strip().lower() not in _DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS:
+    if str(role.get("role_key") or "").strip().lower() not in DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS:
         return labels
     if is_low_cost_coexistable_filler(role):
         return labels
@@ -3621,7 +3598,7 @@ def _score_composite_practical_assignment(
             # coach-owned combat role.
             weekday = str(label_to_weekday.get(str(role.get("scheduled_countdown_label") or "")) or "").strip().lower()
             if (
-                str(role.get("role_key") or "").strip().lower() in _DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS
+                str(role.get("role_key") or "").strip().lower() in DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS
                 and weekday in hard_weekdays
                 and _role_has_non_hard_weekday_option(role, label_to_weekday, hard_weekdays)
             ):

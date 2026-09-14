@@ -40,7 +40,11 @@
     "lactate_load": "low",
     "movement_cost": "low",
     "mechanical_risk_tags": ["mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"]
+    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Step-Back Pivot Reset",
@@ -85,7 +89,11 @@
     "lactate_load": "low",
     "movement_cost": "moderate",
     "mechanical_risk_tags": ["mech_change_of_direction", "mech_hip_rotation", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
+    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Lateral Exit to Re-Enter",
@@ -129,7 +137,11 @@
     "lactate_load": "low",
     "movement_cost": "moderate",
     "mechanical_risk_tags": ["mech_change_of_direction", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
+    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "45-Degree Angle Step to Jab Reset",
@@ -175,7 +187,11 @@
     "lactate_load": "low",
     "movement_cost": "moderate",
     "mechanical_risk_tags": ["mech_change_of_direction", "mech_hip_rotation", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
+    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Check-Hook Pivot Out Shadow Drill",
@@ -219,7 +235,11 @@
     "lactate_load": "low",
     "movement_cost": "moderate",
     "mechanical_risk_tags": ["mech_change_of_direction", "mech_hip_rotation", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
+    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Corner Escape L-Step",
@@ -266,7 +286,11 @@
     "lactate_load": "low",
     "movement_cost": "moderate",
     "mechanical_risk_tags": ["mech_change_of_direction", "mech_hip_rotation", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7"]
+    "late_windows": ["d21_to_d14", "d13_to_d8", "d7"],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Ring Cut-Off Walkdown",
@@ -309,7 +333,11 @@
     "lactate_load": "low",
     "movement_cost": "low",
     "mechanical_risk_tags": ["mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"]
+    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Pressure Step-Cut Reset",
@@ -354,7 +382,11 @@
     "lactate_load": "low",
     "movement_cost": "moderate",
     "mechanical_risk_tags": ["mech_change_of_direction", "mech_deceleration", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8"]
+    "late_windows": ["d21_to_d14", "d13_to_d8"],
+    "stress_class": "support",
+    "cost_class": "moderate",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Clinch Exit Square-Up Reset",
@@ -398,7 +430,11 @@
     "lactate_load": "low",
     "movement_cost": "moderate",
     "mechanical_risk_tags": ["mech_hip_rotation", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
+    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Kick Exit and Re-Stance Walkthrough",
@@ -443,7 +479,11 @@
     "lactate_load": "low",
     "movement_cost": "moderate",
     "mechanical_risk_tags": ["mech_plantarflexion", "mech_hip_rotation", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"]
+    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Teep Retreat and Re-Stance",
@@ -488,7 +528,11 @@
     "lactate_load": "low",
     "movement_cost": "low",
     "mechanical_risk_tags": ["mech_plantarflexion", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7"]
+    "late_windows": ["d21_to_d14", "d13_to_d8", "d7"],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Check and Return Step",
@@ -534,7 +578,11 @@
     "lactate_load": "low",
     "movement_cost": "moderate",
     "mechanical_risk_tags": ["mech_change_of_direction", "mech_plantarflexion", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7"]
+    "late_windows": ["d21_to_d14", "d13_to_d8", "d7"],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Switch-Step Stance Recovery",
@@ -580,7 +628,11 @@
     "lactate_load": "low",
     "movement_cost": "low",
     "mechanical_risk_tags": ["mech_hip_rotation", "mech_plantarflexion", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
+    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Cage Circle and Cut-Off",
@@ -624,7 +676,11 @@
     "lactate_load": "low",
     "movement_cost": "moderate",
     "mechanical_risk_tags": ["mech_change_of_direction", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"]
+    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Scramble-to-Strike Rebase",
@@ -669,7 +725,11 @@
     "lactate_load": "low",
     "movement_cost": "moderate",
     "mechanical_risk_tags": ["mech_change_of_direction", "mech_deceleration", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8"]
+    "late_windows": ["d21_to_d14", "d13_to_d8"],
+    "stress_class": "support",
+    "cost_class": "moderate",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Sprawl Exit to Ring Angle",
@@ -715,7 +775,11 @@
     "lactate_load": "low",
     "movement_cost": "moderate",
     "mechanical_risk_tags": ["mech_change_of_direction", "mech_deceleration", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8"]
+    "late_windows": ["d21_to_d14", "d13_to_d8"],
+    "stress_class": "support",
+    "cost_class": "moderate",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Level-Change Feint to Angle",
@@ -761,7 +825,11 @@
     "lactate_load": "low",
     "movement_cost": "moderate",
     "mechanical_risk_tags": ["mech_change_of_direction", "mech_deceleration", "mech_hip_rotation", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8"]
+    "late_windows": ["d21_to_d14", "d13_to_d8"],
+    "stress_class": "support",
+    "cost_class": "moderate",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Submission Hunter Stand-Up Reset",
@@ -803,7 +871,11 @@
     "lactate_load": "low",
     "movement_cost": "moderate",
     "mechanical_risk_tags": ["mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8"]
+    "late_windows": ["d21_to_d14", "d13_to_d8"],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Thai Ring-Cut Pressure Walkdown",
@@ -849,7 +921,11 @@
     "lactate_load": "low",
     "movement_cost": "moderate",
     "mechanical_risk_tags": ["mech_change_of_direction", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
+    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Long-Guard Clinch Entry Step",
@@ -895,7 +971,11 @@
     "lactate_load": "low",
     "movement_cost": "moderate",
     "mechanical_risk_tags": ["mech_change_of_direction", "mech_hip_rotation", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7"]
+    "late_windows": ["d21_to_d14", "d13_to_d8", "d7"],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Shot-Line Circle-Off Reset",
@@ -941,7 +1021,11 @@
     "lactate_load": "low",
     "movement_cost": "moderate",
     "mechanical_risk_tags": ["mech_change_of_direction", "mech_deceleration", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
+    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Kick-Recovery Anti-Shot Rebase",
@@ -985,7 +1069,11 @@
     "lactate_load": "low",
     "movement_cost": "moderate",
     "mechanical_risk_tags": ["mech_plantarflexion", "mech_hip_rotation", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
+    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Fence Exit to Center Rebase",
@@ -1028,7 +1116,11 @@
     "lactate_load": "low",
     "movement_cost": "moderate",
     "mechanical_risk_tags": ["mech_change_of_direction", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
+    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Wrestling Stance-Motion Circle Reset",
@@ -1074,7 +1166,11 @@
     "lactate_load": "low",
     "movement_cost": "low",
     "mechanical_risk_tags": ["mech_change_of_direction", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"]
+    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Standing Guard-Pass Base Circle",
@@ -1118,6 +1214,10 @@
     "lactate_load": "low",
     "movement_cost": "low",
     "mechanical_risk_tags": ["mech_change_of_direction", "mech_lower_limb_weight_bearing"],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"]
+    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   }
 ]

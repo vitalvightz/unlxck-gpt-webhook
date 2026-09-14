@@ -39,6 +39,7 @@ from typing import Any
 
 from fightcamp.weekly_schedule_view import extract_weekly_schedule
 from fightcamp.sparring_dose_planner import hard_sparring_cutoff, contact_safety_reasons
+from fightcamp.declared_combat_ownership import is_declared_light_combat_role
 
 # effective_load values from the deterministic schedule that mean coach-owned
 # contact work the athlete must see as its own card.
@@ -314,7 +315,9 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
         for role in role_entries:
             if not isinstance(role, dict):
                 continue
-            if str(role.get("role_key") or "").strip() != "hard_sparring_day":
+            role_key = str(role.get("role_key") or "").strip()
+            is_declared_light_combat = is_declared_light_combat_role(role)
+            if role_key != "hard_sparring_day" and not is_declared_light_combat:
                 continue
 
             raw_offset = role.get("countdown_offset")
@@ -326,10 +329,18 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
             if d_day is None or d_day == 0:
                 continue
 
-            load = _ban_clamped_load(_role_contact_load(role, d_day, athlete_snapshot), d_day, athlete_snapshot)
-            resolved_load = resolved_loads.get(d_day)
-            if resolved_load in load_rank and load_rank[resolved_load] < load_rank[load]:
-                load = resolved_load
+            if is_declared_light_combat:
+                # A declared light-combat / technical day is coach-owned calendar
+                # context the athlete stated, exactly like a declared hard-sparring
+                # day. It carries technical contact load and is never clamped down
+                # by the hard-sparring bans: the deterministic owners express any
+                # suppression by leaving the role out of session_roles entirely.
+                load = "technical"
+            else:
+                load = _ban_clamped_load(_role_contact_load(role, d_day, athlete_snapshot), d_day, athlete_snapshot)
+                resolved_load = resolved_loads.get(d_day)
+                if resolved_load in load_rank and load_rank[resolved_load] < load_rank[load]:
+                    load = resolved_load
             if load == "none":
                 continue
             append_contact(

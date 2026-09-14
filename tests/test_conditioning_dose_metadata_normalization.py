@@ -234,12 +234,47 @@ def test_rep_encoded_plyo_entry_is_reported_not_modified():
     assert "reps/distance" in _AMBIGUOUS["Depth Jump to Sprint"]
 
 
-def test_active_recovery_interval_is_reported_not_modified():
-    # "Echo Bike Tempo Intervals" (4x3min hard, 2min easy) has no discrete rest.
+def test_active_recovery_intervals_follow_the_in_bank_precedent():
+    """Active-recovery intervals record the easy bout as ``rest_sec``.
+
+    The classifier cannot auto-derive these — "2min easy" states no rest token —
+    so they stay ``ambiguous`` (manual review) rather than ``fix``. The review
+    itself is settled by the bank's own precedent: "Concept2 Rower Zone 3 Block"
+    ("3x4min @ zone 3, 2min easy") already encodes rest_sec=120 with elapsed
+    total_minutes. Identically shaped prescriptions were recording work-only
+    time, understating a machine block by up to 50% for load accounting.
+    """
+    precedent = _BANK["Concept2 Rower Zone 3 Block"]
+    assert precedent["rest_sec"] == 120
+    assert precedent["total_minutes"] == _elapsed(
+        precedent["work_sec"], precedent["rest_sec"], precedent["rounds"]
+    )
+
+    for name in (
+        "Echo Bike Tempo Intervals",
+        "SkiErg Interval Complex",
+        "Elliptical Tempo Intervals",
+    ):
+        drill = _BANK[name]
+        assert drill["rest_sec"] > 0, name
+        assert drill["total_minutes"] == _elapsed(
+            drill["work_sec"], drill["rest_sec"], drill["rounds"]
+        ), name
+        # Still not auto-correctable, so still reported for review.
+        assert name in _AMBIGUOUS, name
+
+
+def test_active_recovery_correction_preserves_training_purpose():
+    # Only the rest/elapsed bookkeeping moves: system, intensity and every
+    # purpose signal stay as prescribed.
     drill = _BANK["Echo Bike Tempo Intervals"]
-    assert "rest_sec" not in drill or drill["rest_sec"] is None
-    assert drill["total_minutes"] == 12
-    assert "Echo Bike Tempo Intervals" in _AMBIGUOUS
+    assert drill["duration"] == "4x3min hard, 2min easy"
+    assert drill["work_sec"] == 180
+    assert drill["rounds"] == 4
+    assert drill["system"] == "glycolytic"
+    assert drill["rpe"] == 9
+    assert drill["lactate_load"] == "high"
+    assert drill["impact_cost"] == "low"
 
 
 def test_ambiguous_entries_are_never_clean_timed_intervals():

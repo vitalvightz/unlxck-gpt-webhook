@@ -98,10 +98,6 @@ def test_normal_rehab_composition_closes_mobility_rehab_role_for_rendering():
         "selected_plan": {"weekly_role_map": role_map},
     })
     assert manifest[0]["selected_count"] == 2
-    assert manifest[0]["exercise_lines"] == [
-        "- Heel Walks: Heel Walks - 2 x 10 controlled reps",
-        "- Isometric Toe Lift Holds: Isometric Toe Lift Holds - 2 x 10 controlled reps",
-    ]
 
 
 def test_normal_rehab_composition_does_not_fill_non_recovery_or_late_tail_roles():

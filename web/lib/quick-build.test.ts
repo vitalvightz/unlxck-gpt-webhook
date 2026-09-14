@@ -46,18 +46,47 @@ test("validateQuickBuildInput rejects multiple tactical styles", () => {
   assert.equal(errors.tactical_style, "Pick only one tactical style.");
 });
 
-test("validateQuickBuildInput accepts an empty hard_sparring_days list", () => {
+test("validateQuickBuildInput allows an Open Plan with no combat sessions", () => {
   const input = buildValidInput();
   input.hard_sparring_days = [];
+  input.support_work_days = [];
   const errors = validateQuickBuildInput(input);
-  assert.equal(errors.hard_sparring_days, undefined);
+  assert.equal(errors.combat_sessions, undefined);
+});
+
+test("validateQuickBuildInput blocks a Fight Camp with no combat sessions", () => {
+  const input = buildValidInput();
+  input.no_scheduled_fight = false;
+  input.fight_date = "2099-04-18";
+  input.hard_sparring_days = [];
+  input.support_work_days = [];
+
+  const errors = validateQuickBuildInput(input);
+
+  assert.equal(
+    errors.combat_sessions,
+    "Add at least one hard sparring or light/technical combat day to build a Fight Camp. If none is scheduled, use Open Plan.",
+  );
+});
+
+test("validateQuickBuildInput allows a Fight Camp with a light or technical combat day", () => {
+  const input = buildValidInput();
+  input.no_scheduled_fight = false;
+  input.fight_date = "2099-04-18";
+  input.training_availability = ["Monday", "Wednesday", "Friday"];
+  input.support_work_days = ["Monday"];
+
+  const errors = validateQuickBuildInput(input);
+
+  assert.equal(errors.combat_sessions, undefined);
 });
 
 test("validateQuickBuildInput rejects hard sparring days outside training availability", () => {
   const input = buildValidInput();
+  input.training_availability = ["Monday", "Wednesday", "Friday"];
   input.hard_sparring_days = ["Wednesday", "Saturday"];
   const errors = validateQuickBuildInput(input);
-  assert.equal(errors.hard_sparring_days, "Hard sparring days must be inside your training days.");
+  assert.equal(errors.combat_sessions, "Hard sparring days must also be selected as available days: Saturday.");
 });
 
 test("validateQuickBuildInput rejects more than four hard sparring days", () => {
@@ -65,7 +94,7 @@ test("validateQuickBuildInput rejects more than four hard sparring days", () => 
   input.training_availability = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
   input.hard_sparring_days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
   const errors = validateQuickBuildInput(input);
-  assert.equal(errors.hard_sparring_days, "Pick at most 4 hard sparring days.");
+  assert.equal(errors.combat_sessions, "Hard sparring days cap is 4; reduce to 4 or fewer to continue.");
 });
 
 // Reconciled: quickBuildToPlanRequest filters hard sparring days against
@@ -87,6 +116,16 @@ test("quickBuildToPlanRequest drops hard sparring days that are not training day
   input.hard_sparring_days = ["Monday", "Saturday"];
   const plan = quickBuildToPlanRequest(input);
   assert.deepEqual(plan.hard_sparring_days, ["Monday"]);
+});
+
+test("quickBuildToPlanRequest forwards light or technical combat days to the plan request", () => {
+  const input = buildValidInput();
+  input.training_availability = ["Monday", "Wednesday", "Friday"];
+  input.support_work_days = ["Wednesday"];
+
+  const plan = quickBuildToPlanRequest(input);
+
+  assert.deepEqual(plan.support_work_days, ["Wednesday"]);
 });
 
 test("quickBuildToPlanRequest promotes first quick build focus values to primary", () => {
@@ -112,6 +151,7 @@ test("planRequestToQuickBuildInput pulls advanced onboarding fields", () => {
   plan.weekly_training_frequency = 5;
   plan.training_availability = ["Monday", "Tuesday", "Thursday", "Friday", "Saturday"];
   plan.hard_sparring_days = ["Tuesday", "Friday"];
+  plan.support_work_days = ["Monday"];
   plan.equipment_access = ["barbell", "dumbbells"];
   plan.key_goals = ["conditioning"];
   plan.weak_areas = ["gas_tank"];
@@ -133,6 +173,7 @@ test("planRequestToQuickBuildInput pulls advanced onboarding fields", () => {
     "Saturday",
   ]);
   assert.deepEqual(input.hard_sparring_days, ["Tuesday", "Friday"]);
+  assert.deepEqual(input.support_work_days, ["Monday"]);
   assert.deepEqual(input.equipment_access, ["barbell", "dumbbells"]);
   assert.deepEqual(input.key_goals, ["conditioning"]);
   assert.deepEqual(input.weak_areas, ["gas_tank"]);

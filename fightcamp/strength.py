@@ -242,6 +242,14 @@ POOR_SQUAT_TOLERANCE_LEVELS = {"poor", "low", "limited", "bad"}
 TRAP_BAR_PREFERENCE_SQUAT_PENALTY = -0.6
 TRAP_BAR_PREFERENCE_HINGE_BOOST = 0.4
 
+# Camp-level rotational-power coverage.
+# Rotational power is its own power family, but nothing makes the planner notice
+# when a whole camp's development phases have produced no exposure to it. When
+# the caller reports that gap, safe rotational-power anchors get a modest
+# selection boost — a preference, not a requirement: equipment, injury state,
+# fatigue, and a stronger goal/weakness fit can all still win.
+ROTATIONAL_POWER_COVERAGE_BOOST = 0.35
+
 
 def _exercise_fatigue_cost(exercise: dict, quality_profile: dict) -> float:
     """Return a small recovery-cost proxy for near-equal Rule 2 ordering.
@@ -541,6 +549,28 @@ def _trap_bar_anchor_preference_adjustment(
             "trap_bar_pref_trap_bar_anchor_boost"
         ]
     return 0.0, []
+
+
+def _rotational_power_coverage_adjustment(
+    quality_profile: dict,
+    *,
+    active: bool,
+    restricted: bool,
+) -> tuple[float, list[str]]:
+    """Boost a safe rotational-power anchor when the camp has no exposure yet.
+
+    Only fires when the caller reports the camp-level gap (``active``). A
+    candidate qualifies only if it is a real rotational-power anchor and carries
+    no restriction match, so injury/equipment-constrained options are never
+    pulled forward by the gap.
+    """
+    if not active or restricted:
+        return 0.0, []
+    if not quality_profile.get("anchor_capable"):
+        return 0.0, []
+    if "rotational_power" not in set(quality_profile.get("base_categories") or ()):
+        return 0.0, []
+    return ROTATIONAL_POWER_COVERAGE_BOOST, ["rotational_power_camp_coverage_boost"]
 
 
 def _strength_is_lower_body(exercise: dict, tags: set[str]) -> bool:
@@ -1164,7 +1194,6 @@ def score_exercise(
     priority_profile=None,
     must_have_bonus_multiplier: float = 1.0,
     derived_clarification_tags=None,
-    rng: random.Random | None = None,
 ):
     """Return a weighted score and breakdown for a candidate exercise."""
     exercise_tags = normalize_tags(exercise_tags or [])
@@ -1301,7 +1330,6 @@ def score_exercise(
         score += rehab_penalty
     reasons["penalties"] = rehab_penalty
 
-    reasons["randomness"] = 0.0
     reasons["deterministic_scoring"] = True
     reasons["final_score"] = round(score, 4)
 
@@ -1537,32 +1565,95 @@ def normalize_exercise_movement(exercise: dict) -> str:
     return movement
 
 
+# Loaded carries are dosed in distance or time, never in reps. Identified from
+# the bank's own carry semantics plus a narrow carry/sled noun -- deliberately
+# NOT the word "walk", which in this bank also names banded lateral walks and a
+# tandem-gait balance drill that correctly keep ordinary reps.
+_CARRY_TAGS = frozenset({"carry_heavy", "mech_upper_carry"})
+_CARRY_NAME_PATTERN = re.compile(r"\b(?:carry|carries|sled|yoke)\b")
+
+# Loaded complete-cycle work: one full ground-to-standing cycle per side is the
+# rep, so volume is counted in cycles per side and quality, not fatigue, governs.
+# This is a deliberately narrow exception for the get-up family. The bank marks
+# the Turkish Get-Up ``movement: "complex"``, but "complex" is also the natural
+# label for a barbell complex, which is dosed nothing like a get-up -- so the
+# movement value is not used as the discriminator here.
+_LOADED_CYCLE_NAME_PATTERN = re.compile(r"\bget[-\s]?ups?\b")
+
+_LOADED_BAR_EQUIPMENT = frozenset({"barbell", "trap_bar"})
+
+# Ballistic bar lifts whose bank ``method`` still reads "strength". Their method
+# field also gates strength-maintenance eligibility, so correcting the dose here
+# rather than in the bank keeps selection semantics untouched. Gated on bar
+# equipment, so the non-bar push-press variants keep their current class.
+_POWER_LIFT_NAME_PATTERN = re.compile(
+    r"\b(?:thruster|thrusters|push press|clean and jerk|clean & jerk)\b"
+)
+
+# Word-boundary med-ball match. A bare ``"med" in name`` substring also matched
+# "Glute Medius", routing a static hold to the ballistic speed template.
+_MED_BALL_NAME_PATTERN = re.compile(r"\bmed(?:icine)?[-\s]?ball\b")
+
+
 def _classify_prescription_type(exercise: dict) -> str:
     tags = set(normalize_tags(exercise.get("tags") or []))
     equipment = set(normalize_equipment_list(exercise.get("equipment", [])))
     name = (exercise.get("name") or "").lower()
     method = str(exercise.get("method") or "").strip().lower()
 
+    # --- Archetypes whose dosing UNIT or METHOD the generic templates cannot
+    # express. All are resolved BEFORE the equipment branch, because a loaded
+    # implement must not override what the movement actually is.
+
+    # A contrast pair carries two doses (heavy + explosive) and must keep both.
+    # ``method: "contrast"`` is the bank's own class for exactly these entries.
+    if method == "contrast" or "→" in name or "->" in name or "contrast_pairing" in tags:
+        return "contrast"
+
+    # Maximal overcoming isometrics (>=105% 1RM, or a max implement) are a few
+    # seconds of all-out intent, not a 10-20s submaximal hold and certainly not
+    # reps. ``_is_over_100_percent_isometric`` is the bank helper already used
+    # for late-camp eligibility.
+    if _is_over_100_percent_isometric(exercise):
+        return "max_isometric"
+
+    # Isometrics resolve before equipment: a barbell in the rack does not turn a
+    # 110% 1RM pin hold into an 8-12 rep tempo lift. The condition itself is
+    # unchanged -- only its position moved.
+    if "isometric" in tags or "isometric" in name or "iso hold" in name:
+        return "isometric"
+
+    if tags & _CARRY_TAGS or _CARRY_NAME_PATTERN.search(name):
+        return "carry"
+
+    if _LOADED_CYCLE_NAME_PATTERN.search(name):
+        return "quality_cycle"
+
     # Jumps, hops and bounds are ballistic power work and must not inherit the
     # barbell %1RM strength template just because they use a loaded implement
-    # (e.g. a trap-bar jump). Contrast/complex pairs ("Heavy RDL -> Broad Jump")
-    # are the exception: the loaded first half legitimately wants the contrast
-    # prescription, so they fall through to the barbell branch.
-    is_contrast_pair = "→" in name or "->" in name or "contrast_pairing" in tags
+    # (e.g. a trap-bar jump).
     is_jump_pattern = (
         method == "plyometric"
         or "mech_lower_jump" in tags
         or bool(re.search(r"\b(?:jump|jumps|bound|bounds|hop|hops|pogo)\b", name))
     )
-    if is_jump_pattern and not is_contrast_pair:
+    if is_jump_pattern:
+        return "ballistic"
+
+    # Olympic / loaded-power derivatives (clean, high pull, push press, speed
+    # squat) are explosive work and take the ballistic dose rather than a
+    # hypertrophy-and-slow-eccentrics barbell one. Gated on the bank's
+    # authoritative ``method: "power"``, NOT on tags: heavy strength lifts such
+    # as "Cluster Set Trap Bar Deadlift" also carry ``mech_ballistic``.
+    if equipment & _LOADED_BAR_EQUIPMENT and (
+        method == "power" or _POWER_LIFT_NAME_PATTERN.search(name)
+    ):
         return "ballistic"
 
     if equipment.intersection({"barbell", "trap_bar"}):
         return "barbell"
-    if "medicine_ball" in equipment or "med" in name or "medicine ball" in name:
+    if "medicine_ball" in equipment or _MED_BALL_NAME_PATTERN.search(name):
         return "ballistic"
-    if "isometric" in tags or "isometric" in name or "iso hold" in name:
-        return "isometric"
     if tags.intersection({"core", "trunk", "anti_rotation", "stability"}):
         return "core"
     if "deadbug" in name or "dead bug" in name:
@@ -1586,9 +1677,55 @@ def _prescription_templates(phase: str) -> dict[str, str]:
         "SPP": "4–6x2–5 reps at max speed; full rest 60–120s.",
         "TAPER": "3–5x2–4 reps/throws at max speed; full rest 60–120s.",
     }
+    # A contrast pair keeps BOTH components. Written without a bare "NxM" token
+    # so the countdown overlay in ``prescription_resolver`` preserves the pair
+    # verbatim instead of parsing the first pair of numbers and replacing the
+    # whole string -- which would silently delete the explosive half.
+    contrast = {
+        "GPP": (
+            "3–5 rounds: heavy movement 3–5 reps @ 70–80% 1RM "
+            "→ explosive movement 3–5 reps at max intent; rest 2–4 min per round."
+        ),
+        "SPP": (
+            "3–4 rounds: heavy movement 2–3 reps @ 85–92% 1RM "
+            "→ explosive movement 2–3 reps at max intent; rest 2–4 min per round."
+        ),
+        "TAPER": (
+            "1–3 rounds: heavy movement 1–2 reps @ 80–85% 1RM "
+            "→ explosive movement 1–2 reps at max intent; full rest, stop on any speed drop."
+        ),
+    }
+    # Carries are dosed in distance or time. Also deliberately free of a bare
+    # "NxM" token: "3 x 20 m" would be parsed as 20 *reps* by the countdown
+    # overlay, so the unit is spelled out instead.
+    carry = {
+        "GPP": "3–5 carries over 20–40 m (or 20–40s), heavy but unbroken; rest 60–90s.",
+        "SPP": "2–4 carries over 15–30 m (or 15–30s), heavier load, posture first; full rest.",
+        "TAPER": "1–2 carries over 10–20 m (or 10–20s), moderate load; stop well before grip failure.",
+    }
+    # One full cycle per side is the rep; quality and control govern, not
+    # fatigue. The ceiling is stated in the dose itself so it survives rendering.
+    quality_cycle = {
+        "GPP": (
+            "1–2 sets of 1–2 reps per side (hard ceiling 2 sets of 2 per side); "
+            "full quality cycles, never to fatigue."
+        ),
+        "SPP": (
+            "1–2 sets of 1–2 reps per side; heavier implement, perfect positions, "
+            "stop on any wobble."
+        ),
+        "TAPER": "1 set of 1 rep per side; movement quality only, no fatigue.",
+    }
     return {
         "barbell": barbell.get(phase, barbell["GPP"]),
+        "contrast": contrast.get(phase, contrast["GPP"]),
         "ballistic": ballistic.get(phase, ballistic["GPP"]),
+        "quality_cycle": quality_cycle.get(phase, quality_cycle["GPP"]),
+        "carry": carry.get(phase, carry["GPP"]),
+        "max_isometric": (
+            "3–5 efforts of 3–6s all-out against pins or an immovable load; "
+            "2–3 min rest. Maximal intent, never dosed as reps."
+        ),
         "isometric": "3–5 holds x 10–20s @ 7–9/10 effort; full rest between holds.",
         "core": "2-4 sets x 6-10 reps or 20-40s tempo (3-1-3), RPE 6-8.",
         "general": "2–3x6–10 @ RPE 6–7, keep reps crisp.",
@@ -1677,7 +1814,17 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
     strength_output.append(f"**Top Exercises:** {top_exercises}")
 
     prescriptions = _prescription_templates(phase)
-    ordered_types = ["barbell", "ballistic", "isometric", "core", "general"]
+    ordered_types = [
+        "barbell",
+        "contrast",
+        "ballistic",
+        "quality_cycle",
+        "carry",
+        "max_isometric",
+        "isometric",
+        "core",
+        "general",
+    ]
     present_types = []
     for exercise in exercises:
         ex_type = _classify_prescription_type(exercise)
@@ -1690,7 +1837,11 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
             continue
         label = {
             "barbell": "Barbell Strength",
+            "contrast": "Contrast Pairs (Heavy → Explosive)",
             "ballistic": "Ballistics (Med Ball / Speed / Power)",
+            "quality_cycle": "Loaded Complete-Cycle (Per Side)",
+            "carry": "Loaded Carries (Distance / Time)",
+            "max_isometric": "Maximal Overcoming Isometrics",
             "isometric": "Isometrics",
             "core": "Core Control",
             "general": "General Strength",
@@ -1706,7 +1857,7 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
     return "\n".join(strength_output)
 
 
-def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
+def generate_strength_block(*, flags: dict, weaknesses=None):
     strength_started_at = perf_counter()
     substep_callback = flags.get("strength_substep_callback")
     logger = logging.getLogger(__name__)
@@ -1767,6 +1918,14 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     ]
     goals = flags.get("key_goals", [])
     core_balance_bonus = 1 if _has_core_balance_priority(flags, weaknesses) else 0
+    # Camp-level rotational coverage gap, reported by the phase loop. Held to
+    # the development phases and to non-high fatigue: a taper or a fried athlete
+    # is no place to chase missing exposure.
+    rotational_power_coverage_gap = (
+        bool(flags.get("rotational_power_camp_gap"))
+        and phase in {"GPP", "SPP"}
+        and str(fatigue or "").strip().lower() != "high"
+    )
     require_lower_body_explosive_anchor = (
         phase in {"GPP", "SPP"}
         and str(fatigue or "").strip().lower() != "high"
@@ -1911,8 +2070,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if not active_late_window:
             return {
                 "blocked": False,
+                "severity": "safe",
                 "block_codes": [],
                 "reason_codes": [],
+                "penalty_codes": [],
                 "adjustment": 0.0,
                 "ambiguous_gap": None,
             }
@@ -1942,7 +2103,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         exercise: dict,
         *,
         profile: dict | None = None,
-        late_eval: dict | None = None,
     ) -> dict:
         tags = set(normalize_tags(exercise.get("tags", [])))
         late_windows = _exercise_late_windows(exercise)
@@ -1972,7 +2132,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         }
 
     def _merge_post_score_reasons(
-        exercise: dict,
         reasons: dict,
         *,
         profile: dict,
@@ -2113,7 +2272,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             priority_profile=priority_profile,
             must_have_bonus_multiplier=must_have_bonus_multiplier,
             derived_clarification_tags=derived_clarification_tags,
-            rng=rng,
         )
         if score == -999:
             continue
@@ -2150,23 +2308,25 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             breakdown["reason_codes"] = list(
                 dict.fromkeys(list(breakdown.get("reason_codes", [])) + list(trap_bar_reason_codes))
             )
+        rotational_adjustment, rotational_reason_codes = _rotational_power_coverage_adjustment(
+            quality_profile,
+            active=rotational_power_coverage_gap,
+            restricted=bool(matched_restrictions),
+        )
+        if rotational_adjustment:
+            score += rotational_adjustment
+            breakdown["rotational_power_coverage_adjustment"] = rotational_adjustment
+        if rotational_reason_codes:
+            breakdown["reason_codes"] = list(
+                dict.fromkeys(list(breakdown.get("reason_codes", [])) + list(rotational_reason_codes))
+            )
         if not ignore_restrictions and restriction_penalty:
             score += restriction_penalty
             breakdown["penalties"] = round(breakdown.get("penalties", 0.0) + restriction_penalty, 2)
             breakdown["restriction_hits"] = len(matched_restrictions)
-        late_eval = _evaluate_strength_late_window(
-            ex,
-            window=late_window,
-            days_until_fight=days_until_fight,
-            cut_bucket=cut_bucket,
-            familiar_names=familiar_exercise_names,
-        )
-        _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
+        late_eval = _get_post_score_late_eval(ex, fallback_score=score)
         if late_eval["blocked"]:
-            _record_late_block(ex, score, late_eval["block_codes"])
             continue
-        if late_eval.get("penalty_codes"):
-            _record_late_penalty(ex, score, late_eval["penalty_codes"])
         if late_eval["adjustment"]:
             score += late_eval["adjustment"]
         if late_eval["reason_codes"]:
@@ -2271,19 +2431,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     continue
                 if not any(t in taper_allowed for t in tags_lower):
                     continue
-            late_eval = _evaluate_strength_late_window(
-                ex,
-                window=late_window,
-                days_until_fight=days_until_fight,
-                cut_bucket=cut_bucket,
-                familiar_names=familiar_exercise_names,
-            )
-            _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
+            late_eval = _get_post_score_late_eval(ex, fallback_score=0.0)
             if late_eval["blocked"]:
-                _record_late_block(ex, 0.0, late_eval["block_codes"])
                 continue
-            if late_eval.get("penalty_codes"):
-                _record_late_penalty(ex, 0.0, late_eval["penalty_codes"])
             fallback_exercises.append(ex)
             if len(fallback_exercises) >= target_exercises - len(weighted_exercises):
                 break
@@ -2318,8 +2468,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     equipment_cache: dict[str, set[str]] = {}
     guarded_decision_cache: dict[tuple[str, str], Decision] = {}
     injury_match_cache: dict[tuple[str, tuple[str, ...], tuple[str, ...]], bool] = {}
-    post_score_late_eval_cache: dict[str, dict] = {}
-    late_safe_profile_cache: dict[tuple[str, tuple], dict] = {}
+    late_safe_profile_cache: dict[str, dict] = {}
 
     def _cached_classify(exercise: dict) -> dict:
         key = _exercise_key(exercise)
@@ -2357,16 +2506,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             injury_match_cache[key] = bool(injury_match_details(exercise, injuries, fields=fields, risk_levels=risk_levels))
         return injury_match_cache[key]
 
-    def _cached_post_score_late_eval(exercise: dict, fallback_score: float) -> dict:
-        key = f"{_exercise_key(exercise)}:{round(float(fallback_score or 0.0), 4)}"
-        if key not in post_score_late_eval_cache:
-            post_score_late_eval_cache[key] = _get_post_score_late_eval(exercise, fallback_score=fallback_score)
-        return post_score_late_eval_cache[key]
-
-    def _cached_late_safe_profile(exercise: dict, profile: dict, late_eval: dict) -> dict:
-        key = (_exercise_key(exercise), tuple(sorted(late_eval.get("reason_codes", []))), bool(late_eval.get("blocked")))
+    def _cached_late_safe_profile(exercise: dict, profile: dict | None = None) -> dict:
+        # The marker profile is derived from the exercise (plus the request-level
+        # late window and cut bucket, both fixed for this call), so the exercise
+        # identity is the whole cache key.
+        key = _exercise_key(exercise)
         if key not in late_safe_profile_cache:
-            late_safe_profile_cache[key] = _late_safe_marker_profile(exercise, profile=profile, late_eval=late_eval)
+            late_safe_profile_cache[key] = _late_safe_marker_profile(exercise, profile=profile)
         return late_safe_profile_cache[key]
 
     def _selected_names(exercises: list[dict]) -> set[str]:
@@ -2384,16 +2530,11 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             if not cand_name or cand_name in blocked_names:
                 continue
             profile = _cached_classify(cand)
-            late_eval = _cached_post_score_late_eval(cand, fallback_score=cand_score)
+            late_eval = _get_post_score_late_eval(cand, fallback_score=cand_score)
             if active_late_window and late_eval["blocked"]:
                 continue
-            late_safe_profile = _cached_late_safe_profile(
-                cand,
-                profile=profile,
-                late_eval=late_eval,
-            )
+            late_safe_profile = _cached_late_safe_profile(cand, profile=profile)
             merged_reasons = _merge_post_score_reasons(
-                cand,
                 cand_reasons,
                 profile=profile,
                 late_eval=late_eval,
@@ -2468,7 +2609,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             non_explicit_late_safe_indices = [
                 idx
                 for idx in candidate_indices
-                if not _late_safe_marker_profile(exercises[idx])["explicit"]
+                if not _cached_late_safe_profile(exercises[idx])["explicit"]
             ]
             if non_explicit_late_safe_indices:
                 candidate_indices = non_explicit_late_safe_indices
@@ -2494,19 +2635,14 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             if not cand_name or cand_name in blocked_names:
                 continue
             profile = _cached_classify(cand)
-            late_eval = _cached_post_score_late_eval(
+            late_eval = _get_post_score_late_eval(
                 cand,
                 fallback_score=score_lookup.get(cand_name, 0.0),
             )
             if active_late_window and late_eval["blocked"]:
                 continue
-            late_safe_profile = _cached_late_safe_profile(
-                cand,
-                profile=profile,
-                late_eval=late_eval,
-            )
+            late_safe_profile = _cached_late_safe_profile(cand, profile=profile)
             merged_reasons = _merge_post_score_reasons(
-                cand,
                 reasons_by_name.get(cand_name, {}),
                 profile=profile,
                 late_eval=late_eval,
@@ -2679,7 +2815,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                         local_candidates = [
                             idx
                             for idx in local_candidates
-                            if not _late_safe_marker_profile(items[idx])["explicit"]
+                            if not _cached_late_safe_profile(items[idx])["explicit"]
                         ]
                     if not local_candidates:
                         continue
@@ -2847,7 +2983,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if not name:
             continue
         profile = _cached_classify(ex)
-        late_eval = _cached_post_score_late_eval(ex, fallback_score=score)
+        late_eval = _get_post_score_late_eval(ex, fallback_score=score)
         candidate_metadata[name] = {
             "exercise": ex,
             "score": score,
@@ -2857,7 +2993,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             "tags": _cached_tags(ex),
             "equipment": _cached_equipment(ex),
             "late_eval": late_eval,
-            "late_safe_profile": _cached_late_safe_profile(ex, profile, late_eval),
+            "late_safe_profile": _cached_late_safe_profile(ex, profile),
         }
 
     top_pairs = weighted_exercises[:target_exercises]
@@ -3205,7 +3341,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     return {
         "block": strength_output,
         "num_sessions": len(used_days),
-        "preferred_tags": list(set(all_tags)),
+        "preferred_tags": list(dict.fromkeys(all_tags)),
         "exercises": base_exercises,
         "why_log": why_log,
         "candidate_reservoir": candidate_reservoir,

@@ -11796,6 +11796,50 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "shoulder_unspecified_scapular_wall_slide_band_external_rotation_reset",
+        "name": "Scapular Wall Slide + Band External Rotation Reset",
+        "notes": "GPP: 1–2 x 6–10 controlled reps to restore shoulder rhythm → TAPER: 1 light set; stop before fatigue.",
+        "rehab_stage": "restore",
+        "function": "control",
+        "equipment": [
+          "wall",
+          "bands"
+        ],
+        "dose": {
+          "sets": 2,
+          "reps": 10,
+          "duration_seconds": null
+        },
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": 3,
+        "allowed_severities": [
+          "low"
+        ],
+        "progress_when": [
+          "Scapular motion stays smooth with ribs down."
+        ],
+        "regress_when": [
+          "Shoulder discomfort or compensatory shrugging appears."
+        ],
+        "stop_when": [
+          "Pain exceeds 3/10 or scapular control is lost."
+        ],
+        "target_regions": [
+          "shoulder"
+        ],
+        "laterality_applicability": "bilateral_only",
+        "target_tissues": [
+          "rotator cuff",
+          "scapular stabilizers"
+        ],
+        "contraction_type": "mixed",
+        "sport_specificity": "combat_sport",
+        "contact_level": "none",
+        "evidence_notes": "Moved from conditioning authority; retained as low-load scapular control work."
       }
     ]
   },
@@ -16634,6 +16678,47 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "wrist_unspecified_wrist_finger_activation_micro_reset",
+        "name": "Wrist/Finger Activation Micro-Reset",
+        "notes": "GPP: 1–2 x 10–12 light reps for hand and wrist activation → TAPER: 1 x 10–12 light reps or 30–45s; stop before fatigue.",
+        "rehab_stage": "restore",
+        "function": "activation",
+        "equipment": [],
+        "dose": {
+          "sets": 2,
+          "reps": 12,
+          "duration_seconds": 45
+        },
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": 3,
+        "allowed_severities": [
+          "low"
+        ],
+        "progress_when": [
+          "Light activation remains pain-free."
+        ],
+        "regress_when": [
+          "Grip or wrist discomfort increases."
+        ],
+        "stop_when": [
+          "Pain exceeds 3/10 or fatigue changes hand control."
+        ],
+        "target_regions": [
+          "wrist",
+          "fingers"
+        ],
+        "laterality_applicability": "side_specific",
+        "target_tissues": [
+          "wrist and finger extensors"
+        ],
+        "contraction_type": "mixed",
+        "sport_specificity": "combat_sport",
+        "contact_level": "none",
+        "evidence_notes": "Moved from conditioning authority; retained as low-load wrist/finger activation."
       }
     ]
   },

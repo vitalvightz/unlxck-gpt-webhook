@@ -29,11 +29,11 @@ LEGACY = {
     "Clinch Fighter's Neck Endurance", "Clinch Fighter's Frame Endurance",
 }
 PRESERVED_HASHES = {
-    ("boxing", "clinch_fighter"): "a8c2cacfaf4b81155c1048bad4bb3b17ffd90c600991fd2750ffe05cdb36b4a9",
-    ("muay_thai", "brawler"): "3ccf3c0ce34b1e5e3d54884036111ce00dd9cbc9dc9b802dc32dd230f4403d59",
-    ("muay_thai", "pressure_fighter"): "c50d134c3ce131f8a27081820bd11d9aa4ab0177bc3dedb68da7769a3688131f",
-    ("muay_thai", "counter_striker"): "301695d8d03ef77551bd48d0973618b4f0fb51b91ba86e23b9c7d8d3fb9aa442",
-    ("muay_thai", "distance_striker"): "e5a39b46a7bb4ddb47d441595d6b999fc48754d178052840413f32f83d68cc01",
+    ("boxing", "clinch_fighter"): "1ed586722ad69f2ed2bff3859cda0ead1e8d0c4401c0b16efc975658b004e4e8",
+    ("muay_thai", "brawler"): "d8bf31e5a9e64e589ff2b30d890f0494c82a2d4f212d6867699050bf0bf577ef",
+    ("muay_thai", "pressure_fighter"): "6ab4447fe0e36cc55c7801a7b731651c86b5e5d3e728a35460fa9b2c4221a40e",
+    ("muay_thai", "counter_striker"): "1dd1049196a0400a8ebd5d6c1dd8e9066aa1e8423739195ada8ccea424c2444d",
+    ("muay_thai", "distance_striker"): "cac9dfbcc3f89d032915ac090571ac1e05c8ade57f8238f38380816ba7abaf13",
 }
 
 
@@ -118,12 +118,17 @@ def test_phase_equipment_and_mechanical_metadata_follow_conventions():
 
 
 def test_existing_selector_surfaces_slice_in_gpp_and_spp():
+    # Conditioning selection now prefers the best physiological match for the
+    # slot, so a style drill no longer owns a system slot by default. This test
+    # covers bank *reachability* — sport, style, equipment, phase and safety
+    # filtering — so it names the slice explicitly; an explicitly requested
+    # exercise is a coach instruction and is never displaced on target grounds.
     flags = {
         "sport": "muay_thai", "style_technical": ["muay thai"],
         "style_tactical": ["Clinch Fighter"], "key_goals": ["conditioning"],
         "weaknesses": ["gas_tank"], "fatigue": "low", "equipment": ["partner", "thai_pads"],
         "training_frequency": 5, "days_available": 5, "days_until_fight": 35,
-        "time_to_fight_days": 35, "injuries": [], "restrictions": [],
+        "time_to_fight_days": 35, "injuries": [], "restrictions": [], "preferred_exercise_names": sorted(EXPECTED),
     }
     expected = set(EXPECTED)
     for phase in ("GPP", "SPP"):

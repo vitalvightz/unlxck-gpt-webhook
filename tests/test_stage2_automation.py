@@ -815,14 +815,14 @@ def test_first_pass_over_limit_blocks_before_openai(monkeypatch: pytest.MonkeyPa
     assert client.responses.calls == []
 
 
-def test_first_pass_default_limit_is_180k_chars(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_first_pass_default_limit_is_400k_chars(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("UNLXCK_STAGE2_MAX_FIRST_PASS_CHARS", raising=False)
     stage1 = _stage1_result()
-    stage1["stage2_handoff_text"] = "x" * 180_001
+    stage1["stage2_handoff_text"] = "x" * 400_001
     client = FakeClient([_response("# should not be called")])
     automator = OpenAIStage2Automator(client=client, model="test-model")
 
-    with pytest.raises(Stage2AutomationError, match="chars > 180000"):
+    with pytest.raises(Stage2AutomationError, match="chars > 400000"):
         asyncio.run(automator.finalize(stage1_result=stage1))
 
     assert client.responses.calls == []
@@ -1198,3 +1198,80 @@ def test_structural_source_repair_noop_without_structural_findings() -> None:
     assert result["status"] == "publishable_with_flags"
     assert result["plan_text"] == original_text
     assert "source_repair" not in result["stage2_validator_report"]
+
+
+def _preflight_finding(code: str) -> dict:
+    return {
+        "code": code,
+        "severity": "info" if code == "late_physical_role_safely_omitted" else "blocker",
+        "role_key": "secondary_strength_day",
+        "countdown_label": "D-11",
+    }
+
+
+@pytest.mark.parametrize(
+    "code",
+    # Neither is a release-hold code: the safe omission is informational, and a
+    # missing exposure is routed to admin review by the same authority. Both
+    # used to suppress the Stage 2 model call entirely.
+    ["late_physical_role_safely_omitted", "late_physical_role_missing_assignment"],
+)
+def test_non_holding_preflight_finding_does_not_skip_stage2(monkeypatch, code):
+    """Production case: a non-holding finding must not suppress the model call."""
+    finding = _preflight_finding(code)
+    monkeypatch.setattr(
+        stage2_module,
+        "build_stage2_package",
+        lambda **_: {
+            "planner_preflight_findings": [finding],
+            "planning_brief": {"schema_version": "planning_brief.v1"},
+            "stage2_payload": {"ok": True},
+            "handoff_text": "handoff",
+            "draft_plan_text": "# Stage 1 Draft",
+        },
+    )
+    monkeypatch.setattr(stage2_module, "validate_goal_preservation", lambda _: [])
+    monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("PASS"))
+    client = FakeClient([_response("# Usable camp")])
+    result = asyncio.run(
+        OpenAIStage2Automator(client=client, model="test").finalize(
+            stage1_result=_stage1_result()
+        )
+    )
+
+    assert len(client.responses.calls) == 1
+    assert result["stage2_attempt_count"] >= 1
+    assert result["final_plan_text"] == "# Usable camp"
+    assert result["plan_text"] == "# Usable camp"
+    assert result["plan_text"] != result["draft_plan_text"]
+    assert result["stage2_status"] == "stage2_pass"
+    report = result["stage2_validator_report"]
+    assert finding in report["review_flags"]
+    assert report.get("planner_preflight_failed") is not True
+
+
+def test_blocking_preflight_finding_still_prevents_stage2(monkeypatch):
+    finding = _preflight_finding("selected_loaded_exercise_forbidden")
+    monkeypatch.setattr(
+        stage2_module,
+        "build_stage2_package",
+        lambda **_: {
+            "planner_preflight_findings": [finding],
+            "planning_brief": {"schema_version": "planning_brief.v1"},
+            "stage2_payload": {"ok": True},
+            "handoff_text": "handoff",
+            "draft_plan_text": "# Stage 1 Draft",
+        },
+    )
+    client = FakeClient([_response("# Usable camp")])
+    result = asyncio.run(
+        OpenAIStage2Automator(client=client, model="test").finalize(
+            stage1_result=_stage1_result()
+        )
+    )
+
+    assert client.responses.calls == []
+    assert result["stage2_attempt_count"] == 0
+    assert result["final_plan_text"] == ""
+    assert result["plan_text"] == ""
+    assert result["stage2_validator_report"]["planner_preflight_failed"] is True

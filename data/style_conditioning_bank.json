@@ -40,7 +40,11 @@
       "mech_upper_press",
       "mech_lower_lunge",
       "mech_deceleration"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Cover-Hook-Kick Burst",
@@ -84,7 +88,11 @@
       "mech_trunk_stability",
       "mech_upper_press",
       "mech_deceleration"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Check-Return Pocket Burst",
@@ -127,7 +135,11 @@
       "mech_upper_press",
       "mech_lower_lunge",
       "mech_deceleration"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Pocket Knee Reentry Burst",
@@ -167,7 +179,11 @@
       "mech_trunk_stability",
       "mech_lower_hip_hinge",
       "mech_deceleration"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Punch-Kick Exchange Intervals",
@@ -212,7 +228,11 @@
       "mech_lower_lunge",
       "mech_deceleration",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Guard-and-Low-Kick Answer",
@@ -257,7 +277,11 @@
       "mech_upper_press",
       "mech_deceleration",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Pocket Body-Head-Leg Intervals",
@@ -305,7 +329,11 @@
       "mech_lower_lunge",
       "mech_deceleration",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Close-Range Exchange Rounds",
@@ -349,7 +377,11 @@
       "mech_upper_press",
       "mech_lower_lunge",
       "mech_deceleration"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Inside Decision Rounds — Kickboxing / Muay Thai",
@@ -392,7 +424,11 @@
       "mech_upper_press",
       "mech_lower_lunge",
       "mech_deceleration"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "MMA Pocket Power Cluster",
@@ -433,7 +469,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Exchange-Sprawl-Return Burst",
@@ -479,7 +519,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Clinch-Break Strike Burst",
@@ -521,7 +565,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Ground-and-Pound Position Burst",
@@ -559,7 +607,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Pocket Strike-Shot Intervals",
@@ -608,7 +660,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Frame-Break-Reengage Intervals",
@@ -650,7 +706,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Cage Pocket Exchange Intervals",
@@ -698,7 +758,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "MMA Close-Exchange Flow",
@@ -741,7 +805,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "MMA Brawler Decision Rounds",
@@ -785,7 +853,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Clinch Hold & Knee Complex",
@@ -823,7 +895,11 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability",
       "mech_upper_pull"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "MMA Clinch Position Flow",
@@ -859,7 +935,11 @@
       "mech_grip_support",
       "mech_trunk_stability",
       "mech_upper_pull"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Cage Position Flow",
@@ -899,7 +979,11 @@
       "mech_trunk_stability",
       "mech_upper_press",
       "mech_upper_pull"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Reactive MMA Clinch Rounds",
@@ -941,7 +1025,11 @@
       "mech_trunk_stability",
       "mech_upper_press",
       "mech_upper_pull"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Underhook Position Burst",
@@ -979,7 +1067,11 @@
       "mech_grip_intensive",
       "mech_trunk_stability",
       "mech_upper_pull"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Cage Turn Burst",
@@ -1022,7 +1114,11 @@
       "mech_trunk_stability",
       "mech_upper_press",
       "mech_upper_pull"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Level-Change Stuff-and-Recover Burst",
@@ -1067,7 +1163,11 @@
       "mech_trunk_stability",
       "mech_upper_press",
       "mech_upper_pull"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Cage Position Intervals",
@@ -1111,7 +1211,11 @@
       "mech_trunk_stability",
       "mech_upper_press",
       "mech_upper_pull"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Clinch Strike-Control Intervals",
@@ -1157,7 +1261,11 @@
       "mech_trunk_stability",
       "mech_upper_press",
       "mech_upper_pull"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Pummel-to-Attack Intervals",
@@ -1204,7 +1312,11 @@
       "mech_trunk_stability",
       "mech_upper_press",
       "mech_upper_pull"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "MMA Clinch Decision Rounds",
@@ -1256,7 +1368,11 @@
       "mech_trunk_stability",
       "mech_upper_press",
       "mech_upper_pull"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Clinch Position Flow",
@@ -1292,7 +1408,11 @@
       "mech_grip_support",
       "mech_reactive",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Posture-Control Knee Flow",
@@ -1331,7 +1451,11 @@
       "mech_lower_hip_hinge",
       "mech_reactive",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Reactive Clinch Position Rounds",
@@ -1371,7 +1495,11 @@
       "mech_lower_hip_hinge",
       "mech_reactive",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Posture-Break Knee Burst",
@@ -1412,7 +1540,11 @@
       "mech_lower_hip_hinge",
       "mech_trunk_stability",
       "mech_upper_pull"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Turn-and-Knee Burst",
@@ -1454,7 +1586,11 @@
       "mech_grip_intensive",
       "mech_lower_hip_hinge",
       "mech_trunk_rotation"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Frame-Reconnect Burst",
@@ -1494,7 +1630,11 @@
       "mech_reactive",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Clinch Reposition Intervals",
@@ -1536,7 +1676,11 @@
       "mech_trunk_stability",
       "mech_upper_press",
       "mech_upper_pull"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Knee-and-Recover Intervals",
@@ -1576,7 +1720,11 @@
       "mech_reactive",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Grip-Fight-to-Score Intervals",
@@ -1620,7 +1768,11 @@
       "mech_trunk_stability",
       "mech_upper_press",
       "mech_upper_pull"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Clinch Decision Rounds",
@@ -1664,7 +1816,11 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Inside Position Flow",
@@ -1700,7 +1856,11 @@
       "mech_upper_pull",
       "mech_trunk_stability"
     ],
-    "impact_cost": "low"
+    "impact_cost": "low",
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Frame-Separate-Reset Flow",
@@ -1736,7 +1896,11 @@
       "mech_trunk_stability",
       "mech_deceleration"
     ],
-    "impact_cost": "low"
+    "impact_cost": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Tie-Up Position Burst",
@@ -1774,7 +1938,11 @@
       "mech_trunk_stability",
       "mech_ballistic"
     ],
-    "impact_cost": "low"
+    "impact_cost": "low",
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Turn-and-Separate Burst",
@@ -1815,7 +1983,11 @@
       "mech_deceleration",
       "mech_ballistic"
     ],
-    "impact_cost": "low"
+    "impact_cost": "low",
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Smother-Return Burst",
@@ -1858,7 +2030,11 @@
       "mech_deceleration",
       "mech_ballistic"
     ],
-    "impact_cost": "low"
+    "impact_cost": "low",
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Inside Position Intervals",
@@ -1900,7 +2076,11 @@
       "mech_reactive",
       "mech_systemic_fatigue"
     ],
-    "impact_cost": "low"
+    "impact_cost": "low",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Control-Separate-Punch Intervals",
@@ -1941,7 +2121,11 @@
       "mech_reactive",
       "mech_systemic_fatigue"
     ],
-    "impact_cost": "low"
+    "impact_cost": "low",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Reactive Clinch Decision Rounds",
@@ -1984,7 +2168,11 @@
       "mech_reactive",
       "mech_deceleration"
     ],
-    "impact_cost": "low"
+    "impact_cost": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Max Knee & Sprawl Complex",
@@ -2026,7 +2214,11 @@
       "mech_reactive",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Dutch Clinch Drill",
@@ -2062,7 +2254,11 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Band-Resisted Whizzer & Sprawl Complex",
@@ -2100,7 +2296,11 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability",
       "mech_upper_pull"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Read & Counter Flow",
@@ -2139,7 +2339,11 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Counter Shadow Flow",
@@ -2176,7 +2380,11 @@
       "mech_deceleration",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Defensive Position Flow",
@@ -2213,7 +2421,11 @@
       "mech_deceleration",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Slip-Cross Burst",
@@ -2252,7 +2464,11 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Pull-Straight Burst",
@@ -2291,7 +2507,11 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Check-Hook Pivot Burst",
@@ -2331,7 +2551,11 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Intercepting Straight Burst",
@@ -2370,7 +2594,11 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Reactive Counter Choice",
@@ -2410,7 +2638,11 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Parry-Return Intervals",
@@ -2446,7 +2678,11 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Defend-Counter-Exit Intervals",
@@ -2486,7 +2722,11 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Random Attack Counter Rounds",
@@ -2526,7 +2766,11 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Counter Quality Rounds",
@@ -2566,7 +2810,11 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Counter Kick Matrix",
@@ -2610,7 +2858,11 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Teep Intercept Flow",
@@ -2653,7 +2905,11 @@
       "mech_lower_lunge",
       "mech_reactive",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Kick Defence Reset Flow",
@@ -2697,7 +2953,11 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Check-Return Kick Burst",
@@ -2744,7 +3004,11 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Pull-Kick Counter Burst",
@@ -2790,7 +3054,11 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Intercept & Counter Mitts",
@@ -2839,7 +3107,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Reactive Counter Choice — Kickboxing",
@@ -2887,7 +3159,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Check-Return Intervals — Kickboxing",
@@ -2934,7 +3210,11 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Defend-Counter-Reposition Intervals — Kickboxing",
@@ -2988,7 +3268,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Random Attack Counter Rounds — Kickboxing",
@@ -3043,7 +3327,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Counter Knee Matrix",
@@ -3092,7 +3380,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "MMA Read & Counter Flow",
@@ -3136,7 +3428,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Strike-Shot Transition Flow",
@@ -3178,7 +3474,11 @@
       "mech_reactive",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Cage Counter Movement Flow",
@@ -3222,7 +3522,11 @@
       "mech_reactive",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sprawl-Counter Burst",
@@ -3266,7 +3570,11 @@
       "mech_reactive",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Intercepting Knee Entry Burst",
@@ -3308,7 +3616,11 @@
       "mech_lower_lunge",
       "mech_reactive",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Level-Change Uppercut Burst",
@@ -3350,7 +3662,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Stuff-Shot Counter Exit",
@@ -3396,7 +3712,11 @@
       "mech_reactive",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Reactive MMA Counter Choice",
@@ -3445,7 +3765,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Strike-or-Shot Counter Intervals",
@@ -3490,7 +3814,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Cage Defend-Counter-Escape",
@@ -3537,7 +3865,11 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Failed Shot Punish & Reset",
@@ -3582,7 +3914,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "MMA Counter Decision Rounds",
@@ -3633,7 +3969,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Ring Perimeter Flow",
@@ -3671,7 +4011,11 @@
       "mech_change_of_direction",
       "mech_lower_lunge",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Ring Escape Flow",
@@ -3713,7 +4057,11 @@
       "mech_lower_lunge",
       "mech_reactive",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Jab Volume & Position",
@@ -3752,7 +4100,11 @@
       "mech_trunk_rotation",
       "mech_lower_lunge",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Entry-Score-Exit Bursts",
@@ -3794,7 +4146,11 @@
       "mech_ballistic",
       "mech_lower_lunge",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Long-Range Movement Flow",
@@ -3830,7 +4186,11 @@
       "mech_lower_lunge",
       "mech_trunk_stability",
       "mech_trunk_rotation"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Backstep Counter Reset",
@@ -3875,7 +4235,11 @@
       "mech_ballistic",
       "mech_lower_lunge",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Straight-Shot Re-Angle",
@@ -3915,7 +4279,11 @@
       "mech_ballistic",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Open-Space Movement Flow",
@@ -3949,7 +4317,11 @@
     "mechanical_risk_tags": [
       "mech_change_of_direction",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Cage-Aware Range Flow",
@@ -3988,7 +4360,11 @@
       "mech_change_of_direction",
       "mech_reactive",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Level-Change Respect Flow",
@@ -4028,7 +4404,11 @@
       "mech_reactive",
       "mech_lower_hip_hinge",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Intercept-and-Exit Burst",
@@ -4073,7 +4453,11 @@
       "mech_change_of_direction",
       "mech_reactive",
       "mech_trunk_rotation"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Strike-Sprawl-Reset Burst",
@@ -4116,7 +4500,11 @@
       "mech_reactive",
       "mech_lower_hip_hinge",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Entry-Score-Angle Burst",
@@ -4158,7 +4546,11 @@
       "mech_deceleration",
       "mech_change_of_direction",
       "mech_trunk_rotation"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Fence-Escape Burst",
@@ -4202,7 +4594,11 @@
       "mech_change_of_direction",
       "mech_reactive",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Reactive Range Decision Burst",
@@ -4247,7 +4643,11 @@
       "mech_reactive",
       "mech_lower_hip_hinge",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Cage Escape Intervals",
@@ -4289,7 +4689,11 @@
       "mech_change_of_direction",
       "mech_reactive",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Strike-Level-Change Decision Rounds",
@@ -4330,7 +4734,11 @@
       "mech_lower_hip_hinge",
       "mech_trunk_stability",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "In-Out MMA Striking Rounds",
@@ -4373,7 +4781,11 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Anti-Fence Range Rounds",
@@ -4413,7 +4825,11 @@
       "mech_reactive",
       "mech_trunk_stability",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Failed-Entry Reset Intervals",
@@ -4456,7 +4872,11 @@
       "mech_reactive",
       "mech_trunk_stability",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Intercept-Reposition Rounds",
@@ -4499,7 +4919,11 @@
       "mech_change_of_direction",
       "mech_reactive",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Long-Range MMA Decision Rounds",
@@ -4541,7 +4965,11 @@
       "mech_lower_hip_hinge",
       "mech_trunk_stability",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Range Recovery Under Pressure",
@@ -4584,7 +5012,11 @@
       "mech_reactive",
       "mech_trunk_stability",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Teep Range-Control Flow",
@@ -4620,7 +5052,11 @@
       "mech_lower_lunge",
       "mech_trunk_stability",
       "mech_trunk_rotation"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Ring Generalship Rounds",
@@ -4661,7 +5097,11 @@
       "mech_trunk_rotation",
       "mech_upper_press",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Range Reset Intervals",
@@ -4705,7 +5145,11 @@
       "mech_lower_lunge",
       "mech_upper_press",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Long-Weapon Exit Flow",
@@ -4742,7 +5186,11 @@
       "mech_lower_lunge",
       "mech_trunk_stability",
       "mech_trunk_rotation"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Flicker’s Endurance",
@@ -4779,7 +5227,11 @@
       "mech_shoulder_overhead",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Precision Under Pace",
@@ -4821,7 +5273,11 @@
       "mech_trunk_rotation",
       "mech_upper_press",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Punch-Slide Repeatability",
@@ -4862,7 +5318,11 @@
       "mech_lower_lunge",
       "mech_upper_press",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Range Movement Flow",
@@ -4899,7 +5359,11 @@
       "mech_change_of_direction",
       "mech_lower_lunge",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Range Reset Flow",
@@ -4939,7 +5403,11 @@
       "mech_change_of_direction",
       "mech_lower_lunge",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Entry-Exit Burst",
@@ -4979,7 +5447,11 @@
       "mech_change_of_direction",
       "mech_lower_lunge",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Range Intercept Burst",
@@ -5021,7 +5493,11 @@
       "mech_change_of_direction",
       "mech_lower_lunge",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Lateral Escape Burst",
@@ -5064,7 +5540,11 @@
       "mech_change_of_direction",
       "mech_lower_lunge",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Range Recovery Intervals",
@@ -5104,7 +5584,11 @@
       "mech_lower_lunge",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Score-Reposition Rounds",
@@ -5145,7 +5629,11 @@
       "mech_lower_lunge",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Movement Economy Rounds",
@@ -5182,7 +5670,11 @@
       "mech_change_of_direction",
       "mech_lower_lunge",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Reactive Distance Rounds",
@@ -5224,7 +5716,11 @@
       "mech_lower_lunge",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Pressure Escape and Reset",
@@ -5267,7 +5763,11 @@
       "mech_lower_lunge",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Teep Range Reset",
@@ -5306,7 +5806,11 @@
       "mech_lower_lunge",
       "mech_trunk_rotation",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Kick & Exit Flow",
@@ -5347,7 +5851,11 @@
       "mech_lower_lunge",
       "mech_trunk_rotation",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Bilateral Round-Kick Flow",
@@ -5387,7 +5895,11 @@
       "mech_lower_lunge",
       "mech_trunk_rotation",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Rear-Kick Power Singles",
@@ -5433,7 +5945,11 @@
       "mech_trunk_stability",
       "mech_acceleration",
       "mech_ballistic"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Reactive Body-Kick Burst",
@@ -5480,7 +5996,11 @@
       "mech_acceleration",
       "mech_ballistic",
       "mech_reactive"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Low-Kick Exit Burst",
@@ -5526,7 +6046,11 @@
       "mech_trunk_stability",
       "mech_acceleration",
       "mech_ballistic"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Check-Return Burst",
@@ -5573,7 +6097,11 @@
       "mech_acceleration",
       "mech_ballistic",
       "mech_reactive"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Body-Kick Repeatability",
@@ -5615,7 +6143,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Switch-Kick Repeatability",
@@ -5657,7 +6189,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Target-Choice Kick Rounds",
@@ -5706,7 +6242,11 @@
       "mech_ballistic",
       "mech_reactive",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Kick Recoil Flow",
@@ -5745,7 +6285,11 @@
       "mech_lower_lunge",
       "mech_trunk_rotation",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Range-Adaptive Kick Rounds",
@@ -5792,7 +6336,11 @@
       "mech_deceleration",
       "mech_reactive",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "MMA Kick Recoil Flow",
@@ -5835,7 +6383,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_deceleration"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Bilateral MMA Kick Flow",
@@ -5878,7 +6430,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_deceleration"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Cage-Space Kick Flow",
@@ -5924,7 +6480,11 @@
       "mech_deceleration",
       "mech_reactive",
       "mech_change_of_direction"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Kick-Level-Change Ready Reset",
@@ -5970,7 +6530,11 @@
       "mech_deceleration",
       "mech_ballistic",
       "mech_reactive"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Entry-Safe Low-Kick Burst",
@@ -6017,7 +6581,11 @@
       "mech_deceleration",
       "mech_ballistic",
       "mech_reactive"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Intercept-and-Frame Kick Burst",
@@ -6062,7 +6630,11 @@
       "mech_deceleration",
       "mech_ballistic",
       "mech_reactive"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Low-Kick Repeatability",
@@ -6108,7 +6680,11 @@
       "mech_deceleration",
       "mech_ballistic",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Kick-or-Defend Decision Rounds",
@@ -6155,7 +6731,11 @@
       "mech_reactive",
       "mech_change_of_direction",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Cage-Space Kick Rounds",
@@ -6203,7 +6783,11 @@
       "mech_reactive",
       "mech_change_of_direction",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Kick-Exit Anti-Entry Rounds",
@@ -6250,7 +6834,11 @@
       "mech_reactive",
       "mech_change_of_direction",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Pressure Footwork Flow",
@@ -6288,7 +6876,11 @@
       "mech_change_of_direction",
       "mech_acceleration",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Ring-Cut Flow",
@@ -6326,7 +6918,11 @@
       "mech_change_of_direction",
       "mech_acceleration",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Jab-to-Pressure Flow",
@@ -6367,7 +6963,11 @@
       "mech_trunk_stability",
       "mech_upper_press",
       "mech_trunk_rotation"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Max-Power Bag Burst",
@@ -6406,7 +7006,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_ballistic"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Explosive Cutoff Burst",
@@ -6450,7 +7054,11 @@
       "mech_upper_press",
       "mech_trunk_rotation",
       "mech_ballistic"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Entry-and-Score Burst",
@@ -6494,7 +7102,11 @@
       "mech_upper_press",
       "mech_trunk_rotation",
       "mech_ballistic"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Escape-Recatch Burst",
@@ -6541,7 +7153,11 @@
       "mech_upper_press",
       "mech_trunk_rotation",
       "mech_ballistic"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Corner Trap Burst",
@@ -6588,7 +7204,11 @@
       "mech_upper_press",
       "mech_trunk_rotation",
       "mech_ballistic"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Ring-Cutting Intervals",
@@ -6630,7 +7250,11 @@
       "mech_trunk_stability",
       "mech_reactive",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Pressure Combination Rounds",
@@ -6673,7 +7297,11 @@
       "mech_upper_press",
       "mech_trunk_rotation",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Body-Head Pressure Intervals",
@@ -6711,7 +7339,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Cutoff-Reposition Intervals",
@@ -6757,7 +7389,11 @@
       "mech_upper_press",
       "mech_trunk_rotation",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Pocket Repeatability Rounds",
@@ -6795,7 +7431,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Pressure Reset Intervals",
@@ -6839,7 +7479,11 @@
       "mech_upper_press",
       "mech_trunk_rotation",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Rope/Corner Pressure Rounds",
@@ -6885,7 +7529,11 @@
       "mech_upper_press",
       "mech_trunk_rotation",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Pressure Decision Rounds",
@@ -6932,7 +7580,11 @@
       "mech_upper_press",
       "mech_trunk_rotation",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Cage Cut & Re-Catch",
@@ -6974,7 +7626,11 @@
       "mech_acceleration",
       "mech_trunk_stability",
       "mech_reactive"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Level-Threat Pressure Reset",
@@ -7019,7 +7675,11 @@
       "mech_reactive",
       "mech_lower_hip_hinge",
       "mech_ballistic"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Punch-Clinch Reentry",
@@ -7068,7 +7728,11 @@
       "mech_trunk_rotation",
       "mech_grip_support",
       "mech_ballistic"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Strike-to-Fence Pressure",
@@ -7118,7 +7782,11 @@
       "mech_trunk_rotation",
       "mech_grip_support",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Fence Escape Denial",
@@ -7165,7 +7833,11 @@
       "mech_upper_press",
       "mech_grip_support",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Kick-to-Pressure Flow",
@@ -7210,7 +7882,11 @@
       "mech_lower_hip_hinge",
       "mech_lower_lunge",
       "mech_trunk_rotation"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Teep Walk-Down Reset",
@@ -7257,7 +7933,11 @@
       "mech_lower_lunge",
       "mech_trunk_rotation",
       "mech_ballistic"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Pressure-to-Clinch Transition",
@@ -7312,7 +7992,11 @@
       "mech_upper_press",
       "mech_grip_support",
       "mech_ballistic"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Kick-Step Pressure Rounds",
@@ -7361,7 +8045,11 @@
       "mech_trunk_rotation",
       "mech_upper_press",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Low-Kick Re-Catch Intervals",
@@ -7412,7 +8100,11 @@
       "mech_lower_lunge",
       "mech_trunk_rotation",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Takedown to Backtake Scramble",
@@ -7446,7 +8138,11 @@
     "mechanical_risk_tags": [
       "mech_ballistic",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sprawl to Spin Drill",
@@ -7479,7 +8175,11 @@
       "mech_ballistic",
       "mech_lower_lunge",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Cage Wrestle Chaos",
@@ -7512,7 +8212,11 @@
     "mechanical_risk_tags": [
       "mech_grip_support",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Turtle to Guard Scramble",
@@ -7544,7 +8248,11 @@
       "mech_ballistic",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Shot to Granby Roll",
@@ -7574,7 +8282,11 @@
     "mechanical_risk_tags": [
       "mech_systemic_fatigue",
       "mech_trunk_rotation"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Stand-Up Sprint",
@@ -7613,7 +8325,11 @@
       "mech_reactive",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Submission to Sweep Chain",
@@ -7641,7 +8357,11 @@
     "movement_cost": "high",
     "mechanical_risk_tags": [
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Clinch to Takedown Scramble",
@@ -7676,7 +8396,11 @@
       "mech_ballistic",
       "mech_grip_support",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Guard Pass to Backtake",
@@ -7706,7 +8430,11 @@
     "mechanical_risk_tags": [
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Strike to Takedown Scramble",
@@ -7742,7 +8470,11 @@
       "mech_ballistic",
       "mech_systemic_fatigue",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Arm Drag to Backtake",
@@ -7773,7 +8505,11 @@
     "mechanical_risk_tags": [
       "mech_ballistic",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Front Headlock Escapes",
@@ -7803,7 +8539,11 @@
     "mechanical_risk_tags": [
       "mech_ballistic",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Cage to Center Scramble",
@@ -7834,7 +8574,11 @@
     "movement_cost": "high",
     "mechanical_risk_tags": [
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Rolling Backtake Drill",
@@ -7865,7 +8609,11 @@
     "mechanical_risk_tags": [
       "mech_systemic_fatigue",
       "mech_trunk_rotation"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Strike to Submission Chain",
@@ -7897,7 +8645,11 @@
     "mechanical_risk_tags": [
       "mech_systemic_fatigue",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Granby to Single Leg",
@@ -7932,7 +8684,11 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Flying Sub Scramble",
@@ -7960,7 +8716,11 @@
     "movement_cost": "high",
     "mechanical_risk_tags": [
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Clinch to Spin Drill",
@@ -7990,7 +8750,11 @@
     "mechanical_risk_tags": [
       "mech_grip_support",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Guard Recovery Sprint",
@@ -8028,7 +8792,11 @@
       "mech_reactive",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Standing Backtake Drill",
@@ -8059,7 +8827,11 @@
     "mechanical_risk_tags": [
       "mech_ballistic",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Mat Shark",
@@ -8095,7 +8867,11 @@
       "mech_lower_lunge",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Stranglehold",
@@ -8127,7 +8903,11 @@
     "mechanical_risk_tags": [
       "mech_ballistic",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Limb Collector",
@@ -8158,7 +8938,11 @@
     "mechanical_risk_tags": [
       "mech_ballistic",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Heel Hook Highway",
@@ -8189,7 +8973,11 @@
     "mechanical_risk_tags": [
       "mech_ballistic",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Guillotine Gauntlet",
@@ -8222,7 +9010,11 @@
       "mech_lower_lunge",
       "mech_systemic_fatigue",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Twister Protocol",
@@ -8254,7 +9046,11 @@
       "mech_grip_support",
       "mech_systemic_fatigue",
       "mech_trunk_rotation"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "D’Arce Depth Charge",
@@ -8296,7 +9092,11 @@
       "mech_reactive",
       "mech_reactive_rebound",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Calf Slicer Pressure Drill",
@@ -8328,7 +9128,11 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Kneebar Khaos",
@@ -8358,7 +9162,11 @@
     "mechanical_risk_tags": [
       "mech_ballistic",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "North-South Chokehold",
@@ -8389,7 +9197,11 @@
     "mechanical_risk_tags": [
       "mech_systemic_fatigue",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Peruvian Necktie Drill",
@@ -8422,7 +9234,11 @@
       "mech_shoulder_overhead",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Gogoplata Grinder",
@@ -8452,7 +9268,11 @@
     "mechanical_risk_tags": [
       "mech_systemic_fatigue",
       "mech_trunk_rotation"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Buggy Choke Crucible",
@@ -8482,7 +9302,11 @@
     "mechanical_risk_tags": [
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Electric Chair Sweep",
@@ -8514,7 +9338,11 @@
       "mech_ballistic",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Bicep Slicer Drill",
@@ -8544,7 +9372,11 @@
     "mechanical_risk_tags": [
       "mech_systemic_fatigue",
       "mech_trunk_rotation"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Loop Choke Loop",
@@ -8575,7 +9407,11 @@
     "mechanical_risk_tags": [
       "mech_grip_support",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Inverted Triangle Matrix",
@@ -8603,7 +9439,11 @@
     "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Ezekiel Finishing Drill",
@@ -8633,7 +9473,11 @@
     "mechanical_risk_tags": [
       "mech_ballistic",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Anaconda Ambush",
@@ -8669,7 +9513,11 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Crucifix Collector",
@@ -8699,7 +9547,11 @@
     "movement_cost": "high",
     "mechanical_risk_tags": [
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Toe Hold Torment",
@@ -8731,7 +9583,11 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Mir Lock Madness",
@@ -8761,7 +9617,11 @@
     "mechanical_risk_tags": [
       "mech_shoulder_overhead",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Japanese Necktie Drill",
@@ -8791,7 +9651,11 @@
     "mechanical_risk_tags": [
       "mech_lower_lunge",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Pocket Power Cluster",
@@ -8829,7 +9693,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Wall-Wrestler Pummel Rounds",
@@ -8858,7 +9726,11 @@
     "movement_cost": "high",
     "mechanical_risk_tags": [
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Teep Intercept Burst",
@@ -8899,7 +9771,11 @@
       "mech_ballistic",
       "mech_acceleration",
       "mech_reactive"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Cover-Return Burst",
@@ -8936,7 +9812,11 @@
       "mech_reactive",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sprawl-to-Strike Intervals",
@@ -8969,7 +9849,11 @@
       "mech_lower_lunge",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Submission Chain Fatigue Drill",
@@ -8998,7 +9882,11 @@
     "movement_cost": "high",
     "mechanical_risk_tags": [
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Kick-and-Exit Burst",
@@ -9038,7 +9926,11 @@
       "mech_trunk_rotation",
       "mech_ballistic",
       "mech_acceleration"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sprawl-to-Takedown Reaction Drill",
@@ -9076,7 +9968,11 @@
       "mech_lower_lunge",
       "mech_reactive",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Guillotine Shot Sprints",
@@ -9114,7 +10010,11 @@
       "mech_landing_impact",
       "mech_reactive",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Takedown Shot Reaction Drill",
@@ -9145,7 +10045,11 @@
     "mechanical_risk_tags": [
       "mech_ballistic",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Thai Plum Explosion Drill",
@@ -9175,7 +10079,11 @@
     "mechanical_risk_tags": [
       "mech_ballistic",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sprawl-to-Shot Sprints",
@@ -9214,7 +10122,11 @@
       "mech_lower_lunge",
       "mech_reactive",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Jab-Kick Entry Burst",
@@ -9257,7 +10169,11 @@
       "mech_ballistic",
       "mech_acceleration",
       "mech_reactive"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Body-Head Power Burst",
@@ -9297,7 +10213,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Blast Double Sprints",
@@ -9332,7 +10252,11 @@
       "mech_landing_impact",
       "mech_reactive",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Guillotine Shot Reactions",
@@ -9365,7 +10289,11 @@
       "mech_ballistic",
       "mech_grip_support",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Rear-Kick Reposition Burst",
@@ -9405,7 +10333,11 @@
       "mech_trunk_rotation",
       "mech_ballistic",
       "mech_acceleration"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Reactive Sprawl Jumps",
@@ -9442,7 +10374,11 @@
       "mech_lower_lunge",
       "mech_reactive",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Exchange-Reentry Burst",
@@ -9481,7 +10417,11 @@
       "mech_reactive",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Takedown-to-Knee Drill",
@@ -9515,7 +10455,11 @@
       "mech_ballistic",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Reactive Long-Weapon Burst",
@@ -9558,7 +10502,11 @@
       "mech_ballistic",
       "mech_acceleration",
       "mech_reactive"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "BJJ Explosive Guard Pull",
@@ -9591,7 +10539,11 @@
       "mech_ballistic",
       "mech_grip_intensive",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Dump Explosions",
@@ -9625,7 +10577,11 @@
       "mech_grip_support",
       "mech_lower_hip_hinge",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Cage-Push Escapes",
@@ -9657,7 +10613,11 @@
     "mechanical_risk_tags": [
       "mech_ballistic",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Pocket Combination Intervals",
@@ -9697,7 +10657,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Teep Volume & Position",
@@ -9731,7 +10695,11 @@
     "mechanical_risk_tags": [
       "mech_lower_lunge",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Reshot Chains",
@@ -9764,7 +10732,11 @@
       "mech_ballistic",
       "mech_lower_lunge",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Kick-Exit Intervals",
@@ -9800,7 +10772,11 @@
       "mech_lower_lunge",
       "mech_trunk_stability",
       "mech_trunk_rotation"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Guard-and-Answer Intervals",
@@ -9839,7 +10815,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Hip Slam Drill",
@@ -9871,7 +10851,11 @@
       "mech_ballistic",
       "mech_lower_hip_hinge",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Corner Knee Bursts",
@@ -9904,7 +10888,11 @@
       "mech_ballistic",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Scrambler's Standup Explosions",
@@ -9935,7 +10923,11 @@
     "mechanical_risk_tags": [
       "mech_ballistic",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Pocket Exchange Rounds",
@@ -9973,7 +10965,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Long Combination Rounds",
@@ -10008,7 +11004,11 @@
     "mechanical_risk_tags": [
       "mech_lower_lunge",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Long-Distance Shadowboxing",
@@ -10044,7 +11044,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "moderate",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Clinch Marching Rounds",
@@ -10080,7 +11084,11 @@
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "moderate",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Grappler's Flow Roll",
@@ -10115,7 +11123,11 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Range-Recovery Intervals",
@@ -10151,7 +11163,11 @@
       "mech_lower_lunge",
       "mech_trunk_stability",
       "mech_trunk_rotation"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Cage Cutting Footwork",
@@ -10186,7 +11202,11 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "moderate",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Pummeling Endurance Rounds",
@@ -10219,7 +11239,11 @@
       "mech_grip_support",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "moderate",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Brawler's Forward Shadow",
@@ -10312,7 +11336,11 @@
       "mech_lower_lunge",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "moderate",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Submission Hunter's Guard Retention",
@@ -10344,7 +11372,11 @@
     "mechanical_risk_tags": [
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "moderate",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Jab-Teep Control Rounds",
@@ -10379,7 +11411,11 @@
     "mechanical_risk_tags": [
       "mech_lower_lunge",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Wrestler's Wall-Walk Drill",
@@ -10413,7 +11449,11 @@
       "mech_lower_hip_hinge",
       "mech_reactive",
       "mech_shoulder_overhead"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "moderate",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Pressure Fighter's Cutoff Circuit",
@@ -10446,7 +11486,11 @@
       "mech_change_of_direction",
       "mech_reactive",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "moderate",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Hybrid's Stance Transition Drill",
@@ -10477,7 +11521,11 @@
     "mechanical_risk_tags": [
       "mech_lower_lunge",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "moderate",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Clinch Fighter's Neck Endurance",
@@ -10538,7 +11586,11 @@
     "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "moderate",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Inside Decision Rounds",
@@ -10575,7 +11627,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Kick-Reposition Rounds",
@@ -10611,7 +11667,11 @@
       "mech_lower_lunge",
       "mech_trunk_stability",
       "mech_trunk_rotation"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Grappler's Standup Chain",
@@ -10676,7 +11736,11 @@
       "mech_change_of_direction",
       "mech_reactive",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "moderate",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Clinch Fighter's Frame Endurance",
@@ -10735,7 +11799,11 @@
     "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "moderate",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Scrambler's Hip Escape Marathon",
@@ -10798,7 +11866,11 @@
     "mechanical_risk_tags": [
       "mech_lower_lunge",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Shadow Flow Rounds",
@@ -10835,7 +11907,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "moderate",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Long-Range Decision Rounds",
@@ -10872,7 +11948,11 @@
       "mech_lower_lunge",
       "mech_trunk_stability",
       "mech_trunk_rotation"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Grappler's Blindfold Pummeling",
@@ -10906,6 +11986,10 @@
       "mech_grip_support",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   }
 ]

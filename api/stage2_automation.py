@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from fightcamp.goal_preservation import validate_goal_preservation
+from fightcamp.planner_authority_integrity import AUTHORITY_RELEASE_HOLD_CODES
 from fightcamp.stage2_pipeline import (
     apply_structural_integrity_hold,
     build_stage2_package,
@@ -56,7 +57,7 @@ STAGE2_STAGE1_FALLBACK = "stage2_failed_stage1_fallback"
 STAGE2_FALLBACK_REPORT_KEY = "stage2_fallback"
 
 logger = logging.getLogger(__name__)
-_DEFAULT_FIRST_PASS_CHAR_LIMIT = 180_000
+_DEFAULT_FIRST_PASS_CHAR_LIMIT = 400_000
 _DEFAULT_OPENAI_MAX_RETRIES = 0
 _DEFAULT_MAX_OUTPUT_TOKENS = 0
 
@@ -1109,9 +1110,35 @@ class OpenAIStage2Automator:
         log_context: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         package = build_stage2_package(stage1_result=stage1_result)
-        if package.get("planner_preflight_findings"):
+        preflight_findings = [
+            finding
+            for finding in (package.get("planner_preflight_findings") or [])
+            if isinstance(finding, dict)
+        ]
+        # Only a finding the planner-authority gate would actually hold on may
+        # prevent the Stage 2 model call. AUTHORITY_RELEASE_HOLD_CODES is that
+        # canonical classification: an unsafe scheduling decision. Every other
+        # preflight finding -- an informational safe omission, or a missing
+        # exposure the same authority routes to admin review rather than a hold
+        # -- is recorded on the report below while Stage 2 still runs.
+        #
+        # Skipping the model for a non-hold finding also broke the release
+        # invariant: the report published with flags, so the row read
+        # stage2_pass with attempt_count=0 and no Stage 2 text -- the Stage 1
+        # draft wearing a Stage 2 status. Keeping the skip set identical to the
+        # hold set means a skipped Stage 2 is always recorded as held/failed.
+        preflight_blockers = [
+            finding
+            for finding in preflight_findings
+            if str(finding.get("code") or "").strip() in AUTHORITY_RELEASE_HOLD_CODES
+        ]
+        preflight_flags = [
+            finding for finding in preflight_findings if finding not in preflight_blockers
+        ]
+        if preflight_blockers:
             report = apply_stage2_release_policy({
-                "errors": package["planner_preflight_findings"],
+                "errors": preflight_blockers,
+                "review_flags": preflight_flags,
                 "is_valid": False,
                 "planner_preflight_failed": True,
             })
@@ -1152,6 +1179,15 @@ class OpenAIStage2Automator:
                     finding for finding in goal_errors if finding not in errors
                 )
                 report["errors"] = errors
+            if preflight_flags:
+                # Non-blocking preflight findings stay visible for QA/admin review
+                # even though they no longer withhold the Stage 2 model call.
+                flags = report.get("review_flags")
+                flags = list(flags) if isinstance(flags, list) else []
+                flags.extend(
+                    finding for finding in preflight_flags if finding not in flags
+                )
+                report["review_flags"] = flags
             return {**review, "validator_report": apply_stage2_release_policy(report)}
 
         first_review = reviewed_report(first_review)
@@ -1257,9 +1293,17 @@ class OpenAIStage2Automator:
                 and deterministic_repair.get("unresolved")
             )
             if retry.get("needs_retry") and retry_text and not deterministic_complete and not deterministic_unsafe:
+                # ``needs_retry`` is only ever True for missing closed conditioning
+                # membership. ``build_stage2_retry`` returns False for a goal failure
+                # on its own, and the one other route to True — release_decision
+                # "hold" — is unreachable here because a hold is raised solely by
+                # planner-authority blockers, which the same module's
+                # ``authority_build_stage2_retry`` wrapper then forces back to False.
+                # So this repair is always the conditioning render repair; the old
+                # "effective_dose_repair" branch of this label was dead.
                 final_text, final_cost = await self._generate_text(
                     retry_text,
-                    attempt_label="render_repair" if missing_conditioning else "effective_dose_repair",
+                    attempt_label="render_repair",
                     source=source,
                     log_context=log_context,
                 )

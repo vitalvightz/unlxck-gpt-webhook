@@ -220,6 +220,27 @@ def _brief(*, days_until_fight: int = 21, sport: str = "mma", fight_date: str = 
     }
 
 
+def _brief_with_microdose(d_day: int = 26) -> dict:
+    brief = _brief(days_until_fight=28)
+    for week in brief["weekly_role_map"]["weeks"]:
+        if any(day.get("d_day") == d_day for day in week.get("calendar_days") or []):
+            week.setdefault("session_roles", []).append(
+                {
+                    "role_key": "light_combat_microdose_host",
+                    "category": "combat",
+                    "scheduled_countdown_label": f"D-{d_day}",
+                    "priority_microdose": {
+                        "goal": "power",
+                        "name": "Med-Ball Rotational Throw",
+                        "prescription": "2 x 3/side @ RPE 7",
+                        "authority": "goal_preservation.v1",
+                    },
+                }
+            )
+            return brief
+    raise AssertionError(f"D-{d_day} is not present in the planner calendar")
+
+
 def _late_fight_brief() -> dict:
     return {
         "weekly_role_map": {
@@ -322,6 +343,36 @@ def test_session_content_is_preserved_verbatim():
     assert kept["sessions"][0]["title"] == "Back Squat"
     assert kept["sessions"][0]["session_id"] == "sess-16"
     assert kept["today_card"]["coach_led_contact"] == "Technical-only combat"
+
+
+def test_priority_microdose_is_projected_onto_its_sessionless_host_day():
+    plan = _plan([_week([_coach_only_day(26, headline="Light technical combat")])])
+
+    out = reconcile_calendar_spine(plan, _brief_with_microdose())
+    validate_structured_plan(out)
+    host = next(d for w in out["weeks"] for d in w["days"] if d["countdown_label"] == "D-26")
+
+    assert host["sessions"] == []
+    assert host["today_card"]["headline"] == "Light technical combat"
+    assert host["priority_microdose"] == {
+        "goal": "power",
+        "name": "Med-Ball Rotational Throw",
+        "prescription": "2 x 3/side @ RPE 7",
+    }
+    assert reconcile_calendar_spine(out, _brief_with_microdose()) is out
+
+
+def test_existing_microdose_block_is_not_projected_as_a_duplicate_day_card():
+    day = _session_day(26)
+    day["sessions"][0]["blocks"] = [
+        {"block_id": "light-combat-microdose", "display_name": "Med-Ball Rotational Throw"}
+    ]
+
+    out = reconcile_calendar_spine(_plan([_week([day])]), _brief_with_microdose())
+    host = next(d for w in out["weeks"] for d in w["days"] if d["countdown_label"] == "D-26")
+
+    assert "priority_microdose" not in host
+    assert host["sessions"][0]["blocks"][0]["display_name"] == "Med-Ball Rotational Throw"
 
 
 # ── Issue 2: continuity alone is not enough ───────────────────────────────────
@@ -553,3 +604,45 @@ def test_blank_countdown_label_day_is_recovered_from_its_date():
     kept = next(d for w in out["weeks"] for d in w["days"] if d["date"] == _iso(14))
     assert kept["sessions"][0]["title"] == "Bench"
     assert kept["countdown_label"] == "D-14"
+
+
+def test_spine_builds_the_deterministic_calendar_with_no_converter_content():
+    """An empty week list is the fallback case, not a reason to stand down.
+
+    When Stage 2 produced nothing usable there is no converter content to
+    protect, so the authoritative spine is built on its own. This is the base a
+    deterministic fallback assembly needs; the guards are unchanged when the
+    converter did produce content.
+    """
+    import pytest
+
+    generate_plan_sync = pytest.importorskip("fightcamp.main").generate_plan_sync
+    from support import _build_request
+
+    fight_date = (date.today() + timedelta(days=56)).isoformat()
+    request = _build_request({"fight_date": fight_date}).to_payload()
+    request["random_seed"] = 3
+    planning_brief = generate_plan_sync(request)["planning_brief"]
+
+    built = reconcile_calendar_spine({"weeks": []}, planning_brief)
+    days = [day for week in built.get("weeks") or [] for day in week.get("days") or []]
+
+    assert days, "the deterministic spine must be able to stand on its own"
+    labels = [day["countdown_label"] for day in days]
+    assert labels[-1] == "D-0"
+    ddays = [int(label.split("-")[1]) for label in labels]
+    assert ddays == sorted(range(min(ddays), max(ddays) + 1), reverse=True)
+    # It supplies calendar identity only; it invents no sessions.
+    assert all(not day.get("sessions") for day in days)
+
+
+def test_spine_still_stands_down_when_content_has_no_calendar_identity():
+    """The protective guard is unchanged for a plan that actually has content."""
+    plan = {
+        "weeks": [
+            {"week_index": 1, "days": [{"countdown_label": "", "date": "", "sessions": []}]}
+        ]
+    }
+    brief = {"weekly_role_map": {"weeks": []}}
+
+    assert reconcile_calendar_spine(plan, brief) is plan

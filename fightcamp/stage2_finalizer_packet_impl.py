@@ -115,14 +115,163 @@ def _compact_restrictions(restrictions: Any) -> list[dict[str, Any]]:
     return compact
 
 
+# Stage 1's own decision-hierarchy declaration. Every role carries the same
+# constant block (only a handful of distinct values across a whole camp), no
+# render rule or contract text names any of these fields, and the finalizer has
+# no use for which internal driver won a Stage 1 argument. They are dropped from
+# the packet for the same reason selection_rule / placement_rule are, below --
+# the planning brief and the role map keep them for validation and audit. The
+# governance fields the finalizer does act on (selected_drill_locked, main_job,
+# support_cap, forbidden_secondary_stressors, suppression_rules, locked_day,
+# late_fight_payload, ...) are preserved untouched.
+_INTERNAL_GOVERNANCE_FIELDS = (
+    "authority",
+    "execution_only",
+    "governed_by",
+    "cannot_override",
+    "resolved_authority",
+)
+
+
+def _compact_governance(governance: Any) -> Any:
+    if not isinstance(governance, dict):
+        return governance
+    return {
+        key: value
+        for key, value in governance.items()
+        if key not in _INTERNAL_GOVERNANCE_FIELDS
+    }
+
+
+# Fields the progression object republishes verbatim from the same week's entry in
+# weekly_role_map. Measured on a real 8-week camp, both are byte-identical in
+# EVERY week, so the finalizer received one calendar twice and had to decide which
+# copy was authoritative. weekly_role_map is that authority, so the copies are
+# dropped from the progression view here -- at the handoff boundary only. Stage 1
+# keeps the whole object for planning, validators, diagnostics and persistence.
+#
+# Deliberately NOT listed: hard_sparring_plan and intentionally_unused_days. They
+# match the role map in most weeks but not all (7/8 and 6/8 measured), so removing
+# them would silently drop real per-week information.
+_PROGRESSION_FIELDS_OWNED_BY_ROLE_MAP = ("calendar_days", "intentional_compression")
+
+
+def _compact_week_progression(progression: Any) -> Any:
+    """Drop the calendar fields weekly_role_map already owns."""
+    if not isinstance(progression, dict):
+        return progression
+    weeks = progression.get("weeks")
+    if not isinstance(weeks, list):
+        return progression
+    return {
+        **progression,
+        "weeks": [
+            {
+                key: value
+                for key, value in week.items()
+                if key not in _PROGRESSION_FIELDS_OWNED_BY_ROLE_MAP
+            }
+            if isinstance(week, dict)
+            else week
+            for week in weeks
+        ],
+    }
+
+
+# Per-exercise bookkeeping that names where Stage 1 found a slot. No finalizer
+# prompt, render contract or rule names any of them, and membership is already
+# closed by selected_exercise_assignments, so they only add tokens between the
+# model and the fields it must act on (name and effective_prescription). They stay
+# on the rich Stage 1 object for validators, diagnostics and persistence.
+_ASSIGNMENT_PROVENANCE_FIELDS = (
+    "slot_group",
+    "source_phase",
+    "source_session_index",
+    "dose_authority",
+    # Authored mechanical vocabulary the deterministic planner uses to measure a
+    # composed session's realised cross-day cost. No finalizer rule names it and
+    # the model must not act on it, so it stays on the rich Stage 1 object.
+    "mechanical_risk_tags",
+)
+
+
+def _compact_prescribed_items(
+    items: Any, *, effective_by_slot: dict[str, str]
+) -> Any:
+    """Drop provenance, and the base dose the finalizer must not choose from.
+
+    ``base_prescription`` is the raw exercise-bank dose, never the authorised
+    one. It is dropped where it is character-identical to the authoritative
+    ``effective_prescription`` for the same slot, and also wherever the item has
+    an effective dose that the scheduled-day strength resolver does not own.
+
+    The distinction is which packet rule defends the pairing. A slot present in
+    ``effective_by_slot`` belongs to a role carrying
+    ``effective_strength_prescriptions``, and an explicit packet rule tells the
+    finalizer to render that entry's ``effective_prescription`` and never its
+    ``base_prescription`` — so a capped strength dose keeps both, and the raw
+    bank dose stays visible as provenance.
+
+    An item with no resolver-owned dose has no such rule. In practice that is an
+    embedded support item: a ``strength_slots`` assignment composed into a
+    *conditioning* role, which never carries ``effective_strength_prescriptions``
+    and so falls outside the strength-scoped rule entirely. Shipping its capped
+    ``effective_prescription`` next to the uncapped bank dose left the finalizer
+    two competing doses with nothing to separate them, and it could render the
+    bank dose. Only the authorised dose is sent.
+
+    Provenance is unaffected: ``base_prescription`` stays on the rich Stage 1
+    object, in the validator's view and in persistence.
+    """
+    if not isinstance(items, list):
+        return items
+    compact: list[Any] = []
+    for item in items:
+        if not isinstance(item, dict):
+            compact.append(item)
+            continue
+        trimmed = {
+            key: value
+            for key, value in item.items()
+            if key not in _ASSIGNMENT_PROVENANCE_FIELDS
+        }
+        base = trimmed.get("base_prescription")
+        slot_id = str(trimmed.get("slot_id") or "")
+        resolver_owned = slot_id in effective_by_slot
+        effective = trimmed.get("effective_prescription") or effective_by_slot.get(slot_id)
+        if base and effective and (base == effective or not resolver_owned):
+            trimmed.pop("base_prescription", None)
+        compact.append(trimmed)
+    return compact
+
+
+def _drops_locked_display_text(role: dict[str, Any]) -> bool:
+    """True when this role's body is written by the server, not the finalizer.
+
+    A ``selected_drill_locked`` role (in practice the deterministic Fight Tactical
+    Watch) is rendered from its own ``tactical_watch`` object by the structured
+    locked merge, by the deterministic fallback and by the source repair. Shipping
+    the full multi-line script to a model that must not author it spends attention
+    on content it cannot change. The drill's identity still reaches the finalizer
+    via ``governance.selected_drill_name`` and ``preferred_exercise_names``, which
+    is what it needs to plan the surrounding day.
+
+    Stage 1 keeps ``display_text`` on the rich role: the faithfulness gate reads it
+    from the planning brief, not from this packet.
+    """
+    governance = role.get("governance")
+    return isinstance(governance, dict) and governance.get("selected_drill_locked") is True
+
+
 def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
     keep = (
         "session_index",
         "category",
         "role_key",
         "scheduled_day_hint",
-        "preferred_pool",
-        "preferred_system",
+        # preferred_tags stays: the tactical-identity boundary sanitizes it before
+        # the handoff (a competing declared style is stripped), so it is delivered
+        # deliberately rather than incidentally.
         "preferred_tags",
         "preferred_exercise_names",
         "anchor",
@@ -194,8 +343,6 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
         "strength_dose_cap",
         "rpe_cap",
         "selected_exercise_assignments",
-        "conditioning_composition_policy",
-        "optional_conditioning_support_assignments",
         "effective_strength_prescriptions",
         "effective_strength_envelope",
         "strength_session_index",
@@ -205,7 +352,7 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
     # ``selected_exercise_assignments=[]`` is an explicit closed-membership
     # sentinel.  Dropping it would make an intentionally empty role appear open
     # to the finalizer, incorrectly authorising downstream exercise selection.
-    return {
+    compact = {
         key: role.get(key)
         for key in keep
         if role.get(key) not in (None, "", [])
@@ -215,80 +362,25 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
             and role.get(key) == []
         )
     }
-
-
-def _normal_conditioning_composition_options(source: dict[str, Any]) -> list[dict[str, Any]]:
-    """Project the existing Stage-1 conditioning surplus for open normal roles.
-
-    This is deliberately a packet projection, not another selector: ordering,
-    eligibility, prescriptions, equipment and mechanical evidence all remain
-    the authoritative objects already emitted in ``candidate_pools``.
-    """
-    from .session_composition import _conditioning_phase_workload_envelope
-
-    pools = source.get("candidate_pools") or {}
-    role_map = source.get("weekly_role_map") or {}
-    options: list[dict[str, Any]] = []
-    for week in role_map.get("weeks") or []:
-        if not isinstance(week, dict):
-            continue
-        phase = str(week.get("phase") or "").upper()
-        phase_pool = pools.get(phase) if isinstance(pools, dict) else None
-        slots = phase_pool.get("conditioning_slots") if isinstance(phase_pool, dict) else []
-        for role in week.get("session_roles") or []:
-            if not isinstance(role, dict):
-                continue
-            policy = role.get("conditioning_composition_policy") or {}
-            if (
-                str(role.get("category") or "").lower() != "conditioning"
-                or role.get("late_fight_tail_owned")
-                or not policy.get("stage2_composes_membership")
-            ):
-                continue
-            phase = str(policy.get("source_phase") or phase).upper()
-            phase_pool = pools.get(phase) if isinstance(pools, dict) else None
-            slots = phase_pool.get("conditioning_slots") if isinstance(phase_pool, dict) else []
-            system = str(role.get("preferred_system") or "").lower()
-            candidates: list[dict[str, Any]] = []
-            seen: set[str] = set()
-            for slot in slots or []:
-                if not isinstance(slot, dict) or str(slot.get("role") or "").lower() != system:
-                    continue
-                for candidate in [slot.get("selected"), *(slot.get("alternates") or [])]:
-                    if not isinstance(candidate, dict):
-                        continue
-                    name = str(candidate.get("name") or "").strip()
-                    if not name or name in seen:
-                        continue
-                    seen.add(name)
-                    candidates.append(deepcopy(candidate))
-            target_active_work, elapsed_cap_minutes = _conditioning_phase_workload_envelope(
-                phase=phase,
-                system=system,
+    effective_by_slot = {
+        str(item.get("slot_id") or ""): str(item.get("effective_prescription") or "")
+        for item in role.get("effective_strength_prescriptions") or []
+        if isinstance(item, dict) and item.get("effective_prescription")
+    }
+    for key in ("selected_exercise_assignments", "effective_strength_prescriptions"):
+        if key in compact:
+            compact[key] = _compact_prescribed_items(
+                compact[key], effective_by_slot=effective_by_slot
             )
-            options.append(
-                {
-                    "week_index": week.get("week_index"),
-                    "phase": phase,
-                    "scheduled_countdown_label": role.get("scheduled_countdown_label")
-                    or role.get("countdown_label"),
-                    "role_key": role.get("role_key"),
-                    "athlete_facing_label": role.get("athlete_facing_label"),
-                    "system": system,
-                    "hard_sparring_adjacent": bool(policy.get("hard_sparring_adjacent")),
-                    "phase_system_workload_guidance": {
-                        "target_active_work_seconds": target_active_work,
-                        "elapsed_cap_seconds": (
-                            elapsed_cap_minutes * 60.0 if elapsed_cap_minutes is not None else None
-                        ),
-                    },
-                    "eligible_candidates_ranked": candidates,
-                    "optional_trunk_support": deepcopy(
-                        role.get("optional_conditioning_support_assignments") or []
-                    ),
-                }
-            )
-    return options
+    if _drops_locked_display_text(role):
+        compact.pop("display_text", None)
+    if "governance" in compact:
+        governance = _compact_governance(compact["governance"])
+        if governance:
+            compact["governance"] = governance
+        else:
+            compact.pop("governance")
+    return compact
 
 
 def _as_list(value: Any) -> list[Any]:
@@ -564,9 +656,8 @@ def build_stage2_finalizer_packet(
 ) -> dict[str, Any]:
     """Return the compact LLM-facing Stage 2 packet.
 
-    This function must not mutate the original Stage 2 payload. It excludes
-    generic candidate pools, except for the bounded Stage-1 surplus explicitly
-    authorised for normal conditioning composition.
+    This function must not mutate the original Stage 2 payload.
+    It intentionally excludes full candidate pools and internal scoring data.
 
     planning_brief is optional but preferred when available because it can carry
     richer late-fight/session sequencing data than the raw Stage 2 payload.
@@ -658,27 +749,26 @@ def build_stage2_finalizer_packet(
             "Use session_count_summary to explain reduced weeks; do not restore suppressed roles to match the athlete's planned weekly frequency.",
             "Stage 1 draft exercise text is candidate material only. For a role with selected_exercise_assignments, those assignments are the deterministic planner's complete session membership: render every assigned exercise and do not add candidates, alternates, substitutes, or other S&C exercises. Render each assignment's effective_prescription when present; it is the dose authority. Final exercise rendering must obey weekly_role_map role, count, day ownership, restrictions, and taper rules first.",
             "For a conditioning role with selected_exercise_assignments, render one separate bullet for every assignment: `- exact assignment name: effective_prescription`. Do not merge assignments into a single conditioning block, promote one assignment to the only primary drill, turn another assignment into an optional fallback, or replace it with a Stage 1 draft/candidate exercise.",
-            "For each selected_plan.normal_conditioning_composition entry, Stage 2 is the bounded coach: choose the final one, two, or three eligible_candidates_ranked drills (or another count only when the existing role guidance permits), their order, and a coherent bank-backed dose. These are the only conditioning drills that may be selected for that role; do not invent or substitute. Preserve each bank work/rest/RPE ceiling, never shorten required rest, and do not stack full prescriptions merely to reach three drills. Use phase_system_workload_guidance across the whole selected session, not the first drill. Account for combined mechanical_risk_tags, local fatigue, hard_sparring_adjacent, nearby work, sport specificity, and the athlete's stated limiter. A single drill is valid when it safely delivers the intended dose. If no adequate safe composition is available, use the existing underfill path and state `Underfill: <specific reason>`. optional_trunk_support is optional and never required session membership.",
             "For every role with selected_exercise_assignments, closed membership overrides all Stage 2 prompt, writing-rule, decision-rule, anchor-standard, safe-strong, goal-support, accessory, equipment-replacement, and substitution guidance, including Rules 4, 5, 6A, 7, and 8. Those rules may change wording or reduce dose only within the selected set. If a hard restriction makes a selected exercise illegal, remove/hold that selected exercise and leave the gap; never choose a downstream replacement. Exercise selection must return upstream to deterministic composition.",
             # Late-camp effective strength dose is authoritative over the bank dose.
             "If a session role carries effective_strength_prescriptions, each entry's effective_prescription is the authoritative dose for that exercise on that day. Render effective_prescription, never the base_prescription, and never a dose above it. Its base_prescription is the original exercise-bank dose kept only for provenance — do not render it as the prescription.",
+            "A selected_exercise_assignments entry may carry coaching_notes: the authored exercise-bank guidance for that exercise. Use it as source-backed execution evidence — choose the one or two most relevant cues (technique, load, or a stop/quality rule) and phrase them in your own words. Do not dump every note verbatim or repeat generic advice. coaching_notes is never a dose: it can never override effective_prescription, effective_strength_envelope, restrictions, taper rules, or closed membership.",
             "If a session role carries effective_strength_envelope, treat it as a hard ceiling: do not render more sets than effective_strength_envelope.max_sets, more reps than max_reps (for the loaded anchor/secondary lifts), or a higher RPE than rpe_cap_high. If effective_strength_envelope.loaded_allowed is false, render no loaded strength lifting on that day — neural/primer, readiness, or mobility work only.",
             "If effective_strength_envelope.complete_exercise_allow_list is true, effective_strength_envelope.allowed_exercise_names is the complete S&C exercise allow-list selected by the deterministic planner for that role. Render only those named exercises; do not restore omitted candidates, alternates, substitutes, add another loaded lift, or invent another strength, power, plyometric, trunk, or support exercise for that session. An individually legal dose does not make an unselected exercise legal. If effective_strength_envelope.forbid_slow_eccentric_emphasis is true, do not restore a slow/tempo eccentric prescription from the base exercise-bank text.",
             "If selected_plan.session_sequence is present, render every entry in selected_plan.session_sequence as its own athlete-facing countdown card.",
             "Each selected_plan.session_sequence entry with scheduled_countdown_label/countdown_display_label must appear as a visible D-X header in the final output.",
             "Do not omit selected support, recovery, freshness, mobility, reset, or technical roles because they are low stress or short duration.",
-            # Generic locked-drill contract. Stage 1 sometimes selects a specific
-            # activity for a role rather than leaving the choice open. When it
-            # does, the selection is a decision, not a suggestion, and the
-            # finalizer must not re-open it.
-            "If a session role has governance.selected_drill_locked=true, Stage 1 has already chosen that role's activity: preferred_exercise_names[0] is the authoritative activity name. Render that exact name as the activity title.",
-            "For a governance.selected_drill_locked=true role, render the supplied display_text content as that activity's own prescription. Do not rename it, do not substitute a different activity, do not merge it into another session, and do not restate it as generic category language.",
-            # display_text for a locked drill is already written in the session-body
-            # contract. Reshuffling it (promoting a detail line to its own bullet, or
-            # letting the activity name and duration drift above the first bullet)
-            # makes the card parse as several load-less exercises instead of one.
-            "A governance.selected_drill_locked=true display_text is already in final session-body shape: keep its line order exactly. Its leading `Why:` line is that session's objective, its single bulleted line is the activity heading, and every indented line below that bullet is a detail line of that same activity. Do not re-order those lines, do not promote an indented line to its own bullet, and never let the activity name, its duration, or a bare section header render as a session-level note above the bullet.",
-            "A governance.selected_drill_locked=true role is authoritative, must render, and must never be moved to suppressed_roles.",
+            # Locked-drill contract, reduced to context. Stage 1 selects the
+            # activity AND the server now writes its body into every athlete-facing
+            # surface: merge_locked_structured_content builds the card from the
+            # deterministic tactical_watch object, the deterministic fallback
+            # rebuilds it when Stage 2 fails, and the source repair inserts it into
+            # the plan text. The finalizer used to be told to reproduce that body
+            # verbatim, so the whole multi-line script had to be shipped to it; it
+            # no longer authors any of it. What remains is the one thing only the
+            # finalizer can get wrong: the day must exist and must stay free of
+            # adaptive S&C.
+            "A session role with governance.selected_drill_locked=true is a deterministic, server-rendered session. Keep its D-X card in the plan so the day exists, but do not author, rename, expand or restate its content: the server writes that session's own body. Never move it to suppressed_roles, and do not place additional S&C work on it beyond what its own role allows.",
             "Do not collapse a selected countdown session into Lead notes, another day, movement prep, mobility finisher, rationale, or a generic note. It must keep its own D-X card.",
             "If selected_plan.session_sequence contains D-3 fight_week_freshness_day, render a D-3 freshness/reset card even when it is support-class and low RPE.",
             "Render selected countdown cards in descending countdown order, then append D-0 last.",
@@ -717,7 +807,6 @@ def build_stage2_finalizer_packet(
             "session_sequence": _compact_session_sequence(source)
             or _compact_session_sequence(stage2_payload),
             "weekly_role_map": _compact_weekly_role_map(weekly_role_map, athlete_model),
-            "normal_conditioning_composition": _normal_conditioning_composition_options(source),
             "late_fight_plan_spec": late_fight_plan_spec,
             "open_plan_spec": open_plan_spec,
             "fight_week_override": (
@@ -725,7 +814,7 @@ def build_stage2_finalizer_packet(
                 or stage2_payload.get("fight_week_override")
                 or {}
             ),
-            "week_by_week_progression": (
+            "week_by_week_progression": _compact_week_progression(
                 source.get("week_by_week_progression")
                 or stage2_payload.get("week_by_week_progression")
                 or {}

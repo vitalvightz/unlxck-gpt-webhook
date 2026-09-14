@@ -67,13 +67,6 @@ def _normalise_countdown_label(value: Any) -> str:
     return f"D-{int(match.group(1))}"
 
 
-def _rendered_countdown_labels(final_plan_text: str) -> set[str]:
-    return {
-        f"D-{int(match.group(1))}"
-        for match in _COUNTDOWN_HEADER_RE.finditer(final_plan_text or "")
-    }
-
-
 def _normalise_render_match_text(value: Any) -> str:
     return re.sub(r"[^a-z0-9]+", " ", str(value or "").lower()).strip()
 
@@ -934,6 +927,11 @@ def build_stage2_retry(
         }
         for item in validator_report.get("errors", []) or []
     )
+    conditioning_underfilled = any(
+        isinstance(item, dict)
+        and str(item.get("code") or "") == "conditioning_role_workload_underfilled"
+        for item in validator_report.get("errors", []) or []
+    )
     has_goal_failure = any(
         isinstance(item, dict)
         and str(item.get("code") or "").strip() == "goal_preservation_failed"
@@ -961,6 +959,16 @@ def build_stage2_retry(
         if isinstance(item, dict)
         and str(item.get("code") or "").strip() == "goal_preservation_failed"
     ]
+    if conditioning_underfilled:
+        return {
+            "status": _STATUS_FAIL,
+            "validator_report": validator_report,
+            "summary": "FAIL: conditioning workload requires deterministic planner regeneration",
+            "summary_lines": summary_lines,
+            "needs_retry": False,
+            "requires_planner_regeneration": True,
+            "repair_prompt": None,
+        }
     requires_planner_regeneration = bool(goal_failures)
     if goal_failures and not missing_closed_conditioning:
         return {

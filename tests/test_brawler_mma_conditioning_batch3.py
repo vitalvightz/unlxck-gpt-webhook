@@ -99,7 +99,12 @@ def test_equipment_mechanics_uniqueness_and_phase_reachability():
 
 
 def test_existing_selector_surfaces_rebuild_for_gpp_and_spp():
-    flags = {"sport": "mma", "style_technical": ["mma"], "style_tactical": ["Brawler"], "key_goals": ["conditioning"], "weaknesses": ["gas_tank"], "fatigue": "low", "equipment": ["partner", "thai pads", "grappler dummy", "cage"], "training_frequency": 5, "days_available": 5, "days_until_fight": 35, "time_to_fight_days": 35, "injuries": [], "restrictions": []}
+    # Conditioning selection now prefers the best physiological match for the
+    # slot, so a style drill no longer owns a system slot by default. This test
+    # covers bank *reachability* — sport, style, equipment, phase and safety
+    # filtering — so it names the slice explicitly; an explicitly requested
+    # exercise is a coach instruction and is never displaced on target grounds.
+    flags = {"sport": "mma", "style_technical": ["mma"], "style_tactical": ["Brawler"], "key_goals": ["conditioning"], "weaknesses": ["gas_tank"], "fatigue": "low", "equipment": ["partner", "thai pads", "grappler dummy", "cage"], "training_frequency": 5, "days_available": 5, "days_until_fight": 35, "time_to_fight_days": 35, "injuries": [], "restrictions": [], "preferred_exercise_names": sorted(EXPECTED)}
     for phase in ("GPP", "SPP"):
         result = conditioning.generate_conditioning_block({**flags, "phase": phase})
         selected = result[5]["__style_conditioning__"]["final_selected_style_conditioning_names"]

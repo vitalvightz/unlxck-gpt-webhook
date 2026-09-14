@@ -17,6 +17,25 @@ test("flags sessions above the available training days", () => {
   );
 });
 
+test("requires a combat session only when building a Fight Camp", () => {
+  assert.deepStrictEqual(
+    getSparringConsistency(["Monday"], [], [], true),
+    {
+      hardError: "Add at least one hard sparring or light/technical combat day to build a Fight Camp. If none is scheduled, use Open Plan.",
+      softWarning: null,
+    },
+  );
+  assert.deepStrictEqual(
+    getSparringConsistency(["Monday"], [], [], false),
+    { hardError: null, softWarning: null },
+  );
+});
+
+test("accepts hard or light combat sessions for a Fight Camp", () => {
+  assert.equal(getSparringConsistency(["Monday"], ["Monday"], [], true).hardError, null);
+  assert.equal(getSparringConsistency(["Monday"], [], ["Monday"], true).hardError, null);
+});
+
 test("flags hard sparring days that sit outside the available schedule", () => {
   assert.deepStrictEqual(
     getSparringConsistency(["Monday", "Wednesday"], ["Friday"], []),

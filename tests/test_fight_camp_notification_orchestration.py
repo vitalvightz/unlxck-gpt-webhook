@@ -21,7 +21,11 @@ from api.services.notification_foundation import (
     simulate_notification_delivery_decision,
     update_notification_preferences,
 )
-from api.services.notification_templates import BUNDLED_TEMPLATES, select_notification_template
+from api.services.notification_templates import (
+    BUNDLED_TEMPLATES,
+    LATE_FIGHT_COUNTDOWN_COPY,
+    select_notification_template,
+)
 
 
 class OrchestrationStore:
@@ -407,8 +411,8 @@ def test_fight_countdown_uses_unique_copy_for_each_milestone() -> None:
     expected = {
         "D-14": ("fc-d14", "D-14. TWO WEEKS."),
         "D-7": ("fc-d07", "D-7. FIGHT WEEK."),
-        "D-3": ("fc-d03", "D-3. STAY SHARP."),
-        "D-1": ("fc-d01", "D-1. READY."),
+        "D-3": ("fc-d03", LATE_FIGHT_COUNTDOWN_COPY["fc-d03"][0]),
+        "D-1": ("fc-d01", LATE_FIGHT_COUNTDOWN_COPY["fc-d01"][0]),
     }
 
     for countdown, (variant_id, title) in expected.items():

@@ -135,6 +135,20 @@ jobs:
                 exit 1
               fi
 
+              # The Stage 2 first-pass char limit defaults to 400000 in code, but
+              # .env.production still carried the old 180000 and env always wins,
+              # which rejected long-camp handoffs before the model saw them. This
+              # is a non-secret tuning value, so pin it here rather than adding a
+              # second config source. Only this key is touched; the rest of the
+              # file (and every secret in it) is left exactly as the server has
+              # it, and nothing from it is printed.
+              if grep -q '^UNLXCK_STAGE2_MAX_FIRST_PASS_CHARS=' .env.production; then
+                sed -i 's/^UNLXCK_STAGE2_MAX_FIRST_PASS_CHARS=.*/UNLXCK_STAGE2_MAX_FIRST_PASS_CHARS=400000/' .env.production
+              else
+                printf '\nUNLXCK_STAGE2_MAX_FIRST_PASS_CHARS=400000\n' >> .env.production
+              fi
+              echo "Pinned UNLXCK_STAGE2_MAX_FIRST_PASS_CHARS=400000 in .env.production."
+
               PREVIOUS_COMMIT="$(git rev-parse HEAD)"
               DEPLOYMENT_SUCCEEDED=false
 

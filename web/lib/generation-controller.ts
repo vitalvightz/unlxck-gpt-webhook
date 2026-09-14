@@ -312,6 +312,8 @@ export function useGenerationController({
   const [milestones, setMilestones] = useState<ProgressMilestone[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [failedJobId, setFailedJobId] = useState<string | null>(null);
+  const [currentJobId, setCurrentJobId] = useState<string | null>(() => getPendingGeneration(storageKey)?.jobId ?? null);
+  const [readyToOpen, setReadyToOpen] = useState(false);
   const [failureKind, setFailureKind] = useState<GenerationFailureKind | null>(null);
   // Backend-derived instant the job stopped. Set once and only once per build:
   // the elapsed clock reads from it instead of Date.now() the moment it lands,
@@ -373,6 +375,8 @@ export function useGenerationController({
       createdAtMs: number,
       recovered: boolean,
     ) => {
+      setCurrentJobId(job.job_id);
+      setReadyToOpen(job.ready_to_open === true);
       setPhase(phaseForJobStatus(job.status));
       setStatusMessage(statusMessageForJob(job.status, createdAtMs));
       if (Array.isArray(job.progress_milestones)) {
@@ -391,6 +395,8 @@ export function useGenerationController({
 
       for (;;) {
         const currentJob = await getGenerationJob(activeToken, job.job_id);
+        setCurrentJobId(currentJob.job_id);
+        setReadyToOpen(currentJob.ready_to_open === true);
 
         if (Array.isArray(currentJob.progress_milestones)) {
           setMilestones(currentJob.progress_milestones);
@@ -490,6 +496,7 @@ export function useGenerationController({
       }
 
       setError(null);
+      setReadyToOpen(false);
       setFailureKind(null);
       markFailedJob(null);
       setEndedAtMs(null);
@@ -554,6 +561,7 @@ export function useGenerationController({
     }
 
     setError(null);
+    setReadyToOpen(false);
     setFailureKind(null);
     setEndedAtMs(null);
     setIsGenerating(true);
@@ -641,6 +649,8 @@ export function useGenerationController({
     startedAtMs,
     endedAtMs,
     milestones,
+    currentJobId,
+    readyToOpen,
     error,
     setError,
     failureKind,

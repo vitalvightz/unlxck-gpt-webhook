@@ -84,7 +84,42 @@ def _patch_conditioning_visibility_banks(
     monkeypatch.setattr(conditioning, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"conditioning": total_drills})
 
 
-def test_gpp_valid_style_conditioning_candidate_surfaces_when_conditioning_selected(monkeypatch):
+def test_gpp_style_conditioning_wins_its_slot_when_it_matches_the_target(monkeypatch):
+    """Style is the preference *between suitable candidates*.
+
+    A style drill that also matches the athlete's declared target keeps the
+    aerobic slot ahead of the generic pool: its style and sport bonuses put it
+    in front once both are judged on the same physiological footing.
+    """
+    style_drill = {
+        "name": "Counter Reactive Footwork",
+        "placement": "conditioning",
+        "system": "aerobic",
+        "phases": ["GPP"],
+        "tags": ["reactive", "footwork", "conditioning", "aerobic"],
+        "timing": "10 min technical tempo",
+        "rest": "",
+        "load": "moderate",
+    }
+    _patch_conditioning_visibility_banks(monkeypatch, style_bank=[style_drill])
+
+    _text, selected_names, _why, _grouped, _missing, reservoir = conditioning.generate_conditioning_block(
+        _style_visibility_flags("GPP")
+    )
+
+    diagnostics = reservoir["__style_conditioning__"]
+    assert "Counter Reactive Footwork" in selected_names
+    assert diagnostics["style_target"] >= 1
+    assert diagnostics["final_selected_style_conditioning_names"] == ["Counter Reactive Footwork"]
+
+
+def test_gpp_style_conditioning_yields_the_slot_when_it_matches_no_target(monkeypatch):
+    """A style drill must not own a system slot it does not physiologically fit.
+
+    The same drill without any conditioning/aerobic tag is not a suitable
+    candidate for a gas-tank athlete's aerobic slot, so the tagged generic drill
+    takes it. Zero style relevance in the generic pool does not block that.
+    """
     style_drill = {
         "name": "Counter Reactive Footwork",
         "placement": "conditioning",
@@ -101,20 +136,23 @@ def test_gpp_valid_style_conditioning_candidate_surfaces_when_conditioning_selec
         _style_visibility_flags("GPP")
     )
 
-    diagnostics = reservoir["__style_conditioning__"]
-    assert "Counter Reactive Footwork" in selected_names
-    assert diagnostics["style_target"] >= 1
-    assert diagnostics["entries_selected"] == 1
-    assert diagnostics["final_selected_style_conditioning_names"] == ["Counter Reactive Footwork"]
+    assert "Generic Boxing Tempo" in selected_names
+    assert "Counter Reactive Footwork" not in selected_names
+    assert reservoir["__style_conditioning__"]["final_selected_style_conditioning_names"] == []
 
 
-def test_spp_style_conditioning_is_picked_before_generic_system_fallback(monkeypatch):
+def test_spp_style_conditioning_is_picked_before_a_weaker_generic_match(monkeypatch):
+    """Style still leads the blend; it only yields to a better target match.
+
+    The style drill carries the athlete's target, so it takes the glycolytic
+    slot ahead of the generic fallback exactly as before.
+    """
     style_drill = {
         "name": "Counter Reactive Intervals",
         "placement": "conditioning",
         "system": "glycolytic",
         "phases": ["SPP"],
-        "tags": ["reactive", "timing"],
+        "tags": ["reactive", "timing", "conditioning", "glycolytic"],
         "timing": "4 x 45s",
         "rest": "75s",
         "load": "hard",
@@ -136,7 +174,9 @@ def test_style_conditioning_expanded_style_tag_match_does_not_need_raw_tactical_
         "placement": "conditioning",
         "system": "glycolytic",
         "phases": ["SPP"],
-        "tags": ["reactive"],
+        # Carries the athlete's target as well as the expanded style tag, so the
+        # assertion stays about style-tag expansion rather than slot precedence.
+        "tags": ["reactive", "conditioning", "glycolytic"],
         "timing": "4 x 40s",
         "rest": "80s",
         "load": "hard",
@@ -782,7 +822,7 @@ def test_generated_boxing_d6_taper_uses_low_impact_alactic_not_jump_or_sprint_st
         }
     )
 
-    plan_text, selected_names, *_rest, candidate_reservoir = result
+    plan_text, selected_names, _why, grouped_drills, _missing, candidate_reservoir = result
     blocked: dict[str, set[str]] = {}
     for entry in candidate_reservoir["__late_window__"]["blocked"]:
         blocked.setdefault(entry["name"], set()).update(entry["reason_codes"])
@@ -792,9 +832,20 @@ def test_generated_boxing_d6_taper_uses_low_impact_alactic_not_jump_or_sprint_st
     }
 
     assert "Explosive Boxing Burst Intervals" not in selected_names
-    assert "Reactive Shuffle Repeats" in selected_names
-    assert "late_penalty_missing_governance_metadata" in penalized["Explosive Boxing Burst Intervals"]
-    assert "late_penalty_missing_governance_metadata" in penalized["Reactive Shuffle Repeats"]
+    assert not any(
+        "late_penalty_missing_governance_metadata" in codes
+        for name, codes in penalized.items()
+        if name in {"Explosive Boxing Burst Intervals", "Reactive Shuffle Repeats"}
+    )
+    assert grouped_drills["alactic"]
+    assert all(
+        drill.get("meaningful_stress") is True and drill.get("support_only") is False
+        for drill in grouped_drills["alactic"]
+    )
+    assert all(
+        drill.get("support_only") is True and drill.get("meaningful_stress") is False
+        for drill in grouped_drills.get("conditioning_support", [])
+    )
     assert "Band-Assisted Jump Reset" not in plan_text
     assert "Band-Resisted Sprint Start" not in plan_text
 
@@ -805,8 +856,8 @@ def test_final_week_taper_caps_keep_primers_submaximal():
 
     assert "RPE 8" not in d6
     assert "RPE 8" not in d1
-    assert "2-3 bursts max (5-6 sec @ RPE 6-7" in d6
-    assert "RPE 3-5" in d1
+    assert "2-3 bursts max (5-6 sec @ RPE ≤5" in d6
+    assert "RPE ≤3" in d1
 
 
 def test_late_fight_generation_keeps_safe_support_available_across_windows():
@@ -843,7 +894,7 @@ def test_late_fight_generation_keeps_safe_support_available_across_windows():
             for drill in selected_drills:
                 tags = set(conditioning.normalize_tags(drill.get("tags", [])))
                 assert tags & {"breathing", "visualization", "tactical", "readiness_check"}
-                assert not drill.get("equipment")
+                assert set(drill.get("equipment") or []).issubset({"bodyweight"})
                 assert float(drill.get("rpe_max", drill.get("rpe", 0)) or 0) <= 3
             assert any(
                 "late_support_fallback" in entry.get("reasons", {}).get("reason_codes", [])
@@ -894,7 +945,7 @@ def test_taper_d19_gas_tank_signal_keeps_one_low_noise_aerobic_machine_dose():
         for name, reason_codes in blocked.items()
         if any(term in name.lower() for term in ("rower", "bike"))
     )
-    assert "late_penalty_missing_governance_metadata" in penalized["Easy Assault Bike"]
+    assert "late_penalty_missing_governance_metadata" not in penalized.get("Easy Assault Bike", set())
 
 
 def test_machine_biased_gas_tank_helper_detects_bike_and_rower():
@@ -928,7 +979,7 @@ def test_focus_token_normalization_matches_ui_labels():
     assert "work capacity" in values
 
 
-def test_d16_profile_keeps_low_aerobic_machine_and_rejects_dense_machine_work(monkeypatch):
+def test_d16_missing_windows_fail_closed_even_for_low_aerobic_machine(monkeypatch):
     safe_machine = {
         "name": "Assault Bike Easy Gas Tank Ride",
         "placement": "conditioning",
@@ -937,7 +988,12 @@ def test_d16_profile_keeps_low_aerobic_machine_and_rejects_dense_machine_work(mo
         "equipment": ["assault_bike"],
         "tags": ["conditioning", "aerobic", "low_impact", "recovery"],
         "rpe": 5,
+        "total_minutes": 15,
         "lactate_load": "low",
+        "stress_class": "anchor",
+        "cost_class": "low",
+        "support_only": False,
+        "meaningful_stress": True,
         "notes": "12-18 min easy nasal breathing",
     }
     unsafe_machine = {
@@ -948,7 +1004,14 @@ def test_d16_profile_keeps_low_aerobic_machine_and_rejects_dense_machine_work(mo
         "equipment": ["assault_bike"],
         "tags": ["conditioning", "work_capacity"],
         "rpe": 9,
+        "work_sec": 20,
+        "rest_sec": 10,
+        "rounds": 8,
         "lactate_load": "high",
+        "stress_class": "anchor",
+        "cost_class": "high",
+        "support_only": False,
+        "meaningful_stress": True,
         "notes": "8 x 20s hard / 10s easy",
     }
     monkeypatch.setattr(conditioning, "get_conditioning_bank", lambda: [unsafe_machine, safe_machine])
@@ -958,7 +1021,7 @@ def test_d16_profile_keeps_low_aerobic_machine_and_rejects_dense_machine_work(mo
     monkeypatch.setattr(conditioning, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"conditioning": 1})
     monkeypatch.setattr(conditioning, "_load_bank", lambda *_args, **_kwargs: [])
 
-    _text, selected_names, _why, grouped_drills, _missing, _reservoir = conditioning.generate_conditioning_block(
+    _text, _selected_names, _why, grouped_drills, missing, _reservoir = conditioning.generate_conditioning_block(
         {
             "phase": "SPP",
             "sport": "boxing",
@@ -975,9 +1038,10 @@ def test_d16_profile_keeps_low_aerobic_machine_and_rejects_dense_machine_work(mo
             "restrictions": [],
         }
     )
-    blob = " ".join(selected_names + [d.get("name", "") for d in grouped_drills.get("aerobic", [])]).lower()
-    assert "assault bike" in blob or "rower" in blob
-    assert "tabata" not in blob
+    aerobic_blob = " ".join(d.get("name", "") for d in grouped_drills.get("aerobic", [])).lower()
+    assert not aerobic_blob
+    assert "tabata" not in aerobic_blob
+    assert "aerobic" in missing
 
 
 def test_taper_d16_profile_allows_only_low_noise_machine_gas_tank(monkeypatch):

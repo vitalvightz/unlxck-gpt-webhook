@@ -37,7 +37,7 @@ from .models import (
     UsernameRateLimitInfo,
     WeeklySchedule,
 )
-from .store import AppStore
+from .store import AppStore, is_effective_admin_profile
 from .structured_card_lifecycle import (
     STRUCTURED_CARD_ATTEMPT_STARTED_AT_KEY,
     STRUCTURED_CARD_BUILD_STALE_AFTER,
@@ -48,6 +48,9 @@ from .structured_plan_calendar_spine import reconcile_calendar_spine
 from .structured_plan_generation import (
     reconcile_late_fight_week_context,
     reconcile_rehab_drill_ids,
+)
+from .structured_plan_deterministic_fallback import (
+    build_deterministic_structured_plan,
 )
 from .structured_plan_locked_merge import merge_locked_structured_content
 from .services.open_plan_timeline import project_open_structured_plan
@@ -79,6 +82,7 @@ def _build_me_response(profile: ProfileRecord, store: AppStore) -> MeResponse:
     latest_plan = _map_plan_summary(plans[0], current_training_day=training_day) if plans else None
     return MeResponse(
         profile=profile,
+        effective_admin=is_effective_admin_profile(profile, store),
         latest_intake=latest_intake.get("intake") if latest_intake else None,
         latest_plan=latest_plan,
         plan_count=len(plans),
@@ -244,8 +248,13 @@ def _map_plan_summary(
             policy_report = apply_stage2_release_policy(report)
             has_errors = bool(policy_report.get("errors"))
             has_blocking = policy_report.get("release_decision") == "hold"
+            # A malformed report cannot clear a plan that was already held. The
+            # release policy is observational at generation time, but this is a
+            # stored review_required decision being re-derived: if the report is
+            # unreadable we cannot show that the hold is resolved, so it stands.
+            has_unreadable_report = bool(policy_report.get("release_policy_malformed_fields"))
             has_review_flags = bool(report.get("warnings") or report.get("review_flags"))
-            if has_errors or has_blocking:
+            if has_errors or has_blocking or has_unreadable_report:
                 normalized_status = "held_for_review"
             elif has_review_flags:
                 normalized_status = "publishable_with_flags"
@@ -573,12 +582,14 @@ def _map_plan_detail(
     summary = _map_plan_summary(row, current_training_day=current_training_day)
     planning_brief = _decode_structured_text(row.get("planning_brief"))
     raw_stage2_payload = row.get("stage2_payload")
-    fallback_parsing_metadata = (
-        raw_stage2_payload.get("input_parsing_metadata")
-        if isinstance(raw_stage2_payload, dict)
-        else {}
-    )
-    parsing_metadata = row.get("parsing_metadata") or fallback_parsing_metadata or {}
+    # No fallback to stage2_payload["input_parsing_metadata"]: Stage 1 sets it and
+    # the top-level parsing_metadata from the same plan_input.parsing_metadata in
+    # the same result (fightcamp/main.py), so the fallback could only ever repeat
+    # the value the column already holds — and when the column is falsy, so is it.
+    # Rows predating the column predate stage2_payload too (both were added by
+    # 20260427120000_stabilize_generation_runtime.sql, neither backfilled), so
+    # there is no legacy era where the fallback supplied anything either.
+    parsing_metadata = row.get("parsing_metadata") or {}
     display_plan_text = str(row.get("plan_text") or "")
     if not display_plan_text and summary.status == "archived" and not include_admin:
         display_plan_text = str(row.get("final_plan_text") or row.get("draft_plan_text") or "")
@@ -593,6 +604,26 @@ def _map_plan_detail(
         row.get("structured_plan"),
         raw_markdown=display_plan_text,
     )
+    if structured_plan is None:
+        # Stage 2 failed or its card never validated. Without a structured plan
+        # the athlete client rebuilds its calendar from plan_text, which lets a
+        # model omission delete a declared sparring day, a declared light-combat
+        # day or a Tactical Watch. Assemble the canonical plan from deterministic
+        # planner state instead; plan_text stays stored for admin/diagnostics but
+        # is no longer a schedule authority.
+        fallback = build_deterministic_structured_plan(planning_brief)
+        if fallback is not None:
+            fallback_result = safe_parse_structured_plan(
+                fallback,
+                raw_markdown=display_plan_text or None,
+            )
+            if fallback_result.ok and fallback_result.plan is not None:
+                structured_plan = fallback_result.plan
+                structured_schema_version = fallback_result.plan.schema_version
+                logger.info(
+                    "[plan_mappers] deterministic structured fallback assembled plan_id=%s",
+                    row.get("id"),
+                )
     structured_payload = (
         structured_plan.model_dump(mode="json") if structured_plan is not None else {}
     )

@@ -37,9 +37,10 @@ test("normalizeRehabText drops parentheticals and collapses punctuation", () => 
   assert.equal(normalizeRehabText(null), "");
 });
 
-test("isRehabBlock only matches the rehab block type", () => {
+test("isRehabBlock recognises canonical and legacy rehab block types", () => {
   assert.equal(isRehabBlock(HAMSTRING_BLOCK), true);
   assert.equal(isRehabBlock({ block_type: "REHAB" }), true);
+  assert.equal(isRehabBlock({ block_type: "Rehab-friendly low-load support" }), true);
   assert.equal(isRehabBlock({ block_type: "mobility" }), false);
   assert.equal(isRehabBlock({}), false);
 });

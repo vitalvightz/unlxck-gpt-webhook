@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any, Literal
 
@@ -96,6 +97,25 @@ _ALL_INSERTS = (
     | LOW_COST_AEROBIC_INSERTS
 )
 TACTICAL_INSERTS = {"tactical_watch", "tactical_cue_card", "self_review"}
+
+
+def consumes_insert_budget(role_key: Any) -> bool:
+    """Whether an insert spends the camp's support-insert allowance.
+
+    Zero-cost inserts (Tactical Watch, cue card, self review, visualization) are
+    informational: they carry no physical load, coexist with real sessions and
+    do not fill a training day. Counting them against the allowance let a week
+    of tactical reading crowd out the physical support the athlete's goals need.
+    """
+    return str(role_key or "") not in ZERO_COST_INSERTS
+
+
+def budgeted_insert_count(inserts: list[dict[str, Any]]) -> int:
+    return sum(
+        1
+        for insert in inserts
+        if isinstance(insert, dict) and consumes_insert_budget(insert.get("role_key"))
+    )
 CONDITIONING_MAINTENANCE_INSERTS = LOW_COST_AEROBIC_INSERTS
 
 _LOWER_LEG_LOAD_MARKERS = (
@@ -236,7 +256,7 @@ _STRUCTURED_TARGET_FIELDS = (
 
 _INSERT_META = {
     "tactical_watch": {
-        "label": "Fight Tactical Watch",
+        "label": "Tactical Focus",
         "duration_min": [8, 12],
         "rpe_max": 1,
         "insert_category": "tactical",
@@ -569,37 +589,6 @@ def build_target_coverage_state(
     return sorted(
         states,
         key=lambda state: (-state.priority_weight, order_index[state.target]),
-    )
-
-
-def remaining_target_need(
-    athlete_model: dict[str, Any],
-    scheduled_roles: list[dict[str, Any]],
-    target: str,
-) -> float:
-    canonical = _canonical_target(target)
-    return next(
-        (
-            state.remaining_need
-            for state in build_target_coverage_state(athlete_model, scheduled_roles)
-            if state.target == canonical and state.low_cost_addressable
-        ),
-        0.0,
-    )
-
-
-def highest_priority_remaining_target(
-    athlete_model: dict[str, Any],
-    scheduled_roles: list[dict[str, Any]],
-) -> str:
-    """Return the highest canonical selected target a low-cost filler can address."""
-    return next(
-        (
-            state.target
-            for state in build_target_coverage_state(athlete_model, scheduled_roles)
-            if state.low_cost_addressable and state.remaining_need > 0
-        ),
-        "",
     )
 
 
@@ -975,11 +964,6 @@ def _apply_bank_watch(
     role["duration_min"] = [watch.duration_minutes, watch.duration_minutes]
     used_watch_keys.add(watch.key)
 
-
-def _first_allowed(preferences: list[str], allowed: set[str]) -> str | None:
-    return next((role_key for role_key in preferences if role_key in allowed), None)
-
-
 def _time_band_preferences(insert_offset: int) -> list[str]:
     if insert_offset == 1:
         return [
@@ -1172,10 +1156,15 @@ def _select_role_key(
     coverage_state = coverage_state or []
     if force_tactical:
         candidates &= TACTICAL_INSERTS
-    elif force_conditioning and any(
-        state.target == "conditioning" and state.remaining_need > 0
-        for state in coverage_state
-    ):
+    elif force_conditioning:
+        # The caller owns the frequency decision: it knows the week, how many
+        # aerobic touches it already holds, and whether another is wanted.
+        # Coverage state cannot answer that — it reports whether a goal is
+        # represented at all, so one conditioning day marks conditioning
+        # satisfied for the rest of the week. ``candidates`` only contains
+        # aerobic inserts when the athlete actually selected a conditioning
+        # signal (see _allowed_inserts), so a non-conditioning athlete falls
+        # through untouched.
         aerobic = candidates & LOW_COST_AEROBIC_INSERTS
         if aerobic:
             candidates = aerobic
@@ -1383,9 +1372,23 @@ def _apply_bank_footwork(
     fields = technical_footwork_prescription_fields(drill, stance=stance)
     name = fields["name"]
     notes = str(drill.get("notes") or "").strip()
+    timing_lower = fields["timing"].lower()
+    rest_lower = fields["rest"].lower()
+    rest_seconds = re.match(r"(\d+)\s*sec", rest_lower)
+    rest_already_stated = rest_lower in timing_lower
+    if rest_seconds:
+        rest_already_stated = rest_already_stated or bool(
+            re.search(
+                rf"\b{re.escape(rest_seconds.group(1))}\s*sec(?:ond)?s?\s+(?:rest|reset)\b",
+                timing_lower,
+            )
+        )
     dose = " ".join(
         part
-        for part in (fields["timing"], f"Rest: {fields['rest']}." if fields["rest"] and not any(marker in fields["timing"].lower() for marker in ("rest", "reset")) else "")
+        for part in (
+            fields["timing"],
+            f"Rest: {fields['rest']}." if fields["rest"] and not rest_already_stated else "",
+        )
         if part
     )
     # Same shared "Why: / bulleted activity / indented detail lines" contract as
@@ -1623,24 +1626,6 @@ def _candidate_offsets_from_sequence(
 def _has_tactical_support(session_sequence: list[dict[str, Any]]) -> bool:
     return any(str(role.get("role_key") or "") in TACTICAL_INSERTS for role in session_sequence)
 
-
-def _missing_mandatory_watch_count(session_sequence: list[dict[str, Any]]) -> int:
-    """Count represented D-21..D-1 segments that still need a Fight Tactical Watch."""
-    segments = {
-        _segment_for_offset(offset)
-        for role in session_sequence
-        if (offset := _role_offset(role)) is not None and 0 < offset <= 21
-    }
-    watch_segments = {
-        _segment_for_offset(offset)
-        for role in session_sequence
-        if str(role.get("role_key") or "") == "tactical_watch"
-        and (offset := _role_offset(role)) is not None
-        and 0 < offset <= 21
-    }
-    return len(segments - watch_segments)
-
-
 def _ensure_weekly_tactical_watches(
     session_sequence: list[dict[str, Any]],
     athlete_model: dict[str, Any],
@@ -1855,7 +1840,7 @@ def apply_gap_fill_inserts(
         # resolved contact set, not raw declared weekday names.
         on_hard_sparring_day = target_offset in contact_offsets
         force_tactical = tactical_required and not tactical_present
-        if len(inserts) >= MAX_INSERTS_TOTAL_D21_TO_D0 and not force_tactical:
+        if budgeted_insert_count(inserts) >= MAX_INSERTS_TOTAL_D21_TO_D0 and not force_tactical:
             break
         insert = select_gap_fill_insert(
             athlete_model,
@@ -1897,14 +1882,11 @@ def apply_gap_fill_inserts(
             insert["real_weekday"] = weekday
             insert["countdown_display_label"] = f"D-{target_offset} ({weekday.title()})"
 
-        projected = ordered + inserts + [insert]
-        mandatory_watch_slots = (
-            _missing_mandatory_watch_count(projected)
-            if _is_fight_sport(athlete_model)
-            else 0
-        )
-        if len(inserts) + 1 + mandatory_watch_slots > MAX_INSERTS_TOTAL_D21_TO_D0:
-            continue
+        # A zero-cost insert spends nothing, so it needs no allowance and no
+        # reserved slot for the mandatory watches that are themselves zero-cost.
+        if consumes_insert_budget(insert.get("role_key")):
+            if budgeted_insert_count(inserts) + 1 > MAX_INSERTS_TOTAL_D21_TO_D0:
+                continue
 
         if insert["role_key"] in PHYSICAL_INSERTS:
             segment = _segment_for_offset(target_offset)

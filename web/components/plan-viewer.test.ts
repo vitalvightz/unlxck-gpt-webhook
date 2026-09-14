@@ -1099,7 +1099,7 @@ test("late-fight raw output becomes clear notes, contact cards, and exercise car
       "D-11 (Tuesday) — Technical-only combat",
       "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority.",
       "",
-      "D-11 (Tuesday) — Fight Tactical Watch",
+      "D-11 (Tuesday) — Tactical Focus",
       "Why: keep pocket exchanges planned rather than chaotic.",
       "- Pocket Exchange Map: 10 minutes, tactical review only. No physical load.",
       "  Step 1: Identify the opponent's most common pocket sequence.",
@@ -1131,7 +1131,7 @@ test("late-fight raw output becomes clear notes, contact cards, and exercise car
       "- Easier: 1-2 x 5 sec bursts with full recovery.",
       "- Stop: when technique or speed collapses.",
       "",
-      "D-5 (Monday) — Fight Tactical Watch",
+      "D-5 (Monday) — Tactical Focus",
       "Why: confirm controlled opening pressure without a reckless start.",
       "- First-Round Pressure Script: 8 minutes, tactical review only. No physical load.",
       "  Step 1: Choose the opening pressure action you trust.",
@@ -1187,7 +1187,7 @@ test("late-fight raw output becomes clear notes, contact cards, and exercise car
     "D-12", "D-11", "D-10", "D-8", "D-5", "D-4", "D-3", "D-1", "D-0",
   ]);
   assert.equal(days[1]?.today_card?.coach_led_contact, "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority.");
-  assert.equal(days[1]?.sessions?.[0]?.title, "Fight Tactical Watch");
+  assert.equal(days[1]?.sessions?.[0]?.title, "Tactical Focus");
   assert.equal(days[1]?.sessions?.[0]?.blocks?.[0]?.display_name, "Pocket Exchange Map");
   assert.deepEqual(days[1]?.sessions?.[0]?.blocks?.[0]?.coaching_cues, [
     "Purpose: SPP pocket planning for a brawler.",
@@ -1206,7 +1206,7 @@ test("late-fight raw output becomes clear notes, contact cards, and exercise car
   assert.deepEqual(neuralBlocks[1]?.regression_options, ["2 sets x 3 with lighter load."]);
   assert.equal(neuralBlocks[1]?.coaching_cues?.[0], "Stop: any sharp shoulder pain or new wound bleeding.");
 
-  assert.deepEqual(days[4]?.sessions?.map((session) => session.title), ["Fight-Speed Primer", "Fight Tactical Watch"]);
+  assert.deepEqual(days[4]?.sessions?.map((session) => session.title), ["Fight-Speed Primer", "Tactical Focus"]);
   assert.deepEqual(days[6]?.sessions?.map((session) => session.title), ["Fight-week freshness", "Light Combat / Technical"]);
   assert.equal(days[7]?.today_card?.coach_led_contact?.startsWith("Technical-only contact today"), true);
   assert.equal(days[7]?.sessions?.[0]?.title, "Tactical Cue Card");
@@ -1240,7 +1240,7 @@ test("does not swallow dashed exercise prose that mentions no extra S&C", () => 
   assert.equal(day?.sessions?.[0]?.blocks?.[0]?.display_name, "Recovery reset");
 });
 
-test("a Fight Tactical Watch day renders as one drill block, not one block per step", () => {
+test("a Tactical Focus day renders as one drill block, not one block per step", () => {
   // Regression for the shredded Tactical Watch card. The watch used to ship its
   // own layout — a bare drill-name line, `Duration:` / `Prescription:` headers,
   // then one bullet per instruction — and every one of those peer-level lines
@@ -1251,7 +1251,7 @@ test("a Fight Tactical Watch day renders as one drill block, not one block per s
   // now emits the shared session-body contract this asserts.
   const plan = buildStructuredPlanFromText(
     [
-      "D-11 (Tuesday) — Fight Tactical Watch",
+      "D-11 (Tuesday) — Tactical Focus",
       "Why: Know what happens after the first punches so pocket exchanges stay planned rather than chaotic.",
       "- Pocket Exchange Map: 10 minutes, tactical review only. No physical load.",
       "  Step 1: Identify the opponent's most common pocket sequence.",
@@ -1268,7 +1268,7 @@ test("a Fight Tactical Watch day renders as one drill block, not one block per s
   );
 
   const session = plan.weeks?.[0]?.days?.[0]?.sessions?.[0];
-  assert.equal(session?.title, "Fight Tactical Watch");
+  assert.equal(session?.title, "Tactical Focus");
   // The objective is the day's own Why — never the drill name or its duration.
   assert.equal(
     session?.objective,

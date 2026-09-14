@@ -88,12 +88,24 @@ _VERIFIED_LOW_COST_LEVELS = frozenset(
 _PRE_HARD_COST_FIELDS = ("impact_cost", "landing_cost", "eccentric_cost", "soreness_risk")
 
 
+# "2 x 20 m", "3 x 30s", "4 x 20 km" — the second number carries a distance or
+# time unit, so it is NOT a rep count. A goal-preservation microdose is written
+# this way ("2 x 20 m @ RPE 7"); reading its 20 metres as 20 reps let the
+# countdown overlay rewrite the dose to "2 x 3" and silently drop the unit.
+_NON_REP_SECOND_TERM = re.compile(
+    r"\s*(?:m|km|s|sec|secs|second|seconds|min|mins|minute|minutes)\b", re.I
+)
+
+
 def _parse_sets_reps(prescription: str) -> tuple[int | None, int | None]:
     text = str(prescription or "")
-    match = re.search(r"\b(\d+)\s*[xX×]\s*(\d+)\b", text)
-    if not match:
-        return None, None
-    return int(match.group(1)), int(match.group(2))
+    for match in re.finditer(r"\b(\d+)\s*[xX×]\s*(\d+)\b", text):
+        if _NON_REP_SECOND_TERM.match(text[match.end():]):
+            # Distance/time dose: leave it to the non-rep handling, which keeps
+            # the unit and reduces the leading count instead.
+            continue
+        return int(match.group(1)), int(match.group(2))
+    return None, None
 
 
 def _rpe_ceiling(rpe_cap: Any) -> int | None:
@@ -224,12 +236,69 @@ def _slot_quality_class_effective(slot: dict[str, Any]) -> str:
     return ""
 
 
+# Dosing units that are not reps: distance, seconds, a per-side complete cycle,
+# or a contrast pair's two components. Only consulted once the "N x M" parse has
+# already failed, so an ordinary rep dose is never matched.
+_NON_REP_DOSE_PATTERN = re.compile(r"\bper side\b|\d\s*m\b|\d\s*s\b|\u2192", re.IGNORECASE)
+
+
+def _is_non_rep_dose(prescription: str) -> bool:
+    return bool(_NON_REP_DOSE_PATTERN.search(str(prescription or "")))
+
+
+# A non-rep dose still opens with its own volume count -- "3-5 holds x 10-20s",
+# "3-5 carries over 20-40 m", "3-4 rounds: ...", "1-2 sets of 1-2 reps per
+# side". That leading count is the countdown band's reduction lever: capping it
+# lowers total volume while every unit downstream of it is left untouched.
+_LEADING_COUNT_PATTERN = re.compile(r"^(\s*)(\d+)(?:\s*[\u2013-]\s*(\d+))?(?=\s*\D)")
+
+# Only needed so a count reduced to exactly one does not read "1 sets".
+_SINGULAR_COUNT_NOUNS = {
+    "sets": "set",
+    "carries": "carry",
+    "rounds": "round",
+    "holds": "hold",
+    "efforts": "effort",
+    "pushes": "push",
+}
+
+
+def _reduce_leading_count(prescription: str, max_count: int) -> str:
+    """Cap a non-rep dose's leading volume count. Reduce-only; unit preserved.
+
+    Returns the prescription unchanged when it does not open with a count, or
+    when the count is already at or below ``max_count`` -- the countdown band
+    may never raise a dose.
+    """
+    match = _LEADING_COUNT_PATTERN.match(prescription)
+    if not match or max_count < 1:
+        return prescription
+    low = int(match.group(2))
+    high = int(match.group(3)) if match.group(3) else low
+    new_high = min(high, max_count)
+    new_low = min(low, new_high)
+    if (new_low, new_high) == (low, high):
+        return prescription
+    count = f"{new_low}" if new_low == new_high else f"{new_low}\u2013{new_high}"
+    tail = prescription[match.end():]
+    if new_low == new_high == 1:
+        # The noun may carry trailing punctuation ("3-4 rounds: ..."), so match
+        # the word itself rather than splitting on whitespace.
+        noun_match = re.match(r"(\s*)([A-Za-z]+)", tail)
+        if noun_match:
+            singular = _SINGULAR_COUNT_NOUNS.get(noun_match.group(2).lower())
+            if singular:
+                tail = f"{noun_match.group(1)}{singular}{tail[noun_match.end():]}"
+    return f"{match.group(1)}{count}{tail}"
+
+
 def _effective_counts(
     *,
     base_sets: int | None,
     base_reps: int | None,
     role_kind: str,
     strength_cap: dict[str, Any],
+    base_prescription: str = "",
 ) -> tuple[int | None, int | None, bool]:
     """Return ``(effective_sets, effective_reps, loaded)`` for one slot.
 
@@ -249,11 +318,27 @@ def _effective_counts(
             return None, None, False
 
     if role_kind in {"anchor", "hybrid"}:
+        # A dose counted in something other than reps -- a carry in metres, a
+        # per-side quality cycle, a timed hold, a contrast pair's two components
+        # -- keeps its own unit: substituting the cap's reps would replace the
+        # whole prescription and drop the pair's explosive half or the get-up's
+        # "per side". It is still reduced, through its leading set/round count
+        # (see ``_format_effective_prescription``), so the countdown band keeps
+        # a real volume lever and is not reduced to allow/forbid. A rep dose the
+        # NxM regex merely could not read ("5 sets x 8 reps") is NOT covered
+        # here and still takes the numeric cap below.
+        non_rep = (
+            base_sets is None
+            and base_reps is None
+            and _is_non_rep_dose(base_prescription)
+        )
         sets = (
             min(base_sets, max_sets)
             if base_sets is not None and max_sets is not None
             else (base_sets if base_sets is not None else max_sets)
         )
+        if non_rep:
+            return sets, None, True
         reps = (
             min(base_reps, max_reps)
             if base_reps is not None and max_reps is not None
@@ -310,9 +395,18 @@ def _format_effective_prescription(
 ) -> str:
     if sets is None or reps is None:
         # Only a loaded lift forbidden by the countdown band is suppressed.
-        # Timed isometrics, throws, primers and support work often have a valid
-        # non-NxM bank prescription and must retain it verbatim.
-        return _NO_LOADED_LIFTING if suppressed_loaded_lift else base_prescription
+        if suppressed_loaded_lift:
+            return _NO_LOADED_LIFTING
+        # Timed isometrics, carries, per-side cycles and contrast pairs keep
+        # their own unit rather than being rewritten as reps -- but the band's
+        # set ceiling still applies, to their leading volume count. This is the
+        # one reduction lever these doses have; without it they would be immune
+        # to everything except an outright no-loaded-lifting band.
+        if isinstance(sets, int) and _is_non_rep_dose(base_prescription):
+            return _reduce_leading_count(base_prescription, sets)
+        # Throws, primers and other support work with no recognised unit retain
+        # their bank prescription verbatim.
+        return base_prescription
     if sets == 0 or reps == 0:
         return _NO_LOADED_LIFTING
     dose = f"{sets} x {reps}"
@@ -510,6 +604,7 @@ def resolve_strength_slot_prescription(
         base_reps=base_reps,
         role_kind=kind,
         strength_cap=cap,
+        base_prescription=base_prescription,
     )
 
     # Readiness / cut / injury state can only pull the dose down further.
@@ -870,11 +965,17 @@ def apply_effective_strength_prescriptions(
                 role["scheduled_d_day"] = scheduled_d_day
                 envelope["scheduled_d_day"] = scheduled_d_day
             role["effective_strength_envelope"] = envelope
-        if not isinstance(role.get("strength_dose_cap"), dict):
-            continue
-        scheduled_d_day = role_d_day(week, role)
-        if scheduled_d_day is not None:
-            role["scheduled_d_day"] = scheduled_d_day
+        # A closed-membership strength role always carries its selected bank
+        # dose forward, whether or not a scheduled-day cap applies.  When a cap
+        # exists ``resolve_strength_slot_prescription`` reshapes the dose to the
+        # ceiling; with no cap it returns the exercise-bank dose unchanged.  The
+        # scheduled-day metadata below stays cap-only so a normal-camp role is
+        # never labelled as a countdown day.
+        has_dose_cap = isinstance(role.get("strength_dose_cap"), dict)
+        if has_dose_cap:
+            scheduled_d_day = role_d_day(week, role)
+            if scheduled_d_day is not None:
+                role["scheduled_d_day"] = scheduled_d_day
 
         if not isinstance(assignments, list):
             continue
@@ -911,7 +1012,11 @@ def apply_effective_strength_prescriptions(
         if not resolved:
             continue
         role["effective_strength_prescriptions"] = resolved
-        envelope = _build_role_envelope(role, resolved)
-        if envelope:
-            role["effective_strength_envelope"] = envelope
+        # The numeric loaded-strength ceiling envelope is a scheduled-day cap
+        # artefact.  A normal-camp role has no cap to summarise and keeps the
+        # complete-allow-list envelope already built above.
+        if has_dose_cap:
+            envelope = _build_role_envelope(role, resolved)
+            if envelope:
+                role["effective_strength_envelope"] = envelope
     return weekly_role_map

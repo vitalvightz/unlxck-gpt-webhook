@@ -33,7 +33,11 @@
       "mech_systemic_fatigue",
       "mech_lower_hip_hinge",
       "mech_ballistic"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Aerobic power circuits",
@@ -66,7 +70,11 @@
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Pad EMOM (5x5 format)",
@@ -82,6 +90,8 @@
       "glycolytic",
       "shoulders",
       "reactive",
+      "conditioning",
+      "work_capacity",
       "mech_upper_press",
       "mech_trunk_rotation",
       "mech_shoulder_overhead",
@@ -107,7 +117,12 @@
       "d21_to_d14"
     ],
     "block_if_fight_within_days": 10,
-    "rest_sec": 30
+    "rest_sec": 30,
+    "round_based": true,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Reaction Ball Drills",
@@ -145,7 +160,11 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Nasal Jog",
@@ -173,7 +192,11 @@
       "mech_lower_lunge",
       "mech_systemic_fatigue"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Grapple Circuits (High Pace)",
@@ -208,7 +231,11 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability"
     ],
-    "rest_sec": 30
+    "rest_sec": 30,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sled Sprint Repeats",
@@ -247,7 +274,11 @@
       "mech_landing_impact",
       "mech_lower_hip_hinge",
       "mech_reactive"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Jump Rope Conditioning",
@@ -282,7 +313,11 @@
       "mech_lower_lunge",
       "mech_reactive",
       "mech_reactive_rebound"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Tempo Hill Runs",
@@ -314,7 +349,11 @@
       "mech_lower_hip_hinge",
       "mech_lower_lunge",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Shadowboxing Intervals",
@@ -330,6 +369,8 @@
       "reactive",
       "shoulders",
       "conditioning",
+      "glycolytic",
+      "work_capacity",
       "mech_upper_press",
       "mech_trunk_rotation",
       "mech_shoulder_overhead",
@@ -350,7 +391,12 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "round_based": true,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Nasal Breathing Ruck March",
@@ -379,7 +425,11 @@
       "mech_trunk_stability",
       "mech_upper_carry"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Pool Running (Weight Belt)",
@@ -407,7 +457,11 @@
       "mech_systemic_fatigue"
     ],
     "rpe": 6,
-    "intensity": "zone 2"
+    "intensity": "zone 2",
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Bike Zone 2 (Nasal Only)",
@@ -441,7 +495,11 @@
       "d6_to_d5"
     ],
     "rpe": 4,
-    "intensity": "zone 2"
+    "intensity": "zone 2",
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Swim Intervals (Freestyle)",
@@ -474,7 +532,11 @@
       "mech_upper_pull"
     ],
     "rpe": 4,
-    "intensity": "zone 2"
+    "intensity": "zone 2",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Step Mill (No Hands)",
@@ -505,7 +567,11 @@
       "mech_systemic_fatigue"
     ],
     "rpe": 6,
-    "intensity": "zone 2"
+    "intensity": "zone 2",
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Shadowboxing (Light Pace)",
@@ -515,7 +581,7 @@
       "TAPER"
     ],
     "system": "aerobic",
-    "duration": "3x10min rounds",
+    "duration": "3x5min rounds",
     "tags": [
       "skill",
       "mech_upper_press",
@@ -523,9 +589,9 @@
       "mech_systemic_fatigue"
     ],
     "notes": "Focus on technique, not intensity",
-    "work_sec": 600,
+    "work_sec": 300,
     "rounds": 3,
-    "total_minutes": 30.0,
+    "total_minutes": 15.0,
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
@@ -540,7 +606,12 @@
       "d6_to_d5"
     ],
     "rpe": 4,
-    "intensity": "low"
+    "intensity": "low",
+    "round_based": true,
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Rowing (Zone 2)",
@@ -572,7 +643,11 @@
       "mech_upper_pull"
     ],
     "rpe": 4,
-    "intensity": "zone 2"
+    "intensity": "zone 2",
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Hiking (Weighted Vest)",
@@ -602,7 +677,11 @@
       "mech_trunk_stability"
     ],
     "rpe": 6,
-    "intensity": "zone 2"
+    "intensity": "zone 2",
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Jump Rope (Recovery Pace)",
@@ -639,7 +718,11 @@
       "shin"
     ],
     "rpe": 4,
-    "intensity": "low"
+    "intensity": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Sled Drag Walk",
@@ -675,7 +758,11 @@
       "mech_trunk_stability"
     ],
     "rpe": 7,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Recumbent Bike",
@@ -710,7 +797,11 @@
       "d6_to_d5"
     ],
     "rpe": 6,
-    "intensity": "zone 2"
+    "intensity": "zone 2",
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Arm Ergometer",
@@ -739,40 +830,13 @@
       "mech_upper_pull"
     ],
     "rpe": 6,
-    "intensity": "zone 2"
+    "intensity": "zone 2",
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
-  {
-    "name": "Yoga Flow (Dynamic)",
-    "equipment": [],
-    "phases": [
-      "GPP",
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "duration": "45min",
-    "tags": [
-      "mobility",
-      "mech_trunk_stability",
-      "mech_shoulder_overhead"
-    ],
-    "notes": "Emphasize hip/shoulder ROM",
-    "work_sec": 2700,
-    "total_minutes": 45,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_shoulder_overhead",
-      "mech_trunk_stability"
-    ],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5"
-    ],
-    "rpe": 4,
-    "intensity": "low"
-  },
+
   {
     "name": "Farmers Walk (Light)",
     "equipment": [
@@ -804,7 +868,11 @@
       "mech_upper_carry"
     ],
     "rpe": 7,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Stair Climbing (Recovery)",
@@ -832,7 +900,11 @@
       "mech_systemic_fatigue"
     ],
     "rpe": 4,
-    "intensity": "low"
+    "intensity": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Elliptical (Nasal Only)",
@@ -867,7 +939,11 @@
       "d4_to_d2"
     ],
     "rpe": 4,
-    "intensity": "zone 2"
+    "intensity": "zone 2",
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Low-intensity capacity circuits (non-steady)",
@@ -894,36 +970,13 @@
       "mech_trunk_stability"
     ],
     "rpe": 6,
-    "intensity": "zone 2"
+    "intensity": "zone 2",
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
-  {
-    "name": "Breath Control Drills",
-    "equipment": [],
-    "phases": [
-      "GPP",
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "duration": "15min",
-    "tags": [
-      "recovery"
-    ],
-    "notes": "Diaphragmatic focus",
-    "work_sec": 900,
-    "total_minutes": 15,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
-    ],
-    "rpe": 6,
-    "intensity": "low"
-  },
+
   {
     "name": "Sandbag Carry (Light)",
     "equipment": [
@@ -956,7 +1009,11 @@
       "mech_upper_press"
     ],
     "rpe": 4,
-    "intensity": "low"
+    "intensity": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Agility Ladder (Recovery)",
@@ -985,7 +1042,11 @@
     "late_windows": [
       "d13_to_d8",
       "d7"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Band-Resisted Broad Jump",
@@ -1022,7 +1083,11 @@
       "mech_reactive"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Medicine Ball Rotational Throw",
@@ -1057,7 +1122,11 @@
       "mech_trunk_rotation"
     ],
     "rpe": 8,
-    "intensity": "high"
+    "intensity": "high",
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Depth Jump to Sprint",
@@ -1097,7 +1166,11 @@
     ],
     "rpe": 8,
     "intensity": "high",
-    "rest_sec": 120
+    "rest_sec": 120,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Plyo Push-Up to Sprint",
@@ -1139,7 +1212,11 @@
       "mech_upper_press"
     ],
     "rpe": 8,
-    "intensity": "high"
+    "intensity": "high",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sled Sprint (Empty)",
@@ -1181,7 +1258,11 @@
       "mech_reactive"
     ],
     "rpe": 8,
-    "intensity": "high"
+    "intensity": "high",
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Box Jump (Stick Landing)",
@@ -1218,7 +1299,11 @@
     ],
     "rpe": 6,
     "intensity": "moderate",
-    "rest_sec": 90
+    "rest_sec": 90,
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "KB Swing (Heavy)",
@@ -1253,7 +1338,11 @@
       "mech_lower_hip_hinge"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Alternating Bounds",
@@ -1288,7 +1377,11 @@
     ],
     "rpe": 6,
     "intensity": "moderate",
-    "rest_sec": 120
+    "rest_sec": 120,
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Med Ball Chest Pass (Reactive)",
@@ -1323,7 +1416,11 @@
     ],
     "rpe": 6,
     "intensity": "moderate",
-    "rest_sec": 45
+    "rest_sec": 45,
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Hurdle Hop (Stick Landing)",
@@ -1362,7 +1459,11 @@
     ],
     "rpe": 6,
     "intensity": "moderate",
-    "rest_sec": 120
+    "rest_sec": 120,
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Band-Resisted Sprint Start",
@@ -1401,7 +1502,11 @@
       "mech_reactive"
     ],
     "rpe": 8,
-    "intensity": "high"
+    "intensity": "high",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Depth Drop to Vertical",
@@ -1440,7 +1545,11 @@
     ],
     "rpe": 8,
     "intensity": "high",
-    "rest_sec": 120
+    "rest_sec": 120,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sled Push (Light)",
@@ -1476,7 +1585,11 @@
       "mech_trunk_stability"
     ],
     "rpe": 8,
-    "intensity": "high"
+    "intensity": "high",
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Single-Leg Hop (Stabilize)",
@@ -1509,7 +1622,11 @@
     ],
     "rpe": 6,
     "intensity": "moderate",
-    "rest_sec": 90
+    "rest_sec": 90,
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Wall Ball Shot (Max Height)",
@@ -1544,7 +1661,11 @@
     ],
     "rpe": 8,
     "intensity": "high",
-    "rest_sec": 90
+    "rest_sec": 90,
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Broad Jump (Stick Landing)",
@@ -1577,7 +1698,11 @@
     ],
     "rpe": 6,
     "intensity": "moderate",
-    "rest_sec": 120
+    "rest_sec": 120,
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Split Jump (Alternating)",
@@ -1614,7 +1739,11 @@
     ],
     "rpe": 6,
     "intensity": "moderate",
-    "rest_sec": 90
+    "rest_sec": 90,
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Med Ball Slam (Rotational)",
@@ -1649,7 +1778,11 @@
     ],
     "rpe": 6,
     "intensity": "moderate",
-    "rest_sec": 60
+    "rest_sec": 60,
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Box Jump-Over (Continuous)",
@@ -1688,7 +1821,11 @@
     ],
     "rpe": 6,
     "intensity": "moderate",
-    "rest_sec": 120
+    "rest_sec": 120,
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Band-Resisted Lateral Bounds",
@@ -1725,7 +1862,11 @@
     ],
     "rpe": 6,
     "intensity": "moderate",
-    "rest_sec": 90
+    "rest_sec": 90,
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Thai Clinch EMOM",
@@ -1762,7 +1903,11 @@
       "mech_upper_pull"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Takedown Sprawl Circuit",
@@ -1798,7 +1943,11 @@
       "mech_trunk_stability"
     ],
     "rpe": 8,
-    "intensity": "high"
+    "intensity": "high",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Pad Round Triples",
@@ -1811,6 +1960,9 @@
     "tags": [
       "striking",
       "shoulders",
+      "conditioning",
+      "glycolytic",
+      "work_capacity",
       "mech_upper_press",
       "mech_trunk_rotation",
       "mech_shoulder_overhead",
@@ -1831,7 +1983,12 @@
       "mech_upper_press"
     ],
     "rpe": 4,
-    "intensity": "low"
+    "intensity": "low",
+    "round_based": true,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Grappler Escape Chains",
@@ -1864,7 +2021,11 @@
     ],
     "rpe": 6,
     "intensity": "moderate",
-    "rest_sec": 90
+    "rest_sec": 90,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Wall Drill Intervals",
@@ -1897,7 +2058,11 @@
       "mech_upper_press"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sandbag Shouldering",
@@ -1937,7 +2102,11 @@
       "mech_upper_press"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Battle Rope Gauntlet",
@@ -1978,7 +2147,11 @@
       "mech_trunk_stability"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Tire Flip Sprints",
@@ -2016,7 +2189,11 @@
       "mech_reactive"
     ],
     "rpe": 8,
-    "intensity": "high"
+    "intensity": "high",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Kettlebell Snatch Test",
@@ -2053,7 +2230,11 @@
       "mech_systemic_fatigue"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sled Drag Intervals",
@@ -2097,7 +2278,11 @@
       "mech_upper_pull"
     ],
     "rpe": 8,
-    "intensity": "high"
+    "intensity": "high",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sprawl-Burpee Complex",
@@ -2132,7 +2317,11 @@
       "mech_upper_press"
     ],
     "rpe": 8,
-    "intensity": "high"
+    "intensity": "high",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Rope Climb Sprints",
@@ -2174,7 +2363,11 @@
       "mech_upper_pull"
     ],
     "rpe": 8,
-    "intensity": "high"
+    "intensity": "high",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Med Ball Circuit",
@@ -2207,7 +2400,11 @@
       "mech_trunk_rotation"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Hill Sprint Repeats",
@@ -2246,7 +2443,11 @@
       "mech_reactive"
     ],
     "rpe": 8,
-    "intensity": "high"
+    "intensity": "high",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Wrestler Shot Series",
@@ -2283,7 +2484,11 @@
       "mech_reactive"
     ],
     "rpe": 8,
-    "intensity": "high"
+    "intensity": "high",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Stair Running Intervals",
@@ -2318,7 +2523,11 @@
       "mech_systemic_fatigue"
     ],
     "rpe": 8,
-    "intensity": "high"
+    "intensity": "high",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Heavy Bag Power Rounds",
@@ -2333,6 +2542,9 @@
     "tags": [
       "striking",
       "shoulders",
+      "conditioning",
+      "glycolytic",
+      "work_capacity",
       "mech_ballistic",
       "mech_upper_press",
       "mech_trunk_rotation",
@@ -2358,7 +2570,12 @@
       "mech_upper_press"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "round_based": true,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sandbag Get-Up Complex",
@@ -2393,7 +2610,11 @@
       "mech_upper_press"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sledgehammer Strikes",
@@ -2433,7 +2654,11 @@
       "mech_upper_press"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Defensive Movement Drill",
@@ -2466,7 +2691,11 @@
       "mech_trunk_rotation"
     ],
     "rpe": 4,
-    "intensity": "low"
+    "intensity": "low",
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Ground-N-Pound Intervals",
@@ -2499,7 +2728,11 @@
       "mech_upper_press"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Clinch Knee-to-Teep Drill",
@@ -2532,7 +2765,11 @@
       "mech_trunk_stability"
     ],
     "rpe": 4,
-    "intensity": "low"
+    "intensity": "low",
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Towel Pull-Up Sprints",
@@ -2569,7 +2806,11 @@
       "mech_upper_pull"
     ],
     "rpe": 8,
-    "intensity": "high"
+    "intensity": "high",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Plyo Push-Up Burpee",
@@ -2604,7 +2845,11 @@
     ],
     "rpe": 4,
     "intensity": "low",
-    "rest_sec": 90
+    "rest_sec": 90,
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sled Push-Pull Complex",
@@ -2644,7 +2889,11 @@
       "mech_upper_pull"
     ],
     "rpe": 8,
-    "intensity": "high"
+    "intensity": "high",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Wall Ball Conditioning",
@@ -2679,7 +2928,11 @@
       "mech_systemic_fatigue"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Agility Ladder Power Drills",
@@ -2715,7 +2968,11 @@
       "mech_trunk_stability"
     ],
     "rpe": 8,
-    "intensity": "high"
+    "intensity": "high",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sandbag Bearhug Carry",
@@ -2752,7 +3009,11 @@
       "mech_upper_press"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Striking Combos Under Fatigue",
@@ -2765,6 +3026,9 @@
     "tags": [
       "boxing",
       "shoulders",
+      "conditioning",
+      "glycolytic",
+      "work_capacity",
       "mech_upper_press",
       "mech_trunk_rotation",
       "mech_shoulder_overhead",
@@ -2785,7 +3049,12 @@
       "mech_upper_press"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "round_based": true,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Tire Slam Intervals",
@@ -2824,7 +3093,11 @@
       "mech_trunk_rotation"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Defensive Level Change Drill",
@@ -2858,7 +3131,11 @@
       "mech_reactive"
     ],
     "rpe": 8,
-    "intensity": "high"
+    "intensity": "high",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Plyo Step-Up Jumps",
@@ -2896,7 +3173,11 @@
       "mech_reactive"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Rope Wave Sprints",
@@ -2935,7 +3216,11 @@
       "mech_shoulder_overhead"
     ],
     "rpe": 8,
-    "intensity": "high"
+    "intensity": "high",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Overhead Carry Complex",
@@ -2970,7 +3255,11 @@
       "mech_upper_carry"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sprawl-to-Stand Sprint",
@@ -3007,7 +3296,11 @@
       "mech_reactive"
     ],
     "rpe": 8,
-    "intensity": "high"
+    "intensity": "high",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Med Ball Reaction Drill",
@@ -3042,7 +3335,11 @@
       "mech_trunk_rotation"
     ],
     "rpe": 8,
-    "intensity": "high"
+    "intensity": "high",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Kettlebell Snatch Complex",
@@ -3077,7 +3374,11 @@
       "mech_shoulder_overhead"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sandbag Clean & Carry",
@@ -3114,7 +3415,11 @@
       "mech_upper_press"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Striking Defense Circuits",
@@ -3127,6 +3432,9 @@
     "tags": [
       "footwork",
       "reactive",
+      "conditioning",
+      "glycolytic",
+      "work_capacity",
       "mech_reactive",
       "mech_change_of_direction",
       "mech_upper_press",
@@ -3151,7 +3459,12 @@
       "mech_upper_press"
     ],
     "rpe": 4,
-    "intensity": "low"
+    "intensity": "low",
+    "round_based": true,
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sled Drag Sprint Complex",
@@ -3192,7 +3505,11 @@
       "mech_upper_pull"
     ],
     "rpe": 8,
-    "intensity": "high"
+    "intensity": "high",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "MMA Gauntlet (Strike-Grapple-Strike)",
@@ -3225,7 +3542,11 @@
       "mech_upper_press"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Boxing Punishment Drill (Bad Position Rounds)",
@@ -3238,6 +3559,9 @@
     "tags": [
       "boxing",
       "mental_toughness",
+      "conditioning",
+      "glycolytic",
+      "work_capacity",
       "mech_upper_press",
       "mech_trunk_rotation",
       "mech_shoulder_overhead",
@@ -3257,7 +3581,12 @@
       "mech_upper_press"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "round_based": true,
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Wrestler Chain Reaction Sparring",
@@ -3291,7 +3620,11 @@
       "mech_systemic_fatigue"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Heat Acclimation Rounds",
@@ -3317,7 +3650,11 @@
       "mech_systemic_fatigue"
     ],
     "rpe": 6,
-    "intensity": "zone 2"
+    "intensity": "zone 2",
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Water Jug Carries (No Sled)",
@@ -3351,7 +3688,11 @@
       "mech_upper_carry"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Tire Flip Drag (No Sled)",
@@ -3385,7 +3726,11 @@
       "mech_systemic_fatigue"
     ],
     "rpe": 8,
-    "intensity": "high"
+    "intensity": "high",
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Backpack Step-Ups (No Weight Vest)",
@@ -3415,69 +3760,14 @@
       "mech_trunk_stability"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
-  {
-    "name": "Dynamic Visual Tracking Drills",
-    "equipment": [],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "cognitive",
-    "duration": "3x3min (track moving objects)",
-    "tags": [
-      "visual_processing",
-      "reaction",
-      "mech_reactive"
-    ],
-    "notes": "OBJECTS: Use 2-3 colored balls. SPEED: Progress from slow to fast",
-    "work_sec": 180,
-    "rounds": 3,
-    "total_minutes": 9,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "moderate",
-    "mechanical_risk_tags": [
-      "mech_reactive"
-    ],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5"
-    ],
-    "rpe": 6,
-    "intensity": "low"
-  },
-  {
-    "name": "Tactical Breathing Recovery",
-    "equipment": [],
-    "phases": [
-      "GPP",
-      "TAPER"
-    ],
-    "system": "cognitive",
-    "duration": "5x1min (4-7-8 pattern)",
-    "tags": [
-      "parasympathetic",
-      "recovery"
-    ],
-    "notes": "POST-SESSION: Use after high-CNS workouts. POSITION: Supine preferred",
-    "work_sec": 60,
-    "rounds": 5,
-    "total_minutes": 5,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "moderate",
-    "mechanical_risk_tags": [],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
-    ],
-    "rpe": 6,
-    "intensity": "low"
-  },
+
+
   {
     "name": "KB Swing Intervals",
     "equipment": [
@@ -3512,7 +3802,11 @@
       "mech_grip_support",
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sled Push Sprints",
@@ -3555,7 +3849,11 @@
       "mech_lower_hip_hinge",
       "mech_reactive",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Med Ball Slams",
@@ -3591,7 +3889,11 @@
       "mech_shoulder_overhead",
       "mech_systemic_fatigue",
       "mech_trunk_rotation"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Treadmill Hill Sprints",
@@ -3633,7 +3935,11 @@
       "mech_lower_lunge",
       "mech_reactive",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Battle Rope Waves",
@@ -3674,7 +3980,11 @@
       "mech_shoulder_overhead",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sandbag Shoulder Intervals",
@@ -3715,7 +4025,11 @@
       "mech_shoulder_overhead",
       "mech_systemic_fatigue",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Prowler Sprint Intervals",
@@ -3759,7 +4073,11 @@
       "mech_lower_hip_hinge",
       "mech_reactive",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Burpee Broad Jumps",
@@ -3797,7 +4115,11 @@
       "mech_reactive",
       "mech_systemic_fatigue",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Clap Push-Up Sprints",
@@ -3834,7 +4156,11 @@
       "mech_reactive",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Lateral Bound Intervals",
@@ -3874,7 +4200,11 @@
       "mech_reactive",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Wall Ball Shot Intervals",
@@ -3910,7 +4240,11 @@
       "mech_lower_squat",
       "mech_shoulder_overhead",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Jump Squat Intervals",
@@ -3948,7 +4282,11 @@
       "mech_lower_squat",
       "mech_reactive",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Tire Flip + Short Sprint",
@@ -3989,7 +4327,11 @@
       "mech_lower_hip_hinge",
       "mech_reactive"
     ],
-    "rest_sec": 120
+    "rest_sec": 120,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Defensive Sprawl Intervals",
@@ -4004,6 +4346,7 @@
     "tags": [
       "eccentric",
       "reactive",
+      "work_capacity",
       "mech_lower_hip_hinge",
       "mech_reactive",
       "mech_trunk_stability",
@@ -4027,7 +4370,11 @@
       "mech_reactive",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Single-Arm KB Snatch",
@@ -4067,7 +4414,11 @@
       "mech_grip_support",
       "mech_lower_hip_hinge",
       "mech_shoulder_overhead"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Agility Ladder Sprints",
@@ -4106,7 +4457,11 @@
       "mech_lower_lunge",
       "mech_reactive",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Heavy Bag Power Intervals",
@@ -4123,6 +4478,8 @@
     "tags": [
       "shoulders",
       "rotational",
+      "glycolytic",
+      "work_capacity",
       "mech_ballistic",
       "mech_upper_press",
       "mech_trunk_rotation",
@@ -4145,7 +4502,11 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sandbag Clean & Press",
@@ -4186,7 +4547,11 @@
       "mech_shoulder_overhead",
       "mech_upper_press"
     ],
-    "rest_sec": 120
+    "rest_sec": 120,
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Plyo Step-Up Intervals",
@@ -4226,7 +4591,11 @@
       "mech_lower_lunge",
       "mech_reactive",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Rope Climb + Short Sprint",
@@ -4270,7 +4639,11 @@
       "mech_reactive",
       "mech_upper_pull"
     ],
-    "rest_sec": 180
+    "rest_sec": 180,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Shadowboxing Power Bursts",
@@ -4306,7 +4679,11 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sled Drag Sprints",
@@ -4353,7 +4730,11 @@
       "mech_reactive",
       "mech_trunk_stability",
       "mech_upper_pull"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Med Ball Throw Circuit",
@@ -4390,7 +4771,11 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Broad Jump Repeats",
@@ -4426,7 +4811,11 @@
       "mech_lower_jump",
       "mech_reactive"
     ],
-    "rest_sec": 120
+    "rest_sec": 120,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Grapple Escapes Under Fatigue",
@@ -4441,6 +4830,9 @@
     "tags": [
       "grip",
       "reactive",
+      "conditioning",
+      "glycolytic",
+      "work_capacity",
       "mech_grip_intensive",
       "mech_trunk_stability",
       "mech_systemic_fatigue",
@@ -4460,7 +4852,11 @@
       "mech_grip_intensive",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Tempo Shadowboxing",
@@ -4501,7 +4897,11 @@
       "d6_to_d5",
       "d4_to_d2"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Recovery Cycling (Nasal Breathing)",
@@ -4540,7 +4940,11 @@
       "d7",
       "d6_to_d5"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Swimming (Freestyle Laps)",
@@ -4576,7 +4980,11 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability",
       "mech_upper_pull"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Incline Walk (Posture Focus)",
@@ -4616,7 +5024,11 @@
       "d6_to_d5",
       "d4_to_d2"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Rowing (Steady State)",
@@ -4651,7 +5063,11 @@
       "mech_trunk_stability",
       "mech_upper_pull"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Footwork Ladder (Continuous Flow)",
@@ -4685,7 +5101,11 @@
       "mech_lower_lunge",
       "mech_reactive",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Light Heavy Bag (Pacing Drill)",
@@ -4704,6 +5124,7 @@
       "striking",
       "conditioning",
       "low_cns",
+      "work_capacity",
       "mech_upper_press",
       "mech_trunk_rotation",
       "mech_systemic_fatigue"
@@ -4721,7 +5142,12 @@
       "mech_trunk_rotation",
       "mech_upper_press"
     ],
-    "rest_sec": 30
+    "rest_sec": 30,
+    "round_based": true,
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Defensive Movement Flow",
@@ -4756,7 +5182,11 @@
       "mech_change_of_direction",
       "mech_reactive",
       "mech_trunk_rotation"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Wall Drill Sparring (Light Tap)",
@@ -4789,7 +5219,12 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "round_based": true,
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Thai Clinch Walk (Light Resistance)",
@@ -4820,7 +5255,11 @@
     "mechanical_risk_tags": [
       "mech_grip_support",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "3-Min Round Intervals (Bag/Pads)",
@@ -4839,6 +5278,7 @@
       "glycolytic",
       "striking",
       "work_capacity",
+      "conditioning",
       "mech_upper_press",
       "mech_trunk_rotation",
       "mech_shoulder_overhead",
@@ -4855,7 +5295,13 @@
       "mech_trunk_rotation",
       "mech_upper_press"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "round_based": true,
+    "rounds": 5,
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "EMOM Jab-Cross",
@@ -4887,47 +5333,13 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
-  {
-    "name": "Dynamic Yoga for Fighters",
-    "equipment": [
-      "mat"
-    ],
-    "phases": [
-      "SPP",
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "mobility",
-    "duration": "30min",
-    "intensity": "low",
-    "tags": [
-      "aerobic",
-      "mobility",
-      "recovery",
-      "parasympathetic",
-      "mech_trunk_stability",
-      "mech_shoulder_overhead"
-    ],
-    "notes": "Hip/shoulder focus for combat athletes",
-    "work_sec": 1800,
-    "total_minutes": 30,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_shoulder_overhead",
-      "mech_trunk_stability"
-    ],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
-    ]
-  },
+
   {
     "name": "Breathwork + Slow Shadowboxing",
     "equipment": [],
@@ -4954,7 +5366,11 @@
     "mechanical_risk_tags": [
       "mech_upper_press"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Pool Running (No Impact)",
@@ -4991,7 +5407,11 @@
       "d6_to_d5",
       "d4_to_d2"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Prowler Push (Light, Continuous)",
@@ -5025,7 +5445,11 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Sandbag Carry (Bearhug)",
@@ -5066,7 +5490,11 @@
       "mech_trunk_stability",
       "mech_upper_carry",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Ruck March (20-30lbs)",
@@ -5101,7 +5529,11 @@
       "mech_trunk_stability",
       "mech_upper_carry"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Breath-Hold Shadowboxing Intervals",
@@ -5134,7 +5566,12 @@
       "mech_trunk_rotation",
       "mech_upper_press"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "round_based": true,
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Kettlebell Swings (EMOM Aerobic)",
@@ -5170,7 +5607,11 @@
       "mech_grip_support",
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sled Drag (Light, RPE 4)",
@@ -5207,7 +5648,11 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability",
       "mech_upper_pull"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Meditative Jump Rope (Eyes Closed)",
@@ -5241,44 +5686,13 @@
       "mech_landing_impact",
       "mech_reactive",
       "mech_reactive_rebound"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
-  {
-    "name": "Striking Combos @ 20% Effort",
-    "equipment": [],
-    "phases": [
-      "SPP",
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "shadowbox",
-    "duration": "15min continuous",
-    "intensity": "very low",
-    "tags": [
-      "aerobic",
-      "skill",
-      "striking",
-      "parasympathetic",
-      "mech_upper_press",
-      "mech_trunk_rotation"
-    ],
-    "notes": "Cooldown flow; zero fatigue",
-    "total_minutes": 15,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
-    ]
-  },
+
   {
     "name": "BJJ Flow Rolling (No Submissions)",
     "equipment": [
@@ -5310,7 +5724,11 @@
       "mech_grip_support",
       "mech_trunk_rotation",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Lateral Shuffle + Strike Drills",
@@ -5349,7 +5767,11 @@
       "mech_lower_lunge",
       "mech_systemic_fatigue",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Wrestler Chain Drills (50% Effort)",
@@ -5383,7 +5805,11 @@
       "mech_grip_support",
       "mech_lower_hip_hinge",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Muay Thai Skip Rope (Rhythm Focus)",
@@ -5419,7 +5845,11 @@
       "mech_lower_lunge",
       "mech_reactive",
       "mech_reactive_rebound"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Band-Resisted Jab/Cross (Slow Tempo)",
@@ -5454,71 +5884,11 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
-  },
-  {
-    "name": "Calf Raise Walk",
-    "equipment": [],
-    "phases": [
-      "SPP"
     ],
-    "system": "aerobic",
-    "modality": "walk",
-    "duration": "10min continuous",
-    "intensity": "low",
-    "tags": [
-      "aerobic",
-      "unilateral",
-      "rehab_friendly",
-      "low_impact",
-      "mech_systemic_fatigue",
-      "mech_lower_lunge"
-    ],
-    "notes": "Tibialis/calf endurance for kick defense",
-    "total_minutes": 10,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_lower_lunge",
-      "mech_systemic_fatigue"
-    ]
-  },
-  {
-    "name": "Cooldown Flow (Striking + Mobility)",
-    "equipment": [],
-    "phases": [
-      "SPP",
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "shadowbox",
-    "duration": "15min",
-    "intensity": "zone 1",
-    "tags": [
-      "aerobic",
-      "mobility",
-      "recovery",
-      "parasympathetic",
-      "mech_upper_press"
-    ],
-    "notes": "Post-training flush only (RPE 2)",
-    "work_sec": 900,
-    "total_minutes": 15,
-    "rpe": 2,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_upper_press"
-    ],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
-    ]
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Low Box Jump (Fast Reset)",
@@ -5553,7 +5923,11 @@
     ],
     "rpe": 6,
     "intensity": "moderate",
-    "rest_sec": 60
+    "rest_sec": 60,
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Pogo Jump Series (Mini Bounce)",
@@ -5593,7 +5967,11 @@
     ],
     "rpe": 6,
     "intensity": "moderate",
-    "rest_sec": 30
+    "rest_sec": 30,
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Band-Resisted Vertical Jump",
@@ -5630,7 +6008,11 @@
     ],
     "rpe": 4,
     "intensity": "low",
-    "rest_sec": 90
+    "rest_sec": 90,
+    "stress_class": "support",
+    "cost_class": "moderate",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Snapdown to Quick Hop",
@@ -5667,48 +6049,13 @@
     ],
     "rpe": 8,
     "intensity": "high",
-    "rest_sec": 60
+    "rest_sec": 60,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
-  {
-    "name": "Mini Hurdle Quick Steps",
-    "equipment": [
-      "hurdles"
-    ],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "duration": "4x10s, 30s rest",
-    "tags": [
-      "plyometric",
-      "speed",
-      "footwork",
-      "reactive",
-      "coordination",
-      "mech_reactive",
-      "mech_lower_jump",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "mech_lower_lunge"
-    ],
-    "notes": "Fast taps over 4–6” hurdles. Emphasize light contacts.",
-    "work_sec": 10,
-    "rest_sec": 30,
-    "rounds": 4,
-    "total_minutes": 2.17,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_lower_jump",
-      "mech_lower_lunge",
-      "mech_reactive"
-    ],
-    "rpe": 4,
-    "intensity": "low"
-  },
+
   {
     "name": "Med Ball Drop Catch to Jump",
     "equipment": [
@@ -5744,7 +6091,11 @@
     ],
     "rpe": 6,
     "intensity": "moderate",
-    "rest_sec": 90
+    "rest_sec": 90,
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Mini Box Depth Drop",
@@ -5781,7 +6132,11 @@
     ],
     "rpe": 6,
     "intensity": "moderate",
-    "rest_sec": 60
+    "rest_sec": 60,
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Band-Assisted Jump Reset",
@@ -5820,7 +6175,11 @@
     ],
     "rpe": 6,
     "intensity": "moderate",
-    "rest_sec": 75
+    "rest_sec": 75,
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Explosive Boxing Burst Intervals",
@@ -5861,7 +6220,11 @@
       "mech_trunk_rotation",
       "mech_upper_press"
     ],
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Reactive Shuffle Repeats",
@@ -5899,7 +6262,11 @@
     "mechanical_risk_tags": [
       "mech_reactive"
     ],
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Wall Reactive Jump (Cue Start)",
@@ -5934,7 +6301,11 @@
     ],
     "rpe": 6,
     "intensity": "moderate",
-    "rest_sec": 60
+    "rest_sec": 60,
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Quick Lateral Hop Tap",
@@ -5974,7 +6345,11 @@
     ],
     "rpe": 6,
     "intensity": "moderate",
-    "rest_sec": 30
+    "rest_sec": 30,
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Tuck Jump (Submax)",
@@ -6009,7 +6384,11 @@
     ],
     "rpe": 8,
     "intensity": "high",
-    "rest_sec": 90
+    "rest_sec": 90,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Band-Resisted Split Jump",
@@ -6048,7 +6427,11 @@
     "late_windows": [],
     "rpe": 4,
     "intensity": "low",
-    "rest_sec": 60
+    "rest_sec": 60,
+    "stress_class": "support",
+    "cost_class": "moderate",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Single-Leg Med Ball Toss Jump",
@@ -6085,7 +6468,11 @@
     ],
     "rpe": 8,
     "intensity": "high",
-    "rest_sec": 90
+    "rest_sec": 90,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Split Stance Hop Switch",
@@ -6125,7 +6512,11 @@
     ],
     "rpe": 4,
     "intensity": "low",
-    "rest_sec": 60
+    "rest_sec": 60,
+    "stress_class": "support",
+    "cost_class": "moderate",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Reactive Med Ball Chest Pass",
@@ -6165,7 +6556,11 @@
     ],
     "rpe": 6,
     "intensity": "moderate",
-    "rest_sec": 45
+    "rest_sec": 45,
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Plyo Push-Up on Knees",
@@ -6207,7 +6602,11 @@
     ],
     "rpe": 8,
     "intensity": "high",
-    "rest_sec": 60
+    "rest_sec": 60,
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Band-Resisted Straight Punch Release",
@@ -6250,7 +6649,11 @@
       "mech_upper_press"
     ],
     "rpe": 6,
-    "intensity": "moderate"
+    "intensity": "moderate",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Overhead Med Ball Slam (Snappy)",
@@ -6290,7 +6693,11 @@
     ],
     "rpe": 8,
     "intensity": "high",
-    "rest_sec": 60
+    "rest_sec": 60,
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Seated Med Ball Chest Pop",
@@ -6332,7 +6739,11 @@
     ],
     "rpe": 6,
     "intensity": "moderate",
-    "rest_sec": 45
+    "rest_sec": 45,
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Partner Manual Neck Resistance",
@@ -6367,7 +6778,11 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Neck Harness Flexion/Extension",
@@ -6398,7 +6813,11 @@
     "movement_cost": "moderate",
     "mechanical_risk_tags": [
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "moderate",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Assault Bike Zone 2 Steady",
@@ -6437,7 +6856,11 @@
       "d6_to_d5",
       "d4_to_d2"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Echo Bike Tempo Intervals",
@@ -6461,8 +6884,9 @@
     ],
     "notes": "Monumental work capacity builder without impact",
     "work_sec": 180,
+    "rest_sec": 120,
     "rounds": 4,
-    "total_minutes": 12,
+    "total_minutes": 18.0,
     "rpe": 9,
     "impact_cost": "low",
     "lactate_load": "high",
@@ -6470,7 +6894,11 @@
     "mechanical_risk_tags": [
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Stationary Bike Lactate Threshold",
@@ -6505,7 +6933,11 @@
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue"
     ],
-    "rest_sec": 180
+    "rest_sec": 180,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Rogue Echo Bike Recovery Spin",
@@ -6543,7 +6975,11 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Concept2 Rower Zone 3 Block",
@@ -6578,7 +7014,11 @@
       "mech_systemic_fatigue",
       "mech_upper_pull"
     ],
-    "rest_sec": 120
+    "rest_sec": 120,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Rower Pyramid (1-5-1min)",
@@ -6611,7 +7051,11 @@
       "mech_ballistic",
       "mech_lower_hip_hinge",
       "mech_upper_pull"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Air Dyne Bike Aerobic Base",
@@ -6642,7 +7086,11 @@
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "SkiErg Interval Complex",
@@ -6666,8 +7114,9 @@
     ],
     "notes": "Full-body erg work; minimal impact",
     "work_sec": 30,
+    "rest_sec": 30,
     "rounds": 6,
-    "total_minutes": 3,
+    "total_minutes": 5.5,
     "rpe": 9,
     "impact_cost": "low",
     "lactate_load": "high",
@@ -6675,7 +7124,11 @@
     "mechanical_risk_tags": [
       "mech_systemic_fatigue",
       "mech_upper_pull"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Hydrow Steady State",
@@ -6706,7 +7159,11 @@
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Assault Bike Capacity Builder",
@@ -6738,7 +7195,11 @@
     "mechanical_risk_tags": [
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Concept2 Rower Recovery Rows",
@@ -6777,7 +7238,11 @@
       "d6_to_d5",
       "d4_to_d2"
     ],
-    "rpe": 4
+    "rpe": 4,
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "BikeErg Power Repeats",
@@ -6813,7 +7278,11 @@
       "mech_ballistic",
       "mech_cns_high",
       "mech_lower_hip_hinge"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Watt Bike Tempo Climbs",
@@ -6848,7 +7317,11 @@
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "SkiErg Recovery Flow",
@@ -6875,7 +7348,11 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
-    "mechanical_risk_tags": []
+    "mechanical_risk_tags": [],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Sled Push Aerobic Intervals",
@@ -6908,7 +7385,11 @@
     "mechanical_risk_tags": [
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "moderate",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Sled Drag Tempo Complex",
@@ -6942,7 +7423,11 @@
     "mechanical_risk_tags": [
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sled Sprint Finisher",
@@ -6952,7 +7437,7 @@
     "phases": [
       "SPP"
     ],
-    "system": "ATP-PCr",
+    "system": "glycolytic",
     "modality": "sled",
     "duration": "6x20s sprint, 2:1 rest",
     "intensity": "max",
@@ -6973,14 +7458,18 @@
     "total_minutes": 5.33,
     "rpe": 9,
     "impact_cost": "low",
-    "lactate_load": "low",
+    "lactate_load": "high",
     "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_ballistic",
       "mech_landing_impact",
       "mech_lower_hip_hinge",
       "mech_reactive"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Prowler Light Push Conditioning",
@@ -7011,7 +7500,11 @@
     "mechanical_risk_tags": [
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sled Push/Drag Contrast",
@@ -7042,7 +7535,11 @@
     "mechanical_risk_tags": [
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sled Crawl Conditioning",
@@ -7076,7 +7573,11 @@
     "mechanical_risk_tags": [
       "mech_lower_hip_hinge",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "moderate",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Light Sled Steady Base",
@@ -7108,7 +7609,11 @@
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sled Push EMOM Capacity",
@@ -7140,7 +7645,11 @@
     "mechanical_risk_tags": [
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sled Harness Backward Drag",
@@ -7173,7 +7682,11 @@
     "mechanical_risk_tags": [
       "mech_lower_hip_hinge",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sled Push Recovery Flush",
@@ -7204,7 +7717,11 @@
     "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_lower_hip_hinge"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Pool Running Fartlek",
@@ -7235,7 +7752,11 @@
     "mechanical_risk_tags": [
       "mech_lower_lunge",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Easy Continuous Swimming",
@@ -7272,7 +7793,11 @@
       "d6_to_d5",
       "d4_to_d2"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Kickboard Tempo Sets",
@@ -7305,7 +7830,11 @@
     "mechanical_risk_tags": [
       "mech_lower_lunge",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Water Resistance Training",
@@ -7339,7 +7868,11 @@
     "mechanical_risk_tags": [
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Pull Buoy Aerobic Threshold",
@@ -7373,7 +7906,11 @@
       "mech_systemic_fatigue",
       "mech_upper_pull"
     ],
-    "rest_sec": 60
+    "rest_sec": 60,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Swimming Interval Pyramid",
@@ -7407,7 +7944,11 @@
       "mech_landing_impact",
       "mech_reactive",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Pool Treading Conditioning",
@@ -7438,7 +7979,11 @@
     "mechanical_risk_tags": [
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Mixed Stroke Tempo Set",
@@ -7469,7 +8014,11 @@
     "movement_cost": "high",
     "mechanical_risk_tags": [
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Fins Sprint Repeats",
@@ -7507,7 +8056,11 @@
       "mech_landing_impact",
       "mech_reactive",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Elliptical Lactate Threshold",
@@ -7541,7 +8094,11 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability"
     ],
-    "rest_sec": 180
+    "rest_sec": 180,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Stair Mill Recovery Climbs",
@@ -7571,7 +8128,11 @@
     "mechanical_risk_tags": [
       "mech_systemic_fatigue"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Incline Treadmill Walk Intervals",
@@ -7601,7 +8162,11 @@
     "movement_cost": "high",
     "mechanical_risk_tags": [
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Versa Climber Aerobic Base",
@@ -7630,7 +8195,11 @@
     "mechanical_risk_tags": [
       "mech_systemic_fatigue"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "StairMaster HIIT Capacity",
@@ -7664,7 +8233,11 @@
     "mechanical_risk_tags": [
       "mech_systemic_fatigue",
       "mech_trunk_rotation"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Elliptical Tempo Intervals",
@@ -7687,15 +8260,20 @@
     ],
     "notes": "Anti-gravity; reduces Achilles/calf stress",
     "work_sec": 180,
+    "rest_sec": 120,
     "rounds": 4,
-    "total_minutes": 12,
+    "total_minutes": 18.0,
     "rpe": 9,
     "impact_cost": "low",
     "lactate_load": "high",
     "movement_cost": "high",
     "mechanical_risk_tags": [
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Versa Climber EMOM Capacity",
@@ -7725,7 +8303,11 @@
     "movement_cost": "high",
     "mechanical_risk_tags": [
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Heavy Bag Aerobic Pace",
@@ -7744,6 +8326,8 @@
       "upper_body",
       "shoulders",
       "recovery",
+      "conditioning",
+      "work_capacity",
       "mech_systemic_fatigue",
       "mech_upper_press"
     ],
@@ -7756,7 +8340,11 @@
       "mech_systemic_fatigue",
       "mech_upper_press"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Battle Ropes Tempo Burner",
@@ -7795,7 +8383,11 @@
       "mech_landing_impact",
       "mech_reactive",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Double-End Bag Circuit",
@@ -7813,6 +8405,8 @@
       "shoulders",
       "conditioning",
       "coordination",
+      "glycolytic",
+      "work_capacity",
       "mech_ballistic",
       "mech_systemic_fatigue",
       "mech_upper_press"
@@ -7829,7 +8423,12 @@
       "mech_ballistic",
       "mech_systemic_fatigue",
       "mech_upper_press"
-    ]
+    ],
+    "round_based": true,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Speed Bag Precision Drill",
@@ -7867,7 +8466,11 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "moderate",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sandbag Shoulder Clean Flow",
@@ -7906,7 +8509,11 @@
       "mech_trunk_stability",
       "mech_upper_press",
       "mech_upper_pull"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "low",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Medicine Ball Pass Intervals",
@@ -7940,39 +8547,13 @@
     "mechanical_risk_tags": [
       "mech_ballistic",
       "mech_trunk_rotation"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
-  {
-    "name": "Turkish Get-Up Skill Flow",
-    "equipment": [
-      "kettlebell"
-    ],
-    "phases": [
-      "GPP"
-    ],
-    "system": "aerobic",
-    "modality": "kettlebell",
-    "duration": "5x5 reps per side slow tempo",
-    "intensity": "low",
-    "tags": [
-      "stability",
-      "upper_body",
-      "core",
-      "skill",
-      "mech_trunk_stability"
-    ],
-    "notes": "Skill-based conditioning without metabolic tax",
-    "work_sec": 5,
-    "rounds": 5,
-    "total_minutes": 0.42,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "high",
-    "movement_cost": "high",
-    "mechanical_risk_tags": [
-      "mech_trunk_stability"
-    ]
-  },
+
   {
     "name": "Farmer Carry + Battle Rope Combo",
     "equipment": [
@@ -8009,7 +8590,11 @@
       "mech_shoulder_overhead",
       "mech_systemic_fatigue",
       "mech_upper_carry"
-    ]
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Nasal Breathing Walk Tempo",
@@ -8037,179 +8622,18 @@
     "mechanical_risk_tags": [
       "mech_systemic_fatigue"
     ],
-    "rpe": 6
+    "rpe": 6,
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
-  {
-    "name": "Foam Rolling Mobility Circuit",
-    "equipment": [],
-    "phases": [
-      "GPP",
-      "TAPER"
-    ],
-    "system": "recovery",
-    "modality": "mobility",
-    "duration": "15-20min full body",
-    "intensity": "low",
-    "tags": [
-      "recovery",
-      "mobility",
-      "rehab_friendly",
-      "cns_freshness",
-      "parasympathetic",
-      "mech_trunk_rotation"
-    ],
-    "notes": "Tissue care; zero training stimulus",
-    "work_sec": 1200,
-    "total_minutes": 20,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "moderate",
-    "mechanical_risk_tags": [
-      "mech_trunk_rotation"
-    ],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5"
-    ]
-  },
-  {
-    "name": "Breathing Protocol Deep Work",
-    "equipment": [],
-    "phases": [
-      "GPP"
-    ],
-    "system": "recovery",
-    "modality": "breathing",
-    "duration": "10-15min box breathing cycles",
-    "intensity": "low",
-    "tags": [
-      "recovery",
-      "parasympathetic",
-      "mental_toughness",
-      "cns_freshness",
-      "cognitive"
-    ],
-    "notes": "Autonomic nervous system balancing",
-    "rest_sec": 900,
-    "total_minutes": 15,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "moderate",
-    "mechanical_risk_tags": []
-  },
-  {
-    "name": "Cold Plunge Recovery Routine",
-    "equipment": [],
-    "phases": [
-      "GPP"
-    ],
-    "system": "recovery",
-    "modality": "recovery",
-    "duration": "3-5min cold exposure",
-    "intensity": "low",
-    "tags": [
-      "recovery",
-      "resilience",
-      "parasympathetic",
-      "endurance",
-      "cns_freshness",
-      "mech_lower_lunge"
-    ],
-    "notes": "Post-session recovery flush",
-    "rest_sec": 300,
-    "total_minutes": 5,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "moderate",
-    "mechanical_risk_tags": [
-      "mech_lower_lunge"
-    ]
-  },
-  {
-    "name": "Gentle Movement Flow",
-    "equipment": [],
-    "phases": [
-      "GPP"
-    ],
-    "system": "recovery",
-    "modality": "mobility",
-    "duration": "30min continuous flow",
-    "intensity": "low",
-    "tags": [
-      "mobility",
-      "recovery",
-      "parasympathetic",
-      "balance",
-      "coordination"
-    ],
-    "notes": "Mobility + breathing integration",
-    "rest_sec": 1800,
-    "total_minutes": 30,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": []
-  },
-  {
-    "name": "PVC Pipe Mobility Prep",
-    "equipment": [],
-    "phases": [
-      "GPP"
-    ],
-    "system": "recovery",
-    "modality": "mobility",
-    "duration": "10-15min shoulder/hip",
-    "intensity": "low",
-    "tags": [
-      "mobility",
-      "recovery",
-      "rehab_friendly",
-      "cns_freshness",
-      "stability",
-      "mech_shoulder_overhead"
-    ],
-    "notes": "Joint-by-joint mobility work",
-    "work_sec": 900,
-    "total_minutes": 15,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "moderate",
-    "mechanical_risk_tags": [
-      "mech_shoulder_overhead"
-    ]
-  },
-  {
-    "name": "Sauna Session Recovery",
-    "equipment": [],
-    "phases": [
-      "GPP"
-    ],
-    "system": "recovery",
-    "modality": "recovery",
-    "duration": "15-20min session",
-    "intensity": "low",
-    "tags": [
-      "recovery",
-      "parasympathetic",
-      "endurance",
-      "resilience",
-      "cns_freshness"
-    ],
-    "notes": "Passive heat recovery tool",
-    "rest_sec": 1200,
-    "total_minutes": 20,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "moderate",
-    "movement_cost": "moderate",
-    "mechanical_risk_tags": []
-  },
+
+
+
+
+
+
   {
     "name": "Double-End Bag Snap Singles",
     "equipment": [
@@ -8251,7 +8675,11 @@
     "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Coach-Led Unresisted Theme Shadow",
@@ -8290,7 +8718,11 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
-    "mechanical_risk_tags": []
+    "mechanical_risk_tags": [],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Heavy-Bag Single-Shot Clusters",
@@ -8338,7 +8770,11 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Split-Step Ankle Snap Pogo",
@@ -8394,7 +8830,11 @@
       "ankle",
       "calf",
       "foot"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Double-End Bag Precision Rhythm",
@@ -8439,195 +8879,17 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
-  {
-    "name": "Mobility Reset: Breathing + T-Spine + Ankle Flow",
-    "equipment": [],
-    "phases": [
-      "SPP",
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "mobility",
-    "duration": "1–2 rounds, 5–10 min total",
-    "intensity": "low",
-    "tags": [
-      "recovery",
-      "mobility",
-      "low_impact",
-      "rehab_friendly",
-      "cns_freshness",
-      "mech_systemic_fatigue"
-    ],
-    "notes": "Breathing-led reset with thoracic and ankle flow for late-fight freshness.",
-    "late_windows": [
-      "d21_to_d14",
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2",
-      "d1"
-    ],
-    "work_sec": 600,
-    "total_minutes": 10,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_systemic_fatigue"
-    ]
-  },
-  {
-    "name": "Scapular Wall Slide + Band External Rotation Reset",
-    "equipment": [
-      "wall",
-      "bands"
-    ],
-    "equipment_note": "Requires: Wall + Bands",
-    "phases": [
-      "SPP",
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "mobility",
-    "duration": "1-2 x 6-10 reps",
-    "intensity": "low",
-    "tags": [
-      "rehab_friendly",
-      "shoulders",
-      "recovery",
-      "low_impact",
-      "cns_freshness",
-      "coordination",
-      "mech_shoulder_overhead",
-      "mech_trunk_rotation"
-    ],
-    "notes": "Keep ribs down and shoulder blade smooth. Use to keep shoulder rhythm fresh.",
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
-    ],
-    "work_sec": 6,
-    "rounds": 2,
-    "total_minutes": 0.2,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_shoulder_overhead",
-      "mech_trunk_rotation"
-    ]
-  },
-  {
-    "name": "Wrist/Finger Activation Micro-Reset",
-    "equipment": [],
-    "phases": [
-      "SPP",
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "mobility",
-    "duration": "1-2 x 10-12 light reps or 30-45s",
-    "intensity": "low",
-    "tags": [
-      "rehab_friendly",
-      "grip",
-      "recovery",
-      "low_impact",
-      "cns_freshness",
-      "boxing",
-      "kickboxing",
-      "mma"
-    ],
-    "notes": "Light hand and wrist activation only. No fatigue. Good for D-3 and D-1.",
-    "late_windows": [
-      "d4_to_d2",
-      "d1"
-    ],
-    "work_sec": 10,
-    "rounds": 2,
-    "total_minutes": 0.33,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": []
-  },
-  {
-    "name": "Shadowboxing Technical Rhythm",
-    "equipment": [],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "shadowbox",
-    "duration": "2x2min RPE 4-5",
-    "intensity": "low",
-    "tags": [
-      "skill",
-      "coordination",
-      "cns_freshness",
-      "mech_upper_press",
-      "mech_trunk_rotation"
-    ],
-    "notes": "Light technical rhythm only; keep it sharp and easy.",
-    "work_sec": 120,
-    "rounds": 2,
-    "total_minutes": 4,
-    "rpe": 5,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_trunk_rotation",
-      "mech_upper_press"
-    ],
-    "late_windows": [
-      "d21_to_d14",
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
-    ]
-  },
-  {
-    "name": "Assault Bike Rhythm Primer",
-    "equipment": [
-      "assault_bike"
-    ],
-    "phases": [
-      "SPP",
-      "TAPER"
-    ],
-    "system": "aerobic",
-    "modality": "bike",
-    "duration": "6-8 x 10s moderate-fast / 60s easy",
-    "intensity": "moderate",
-    "tags": [
-      "low_impact",
-      "aerobic",
-      "cns_freshness",
-      "recovery"
-    ],
-    "work_sec": 10,
-    "rest_sec": 60,
-    "rounds": 8,
-    "rpe": 6,
-    "impact_cost": "low",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "late_windows": [
-      "d21_to_d14",
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5"
-    ]
-  },
+
+
+
+
+
   {
     "name": "Rower Gas-Tank Flush",
     "equipment": [
@@ -8654,7 +8916,11 @@
     "late_windows": [
       "d21_to_d14",
       "d13_to_d8"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Assault Bike Easy Gas Tank Ride",
@@ -8716,7 +8982,11 @@
     "mechanical_risk_tags": [
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Rower Nasal Aerobic Base",
@@ -8781,7 +9051,11 @@
       "mech_upper_pull",
       "mech_lower_hip_hinge",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Nasal Shadowboxing Flow (Gas Tank)",
@@ -8841,7 +9115,11 @@
     "mechanical_risk_tags": [
       "mech_upper_press",
       "mech_trunk_rotation"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Pressure Step Flow",
@@ -8887,7 +9165,11 @@
     "mechanical_risk_tags": [
       "mech_lower_lunge",
       "mech_trunk_rotation"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Defensive Rhythm Flow",
@@ -8933,7 +9215,11 @@
     "mechanical_risk_tags": [
       "mech_reactive",
       "mech_trunk_rotation"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Stance Switch Walk Flow",
@@ -8981,7 +9267,11 @@
     "mechanical_risk_tags": [
       "mech_lower_lunge",
       "mech_trunk_stability"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Nasal Walk with Boxing Posture",
@@ -9023,7 +9313,11 @@
     "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_systemic_fatigue"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "Partner Mirror Footwork Flow",
@@ -9073,7 +9367,11 @@
     "mechanical_risk_tags": [
       "mech_reactive",
       "mech_lower_lunge"
-    ]
+    ],
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false
   },
   {
     "name": "5-10-15 Ladder (Box Jumps/Push-Ups/KB Swings)",
@@ -9117,7 +9415,11 @@
       "mech_systemic_fatigue",
       "mech_upper_press"
     ],
-    "block_if_fight_within_days": 21
+    "block_if_fight_within_days": 21,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "EMOM: 5 Squat Cleans + 5 Burpees",
@@ -9165,7 +9467,11 @@
       "mech_upper_press",
       "mech_upper_pull"
     ],
-    "block_if_fight_within_days": 21
+    "block_if_fight_within_days": 21,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Box Jump (Max Height)",
@@ -9202,7 +9508,11 @@
       "mech_lower_jump",
       "mech_reactive"
     ],
-    "rest_sec": 90
+    "rest_sec": 90,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Depth Drop (No Rebound)",
@@ -9241,7 +9551,11 @@
       "mech_reactive",
       "mech_reactive_rebound"
     ],
-    "rest_sec": 90
+    "rest_sec": 90,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Sledgehammer Strike Intervals",
@@ -9283,7 +9597,11 @@
       "mech_trunk_rotation",
       "mech_upper_press"
     ],
-    "rest_sec": 75
+    "rest_sec": 75,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   },
   {
     "name": "Band-Resisted Broad Jump (Max Effort)",
@@ -9320,6 +9638,10 @@
       "mech_lower_jump",
       "mech_reactive"
     ],
-    "rest_sec": 120
+    "rest_sec": 120,
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
   }
 ]

@@ -62,10 +62,6 @@ _FUNCTIONAL_CANNOT_PATTERN = re.compile(
 )
 
 
-def _contains_cannot_phrase(lowered: str) -> bool:
-    return bool(_CANNOT_PATTERN.search(lowered))
-
-
 def _contains_functional_cannot_phrase(lowered: str) -> bool:
     return bool(_FUNCTIONAL_CANNOT_PATTERN.search(lowered))
 

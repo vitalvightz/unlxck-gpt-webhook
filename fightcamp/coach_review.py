@@ -4,6 +4,7 @@ import logging
 from typing import Iterable
 
 from .conditioning import is_banned_drill, normalize_system, render_conditioning_block
+from .config import athlete_round_seconds
 from .injury_filtering import injury_match_details
 from .injury_guard import choose_injury_replacement, injury_decision
 from .rehab_protocols import build_coach_review_entries
@@ -417,6 +418,9 @@ def run_coach_review(
             missing_systems=cond.get("missing_systems", []),
             num_sessions=cond.get("num_sessions", 1),
             diagnostic_context=cond.get("diagnostic_context", {}),
+            # Round-based doses render at the athlete's round length, so the
+            # re-render must carry the same format the first render used.
+            round_seconds=athlete_round_seconds(training_context.get("rounds_format")),
             sport=cond.get("sport"),
             # Carry the canonical stance through re-render so technical-footwork
             # side/stance instruction is identical to the first render. Prefer

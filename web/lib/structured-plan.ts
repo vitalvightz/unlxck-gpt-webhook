@@ -427,6 +427,18 @@ export function getSessions(day: StructuredDay | null | undefined): StructuredSe
   return safeArray(day?.sessions).filter(isObject);
 }
 
+/** Complete planner-owned microdose for this host day; malformed legacy data is hidden. */
+export function getPriorityMicrodose(day: StructuredDay | null | undefined) {
+  const raw = day?.priority_microdose;
+  if (!isObject(raw)) {
+    return null;
+  }
+  const goal = cleanText(raw.goal);
+  const name = cleanText(raw.name);
+  const prescription = cleanText(raw.prescription);
+  return goal && name && prescription ? { goal, name, prescription } : null;
+}
+
 export function getBlocks(session: StructuredSession | null | undefined): StructuredBlock[] {
   return safeArray(session?.blocks).filter(isObject);
 }

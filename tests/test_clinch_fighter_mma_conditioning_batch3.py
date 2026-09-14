@@ -28,12 +28,12 @@ LEGACY = {
     "Neck Snap Drill", "Knee Strike Bursts", "Strike-to-Clinch Drill",
 }
 PRESERVED_HASHES = {
-    ("boxing", "clinch_fighter"): "a8c2cacfaf4b81155c1048bad4bb3b17ffd90c600991fd2750ffe05cdb36b4a9",
-    ("muay_thai", "clinch_fighter"): "dde054e5f0fa8eddd77a08dc34dac94feade2515368db25bb6408c18de389358",
-    ("mma", "brawler"): "cb8a9c25186201b904ed9dee351a54a942bd97250d01b15998fc67ca45999d76",
-    ("mma", "pressure_fighter"): "655b2724c48bd2fed2d849e0c0e605b15631ac441001b4c642c25b0c11d470c1",
-    ("mma", "counter_striker"): "7b0b5b305792afcc281ab6aa01b27e47984254cedda23923e738a4507be98d6b",
-    ("mma", "distance_striker"): "de7cfb86eceb0fedab845908a2ad2de4894bf3836ba8f395aa30d3f58461cc04",
+    ("boxing", "clinch_fighter"): "1ed586722ad69f2ed2bff3859cda0ead1e8d0c4401c0b16efc975658b004e4e8",
+    ("muay_thai", "clinch_fighter"): "d441905f65e8b72e455a8004cc60015dba4c2495cf390f2a900e3d1e25210050",
+    ("mma", "brawler"): "9cbec3fb5ab85c95fb675a0bf33bd179742b7ead69d261e4ac90d843144f8651",
+    ("mma", "pressure_fighter"): "7b30210383e5b4e0e8b4e0286fb3424aa23268060ee84b11af1c214e86c09189",
+    ("mma", "counter_striker"): "d8d07ac42bc5cee235979f7ad1ebf17b453b9da5d650c85a19e1f6ccdca3cc77",
+    ("mma", "distance_striker"): "87cd32a5a50496be6c752f933ffba8b150b5671849811d301276ec7535dc7ab8",
 }
 
 
@@ -110,12 +110,17 @@ def test_reactive_and_fatigue_decision_rounds_are_meaningfully_distinct():
 
 
 def test_existing_selector_surfaces_mma_clinch_fighter_in_gpp_and_spp():
+    # Conditioning selection now prefers the best physiological match for the
+    # slot, so a style drill no longer owns a system slot by default. This test
+    # covers bank *reachability* — sport, style, equipment, phase and safety
+    # filtering — so it names the slice explicitly; an explicitly requested
+    # exercise is a coach instruction and is never displaced on target grounds.
     flags = {
         "sport": "mma", "style_technical": ["mma"], "style_tactical": ["Clinch Fighter"],
         "key_goals": ["conditioning"], "weaknesses": ["gas_tank"], "fatigue": "low",
         "equipment": ["partner", "thai pads"], "training_frequency": 5,
         "days_available": 5, "days_until_fight": 35, "time_to_fight_days": 35,
-        "injuries": [], "restrictions": [],
+        "injuries": [], "restrictions": [], "preferred_exercise_names": sorted(EXPECTED),
     }
     for phase in ("GPP", "SPP"):
         conditioning._style_conditioning_bank_cache = None

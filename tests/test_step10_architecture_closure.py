@@ -399,6 +399,23 @@ def test_late_fight_placement_holds_no_second_sparring_resolver():
 # and no test reached. They are deleted; these guard them from returning.
 # ---------------------------------------------------------------------------
 _REMOVED_PAYLOAD_DUPLICATES = (
+    # Step 11: the prod-dead readiness-compression / spar-first allocation fork.
+    # stage2_role_map owns weekly role budget, compression and suppression.
+    "_active_weight_cut_is_meaningful",
+    "_append_week_coach_note_flag",
+    "_apply_high_fatigue_week_compression",
+    "_apply_legacy_high_fatigue_compression",
+    "_build_spar_allocation_reason_codes",
+    "_compute_readiness_compression",
+    "_cut_severity_compression_points",
+    "_dedupe_clean_strings",
+    "_forbidden_between_effective_hard_contacts",
+    "_intentional_compression_stub",
+    "_is_optional_alactic_role",
+    "_non_spar_role_priority_rank",
+    "_ordered_weekdays",
+    "_suppress_sandwiched_glycolytic",
+    # Step 10.
     "_compressed_priority_for_role",
     "_is_final_week_capped_sparring_entry",
     "_join_rule_parts",
@@ -472,8 +489,6 @@ def test_payload_test_oracles_survived_the_dedupe():
     for name in (
         "_is_meaningful_stressor",                    # tests/test_gap_fill_inserts.py
         "_active_injury_affects_generic_compression", # tests/test_surface_injury_train_through.py
-        "_apply_high_fatigue_week_compression",       # tests/test_stage2_planning_brief.py
-        "_compute_readiness_compression",             # tests/test_stage2_planning_brief.py
     ):
         assert hasattr(stage2_payload, name), name
 

@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-# Match the score_exercise noise ceiling (uniform +/-0.15) so Rule 2 only treats
-# candidates inside the scorer's normal jitter band as near-equal.
+# Scoring is deterministic (score_exercise injects no jitter). This band is the
+# tolerance for "the scorer rates these the same", so Rule 2 only reorders
+# candidates whose scores differ by less than a single tag hit.
 NEAR_EQUAL_SCORE_BAND = 0.15
 _SCORE_COMPARISON_PRECISION = 4
 

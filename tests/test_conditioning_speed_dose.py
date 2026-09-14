@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from fightcamp import conditioning
+from fightcamp.coordination_support_library import all_coordination_drills
 from fightcamp.stage2_planning_brief import _compress_short_camp_priorities
 
 
@@ -250,10 +251,11 @@ def test_speed_tagging_regression_entries_are_additive():
     conditioning_by_name = {item["name"]: set(item.get("tags", [])) for item in conditioning_bank}
     exercise_by_name = {item["name"]: set(item.get("tags", [])) for item in exercise_bank}
     conditioning_by_name_full = {item["name"]: item for item in conditioning_bank}
+    coordination_by_name = {drill.name: set(drill.raw.get("tags", [])) for drill in all_coordination_drills()}
 
-    assert {"speed", "footwork", "reactive"} <= conditioning_by_name["Mini Hurdle Quick Steps"]
+    assert {"coordination", "speed", "footwork", "reactive"} <= coordination_by_name["Mini Hurdle Quick Steps"]
     assert {"speed", "footwork", "reactive"} <= conditioning_by_name["Reactive Shuffle Repeats"]
-    for name in ("Mini Hurdle Quick Steps", "Quick Lateral Hop Tap", "Split Stance Hop Switch"):
+    for name in ("Quick Lateral Hop Tap", "Split Stance Hop Switch"):
         drill = conditioning_by_name_full[name]
         tags = conditioning_by_name[name]
         risk_tags = set(drill.get("mechanical_risk_tags", []))

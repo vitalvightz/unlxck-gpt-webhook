@@ -25,7 +25,7 @@ MINDSET = {
     "context": "SPP pocket planning for a brawler.",
 }
 PROGRESS = "Rehearse the chosen exchange ending, not just the opening combination."
-SOURCE = """D-11 (Tuesday): Fight Tactical Watch
+SOURCE = """D-11 (Tuesday): Tactical Focus
 Why: {why}
 - Pocket Exchange Map: 10 minutes, tactical review only. No physical load.
   Step 1: {step0}
@@ -68,7 +68,7 @@ def _plan(*, day="D-11", include=True):
         "energy_system": "none", "impact_level": "low",
     }]
     return {"weeks": [{"days": [{"countdown_label": day, "sessions": [{
-        "session_type": "mindset", "title": "Fight Tactical Watch", "objective": "AI why.",
+        "session_type": "mindset", "title": "Tactical Focus", "objective": "AI why.",
         "primary_stressor": "decision-making", "cns_demand": "low",
         "mindset_anchor": {"intent": "Clarify pocket decisions.", "focus_cue": "Read patterns.",
                            "reset_cue": "Reset calmly.", "confidence_anchor": "Control it."},
@@ -149,7 +149,7 @@ def test_drill_titled_session_is_reused_as_the_single_tactical_watch():
     result = _merged(plan)
 
     sessions = result.plan["weeks"][0]["days"][0]["sessions"]
-    assert [session["title"] for session in sessions] == ["Fight Tactical Watch"]
+    assert [session["title"] for session in sessions] == ["Tactical Focus"]
     assert sessions[0]["blocks"][0]["display_name"] == "Pocket Exchange Map"
     assert result.unresolved == []
     assert check_structured_faithfulness(result.plan, SOURCE, _brief()) == []
@@ -164,7 +164,7 @@ def test_tactical_watch_keeps_its_fixed_session_title_not_a_role_alias():
     result = _merged(plan, brief)
 
     assert result.plan["weeks"][0]["days"][0]["sessions"][0]["title"] == (
-        "Fight Tactical Watch"
+        "Tactical Focus"
     )
 
 
@@ -185,7 +185,7 @@ def test_stale_drill_titled_shell_is_collapsed_into_existing_tactical_watch():
     result = _merged(plan)
 
     sessions = result.plan["weeks"][0]["days"][0]["sessions"]
-    assert [session["title"] for session in sessions] == ["Fight Tactical Watch"]
+    assert [session["title"] for session in sessions] == ["Tactical Focus"]
     assert sessions[0]["blocks"][0]["display_name"] == "Pocket Exchange Map"
     assert result.unresolved == []
     assert merge_locked_structured_content(result.plan, _brief()).plan == result.plan
@@ -205,7 +205,7 @@ def test_completed_drill_titled_session_is_preserved():
     result = _merged(plan)
 
     assert [session["title"] for session in result.plan["weeks"][0]["days"][0]["sessions"]] == [
-        "Fight Tactical Watch",
+        "Tactical Focus",
         "Pocket Exchange Map",
     ]
 
@@ -219,7 +219,7 @@ def test_locked_block_in_wrong_same_day_session_moves_without_overwriting_combat
     sessions = result.plan["weeks"][0]["days"][0]["sessions"]
     assert [session["title"] for session in sessions] == [
         "Technical-only combat",
-        "Fight Tactical Watch",
+        "Tactical Focus",
     ]
     assert sessions[0]["blocks"] == []
     assert sessions[1]["blocks"][0]["display_name"] == "Pocket Exchange Map"
@@ -234,7 +234,7 @@ def test_omitted_tactical_watch_session_is_created_without_another_model_call():
 
     session = result.plan["weeks"][0]["days"][0]["sessions"][0]
     assert session["session_type"] == "skill"
-    assert session["title"] == "Fight Tactical Watch"
+    assert session["title"] == "Tactical Focus"
     assert session["blocks"][0]["display_name"] == "Pocket Exchange Map"
     assert result.unresolved == []
     assert check_structured_faithfulness(result.plan, SOURCE, _brief()) == []
@@ -298,7 +298,7 @@ def test_schema_valid_card_with_omitted_watch_is_repaired_and_persistable():
     assert outcome.status == "valid"
     assert outcome.structured_plan is not None
     sessions = outcome.structured_plan["weeks"][0]["days"][0]["sessions"]
-    assert sessions[0]["title"] == "Fight Tactical Watch"
+    assert sessions[0]["title"] == "Tactical Focus"
     assert sessions[0]["blocks"][0]["coaching_cues"] == STEPS
     assert safe_parse_structured_plan(
         outcome.structured_plan, raw_markdown=SOURCE

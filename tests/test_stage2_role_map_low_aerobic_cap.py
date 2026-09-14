@@ -38,13 +38,49 @@ def _mobility_athlete(**overrides):
 # ---------------------------------------------------------------------------
 
 
-def test_cap_none_low_cut_allows_one_low_aerobic_support_touch_in_gpp_and_spp():
+def test_cap_none_low_cut_allows_two_build_phase_touches_for_a_conditioning_priority():
+    """A stated conditioning/gas-tank priority earns a second easy GPP/SPP touch.
+
+    Frequent low-damage aerobic exposure is the point of the build phases. The
+    boost is limited to GPP/SPP on a none/low cut with no fatigue, red-flag or
+    heavy hard-contact load; every other branch stays at one.
+    """
     week = {"phase": "GPP", "calendar_days": [{"weekday": "tuesday", "d_day": 36}]}
     athlete = _gas_tank_athlete(cut_severity_bucket="none")
-    assert _low_aerobic_support_cap_for_week(week, athlete, []) == 1
+    assert _low_aerobic_support_cap_for_week(week, athlete, []) == 2
 
     week = {"phase": "SPP", "calendar_days": [{"weekday": "thursday", "d_day": 27}]}
     athlete = _gas_tank_athlete(cut_severity_bucket="low")
+    assert _low_aerobic_support_cap_for_week(week, athlete, []) == 2
+
+
+def test_cap_build_phase_boost_requires_a_stated_conditioning_priority():
+    week = {"phase": "GPP", "calendar_days": [{"weekday": "tuesday", "d_day": 36}]}
+    athlete = {"key_goals": ["power"], "weaknesses": ["mobility"], "cut_severity_bucket": "none"}
+    assert _low_aerobic_support_cap_for_week(week, athlete, []) == 1
+
+
+def test_cap_build_phase_boost_counts_existing_hard_contact_load():
+    """A week already carrying three hard-contact days keeps a single touch."""
+    week = {"phase": "GPP", "calendar_days": [{"weekday": "tuesday", "d_day": 36}]}
+    athlete = _gas_tank_athlete(cut_severity_bucket="none")
+    plan = [
+        {"day": "monday", "status": "hard_as_planned"},
+        {"day": "wednesday", "status": "hard_as_planned"},
+        {"day": "friday", "status": "hard_as_planned"},
+    ]
+    assert _low_aerobic_support_cap_for_week(week, athlete, [], hard_sparring_plan=plan) == 1
+
+    light = [{"day": "wednesday", "status": "hard_as_planned"}]
+    assert _low_aerobic_support_cap_for_week(week, athlete, [], hard_sparring_plan=light) == 2
+
+
+def test_cap_build_phase_boost_blocked_by_fatigue_and_red_flag():
+    week = {"phase": "GPP", "calendar_days": [{"weekday": "tuesday", "d_day": 36}]}
+    athlete = _gas_tank_athlete(cut_severity_bucket="none", fatigue="high")
+    assert _low_aerobic_support_cap_for_week(week, athlete, []) == 1
+
+    athlete = _gas_tank_athlete(cut_severity_bucket="none", readiness_flags=["severe_injury"])
     assert _low_aerobic_support_cap_for_week(week, athlete, []) == 1
 
 

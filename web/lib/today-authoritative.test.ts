@@ -87,6 +87,7 @@ test("current session before check-in is not classified as blocked", () => {
   });
   assert.equal(resolved.sessionOutcome, "unchanged");
   assert.equal(resolved.banner, null);
+  assert.equal(resolved.canCompleteSession, false);
 });
 
 test("pull-back remains blocking despite green-sounding prose", () => {

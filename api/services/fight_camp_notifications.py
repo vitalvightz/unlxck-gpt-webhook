@@ -26,6 +26,9 @@ from api.services.notification_foundation import (
 )
 from api.services.notification_templates import select_notification_template
 from api.services.notification_timing import ResolvedTrainingTime, resolve_training_time
+from api.services.fight_countdown_eligibility import (
+    filter_late_fight_countdown_candidates,
+)
 from api.services.push_notifications import dispatch_push_candidates
 from api.services.today_readiness_boundary import build_today_command_view
 from api.store import AppStore
@@ -1147,6 +1150,9 @@ def dispatch_fight_camp_notifications(
             observe_mode=rollout_mode == "observe",
         )
         if rollout_mode == "observe":
+            # Shadow the same late-countdown targeting the send path applies, so
+            # observation volume and copy match what would actually ship.
+            filter_late_fight_countdown_candidates(store, candidates)
             simulate_notification_delivery_decision(store, candidates, now_utc=now_utc)
             # Returning zero candidates intentionally allows the existing worker
             # path to continue sending legacy notifications during observation.

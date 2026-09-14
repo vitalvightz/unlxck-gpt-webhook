@@ -187,6 +187,7 @@ def test_gap_fill_footwork_carries_full_technical_prescription():
 
     # Truthful rep-based dose and rest (no fabricated timed-work wording).
     assert "2 sets x 3 clean reactions each direction" in text
+    assert "full stance reset between reps" in text
     assert "75 sec between sets" in text
     assert "75 sec technical sets" not in text
     # Cue, resolved side/stance instruction, and quality-stop rule all survive.
@@ -210,6 +211,8 @@ def test_gap_fill_footwork_timed_drill_carries_dose_without_fake_reps():
     )
     assert role["technical_footwork_name"] == "Stance Reset Line Drill"
     text = role["display_text"]
+    assert text.count("60 sec reset") == 1
+    assert "Rest: 60 sec between sets" not in text
     assert "Side / Stance: Start in your orthodox stance and work both directions evenly." in text
     assert "clean reactions each direction" not in text
 

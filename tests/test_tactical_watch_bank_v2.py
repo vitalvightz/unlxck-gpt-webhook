@@ -1,4 +1,4 @@
-"""Fight Tactical Watch: JSON bank integrity, selection, and placement.
+"""Tactical Focus: JSON bank integrity, selection, and placement.
 
 The athlete-facing Tactical Watch library lives in ``data/tactical_watch_bank.json``.
 These tests protect the JSON itself (structure, and genuine task differentiation
@@ -739,7 +739,7 @@ def test_normal_fight_camp_gets_one_named_watch_every_week():
     ]
     assert all(watch["mandatory_tactical_watch"] is True for watch in watches)
     assert all(watch["weekly_requirement"] == "fight_tactical_watch" for watch in watches)
-    assert all(watch["athlete_facing_label"] == "Fight Tactical Watch" for watch in watches)
+    assert all(watch["athlete_facing_label"] == "Tactical Focus" for watch in watches)
 
 
 def test_consecutive_weeks_change_the_whole_visible_card_not_just_the_title():
@@ -807,13 +807,18 @@ def test_compressed_fight_week_keeps_zero_load_tactical_watch():
     ]
 
 
-def test_support_caps_hold_per_phase():
+def test_discretionary_support_caps_exclude_zero_load_tactical_watch():
     role_map = {"weeks": [_week("GPP", 35), _week("SPP", 21), _week("TAPER", 7)]}
     apply_camp_week_fillers(role_map, _athlete(tactical_styles=["out-boxer"]))
     caps = {"GPP": 1, "SPP": 2, "TAPER": 1}
     for week in role_map["weeks"]:
         fillers = [role for role in week["session_roles"] if role.get("camp_week_filler")]
-        assert len(fillers) <= caps[week["phase"]]
+        watches = [role for role in fillers if role.get("role_key") == "tactical_watch"]
+        discretionary_fillers = [
+            role for role in fillers if role.get("role_key") != "tactical_watch"
+        ]
+        assert len(watches) == 1
+        assert len(discretionary_fillers) <= caps[week["phase"]]
 
 
 def test_mandatory_watch_shares_a_scheduled_day_and_never_takes_a_rest_day():
@@ -886,11 +891,15 @@ def test_selected_drill_identity_survives_finalizer_compaction():
     )
     compact = _compact_role(role)
     assert compact["role_key"] == "tactical_watch"
-    assert compact["athlete_facing_label"] == "Fight Tactical Watch"
+    assert compact["athlete_facing_label"] == "Tactical Focus"
     assert compact["preferred_exercise_names"] == ["Intercept the Entry"]
-    # Session objective first, then the selected watch as the one activity bullet
-    # with its own indented detail lines.
-    lines = compact["display_text"].splitlines()
+    # The body is no longer shipped to the finalizer: the server renders the watch
+    # from its own tactical_watch object (structured locked merge, deterministic
+    # fallback, source repair), and every consumer of display_text reads it from
+    # the planning brief rather than from this packet. Identity still travels so
+    # the finalizer can plan the surrounding day.
+    assert "display_text" not in compact
+    lines = role["display_text"].splitlines()
     assert lines[0].startswith("Why: ")
     assert lines[1].startswith("- Intercept the Entry: ")
     assert [line for line in lines if line.startswith("- ")] == [lines[1]]
@@ -903,7 +912,7 @@ def test_selected_drill_identity_survives_finalizer_compaction():
     assert compact["governance"]["render_selected_drill_exactly"] is True
     assert compact["governance"]["do_not_reselect_or_generalize"] is True
     for instruction in role["tactical_watch"]["instructions"]:
-        assert instruction in compact["display_text"]
+        assert instruction in role["display_text"]
 
 
 # --- athlete-facing card shape ------------------------------------------------

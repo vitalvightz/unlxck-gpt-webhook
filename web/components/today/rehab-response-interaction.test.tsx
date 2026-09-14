@@ -5,6 +5,7 @@ import "../test-dom";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
+import { AuthProvider } from "@/components/auth-provider";
 import { ToastProvider } from "@/components/toast-provider";
 import { RehabResponsePrompt } from "./rehab-response-prompt";
 import { TodaySessionPanel } from "./today-session-panel";
@@ -355,14 +356,16 @@ test("Today rehydrates a skipped unanswered prompt from durable server state", a
   function renderPanel(root: Root, currentState: TodayCommandView = state) {
     act(() => {
       root.render(
-        <ToastProvider>
-          <TodaySessionPanel
-            state={currentState}
-            structuredPlan={null}
-            token="test-token"
-            onRefresh={async () => {}}
-          />
-        </ToastProvider>,
+        <AuthProvider>
+          <ToastProvider>
+            <TodaySessionPanel
+              state={currentState}
+              structuredPlan={null}
+              token="test-token"
+              onRefresh={async () => {}}
+            />
+          </ToastProvider>
+        </AuthProvider>,
       );
     });
   }

@@ -23,6 +23,7 @@ import json
 import logging
 import re
 from dataclasses import dataclass, field
+from collections.abc import Mapping
 from typing import Any, Callable, Literal, get_args
 
 from fightcamp.weekly_schedule_view import normalize_weekday as _normalize_weekday
@@ -303,6 +304,20 @@ _SESSION_TYPE_ALIASES = {
     "warmup": "primer",
     "warm-up": "primer",
 }
+
+
+def _raw_session_type_is_rehab(value: Any) -> bool:
+    """Recognise legacy rehab labels before unknown enums fall back to mixed.
+
+    Earlier raw-plan conversion can emit a session label such as
+    ``Rehab-friendly low-load support`` in ``session_type`` rather than the
+    structured ``rehab`` enum. This remains deliberately narrow: a canonical
+    session type always wins, and only rehab/prehab wording gets this fallback.
+    """
+    text = _coerce_str(value).strip().lower()
+    return bool(re.search(r"\b(?:prehab|rehab)\b", text))
+
+
 _EFFORT_METHOD_ALIASES = {
     "rpe": "RPE",
     "rir": "RIR",
@@ -1047,10 +1062,68 @@ def _normalize_block(value: Any) -> dict[str, Any]:
     return out
 
 
+# Fields that make a block an actual prescribed exercise rather than a mention.
+_BLOCK_PRESCRIPTION_KEYS = ("sets", "reps", "work", "rest", "duration", "distance", "load")
+
+
+def _block_has_prescription(block: Mapping[str, Any]) -> bool:
+    return any(block.get(key) not in (None, "", [], {}) for key in _BLOCK_PRESCRIPTION_KEYS)
+
+
+def _block_identity(block: Mapping[str, Any]) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", str(block.get("display_name") or "").casefold()).strip()
+
+
+def _collapse_unprescribed_duplicate_blocks(blocks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Drop a duplicate block that only *mentions* an exercise already prescribed.
+
+    Stage 2 sometimes follows a prescribed line with an explanatory aside
+    ("Note: Loaded Carry Touch is a scheduled microdose ..."). Converted to a
+    card that becomes a second block with the same name and no dose, so the
+    athlete sees the same exercise twice — once real, once empty.
+
+    Only a dose-less duplicate of an already-prescribed block is collapsed, and
+    its coaching detail is merged into the real one. Two genuinely prescribed
+    blocks with the same name are left alone: that is a real duplicate and stays
+    visible to the duplicate-detection checks rather than being silently hidden.
+    """
+    prescribed: dict[str, dict[str, Any]] = {}
+    for block in blocks:
+        identity = _block_identity(block)
+        if identity and _block_has_prescription(block):
+            prescribed.setdefault(identity, block)
+    if not prescribed:
+        return blocks
+
+    kept: list[dict[str, Any]] = []
+    for block in blocks:
+        identity = _block_identity(block)
+        host = prescribed.get(identity)
+        if host is not None and block is not host and not _block_has_prescription(block):
+            for list_key in ("coaching_cues", "regression_options", "substitutions", "stop_rules"):
+                merged = _coerce_str_list(host.get(list_key)) + _coerce_str_list(block.get(list_key))
+                if merged:
+                    host[list_key] = _dedupe_text_values(merged)
+            for text_key in ("purpose", "why_today"):
+                if not str(host.get(text_key) or "").strip() and str(block.get(text_key) or "").strip():
+                    host[text_key] = block[text_key]
+            continue
+        kept.append(block)
+    return kept
+
+
 def _normalize_session(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
     out["session_id"] = _coerce_nonempty_str(out.get("session_id"), "session")
-    out["session_type"] = _enum(out.get("session_type"), _SESSION_TYPE_VALUES, "mixed", _SESSION_TYPE_ALIASES)
+    raw_session_type = out.get("session_type")
+    normalized_session_type = _enum(
+        raw_session_type, _SESSION_TYPE_VALUES, "mixed", _SESSION_TYPE_ALIASES
+    )
+    out["session_type"] = (
+        "rehab"
+        if normalized_session_type == "mixed" and _raw_session_type_is_rehab(raw_session_type)
+        else normalized_session_type
+    )
     out["title"] = _coerce_str(out.get("title"))
     out["objective"] = _coerce_str(out.get("objective"))
     out["mindset_anchor"] = _normalize_mindset(out.get("mindset_anchor"))
@@ -1058,7 +1131,9 @@ def _normalize_session(value: Any) -> dict[str, Any]:
         out["completion_status"] = _enum(out.get("completion_status"), _COMPLETION_VALUES, "not_started")
     if out.get("planned_duration") is not None:
         out["planned_duration"] = _normalize_measured(out.get("planned_duration"), "minutes")
-    out["blocks"] = [_normalize_block(block) for block in _as_dict_list(out.get("blocks"))]
+    out["blocks"] = _collapse_unprescribed_duplicate_blocks(
+        [_normalize_block(block) for block in _as_dict_list(out.get("blocks"))]
+    )
     return out
 
 
@@ -2497,11 +2572,11 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
     `Step 1`/`Step 2`/…, `Intent`, `Focus`, `Reset`, `Anchor`, `Context`,
     and `Coach call`. An INDENTED line always belongs to the bullet above it —
     it is never a block of its own, however imperative it reads.
-  * Short late-camp support days like `Fight Tactical Watch`, `Tactical Cue
+  * Short late-camp support days like `Tactical Focus`, `Tactical Cue
     Card`, `Breathing Reset`, `Freshness Reset`, and `Final Neural Cue` are real
     sessions when the plan gives Duration/Prescription/Purpose lines. Do not
     collapse them into rest days just because they are low-load. A
-    `Fight Tactical Watch` day is ONE block: the single bulleted drill name
+    `Tactical Focus` day is ONE block: the single bulleted drill name
     (e.g. `- Pocket Exchange Map: 10 minutes...`) is the block, its dose is the
     duration, and every `Step N` / `Intent` / `Focus` / `Reset` / `Anchor` /
     `Purpose` / `Progress` line below it is that block's own detail. Never emit

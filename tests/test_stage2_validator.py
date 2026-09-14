@@ -2820,7 +2820,7 @@ def test_late_fight_tactical_advance_language_is_not_flagged_as_progression():
     report = validate_stage2_output(
         planning_brief=brief,
         final_plan_text="""
-        D-9 (Saturday) — Fight Tactical Watch
+        D-9 (Saturday) — Tactical Focus
         - Cue: advance to close the distance behind the jab.
         - Partner advances after each teep.
         - Progression/regression: regress to shorter clips if focus drifts.

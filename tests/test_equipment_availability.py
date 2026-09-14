@@ -105,7 +105,6 @@ def test_bodyweight_strength_drill_remains_selectable_when_athlete_does_not_list
             "random_seed": 7,
         },
         weaknesses=[],
-        mindset_cue=None,
     )
 
     selected_names = {exercise["name"] for exercise in block["exercises"]}

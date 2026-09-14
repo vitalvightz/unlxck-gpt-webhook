@@ -8,6 +8,8 @@ a card that reflects the validated text, otherwise the raw text fallback.
 """
 from __future__ import annotations
 
+import copy
+
 import api.structured_plan_faithfulness as faithfulness
 from api.structured_plan_faithfulness import check_structured_faithfulness
 from api.structured_plan_faithfulness import repair_locked_tactical_watch_source_text
@@ -28,7 +30,7 @@ SOURCE = """# FIGHT CAMP PLAN
 - Pallof Press 3x10 each side anti-rotation.
 """
 
-LOCKED_WATCH_SOURCE = """D-11 (Tuesday): Fight Tactical Watch
+LOCKED_WATCH_SOURCE = """D-11 (Tuesday): Tactical Focus
 Why: Know what happens after the first punches so pocket exchanges stay planned rather than chaotic.
 - Pocket Exchange Map: 10 minutes, tactical review only. No physical load.
   Step 1: Identify the opponent's most common pocket sequence.
@@ -251,7 +253,7 @@ def _body_attack_card() -> dict:
             "days": [{
                 "countdown_label": "D-17",
                 "sessions": [{
-                    "title": "Fight Tactical Watch",
+                    "title": "Tactical Focus",
                     "objective": "Find safe body attacks that reward pressure without making the entry predictable.",
                     "mindset_anchor": {
                         "intent": "Attack the body when the position earns it.",
@@ -285,7 +287,7 @@ def test_repeated_overlay_elsewhere_does_not_create_locked_step_requirements():
     source = f"""D-17 (Monday) - Strength
 - Sled Push (Speed). 3 x 2 pushes.
 
-D-9 (Tuesday) - Fight Tactical Watch
+D-9 (Tuesday) - Tactical Focus
 Why: Know what happens after the first punches so pocket exchanges stay planned.
 - Pocket Exchange Map: 10 minutes, tactical review only. No physical load.
   Step 1: Identify the opponent's most common pocket sequence.
@@ -294,20 +296,29 @@ Why: Know what happens after the first punches so pocket exchanges stay planned.
   Step 6: {OVERLAY_ROUND_PHASE}
 """
 
-    violations = check_structured_faithfulness(
+    # Stage 2 authored no Tactical Watch prose on D-17, and it was never its job
+    # to: the locked role owns the drill and the deterministic merge projects it
+    # into the card. The card carries the authoritative content, so there is no
+    # violation -- the requirement is checked against the role, not the prose.
+    assert check_structured_faithfulness(
         _body_attack_card(),
         source,
         _body_attack_brief(),
-    )
+    ) == []
 
-    assert violations == [
-        "LOCKED_CONTENT: 'Body Attack Opportunity' "
-        "locked_tactical_watch_missing_from_stage2 on D-17"
+    # The requirement did not disappear, it moved to the real owner: a card that
+    # drops the locked block still fails, even though the prose is unchanged.
+    stripped = copy.deepcopy(_body_attack_card())
+    stripped["weeks"][0]["days"][0]["sessions"][0]["blocks"] = []
+    assert check_structured_faithfulness(stripped, source, _body_attack_brief()) == [
+        "LOCKED_CONTENT: 'Body Attack Opportunity' lost required source content: "
+        "selected drill name, Why, Step 1, Step 2, Step 3, Step 4, Step 5, Step 6, "
+        "Intent, Focus, Reset, Anchor, Purpose, Progress"
     ]
 
 
 def test_locked_requirements_are_scoped_to_the_correct_drill_section():
-    source = f"""D-17 (Monday) - Fight Tactical Watch
+    source = f"""D-17 (Monday) - Tactical Focus
 Why: Find safe body attacks that reward pressure without making the entry predictable.
 - Body Attack Opportunity: 10 minutes, tactical review only. No physical load.
   Step 1: Identify the clearest body opening the opponent gives away.
@@ -321,7 +332,7 @@ Why: Find safe body attacks that reward pressure without making the entry predic
   Purpose: SPP body-attack selection for a pressure fighter.
   Progress: Use the body attack only after the chosen setup appears in technical work.
 
-D-9 (Tuesday) - Fight Tactical Watch
+D-9 (Tuesday) - Tactical Focus
 Why: Know what happens after the first punches so pocket exchanges stay planned.
 - Pocket Exchange Map: 10 minutes, tactical review only. No physical load.
   Step 5: {OVERLAY_DANGER_CUE}
@@ -344,7 +355,7 @@ def test_missing_locked_tactical_watch_source_is_repaired_idempotently():
 D-16 (Tuesday) - Technical-only combat
 Technical-only contact today - no hard sparring.
 
-D-9 (Tuesday) - Fight Tactical Watch
+D-9 (Tuesday) - Tactical Focus
 Why: Know what happens after the first punches so pocket exchanges stay planned.
 - Pocket Exchange Map: 10 minutes, tactical review only. No physical load.
 """
@@ -382,11 +393,11 @@ Technical-only contact today - no hard sparring.
 
     assert repaired.unresolved == []
     assert repaired.applied == ["D-17: Body Attack Opportunity"]
-    assert "D-17 (Monday) — Fight Tactical Watch" in repaired.source_markdown
+    assert "D-17 (Monday) — Tactical Focus" in repaired.source_markdown
     assert repaired.source_markdown.index("Technical Sparring") < repaired.source_markdown.index(
-        "Fight Tactical Watch"
+        "Tactical Focus"
     )
-    assert repaired.source_markdown.index("Fight Tactical Watch") < repaired.source_markdown.index(
+    assert repaired.source_markdown.index("Tactical Focus") < repaired.source_markdown.index(
         "D-16 (Tuesday)"
     )
 
@@ -692,12 +703,12 @@ def test_real_format_faithful_card_passes():
 def test_tactical_watch_note_label_is_not_treated_as_misplaced_exercise():
     source = """# FIGHT CAMP PLAN
 
-D-17 (Friday) - Fight Tactical Watch
+D-17 (Friday) - Tactical Focus
 - Watch: 8-12 min.
 Purpose: identify opponent rhythm.
 Output: write 3 fight cues only.
 
-D-9 (Saturday) - Fight Tactical Watch
+D-9 (Saturday) - Tactical Focus
 - Watch: 8-12 min.
 Purpose: identify bait reactions and exits.
 Output: write 3 fight cues only.

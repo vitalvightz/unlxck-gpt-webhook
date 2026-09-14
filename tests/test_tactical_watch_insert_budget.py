@@ -1,5 +1,9 @@
 from fightcamp.camp_phases import calculate_phase_weeks
-from fightcamp.gap_fill_inserts import MAX_INSERTS_TOTAL_D21_TO_D0, apply_gap_fill_inserts
+from fightcamp.gap_fill_inserts import (
+    MAX_INSERTS_TOTAL_D21_TO_D0,
+    apply_gap_fill_inserts,
+    budgeted_insert_count,
+)
 
 
 def _role(offset: int) -> dict:
@@ -14,7 +18,14 @@ def _role(offset: int) -> dict:
     }
 
 
-def test_mandatory_weekly_watches_stay_inside_total_insert_budget():
+def test_mandatory_weekly_watches_do_not_spend_the_insert_budget():
+    """Zero-load inserts are outside the allowance, so they cannot crowd it out.
+
+    The Tactical Watch and cue card carry no physical load and coexist with real
+    sessions. Counting them against the camp's support-insert allowance let a
+    week of tactical reading consume the room the athlete's physical goals need,
+    so only load-bearing inserts are charged to it.
+    """
     phase_weeks = calculate_phase_weeks(
         3,
         "boxing",
@@ -48,7 +59,7 @@ def test_mandatory_weekly_watches_stay_inside_total_insert_budget():
     )
     generated = [role for role in sequence if role.get("category") == "support_insert"]
 
-    assert len(generated) <= MAX_INSERTS_TOTAL_D21_TO_D0
+    assert budgeted_insert_count(generated) <= MAX_INSERTS_TOTAL_D21_TO_D0
     for low, high in ((1, 7), (8, 14), (15, 21)):
         segment = [
             role
@@ -63,3 +74,23 @@ def test_mandatory_weekly_watches_stay_inside_total_insert_budget():
             and role.get("mandatory_tactical_watch") is True
         ]
         assert len(watches) == 1
+
+
+def test_zero_cost_inserts_are_not_charged_to_the_allowance():
+    from fightcamp.gap_fill_inserts import consumes_insert_budget
+
+    for zero_cost in ("tactical_watch", "tactical_cue_card", "self_review", "neural_visualization"):
+        assert consumes_insert_budget(zero_cost) is False
+    for load_bearing in ("breathing_reset", "aerobic_shadow_flow", "mobility_rehab", "walk_flush"):
+        assert consumes_insert_budget(load_bearing) is True
+
+
+def test_budgeted_count_ignores_zero_cost_inserts():
+    inserts = [
+        {"role_key": "tactical_watch"},
+        {"role_key": "tactical_cue_card"},
+        {"role_key": "breathing_reset"},
+        {"role_key": "aerobic_shadow_flow"},
+    ]
+    assert budgeted_insert_count(inserts) == 2
+    assert budgeted_insert_count([]) == 0

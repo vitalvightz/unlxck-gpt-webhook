@@ -508,6 +508,7 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
   const canCompleteSession =
     canCompleteTodaySession(state.today.next_session) &&
     sessionIsToday &&
+    authoritativeTier !== "not_checked_in" &&
     !blocksCurrentSession;
 
   return {

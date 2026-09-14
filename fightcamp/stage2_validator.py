@@ -11,6 +11,7 @@ from .normalization import clean_list, phrase_in_text, dedupe_preserve_order
 from .late_selector_windows import classify_late_selector_window
 from .fight_day_override import FIGHT_DAY_PROTOCOL_TEXT
 from .stage2_render_guards import _has_active_injury_from_athlete_model
+from .calendar_context import role_d_day
 
 _BULLET_PREFIX = compile_regex("stage2_validator", "bullet_prefix")
 _PHASE_HEADER = PHASE_HEADER_PATTERN
@@ -384,9 +385,17 @@ _LATE_FIGHT_WARMUP_PREP = re.compile(
 )
 
 
+# A leading markdown list bullet / emphasis marker. Annotation lines are written
+# both bare ("Purpose: ...") and bulleted ("- Purpose: ..."); only whitespace was
+# stripped before matching, so the bulleted form escaped the annotation check and
+# was then read as an exercise whose name was the label itself ("Purpose",
+# "Easier"). ``_rendered_exercise_label`` already strips the same prefix.
+_LIST_BULLET_PREFIX = re.compile(r"^\s*(?:[-*\u2022]\s*)?(?:\*\*?)?\s*")
+
+
 def _late_fight_line_is_annotation_or_task(line: str) -> bool:
     """True for descriptive annotation labels and non-exercise tactical tasks."""
-    stripped = (line or "").strip()
+    stripped = _LIST_BULLET_PREFIX.sub("", (line or "").strip())
     if not stripped:
         return False
     if _LATE_FIGHT_ANNOTATION_LABEL.match(stripped):
@@ -3394,19 +3403,22 @@ def _late_camp_effective_prescription_warnings(
 
 
 def _scheduled_role_d_day(week: dict[str, Any], role: dict[str, Any]) -> int | None:
-    for key in ("scheduled_countdown_label", "countdown_label"):
-        match = re.search(r"D-(\d+)", str(role.get(key) or ""), re.IGNORECASE)
-        if match:
-            return int(match.group(1))
-    scheduled_day = str(role.get("scheduled_day_hint") or "").strip().lower()
-    for calendar_day in week.get("calendar_days") or []:
-        if str(calendar_day.get("weekday") or "").strip().lower() != scheduled_day:
-            continue
-        try:
-            return int(calendar_day.get("d_day"))
-        except (TypeError, ValueError):
-            return None
-    return None
+    """Which countdown day owns this role — resolved by the canonical adapter.
+
+    This used to be a local resolver that read ``countdown_label`` second and
+    never read ``scheduled_d_day`` or ``countdown_offset`` at all. Those are the
+    two fields ``calendar_integrity._stamp_relocation`` always writes when the
+    final governor moves a role, while ``countdown_label`` is never refreshed
+    there and is therefore stale after a relocation. Trusting it above the
+    authoritative integers meant the conditioning validator — and
+    ``stage2_repair``, which resolves days through this same helper — could
+    attribute a closed member to a day the governor had already moved it off.
+
+    ``calendar_context.role_d_day`` is the canonical representation owner named
+    by the architecture contract, and it orders the same fields correctly:
+    final placement metadata first, the stale label only as a last resort.
+    """
+    return role_d_day(week, role)
 
 
 def _missing_selected_conditioning_assignment_warnings(
@@ -3426,10 +3438,6 @@ def _missing_selected_conditioning_assignment_warnings(
             continue
         for role in week.get("session_roles") or []:
             if not isinstance(role, dict) or str(role.get("category") or "").lower() != "conditioning":
-                continue
-            if (role.get("conditioning_composition_policy") or {}).get("stage2_composes_membership"):
-                # Normal conditioning is intentionally validated from Stage 2's
-                # chosen candidates below, never against a stale closed list.
                 continue
             assignments = [
                 assignment
@@ -3590,201 +3598,6 @@ def _conditioning_dose_within_bounds(expected: str, rendered: str) -> tuple[bool
     return not violations, violations, expected_bounds, rendered_bounds
 
 
-def _normal_conditioning_composition_warnings(
-    planning_brief: dict,
-    final_plan_text: str,
-) -> list[dict[str, Any]]:
-    """Validate Stage 2's actual normal-conditioning choices against Stage 1.
-
-    Normal conditioning deliberately has no ``selected_exercise_assignments``:
-    that closed contract belongs to strength and the late-fight allocator.  The
-    candidate reservoir is still a hard identity/dose boundary, and the existing
-    phase-system guidance remains an aggregate guard for multi-drill high-load
-    sessions.
-    """
-    from .session_composition import _conditioning_phase_workload_envelope
-    # Reuse the canonical session-card parser already used to disambiguate
-    # same-day role ownership during post-processing. Day-wide blocks are too
-    # broad: a candidate mentioned in another card is not this role's choice.
-    from .stage2_validator_postprocess import _norm, _role_render_label, _session_blocks
-
-    session_blocks = _session_blocks(final_plan_text)
-    if not session_blocks:
-        return []
-
-    pools = planning_brief.get("candidate_pools") or {}
-    warnings: list[dict[str, Any]] = []
-    for week in (planning_brief.get("weekly_role_map") or {}).get("weeks") or []:
-        if not isinstance(week, dict):
-            continue
-        phase = str(week.get("phase") or "").upper()
-        phase_pool = pools.get(phase) if isinstance(pools, dict) else None
-        slots = phase_pool.get("conditioning_slots") if isinstance(phase_pool, dict) else []
-        for role in week.get("session_roles") or []:
-            if not isinstance(role, dict):
-                continue
-            policy = role.get("conditioning_composition_policy") or {}
-            if (
-                str(role.get("category") or "").lower() != "conditioning"
-                or role.get("late_fight_tail_owned")
-                or not policy.get("stage2_composes_membership")
-            ):
-                continue
-            d_day = _scheduled_role_d_day(week, role)
-            if d_day is None:
-                continue
-            phase = str(policy.get("source_phase") or phase).upper()
-            phase_pool = pools.get(phase) if isinstance(pools, dict) else None
-            slots = phase_pool.get("conditioning_slots") if isinstance(phase_pool, dict) else []
-            system = str(role.get("preferred_system") or "").lower()
-            candidates: dict[str, dict[str, Any]] = {}
-            for slot in slots or []:
-                if not isinstance(slot, dict) or str(slot.get("role") or "").lower() != system:
-                    continue
-                for candidate in [slot.get("selected"), *(slot.get("alternates") or [])]:
-                    if isinstance(candidate, dict) and str(candidate.get("name") or "").strip():
-                        candidates.setdefault(str(candidate["name"]).strip(), candidate)
-            if not candidates:
-                continue
-
-            role_label = _role_render_label(role)
-            blocks = [
-                block
-                for block in session_blocks
-                if block.get("d_day") == d_day
-                and _norm(block.get("title")) == role_label
-            ]
-            if len(blocks) != 1:
-                warnings.append(
-                    {
-                        "code": "normal_conditioning_session_identity_unresolved",
-                        "message": f"D-{d_day} normal conditioning cannot be bound to exactly one rendered role card.",
-                        "severity": "blocker",
-                        "confidence": "high",
-                        "scheduled_d_day": d_day,
-                        "role_key": role.get("role_key"),
-                    }
-                )
-                continue
-            session_block = blocks[0]
-            rendered_lines = list(session_block.get("lines") or [])
-            selected: list[tuple[str, str, dict[str, Any]]] = []
-            for name, candidate in candidates.items():
-                for line in rendered_lines:
-                    if _line_has_exercise(line, name):
-                        selected.append((name, line, candidate))
-            if not selected:
-                warnings.append(
-                    {
-                        "code": "normal_conditioning_candidate_missing",
-                        "message": f"D-{d_day} has no Stage-1 eligible conditioning drill selected by Stage 2.",
-                        "severity": "blocker",
-                        "confidence": "high",
-                        "scheduled_d_day": d_day,
-                        "role_key": role.get("role_key"),
-                    }
-                )
-                continue
-
-            optional_names = {
-                str(item.get("name") or "").strip()
-                for item in (role.get("optional_conditioning_support_assignments") or [])
-                if isinstance(item, dict) and str(item.get("name") or "").strip()
-            }
-            permitted_names = [*candidates, *optional_names]
-            for line in rendered_lines:
-                stripped = _BULLET_PREFIX.sub("", str(line)).strip()
-                if not stripped or ":" not in stripped or _line_is_instruction_only(stripped):
-                    continue
-                name = stripped.split(":", 1)[0].strip()
-                if re.match(r"^(?:why|purpose|warm[- ]?up|cool[- ]?down|easier|stop|underfill|optional)\b", name, re.I):
-                    continue
-                bounds = _conditioning_dose_bounds(stripped)
-                if not (bounds["intervals"] or bounds["duration_sec"]):
-                    continue
-                if not any(_line_has_exercise(stripped, permitted) for permitted in permitted_names):
-                    warnings.append(
-                        {
-                            "code": "normal_conditioning_unapproved_exercise",
-                            "message": f"D-{d_day} includes conditioning work outside its Stage-1 eligible bank surplus.",
-                            "severity": "blocker",
-                            "confidence": "high",
-                            "scheduled_d_day": d_day,
-                            "role_key": role.get("role_key"),
-                            "rendered_line": line,
-                        }
-                    )
-
-            for name, line, candidate in selected:
-                expected = str(candidate.get("prescription") or "").strip()
-                dose_ok, violations, expected_bounds, rendered_bounds = _conditioning_dose_within_bounds(
-                    expected, line
-                )
-                if expected and not dose_ok:
-                    warnings.append(
-                        {
-                            "code": "normal_conditioning_bank_dose_violation",
-                            "message": f"D-{d_day} conditioning drill '{name}' exceeds or omits its bank-backed dose.",
-                            "severity": "blocker",
-                            "confidence": "high",
-                            "scheduled_d_day": d_day,
-                            "exercise": name,
-                            "role_key": role.get("role_key"),
-                            "rendered_line": line,
-                            "dose_violations": violations,
-                            "bank_dose_bounds": expected_bounds,
-                            "rendered_dose_bounds": rendered_bounds,
-                        }
-                    )
-
-            target_active, elapsed_cap_minutes = _conditioning_phase_workload_envelope(
-                phase=phase,
-                system=system,
-            )
-            if target_active is not None and elapsed_cap_minutes is not None:
-                active_work = 0.0
-                elapsed = 0.0
-                for _, line, _ in selected:
-                    bounds = _conditioning_dose_bounds(line)
-                    active_work += sum(interval["count"] * interval["work_sec"] for interval in bounds["intervals"])
-                    elapsed += sum(interval["count"] * interval["work_sec"] for interval in bounds["intervals"])
-                    elapsed += sum(
-                        max(interval["count"] - 1, 0) * bounds["rest_sec"][min(index, len(bounds["rest_sec"]) - 1)]
-                        for index, interval in enumerate(bounds["intervals"])
-                        if bounds["rest_sec"]
-                    )
-                if active_work > target_active or elapsed > elapsed_cap_minutes * 60.0:
-                    warnings.append(
-                        {
-                            "code": "normal_conditioning_combined_workload_exceeded",
-                            "message": f"D-{d_day} combines high-load conditioning drills beyond existing phase/system guidance.",
-                            "severity": "blocker",
-                            "confidence": "high",
-                            "scheduled_d_day": d_day,
-                            "role_key": role.get("role_key"),
-                            "active_work_seconds": active_work,
-                            "target_active_work_seconds": target_active,
-                            "elapsed_seconds": elapsed,
-                            "elapsed_cap_seconds": elapsed_cap_minutes * 60.0,
-                        }
-                    )
-                elif active_work < target_active and not any(
-                    re.search(r"\bunderfill\s*:\s*\S", line, re.I)
-                    for line in rendered_lines
-                ):
-                    warnings.append(
-                        {
-                            "code": "normal_conditioning_underfill_reason_missing",
-                            "message": f"D-{d_day} is below the existing phase/system dose guidance without an explicit underfill reason.",
-                            "severity": "blocker",
-                            "confidence": "high",
-                            "scheduled_d_day": d_day,
-                            "role_key": role.get("role_key"),
-                        }
-                    )
-    return warnings
-
-
 def _goal_witness_rendered_doses(lines: list[str], witness: dict) -> list[str]:
     """Bind wrapped dose fields to this activity, never to the next exercise."""
     doses = []
@@ -3804,6 +3617,24 @@ def _goal_witness_rendered_doses(lines: list[str], witness: dict) -> list[str]:
     return doses
 
 
+# "4x5/side", "4 x 5 reps", "3 x 8" — a set x rep dose with NO time unit on the
+# work term. A trailing time unit ("4 x 30 sec") is deliberately excluded: that
+# is a timed interval and keeps the timed matching below.
+_AUTHORED_REP_DOSE = re.compile(
+    r"\b(?P<sets>\d+)\s*[x\u00d7]\s*(?P<reps>\d+)\s*"
+    r"(?!\s*(?:s\b|sec|second|m\b|min|minute))(?:reps?\b|/\s*side|per\s+side|\b)",
+    re.I,
+)
+
+
+def _authored_rep_dose(dose: object) -> tuple[int, int] | None:
+    """Return ``(sets, reps)`` when ``dose`` is a rep-shaped set x rep dose."""
+    match = _AUTHORED_REP_DOSE.search(str(dose or ""))
+    if not match:
+        return None
+    return int(match.group("sets")), int(match.group("reps"))
+
+
 def _goal_witness_dose_matches(witness: dict, dose: str) -> bool:
     from .goal_preservation import _sets_reps, strength_intensity
     if witness.get("sets"):
@@ -3819,6 +3650,20 @@ def _goal_witness_dose_matches(witness: dict, dose: str) -> bool:
                 and all(strength_intensity(dose).get(key, 0) >= witness[key]
                         for key in ("minimum_rpe", "minimum_load_percent") if key in witness))
     if witness.get("work_sec") and witness.get("rounds"):
+        # A drill whose OWN authored bank dose is rep-shaped ("4x5/side, 2min
+        # rest") is not a timed interval: its work_sec is an energy-system
+        # accounting estimate, not a prescription. Demanding a time unit in the
+        # rendering made a correctly rendered "4 x 5/side" read as a missing
+        # witness. Check the authored shape first and, when it is rep-shaped,
+        # hold the rendering to that same authored set x rep count.
+        authored = _authored_rep_dose(witness.get("effective_prescription"))
+        if authored:
+            rendered = _authored_rep_dose(dose)
+            return bool(
+                rendered
+                and rendered[0] >= authored[0]
+                and rendered[1] >= authored[1]
+            )
         # Parse common structured timed forms — "3 rounds x 2 min", "3 rounds of
         # 2 minutes", "4 x 30 sec" — in consistent units, normalising minutes to
         # seconds before comparing with work_sec. On any parse failure return a
@@ -3875,6 +3720,114 @@ def _goal_preservation_render_errors(planning_brief: dict, final_plan_text: str)
     return errors
 
 
+# Wording that asserts a host carries no programmed S&C. Harmless on a bare
+# technical day; a direct contradiction on a day the planner gave a physical
+# microdose, which is how a live plan told the athlete to do med-ball throws and
+# that the day had none.
+_MICRODOSE_CONTRADICTION_PHRASES = (
+    "no programmed s&c",
+    "no extra s&c",
+    "technical polish",
+    "technical work only",
+    "no s&c",
+)
+
+# Non-physical exposures cannot be contradicted by a "no S&C" line.
+_PHYSICAL_MICRODOSE_GOALS = {"power", "speed", "strength"}
+
+
+def _priority_microdoses(planning_brief: dict) -> list[dict]:
+    """Every microdose the planner attached, with its host day."""
+    out: list[dict] = []
+    role_map = planning_brief.get("weekly_role_map") or {}
+    for week in role_map.get("weeks") or []:
+        if not isinstance(week, dict):
+            continue
+        for role in week.get("session_roles") or []:
+            if not isinstance(role, dict):
+                continue
+            microdose = role.get("priority_microdose")
+            if not isinstance(microdose, dict) or not str(microdose.get("name") or "").strip():
+                continue
+            d_day = role_d_day(week, role)
+            if isinstance(d_day, int):
+                out.append({"microdose": microdose, "d_day": d_day, "role": role})
+    return out
+
+
+def _priority_microdose_render_errors(planning_brief: dict, final_plan_text: str) -> list[dict]:
+    """The planner's microdose must survive rendering, once, on its host day.
+
+    Render fidelity only. Whether the exposure should exist was already decided
+    by goal preservation; this never re-opens that.
+    """
+    errors: list[dict] = []
+    blocks = _countdown_blocks(final_plan_text)
+    for entry in _priority_microdoses(planning_brief):
+        microdose = entry["microdose"]
+        d_day = entry["d_day"]
+        name = str(microdose["name"]).strip()
+        goal = str(microdose.get("goal") or "").strip().lower()
+        prescription = str(microdose.get("prescription") or "").strip()
+        base = {
+            "goal": goal,
+            "exercise": name,
+            "scheduled_d_day": d_day,
+            "severity": "blocker",
+            "confidence": "high",
+            "effective_prescription": prescription,
+        }
+        day_lines = [
+            line
+            for block in blocks
+            if block["day"] == d_day
+            for line in block.get("lines", [])
+        ]
+        if not day_lines:
+            errors.append({**base, "code": "missing_priority_microdose",
+                "message": "The microdose host day is absent from the rendered plan."})
+            continue
+        occurrences = sum(1 for line in day_lines if name.lower() in line.lower())
+        if occurrences == 0:
+            errors.append({**base, "code": "missing_priority_microdose",
+                "message": "A planner-attached priority microdose disappeared during rendering."})
+            continue
+        if occurrences > 1:
+            errors.append({**base, "code": "duplicate_priority_microdose",
+                "message": "A priority microdose was rendered more than once on its host day."})
+        day_text = " ".join(day_lines).lower()
+        if prescription and prescription.lower() not in day_text:
+            errors.append({**base, "code": "missing_priority_microdose",
+                "message": "A priority microdose rendered without its prescribed dose."})
+        if goal in _PHYSICAL_MICRODOSE_GOALS and any(
+            phrase in day_text for phrase in _MICRODOSE_CONTRADICTION_PHRASES
+        ):
+            errors.append({**base, "code": "priority_microdose_contradiction",
+                "message": "The host day claims it carries no programmed S&C while also "
+                           "carrying a physical priority microdose."})
+    return errors
+
+
+def _underfilled_conditioning_errors(planning_brief: dict) -> list[dict]:
+    errors: list[dict] = []
+    for week in (planning_brief.get("weekly_role_map") or {}).get("weeks", []) or []:
+        if not isinstance(week, dict):
+            continue
+        for role in week.get("session_roles", []) or []:
+            policy = role.get("conditioning_composition_policy") if isinstance(role, dict) else None
+            if not isinstance(policy, dict) or policy.get("conditioning_workload_met") is not False:
+                continue
+            errors.append(_issue(
+                code="conditioning_role_workload_underfilled",
+                message="Conditioning role is short of its required phase/system workload.",
+                severity="blocker",
+                confidence="high",
+                phase=week.get("phase"),
+                role_key=role.get("role_key"),
+            ))
+    return errors
+
+
 def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dict:
     from .goal_preservation import validate_goal_preservation
     plan_lines = _extract_plan_lines(final_plan_text)
@@ -3885,6 +3838,8 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     errors: list[dict[str, Any]] = validate_goal_preservation(planning_brief)
     if not errors:
         errors.extend(_goal_preservation_render_errors(planning_brief, final_plan_text))
+    errors.extend(_priority_microdose_render_errors(planning_brief, final_plan_text))
+    errors.extend(_underfilled_conditioning_errors(planning_brief))
     warnings: list[dict[str, Any]] = []
     if not plan_lines:
         errors.append(_issue(code="stage2_output_empty", message="Stage 2 output is empty.", severity="blocker", confidence="high"))
@@ -3959,10 +3914,6 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         planning_brief, final_plan_text
     )
     errors.extend(_issue(**item) for item in missing_selected_conditioning_assignments)
-    normal_conditioning_composition_warnings = _normal_conditioning_composition_warnings(
-        planning_brief, final_plan_text
-    )
-    errors.extend(_issue(**item) for item in normal_conditioning_composition_warnings)
 
     missing_required_elements = _find_missing_required_elements(planning_brief, final_plan_text)
     missing_phase_sections = _find_missing_phase_sections(planning_brief, phase_sections)

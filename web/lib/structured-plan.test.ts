@@ -27,6 +27,7 @@ import {
   getMindsetLines,
   getSessionCoachingLines,
   getPlanNotes,
+  getPriorityMicrodose,
   planNoteLabel,
   getSessions,
   getStringList,
@@ -56,6 +57,20 @@ test("formatCountdownLabel normalizes legacy event-day labels for display", () =
   assert.equal(formatCountdownLabel("d0"), "D-0");
   assert.equal(formatCountdownLabel("D-12"), "D-12");
   assert.equal(formatCountdownLabel("  "), null);
+});
+
+test("getPriorityMicrodose requires complete planner-owned display fields", () => {
+  assert.deepEqual(
+    getPriorityMicrodose({
+      priority_microdose: { goal: " power ", name: " Med-ball throw ", prescription: " 2 x 3 " },
+    }),
+    { goal: "power", name: "Med-ball throw", prescription: "2 x 3" },
+  );
+  assert.equal(getPriorityMicrodose({}), null);
+  assert.equal(
+    getPriorityMicrodose({ priority_microdose: { goal: "power", name: "Med-ball throw" } }),
+    null,
+  );
 });
 
 // An athlete-safe deterministic_support projection (as the backend emits it,

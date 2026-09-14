@@ -996,6 +996,22 @@ def test_normalize_session_and_block_type_aliases():
     assert session["blocks"][1]["block_type"] == "accessory"  # unknown -> accessory
 
 
+def test_normalize_rehab_friendly_raw_session_type_to_rehab():
+    plan = normalize_structured_plan_candidate(
+        {
+            "weeks": [
+                {
+                    "days": [
+                        {"sessions": [{"session_type": "Rehab-friendly low-load support"}]}
+                    ]
+                }
+            ]
+        }
+    )
+    session = plan["weeks"][0]["days"][0]["sessions"][0]
+    assert session["session_type"] == "rehab"
+
+
 def test_normalize_rest_duration_strings_become_objects():
     plan = normalize_structured_plan_candidate(
         {

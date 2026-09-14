@@ -34,7 +34,12 @@ function blockHaystack(block: StructuredBlock): string {
 }
 
 export function isRehabBlock(block: StructuredBlock): boolean {
-  return String(block.block_type ?? "").trim().toLowerCase() === "rehab";
+  const rawType = normalizeRehabText(block.block_type);
+  // Old raw-plan conversions may retain their athlete-facing label as the
+  // block type (for example, "Rehab-friendly low-load support"). Treat those
+  // as rehab so they render and label correctly while new payloads use the
+  // canonical `rehab` enum.
+  return /\b(?:prehab|rehab)\b/.test(rawType);
 }
 
 /**

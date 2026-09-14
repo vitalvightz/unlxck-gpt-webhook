@@ -40,6 +40,48 @@ _CONTRACT_VISIBLE_PLAN_STATUSES = {"ready", "publishable_with_flags"}
 _CONTRACT_REVIEW_PLAN_STATUS = "review_required"
 _CONTRACT_FLAGGED_PLAN_STATUS = "publishable_with_flags"
 
+# Release override: we keep every validator/contract check running and every
+# finding recorded, but a plan that has usable content is never held for admin
+# approval. Any upstream hold (structural-integrity hold, contract gate, etc.)
+# that lands on one of these statuses is released with flags instead, so the
+# athlete sees the plan immediately. A genuinely empty result (no plan text and
+# no structured card) is left alone — there is nothing to release.
+_RELEASE_OVERRIDE_HELD_STATUSES = {"review_required", "held_for_review"}
+_RELEASE_OVERRIDE_STATUS = "publishable_with_flags"
+
+
+def _release_held_plan_with_flags(
+    final_result: dict[str, Any], *, athlete_id: str, job_id: str
+) -> dict[str, Any]:
+    """Release a would-be-held plan with flags instead of waiting for approval.
+
+    Keeps the validator/contract report untouched (findings stay recorded for
+    audit) and only rewrites the release status. No-op unless the plan is held
+    and has usable content to show.
+    """
+    if not isinstance(final_result, dict):
+        return final_result
+    status = str(final_result.get("status") or "").strip().lower()
+    if status not in _RELEASE_OVERRIDE_HELD_STATUSES:
+        return final_result
+    plan_text = str(final_result.get("plan_text") or "").strip()
+    final_text = str(final_result.get("final_plan_text") or "").strip()
+    if not plan_text and not final_text and not has_clean_structured_card(final_result):
+        # Nothing to show — leave the empty result to normal handling.
+        return final_result
+    released = {**final_result, "status": _RELEASE_OVERRIDE_STATUS}
+    if not plan_text and final_text:
+        # Structural hold clears plan_text but keeps the rendered final text;
+        # surface it so the released plan is not blank.
+        released["plan_text"] = final_result.get("final_plan_text")
+    logger.info(
+        "[jobs] generation:release_override_flagged athlete_id=%s job_id=%s from_status=%s",
+        athlete_id,
+        job_id,
+        status,
+    )
+    return released
+
 # Two independent decisions, each with its own allowlist. They happen to list the
 # same codes today, which is exactly why they must not share a predicate — one
 # can change without the other.
@@ -480,6 +522,12 @@ async def persist_plan_and_finalize(
         athlete_id=athlete_id,
         job_id=job_id,
         emit_milestone=emit_milestone,
+    )
+
+    # Never wait for admin approval: release any held plan that has usable
+    # content with flags. All validator/contract findings above stay recorded.
+    final_result = _release_held_plan_with_flags(
+        final_result, athlete_id=athlete_id, job_id=job_id
     )
 
     if plan_row and plan_id:

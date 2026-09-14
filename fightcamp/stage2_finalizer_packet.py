@@ -70,13 +70,55 @@ def _late_fight_tail_contracts(weekly_role_map: Any) -> dict[str, Any]:
         ),
         reverse=True,
     )
-    return {
+    shared, segments = _hoist_shared_contract(segments)
+    contracts = {
         "active": True,
         "normal_planner_through_d": handoff.get("normal_planner_through_d", 14),
         "late_fight_planner_from_d": handoff.get("late_fight_planner_from_d", 13),
         "source": handoff.get("source") or "finished_existing_late_fight_path",
         "segments": segments,
     }
+    if shared:
+        contracts["shared_render_contract"] = shared
+    return contracts
+
+
+def _hoist_shared_contract(
+    segments: list[dict[str, Any]],
+) -> tuple[str, list[dict[str, Any]]]:
+    """Lift the paragraphs every segment repeats into one shared contract.
+
+    ``_handoff_mode_instructions`` composes each payload mode's contract from a
+    common countdown preamble plus that window's own rules, so the six tail
+    segments carried the same ~3.3k of common text six times (~16.5k duplicated
+    on a real late camp). The model was reading one rule six times and had to
+    infer that the copies were identical rather than subtly different.
+
+    Only lines present in EVERY segment are hoisted, and each segment keeps its
+    own remaining lines in their original order, so no window loses a rule.
+    """
+    contracts = [str(segment.get("render_contract") or "") for segment in segments]
+    if len(contracts) < 2 or not all(contracts):
+        return "", segments
+
+    line_sets = [set(contract.splitlines()) for contract in contracts]
+    shared_lines = set.intersection(*line_sets)
+    # A blank line is not a rule; hoisting it would only strip the formatting.
+    shared_lines = {line for line in shared_lines if line.strip()}
+    if not shared_lines:
+        return "", segments
+
+    # Preserve the order the first segment states them in.
+    shared = "\n".join(
+        line for line in contracts[0].splitlines() if line in shared_lines
+    )
+    trimmed: list[dict[str, Any]] = []
+    for segment, contract in zip(segments, contracts):
+        remaining = "\n".join(
+            line for line in contract.splitlines() if line not in shared_lines
+        ).strip()
+        trimmed.append({**segment, "render_contract": remaining})
+    return shared, trimmed
 
 
 def build_stage2_finalizer_packet(
@@ -114,6 +156,13 @@ def build_stage2_finalizer_packet(
     selected_plan["late_fight_tail_handoff"] = deepcopy(tail_contracts)
 
     hard_rules = packet.setdefault("hard_rules", [])
+    if tail_contracts.get("shared_render_contract"):
+        hard_rules.append(
+            "selected_plan.late_fight_tail_handoff.shared_render_contract applies to "
+            "EVERY tail segment. Each segment's own render_contract carries only the "
+            "rules specific to its countdown window; read the shared contract plus "
+            "that segment's rules together."
+        )
     hard_rules.append(
         "If selected_plan.late_fight_tail_handoff.active is true, its segments are "
         "authoritative for scheduled D-13 through D-0. Match each countdown D-day "

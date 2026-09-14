@@ -130,7 +130,15 @@ def test_finalizer_packet_exposes_selected_identity_and_closed_rule() -> None:
     packet = build_stage2_finalizer_packet(stage2_payload={}, planning_brief=_brief(role))
     compact_role = packet["selected_plan"]["weekly_role_map"]["weeks"][0]["session_roles"][0]
 
-    assert compact_role["selected_exercise_assignments"] == role["selected_exercise_assignments"]
+    # Identity and membership are the contract; slot provenance is server-side
+    # bookkeeping and is no longer serialized into the prompt.
+    assert [item["name"] for item in compact_role["selected_exercise_assignments"]] == [
+        item["name"] for item in role["selected_exercise_assignments"]
+    ]
+    assert all(
+        "slot_group" not in item and "source_phase" not in item
+        for item in compact_role["selected_exercise_assignments"]
+    )
     assert compact_role["effective_strength_envelope"]["allowed_exercise_names"] == ["Trap Bar Deadlift"]
     assert any("complete session membership" in rule for rule in packet["hard_rules"])
     assert any("including Rules 4, 5, 6A, 7, and 8" in rule for rule in packet["hard_rules"])

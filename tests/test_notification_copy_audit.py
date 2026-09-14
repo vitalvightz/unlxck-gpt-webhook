@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from api.services import notification_templates
-from api.services.notification_templates import BUNDLED_TEMPLATES, select_notification_template
+from api.services.notification_templates import (
+    BUNDLED_TEMPLATES,
+    LATE_FIGHT_COUNTDOWN_COPY,
+    select_notification_template,
+)
 
 
 class EmptyTemplateStore:
@@ -86,4 +90,4 @@ def test_recovery_copy_does_not_invent_specific_adjacent_sessions() -> None:
 def test_generic_d1_copy_does_not_assume_weight_cut() -> None:
     d1 = _template("fight_countdown", "fc-d01")
     assert "make weight" not in d1.body_template.lower()
-    assert d1.body_template == "No chasing fitness now. Stay calm and follow the plan."
+    assert d1.body_template == LATE_FIGHT_COUNTDOWN_COPY["fc-d01"][1]

@@ -48,25 +48,33 @@ from .stage2_payload_late_fight import (  # noqa: F401  (re-exported for tests/b
 from .gap_fill_inserts import apply_gap_fill_inserts
 from .conditioning import athlete_facing_system_label, technical_footwork_prescription_fields
 from .fight_day_override import apply_fight_day_override_to_weekly_role_map
-from .role_labels import stamp_weekly_role_map_labels
+from .role_labels import PRIMARY_STRENGTH_ROLE_KEYS, stamp_weekly_role_map_labels
 from .camp_week_fillers import apply_camp_week_fillers
 from .bank_authority import original_bank_entries
+from .bank_schema import has_meaningful_fulfillment_authority
 from .late_camp_role_morph import apply_late_camp_role_morph
 from .prescription_resolver import apply_effective_strength_prescriptions
 from .session_composition import (
+    _conditioning_prescription,
+    _selected_coaching_notes,
     attach_late_fight_assignments,
+    apply_realised_load_calendar_revalidation,
     compose_normal_conditioning_assignments,
     compose_normal_rehab_assignments,
     compose_normal_strength_assignments,
 )
 from .normal_calendar_placement import fill_missing_session_days
-from .late_selector_windows import classify_late_selector_window, late_window_allowed
+from .late_selector_windows import (
+    _normalise_late_window_tokens,
+    classify_late_selector_window,
+    late_window_allowed,
+    late_windows_spanned,
+)
 from .normalization import (  # noqa: F401  (phrase_in_text re-exported for back-compat)
     clean_list,
     dedupe_preserve_order,
     normalize_fatigue_level,
     normalize_text,
-    ordered_weekdays,
     phrase_in_text,
     slugify,
 )
@@ -89,7 +97,7 @@ from .stage2_render_guards import (  # noqa: F401  (re-exported for backwards co
     _render_guard_flags,
 )
 from .strength_session_quality import classify_strength_item, infer_strength_sessions
-from .training_context import TrainingContext
+from .training_context import TrainingContext, allocate_sessions
 from .nutrition import compute_nutrition_targets
 from .recovery import compute_recovery_plan
 from .mindset_module import compute_mindset_plan
@@ -179,11 +187,58 @@ from .stage2_role_map import (  # noqa: F401
 
 
 
+def _clean_list(values) -> list[str]:
+    if values is None:
+        return []
+    if isinstance(values, list):
+        return [str(value).strip() for value in values if str(value).strip()]
+    if isinstance(values, str):
+        return [values.strip()] if values.strip() else []
+    return [str(values).strip()]
+
+
+def _dedupe_preserve_order(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        result.append(value)
+    return result
+
+
+
+
+
 def _compress_short_camp_priorities(athlete_model: dict) -> dict:
     return stage2_planning_brief_module._compress_short_camp_priorities(athlete_model)
 
 
-_build_phase_briefs = stage2_planning_brief_module._build_phase_briefs
+def _build_phase_briefs(training_context: TrainingContext, phase_weeks: dict) -> dict[str, dict]:
+    briefs: dict[str, dict] = {}
+    for phase in ("GPP", "SPP", "TAPER"):
+        if phase_weeks.get(phase, 0) <= 0 and phase_weeks.get("days", {}).get(phase, 0) < 1:
+            continue
+        session_counts = allocate_sessions(training_context.training_frequency, phase)
+        risk_flags: list[str] = []
+        if training_context.injuries:
+            risk_flags.append("respect injury guardrails")
+        if training_context.weight_cut_risk:
+            risk_flags.append("manage cut stress")
+        if training_context.fatigue in {"moderate", "high"}:
+            risk_flags.append("manage accumulated fatigue")
+        briefs[phase] = {
+            "objective": PHASE_OBJECTIVES.get(phase, ""),
+            "emphasize": PHASE_EMPHASIS.get(phase, []),
+            "deprioritize": PHASE_DEPRIORITIZE.get(phase, []),
+            "risk_flags": _dedupe_preserve_order(risk_flags),
+            "session_counts": session_counts,
+            "selection_guardrails": _build_phase_selection_guardrails(phase, training_context),
+            "weeks": phase_weeks.get(phase, 0),
+            "days": phase_weeks.get("days", {}).get(phase, 0),
+        }
+    return briefs
 
 
 
@@ -197,12 +252,6 @@ _build_phase_briefs = stage2_planning_brief_module._build_phase_briefs
 
 
 
-_PRIMARY_STRENGTH_ROLE_KEYS = {
-    "primary_strength_day",
-    "structural_strength_day",
-    "neural_plus_strength_day",
-    "neural_primer_day",
-}
 _LOW_LOAD_SUPPORT_ROLE_KEYS = {
     "recovery_reset_day",
     "tissue_recovery_day",
@@ -231,13 +280,12 @@ _CROWDED_SUPPORT_FORBIDDEN_TOKENS = [
     "sharpness_touch",
     "hard_sparring",
 ]
-# Private compatibility names remain aliases, not parallel implementations.
-_normalized_fatigue_level = normalize_fatigue_level
-_ordered_weekdays = ordered_weekdays
+def _normalized_fatigue_level(athlete_model: dict) -> str:
+    return normalize_fatigue_level(athlete_model)
 
 
 def _is_anchor_role(role: dict[str, Any]) -> bool:
-    return role.get("category") == "strength" and role.get("role_key") in _PRIMARY_STRENGTH_ROLE_KEYS
+    return role.get("category") == "strength" and role.get("role_key") in PRIMARY_STRENGTH_ROLE_KEYS
 
 
 def _is_low_load_support_role(role: dict[str, Any]) -> bool:
@@ -279,6 +327,8 @@ def _apply_day_identity_governance(role: dict[str, Any], *, crowded_week_active:
     role["governance"] = governance
 
 
+
+
 def _is_meaningful_stressor(role: dict[str, Any]) -> bool:
     role_key = str(role.get("role_key") or "").strip()
     if role_key in {"main_conditioning_stressor", "fight_pace_block", "full_neural_session"}:
@@ -312,40 +362,32 @@ def _is_meaningful_stressor(role: dict[str, Any]) -> bool:
 
 
 
-_intentional_compression_stub = stage2_role_map_module._intentional_compression_stub
-_active_weight_cut_is_meaningful = stage2_role_map_module._active_weight_cut_is_meaningful
-_cut_severity_compression_points = stage2_role_map_module._cut_severity_compression_points
-_active_injury_affects_generic_compression = stage2_role_map_module._active_injury_is_moderate_plus
-_active_injury_is_moderate_plus = stage2_role_map_module._boxing_crowded_week_injury_is_moderate_plus
-_compute_readiness_compression = stage2_role_map_module._compute_readiness_compression
+def _active_injury_affects_generic_compression(athlete_model: dict) -> bool:
+    """True when the generic readiness layer should count injury pressure."""
+    # A stable surface/skin-only injury is a hygiene note, not injured tissue —
+    # it must not add compression pressure.
+    if _all_active_injuries_surface_only(athlete_model):
+        return False
+    if athlete_model.get("injuries"):
+        return True
+    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
+    return "injury_management" in readiness_flags
 
 
-def _non_spar_role_priority_rank(
-    role: dict,
-    phase: str,
-    is_hard_spar_week: bool,
-    is_meaningful_cut: bool,
-    must_keep: set[str] | None = None,
-    *,
-    crowded_week: bool = False,
-) -> int:
-    """Compatibility adapter to the canonical role-map priority policies."""
-    if crowded_week:
-        return stage2_role_map_module._boxing_crowded_role_priority(
-            role, must_keep or set()
-        )
-    return stage2_role_map_module._non_spar_role_priority_rank(
-        role,
-        phase,
-        is_hard_spar_week,
-        is_meaningful_cut,
-        must_keep,
-    )
-
-
-_build_spar_allocation_reason_codes = stage2_role_map_module._build_spar_allocation_reason_codes
-_apply_high_fatigue_week_compression = stage2_role_map_module._apply_high_fatigue_week_compression
-_apply_legacy_high_fatigue_compression = stage2_role_map_module._apply_legacy_high_fatigue_compression
+def _active_injury_is_moderate_plus(athlete_model: dict) -> bool:
+    """True when the boxing crowded-week trigger sees moderate+ injury pressure."""
+    # A stable surface/skin-only injury never counts as moderate+ tissue pressure.
+    if _all_active_injuries_surface_only(athlete_model):
+        return False
+    injuries = _clean_list(athlete_model.get("injuries", []))
+    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
+    if readiness_flags & {"injury_management", "moderate_injury", "significant_injury", "severe_injury"}:
+        return True
+    for entry in injuries:
+        lowered = entry.lower()
+        if any(token in lowered for token in ("moderate", "severe", "major", "significant", "grade 2", "grade ii", "grade 3", "grade iii")):
+            return True
+    return False
 
 
 def _build_weekly_role_map(
@@ -372,10 +414,10 @@ def _derive_global_priorities(
     push: list[str] = []
     avoid: list[str] = []
 
-    injuries = clean_list(athlete_model.get("injuries", []))
-    goals = clean_list(athlete_model.get("key_goals", []))
-    hard_sparring_days = clean_list(athlete_model.get("hard_sparring_days", []))
-    support_work_days = clean_list(
+    injuries = _clean_list(athlete_model.get("injuries", []))
+    goals = _clean_list(athlete_model.get("key_goals", []))
+    hard_sparring_days = _clean_list(athlete_model.get("hard_sparring_days", []))
+    support_work_days = _clean_list(
         athlete_model.get("support_work_days", athlete_model.get("technical_skill_days", []))
     )
     high_pressure_cut = _is_high_pressure_weight_cut(athlete_model=athlete_model)
@@ -536,12 +578,27 @@ def _slot_countdown_labels(slot: dict[str, Any]) -> list[str]:
 
 def _slot_support_only(slot: dict[str, Any]) -> bool:
     selected = _slot_selected_option(slot)
-    return bool(slot.get("support_only") or selected.get("support_only"))
+    metadata = selected.get("selection_metadata") if isinstance(selected.get("selection_metadata"), dict) else {}
+    return bool(slot.get("support_only") or selected.get("support_only") or metadata.get("support_only"))
+
+
+def _slot_has_meaningful_authority(slot: dict[str, Any], *, source_kind: str) -> bool:
+    selected = _slot_selected_option(slot)
+    metadata = selected.get("selection_metadata") if isinstance(selected.get("selection_metadata"), dict) else selected
+    return has_meaningful_fulfillment_authority(
+        metadata,
+        source_kind=source_kind,
+        source=str(metadata.get("_schema_source") or ""),
+        allow_legacy_unstamped=True,
+    )
 
 
 def _slot_anchor_capable(slot: dict[str, Any]) -> bool:
     selected = _slot_selected_option(slot)
-    return bool(slot.get("anchor_capable") or selected.get("anchor_capable"))
+    return bool(
+        (slot.get("anchor_capable") or selected.get("anchor_capable"))
+        and _slot_has_meaningful_authority(slot, source_kind="strength")
+    )
 
 
 def _slot_is_low_load_reset(slot: dict[str, Any]) -> bool:
@@ -595,7 +652,9 @@ def _slot_matches_late_fight_role(
                 return False
             return slot_role == "alactic" and _slot_selected_option(slot).get("source") != "style_taper"
         if preferred_system:
-            return slot_role == preferred_system
+            return slot_role == preferred_system and _slot_has_meaningful_authority(
+                slot, source_kind="conditioning"
+            )
         return role_key in {"alactic_sharpness_day", "light_fight_pace_touch_day", "technical_touch_day"}
     if slot_group != "strength_slots":
         return False
@@ -827,16 +886,35 @@ def _build_late_fight_allowed_exercises_by_day(
             if not _slot_countdown_labels(slot):
                 consumed_slot_ids.add(slot_id)
             allowed_by_day[day_label].append(name)
-            assignments_by_day[day_label].append(
-                {
-                    "name": name,
-                    "role_key": role.get("role_key"),
-                    "scheduled_countdown_label": day_label,
-                    "slot_id": slot.get("slot_id"),
-                    "slot_group": slot_group,
-                    "phase": phase,
-                }
-            )
+            option = _slot_selected_option(slot)
+            assignment = {
+                "name": name,
+                "role_key": role.get("role_key"),
+                "scheduled_countdown_label": day_label,
+                "slot_id": slot.get("slot_id"),
+                "slot_group": slot_group,
+                "phase": phase,
+            }
+            # Carry the selected bank dose forward for conditioning tail work so
+            # Stage 2 renders it directly, mirroring normal conditioning.  Loaded
+            # strength tail doses stay owned by the scheduled-day resolver
+            # (effective_strength_prescriptions) so a taper cap is never bypassed.
+            if slot_group == "conditioning_slots":
+                prescription = _conditioning_prescription(option)
+                if prescription:
+                    assignment["base_prescription"] = prescription
+                    assignment["effective_prescription"] = prescription
+                assignment.update(
+                    {
+                        "support_only": option.get("support_only") is True,
+                        "meaningful_stress": option.get("meaningful_stress") is True,
+                        "fulfillment_authority": option.get("fulfillment_authority") is True,
+                    }
+                )
+            notes = _selected_coaching_notes(option)
+            if notes:
+                assignment["coaching_notes"] = notes
+            assignments_by_day[day_label].append(assignment)
 
     return (
         {day: dedupe_preserve_order(names) for day, names in allowed_by_day.items()},
@@ -1221,10 +1299,32 @@ def _build_planning_brief(
     # authoritative effective prescription per selected strength exercise so
     # Stage 2 never has to reconcile the exercise-bank dose against the role caps.
     # Runs AFTER the morph (which owns dose shaping) and BEFORE label stamping.
-    apply_effective_strength_prescriptions(
-        weekly_role_map=weekly_role_map,
-        candidate_pools=candidate_pools,
-        athlete_model=athlete_model,
+    def _resolve_strength_doses(role_map: dict) -> dict:
+        return apply_effective_strength_prescriptions(
+            weekly_role_map=role_map,
+            candidate_pools=candidate_pools,
+            athlete_model=athlete_model,
+        )
+
+    _resolve_strength_doses(weekly_role_map)
+    # Composition plus dose resolution is the first point at which a session's
+    # real cross-day cost is knowable. Until here the calendar has only judged
+    # roles by the promise their role key makes, and a strength assignment
+    # carried only its raw bank dose. Re-ask the canonical policy now that both
+    # exercises and authoritative doses exist. Relocation only, to a strictly
+    # cleaner slot; never a forced rest day. A relocated role is re-morphed and
+    # re-dosed for the day it lands on.
+    def _recompose_conditioning(role_map: dict, only_roles: set) -> dict:
+        return compose_normal_conditioning_assignments(
+            weekly_role_map=role_map,
+            candidate_pools=candidate_pools,
+            only_roles=only_roles,
+        )
+
+    apply_realised_load_calendar_revalidation(
+        weekly_role_map,
+        redose_callback=_resolve_strength_doses,
+        recompose_conditioning_callback=_recompose_conditioning,
     )
     weekly_role_map = stamp_weekly_role_map_labels(weekly_role_map)
     return {
@@ -1287,6 +1387,12 @@ def _serialize_strength_option(exercise: dict, why: str, score_evidence: dict | 
     movement_patterns = [movement] if movement else []
     movement_patterns.extend(clean_list(exercise.get("tags", [])))
     quality_profile = classify_strength_item(exercise)
+    meaningful_authority = has_meaningful_fulfillment_authority(
+        exercise,
+        source_kind="strength",
+        source=str(exercise.get("_schema_source") or ""),
+        allow_legacy_unstamped=True,
+    )
     required_equipment = clean_list(exercise.get("required_equipment") or exercise.get("equipment", []))
     prescription = exercise.get("prescription") or ""
     if not prescription and phase:
@@ -1301,11 +1407,14 @@ def _serialize_strength_option(exercise: dict, why: str, score_evidence: dict | 
         "restriction_tags": _extract_restriction_tags(exercise),
         "mechanical_risk_tags": _extract_mechanical_risk_tags(exercise),
         "prescription": prescription or exercise.get("method") or "",
+        "notes": str(exercise.get("notes") or "").strip(),
         "real_strength_maintenance": exercise.get("real_strength_maintenance") is True,
         "why": why or "balanced selection",
         "quality_class": quality_profile["quality_class"],
-        "anchor_capable": quality_profile["anchor_capable"],
-        "support_only": quality_profile["support_only"],
+        "anchor_capable": quality_profile["anchor_capable"] and meaningful_authority,
+        "support_only": exercise.get("support_only") if isinstance(exercise.get("support_only"), bool) else quality_profile["support_only"],
+        "meaningful_stress": exercise.get("meaningful_stress"),
+        "fulfillment_authority": meaningful_authority,
         "base_categories": quality_profile["base_categories"],
         "required_equipment": required_equipment,
         "universally_available": not required_equipment or set(required_equipment).issubset({"bodyweight"}),
@@ -1334,9 +1443,19 @@ def _serialize_conditioning_option(
         "movement_patterns": dedupe_preserve_order([system] + tags),
         "restriction_tags": _extract_restriction_tags(drill),
         "mechanical_risk_tags": _extract_mechanical_risk_tags(drill),
+        "notes": str(drill.get("notes") or "").strip(),
+        # Conditioning drills author their dose in ``duration`` ("4x5/side, 2min
+        # rest", "45s work / 45s rest x 6 rounds"); only a minority also carry
+        # timing/rest/load. Reading just the latter three serialized EVERY
+        # conditioning entry in the banks to an empty prescription, so Stage 2
+        # was handed a scheduled drill with no dose and had to invent one — the
+        # deterministic dose the planner already held never reached the
+        # finalizer, and the invented phrasing then failed render matching.
         "prescription": " | ".join(
-            part for part in [drill.get("timing"), drill.get("rest"), drill.get("load")] if part
-        ),
+            part
+            for part in [drill.get("timing"), drill.get("rest"), drill.get("load")]
+            if part
+        ) or str(drill.get("duration") or "").strip(),
         "why": why or "balanced selection",
         "required_equipment": required_equipment,
         "universally_available": not required_equipment or set(required_equipment).issubset({"bodyweight"}),
@@ -1344,6 +1463,14 @@ def _serialize_conditioning_option(
         "availability_contingency_reason": drill.get("availability_contingency_reason") or "",
         "session_index": drill.get("session_index"),
         "athlete_facing_system_label": athlete_facing_system_label(drill, late_window=late_window),
+        "support_only": drill.get("support_only") is True,
+        "meaningful_stress": drill.get("meaningful_stress") is True,
+        "fulfillment_authority": has_meaningful_fulfillment_authority(
+            drill,
+            source_kind="conditioning",
+            source=str(drill.get("_schema_source") or ""),
+            allow_legacy_unstamped=True,
+        ),
     }
     if drill.get("modality") == "technical_footwork":
         prescription_fields = technical_footwork_prescription_fields(drill, stance=stance)
@@ -1385,23 +1512,51 @@ def _serialize_conditioning_option(
     return option
 
 
-def _build_late_tail_candidates(phase_block: dict | None, phase: str, *, stance=None) -> list[dict]:
-    """Serialize the existing qualified reservoir without phase-slot truncation."""
+def _build_late_tail_candidates(
+    phase_block: dict | None,
+    phase: str,
+    *,
+    stance=None,
+    required_windows: set[str] | None = None,
+) -> list[dict]:
+    """Serialize the existing qualified reservoir without phase-slot truncation.
+
+    Style-taper drills are always carried. Beyond those, a reservoir candidate is
+    also carried when it is legally usable in a late window this camp actually
+    reaches: Stage 1 had already qualified and scored it, but the handoff used to
+    drop it, so the dated selector could find no legal candidate and left the
+    session empty. Nothing new is selected here - this only stops the handoff
+    discarding coverage Stage 1 already produced.
+    """
+    required_windows = {w for w in (required_windows or set()) if w}
     slots = []
+    seen: set[str] = set()
     for system, candidates in ((phase_block or {}).get("candidate_reservoir") or {}).items():
-        if system not in {"alactic", "aerobic"}:
+        if str(system).startswith("__"):
             continue
         for candidate in candidates:
             drill = candidate.get("drill") or {}
-            if not str(drill.get("_schema_source") or "").endswith("style_taper_conditioning.json"):
+            name = str(drill.get("name") or "").strip()
+            if not name or name in seen:
                 continue
+            is_style_taper = str(drill.get("_schema_source") or "").endswith(
+                "style_taper_conditioning.json"
+            )
+            if is_style_taper:
+                if system not in {"alactic", "aerobic"}:
+                    continue
+            else:
+                drill_windows = _normalise_late_window_tokens(drill.get("late_windows"))
+                if "all" not in drill_windows and not (drill_windows & required_windows):
+                    continue
+            seen.add(name)
             option = _serialize_conditioning_option(
                 drill, system, candidate.get("explanation", ""),
                 score_evidence=candidate.get("score_evidence"), stance=stance,
             )
             option["relevance"] = {key: (candidate.get("reasons") or {}).get(key, 0)
                                    for key in ("style_hits", "goal_hits", "weakness_hits")}
-            slots.append({"slot_id": f"{phase.lower()}_late_{slugify(drill['name'])}",
+            slots.append({"slot_id": f"{phase.lower()}_late_{slugify(name)}",
                           "role": option["system"], "selected": option, "alternates": []})
     return slots
 
@@ -1490,6 +1645,17 @@ def _build_conditioning_alternates(
         name = drill.get("name")
         if not name or name == current_name or name in selected_names or name in seen:
             continue
+        # A same-system alternate can replace a mandatory system slot only when
+        # it carries the same explicit fulfilment authority. Support work stays
+        # available in its own support slot; it is not a hidden fallback for a
+        # developmental aerobic/glycolytic/alactic assignment.
+        if system in {"aerobic", "glycolytic", "alactic"} and not has_meaningful_fulfillment_authority(
+            drill,
+            source_kind="conditioning",
+            source=str(drill.get("_schema_source") or ""),
+            allow_legacy_unstamped=True,
+        ):
+            continue
         alternates.append(
             _serialize_conditioning_option(
                 drill,
@@ -1506,6 +1672,8 @@ def _build_conditioning_alternates(
             )
         )
         seen.add(name)
+        if len(alternates) >= 2:
+            break
     return alternates
 
 
@@ -1566,6 +1734,12 @@ def _build_strength_slots(strength_block: dict | None, phase: str) -> list[dict]
         # movement resolves to "unknown".
         role = movement if movement and movement != "unknown" else "strength_support"
         quality_profile = classify_strength_item(exercise)
+        meaningful_authority = has_meaningful_fulfillment_authority(
+            exercise,
+            source_kind="strength",
+            source=str(exercise.get("_schema_source") or ""),
+            allow_legacy_unstamped=True,
+        )
         slots.append(
             {
                 "slot_id": f"{phase.lower()}_strength_{idx}_{slugify(name)}",
@@ -1588,8 +1762,10 @@ def _build_strength_slots(strength_block: dict | None, phase: str) -> list[dict]
                 "priority": _strength_slot_priority(phase, role, idx),
                 "session_index": position_to_session.get(idx - 1, 1),
                 "quality_class": quality_profile["quality_class"],
-                "anchor_capable": quality_profile["anchor_capable"],
-                "support_only": quality_profile["support_only"],
+                "anchor_capable": quality_profile["anchor_capable"] and meaningful_authority,
+                "support_only": exercise.get("support_only") if isinstance(exercise.get("support_only"), bool) else quality_profile["support_only"],
+                "meaningful_stress": exercise.get("meaningful_stress"),
+                "fulfillment_authority": meaningful_authority,
                 "base_categories": quality_profile["base_categories"],
             }
         )
@@ -1826,13 +2002,23 @@ def build_stage2_payload(
         short_notice=short_notice,
     )
     has_active_injury = _has_active_injury_from_athlete_model(athlete_model)
+    # Which late windows will this camp's own scheduled roles actually ask for?
+    # The dated selector admits a candidate only when the bank opts it into the
+    # role's window, so the handoff must keep coverage for those windows instead
+    # of discarding it and leaving the session empty. Derived from the real
+    # sequence, so only windows this camp reaches are ever required.
+    required_windows = late_windows_spanned(athlete_model.get("days_until_fight"))
     candidate_pools: dict[str, dict] = {}
     for phase in ("GPP", "SPP", "TAPER"):
         if phase_weeks.get(phase, 0) <= 0 and phase_weeks.get("days", {}).get(phase, 0) < 1:
             continue
         candidate_pools[phase] = {
             "late_tail_candidates": _build_late_tail_candidates(
-                conditioning_blocks.get(phase), phase, stance=athlete_model.get("stance")),
+                conditioning_blocks.get(phase),
+                phase,
+                stance=athlete_model.get("stance"),
+                required_windows=required_windows,
+            ),
             "strength_slots": _build_strength_slots(strength_blocks.get(phase), phase),
             "conditioning_slots": _build_conditioning_slots(
                 conditioning_blocks.get(phase),
@@ -1891,7 +2077,7 @@ def build_stage2_payload(
 "Hard sparring days are the athlete's own combat locks (run in their gym, with or without a coach). The app does not prescribe or lead the sparring itself, and it must respect resolved safety, readiness, and calendar restrictions on every declared hard sparring day. Only for a resolved hard-as-planned day render the label '" + CANONICAL_HARD_SPARRING_LABEL + "' (or the equivalent sport-specific label such as 'MMA — hard sparring / controlled hard contact') followed by exactly one short note: '" + CANONICAL_HARD_SPARRING_NOTE + "' From D-14 normally, or D-17 with elevated risk, hard sparring is converted to technical work: render '" + CANONICAL_HARD_SPARRING_BAN_LABEL + "' (or sport-equivalent) — the same applies whenever the day carries reason code 'd14_hard_sparring_ban' or 'd17_hard_sparring_ban' — followed by exactly one short note: '" + CANONICAL_TECHNICAL_ONLY_NOTE + "' A technical-only day must never carry the hard-sparring note. A blocked/none contact status overrides all declarations and dates: no contact or sparring; surface medical evaluation/clearance guidance and do not restore contact. Do not output round counts, time-x-rounds formulas, intensity targets, dose, RPE, work:rest, or any sparring template wording (e.g. never '6-8 x 3-min rounds at set intensity', 'X rounds technical sparring', 'live rounds at moderate intensity'). Do not narrate intent, do not add a 'why today' line, do not list focus areas, do not suggest pad/bag/clinch volume — the athlete owns that contact work. Never schedule programmed S&C on a declared hard-sparring/contact day. Anything more than the label plus that one note is a violation of this rule.",
             "Respect the weekly session count implied by weekly_role_map; do not turn extra available days into extra active training days.",
             "If the athlete has more available days than planned sessions, leave the spare days off or clearly optional rather than rendering another full session.",
-            "If weekly_role_map or week_by_week_progression marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.",
+            "If weekly_role_map marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.",
             "If weekly_role_map.intentional_compression.policy is boxing_crowded_week, keep hard sparring as the week owner, then one anchor, then at most one low-load support day.",
             "In boxing crowded weeks, do not turn anchor days or recovery/support days into multi-stressor sessions by adding glycolytic, transfer, or extra sharpness work.",
             "In camps with 7 days or less to fight, only the compressed week-level priorities may drive standalone session purposes; keep all other selections as support, maintenance, or deferred notes only.",
@@ -2041,7 +2227,7 @@ def build_stage2_payload(
         "rewrite_guidance": rewrite_guidance,
     }
 
-STAGE2_FINALIZER_PROMPT = """You are Stage 2 (finalizer). Stage 1 has made the calendar and safety decisions. Your job is to render and coach the resolved plan; only explicitly supplied normal-conditioning roles retain bounded session-composition authority.
+STAGE2_FINALIZER_PROMPT = """You are Stage 2 (finalizer). Stage 1 has already made the training decisions. Your job is to render and coach the resolved plan, not redesign it.
 
 Input = FINALIZER PACKET + LOCKED SESSION RENDER MANIFEST + Stage 1 draft + athlete profile + optional injury context.
 
@@ -2049,7 +2235,7 @@ AUTHORITY ORDER
 1. FINALIZER PACKET — primary authority for calendar, render mode, countdown labels, restrictions, priorities, compact selected candidate facts, session-count metadata, and risks.
 2. Render guards and restrictions — hard constraints. Non-negotiable.
 3. Weekly role map / hard-sparring days — source of truth for visible session count, day ownership, declared days, and protected hard-sparring/contact slots.
-4. Stage 1 draft text — not final authority. Deterministic selected_exercise_assignments are final session membership; selected_plan.normal_conditioning_composition is the bounded candidate authority for normal conditioning only.
+4. Stage 1 draft text and unselected candidate material — not final authority. Deterministic selected_exercise_assignments in the FINALIZER PACKET are final session membership.
 
 RULE 1 — HARD FILTER
 Remove every exercise, drill, or prescription that violates any restriction, including synonyms and mechanical equivalents. Apply to strength, conditioning, rehab, warm-ups, and finishers. For a role with selected_exercise_assignments, drop/hold an illegal selected item and leave the gap; never replace it. Only open roles may replace or drop an item.
@@ -2058,8 +2244,14 @@ RULE 2 — FINALIZE THE RESOLVED CAMP
 Use the FINALIZER PACKET to render the already-decided calendar, sessions, exercise membership and effective prescriptions. Improve coaching clarity and remove redundant prose without changing training decisions. Do not reorganise, merge, suppress or reselect closed sessions to make the plan shorter or more coherent. Only explicitly open roles retain their existing bounded selection freedom. Safety restrictions and deterministic overrides remain authoritative.
 
 RULE 3 — SELECTION ORDER
-Build the first pass from the LOCKED SESSION RENDER MANIFEST wherever it is supplied. It is a source-backed view of the FINALIZER PACKET, not a separate planning authority. For each closed role, render the exact scheduled membership and every listed exercise line before writing coaching details. The exercise count is mandatory, not a target. A source selected_option=false means the exercise came from an alternate bank option; once promoted into selected_exercise_assignments it is a scheduled member, not an optional fallback. Never treat a shared source slot_id as one exercise. If a locked assignment is illegal or lacks an authoritative dose, leave the conflict unresolved for deterministic planning rather than inventing or substituting work.
-Preserve the calendar, declared days, coach-led ownership, session count, phase, and taper window from selected_plan / weekly_role_map. When a role has selected_exercise_assignments, render every assigned exercise and use only those exercises. That list is closed session membership from the deterministic planner. An empty selected_exercise_assignments list is not creative freedom: do not invent or add an exercise. The sole exception is a matching selected_plan.normal_conditioning_composition entry: compose that normal conditioning session only from its eligible_candidates_ranked, within its bank evidence and workload guidance. Do not add, restore, or substitute candidates or other S&C exercises, even when their dose would be legal. Use each closed selected exercise's effective prescription when supplied. Draft text is candidate material and cannot override the FINALIZER PACKET.
+Build the first pass from the LOCKED SESSION RENDER MANIFEST wherever it is supplied. It is a source-backed view of the FINALIZER PACKET, not a separate planning authority. For each closed role, render the exact scheduled membership and every listed exercise line before writing coaching details. The exercise count is mandatory, not a target. A source selected_option=false means the exercise came from an alternate bank option; once promoted into selected_exercise_assignments it is a scheduled member, not an optional fallback. Never treat a shared source slot_id as one exercise. If a locked assignment is illegal under a hard restriction, drop or hold it and leave the gap — never substitute another exercise. A missing dose is different: an assignment marked DOSE_UNRESOLVED is a scheduled exercise the planner did not dose, and you must prescribe one. Use the athlete profile — phase, countdown day, fatigue, weight cut, injury context, training age, status and equipment — to write a sets/reps/intensity or duration prescription appropriate to that exercise on that day, and never write the literal marker into the plan. Where the packet supplies a countdown or role dose cap, stay inside it. Authoring a dose is not authoring membership: still never add, restore or substitute an exercise.
+Preserve the calendar, declared days, coach-led ownership, session count, phase, and taper window from selected_plan / weekly_role_map. When a role has selected_exercise_assignments, render every assigned exercise and use only those exercises. That list is closed session membership from the deterministic planner. An empty selected_exercise_assignments list is not creative freedom: do not invent or add an exercise. Do not add, restore, or substitute candidates, alternates, or other S&C exercises, even when their dose would be legal. Use each selected exercise's effective prescription when supplied. Roles without selected_exercise_assignments keep their existing contract. Draft text is candidate material and cannot override the FINALIZER PACKET.
+
+RULE 3B — PRIORITY MICRODOSE (MANDATORY)
+A session role may carry a priority_microdose. It is a small, deliberate exposure the planner attached to that existing host session to keep the athlete's primary goal or limiter from going uncovered for the week. It is not optional and it is not a candidate.
+When a session role contains priority_microdose: render it exactly once inside that same host session, preserving its name and prescription verbatim; keep the host session's identity, label and day unchanged; never create another session, another day, or a second copy of it. When the microdose is physical work, that host must not be described as having "No programmed S&C", "no extra S&C", "technical polish only", or any equivalent wording — that would contradict the plan the athlete is being given. Render it as a subordinate line inside the host, for example:
+Power microdose — Med-Ball Rotational Throw — 2 x 3/side @ RPE 7
+This applies on coach-owned declared light-combat / technical days too: the coach still owns the combat work, and the microdose is the one small app-owned exposure the planner placed there.
 
 RULE 4 — ANCHOR STANDARD
 For an open anchor role, select a serious high-transfer strength or power exercise if a compliant compact candidate or finalizer-safe substitution exists. For a closed anchor, preserve its selected membership and do not reselect it. Do not build anchors from bird dogs, dead bugs, planks, carries, or rehab-level work unless restrictions force it. Support work assists the anchor — it cannot become it.
@@ -2277,6 +2469,12 @@ def _json_block(value: dict | list) -> str:
 
 
 
+# Rendered in place of a dose for a scheduled exercise the deterministic planner
+# left un-dosed. The finalizer resolves it from athlete context; it must never
+# reach athlete-facing text.
+_DOSE_UNRESOLVED_MARKER = "DOSE_UNRESOLVED"
+
+
 def _closed_membership_render_manifest(finalizer_packet: dict) -> list[dict]:
     """Expose every closed assignment as an exact first-pass rendering line.
 
@@ -2361,7 +2559,7 @@ def _closed_membership_render_manifest(finalizer_packet: dict) -> list[dict]:
                 resolved_doses = strength_doses.get(source_key) or []
                 if resolved_doses:
                     prescription = resolved_doses.pop(0)
-                else:
+                elif not isinstance(role.get("strength_dose_cap"), dict):
                     prescription = assignment.get("base_prescription")
             if isinstance(prescription, dict):
                 prescription = (
@@ -2369,10 +2567,23 @@ def _closed_membership_render_manifest(finalizer_packet: dict) -> list[dict]:
                     or prescription.get("text")
                 )
             prescription = str(prescription or "").strip()
-            if not name or not prescription:
+            if not name:
+                unresolved.append({
+                    "index": index, "name": name, "reason": "missing_name",
+                })
+                continue
+            if not prescription:
+                # Membership is closed; dosing is not. Dropping the line here
+                # silently deleted a scheduled exercise from the render while
+                # selected_count still demanded it. The member is rendered and
+                # the finalizer authors a dose from athlete context instead.
+                # Deterministic caps still bind: where a countdown envelope
+                # exists the validator enforces it against the authored dose.
+                lines.append(f"- {name}: {_DOSE_UNRESOLVED_MARKER}")
                 unresolved.append({
                     "index": index, "name": name,
-                    "reason": "missing_name_or_effective_prescription",
+                    "reason": "missing_effective_prescription",
+                    "action": "finalizer_prescribes_from_athlete_context",
                 })
                 continue
             lines.append(f"- {name}: {prescription}")
@@ -2581,8 +2792,12 @@ def build_stage2_handoff_text(
             "Render every exercise_lines entry once under its owning day and role, "
             "then add coaching details. selected_count is the required membership count. "
             "Do not promote one member to primary and discard the others. "
-            "Do not invent a dose for unresolved entries; preserve the source conflict "
-            "for deterministic planning. Hard safety restrictions remain authoritative.\n"
+            "An entry whose dose reads DOSE_UNRESOLVED is a scheduled exercise the "
+            "planner did not dose: prescribe an appropriate dose for it from the athlete "
+            "profile and the scheduled day, stay inside any dose cap the packet supplies, "
+            "and never render the marker itself. This licenses dosing only — never adding, "
+            "restoring or substituting an exercise. Hard safety restrictions remain "
+            "authoritative.\n"
             + _json_block(locked_manifest)
         )
 
