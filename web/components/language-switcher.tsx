@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAppSession } from "@/components/auth-provider";
 import { useToast } from "@/components/toast-provider";
-import { LOCALE_COOKIE_NAME, LOCALE_OPTIONS, isSupportedLocale, resolveLocale, type AppLocale } from "@/i18n/config";
+import { LOCALE_COOKIE_NAME, LOCALE_OPTIONS, profileLocaleToRestore, resolveLocale, shouldPersistLocale, type AppLocale } from "@/i18n/config";
 import { updateMe } from "@/lib/api";
 
 function writeLocaleCookie(locale: AppLocale) {
@@ -36,8 +36,8 @@ export function LanguageSwitcher() {
   }, [open]);
 
   useEffect(() => {
-    const profileLocale = me?.profile.athlete_locale;
-    if (readLocaleCookie() || !isSupportedLocale(profileLocale) || profileLocale === locale) return;
+    const profileLocale = profileLocaleToRestore(readLocaleCookie(), me?.profile.athlete_locale, locale);
+    if (!profileLocale) return;
     writeLocaleCookie(profileLocale);
     document.documentElement.setAttribute("lang", profileLocale);
     router.refresh();
@@ -46,7 +46,7 @@ export function LanguageSwitcher() {
   async function selectLocale(next: AppLocale) {
     if (pending || next === locale) return setOpen(false);
     setPending(next); setOpen(false); writeLocaleCookie(next); document.documentElement.setAttribute("lang", next);
-    if (session?.access_token && me?.profile.athlete_locale !== next) {
+    if (shouldPersistLocale(session?.access_token, me?.profile.athlete_locale, next)) {
       try { replaceMe(await updateMe(session.access_token, { athlete_locale: next })); }
       catch { showToast(t("saveError"), { tone: "error" }); }
     }

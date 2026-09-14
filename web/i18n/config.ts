@@ -14,3 +14,20 @@ export function isSupportedLocale(value: string | null | undefined): value is Ap
 export function resolveLocale(value: string | null | undefined): AppLocale {
   return isSupportedLocale(value) ? value : DEFAULT_LOCALE;
 }
+
+export function profileLocaleToRestore(
+  cookieLocale: string | null,
+  profileLocale: string | null | undefined,
+  currentLocale: AppLocale,
+): AppLocale | null {
+  if (cookieLocale || !isSupportedLocale(profileLocale) || profileLocale === currentLocale) return null;
+  return profileLocale;
+}
+
+export function shouldPersistLocale(
+  accessToken: string | null | undefined,
+  profileLocale: string | null | undefined,
+  nextLocale: AppLocale,
+): accessToken is string {
+  return Boolean(accessToken && profileLocale !== nextLocale);
+}

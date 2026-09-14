@@ -8,6 +8,9 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test:unit": "node --import tsx --test \"lib/**/*.test.ts\" \"components/**/*.test.ts\" \"components/**/*.test.tsx\"",
+    "test:i18n": "node --test scripts/i18n-catalog.test.mjs && node scripts/i18n-check.mjs",
+    "i18n:check": "node scripts/i18n-check.mjs",
+    "i18n:sync": "node --env-file-if-exists=.env.local scripts/i18n-sync.mjs",
     "test:e2e": "playwright test",
     "audit:high": "npm audit --audit-level=high --omit=dev"
   },

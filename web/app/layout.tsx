@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import type { Viewport } from "next";
 import { headers } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import { AppNav } from "@/components/app-nav";
 import { AuthProvider } from "@/components/auth-provider";
@@ -16,7 +16,6 @@ import { ToastProvider } from "@/components/toast-provider";
 import { XpAwardFeedback } from "@/components/xp-award-feedback";
 import { XpProvider } from "@/components/xp-provider";
 import { getServerShellSurface } from "@/lib/app-surface";
-import { SAFETY_DISCLAIMER_SHORT, SAFETY_DISCLAIMER_TIGHT } from "@/lib/safety-copy";
 import { APPEARANCE_STORAGE_KEY } from "@/lib/types";
 import "./globals.css";
 import "./brand-surface.css";
@@ -32,9 +31,7 @@ const THEME_INIT_SCRIPT = `(function(){try{var m=localStorage.getItem(${JSON.str
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "UNLXCK Athlete Control Room",
-  description: "Athlete-first fight camp planning on the web.",
+const metadataBase: Omit<Metadata, "title" | "description"> = {
   applicationName: "UNLXCK",
   manifest: "/manifest.webmanifest",
   icons: {
@@ -60,6 +57,15 @@ export const metadata: Metadata = {
   },
 };
 
+export async function generateMetadata(): Promise<Metadata> {
+  const translate = await getTranslations("Metadata");
+  return {
+    ...metadataBase,
+    title: translate("title"),
+    description: translate("description"),
+  };
+}
+
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -73,6 +79,7 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   const requestHeaders = await headers();
   const locale = await getLocale();
+  const safety = await getTranslations("Safety");
   const rawNonce = requestHeaders.get("x-nonce");
   const nonce = rawNonce && /^[A-Za-z0-9+/]{48}$/.test(rawNonce) ? rawNonce : undefined;
   const serverSurface = getServerShellSurface(requestHeaders.get("x-pathname"));
@@ -117,8 +124,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
                           <div className="page">{children}</div>
                         </main>
                         <footer className="app-safety-footer" role="contentinfo">
-                          <span className="app-safety-footer-wide">{SAFETY_DISCLAIMER_SHORT}</span>
-                          <span className="app-safety-footer-tight">{SAFETY_DISCLAIMER_TIGHT}</span>
+                          <span className="app-safety-footer-wide">{safety("footerWide")}</span>
+                          <span className="app-safety-footer-tight">{safety("footerTight")}</span>
                         </footer>
                       </div>
                     </div>
