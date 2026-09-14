@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   useCallback,
   useEffect,
@@ -52,6 +53,7 @@ export function AuthForm({
   onChangeRole?: () => void;
   footerSlot?: ReactNode;
 }) {
+  const t = useTranslations("Auth");
   const router = useRouter();
   const { isReady, session, me } = useAppSession();
   const emailInputRef = useRef<HTMLInputElement | null>(null);
@@ -305,23 +307,23 @@ export function AuthForm({
       <div className="auth-card">
         <div className="auth-header">
           <div>
-            <p className="kicker">{mode === "signup" ? "Create account" : "Welcome back"}</p>
-            <h2>{mode === "signup" ? "Start the intake" : "Continue your camp"}</h2>
+            <p className="kicker">{mode === "signup" ? t("createAccount") : t("welcomeBack")}</p>
+            <h2>{mode === "signup" ? t("startIntake") : t("continueCamp")}</h2>
             {mode === "signup" && role ? (
               <p className="auth-selected-role muted">
-                Signing up as <strong>{SIGNUP_ROLE_LABELS[role] ?? role}</strong>
+                {t("signingUpAs", { role: role === "athlete" ? t("athlete") : SIGNUP_ROLE_LABELS[role] ?? role })}
                 {onChangeRole ? (
                   <>
                     {" · "}
                     <button type="button" className="auth-text-link auth-inline-link" onClick={onChangeRole}>
-                      Change
+                      {t("change")}
                     </button>
                   </>
                 ) : null}
               </p>
             ) : null}
           </div>
-          {mode === "signup" ? <span className="badge status-badge-neutral">Beta</span> : null}
+          {mode === "signup" ? <span className="badge status-badge-neutral">{t("beta")}</span> : null}
         </div>
 
         {message ? (
@@ -338,7 +340,7 @@ export function AuthForm({
         <form onSubmit={handleSubmit} className="auth-form-grid">
           {mode === "signup" ? (
             <div className="field">
-              <label htmlFor="fullName">Full name</label>
+              <label htmlFor="fullName">{t("fullName")}</label>
               <input
                 id="fullName"
                 name="name"
@@ -351,7 +353,7 @@ export function AuthForm({
             </div>
           ) : null}
           <div className="field">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">{t("email")}</label>
             <input
               id="email"
               name="email"
@@ -368,7 +370,7 @@ export function AuthForm({
             />
           </div>
           <div className="field">
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">{t("password")}</label>
             <div className="password-field">
               <input
                 id="password"
@@ -384,10 +386,10 @@ export function AuthForm({
                 type="button"
                 className="password-toggle"
                 onClick={() => setShowPassword((prev) => !prev)}
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-label={showPassword ? t("hidePassword") : t("showPassword")}
                 aria-pressed={showPassword}
               >
-                {showPassword ? "Hide" : "Show"}
+                {showPassword ? t("hide") : t("show")}
               </button>
             </div>
             {mode === "signup" ? <PasswordStrengthMeter strength={passwordStrength} /> : null}
@@ -396,7 +398,7 @@ export function AuthForm({
           {mode === "signup" ? (
             <>
               <div className="field">
-                <label htmlFor="dateOfBirth">Date of birth</label>
+                <label htmlFor="dateOfBirth">{t("dateOfBirth")}</label>
                 <input
                   id="dateOfBirth"
                   name="bday"
@@ -451,7 +453,7 @@ export function AuthForm({
                 <p id="healthDataConsentHelp" className="muted auth-consent-help auth-consent-meta">
                   {consentCopy.signupHealthConsentHelp} ·{" "}
                   <Link href={PRIVACY_HREF} className="auth-text-link" target="_blank">
-                    Privacy Notice
+                    {t("privacyNotice")}
                   </Link>
                 </p>
               </div>
@@ -475,11 +477,11 @@ export function AuthForm({
             >
               {isPending
                 ? mode === "signup"
-                  ? "Creating account…"
-                  : "Signing in…"
+                  ? t("creatingAccount")
+                  : t("signingIn")
                 : mode === "signup"
-                  ? "Create account"
-                  : "Log in"}
+                  ? t("createAccount")
+                  : t("login")}
             </button>
             <button
               type="button"
@@ -487,15 +489,15 @@ export function AuthForm({
               onClick={handleMagicLink}
               disabled={isPending || isMagicLinkPending || isCaptchaBlocked}
             >
-              {isMagicLinkPending ? "Sending link…" : "Email sign-in link"}
+              {isMagicLinkPending ? t("sendingLink") : t("emailLink")}
             </button>
-            <div className="auth-secondary-links" aria-label="Account help">
+            <div className="auth-secondary-links" aria-label={t("accountHelp")}>
               <Link href={mode === "signup" ? "/login" : "/signup"} className="auth-text-link">
-                {mode === "signup" ? "Already have an account?" : "New to UNLXCK? Join the beta"}
+                {mode === "signup" ? t("alreadyAccount") : t("joinBeta")}
               </Link>
               {mode === "login" ? (
                 <Link href="/forgot-password" className="auth-text-link">
-                  Forgot password?
+                  {t("forgotPassword")}
                 </Link>
               ) : null}
             </div>
@@ -507,21 +509,21 @@ export function AuthForm({
 
       <div className="auth-rail">
         <div className="hero-panel-copy">
-          <p className="eyebrow">{mode === "signup" ? "Private beta" : "Athlete access"}</p>
-          <h1>{mode === "signup" ? "Build your camp inside UNLXCK." : "Pick up where you left off."}</h1>
+          <p className="eyebrow">{mode === "signup" ? t("privateBeta") : t("athleteAccess")}</p>
+          <h1>{mode === "signup" ? t("signupTitle") : t("loginTitle")}</h1>
           {mode === "signup" ? (
-            <p>Set up once, then get a fight camp that tells you what to train and adapts as you go.</p>
+            <p>{t("signupSummary")}</p>
           ) : null}
         </div>
         {mode === "signup" ? (
           <div className="auth-signup-proof">
-            <p className="kicker">What you get</p>
+            <p className="kicker">{t("whatYouGet")}</p>
             <ul className="summary-list">
-              <li>Know what to train today, built around your fight date.</li>
-              <li>Adjust before fatigue becomes failure with daily check-ins.</li>
-              <li>Your whole camp stays in one place, so you never start over.</li>
+              <li>{t("benefit1")}</li>
+              <li>{t("benefit2")}</li>
+              <li>{t("benefit3")}</li>
             </ul>
-            <p className="muted auth-signup-note">No payment required during the private beta.</p>
+            <p className="muted auth-signup-note">{t("noPayment")}</p>
           </div>
         ) : null}
       </div>

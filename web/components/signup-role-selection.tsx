@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 import type { UserRole } from "@/lib/types";
 
 type RoleOption = {
   role: Exclude<UserRole, "admin">;
-  title: string;
-  description: string;
-  comingSoonNote?: string;
+  titleKey: string;
+  descriptionKey: string;
+  comingSoonKey?: string;
 };
 
 // Admin is intentionally absent: it is never offered at sign-up and stays
@@ -17,20 +18,20 @@ type RoleOption = {
 const ROLE_OPTIONS: RoleOption[] = [
   {
     role: "athlete",
-    title: "Athlete",
-    description: "Run Advanced Intake and generate a saved fight camp on your athlete workspace.",
+    titleKey: "athlete",
+    descriptionKey: "athleteDescription",
   },
   {
     role: "coach",
-    title: "Coach",
-    description: "Manage rosters and build camps for the fighters you coach.",
-    comingSoonNote: "Coach accounts will be available in public beta.",
+    titleKey: "coach",
+    descriptionKey: "coachDescription",
+    comingSoonKey: "coachSoon",
   },
   {
     role: "gym_owner",
-    title: "Gym owner",
-    description: "Run your gym, oversee coaches, and manage athletes in one place.",
-    comingSoonNote: "Gym accounts will be available in public beta.",
+    titleKey: "gymOwner",
+    descriptionKey: "gymDescription",
+    comingSoonKey: "gymSoon",
   },
 ];
 
@@ -39,23 +40,23 @@ export function SignupRoleSelection({
 }: {
   onSelectAthlete: () => void;
 }) {
+  const t = useTranslations("Auth");
   return (
     <section className="auth-layout">
       <div className="auth-card">
         <div className="auth-header">
           <div>
-            <p className="kicker">Create account</p>
-            <h2>Choose your role</h2>
+            <p className="kicker">{t("createAccount")}</p>
+            <h2>{t("chooseRole")}</h2>
           </div>
           <span className="badge status-badge-neutral">Beta</span>
         </div>
 
         <p className="muted">
-          Unlxck is one app for everyone in the camp. Pick how you want to use it. Athlete access is
-          open now — coach and gym accounts arrive in public beta.
+          {t("roleIntro")}
         </p>
 
-        <ul className="role-card-grid" aria-label="Account roles">
+        <ul className="role-card-grid" aria-label={t("accountRoles")}>
           {ROLE_OPTIONS.map((option) => {
             const isActive = option.role === "athlete";
             const cardClassName = isActive
@@ -70,47 +71,44 @@ export function SignupRoleSelection({
                   onClick={isActive ? onSelectAthlete : undefined}
                   disabled={!isActive}
                 >
-                  <RoleCardBody option={option} />
+                  <RoleCardBody option={option} t={t} />
                 </button>
               </li>
             );
           })}
         </ul>
 
-        <div className="auth-secondary-links" aria-label="Account help">
+        <div className="auth-secondary-links" aria-label={t("accountHelp")}>
           <Link href="/login" className="auth-text-link">
-            Already have an account?
+            {t("alreadyAccount")}
           </Link>
         </div>
       </div>
 
       <div className="auth-rail">
         <div className="hero-panel-copy">
-          <p className="eyebrow">Free beta</p>
-          <h1>One app for the whole camp.</h1>
-          <p>
-            Start as an athlete today. Coach and gym tools are on the way, all inside the same Unlxck
-            workspace — no separate apps to manage.
-          </p>
+          <p className="eyebrow">{t("freeBeta")}</p>
+          <h1>{t("wholeCampTitle")}</h1>
+          <p>{t("wholeCampSummary")}</p>
         </div>
       </div>
     </section>
   );
 }
 
-function RoleCardBody({ option }: { option: RoleOption }) {
+function RoleCardBody({ option, t }: { option: RoleOption; t: ReturnType<typeof useTranslations> }) {
   return (
     <>
       <span className="role-card-header">
-        <span className="role-card-title">{option.title}</span>
-        {option.comingSoonNote ? <span className="badge role-card-badge">Coming soon</span> : null}
+        <span className="role-card-title">{t(option.titleKey)}</span>
+        {option.comingSoonKey ? <span className="badge role-card-badge">{t("comingSoon")}</span> : null}
       </span>
-      <span className="role-card-description muted">{option.description}</span>
-      {option.comingSoonNote ? (
-        <span className="role-card-note">{option.comingSoonNote}</span>
+      <span className="role-card-description muted">{t(option.descriptionKey)}</span>
+      {option.comingSoonKey ? (
+        <span className="role-card-note">{t(option.comingSoonKey)}</span>
       ) : (
         <span className="role-card-cue" aria-hidden="true">
-          Continue →
+          {t("continue")} →
         </span>
       )}
     </>

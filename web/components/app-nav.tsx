@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState, type TransitionEvent } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
@@ -41,6 +42,7 @@ function MenuIcon() {
 }
 
 export function AppNav() {
+  const t = useTranslations("Navigation");
   const pathname = usePathname();
   const router = useRouter();
   const { isReady, isMeHydrated, session, me, signOut } = useAppSession();
@@ -287,11 +289,19 @@ export function AppNav() {
     setMobileNavState("closed");
   }
 
-  const signedInLinks = SIDE_NAV_ITEMS;
+  const navCopy: Record<string, { label: string; meta: string }> = {
+    "/": { label: t("overview"), meta: t("overviewMeta") },
+    "/today": { label: t("today"), meta: t("todayMeta") },
+    "/plans": { label: t("plan"), meta: t("planMeta") },
+    "/history": { label: t("history"), meta: t("historyMeta") },
+    "/onboarding": { label: t("campSetup"), meta: t("campSetupMeta") },
+    "/settings": { label: t("settings"), meta: t("settingsMeta") },
+  };
+  const signedInLinks = SIDE_NAV_ITEMS.map((item) => ({ ...item, ...navCopy[item.href] }));
 
   const profile = me?.profile;
-  const displayName = profile?.full_name || "Athlete";
-  const displayEmail = profile?.email || session?.email || "Session active";
+  const displayName = profile?.full_name || t("athlete");
+  const displayEmail = profile?.email || session?.email || t("sessionActive");
   const initials = getInitials(displayName);
   const avatarUrl = profile && isSafeAvatarImageUrl(profile.avatar_url) ? profile.avatar_url : null;
   const role = profile?.role ?? null;
@@ -300,19 +310,19 @@ export function AppNav() {
   return (
     <>
       {showBrandTopbar ? (
-        <header className="brand-topbar" aria-label="UNLXCK entry navigation">
+        <header className="brand-topbar" aria-label={t("entryNavigation")}>
           <Link href="/" className="brand-topbar-mark">
             <span className="eyebrow">UNLXCK</span>
-            <span>Fight Camp</span>
+            <span>{t("fightCamp")}</span>
           </Link>
-          <nav className="brand-topbar-actions" aria-label="Account access">
+          <nav className="brand-topbar-actions" aria-label={t("accountAccess")}>
             {pathname !== "/login" ? (
               <Link href="/login" className="ghost-button">
-                Log in
+                {t("login")}
               </Link>
             ) : null}
             <Link href="/signup" className="cta">
-              Get started
+              {t("createAccount")}
             </Link>
           </nav>
         </header>
@@ -324,7 +334,7 @@ export function AppNav() {
           type="button"
           className="mobile-nav-toggle"
           data-condensed={navToggleCondensed ? "true" : undefined}
-          aria-label="Open navigation"
+          aria-label={t("openNavigation")}
           aria-expanded={false}
           aria-controls="app-sidebar"
           onClick={openMobileDrawer}
@@ -332,8 +342,8 @@ export function AppNav() {
           <span className="nav-toggle-icon" aria-hidden="true">
             <MenuIcon />
           </span>
-          <span className="nav-toggle-label">Menu</span>
-          {!session && isReady ? <span className="badge status-badge-neutral">Entry</span> : null}
+          <span className="nav-toggle-label">{t("menu")}</span>
+          {!session && isReady ? <span className="badge status-badge-neutral">{t("entry")}</span> : null}
         </button>
       ) : null}
       {desktopNavCollapsed ? (
@@ -341,7 +351,7 @@ export function AppNav() {
           ref={desktopNavToggleRef}
           type="button"
           className="desktop-nav-toggle"
-          aria-label="Open navigation"
+          aria-label={t("openNavigation")}
           aria-expanded={false}
           aria-controls="app-sidebar"
           onClick={() => setDesktopNavCollapsed(false)}
@@ -349,7 +359,7 @@ export function AppNav() {
           <span className="nav-toggle-icon" aria-hidden="true">
             <MenuIcon />
           </span>
-          <span className="nav-toggle-label">Menu</span>
+          <span className="nav-toggle-label">{t("menu")}</span>
         </button>
       ) : null}
       {isMobileDrawerVisible ? (
@@ -357,7 +367,7 @@ export function AppNav() {
           type="button"
           className="nav-scrim"
           data-mobile-nav-state={mobileNavState}
-          aria-label="Close navigation"
+          aria-label={t("closeNavigation")}
           onClick={closeMobileDrawer}
         />
       ) : null}
@@ -375,7 +385,7 @@ export function AppNav() {
               <button
                 type="button"
                 className="sidebar-drawer-close"
-                aria-label="Close menu"
+                aria-label={t("closeMenu")}
                 onClick={handleSidebarClose}
               >
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -384,17 +394,17 @@ export function AppNav() {
               </button>
             </div>
             <Link href="/" className="brand" onClick={closeMobileDrawer}>
-              Fight Camp
+              {t("fightCamp")}
             </Link>
-            <p className="sidebar-tagline">Fight-camp workspace.</p>
+            <p className="sidebar-tagline">{t("tagline")}</p>
           </div>
 
           {!isReady ? (
             <div className="sidebar-nav">
-              <p className="sidebar-section-label">Session</p>
+              <p className="sidebar-section-label">{t("session")}</p>
               <div className="sidebar-user-card">
-                <p className="sidebar-user-name">Loading workspace</p>
-                <p className="sidebar-user-email">Checking your session.</p>
+                <p className="sidebar-user-name">{t("loadingWorkspace")}</p>
+                <p className="sidebar-user-email">{t("checkingSession")}</p>
               </div>
             </div>
           ) : null}
@@ -402,15 +412,15 @@ export function AppNav() {
           {isReady && !session ? (
             <>
               <div className="sidebar-auth">
-                <p className="sidebar-section-label">Access</p>
+                <p className="sidebar-section-label">{t("access")}</p>
                 <Link
                   href="/signup"
                   className={isLinkActive("/signup") ? "sidebar-link sidebar-link-active" : "sidebar-link"}
                   onClick={() => handleSidebarLinkSelect("/signup")}
                 >
                   <div className="sidebar-link-copy">
-                    <span className="sidebar-link-title">Create account</span>
-                    <span className="sidebar-link-meta">Start athlete setup</span>
+                    <span className="sidebar-link-title">{t("createAccount")}</span>
+                    <span className="sidebar-link-meta">{t("startAthleteSetup")}</span>
                   </div>
                 </Link>
                 <Link
@@ -419,14 +429,14 @@ export function AppNav() {
                   onClick={() => handleSidebarLinkSelect("/login")}
                 >
                   <div className="sidebar-link-copy">
-                    <span className="sidebar-link-title">Log in</span>
-                    <span className="sidebar-link-meta">Resume your camp</span>
+                    <span className="sidebar-link-title">{t("login")}</span>
+                    <span className="sidebar-link-meta">{t("resumeCamp")}</span>
                   </div>
                 </Link>
               </div>
               <div className="sidebar-user-card">
-                <p className="sidebar-user-name">Elite athlete entry</p>
-                <p className="sidebar-user-email">Build, generate, and manage fight camps in one place.</p>
+                <p className="sidebar-user-name">{t("eliteEntry")}</p>
+                <p className="sidebar-user-email">{t("entryDescription")}</p>
               </div>
             </>
           ) : null}
@@ -434,7 +444,7 @@ export function AppNav() {
           {isReady && session ? (
             <>
               <nav className="sidebar-nav">
-                <p className="sidebar-section-label">Workspace</p>
+                <p className="sidebar-section-label">{t("workspace")}</p>
                 {signedInLinks.map((link) => (
                   <Link
                     key={link.href}
@@ -451,15 +461,15 @@ export function AppNav() {
                 {isAdminWorkspace ? (
                   <>
                     <div className="sidebar-admin-divider" aria-hidden="true" />
-                    <p className="sidebar-section-label">Control</p>
+                    <p className="sidebar-section-label">{t("control")}</p>
                     <Link
                       className={isLinkActive("/admin") ? "sidebar-link sidebar-link-active" : "sidebar-link"}
                       href="/admin"
                       onClick={() => handleSidebarLinkSelect("/admin")}
                     >
                       <div className="sidebar-link-copy">
-                        <span className="sidebar-link-title">Admin panel</span>
-                        <span className="sidebar-link-meta">Review and support</span>
+                        <span className="sidebar-link-title">{t("adminPanel")}</span>
+                        <span className="sidebar-link-meta">{t("adminMeta")}</span>
                       </div>
                     </Link>
                   </>
@@ -481,9 +491,9 @@ export function AppNav() {
                       {role ? (
                         <span
                           className={`sidebar-role-badge sidebar-role-${role}`}
-                          aria-label={`Role: ${role === "admin" ? "Administrator" : "Athlete"}`}
+                          aria-label={t("role", { role: role === "admin" ? t("administrator") : t("athlete") })}
                         >
-                          {role === "admin" ? "Admin" : "Athlete"}
+                          {role === "admin" ? t("admin") : t("athlete")}
                         </span>
                       ) : isSessionResolving ? (
                         <Skeleton variant="block" width={74} height={24} style={{ borderRadius: 999 }} />
@@ -492,7 +502,7 @@ export function AppNav() {
                   </div>
                   <div className="sidebar-user-actions">
                     <button type="button" className="ghost-button" onClick={handleSignOut}>
-                      Sign out
+                      {t("signOut")}
                     </button>
                   </div>
                 </div>

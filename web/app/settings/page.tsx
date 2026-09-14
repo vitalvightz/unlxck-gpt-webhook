@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import { RequireAuth } from "@/components/auth-guard";
@@ -328,6 +329,7 @@ function SettingsSummaryItem({ label, value }: Readonly<{ label: string; value: 
 }
 
 export default function SettingsPage() {
+  const t = useTranslations("Workspace");
   const { isMeHydrated, me, previewAppearanceMode, replaceMe, session, signOut } = useAppSession();
 
   const [fullName, setFullName] = useState("");
@@ -1406,9 +1408,9 @@ export default function SettingsPage() {
     return (
       <RequireAuth>
         <section className="panel loading-card" aria-busy="true">
-          <p className="kicker">Settings</p>
-          <h1>Loading account settings</h1>
-          <p className="muted">Restoring your saved profile.</p>
+          <p className="kicker">{t("settings")}</p>
+          <h1>{t("loadingSettings")}</h1>
+          <p className="muted">{t("restoringProfile")}</p>
         </section>
       </RequireAuth>
     );
@@ -1419,18 +1421,18 @@ export default function SettingsPage() {
       <section className="panel settings-page">
         <div className="section-heading">
           <div className="athlete-motion-slot athlete-motion-header">
-            <p className="kicker">Settings</p>
-            <h1>{isAdmin ? "Admin settings" : "Athlete settings"}</h1>
+            <p className="kicker">{t("settings")}</p>
+            <h1>{isAdmin ? t("adminSettings") : t("athleteSettings")}</h1>
             <p className="muted">
-              {isAdmin ? "Account access, organisation setup, coach access, programme defaults, templates, and billing." : "Account, access, profile updates, notifications, subscription, and privacy."}
+              {isAdmin ? t("adminSettingsSummary") : t("athleteSettingsSummary")}
             </p>
           </div>
           <div
             className={`status-card athlete-motion-slot athlete-motion-status${isAdmin ? "" : " settings-sync-card"}`}
           >
-            <p className="status-label">{isAdmin ? "Admin profile" : "Profile sync"}</p>
-            <h2 className="plan-summary-title">{isAdmin ? professionalStatusLabel : "Saved to account"}</h2>
-            <p className="muted">{isAdmin ? me?.profile.email || "Unavailable" : `Last updated ${lastUpdatedLabel}`}</p>
+            <p className="status-label">{isAdmin ? t("adminProfile") : t("profileSync")}</p>
+            <h2 className="plan-summary-title">{isAdmin ? professionalStatusLabel : t("savedAccount")}</h2>
+            <p className="muted">{isAdmin ? me?.profile.email || t("unavailable") : t("lastUpdated", { time: lastUpdatedLabel })}</p>
           </div>
         </div>
 
@@ -1448,11 +1450,11 @@ export default function SettingsPage() {
         </div>
 
         {showFloatingSave ? (
-          <div className="settings-save-bar" role="group" aria-label="Unsaved account changes">
-            <p className="settings-save-bar-text">Unsaved account changes</p>
+          <div className="settings-save-bar" role="group" aria-label={t("unsavedChanges")}>
+            <p className="settings-save-bar-text">{t("unsavedChanges")}</p>
             <div className="settings-save-bar-actions">
               <button type="button" className="ghost-button" onClick={handleDiscardAccountChanges} disabled={isPending}>
-                Discard
+                {t("discard")}
               </button>
               <button
                 type="button"
@@ -1460,7 +1462,7 @@ export default function SettingsPage() {
                 onClick={handleSaveAccount}
                 disabled={isPending || isAvatarProcessing}
               >
-                {isAvatarProcessing ? "Processing photo…" : isPending ? "Saving..." : "Save account"}
+                {isAvatarProcessing ? t("processingPhoto") : isPending ? t("saving") : t("saveAccount")}
               </button>
             </div>
           </div>

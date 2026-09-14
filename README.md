@@ -131,6 +131,25 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
+The web app uses local `next-intl` dictionaries in `web/messages`. English is the
+source language; Spanish, Brazilian Portuguese, French, and Italian are currently supported.
+Run `npm run i18n:check` from `web` to verify that every advertised locale has the
+same structure as English.
+
+To fill newly added English keys, configure the server-only
+`AZURE_TRANSLATOR_KEY` and `AZURE_TRANSLATOR_REGION` variables (and optionally
+`AZURE_TRANSLATOR_ENDPOINT`) in `web/.env.local` or the shell environment, then run
+`npm run i18n:sync` from `web`. The command
+sends only missing or changed source strings, preserves human-edited translations,
+and writes complete local dictionaries only after every Translator request succeeds.
+Azure is a developer-time aid only: page views and language changes never call it.
+The Azure F0 tier can avoid a translation-platform subscription within its current
+limits, but hosting, development, and translation review can still have costs.
+
+Adding a language requires a complete local dictionary and an entry in
+`web/i18n/config.ts`. No runtime translation-platform key or recurring subscription is
+required.
+
 On Windows, `tools/start-local-preview.ps1` starts the API and web application with local-safe overrides.
 
 ## Production deployment

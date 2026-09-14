@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
@@ -30,15 +31,6 @@ import {
   getTierMeta,
   resolveTodayDecision,
 } from "@/lib/today";
-import {
-  LANDING_OUTCOME_POINTS,
-  LANDING_PRODUCT_PROOF_POINTS,
-  LANDING_TODAY_PREVIEW,
-  LANDING_WORKFLOW_STEPS,
-  LANDING_WORKSPACE_ROWS,
-  PUBLIC_HERO_LEAD,
-  PUBLIC_HERO_SUMMARY,
-} from "@/lib/public-landing-copy";
 import type { PlanSummary, StructuredPlan, TodayActivePlan, TodayCommandView } from "@/lib/types";
 
 function formatPlanCount(value: number): string {
@@ -241,6 +233,27 @@ function OverviewRiskWatch({ risks = [] }: { risks?: TodayCommandView["risk_watc
 }
 
 export default function HomePage() {
+  const publicT = useTranslations("PublicHome");
+  const landingOutcomePoints = [1, 2, 3].map((index) => ({
+    label: publicT(`outcome${index}Label`),
+    value: publicT(`outcome${index}Value`),
+  }));
+  const landingWorkspaceRows = [
+    { step: "01", label: publicT("intake"), status: publicT("row1Status"), title: publicT("intake"), body: publicT("row1Body") },
+    { step: "02", label: publicT("row2Label"), status: publicT("row2Status"), title: publicT("row2Label"), body: publicT("row2Body") },
+    { step: "03", label: publicT("row3Label"), status: publicT("row3Status"), title: publicT("row3Label"), body: publicT("row3Body") },
+    { step: "04", label: publicT("today"), status: publicT("row4Status"), title: publicT("today"), body: publicT("row4Body") },
+  ];
+  const landingProductProofPoints = [
+    { label: publicT("today"), title: publicT("proof1Title"), body: publicT("proof1Body") },
+    { label: publicT("row2Label"), title: publicT("proof2Title"), body: publicT("proof2Body") },
+    { label: publicT("proof3Label"), title: publicT("proof3Title"), body: publicT("proof3Body") },
+  ];
+  const landingWorkflowSteps = [1, 2, 3, 4].map((index) => ({
+    label: publicT(`step${index}Label`),
+    title: publicT(`step${index}Title`),
+    body: publicT(`step${index}Body`),
+  }));
   const { isReady, isMeHydrated, hasTransientMeError, session, me, signOut, refreshMe } = useAppSession();
   const router = useRouter();
   const trainingDay = useTrainingDay();
@@ -580,27 +593,27 @@ export default function HomePage() {
       <section className="hero-panel public-hero-panel">
         <div className="public-hero-grid">
           <div className="hero-panel-copy public-hero-copy">
-            <p className="public-hero-motto" aria-label="Unlxck Your Potential">
+            <p className="public-hero-motto" aria-label={publicT("motto")}>
               <span>UNLXCK</span>
-              <span>Your Potential</span>
+              <span>{publicT("motto").replace(/^UNLXCK\s+/i, "")}</span>
             </p>
-            <h1 className="hero-title public-hero-title" aria-label="Your fight camp. Lxcked in.">
-              <span>Your fight camp.</span>
-              <span>Lxcked in.</span>
+            <h1 className="hero-title public-hero-title" aria-label={publicT("heroTitle")}>
+              <span>{publicT("heroLine1")}</span>
+              <span>{publicT("heroLine2")}</span>
             </h1>
-            <p className="public-hero-lead">{PUBLIC_HERO_LEAD}</p>
-            <p className="public-hero-summary">{PUBLIC_HERO_SUMMARY}</p>
+            <p className="public-hero-lead">{publicT("lead")}</p>
+            <p className="public-hero-summary">{publicT("summary")}</p>
             <div className="hero-actions public-hero-actions">
               <Link href="/signup" className="cta">
-                Get started
+                {publicT("getStarted")}
               </Link>
               <Link href="/login" className="ghost-button">
-                Log in
+                {publicT("login")}
               </Link>
             </div>
-            <p className="public-hero-cta-note">Private beta · About 2 minutes to set up</p>
-            <div className="public-proof-strip" aria-label="Product outcomes">
-              {LANDING_OUTCOME_POINTS.map((point) => (
+            <p className="public-hero-cta-note">{publicT("betaNote")}</p>
+            <div className="public-proof-strip" aria-label={publicT("productOutcomes")}>
+              {landingOutcomePoints.map((point) => (
                 <div key={point.label} className="public-proof-pill">
                   <span className="label">{point.label}</span>
                   <span className="public-proof-value">{point.value}</span>
@@ -612,32 +625,35 @@ export default function HomePage() {
           <article className="support-panel public-preview-panel">
             <div className="public-preview-header">
               <div>
-                <p className="kicker">Workspace preview</p>
-                <h2 className="form-section-title">See how today&apos;s session changes.</h2>
+                <p className="kicker">{publicT("workspacePreview")}</p>
+                <h2 className="form-section-title">{publicT("previewTitle")}</h2>
               </div>
-              <span className="badge status-badge-neutral">Beta</span>
+              <span className="badge status-badge-neutral">{publicT("beta")}</span>
             </div>
             <div className="public-preview-window">
               <div className="public-preview-toolbar">
                 <span className="public-preview-dot public-preview-dot-active" aria-hidden="true" />
-                <span className="public-preview-toolbar-label">UNLXCK workspace</span>
+                <span className="public-preview-toolbar-label">{publicT("workspaceLabel")}</span>
               </div>
               <div className="public-preview-shell">
-                <aside className="public-preview-sidebar" aria-label="Preview navigation">
-                  <span className="public-preview-section-label">Workspace</span>
-                  <span className="public-preview-nav-active">Overview</span>
-                  <span>Today</span>
-                  <span>Plan</span>
-                  <span>Intake</span>
+                <aside className="public-preview-sidebar" aria-label={publicT("previewNavigation")}>
+                  <span className="public-preview-section-label">{publicT("workspace")}</span>
+                  <span className="public-preview-nav-active">{publicT("overview")}</span>
+                  <span>{publicT("today")}</span>
+                  <span>{publicT("plan")}</span>
+                  <span>{publicT("intake")}</span>
                 </aside>
               <div className="public-workspace-list">
                 <article className="public-today-preview" aria-label="Today, modified session">
                   <div className="public-today-preview-head">
-                    <span className="public-today-preview-eyebrow">{LANDING_TODAY_PREVIEW.eyebrow}</span>
-                    <span className="public-today-preview-status">{LANDING_TODAY_PREVIEW.status}</span>
+                      <span className="public-today-preview-eyebrow">{publicT("today")}</span>
+                      <span className="public-today-preview-status">{publicT("modifiedSession")}</span>
                   </div>
                   <ul className="public-today-changes">
-                    {LANDING_TODAY_PREVIEW.changes.map((change) => (
+                    {([
+                      { direction: "down" as const, text: publicT("heavyBagReduced") },
+                      { direction: "up" as const, text: publicT("reactionDrillsIncreased") },
+                    ]).map((change) => (
                       <li
                         key={change.text}
                         className="public-today-change"
@@ -651,11 +667,11 @@ export default function HomePage() {
                     ))}
                   </ul>
                   <p className="public-today-reason">
-                    <span className="public-today-reason-label">{LANDING_TODAY_PREVIEW.reasonLabel}</span>
-                    <span>{LANDING_TODAY_PREVIEW.reason}</span>
+                    <span className="public-today-reason-label">{publicT("reason")}</span>
+                    <span>{publicT("highFatigue")}</span>
                   </p>
                 </article>
-                {LANDING_WORKSPACE_ROWS.map((row) => (
+                {landingWorkspaceRows.map((row) => (
                   <article key={row.step} className="public-workspace-row">
                     <span className="public-workspace-step">{row.step}</span>
                     <div>
@@ -673,8 +689,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="public-proof-grid" aria-label="Product proof points">
-        {LANDING_PRODUCT_PROOF_POINTS.map((section) => (
+      <section className="public-proof-grid" aria-label={publicT("productProof")}>
+        {landingProductProofPoints.map((section) => (
           <article key={section.title} className="support-panel public-proof-card">
             <p className="kicker">{section.label}</p>
             <h2 className="form-section-title">{section.title}</h2>
@@ -686,8 +702,8 @@ export default function HomePage() {
       <section className="public-section-break" aria-labelledby="public-journey-heading">
         <div className="public-section-break-line" aria-hidden="true" />
         <div className="public-section-break-copy">
-          <p className="kicker">How it works</p>
-          <h2 id="public-journey-heading">From setup to review.</h2>
+          <p className="kicker">{publicT("howItWorks")}</p>
+          <h2 id="public-journey-heading">{publicT("journeyTitle")}</h2>
         </div>
         <Image
           className="public-section-break-logo"
@@ -700,7 +716,7 @@ export default function HomePage() {
       </section>
 
       <section className="metric-grid public-journey-grid">
-        {LANDING_WORKFLOW_STEPS.map((step) => (
+        {landingWorkflowSteps.map((step) => (
           <article key={step.title} className="support-panel">
             <div className="form-section-header">
               <p className="kicker">{step.label}</p>
@@ -713,15 +729,15 @@ export default function HomePage() {
 
       <section className="public-final-cta" aria-labelledby="public-final-cta-heading">
         <div>
-          <p className="kicker">Unlxck Your Potential</p>
-          <h2 id="public-final-cta-heading">Build the first camp.</h2>
+          <p className="kicker">{publicT("potential")}</p>
+          <h2 id="public-final-cta-heading">{publicT("finalTitle")}</h2>
         </div>
         <div className="hero-actions">
           <Link href="/signup" className="cta">
-            Get started
+            {publicT("getStarted")}
           </Link>
           <Link href="/login" className="secondary-button">
-            Log in
+            {publicT("login")}
           </Link>
         </div>
       </section>
