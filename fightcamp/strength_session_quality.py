@@ -319,11 +319,6 @@ def session_starts_with_support_only(session_items: list[dict[str, Any]]) -> boo
         return False
     return all(classify_strength_item(exercise)["support_only"] for exercise in first_two)
 
-
-def has_anchor_capable_option(exercises: list[dict[str, Any]]) -> bool:
-    return any(classify_strength_item(exercise)["anchor_capable"] for exercise in exercises)
-
-
 def count_support_only(exercises: list[dict[str, Any]]) -> int:
     return sum(1 for exercise in exercises if classify_strength_item(exercise)["support_only"])
 
@@ -367,11 +362,6 @@ def missing_base_categories(
     if require_lower_body_explosive_anchor:
         ordered.append("lower_body_explosive_anchor")
     return [category for category in ordered if category not in present]
-
-
-def normalize_line_name(text: str) -> str:
-    return re.sub(r"\s+", " ", (text or "").strip().lower())
-
 
 def strength_quality_adjustment(item: dict[str, Any], *, phase: str) -> tuple[float, dict[str, Any]]:
     profile = classify_strength_item(item)

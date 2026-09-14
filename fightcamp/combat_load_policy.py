@@ -256,7 +256,9 @@ _NEURAL_ALACTIC_ROLE_KEYS = frozenset(
 _TECHNICAL_CONTACT_ROLE_KEYS = frozenset(
     {"technical_touch_day", "light_combat_day"}
 )
-_DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS = frozenset(
+# Stressor roles that own their whole day: nothing else of consequence may share
+# it. Shared with the late-fight payload so both agree on the membership.
+DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS = frozenset(
     {
         "strength_touch_day",
         "neural_primer_day",
@@ -471,7 +473,7 @@ def is_effective_hard_contact(entry: Mapping[str, Any] | None) -> bool:
 def _exclusive_if_needed(
     role_key: str, profile: CalendarLoadProfile
 ) -> CalendarLoadProfile:
-    if role_key in _DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS:
+    if role_key in DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS:
         return _profile(profile.load_class, DayOccupancy.EXCLUSIVE_PHYSICAL)
     return profile
 

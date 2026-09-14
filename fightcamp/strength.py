@@ -1194,7 +1194,6 @@ def score_exercise(
     priority_profile=None,
     must_have_bonus_multiplier: float = 1.0,
     derived_clarification_tags=None,
-    rng: random.Random | None = None,
 ):
     """Return a weighted score and breakdown for a candidate exercise."""
     exercise_tags = normalize_tags(exercise_tags or [])
@@ -1331,7 +1330,6 @@ def score_exercise(
         score += rehab_penalty
     reasons["penalties"] = rehab_penalty
 
-    reasons["randomness"] = 0.0
     reasons["deterministic_scoring"] = True
     reasons["final_score"] = round(score, 4)
 
@@ -1859,7 +1857,7 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
     return "\n".join(strength_output)
 
 
-def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
+def generate_strength_block(*, flags: dict, weaknesses=None):
     strength_started_at = perf_counter()
     substep_callback = flags.get("strength_substep_callback")
     logger = logging.getLogger(__name__)
@@ -2072,8 +2070,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if not active_late_window:
             return {
                 "blocked": False,
+                "severity": "safe",
                 "block_codes": [],
                 "reason_codes": [],
+                "penalty_codes": [],
                 "adjustment": 0.0,
                 "ambiguous_gap": None,
             }
@@ -2103,7 +2103,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         exercise: dict,
         *,
         profile: dict | None = None,
-        late_eval: dict | None = None,
     ) -> dict:
         tags = set(normalize_tags(exercise.get("tags", [])))
         late_windows = _exercise_late_windows(exercise)
@@ -2133,7 +2132,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         }
 
     def _merge_post_score_reasons(
-        exercise: dict,
         reasons: dict,
         *,
         profile: dict,
@@ -2274,7 +2272,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             priority_profile=priority_profile,
             must_have_bonus_multiplier=must_have_bonus_multiplier,
             derived_clarification_tags=derived_clarification_tags,
-            rng=rng,
         )
         if score == -999:
             continue
@@ -2327,19 +2324,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             score += restriction_penalty
             breakdown["penalties"] = round(breakdown.get("penalties", 0.0) + restriction_penalty, 2)
             breakdown["restriction_hits"] = len(matched_restrictions)
-        late_eval = _evaluate_strength_late_window(
-            ex,
-            window=late_window,
-            days_until_fight=days_until_fight,
-            cut_bucket=cut_bucket,
-            familiar_names=familiar_exercise_names,
-        )
-        _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
+        late_eval = _get_post_score_late_eval(ex, fallback_score=score)
         if late_eval["blocked"]:
-            _record_late_block(ex, score, late_eval["block_codes"])
             continue
-        if late_eval.get("penalty_codes"):
-            _record_late_penalty(ex, score, late_eval["penalty_codes"])
         if late_eval["adjustment"]:
             score += late_eval["adjustment"]
         if late_eval["reason_codes"]:
@@ -2444,19 +2431,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     continue
                 if not any(t in taper_allowed for t in tags_lower):
                     continue
-            late_eval = _evaluate_strength_late_window(
-                ex,
-                window=late_window,
-                days_until_fight=days_until_fight,
-                cut_bucket=cut_bucket,
-                familiar_names=familiar_exercise_names,
-            )
-            _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
+            late_eval = _get_post_score_late_eval(ex, fallback_score=0.0)
             if late_eval["blocked"]:
-                _record_late_block(ex, 0.0, late_eval["block_codes"])
                 continue
-            if late_eval.get("penalty_codes"):
-                _record_late_penalty(ex, 0.0, late_eval["penalty_codes"])
             fallback_exercises.append(ex)
             if len(fallback_exercises) >= target_exercises - len(weighted_exercises):
                 break
@@ -2491,8 +2468,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     equipment_cache: dict[str, set[str]] = {}
     guarded_decision_cache: dict[tuple[str, str], Decision] = {}
     injury_match_cache: dict[tuple[str, tuple[str, ...], tuple[str, ...]], bool] = {}
-    post_score_late_eval_cache: dict[str, dict] = {}
-    late_safe_profile_cache: dict[tuple[str, tuple], dict] = {}
+    late_safe_profile_cache: dict[str, dict] = {}
 
     def _cached_classify(exercise: dict) -> dict:
         key = _exercise_key(exercise)
@@ -2530,16 +2506,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             injury_match_cache[key] = bool(injury_match_details(exercise, injuries, fields=fields, risk_levels=risk_levels))
         return injury_match_cache[key]
 
-    def _cached_post_score_late_eval(exercise: dict, fallback_score: float) -> dict:
-        key = f"{_exercise_key(exercise)}:{round(float(fallback_score or 0.0), 4)}"
-        if key not in post_score_late_eval_cache:
-            post_score_late_eval_cache[key] = _get_post_score_late_eval(exercise, fallback_score=fallback_score)
-        return post_score_late_eval_cache[key]
-
-    def _cached_late_safe_profile(exercise: dict, profile: dict, late_eval: dict) -> dict:
-        key = (_exercise_key(exercise), tuple(sorted(late_eval.get("reason_codes", []))), bool(late_eval.get("blocked")))
+    def _cached_late_safe_profile(exercise: dict, profile: dict | None = None) -> dict:
+        # The marker profile is derived from the exercise (plus the request-level
+        # late window and cut bucket, both fixed for this call), so the exercise
+        # identity is the whole cache key.
+        key = _exercise_key(exercise)
         if key not in late_safe_profile_cache:
-            late_safe_profile_cache[key] = _late_safe_marker_profile(exercise, profile=profile, late_eval=late_eval)
+            late_safe_profile_cache[key] = _late_safe_marker_profile(exercise, profile=profile)
         return late_safe_profile_cache[key]
 
     def _selected_names(exercises: list[dict]) -> set[str]:
@@ -2557,16 +2530,11 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             if not cand_name or cand_name in blocked_names:
                 continue
             profile = _cached_classify(cand)
-            late_eval = _cached_post_score_late_eval(cand, fallback_score=cand_score)
+            late_eval = _get_post_score_late_eval(cand, fallback_score=cand_score)
             if active_late_window and late_eval["blocked"]:
                 continue
-            late_safe_profile = _cached_late_safe_profile(
-                cand,
-                profile=profile,
-                late_eval=late_eval,
-            )
+            late_safe_profile = _cached_late_safe_profile(cand, profile=profile)
             merged_reasons = _merge_post_score_reasons(
-                cand,
                 cand_reasons,
                 profile=profile,
                 late_eval=late_eval,
@@ -2641,7 +2609,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             non_explicit_late_safe_indices = [
                 idx
                 for idx in candidate_indices
-                if not _late_safe_marker_profile(exercises[idx])["explicit"]
+                if not _cached_late_safe_profile(exercises[idx])["explicit"]
             ]
             if non_explicit_late_safe_indices:
                 candidate_indices = non_explicit_late_safe_indices
@@ -2667,19 +2635,14 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             if not cand_name or cand_name in blocked_names:
                 continue
             profile = _cached_classify(cand)
-            late_eval = _cached_post_score_late_eval(
+            late_eval = _get_post_score_late_eval(
                 cand,
                 fallback_score=score_lookup.get(cand_name, 0.0),
             )
             if active_late_window and late_eval["blocked"]:
                 continue
-            late_safe_profile = _cached_late_safe_profile(
-                cand,
-                profile=profile,
-                late_eval=late_eval,
-            )
+            late_safe_profile = _cached_late_safe_profile(cand, profile=profile)
             merged_reasons = _merge_post_score_reasons(
-                cand,
                 reasons_by_name.get(cand_name, {}),
                 profile=profile,
                 late_eval=late_eval,
@@ -2852,7 +2815,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                         local_candidates = [
                             idx
                             for idx in local_candidates
-                            if not _late_safe_marker_profile(items[idx])["explicit"]
+                            if not _cached_late_safe_profile(items[idx])["explicit"]
                         ]
                     if not local_candidates:
                         continue
@@ -3020,7 +2983,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if not name:
             continue
         profile = _cached_classify(ex)
-        late_eval = _cached_post_score_late_eval(ex, fallback_score=score)
+        late_eval = _get_post_score_late_eval(ex, fallback_score=score)
         candidate_metadata[name] = {
             "exercise": ex,
             "score": score,
@@ -3030,7 +2993,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             "tags": _cached_tags(ex),
             "equipment": _cached_equipment(ex),
             "late_eval": late_eval,
-            "late_safe_profile": _cached_late_safe_profile(ex, profile, late_eval),
+            "late_safe_profile": _cached_late_safe_profile(ex, profile),
         }
 
     top_pairs = weighted_exercises[:target_exercises]
@@ -3378,7 +3341,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     return {
         "block": strength_output,
         "num_sessions": len(used_days),
-        "preferred_tags": list(set(all_tags)),
+        "preferred_tags": list(dict.fromkeys(all_tags)),
         "exercises": base_exercises,
         "why_log": why_log,
         "candidate_reservoir": candidate_reservoir,

@@ -25,6 +25,19 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 
+# Strength roles that carry a camp's primary strength stimulus. Every consumer
+# that asks "does this plan have a real strength anchor?" must agree on the same
+# membership, so the set lives here rather than being re-spelled per module.
+PRIMARY_STRENGTH_ROLE_KEYS: frozenset[str] = frozenset(
+    {
+        "primary_strength_day",
+        "structural_strength_day",
+        "neural_plus_strength_day",
+        "neural_primer_day",
+    }
+)
+
+
 # Canonical role_key -> athlete-facing label.
 #
 # Labels are aligned with fightcamp/stage2_validator.py:_SESSION_TITLE_HINTS so a

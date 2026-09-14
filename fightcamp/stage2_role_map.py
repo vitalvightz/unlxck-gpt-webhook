@@ -52,7 +52,7 @@ from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 from .fight_day_override import apply_fight_day_override_to_weekly_role_map, compute_fight_weekday
 from .fight_date_utils import build_calendar_days
 from .stage2_render_guards import _all_active_injuries_surface_only
-from .role_labels import stamp_weekly_role_map_labels
+from .role_labels import PRIMARY_STRENGTH_ROLE_KEYS, stamp_weekly_role_map_labels
 from .allocator_priority import (
     allocation_sort_key,
     late_camp_week_reference_d_day,
@@ -1073,12 +1073,6 @@ def _role_governance(
     }
 
 
-_PRIMARY_STRENGTH_ROLE_KEYS = {
-    "primary_strength_day",
-    "structural_strength_day",
-    "neural_plus_strength_day",
-    "neural_primer_day",
-}
 _WEEKDAY_ORDER = {
     "monday": 0,
     "tuesday": 1,
@@ -1404,7 +1398,7 @@ def _replaceable_role_priority(role: dict, *, day: str) -> tuple[int, int]:
         if role.get("gas_tank_recovery_touch") or role.get("allowed_on_recovery_day"):
             return (3, 3)
         return (0 if role.get("preferred_system") == "glycolytic" else 1, 1)
-    if category == "strength" and role_key not in _PRIMARY_STRENGTH_ROLE_KEYS:
+    if category == "strength" and role_key not in PRIMARY_STRENGTH_ROLE_KEYS:
         return (2, 2)
     if category == "recovery":
         return (3, 3)
@@ -1614,7 +1608,7 @@ def _assign_declared_day_hints(
 
     recovery_idx = next((idx for idx, role in enumerate(ordered) if role.get("category") == "recovery"), None)
     primary_idx = next(
-        (idx for idx, role in enumerate(ordered) if role.get("category") == "strength" and role.get("role_key") in _PRIMARY_STRENGTH_ROLE_KEYS),
+        (idx for idx, role in enumerate(ordered) if role.get("category") == "strength" and role.get("role_key") in PRIMARY_STRENGTH_ROLE_KEYS),
         None,
     )
     glycolytic_idx = next(
@@ -1850,7 +1844,7 @@ def _resequence_session_roles(
     phase = str(week_entry.get("phase", "")).upper()
 
     def _is_primary_strength(role: dict) -> bool:
-        return role.get("category") == "strength" and role.get("role_key") in _PRIMARY_STRENGTH_ROLE_KEYS
+        return role.get("category") == "strength" and role.get("role_key") in PRIMARY_STRENGTH_ROLE_KEYS
 
     def _is_support_strength(role: dict) -> bool:
         return role.get("category") == "strength" and not _is_primary_strength(role)
@@ -2386,7 +2380,7 @@ def _build_spar_allocation_reason_codes(
 
 
 def _is_boxing_crowded_anchor_role(role: dict[str, Any]) -> bool:
-    return role.get("category") == "strength" and role.get("role_key") in _PRIMARY_STRENGTH_ROLE_KEYS
+    return role.get("category") == "strength" and role.get("role_key") in PRIMARY_STRENGTH_ROLE_KEYS
 
 
 def _is_boxing_crowded_low_load_support_role(role: dict[str, Any]) -> bool:
@@ -2889,7 +2883,7 @@ def _apply_legacy_high_fatigue_compression(
         removable_role = next(
             (
                 role for role in kept_roles
-                if role.get("category") == "strength" and role.get("role_key") not in _PRIMARY_STRENGTH_ROLE_KEYS
+                if role.get("category") == "strength" and role.get("role_key") not in PRIMARY_STRENGTH_ROLE_KEYS
             ),
             None,
         )

@@ -67,13 +67,6 @@ def _normalise_countdown_label(value: Any) -> str:
     return f"D-{int(match.group(1))}"
 
 
-def _rendered_countdown_labels(final_plan_text: str) -> set[str]:
-    return {
-        f"D-{int(match.group(1))}"
-        for match in _COUNTDOWN_HEADER_RE.finditer(final_plan_text or "")
-    }
-
-
 def _normalise_render_match_text(value: Any) -> str:
     return re.sub(r"[^a-z0-9]+", " ", str(value or "").lower()).strip()
 

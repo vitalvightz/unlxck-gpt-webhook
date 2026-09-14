@@ -8,7 +8,7 @@ from .bout_format import bout_format_metadata
 from .coach_review import run_coach_review
 from .conditioning import generate_conditioning_block
 from .injury_location import canonicalize_location
-from .mindset_module import get_mindset_by_phase, get_phase_mindset_cues
+from .mindset_module import get_mindset_by_phase
 from .nutrition import generate_nutrition_block
 from .plan_pipeline_runtime import (
     PHASES,
@@ -54,22 +54,16 @@ def _run_stage1_module(
     _emit_progress(progress_callback, finished_code, f"{label_prefix} finished")
     return result
 
-def _build_phase_mindsets(training_context: TrainingContext) -> tuple[dict[str, str], dict[str, str]]:
-    phase_mindset_cues = get_phase_mindset_cues(training_context.mental_block)
-    phase_mindsets: dict[str, str] = {}
-    # Compute once; reused for every non-generic phase below.
+def _build_phase_mindsets(training_context: TrainingContext) -> dict[str, str]:
+    # Compute once; the mental-block classification is invariant across phases.
     base_flags = training_context.to_flags()
+    blocks = training_context.mental_block
+    if isinstance(blocks, str):
+        blocks = [blocks]
+    generic = not blocks or blocks[0].lower() == "generic"
+    mindset_flags = {"mental_block": ["generic"]} if generic else base_flags
 
-    for phase in PHASES:
-        blocks = training_context.mental_block
-        if isinstance(blocks, str):
-            blocks = [blocks]
-        if blocks and blocks[0].lower() != "generic":
-            phase_mindsets[phase] = get_mindset_by_phase(phase, base_flags)
-        else:
-            phase_mindsets[phase] = get_mindset_by_phase(phase, {"mental_block": ["generic"]})
-
-    return phase_mindset_cues, phase_mindsets
+    return {phase: get_mindset_by_phase(phase, mindset_flags) for phase in PHASES}
 
 
 def _is_rotational_power_anchor(exercise: dict) -> bool:
@@ -87,7 +81,6 @@ def _is_rotational_power_anchor(exercise: dict) -> bool:
 
 def _generate_strength_blocks(
     context: PlanRuntimeContext,
-    phase_mindset_cues: dict[str, str],
     *,
     progress_callback: ProgressCallback | None = None,
 ) -> tuple[dict[str, dict | None], dict[str, list[dict]]]:
@@ -120,7 +113,7 @@ def _generate_strength_blocks(
         }
         if previous_names:
             flags["prev_exercises"] = previous_names
-            flags["recent_exercises"] = list(previous_movements)
+            flags["recent_exercises"] = sorted(previous_movements)
         if not rotational_power_seen:
             flags["rotational_power_camp_gap"] = True
         phase_step = f"phase_{phase.lower()}"
@@ -130,7 +123,6 @@ def _generate_strength_blocks(
             block = generate_strength_block(
                 flags=flags,
                 weaknesses=context.training_context.weaknesses,
-                mindset_cue=phase_mindset_cues.get(phase),
             )
         finally:
             phase_elapsed = perf_counter() - phase_started
@@ -146,7 +138,7 @@ def _generate_strength_blocks(
             for exercise in block.get("exercises", [])
             if exercise.get("movement")
         }
-        previous_names = list({*previous_names, *phase_names})
+        previous_names = list(dict.fromkeys([*previous_names, *phase_names]))
         previous_movements |= phase_movements
         if not rotational_power_seen:
             rotational_power_seen = any(
@@ -381,9 +373,11 @@ def _infer_rehab_day_type(*, phase: str) -> str | None:
     return None
 
 
-def _generate_rehab_support_bundle(context: PlanRuntimeContext) -> tuple[dict[str, str], dict[str, str], str, bool, str, str, str]:
+def _generate_rehab_support_bundle(
+    context: PlanRuntimeContext,
+    rehab_injury_string: str,
+) -> tuple[dict[str, str], dict[str, str], str, bool, str, str, str]:
     rehab_blocks = {phase: "" for phase in PHASES}
-    rehab_injury_string = _build_rehab_injury_string(context)
 
     if context.phase_active("GPP"):
         rehab_blocks["GPP"], _ = generate_rehab_protocols(
@@ -495,8 +489,12 @@ def generate_plan_blocks(
     progress_callback: ProgressCallback | None = None,
 ) -> PlanBlocksBundle:
     timer_start = perf_counter()
-    phase_mindset_cues, phase_mindsets = _build_phase_mindsets(context.training_context)
+    phase_mindsets = _build_phase_mindsets(context.training_context)
     record_timing("mindset", timer_start)
+
+    # Derived once per request: both the rehab/support bundle and the coach
+    # review read the same normalised injury phrase list.
+    rehab_injury_string = _build_rehab_injury_string(context)
 
     logger.info(
         "[stage] selection_ignore_restrictions=%s restrictions_present=%s restrictions_count=%d",
@@ -516,7 +514,6 @@ def generate_plan_blocks(
         timing_label="strength",
         fn=lambda: _generate_strength_blocks(
             context,
-            phase_mindset_cues,
             progress_callback=progress_callback,
         ),
     )
@@ -570,7 +567,7 @@ def generate_plan_blocks(
         progress_callback=progress_callback,
         record_timing=record_timing,
         timing_label="rehab_support_bundle",
-        fn=lambda: _generate_rehab_support_bundle(context),
+        fn=lambda: _generate_rehab_support_bundle(context, rehab_injury_string),
     )
     if has_injuries:
         rehab_detail = "Rehab protocols and injury guardrails added to every active phase."
@@ -593,7 +590,6 @@ def generate_plan_blocks(
     _emit_progress(progress_callback, "stage1_weekly_schedule_started", "Stage 1 weekly schedule started")
     _emit_progress(progress_callback, "stage1_weekly_schedule_finished", "Stage 1 weekly schedule finished")
 
-    rehab_injury_string = _build_rehab_injury_string(context)
     coach_review_notes, strength_blocks, conditioning_blocks, substitutions = _run_stage1_module(
         module_name="coach_notes",
         started_code="stage1_coach_notes_started",

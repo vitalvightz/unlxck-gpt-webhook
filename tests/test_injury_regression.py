@@ -44,7 +44,7 @@ def test_injury_filters_return_selections_and_limit_exclusions():
     for injuries in cases.values():
         flags = _base_flags(injuries)
 
-        strength_block = generate_strength_block(flags=flags, weaknesses=[], mindset_cue=None)
+        strength_block = generate_strength_block(flags=flags, weaknesses=[])
         exercises = strength_block.get("exercises", [])
         assert exercises
         assert _count_exclusions(exercises, injuries) < exclusion_cap

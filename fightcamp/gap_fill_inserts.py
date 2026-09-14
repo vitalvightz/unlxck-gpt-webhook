@@ -592,37 +592,6 @@ def build_target_coverage_state(
     )
 
 
-def remaining_target_need(
-    athlete_model: dict[str, Any],
-    scheduled_roles: list[dict[str, Any]],
-    target: str,
-) -> float:
-    canonical = _canonical_target(target)
-    return next(
-        (
-            state.remaining_need
-            for state in build_target_coverage_state(athlete_model, scheduled_roles)
-            if state.target == canonical and state.low_cost_addressable
-        ),
-        0.0,
-    )
-
-
-def highest_priority_remaining_target(
-    athlete_model: dict[str, Any],
-    scheduled_roles: list[dict[str, Any]],
-) -> str:
-    """Return the highest canonical selected target a low-cost filler can address."""
-    return next(
-        (
-            state.target
-            for state in build_target_coverage_state(athlete_model, scheduled_roles)
-            if state.low_cost_addressable and state.remaining_need > 0
-        ),
-        "",
-    )
-
-
 def _priority_contribution(
     role_key: str,
     coverage_state: list[TargetCoverageState],
@@ -994,11 +963,6 @@ def _apply_bank_watch(
     role["display_text"] = build_watch_display_text(watch)
     role["duration_min"] = [watch.duration_minutes, watch.duration_minutes]
     used_watch_keys.add(watch.key)
-
-
-def _first_allowed(preferences: list[str], allowed: set[str]) -> str | None:
-    return next((role_key for role_key in preferences if role_key in allowed), None)
-
 
 def _time_band_preferences(insert_offset: int) -> list[str]:
     if insert_offset == 1:
@@ -1661,24 +1625,6 @@ def _candidate_offsets_from_sequence(
 
 def _has_tactical_support(session_sequence: list[dict[str, Any]]) -> bool:
     return any(str(role.get("role_key") or "") in TACTICAL_INSERTS for role in session_sequence)
-
-
-def _missing_mandatory_watch_count(session_sequence: list[dict[str, Any]]) -> int:
-    """Count represented D-21..D-1 segments that still need a Tactical Focus."""
-    segments = {
-        _segment_for_offset(offset)
-        for role in session_sequence
-        if (offset := _role_offset(role)) is not None and 0 < offset <= 21
-    }
-    watch_segments = {
-        _segment_for_offset(offset)
-        for role in session_sequence
-        if str(role.get("role_key") or "") == "tactical_watch"
-        and (offset := _role_offset(role)) is not None
-        and 0 < offset <= 21
-    }
-    return len(segments - watch_segments)
-
 
 def _ensure_weekly_tactical_watches(
     session_sequence: list[dict[str, Any]],

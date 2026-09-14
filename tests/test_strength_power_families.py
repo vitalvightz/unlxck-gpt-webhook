@@ -203,7 +203,7 @@ def test_camp_gap_stays_open_until_a_rotational_anchor_is_selected(monkeypatch):
     }
     seen_gap_flags: dict[str, bool] = {}
 
-    def fake_generate_strength_block(*, flags, weaknesses=None, mindset_cue=None):
+    def fake_generate_strength_block(*, flags, weaknesses=None):
         phase = flags["phase"]
         seen_gap_flags[phase] = bool(flags.get("rotational_power_camp_gap"))
         return phase_blocks[phase]
@@ -219,7 +219,7 @@ def test_camp_gap_stays_open_until_a_rotational_anchor_is_selected(monkeypatch):
         phase_active=lambda phase: True,
     )
 
-    plan_pipeline_blocks._generate_strength_blocks(context, {})
+    plan_pipeline_blocks._generate_strength_blocks(context)
 
     # A governed rotational support item in GPP must not close the gap for SPP;
     # the real rotational anchor selected in SPP closes it for TAPER.

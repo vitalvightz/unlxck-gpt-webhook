@@ -4,7 +4,7 @@ import re
 from collections import defaultdict
 from typing import Any
 
-from .role_labels import athlete_facing_label_for
+from .role_labels import PRIMARY_STRENGTH_ROLE_KEYS, athlete_facing_label_for
 from .stage2_validator import _line_has_exercise, week_incompleteness_code
 
 
@@ -36,11 +36,6 @@ _NON_PHASE_TOP_LEVEL_HEADINGS = {
     "sparring & conditioning adjustments table",
     "nutrition adjustments for unknown sparring load",
     "athlete profile",
-}
-_PRIMARY_STRENGTH_ROLE_KEYS = {
-    "primary_strength_day",
-    "structural_strength_day",
-    "neural_plus_strength_day",
 }
 _GLYCOLYTIC_SUPPRESSED_ROLE_KEYS = {"light_fight_pace_touch_day"}
 
@@ -305,7 +300,7 @@ def _requirement_survives_final_role_map(
     requirement_key = str(requirement or "").strip().lower()
     if requirement_key == "primary_strength":
         return any(
-            str(role.get("role_key") or "").strip().lower() in _PRIMARY_STRENGTH_ROLE_KEYS
+            str(role.get("role_key") or "").strip().lower() in PRIMARY_STRENGTH_ROLE_KEYS
             for role in roles
         )
 

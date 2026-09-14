@@ -152,7 +152,7 @@ def test_boxer_avoids_grappling_terms():
         ],
         "key_goals": [],
     }
-    block = generate_strength_block(flags=flags, weaknesses=[], mindset_cue=None)
+    block = generate_strength_block(flags=flags, weaknesses=[])
     tags = {t for ex in block["exercises"] for t in ex.get("tags", [])}
     banned = {"wrestler", "bjj", "grappler"}
     assert not any(term in tags for term in banned)
@@ -169,6 +169,6 @@ def test_dedupe_against_general_bank():
         "equipment": ["pullup_bar", "dumbbells", "bands", "kettlebell", "landmine"],
         "key_goals": [],
     }
-    block = generate_strength_block(flags=flags, weaknesses=["pull"], mindset_cue=None)
+    block = generate_strength_block(flags=flags, weaknesses=["pull"])
     names = [ex["name"] for ex in block["exercises"]]
     assert names.count("Weighted Pull-Up") <= 1
