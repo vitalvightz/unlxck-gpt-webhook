@@ -862,3 +862,116 @@ def test_the_gas_tank_preset_is_one_obligation_not_two():
         _athlete(key_goals=["conditioning"], primary_goal="conditioning",
                  weak_areas=["gas_tank"], primary_weak_area="gas_tank")
     ) == [("conditioning", "primary")]
+
+
+# ---------------------------------------------------------------------------
+# Closed-membership propagation of an attached microdose
+#
+# Live plan ea747f1f recorded `microdose_attached` for Loaded Carry Touch on the
+# D-23 strength host, yet the host's selected membership never mentioned it, so
+# Stage 2 could not legally render it and raised
+# `goal_preservation_render_mismatch` / `missing_priority_microdose`.
+# `microdose_attached` must mean attached to the host session and renderable
+# through the normal closed-membership path.
+# ---------------------------------------------------------------------------
+
+_STRENGTH_ENTRY = {
+    "goal": "strength",
+    "priority": "primary",
+    "state": "build",
+    "required_intent": "meaningful_strength",
+    "evidence": [],
+}
+
+_CARRY = "Loaded Carry Touch"
+_CARRY_DOSE = "2 x 20 m @ RPE 7"
+
+
+def _strength_host():
+    return {
+        "category": "strength",
+        "role_key": "strength_power_day",
+        "scheduled_day_hint": "Monday",
+        "session_index": 1,
+        "selected_exercise_assignments": [],
+    }
+
+
+def _carry_brief():
+    brief = _brief(roles=[_strength_host()], days=23)
+    brief["athlete_snapshot"].update(key_goals=["strength"], primary_goal="strength")
+    brief["weekly_role_map"]["weeks"][0]["calendar_days"] = [
+        {"weekday": "monday", "d_day": 23}
+    ]
+    return brief
+
+
+def _attached_carry_host():
+    brief = _carry_brief()
+    audit = _attach(brief, _STRENGTH_ENTRY)
+    assert audit["result"] == "microdose_attached"
+    return brief, brief["weekly_role_map"]["weeks"][0]["session_roles"][0]
+
+
+def test_the_attached_carry_reaches_the_hosts_closed_membership():
+    _, host = _attached_carry_host()
+    assert host["priority_microdose"]["name"] == _CARRY
+
+    selected = [a for a in host["selected_exercise_assignments"] if a["name"] == _CARRY]
+    assert len(selected) == 1
+    assert selected[0]["effective_prescription"] == _CARRY_DOSE
+
+    priced = [p for p in host["effective_strength_prescriptions"] if p["name"] == _CARRY]
+    assert len(priced) == 1
+    assert priced[0]["effective_prescription"] == _CARRY_DOSE
+    assert priced[0]["dose_authority"] == "weekly_priority_exposure_floor"
+
+    assert _CARRY in host["effective_strength_envelope"]["allowed_exercise_names"]
+    assert host["effective_strength_envelope"]["complete_exercise_allow_list"] is True
+
+
+def test_the_carry_is_still_meaningful_strength_evidence():
+    from fightcamp.goal_preservation import collect_goal_evidence
+
+    brief, _ = _attached_carry_host()
+    carry = [e for e in collect_goal_evidence(brief) if e.get("name") == _CARRY]
+    assert len(carry) == 1
+    assert carry[0]["intents"] == ["meaningful_strength"]
+    assert carry[0]["effective_prescription"] == _CARRY_DOSE
+    assert carry[0]["development_quality"] is True
+
+
+def test_re_synchronising_the_host_does_not_duplicate_the_carry():
+    from fightcamp.goal_preservation import _sync_microdose_membership
+
+    _, host = _attached_carry_host()
+    _sync_microdose_membership(host, host["priority_microdose"])
+
+    assert [a["name"] for a in host["selected_exercise_assignments"]].count(_CARRY) == 1
+    assert [p["name"] for p in host["effective_strength_prescriptions"]].count(_CARRY) == 1
+    assert host["effective_strength_envelope"]["allowed_exercise_names"].count(_CARRY) == 1
+
+
+_CARRY_RENDER = """## D-23 (Monday) - Strength
+- Trap-Bar Deadlift - 3 x 5 @ RPE 8
+- Loaded Carry Touch - 2 x 20 m @ RPE 7
+"""
+
+
+def test_stage2_no_longer_raises_the_two_blocker_codes():
+    """The live pair of blockers, against the witness reconcile actually writes."""
+    from fightcamp.goal_preservation import reconcile_goal_preservation
+    from fightcamp.stage2_validator import (
+        _goal_preservation_render_errors,
+        _priority_microdose_render_errors,
+    )
+
+    brief, _ = _attached_carry_host()
+    reconcile_goal_preservation(brief)
+    witness = brief["goal_preservation"][0]["evidence"][0]
+    assert witness["name"] == _CARRY
+    assert witness["effective_prescription"] == _CARRY_DOSE
+
+    codes = [e["code"] for e in _goal_preservation_render_errors(brief, _CARRY_RENDER)]
+    codes += [e["code"] for e in _priority_microdose_render_errors(brief, _CARRY_RENDER)]
+    assert codes == []
