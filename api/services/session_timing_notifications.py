@@ -7,7 +7,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from api.contracts.command_view import CommandView
+from api.contracts.command_view import CommandView, session_is_today
 from api.notification_models import NotificationPreferences
 from api.services.notification_foundation import (
     NotificationCandidate,
@@ -112,7 +112,7 @@ def _bound_expiry(
 def _has_today_session(view: CommandView) -> bool:
     return bool(
         str(view.active_plan.get("id") or "").strip()
-        and view.today.session_scope == "today"
+        and session_is_today(view)
         and view.today.completion_status not in {"done", "modified", "skipped", "started"}
     )
 

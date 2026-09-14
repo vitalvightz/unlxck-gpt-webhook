@@ -754,19 +754,20 @@ test("tier meta gives the coach-facing labels and tones", () => {
   assert.equal(getTierMeta("stop").eyebrow, "Today's action");
 });
 
-test("isSessionToday prefers the session relation, then the scope", () => {
-  assert.equal(isSessionToday({ session_relation: "today" }), true);
-  assert.equal(isSessionToday({ session_relation: "next" }), false);
-  assert.equal(
-    isSessionToday(
-      { session_relation: "next", calendar_date: "2026-09-13" },
-      "next",
-      "2026-09-13",
-    ),
-    true,
-  );
+test("isSessionToday reads the backend scope, never its own date maths", () => {
   assert.equal(isSessionToday({}, "today"), true);
   assert.equal(isSessionToday({}, "next"), false);
+  assert.equal(isSessionToday({}, "none"), false);
+  // The backend owns session timing (today_service.build_today_command_view).
+  // A "next" scope stays "next" even when the session is stamped with today's
+  // date — re-deriving the day here is what let Overview and Today disagree.
+  assert.equal(
+    isSessionToday({ session_relation: "today" }, "next"),
+    false,
+  );
+  // Only a payload predating session_scope falls back to the relation stamp.
+  assert.equal(isSessionToday({ session_relation: "today" }), true);
+  assert.equal(isSessionToday({ session_relation: "next" }), false);
   assert.equal(isSessionToday(null), false);
 });
 

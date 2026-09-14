@@ -73,7 +73,14 @@ test("today shows no session blocks while the plan's block has not started", () 
   assert.equal(html.includes("Saturday strength"), false);
 });
 
-test("a future-dated session is a locked preview even when the payload calls it today", () => {
+// Session timing is settled by today_service.build_today_command_view and
+// carried in session_scope. These two tests pin that the panel follows it in
+// both directions rather than re-deciding the day from calendar_date — the
+// second-guessing that let Overview and Today describe the same payload
+// differently. The backend refuses to scope a future open-plan row to today
+// (tests/test_open_plan_recurring_resolution.py) and rejects a completion
+// written against one with a 409, so that guard lives there, once.
+test("a session the backend scopes to next stays a locked preview", () => {
   const state: TodayCommandView = {
     active_plan: { id: "plan-1", name: "Open plan", phase: "GPP" },
     today: {
@@ -88,8 +95,8 @@ test("a future-dated session is a locked preview even when the payload calls it 
         session_relation: "today",
         effective_load: "technical",
       },
-      session_scope: "today",
-      session_label: "Today's session",
+      session_scope: "next",
+      session_label: "Next session",
       completion_status: "not_started",
     },
     risk_watch: [],
@@ -154,7 +161,7 @@ test("today's session actions stay locked until check-in is submitted", () => {
   assert.doesNotMatch(html, />Start session<|>Mark skipped</);
 });
 
-test("a checked-in same-day session unlocks despite a stale next relation", () => {
+test("a session the backend scopes to today unlocks on that scope alone", () => {
   const state: TodayCommandView = {
     active_plan: { id: "plan-1", name: "Active fight camp", phase: "GPP" },
     today: {
@@ -165,12 +172,13 @@ test("a checked-in same-day session unlocks despite a stale next relation", () =
       next_session: {
         session_id: "2026-09-13-strength",
         title: "Strength",
-        calendar_date: "2026-09-13",
+        // Deliberately stamped a week out: the scope decides, not this date.
+        calendar_date: "2026-09-20",
         session_relation: "next",
         effective_load: "moderate",
       },
-      session_scope: "next",
-      session_label: "Next session",
+      session_scope: "today",
+      session_label: "Today's session",
       completion_status: "not_started",
     },
     risk_watch: [],

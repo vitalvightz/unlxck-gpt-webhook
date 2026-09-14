@@ -249,27 +249,47 @@ test("future pull-back remains a neutral pending preview", () => {
   assert.equal(resolved.tone, "neutral");
 });
 
-test("a future calendar date cannot be made completable by an incorrect today relation", () => {
-  const resolved = resolveTodayDecision({
+// resolveTodayDecision is presentation and safety-tier logic; it is not a
+// second source of session timing. The backend decides which day a session
+// falls on (today_service.build_today_command_view) and states it in
+// session_scope, so a scope of "next" is a preview whatever date the session
+// carries — and it cannot be talked out of that by a stale relation stamp.
+test("session timing comes from the backend scope, not the resolver's own date maths", () => {
+  const futureSession = {
+    session_id: "2026-08-08",
+    title: "Fight-Pace Conditioning and Neural Primer",
+    calendar_date: "2026-08-08",
+    session_relation: "today" as const,
+    effective_load: "technical",
+  };
+
+  const preview = resolveTodayDecision({
     ...BASE_STATE,
     today: {
       ...BASE_STATE.today,
       training_day: "2026-08-01",
-      next_session: {
-        session_id: "2026-08-08",
-        title: "Fight-Pace Conditioning and Neural Primer",
-        calendar_date: "2026-08-08",
-        session_relation: "today",
-        effective_load: "technical",
-      },
+      next_session: futureSession,
+      session_scope: "next",
+    },
+  });
+
+  assert.equal(preview.sessionIsToday, false);
+  assert.equal(preview.displayTier, "preview");
+  assert.equal(preview.canCompleteSession, false);
+  assert.equal(preview.sessionOutcome, "preview");
+
+  const scopedToToday = resolveTodayDecision({
+    ...BASE_STATE,
+    today: {
+      ...BASE_STATE.today,
+      training_day: "2026-08-01",
+      next_session: { ...futureSession, session_relation: "next" as const },
       session_scope: "today",
     },
   });
 
-  assert.equal(resolved.sessionIsToday, false);
-  assert.equal(resolved.displayTier, "preview");
-  assert.equal(resolved.canCompleteSession, false);
-  assert.equal(resolved.sessionOutcome, "preview");
+  assert.equal(scopedToToday.sessionIsToday, true);
+  assert.notEqual(scopedToToday.displayTier, "preview");
 });
 
 test("modify is guidance only and never claims the structured session was rewritten", () => {

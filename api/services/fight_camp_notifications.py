@@ -9,7 +9,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any, Mapping
 from zoneinfo import ZoneInfo
 
-from api.contracts.command_view import CommandView
+from api.contracts.command_view import CommandView, session_is_today
 from api.contracts.training_day import resolve_training_day_str
 from api.services.notification_foundation import (
     NOTIFICATION_MAX_ATTEMPTS,
@@ -114,7 +114,7 @@ def _has_active_plan(view: CommandView) -> bool:
 def _has_today_session(view: CommandView) -> bool:
     return bool(
         _has_active_plan(view)
-        and view.today.session_scope == "today"
+        and session_is_today(view)
         and _session_id(view)
     )
 

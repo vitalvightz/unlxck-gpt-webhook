@@ -3165,3 +3165,168 @@ class TestRetroLogCompletion:
             store, training_day="2026-06-16", status="skipped", modification_reason="was travelling"
         )
         assert row["status"] == "skipped"
+
+
+def _session_timing_structured_plan() -> dict:
+    """Mon rest, Tue two sessions, Wed one session — the shapes timing turns on."""
+    return {
+        "weeks": [
+            {
+                "phase_label": "GPP",
+                "days": [
+                    {
+                        "date": "2026-06-22",
+                        "countdown_label": "D-25",
+                        "day_type": "rest",
+                        "today_card": {"headline": "Rest or active recovery"},
+                        "sessions": [],
+                    },
+                    {
+                        "date": "2026-06-23",
+                        "countdown_label": "D-24",
+                        "day_type": "high",
+                        "today_card": {"headline": "Strength then conditioning"},
+                        "sessions": [
+                            {
+                                "session_id": "2026-06-23-strength",
+                                "session_type": "strength",
+                                "title": "Posterior chain strength",
+                                "blocks": [{"block_id": "hinge", "display_name": "Trap bar deadlift"}],
+                            },
+                            {
+                                "session_id": "2026-06-23-conditioning",
+                                "session_type": "conditioning",
+                                "title": "Aerobic support",
+                                "blocks": [{"block_id": "bike", "display_name": "Easy Assault Bike"}],
+                            },
+                        ],
+                    },
+                    {
+                        "date": "2026-06-24",
+                        "countdown_label": "D-23",
+                        "day_type": "high",
+                        "today_card": {"headline": "Hard sparring"},
+                        "sessions": [
+                            {
+                                "session_id": "2026-06-24-sparring",
+                                "session_type": "sparring",
+                                "title": "Hard sparring",
+                                "blocks": [{"block_id": "rounds", "display_name": "Sparring rounds"}],
+                            }
+                        ],
+                    },
+                ],
+            }
+        ]
+    }
+
+
+class TestSessionTimingAuthority:
+    """``build_today_command_view`` is the only derivation of session timing.
+
+    Every surface (Overview, Today, XP, the notification services) reads
+    ``session_scope`` instead of deciding for itself, so these cases fix what
+    that one derivation answers. They previously lived in the app as
+    ``reconcileTodayWithPlanCard``, which meant Today applied them and Overview
+    and XP did not — the same payload described three different ways.
+    """
+
+    def _view(self, store, *, day: int):
+        return build_today_command_view(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            now=datetime(2026, 6, day, 12, 0, tzinfo=timezone.utc),
+        )
+
+    def _store(self) -> FakeStore:
+        store = _store_with_plan()
+        store.plans[PLAN]["structured_plan"] = _session_timing_structured_plan()
+        return store
+
+    def _complete(self, store, session_id: str, training_day: str, status: str = "done"):
+        payload = {"plan_id": PLAN, "session_id": session_id, "status": status}
+        if status == "skipped":
+            payload["modification_reason"] = "was travelling"
+        return upsert_session_completion(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload=payload,
+            now=datetime.fromisoformat(f"{training_day}T12:00:00+00:00"),
+        )
+
+    def test_rest_day_scopes_forward_to_the_next_training_day(self):
+        view = self._view(self._store(), day=22)
+
+        assert view.today.session_scope == "next"
+        assert view.today.session_label == "Next session"
+        assert view.today.next_session["calendar_date"] == "2026-06-23"
+        assert view.today.next_session["session_relation"] == "next"
+
+    def test_session_today_is_scoped_to_today(self):
+        view = self._view(self._store(), day=23)
+
+        assert view.today.session_scope == "today"
+        assert view.today.session_label == "Today's session"
+        assert view.today.next_session["session_id"] == "2026-06-23-strength"
+        assert view.today.completion_status == "not_started"
+
+    def test_a_second_session_keeps_the_day_scoped_to_today(self):
+        store = self._store()
+        self._complete(store, "2026-06-23-strength", "2026-06-23")
+
+        view = self._view(store, day=23)
+
+        # The day still has outstanding work, so it must not roll to tomorrow —
+        # completing the first of two sessions used to advance Today a whole day.
+        assert view.today.session_scope == "today"
+        assert view.today.next_session["session_id"] == "2026-06-23-conditioning"
+        assert view.today.next_session["title"] == "Aerobic support"
+        # Today is not finished while a session is outstanding: the notification
+        # services and XP read completion_status for exactly that question.
+        assert view.today.completion_status == "not_started"
+
+    def test_completing_every_session_rolls_forward_and_reports_today_done(self):
+        store = self._store()
+        self._complete(store, "2026-06-23-strength", "2026-06-23")
+        self._complete(store, "2026-06-23-conditioning", "2026-06-23")
+
+        view = self._view(store, day=23)
+
+        assert view.today.session_scope == "next"
+        assert view.today.session_label == "Next session"
+        assert view.today.next_session["calendar_date"] == "2026-06-24"
+        assert view.today.next_session["session_id"] == "2026-06-24-sparring"
+        # completion_status always describes today, never the card on screen.
+        assert view.today.completion_status == "done"
+
+    def test_next_day_preview_skips_a_session_already_logged_ahead(self):
+        store = self._store()
+        self._complete(store, "2026-06-23-strength", "2026-06-23")
+        self._complete(store, "2026-06-23-conditioning", "2026-06-23")
+        self._complete(store, "2026-06-24-sparring", "2026-06-24", status="done")
+
+        view = self._view(store, day=23)
+
+        # Tomorrow's only session is already terminal, so it is not the next
+        # session; nothing further is scheduled in this plan.
+        assert view.today.session_scope != "today"
+        assert view.today.next_session.get("session_id") != "2026-06-24-sparring"
+
+    def test_a_skipped_session_does_not_reopen_the_day(self):
+        store = self._store()
+        self._complete(store, "2026-06-23-strength", "2026-06-23", status="skipped")
+
+        view = self._view(store, day=23)
+
+        assert view.today.session_scope == "today"
+        assert view.today.next_session["session_id"] == "2026-06-23-conditioning"
+
+    def test_every_surface_reads_one_answer(self):
+        from api.contracts.command_view import session_is_today
+
+        store = self._store()
+
+        assert session_is_today(self._view(store, day=23)) is True
+        assert session_is_today(self._view(store, day=22)) is False

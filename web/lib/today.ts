@@ -832,31 +832,24 @@ export function getOverviewPrimaryAction(params: {
 }
 
 /**
- * Whether the scheduled session is TODAY (vs a future planned day). A canonical
- * calendar-date mismatch wins over relation/scope so a malformed or stale
- * payload cannot unlock a future session. Future sessions stay visible as
- * pending clearance.
+ * Whether the scheduled session is TODAY (vs a future planned day).
+ *
+ * `session_scope` is the answer, not an input to one. The backend
+ * (today_service.build_today_command_view) is the single place session timing
+ * is derived — it owns rest days, multi-session days, completed sessions and
+ * the roll forward to the next training day — so this reads its result rather
+ * than re-deriving the day from calendar dates. When surfaces did their own
+ * date maths, Overview and Today could disagree about the same payload.
  */
 export function isSessionToday(
-  session: Pick<TodaySession, "session_relation" | "calendar_date"> | null | undefined,
+  session: Pick<TodaySession, "session_relation"> | null | undefined,
   sessionScope?: TodayCommandView["today"]["session_scope"] | null,
-  trainingDay?: string | null,
 ): boolean {
-  const sessionDate = session?.calendar_date?.match(/^\d{4}-\d{2}-\d{2}/)?.[0];
-  const currentDate = trainingDay?.match(/^\d{4}-\d{2}-\d{2}/)?.[0];
-  if (sessionDate && currentDate) {
-    // The canonical dates outrank a stale relation stamp. This can occur after
-    // check-in refresh when the backend labels a same-day structured session as
-    // "next"; keeping it locked leaves an athlete unable to start today's work.
-    return sessionDate === currentDate;
+  if (sessionScope) {
+    return sessionScope === "today";
   }
-  if (session?.session_relation === "today") {
-    return true;
-  }
-  if (session?.session_relation === "next") {
-    return false;
-  }
-  return sessionScope === "today";
+  // Payloads that predate session_scope still carry the per-session relation.
+  return session?.session_relation === "today";
 }
 
 /**

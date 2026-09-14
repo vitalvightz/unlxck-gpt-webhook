@@ -447,11 +447,7 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
   const authoritativeTier =
     state.today.decision_tier ?? FALLBACK_TIER_BY_RECOMMENDATION[recommendationState];
   const hasSession = hasTodaySession(state.today.next_session);
-  const sessionIsToday = isSessionToday(
-    state.today.next_session,
-    state.today.session_scope,
-    state.today.training_day,
-  );
+  const sessionIsToday = isSessionToday(state.today.next_session, state.today.session_scope);
   const isPreview = !hasSession || !sessionIsToday;
   const displayTier: TodayDecisionTier = isPreview ? "preview" : authoritativeTier;
   // Injury data can make a backend-authoritative STOP more specific, but it
