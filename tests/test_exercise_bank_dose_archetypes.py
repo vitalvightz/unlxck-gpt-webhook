@@ -40,9 +40,9 @@ def _doses(name: str) -> dict[str, str]:
     return {phase: _prescription_templates(phase)[ptype] for phase in PHASES}
 
 
-def _under_countdown_cap(dose: str, role_kind: str) -> str:
-    """Run one dose through the real countdown overlay at a 3x3 ceiling."""
-    cap = {"max_sets": 3, "max_reps": 3, "loaded_allowed": True}
+def _under_countdown_cap(dose: str, role_kind: str, *, max_sets: int = 3) -> str:
+    """Run one dose through the real countdown overlay."""
+    cap = {"max_sets": max_sets, "max_reps": 3, "loaded_allowed": True}
     base_sets, base_reps = _parse_sets_reps(dose)
     sets, reps, loaded = _effective_counts(
         base_sets=base_sets, base_reps=base_reps, role_kind=role_kind,
@@ -331,6 +331,57 @@ def test_rep_doses_the_regex_cannot_read_are_still_capped(dose):
     longhand must still take the countdown ceiling.
     """
     assert _under_countdown_cap(dose, "anchor") == "3 x 3 @ RPE 6-7 max"
+
+
+@pytest.mark.parametrize("key", ["isometric", "max_isometric", "carry", "quality_cycle", "contrast"])
+def test_non_rep_doses_are_still_reduced_by_the_countdown_cap(key):
+    """Keeping the unit must not make a dose immune to volume reduction.
+
+    The band's set ceiling applies to the dose's own leading volume count
+    (holds / efforts / carries / rounds / sets), so the countdown keeps a real
+    lever instead of collapsing to allow-or-forbid.
+    """
+    base = _prescription_templates("SPP")[key]
+    tightened = [_under_countdown_cap(base, "anchor", max_sets=n) for n in (3, 2, 1)]
+    leading = [int(re.match(r"\s*(\d+)", dose).group(1)) for dose in tightened]
+    assert leading == sorted(leading, reverse=True) or len(set(leading)) > 1, tightened
+    assert leading[-1] == 1, tightened
+    # The unit itself survives every reduction: everything after the leading
+    # count is byte-identical apart from singularising the count noun.
+    for dose in tightened:
+        assert dose.split(None, 1)[1].replace("set ", "sets ", 1).replace(
+            "carry ", "carries ", 1
+        ).replace("hold ", "holds ", 1).replace("effort ", "efforts ", 1).replace(
+            "round:", "rounds:", 1
+        ) == base.split(None, 1)[1], (base, dose)
+
+
+@pytest.mark.parametrize("key", ["isometric", "max_isometric", "carry", "quality_cycle", "contrast"])
+def test_countdown_cap_never_raises_a_non_rep_dose(key):
+    base = _prescription_templates("SPP")[key]
+    assert _under_countdown_cap(base, "anchor", max_sets=99) == base
+
+
+def test_late_camp_isometric_remains_reducible():
+    """Trap-Bar Pin Pull Isometric is allowed out to D-7 and must still taper."""
+    assert _classify_prescription_type(BY_NAME["Trap-Bar Pin Pull Isometric"]) == "isometric"
+    base = _prescription_templates("TAPER")["isometric"]
+    assert _under_countdown_cap(base, "anchor", max_sets=1).startswith("1 hold ")
+
+
+def test_barbell_thruster_is_not_prescribed_as_a_heavy_strength_lift():
+    """A ballistic squat-to-press, corrected in classification, not in the bank."""
+    entry = BY_NAME["Barbell Thruster"]
+    assert entry["method"] == "strength", "bank selection semantics must be untouched"
+    assert _classify_prescription_type(entry) == "ballistic"
+    for phase, dose in _doses("Barbell Thruster").items():
+        assert "slow eccentric" not in dose.lower(), (phase, dose)
+        assert "1RM" not in dose, (phase, dose)
+
+
+def test_thruster_exception_does_not_reclassify_non_bar_push_presses():
+    assert _classify_prescription_type(BY_NAME["Landmine Push Press"]) == "core"
+    assert _classify_prescription_type(BY_NAME["Band-Resisted Push Press"]) == "ballistic"
 
 
 def test_parseable_doses_are_still_capped_exactly_as_before():

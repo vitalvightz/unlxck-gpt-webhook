@@ -1139,14 +1139,19 @@ def compose_normal_strength_assignments(
 
             # Candidate authority follows the phase that owns this role's D-day,
             # not the weekly container's label, so a week straddling a phase
-            # boundary cannot hand a GPP-only exercise to an SPP day. Falls back
-            # to the week phase whenever that phase has no Stage 1 pool, so a
-            # single-phase camp behaves exactly as before.
+            # boundary cannot hand a GPP-only exercise to an SPP day.
+            #
+            # Fails closed, matching ``phase_scoped_candidate_pools``: once the
+            # phase resolves, a missing pool for it yields no candidates rather
+            # than substituting another phase's — substituting is precisely how
+            # a GPP-only exercise reached an SPP day. The week label is the
+            # fallback only when the phase does not resolve at all (an undated
+            # role, or a D-day outside the camp's allocation), which is also the
+            # single-phase camp's path.
             phase = _scheduled_phase_for_role(week, role)
-            pool = candidate_pools.get(phase) if isinstance(candidate_pools, dict) else None
-            if not isinstance(pool, dict):
+            if not phase:
                 phase = week_phase
-                pool = candidate_pools.get(phase) if isinstance(candidate_pools, dict) else None
+            pool = candidate_pools.get(phase) if isinstance(candidate_pools, dict) else None
             slots = pool.get("strength_slots", []) if isinstance(pool, dict) else []
 
             pressure_state = _role_pressure_state(
@@ -1428,15 +1433,21 @@ def _scheduled_phase_for_role(week: dict[str, Any], role: dict[str, Any]) -> str
     still hold a D-20 role that canonically belongs to SPP). Dated roles must
     resolve their phase from their own D-day, which is exactly what the
     authority validator does -- so both read the same Stage 1
-    ``phase_weeks.days`` allocation through ``scheduled_phase_for_role``. The
-    week label remains the fallback for an undated role.
+    ``phase_weeks.days`` allocation through ``scheduled_phase_for_role``.
+
+    Returns "" when the role carries a D-day the camp's allocation cannot map
+    (an out-of-range day, or a camp with no allocation recorded). That empty
+    result is meaningful -- it is the only case in which falling back to the
+    week label is safe -- so callers apply their own fallback rather than having
+    one baked in here. An undated role still resolves to the week label, via
+    ``spec_phase``.
     """
     athlete_model = get_planner_athlete_model() or {}
     return scheduled_phase_for_role(
         role,
         athlete_model=athlete_model,
         spec_phase=week.get("phase"),
-    ) or str(week.get("phase") or "").strip().upper()
+    )
 
 
 def _conditioning_role_is_hard_spar_adjacent(week: dict[str, Any], role: dict[str, Any]) -> bool:
@@ -1506,7 +1517,11 @@ def compose_normal_conditioning_assignments(
             ):
                 continue
 
-            phase = _scheduled_phase_for_role(week, role)
+            # Conditioning keeps the week label as its fallback; that fallback
+            # now lives here rather than inside the shared resolver.
+            phase = _scheduled_phase_for_role(week, role) or str(
+                week.get("phase") or ""
+            ).strip().upper()
             pool = candidate_pools.get(phase) if isinstance(candidate_pools, dict) else None
             slots = pool.get("conditioning_slots", []) if isinstance(pool, dict) else []
             strength_slots = pool.get("strength_slots", []) if isinstance(pool, dict) else []

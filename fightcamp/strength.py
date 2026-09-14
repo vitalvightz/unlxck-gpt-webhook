@@ -1554,6 +1554,14 @@ _LOADED_CYCLE_NAME_PATTERN = re.compile(r"\bget[-\s]?ups?\b")
 
 _LOADED_BAR_EQUIPMENT = frozenset({"barbell", "trap_bar"})
 
+# Ballistic bar lifts whose bank ``method`` still reads "strength". Their method
+# field also gates strength-maintenance eligibility, so correcting the dose here
+# rather than in the bank keeps selection semantics untouched. Gated on bar
+# equipment, so the non-bar push-press variants keep their current class.
+_POWER_LIFT_NAME_PATTERN = re.compile(
+    r"\b(?:thruster|thrusters|push press|clean and jerk|clean & jerk)\b"
+)
+
 # Word-boundary med-ball match. A bare ``"med" in name`` substring also matched
 # "Glute Medius", routing a static hold to the ballistic speed template.
 _MED_BALL_NAME_PATTERN = re.compile(r"\bmed(?:icine)?[-\s]?ball\b")
@@ -1609,7 +1617,9 @@ def _classify_prescription_type(exercise: dict) -> str:
     # hypertrophy-and-slow-eccentrics barbell one. Gated on the bank's
     # authoritative ``method: "power"``, NOT on tags: heavy strength lifts such
     # as "Cluster Set Trap Bar Deadlift" also carry ``mech_ballistic``.
-    if method == "power" and equipment & _LOADED_BAR_EQUIPMENT:
+    if equipment & _LOADED_BAR_EQUIPMENT and (
+        method == "power" or _POWER_LIFT_NAME_PATTERN.search(name)
+    ):
         return "ballistic"
 
     if equipment.intersection({"barbell", "trap_bar"}):

@@ -116,10 +116,46 @@ def test_weeks_wholly_inside_one_phase_are_unchanged(week_phase, d_day, expected
     assert _names(role) == [expected]
 
 
-def test_missing_pool_for_the_resolved_phase_falls_back_to_the_week_label():
-    """A single-phase camp has no other pool and must behave exactly as before."""
-    role = _role("tuesday", 20)  # resolves to SPP, but only a GPP pool exists
+def test_resolved_phase_with_no_pool_fails_closed_instead_of_borrowing():
+    """No cross-phase substitution: that is how the bug happened in the first place.
+
+    D-20 resolves to SPP. If no SPP pool exists, falling back to the GPP pool
+    would hand this SPP day a GPP-only exercise again, so composition yields no
+    candidates instead -- the same contract as ``phase_scoped_candidate_pools``.
+    """
+    role = _role("tuesday", 20)
     _compose("GPP", [role], {"GPP": {"strength_slots": [_slot(GPP_ONLY, 1)]}})
+    assert _names(role) == []
+    assert GPP_ONLY not in _names(role)
+
+
+def test_single_phase_camp_still_composes_normally():
+    """A GPP-only camp resolves into GPP, so it never needs the unsafe fallback."""
+    gpp_only_model = {"phase_weeks": {"days": {"TAPER": 0, "SPP": 0, "GPP": 25}}}
+    role = _role("monday", 20)
+    weekly_role_map = {
+        "weeks": [{
+            "week_index": 1,
+            "phase": "GPP",
+            "calendar_days": [{"weekday": "monday", "d_day": 20}],
+            "session_roles": [role],
+        }]
+    }
+    token = planner_athlete_model_context.set(gpp_only_model)
+    try:
+        compose_normal_strength_assignments(
+            weekly_role_map=weekly_role_map,
+            candidate_pools={"GPP": {"strength_slots": [_slot(GPP_ONLY, 1)]}},
+        )
+    finally:
+        planner_athlete_model_context.reset(token)
+    assert _names(role) == [GPP_ONLY]
+
+
+def test_d_day_outside_the_camp_allocation_falls_back_to_the_week_label():
+    """An unresolvable phase is the one case where the week label is safe."""
+    role = _role("monday", 99)  # beyond the 27-day allocation
+    _compose("GPP", [role], POOLS)
     assert _names(role) == [GPP_ONLY]
 
 
