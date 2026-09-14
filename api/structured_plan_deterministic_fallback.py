@@ -209,7 +209,14 @@ def _session(role: dict[str, Any], d_day: int) -> dict[str, Any] | None:
         "session_id": f"deterministic-{d_day}-{role_key}-{suffix}",
         "session_type": _SESSION_TYPE_BY_CATEGORY.get(category, "mixed"),
         "title": title or "Session",
-        "objective": str(role.get("day_assignment_reason") or title or "Session"),
+        # ``day_assignment_reason`` is internal Stage 1 placement rationale
+        # ("Declared hard sparring day is fixed in the weekly role map", "Use
+        # the lowest-load day immediately before the primary strength anchor").
+        # The finalizer packet already withholds it as non-athlete-facing
+        # content; using it here published that same internal reasoning straight
+        # to the athlete as the card's objective. It stays on the role for
+        # audit; the athlete sees the athlete-facing label instead.
+        "objective": str(title or "Session"),
         "completion_status": "not_started",
         "mindset_anchor": {"intent": "", "focus_cue": "", "reset_cue": ""},
         "blocks": blocks,

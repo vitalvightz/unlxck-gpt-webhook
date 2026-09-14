@@ -1450,9 +1450,18 @@ def _serialize_conditioning_option(
         "restriction_tags": _extract_restriction_tags(drill),
         "mechanical_risk_tags": _extract_mechanical_risk_tags(drill),
         "notes": str(drill.get("notes") or "").strip(),
+        # Conditioning drills author their dose in ``duration`` ("4x5/side, 2min
+        # rest", "45s work / 45s rest x 6 rounds"); only a minority also carry
+        # timing/rest/load. Reading just the latter three serialized EVERY
+        # conditioning entry in the banks to an empty prescription, so Stage 2
+        # was handed a scheduled drill with no dose and had to invent one — the
+        # deterministic dose the planner already held never reached the
+        # finalizer, and the invented phrasing then failed render matching.
         "prescription": " | ".join(
-            part for part in [drill.get("timing"), drill.get("rest"), drill.get("load")] if part
-        ),
+            part
+            for part in [drill.get("timing"), drill.get("rest"), drill.get("load")]
+            if part
+        ) or str(drill.get("duration") or "").strip(),
         "why": why or "balanced selection",
         "required_equipment": required_equipment,
         "universally_available": not required_equipment or set(required_equipment).issubset({"bodyweight"}),
