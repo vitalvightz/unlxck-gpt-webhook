@@ -20,7 +20,7 @@ import logging
 import re
 import uuid
 from datetime import date, datetime, timezone
-from typing import Any, Mapping, NamedTuple, Sequence
+from typing import Any, Callable, Mapping, NamedTuple, Sequence
 
 from fastapi import HTTPException, status
 from pydantic import ValidationError
@@ -1609,6 +1609,7 @@ def _structured_session_entry_for_day(
     day: Mapping[str, Any],
     *,
     week: Mapping[str, Any],
+    session_override: Mapping[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     day_date = _clean_text(day.get("date"))[:10]
     if not day_date:
@@ -1624,7 +1625,14 @@ def _structured_session_entry_for_day(
             if coach_led_contact:
                 break
 
-    first_session = _select_structured_primary_session(sessions)
+    # ``session_override`` names one session on a multi-session day (see
+    # _structured_day_session_entries). Without it the day's primary session is
+    # summarized, which is the single-session behaviour every caller had before.
+    first_session = (
+        session_override
+        if session_override is not None
+        else _select_structured_primary_session(sessions)
+    )
     if first_session is not None:
         session = dict(first_session)
     else:
@@ -1767,38 +1775,95 @@ def _structured_day_for_training_day(
 class _StructuredToday(NamedTuple):
     """What the plan card says about today.
 
-    ``entry`` is today's session as the card describes it, present only for a
-    dated row (an entry has to be keyed on a calendar date). ``is_rest_day``
-    means the card has a row for today and that row schedules no work — the one
-    thing a weekday-only row can still answer, and the answer the intake weekly
-    template must not override.
+    ``entries`` is every session the card schedules today, in the order Today
+    offers them, and is populated only for a dated row (an entry has to be keyed
+    on a calendar date). ``entry`` is the first of them — the day's primary
+    session — which is what callers that only have one session slot want.
+    ``is_rest_day`` means the card has a row for today and that row schedules no
+    work — the one thing a weekday-only row can still answer, and the answer the
+    intake weekly template must not override.
     """
 
-    entry: dict[str, Any] | None
+    entries: list[dict[str, Any]]
     is_rest_day: bool
+
+    @property
+    def entry(self) -> dict[str, Any] | None:
+        return self.entries[0] if self.entries else None
 
 
 def _structured_today(plan_row: Mapping[str, Any], training_day: str) -> _StructuredToday:
     matched = _structured_day_for_training_day(plan_row, training_day)
     if matched is None:
-        return _StructuredToday(None, False)
+        return _StructuredToday([], False)
     day, week = matched
-    entry = _structured_session_entry_for_day(day, week=week)
-    if entry is not None:
-        return _StructuredToday(entry, False)
+    entries = _structured_day_session_entries(day, week=week)
+    if entries:
+        return _StructuredToday(entries, False)
     # A weekday-only row carries no date to key a session on, so it is asked the
     # same question with today's date standing in for the missing one: does this
     # row schedule work at all? Only its answer to that is used — a row with work
     # still resolves through the weekly schedule, so session identity is unchanged.
     dated = _structured_session_entry_for_day({**day, "date": training_day}, week=week)
-    return _StructuredToday(None, dated is None)
+    return _StructuredToday([], dated is None)
 
 
 def _structured_today_session_entry(plan_row: Mapping[str, Any], training_day: str) -> dict[str, Any] | None:
     return _structured_today(plan_row, training_day).entry
 
 
-def _structured_next_session_entry(plan_row: Mapping[str, Any], training_day: str) -> dict[str, Any] | None:
+def _structured_day_session_entries(
+    day: Mapping[str, Any], *, week: Mapping[str, Any]
+) -> list[dict[str, Any]]:
+    """Every session the card schedules on ``day``, in the order Today offers them.
+
+    The day's primary session leads (unchanged single-session behaviour); the
+    remaining sessions follow in card order so a day carrying two sessions can
+    still offer the second one once the first is logged. Previously only the
+    primary session was ever considered, so completing it advanced Today to the
+    next *day* while the athlete's own plan card still showed work left.
+    """
+    primary = _structured_session_entry_for_day(day, week=week)
+    entries = [primary] if primary is not None else []
+    seen = {_session_id_for_entry(primary)} if primary is not None else set()
+    for session in _iter_mapping_items(day.get("sessions")):
+        entry = _structured_session_entry_for_day(day, week=week, session_override=session)
+        if entry is None:
+            continue
+        session_id = _session_id_for_entry(entry)
+        # An unidentified session cannot carry a durable completion, so it would
+        # reopen forever. Only addressable sessions join the rotation.
+        if not session_id or session_id in seen:
+            continue
+        seen.add(session_id)
+        entries.append(entry)
+    return entries
+
+
+def _session_entry_is_complete(
+    entry: Mapping[str, Any] | None,
+    *,
+    is_complete: Callable[[str, str], bool] | None,
+    calendar_date: str | None = None,
+) -> bool:
+    """Whether ``entry`` already has a terminal completion on its own day."""
+    if entry is None or is_complete is None:
+        return False
+    session_id = _session_id_for_entry(entry)
+    if not session_id:
+        return False
+    day = calendar_date or _clean_text(entry.get("calendar_date"))[:10]
+    if not day:
+        return False
+    return bool(is_complete(session_id, day))
+
+
+def _structured_next_session_entry(
+    plan_row: Mapping[str, Any],
+    training_day: str,
+    *,
+    is_complete: Callable[[str, str], bool] | None = None,
+) -> dict[str, Any] | None:
     training_date = _parse_structured_date(training_day)
     if training_date is None:
         return None
@@ -1809,9 +1874,17 @@ def _structured_next_session_entry(plan_row: Mapping[str, Any], training_day: st
             parsed_day_date = _parse_structured_date(day_date)
             if parsed_day_date is None or parsed_day_date <= training_date:
                 continue
-            entry = _structured_session_entry_for_day(day, week=week)
-            if entry and has_scheduled_day_content(entry):
+            # A future day offers its first session that is still outstanding, so
+            # a session already logged ahead of time never becomes "next".
+            for entry in _structured_day_session_entries(day, week=week):
+                if not has_scheduled_day_content(entry):
+                    continue
+                if _session_entry_is_complete(
+                    entry, is_complete=is_complete, calendar_date=day_date
+                ):
+                    continue
                 candidates.append((parsed_day_date, entry))
+                break
     if not candidates:
         return None
     candidates.sort(key=lambda item: item[0])
@@ -2456,23 +2529,40 @@ def build_today_command_view(
             today_entry = next_entry = None
             week = None
 
+    def _session_is_complete(session_id: str, calendar_date: str) -> bool:
+        return (
+            completion_status_of(
+                store.get_session_completion(athlete_id, session_id, calendar_date)
+            )
+            in TERMINAL_COMPLETION_STATUSES
+        )
+
     # The plan card owns whether today is a rest day. The intake weekly template
     # calls every configured training weekday a session ("Fri training"), so
     # without this it resurrects a session on a day the athlete's own card reads
     # "Rest or active recovery" — and Today then offers to start it.
     structured_today = _structured_today(plan_row, training_day)
-    today_session_entry = (
-        None if structured_today.is_rest_day else (structured_today.entry or today_entry)
+    # Today offers the first session on the card that is still outstanding. A day
+    # can schedule more than one, so "the primary session is logged" is not the
+    # same as "today is done" — completing the first used to advance Today to the
+    # next day while the athlete's own card still showed work left.
+    today_candidates = (
+        []
+        if structured_today.is_rest_day
+        else (structured_today.entries or ([today_entry] if today_entry is not None else []))
+    )
+    today_session_entry = next(
+        (
+            entry
+            for entry in today_candidates
+            if not _session_entry_is_complete(
+                entry, is_complete=_session_is_complete, calendar_date=training_day
+            )
+        ),
+        None,
     )
     has_today_session = has_scheduled_day_content(today_session_entry)
-    today_session_id = _session_id_for_entry(today_session_entry) if has_today_session else None
-    today_completion = (
-        store.get_session_completion(athlete_id, today_session_id, training_day)
-        if today_session_id
-        else None
-    )
-    today_is_complete = completion_status_of(today_completion) in TERMINAL_COMPLETION_STATUSES
-    target_entry = today_session_entry if has_today_session and not today_is_complete else next_entry
+    target_entry = today_session_entry if has_today_session else next_entry
     if target_entry is None and week is not None:
         # No training left in the current week — look ahead so the "Next session"
         # card surfaces the upcoming session instead of "No session found".
@@ -2488,7 +2578,9 @@ def build_today_command_view(
     if target_entry is not today_session_entry or today_session_entry is None:
         target_entry = _prefer_earlier_structured_next_entry(
             target_entry,
-            _structured_next_session_entry(plan_row, training_day),
+            _structured_next_session_entry(
+                plan_row, training_day, is_complete=_session_is_complete
+            ),
         )
     session_relation = (
         "today"
@@ -2496,6 +2588,24 @@ def build_today_command_view(
         else ("next" if target_entry is not None else None)
     )
     session_id = _session_id_for_entry(target_entry)
+    # completion_status always describes TODAY (notifications and XP read it as
+    # "has this athlete finished training today"), never the card on screen — a
+    # fall-forward to tomorrow still reports today's session as done. With work
+    # still outstanding today it reports that session, so a day whose first of
+    # two sessions is logged does not read as finished.
+    today_completion_entry = today_session_entry or (
+        today_candidates[0] if today_candidates else None
+    )
+    today_completion_id = (
+        _session_id_for_entry(today_completion_entry)
+        if has_scheduled_day_content(today_completion_entry)
+        else None
+    )
+    today_completion = (
+        store.get_session_completion(athlete_id, today_completion_id, training_day)
+        if today_completion_id
+        else None
+    )
 
     structured_phase = _structured_phase_for_day(plan_row, training_day)
     resolved_plan = _plan_with_resolved_phase(
@@ -2537,10 +2647,10 @@ def build_today_command_view(
     # apply to it — a neck injury cannot block writing a mental cue. Exempt today's
     # scheduled filler from the severe-injury override, the decision tier, and the
     # completion guard.
-    today_is_support_filler = (
-        has_today_session
-        and not today_is_complete
-        and is_support_session(_entry_mapping_for_readiness(today_session_entry))
+    # has_today_session is already limited to a session that is still
+    # outstanding, so a completed one can no longer reach this.
+    today_is_support_filler = has_today_session and is_support_session(
+        _entry_mapping_for_readiness(today_session_entry)
     )
     severe_injury = _active_severe_injury(open_injuries)
     severe_non_surface_injury = _active_severe_non_surface_injury(open_injuries)

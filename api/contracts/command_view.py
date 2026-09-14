@@ -339,6 +339,22 @@ class CommandView(BaseModel):
     quick_actions: list[QuickAction] = Field(default_factory=list)
 
 
+def session_is_today(view: Any) -> bool:
+    """Whether the session the command view carries is scheduled for today.
+
+    ``build_today_command_view`` is the only place session timing is derived —
+    it owns rest days, multi-session days, completed sessions and the roll to
+    tomorrow. Everything downstream (XP, notifications, the app) asks this
+    instead of re-deriving the answer from dates, relations or plan rows, so a
+    surface can never disagree with Today about what day a session falls on.
+
+    Accepts anything command-view shaped so the loosely-typed callers share this
+    one definition rather than keeping a second copy of the comparison.
+    """
+    today = getattr(view, "today", None)
+    return str(getattr(today, "session_scope", "") or "") == "today"
+
+
 _PLAN_IDENTITY_FIELDS = ("status", "phase", "fight_date", "camp_type")
 
 

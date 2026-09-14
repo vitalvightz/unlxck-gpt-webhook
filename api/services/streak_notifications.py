@@ -8,7 +8,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any, Mapping
 from zoneinfo import ZoneInfo
 
-from api.contracts.command_view import CommandView
+from api.contracts.command_view import CommandView, session_is_today
 from api.services.active_plan import resolve_active_plan
 from api.services.notification_foundation import NotificationCandidate, get_notification_preferences
 from api.services.notification_timing import ResolvedTrainingTime, resolve_training_time
@@ -47,7 +47,7 @@ def _today_session(view: CommandView) -> bool:
     session_id = str(session.get("session_id") or session.get("id") or "").strip()
     return bool(
         str(view.active_plan.get("id") or "").strip()
-        and view.today.session_scope == "today"
+        and session_is_today(view)
         and session_id
     )
 

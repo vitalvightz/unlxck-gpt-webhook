@@ -9,7 +9,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any, Mapping
 from zoneinfo import ZoneInfo
 
-from api.contracts.command_view import CommandView
+from api.contracts.command_view import CommandView, session_is_today
 from api.contracts.training_day import resolve_training_day_str
 from api.notification_models import NotificationPreferences
 from api.services.notification_foundation import (
@@ -235,7 +235,7 @@ def _injury_candidate(
 ) -> NotificationCandidate | None:
     if not _morning_window(local_now):
         return None
-    if not _active_plan(view) or view.today.session_scope != "today":
+    if not _active_plan(view) or not session_is_today(view):
         return None
     if view.today.recommendation_state != "not_checked_in" or _today_is_finished(view):
         return None
@@ -328,7 +328,7 @@ def _high_pain_candidate(
 ) -> NotificationCandidate | None:
     if not _morning_window(local_now):
         return None
-    if not _active_plan(view) or view.today.session_scope != "today":
+    if not _active_plan(view) or not session_is_today(view):
         return None
     if view.today.recommendation_state != "not_checked_in" or _today_is_finished(view):
         return None
@@ -370,7 +370,7 @@ def _readiness_candidate(
 ) -> NotificationCandidate | None:
     if not _morning_window(local_now):
         return None
-    if not _active_plan(view) or view.today.session_scope != "today":
+    if not _active_plan(view) or not session_is_today(view):
         return None
     if view.today.recommendation_state != "not_checked_in" or _today_is_finished(view):
         return None
@@ -420,7 +420,7 @@ def _session_log_candidate(
 ) -> NotificationCandidate | None:
     if not _session_log_window(local_now):
         return None
-    if not _active_plan(view) or view.today.session_scope != "today":
+    if not _active_plan(view) or not session_is_today(view):
         return None
     if view.today.completion_status != "started":
         return None

@@ -12,6 +12,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from api.contracts.command_view import session_is_today
 from api.services.today_readiness_boundary import build_today_command_view
 from api.services.today_service import resolve_training_day
 from api.services.week_progress import evaluate_week_completion, find_week_for_training_day
@@ -483,12 +484,13 @@ def _opportunities(
             )
         )
 
-    session_scope = str(getattr(today, "session_scope", "") or "")
     next_session = getattr(today, "next_session", None)
     completion_status = str(getattr(today, "completion_status", "") or "")
     decision_tier = str(getattr(today, "decision_tier", "") or "")
+    # Session timing comes from the command view, never from a second reading of
+    # the plan here — the XP "next action" and Today must name the same session.
     if (
-        session_scope == "today"
+        session_is_today(command)
         and isinstance(next_session, Mapping)
         and bool(next_session)
         and completion_status not in COMPLETED_SESSION_STATUSES
