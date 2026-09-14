@@ -72,6 +72,19 @@ def _build_phase_mindsets(training_context: TrainingContext) -> tuple[dict[str, 
     return phase_mindset_cues, phase_mindsets
 
 
+def _is_rotational_power_anchor(exercise: dict) -> bool:
+    """Does this selection count as real rotational-power exposure?
+
+    Matches the definition the selection boost uses: a rotational-power
+    *anchor*. Authored governance can leave the rotational base category on an
+    item it has demoted to support, and a support twist is not the exposure the
+    camp-level gap is about — treating it as such would close the gap and stop
+    a genuine rotational throw from ever being favoured.
+    """
+    profile = classify_strength_item(exercise)
+    return bool(profile["anchor_capable"]) and "rotational_power" in profile["base_categories"]
+
+
 def _generate_strength_blocks(
     context: PlanRuntimeContext,
     phase_mindset_cues: dict[str, str],
@@ -137,7 +150,7 @@ def _generate_strength_blocks(
         previous_movements |= phase_movements
         if not rotational_power_seen:
             rotational_power_seen = any(
-                "rotational_power" in classify_strength_item(exercise)["base_categories"]
+                _is_rotational_power_anchor(exercise)
                 for exercise in block.get("exercises", [])
             )
 
