@@ -12,6 +12,7 @@ from zoneinfo import ZoneInfo
 from api.contracts.command_view import CommandView
 from api.notification_models import NotificationPreferences
 from api.store import AppStore
+from api.services.effective_structured_plan import resolve_effective_structured_plan
 
 TRAINING_DAY_ROLLOVER_HOUR = 3
 DEFAULT_FALLBACK_TRAINING_TIME = "18:00"
@@ -117,7 +118,7 @@ def _iter_mappings(value: Any) -> Iterable[Mapping[str, Any]]:
 
 
 def _session_type_from_plan(plan: Mapping[str, Any], session_id: str) -> str:
-    structured = plan.get("structured_plan")
+    structured = resolve_effective_structured_plan(plan)
     for row in _iter_mappings(structured):
         if str(row.get("session_id") or "").strip() == session_id:
             return str(row.get("session_type") or row.get("type") or "").strip().lower()

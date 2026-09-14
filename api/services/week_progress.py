@@ -8,6 +8,7 @@ from datetime import date, datetime, timezone
 from typing import Any
 
 from api.services.open_plan_timeline import project_open_structured_plan
+from api.services.effective_structured_plan import resolve_effective_structured_plan
 from api.services.progress_notifications import dispatch_progress_award_notification  # noqa: F401
 from api.services.xp_awards import ensure_xp_abuse_hardening
 from api.store import AppStore
@@ -53,8 +54,8 @@ def _mapping_rows(value: object) -> list[Mapping[str, Any]]:
 
 
 def _weeks(plan: Mapping[str, Any]) -> list[Mapping[str, Any]]:
-    structured = plan.get("structured_plan")
-    if not isinstance(structured, Mapping):
+    structured = resolve_effective_structured_plan(plan)
+    if structured is None:
         return []
     return _mapping_rows(structured.get("weeks"))
 
@@ -70,8 +71,8 @@ def _plan_for_training_day(
     original undated plan remains in place and no week can be awarded.
     """
 
-    structured = plan.get("structured_plan")
-    if not isinstance(structured, Mapping):
+    structured = resolve_effective_structured_plan(plan)
+    if structured is None:
         return plan
     projected, context = project_open_structured_plan(
         plan,

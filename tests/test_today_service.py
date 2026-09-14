@@ -2525,7 +2525,9 @@ class TestCommandView:
         assert view.today.next_session["calendar_date"] == "2026-06-18"
         assert view.today.next_session["session_id"] == "2026-06-18"
         assert view.today.next_session["session_relation"] == "today"
-        assert view.today.next_session["effective_load"] == "technical"
+        # The reconstructed structured calendar owns load as well as timing;
+        # this headline-only session sits on its reduced/rest support day.
+        assert view.today.next_session["effective_load"] == "reduced"
 
     def test_today_session_falls_forward_to_next_training_day(self):
         store = _store_with_plan()
