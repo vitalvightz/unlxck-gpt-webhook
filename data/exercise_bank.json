@@ -49,8 +49,7 @@
       "none",
       "low"
     ],
-    "notes": "Low-dose strength-retention touch, D-21 to D-8 only, and only for fighters who already train the trap-bar deadlift (familiarity_required): never introduce it cold in the final stretch. Keep it non-grinding, no failure, no back-off volume, no soreness target; stop on any bar-speed or quality loss. The taper dose caps thin sets/reps as the fight nears. Not for D-7 or later.",
-    "sport_specific": false
+    "notes": "Low-dose strength-retention touch, D-21 to D-8 only, and only for fighters who already train the trap-bar deadlift (familiarity_required): never introduce it cold in the final stretch. Keep it non-grinding, no failure, no back-off volume, no soreness target; stop on any bar-speed or quality loss. The taper dose caps thin sets/reps as the fight nears. Not for D-7 or later."
   },
   {
     "name": "Back Squat",
@@ -91,8 +90,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Bulgarian Split Squat",
@@ -135,8 +133,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Romanian Deadlift (RDL)",
@@ -176,8 +173,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Front Squat",
@@ -217,8 +213,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Med Ball Scoop Toss",
@@ -314,8 +309,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "DB Bench Press → Plyo Push-Up",
@@ -362,8 +356,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Heavy RDL → Broad Jump",
@@ -410,8 +403,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Landmine Press → Med Ball Chest Pass",
@@ -453,8 +445,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Tempo Split Squat (4-0-1)",
@@ -497,8 +488,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Iso Deadlift Hold",
@@ -538,8 +528,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Hang Power Clean",
@@ -633,8 +622,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Zercher Squat → Sprawl Jump",
@@ -768,8 +756,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Tempo Chin-Up (5-0-1)",
@@ -811,8 +798,7 @@
     "stress_class": "anchor",
     "cost_class": "low",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Trap Bar Jump",
@@ -865,8 +851,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Jump Squat",
@@ -920,8 +905,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Box Jump",
@@ -974,8 +958,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Kettlebell Swing",
@@ -1023,8 +1006,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Speed Box Squat",
@@ -1066,8 +1048,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Sled Push",
@@ -1108,8 +1089,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Single-Leg RDL",
@@ -1151,8 +1131,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Goblet Squat",
@@ -1193,8 +1172,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Step-Up (Bodyweight)",
@@ -1235,8 +1213,7 @@
     "stress_class": "support",
     "cost_class": "moderate",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Banded Lateral Walk",
@@ -1291,8 +1268,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Assisted Pistol Squat",
@@ -1334,8 +1310,7 @@
     "stress_class": "support",
     "cost_class": "moderate",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Nordic Hamstring Curl",
@@ -1373,8 +1348,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Reverse Hyperextension",
@@ -1412,8 +1386,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Cossack Squat",
@@ -1456,8 +1429,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Jump Lunge (Alternating)",
@@ -1505,8 +1477,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Sissy Squat",
@@ -1547,8 +1518,7 @@
     "stress_class": "support",
     "cost_class": "moderate",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Barbell Overhead Press",
@@ -1591,8 +1561,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Push-Up (Weighted)",
@@ -1630,8 +1599,7 @@
     "stress_class": "anchor",
     "cost_class": "low",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Landmine Press",
@@ -1673,8 +1641,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Landmine Push Press",
@@ -1721,8 +1688,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "DB Alternating Incline Press (30-45°)",
@@ -1761,8 +1727,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "DB Plyometric Push-Up (Hands on Dumbbells)",
@@ -1808,8 +1773,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Kneeling Single-Arm Medicine Ball Slam",
@@ -1850,8 +1814,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Incline DB Press",
@@ -1890,8 +1853,7 @@
     "stress_class": "anchor",
     "cost_class": "low",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Clap Push-Up",
@@ -1935,8 +1897,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Push Press",
@@ -1979,8 +1940,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Z Press",
@@ -2023,8 +1983,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "DB Clean & Press",
@@ -2072,8 +2031,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Band-Resisted Push Press",
@@ -2115,8 +2073,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Bent-Over Row",
@@ -2165,8 +2122,7 @@
     "stress_class": "anchor",
     "cost_class": "low",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Weighted Pull-Up",
@@ -2207,8 +2163,7 @@
     "stress_class": "anchor",
     "cost_class": "low",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Towel Pull-Up",
@@ -2249,8 +2204,7 @@
     "stress_class": "anchor",
     "cost_class": "low",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Face Pull",
@@ -2289,8 +2243,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Lat Pulldown",
@@ -2329,8 +2282,7 @@
     "stress_class": "anchor",
     "cost_class": "low",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "High Pull",
@@ -2371,8 +2323,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "TRX Row",
@@ -2412,8 +2363,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Band Face Pull",
@@ -2466,8 +2416,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Scapular Pull-Up",
@@ -2506,8 +2455,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Banded Row (Speed Focus)",
@@ -2548,8 +2496,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Plate Russian Twists",
@@ -2590,8 +2537,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Plank",
@@ -2630,8 +2576,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Suitcase Carry (Heavy)",
@@ -2675,8 +2620,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Cable Pallof Press",
@@ -2715,8 +2659,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Anti-Rotation Press",
@@ -2755,8 +2698,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Weighted Hanging Leg Raise",
@@ -2795,8 +2737,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Wall ISO Deadbug",
@@ -2836,8 +2777,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Copenhagen Side Plank",
@@ -2876,8 +2816,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Isometric Pallof Hold",
@@ -2917,8 +2856,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Hollow-Body Hold",
@@ -2956,8 +2894,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Controlled Bird-Dog",
@@ -3008,8 +2945,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Med-Ball Rotational Slam",
@@ -3054,8 +2990,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Cable Rotations",
@@ -3094,8 +3029,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Barbell Rollout",
@@ -3135,8 +3069,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Seated Medicine Ball Rotation",
@@ -3176,8 +3109,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Hanging Knee Raise (Twist)",
@@ -3220,8 +3152,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Side Plank Row(Band or DB)",
@@ -3265,8 +3196,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Deadbug (Band-Resisted)",
@@ -3306,8 +3236,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Woodchopper (Cable)",
@@ -3347,8 +3276,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Russian Twist (Weighted)",
@@ -3390,8 +3318,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Swiss Ball Press",
@@ -3432,8 +3359,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Sprawl-to-Stand (Weighted Vest)",
@@ -3904,8 +3830,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Neck Harness Flexion",
@@ -3944,8 +3869,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Plate Pinch Carry",
@@ -3989,8 +3913,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Farmers Walk (Fat Grip)",
@@ -4033,8 +3956,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Wrist Roller",
@@ -4073,8 +3995,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Log Press",
@@ -4119,8 +4040,7 @@
     "stress_class": "anchor",
     "cost_class": "low",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Tire Flip",
@@ -4165,8 +4085,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Atlas Stone Lift",
@@ -4205,8 +4124,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Water Jug Carry",
@@ -4249,8 +4167,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Bulgarian Bag Swing",
@@ -4292,8 +4209,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Death by Carry (Sandbag/Sled)",
@@ -4338,8 +4254,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Tabata Sprints (Treadmill/Row)",
@@ -4390,8 +4305,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "3-Minute Round (Striking + Takedowns)",
@@ -4479,8 +4393,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Couch Stretch",
@@ -4515,8 +4428,7 @@
     "stress_class": "support",
     "cost_class": "moderate",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Dead Hang",
@@ -4557,8 +4469,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Brettzel Stretch",
@@ -4592,8 +4503,7 @@
     "stress_class": "support",
     "cost_class": "moderate",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Psoas March (Banded)",
@@ -4628,8 +4538,7 @@
     "stress_class": "support",
     "cost_class": "moderate",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Wall Slide (Shoulder Mobility)",
@@ -4664,8 +4573,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Quadruped Rocking",
@@ -4703,8 +4611,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Dynamic Pigeon Stretch",
@@ -4739,8 +4646,7 @@
     "stress_class": "support",
     "cost_class": "moderate",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Diaphragmatic Breathing Drills",
@@ -4793,8 +4699,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Foam Roller Thoracic Extension",
@@ -4828,8 +4733,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Grappler’s Bridge (Weighted)",
@@ -6067,8 +5971,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Lateral Shuffle Sprint",
@@ -6118,8 +6021,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Alternating Skater Hops",
@@ -6163,8 +6065,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Depth Jump to Sprint",
@@ -6216,8 +6117,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Rapid Hurdle Hops (2-foot)",
@@ -6261,8 +6161,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Backpedal-to-Sprint Transition",
@@ -6308,8 +6207,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Single-Leg Bounding",
@@ -6353,8 +6251,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Jump-in-Place (Max Frequency)",
@@ -6402,8 +6299,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Carioca Sprint",
@@ -6451,8 +6347,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Drop-Step Lateral Bound",
@@ -6494,8 +6389,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Lateral Lunge (Plyometric)",
@@ -6543,8 +6437,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Cossack Squat (Dynamic)",
@@ -6590,8 +6483,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Side Hop-to-Stabilize",
@@ -6633,8 +6525,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Lateral Med Ball Slam",
@@ -6684,8 +6575,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Defensive Slide Drill (Weighted)",
@@ -6726,8 +6616,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Lateral Box Push-Off",
@@ -6773,8 +6662,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Cross-Step Lunge",
@@ -6818,8 +6706,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Lateral Resisted Band Walk",
@@ -6858,8 +6745,7 @@
     "stress_class": "support",
     "cost_class": "moderate",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Depth Jump (Stick Landing)",
@@ -6905,8 +6791,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Reactive Hurdle Hop (Single-Leg)",
@@ -6950,8 +6835,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Ballistic Box Jump (Min Ground Contact)",
@@ -6997,8 +6881,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Reactive Dot Drills",
@@ -7040,8 +6923,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Band-Resisted Reaction Hop",
@@ -7083,8 +6965,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Plyometric Shadow Boxing",
@@ -7174,8 +7055,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Single-Leg Balance (Eyes Closed)",
@@ -7216,8 +7096,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Tandem Gait Walk (Heel-to-Toe)",
@@ -7255,8 +7134,7 @@
     "stress_class": "support",
     "cost_class": "moderate",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Bosu Ball Mini-Squats",
@@ -7296,8 +7174,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Foam Pad Alphabet Tracing",
@@ -7337,8 +7214,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Reactive Band Taps (Partner)",
@@ -7379,8 +7255,7 @@
     "stress_class": "support",
     "cost_class": "moderate",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Single-Leg Wall Sit (60°)",
@@ -7416,8 +7291,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Single-Leg Bridge Hold",
@@ -7456,8 +7330,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Single-Leg Spanish Squat Hold",
@@ -7500,8 +7373,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Single-Leg Deadlift Hold",
@@ -7544,8 +7416,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Single-Leg Calf Raise Hold",
@@ -7584,8 +7455,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Single-Leg Quadruped Hip Hold",
@@ -7624,8 +7494,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Single-Leg Step-Up Hold (Mid-Range)",
@@ -7666,8 +7535,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Single-Leg Lateral Squat Hold",
@@ -7710,8 +7578,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Single-Leg Sled Press Hold",
@@ -7754,8 +7621,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Single-Leg Kneeling Hip Flexor Hold",
@@ -7794,8 +7660,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Single-Leg Banded Anti-Extension Hold",
@@ -7834,8 +7699,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Single-Leg Glute Medius Hold (Side-Lying)",
@@ -7876,8 +7740,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Single-Leg TRX Suspension Hold",
@@ -7916,8 +7779,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Single-Leg Farmer Carry Hold",
@@ -7960,8 +7822,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "🔥 Single-Leg Rotational Med Ball Hold",
@@ -8003,8 +7864,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "🔥 Single-Leg Combat Stance Hold (Weighted)",
@@ -8085,8 +7945,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Single-Leg Lateral Hops",
@@ -8129,8 +7988,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Single-Leg 45° Bound",
@@ -8172,8 +8030,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Single-Leg Box Jump",
@@ -8217,8 +8074,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Single-Leg Depth Drop (Stick Landing)",
@@ -8262,8 +8118,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Single-Leg Zig-Zag Hops",
@@ -8304,8 +8159,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Single-Leg Medicine Ball Chest Push Jump",
@@ -8347,8 +8201,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Single-Leg Reactive Shuffle",
@@ -8388,8 +8241,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Single-Leg Rotational Hop to Balance",
@@ -8433,8 +8285,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "🔥 Single-Leg Combat Stance Switch Jump",
@@ -8518,8 +8369,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Deadlift Isometric (120% 1RM @ knee height)",
@@ -8560,8 +8410,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Bench Isometric (130% 1RM @ mid-range)",
@@ -8603,8 +8452,7 @@
     "stress_class": "anchor",
     "cost_class": "low",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Front Squat Isometric (115% 1RM @ 100°)",
@@ -8645,8 +8493,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Rack Pull Isometric (125% 1RM @ mid-shin)",
@@ -8688,8 +8535,7 @@
     "stress_class": "anchor",
     "cost_class": "low",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Overhead Press Isometric (120% 1RM @ forehead)",
@@ -8733,8 +8579,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Box Squat Isometric (110% 1RM @ parallel)",
@@ -8775,8 +8620,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Deficit Deadlift Isometric (115% 1RM @ floor)",
@@ -8817,8 +8661,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Incline Bench Isometric (125% 1RM @ 45°)",
@@ -8860,8 +8703,7 @@
     "stress_class": "anchor",
     "cost_class": "low",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Zercher Squat Isometric (110% 1RM @ bottom)",
@@ -8902,8 +8744,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Sumo Deadlift Isometric (120% 1RM @ mid-thigh)",
@@ -8944,8 +8785,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Floor Press Isometric (130% 1RM @ lockout)",
@@ -8987,8 +8827,7 @@
     "stress_class": "anchor",
     "cost_class": "low",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Safety Bar Squat Isometric (115% 1RM @ 90°)",
@@ -9029,8 +8868,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Snatch Grip Deadlift Isometric (125% 1RM @ knee)",
@@ -9077,8 +8915,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Close-Grip Bench Isometric (120% 1RM @ mid-range)",
@@ -9120,8 +8957,7 @@
     "stress_class": "anchor",
     "cost_class": "low",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Atlas Stone Load Isometric (120% max stone @ lap)",
@@ -9159,8 +8995,7 @@
       "moderate",
       "high",
       "critical"
-    ],
-    "sport_specific": false
+    ]
   },
   {
     "name": "Sled Push Isometric Hold",
@@ -9212,8 +9047,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Squat Isometric (110% 1RM @ Parallel)",
@@ -9253,8 +9087,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Deadlift Isometric (110% 1RM @ Mid-Shin)",
@@ -9294,8 +9127,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Bench Isometric (110% 1RM @ 90° Elbow)",
@@ -9336,8 +9168,7 @@
     "stress_class": "anchor",
     "cost_class": "low",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Front Squat Isometric (105% 1RM @ 100°)",
@@ -9377,8 +9208,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Rack Pull Isometric (115% 1RM @ Knees)",
@@ -9419,8 +9249,7 @@
     "stress_class": "anchor",
     "cost_class": "low",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Overhead Press Isometric (105% 1RM @ Chin)",
@@ -9463,8 +9292,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "KB Suitcase Carry",
@@ -9510,8 +9338,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Slow-Lowered Pull-Up",
@@ -9554,8 +9381,7 @@
     "stress_class": "anchor",
     "cost_class": "low",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Sled Push (Heavy)",
@@ -9595,8 +9421,7 @@
     "stress_class": "anchor",
     "cost_class": "low",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Sled Push (Speed)",
@@ -9636,8 +9461,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Sled Pull Backward",
@@ -9677,8 +9501,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Sled Drag (Side)",
@@ -9719,8 +9542,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Weighted Sled Push (Pins)",
@@ -9761,8 +9583,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Sled Push (Incline)",
@@ -9803,8 +9624,7 @@
     "stress_class": "anchor",
     "cost_class": "low",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Sled Push (Board)",
@@ -9844,8 +9664,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Sled Pull Forward (Harness)",
@@ -9883,8 +9702,7 @@
     "stress_class": "anchor",
     "cost_class": "low",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Squat Hold (Parallel)",
@@ -9927,8 +9745,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Bottom-Out Hold (Squat)",
@@ -9969,8 +9786,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Wall Sit (Knee-Friendly)",
@@ -10012,8 +9828,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Plank (Extended Hold)",
@@ -10054,8 +9869,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Side Plank (Long Duration)",
@@ -10097,8 +9911,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Hollow Body Hold",
@@ -10138,8 +9951,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Farmer Walk Hold (Static)",
@@ -10182,8 +9994,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Dead Bug (Isometric)",
@@ -10224,8 +10035,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Glute Bridge Hold (Heavy Load)",
@@ -10265,8 +10075,7 @@
     "stress_class": "anchor",
     "cost_class": "low",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Pallof Press Iso (Against Resistance)",
@@ -10320,8 +10129,7 @@
       "high",
       "critical"
     ],
-    "notes": "Low-cost anti-rotation trunk-stability support (overcoming isometric). Keep the dose tiny and intent moderate; not a maximal-strength anchor.",
-    "sport_specific": false
+    "notes": "Low-cost anti-rotation trunk-stability support (overcoming isometric). Keep the dose tiny and intent moderate; not a maximal-strength anchor."
   },
   {
     "name": "Pallof Press",
@@ -10364,8 +10172,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Half-Kneeling Anti-Rotation Hold",
@@ -10408,8 +10215,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Banded Pallof (Walking)",
@@ -10450,8 +10256,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Landmine Anti-Rotation Press",
@@ -10492,8 +10297,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Single-Arm Chest Press (Floor)",
@@ -10536,8 +10340,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Chop Holds (Anti-Rotation)",
@@ -10579,8 +10382,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Single-Leg Romanian Deadlift Hold",
@@ -10626,8 +10428,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Staggered Stance Hold",
@@ -10669,8 +10470,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Farmer Carry (Heavy)",
@@ -10716,8 +10516,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Waiter Walk",
@@ -10760,8 +10559,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Overhead Carry (Single Arm)",
@@ -10808,8 +10606,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Rack Carry (Shoulder)",
@@ -10852,8 +10649,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Bear Hug Carry",
@@ -10898,8 +10694,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Cross-Body Carry",
@@ -10944,8 +10739,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Yoke Walk",
@@ -10986,8 +10780,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Bottoms-Up Carry",
@@ -11030,8 +10823,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Band Carry (Overhead)",
@@ -11076,8 +10868,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Trap Bar Carry (Frame Neutral)",
@@ -11123,8 +10914,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Machine Chest Press",
@@ -11162,8 +10952,7 @@
     "stress_class": "anchor",
     "cost_class": "low",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Dumbbell Chest Fly",
@@ -11205,8 +10994,7 @@
     "stress_class": "support",
     "cost_class": "moderate",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Cable Fly (High to Low)",
@@ -11247,8 +11035,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Lat Pulldown Machine",
@@ -11291,8 +11078,7 @@
     "stress_class": "anchor",
     "cost_class": "low",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Machine Row",
@@ -11332,8 +11118,7 @@
     "stress_class": "anchor",
     "cost_class": "low",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Arm Wrestler's Curl (Machine)",
@@ -11375,8 +11160,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Triceps Rope Pushdown",
@@ -11414,8 +11198,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Hammer Strength Chest Press",
@@ -11453,8 +11236,7 @@
     "stress_class": "anchor",
     "cost_class": "moderate",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Lateral Raise (Machine)",
@@ -11493,8 +11275,7 @@
     "stress_class": "support",
     "cost_class": "moderate",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Reverse Pec Deck",
@@ -11533,8 +11314,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Machine Pullover",
@@ -11572,8 +11352,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Smith Machine Shoulder Press",
@@ -11611,8 +11390,7 @@
     "stress_class": "anchor",
     "cost_class": "low",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Ab Wheel Rollout (Kneeling)",
@@ -11653,8 +11431,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Pallof Row (Half-Kneeling)",
@@ -11696,8 +11473,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Bird Dog Hold",
@@ -11753,8 +11529,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Stir the Pot",
@@ -11797,8 +11572,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Copenhagen Adduction",
@@ -11839,8 +11613,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Quadruped Shoulder Taps",
@@ -11881,8 +11654,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Suitcase Carry Holds",
@@ -11940,8 +11712,7 @@
       "high",
       "critical"
     ],
-    "notes": "Low-cost grip/anti-rotation trunk support, not a maximal-strength anchor. Use only when grip/trunk work fits the athlete; keep totals tiny (2-3 short holds per side) and never chase grip or trunk fatigue. Shrink the dose from D-7 inward.",
-    "sport_specific": false
+    "notes": "Low-cost grip/anti-rotation trunk support, not a maximal-strength anchor. Use only when grip/trunk work fits the athlete; keep totals tiny (2-3 short holds per side) and never chase grip or trunk fatigue. Shrink the dose from D-7 inward."
   },
   {
     "name": "Kettlebell Suitcase Carry Hold",
@@ -11999,8 +11770,7 @@
       "high",
       "critical"
     ],
-    "notes": "Low-cost grip/anti-rotation trunk support, not a maximal-strength anchor. Use only when grip/trunk work fits the athlete; keep totals tiny (2-3 short holds per side) and never chase grip or trunk fatigue. Shrink the dose from D-7 inward.",
-    "sport_specific": false
+    "notes": "Low-cost grip/anti-rotation trunk support, not a maximal-strength anchor. Use only when grip/trunk work fits the athlete; keep totals tiny (2-3 short holds per side) and never chase grip or trunk fatigue. Shrink the dose from D-7 inward."
   },
   {
     "name": "Stability Ball Crunch",
@@ -12042,8 +11812,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Supported Lower Back Hold",
@@ -12084,8 +11853,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Isometric Mid-Thigh Pull",
@@ -13213,8 +12981,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Band Row Speed Focus",
@@ -16110,8 +15877,7 @@
     "stress_class": "support",
     "cost_class": "low",
     "support_only": true,
-    "meaningful_stress": false,
-    "sport_specific": false
+    "meaningful_stress": false
   },
   {
     "name": "Barbell Thruster",
@@ -16164,8 +15930,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Turkish Get-Up",
@@ -16209,8 +15974,7 @@
     "stress_class": "anchor",
     "cost_class": "high",
     "support_only": false,
-    "meaningful_stress": true,
-    "sport_specific": false
+    "meaningful_stress": true
   },
   {
     "name": "Counter-Striker Split-Line Punch Isometric Hold",
