@@ -211,3 +211,123 @@ def test_deterministic_card_objective_is_not_internal_placement_rationale():
     assert session["objective"] == session["title"]
     # The internal field itself is preserved for audit.
     assert role["day_assignment_reason"]
+
+
+# --------------------------------------------------------------------------- #
+# Render integrity: an aside must not become a second athlete-facing card.
+# --------------------------------------------------------------------------- #
+def test_unprescribed_duplicate_block_is_collapsed_into_the_prescribed_one():
+    """Stage 2's explanatory aside became a second, empty exercise card.
+
+    The plan text carried one real prescription plus a later
+    "Note: Loaded Carry Touch is a scheduled microdose ..."; conversion turned
+    the aside into a second block with the same name and no dose.
+    """
+    from api.structured_plan_generation import _normalize_session
+
+    session = _normalize_session({
+        "session_id": "s1",
+        "blocks": [
+            {"block_id": "b1", "display_name": "Loaded Carry Touch", "sets": 2,
+             "distance": {"value": 20, "unit": "meters"},
+             "coaching_cues": ["tall posture"]},
+            {"block_id": "b2", "display_name": "Trap Bar Deadlift", "sets": 4, "reps": 3},
+            {"block_id": "b3", "display_name": "Loaded Carry Touch",
+             "coaching_cues": ["Scheduled microdose for strength exposure."]},
+        ],
+    })
+    names = [b["display_name"] for b in session["blocks"]]
+    assert names.count("Loaded Carry Touch") == 1, names
+    carry = next(b for b in session["blocks"] if b["display_name"] == "Loaded Carry Touch")
+    assert carry["sets"] == 2  # the prescribed block survives, not the empty one
+    # The aside's coaching detail is kept, not discarded.
+    assert "Scheduled microdose for strength exposure." in carry["coaching_cues"]
+
+
+def test_two_genuinely_prescribed_blocks_are_not_silently_collapsed():
+    """A real duplicate stays visible to duplicate detection."""
+    from api.structured_plan_generation import _normalize_session
+
+    session = _normalize_session({
+        "session_id": "s2",
+        "blocks": [
+            {"block_id": "b1", "display_name": "Easy Assault Bike",
+             "duration": {"value": 20, "unit": "minutes"}},
+            {"block_id": "b2", "display_name": "Easy Assault Bike",
+             "duration": {"value": 10, "unit": "minutes"}},
+        ],
+    })
+    assert len(session["blocks"]) == 2
+
+
+# --------------------------------------------------------------------------- #
+# Deterministic conditioning dose must survive Stage 2 verbatim.
+# --------------------------------------------------------------------------- #
+def test_conditioning_dose_drift_is_detected_now_that_expected_is_populated():
+    """The drift check was dead code while every expected dose was empty.
+
+    Double-End Bag Circuit is authored "5x2min rounds with 30s transitions";
+    Stage 2 rendered 5 x 3 min, a 50% increase in work duration.
+    """
+    from fightcamp.stage2_validator import _conditioning_dose_within_bounds
+
+    drill = next(
+        d for d in _bank("conditioning_bank.json") if d.get("name") == "Double-End Bag Circuit"
+    )
+    expected = _serialize_conditioning_option(drill, "glycolytic", "why")["prescription"]
+    assert expected, "an empty expected dose silently disables the drift check"
+
+    faithful, _, _, _ = _conditioning_dose_within_bounds(
+        expected, "- Double-End Bag Circuit: 5 x 2 min, 60s rest"
+    )
+    assert faithful
+
+    drifted, violations, _, _ = _conditioning_dose_within_bounds(
+        expected, "- Double-End Bag Circuit: 5 x 3 min, 60s rest"
+    )
+    assert not drifted
+    assert violations
+
+
+# --------------------------------------------------------------------------- #
+# Annotation labels are never read as exercise names.
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize(
+    "line",
+    [
+        "Purpose: build aerobic base over 20 min",
+        "- Purpose: build aerobic base over 20 min",
+        "  - Easier: drop to 3 sets",
+        "* Stop: sharp pain, end the set",
+        "- **Why today:** keep speed sharp",
+        "- Regression/stop: halve the rounds",
+    ],
+)
+def test_bulleted_annotation_lines_are_not_exercises(line):
+    """A bulleted annotation escaped the check and was reported as an exercise
+    whose name was the label itself ("Purpose", "Easier")."""
+    from fightcamp.stage2_validator import (
+        _late_fight_line_is_annotation_or_task,
+        _late_fight_line_is_exercise_like,
+    )
+
+    assert _late_fight_line_is_annotation_or_task(line)
+    assert not _late_fight_line_is_exercise_like(line)
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "- Trap Bar Deadlift: 4 x 3 @ RPE 7",
+        "- Easy Assault Bike — 20 min easy",
+        "- Alternating Bounds: 4 x 5/side, 2 min rest",
+    ],
+)
+def test_real_exercise_lines_are_still_exercises(line):
+    from fightcamp.stage2_validator import (
+        _late_fight_line_is_annotation_or_task,
+        _late_fight_line_is_exercise_like,
+    )
+
+    assert not _late_fight_line_is_annotation_or_task(line)
+    assert _late_fight_line_is_exercise_like(line)

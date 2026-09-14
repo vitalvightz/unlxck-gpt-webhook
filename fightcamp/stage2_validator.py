@@ -385,9 +385,17 @@ _LATE_FIGHT_WARMUP_PREP = re.compile(
 )
 
 
+# A leading markdown list bullet / emphasis marker. Annotation lines are written
+# both bare ("Purpose: ...") and bulleted ("- Purpose: ..."); only whitespace was
+# stripped before matching, so the bulleted form escaped the annotation check and
+# was then read as an exercise whose name was the label itself ("Purpose",
+# "Easier"). ``_rendered_exercise_label`` already strips the same prefix.
+_LIST_BULLET_PREFIX = re.compile(r"^\s*(?:[-*\u2022]\s*)?(?:\*\*?)?\s*")
+
+
 def _late_fight_line_is_annotation_or_task(line: str) -> bool:
     """True for descriptive annotation labels and non-exercise tactical tasks."""
-    stripped = (line or "").strip()
+    stripped = _LIST_BULLET_PREFIX.sub("", (line or "").strip())
     if not stripped:
         return False
     if _LATE_FIGHT_ANNOTATION_LABEL.match(stripped):
