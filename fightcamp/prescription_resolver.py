@@ -224,12 +224,23 @@ def _slot_quality_class_effective(slot: dict[str, Any]) -> str:
     return ""
 
 
+# Dosing units that are not reps: distance, seconds, a per-side complete cycle,
+# or a contrast pair's two components. Only consulted once the "N x M" parse has
+# already failed, so an ordinary rep dose is never matched.
+_NON_REP_DOSE_PATTERN = re.compile(r"\bper side\b|\d\s*m\b|\d\s*s\b|\u2192", re.IGNORECASE)
+
+
+def _is_non_rep_dose(prescription: str) -> bool:
+    return bool(_NON_REP_DOSE_PATTERN.search(str(prescription or "")))
+
+
 def _effective_counts(
     *,
     base_sets: int | None,
     base_reps: int | None,
     role_kind: str,
     strength_cap: dict[str, Any],
+    base_prescription: str = "",
 ) -> tuple[int | None, int | None, bool]:
     """Return ``(effective_sets, effective_reps, loaded)`` for one slot.
 
@@ -249,6 +260,18 @@ def _effective_counts(
             return None, None, False
 
     if role_kind in {"anchor", "hybrid"}:
+        if base_sets is None and base_reps is None and _is_non_rep_dose(base_prescription):
+            # The base dose is not counted in reps at all: a carry in metres, a
+            # per-side quality cycle, a timed hold, a contrast pair with two
+            # components. Substituting the cap's own numbers here would replace
+            # the whole prescription and silently change its unit -- dropping a
+            # pair's explosive half, or a get-up's "per side". The dose is kept
+            # verbatim instead; the ``loaded_allowed`` gate above remains the
+            # band's hard safety lever. This matches the contract already
+            # documented in ``_format_effective_prescription``. A rep dose the
+            # NxM regex simply could not read ("5 sets x 8 reps") is NOT covered
+            # here and still takes the cap below.
+            return None, None, True
         sets = (
             min(base_sets, max_sets)
             if base_sets is not None and max_sets is not None
@@ -510,6 +533,7 @@ def resolve_strength_slot_prescription(
         base_reps=base_reps,
         role_kind=kind,
         strength_cap=cap,
+        base_prescription=base_prescription,
     )
 
     # Readiness / cut / injury state can only pull the dose down further.

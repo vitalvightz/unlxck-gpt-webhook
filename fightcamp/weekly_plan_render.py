@@ -129,7 +129,11 @@ def _strength_line(exercise: dict[str, Any], phase: str, forbidden: set[str]) ->
     name = str(exercise.get("name") or "").strip()
     if not name:
         return ""
-    dose = _prescription_templates(phase).get(_classify_prescription_type(exercise), "")
+    # Authority order: an explicit per-exercise prescription wins over the
+    # generic phase template, matching how Stage 2 already resolves the dose.
+    dose = str(exercise.get("prescription") or "").strip()
+    if not dose:
+        dose = _prescription_templates(phase).get(_classify_prescription_type(exercise), "")
     dose = _sanitize_dose(dose, forbidden)
     return f"- {name} — {dose}" if dose else f"- {name}"
 

@@ -153,8 +153,13 @@ def test_single_leg_box_jump_not_general_reps():
 def test_contrast_pairs_keep_contrast_template():
     # A contrast/complex pair (RDL -> broad jump) legitimately wants the loaded
     # contrast prescription and must NOT be rerouted to the light ballistic one.
+    # It now takes the dedicated contrast dose, which keeps BOTH halves of the
+    # pair instead of collapsing into a single lift.
     ptype = _classify_prescription_type(BY_NAME["Heavy RDL → Broad Jump"])
-    assert ptype == "barbell", ptype
+    assert ptype == "contrast", ptype
+    template = _prescription_templates("SPP")[ptype]
+    assert "1RM" in template, template
+    assert "explosive movement" in template, template
 
 
 # --------------------------------------------------------------------------- #

@@ -1122,9 +1122,7 @@ def compose_normal_strength_assignments(
     for week_position, week in enumerate(weekly_role_map.get("weeks", []) or []):
         if not isinstance(week, dict):
             continue
-        phase = str(week.get("phase") or "").strip().upper()
-        pool = candidate_pools.get(phase) if isinstance(candidate_pools, dict) else None
-        slots = pool.get("strength_slots", []) if isinstance(pool, dict) else []
+        week_phase = str(week.get("phase") or "").strip().upper()
         strength_index = 0
         for role in week.get("session_roles", []) or []:
             if not isinstance(role, dict):
@@ -1138,6 +1136,18 @@ def compose_normal_strength_assignments(
             strength_index += 1
             if role.get("late_fight_tail_owned"):
                 continue
+
+            # Candidate authority follows the phase that owns this role's D-day,
+            # not the weekly container's label, so a week straddling a phase
+            # boundary cannot hand a GPP-only exercise to an SPP day. Falls back
+            # to the week phase whenever that phase has no Stage 1 pool, so a
+            # single-phase camp behaves exactly as before.
+            phase = _scheduled_phase_for_role(week, role)
+            pool = candidate_pools.get(phase) if isinstance(candidate_pools, dict) else None
+            if not isinstance(pool, dict):
+                phase = week_phase
+                pool = candidate_pools.get(phase) if isinstance(candidate_pools, dict) else None
+            slots = pool.get("strength_slots", []) if isinstance(pool, dict) else []
 
             pressure_state = _role_pressure_state(
                 pressure_context,
@@ -1410,7 +1420,17 @@ def _conditioning_partition_high_load(
     }
 
 
-def _conditioning_phase_for_role(week: dict[str, Any], role: dict[str, Any]) -> str:
+def _scheduled_phase_for_role(week: dict[str, Any], role: dict[str, Any]) -> str:
+    """Return the Stage 1 phase that owns this role's own scheduled day.
+
+    A calendar week is a container, not a phase: its label is the phase the week
+    starts in, and a week can straddle a phase boundary (a week labelled GPP can
+    still hold a D-20 role that canonically belongs to SPP). Dated roles must
+    resolve their phase from their own D-day, which is exactly what the
+    authority validator does -- so both read the same Stage 1
+    ``phase_weeks.days`` allocation through ``scheduled_phase_for_role``. The
+    week label remains the fallback for an undated role.
+    """
     athlete_model = get_planner_athlete_model() or {}
     return scheduled_phase_for_role(
         role,
@@ -1486,7 +1506,7 @@ def compose_normal_conditioning_assignments(
             ):
                 continue
 
-            phase = _conditioning_phase_for_role(week, role)
+            phase = _scheduled_phase_for_role(week, role)
             pool = candidate_pools.get(phase) if isinstance(candidate_pools, dict) else None
             slots = pool.get("conditioning_slots", []) if isinstance(pool, dict) else []
             strength_slots = pool.get("strength_slots", []) if isinstance(pool, dict) else []
