@@ -28,6 +28,7 @@ from .rehab_protocols import (
     generate_support_notes,
 )
 from .strength import generate_strength_block
+from .strength_session_quality import classify_strength_item
 from .training_context import TrainingContext, allocate_sessions
 
 def _run_stage1_module(
@@ -81,6 +82,11 @@ def _generate_strength_blocks(
     strength_reason_log: dict[str, list[dict]] = {}
     previous_names: list[str] = []
     previous_movements: set[str] = set()
+    # Camp-level rotational-power coverage. Rotational power is a distinct power
+    # family, so a camp whose development phases never touch it has a hole the
+    # per-phase rules cannot see. Once any phase selects a rotational-power
+    # anchor the gap closes and later phases score normally.
+    rotational_power_seen = False
     # Compute once per request; spread into per-phase flags dict below.
     base_flags = context.training_context.to_flags()
     logger = logging.getLogger(__name__)
@@ -102,6 +108,8 @@ def _generate_strength_blocks(
         if previous_names:
             flags["prev_exercises"] = previous_names
             flags["recent_exercises"] = list(previous_movements)
+        if not rotational_power_seen:
+            flags["rotational_power_camp_gap"] = True
         phase_step = f"phase_{phase.lower()}"
         _emit_strength_substep(f"stage1_strength_{phase_step}_started", f"Stage 1 strength {phase} started")
         phase_started = perf_counter()
@@ -127,6 +135,11 @@ def _generate_strength_blocks(
         }
         previous_names = list({*previous_names, *phase_names})
         previous_movements |= phase_movements
+        if not rotational_power_seen:
+            rotational_power_seen = any(
+                "rotational_power" in classify_strength_item(exercise)["base_categories"]
+                for exercise in block.get("exercises", [])
+            )
 
     return strength_blocks, strength_reason_log
 

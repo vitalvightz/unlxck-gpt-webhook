@@ -1,3 +1,7 @@
+from fightcamp.strength import (
+    ROTATIONAL_POWER_COVERAGE_BOOST,
+    _rotational_power_coverage_adjustment,
+)
 from fightcamp.strength_session_quality import classify_strength_item, missing_base_categories
 
 
@@ -108,3 +112,50 @@ def test_upper_body_plyometric_does_not_satisfy_lower_body_explosive_anchor():
 
     assert "upper_body_ballistic" in profile["base_categories"]
     assert "lower_body_explosive_anchor" not in profile["base_categories"]
+
+
+def _rotational_profile() -> dict:
+    return classify_strength_item(
+        {
+            "name": "Med-Ball Rotational Throw",
+            "method": "power",
+            "equipment": "medicine_ball",
+            "tags": ["explosive", "rotational", "mech_trunk_rotation"],
+        }
+    )
+
+
+def test_rotational_coverage_boost_fires_only_on_an_open_camp_gap():
+    profile = _rotational_profile()
+
+    gap_adjustment, gap_codes = _rotational_power_coverage_adjustment(
+        profile, active=True, restricted=False
+    )
+    covered_adjustment, covered_codes = _rotational_power_coverage_adjustment(
+        profile, active=False, restricted=False
+    )
+
+    assert gap_adjustment == ROTATIONAL_POWER_COVERAGE_BOOST
+    assert gap_codes == ["rotational_power_camp_coverage_boost"]
+    assert covered_adjustment == 0.0
+    assert covered_codes == []
+
+
+def test_rotational_coverage_boost_skips_restricted_and_non_rotational_candidates():
+    restricted_adjustment, _ = _rotational_power_coverage_adjustment(
+        _rotational_profile(), active=True, restricted=True
+    )
+    jump_profile = classify_strength_item(
+        {
+            "name": "Jump Squat",
+            "method": "power",
+            "equipment": "bodyweight",
+            "tags": ["explosive", "mech_lower_jump", "triple_extension"],
+        }
+    )
+    non_rotational_adjustment, _ = _rotational_power_coverage_adjustment(
+        jump_profile, active=True, restricted=False
+    )
+
+    assert restricted_adjustment == 0.0
+    assert non_rotational_adjustment == 0.0

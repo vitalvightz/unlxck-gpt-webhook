@@ -242,6 +242,14 @@ POOR_SQUAT_TOLERANCE_LEVELS = {"poor", "low", "limited", "bad"}
 TRAP_BAR_PREFERENCE_SQUAT_PENALTY = -0.6
 TRAP_BAR_PREFERENCE_HINGE_BOOST = 0.4
 
+# Camp-level rotational-power coverage.
+# Rotational power is its own power family, but nothing makes the planner notice
+# when a whole camp's development phases have produced no exposure to it. When
+# the caller reports that gap, safe rotational-power anchors get a modest
+# selection boost — a preference, not a requirement: equipment, injury state,
+# fatigue, and a stronger goal/weakness fit can all still win.
+ROTATIONAL_POWER_COVERAGE_BOOST = 0.35
+
 
 def _exercise_fatigue_cost(exercise: dict, quality_profile: dict) -> float:
     """Return a small recovery-cost proxy for near-equal Rule 2 ordering.
@@ -541,6 +549,28 @@ def _trap_bar_anchor_preference_adjustment(
             "trap_bar_pref_trap_bar_anchor_boost"
         ]
     return 0.0, []
+
+
+def _rotational_power_coverage_adjustment(
+    quality_profile: dict,
+    *,
+    active: bool,
+    restricted: bool,
+) -> tuple[float, list[str]]:
+    """Boost a safe rotational-power anchor when the camp has no exposure yet.
+
+    Only fires when the caller reports the camp-level gap (``active``). A
+    candidate qualifies only if it is a real rotational-power anchor and carries
+    no restriction match, so injury/equipment-constrained options are never
+    pulled forward by the gap.
+    """
+    if not active or restricted:
+        return 0.0, []
+    if not quality_profile.get("anchor_capable"):
+        return 0.0, []
+    if "rotational_power" not in set(quality_profile.get("base_categories") or ()):
+        return 0.0, []
+    return ROTATIONAL_POWER_COVERAGE_BOOST, ["rotational_power_camp_coverage_boost"]
 
 
 def _strength_is_lower_body(exercise: dict, tags: set[str]) -> bool:
@@ -1890,6 +1920,14 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     ]
     goals = flags.get("key_goals", [])
     core_balance_bonus = 1 if _has_core_balance_priority(flags, weaknesses) else 0
+    # Camp-level rotational coverage gap, reported by the phase loop. Held to
+    # the development phases and to non-high fatigue: a taper or a fried athlete
+    # is no place to chase missing exposure.
+    rotational_power_coverage_gap = (
+        bool(flags.get("rotational_power_camp_gap"))
+        and phase in {"GPP", "SPP"}
+        and str(fatigue or "").strip().lower() != "high"
+    )
     require_lower_body_explosive_anchor = (
         phase in {"GPP", "SPP"}
         and str(fatigue or "").strip().lower() != "high"
@@ -2272,6 +2310,18 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if trap_bar_reason_codes:
             breakdown["reason_codes"] = list(
                 dict.fromkeys(list(breakdown.get("reason_codes", [])) + list(trap_bar_reason_codes))
+            )
+        rotational_adjustment, rotational_reason_codes = _rotational_power_coverage_adjustment(
+            quality_profile,
+            active=rotational_power_coverage_gap,
+            restricted=bool(matched_restrictions),
+        )
+        if rotational_adjustment:
+            score += rotational_adjustment
+            breakdown["rotational_power_coverage_adjustment"] = rotational_adjustment
+        if rotational_reason_codes:
+            breakdown["reason_codes"] = list(
+                dict.fromkeys(list(breakdown.get("reason_codes", [])) + list(rotational_reason_codes))
             )
         if not ignore_restrictions and restriction_penalty:
             score += restriction_penalty
