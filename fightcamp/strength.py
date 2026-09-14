@@ -1537,32 +1537,95 @@ def normalize_exercise_movement(exercise: dict) -> str:
     return movement
 
 
+# Loaded carries are dosed in distance or time, never in reps. Identified from
+# the bank's own carry semantics plus a narrow carry/sled noun -- deliberately
+# NOT the word "walk", which in this bank also names banded lateral walks and a
+# tandem-gait balance drill that correctly keep ordinary reps.
+_CARRY_TAGS = frozenset({"carry_heavy", "mech_upper_carry"})
+_CARRY_NAME_PATTERN = re.compile(r"\b(?:carry|carries|sled|yoke)\b")
+
+# Loaded complete-cycle work: one full ground-to-standing cycle per side is the
+# rep, so volume is counted in cycles per side and quality, not fatigue, governs.
+# This is a deliberately narrow exception for the get-up family. The bank marks
+# the Turkish Get-Up ``movement: "complex"``, but "complex" is also the natural
+# label for a barbell complex, which is dosed nothing like a get-up -- so the
+# movement value is not used as the discriminator here.
+_LOADED_CYCLE_NAME_PATTERN = re.compile(r"\bget[-\s]?ups?\b")
+
+_LOADED_BAR_EQUIPMENT = frozenset({"barbell", "trap_bar"})
+
+# Ballistic bar lifts whose bank ``method`` still reads "strength". Their method
+# field also gates strength-maintenance eligibility, so correcting the dose here
+# rather than in the bank keeps selection semantics untouched. Gated on bar
+# equipment, so the non-bar push-press variants keep their current class.
+_POWER_LIFT_NAME_PATTERN = re.compile(
+    r"\b(?:thruster|thrusters|push press|clean and jerk|clean & jerk)\b"
+)
+
+# Word-boundary med-ball match. A bare ``"med" in name`` substring also matched
+# "Glute Medius", routing a static hold to the ballistic speed template.
+_MED_BALL_NAME_PATTERN = re.compile(r"\bmed(?:icine)?[-\s]?ball\b")
+
+
 def _classify_prescription_type(exercise: dict) -> str:
     tags = set(normalize_tags(exercise.get("tags") or []))
     equipment = set(normalize_equipment_list(exercise.get("equipment", [])))
     name = (exercise.get("name") or "").lower()
     method = str(exercise.get("method") or "").strip().lower()
 
+    # --- Archetypes whose dosing UNIT or METHOD the generic templates cannot
+    # express. All are resolved BEFORE the equipment branch, because a loaded
+    # implement must not override what the movement actually is.
+
+    # A contrast pair carries two doses (heavy + explosive) and must keep both.
+    # ``method: "contrast"`` is the bank's own class for exactly these entries.
+    if method == "contrast" or "→" in name or "->" in name or "contrast_pairing" in tags:
+        return "contrast"
+
+    # Maximal overcoming isometrics (>=105% 1RM, or a max implement) are a few
+    # seconds of all-out intent, not a 10-20s submaximal hold and certainly not
+    # reps. ``_is_over_100_percent_isometric`` is the bank helper already used
+    # for late-camp eligibility.
+    if _is_over_100_percent_isometric(exercise):
+        return "max_isometric"
+
+    # Isometrics resolve before equipment: a barbell in the rack does not turn a
+    # 110% 1RM pin hold into an 8-12 rep tempo lift. The condition itself is
+    # unchanged -- only its position moved.
+    if "isometric" in tags or "isometric" in name or "iso hold" in name:
+        return "isometric"
+
+    if tags & _CARRY_TAGS or _CARRY_NAME_PATTERN.search(name):
+        return "carry"
+
+    if _LOADED_CYCLE_NAME_PATTERN.search(name):
+        return "quality_cycle"
+
     # Jumps, hops and bounds are ballistic power work and must not inherit the
     # barbell %1RM strength template just because they use a loaded implement
-    # (e.g. a trap-bar jump). Contrast/complex pairs ("Heavy RDL -> Broad Jump")
-    # are the exception: the loaded first half legitimately wants the contrast
-    # prescription, so they fall through to the barbell branch.
-    is_contrast_pair = "→" in name or "->" in name or "contrast_pairing" in tags
+    # (e.g. a trap-bar jump).
     is_jump_pattern = (
         method == "plyometric"
         or "mech_lower_jump" in tags
         or bool(re.search(r"\b(?:jump|jumps|bound|bounds|hop|hops|pogo)\b", name))
     )
-    if is_jump_pattern and not is_contrast_pair:
+    if is_jump_pattern:
+        return "ballistic"
+
+    # Olympic / loaded-power derivatives (clean, high pull, push press, speed
+    # squat) are explosive work and take the ballistic dose rather than a
+    # hypertrophy-and-slow-eccentrics barbell one. Gated on the bank's
+    # authoritative ``method: "power"``, NOT on tags: heavy strength lifts such
+    # as "Cluster Set Trap Bar Deadlift" also carry ``mech_ballistic``.
+    if equipment & _LOADED_BAR_EQUIPMENT and (
+        method == "power" or _POWER_LIFT_NAME_PATTERN.search(name)
+    ):
         return "ballistic"
 
     if equipment.intersection({"barbell", "trap_bar"}):
         return "barbell"
-    if "medicine_ball" in equipment or "med" in name or "medicine ball" in name:
+    if "medicine_ball" in equipment or _MED_BALL_NAME_PATTERN.search(name):
         return "ballistic"
-    if "isometric" in tags or "isometric" in name or "iso hold" in name:
-        return "isometric"
     if tags.intersection({"core", "trunk", "anti_rotation", "stability"}):
         return "core"
     if "deadbug" in name or "dead bug" in name:
@@ -1586,9 +1649,55 @@ def _prescription_templates(phase: str) -> dict[str, str]:
         "SPP": "4–6x2–5 reps at max speed; full rest 60–120s.",
         "TAPER": "3–5x2–4 reps/throws at max speed; full rest 60–120s.",
     }
+    # A contrast pair keeps BOTH components. Written without a bare "NxM" token
+    # so the countdown overlay in ``prescription_resolver`` preserves the pair
+    # verbatim instead of parsing the first pair of numbers and replacing the
+    # whole string -- which would silently delete the explosive half.
+    contrast = {
+        "GPP": (
+            "3–5 rounds: heavy movement 3–5 reps @ 70–80% 1RM "
+            "→ explosive movement 3–5 reps at max intent; rest 2–4 min per round."
+        ),
+        "SPP": (
+            "3–4 rounds: heavy movement 2–3 reps @ 85–92% 1RM "
+            "→ explosive movement 2–3 reps at max intent; rest 2–4 min per round."
+        ),
+        "TAPER": (
+            "1–3 rounds: heavy movement 1–2 reps @ 80–85% 1RM "
+            "→ explosive movement 1–2 reps at max intent; full rest, stop on any speed drop."
+        ),
+    }
+    # Carries are dosed in distance or time. Also deliberately free of a bare
+    # "NxM" token: "3 x 20 m" would be parsed as 20 *reps* by the countdown
+    # overlay, so the unit is spelled out instead.
+    carry = {
+        "GPP": "3–5 carries over 20–40 m (or 20–40s), heavy but unbroken; rest 60–90s.",
+        "SPP": "2–4 carries over 15–30 m (or 15–30s), heavier load, posture first; full rest.",
+        "TAPER": "1–2 carries over 10–20 m (or 10–20s), moderate load; stop well before grip failure.",
+    }
+    # One full cycle per side is the rep; quality and control govern, not
+    # fatigue. The ceiling is stated in the dose itself so it survives rendering.
+    quality_cycle = {
+        "GPP": (
+            "1–2 sets of 1–2 reps per side (hard ceiling 2 sets of 2 per side); "
+            "full quality cycles, never to fatigue."
+        ),
+        "SPP": (
+            "1–2 sets of 1–2 reps per side; heavier implement, perfect positions, "
+            "stop on any wobble."
+        ),
+        "TAPER": "1 set of 1 rep per side; movement quality only, no fatigue.",
+    }
     return {
         "barbell": barbell.get(phase, barbell["GPP"]),
+        "contrast": contrast.get(phase, contrast["GPP"]),
         "ballistic": ballistic.get(phase, ballistic["GPP"]),
+        "quality_cycle": quality_cycle.get(phase, quality_cycle["GPP"]),
+        "carry": carry.get(phase, carry["GPP"]),
+        "max_isometric": (
+            "3–5 efforts of 3–6s all-out against pins or an immovable load; "
+            "2–3 min rest. Maximal intent, never dosed as reps."
+        ),
         "isometric": "3–5 holds x 10–20s @ 7–9/10 effort; full rest between holds.",
         "core": "2-4 sets x 6-10 reps or 20-40s tempo (3-1-3), RPE 6-8.",
         "general": "2–3x6–10 @ RPE 6–7, keep reps crisp.",
@@ -1677,7 +1786,17 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
     strength_output.append(f"**Top Exercises:** {top_exercises}")
 
     prescriptions = _prescription_templates(phase)
-    ordered_types = ["barbell", "ballistic", "isometric", "core", "general"]
+    ordered_types = [
+        "barbell",
+        "contrast",
+        "ballistic",
+        "quality_cycle",
+        "carry",
+        "max_isometric",
+        "isometric",
+        "core",
+        "general",
+    ]
     present_types = []
     for exercise in exercises:
         ex_type = _classify_prescription_type(exercise)
@@ -1690,7 +1809,11 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
             continue
         label = {
             "barbell": "Barbell Strength",
+            "contrast": "Contrast Pairs (Heavy → Explosive)",
             "ballistic": "Ballistics (Med Ball / Speed / Power)",
+            "quality_cycle": "Loaded Complete-Cycle (Per Side)",
+            "carry": "Loaded Carries (Distance / Time)",
+            "max_isometric": "Maximal Overcoming Isometrics",
             "isometric": "Isometrics",
             "core": "Core Control",
             "general": "General Strength",
