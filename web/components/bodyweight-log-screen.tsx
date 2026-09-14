@@ -147,7 +147,7 @@ export function BodyweightLogScreen() {
     };
   }, [session?.access_token]);
 
-  const athleteName = me?.profile.full_name || me?.profile.email || "Nutrition workspace";
+  const athleteName = me?.profile.full_name || me?.profile.email || appText("text_02207fbaeaef");
   const entries = workspace?.nutrition_monitoring.daily_bodyweight_log ?? [];
   const indexedEntries = getBodyweightEntriesWithIndex(entries);
   const latestEntry = workspace ? getLatestBodyweightEntry(entries) : null;

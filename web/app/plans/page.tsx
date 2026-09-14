@@ -6,6 +6,7 @@ import { useTranslations, useTranslations as useAppTranslations } from "next-int
 import { createPortal } from "react-dom";
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { translateUiText } from "@/i18n/ui-text";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { PlanHistoryRowSkeleton, PlansFeaturedSkeleton } from "@/components/skeleton";
@@ -909,7 +910,7 @@ function IntakeCard({
       <div className="plans-dashboard-card-header">
         <div className="plans-dashboard-card-copy">
           <p className="kicker">{appText("text_995d74d7974c")}</p>
-          <h2>{profileLines[0]?.value || "Athlete profile"}</h2>
+          <h2>{translateUiText(appText, profileLines[0]?.value || "Athlete profile")}</h2>
           <p className="muted">{appText("text_e44c11f1b9b3")}</p>
         </div>
         <span className={`badge ${hasIntake ? "status-badge-success" : "status-badge-neutral"}`}>
@@ -921,8 +922,8 @@ function IntakeCard({
         <dl className="plans-source-facts">
           {sourceLines.map((line) => (
             <div key={line.label} className="plans-source-fact">
-              <dt>{line.label}</dt>
-              <dd>{line.value}</dd>
+              <dt>{translateUiText(appText, line.label)}</dt>
+              <dd>{translateUiText(appText, line.value)}</dd>
             </div>
           ))}
         </dl>

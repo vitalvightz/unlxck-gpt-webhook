@@ -152,6 +152,7 @@ function formatEnumLabel(value: string | null | undefined, fallback: string): st
 }
 
 function StatusRows({ workspace }: { workspace: NutritionWorkspaceState }) {
+  const appText = useAppTranslations("AppText");
   const derived = workspace.derived;
   return (
     <div className="review-detail-list nutrition-review-list">
@@ -161,8 +162,8 @@ function StatusRows({ workspace }: { workspace: NutritionWorkspaceState }) {
         ["Cut size", `${derived.weight_cut_pct.toFixed(1)}%`],
       ].map(([label, value]) => (
         <div key={label} className="review-detail-row">
-          <p className="review-detail-label">{label}</p>
-          <p className="review-detail-value">{value}</p>
+          <p className="review-detail-label">{translateUiText(appText, label)}</p>
+          <p className="review-detail-value">{translateUiText(appText, value)}</p>
         </div>
       ))}
     </div>
@@ -262,7 +263,7 @@ export function NutritionWorkspaceScreen() {
     });
   }
 
-  const athleteName = me?.profile.full_name || me?.profile.email || "Nutrition workspace";
+  const athleteName = me?.profile.full_name || me?.profile.email || appText("text_02207fbaeaef");
   const coreMissingFields = workspace
     ? workspace.derived.missing_required_fields.filter((field) =>
         Object.prototype.hasOwnProperty.call(CORE_FIELD_LABELS, field),
@@ -331,8 +332,8 @@ export function NutritionWorkspaceScreen() {
                           ]),
                     ].map(([label, value]) => (
                       <div key={label} className="review-detail-row">
-                        <p className="review-detail-label">{label}</p>
-                        <p className="review-detail-value">{value}</p>
+                        <p className="review-detail-label">{translateUiText(appText, label)}</p>
+                        <p className="review-detail-value">{translateUiText(appText, value)}</p>
                       </div>
                     ))}
                   </div>
@@ -357,8 +358,8 @@ export function NutritionWorkspaceScreen() {
                       ["Restriction level", formatEnumLabel(workspace.shared_camp_context.training_restriction_level, "Not set")],
                     ].map(([label, value]) => (
                       <div key={label} className="review-detail-row">
-                        <p className="review-detail-label">{label}</p>
-                        <p className="review-detail-value">{value}</p>
+                        <p className="review-detail-label">{translateUiText(appText, label)}</p>
+                        <p className="review-detail-value">{translateUiText(appText, value)}</p>
                       </div>
                     ))}
                   </div>
@@ -455,7 +456,7 @@ export function NutritionWorkspaceScreen() {
                         onChange={(event) => handleWeightSourceChange(event.target.value)}
                       >
                         {WEIGHT_SOURCE_OPTIONS.map((value) => (
-                          <option key={value || "empty"} value={value}>{value || "Select"}</option>
+                          <option key={value || "empty"} value={value}>{value || appText("text_2a78025de6aa")}</option>
                         ))}
                       </select>
                       <p className="muted">{appText("text_b31f0c9607bb")}</p>

@@ -8,6 +8,7 @@ import {
   AthleteProfileHero,
   AthleteProfileOverviewCard,
 } from "@/components/admin-athlete-profile";
+import { translateUiText } from "@/i18n/ui-text";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import {
@@ -151,7 +152,7 @@ function AthletePlanAccessCard({
           (result.skipped_count ? ` ${result.skipped_count} skipped.` : ""),
       );
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Unable to delete the selected plans.");
+      setError(deleteError instanceof Error ? deleteError.message : appText("text_c6e2f69acea3"));
     } finally {
       setIsDeleting(false);
     }
@@ -178,7 +179,9 @@ function AthletePlanAccessCard({
               aria-label={appText("text_5dcf451bbb87")}
             />
             <span className="muted">
-              {selectedCount > 0 ? `${selectedCount} selected` : `Select archived (${archivedIds.length})`}
+              {selectedCount > 0
+                ? appText("text_529aacfdfd2b", { count: selectedCount })
+                : appText("text_ef276ee1d896", { count: archivedIds.length })}
             </span>
           </label>
           <button
@@ -187,7 +190,11 @@ function AthletePlanAccessCard({
             onClick={() => void handleBulkDelete()}
             disabled={selectedCount === 0 || isDeleting || !accessToken}
           >
-            {isDeleting ? appText("text_685ecb984ac2") : `Delete selected${selectedCount ? ` (${selectedCount})` : ""}`}
+            {isDeleting
+              ? appText("text_685ecb984ac2")
+              : selectedCount
+                ? appText("text_a84a0a76c974", { count: selectedCount })
+                : appText("text_d2ab5d46fed4")}
           </button>
         </div>
       ) : null}
@@ -202,7 +209,7 @@ function AthletePlanAccessCard({
             return (
               <div key={plan.plan_id} className="admin-athlete-plan-item">
                 {archived ? (
-                  <label className="admin-athlete-plan-select" aria-label={`Select ${getPlanDisplayName(plan)}`}>
+                  <label className="admin-athlete-plan-select" aria-label={appText("text_cbe2f0672d5f", { name: getPlanDisplayName(plan) })}>
                     <input
                       type="checkbox"
                       checked={selectedIds.includes(plan.plan_id)}
@@ -325,7 +332,7 @@ function GenerationDiagnosticCard({
       ) : null}
       {job.error ? <div className="error-banner" role="alert">{appText("text_617062906764")}{job.error}</div> : null}
       {job.is_stale ? (
-        <div className="error-banner" role="alert">{appText("text_d0c8ece8c375")}{job.stale_reason || "Job appears stale."}</div>
+        <div className="error-banner" role="alert">{appText("text_d0c8ece8c375")}{job.stale_reason || appText("text_09b4fbb228e8")}</div>
       ) : null}
 
       <div className="plan-summary-actions">
@@ -751,20 +758,20 @@ export default function AdminAthletePage() {
                 </div>
                 <div className="review-detail-list nutrition-review-list">
                   {[
-                    ["Foundation", humanizeEnumValue(nutrition.derived.foundation_status, "Unknown")],
-                    ["Days until fight", nutrition.derived.days_until_fight != null ? String(nutrition.derived.days_until_fight) : "Not set"],
-                    ["Current phase", nutrition.derived.current_phase_effective || "Not derived yet"],
-                    ["Weight cut", `${nutrition.derived.weight_cut_pct.toFixed(1)}%`],
+                    [appText("text_df42a4d5d353"), humanizeEnumValue(nutrition.derived.foundation_status, appText("text_b764cdc0eab7"))],
+                    [appText("text_78a14d0fe2ba"), nutrition.derived.days_until_fight != null ? String(nutrition.derived.days_until_fight) : appText("text_4895f73177ab")],
+                    [appText("text_44c03cecc032"), nutrition.derived.current_phase_effective || appText("text_3bdd1db64207")],
+                    [appText("text_567bd1996d3a"), `${nutrition.derived.weight_cut_pct.toFixed(1)}%`],
                     [
-                      "Readiness flags",
+                      appText("text_10c9502fffb6"),
                       nutrition.derived.readiness_flags.length
                         ? nutrition.derived.readiness_flags.map((flag) => humanizeEnumValue(flag, flag)).join(", ")
-                        : "Baseline",
+                        : appText("text_cc9ea7f7c64e"),
                     ],
                   ].map(([label, value]) => (
                     <div key={label} className="review-detail-row">
                       <p className="review-detail-label">{label}</p>
-                      <p className="review-detail-value">{value}</p>
+                      <p className="review-detail-value">{translateUiText(appText, value)}</p>
                     </div>
                   ))}
                 </div>

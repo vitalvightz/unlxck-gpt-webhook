@@ -18,6 +18,7 @@ import {
   healthConsentSummary,
   termsSummary,
 } from "@/lib/compliance";
+import { translateUiText } from "@/i18n/ui-text";
 import { PRIVACY_HREF, TERMS_HREF, buildDataRequestMailto } from "@/lib/legal-documents";
 import { isSafeAvatarImageUrl } from "@/lib/avatar-image-url";
 import { formatAppDate, formatAppDateTime } from "@/lib/date-format";
@@ -321,10 +322,13 @@ function SettingsNav({
 }
 
 function SettingsSummaryItem({ label, value }: Readonly<{ label: string; value: string }>) {
+  const appText = useAppTranslations("AppText");
+  // Labels and values reach this card as plain strings from summary helpers that run
+  // outside React, so they are translated here rather than at every call site.
   return (
     <article className="plan-meta-item">
-      <p className="plan-meta-label">{label}</p>
-      <p className="plan-meta-value">{value}</p>
+      <p className="plan-meta-label">{translateUiText(appText, label)}</p>
+      <p className="plan-meta-value">{translateUiText(appText, value)}</p>
     </article>
   );
 }
@@ -655,7 +659,7 @@ export default function SettingsPage() {
       return;
     }
     if (!passwordStrength.isAcceptable) {
-      setPasswordError(passwordStrength.feedback || "Pick a stronger password.");
+      setPasswordError(passwordStrength.feedback || appText("text_52366e98cf23"));
       return;
     }
     if (newPassword === currentPassword) {

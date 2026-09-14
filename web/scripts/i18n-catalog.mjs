@@ -2,6 +2,14 @@ import { createHash, randomUUID } from "node:crypto";
 import { readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import {
+  applyGlossaryMarkup,
+  brandViolations,
+  glossaryViolations,
+  hasResidualMarkup,
+  stripGlossaryMarkup,
+} from "../i18n/glossary.mjs";
+
 export const TARGET_LOCALES = {
   es: "es",
   "pt-BR": "pt",
@@ -129,7 +137,18 @@ function translationWork(sourceFlat, targetFlat, localeState) {
   return work;
 }
 
-async function translateBatch({ endpoint, key, region, language, items, fetchImpl }) {
+function assertGlossary(source, translated, keyPath, locale) {
+  const violations = glossaryViolations(source, translated, locale);
+  const brands = brandViolations(source, translated);
+  if (!violations.length && !brands.length) return;
+  const details = [
+    ...violations.map(({ term, rendering }) => `${term} came back as "${rendering}"`),
+    ...brands.map((term) => `${term} was translated away`),
+  ].join("; ");
+  throw new Error(`Azure ignored the glossary for ${locale}.${keyPath}: ${details}`);
+}
+
+async function translateBatch({ endpoint, key, region, locale, language, items, fetchImpl }) {
   const url = new URL("/translate", endpoint);
   url.searchParams.set("api-version", "3.0");
   url.searchParams.set("from", "en");
@@ -141,7 +160,9 @@ async function translateBatch({ endpoint, key, region, language, items, fetchImp
     "X-ClientTraceId": randomUUID(),
   };
   if (region) headers["Ocp-Apim-Subscription-Region"] = region;
-  const masked = items.map(({ source }) => maskPlaceholders(source));
+  // Glossary markup first, so `\b` term matching sees plain English, then placeholder
+  // masking, which only ever looks at `{...}`.
+  const masked = items.map(({ source }) => maskPlaceholders(applyGlossaryMarkup(source, locale)));
   const response = await fetchImpl(url, {
     method: "POST",
     headers,
@@ -162,7 +183,8 @@ async function translateBatch({ endpoint, key, region, language, items, fetchImp
     if (typeof translated !== "string" || !translated.trim()) {
       throw new Error(`Azure Translator returned no text for ${items[index].keyPath}`);
     }
-    return masked[index].restore(translated);
+    const restored = masked[index].restore(translated);
+    return hasResidualMarkup(restored) ? stripGlossaryMarkup(restored) : restored;
   });
 }
 
@@ -248,10 +270,11 @@ export async function syncCatalogs({
       const delay = Math.max(0, nextRequestAt - Date.now());
       if (delay) await sleepImpl(delay);
       nextRequestAt = Date.now() + Math.ceil(batchCharacters * 60_000 / charactersPerMinute);
-      const translations = await translateBatchWithRetry({ endpoint, key, region, language, items, fetchImpl }, sleepImpl);
+      const translations = await translateBatchWithRetry({ endpoint, key, region, locale, language, items, fetchImpl }, sleepImpl);
       translations.forEach((translated, index) => {
         const item = items[index];
         assertPlaceholders(item.source, translated, item.keyPath, locale);
+        assertGlossary(item.source, translated, item.keyPath, locale);
         targetFlat[item.keyPath] = translated;
         localeState[item.keyPath] = {
           sourceHash: hash(item.source),

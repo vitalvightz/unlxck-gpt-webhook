@@ -14,9 +14,9 @@ async function chooseLanguage(page: Page, label: string) {
 }
 
 for (const locale of [
-  { code: "es", label: "Español", heading: "Tu campamento. Totalmente enfocado.", terms: "Términos de uso", eligibility: "Elegibilidad" },
-  { code: "fr", label: "Français", heading: "Ton camp de combat. Connecté.", terms: "Conditions d’utilisation", eligibility: "Éligibilité" },
-  { code: "it", label: "Italiano", heading: "Il tuo camp. Bloccato dentro.", terms: "Termini di utilizzo", eligibility: "Ammissibilità" },
+  { code: "es", label: "Español", heading: "Tu camp. Totalmente enfocado.", terms: "Términos de uso", eligibility: "Elegibilidad" },
+  { code: "fr", label: "Français", heading: "Ton camp. Focus total.", terms: "Conditions d’utilisation", eligibility: "Éligibilité" },
+  { code: "it", label: "Italiano", heading: "Il tuo camp. Focus totale.", terms: "Termini di utilizzo", eligibility: "Ammissibilità" },
 ]) {
   test(`switching to ${locale.label} persists through a reload`, async ({ page, baseURL, context }) => {
     await isolateFromNetwork(page, baseURL ?? BASE_URL);

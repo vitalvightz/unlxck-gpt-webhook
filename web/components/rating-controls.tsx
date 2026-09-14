@@ -163,7 +163,9 @@ export function FaceScale({
     }
   }
 
-  const activeLabel = selectedIndex === -1 ? "Not set" : PAIN_LEVELS[selectedIndex].label;
+  const activeLabel = selectedIndex === -1
+    ? translateUiText(appText, "Not set")
+    : translateUiText(appText, PAIN_LEVELS[selectedIndex].label);
 
   return (
     <div className="face-scale">

@@ -122,7 +122,7 @@ export default function ProgressPage() {
   }
 
   const profile = me.profile;
-  const athleteName = profile.full_name.trim() || "Your progress";
+  const athleteName = profile.full_name.trim() || appText("text_433a720b7e1d");
   const avatarUrl = isSafeAvatarImageUrl(profile.avatar_url) ? profile.avatar_url : null;
   const statusAndRecord = [
     profile.professional_status ? titleCase(profile.professional_status) : "",

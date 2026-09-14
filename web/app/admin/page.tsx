@@ -563,7 +563,7 @@ export default function AdminPage() {
           (result.skipped_count ? ` ${result.skipped_count} skipped.` : ""),
       );
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Unable to delete archived plans.");
+      setError(deleteError instanceof Error ? deleteError.message : appText("text_6ba78c22f62b"));
     } finally {
       setBulkDeletingPlans(false);
     }
@@ -797,7 +797,7 @@ export default function AdminPage() {
                   <div className="admin-active-row-main">
                     <div>
                       <h3 className="plan-card-title">{getJobDisplayName(job)}</h3>
-                      <p className="muted">{job.athlete_email || job.athlete_id || "No athlete email"}</p>
+                      <p className="muted">{job.athlete_email || job.athlete_id || appText("text_708bc3861e4b")}</p>
                       <ProfileUnavailableNote unavailable={job.profile_unavailable} />
                     </div>
                     <span className="badge">{getJobStatusLabel(job)}</span>
@@ -813,9 +813,9 @@ export default function AdminPage() {
                   </div>
                   <div className="admin-job-summary">
                     <ProfileRefreshWarningBanner job={job} />
-                    {job.is_stale ? <p className="error-text">{job.stale_reason || "This generation has stopped heartbeating."}</p> : null}
+                    {job.is_stale ? <p className="error-text">{job.stale_reason || appText("text_fc6ce88b89a0")}</p> : null}
                     <p className="muted">{appText("text_f65bea824e6f")}{job.request_payload_summary?.fight_date ? formatAppDate(job.request_payload_summary.fight_date) : appText("text_4895f73177ab")}</p>
-                    <p className="muted">{appText("text_9a5649a42cb2")}{job.request_payload_summary?.fight_format || "Not set"}</p>
+                    <p className="muted">{appText("text_9a5649a42cb2")}{job.request_payload_summary?.fight_format || appText("text_4895f73177ab")}</p>
                     <p className="muted">{appText("text_d5c7aa27cc62")}{joinOrDash(job.request_payload_summary?.goals)}</p>
                   </div>
                   <div className="plan-card-actions">
@@ -877,7 +877,7 @@ export default function AdminPage() {
                   <div className="plan-card-header">
                     <div>
                       <h3 className="plan-card-title">{getJobDisplayName(job)}</h3>
-                      <p className="muted">{job.athlete_email || job.athlete_id || "No athlete email"}</p>
+                      <p className="muted">{job.athlete_email || job.athlete_id || appText("text_708bc3861e4b")}</p>
                       <ProfileUnavailableNote unavailable={job.profile_unavailable} />
                     </div>
                     <span className="badge">{appText("text_17d48234f771")}</span>
@@ -952,7 +952,7 @@ export default function AdminPage() {
                       <Link href={`/plans/${plan.plan_id}`}>
                         <h3 className="plan-card-title">{getPlanDisplayName(plan)}</h3>
                       </Link>
-                      <p className="muted">{plan.athlete_email || plan.athlete_id || "No athlete email"}</p>
+                      <p className="muted">{plan.athlete_email || plan.athlete_id || appText("text_708bc3861e4b")}</p>
                       <ProfileUnavailableNote unavailable={plan.profile_unavailable} />
                     </div>
                     <span className="badge">{plan.status}</span>
@@ -1165,8 +1165,8 @@ export default function AdminPage() {
                       />
                       <span className="muted">
                         {selectedArchivedCount > 0
-                          ? `${selectedArchivedCount} archived selected`
-                          : `Select archived (${archivedPlanIds.length})`}
+                          ? appText("text_62ee2852ec4e", { count: selectedArchivedCount })
+                          : appText("text_ef276ee1d896", { count: archivedPlanIds.length })}
                       </span>
                     </label>
                     <button
@@ -1177,7 +1177,9 @@ export default function AdminPage() {
                     >
                       {bulkDeletingPlans
                         ? appText("text_685ecb984ac2")
-                        : `Delete archived${selectedArchivedCount ? ` (${selectedArchivedCount})` : ""}`}
+                        : selectedArchivedCount
+                          ? appText("text_ba8345b330fa", { count: selectedArchivedCount })
+                          : appText("text_b6d1e0fbd54f")}
                     </button>
                   </div>
                 ) : null}
@@ -1187,7 +1189,7 @@ export default function AdminPage() {
                       <div className="plan-card-header">
                         <div className="admin-plan-title-row">
                           {isArchivedPlan(plan) ? (
-                            <label className="admin-athlete-plan-select" aria-label={`Select ${getPlanDisplayName(plan)}`}>
+                            <label className="admin-athlete-plan-select" aria-label={appText("text_cbe2f0672d5f", { name: getPlanDisplayName(plan) })}>
                               <input
                                 type="checkbox"
                                 checked={selectedArchivedIds.includes(plan.plan_id)}
