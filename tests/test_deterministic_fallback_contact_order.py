@@ -48,6 +48,7 @@ def _brief(d_day: int, contact_fields: dict) -> dict:
 
 
 def _spine(d_day: int) -> dict:
+    """Return the fallback's pre-merge rest day for one countdown day."""
     return {
         "weeks": [
             {
