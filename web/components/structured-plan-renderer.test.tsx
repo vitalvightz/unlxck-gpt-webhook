@@ -2401,15 +2401,15 @@ test("next-session focus marks the active week and day before a dated camp start
   );
 });
 
-test("a long phase label is kept on one line with the full text available on hover/AT", () => {
+test("a long phase label retains its full text and accessible title", () => {
   const longPhase = "Accumulation Overreaching Realisation Block";
   const plan = weeksPlan(3, longPhase);
   const expected = formatPlanLabel(longPhase);
 
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
 
-  // Truncation is visual (CSS ellipsis); the complete label stays in the title
-  // attribute and the text node, so nothing is lost to hover or screen readers.
+  // Wrapping is handled by CSS; the full label remains available in both the
+  // text node and the title attribute.
   assert.equal(html.includes(`title="${expected}"`), true);
   assert.equal(html.includes(`<span class="cm-week-pill-phase" title="${expected}">${expected}</span>`), true);
 });
