@@ -33,7 +33,7 @@ def _brief(d_day: int, contact_fields: dict) -> dict:
                                 "why": "Keep pocket exchanges planned rather than chaotic.",
                                 "instructions": ["Map the opponent's likely response."],
                                 "mindset": {
-                                    "intent": "Win the second decision.",
+                                    "intent": "Treat the exchange as a branch, not a prolonged strength contest.",
                                     "focus": "Read the response after the first punches.",
                                     "reset": "Smother or leave if the exchange loses shape.",
                                 },
@@ -108,7 +108,7 @@ def test_locked_tactical_focus_survives_contact_reconcile(
     expected_contact,
     expected_day_type,
 ):
-    """Locked Tactical Focus and deterministic contact must both survive fallback."""
+    """Locked Tactical Focus survives even when its zero-load prose says strength."""
     brief = _brief(d_day, contact_fields)
     monkeypatch.setattr(
         fallback_module,
