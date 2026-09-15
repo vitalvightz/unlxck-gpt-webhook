@@ -168,8 +168,20 @@ def _is_allowed_nontechnical_contact_filler(session: Any) -> bool:
     """Keep the existing guard only for hard/reduced contact days.
 
     Technical-contact cards are a display context, not a filter: all app work
-    supplied by the final plan remains visible alongside them.
+    supplied by the final plan remains visible alongside them. A locked Tactical
+    Focus session is already deterministically classified as zero-load, so its
+    instructional wording must never be reinterpreted as physical work here.
     """
+    if isinstance(session, dict):
+        title = str(session.get("title") or "").strip().casefold()
+        session_id = str(session.get("session_id") or "").strip().casefold()
+        if (
+            title == "tactical focus"
+            and session_id.startswith("locked-")
+            and session_id.endswith("-tactical-watch")
+        ):
+            return True
+
     text = _session_text(session)
     if _BLOCKED_CONTACT_FILLER_RE.search(text) or _HIGH_RPE_RE.search(text):
         return False
