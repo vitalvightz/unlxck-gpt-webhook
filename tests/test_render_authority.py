@@ -34,14 +34,6 @@ from fightcamp.render_authority import (
     AUTHORITY_FIGHT_DAY_PROTOCOL,
     authoritative_render_for_role,
 )
-from fightcamp.stage2_finalizer_packet import build_stage2_finalizer_packet
-from fightcamp.stage2_payload import _closed_membership_render_manifest
-from fightcamp.stage2_pipeline import repair_stage2_structural_text
-from fightcamp.tactical_watch_library import (
-    build_watch_display_text,
-    select_tactical_watch,
-    watch_metadata,
-)
 
 
 # ─────────────────────────── B. deterministic exact content ──────────────────
