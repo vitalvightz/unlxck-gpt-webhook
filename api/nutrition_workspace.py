@@ -626,7 +626,10 @@ def build_nutrition_workspace(
         days_until_fight=days_until_fight,
         weight_cut_pct=weight_cut_pct,
         weight_cut_risk=weight_cut_risk,
-        aggressive_weight_cut=weight_cut_pct >= 5.0,
+        # Canonical readiness flag, not a raw percentage: athlete_model derives
+        # aggressive_weight_cut from the capacity severity bucket, so repeating
+        # a bare >= 5.0 here contradicted it for any cut far from fight day.
+        aggressive_weight_cut="aggressive_weight_cut" in (readiness_flags or []),
         high_pressure_weight_cut=_is_high_pressure_weight_cut(athlete_model=athlete_model),
         short_notice=short_notice,
         fight_week=isinstance(days_until_fight, int) and 0 <= days_until_fight <= 7,

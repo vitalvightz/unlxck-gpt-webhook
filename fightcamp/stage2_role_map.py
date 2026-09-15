@@ -8,7 +8,7 @@ backward compatibility.
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any
+from typing import Any, NamedTuple
 
 from .normalization import clean_list, normalize_fatigue_level, ordered_weekdays as _ordered_weekdays
 from .calendar_context import (
@@ -2240,12 +2240,33 @@ def _compute_readiness_compression(athlete_model: dict) -> int:
     - Active injury/restriction at moderate or greater severity (+1)
     - Proximity to fight (≤17 days) (+1)
     """
+    return _readiness_compression_components(athlete_model).total
+
+
+class _CompressionComponents(NamedTuple):
+    """Readiness compression split by origin.
+
+    ``cut`` is an exact slot count promised by the canonical cut authority;
+    ``generic`` is a points score that passes through the non-linear floor
+    curve. They are kept apart because folding the cut into the generic score
+    silently discarded part of what the cut authority promised: a critical cut
+    contributes 2 points, but 2 generic points map to only *one* removed slot.
+    """
+
+    generic: int
+    cut: int
+
+    @property
+    def total(self) -> int:
+        return self.generic + self.cut
+
+
+def _readiness_compression_components(athlete_model: dict) -> _CompressionComponents:
     compression = 0
     fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
     if fatigue == "high":
         compression += 1
     cut_points = _cut_severity_compression_points(athlete_model)
-    compression += cut_points
     if _active_injury_is_moderate_plus(athlete_model):
         compression += 1
     # Fight proximity is only an *independent* compression signal when the cut
@@ -2258,16 +2279,44 @@ def _compute_readiness_compression(athlete_model: dict) -> int:
     days_to_fight = athlete_model.get("days_until_fight")
     if cut_points == 0 and isinstance(days_to_fight, int) and 0 <= days_to_fight <= 17:
         compression += 1
-    return compression
+    return _CompressionComponents(generic=compression, cut=cut_points)
+
+
+# Ceiling on how many non-spar slots any combination of readiness signals may
+# remove in one week. Without it a critical cut stacked on high fatigue and
+# injury could empty a low-frequency week outright, which is the failure mode
+# the cut rework exists to prevent. The allocator's ``min_non_spar_active``
+# clamp is the second guard.
+MAX_READINESS_COMPRESSION_FLOOR = 3
 
 
 def _compression_floor_value(compression: int) -> int:
-    """Convert compression score to compression_floor (number of non-spar slots to remove)."""
+    """Convert a *generic* readiness score to removed non-spar slots.
+
+    Cut severity is deliberately NOT routed through this curve — see
+    :func:`_readiness_compression_floor`. This curve is lossy by design (1 and 2
+    points both mean one slot), which is fine for soft signals but would break
+    the exact slot count the cut authority promises.
+    """
     if compression == 0:
         return 0
     if compression <= 2:
         return 1
     return 2  # compression >= 3
+
+
+def _readiness_compression_floor(athlete_model: dict) -> int:
+    """Non-spar slots to remove, honouring the cut authority's exact promise.
+
+    The cut's charge is added rather than blended, so
+    ``cut_training_compression_points`` means what it says at the allocator:
+    moderate removes 0, high removes 1, critical and extreme remove 2.
+    """
+    components = _readiness_compression_components(athlete_model)
+    return min(
+        MAX_READINESS_COMPRESSION_FLOOR,
+        _compression_floor_value(components.generic) + components.cut,
+    )
 
 
 def _can_keep_low_noise_conditioning(athlete_model: dict) -> bool:
@@ -2716,7 +2765,7 @@ def _apply_high_fatigue_week_compression(
     # No late-cut overlay here: ``_cut_severity_compression_points`` is the sole
     # cut-driven capacity charge. The former ``aggressive_cut_extra_compression``
     # re-read the same severity bucket and removed a *second* slot for it.
-    compression_floor = _compression_floor_value(compression)
+    compression_floor = _readiness_compression_floor(athlete_model)
 
     # Step 3: Compute target number of non-sparring active sessions
     phase = str(week_entry.get("phase", "")).strip().upper()

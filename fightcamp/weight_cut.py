@@ -293,16 +293,28 @@ def is_high_pressure_weight_cut(flags: dict) -> bool:
     Reads the flat ``weight_cut_risk`` / ``weight_cut_pct`` / ``fatigue`` /
     ``days_until_fight`` shape used by the Stage 1 nutrition and recovery
     blocks. ``athlete_model._is_high_pressure_weight_cut`` answers the same
-    question from the readiness-flag shape; keep the two thresholds in step.
+    question from the readiness-flag shape; keep the two in step.
 
-    A low-fatigue, non-aggressive active cut only counts as high-pressure inside
-    the final two weeks (<=14). Aggressive cuts (>=5%) and moderate+ fatigue stay
-    high-pressure at any distance via the clauses above. (Was <=28, which flagged
-    a routine 3-3.5% cut at D-21 as high-pressure even at low fatigue.)
+    This softens load and density, so it reads the STRAIN scale. It used to
+    short-circuit on a bare ``weight_cut_pct >= 5.0``, which was a third
+    severity system: days-out blind, it treated 5% at D-40 exactly like 5% on
+    fight day and contradicted the canonical score both scales derive from.
+
+    A low-fatigue, non-strained active cut only counts as high-pressure inside
+    the final two weeks (<=14). A strain-escalated cut and moderate+ fatigue stay
+    high-pressure at any distance via the clauses above.
     """
     if not flags.get("weight_cut_risk", False):
         return False
-    if float(flags.get("weight_cut_pct", 0.0) or 0.0) >= 5.0:
+    try:
+        cut_pct = float(flags.get("weight_cut_pct", 0.0) or 0.0)
+    except (TypeError, ValueError):
+        cut_pct = 0.0
+    if cut_warnings_escalate(
+        cut_health_bucket(
+            compute_cut_severity_score(cut_pct, flags.get("days_until_fight"))
+        )
+    ):
         return True
     fatigue = str(flags.get("fatigue", "")).strip().lower()
     days_until_fight = flags.get("days_until_fight")

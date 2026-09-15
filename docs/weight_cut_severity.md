@@ -61,6 +61,32 @@ dehydration.
 `weight_cut.cut_training_compression_points()` is the **only** place a cut
 subtracts weekly capacity. No other module may charge the same cut again.
 
+That promise is honoured exactly at the allocator. The cut's charge is **added
+to** the generic readiness floor rather than blended into it, because
+`_compression_floor_value` is deliberately lossy (1 and 2 points both mean one
+slot) — routing the cut through that curve silently halved what a critical or
+extreme cut was supposed to remove. `_readiness_compression_floor()` combines
+them and caps the total at `MAX_READINESS_COMPRESSION_FLOOR` (3) so no
+combination of signals can empty a low-frequency week; the allocator's
+`min_non_spar_active` clamp is the second guard.
+
+## No third severity system
+
+Every consumer reads one of the two scales. Raw `weight_cut_pct >= 5.0` rules
+are gone from `athlete_model`, `athlete_dose_state`, the late-fight payload,
+`is_high_pressure_weight_cut()` (now strain-escalation, so a 5% cut at D-40 is
+routine while the same cut at D-6 still flags) and `api/nutrition_workspace.py`
+(now the canonical `aggressive_weight_cut` readiness flag).
+
+## Compound interactions are not cut penalties
+
+The boxing crowded-week override fires on `high_fatigue + active cut`. This is
+an intentional **compound** rule: neither half fires it alone, and it changes
+week policy without charging the cut for capacity — a 4% cut there is
+capacity-low, so its slot charge stays zero while the override fires. Keyed on
+whether a cut is *declared*, never on the severity bucket, so it can never
+become a second capacity charge.
+
 Goal deferral (abandoning power, footwork, skill refinement rather than reducing
 their dose) requires `cut_justifies_goal_deferral`, i.e. critical or extreme.
 
