@@ -1,0 +1,87 @@
+.command {
+  border-color: var(--border-subtle, rgba(255, 255, 255, 0.1)) !important;
+  background: var(--surface-panel, #111216) !important;
+}
+
+.command::before {
+  display: none;
+}
+
+.planName {
+  overflow-wrap: anywhere;
+}
+
+.command :global(.today-hero-meta) {
+  gap: 0.45em;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+}
+
+.links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.links a:hover {
+  color: var(--text-primary);
+}
+
+.links a:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+.command :global(.today-readiness-strip) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.command :global(.today-readiness-strip dd) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.command :global(.today-readiness-strip a) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+@media (max-width: 720px) {
+  .command :global(.today-hero-grid) {
+    gap: 8px;
+  }
+
+  .links {
+    width: 100%;
+  }
+
+  .command :global(.today-readiness-strip div) {
+    padding: 10px 8px;
+    align-content: start;
+  }
+
+  .command :global(.today-readiness-strip dt) {
+    font-size: 9px;
+    letter-spacing: 0.04em;
+  }
+
+  .command :global(.today-readiness-strip dd) {
+    font-size: 12px;
+  }
+}
+
+:global(html[data-theme="light"]) .command {
+  background: #fff !important;
+  border-color: rgba(20, 20, 25, 0.12) !important;
+}
