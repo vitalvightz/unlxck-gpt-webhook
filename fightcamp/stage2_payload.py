@@ -809,14 +809,172 @@ def _slot_late_window_allowed(
     return late_window_allowed([metadata], offset=offset)
 
 
+class StyleTaperLateTailUsage:
+    """Style Taper primer usage across one athlete's whole finished late tail.
+
+    The late tail is allocated in phase-scoped batches
+    (``late_fight_phase_eligibility`` splits the roles by the Stage 1 phase that
+    owns each D-day), so this state is owned by the caller and handed to every
+    batch. That is what stops the sequence resetting at the SPP -> TAPER
+    boundary, at a week boundary, or when the role key changes from
+    ``neural_primer_day`` to ``alactic_sharpness_day``.
+
+    Only Style Taper primers are recorded. Normal-camp conditioning consumption
+    stays owned by ``consumed_slot_ids`` and is untouched.
+    """
+
+    __slots__ = ("name_uses", "family_uses")
+
+    def __init__(self) -> None:
+        self.name_uses: dict[str, int] = {}
+        self.family_uses: dict[str, int] = {}
+
+    def record(self, option: dict[str, Any]) -> None:
+        if not isinstance(option, dict) or option.get("source") != "style_taper":
+            return
+        name = _style_taper_usage_name(option)
+        if name:
+            self.name_uses[name] = self.name_uses.get(name, 0) + 1
+        family = _style_taper_option_family(option)
+        self.family_uses[family] = self.family_uses.get(family, 0) + 1
+
+
+def _style_taper_usage_name(option: dict[str, Any]) -> str:
+    return str(option.get("name") or "").strip().lower()
+
+
+def _style_taper_option_family(option: dict[str, Any]) -> str:
+    from .style_taper_governance import style_taper_primer_family
+
+    metadata = option.get("selection_metadata")
+    return style_taper_primer_family(metadata if isinstance(metadata, dict) else option)
+
+
+def _style_taper_relevance_key(option: dict[str, Any]) -> tuple[float, float, float, int]:
+    """The existing Style Taper relevance order, unchanged.
+
+    Style specificity, then declared goal/weakness coverage, then the Stage 1
+    score, then bank order as the stable final tie-break.
+    """
+    relevance = option.get("relevance") or {}
+
+    def hits(key: str) -> float:
+        return float(relevance.get(key, 0) or 0)
+
+    return (
+        -hits("style_hits"),
+        -(hits("goal_hits") + hits("weakness_hits")),
+        -float(option.get("score", 0) or 0),
+        # Bank order, with the bank's first entry (order 0) treated as first
+        # rather than as missing metadata.
+        int(option.get("bank_order") if option.get("bank_order") is not None else 10000),
+    )
+
+
+def _style_taper_relevance_band(option: dict[str, Any]) -> tuple[float, int]:
+    """The relevance class inside which primers count as comparably appropriate.
+
+    Two axes, both drawn from the relevance the Stage 1 reservoir already
+    carries: how well the primer matches the athlete's tactical style, and
+    whether it addresses any declared goal or weakness at all. A primer that
+    matches the style less well, or that speaks to none of the athlete's
+    declared targets, is *materially* less relevant and never displaces a
+    repeat. A primer inside the band that overlaps one fewer goal tag is not:
+    tag-overlap counts are a coarse relevance signal, not a dose-response
+    measure, so a one-tag difference is a preference (kept, further down
+    ``_style_taper_relevance_key``) rather than a different class.
+    """
+    relevance = option.get("relevance") or {}
+
+    def hits(key: str) -> float:
+        return float(relevance.get(key, 0) or 0)
+
+    targets = hits("goal_hits") + hits("weakness_hits")
+    return (hits("style_hits"), 1 if targets > 0 else 0)
+
+
+def _rank_style_taper_primer_matches(
+    matches: list[tuple[str, str, dict[str, Any]]],
+    usage: "StyleTaperLateTailUsage",
+) -> list[tuple[str, str, dict[str, Any]]]:
+    """Order eligible Style Taper primers for one late-tail day.
+
+    Every candidate reaching here has already passed the hard gates (sport,
+    style, phase, late window, contact cap, equipment, injury/restriction,
+    mechanical risk, dose and day safety) - this only decides preference among
+    survivors, and can never admit something the gates rejected.
+
+    Relevance leads, exactly as before: the relevance leader defines the band of
+    comparably appropriate primers. Inside that band, and only among primers
+    that cost the athlete no more than the leader on every taper-cost axis, an
+    unused drill is preferred to a repeat, and a less-used primer family to a
+    much-used one. Everything outside the band keeps the existing relevance
+    order behind it, so when the band is exhausted - or holds a single option -
+    the leader is still selected and repetition stays legal.
+
+    Deterministic throughout: the counters are plan state, every tie-break is
+    bank metadata, and no randomness, clock or hash enters the order.
+    """
+    from .style_taper_governance import style_taper_cost_is_not_higher
+
+    ordered = sorted(matches, key=lambda match: _style_taper_relevance_key(_slot_selected_option(match[2])))
+    if len(ordered) < 2:
+        return ordered
+
+    leader = _slot_selected_option(ordered[0][2])
+    leader_band = _style_taper_relevance_band(leader)
+    leader_metadata = leader.get("selection_metadata")
+    leader_metadata = leader_metadata if isinstance(leader_metadata, dict) else {}
+
+    def in_band(option: dict[str, Any]) -> bool:
+        if _style_taper_relevance_band(option) != leader_band:
+            return False
+        metadata = option.get("selection_metadata")
+        # Novelty must not buy a more elaborate taper session: a candidate is
+        # only comparable when it is no more expensive than the leader.
+        return style_taper_cost_is_not_higher(
+            metadata if isinstance(metadata, dict) else {}, leader_metadata
+        )
+
+    def novelty_key(match: tuple[str, str, dict[str, Any]]):
+        option = _slot_selected_option(match[2])
+        # Exact-drill reuse is discouraged more strongly than family reuse
+        # purely by position in this key: an unused drill outranks a used one
+        # whatever their families, and family use only separates drills that
+        # have been used equally often.
+        return (
+            usage.name_uses.get(_style_taper_usage_name(option), 0),
+            usage.family_uses.get(_style_taper_option_family(option), 0),
+            *_style_taper_relevance_key(option),
+        )
+
+    band_positions = {
+        position
+        for position, match in enumerate(ordered)
+        if in_band(_slot_selected_option(match[2]))
+    }
+    if not band_positions:
+        return ordered
+    band = sorted((ordered[position] for position in sorted(band_positions)), key=novelty_key)
+    return band + [
+        match for position, match in enumerate(ordered) if position not in band_positions
+    ]
+
+
 def _build_late_fight_allowed_exercises_by_day(
     *,
     spec: dict[str, Any],
     candidate_pools: dict[str, dict],
+    style_taper_usage: "StyleTaperLateTailUsage | None" = None,
 ) -> tuple[dict[str, list[str]], dict[str, list[dict[str, Any]]]]:
     allowed_by_day: dict[str, list[str]] = {}
     assignments_by_day: dict[str, list[dict[str, Any]]] = {}
     consumed_slot_ids: set[str] = set()
+    # Style Taper primers stay deliberately exempt from consumed_slot_ids (a
+    # single surviving safe option must still be able to fill a later day), so
+    # the sequence is remembered here instead of banning reuse. Passed in by the
+    # phase-scoped caller when one plan is allocated in several batches.
+    style_taper_usage = style_taper_usage if style_taper_usage is not None else StyleTaperLateTailUsage()
 
     for role in _scheduled_late_fight_roles(spec):
         day_label = str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "").strip()
@@ -882,13 +1040,12 @@ def _build_late_fight_allowed_exercises_by_day(
             if selected_matches:
                 role["support_only_fill"] = True
                 role["meaningful_stress_fulfilled"] = False
-            selected_matches = sorted(selected_matches, key=lambda match: (
-                -float((_slot_selected_option(match[2]).get("relevance") or {}).get("style_hits", 0)),
-                -float((_slot_selected_option(match[2]).get("relevance") or {}).get("goal_hits", 0))
-                -float((_slot_selected_option(match[2]).get("relevance") or {}).get("weakness_hits", 0)),
-                -float(_slot_selected_option(match[2]).get("score", 0)),
-                _slot_selected_option(match[2]).get("bank_order") or 10000,
-            ))[:1]
+            # Relevance still leads; among comparably appropriate, no-more-
+            # expensive primers an unused drill is preferred to repeating the
+            # one this tail already used.
+            selected_matches = _rank_style_taper_primer_matches(
+                selected_matches, style_taper_usage
+            )[:1]
         if not selected_matches:
             selected_matches = fallback_matches[:1]
         for phase, slot_group, slot in selected_matches:
@@ -900,6 +1057,10 @@ def _build_late_fight_allowed_exercises_by_day(
                 consumed_slot_ids.add(slot_id)
             allowed_by_day[day_label].append(name)
             option = _slot_selected_option(slot)
+            # Record the exposure whichever path selected it, so a primer placed
+            # by an explicit day label or by the generic fallback still counts as
+            # used when the next late-tail day is allocated.
+            style_taper_usage.record(option)
             assignment = {
                 "name": name,
                 "role_key": role.get("role_key"),

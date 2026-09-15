@@ -123,11 +123,16 @@ def install() -> None:
         *,
         spec: dict[str, Any],
         candidate_pools: dict[str, dict],
+        style_taper_usage: Any = None,
     ):
         roles = spec.get("visible_session_sequence") or spec.get("session_sequence") or []
         roles = [role for role in roles if isinstance(role, dict)]
         if not roles:
-            return original_allocate(spec=spec, candidate_pools=candidate_pools)
+            return original_allocate(
+                spec=spec,
+                candidate_pools=candidate_pools,
+                style_taper_usage=style_taper_usage,
+            )
 
         athlete_model = planner_athlete_model_context.get()
         if athlete_model is None and isinstance(spec.get("athlete_model"), dict):
@@ -150,6 +155,12 @@ def install() -> None:
 
         allowed_by_day: dict[str, list[str]] = {}
         assignments_by_day: dict[str, list[dict[str, Any]]] = {}
+        # One Style Taper sequence per plan, not per phase batch. The grouping
+        # below is a phase-eligibility concern; the athlete still experiences a
+        # single D-13 -> D-1 tail, so what a SPP day already used must stay
+        # visible when the TAPER days are allocated.
+        if style_taper_usage is None:
+            style_taper_usage = payload.StyleTaperLateTailUsage()
         for group_key, group_roles in grouped:
             group_spec = {
                 **spec,
@@ -160,6 +171,7 @@ def install() -> None:
             group_allowed, group_assignments = original_allocate(
                 spec=group_spec,
                 candidate_pools=scoped_pools,
+                style_taper_usage=style_taper_usage,
             )
             for day, names in group_allowed.items():
                 bucket = allowed_by_day.setdefault(day, [])
