@@ -112,6 +112,7 @@ async def run_generation_job(
     t_start = time.perf_counter()
     stop_event = asyncio.Event()
     heartbeat_task: asyncio.Task[None] | None = None
+    progress_flush: Callable[[], None] | None = None
     athlete_id = "unknown"
     progress_callback: ProgressCallback | None = None
     stage1_timed_out = threading.Event()
@@ -247,7 +248,7 @@ async def run_generation_job(
                 milestone_code = str(milestone.get("code") or "").strip()
                 if milestone_code:
                     seen_milestone_codes.add(milestone_code)
-        _, progress_callback = build_progress_recorder(
+        _, progress_callback, progress_flush = build_progress_recorder(
             job_id=job_id,
             store=store,
             initial_milestones=initial_milestones,
@@ -803,6 +804,11 @@ async def run_generation_job(
         await _fail_claimed_job("Plan generation failed unexpectedly. Check server logs with the request ID.")
     finally:
         stop_event.set()
+        if progress_flush is not None:
+            # Writes are throttled, so the closing milestones of the run are
+            # usually still pending here. Never let the job end without them.
+            with suppress(Exception):
+                await asyncio.to_thread(progress_flush)
         if heartbeat_task is not None:
             heartbeat_task.cancel()
             with suppress(asyncio.CancelledError):

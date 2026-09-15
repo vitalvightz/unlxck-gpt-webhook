@@ -23,7 +23,10 @@ from .generation.triage import (
     should_skip_stage2 as should_skip_stage2,
 )
 from .generation.milestones import (
+    _DEFAULT_PERSIST_MIN_INTERVAL_SECONDS as _DEFAULT_PERSIST_MIN_INTERVAL_SECONDS,
+    _MAX_PERSIST_MIN_INTERVAL_SECONDS as _MAX_PERSIST_MIN_INTERVAL_SECONDS,
     _MAX_PERSISTED_MILESTONES as _MAX_PERSISTED_MILESTONES,
+    _persist_min_interval_seconds as _persist_min_interval_seconds,
     build_progress_recorder as build_progress_recorder,
 )
 from .generation.heartbeat import is_stale_job as is_stale_job
