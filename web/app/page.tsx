@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations, useTranslations as useAppTranslations } from "next-intl";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
+import { translateUiText } from "@/i18n/ui-text";
 import { useAppSession } from "@/components/auth-provider";
 import { CampProgressBar } from "@/components/camp-progress-bar";
 import { EmptyState } from "@/components/empty-state";
@@ -437,7 +438,7 @@ export default function HomePage() {
         <section className="panel loading-card">
           <p className="kicker">{appText("text_d4b1ea5708dd")}</p>
           <h1>{appText("text_3fab2b4de3cd")}</h1>
-          <p className="muted">{commandError}</p>
+          <p className="muted">{translateUiText(appText, commandError)}</p>
           <div className="hero-actions">
             <button type="button" className="cta" onClick={() => window.location.reload()}>
               {appText("text_942087cc2d41")}</button>
@@ -551,7 +552,7 @@ export default function HomePage() {
           </div>
           {commandError ? (
             <div className="error-banner" role="alert">
-              <span>{commandError}</span>
+              <span>{translateUiText(appText, commandError)}</span>
               <button
                 type="button"
                 className="error-banner-retry"

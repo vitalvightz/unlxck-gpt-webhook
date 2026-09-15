@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslations as useAppTranslations } from "next-intl";
+import { translateUiText } from "@/i18n/ui-text";
 
 export type ToastTone = "info" | "success" | "error";
 
@@ -76,7 +77,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((toast) => (
           <div key={toast.id} className={`toast toast-${toast.tone ?? "info"}`} role="status">
             <span className="toast-dot" aria-hidden="true" />
-            <span className="toast-message">{toast.message}</span>
+            <span className="toast-message">{translateUiText(appText, toast.message)}</span>
             {toast.action ? (
               <button
                 type="button"
@@ -86,7 +87,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   dismissToast(toast.id);
                 }}
               >
-                {toast.action.label}
+                {translateUiText(appText, toast.action.label)}
               </button>
             ) : null}
             <button

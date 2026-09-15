@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
+import { translateUiText } from "@/i18n/ui-text";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
@@ -440,9 +441,9 @@ export default function AdminPage() {
         resolution_notes: "reviewed from admin dashboard",
       });
       setAttentionReviews((reviews) => reviews.filter((review) => review.id !== reviewId));
-      setMessage("Review resolved.");
+      setMessage(appText("text_70d055938163"));
     } catch (resolveError) {
-      setError(resolveError instanceof Error ? resolveError.message : "Failed to resolve review.");
+      setError(resolveError instanceof Error ? resolveError.message : appText("text_e0e901ce8c4c"));
     } finally {
       setResolvingReviewId(null);
     }
@@ -460,7 +461,7 @@ export default function AdminPage() {
       );
       setMessage(`${approved.full_name || approved.email} approved.`);
     } catch (approveError) {
-      setError(approveError instanceof Error ? approveError.message : "Failed to approve account.");
+      setError(approveError instanceof Error ? approveError.message : appText("text_69baa63b29c2"));
     } finally {
       setApprovingAthleteId(null);
     }
@@ -476,13 +477,13 @@ export default function AdminPage() {
       setMessage(
         result.queued > 0
           ? `Queued ${result.queued} plan${result.queued === 1 ? "" : "s"} for structured-card backfill. Cards appear as each conversion finishes.`
-          : "No plans need a structured-card backfill — every displayable plan already has one.",
+          : appText("text_736a5b75c981"),
       );
     } catch (backfillError) {
       setError(
         backfillError instanceof Error
           ? backfillError.message
-          : "Failed to queue the structured-card backfill.",
+          : appText("text_600478032f39"),
       );
     } finally {
       setBackfillPending(false);
@@ -500,10 +501,10 @@ export default function AdminPage() {
         jobId,
         { reason: "admin reviewed and approved from dashboard" },
       );
-      setMessage("Resume queued. The triage item will leave the queue after refresh.");
+      setMessage(appText("text_14ea326cd070"));
       setReloadKey((value) => value + 1);
     } catch (resumeError) {
-      setError(resumeError instanceof Error ? resumeError.message : "Failed to approve and resume generation.");
+      setError(resumeError instanceof Error ? resumeError.message : appText("text_1a48b6507271"));
     } finally {
       setResumingJobId(null);
     }
@@ -521,10 +522,10 @@ export default function AdminPage() {
     try {
       await cancelAdminGenerationJob(session.access_token, job.job_id);
       setActiveJobs((jobs) => jobs.filter((item) => item.job_id !== job.job_id));
-      setMessage("Generation cancelled. You can archive or delete the related plan now.");
+      setMessage(appText("text_1df25a56d42c"));
       setReloadKey((value) => value + 1);
     } catch (cancelError) {
-      setError(cancelError instanceof Error ? cancelError.message : "Failed to cancel generation.");
+      setError(cancelError instanceof Error ? cancelError.message : appText("text_4a3a1ebff6db"));
     } finally {
       setCancellingJobId(null);
     }
@@ -694,7 +695,7 @@ export default function AdminPage() {
 
         {directoryDisplayError ? (
           <div className="error-banner" role="alert">
-            <span>{directoryDisplayError}</span>
+            <span>{translateUiText(appText, directoryDisplayError)}</span>
             <button
               type="button"
               className="ghost-button"

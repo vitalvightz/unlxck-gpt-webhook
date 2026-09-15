@@ -96,6 +96,7 @@ import type {
   TodaySessionCompletionRecord,
 } from "@/lib/types";
 import { useTranslations as useAppTranslations } from "next-intl";
+import { translateUiText } from "@/i18n/ui-text";
 
 /** Live logging info CampDayCard resolves per session and hands to SessionCard:
  * the display status (tone + label), the stored row (for RPE/reason lines) and
@@ -389,7 +390,7 @@ export function BlockCard({
   return (
     <div className="sp-block">
       <div className="sp-block-head">
-        <span className="sp-block-title">{title}</span>
+        <span className="sp-block-title">{translateUiText(appText, title)}</span>
         {tagLabel ? (
           <span className="sp-tag">
             {tagLabel}
@@ -504,7 +505,7 @@ function RehabSummary({ blocks }: { blocks: StructuredBlock[] }) {
           const metric = blockSummaryMetric(block);
           return (
             <li key={cleanText(block.block_id) || `${title}-${index}`}>
-              <span className="sp-rehab-title">{title}</span>
+              <span className="sp-rehab-title">{translateUiText(appText, title)}</span>
               {metric ? <span className="sp-rehab-metric">{metric}</span> : null}
             </li>
           );
@@ -1171,6 +1172,7 @@ export function CampDayCard({
   /** Opens the retro-log form for a past, still-loggable session. */
   onLogSession?: (day: StructuredDay, session: StructuredSession, sessionId: string) => void;
 }) {
+  const appText = useAppTranslations("AppText");
   const [open, setOpen] = useState<boolean>(Boolean(defaultOpen));
   const userToggledOpen = useRef(false);
 
@@ -1240,7 +1242,7 @@ export function CampDayCard({
               {countdown}
             </span>
           ) : null}
-          <span className="sp-week-title cm-day-title">{timelineLabel}</span>
+          <span className="sp-week-title cm-day-title">{translateUiText(appText, timelineLabel)}</span>
           {isCurrent ? <span className="cm-day-now">{currentLabel}</span> : null}
         </span>
 

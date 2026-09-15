@@ -31,6 +31,7 @@ import type {
   TodaySessionCompletionRecord,
 } from "@/lib/types";
 import { useTranslations as useAppTranslations } from "next-intl";
+import { translateUiText } from "@/i18n/ui-text";
 
 type HistoryTab = "sessions" | "checkins" | "injuries";
 
@@ -290,7 +291,7 @@ export function HistoryScreen() {
 
       {active.error ? (
         <div className="error-banner" role="alert">
-          {active.error}
+          {translateUiText(appText, active.error)}
         </div>
       ) : active.rows === null ? (
         <ListSkeleton />

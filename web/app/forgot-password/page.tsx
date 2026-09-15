@@ -74,7 +74,7 @@ export default function ForgotPasswordPage() {
         return;
       }
 
-      setMessage("If an account exists for that email, you'll receive a password reset link shortly.");
+      setMessage(appText("text_59ded8050030"));
     });
   }
 

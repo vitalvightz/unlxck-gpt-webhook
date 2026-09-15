@@ -6,6 +6,7 @@ import { getAdminFeedbackScreenshot, listAdminFeedback } from "@/lib/api";
 import { formatAppDateTime } from "@/lib/date-format";
 import { formatPlanLabel } from "@/lib/plan-labels";
 import type { AdminFeedbackRecord } from "@/lib/types";
+import { translateUiText } from "@/i18n/ui-text";
 import { useTranslations as useAppTranslations } from "next-intl";
 
 
@@ -340,13 +341,13 @@ function FeedbackItem({
       </div>
 
       <p className="admin-feedback-meta-line">
-        <span>{item.camp_phase || "Phase not set"}</span>
+        <span>{item.camp_phase || appText("text_118a6a98418d")}</span>
         <span aria-hidden="true">{appText("text_a137f17a19a0")}</span>
         <time dateTime={item.created_at}>{formatCompactDateTime(item.created_at)}</time>
       </p>
 
       <p className={`admin-feedback-comment${item.comment ? "" : " admin-feedback-comment-empty"}`}>
-        {item.comment || "No written comment"}
+        {item.comment || appText("text_a08cd8a38470")}
       </p>
 
       {sessionAnswers.length ? (
@@ -495,7 +496,7 @@ function AdminFeedbackLoader({ token, reloadKey }: { token: string; reloadKey: n
       {loading ? <p className="muted">{appText("text_94ec56d35dc6")}</p> : null}
       {!loading && error ? (
         <div className="support-panel">
-          <p className="error-text">{error}</p>
+          <p className="error-text">{translateUiText(appText, error)}</p>
           <button type="button" className="ghost-button" onClick={retryFeedback}>
             {appText("text_eefae8a75e3f")}</button>
         </div>

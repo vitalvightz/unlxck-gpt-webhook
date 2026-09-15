@@ -294,14 +294,14 @@ function PlanCard({
     event.preventDefault();
 
     if (!accessToken) {
-      setError("Session expired. Sign in again.");
+      setError(appText("text_95f5b7d0dc11"));
       return;
     }
 
     const currentName = plan.plan_name?.trim() || "";
     const normalizedName = renameDraft.trim();
     if (!normalizedName) {
-      setError("Plan name cannot be empty.");
+      setError(appText("text_bee32f4af8c5"));
       return;
     }
     if (normalizedName === currentName) {
@@ -316,12 +316,12 @@ function PlanCard({
     try {
       const updatedPlan = await renamePlan(accessToken, plan.plan_id, normalizedName);
       onPlanRenamed(updatedPlan);
-      showToast("Plan renamed.", { tone: "success" });
+      showToast(appText("text_3884343b3c7f"), { tone: "success" });
       setIsRenaming(false);
     } catch (renameError) {
       const errorMessage = renameError instanceof Error ? renameError.message : "Unable to rename this plan.";
       if (errorMessage.includes("Unable to reach the server") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
-        setError("Connection issue. Try again in a minute.");
+        setError(appText("text_c0ca548a25f7"));
       } else {
         setError(errorMessage);
       }
@@ -346,7 +346,7 @@ function PlanCard({
 
   async function handleDeleteConfirm() {
     if (!accessToken) {
-      setError("Session expired. Sign in again.");
+      setError(appText("text_95f5b7d0dc11"));
       return;
     }
 
@@ -361,7 +361,7 @@ function PlanCard({
     } catch (deleteError) {
       const errorMessage = deleteError instanceof Error ? deleteError.message : "Unable to delete this plan.";
       if (errorMessage.includes("Unable to reach the server") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
-        setError("Connection issue. Try again in a minute.");
+        setError(appText("text_c0ca548a25f7"));
       } else {
         setError(errorMessage);
       }
@@ -413,7 +413,7 @@ function PlanCard({
           </div>
           <p id={`delete-plan-body-${plan.plan_id}`} className="muted">
             {appText("text_8affd0d4d884")}</p>
-          {error ? <div className="error-banner">{error}</div> : null}
+          {error ? <div className="error-banner">{translateUiText(appText, error)}</div> : null}
           <div className="plan-dialog-actions">
             <button type="button" className="ghost-button" onClick={handleDeleteDismiss} disabled={pendingAction === "delete"}>
               {appText("text_19766ed6ccb2")}</button>
@@ -480,7 +480,7 @@ function PlanCard({
         {message || (error && !isDeleteConfirmOpen) ? (
           <div className="plan-history-feedback">
             {message ? <div className="success-banner">{message}</div> : null}
-            {error ? <div className="error-banner">{error}</div> : null}
+            {error ? <div className="error-banner">{translateUiText(appText, error)}</div> : null}
           </div>
         ) : null}
       </article>
@@ -686,14 +686,14 @@ function LatestPlanCard({
       return;
     }
     if (!accessToken) {
-      setError("Session expired. Sign in again.");
+      setError(appText("text_95f5b7d0dc11"));
       return;
     }
 
     const currentName = plan.plan_name?.trim() || "";
     const normalizedName = renameDraft.trim();
     if (!normalizedName) {
-      setError("Plan name cannot be empty.");
+      setError(appText("text_bee32f4af8c5"));
       return;
     }
     if (normalizedName === currentName) {
@@ -707,12 +707,12 @@ function LatestPlanCard({
     try {
       const updatedPlan = await renamePlan(accessToken, plan.plan_id, normalizedName);
       onPlanRenamed(updatedPlan);
-      showToast("Plan renamed.", { tone: "success" });
+      showToast(appText("text_3884343b3c7f"), { tone: "success" });
       setIsRenaming(false);
     } catch (renameError) {
       const errorMessage = renameError instanceof Error ? renameError.message : "Unable to rename this plan.";
       if (errorMessage.includes("Unable to reach the server") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
-        setError("Connection issue. Try again in a minute.");
+        setError(appText("text_c0ca548a25f7"));
       } else {
         setError(errorMessage);
       }
@@ -738,7 +738,7 @@ function LatestPlanCard({
       return;
     }
     if (!accessToken) {
-      setError("Session expired. Sign in again.");
+      setError(appText("text_95f5b7d0dc11"));
       return;
     }
 
@@ -752,7 +752,7 @@ function LatestPlanCard({
     } catch (deleteError) {
       const errorMessage = deleteError instanceof Error ? deleteError.message : "Unable to delete this plan.";
       if (errorMessage.includes("Unable to reach the server") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
-        setError("Connection issue. Try again in a minute.");
+        setError(appText("text_c0ca548a25f7"));
       } else {
         setError(errorMessage);
       }
@@ -804,7 +804,7 @@ function LatestPlanCard({
           </div>
           <p id={`delete-latest-plan-body-${plan.plan_id}`} className="muted">
             {appText("text_8affd0d4d884")}</p>
-          {error ? <div className="error-banner">{error}</div> : null}
+          {error ? <div className="error-banner">{translateUiText(appText, error)}</div> : null}
           <div className="plan-dialog-actions">
             <button type="button" className="ghost-button" onClick={handleDeleteDismiss} disabled={pendingAction === "delete"}>
               {appText("text_19766ed6ccb2")}</button>
@@ -886,7 +886,7 @@ function LatestPlanCard({
           )}
         </div>
 
-        {error && !isDeleteConfirmOpen ? <div className="error-banner">{error}</div> : null}
+        {error && !isDeleteConfirmOpen ? <div className="error-banner">{translateUiText(appText, error)}</div> : null}
       </article>
       {deleteConfirmationModal}
     </>
@@ -1069,7 +1069,7 @@ export default function PlansPage() {
       const active = await setActivePlan(token, plan.plan_id, { overlapAction });
       setActivePlanId(active.plan_id);
       setOverlapConflictPlan(null);
-      showToast("Active plan updated.", { tone: "success" });
+      showToast(appText("text_77ce0f42e3ee"), { tone: "success" });
       await loadPlans();
       requestXpRefresh();
       router.refresh();
@@ -1098,7 +1098,7 @@ export default function PlansPage() {
 
   function handleStartAfterCurrentPlan() {
     setOverlapConflictPlan(null);
-    showToast("Choose a new start date before generating the next version.", { tone: "success" });
+    showToast(appText("text_4aa20e49e701"), { tone: "success" });
     router.push("/onboarding");
   }
 
@@ -1118,7 +1118,7 @@ export default function PlansPage() {
 
         {error ? (
           <div className="error-banner athlete-motion-slot athlete-motion-status" role="alert">
-            <span>{error}</span>
+            <span>{translateUiText(appText, error)}</span>
             {error.includes("Session expired") ? null : (
               <button
                 type="button"

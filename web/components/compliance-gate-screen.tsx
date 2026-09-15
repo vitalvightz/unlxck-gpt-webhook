@@ -75,7 +75,7 @@ function ComplianceAcceptance() {
       return;
     }
     if (needsTerms && !acceptedTerms) {
-      setError("Accept the Terms of Use to continue.");
+      setError(appText("text_3da06cf8ba86"));
       return;
     }
     setIsSubmitting(true);
@@ -95,7 +95,7 @@ function ComplianceAcceptance() {
       setError(
         submitError instanceof Error
           ? submitError.message
-          : "Your details could not be saved. Try again.",
+          : appText("text_0cfe36117f0f"),
       );
       setIsSubmitting(false);
     }

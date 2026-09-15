@@ -191,7 +191,7 @@ export default function ResetPasswordPage() {
     }
 
     if (!passwordsMatch) {
-      setError("Passwords do not match.");
+      setError(appText("text_6c6e178ad2a8"));
       return;
     }
 
@@ -200,7 +200,7 @@ export default function ResetPasswordPage() {
       try {
         client = getSupabaseBrowserClient();
       } catch {
-        setError("We're having trouble connecting. Please try again in a minute.");
+        setError(appText("text_8f2d27860edb"));
         return;
       }
 
@@ -215,7 +215,7 @@ export default function ResetPasswordPage() {
       // form for the rest of the tab's life.
       clearPasswordRecovery();
       await client.auth.signOut();
-      setMessage("Password updated successfully. Redirecting to log in...");
+      setMessage(appText("text_f8ebe1b839b0"));
       setTimeout(() => router.replace("/login"), 1500);
     });
   }

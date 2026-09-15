@@ -401,26 +401,26 @@ export function TodayInjuryManager({
         showToast(
           severityRaised
             ? `Severity raised to ${updated.severity}. This skin injury needs checking.`
-            : "This skin injury needs checking before training.",
+            : appText("text_4dc5ac17621b"),
           { tone: "info" },
         );
       } else if (status !== "resolved" && updated?.surface_class === "surface_no_contact") {
-        showToast("Injury updated. Keep contact off it until the skin is closed and coverable.", {
+        showToast(appText("text_deaa9605ab68"), {
           tone: "info",
         });
       } else if (
         status !== "resolved" &&
         updated?.surface_class === "surface_local_restriction"
       ) {
-        showToast("Injury updated. Protect it from rubbing or contact.", { tone: "info" });
+        showToast(appText("text_ffd5ecb372b4"), { tone: "info" });
       } else {
-        showToast(status === "resolved" ? "Injury cleared." : "Injury updated.", {
+        showToast(status === "resolved" ? appText("text_bcf78af3540f") : appText("text_5a68494e1003"), {
           tone: "success",
         });
       }
       return true;
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Injury update failed.", { tone: "error" });
+      showToast(error instanceof Error ? error.message : appText("text_3641a6bf960e"), { tone: "error" });
       return false;
     } finally {
       setPendingFlagId(null);
@@ -539,7 +539,7 @@ export function TodayInjuryManager({
       setNewZone("");
       setAddMissing(null);
       setIsAddFormOpen(false);
-      showToast("Injury added.", { tone: "success" });
+      showToast(appText("text_e785a04889ba"), { tone: "success" });
       // A skin injury is routed by what the skin is doing, so ask the five
       // surface questions immediately instead of waiting for a later easing /
       // worse report. A wound that already lands in medical review skips the
@@ -551,7 +551,7 @@ export function TodayInjuryManager({
         openSurfaceFollowUp(created, "initial");
       }
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Could not add injury.", { tone: "error" });
+      showToast(error instanceof Error ? error.message : appText("text_a0d2961aabf1"), { tone: "error" });
     } finally {
       setIsAdding(false);
     }

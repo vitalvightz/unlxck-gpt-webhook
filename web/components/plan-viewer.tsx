@@ -88,6 +88,7 @@ import {
 } from "@/lib/profile-refresh-warning";
 import { hasTriageResumeApproval, shouldShowTriageBlockedState } from "@/lib/triage-view";
 import { useTranslations as useAppTranslations } from "next-intl";
+import { translateUiText } from "@/i18n/ui-text";
 
 
 
@@ -492,7 +493,7 @@ export function EnhancedCardLockInCard({
     } catch (error) {
       setPushState("unsubscribed");
       setPushError(
-        error instanceof Error ? error.message : "Unable to enable notifications right now.",
+        error instanceof Error ? error.message : appText("text_be30a0d2a7d7"),
       );
     }
   }
@@ -1765,7 +1766,7 @@ export function PlanViewer({
       }
 
       onPlanUpdated?.(refreshedPlan);
-      setResumeMessage("Approved and resumed successfully.");
+      setResumeMessage(appText("text_244d3ebf670a"));
       router.refresh();
     },
   });
@@ -1970,11 +1971,11 @@ export function PlanViewer({
 
   async function handleManualStage2Submit() {
     if (!accessToken) {
-      setManualSubmitError("Admin session missing. Please sign in again.");
+      setManualSubmitError(appText("text_760654079e13"));
       return;
     }
     if (!manualPlanText.trim()) {
-      setManualSubmitError("Paste the GPT final plan before submitting.");
+      setManualSubmitError(appText("text_b923d41c76e2"));
       return;
     }
 
@@ -1993,13 +1994,13 @@ export function PlanViewer({
       onPlanUpdated?.(updatedPlan);
       setManualSubmitMessage(
         retryPassed
-          ? "Manual Stage 2 output passed validation and is now published in the app."
-          : "Manual Stage 2 output was saved, but it still needs revision. The retry prompt below is updated.",
+          ? appText("text_f6a4225cf141")
+          : appText("text_086103a2d1c5"),
       );
     } catch (error) {
       setStage2RetryJustCompleted(null);
       setManualSubmitError(
-        error instanceof Error ? error.message : "Unable to submit manual Stage 2 output.",
+        error instanceof Error ? error.message : appText("text_ad1b4a484634"),
       );
     } finally {
       setManualSubmitPending(false);
@@ -2025,11 +2026,11 @@ export function PlanViewer({
 
   async function handleApproveForRelease() {
     if (!accessToken) {
-      setApproveError("Admin session missing. Please sign in again.");
+      setApproveError(appText("text_760654079e13"));
       return;
     }
     if (!canApproveForRelease) {
-      setApproveError("There is no saved draft or Stage 2 final text available to approve.");
+      setApproveError(appText("text_9c607a6752f5"));
       return;
     }
 
@@ -2059,7 +2060,7 @@ export function PlanViewer({
         return;
       }
       setApproveError(
-        error instanceof Error ? error.message : "Unable to approve this plan for athlete view.",
+        error instanceof Error ? error.message : appText("text_2c7230593ba4"),
       );
     } finally {
       setApprovePending(false);
@@ -2068,12 +2069,12 @@ export function PlanViewer({
 
   async function handleRebuildStructuredCard() {
     if (!accessToken) {
-      setStructuredCardRebuildError("Admin session missing. Please sign in again.");
+      setStructuredCardRebuildError(appText("text_760654079e13"));
       return;
     }
     if (!canRebuildStructuredCard) {
       setStructuredCardRebuildError(
-        "Enhanced cards can only be rebuilt after a failed or not-attempted conversion.",
+        appText("text_dbb32fe33855"),
       );
       return;
     }
@@ -2099,13 +2100,13 @@ export function PlanViewer({
 
       setStructuredCardRebuildMessage(
         result.queued
-          ? "Enhanced card rebuild queued. Status updates automatically."
-          : "No new rebuild was queued; current server status refreshed.",
+          ? appText("text_28064367f7ce")
+          : appText("text_233a5707c3a8"),
       );
       router.refresh();
     } catch (error) {
       setStructuredCardRebuildError(
-        error instanceof Error ? error.message : "Unable to rebuild the enhanced card.",
+        error instanceof Error ? error.message : appText("text_3d3d064d7d08"),
       );
     } finally {
       setStructuredCardRebuildPending(false);
@@ -2114,15 +2115,15 @@ export function PlanViewer({
 
   async function handleApproveAndResumeGeneration() {
     if (!accessToken) {
-      setResumeError("Admin session missing. Please sign in again.");
+      setResumeError(appText("text_760654079e13"));
       return;
     }
     if (!canRetryResumeGeneration) {
-      setResumeError("This plan cannot be resumed from its current triage state.");
+      setResumeError(appText("text_ebabf2569c42"));
       return;
     }
     if (!resumeReason.trim()) {
-      setResumeError("Please enter a short reason before resuming generation.");
+      setResumeError(appText("text_6e8d69aa4da6"));
       return;
     }
     setResumePending(true);
@@ -2133,7 +2134,7 @@ export function PlanViewer({
       await generationController.startGeneration();
       setResumeReason("");
     } catch (error) {
-      setResumeError(error instanceof Error ? error.message : "Unable to approve and resume generation.");
+      setResumeError(error instanceof Error ? error.message : appText("text_9cb185191de3"));
     } finally {
       setResumePending(false);
     }
@@ -2159,7 +2160,7 @@ export function PlanViewer({
 
   async function handleRejectApproval() {
     if (!accessToken) {
-      setRejectError("Admin session missing. Please sign in again.");
+      setRejectError(appText("text_760654079e13"));
       return;
     }
 
@@ -2172,9 +2173,9 @@ export function PlanViewer({
     try {
       const updatedPlan = await rejectApprovedPlan(accessToken, plan.plan_id);
       onPlanUpdated?.(updatedPlan);
-      setRejectMessage(hasPublishedPlan ? "Plan rejected and moved back to review." : "Plan rejected.");
+      setRejectMessage(hasPublishedPlan ? appText("text_02f3dc217a44") : appText("text_d7a2bb605602"));
     } catch (error) {
-      setRejectError(error instanceof Error ? error.message : "Unable to reject this plan.");
+      setRejectError(error instanceof Error ? error.message : appText("text_bc6598e58abb"));
     } finally {
       setRejectPending(false);
     }
@@ -2182,11 +2183,11 @@ export function PlanViewer({
 
   async function handleSetActive(overlapAction?: ActivePlanOverlapAction) {
     if (!accessToken) {
-      setSetActiveError("Session expired. Sign in again.");
+      setSetActiveError(appText("text_95f5b7d0dc11"));
       return;
     }
     if (!canSetActivePlan(plan.activation_state)) {
-      setSetActiveError("This plan cannot be set active from its current state.");
+      setSetActiveError(appText("text_685036256dfb"));
       return;
     }
     setSetActivePending(true);
@@ -2208,7 +2209,7 @@ export function PlanViewer({
         setShowActiveConflict(true);
         return;
       }
-      setSetActiveError(error instanceof Error ? error.message : "Unable to set this plan active.");
+      setSetActiveError(error instanceof Error ? error.message : appText("text_92fa6b965fc7"));
     } finally {
       setSetActivePending(false);
     }
@@ -2221,7 +2222,7 @@ export function PlanViewer({
 
   async function handleArchivePlan() {
     if (!accessToken) {
-      setArchiveError("Admin session missing. Please sign in again.");
+      setArchiveError(appText("text_760654079e13"));
       return;
     }
 
@@ -2237,9 +2238,9 @@ export function PlanViewer({
     try {
       const updatedPlan = await adminArchivePlan(accessToken, plan.plan_id);
       onPlanUpdated?.(updatedPlan);
-      setArchiveMessage("Plan archived.");
+      setArchiveMessage(appText("text_f7a5bdc7b420"));
     } catch (error) {
-      setArchiveError(error instanceof Error ? error.message : "Unable to archive this plan.");
+      setArchiveError(error instanceof Error ? error.message : appText("text_0ee45e824d4a"));
     } finally {
       setArchivePending(false);
     }
@@ -2247,7 +2248,7 @@ export function PlanViewer({
 
   async function handleRenamePlan() {
     if (!accessToken) {
-      setPlanActionError("Session expired. Sign in again.");
+      setPlanActionError(appText("text_95f5b7d0dc11"));
       return;
     }
 
@@ -2259,7 +2260,7 @@ export function PlanViewer({
 
     const normalizedName = nextName.trim();
     if (!normalizedName) {
-      setPlanActionError("Plan name cannot be empty.");
+      setPlanActionError(appText("text_bee32f4af8c5"));
       return;
     }
 
@@ -2270,7 +2271,7 @@ export function PlanViewer({
     try {
       const updatedPlan = await renamePlan(accessToken, plan.plan_id, normalizedName);
       onPlanUpdated?.(updatedPlan);
-      setPlanActionMessage("Plan renamed.");
+      setPlanActionMessage(appText("text_3884343b3c7f"));
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unable to rename this plan.";
       if (
@@ -2279,7 +2280,7 @@ export function PlanViewer({
         errorMessage.includes("503") ||
         errorMessage.includes("504")
       ) {
-        setPlanActionError("Connection issue. Try again in a minute.");
+        setPlanActionError(appText("text_c0ca548a25f7"));
       } else {
         setPlanActionError(errorMessage);
       }
@@ -2290,7 +2291,7 @@ export function PlanViewer({
 
   async function handleArchiveOwnPlan() {
     if (!accessToken) {
-      setPlanActionError("Session expired. Sign in again.");
+      setPlanActionError(appText("text_95f5b7d0dc11"));
       return;
     }
 
@@ -2317,7 +2318,7 @@ export function PlanViewer({
         errorMessage.includes("503") ||
         errorMessage.includes("504")
       ) {
-        setPlanActionError("Connection issue. Try again in a minute.");
+        setPlanActionError(appText("text_c0ca548a25f7"));
       } else {
         setPlanActionError(errorMessage);
       }
@@ -2328,7 +2329,7 @@ export function PlanViewer({
 
   async function handlePermanentDelete() {
     if (!accessToken) {
-      setPlanActionError("Session expired. Sign in again.");
+      setPlanActionError(appText("text_95f5b7d0dc11"));
       return;
     }
 
@@ -2346,7 +2347,7 @@ export function PlanViewer({
       }
     } else {
       if (!planName) {
-        setPlanActionError("This plan has no name. Rename it before permanent deletion.");
+        setPlanActionError(appText("text_91696bb6ef6c"));
         return;
       }
 
@@ -2357,7 +2358,7 @@ export function PlanViewer({
         return;
       }
       if (typed.trim() !== planName) {
-        setPlanActionError("Confirmation did not match the plan name. Nothing was deleted.");
+        setPlanActionError(appText("text_bddb3f100d1b"));
         return;
       }
     }
@@ -2380,7 +2381,7 @@ export function PlanViewer({
         errorMessage.includes("503") ||
         errorMessage.includes("504")
       ) {
-        setPlanActionError("Connection issue. Try again in a minute.");
+        setPlanActionError(appText("text_c0ca548a25f7"));
       } else {
         setPlanActionError(errorMessage);
       }
@@ -2616,7 +2617,7 @@ export function PlanViewer({
           ) : null}
         </div>
         {planActionMessage ? <div className="success-banner">{planActionMessage}</div> : null}
-        {planActionError ? <div className="error-banner">{planActionError}</div> : null}
+        {planActionError ? <div className="error-banner">{translateUiText(appText, planActionError)}</div> : null}
         {showActiveConflict ? (
           <div className="support-panel support-panel-alert">
             <div className="form-section-header">

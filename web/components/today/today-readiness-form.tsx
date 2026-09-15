@@ -131,7 +131,7 @@ export function TodayReadinessForm({
       }
       await onRefresh();
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Check-in failed.", { tone: "error" });
+      showToast(error instanceof Error ? error.message : appText("text_ccb8a0b3e511"), { tone: "error" });
     } finally {
       setIsSubmitting(false);
     }

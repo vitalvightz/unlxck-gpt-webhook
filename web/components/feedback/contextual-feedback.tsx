@@ -135,7 +135,7 @@ export function ContextualFeedback({
       setComment(saved.comment);
       setEditing(false);
     } catch (saveError) {
-      setSubmissionError(saveError instanceof Error ? saveError.message : "Feedback could not be sent. Try again.");
+      setSubmissionError(saveError instanceof Error ? saveError.message : appText("text_c9e0504c42fb"));
     } finally {
       submissionInFlightRef.current = false;
       setSubmitting(false);

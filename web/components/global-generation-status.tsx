@@ -572,7 +572,7 @@ export function GlobalGenerationStatus() {
 
                     void retryGenerationJob(session.access_token, latestJob.job_id)
                       .then(() => refreshStatus())
-                      .catch(() => setRetryLatestError("Retry failed. Open Generate and try again."))
+                      .catch(() => setRetryLatestError(appText("text_c01839f91c7a")))
                       .finally(() => setIsRetryingLatest(false));
                   }}
                 >
@@ -790,7 +790,7 @@ export function GlobalGenerationStatus() {
 
                   void cancelGenerationJob(session.access_token, jobId)
                     .then(() => refreshStatus())
-                    .catch(() => setCancelError("Cancel failed. Try again."))
+                    .catch(() => setCancelError(appText("text_490b4a1bc02b")))
                     .finally(() => setIsCancelling(false));
                 }}
               >
@@ -813,7 +813,7 @@ export function GlobalGenerationStatus() {
 
                   void retryGenerationJob(session.access_token, jobId)
                     .then(() => refreshStatus())
-                    .catch(() => setRetryLatestError("Retry failed. Open Generate and try again."))
+                    .catch(() => setRetryLatestError(appText("text_c01839f91c7a")))
                     .finally(() => setIsRetryingLatest(false));
                 }}
               >

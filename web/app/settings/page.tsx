@@ -423,14 +423,14 @@ export default function SettingsPage() {
       replaceMe(next);
       setPrivacyMessage(
         grant
-          ? "Health-data consent recorded. Personalised health features are available again."
-          : "Health-data consent withdrawn. UNLXCK will not use your health information for new personalised guidance.",
+          ? appText("text_6f619f24fd58")
+          : appText("text_1fbd7bd2a506"),
       );
     } catch (consentError) {
       setPrivacyError(
         consentError instanceof Error
           ? consentError.message
-          : "Your consent change could not be saved. Try again.",
+          : appText("text_b5437dcaf114"),
       );
     } finally {
       setIsConsentSaving(false);
@@ -563,10 +563,10 @@ export default function SettingsPage() {
           appearance_mode: nextMode,
         });
         replaceMe(updatedMe);
-        setMessage("Theme updated.");
+        setMessage(appText("text_419ead526b33"));
       } catch (saveError) {
         setAppearanceMode(me?.profile.appearance_mode ?? "dark");
-        setError(saveError instanceof Error ? saveError.message : "Unable to update settings.");
+        setError(saveError instanceof Error ? saveError.message : appText("text_c69714644c00"));
       }
     });
   }
@@ -578,7 +578,7 @@ export default function SettingsPage() {
     if (isAvatarProcessing) {
       // Photo is still compressing; block the save so we don't persist the old
       // avatar under a preview that hasn't been committed yet.
-      setError("Your photo is still processing. Please wait a moment.");
+      setError(appText("text_38ac5df2a3d4"));
       return;
     }
     setMessage(null);
@@ -593,9 +593,9 @@ export default function SettingsPage() {
           avatar_url: isSafeAvatarImageUrl(avatarUrl) ? avatarUrl.trim() : null,
         });
         replaceMe(updatedMe);
-        setMessage("Account settings updated.");
+        setMessage(appText("text_b555f0703dcf"));
       } catch (saveError) {
-        setError(saveError instanceof Error ? saveError.message : "Unable to update settings.");
+        setError(saveError instanceof Error ? saveError.message : appText("text_c69714644c00"));
       }
     });
   }
@@ -609,7 +609,7 @@ export default function SettingsPage() {
 
     const next = usernameDraft.trim().toLowerCase();
     if (next === currentUsername.toLowerCase()) {
-      setUsernameError("That is already your username.");
+      setUsernameError(appText("text_b33a96a452ac"));
       return;
     }
     const validationError = validateUsernameClient(next);
@@ -630,12 +630,12 @@ export default function SettingsPage() {
       try {
         const updated = await changeUsername(session.access_token, { username: next });
         replaceMe(updated);
-        setUsernameMessage(currentUsername ? "Username updated." : "Username set.");
+        setUsernameMessage(currentUsername ? appText("text_7311374cecaf") : appText("text_b8b45b836f4e"));
       } catch (err) {
         if (err instanceof ApiError) {
           setUsernameError(err.message);
         } else {
-          setUsernameError(err instanceof Error ? err.message : "Unable to update username.");
+          setUsernameError(err instanceof Error ? err.message : appText("text_fb820340c6aa"));
         }
       }
     });
@@ -647,15 +647,15 @@ export default function SettingsPage() {
     setPasswordMessage(null);
 
     if (!currentPassword) {
-      setPasswordError("Enter your current password.");
+      setPasswordError(appText("text_cf4d205e451d"));
       return;
     }
     if (!newPassword || newPassword.length < 8) {
-      setPasswordError("New password must be at least 8 characters.");
+      setPasswordError(appText("text_46d36027482b"));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordError("New password and confirmation do not match.");
+      setPasswordError(appText("text_31484c7c9a2d"));
       return;
     }
     if (!passwordStrength.isAcceptable) {
@@ -663,12 +663,12 @@ export default function SettingsPage() {
       return;
     }
     if (newPassword === currentPassword) {
-      setPasswordError("New password must be different from your current password.");
+      setPasswordError(appText("text_07f576b445b0"));
       return;
     }
     const email = me?.profile.email;
     if (!email) {
-      setPasswordError("Your account email is unavailable. Reload and try again.");
+      setPasswordError(appText("text_e8ff66afc225"));
       return;
     }
 
@@ -677,7 +677,7 @@ export default function SettingsPage() {
       try {
         client = getSupabaseBrowserClient();
       } catch (clientError) {
-        setPasswordError(clientError instanceof Error ? clientError.message : "Auth client unavailable.");
+        setPasswordError(clientError instanceof Error ? clientError.message : appText("text_d6d9b274183f"));
         return;
       }
 
@@ -686,7 +686,7 @@ export default function SettingsPage() {
         password: currentPassword,
       });
       if (reauthError) {
-        setPasswordError("Current password is incorrect.");
+        setPasswordError(appText("text_7bd90cab5f6d"));
         return;
       }
 
@@ -699,7 +699,7 @@ export default function SettingsPage() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setPasswordMessage("Password updated.");
+      setPasswordMessage(appText("text_df01ff0dd6ed"));
     });
   }
 
@@ -707,7 +707,7 @@ export default function SettingsPage() {
     const file = event.target.files?.[0];
     if (!file) return;
     if (file.size > MAX_AVATAR_FILE_BYTES) {
-      setError("Image must be smaller than 5 MB. Please choose a smaller file.");
+      setError(appText("text_25c70bb7c774"));
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
@@ -724,7 +724,7 @@ export default function SettingsPage() {
       })
       .catch(() => {
         if (requestId !== avatarRequestRef.current) return;
-        setError("Couldn't process that image. Please try a different photo.");
+        setError(appText("text_64d3fa44c64a"));
       })
       .finally(() => {
         // Only the latest request clears the processing flag.
@@ -887,7 +887,7 @@ export default function SettingsPage() {
           </div>
           <div className="field">
             <label>{appText("text_969ccbd3cf63")}</label>
-            <div className="readonly-field">{me?.profile.email || "Unavailable"}</div>
+            <div className="readonly-field">{me?.profile.email || appText("text_ca1844969742")}</div>
           </div>
         </div>
 

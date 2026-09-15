@@ -275,7 +275,7 @@ function GenerationDiagnosticCard({
           <h3 className="review-card-title">{statusLabel(job.status)}</h3>
         </div>
         <div className="admin-diagnostic-badges">
-          <span className="badge">{job.source || "unknown source"}</span>
+          <span className="badge">{job.source || appText("text_00a6b7e5393f")}</span>
           {job.stage2_status ? <span className="badge">{statusLabel(job.stage2_status)}</span> : null}
           {job.is_stale ? <span className="badge admin-diagnostic-badge-warning">{appText("text_40c9e59c5e15")}</span> : null}
         </div>
@@ -553,9 +553,9 @@ export default function AdminAthletePage() {
             : item,
         ),
       );
-      setMessage("Generation cancelled. Archived plan cleanup is now available.");
+      setMessage(appText("text_e7fc3acf2f85"));
     } catch (cancelError) {
-      setError(cancelError instanceof Error ? cancelError.message : "Unable to cancel generation.");
+      setError(cancelError instanceof Error ? cancelError.message : appText("text_493fec8cc24e"));
     } finally {
       setCancellingJobId(null);
     }
@@ -574,10 +574,10 @@ export default function AdminAthletePage() {
         jobId,
         { reason: "admin reviewed and approved" },
       );
-      setMessage("Resume queued. The new generation will create a real plan if Stage 2 succeeds.");
+      setMessage(appText("text_65b39132bf5b"));
       setReloadKey((value) => value + 1);
     } catch (error) {
-      setResumeError(error instanceof Error ? error.message : "Failed to start resume generation.");
+      setResumeError(error instanceof Error ? error.message : appText("text_41c00f0d78dd"));
     } finally {
       setResumingJobId(null);
     }
@@ -597,9 +597,9 @@ export default function AdminAthletePage() {
         toNutritionUpdateRequest(nutrition),
       );
       setNutrition(updated);
-      setMessage("Coach controls saved.");
+      setMessage(appText("text_06c57dc0f7d0"));
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Unable to save coach controls.");
+      setError(saveError instanceof Error ? saveError.message : appText("text_eba59f33ef6a"));
     } finally {
       setIsSavingControls(false);
     }
@@ -614,12 +614,12 @@ export default function AdminAthletePage() {
         weak_areas: intakeDraft.weak_areas,
       });
       setAthlete(updated);
-      setMessage("Intake updated.");
+      setMessage(appText("text_f5cbe9a573f5"));
       if (andGenerate) {
         await controller.startGeneration();
       }
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Unable to save intake updates.");
+      setError(saveError instanceof Error ? saveError.message : appText("text_0e480d624e61"));
     } finally {
       setIsSavingIntake(false);
     }
@@ -630,7 +630,7 @@ export default function AdminAthletePage() {
       {loadError && !athlete ? (
         <section className="panel loading-card">
           <p className="kicker">{appText("text_a121ff101a02")}</p>
-          <div className="error-banner" role="alert">{loadError}</div>
+          <div className="error-banner" role="alert">{translateUiText(appText, loadError)}</div>
           <div className="plan-summary-actions">
             <Link href="/admin" className="ghost-button">
               {appText("text_d6ac2209460b")}</Link>
@@ -669,7 +669,7 @@ export default function AdminAthletePage() {
           {controller.statusMessage ? <p className="muted">{controller.statusMessage}</p> : null}
           {loadError ? (
             <div className="error-banner" role="alert">
-              <span>{loadError}</span>
+              <span>{translateUiText(appText, loadError)}</span>
               <button
                 type="button"
                 className="ghost-button"

@@ -91,16 +91,59 @@ distinct such strings, including every example named in the audit request:
   `"Email unavailable"`, `"Authenticated user"`, `"Not connected"`, `"Pick a stronger
   password."`, and the nutrition/admin table labels around them
 
-46 of these are now localised in all five catalogs and wired into the components. The
-remainder — roughly 340 distinct strings, mostly per-screen error messages ("Unable to
-load plan.", "Unable to save draft.") and the plan-renderer's own labels, concentrated in
-`components/plan-viewer.tsx`, `components/plan-intake-form.tsx` and
-`components/structured-plan-renderer.tsx` — is not covered here. Closing it means
-extending `scripts/i18n-extract-ui.mjs` to the three missing literal positions and
-running `npm run i18n:sync`, which now sends the glossary to Azure with every batch.
+46 of these were localised in the first repair pass.
 
-`scripts/i18n-glossary-check.mjs` holds the list of English phrases that must never
-appear on a non-English locale, and `npm run test:i18n` fails if one does.
+## The second pass: what the extractor now reaches
+
+A re-scan with a stricter classifier counted **415** distinct user-facing static literals
+still untranslated (higher than the first estimate because it also looks at arguments
+handed to UI sinks). That is now **279**.
+
+`scripts/i18n-ui-text-rules.mjs` holds the shared rules — what counts as copy, which
+callees are UI sinks — and `scripts/i18n-extract-ui.mjs` uses them to reach two further
+positions. Both are *terminal*: the string is shown to a person and nothing reads it back.
+
+```
+setError("Unable to save draft.")        // a UI sink, directly or through a ?: / ||
+<p>{ready ? "Complete" : "Pending"}</p>  // rendered where it stands
+```
+
+That extracted 129 strings. A further 7 were added by hand — `Block`, `Rehab block`,
+`Training day` and four `Unable to …` plan actions — giving **136** closed in this pass,
+translated into all four locales.
+
+### What is deliberately not extracted, and why
+
+| Position | Distinct | Why it is left |
+| --- | --- | --- |
+| template literal spans | 140 | A span is a sentence fragment around an interpolation. Translating fragments fixes English word order into every other language, and the `n === 1 ? "" : "s"` idiom needs an ICU plural. Each one is a per-site ICU conversion, not an extraction. |
+| assigned to a variable | ~133 | The value may be read back. `cleanText(block.display_name) \|\| "Block"` in structured-plan-renderer.tsx is both rendered *and* passed to a prescription lookup, so replacing it with a translation would break the lookup on every non-English locale. |
+| inside a hook callback with deps | 15 | Calling `appText` there makes it a closed-over value; listing it in the dependency array re-runs data-loading effects whenever the translator's identity changes. |
+
+The last two classes are not left in English. They keep the English string in the code
+path that compares it, and are translated where they are rendered with `translateUiText()`
+— the same mechanism the first pass used for the settings summary. Every error and status
+banner that carries one is now wrapped, so the athlete sees the translation while the
+comparison still sees English.
+
+### Strings that were classified as not-copy
+
+The classifier excluded 3,898 literal occurrences. The reasons, in order of volume:
+arguments to calls that are not UI sinks; enum and storage keys; CSS class lists; routes
+and hrefs; date-format patterns; content types; `CONSTANT_CASE` and camelCase
+identifiers; DOM id prefixes such as `guidedInjuryCard-`; and cookie attributes such as
+`"; Secure"`, which reads like copy but is an HTTP flag.
+
+One class could not be settled by rule and was left alone deliberately: a combined admin
+load error (`app/admin/page.tsx`) joins several English fragments into one string before
+it reaches state, so the render-site lookup matches only when a single fragment is
+present. Its individual messages are in the catalogs; a multi-source failure renders its
+fragments in English.
+
+`scripts/i18n-glossary-check.mjs` owns the coverage test. `ENGLISH_UI_PHRASES` names copy
+whose translation must differ from the English; `ENGLISH_MARKERS` catches English left
+*inside* an otherwise translated value, which is how `Delete selected (3)` shipped.
+`npm run test:i18n` fails on either.
 
 ## A separate English-side defect, not fixed here
 

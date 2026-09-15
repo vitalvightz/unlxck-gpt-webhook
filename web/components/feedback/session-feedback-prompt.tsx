@@ -140,7 +140,7 @@ export function SessionFeedbackPrompt({
       setIsSent(true);
     } catch (submitError) {
       setError(
-        submitError instanceof Error ? submitError.message : "Feedback could not be sent. Try again.",
+        submitError instanceof Error ? submitError.message : appText("text_c9e0504c42fb"),
       );
     } finally {
       submissionLockRef.current = false;

@@ -176,7 +176,7 @@ export function BodyweightLogScreen() {
         setMessage(successMessage);
         onSuccess?.();
       } catch (saveError) {
-        setError(saveError instanceof Error ? saveError.message : "Unable to save bodyweight log.");
+        setError(saveError instanceof Error ? saveError.message : appText("text_090cb0074d98"));
       }
     });
   }
@@ -188,7 +188,7 @@ export function BodyweightLogScreen() {
         setQuickAdd(createEmptyDraft());
       });
     } catch (draftError) {
-      setError(draftError instanceof Error ? draftError.message : "Unable to save bodyweight entry.");
+      setError(draftError instanceof Error ? draftError.message : appText("text_f39b4fe04e64"));
       setMessage(null);
     }
   }
@@ -218,7 +218,7 @@ export function BodyweightLogScreen() {
         setEditingDraft(null);
       });
     } catch (draftError) {
-      setError(draftError instanceof Error ? draftError.message : "Unable to update bodyweight entry.");
+      setError(draftError instanceof Error ? draftError.message : appText("text_24a10a379ec3"));
       setMessage(null);
     }
   }
@@ -547,7 +547,7 @@ export function BodyweightLogScreen() {
         )}
 
         {message ? <div className="success-banner athlete-motion-slot athlete-motion-status">{message}</div> : null}
-        {error ? <div className="error-banner athlete-motion-slot athlete-motion-status">{error}</div> : null}
+        {error ? <div className="error-banner athlete-motion-slot athlete-motion-status">{translateUiText(appText, error)}</div> : null}
       </section>
     </RequireAuth>
   );

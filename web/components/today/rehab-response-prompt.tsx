@@ -139,7 +139,7 @@ export function RehabResponsePrompt({
       setError(
         submitError instanceof Error
           ? submitError.message
-          : "That could not be saved. Try again.",
+          : appText("text_e85087279418"),
       );
     } finally {
       setIsSubmitting(false);

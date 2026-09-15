@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
+import { translateUiText } from "@/i18n/ui-text";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { PlanViewer } from "@/components/plan-viewer";
@@ -68,7 +69,7 @@ function PlanDetailStateCard({
             ) : null}
 
             {error ? (
-              <div className="error-banner">{error}</div>
+              <div className="error-banner">{translateUiText(appText, error)}</div>
             ) : (
               <div className="loading-status-strip">{statusMessage}</div>
             )}

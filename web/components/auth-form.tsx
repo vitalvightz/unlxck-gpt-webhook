@@ -211,14 +211,14 @@ export function AuthForm({
             setError(
               complianceError instanceof Error
                 ? complianceError.message
-                : "Your account was created but your consent could not be saved. Sign in to finish setup.",
+                : appText("text_294dbf78e6d5"),
             );
             return;
           }
           router.replace("/onboarding");
           return;
         }
-        setMessage("Check your email to confirm your account, then log in.");
+        setMessage(appText("text_a43476939456"));
         return;
       }
 
@@ -258,7 +258,7 @@ export function AuthForm({
     setError(null);
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
-      setError("Enter your email above, then request a sign-in link.");
+      setError(appText("text_adba755faaa5"));
       return;
     }
 

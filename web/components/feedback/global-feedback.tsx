@@ -56,7 +56,7 @@ export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
     event.preventDefault();
     if (!hasSubmission) {
       setMessage(null);
-      setError("Add a description or screenshot before sending feedback.");
+      setError(appText("text_9899f05d1541"));
       return;
     }
     if (submissionLockRef.current) return;
@@ -78,10 +78,10 @@ export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
       setDescription("");
       removeScreenshot();
       setContactAllowed(false);
-      setMessage("Feedback sent. Thank you.");
+      setMessage(appText("text_6fa02c1b33aa"));
       form.reset();
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Feedback could not be sent. Try again.");
+      setError(submitError instanceof Error ? submitError.message : appText("text_c9e0504c42fb"));
     } finally {
       submissionLockRef.current = false;
       setSubmitting(false);

@@ -743,7 +743,7 @@ function QuickBuildFormInner() {
       return;
     }
     if (!session?.access_token) {
-      setSubmitError("Session expired. Sign in again.");
+      setSubmitError(appText("text_95f5b7d0dc11"));
       return;
     }
 
@@ -787,7 +787,7 @@ function QuickBuildFormInner() {
           replaceMe(nextMe);
         }
         if (!writePendingGenerationPayload(planRequest, "quick_build")) {
-          setSubmitError("Unable to prepare the generation payload. Reload and try again.");
+          setSubmitError(appText("text_083352324ed7"));
           return;
         }
         markGenerationIntent();
@@ -795,11 +795,11 @@ function QuickBuildFormInner() {
       } catch (err) {
         const message = err instanceof Error ? err.message : "";
         if (message.toLowerCase().includes("session") || message.includes("401")) {
-          setSubmitError("Session expired. Sign in again.");
+          setSubmitError(appText("text_95f5b7d0dc11"));
         } else if (message.includes("Unable to reach the server") || message.includes("502") || message.includes("503") || message.includes("504")) {
-          setSubmitError("Connection issue. Try again in a minute.");
+          setSubmitError(appText("text_c0ca548a25f7"));
         } else {
-          setSubmitError(message || "Unable to save plan. Please try again.");
+          setSubmitError(message || appText("text_e5c3a9197c05"));
         }
       }
     });
@@ -1032,7 +1032,7 @@ function QuickBuildFormInner() {
               onClick={() => {
                 setSubmitError(null);
                 setInput((current) => ({ ...current, no_scheduled_fight: true, fight_date: "" }));
-                setMessage("Open Plan selected. Continue with your available training schedule.");
+                setMessage(appText("text_43f15dfa7ec4"));
               }}
             >
               {appText("text_d5ca03dcf519")}</button>
@@ -1142,13 +1142,13 @@ function QuickBuildFormInner() {
         {message ? (
           <div className="quick-build-action-feedback" role="status" aria-live="polite">
             <span className="quick-build-action-feedback-label">{appText("text_65659145569b")}</span>
-            <span>{message}</span>
+            <span>{translateUiText(appText, message)}</span>
           </div>
         ) : null}
         {submitError ? (
           <div id={submitErrorId} className="quick-build-action-feedback" role="alert" aria-live="assertive">
             <span className="quick-build-action-feedback-label">{appText("text_9d60841e0a78")}</span>
-            <span>{submitError}</span>
+            <span>{translateUiText(appText, submitError)}</span>
           </div>
         ) : null}
         <div className="plan-summary-actions quick-build-action-buttons">

@@ -256,9 +256,9 @@ export function NutritionWorkspaceScreen() {
         setWorkspace(nextWorkspace);
         setForm(normalizeTrainingSelections(toUpdateRequest(nextWorkspace)));
         await refreshMe();
-        showToast("Nutrition workspace saved.", { tone: "success" });
+        showToast(appText("text_722f0bab1e97"), { tone: "success" });
       } catch (saveError) {
-        setError(saveError instanceof Error ? saveError.message : "Unable to save nutrition workspace.");
+        setError(saveError instanceof Error ? saveError.message : appText("text_4c196f9c5409"));
       }
     });
   }
@@ -626,7 +626,7 @@ export function NutritionWorkspaceScreen() {
         )}
 
         {message ? <div className="success-banner athlete-motion-slot athlete-motion-status">{message}</div> : null}
-        {error ? <div className="error-banner athlete-motion-slot athlete-motion-status">{error}</div> : null}
+        {error ? <div className="error-banner athlete-motion-slot athlete-motion-status">{translateUiText(appText, error)}</div> : null}
 
         <div className="nutrition-sticky-save">
           <button type="button" className="cta" onClick={handleSave} disabled={isPending || !workspace}>

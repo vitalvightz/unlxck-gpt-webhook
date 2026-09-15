@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import { applyGlossaryMarkup, brandViolations, glossaryViolations, hasResidualMarkup, stripGlossaryMarkup } from "../i18n/glossary.mjs";
 import { TARGET_LOCALES } from "./i18n-catalog.mjs";
-import { ENGLISH_UI_PHRASES, glossaryIssues, untranslatedLiterals } from "./i18n-glossary-check.mjs";
+import { englishMarkers, ENGLISH_UI_PHRASES, glossaryIssues, untranslatedLiterals } from "./i18n-glossary-check.mjs";
 
 const directory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../messages");
 const read = async (locale) => JSON.parse(await readFile(path.join(directory, `${locale}.json`), "utf8"));
@@ -44,6 +44,81 @@ test("the phrase list only names copy the English catalog actually uses", () => 
   ).map((value) => String(value).trim().toLocaleLowerCase()));
   const unused = ENGLISH_UI_PHRASES.filter((phrase) => !values.has(phrase.trim().toLocaleLowerCase()));
   assert.deepEqual(unused, [], "these phrases no longer exist in en.json and should be dropped");
+});
+
+test("the named regressions each fail the coverage check", () => {
+  // One case per class the audit asked this test to catch. Each is a value a locale could
+  // plausibly ship with English still in it, and each must be reported.
+  const cases = [
+    ["AppText.a", "Not set", "Not set"],
+    ["AppText.b", "No active plan", "No active plan"],
+    ["AppText.c", "Unable to load plan.", "Unable to load plan."],
+    ["AppText.d", "Unable to save draft.", "Unable to save draft."],
+    ["AppText.e", "Delete selected", "Delete selected"],
+    ["AppText.f", "Training day", "Training day"],
+    ["AppText.g", "Rehab block", "Rehab block"],
+  ];
+  for (const [keyPath, english, spanish] of cases) {
+    const key = keyPath.split(".")[1];
+    const stale = untranslatedLiterals({ AppText: { [key]: english } }, { AppText: { [key]: spanish } }, "es");
+    assert.equal(stale.length, 1, `${english} was not reported as untranslated`);
+  }
+});
+
+test("English left inside an otherwise translated value is a failure", () => {
+  // The exact-value check cannot see these: the value differs from the English, but the
+  // English is still in it. This is how "Delete selected (3)" shipped.
+  const english = {
+    AppText: {
+      count: "Delete selected ({count})",
+      mixed: "Could not reach the server. Unable to load plan.",
+      archived: "Select archived ({count})",
+    },
+  };
+  const spanish = {
+    AppText: {
+      count: "Delete selected ({count})",
+      mixed: "No se pudo contactar con el servidor. Unable to load plan.",
+      archived: "Seleccionar archivados ({count})",
+    },
+  };
+  const leaks = englishMarkers(english, spanish, "es");
+  assert.deepEqual(leaks.map((leak) => leak.keyPath).sort(), ["AppText.count", "AppText.mixed"]);
+});
+
+test("a marker is not reported when the English source never used it", () => {
+  // "selected" appears in the Spanish word "seleccionados"; the word-boundary match and the
+  // requirement that the English source carry the marker both have to hold.
+  const english = { AppText: { a: "Choose your training days" } };
+  const spanish = { AppText: { a: "Elige tus días de entrenamiento" } };
+  assert.deepEqual(englishMarkers(english, spanish, "es"), []);
+});
+
+test("intentionally English product vocabulary is never reported", () => {
+  const english = {
+    AppText: {
+      brand: "Unable to load Quick Build",
+      day: "Light Combat day",
+    },
+  };
+  const italian = {
+    AppText: {
+      brand: "Impossibile caricare Quick Build",
+      day: "Giorno Light Combat",
+    },
+  };
+  assert.deepEqual(englishMarkers(english, italian, "it"), []);
+});
+
+test("no shipped locale leaks English inside a translated value", async () => {
+  for (const locale of locales) {
+    const leaks = englishMarkers(source, await read(locale), locale);
+    assert.deepEqual(
+      leaks.map((leak) => `${leak.keyPath}: kept "${leak.marker}"`),
+      [],
+      `${locale} still carries English inside a value`,
+    );
+  }
 });
 
 test("the combat-sports sense of an ambiguous term is enforced", () => {

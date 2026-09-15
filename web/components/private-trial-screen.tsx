@@ -69,7 +69,7 @@ function PrivateTrialAcknowledgement() {
       setError(
         acknowledgeError instanceof Error
           ? acknowledgeError.message
-          : "Your confirmation could not be saved. Try again.",
+          : appText("text_9cd76418e636"),
       );
       setIsSubmitting(false);
     }

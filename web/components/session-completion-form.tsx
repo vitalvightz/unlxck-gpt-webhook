@@ -78,7 +78,7 @@ export function SessionCompletionForm({
     event.preventDefault();
     setError(null);
     if (!activeIntent) {
-      setError("Choose how the session went first.");
+      setError(appText("text_2f068793bd5a"));
       return;
     }
     if (needsReason && !modificationReason.trim()) {
@@ -86,7 +86,7 @@ export function SessionCompletionForm({
       return;
     }
     if (needsReviewFields && (sessionRpe === null || (canCollectPain && painAfter === null))) {
-      setError(canCollectPain ? "Add session RPE and pain-after before saving." : "Add session RPE before saving.");
+      setError(canCollectPain ? appText("text_44ddb44a04ad") : appText("text_bc5954363faf"));
       return;
     }
     await onSubmit(activeIntent, {

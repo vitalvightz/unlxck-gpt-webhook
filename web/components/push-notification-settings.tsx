@@ -120,7 +120,7 @@ export function PushNotificationSettings({ token }: { token: string }) {
       }
     } catch (caught) {
       setError(
-        caught instanceof Error ? caught.message : "Unable to update notifications right now.",
+        caught instanceof Error ? caught.message : appText("text_5082f03d654e"),
       );
       setState(await getPushOptInState(token));
     }
@@ -137,7 +137,7 @@ export function PushNotificationSettings({ token }: { token: string }) {
       syncPreferences(await updateNotificationPreferences(token, { [key]: checked }));
     } catch (caught) {
       setPreferences(previous);
-      setError(caught instanceof Error ? caught.message : "Unable to update preferences.");
+      setError(caught instanceof Error ? caught.message : appText("text_a4e3564adef9"));
     } finally {
       setWorkingPreference(null);
     }
@@ -155,7 +155,7 @@ export function PushNotificationSettings({ token }: { token: string }) {
         }),
       );
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to update quiet hours.");
+      setError(caught instanceof Error ? caught.message : appText("text_ea43b347b452"));
     } finally {
       setWorkingPreference(null);
     }
@@ -172,7 +172,7 @@ export function PushNotificationSettings({ token }: { token: string }) {
         }),
       );
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to update training time.");
+      setError(caught instanceof Error ? caught.message : appText("text_cc6a2d6d4cf2"));
     } finally {
       setWorkingPreference(null);
     }
@@ -335,7 +335,7 @@ export function PushNotificationSettings({ token }: { token: string }) {
         </div>
       ) : null}
 
-      {error ? <p className="settings-push-error">{error}</p> : null}
+      {error ? <p className="settings-push-error">{translateUiText(appText, error)}</p> : null}
     </div>
   );
 }

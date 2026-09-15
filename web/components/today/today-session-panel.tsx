@@ -441,7 +441,7 @@ export function TodaySessionPanel({
       );
       await onRefresh();
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Session update failed.", { tone: "error" });
+      showToast(error instanceof Error ? error.message : appText("text_63eb97e6e195"), { tone: "error" });
     } finally {
       setIsSubmitting(false);
     }
@@ -588,7 +588,7 @@ export function TodaySessionPanel({
           <button
             type="button"
             className="cta"
-            onClick={() => showToast("Session is in progress.", { tone: "info" })}
+            onClick={() => showToast(appText("text_75a661065c97"), { tone: "info" })}
             disabled={isSubmitting}
           >
             {appText("text_0beb88010ce1")}</button>

@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { assertCatalogComplete, TARGET_LOCALES, untranslatedKeys } from "./i18n-catalog.mjs";
-import { glossaryIssues, untranslatedLiterals } from "./i18n-glossary-check.mjs";
+import { englishMarkers, glossaryIssues, untranslatedLiterals } from "./i18n-glossary-check.mjs";
 
 const directory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../messages");
 const read = async (locale) => JSON.parse(await readFile(path.join(directory, `${locale}.json`), "utf8"));
@@ -26,6 +26,9 @@ try {
     const literals = untranslatedLiterals(source, target, locale);
     for (const literal of literals) {
       failures.push(`${locale}.${literal.keyPath}: still reads as English ("${literal.value}")`);
+    }
+    for (const leak of englishMarkers(source, target, locale)) {
+      failures.push(`${locale}.${leak.keyPath}: kept the English "${leak.marker}" ("${leak.value}")`);
     }
   }
   if (failures.length) {

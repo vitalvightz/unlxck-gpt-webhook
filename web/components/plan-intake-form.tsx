@@ -1895,14 +1895,14 @@ export function PlanIntakeForm() {
         return;
       }
       if (!session?.access_token) {
-        setError("You must be signed in to save a draft.");
+        setError(appText("text_4b5fdd19a96c"));
         return;
       }
       try {
         await persistDraft();
-        setMessage("Draft saved.");
+        setMessage(appText("text_be997844b2a8"));
       } catch (draftError) {
-        setError(draftError instanceof Error ? draftError.message : "Unable to save draft.");
+        setError(draftError instanceof Error ? draftError.message : appText("text_0b53da598881"));
       }
     });
   }
@@ -1991,19 +1991,19 @@ export function PlanIntakeForm() {
         return;
       }
       if (!session?.access_token) {
-        setError("You must be signed in to generate a plan.");
+        setError(appText("text_b5a7aec99051"));
         return;
       }
       try {
         await persistDraft(steps.length - 1, nextForm);
         if (!writePendingGenerationPayload(nextForm, "self_serve")) {
-          setError("Unable to prepare the generation payload. Reload and try again.");
+          setError(appText("text_083352324ed7"));
           return;
         }
         markGenerationIntent();
         router.push("/generate");
       } catch (draftError) {
-        setError(draftError instanceof Error ? draftError.message : "Unable to prepare plan generation.");
+        setError(draftError instanceof Error ? draftError.message : appText("text_61a074c4218b"));
       }
     });
   }
@@ -2701,7 +2701,7 @@ export function PlanIntakeForm() {
                       />
                       <p className="muted">
                         {getFieldHelperText(daysOutCtx, "weekly_training_frequency") ||
-                          "Count the total training sessions the week should carry. Hard sparring days and Light Combat days are labels inside that weekly total, not extra sessions on top."}
+                          appText("text_e6c0df2df287")}
                       </p>
                       {invalidFieldId === "sessionsPerWeek" && error ? (
                         <p id="sessionsPerWeek-error" className="error-text" role="alert">{error}</p>
@@ -2830,7 +2830,7 @@ export function PlanIntakeForm() {
                 <div className="field">
                   <p className="muted">
                     {getFieldHelperText(daysOutCtx, "hard_sparring_days") ||
-                      "Select your usual hard sparring days."}
+                      appText("text_008fc1dbb200")}
                   </p>
                 </div>
                 {hardSparringWarning.message ? (
@@ -2889,7 +2889,7 @@ export function PlanIntakeForm() {
                 <div className="field">
                   <p className="muted">
                     {getFieldHelperText(daysOutCtx, "support_work_days") ||
-                      "Pads, drills, movement or other lower-intensity combat work."
+                      appText("text_13ce29ff5c2d")
                     }
                   </p>
                 </div>
@@ -2919,7 +2919,7 @@ export function PlanIntakeForm() {
                         setError(null);
                         setInvalidFieldId(null);
                         setValidationFocusRequest(null);
-                        setMessage("Open Plan selected. Continue with your available training schedule.");
+                        setMessage(appText("text_43f15dfa7ec4"));
                       }}
                     >
                       {appText("text_d5ca03dcf519")}</button>
@@ -2953,7 +2953,7 @@ export function PlanIntakeForm() {
                   />
                   <p className="muted">
                     {getFieldHelperText(daysOutCtx, "training_preference") ||
-                      "Use this only for session feel, pacing, or format preferences."}
+                      appText("text_bae5a6ce490e")}
                   </p>
                 </div>
               </OptionalDetails>
@@ -3362,7 +3362,7 @@ export function PlanIntakeForm() {
           </div>
         ) : null}
 
-        {message ? <div className="success-banner athlete-motion-slot athlete-motion-status">{message}</div> : null}
+        {message ? <div className="success-banner athlete-motion-slot athlete-motion-status">{translateUiText(appText, message)}</div> : null}
         {error ? (
           <div
             id="onboarding-error-banner"
@@ -3370,7 +3370,7 @@ export function PlanIntakeForm() {
             role="alert"
             aria-live="assertive"
           >
-            {error}
+            {translateUiText(appText, error)}
           </div>
         ) : null}
 
