@@ -61,7 +61,7 @@ from .late_selector_windows import (
 )
 from .stage2_payload_late_fight import _conditioning_limiter_signal, compute_bridge_rules
 from .selection_metadata import build_score_evidence, normalize_selection_metadata
-from .weight_cut import compute_cut_severity_score, cut_severity_bucket
+from .weight_cut import compute_cut_severity_score, cut_health_bucket
 from .priority_profile import (
     PRIMARY_GOAL_WEIGHT,
     PRIMARY_WEAKNESS_WEIGHT,
@@ -939,9 +939,13 @@ def _conditioning_resolve_bridge_rules(
 ) -> dict:
     triage_summary = flags.get("triage_summary") or {}
     injury_mode = str(triage_summary.get("mode") or "full_plan").strip().lower() or "full_plan"
-    cut_bucket = str(flags.get("cut_severity_bucket") or "").strip().lower()
+    # Strain scale: conditioning/glycolytic exposure follows how hard the cut
+    # is on the body, not how many sessions it may delete.
+    cut_bucket = str(
+        flags.get("cut_health_bucket") or flags.get("cut_severity_bucket") or ""
+    ).strip().lower()
     if not cut_bucket:
-        cut_bucket = cut_severity_bucket(
+        cut_bucket = cut_health_bucket(
             compute_cut_severity_score(flags.get("weight_cut_pct"), days_until_fight)
         )
     return compute_bridge_rules(

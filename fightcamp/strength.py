@@ -50,7 +50,7 @@ from .late_selector_windows import (
 )
 from .normalization import normalize_fight_format as _normalize_fight_format
 from .selection_metadata import build_score_evidence, normalize_selection_metadata
-from .weight_cut import compute_cut_severity_score, cut_severity_bucket
+from .weight_cut import compute_cut_severity_score, cut_health_bucket
 from .priority_clarification_tags import derive_clarification_tags
 from .stage1_fail_safe import bounded_max_iterations, log_fail_safe_degrade
 from .priority_profile import (
@@ -433,7 +433,15 @@ def _strength_text_blob(exercise: dict) -> str:
 
 
 def _resolved_cut_severity_bucket(flags: dict) -> str:
-    explicit_bucket = str(flags.get("cut_severity_bucket") or "").strip().lower()
+    """Strain bucket driving strength dose/exercise caps.
+
+    Reads the strain scale so that recalibrating capacity severity (which
+    governs how many sessions a cut may delete) never weakens how much a cut
+    trims strength dose.
+    """
+    explicit_bucket = str(
+        flags.get("cut_health_bucket") or flags.get("cut_severity_bucket") or ""
+    ).strip().lower()
     if explicit_bucket in VALID_CUT_BUCKETS:
         return explicit_bucket
 
@@ -442,9 +450,9 @@ def _resolved_cut_severity_bucket(flags: dict) -> str:
     except (TypeError, ValueError):
         cut_score = None
     if cut_score is not None:
-        return cut_severity_bucket(cut_score)
+        return cut_health_bucket(cut_score)
 
-    return cut_severity_bucket(
+    return cut_health_bucket(
         compute_cut_severity_score(
             flags.get("weight_cut_pct"),
             flags.get("days_until_fight"),

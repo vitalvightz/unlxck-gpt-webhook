@@ -6,6 +6,7 @@ from fightcamp.weight_cut import (
     WEIGHT_CUT_INPUTS_MISSING_TARGET,
     compute_cut_severity_score,
     compute_weight_cut_pct,
+    cut_health_bucket,
     cut_severity_bucket,
     cut_severity_rank,
     cut_warnings_escalate,
@@ -97,17 +98,35 @@ def test_cut_severity_score_examples_match_expected_calibration():
 
 
 def test_cut_severity_bucket_thresholds():
+    """Training-pressure boundaries, recalibrated against combat-sport evidence."""
     assert cut_severity_bucket(0) == "none"
-    assert cut_severity_bucket(4.9) == "none"
-    assert cut_severity_bucket(5.0) == "low"
-    assert cut_severity_bucket(14.9) == "low"
-    assert cut_severity_bucket(15.0) == "moderate"
-    assert cut_severity_bucket(34.9) == "moderate"
-    assert cut_severity_bucket(35.0) == "high"
-    assert cut_severity_bucket(54.9) == "high"
-    assert cut_severity_bucket(55.0) == "critical"
-    assert cut_severity_bucket(84.9) == "critical"
-    assert cut_severity_bucket(85.0) == "extreme"
+    assert cut_severity_bucket(9.9) == "none"
+    assert cut_severity_bucket(10.0) == "low"
+    assert cut_severity_bucket(24.9) == "low"
+    assert cut_severity_bucket(25.0) == "moderate"
+    assert cut_severity_bucket(49.9) == "moderate"
+    assert cut_severity_bucket(50.0) == "high"
+    assert cut_severity_bucket(74.9) == "high"
+    assert cut_severity_bucket(75.0) == "critical"
+    assert cut_severity_bucket(94.9) == "critical"
+    assert cut_severity_bucket(95.0) == "extreme"
+
+
+def test_cut_health_bucket_keeps_stricter_medical_thresholds():
+    """Health escalation must not inherit the looser training calibration."""
+    assert cut_health_bucket(4.9) == "none"
+    assert cut_health_bucket(5.0) == "low"
+    assert cut_health_bucket(15.0) == "moderate"
+    assert cut_health_bucket(35.0) == "high"
+    assert cut_health_bucket(55.0) == "critical"
+    assert cut_health_bucket(85.0) == "extreme"
+    # Same score, two different questions: a 5.0% cut at D-6 scores ~43, which
+    # is training-moderate (keep the sessions, cut the dose) but health-high
+    # (warn and recommend supervision).
+    score = compute_cut_severity_score(5.0, 6)
+    assert cut_severity_bucket(score) == "moderate"
+    assert cut_health_bucket(score) == "high"
+    assert weight_cut_supervision_required(True, 5.0, 6) is True
 
 
 def test_cut_severity_rank_orders_buckets():

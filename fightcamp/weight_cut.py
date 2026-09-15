@@ -114,8 +114,24 @@ def compute_cut_severity_score(weight_cut_pct: object, days_until_fight: object)
     return round(min(100.0, max(0.0, raw_score)), 1)
 
 
-def cut_severity_bucket(score: object) -> str:
-    """Map cut severity score to deterministic buckets."""
+def cut_health_bucket(score: object) -> str:
+    """Map the severity score to buckets for PHYSIOLOGICAL STRAIN.
+
+    One score, two scales, because a cut poses two different questions:
+
+    * strain (this function, stricter, original calibration) -> "how hard is
+      this cut on the body right now?" It drives health-risk escalation
+      (warnings, supervision, stop-and-report) *and* load shaping (volume, RPE
+      ceilings, glycolytic exposure, strength dose, sparring dose). A 5% cut six
+      days out is strain-high and must keep being treated as such.
+    * capacity (:func:`cut_severity_bucket`, recalibrated) -> "does this cut
+      justify deleting training days?" The same 5% cut six days out does not; it
+      warrants a reduced dose, not a blank week.
+
+    Keeping them apart is what lets the planner reduce dose *before* deleting
+    calendar: recalibrating capacity severity must never quietly relax medical
+    escalation or load shaping, so strain keeps its own thresholds.
+    """
     try:
         value = float(score or 0.0)
     except (TypeError, ValueError):
@@ -129,6 +145,46 @@ def cut_severity_bucket(score: object) -> str:
     if value < 55.0:
         return "high"
     if value < 85.0:
+        return "critical"
+    return "extreme"
+
+
+def cut_severity_bucket(score: object) -> str:
+    """Map the severity score to buckets for TRAINING-PRESSURE decisions.
+
+    Boundaries (none <10, low <25, moderate <50, high <75, critical <95,
+    extreme >=95) are calibrated against combat-sport evidence rather than
+    arbitrary conservatism. At the boundaries this puts the moderate/high line
+    at roughly 8.8% at D-28, 7.2% at D-16 and 4.6% at D-1, and the high/critical
+    line at 12.5% / 10.2% / 6.6% respectively.
+
+    Sanity check against the evidence base: UFC data on 616 athletes recorded
+    average mass above class of ~6.7% at 72h, ~5.7% at 48h and ~4.4% at 24h
+    before weigh-in, and the 2025 ISSN combat-sport position stand treats ~2-4%
+    acute water loss in the final 24h as a practice seen in appropriately
+    supervised professional contexts. The previous boundaries placed
+    moderate/high at 5.3% at D-16 and 3.4% at D-1, i.e. they classified the
+    *median* competitive cut as "high" and deleted training for it. These
+    boundaries keep a routine cut in ``moderate`` and reserve ``high`` and above
+    for cuts that genuinely exceed normal competitive practice.
+
+    This is a calibration of *planner* severity, not an endorsement of
+    aggressive dehydration: health-risk escalation keeps its own magnitude floor
+    (see :func:`weight_cut_risk_band` / :func:`weight_cut_supervision_required`).
+    """
+    try:
+        value = float(score or 0.0)
+    except (TypeError, ValueError):
+        value = 0.0
+    if value < 10.0:
+        return "none"
+    if value < 25.0:
+        return "low"
+    if value < 50.0:
+        return "moderate"
+    if value < 75.0:
+        return "high"
+    if value < 95.0:
         return "critical"
     return "extreme"
 
@@ -194,7 +250,7 @@ def weight_cut_risk_band(
     if pct >= 6.0:
         return "severe"
     rank = cut_severity_rank(
-        cut_severity_bucket(compute_cut_severity_score(pct, days))
+        cut_health_bucket(compute_cut_severity_score(pct, days))
     )
     if rank >= _SEVERITY_ORDER.index("critical"):
         return "severe"
@@ -227,7 +283,7 @@ def weight_cut_supervision_required(
     if pct >= 6.0:
         return True
     return cut_warnings_escalate(
-        cut_severity_bucket(compute_cut_severity_score(pct, days))
+        cut_health_bucket(compute_cut_severity_score(pct, days))
     )
 
 
@@ -237,19 +293,96 @@ def is_high_pressure_weight_cut(flags: dict) -> bool:
     Reads the flat ``weight_cut_risk`` / ``weight_cut_pct`` / ``fatigue`` /
     ``days_until_fight`` shape used by the Stage 1 nutrition and recovery
     blocks. ``athlete_model._is_high_pressure_weight_cut`` answers the same
-    question from the readiness-flag shape; keep the two thresholds in step.
+    question from the readiness-flag shape; keep the two in step.
 
-    A low-fatigue, non-aggressive active cut only counts as high-pressure inside
-    the final two weeks (<=14). Aggressive cuts (>=5%) and moderate+ fatigue stay
-    high-pressure at any distance via the clauses above. (Was <=28, which flagged
-    a routine 3-3.5% cut at D-21 as high-pressure even at low fatigue.)
+    This softens load and density, so it reads the STRAIN scale. It used to
+    short-circuit on a bare ``weight_cut_pct >= 5.0``, which was a third
+    severity system: days-out blind, it treated 5% at D-40 exactly like 5% on
+    fight day and contradicted the canonical score both scales derive from.
+
+    A low-fatigue, non-strained active cut only counts as high-pressure inside
+    the final two weeks (<=14). A strain-escalated cut and moderate+ fatigue stay
+    high-pressure at any distance via the clauses above.
     """
     if not flags.get("weight_cut_risk", False):
         return False
-    if float(flags.get("weight_cut_pct", 0.0) or 0.0) >= 5.0:
+    try:
+        cut_pct = float(flags.get("weight_cut_pct", 0.0) or 0.0)
+    except (TypeError, ValueError):
+        cut_pct = 0.0
+    if cut_warnings_escalate(
+        cut_health_bucket(
+            compute_cut_severity_score(cut_pct, flags.get("days_until_fight"))
+        )
+    ):
         return True
     fatigue = str(flags.get("fatigue", "")).strip().lower()
     days_until_fight = flags.get("days_until_fight")
     return fatigue in {"moderate", "high"} or (
         isinstance(days_until_fight, int) and days_until_fight <= 14
     )
+
+
+# ---------------------------------------------------------------------------
+# Cut TRAINING PRESSURE (distinct from cut HEALTH RISK)
+# ---------------------------------------------------------------------------
+# Health risk answers "does this cut warrant a warning, supervision, or medical
+# escalation?" and is owned by ``weight_cut_risk_band`` /
+# ``weight_cut_supervision_required``, which keep their own >=6% magnitude floor
+# because a medically serious acute cut is serious regardless of days-out.
+#
+# Training pressure answers a different question: "does this cut justify
+# *deleting training*?" A health caution must not silently delete physical
+# sessions, so training consequences are resolved here and nowhere else.
+#
+# The intended hierarchy is dose-before-calendar:
+#   none/low  - no training consequence at all
+#   moderate  - preserve training frequency; adjust volume / density / RPE
+#               ceiling / glycolytic dose / recovery emphasis only
+#   high      - still preserve usable days; shed expensive work first
+#               (volume, soreness cost, glycolytic density, eccentric and
+#               collision load) before removing anything
+#   critical  - may remove one meaningful stress exposure
+#   extreme   - may suppress high-risk training and escalate on safety
+
+_CUT_TRAINING_COMPRESSION_POINTS = {
+    "none": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 1,
+    "critical": 2,
+    "extreme": 2,
+}
+
+
+def cut_training_compression_points(bucket: object) -> int:
+    """Weekly *calendar* slots a cut may remove, as one canonical decision.
+
+    This is the single authority for cut-driven session-count removal. No other
+    module may independently subtract weekly capacity for the same cut: stacking
+    a second removal on top of this (an extra late-camp overlay, a raw-percentage
+    rule, a proximity point that the severity score already folded in) is what
+    turned a routine 5.3% cut into a three-slot deletion.
+
+    Moderate deliberately returns 0. A moderate cut still shapes training, but it
+    does so through dose, density and RPE ceilings, never by emptying the
+    calendar.
+    """
+    key = str(bucket or "none").strip().lower()
+    return _CUT_TRAINING_COMPRESSION_POINTS.get(key, 0)
+
+
+def cut_restricts_training_capacity(bucket: object) -> bool:
+    """Whether a cut is restrictive enough to justify removing training capacity."""
+    return cut_training_compression_points(bucket) > 0
+
+
+def cut_justifies_goal_deferral(bucket: object) -> bool:
+    """Whether a cut is restrictive enough to abandon a requested goal.
+
+    Deliberately far stricter than "an active cut exists". Deferring power,
+    footwork or skill refinement requires a genuinely restrictive cut state, not
+    a routine one - at moderate and below a safe qualifying exposure can almost
+    always be preserved at reduced dose instead.
+    """
+    return cut_severity_rank(bucket) >= _SEVERITY_ORDER.index("critical")

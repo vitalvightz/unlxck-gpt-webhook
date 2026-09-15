@@ -13,7 +13,21 @@ from fightcamp.weight_cut import (
 
 def test_nutrition_high_pressure_weight_cut_detects_multiple_triggers():
     assert not nutrition_high_pressure_cut({"weight_cut_risk": False, "weight_cut_pct": 7.0})
-    assert nutrition_high_pressure_cut({"weight_cut_risk": True, "weight_cut_pct": 5.1})
+    # Magnitude alone no longer short-circuits this. A 5.1% cut with no
+    # countdown is scored at the default far-out distance, where it is a
+    # routine cut; the bare ``>= 5.0`` rule used to flag it regardless.
+    assert not nutrition_high_pressure_cut({"weight_cut_risk": True, "weight_cut_pct": 5.1})
+    assert not nutrition_high_pressure_cut(
+        {"weight_cut_risk": True, "weight_cut_pct": 5.1, "fatigue": "low", "days_until_fight": 40}
+    )
+    # The same cut near the fight is strain-escalated and still flags.
+    assert nutrition_high_pressure_cut(
+        {"weight_cut_risk": True, "weight_cut_pct": 5.1, "fatigue": "low", "days_until_fight": 6}
+    )
+    # So does a genuinely large cut at any distance.
+    assert nutrition_high_pressure_cut(
+        {"weight_cut_risk": True, "weight_cut_pct": 12.0, "fatigue": "low", "days_until_fight": 40}
+    )
     assert nutrition_high_pressure_cut(
         {"weight_cut_risk": True, "weight_cut_pct": 2.0, "fatigue": "moderate", "days_until_fight": 40}
     )

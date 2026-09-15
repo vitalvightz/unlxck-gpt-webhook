@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+from .weight_cut import cut_restricts_training_capacity
 import json
 import logging
 import threading
@@ -563,12 +565,11 @@ def _planned_sessions_per_week(athlete_model: dict[str, Any]) -> int:
 def _weight_cut_is_extreme(athlete_model: dict[str, Any], flags: set[str]) -> bool:
     if "aggressive_weight_cut" in flags or "extreme_weight_cut" in flags:
         return True
-    risk = bool(athlete_model.get("weight_cut_risk"))
-    try:
-        pct = float(athlete_model.get("weight_cut_pct") or 0.0)
-    except (TypeError, ValueError):
-        pct = 0.0
-    return risk and pct >= 5.0
+    # Resolved cut state, not a raw percentage: the old ``pct >= 5.0`` clause
+    # was a third independent severity system layered on the same signal.
+    return bool(athlete_model.get("weight_cut_risk")) and cut_restricts_training_capacity(
+        _resolve_bridge_cut_bucket(athlete_model)
+    )
 
 
 def _conditioning_limiter_signal(athlete_model: dict) -> bool:

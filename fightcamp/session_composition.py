@@ -36,7 +36,7 @@ from .config import (
     conditioning_phase_workload_envelope as _conditioning_phase_workload_envelope,
 )
 from .bank_schema import has_meaningful_fulfillment_authority
-from .weight_cut import compute_cut_severity_score, cut_severity_bucket
+from .weight_cut import compute_cut_severity_score, cut_health_bucket
 
 
 _NORMAL_STRENGTH_ROLE_CAPS: dict[str, int] = {
@@ -195,7 +195,12 @@ def _normalized_fatigue(athlete_model: dict[str, Any]) -> str:
 
 
 def _resolved_cut_bucket(athlete_model: dict[str, Any]) -> str:
-    bucket = str(athlete_model.get("cut_severity_bucket") or "").strip().lower()
+    """Strain bucket driving session composition pressure (dose, not calendar)."""
+    bucket = str(
+        athlete_model.get("cut_health_bucket")
+        or athlete_model.get("cut_severity_bucket")
+        or ""
+    ).strip().lower()
     if bucket in _CUT_PRESSURE:
         return bucket
 
@@ -216,7 +221,7 @@ def _resolved_cut_bucket(athlete_model: dict[str, Any]) -> str:
             athlete_model.get("weight_cut_pct"),
             athlete_model.get("days_until_fight"),
         )
-    return cut_severity_bucket(score)
+    return cut_health_bucket(score)
 
 
 def _injury_restricted(athlete_model: dict[str, Any]) -> bool:
@@ -709,7 +714,9 @@ def _role_pressure_state(
     role_d_day = _role_days_until_fight(role)
     cut_pct = _float_or_none(context.get("weight_cut_pct"))
     if active_cut and cut_pct is not None and cut_pct > 0.0 and role_d_day is not None:
-        cut_bucket = cut_severity_bucket(compute_cut_severity_score(cut_pct, role_d_day))
+        # Per-role strain recalculation: a role nearer the fight carries more
+        # cut strain, which trims its dose. It never removes the role.
+        cut_bucket = cut_health_bucket(compute_cut_severity_score(cut_pct, role_d_day))
     elif not active_cut:
         cut_bucket = "none"
 
