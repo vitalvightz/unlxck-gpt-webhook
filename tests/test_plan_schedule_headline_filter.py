@@ -85,3 +85,30 @@ def test_real_structured_sessions_bypass_headline_only_gate():
         "effective_load": "reduced",
     }
     assert has_scheduled_day_content(entry) is True
+
+
+def test_blockless_contact_sessions_get_a_label_despite_inflection():
+    """A coach-owned session with no blocks must still name itself as contact.
+
+    ``_structured_contact_label_from_session`` carried the same bare ``spar``
+    stem as the work allowlist, and spelled the technical phrase with a literal
+    space, so neither "Hard sparring" nor the canonical hyphenated
+    "Technical-only combat" produced a contact label — Today's summary view
+    dropped the Coach contact row on exactly the days it exists for.
+    """
+    from api.services.today_service import _structured_contact_label_from_session
+
+    for title in (
+        "Hard sparring",
+        "Sparring",
+        "Light sparring",
+        "Technical-only combat",
+        "Technical only — no hard sparring",
+        "Coaching session",
+        "Pad work",
+    ):
+        assert _structured_contact_label_from_session({"title": title}) == title, title
+
+    # App-owned work is not coach contact and must stay unlabelled.
+    for title in ("Strength", "Fight-pace conditioning", "Aerobic support"):
+        assert _structured_contact_label_from_session({"title": title}) == "", title

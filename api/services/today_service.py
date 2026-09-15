@@ -1520,8 +1520,13 @@ def _structured_effective_load(day_type: Any) -> str:
     return "technical"
 
 
+# Same inflection rule as the work-headline allowlist in plan_schedule.py and
+# the web classifier's SPARRING_RE: the trailing ``\b`` closes the whole
+# alternation, so a bare ``spar`` stem matched only the exact word and a
+# blockless "Hard sparring" session produced no contact label at all.
 _STRUCTURED_COACH_CONTACT_RE = re.compile(
-    r"\b(coach|spar|technical\s+only|no\s+hard\s+sparring|boxing|pad\s?work|pads|mitts?)\b",
+    r"\b(coach(?:ing|ed)?|spar(?:r(?:ing|ed)|s)?|technical[\s-]+only|"
+    r"no\s+hard\s+sparring|boxing|pad\s?work|pads|mitts?)\b",
     re.I,
 )
 
