@@ -49,7 +49,7 @@ from .structured_plan_generation import (
     reconcile_late_fight_week_context,
     reconcile_rehab_drill_ids,
 )
-from .structured_plan_locked_merge import merge_locked_structured_content
+from .structured_plan_locked_merge import merge_planner_owned_structured_content
 from .services.effective_structured_plan import resolve_effective_structured_plan
 from .services.open_plan_timeline import project_open_structured_plan
 from .services.active_plan import get_plan_activation_state
@@ -609,7 +609,7 @@ def _map_plan_detail(
     structured_payload = (
         structured_plan.model_dump(mode="json") if structured_plan is not None else {}
     )
-    locked_payload = merge_locked_structured_content(
+    locked_payload = merge_planner_owned_structured_content(
         structured_payload,
         planning_brief,
     ).plan

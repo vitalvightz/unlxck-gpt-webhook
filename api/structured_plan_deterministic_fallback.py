@@ -34,8 +34,7 @@ from typing import Any
 from fightcamp.role_labels import athlete_facing_label_for
 
 from .structured_plan_calendar_spine import reconcile_calendar_spine
-from .structured_plan_locked_merge import merge_locked_structured_content
-from .structured_plan_sparring_reconcile import reconcile_coach_led_sparring_days
+from .structured_plan_locked_merge import merge_planner_owned_structured_content
 
 logger = logging.getLogger(__name__)
 
@@ -296,8 +295,7 @@ def _build(planning_brief: Any) -> dict[str, Any] | None:
     # finished day. A Tactical Watch can be merged onto a declared contact day;
     # the final reconcile must see that session so it writes coach_led_contact
     # instead of leaving the contact only in a headline the renderer will hide.
-    plan = merge_locked_structured_content(plan, planning_brief).plan
-    reconcile_coach_led_sparring_days(plan, planning_brief)
+    plan = merge_planner_owned_structured_content(plan, planning_brief).plan
 
     weeks_out = plan.get("weeks") if isinstance(plan, dict) else None
     if not isinstance(weeks_out, list) or not weeks_out:
