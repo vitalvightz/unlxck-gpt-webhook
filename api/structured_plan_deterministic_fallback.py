@@ -292,9 +292,12 @@ def _build(planning_brief: Any) -> dict[str, Any] | None:
         if sessions:
             day["sessions"] = sessions
 
-    # Each remaining kind of locked content is added by the module that owns it.
-    reconcile_coach_led_sparring_days(plan, planning_brief)
+    # Assemble every locked session first, then reconcile contact against the
+    # finished day. A Tactical Watch can be merged onto a declared contact day;
+    # the final reconcile must see that session so it writes coach_led_contact
+    # instead of leaving the contact only in a headline the renderer will hide.
     plan = merge_locked_structured_content(plan, planning_brief).plan
+    reconcile_coach_led_sparring_days(plan, planning_brief)
 
     weeks_out = plan.get("weeks") if isinstance(plan, dict) else None
     if not isinstance(weeks_out, list) or not weeks_out:
