@@ -2613,8 +2613,69 @@ def _closed_membership_render_manifest(
             "category": role.get("category"),
         }
 
-        if "selected_exercise_assignments" in role:
-            assignments = role.get("selected_exercise_assignments")
+        assignments = role.get("selected_exercise_assignments")
+        has_membership_key = "selected_exercise_assignments" in role
+        priced_membership = (
+            isinstance(assignments, list) and bool(assignments)
+        )
+
+        if priced_membership:
+            lines, unresolved = _closed_membership_exercise_lines(role, assignments)
+            entry.update({
+                "authority": AUTHORITY_CLOSED_SELECTED_ASSIGNMENTS,
+                "selected_count": len(assignments),
+                "exercise_lines": lines,
+                "unresolved": unresolved,
+            })
+            _attach_manifest_label_and_microdose(entry, role)
+            manifest.append(entry)
+            continue
+
+        # Deterministic authority is checked BEFORE the closed-membership branch
+        # for a role with no priced members. ``selected_exercise_assignments=[]``
+        # is a deliberate closed-membership sentinel that the packet preserves
+        # (see _compact_role), and in production it sits on exactly the roles
+        # whose bodies the planner already wrote — hard_sparring_day,
+        # tactical_watch, breathing_reset, tactical_cue_card. Testing the key
+        # first classified them as zero-exercise closed roles, so the resolver
+        # never ran and their decided content never reached the first pass.
+        #
+        # The packet also compacts roles for the model (it strips the long body of
+        # a selected_drill_locked role, and internal governance keys), so
+        # authority is decided against the pre-compaction Stage 1 role where one
+        # exists: compaction can never make decided content look undecided.
+        rich_role = _manifest_rich_role(role, label, rich_index)
+        render = authoritative_render_for_role(
+            rich_role if rich_role is not None else role,
+            week=week,
+            athlete_snapshot=athlete_snapshot,
+            d_day=d_day,
+            display_text_fallback=role.get("display_text"),
+        )
+        if render is not None and render["authority"] != AUTHORITY_CLOSED_SELECTED_ASSIGNMENTS:
+            entry.update({
+                "authority": render["authority"],
+                "exact_body_lines": list(render.get("body_lines") or []),
+                "unresolved": [],
+            })
+            if render.get("athlete_facing_label"):
+                entry["athlete_facing_label"] = render["athlete_facing_label"]
+            if render.get("contact_load"):
+                entry["contact_load"] = render["contact_load"]
+            if render.get("zero_physical_load"):
+                entry["zero_physical_load"] = True
+            if render.get("priority_microdose"):
+                entry["priority_microdose"] = render["priority_microdose"]
+            if isinstance(assignments, list) and not assignments:
+                # The sentinel keeps its meaning alongside the exact body: the
+                # session carries zero exercises and membership is still closed,
+                # so Stage 2 may not open it up and select work for the day.
+                entry["selected_count"] = 0
+                entry["exercise_lines"] = []
+            manifest.append(entry)
+            continue
+
+        if has_membership_key:
             if not isinstance(assignments, list):
                 continue
             lines, unresolved = _closed_membership_exercise_lines(role, assignments)
@@ -2628,36 +2689,8 @@ def _closed_membership_render_manifest(
             manifest.append(entry)
             continue
 
-        # The packet compacts roles for the model (it strips the long body of a
-        # selected_drill_locked role, and internal governance keys). Authority is
-        # decided against the pre-compaction Stage 1 role where one exists, so
-        # compaction can never make decided content look undecided.
-        rich_role = _manifest_rich_role(role, label, rich_index)
-        render = authoritative_render_for_role(
-            rich_role if rich_role is not None else role,
-            week=week,
-            athlete_snapshot=athlete_snapshot,
-            d_day=d_day,
-            display_text_fallback=role.get("display_text"),
-        )
-        if render is None:
-            # Genuinely open role: Stage 2 still authors it under the existing
-            # bounded rules. Inventing a body here would be a second planner.
-            continue
-        entry.update({
-            "authority": render["authority"],
-            "exact_body_lines": list(render.get("body_lines") or []),
-            "unresolved": [],
-        })
-        if render.get("athlete_facing_label"):
-            entry["athlete_facing_label"] = render["athlete_facing_label"]
-        if render.get("contact_load"):
-            entry["contact_load"] = render["contact_load"]
-        if render.get("zero_physical_load"):
-            entry["zero_physical_load"] = True
-        if render.get("priority_microdose"):
-            entry["priority_microdose"] = render["priority_microdose"]
-        manifest.append(entry)
+        # Genuinely open role: Stage 2 still authors it under the existing
+        # bounded rules. Inventing a body here would be a second planner.
     return manifest
 
 
@@ -2960,7 +2993,8 @@ def build_stage2_handoff_text(
             "athlete_facing_label is the day's session name. A priority_microdose belongs "
             "inside that same host session exactly once - never as its own session or day. "
             "An entry marked zero_physical_load is review/support only and adds no physical "
-            "training load. "
+            "training load. An entry whose selected_count is 0 carries no exercises and its "
+            "membership is still closed: render its body and add no exercises to that day. "
             "Render every exercise_lines entry once under its owning day and role, "
             "then add coaching details. selected_count is the required membership count. "
             "Do not promote one member to primary and discard the others. "

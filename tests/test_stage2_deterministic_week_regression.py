@@ -35,6 +35,9 @@ from fightcamp.tactical_watch_library import (
 def _support_insert_role(role_key, *, day, d_day, label=None):
     meta = _INSERT_META[role_key]
     return {
+        # Production shape: the planner stamps the closed-membership sentinel on
+        # these roles, and the finalizer packet preserves it (see _compact_role).
+        "selected_exercise_assignments": [],
         "category": "support_insert",
         "role_key": role_key,
         "athlete_facing_label": label or meta["label"],
@@ -72,6 +75,7 @@ def _tactical_watch_role():
         "countdown_display_label": "D-11 (Sunday)",
         "support_insert_category": "tactical",
         "support_insert_cost_category": "zero_cost",
+        "selected_exercise_assignments": [],
         "mandatory_tactical_watch": True,
         "camp_week_filler": True,
         "stress_class": "support",
@@ -123,6 +127,7 @@ def _week_one_planning_brief():
                             "hard_sparring_status": "hard_as_planned",
                             "hard_sparring_class": "primary_hard",
                             "hard_sparring_reason_codes": [],
+                            "selected_exercise_assignments": [],
                         },
                         watch_role,
                         _support_insert_role("breathing_reset", day="tuesday", d_day=9),
@@ -168,6 +173,10 @@ def test_first_pass_projection_carries_every_deterministic_week_one_role():
         assert entry["authority"] == "deterministic_display_text"
         assert entry["exact_body_lines"] == [_INSERT_META[role_key]["display_text"]]
         assert entry["athlete_facing_label"] == _INSERT_META[role_key]["label"]
+        # The empty closed-membership sentinel survives alongside the exact body:
+        # zero exercises, and still no licence to select work for the day.
+        assert entry["selected_count"] == 0
+        assert entry["exercise_lines"] == []
     assert by_role["recovery_reset"]["scheduled_countdown_label"] == "D-14"
     assert by_role["recovery_reset"]["phase"] == "SPP"
     assert by_role["recovery_reset"]["week_index"] == 1
@@ -187,7 +196,7 @@ def test_first_pass_projection_carries_every_deterministic_week_one_role():
 
     # 6. The watch stays zero-load: it must not read as physical training.
     assert watch_entry["zero_physical_load"] is True
-    assert watch_entry.get("selected_count") is None
+    assert watch_entry["selected_count"] == 0
 
     # 5. Combat wording comes from resolved canonical truth, not from the raw
     # declaration: D-11 sits inside the hard-contact cutoff, so the declared hard
@@ -289,3 +298,119 @@ def test_repair_does_not_duplicate_roles_stage2_already_rendered():
     assert repaired["applied"] == []
     assert repaired["unresolved"] == []
     assert repaired["text"].count("Recovery Reset") == 1
+
+
+# ── the empty closed-membership sentinel must not hide decided content ────────
+
+
+def _sentinel_role(kind):
+    """A deterministic role in production shape: decided body + `[]` sentinel."""
+    if kind == "support_insert":
+        role = _support_insert_role("breathing_reset", day="tuesday", d_day=9)
+    elif kind == "tactical_watch":
+        role, _ = _tactical_watch_role()
+    elif kind == "hard_sparring":
+        role = {
+            "category": "sparring",
+            "role_key": "hard_sparring_day",
+            "coach_owned": True,
+            "scheduled_day_hint": "sunday",
+            "scheduled_countdown_label": "D-25",
+            "hard_sparring_status": "hard_as_planned",
+            "hard_sparring_class": "primary_hard",
+            "selected_exercise_assignments": [],
+        }
+    elif kind == "technical_only_combat":
+        role = {
+            "category": "sparring",
+            "role_key": "hard_sparring_day",
+            "coach_owned": True,
+            "scheduled_day_hint": "sunday",
+            "scheduled_countdown_label": "D-11",
+            "hard_sparring_status": "convert_to_technical_suggested",
+            "hard_sparring_reason_codes": ["d14_hard_sparring_ban"],
+            "selected_exercise_assignments": [],
+        }
+    elif kind == "tactical_cue_card":
+        role = _support_insert_role("tactical_cue_card", day="wednesday", d_day=8)
+    elif kind == "fight_day":
+        from fightcamp.fight_day_override import _make_fight_day_protocol_role
+
+        role = _make_fight_day_protocol_role("saturday")
+        role["scheduled_countdown_label"] = "D-0"
+        role["selected_exercise_assignments"] = []
+    else:  # pragma: no cover - guard against a typo in the parametrisation
+        raise AssertionError(kind)
+    assert role["selected_exercise_assignments"] == []
+    return role
+
+
+@pytest.mark.parametrize(
+    "kind",
+    [
+        "support_insert",
+        "tactical_watch",
+        "hard_sparring",
+        "technical_only_combat",
+        "tactical_cue_card",
+        "fight_day",
+    ],
+)
+def test_empty_closed_membership_sentinel_does_not_hide_decided_content(kind):
+    """`selected_exercise_assignments=[]` must not outrank deterministic authority.
+
+    The packet deliberately preserves the empty list as a closed-membership
+    sentinel, and in production it sits on exactly the roles whose bodies the
+    planner already wrote. Testing the key before the render authority classified
+    every one of them as a zero-exercise closed role: selected_count 0, no body,
+    resolver never consulted. The sentinel keeps its own job — zero exercises,
+    membership still closed — but it no longer decides authority.
+    """
+    role = _sentinel_role(kind)
+    planning_brief = {
+        "athlete_snapshot": {"sport": "boxing"},
+        "weekly_role_map": {
+            "weeks": [{"week_index": 1, "phase": "SPP", "session_roles": [role]}]
+        },
+    }
+
+    entry = _closed_membership_render_manifest(
+        _finalizer_packet(planning_brief), planning_brief=planning_brief
+    )[0]
+
+    assert entry["authority"] != "closed_selected_assignments"
+    assert entry["exact_body_lines"], entry
+    assert entry["athlete_facing_label"]
+    # ...and the sentinel still forbids exercise invention on the day.
+    assert entry["selected_count"] == 0
+    assert entry["exercise_lines"] == []
+
+
+def test_priced_closed_membership_still_wins_over_everything():
+    """A role with real members keeps the closed-membership path unchanged."""
+    planning_brief = {
+        "weekly_role_map": {
+            "weeks": [{
+                "week_index": 1,
+                "phase": "SPP",
+                "session_roles": [{
+                    "category": "strength",
+                    "role_key": "primary_strength_day",
+                    "scheduled_countdown_label": "D-20",
+                    "scheduled_day_hint": "monday",
+                    "selected_exercise_assignments": [
+                        {"name": "Trap Bar Deadlift", "effective_prescription": "3 x 3; RPE 6-7"}
+                    ],
+                }],
+            }]
+        }
+    }
+
+    entry = _closed_membership_render_manifest(
+        _finalizer_packet(planning_brief), planning_brief=planning_brief
+    )[0]
+
+    assert entry["authority"] == "closed_selected_assignments"
+    assert entry["selected_count"] == 1
+    assert entry["exercise_lines"] == ["- Trap Bar Deadlift: 3 x 3; RPE 6-7"]
+    assert "exact_body_lines" not in entry
