@@ -6,6 +6,8 @@ can discharge this contract; neither role names nor LLM prose are evidence.
 """
 from __future__ import annotations
 
+from .weight_cut import cut_justifies_goal_deferral
+
 from copy import deepcopy
 import re
 from typing import Any
@@ -194,7 +196,13 @@ def classify_goal_preservation(athlete: dict, focus: dict | None = None) -> list
         limits.append("fight_proximity")
     if readiness.get("high_fatigue"):
         limits.append("high_fatigue")
-    if readiness.get("aggressive_weight_cut"):
+    # Abandoning a requested goal (power, footwork, skill refinement) is a far
+    # heavier call than reducing its dose, so it needs a genuinely restrictive
+    # cut state — not merely "a cut is active". ``aggressive_weight_cut`` now
+    # means high+, which still shapes dose everywhere else, but only a
+    # critical/extreme cut removes the planner's obligation to preserve a safe
+    # qualifying exposure.
+    if cut_justifies_goal_deferral(athlete.get("cut_severity_bucket")):
         limits.append("weight_cut_pressure")
     return [
         {"goal": goal, "priority": priority,

@@ -869,6 +869,15 @@ def _build_late_fight_allowed_exercises_by_day(
                 if match[1] == "conditioning_slots"
                 and _slot_is_style_taper_neural_primer(match[2], role, source_phase=match[0])
             ]
+            # A style-taper primer is admitted here *as support* only: it is
+            # stamped support_only=true / meaningful_stress=false by
+            # _slot_is_style_taper_neural_primer. Filling the day is not the
+            # same as discharging the strength/power obligation the role
+            # represents, so record that the role's meaningful exposure is
+            # still outstanding rather than letting the role read as covered.
+            if selected_matches:
+                role["support_only_fill"] = True
+                role["meaningful_stress_fulfilled"] = False
             selected_matches = sorted(selected_matches, key=lambda match: (
                 -float((_slot_selected_option(match[2]).get("relevance") or {}).get("style_hits", 0)),
                 -float((_slot_selected_option(match[2]).get("relevance") or {}).get("goal_hits", 0))

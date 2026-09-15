@@ -3261,7 +3261,14 @@ def test_readiness_compression_uses_numeric_cut_bucket_before_weight_cut_risk():
     assert _compute_readiness_compression(athlete_model) == 0
 
 
-def test_readiness_compression_uses_weight_cut_risk_as_fallback_when_numeric_missing():
+def test_unmeasurable_weight_cut_does_not_remove_a_training_slot():
+    """A cut of unknown magnitude is not evidence of a severe cut.
+
+    This used to charge one compression slot purely because ``weight_cut_risk``
+    was set, so an athlete who declared a cut without usable numbers was
+    punished exactly like a measured severe one. Capacity removal now requires a
+    resolved high+ severity bucket.
+    """
     athlete_model = {
         "fatigue": "low",
         "injuries": [],
@@ -3271,7 +3278,7 @@ def test_readiness_compression_uses_weight_cut_risk_as_fallback_when_numeric_mis
         "readiness_flags": [],
     }
 
-    assert _compute_readiness_compression(athlete_model) == 1
+    assert _compute_readiness_compression(athlete_model) == 0
 
 
 def test_sandwiched_glycolytic_suppressed_for_boxing_athlete():

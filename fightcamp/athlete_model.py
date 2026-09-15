@@ -26,6 +26,8 @@ from .training_context import TrainingContext
 from .weight_cut import (
     WEIGHT_CUT_INPUTS_KNOWN,
     compute_cut_severity_score,
+    cut_health_bucket,
+    cut_restricts_training_capacity,
     cut_severity_bucket,
 )
 
@@ -109,7 +111,17 @@ def _derive_readiness_flags(
         flags.append(f"{fatigue_value}_fatigue")
     if weight_cut_risk:
         flags.append("active_weight_cut")
-    if weight_cut_pct >= 5.0:
+    # ``aggressive_weight_cut`` is a *training pressure* flag, so it follows the
+    # canonical severity bucket rather than a bare percentage. The old
+    # ``>= 5.0`` rule was a second, days-out-blind severity system: it fired for
+    # a routine 5.3% cut 16 days out exactly as hard as for 5.3% on fight day,
+    # and every downstream consumer inherited that. Health-risk escalation keeps
+    # its own magnitude floor separately in ``weight_cut``.
+    if weight_cut_risk and cut_restricts_training_capacity(
+        cut_severity_bucket(
+            compute_cut_severity_score(weight_cut_pct, days_until_fight)
+        )
+    ):
         flags.append("aggressive_weight_cut")
     # A stable surface/skin-only injury is a hygiene note, not injured tissue:
     # it never raises the injury_management readiness flag, so no downstream
@@ -211,6 +223,10 @@ def _build_athlete_model(
         ),
         "cut_severity_score": cut_severity_score,
         "cut_severity_bucket": cut_severity_bucket(cut_severity_score),
+        # Strain scale: drives health escalation and dose/load shaping. Kept
+        # separate from the capacity scale above so relaxing calendar deletion
+        # never relaxes how hard the cut is treated physiologically.
+        "cut_health_bucket": cut_health_bucket(cut_severity_score),
         "technical_styles": training_context.style_technical,
         "tactical_styles": training_context.style_tactical,
         "weaknesses": training_context.weaknesses,

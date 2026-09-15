@@ -30,6 +30,8 @@ Design contract (kept deliberately narrow):
 
 from __future__ import annotations
 
+from .weight_cut import cut_restricts_training_capacity
+
 import re
 from typing import Any
 
@@ -444,17 +446,16 @@ def athlete_dose_state(athlete_model: dict[str, Any] | None) -> dict[str, bool]:
     }
     fatigue = str(athlete_model.get("fatigue") or "").strip().lower()
     cut_bucket = str(athlete_model.get("cut_severity_bucket") or "").strip().lower()
-    try:
-        weight_cut_pct = float(athlete_model.get("weight_cut_pct") or 0.0)
-    except (TypeError, ValueError):
-        weight_cut_pct = 0.0
     injuries = athlete_model.get("injuries") or athlete_model.get("parsed_injuries") or []
     return {
         "high_fatigue": fatigue == "high" or "high_fatigue" in readiness_flags,
+        # Consume the resolved cut state; never re-derive severity from a raw
+        # percentage here. The ``>= 5.0`` clause was an independent severity
+        # system that overrode the canonical bucket for any 5%+ cut regardless
+        # of how far out the fight was.
         "aggressive_weight_cut": (
             "aggressive_weight_cut" in readiness_flags
-            or cut_bucket in {"high", "aggressive", "severe"}
-            or weight_cut_pct >= 5.0
+            or cut_restricts_training_capacity(cut_bucket)
         ),
         "injury_restricted": bool(injuries) or "injury_management" in readiness_flags,
         # Reserved for genuine athlete-level recent-contact state. Scheduled
