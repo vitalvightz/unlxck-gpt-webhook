@@ -261,6 +261,8 @@ test("safety checks are omitted on a preview card", () => {
     ],
   });
   assert.ok(!html.includes("Skin injury"));
+  assert.ok(html.includes("<details"));
+  assert.ok(!/<details[^>]*\sopen/.test(html));
 });
 
 test("a current skin-care message stays authoritative over preview timing", () => {
@@ -291,6 +293,7 @@ test("a current skin-care message stays authoritative over preview timing", () =
   assert.ok(html.includes(">SKIN CARE<"));
   assert.ok(html.includes("Keep the left eyebrow cut clean and covered."));
   assert.ok(html.includes("Why this message?"));
+  assert.ok(/<details[^>]*\sopen/.test(html));
   assert.ok(html.includes("Message based on"));
   assert.ok(html.includes("your tracked injuries"));
   assert.ok(html.includes("Skin injury"));

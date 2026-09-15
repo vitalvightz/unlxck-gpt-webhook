@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
+import styles from "./today-screen.module.css";
 
 import { useAppSession } from "@/components/auth-provider";
 import { CampProgressBar } from "@/components/camp-progress-bar";
@@ -125,7 +126,7 @@ function TodayReadinessStrip({
         </ReadinessValue>
       </div>
       <div data-tone={sessionTone}>
-        <dt>Session</dt>
+        <dt>Today’s session</dt>
         <ReadinessValue href={sessionHref} actionLabel="Go to today's session">
           {getCompletionLabel(completionStatus)}
         </ReadinessValue>
@@ -222,32 +223,29 @@ export function TodayScreen() {
 
   return (
     <div className="today-page">
-      <section className="panel today-shell">
+      <section className={`panel today-shell ${styles.command}`}>
         <div className="today-hero-grid">
           <div className="today-hero-copy">
-            <p className="kicker">Today</p>
-            <h1>{planTitle}</h1>
+            <p className={`kicker ${styles.planName}`}>{planTitle}</p>
+            <h1>Today</h1>
             <p className="muted today-hero-meta">
-              {trainingDayLabel}
-              {openOngoing || activePlan.phase ? <span aria-hidden="true"> · </span> : null}
-              {openOngoing
+              <span>{trainingDayLabel}</span>
+              {openOngoing || activePlan.phase ? <span aria-hidden="true">·</span> : null}
+              <span>{openOngoing
                 ? "Ongoing 4-week block"
                 : activePlan.phase
                   ? humanizeIfRawEnum(activePlan.phase)
-                  : null}
+                  : null}</span>
             </p>
           </div>
-          <div className="today-hero-actions">
-            <Link href={`/plans/${activePlan.id}`} className="secondary-button">
+          <nav className={styles.links} aria-label="Today context">
+            <Link href={`/plans/${activePlan.id}`}>
               Open camp plan
             </Link>
-            <Link href="/history" className="ghost-button">
+            <Link href="/history">
               View history
             </Link>
-            <Link href="/" className="ghost-button">
-              Overview
-            </Link>
-          </div>
+          </nav>
         </div>
         <CampProgressBar plan={structuredPlan} trainingDay={trainingDay} variant="today" />
         <TodayReadinessStrip
@@ -256,7 +254,7 @@ export function TodayScreen() {
           completionStatus={state.today.completion_status}
           checkinHref={showCheckin ? "#today-checkin" : undefined}
           injuriesHref={token ? "#today-injury" : undefined}
-          sessionHref="#today-session"
+          sessionHref={resolvedDecision.displayTier === "preview" ? undefined : "#today-session"}
         />
         <TodayDecisionPanel
           banner={resolvedDecision.banner}

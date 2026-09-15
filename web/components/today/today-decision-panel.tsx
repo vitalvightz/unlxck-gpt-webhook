@@ -109,7 +109,7 @@ export function TodayDecisionPanel({
         ) : null}
       </div>
       {hasEvidence ? (
-        <details className="today-decision-disclosure" open>
+        <details className="today-decision-disclosure" open={!isPreview}>
           <summary>{isSafetyNotice ? "Why this message?" : "Why this decision?"}</summary>
         <dl className="today-decision-evidence" data-evidence-count={evidenceCount}>
           {triggerLabels.length ? (
