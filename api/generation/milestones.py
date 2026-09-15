@@ -72,15 +72,23 @@ def build_progress_recorder(
         if min_persist_interval_seconds is None
         else max(0.0, min(float(min_persist_interval_seconds), _MAX_PERSIST_MIN_INTERVAL_SECONDS))
     )
-    # None means "nothing recorded since the last successful persist".
+    # pending_since: None means "nothing recorded since the last SUCCESSFUL
+    # persist". last_attempt_at tracks the last ATTEMPT, successful or not —
+    # the two differ precisely when the store is failing, which is when the
+    # rate limit matters most.
     pending_since: list[float | None] = [None]
-    last_persist_at: list[float | None] = [None]
+    last_attempt_at: list[float | None] = [None]
 
     def _persist(code: str, *, touch_heartbeat: bool = True) -> None:
         snapshot = list(milestones)
         changes: dict[str, Any] = {"progress_milestones": snapshot}
         if touch_heartbeat:
             changes["heartbeat_at"] = utc_now_iso()
+        # Stamp the ATTEMPT, not the success. If the store is down, every
+        # subsequent emit would otherwise see last_attempt_at unset and fire
+        # another PATCH immediately — the same unbounded write rate this
+        # throttle exists to prevent, at the worst possible moment.
+        last_attempt_at[0] = monotonic()
         try:
             store.update_generation_job(job_id, refresh=False, **changes)
         except Exception:
@@ -89,9 +97,9 @@ def build_progress_recorder(
                 job_id,
                 code,
             )
-            # Leave pending_since set so the next emit or the flush retries.
+            # pending_since stays set so a later emit or the flush retries, and
+            # the snapshot is cumulative so nothing recorded so far is lost.
             return
-        last_persist_at[0] = monotonic()
         pending_since[0] = None
 
     def _callback(code: str, label: str, detail: str, meta: dict[str, Any]) -> None:
@@ -113,7 +121,7 @@ def build_progress_recorder(
         now = monotonic()
         if pending_since[0] is None:
             pending_since[0] = now
-        previous = last_persist_at[0]
+        previous = last_attempt_at[0]
         if previous is not None and (now - previous) < interval:
             # Coalesced into the next write; the snapshot is cumulative.
             return

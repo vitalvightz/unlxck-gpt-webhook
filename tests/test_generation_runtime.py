@@ -1162,6 +1162,68 @@ def test_progress_flush_is_a_noop_when_nothing_is_pending():
     assert len(store.calls) == 1
 
 
+def test_failing_persists_are_rate_limited_too():
+    """A database outage must not turn every emit into another PATCH attempt.
+
+    Throttling on success alone leaves last_attempt_at unset while the store is
+    down, so each subsequent milestone retries immediately — full-rate writes
+    aimed at an already-struggling database.
+    """
+
+    class _AlwaysFailingStore:
+        def __init__(self) -> None:
+            self.attempts = 0
+
+        def update_generation_job(self, job_id, *, refresh=True, **changes):
+            self.attempts += 1
+            raise RuntimeError("db down")
+
+    clock = _FakeClock()
+    store = _AlwaysFailingStore()
+    _milestones, callback, _flush = generation_runtime.build_progress_recorder(
+        job_id="job-x", store=store, min_persist_interval_seconds=5.0, monotonic=clock
+    )
+
+    # 200 emits across 10 simulated seconds, every single write raising.
+    for index in range(200):
+        callback(f"code-{index}", "label", "detail", {})
+        clock.advance(0.05)
+
+    # Bounded by the interval (t=0 and t=5), not by the emit count.
+    assert store.attempts <= 3
+    assert 200 // store.attempts > 50  # sanity: nowhere near one attempt per emit
+
+
+def test_failing_persists_still_flush_the_full_backlog_once_the_store_recovers():
+    """Rate-limiting failures must not discard what those failures did not write."""
+
+    class _RecoveringStore(_RecordingStore):
+        def __init__(self) -> None:
+            super().__init__()
+            self.down = True
+
+        def update_generation_job(self, job_id, *, refresh=True, **changes):
+            if self.down:
+                raise RuntimeError("db down")
+            return super().update_generation_job(job_id, refresh=refresh, **changes)
+
+    clock = _FakeClock()
+    store = _RecoveringStore()
+    _milestones, callback, flush = generation_runtime.build_progress_recorder(
+        job_id="job-x", store=store, min_persist_interval_seconds=5.0, monotonic=clock
+    )
+    for code in ("first", "second", "third"):
+        callback(code, "label", "detail", {})
+        clock.advance(0.05)
+    assert store.calls == []  # nothing landed while the store was down
+
+    store.down = False
+    flush()
+
+    persisted = [entry["code"] for entry in store.calls[-1][1]["progress_milestones"]]
+    assert persisted == ["first", "second", "third"]
+
+
 def test_progress_flush_retries_after_a_failed_persist():
     """A failed write must leave the milestones pending for the flush."""
 
