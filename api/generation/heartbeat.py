@@ -5,6 +5,7 @@ import asyncio
 import logging
 from contextlib import suppress
 from datetime import datetime, timezone
+from functools import partial
 from typing import Any, Callable
 
 from ..generation_config import generation_job_stale_after_seconds
@@ -106,9 +107,15 @@ async def heartbeat_generation_job(
                 return
             try:
                 await asyncio.to_thread(
-                    store.update_generation_job,
-                    job_id,
-                    heartbeat_at=utc_now_iso(),
+                    partial(
+                        store.update_generation_job,
+                        job_id,
+                        # Ticks every 15s for the life of the job and the result
+                        # is discarded; the read-back would be a full-row
+                        # select="*" each time.
+                        refresh=False,
+                        heartbeat_at=utc_now_iso(),
+                    )
                 )
             except Exception:
                 logger.exception("[jobs] generation:heartbeat_failed job_id=%s", job_id)

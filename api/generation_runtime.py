@@ -23,6 +23,7 @@ from .generation.triage import (
     should_skip_stage2 as should_skip_stage2,
 )
 from .generation.milestones import (
+    _MAX_PERSIST_MIN_INTERVAL_SECONDS as _MAX_PERSIST_MIN_INTERVAL_SECONDS,
     _MAX_PERSISTED_MILESTONES as _MAX_PERSISTED_MILESTONES,
     build_progress_recorder as build_progress_recorder,
 )

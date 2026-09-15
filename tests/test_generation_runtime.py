@@ -876,16 +876,22 @@ class _RecordingStore:
 
     def __init__(self) -> None:
         self.calls: list[tuple[str, dict]] = []
+        self.refresh_flags: list[bool] = []
 
-    def update_generation_job(self, job_id: str, **changes: object) -> dict:
+    def update_generation_job(
+        self, job_id: str, *, refresh: bool = True, **changes: object
+    ) -> dict:
         self.calls.append((job_id, dict(changes)))
-        return {"id": job_id, **changes}
+        self.refresh_flags.append(refresh)
+        return {"id": job_id, **changes} if refresh else {}
 
 
 class _FailingUpdateStore:
     """Store stub whose update_generation_job always raises."""
 
-    def update_generation_job(self, job_id: str, **changes: object) -> dict:
+    def update_generation_job(
+        self, job_id: str, *, refresh: bool = True, **changes: object
+    ) -> dict:
         raise RuntimeError("db down")
 
 
@@ -1007,7 +1013,9 @@ def test_compact_final_result_preserves_triage_context_for_held_outcome():
 
 def test_build_progress_recorder_persists_milestone_and_heartbeat():
     store = _RecordingStore()
-    milestones, callback = generation_runtime.build_progress_recorder(job_id="job-x", store=store)
+    milestones, callback, _flush = generation_runtime.build_progress_recorder(
+        job_id="job-x", store=store
+    )
     callback("stage1_planner_invoked", "Stage 1 planner invoked", "detail", {"k": "v"})
 
     assert len(store.calls) == 1
@@ -1022,7 +1030,9 @@ def test_build_progress_recorder_persists_milestone_and_heartbeat():
 
 def test_build_progress_recorder_swallows_persist_failures():
     store = _FailingUpdateStore()
-    milestones, callback = generation_runtime.build_progress_recorder(job_id="job-x", store=store)
+    milestones, callback, _flush = generation_runtime.build_progress_recorder(
+        job_id="job-x", store=store
+    )
 
     # Must not raise even though the store write fails.
     callback("stage1_planner_invoked", "label", "detail", {})
@@ -1032,7 +1042,7 @@ def test_build_progress_recorder_swallows_persist_failures():
 
 def test_build_progress_recorder_respects_should_persist_guard():
     store = _RecordingStore()
-    milestones, callback = generation_runtime.build_progress_recorder(
+    milestones, callback, _flush = generation_runtime.build_progress_recorder(
         job_id="job-x", store=store, should_persist=lambda: False
     )
     callback("stage1_planner_invoked", "label", "detail", {})
@@ -1044,7 +1054,9 @@ def test_build_progress_recorder_respects_should_persist_guard():
 def test_build_progress_recorder_caps_persisted_milestones():
     store = _RecordingStore()
     cap = generation_runtime._MAX_PERSISTED_MILESTONES
-    milestones, callback = generation_runtime.build_progress_recorder(job_id="job-x", store=store)
+    milestones, callback, _flush = generation_runtime.build_progress_recorder(
+        job_id="job-x", store=store, min_persist_interval_seconds=0
+    )
     for index in range(cap + 5):
         callback(f"code-{index}", "label", "detail", {})
 
@@ -1052,6 +1064,217 @@ def test_build_progress_recorder_caps_persisted_milestones():
     last_snapshot = store.calls[-1][1]["progress_milestones"]
     assert len(last_snapshot) == cap
     assert milestones[-1]["code"] == f"code-{cap + 4}"
+
+
+# --- progress-path write amplification (2026-09-15 outage regression) ------
+#
+# A single generation drove ~280 PATCHes plus ~285 full-row GETs against
+# generation_jobs in five minutes, saturating the database. Two causes: the
+# recorder persisted on every emit, and update_generation_job re-read the whole
+# row (select="*", so every TOASTed blob) after every write.
+
+
+class _FakeClock:
+    def __init__(self) -> None:
+        self.now = 1000.0
+
+    def __call__(self) -> float:
+        return self.now
+
+    def advance(self, seconds: float) -> None:
+        self.now += seconds
+
+
+def test_progress_persist_never_refreshes_the_full_job_row():
+    store = _RecordingStore()
+    _milestones, callback, _flush = generation_runtime.build_progress_recorder(
+        job_id="job-x", store=store
+    )
+    callback("stage1_planner_invoked", "label", "detail", {})
+
+    assert store.refresh_flags == [False]
+
+
+def test_progress_persist_writes_only_milestones_and_heartbeat():
+    """Progress writes must never carry heavyweight generation payloads."""
+    store = _RecordingStore()
+    _milestones, callback, _flush = generation_runtime.build_progress_recorder(
+        job_id="job-x", store=store
+    )
+    callback("stage1_planner_invoked", "label", "detail", {})
+
+    _job_id, changes = store.calls[0]
+    assert set(changes) == {"progress_milestones", "heartbeat_at"}
+    for heavy in ("stage1_result", "stage2_payload", "final_result", "request_payload"):
+        assert heavy not in changes
+
+
+def test_repeated_progress_events_produce_bounded_writes():
+    """200 rapid emits must not become 200 database writes."""
+    clock = _FakeClock()
+    store = _RecordingStore()
+    _milestones, callback, flush = generation_runtime.build_progress_recorder(
+        job_id="job-x",
+        store=store,
+        min_persist_interval_seconds=5.0,
+        monotonic=clock,
+    )
+
+    # 200 emits spread over 10 simulated seconds — the old code wrote 200 times.
+    for index in range(200):
+        callback(f"code-{index}", "label", "detail", {})
+        clock.advance(0.05)
+    flush()
+
+    # 1 leading write + 1 at the 5s boundary + 1 flush.
+    assert len(store.calls) <= 4
+    assert all(refresh is False for refresh in store.refresh_flags)
+
+
+def test_throttled_progress_events_are_coalesced_not_lost():
+    """A skipped write must still be represented in the next snapshot."""
+    clock = _FakeClock()
+    store = _RecordingStore()
+    _milestones, callback, flush = generation_runtime.build_progress_recorder(
+        job_id="job-x", store=store, min_persist_interval_seconds=5.0, monotonic=clock
+    )
+
+    callback("first", "label", "detail", {})
+    callback("throttled", "label", "detail", {})
+    assert len(store.calls) == 1  # second emit was throttled
+
+    flush()
+    persisted = [entry["code"] for entry in store.calls[-1][1]["progress_milestones"]]
+    assert persisted == ["first", "throttled"]
+
+
+def test_progress_flush_is_a_noop_when_nothing_is_pending():
+    clock = _FakeClock()
+    store = _RecordingStore()
+    _milestones, callback, flush = generation_runtime.build_progress_recorder(
+        job_id="job-x", store=store, min_persist_interval_seconds=5.0, monotonic=clock
+    )
+    callback("first", "label", "detail", {})
+    assert len(store.calls) == 1
+
+    flush()
+    flush()
+    assert len(store.calls) == 1
+
+
+def test_progress_flush_retries_after_a_failed_persist():
+    """A failed write must leave the milestones pending for the flush."""
+
+    class _FlakyStore(_RecordingStore):
+        def __init__(self) -> None:
+            super().__init__()
+            self.fail_next = True
+
+        def update_generation_job(self, job_id, *, refresh=True, **changes):
+            if self.fail_next:
+                self.fail_next = False
+                raise RuntimeError("db down")
+            return super().update_generation_job(job_id, refresh=refresh, **changes)
+
+    clock = _FakeClock()
+    store = _FlakyStore()
+    _milestones, callback, flush = generation_runtime.build_progress_recorder(
+        job_id="job-x", store=store, min_persist_interval_seconds=5.0, monotonic=clock
+    )
+    callback("first", "label", "detail", {})
+    assert store.calls == []  # the write raised and was swallowed
+
+    flush()
+    persisted = [entry["code"] for entry in store.calls[-1][1]["progress_milestones"]]
+    assert persisted == ["first"]
+
+
+def test_flush_still_persists_milestones_recorded_before_a_timeout():
+    """A timeout after a throttled emit must not lose that milestone.
+
+    should_persist closes when the job times out or is cancelled. The pending
+    milestones were all accepted while it was still open, so they must still
+    reach the row — but heartbeat_at must NOT be bumped, or a timed-out job
+    would look freshly alive to the staleness sweep.
+    """
+    clock = _FakeClock()
+    store = _RecordingStore()
+    allow = {"value": True}
+    _milestones, callback, flush = generation_runtime.build_progress_recorder(
+        job_id="job-x",
+        store=store,
+        should_persist=lambda: allow["value"],
+        min_persist_interval_seconds=5.0,
+        monotonic=clock,
+    )
+    callback("first", "label", "detail", {})
+    callback("throttled", "label", "detail", {})
+    allow["value"] = False  # stage 1 times out here
+
+    flush()
+
+    _job_id, changes = store.calls[-1]
+    persisted = [entry["code"] for entry in changes["progress_milestones"]]
+    assert persisted == ["first", "throttled"]
+    assert "heartbeat_at" not in changes
+
+
+def test_flush_bumps_heartbeat_while_the_job_is_still_live():
+    clock = _FakeClock()
+    store = _RecordingStore()
+    _milestones, callback, flush = generation_runtime.build_progress_recorder(
+        job_id="job-x",
+        store=store,
+        should_persist=lambda: True,
+        min_persist_interval_seconds=5.0,
+        monotonic=clock,
+    )
+    callback("first", "label", "detail", {})
+    callback("throttled", "label", "detail", {})
+
+    flush()
+
+    assert store.calls[-1][1]["heartbeat_at"]
+
+
+def test_guard_still_blocks_new_milestones_after_a_timeout():
+    """Post-timeout emits must not be recorded at all."""
+    clock = _FakeClock()
+    store = _RecordingStore()
+    allow = {"value": True}
+    milestones, callback, flush = generation_runtime.build_progress_recorder(
+        job_id="job-x",
+        store=store,
+        should_persist=lambda: allow["value"],
+        min_persist_interval_seconds=5.0,
+        monotonic=clock,
+    )
+    callback("first", "label", "detail", {})
+    allow["value"] = False
+    callback("after_timeout", "label", "detail", {})
+    flush()
+
+    assert [entry["code"] for entry in milestones] == ["first"]
+    for _job_id, changes in store.calls:
+        codes = [entry["code"] for entry in changes["progress_milestones"]]
+        assert "after_timeout" not in codes
+
+
+def test_progress_persist_interval_is_capped():
+    """An oversized env value must not push writes past the staleness window."""
+    clock = _FakeClock()
+    store = _RecordingStore()
+    _milestones, callback, _flush = generation_runtime.build_progress_recorder(
+        job_id="job-x",
+        store=store,
+        min_persist_interval_seconds=10_000,
+        monotonic=clock,
+    )
+    callback("first", "label", "detail", {})
+    clock.advance(generation_runtime._MAX_PERSIST_MIN_INTERVAL_SECONDS + 1)
+    callback("second", "label", "detail", {})
+
+    assert len(store.calls) == 2
 
 
 # --- schedule_generation_job_if_needed (isolated branches) -----------------

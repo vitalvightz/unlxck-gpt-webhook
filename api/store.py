@@ -124,6 +124,11 @@ GENERATION_JOB_ADMIN_TRIAGE_SELECT = (
 GENERATION_JOB_ADMIN_LIST_SELECT = (
     f"{GENERATION_JOB_ADMIN_BASE_SELECT}, request_payload, final_result"
 )
+# The status-transition guard in update_generation_job only needs the current
+# status. It used to re-read the whole row with select="*", which pulls
+# request_payload/stage1_result/final_result out of TOAST storage on every
+# status write for no reason.
+GENERATION_JOB_STATUS_GUARD_SELECT = "id, status"
 
 _TRANSIENT_SUPABASE_ERRORS = (
     httpx.RemoteProtocolError,
@@ -447,7 +452,9 @@ class AppStore(Protocol):
         enforce_worker_ownership: bool = True,
     ) -> dict[str, Any]: ...
 
-    def update_generation_job(self, job_id: str, **changes: Any) -> dict[str, Any]: ...
+    def update_generation_job(
+        self, job_id: str, *, refresh: bool = True, **changes: Any
+    ) -> dict[str, Any]: ...
 
     def record_stage2_cost(self, job_id: str, metadata: dict[str, Any]) -> None: ...
 
@@ -1369,6 +1376,14 @@ class SupabaseAppStore:
     def _read_generation_job(self, job_id: str) -> dict[str, Any] | None:
         return self._select_first(
             self.client.table("generation_jobs").select(GENERATION_JOB_SELECT).eq("id", job_id)
+        )
+
+    def _read_generation_job_status_guard(self, job_id: str) -> dict[str, Any] | None:
+        """Status-only read for the update_generation_job transition guard."""
+        return self._select_first(
+            self.client.table("generation_jobs")
+            .select(GENERATION_JOB_STATUS_GUARD_SELECT)
+            .eq("id", job_id)
         )
 
     def _get_profile_by_id(self, athlete_id: str) -> dict[str, Any] | None:
@@ -3778,14 +3793,26 @@ class SupabaseAppStore:
                 detail="failed to fail generation job",
             ) from exc
 
-    def update_generation_job(self, job_id: str, **changes: Any) -> dict[str, Any]:
+    def update_generation_job(
+        self, job_id: str, *, refresh: bool = True, **changes: Any
+    ) -> dict[str, Any]:
+        """Patch a generation job row.
+
+        ``refresh=False`` skips the read-back and returns ``{}``. High-frequency
+        writers (the progress-milestone recorder and the heartbeat loop) discard
+        the returned row, and the read-back is a ``select="*"`` that pulls every
+        TOASTed blob on the row (request_payload/stage1_result/final_result).
+        Doing that after every write turned one progress event into a PATCH plus
+        a multi-megabyte GET, which is what saturated the database on
+        2026-09-15. Callers that actually use the updated row keep the default.
+        """
         try:
             payload = dict(changes)
             if "status" in payload:
                 next_status = str(payload.get("status") or "").strip().lower()
                 if not is_generation_job_status(next_status):
                     raise _status_transition_error(f"unknown generation job status: {next_status!r}")
-                existing = self._read_generation_job(job_id)
+                existing = self._read_generation_job_status_guard(job_id)
                 if not existing:
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
@@ -3799,6 +3826,8 @@ class SupabaseAppStore:
                 operation="update_generation_job:update",
                 fn=lambda: self.client.table("generation_jobs").update(payload).eq("id", job_id).execute(),
             )
+            if not refresh:
+                return {}
             updated = self.get_generation_job(job_id)
             if not updated:
                 raise HTTPException(
