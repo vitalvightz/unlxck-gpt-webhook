@@ -383,3 +383,110 @@ def test_d7_allows_cooperative_contact_but_live_is_always_forbidden():
     base["equipment"] = ["partner"]
     assert style_taper_entry_issues(base) == []
     assert "live_contact_forbidden" in style_taper_entry_issues(dict(base, contact_level="live"))
+
+
+# --- Bank 2.1: reservoir depth so the late tail is not forced to repeat -------
+
+MIN_ALACTIC_OPTIONS_PER_STYLE = 4
+PRIMER_FAMILIES = {"pure_neural", "technical_neural", "tactical_neural"}
+
+
+def _alactic_by_style(style: str) -> list[dict]:
+    return [
+        item for item in _load_bank()
+        if item["system"] == "alactic" and style in set(item.get("tags", []))
+    ]
+
+
+@pytest.mark.parametrize("style", sorted(STYLE_TAGS))
+def test_every_style_has_a_real_alactic_reservoir_not_a_single_answer(style):
+    """The late neural selector must have more than one personalised answer.
+
+    With one qualified alactic option per style the selector re-picked the same
+    drill on every dated day, which read as a bug to athletes. Depth is what
+    fixes that; a repeat penalty on a one-item reservoir cannot.
+    """
+    options = _alactic_by_style(style)
+    assert len(options) >= MIN_ALACTIC_OPTIONS_PER_STYLE, [i["name"] for i in options]
+
+
+@pytest.mark.parametrize("style", sorted(STYLE_TAGS))
+@pytest.mark.parametrize("window", [D13_TO_D8, D7, D6_TO_D5])
+def test_every_style_has_multiple_alactic_options_in_each_early_window(style, window):
+    options = [i for i in _alactic_by_style(style) if window in i["late_windows"]]
+    assert len(options) >= MIN_ALACTIC_OPTIONS_PER_STYLE, [i["name"] for i in options]
+
+
+@pytest.mark.parametrize("style", sorted(STYLE_TAGS))
+def test_every_style_has_a_zero_contact_alactic_cue_for_the_final_days(style):
+    """A neural touch need not become an aerobic rhythm drill once contact stops."""
+    cues = [
+        item for item in _alactic_by_style(style)
+        if item["contact_level"] == "none" and D1 in item["late_windows"]
+    ]
+    assert cues, style
+    for cue in cues:
+        assert D4_TO_D2 in cue["late_windows"]
+        assert float(cue["rpe_max"]) <= RPE_MAX_BY_WINDOW[D1]
+
+
+@pytest.mark.parametrize("style", sorted(STYLE_TAGS))
+def test_every_style_spans_all_three_primer_families(style):
+    """Not every primer may be a fight-specific tactical drill.
+
+    If the whole reservoir is tactical the athlete loses pure speed/neural
+    priming, which taper research supports retaining while volume drops.
+    """
+    families = {item["primer_family"] for item in _alactic_by_style(style)}
+    assert PRIMER_FAMILIES <= families, sorted(families)
+
+
+def test_every_bank_entry_declares_a_known_primer_family():
+    for item in _load_bank():
+        family = item.get("primer_family")
+        expected = PRIMER_FAMILIES if item["system"] == "alactic" else {"rehearsal"}
+        assert family in expected, (item["name"], family)
+
+
+def test_clinch_tie_work_is_not_offered_to_every_kickboxer():
+    """Clinch rules differ by kickboxing ruleset, so sport eligibility stays strict."""
+    for item in _load_bank():
+        tags = set(item.get("tags", []))
+        if "clinch" not in tags or item["contact_level"] == "none":
+            continue
+        assert "kickboxing" not in tags, item["name"]
+        assert "boxing" not in tags, item["name"]
+
+
+def test_expanded_entries_never_claim_strength_or_meaningful_stress():
+    """The expansion must not resurrect the primer-fulfils-strength bug."""
+    for item in _load_bank():
+        assert item["support_only"] is True
+        assert item["meaningful_stress"] is False
+        assert item["stress_class"] == "support"
+
+
+D1_CONTENT_TAGS = {"breathing", "visualization", "tactical", "readiness_check"}
+
+
+def test_every_d1_entry_carries_fight_eve_content_tags():
+    """Fight eve is rehearsal, not conditioning.
+
+    The D-1 renderer only admits recognisable breathing/visualization/tactical/
+    readiness content. A d1 entry without one of those tags fails that contract
+    the moment an athlete actually selects it, so the bank must not ship one.
+    """
+    for item in _load_bank():
+        if D1 not in item.get("late_windows", []):
+            continue
+        assert set(item["tags"]) & D1_CONTENT_TAGS, item["name"]
+
+
+def test_pure_physical_primers_never_reach_fight_eve():
+    """Keeping speed work available must not push bare physical work to D-1."""
+    for item in _load_bank():
+        if item.get("primer_family") != "pure_neural":
+            continue
+        if set(item["tags"]) & D1_CONTENT_TAGS:
+            continue  # shadow rehearsal of a fight action, not bare physical work
+        assert D1 not in item["late_windows"], item["name"]

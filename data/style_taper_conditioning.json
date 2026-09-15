@@ -52,7 +52,8 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5"
-    ]
+    ],
+    "primer_family": "technical_neural"
   },
   {
     "name": "Pocket Rhythm Shadow",
@@ -100,7 +101,8 @@
     "late_windows": [
       "d4_to_d2",
       "d1"
-    ]
+    ],
+    "primer_family": "rehearsal"
   },
   {
     "name": "Pressure Lane Shadow",
@@ -151,7 +153,8 @@
       "d6_to_d5",
       "d4_to_d2",
       "d1"
-    ]
+    ],
+    "primer_family": "rehearsal"
   },
   {
     "name": "Cover-Return-Exit",
@@ -201,7 +204,8 @@
     "late_windows": [
       "d7",
       "d6_to_d5"
-    ]
+    ],
+    "primer_family": "tactical_neural"
   },
   {
     "name": "Visual Counter Shadow",
@@ -228,7 +232,8 @@
       "skill_refinement",
       "zero_impact",
       "coordination",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "tactical"
     ],
     "mechanical_risk_tags": [
       "mech_trunk_rotation"
@@ -251,7 +256,8 @@
       "d6_to_d5",
       "d4_to_d2",
       "d1"
-    ]
+    ],
+    "primer_family": "rehearsal"
   },
   {
     "name": "Range Gate-Score-Exit",
@@ -303,7 +309,8 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5"
-    ]
+    ],
+    "primer_family": "tactical_neural"
   },
   {
     "name": "Long-Range Rhythm Shadow",
@@ -328,7 +335,8 @@
       "footwork",
       "skill_refinement",
       "zero_impact",
-      "coordination"
+      "coordination",
+      "tactical"
     ],
     "mechanical_risk_tags": [],
     "work_sec": 20,
@@ -349,7 +357,8 @@
       "d6_to_d5",
       "d4_to_d2",
       "d1"
-    ]
+    ],
+    "primer_family": "rehearsal"
   },
   {
     "name": "Single-Kick Recoil Primer",
@@ -399,7 +408,8 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5"
-    ]
+    ],
+    "primer_family": "technical_neural"
   },
   {
     "name": "Kick Timing Shadow Cue",
@@ -424,7 +434,8 @@
       "reaction",
       "skill_refinement",
       "zero_impact",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "tactical"
     ],
     "mechanical_risk_tags": [
       "mech_trunk_rotation"
@@ -447,7 +458,8 @@
       "d6_to_d5",
       "d4_to_d2",
       "d1"
-    ]
+    ],
+    "primer_family": "rehearsal"
   },
   {
     "name": "Pummel-Frame-Exit Flow",
@@ -464,7 +476,6 @@
     "duration": "2x6s with 120s rest",
     "intensity": "technical crisp",
     "tags": [
-      "kickboxing",
       "muay_thai",
       "mma",
       "clinch_fighter",
@@ -501,7 +512,8 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5"
-    ]
+    ],
+    "primer_family": "technical_neural"
   },
   {
     "name": "Clinch Frame-Exit Shadow",
@@ -548,7 +560,8 @@
     "late_windows": [
       "d4_to_d2",
       "d1"
-    ]
+    ],
+    "primer_family": "rehearsal"
   },
   {
     "name": "Position-Attack Entry-Release",
@@ -600,7 +613,8 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5"
-    ]
+    ],
+    "primer_family": "technical_neural"
   },
   {
     "name": "Submission Entry Map Shadow",
@@ -646,7 +660,8 @@
     "late_windows": [
       "d4_to_d2",
       "d1"
-    ]
+    ],
+    "primer_family": "rehearsal"
   },
   {
     "name": "Hip-Heist-Re-square",
@@ -700,7 +715,8 @@
       "d7",
       "d6_to_d5",
       "d4_to_d2"
-    ]
+    ],
+    "primer_family": "technical_neural"
   },
   {
     "name": "Scramble Base Reset Shadow",
@@ -747,7 +763,8 @@
     "late_windows": [
       "d4_to_d2",
       "d1"
-    ]
+    ],
+    "primer_family": "rehearsal"
   },
   {
     "name": "Position Touch-Reset",
@@ -798,7 +815,8 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5"
-    ]
+    ],
+    "primer_family": "technical_neural"
   },
   {
     "name": "Grappling Base-Position Shadow",
@@ -845,7 +863,8 @@
     "late_windows": [
       "d4_to_d2",
       "d1"
-    ]
+    ],
+    "primer_family": "rehearsal"
   },
   {
     "name": "Level-Change-Entry-Recover",
@@ -896,7 +915,8 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5"
-    ]
+    ],
+    "primer_family": "technical_neural"
   },
   {
     "name": "Circle-Re-shot Cue",
@@ -945,7 +965,8 @@
     "late_windows": [
       "d7",
       "d6_to_d5"
-    ]
+    ],
+    "primer_family": "tactical_neural"
   },
   {
     "name": "Re-shot Rhythm Shadow",
@@ -992,7 +1013,8 @@
     "late_windows": [
       "d4_to_d2",
       "d1"
-    ]
+    ],
+    "primer_family": "rehearsal"
   },
   {
     "name": "Standing Stance-Set Cue",
@@ -1019,7 +1041,8 @@
       "low_volume",
       "skill_refinement",
       "cns_freshness",
-      "counter_striker"
+      "counter_striker",
+      "tactical"
     ],
     "work_sec": 3,
     "rest_sec": 120,
@@ -1039,19 +1062,42 @@
       "d4_to_d2",
       "d1"
     ],
-    "mechanical_risk_tags": []
+    "mechanical_risk_tags": [],
+    "primer_family": "pure_neural"
   },
   {
     "name": "Shadowboxing Technical Rhythm",
     "description": "Rehearse light striking cadence and stance organisation without a sustained flurry or conditioning demand.",
-    "equipment": ["bodyweight"],
-    "phases": ["SPP", "TAPER"],
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "system": "aerobic",
     "modality": "technical rhythm rehearsal",
     "duration": "2x120s with 60s rest",
     "intensity": "easy technical rhythm",
-    "tags": ["boxing", "kickboxing", "muay_thai", "mma", "pressure_fighter", "counter_striker", "distance_striker", "skill_refinement", "coordination", "zero_impact", "cns_freshness", "mech_upper_press", "mech_trunk_rotation"],
-    "mechanical_risk_tags": ["mech_trunk_rotation", "mech_upper_press"],
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "pressure_fighter",
+      "counter_striker",
+      "distance_striker",
+      "skill_refinement",
+      "coordination",
+      "zero_impact",
+      "cns_freshness",
+      "mech_upper_press",
+      "mech_trunk_rotation"
+    ],
+    "mechanical_risk_tags": [
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
     "work_sec": 120,
     "rest_sec": 60,
     "rounds": 2,
@@ -1066,18 +1112,40 @@
     "meaningful_stress": false,
     "execution_intent": "relaxed",
     "contact_level": "none",
-    "late_windows": ["d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"]
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "primer_family": "rehearsal"
   },
   {
     "name": "Assault Bike Rhythm Primer",
     "description": "Use brief cadence touches and easy pedalling to retain machine rhythm without creating an aerobic workload.",
-    "equipment": ["assault_bike"],
-    "phases": ["SPP", "TAPER"],
+    "equipment": [
+      "assault_bike"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "system": "aerobic",
     "modality": "bike cadence primer",
     "duration": "6x10s with 60s rest",
     "intensity": "moderate-fast cadence, fully easy recovery",
-    "tags": ["boxing", "kickboxing", "muay_thai", "mma", "pressure_fighter", "counter_striker", "distance_striker", "low_impact", "cns_freshness", "recovery"],
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "pressure_fighter",
+      "counter_striker",
+      "distance_striker",
+      "low_impact",
+      "cns_freshness",
+      "recovery"
+    ],
     "mechanical_risk_tags": [],
     "work_sec": 10,
     "rest_sec": 60,
@@ -1093,6 +1161,3032 @@
     "meaningful_stress": false,
     "execution_intent": "technical_crisp",
     "contact_level": "none",
-    "late_windows": ["d13_to_d8", "d7", "d6_to_d5"]
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "rehearsal"
+  },
+  {
+    "name": "Body-Head Burst-Exit",
+    "description": "One compact body shot into one head shot, then a single clean exit step and guard reset.",
+    "equipment": [
+      "focus_mitts"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "pocket burst sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "brawler",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "tactical",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "touch",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "technical_neural"
+  },
+  {
+    "name": "Hook-Cross-Pivot Burst",
+    "description": "Short rotational hook-cross pair followed immediately by a pivot off the line and guard restoration.",
+    "equipment": [
+      "focus_mitts"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "rotational burst sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "brawler",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "tactical",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press",
+      "mech_change_of_direction"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press",
+      "mech_change_of_direction"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "touch",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "technical_neural"
+  },
+  {
+    "name": "Pocket Frame-Burst Touch",
+    "description": "Absorb one cooperative pressure touch, frame, return two crisp pocket shots, then reset stance.",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "pocket exchange sharpness",
+    "duration": "2x5s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "brawler",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "tactical",
+      "reaction",
+      "visual_processing",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "work_sec": 5,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.2,
+    "rpe_max": 4,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "touch",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "primer_family": "tactical_neural"
+  },
+  {
+    "name": "Cut-Off-Step-Score",
+    "description": "Partner shows one escape lane; cut it off with a single explosive step, land one crisp score, stop.",
+    "equipment": [
+      "focus_mitts",
+      "partner"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "pressure entry sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "pressure_fighter",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "tactical",
+      "reaction",
+      "visual_processing",
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "tactical_neural"
+  },
+  {
+    "name": "Herd-Corner-Burst-Reset",
+    "description": "Partner gives an escape cue; seal the lane and answer with a two-shot burst, then reset to neutral range.",
+    "equipment": [
+      "focus_mitts",
+      "partner"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "lane seal sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "pressure_fighter",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "tactical",
+      "reaction",
+      "visual_processing",
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "tactical_neural"
+  },
+  {
+    "name": "Step-Jab-Cutoff Cue",
+    "description": "Explosive first pressure step behind a jab, seal the angle, then settle - no follow-up flurry.",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "pressure entry sharpness",
+    "duration": "2x5s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "pressure_fighter",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "tactical",
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_upper_press"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_upper_press"
+    ],
+    "work_sec": 5,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.2,
+    "rpe_max": 4,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "none",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "primer_family": "technical_neural"
+  },
+  {
+    "name": "Cutoff-Low-Kick Touch",
+    "description": "Close the escape lane with one step and answer with a single low kick, then re-square and stop.",
+    "equipment": [
+      "thai_pad"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "pressure kick sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "pressure_fighter",
+      "kicker",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "tactical",
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "touch",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "tactical_neural"
+  },
+  {
+    "name": "Parry-Cross-Exit",
+    "description": "One partner cue, one parry, one straight return, then immediate exit and guard reset.",
+    "equipment": [
+      "focus_mitts",
+      "partner"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "defence-return sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "counter_striker",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "tactical",
+      "reaction",
+      "visual_processing",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "tactical_neural"
+  },
+  {
+    "name": "Slip-Cross-Pivot",
+    "description": "Slip one telegraphed cue, answer with a single straight, then pivot out to a new angle.",
+    "equipment": [
+      "focus_mitts",
+      "partner"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "defence-return sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "counter_striker",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "tactical",
+      "reaction",
+      "visual_processing",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press",
+      "mech_change_of_direction"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press",
+      "mech_change_of_direction"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "tactical_neural"
+  },
+  {
+    "name": "Pull-Counter-Reset",
+    "description": "Draw one attack, take a small pull off the end of it, return once, then restore stance.",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "counter timing sharpness",
+    "duration": "2x5s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "counter_striker",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "tactical",
+      "reaction",
+      "visual_processing",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "work_sec": 5,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.2,
+    "rpe_max": 4,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "none",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "primer_family": "technical_neural"
+  },
+  {
+    "name": "Check-Return-Kick",
+    "description": "Check one cooperative kick cue and answer with a single return kick, then re-square.",
+    "equipment": [
+      "thai_pad",
+      "partner"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "kick counter sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "counter_striker",
+      "kicker",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "tactical",
+      "reaction",
+      "visual_processing",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "tactical_neural"
+  },
+  {
+    "name": "Shuffle-In-Score-Angle-Out",
+    "description": "Explosive shuffle to close range, one clean score, then an angled exit back to long range.",
+    "equipment": [
+      "focus_mitts"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "range entry sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "distance_striker",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "tactical",
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "touch",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "tactical_neural"
+  },
+  {
+    "name": "Intercept-Step-Straight",
+    "description": "A cue triggers one intercepting step and straight on the way in, then immediate recovery to range.",
+    "equipment": [
+      "focus_mitts",
+      "partner"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "intercept timing sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "distance_striker",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "tactical",
+      "reaction",
+      "visual_processing",
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "tactical_neural"
+  },
+  {
+    "name": "Pendulum Jab-Cross Reset",
+    "description": "Brief long-range hand-speed action from a pendulum step, then settle back to guard.",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "long-range hand speed",
+    "duration": "2x5s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "distance_striker",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "work_sec": 5,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.2,
+    "rpe_max": 4,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "none",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "primer_family": "technical_neural"
+  },
+  {
+    "name": "Range Feint-Entry-Exit",
+    "description": "One feint at range, one rapid entry, one shot, then clean exit - no second entry.",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "range entry sharpness",
+    "duration": "2x5s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "distance_striker",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "tactical",
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_deceleration",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "work_sec": 5,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.2,
+    "rpe_max": 4,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "none",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "primer_family": "tactical_neural"
+  },
+  {
+    "name": "Teep-Recoil-Re-square",
+    "description": "Single teep to manage range, fast recoil of the kicking leg, then re-square to stance.",
+    "equipment": [
+      "thai_pad"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "kick recoil sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "distance_striker",
+      "kicker",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "touch",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "technical_neural"
+  },
+  {
+    "name": "Lead-Kick Snap-Recover",
+    "description": "One snapping lead kick with an immediate controlled recovery to a balanced stance.",
+    "equipment": [
+      "thai_pad"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "kick recoil sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "kicker",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "touch",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "technical_neural"
+  },
+  {
+    "name": "Punch-Cue-Low-Kick Counter",
+    "description": "Partner shows one hand cue; answer with a single low kick, recover the leg, then stop.",
+    "equipment": [
+      "thai_pad",
+      "partner"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "kick counter sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "kicker",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "tactical",
+      "reaction",
+      "visual_processing",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "tactical_neural"
+  },
+  {
+    "name": "Hand-Entry-Single-Kick Reset",
+    "description": "One short hand entry into a single kick, then recoil and re-square with no follow-up volume.",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "kick transition sharpness",
+    "duration": "2x5s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "kicker",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "transition",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press",
+      "mech_lower_hip_hinge"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
+    ],
+    "work_sec": 5,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.2,
+    "rpe_max": 4,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "none",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "primer_family": "technical_neural"
+  },
+  {
+    "name": "Pummel-Underhook-Reset",
+    "description": "Two crisp pummels to a dominant underhook, then release the tie and reset to neutral posture.",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "clinch position sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "muay_thai",
+      "mma",
+      "clinch_fighter",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "clinch",
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull"
+    ],
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "technical_neural"
+  },
+  {
+    "name": "Inside-Tie Snap-Reset",
+    "description": "Snap to an inside tie from neutral posture, hold the position for a beat, then release cleanly.",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "clinch position sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "muay_thai",
+      "mma",
+      "clinch_fighter",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "clinch",
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull"
+    ],
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "technical_neural"
+  },
+  {
+    "name": "Clinch Knee-Touch Entry",
+    "description": "Enter the clinch, place one light knee touch, then break the tie - early taper only, never a knee volume set.",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "clinch entry sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "muay_thai",
+      "mma",
+      "clinch_fighter",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "tactical",
+      "clinch",
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
+    ],
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7"
+    ],
+    "primer_family": "tactical_neural"
+  },
+  {
+    "name": "Solo Frame-Turn Exit Cue",
+    "description": "Shadow the clinch frame, turn the corner and exit, with no partner load and no sustained tie.",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "solo clinch position rehearsal",
+    "duration": "2x5s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "clinch_fighter",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "zero_impact",
+      "cns_freshness",
+      "coordination",
+      "clinch",
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_trunk_stability"
+    ],
+    "work_sec": 5,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.2,
+    "rpe_max": 4,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "none",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "primer_family": "technical_neural"
+  },
+  {
+    "name": "Arm-Drag-Back-Catch-Release",
+    "description": "One arm drag to back exposure, catch the position, then release immediately - no finishing squeeze.",
+    "equipment": [
+      "partner",
+      "mat"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "submission entry sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "bjj",
+      "grappling",
+      "mma",
+      "submission_hunter",
+      "grappler",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "transition",
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull",
+      "mech_change_of_direction",
+      "mech_trunk_rotation"
+    ],
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull",
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "technical_neural"
+  },
+  {
+    "name": "Front-Headlock-Capture-Release",
+    "description": "Snap to front-headlock control, establish the position for one beat, then release without squeezing.",
+    "equipment": [
+      "partner",
+      "mat"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "submission entry sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "bjj",
+      "grappling",
+      "mma",
+      "submission_hunter",
+      "grappler",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "transition",
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull",
+      "mech_change_of_direction",
+      "mech_trunk_rotation"
+    ],
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull",
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "technical_neural"
+  },
+  {
+    "name": "Armbar Entry-Catch-Release",
+    "description": "Acquire the armbar entry configuration quickly, stop at the catch, then release - no loaded joint finish.",
+    "equipment": [
+      "partner",
+      "mat"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "submission entry sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "bjj",
+      "grappling",
+      "mma",
+      "submission_hunter",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_grip_support"
+    ],
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_grip_support"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "technical_neural"
+  },
+  {
+    "name": "Guillotine Position-Catch-Release",
+    "description": "Take the guillotine position from a front-headlock touch, confirm the grip, then release with no squeeze.",
+    "equipment": [
+      "partner",
+      "mat"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "submission entry sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "bjj",
+      "grappling",
+      "mma",
+      "submission_hunter",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull",
+      "mech_change_of_direction",
+      "mech_trunk_rotation"
+    ],
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull",
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "technical_neural"
+  },
+  {
+    "name": "Sprawl-Re-shot Touch",
+    "description": "Sprawl on one cooperative entry cue, recover posture, then answer with a single re-shot touch.",
+    "equipment": [
+      "partner",
+      "mat"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "scramble recovery sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "wrestling",
+      "bjj",
+      "grappling",
+      "mma",
+      "scrambler",
+      "wrestler",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "tactical",
+      "reaction",
+      "visual_processing",
+      "mech_acceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_deceleration",
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_deceleration",
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "tactical_neural"
+  },
+  {
+    "name": "Sit-Out-Re-square",
+    "description": "One crisp sit-out from a bottom touch, then re-square to a balanced base and stop.",
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "scramble recovery sharpness",
+    "duration": "2x5s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "wrestling",
+      "bjj",
+      "grappling",
+      "mma",
+      "scrambler",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "work_sec": 5,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.2,
+    "rpe_max": 4,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "touch",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "primer_family": "technical_neural"
+  },
+  {
+    "name": "Turtle-Technical-Stand",
+    "description": "From turtle, execute one technical stand to a squared base, then reset down - single repetition per burst.",
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "scramble recovery sharpness",
+    "duration": "2x5s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "wrestling",
+      "bjj",
+      "grappling",
+      "mma",
+      "scrambler",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_lower_lunge"
+    ],
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_lower_lunge"
+    ],
+    "work_sec": 5,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.2,
+    "rpe_max": 4,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "touch",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "primer_family": "technical_neural"
+  },
+  {
+    "name": "Snapdown-Go-Behind Touch",
+    "description": "One snapdown into a go-behind touch on the back position, then release and reset to neutral.",
+    "equipment": [
+      "partner",
+      "mat"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "grappling position sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "bjj",
+      "grappling",
+      "wrestling",
+      "mma",
+      "grappler",
+      "wrestler",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "transition",
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull",
+      "mech_change_of_direction",
+      "mech_trunk_rotation"
+    ],
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull",
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "technical_neural"
+  },
+  {
+    "name": "Body-Lock Entry-Position Touch",
+    "description": "Enter to a body lock, confirm the position for one beat, then release - no lift and no finish.",
+    "equipment": [
+      "partner",
+      "mat"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "grappling position sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "bjj",
+      "grappling",
+      "wrestling",
+      "mma",
+      "grappler",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull",
+      "mech_lower_hip_hinge"
+    ],
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull",
+      "mech_lower_hip_hinge"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "technical_neural"
+  },
+  {
+    "name": "Pass-Entry-Control Touch",
+    "description": "One crisp guard-pass entry to a control touch, then release the position and reset.",
+    "equipment": [
+      "partner",
+      "mat"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "grappling position sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "bjj",
+      "grappling",
+      "grappler",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "transition",
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "technical_neural"
+  },
+  {
+    "name": "Fake-Shot-Go",
+    "description": "Show one convincing fake, read the reaction, then commit to a single entry and recover stance.",
+    "equipment": [
+      "partner",
+      "mat"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "shot entry sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "wrestling",
+      "mma",
+      "grappling",
+      "wrestler",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "tactical",
+      "reaction",
+      "visual_processing",
+      "mech_acceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_deceleration"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_deceleration"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "tactical_neural"
+  },
+  {
+    "name": "Touch-and-Go Entry",
+    "description": "One light tie touch to set the level, then a single explosive entry and immediate stance recovery.",
+    "equipment": [
+      "partner",
+      "mat"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "shot entry sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "wrestling",
+      "mma",
+      "grappling",
+      "wrestler",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "tactical",
+      "mech_acceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_deceleration",
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_deceleration",
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "tactical_neural"
+  },
+  {
+    "name": "Penetration-Step-Recover",
+    "description": "One penetration step to depth, then stand back to a squared stance - single rep, no finish.",
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "shot entry sharpness",
+    "duration": "2x5s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "wrestling",
+      "mma",
+      "grappling",
+      "wrestler",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "mech_acceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_deceleration"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_deceleration"
+    ],
+    "work_sec": 5,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.2,
+    "rpe_max": 4,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "none",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "primer_family": "technical_neural"
+  },
+  {
+    "name": "Explosive Straight Burst",
+    "description": "Pure hand-speed burst: rapid straight punches in the air at maximal crispness, then full recovery.",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "hand speed primer",
+    "duration": "2x5s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "brawler",
+      "pressure_fighter",
+      "counter_striker",
+      "distance_striker",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "zero_impact",
+      "cns_freshness",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "work_sec": 5,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.2,
+    "rpe_max": 4,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "none",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "primer_family": "pure_neural"
+  },
+  {
+    "name": "Explosive First-Step Cue",
+    "description": "Pure acceleration cue: one maximal-intent first step from fighting stance, then stop and reset.",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "acceleration primer",
+    "duration": "2x5s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "wrestling",
+      "grappling",
+      "pressure_fighter",
+      "distance_striker",
+      "wrestler",
+      "scrambler",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "zero_impact",
+      "cns_freshness",
+      "footwork",
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_deceleration"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_deceleration"
+    ],
+    "work_sec": 5,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.2,
+    "rpe_max": 4,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "fast_crisp",
+    "contact_level": "none",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "primer_family": "pure_neural"
+  },
+  {
+    "name": "Position-Read Control Touch",
+    "description": "Partner shows one of two openings; take the matching control position, confirm it, then release.",
+    "equipment": [
+      "partner",
+      "mat"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "grappling position sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "bjj",
+      "grappling",
+      "wrestling",
+      "mma",
+      "grappler",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "tactical",
+      "reaction",
+      "visual_processing",
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull",
+      "mech_change_of_direction",
+      "mech_trunk_rotation"
+    ],
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull",
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "tactical_neural"
+  },
+  {
+    "name": "Entry-Read Catch-Release",
+    "description": "Partner shows one of two openings; take the matching submission entry to the catch, then release.",
+    "equipment": [
+      "partner",
+      "mat"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "submission entry sharpness",
+    "duration": "3x6s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "bjj",
+      "grappling",
+      "mma",
+      "submission_hunter",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "tactical",
+      "reaction",
+      "visual_processing",
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull",
+      "mech_change_of_direction",
+      "mech_trunk_rotation"
+    ],
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull",
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "work_sec": 6,
+    "rest_sec": 120,
+    "rounds": 3,
+    "total_minutes": 6.3,
+    "rpe_max": 5,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "cooperative",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "primer_family": "tactical_neural"
+  },
+  {
+    "name": "Solo Back-Exposure Snap",
+    "description": "Snap solo through one back-exposure path to a controlled finish shape, then reset to base.",
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "solo grappling position rehearsal",
+    "duration": "2x5s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "bjj",
+      "grappling",
+      "wrestling",
+      "mma",
+      "grappler",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "zero_impact",
+      "cns_freshness",
+      "coordination",
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "work_sec": 5,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.2,
+    "rpe_max": 4,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "none",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "primer_family": "technical_neural"
+  },
+  {
+    "name": "Solo Submission Entry Snap",
+    "description": "Snap solo into one submission-entry shape at speed, hold one beat, then release and reset.",
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "solo submission pathway rehearsal",
+    "duration": "2x5s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "bjj",
+      "grappling",
+      "mma",
+      "submission_hunter",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "zero_impact",
+      "cns_freshness",
+      "coordination",
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "work_sec": 5,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.2,
+    "rpe_max": 4,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "none",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "primer_family": "technical_neural"
+  },
+  {
+    "name": "Shadow Pocket Burst-Freeze",
+    "description": "Shadow two compact pocket shots, freeze the guard, then settle - zero contact, zero impact.",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "neural stance cue",
+    "duration": "2x4s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "brawler",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "zero_impact",
+      "cns_freshness",
+      "coordination",
+      "tactical",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "work_sec": 4,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.0,
+    "rpe_max": 3,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "none",
+    "late_windows": [
+      "d4_to_d2",
+      "d1"
+    ],
+    "primer_family": "pure_neural"
+  },
+  {
+    "name": "Cutoff Step-Set Cue",
+    "description": "Shadow one cut-off step and set the stance, then hold still - zero contact, zero impact.",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "neural stance cue",
+    "duration": "2x4s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "pressure_fighter",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "zero_impact",
+      "cns_freshness",
+      "coordination",
+      "tactical",
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_deceleration"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_deceleration"
+    ],
+    "work_sec": 4,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.0,
+    "rpe_max": 3,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "none",
+    "late_windows": [
+      "d4_to_d2",
+      "d1"
+    ],
+    "primer_family": "pure_neural"
+  },
+  {
+    "name": "Slip-Return Shadow Cue",
+    "description": "Shadow one slip and one return, then restore guard and stop - zero contact, zero impact.",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "neural stance cue",
+    "duration": "2x4s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "counter_striker",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "zero_impact",
+      "cns_freshness",
+      "coordination",
+      "tactical",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "work_sec": 4,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.0,
+    "rpe_max": 3,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "none",
+    "late_windows": [
+      "d4_to_d2",
+      "d1"
+    ],
+    "primer_family": "pure_neural"
+  },
+  {
+    "name": "Shuffle-Angle-Set Cue",
+    "description": "Shadow one shuffle and one angle change, then set the stance - zero contact, zero impact.",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "neural stance cue",
+    "duration": "2x4s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "distance_striker",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "zero_impact",
+      "cns_freshness",
+      "coordination",
+      "tactical",
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_deceleration"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_change_of_direction",
+      "mech_deceleration"
+    ],
+    "work_sec": 4,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.0,
+    "rpe_max": 3,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "none",
+    "late_windows": [
+      "d4_to_d2",
+      "d1"
+    ],
+    "primer_family": "pure_neural"
+  },
+  {
+    "name": "Shadow Kick-Recoil Cue",
+    "description": "Shadow one kick and its recoil to stance, with no pad, no partner and no impact.",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "neural stance cue",
+    "duration": "2x4s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "kicker",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "zero_impact",
+      "cns_freshness",
+      "coordination",
+      "tactical",
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
+    ],
+    "work_sec": 4,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.0,
+    "rpe_max": 3,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "none",
+    "late_windows": [
+      "d4_to_d2",
+      "d1"
+    ],
+    "primer_family": "pure_neural"
+  },
+  {
+    "name": "Shadow Frame-Turn-Set",
+    "description": "Shadow one clinch frame and corner turn, then set posture - no partner, no tie, no load.",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "neural stance cue",
+    "duration": "2x4s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "kickboxing",
+      "muay_thai",
+      "mma",
+      "clinch_fighter",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "zero_impact",
+      "cns_freshness",
+      "coordination",
+      "tactical",
+      "clinch",
+      "mech_trunk_stability",
+      "mech_change_of_direction"
+    ],
+    "mechanical_risk_tags": [
+      "mech_trunk_stability",
+      "mech_change_of_direction"
+    ],
+    "work_sec": 4,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.0,
+    "rpe_max": 3,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "none",
+    "late_windows": [
+      "d4_to_d2",
+      "d1"
+    ],
+    "primer_family": "pure_neural"
+  },
+  {
+    "name": "Solo Entry-Position Snap",
+    "description": "Snap solo into one submission-entry shape, hold it for a beat, then release - no partner, no squeeze.",
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "neural stance cue",
+    "duration": "2x4s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "bjj",
+      "grappling",
+      "mma",
+      "submission_hunter",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "zero_impact",
+      "cns_freshness",
+      "coordination",
+      "tactical",
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "work_sec": 4,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.0,
+    "rpe_max": 3,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "none",
+    "late_windows": [
+      "d4_to_d2",
+      "d1"
+    ],
+    "primer_family": "pure_neural"
+  },
+  {
+    "name": "Hip-Heist-Base Snap",
+    "description": "One solo hip heist to a squared base, then stop - no partner and no scramble volume.",
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "neural stance cue",
+    "duration": "2x4s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "wrestling",
+      "bjj",
+      "grappling",
+      "mma",
+      "scrambler",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "zero_impact",
+      "cns_freshness",
+      "coordination",
+      "tactical",
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "work_sec": 4,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.0,
+    "rpe_max": 3,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "none",
+    "late_windows": [
+      "d4_to_d2",
+      "d1"
+    ],
+    "primer_family": "pure_neural"
+  },
+  {
+    "name": "Solo Arm-Drag Footwork Cue",
+    "description": "Shadow one arm-drag path with the feet only, then reset to base - no partner and no grip load.",
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "neural stance cue",
+    "duration": "2x4s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "bjj",
+      "grappling",
+      "wrestling",
+      "mma",
+      "grappler",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "zero_impact",
+      "cns_freshness",
+      "coordination",
+      "tactical",
+      "footwork",
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "mechanical_risk_tags": [
+      "mech_change_of_direction",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "work_sec": 4,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.0,
+    "rpe_max": 3,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "none",
+    "late_windows": [
+      "d4_to_d2",
+      "d1"
+    ],
+    "primer_family": "pure_neural"
+  },
+  {
+    "name": "Level-Change-Penetration Snap",
+    "description": "One solo level change into a short penetration step, then stand and stop - no partner, no finish.",
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "alactic",
+    "modality": "neural stance cue",
+    "duration": "2x4s with 120s rest",
+    "intensity": "low volume, fast crisp intent",
+    "tags": [
+      "wrestling",
+      "mma",
+      "grappling",
+      "wrestler",
+      "sharpness",
+      "low_volume",
+      "skill_refinement",
+      "zero_impact",
+      "cns_freshness",
+      "coordination",
+      "tactical",
+      "mech_acceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_deceleration"
+    ],
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_deceleration"
+    ],
+    "work_sec": 4,
+    "rest_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4.0,
+    "rpe_max": 3,
+    "impact_cost": "low",
+    "movement_cost": "low",
+    "lactate_load": "low",
+    "stress_class": "support",
+    "cost_class": "low",
+    "support_only": true,
+    "meaningful_stress": false,
+    "execution_intent": "technical_crisp",
+    "contact_level": "none",
+    "late_windows": [
+      "d4_to_d2",
+      "d1"
+    ],
+    "primer_family": "pure_neural"
   }
 ]
