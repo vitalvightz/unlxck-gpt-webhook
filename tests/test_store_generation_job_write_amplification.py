@@ -116,6 +116,30 @@ def test_update_missing_job_still_404s_through_the_narrow_guard():
     assert getattr(excinfo.value, "status_code", None) == 404
 
 
+def test_fake_store_matches_the_real_update_generation_job_contract():
+    """FakeStore backs most generation tests; a divergent contract hides bugs.
+
+    Taking ``refresh`` through **changes persisted {"refresh": False} into the
+    in-memory row and returned that row, where SupabaseAppStore treats refresh
+    as control data and returns {}.
+    """
+    from support import FakeStore
+
+    store = FakeStore()
+    store.generation_jobs["job-1"] = {"id": "job-1", "status": "running"}
+
+    result = store.update_generation_job("job-1", refresh=False, heartbeat_at="2026-09-15T00:00:00Z")
+
+    assert result == {}, "refresh=False must return {} like SupabaseAppStore"
+    stored = store.generation_jobs["job-1"]
+    assert "refresh" not in stored, "refresh is control data, never a column"
+    assert stored["heartbeat_at"] == "2026-09-15T00:00:00Z"
+
+    refreshed = store.update_generation_job("job-1", heartbeat_at="2026-09-15T00:01:00Z")
+    assert refreshed["id"] == "job-1"
+    assert "refresh" not in refreshed
+
+
 @pytest.mark.parametrize(
     ("projection", "required"),
     [

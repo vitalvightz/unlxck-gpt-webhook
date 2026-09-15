@@ -1080,7 +1080,11 @@ class FakeStore:
                 count += 1
         return count
 
-    def update_generation_job(self, job_id: str, **changes: dict) -> dict:
+    def update_generation_job(self, job_id: str, *, refresh: bool = True, **changes: dict) -> dict:
+        # ``refresh`` is control data, not a column. Taking it through
+        # **changes would persist {"refresh": False} into the job row and
+        # return the row where SupabaseAppStore returns {}, so FakeStore-backed
+        # tests would exercise a contract production does not have.
         job = self.generation_jobs.get(job_id)
         if not job:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
@@ -1095,6 +1099,8 @@ class FakeStore:
                 raise _status_transition_error(str(exc)) from exc
         job.update(payload)
         job["updated_at"] = _now()
+        if not refresh:
+            return {}
         return dict(job)
 
     def _assert_generation_job_terminal_owner(

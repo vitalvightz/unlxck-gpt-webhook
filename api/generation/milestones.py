@@ -9,6 +9,7 @@ logged and swallowed so they never surface into the planner pipeline.
 from __future__ import annotations
 
 import logging
+import math
 import os
 import time
 from typing import Any, Callable
@@ -37,6 +38,16 @@ def _persist_min_interval_seconds() -> float:
     except ValueError:
         logger.warning(
             "[jobs] generation:invalid_progress_persist_interval value=%r; using default",
+            raw,
+        )
+        return _DEFAULT_PERSIST_MIN_INTERVAL_SECONDS
+    # float() accepts "nan"/"inf". NaN is the dangerous one: every comparison
+    # against it is False, so `elapsed < interval` never holds and the throttle
+    # silently disables itself — the exact failure this module exists to
+    # prevent. Reject all non-finite values rather than reasoning about each.
+    if not math.isfinite(value):
+        logger.warning(
+            "[jobs] generation:non_finite_progress_persist_interval value=%r; using default",
             raw,
         )
         return _DEFAULT_PERSIST_MIN_INTERVAL_SECONDS
@@ -133,12 +144,17 @@ def build_progress_recorder(
         Every pending milestone was accepted by the callback while
         ``should_persist`` was still open, so a later timeout/cancel must not
         discard it — that would silently lose the closing milestones of a
-        timed-out run. The guard still applies to ``heartbeat_at``: a job that
-        has been cancelled or timed out must never look freshly alive.
+        timed-out run.
+
+        This NEVER writes ``heartbeat_at``. The flush runs from the
+        orchestrator's ``finally``, by which point the job is terminal —
+        including via ``_fail_claimed_job``, which marks it failed without
+        setting ``stage1_timed_out`` or ``cancelled``, so a guard-based check
+        would still read "live" and stamp a fresh heartbeat onto an
+        already-failed job. Liveness belongs to the heartbeat loop alone.
         """
         if pending_since[0] is None:
             return
-        touch_heartbeat = should_persist is None or should_persist()
-        _persist("flush", touch_heartbeat=touch_heartbeat)
+        _persist("flush", touch_heartbeat=False)
 
     return milestones, _callback, _flush

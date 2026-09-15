@@ -1281,22 +1281,56 @@ def test_flush_still_persists_milestones_recorded_before_a_timeout():
     assert "heartbeat_at" not in changes
 
 
-def test_flush_bumps_heartbeat_while_the_job_is_still_live():
+@pytest.mark.parametrize(
+    "scenario",
+    [
+        "no_guard",
+        "guard_still_open",  # _fail_claimed_job: job failed, guard reads "live"
+        "guard_closed",      # stage 1 timeout / cancel
+    ],
+)
+def test_flush_never_writes_heartbeat_whatever_the_guard_says(scenario):
+    """Liveness belongs to the heartbeat loop, not the end-of-run flush.
+
+    _fail_claimed_job marks a job failed without setting stage1_timed_out or
+    cancelled, so a guard-based check still reads "live" and would stamp a
+    fresh heartbeat onto an already-failed job.
+    """
     clock = _FakeClock()
     store = _RecordingStore()
+    open_flag = {"value": True}
+    guard = None if scenario == "no_guard" else (lambda: open_flag["value"])
     _milestones, callback, flush = generation_runtime.build_progress_recorder(
         job_id="job-x",
         store=store,
-        should_persist=lambda: True,
+        should_persist=guard,
         min_persist_interval_seconds=5.0,
         monotonic=clock,
     )
     callback("first", "label", "detail", {})
     callback("throttled", "label", "detail", {})
+    if scenario == "guard_closed":
+        open_flag["value"] = False
 
     flush()
 
-    assert store.calls[-1][1]["heartbeat_at"]
+    flush_changes = store.calls[-1][1]
+    assert "heartbeat_at" not in flush_changes
+    assert [entry["code"] for entry in flush_changes["progress_milestones"]] == [
+        "first",
+        "throttled",
+    ]
+
+
+def test_ordinary_progress_writes_still_refresh_heartbeat():
+    """Only the flush drops heartbeat_at; in-run writes keep it."""
+    store = _RecordingStore()
+    _milestones, callback, _flush = generation_runtime.build_progress_recorder(
+        job_id="job-x", store=store
+    )
+    callback("first", "label", "detail", {})
+
+    assert store.calls[0][1]["heartbeat_at"]
 
 
 def test_guard_still_blocks_new_milestones_after_a_timeout():
@@ -1320,6 +1354,42 @@ def test_guard_still_blocks_new_milestones_after_a_timeout():
     for _job_id, changes in store.calls:
         codes = [entry["code"] for entry in changes["progress_milestones"]]
         assert "after_timeout" not in codes
+
+
+@pytest.mark.parametrize("raw", ["nan", "NaN", "inf", "-inf", "Infinity", "-Infinity"])
+def test_non_finite_persist_interval_env_falls_back_to_default(monkeypatch, raw):
+    """float() accepts these; NaN would silently disable the throttle entirely.
+
+    Every comparison against NaN is False, so `elapsed < interval` never holds
+    and each emit writes again — the exact behaviour this module prevents.
+    """
+    monkeypatch.setenv("UNLXCK_PROGRESS_PERSIST_MIN_INTERVAL_SECONDS", raw)
+
+    assert (
+        generation_runtime._persist_min_interval_seconds()
+        == generation_runtime._DEFAULT_PERSIST_MIN_INTERVAL_SECONDS
+    )
+
+
+def test_nan_persist_interval_env_does_not_disable_throttling(monkeypatch):
+    """End-to-end guard: the NaN fallback must actually bound writes."""
+    monkeypatch.setenv("UNLXCK_PROGRESS_PERSIST_MIN_INTERVAL_SECONDS", "nan")
+    clock = _FakeClock()
+    store = _RecordingStore()
+    _milestones, callback, _flush = generation_runtime.build_progress_recorder(
+        job_id="job-x", store=store, monotonic=clock
+    )
+    for index in range(100):
+        callback(f"code-{index}", "label", "detail", {})
+        clock.advance(0.05)
+
+    assert len(store.calls) <= 3
+
+
+def test_valid_persist_interval_env_is_still_honoured(monkeypatch):
+    monkeypatch.setenv("UNLXCK_PROGRESS_PERSIST_MIN_INTERVAL_SECONDS", "12.5")
+
+    assert generation_runtime._persist_min_interval_seconds() == 12.5
 
 
 def test_progress_persist_interval_is_capped():
