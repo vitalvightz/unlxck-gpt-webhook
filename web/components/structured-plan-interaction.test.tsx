@@ -331,6 +331,28 @@ test("selecting an off-screen week scrolls the rail to centre it", async () => {
   }
 });
 
+test("current week shortcut restores selection after browsing another week", async () => {
+  const { container, root } = mount();
+  try {
+    await act(async () => {
+      root.render(<StructuredPlanRenderer plan={manyWeekPlan(8)} today={new Date(2026, 5, 1)} />);
+    });
+    assert.equal(container.querySelector(".cm-current-week"), null);
+    const later = container.querySelector<HTMLButtonElement>('[data-week-pos="6"]');
+    assert.ok(later);
+    await act(async () => later.click());
+    assert.equal(container.querySelector(".cm-week-navigation-label")?.textContent, "Week 7 of 8");
+    const returnButton = container.querySelector<HTMLButtonElement>(".cm-current-week");
+    assert.ok(returnButton);
+    await act(async () => returnButton.click());
+    assert.equal(container.querySelector(".cm-week-pill-selected")?.getAttribute("data-week-pos"), "0");
+    assert.equal(container.querySelector(".cm-week-navigation-label")?.textContent, "Week 1 of 8");
+    assert.equal(container.querySelector(".cm-current-week"), null);
+  } finally {
+    cleanup(container, root);
+  }
+});
+
 test("the rail does not scroll (or throw) when it fits without overflow", async () => {
   const { container, root } = mount();
   try {

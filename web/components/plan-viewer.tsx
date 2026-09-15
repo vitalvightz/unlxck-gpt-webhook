@@ -2478,19 +2478,21 @@ export function PlanViewer({
 
   return (
     <div className="page">
-      <section className="panel">
+      <section className="panel plan-detail-hero">
         <QuickBuildRefinementBanner planId={plan.plan_id} planSource={plan.plan_source ?? null} />
         <div className="section-heading">
           <div>
-            <p className="kicker">Plan Detail</p>
+            <p className="kicker">{openOngoing ? "Training plan" : "Camp plan"}</p>
             <h1>{planDetailTitle}</h1>
-            <p className="muted">{heroSummary}</p>
+            {completedFightCamp || isTriageBlocked || !hasPublishedPlan ? (
+              <p className="muted">{heroSummary}</p>
+            ) : null}
             {fightDateLabel || openBlockLabel ? (
               <p className="plan-detail-meta">{fightDateLabel || openBlockLabel}</p>
             ) : null}
           </div>
-          <div className="status-card">
-            <p className="status-label">Status</p>
+          <div className="plan-detail-status">
+            <p className="sr-only">Plan status</p>
             <h2 className="plan-summary-title">
               {statusLabel}
               {isCurrentActivePlan ? (
@@ -2499,11 +2501,7 @@ export function PlanViewer({
                 <span className="badge status-badge-neutral cm-active-badge">SYNCING</span>
               ) : null}
             </h2>
-            <p className="muted">
-              {isTriageBlocked
-                ? "Stage 2 was skipped intentionally."
-                : `Created ${formatPlanTimestamp(plan.created_at)}`}
-            </p>
+            {isTriageBlocked ? <p className="muted">Stage 2 was skipped intentionally.</p> : null}
           </div>
         </div>
 
@@ -2576,6 +2574,7 @@ export function PlanViewer({
             <details className="plan-action-menu">
               <summary className="ghost-button">Manage</summary>
               <div className="plan-action-menu-popover">
+                <p className="plan-created-at muted">Created {formatPlanTimestamp(plan.created_at)}</p>
                 {canManagePlan && !archivedPreview ? (
                   <>
                     <button
