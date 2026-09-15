@@ -2995,6 +2995,60 @@ def _build_conditioning_candidate_reservoir(
 
     return dict(reservoirs)
 
+
+# Style Taper primers are classified into three families so the late tail can
+# alternate between them: a pure speed/neural touch, a technical action, and a
+# fight-specific tactical task. Entries without the field fall back to a single
+# shared bucket, which simply leaves their relative order untouched.
+def _style_taper_primer_family(drill: dict) -> str:
+    return str(drill.get("primer_family") or "unclassified").strip().lower()
+
+
+def _rotate_style_taper_primer_families(
+    ranked: list[tuple[tuple[int, int, int], int, dict, str, dict]],
+) -> list[tuple[tuple[int, int, int], int, dict, str, dict]]:
+    """Rotate primer families inside equal-relevance groups.
+
+    Relevance ordering (system, style, goal/weakness) is never disturbed - only
+    the order *within* a tie is. Before this, a tie fell straight through to
+    bank order, so the same drill led the reservoir on every dated late-tail day
+    and the athlete saw one primer repeated down the taper. Rotating families
+    means a tie is broken by the family used least so far, with bank order still
+    deciding inside a family.
+
+    This is a preference, not a ban: when a tie holds only one family the order
+    is unchanged, so a genuinely singular qualified option still repeats rather
+    than being displaced by something less relevant.
+    """
+    family_counts: dict[str, int] = defaultdict(int)
+    rotated: list[tuple[tuple[int, int, int], int, dict, str, dict]] = []
+    index = 0
+    while index < len(ranked):
+        relevance = ranked[index][0]
+        group = []
+        while index < len(ranked) and ranked[index][0] == relevance:
+            group.append(ranked[index])
+            index += 1
+        if len(group) > 1:
+            remaining = list(group)
+            group = []
+            while remaining:
+                pick = min(
+                    range(len(remaining)),
+                    key=lambda position: (
+                        family_counts[_style_taper_primer_family(remaining[position][2])],
+                        remaining[position][1],
+                    ),
+                )
+                entry = remaining.pop(pick)
+                family_counts[_style_taper_primer_family(entry[2])] += 1
+                group.append(entry)
+        else:
+            family_counts[_style_taper_primer_family(group[0][2])] += 1
+        rotated.extend(group)
+    return rotated
+
+
 def generate_conditioning_block(flags):
     phase = str(flags.get("phase", "GPP") or "GPP").strip().upper()
     conditioning_substep_callback = flags.get("conditioning_substep_callback")
@@ -4289,6 +4343,7 @@ def generate_conditioning_block(flags):
             ranked.append((relevance, bank_index, drill, system, reasons))
 
         ranked.sort(key=lambda item: (-item[0][0], -item[0][1], -item[0][2], item[1]))
+        ranked = _rotate_style_taper_primer_families(ranked)
         style_taper_ranked = ranked
         return ranked
 

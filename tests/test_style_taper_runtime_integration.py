@@ -254,3 +254,89 @@ def test_style_taper_bank_order_breaks_equal_ties_not_alphabetical(monkeypatch):
     )
     selected = [drill["name"] for drills in result[3].values() for drill in drills]
     assert selected == ["Single-Kick Recoil Primer"]
+
+
+# --- Bank 2.1: primer-family rotation inside equal-relevance ties -------------
+
+
+def _rank_entry(name: str, family: str, *, bank_index: int, style_hits: int = 1):
+    """Build the 5-tuple shape ``_rank_style_taper_candidates`` produces."""
+    relevance = (1, style_hits, 0)
+    drill = {"name": name, "primer_family": family, "bank_order": bank_index}
+    return (relevance, bank_index, drill, "alactic", {"final_score": float(sum(relevance))})
+
+
+def test_rotation_alternates_families_instead_of_falling_through_to_bank_order():
+    ranked = [
+        _rank_entry("Tactical A", "tactical_neural", bank_index=0),
+        _rank_entry("Tactical B", "tactical_neural", bank_index=1),
+        _rank_entry("Technical A", "technical_neural", bank_index=2),
+        _rank_entry("Pure A", "pure_neural", bank_index=3),
+    ]
+    rotated = conditioning._rotate_style_taper_primer_families(ranked)
+
+    assert [item[2]["name"] for item in rotated] == [
+        "Tactical A", "Technical A", "Pure A", "Tactical B",
+    ]
+
+
+def test_rotation_never_reorders_across_different_relevance():
+    """Style/goal relevance still outranks variety; only ties are rotated."""
+    ranked = [
+        _rank_entry("Style match", "tactical_neural", bank_index=0, style_hits=1),
+        _rank_entry("No style match", "pure_neural", bank_index=1, style_hits=0),
+    ]
+    rotated = conditioning._rotate_style_taper_primer_families(ranked)
+
+    assert [item[2]["name"] for item in rotated] == ["Style match", "No style match"]
+
+
+def test_a_genuinely_singular_option_is_not_displaced_by_variety():
+    """Repetition must be earned, but a lone qualified option still wins.
+
+    The rule is a preference, not a ban: when a tie holds one family, ordering
+    is untouched rather than promoting a less relevant drill for novelty.
+    """
+    ranked = [
+        _rank_entry("Only A", "tactical_neural", bank_index=0),
+        _rank_entry("Only B", "tactical_neural", bank_index=1),
+    ]
+    rotated = conditioning._rotate_style_taper_primer_families(ranked)
+
+    assert [item[2]["name"] for item in rotated] == ["Only A", "Only B"]
+
+
+def test_entries_without_a_family_keep_their_bank_order():
+    ranked = [
+        _rank_entry("First", "", bank_index=0),
+        _rank_entry("Second", "", bank_index=1),
+    ]
+    rotated = conditioning._rotate_style_taper_primer_families(ranked)
+
+    assert [item[2]["name"] for item in rotated] == ["First", "Second"]
+
+
+def test_real_bank_gives_a_distance_striker_more_than_one_personalised_primer(monkeypatch):
+    """The reported symptom: Range Gate, Range Gate, Range Gate down the taper."""
+    _patch_to_isolate_style_taper(monkeypatch)
+    result = conditioning.generate_conditioning_block(
+        _base_flags(
+            sport="mma",
+            fight_format="mma",
+            style_technical=["mma"],
+            style_tactical=["distance_striker"],
+            days_until_fight=6,
+        )
+    )
+    reservoir = result[5]
+    head = [
+        candidate["drill"]
+        for candidate in reservoir.get("alactic", [])
+        if candidate["drill"].get("primer_family")
+        and candidate["reasons"].get("style_hits")
+    ][:5]
+
+    assert len(head) >= 4
+    assert len({drill["name"] for drill in head}) == len(head)
+    # The head of the reservoir must not be one family repeated.
+    assert len({drill["primer_family"] for drill in head}) >= 2

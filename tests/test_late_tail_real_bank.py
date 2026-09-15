@@ -170,9 +170,15 @@ def test_each_late_window_uses_real_qualified_reservoir(mma_brief, day):
     assert_assignment(mma_brief, role, "mma")
 
 
-def test_original_equipment_legal_reservoir_has_no_d2_alactic_candidate(mma_brief):
-    # Prove the narrow content exception: remove only the new item, leaving all
-    # real Stage 1 winners and original alternates/qualified support untouched.
+def test_d2_alactic_reservoir_survives_losing_the_single_stance_cue(mma_brief):
+    """D-2 no longer depends on one entry surviving.
+
+    The pre-expansion bank held exactly one equipment-free d4_to_d2 alactic
+    option, so dropping "Standing Stance-Set Cue" left the D-2 sharpness role
+    with nothing legal and the day rendered empty. The expanded bank carries
+    several equipment-free options per style, so the day is still filled after
+    the same removal — and the replacement is itself legal for the window.
+    """
     pools = deepcopy(mma_brief["candidate_pools"])
     for pool in pools.values():
         pool["late_tail_candidates"] = [s for s in pool["late_tail_candidates"]
@@ -186,12 +192,24 @@ def test_original_equipment_legal_reservoir_has_no_d2_alactic_candidate(mma_brie
     _, assignments = _build_late_fight_allowed_exercises_by_day(
         spec={"visible_session_sequence": [role], "athlete_model": mma_brief["athlete_snapshot"]},
         candidate_pools=pools)
-    assert assignments["D-2"] == []
-    existing = [item for name, item in BANK.items() if name != "Standing Stance-Set Cue"
-                and item["system"] == "alactic" and "d4_to_d2" in item["late_windows"]]
-    assert [item["name"] for item in existing] == ["Hip-Heist-Re-square"]
-    assert existing[0]["equipment"] == ["mat"]
-    assert "mat" not in mma_brief["athlete_snapshot"]["equipment"]
+
+    assert assignments["D-2"], "expanded bank must keep D-2 fillable without the stance cue"
+    athlete_equipment = set(normalize_athlete_equipment_list(
+        mma_brief["athlete_snapshot"]["equipment"]))
+    for assignment in assignments["D-2"]:
+        item = BANK[assignment["name"]]
+        assert item["system"] == "alactic"
+        assert "d4_to_d2" in item["late_windows"]
+        assert set(normalize_athlete_equipment_list(item["equipment"])) <= athlete_equipment
+
+    # The reservoir must stay plural: this is the scarcity the expansion fixed.
+    equipment_free = [
+        item for name, item in BANK.items()
+        if name != "Standing Stance-Set Cue" and item["system"] == "alactic"
+        and "d4_to_d2" in item["late_windows"]
+        and set(normalize_athlete_equipment_list(item["equipment"])) <= athlete_equipment
+    ]
+    assert len(equipment_free) >= 3
 
 
 def test_direct_countdown_preflight_uses_final_visible_sequence(mma_brief):
