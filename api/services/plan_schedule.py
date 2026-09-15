@@ -31,11 +31,22 @@ _STRUCTURED_REST_HEADLINE_RE = re.compile(
     r"^(?:full\s+|complete\s+|total\s+)?(?:rest|off|no\s+training|day\s+off|travel)\b",
     re.I,
 )
+# Stems that inflect carry their own suffixes. The trailing ``\b`` applies to
+# the whole alternation, so a bare stem only ever matched the exact word: "spar"
+# never matched "sparring", which is how a declared hard-sparring day — real
+# work, and the athlete's hardest day of the week — was read as a rest day by
+# Today/Overview while Plan rendered it as a sparring session. The combat /
+# sparring / technical vocabulary here is the backend half of the classification
+# the web client does in ``classifySessionlessDay`` (web/lib/structured-plan.ts);
+# keep the two in step so one surface cannot call a day rest while the other
+# calls it training.
 _STRUCTURED_WORK_HEADLINE_RE = re.compile(
-    r"\b(coach|spar|technical|boxing|pad\s?work|pads|mitts?|skill|primer|"
+    r"\b(coach(?:ing|ed)?|spar(?:r(?:ing|ed)|s)?|technical|combat|boxing|"
+    r"pad\s?work|pads|mitts?|skills?|drill(?:s|ing)?|primer|"
     r"strength|conditioning|mobility|reset|fight\s+day|protocol|rhythm|flush|"
     r"breath(?:ing)?|downshift|(?:easy|recovery)\s+walk|visuali[sz](?:e|ation)|"
-    r"cue\s+card|mindset\s+(?:reset|work)|movement\s+quality|shadowbox|footwork|"
+    r"cue\s+card|mindset\s+(?:reset|work)|movement\s+quality|"
+    r"shadowbox(?:ing|es)?|footwork|"
     r"tactical\s+(?:watch|review)|film\s+(?:review|study))\b",
     re.I,
 )

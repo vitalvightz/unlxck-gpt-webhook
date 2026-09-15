@@ -406,6 +406,33 @@ def _valid_phase_label(phase: str, fallback: str) -> str:
     return phase if phase in allowed else fallback
 
 
+_REST_DAY_TYPES = {"rest", "off", "none", "travel"}
+
+
+def _apply_contact_day_type(day: dict[str, Any], contact: _ContactDay) -> bool:
+    """Lift a rest ``day_type`` to the contact's own load when stamping a day.
+
+    An inserted contact day (``_build_coach_led_day``) carries the day_type its
+    load implies, but a day the converter already emitted as rest keeps that
+    rest day_type when we stamp the contact headline onto it — so a declared
+    hard-sparring day reads "Hard sparring" while every day_type consumer still
+    sees rest. That understated the athlete's hardest day as reduced load on
+    Today/Overview and dropped it from week-progress and streak counts.
+
+    Only a declared *hard* contact is lifted, and only off a rest-ish day_type.
+    Reduced and technical contact genuinely belong on an easy day — light
+    technical touches on a recovery day are a normal prescription, and calling
+    that day "moderate" would inflate it — so those keep the day_type the
+    converter chose.
+    """
+    if contact.load != "hard":
+        return False
+    if str(day.get("day_type") or "").strip().lower() not in _REST_DAY_TYPES:
+        return False
+    day["day_type"] = _DAY_TYPE_BY_LOAD["hard"]
+    return True
+
+
 def _build_coach_led_day(contact: _ContactDay, *, phase_fallback: str) -> dict[str, Any]:
     """A schema-valid sessionless coach-led day for an absent contact day."""
     countdown = f"D-{contact.d_day}" if contact.d_day is not None else ""
@@ -580,6 +607,11 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
                         )
                 if not day.get("sessions"):
                     card["headline"] = contact.headline
+                    if _apply_contact_day_type(day, contact):
+                        notes.append(
+                            f"lifted rest day_type to {day['day_type']!r} on "
+                            f"{date or f'D-{dday}'} ({contact.headline!r})"
+                        )
                     notes.append(
                         f"stamped contact headline on {date or f'D-{dday}'} "
                         f"({contact.headline!r})"
@@ -594,8 +626,20 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
                 )
                 continue
             if current and _already_coach_led(current):
+                # The headline already classifies, but the day_type behind it can
+                # still be the converter's rest stamp — fix that either way.
+                if _apply_contact_day_type(day, contact):
+                    notes.append(
+                        f"lifted rest day_type to {day['day_type']!r} on "
+                        f"{date or f'D-{dday}'} ({current!r})"
+                    )
                 continue
             card["headline"] = contact.headline
+            if _apply_contact_day_type(day, contact):
+                notes.append(
+                    f"lifted rest day_type to {day['day_type']!r} on "
+                    f"{date or f'D-{dday}'} ({contact.headline!r})"
+                )
             notes.append(
                 f"stamped contact headline on {date or f'D-{dday}'} "
                 f"({contact.headline!r})"

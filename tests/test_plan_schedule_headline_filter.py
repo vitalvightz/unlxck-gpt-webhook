@@ -40,6 +40,43 @@ def test_explicit_support_headlines_remain_scheduled():
         assert has_scheduled_day_content(_synthetic_entry(headline)) is True, headline
 
 
+def test_combat_vocabulary_survives_inflection():
+    """Inflected combat headlines are real work, not rest.
+
+    The allowlist is a stem list wrapped in one trailing ``\\b``, so any stem
+    without its own suffixes only matched the exact word. "spar" therefore never
+    matched "Hard sparring" — the athlete's declared contact day — and Today,
+    Overview and the completion write all treated that day as rest while Plan
+    rendered it as a sparring session. These are the inflections the web
+    client's ``classifySessionlessDay`` already recognises.
+    """
+    for headline in (
+        "Hard sparring",
+        "Sparring",
+        "Light sparring",
+        "Sparring and clinch",
+        "Spars",
+        "Sparred rounds",
+        "Light combat",
+        "Technical combat",
+        "Shadowboxing",
+        "Skills work",
+        "Drills",
+        "Coaching session",
+    ):
+        assert has_scheduled_day_content(_synthetic_entry(headline)) is True, headline
+
+
+def test_rest_prefix_still_vetoes_combat_vocabulary():
+    """A rest/off prefix outranks the combat words above."""
+    for headline in (
+        "Rest day — no sparring",
+        "Off — skip the drills",
+        "No training today — sparring cancelled",
+    ):
+        assert has_scheduled_day_content(_synthetic_entry(headline)) is False, headline
+
+
 def test_real_structured_sessions_bypass_headline_only_gate():
     entry = {
         "status": "recovery",
