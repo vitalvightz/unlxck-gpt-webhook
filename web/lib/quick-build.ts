@@ -1,6 +1,7 @@
 import {
   detectDeviceTimeZone,
   EQUIPMENT_ACCESS_OPTIONS,
+  canonicalizeEquipmentAccessValues,
   KEY_GOAL_OPTIONS,
   TACTICAL_STYLE_OPTIONS,
   TECHNICAL_STYLE_OPTIONS,
@@ -96,7 +97,7 @@ export function planRequestToQuickBuildInput(plan: PlanRequest): QuickBuildInput
       TRAINING_AVAILABILITY_OPTIONS,
     ).filter((day) => trainingAvailability.includes(day)),
     equipment_access: retainKnownOptionValues(
-      plan.equipment_access ?? [],
+      canonicalizeEquipmentAccessValues(plan.equipment_access ?? []),
       EQUIPMENT_ACCESS_OPTIONS,
     ),
     key_goals: retainKnownOptionValues(plan.key_goals ?? [], KEY_GOAL_OPTIONS).slice(
@@ -248,7 +249,10 @@ export function quickBuildToPlanRequest(input: QuickBuildInput): PlanRequest {
       .slice(0, HARD_SPARRING_DAY_CAP),
     support_work_days: retainKnownOptionValues(input.support_work_days, TRAINING_AVAILABILITY_OPTIONS)
       .filter((day) => input.training_availability.includes(day)),
-    equipment_access: retainKnownOptionValues(input.equipment_access, EQUIPMENT_ACCESS_OPTIONS),
+    equipment_access: retainKnownOptionValues(
+      canonicalizeEquipmentAccessValues(input.equipment_access),
+      EQUIPMENT_ACCESS_OPTIONS,
+    ),
     injuries: input.injuries.trim(),
     key_goals: keyGoals,
     primary_goal: keyGoals[0] ?? "",

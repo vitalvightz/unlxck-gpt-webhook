@@ -16,6 +16,7 @@ import { markGenerationIntent } from "@/lib/generation-intent";
 import {
   detectDeviceTimeZone,
   EQUIPMENT_ACCESS_OPTIONS,
+  canonicalizeEquipmentAccessValues,
   getOptionLabel,
   getOptionLabels,
   isValidRecordFormat,
@@ -354,7 +355,7 @@ function formatEquipmentLimitations(selectedEquipment: string[]): string | null 
   }
 
   const loadedStrengthOptions = ["barbell", "dumbbells", "kettlebells", "trap_bar", "cable", "landmine"];
-  const conditioningOptions = ["assault_bike", "rower", "sled", "heavy_bag", "thai_pads"];
+  const conditioningOptions = ["assault_bike", "rower", "sled", "heavy_bag", "pads"];
   const hasLoadedStrengthOption = selectedEquipment.some((item) => loadedStrengthOptions.includes(item));
   const hasConditioningOption = selectedEquipment.some((item) => conditioningOptions.includes(item));
 
@@ -1506,7 +1507,10 @@ export function PlanIntakeForm() {
   ) {
     setForm((current) => {
       const currentValues = key === "equipment_access"
-        ? retainKnownOptionValues(current[key], EQUIPMENT_ACCESS_OPTIONS)
+        ? retainKnownOptionValues(
+            canonicalizeEquipmentAccessValues(current[key]),
+            EQUIPMENT_ACCESS_OPTIONS,
+          )
         : current[key];
       const alreadySelected = currentValues.includes(value);
       const performanceFocusGroup = getPerformanceFocusGroupForField(key);

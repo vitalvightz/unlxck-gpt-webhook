@@ -117,7 +117,7 @@ export const EQUIPMENT_ACCESS_GROUPS: EquipmentAccessGroup[] = [
     label: "Combat",
     options: [
       { label: "Heavy Bag", value: "heavy_bag" },
-      { label: "Thai Pads", value: "thai_pads" },
+      { label: "Pads / Mitts", value: "pads" },
       { label: "Partner", value: "partner" },
     ],
   },
@@ -189,7 +189,45 @@ const LEGACY_OPTION_LABELS: Record<string, string> = {
   dumbbell: "Dumbbell",
   kettlebell: "Kettlebell",
   jump_rope: "Jump Rope",
+  thai_pads: "Pads / Mitts",
+  thai_pad: "Pads / Mitts",
+  focus_mitts: "Pads / Mitts",
+  partner_mitts: "Pads / Mitts",
 };
+
+/**
+ * Legacy equipment values that mean the same athlete capability as the
+ * canonical `pads` option. Profiles saved before "Thai Pads" became
+ * "Pads / Mitts" still carry these, and `retainKnownOptionValues` would
+ * otherwise drop them as unknown the first time such a profile is re-saved.
+ *
+ * This mirrors the pad aliases in `fightcamp/training_context.py`; the backend
+ * remains the authority for eligibility, this only keeps the form honest about
+ * what the athlete already told us.
+ */
+export const LEGACY_EQUIPMENT_ALIASES: Record<string, string> = {
+  thai_pads: "pads",
+  thai_pad: "pads",
+  focus_mitts: "pads",
+  focus_mitt: "pads",
+  partner_mitts: "pads",
+  partner_mitt: "pads",
+  boxing_mitts: "pads",
+  punch_mitts: "pads",
+  mitts: "pads",
+};
+
+/** Map legacy equipment values onto their canonical option value, deduped. */
+export function canonicalizeEquipmentAccessValues(values: string[] | undefined): string[] {
+  const canonical: string[] = [];
+  for (const value of values ?? []) {
+    const mapped = LEGACY_EQUIPMENT_ALIASES[value] ?? value;
+    if (mapped && !canonical.includes(mapped)) {
+      canonical.push(mapped);
+    }
+  }
+  return canonical;
+}
 
 export function detectDeviceTimeZone(): string {
   if (typeof window === "undefined" || typeof Intl === "undefined") {

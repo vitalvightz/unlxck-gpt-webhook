@@ -8,6 +8,7 @@ from .phases import PHASE_HEADER_PATTERN
 from .regex_config import compile_regex, compile_regex_list
 from .restriction_filtering import evaluate_restriction_impact
 from .normalization import clean_list, phrase_in_text, dedupe_preserve_order
+from .training_context import normalize_equipment_list
 from .late_selector_windows import classify_late_selector_window
 from .fight_day_override import FIGHT_DAY_PROTOCOL_TEXT
 from .stage2_render_guards import _has_active_injury_from_athlete_model
@@ -754,12 +755,15 @@ def _line_has_risk_context(line: str) -> bool:
 
 
 def _normalize_equipment_set(values: Any) -> set[str]:
-    equipment: set[str] = set()
-    for value in clean_list(values):
-        normalized = str(value).strip().lower().replace(" ", "_")
-        if normalized:
-            equipment.add(normalized)
-    return equipment
+    """Canonical equipment tokens, using the one shared runtime normalizer.
+
+    The validator must agree with the selectors about what an athlete owns -
+    a second local alias table is how ``equipment_incongruent_selection`` starts
+    firing on drills the planner legitimately selected (e.g. a bank drill
+    spelling the pad capability ``focus_mitts`` against a profile that stored
+    ``thai_pads``).
+    """
+    return set(normalize_equipment_list(clean_list(values)))
 
 
 def _option_records_by_phase(planning_brief: dict) -> dict[str, list[dict]]:

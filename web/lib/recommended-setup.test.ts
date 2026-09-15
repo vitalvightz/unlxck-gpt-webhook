@@ -57,7 +57,7 @@ test("equipment groups contain every supported option exactly once", () => {
   const expectedGroups = {
     "Weights & strength": ["dumbbells", "kettlebells", "barbell", "trap_bar", "plate", "bench", "cable", "landmine", "log", "atlas_stone"],
     Conditioning: ["assault_bike", "rower", "treadmill", "step_mill", "pool", "sled", "battle_ropes", "tire", "sledgehammer", "weight_vest"],
-    Combat: ["heavy_bag", "thai_pads", "partner"],
+    Combat: ["heavy_bag", "pads", "partner"],
     "Plyometrics & movement": ["box", "agility_ladder", "hurdles", "jump_rope"],
     "Functional & accessories": ["medicine_ball", "sandbag", "bulgarian_bag", "bands", "trx", "pullup_bar", "swiss_ball", "bosu_ball", "neck_harness", "weight_belt", "water_jug"],
     Recovery: ["foam_roller", "towel"],
