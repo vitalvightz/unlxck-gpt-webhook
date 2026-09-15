@@ -573,7 +573,7 @@ export function TodaySessionPanel({
       ) : null}
 
       {canCompleteSession && status === "not_started" ? (
-        <div className="today-action-row today-sticky-actions">
+        <div className="today-session-actions">
           <button type="button" className="cta" onClick={() => void saveCompletion("started")} disabled={isSubmitting}>
             Start session
           </button>
@@ -584,7 +584,7 @@ export function TodaySessionPanel({
       ) : null}
 
       {canCompleteSession && status === "started" ? (
-        <div className="today-action-row today-sticky-actions">
+        <div className="today-session-actions">
           <button
             type="button"
             className="cta"
