@@ -1763,6 +1763,17 @@ function WeekStrip({
   }, [activePos, weeks.length]);
 
   return (
+    <>
+    <div className="cm-week-navigation">
+      <p className="cm-week-navigation-label" aria-live="polite" aria-atomic="true">
+        Week {selectedPos + 1} of {weeks.length}
+      </p>
+      {currentPos !== null && currentPos !== selectedPos ? (
+        <button type="button" className="cm-current-week" onClick={() => onSelect(currentPos)}>
+          Current week
+        </button>
+      ) : null}
+    </div>
     <nav
       ref={stripRef}
       className="cm-week-strip"
@@ -1813,6 +1824,7 @@ function WeekStrip({
         );
       })}
     </nav>
+    </>
   );
 }
 
