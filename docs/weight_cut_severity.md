@@ -80,14 +80,19 @@ max_removable    = max(0, non_spar_cap - minimum_required)
 effective_floor  = min(raw_floor, max_removable)
 ```
 
-`minimum_required` is 1 normally, and 0 when the week already contains a
-declared combat session — that is real physical work, so non-spar sessions may
+`minimum_required` is 1 normally, and 0 when the week already contains an
+actual combat **role** — that is real physical work, so non-spar sessions may
 legitimately fall to zero late in taper and we do not manufacture filler just to
-hit a frequency number.
+hit a frequency number. The exemption counts retained combat roles, never
+declared hard-sparring days: a declared day whose combat role was never built or
+has since been suppressed is not physical work, and treating the declaration as
+the exemption would let compression empty the week. Weekly capacity still
+follows the declared lock, which is what reserves the day.
 
 **Readiness compression is never an authority for a zero-physical week.** Only a
-medical hold, a red-flag injury, or fight day itself (`_zero_physical_week_is_authorised`)
-may leave an athlete with nothing scheduled.
+medical hold, restricted-rehab-only, a red-flag injury, or fight day itself
+(`_zero_physical_week_is_authorised`) may leave an athlete with nothing
+scheduled.
 
 ## No third severity system
 

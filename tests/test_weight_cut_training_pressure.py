@@ -13,6 +13,7 @@ from fightcamp.stage2_role_map import (
     _apply_high_fatigue_week_compression,
     _boxing_crowded_week_policy_state,
     _effective_compression_floor,
+    _minimum_required_non_spar_exposures,
     _compression_floor_value,
     _compute_readiness_compression,
     _cut_severity_compression_points,
@@ -388,7 +389,7 @@ def test_frequency_two_taper_with_combat_may_drop_non_spar_to_zero():
     # The combat exposure survives; taper policy may legitimately take non-spar
     # work to zero because the week still contains real physical work.
     assert "hard_sparring_day" in kept_keys
-    assert _effective_compression_floor(athlete, non_spar_cap=1, spar_count=1) == 1
+    assert _effective_compression_floor(athlete, non_spar_cap=1, combat_role_count=1) == 1
 
 
 @pytest.mark.parametrize("frequency,spar_days", [(2, ()), (3, ()), (4, ()), (5, ()), (6, ())])
@@ -417,7 +418,7 @@ def test_explicit_safety_authority_may_still_take_the_week_to_zero(authority):
     """Only medical / fight-day authority may zero a week — never compression."""
     days = ["monday", "thursday"]
     athlete = _severe_cut_athlete(15.0, training_days=days, frequency=2, **authority)
-    assert _effective_compression_floor(athlete, non_spar_cap=2, spar_count=0) == 2
+    assert _effective_compression_floor(athlete, non_spar_cap=2, combat_role_count=0) == 2
 
 
 def test_compression_alone_is_never_a_zero_week_authority():
@@ -431,7 +432,7 @@ def test_compression_alone_is_never_a_zero_week_authority():
         injuries=["moderate knee sprain"],
         readiness_flags=["high_fatigue", "injury_management"],
     )
-    assert _effective_compression_floor(athlete, non_spar_cap=2, spar_count=0) == 1
+    assert _effective_compression_floor(athlete, non_spar_cap=2, combat_role_count=0) == 1
 
 
 # ── The compound rule is a compound rule, not a second cut penalty ───────────
@@ -533,3 +534,24 @@ def test_high_pressure_cut_still_flags_on_fatigue_and_proximity():
         {"weight_cut_risk": False, "weight_cut_pct": 9.0,
          "fatigue": "high", "days_until_fight": 3}
     ) is False
+
+
+def test_declared_spar_day_without_a_combat_role_still_keeps_one_session():
+    """The zero-non-spar exemption must follow real combat work, not intake.
+
+    A declared hard-sparring day whose combat role was never built, or was
+    suppressed before allocation, is not physical work. Basing the exemption on
+    the declaration let compression strip every remaining non-spar role and
+    leave the week with nothing at all.
+    """
+    days = ["monday", "thursday"]
+    athlete = _severe_cut_athlete(
+        13.0, training_days=days, frequency=2, spar_days=["thursday"]
+    )
+    # Thursday is declared hard sparring, but no hard_sparring_day role exists.
+    kept, _suppressed = _apply_high_fatigue_week_compression(
+        _taper_week(days), [_role(1, "monday")], [], athlete
+    )
+    assert len(kept) >= 1
+    assert _minimum_required_non_spar_exposures(athlete, combat_role_count=0) == 1
+    assert _minimum_required_non_spar_exposures(athlete, combat_role_count=1) == 0

@@ -2334,26 +2334,32 @@ def _zero_physical_week_is_authorised(athlete_model: dict) -> bool:
 
 
 def _minimum_required_non_spar_exposures(
-    athlete_model: dict, *, spar_count: int
+    athlete_model: dict, *, combat_role_count: int
 ) -> int:
     """Non-spar sessions that readiness compression may never remove.
 
-    The week still needs *some* physical work. A declared combat session is
-    physical work, so when one is already scheduled the non-spar count may
-    legitimately fall to zero late in taper — we do not manufacture filler just
-    to hit a frequency number. With no combat session in the week, one non-spar
-    exposure must survive, because otherwise a declared two-session week
-    silently becomes a zero-session week.
+    The week still needs *some* physical work. A combat session is physical
+    work, so when one is present the non-spar count may legitimately fall to
+    zero late in taper — we do not manufacture filler just to hit a frequency
+    number. With no combat session in the week, one non-spar exposure must
+    survive, because otherwise a declared two-session week silently becomes a
+    zero-session week.
+
+    ``combat_role_count`` must be a count of *actual combat roles in the week*,
+    never of declared hard-sparring days. A declared day whose combat role was
+    never built or has since been suppressed is not physical work, and treating
+    the declaration as the exemption let compression strip every remaining
+    non-spar role and leave nothing at all.
     """
     if _zero_physical_week_is_authorised(athlete_model):
         return 0
-    if spar_count > 0:
+    if combat_role_count > 0:
         return 0
     return 1
 
 
 def _effective_compression_floor(
-    athlete_model: dict, *, non_spar_cap: int, spar_count: int
+    athlete_model: dict, *, non_spar_cap: int, combat_role_count: int
 ) -> int:
     """Readiness compression bounded by what the week can actually afford.
 
@@ -2364,7 +2370,7 @@ def _effective_compression_floor(
     the stronger invariant.
     """
     minimum_required = _minimum_required_non_spar_exposures(
-        athlete_model, spar_count=spar_count
+        athlete_model, combat_role_count=combat_role_count
     )
     max_removable = max(0, int(non_spar_cap) - minimum_required)
     return min(_readiness_compression_floor(athlete_model), max_removable)
@@ -2810,6 +2816,13 @@ def _apply_high_fatigue_week_compression(
     spar_count = len(locked_spar_days)
     non_spar_cap = max(0, weekly_cap - spar_count)
 
+    # Separate sparring and non-sparring roles up front: the zero-non-spar
+    # exemption below must be decided on combat work that actually exists in
+    # this week, not on the intake declaration. Weekly capacity still follows
+    # the declared lock, which is what reserves the day.
+    spar_roles = [r for r in session_roles if r.get("role_key") == "hard_sparring_day"]
+    non_spar_roles = [r for r in session_roles if r.get("role_key") != "hard_sparring_day"]
+
     # Step 2: Compute readiness compression score (applied to non-sparring slots only)
     fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
     compression = _compute_readiness_compression(athlete_model)
@@ -2821,7 +2834,7 @@ def _apply_high_fatigue_week_compression(
     # so readiness compression can never take a declared training week to zero
     # physical sessions. Only a medical/fight-day authority may do that.
     compression_floor = _effective_compression_floor(
-        athlete_model, non_spar_cap=non_spar_cap, spar_count=spar_count
+        athlete_model, non_spar_cap=non_spar_cap, combat_role_count=len(spar_roles)
     )
 
     # Step 3: Compute target number of non-sparring active sessions
@@ -2838,9 +2851,6 @@ def _apply_high_fatigue_week_compression(
     # Never exceed the available non-spar capacity
     non_spar_target = min(non_spar_target, non_spar_cap)
 
-    # Separate sparring and non-sparring roles
-    spar_roles = [r for r in session_roles if r.get("role_key") == "hard_sparring_day"]
-    non_spar_roles = [r for r in session_roles if r.get("role_key") != "hard_sparring_day"]
     conditioning_roles = [r for r in non_spar_roles if r.get("category") == "conditioning"]
 
     # Guardrail: if conditioning is a goal/weakness, keep space for it inside non-spar allocation.
