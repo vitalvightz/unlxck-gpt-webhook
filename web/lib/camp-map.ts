@@ -646,14 +646,21 @@ export function resolveNextPlanFocusDay(
     }
   }
 
-  const nextAppDay = futureDays.find((day) => {
+  // First future training day in card order, whether the work is an app session
+  // or coach-owned contact. Ranking every app card ahead of every coach-led day
+  // used to jump the marker *past* a nearer contact day — a Saturday sparring /
+  // technical day would be skipped for Sunday's conditioning card — so Plan
+  // marked a different "next session" than Today, which counts a contact day as
+  // a session. Terminal app cards are still passed over, which is the only
+  // ordering this preference was ever really doing.
+  const nextTrainingDay = futureDays.find((day) => {
     const sessions = getSessions(day);
-    return sessions.length > 0 && sessions.some((session) => !isSessionTerminal(session));
+    if (sessions.length > 0) {
+      return sessions.some((session) => !isSessionTerminal(session));
+    }
+    return classifySessionlessDay(day).coachLed;
   });
-  const nextCoachLedDay = futureDays.find((day) => {
-    return getSessions(day).length === 0 && classifySessionlessDay(day).coachLed;
-  });
-  return dateFromDay(nextAppDay ?? nextCoachLedDay) ?? fallbackFocusDay;
+  return dateFromDay(nextTrainingDay) ?? fallbackFocusDay;
 }
 
 export type WeekSessionSummary = {
