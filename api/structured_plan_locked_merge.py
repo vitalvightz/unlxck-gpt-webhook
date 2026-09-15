@@ -13,6 +13,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Mapping
 
+from .structured_plan_sparring_reconcile import reconcile_coach_led_sparring_days
+
 
 _TACTICAL_WATCH_SESSION_TITLE = "Tactical Focus"
 
@@ -325,4 +327,19 @@ def merge_locked_structured_content(
             ]
         result.applied.append(LockedMergeApplication(day_label, str(block["display_name"])))
 
+    return result
+
+
+def merge_planner_owned_structured_content(
+    structured_plan: dict[str, Any], planning_brief: Any
+) -> LockedMergeResult:
+    """Carry all planner-owned session and contact truth into one final card.
+
+    Contact reconciliation must run after locked sessions are present. Otherwise
+    adding Tactical Focus can turn a contact-only day into a session day while
+    leaving its contact truth stranded in the now-hidden day headline.
+    """
+    result = merge_locked_structured_content(structured_plan, planning_brief)
+
+    reconcile_coach_led_sparring_days(result.plan, planning_brief)
     return result

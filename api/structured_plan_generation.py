@@ -30,7 +30,7 @@ from fightcamp.weekly_schedule_view import normalize_weekday as _normalize_weekd
 
 from .state_machine import is_athlete_displayable_plan_status
 from .structured_plan_faithfulness import check_structured_faithfulness
-from .structured_plan_locked_merge import merge_locked_structured_content
+from .structured_plan_locked_merge import merge_planner_owned_structured_content
 from .structured_plan_safety import athlete_safe_support, audit_structured_plan, split_findings
 from .structured_plan_models import (
     SCHEMA_VERSION,
@@ -100,7 +100,7 @@ def _merge_locked_content(
     plan_dict: dict[str, Any], planning_brief: Any
 ) -> dict[str, Any]:
     """Apply Stage 1 locked truth and emit compact, profile-free diagnostics."""
-    result = merge_locked_structured_content(plan_dict, planning_brief)
+    result = merge_planner_owned_structured_content(plan_dict, planning_brief)
     locked_roles = len(result.applied) + len(result.unresolved)
     if locked_roles:
         logger.info(

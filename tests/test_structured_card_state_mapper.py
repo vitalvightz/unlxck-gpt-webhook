@@ -192,3 +192,86 @@ def test_plan_detail_serializes_server_authoritative_state():
         "schema_version": None,
         "attempt_started_at": None,
     }
+
+
+@pytest.mark.parametrize(
+    ("d_day", "contact_fields", "expected_contact"),
+    [
+        (
+            11,
+            {
+                "downgraded": True,
+                "downgraded_to_role_key": "technical_touch_day",
+                "placement_source": "declared_hard_day_downgrade_context",
+            },
+            "Controlled fight-speed technical rounds",
+        ),
+        (
+            20,
+            {"downgraded": False, "placement_source": "declared_hard_day_lock"},
+            "Hard sparring",
+        ),
+        (
+            25,
+            {
+                "hard_sparring_status": "deload_suggested",
+                "hard_sparring_class": "managed_hard",
+                "hard_sparring_reason_codes": ["consecutive_hard_days"],
+            },
+            "Hard sparring — reduced dose",
+        ),
+    ],
+)
+def test_plan_detail_carries_planner_contact_after_locked_tactical_merge(
+    d_day: int,
+    contact_fields: dict,
+    expected_contact: str,
+):
+    plan = _valid_plan()
+    day = plan["weeks"][0]["days"][0]
+    day["countdown_label"] = f"D-{d_day}"
+    day["today_card"]["headline"] = "Rest day"
+    day["sessions"] = []
+
+    row = _row(debug={"status": "valid", "schema_version": SCHEMA_VERSION})
+    row["structured_plan"] = plan
+    row["planning_brief"] = {
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "phase": "SPP",
+                    "session_roles": [
+                        {
+                            "role_key": "hard_sparring_day",
+                            "countdown_offset": d_day,
+                            "scheduled_countdown_label": f"D-{d_day}",
+                            **contact_fields,
+                        },
+                        {
+                            "role_key": "tactical_watch",
+                            "countdown_offset": d_day,
+                            "scheduled_countdown_label": f"D-{d_day}",
+                            "governance": {
+                                "selected_drill_locked": True,
+                                "selected_drill_name": "Pocket Exchange Map",
+                            },
+                            "tactical_watch": {
+                                "name": "Pocket Exchange Map",
+                                "duration_min": 10,
+                                "why": "Keep the exchange planned.",
+                                "instructions": ["Read the first response."],
+                                "mindset": {},
+                                "progress": "Rehearse the chosen ending.",
+                            },
+                        },
+                    ],
+                }
+            ]
+        }
+    }
+
+    detail = _map_plan_detail(row, include_admin=False)
+    mapped_day = detail.outputs.structured_plan.weeks[0].days[0]
+
+    assert [session.title for session in mapped_day.sessions] == ["Tactical Focus"]
+    assert mapped_day.today_card.coach_led_contact == expected_contact
