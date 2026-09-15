@@ -40,6 +40,7 @@ import {
   type SafeSessionView,
 } from "@/lib/today";
 import type {
+
   RehabLabelPolicy,
   PendingRehabResponseSet,
   StructuredPlan,
@@ -47,6 +48,7 @@ import type {
   TodayCompletionStatus,
   TodaySession,
 } from "@/lib/types";
+import { useTranslations as useAppTranslations } from "next-intl";
 
 function formatSessionDate(session: TodaySession): string {
   const dayText = session.weekday_with_label || session.weekday;
@@ -130,6 +132,7 @@ function getSessionRelationCopy(
  * today is a STOP — Today never displays hard combat as available under a stop.
  */
 function SafeSessionCard({ view }: { view: SafeSessionView }) {
+    const appText = useAppTranslations("AppText");
   return (
     <div className="today-safe-session" data-tone="red">
       <p className="today-safe-session-eyebrow">{view.eyebrow}</p>
@@ -137,11 +140,11 @@ function SafeSessionCard({ view }: { view: SafeSessionView }) {
       <p className="today-safe-session-detail">{view.detail}</p>
       <div className="today-safe-session-lists">
         <div className="today-safe-list" data-kind="allowed">
-          <p className="today-safe-list-label">Allowed</p>
+          <p className="today-safe-list-label">{appText("text_1bb201d18835")}</p>
           <ul>{view.allowed.map((item) => <li key={item}>{item}</li>)}</ul>
         </div>
         <div className="today-safe-list" data-kind="blocked">
-          <p className="today-safe-list-label">Blocked</p>
+          <p className="today-safe-list-label">{appText("text_18f2a0947f9d")}</p>
           <ul>{view.blocked.map((item) => <li key={item}>{item}</li>)}</ul>
         </div>
       </div>
@@ -173,6 +176,7 @@ export function TodaySessionBlocks({
    * screen read "Rehab" no matter which injuries had cleared. */
   rehabLabelPolicy?: RehabLabelPolicy | null;
 }) {
+    const appText = useAppTranslations("AppText");
   if (!current.inRange || !current.day) {
     return null;
   }
@@ -186,7 +190,7 @@ export function TodaySessionBlocks({
   const weekIntentNote = openWeekIntent ? (
     <p className="today-open-week-note">
       <span className="sp-tag sp-accent">
-        Week {openWeekIntent.weekNumber} · {openWeekIntent.label}
+        {appText("text_e78041ab51a8")}{openWeekIntent.weekNumber} {appText("text_a137f17a19a0")}{openWeekIntent.label}
       </span>
       {openWeekIntent.summary}
     </p>
@@ -249,6 +253,7 @@ export function TodaySessionPanel({
   token: string;
   onRefresh: () => Promise<void>;
 }) {
+    const appText = useAppTranslations("AppText");
   const { showToast } = useToast();
   const [intent, setIntent] = useState<CompletionIntent>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -436,7 +441,7 @@ export function TodaySessionPanel({
       );
       await onRefresh();
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Session update failed.", { tone: "error" });
+      showToast(error instanceof Error ? error.message : appText("text_63eb97e6e195"), { tone: "error" });
     } finally {
       setIsSubmitting(false);
     }
@@ -452,7 +457,7 @@ export function TodaySessionPanel({
       >
         <div className="today-card-head">
           <div>
-            <p className="kicker">Today&apos;s session</p>
+            <p className="kicker">{appText("text_e48e56e4484e")}</p>
             {/* training_day is always present in the initial payload, so headline
                 it unconditionally — gating on the async-loaded structuredPlan
                 caused a flash from "No session scheduled" to the date on load. */}
@@ -469,7 +474,7 @@ export function TodaySessionPanel({
             rehabLabelPolicy={rehabLabelPolicy}
           />
         ) : (
-          <p className="muted">No active plan card matched today. Use Open camp plan to find the next training target.</p>
+          <p className="muted">{appText("text_d0f522ca3556")}</p>
         )}
       </section>
     );
@@ -512,28 +517,28 @@ export function TodaySessionPanel({
       ) : (
         <div className="today-session-summary">
           <div>
-            <p className="today-detail-label">Day</p>
+            <p className="today-detail-label">{appText("text_8f2364e11b8b")}</p>
             <p>{formatSessionDate(session)}</p>
           </div>
           <div>
-            <p className="today-detail-label">Focus</p>
+            <p className="today-detail-label">{appText("text_9d3cab2b5efe")}</p>
             <p>{getSessionFocus(session)}</p>
           </div>
           {session.coach_led_contact ? (
             <div>
-              <p className="today-detail-label">Coach contact</p>
+              <p className="today-detail-label">{appText("text_b4343f69da2b")}</p>
               <p>{session.coach_led_contact}</p>
             </div>
           ) : null}
           {duration ? (
             <div>
-              <p className="today-detail-label">Duration</p>
+              <p className="today-detail-label">{appText("text_4fc52a3c4c55")}</p>
               <p>{duration}</p>
             </div>
           ) : null}
           {!isSessionPreview ? (
             <div>
-              <p className="today-detail-label">Status</p>
+              <p className="today-detail-label">{appText("text_920e413c7d41")}</p>
               <p>{getCompletionLabel(status)}</p>
             </div>
           ) : null}
@@ -542,15 +547,13 @@ export function TodaySessionPanel({
       {isSessionPreview && !safeSession ? (
         <div className="today-next-planned-note">
           <p className="today-pending-line">
-            <span className="today-pending-pill">Pending</span>
-            Check in on the day to unlock this session.
-          </p>
+            <span className="today-pending-pill">{appText("text_331551b0de41")}</span>
+            {appText("text_eff04b7b21b6")}</p>
           {nextIsHardCombat ? (
             <div className="today-caution-row">
-              <span className="today-caution-label">Caution</span>
+              <span className="today-caution-label">{appText("text_2e178e6c65f9")}</span>
               <span className="today-caution-text">
-                Combat session planned next. Re-check fatigue, pain, and injury status before clearing.
-              </span>
+                {appText("text_9b7497ff2351")}</span>
             </div>
           ) : null}
         </div>
@@ -566,8 +569,7 @@ export function TodaySessionPanel({
           </p>
           {severeInjuryBlocksCurrentSession ? (
             <a href="#today-injury" className="secondary-button today-terminal-action">
-              Open injury check-in
-            </a>
+              {appText("text_461aba7aee44")}</a>
           ) : null}
         </div>
       ) : null}
@@ -575,11 +577,9 @@ export function TodaySessionPanel({
       {canCompleteSession && status === "not_started" ? (
         <div className="today-action-row today-sticky-actions">
           <button type="button" className="cta" onClick={() => void saveCompletion("started")} disabled={isSubmitting}>
-            Start session
-          </button>
+            {appText("text_b1c52ee3677d")}</button>
           <button type="button" className="ghost-button" onClick={() => setIntent("skipped")} disabled={isSubmitting}>
-            Mark skipped
-          </button>
+            {appText("text_76b6a8210979")}</button>
         </div>
       ) : null}
 
@@ -588,20 +588,16 @@ export function TodaySessionPanel({
           <button
             type="button"
             className="cta"
-            onClick={() => showToast("Session is in progress.", { tone: "info" })}
+            onClick={() => showToast(appText("text_75a661065c97"), { tone: "info" })}
             disabled={isSubmitting}
           >
-            Resume session
-          </button>
+            {appText("text_0beb88010ce1")}</button>
           <button type="button" className="secondary-button" onClick={() => setIntent("done")} disabled={isSubmitting}>
-            Mark done
-          </button>
+            {appText("text_95acc4a22bde")}</button>
           <button type="button" className="secondary-button" onClick={() => setIntent("modified")} disabled={isSubmitting}>
-            Mark modified
-          </button>
+            {appText("text_c42011997a28")}</button>
           <button type="button" className="ghost-button" onClick={() => setIntent("skipped")} disabled={isSubmitting}>
-            Mark skipped
-          </button>
+            {appText("text_76b6a8210979")}</button>
         </div>
       ) : null}
 

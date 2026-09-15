@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { useTranslations as useAppTranslations } from "next-intl";
+
 
 type EmptyStateAction = {
   label: string;
@@ -26,6 +28,7 @@ export function EmptyState({
   secondaryAction,
   primaryActionNode,
 }: EmptyStateProps) {
+    const appText = useAppTranslations("AppText");
   const hasActions = Boolean(primaryAction || primaryActionNode || secondaryAction);
 
   return (
@@ -36,7 +39,7 @@ export function EmptyState({
         <p className="muted empty-state-description">{description}</p>
       </div>
       <div className="empty-state-example" aria-hidden="false">
-        <p className="label">What appears here next</p>
+        <p className="label">{appText("text_017fd22c1e13")}</p>
         <p className="empty-state-example-body">{example}</p>
       </div>
       {hasActions ? (

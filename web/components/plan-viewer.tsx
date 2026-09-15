@@ -87,6 +87,9 @@ import {
   planHasProfileRefreshFailed,
 } from "@/lib/profile-refresh-warning";
 import { hasTriageResumeApproval, shouldShowTriageBlockedState } from "@/lib/triage-view";
+import { useTranslations as useAppTranslations } from "next-intl";
+import { translateUiText } from "@/i18n/ui-text";
+
 
 
 // Re-exported from the extracted adapter so existing imports keep working.
@@ -456,6 +459,7 @@ export function EnhancedCardLockInCard({
 }: {
   accessToken?: string | null;
 }) {
+    const appText = useAppTranslations("AppText");
   const [pushState, setPushState] = useState<PushOptInState | "loading" | "enabling">("loading");
   const [pushError, setPushError] = useState<string | null>(null);
 
@@ -489,26 +493,23 @@ export function EnhancedCardLockInCard({
     } catch (error) {
       setPushState("unsubscribed");
       setPushError(
-        error instanceof Error ? error.message : "Unable to enable notifications right now.",
+        error instanceof Error ? error.message : appText("text_be30a0d2a7d7"),
       );
     }
   }
 
   return (
     <section className="support-panel plan-lockin-card" role="status" aria-live="polite">
-      <p className="kicker plan-lockin-kicker">Final review</p>
+      <p className="kicker plan-lockin-kicker">{appText("text_10ec53cdbf67")}</p>
       <h3 className="plan-lockin-title">
-        YOUR CAMP IS BEING LXCKED IN
-        <span className="loading-title-dots" aria-hidden="true">
+        {appText("text_e54b86cda43e")}<span className="loading-title-dots" aria-hidden="true">
           <span />
           <span />
           <span />
         </span>
       </h3>
       <p className="plan-lockin-copy">
-        UNLXCK is reviewing and finalising your camp. This takes 2-5 minutes.
-        We&rsquo;ll notify you when it&rsquo;s ready.
-      </p>
+        {appText("text_a1b5da65392f")}</p>
       {accessToken && (pushState === "unsubscribed" || pushState === "enabling") ? (
         <button
           type="button"
@@ -516,13 +517,12 @@ export function EnhancedCardLockInCard({
           onClick={handleEnableNotifications}
           disabled={pushState === "enabling"}
         >
-          {pushState === "enabling" ? "Enabling notifications…" : "Notify me when it's ready"}
+          {pushState === "enabling" ? appText("text_24721556b0e4") : appText("text_b0e8ccafb345")}
         </button>
       ) : null}
       {pushState === "subscribed" ? (
         <p className="plan-lockin-notify-confirmed">
-          Notifications on. We&rsquo;ll ping you the moment it&rsquo;s live.
-        </p>
+          {appText("text_7f9fae7b1c6f")}</p>
       ) : null}
       {pushError ? <p className="plan-lockin-notify-error">{pushError}</p> : null}
     </section>
@@ -695,6 +695,7 @@ function StructuredCardDiagnostic({
    * text renderer is showing. */
   hasSavedCard?: boolean;
 }) {
+    const appText = useAppTranslations("AppText");
   const wasBuilt = debug.status === "valid" || debug.status === "repair_attempted_valid";
   const notAttempted = debug.status === "not_attempted";
   const buildDidNotComplete = debug.status === "failed";
@@ -712,9 +713,9 @@ function StructuredCardDiagnostic({
   return (
     <section className="support-panel" role="status">
       <div className="form-section-header">
-        <p className="kicker">Admin diagnostic</p>
+        <p className="kicker">{appText("text_76cae0bbb94f")}</p>
         <h3>
-          {heading} — {humanizeStatus(debug.status)}
+          {heading} {appText("text_bda050585a00")}{humanizeStatus(debug.status)}
         </h3>
       </div>
       <p className="muted">{copy}</p>
@@ -873,6 +874,7 @@ function BlockedPlanDecisionCard({
   injuryContext?: BlockedInjuryContextSummary | null;
   isAdmin: boolean;
 }) {
+    const appText = useAppTranslations("AppText");
   const isMedicalHold = triage.mode === "medical_hold";
   const isRestricted = triage.mode === "restricted_rehab_only";
   const [injuryDetailsOpen, setInjuryDetailsOpen] = useState(false);
@@ -920,19 +922,19 @@ function BlockedPlanDecisionCard({
     >
       <div className="plan-header-row">
         <div>
-          <p className="kicker">Planner decision</p>
+          <p className="kicker">{appText("text_08d2e30ce6a5")}</p>
           <h3>{title}</h3>
         </div>
         <div className="sparring-advisory-badges">
-          <span className="badge">PROTECTED</span>
-          <span className="badge">STAGE 2 SKIPPED</span>
+          <span className="badge">{appText("text_a2da5a8914a4")}</span>
+          <span className="badge">{appText("text_45b3c951de62")}</span>
           {riskBandLabel && displayedRiskBand ? (
             <span
               className={`sparring-risk-chip sparring-risk-${displayedRiskBand}`}
               aria-label={`Injury risk ${riskBandLabel}`}
             >
               <span className="sparring-risk-dot" aria-hidden="true" />
-              <span>Sparring risk: {riskBandLabel}</span>
+              <span>{appText("text_52083804aaf2")}{riskBandLabel}</span>
               {(() => {
                 const riskExplanation = explainRiskBand(displayedRiskBand);
                 const blockedExplanation = buildBlockedWhy(triage);
@@ -953,7 +955,7 @@ function BlockedPlanDecisionCard({
       {injuryContext?.capturedInjury ? (
         <div className="blocked-context-line">
           <div>
-            <strong>Captured injury:</strong> {injuryContext.capturedInjury}
+            <strong>{appText("text_5b739da5e143")}</strong> {injuryContext.capturedInjury}
           </div>
         </div>
       ) : null}
@@ -961,7 +963,7 @@ function BlockedPlanDecisionCard({
       {injuryContext?.blockedTrigger ? (
         <div className="blocked-context-line">
           <div>
-            <strong>Blocked trigger:</strong> {injuryContext.blockedTrigger}
+            <strong>{appText("text_73bf1ba8f0fc")}</strong> {injuryContext.blockedTrigger}
           </div>
         </div>
       ) : null}
@@ -974,7 +976,7 @@ function BlockedPlanDecisionCard({
             onClick={() => setInjuryDetailsOpen((open) => !open)}
             aria-expanded={injuryDetailsOpen}
           >
-            {injuryDetailsOpen ? "Hide injury details" : "Show injury details"}
+            {injuryDetailsOpen ? appText("text_8e4b16c88956") : appText("text_bfb734d35f84")}
           </button>
           {injuryDetailsOpen ? (
             capturedInjuries.length ? (
@@ -1004,12 +1006,12 @@ function BlockedPlanDecisionCard({
                     ) : null}
                     {injury.notes ? (
                       <div>
-                        <em>Athlete notes:</em> {injury.notes}
+                        <em>{appText("text_3e947548ebed")}</em> {injury.notes}
                       </div>
                     ) : null}
                     {injury.avoid ? (
                       <div>
-                        <em>Avoid:</em> {injury.avoid}
+                        <em>{appText("text_0c98d3dd1920")}</em> {injury.avoid}
                       </div>
                     ) : null}
                   </li>
@@ -1017,7 +1019,7 @@ function BlockedPlanDecisionCard({
               </ul>
             ) : (
               <div>
-                <strong>Captured injury:</strong> {legacyInjuryText}
+                <strong>{appText("text_5b739da5e143")}</strong> {legacyInjuryText}
               </div>
             )
           ) : null}
@@ -1026,7 +1028,7 @@ function BlockedPlanDecisionCard({
 
       {isAdmin && pauseReasons.length ? (
         <div className="blocked-context-line">
-          <strong>Why this was paused</strong>
+          <strong>{appText("text_54b17a46caa3")}</strong>
           <ul className="summary-list">
             {pauseReasons.map((reason) => (
               <li key={reason}>{reason}</li>
@@ -1046,14 +1048,14 @@ function BlockedPlanDecisionCard({
       ) : null}
 
       <ul className="summary-list">
-        <li>Stage 2 was skipped intentionally.</li>
+        <li>{appText("text_f4f254aca06b")}</li>
         <li>
           {isMedicalHold
-            ? "Medical review is required before any plan can be released."
-            : "Only already-approved rehab or clinician-led guidance should continue until clearance."}
+            ? appText("text_fd67b25b1d7b")
+            : appText("text_d75ed5027154")}
         </li>
         {triage.clinician_clearance_required ? (
-          <li>Clinician clearance is required before return to loading or sparring.</li>
+          <li>{appText("text_d5ae920f2b68")}</li>
         ) : null}
       </ul>
     </section>
@@ -1061,6 +1063,7 @@ function BlockedPlanDecisionCard({
 }
 
 function SparringAdvisoryCard({ advisory }: { advisory: PlanAdvisory }) {
+    const appText = useAppTranslations("AppText");
   // Surfaced only for advisories carrying a real injury-risk band (see
   // selectInjuryRiskAdvisory). The directive leads; generated rationale is
   // intentionally omitted because it is too noisy for the athlete view.
@@ -1075,8 +1078,8 @@ function SparringAdvisoryCard({ advisory }: { advisory: PlanAdvisory }) {
     >
       <div className="plan-header-row">
         <div>
-          <p className="kicker">Sparring risk</p>
-          {daysLabel ? <h3>{daysLabel}</h3> : <h3>Hard sparring</h3>}
+          <p className="kicker">{appText("text_67937bed48ee")}</p>
+          {daysLabel ? <h3>{daysLabel}</h3> : <h3>{appText("text_0474489d1ffe")}</h3>}
         </div>
         {riskBandLabel ? (
           <span
@@ -1084,7 +1087,7 @@ function SparringAdvisoryCard({ advisory }: { advisory: PlanAdvisory }) {
             aria-label={`Injury risk ${riskBandLabel}`}
           >
             <span className="sparring-risk-dot" aria-hidden="true" />
-            <span>Injury risk: {riskBandLabel}</span>
+            <span>{appText("text_c38ab019e276")}{riskBandLabel}</span>
             {explanation ? <WhyTooltip title={explanation.title} body={explanation.body} /> : null}
           </span>
         ) : null}
@@ -1355,6 +1358,7 @@ function ArtifactActions({
   text: string;
   filename: string;
 }) {
+    const appText = useAppTranslations("AppText");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   useEffect(() => {
@@ -1381,16 +1385,16 @@ function ArtifactActions({
   return (
     <div className="plan-summary-actions">
       <button type="button" className="ghost-button" onClick={handleCopy}>
-        {copiedKey === artifactKey ? "Copied" : "Copy text"}
+        {copiedKey === artifactKey ? appText("text_8d525e5f158b") : appText("text_b0ac9cea8687")}
       </button>
       <button type="button" className="ghost-button" onClick={() => downloadArtifact(text, filename)}>
-        Download .txt
-      </button>
+        {appText("text_aa0bbc439857")}</button>
     </div>
   );
 }
 
 function QuickCopyButton({ text, artifactKey }: { text: string; artifactKey: string }) {
+    const appText = useAppTranslations("AppText");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   useEffect(() => {
@@ -1416,7 +1420,7 @@ function QuickCopyButton({ text, artifactKey }: { text: string; artifactKey: str
 
   return (
     <button type="button" className="ghost-button" onClick={handleCopy}>
-      {copiedKey === artifactKey ? "Copied" : "Copy text"}
+      {copiedKey === artifactKey ? appText("text_8d525e5f158b") : appText("text_b0ac9cea8687")}
     </button>
   );
 }
@@ -1505,6 +1509,7 @@ export function PlanViewer({
   onPlanUpdated?: (plan: PlanDetail) => void;
   onPlanDeleted?: () => Promise<void> | void;
 }) {
+    const appText = useAppTranslations("AppText");
   const router = useRouter();
   const canUseAdminOutputs = canUseAdminPlanControls(viewerRole, Boolean(plan.admin_outputs));
   const isViewerAdmin = isAdminRole(viewerRole);
@@ -1761,7 +1766,7 @@ export function PlanViewer({
       }
 
       onPlanUpdated?.(refreshedPlan);
-      setResumeMessage("Approved and resumed successfully.");
+      setResumeMessage(appText("text_244d3ebf670a"));
       router.refresh();
     },
   });
@@ -1966,11 +1971,11 @@ export function PlanViewer({
 
   async function handleManualStage2Submit() {
     if (!accessToken) {
-      setManualSubmitError("Admin session missing. Please sign in again.");
+      setManualSubmitError(appText("text_760654079e13"));
       return;
     }
     if (!manualPlanText.trim()) {
-      setManualSubmitError("Paste the GPT final plan before submitting.");
+      setManualSubmitError(appText("text_b923d41c76e2"));
       return;
     }
 
@@ -1989,13 +1994,13 @@ export function PlanViewer({
       onPlanUpdated?.(updatedPlan);
       setManualSubmitMessage(
         retryPassed
-          ? "Manual Stage 2 output passed validation and is now published in the app."
-          : "Manual Stage 2 output was saved, but it still needs revision. The retry prompt below is updated.",
+          ? appText("text_f6a4225cf141")
+          : appText("text_086103a2d1c5"),
       );
     } catch (error) {
       setStage2RetryJustCompleted(null);
       setManualSubmitError(
-        error instanceof Error ? error.message : "Unable to submit manual Stage 2 output.",
+        error instanceof Error ? error.message : appText("text_ad1b4a484634"),
       );
     } finally {
       setManualSubmitPending(false);
@@ -2021,11 +2026,11 @@ export function PlanViewer({
 
   async function handleApproveForRelease() {
     if (!accessToken) {
-      setApproveError("Admin session missing. Please sign in again.");
+      setApproveError(appText("text_760654079e13"));
       return;
     }
     if (!canApproveForRelease) {
-      setApproveError("There is no saved draft or Stage 2 final text available to approve.");
+      setApproveError(appText("text_9c607a6752f5"));
       return;
     }
 
@@ -2055,7 +2060,7 @@ export function PlanViewer({
         return;
       }
       setApproveError(
-        error instanceof Error ? error.message : "Unable to approve this plan for athlete view.",
+        error instanceof Error ? error.message : appText("text_2c7230593ba4"),
       );
     } finally {
       setApprovePending(false);
@@ -2064,12 +2069,12 @@ export function PlanViewer({
 
   async function handleRebuildStructuredCard() {
     if (!accessToken) {
-      setStructuredCardRebuildError("Admin session missing. Please sign in again.");
+      setStructuredCardRebuildError(appText("text_760654079e13"));
       return;
     }
     if (!canRebuildStructuredCard) {
       setStructuredCardRebuildError(
-        "Enhanced cards can only be rebuilt after a failed or not-attempted conversion.",
+        appText("text_dbb32fe33855"),
       );
       return;
     }
@@ -2095,13 +2100,13 @@ export function PlanViewer({
 
       setStructuredCardRebuildMessage(
         result.queued
-          ? "Enhanced card rebuild queued. Status updates automatically."
-          : "No new rebuild was queued; current server status refreshed.",
+          ? appText("text_28064367f7ce")
+          : appText("text_233a5707c3a8"),
       );
       router.refresh();
     } catch (error) {
       setStructuredCardRebuildError(
-        error instanceof Error ? error.message : "Unable to rebuild the enhanced card.",
+        error instanceof Error ? error.message : appText("text_3d3d064d7d08"),
       );
     } finally {
       setStructuredCardRebuildPending(false);
@@ -2110,15 +2115,15 @@ export function PlanViewer({
 
   async function handleApproveAndResumeGeneration() {
     if (!accessToken) {
-      setResumeError("Admin session missing. Please sign in again.");
+      setResumeError(appText("text_760654079e13"));
       return;
     }
     if (!canRetryResumeGeneration) {
-      setResumeError("This plan cannot be resumed from its current triage state.");
+      setResumeError(appText("text_ebabf2569c42"));
       return;
     }
     if (!resumeReason.trim()) {
-      setResumeError("Please enter a short reason before resuming generation.");
+      setResumeError(appText("text_6e8d69aa4da6"));
       return;
     }
     setResumePending(true);
@@ -2129,7 +2134,7 @@ export function PlanViewer({
       await generationController.startGeneration();
       setResumeReason("");
     } catch (error) {
-      setResumeError(error instanceof Error ? error.message : "Unable to approve and resume generation.");
+      setResumeError(error instanceof Error ? error.message : appText("text_9cb185191de3"));
     } finally {
       setResumePending(false);
     }
@@ -2155,7 +2160,7 @@ export function PlanViewer({
 
   async function handleRejectApproval() {
     if (!accessToken) {
-      setRejectError("Admin session missing. Please sign in again.");
+      setRejectError(appText("text_760654079e13"));
       return;
     }
 
@@ -2168,9 +2173,9 @@ export function PlanViewer({
     try {
       const updatedPlan = await rejectApprovedPlan(accessToken, plan.plan_id);
       onPlanUpdated?.(updatedPlan);
-      setRejectMessage(hasPublishedPlan ? "Plan rejected and moved back to review." : "Plan rejected.");
+      setRejectMessage(hasPublishedPlan ? appText("text_02f3dc217a44") : appText("text_d7a2bb605602"));
     } catch (error) {
-      setRejectError(error instanceof Error ? error.message : "Unable to reject this plan.");
+      setRejectError(error instanceof Error ? error.message : appText("text_bc6598e58abb"));
     } finally {
       setRejectPending(false);
     }
@@ -2178,11 +2183,11 @@ export function PlanViewer({
 
   async function handleSetActive(overlapAction?: ActivePlanOverlapAction) {
     if (!accessToken) {
-      setSetActiveError("Session expired. Sign in again.");
+      setSetActiveError(appText("text_95f5b7d0dc11"));
       return;
     }
     if (!canSetActivePlan(plan.activation_state)) {
-      setSetActiveError("This plan cannot be set active from its current state.");
+      setSetActiveError(appText("text_685036256dfb"));
       return;
     }
     setSetActivePending(true);
@@ -2204,7 +2209,7 @@ export function PlanViewer({
         setShowActiveConflict(true);
         return;
       }
-      setSetActiveError(error instanceof Error ? error.message : "Unable to set this plan active.");
+      setSetActiveError(error instanceof Error ? error.message : appText("text_92fa6b965fc7"));
     } finally {
       setSetActivePending(false);
     }
@@ -2217,7 +2222,7 @@ export function PlanViewer({
 
   async function handleArchivePlan() {
     if (!accessToken) {
-      setArchiveError("Admin session missing. Please sign in again.");
+      setArchiveError(appText("text_760654079e13"));
       return;
     }
 
@@ -2233,9 +2238,9 @@ export function PlanViewer({
     try {
       const updatedPlan = await adminArchivePlan(accessToken, plan.plan_id);
       onPlanUpdated?.(updatedPlan);
-      setArchiveMessage("Plan archived.");
+      setArchiveMessage(appText("text_f7a5bdc7b420"));
     } catch (error) {
-      setArchiveError(error instanceof Error ? error.message : "Unable to archive this plan.");
+      setArchiveError(error instanceof Error ? error.message : appText("text_0ee45e824d4a"));
     } finally {
       setArchivePending(false);
     }
@@ -2243,7 +2248,7 @@ export function PlanViewer({
 
   async function handleRenamePlan() {
     if (!accessToken) {
-      setPlanActionError("Session expired. Sign in again.");
+      setPlanActionError(appText("text_95f5b7d0dc11"));
       return;
     }
 
@@ -2255,7 +2260,7 @@ export function PlanViewer({
 
     const normalizedName = nextName.trim();
     if (!normalizedName) {
-      setPlanActionError("Plan name cannot be empty.");
+      setPlanActionError(appText("text_bee32f4af8c5"));
       return;
     }
 
@@ -2266,7 +2271,7 @@ export function PlanViewer({
     try {
       const updatedPlan = await renamePlan(accessToken, plan.plan_id, normalizedName);
       onPlanUpdated?.(updatedPlan);
-      setPlanActionMessage("Plan renamed.");
+      setPlanActionMessage(appText("text_3884343b3c7f"));
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unable to rename this plan.";
       if (
@@ -2275,7 +2280,7 @@ export function PlanViewer({
         errorMessage.includes("503") ||
         errorMessage.includes("504")
       ) {
-        setPlanActionError("Connection issue. Try again in a minute.");
+        setPlanActionError(appText("text_c0ca548a25f7"));
       } else {
         setPlanActionError(errorMessage);
       }
@@ -2286,7 +2291,7 @@ export function PlanViewer({
 
   async function handleArchiveOwnPlan() {
     if (!accessToken) {
-      setPlanActionError("Session expired. Sign in again.");
+      setPlanActionError(appText("text_95f5b7d0dc11"));
       return;
     }
 
@@ -2313,7 +2318,7 @@ export function PlanViewer({
         errorMessage.includes("503") ||
         errorMessage.includes("504")
       ) {
-        setPlanActionError("Connection issue. Try again in a minute.");
+        setPlanActionError(appText("text_c0ca548a25f7"));
       } else {
         setPlanActionError(errorMessage);
       }
@@ -2324,7 +2329,7 @@ export function PlanViewer({
 
   async function handlePermanentDelete() {
     if (!accessToken) {
-      setPlanActionError("Session expired. Sign in again.");
+      setPlanActionError(appText("text_95f5b7d0dc11"));
       return;
     }
 
@@ -2342,7 +2347,7 @@ export function PlanViewer({
       }
     } else {
       if (!planName) {
-        setPlanActionError("This plan has no name. Rename it before permanent deletion.");
+        setPlanActionError(appText("text_91696bb6ef6c"));
         return;
       }
 
@@ -2353,7 +2358,7 @@ export function PlanViewer({
         return;
       }
       if (typed.trim() !== planName) {
-        setPlanActionError("Confirmation did not match the plan name. Nothing was deleted.");
+        setPlanActionError(appText("text_bddb3f100d1b"));
         return;
       }
     }
@@ -2376,7 +2381,7 @@ export function PlanViewer({
         errorMessage.includes("503") ||
         errorMessage.includes("504")
       ) {
-        setPlanActionError("Connection issue. Try again in a minute.");
+        setPlanActionError(appText("text_c0ca548a25f7"));
       } else {
         setPlanActionError(errorMessage);
       }
@@ -2482,7 +2487,7 @@ export function PlanViewer({
         <QuickBuildRefinementBanner planId={plan.plan_id} planSource={plan.plan_source ?? null} />
         <div className="section-heading">
           <div>
-            <p className="kicker">Plan Detail</p>
+            <p className="kicker">{appText("text_6d8dda9961d6")}</p>
             <h1>{planDetailTitle}</h1>
             <p className="muted">{heroSummary}</p>
             {fightDateLabel || openBlockLabel ? (
@@ -2490,18 +2495,18 @@ export function PlanViewer({
             ) : null}
           </div>
           <div className="status-card">
-            <p className="status-label">Status</p>
+            <p className="status-label">{appText("text_920e413c7d41")}</p>
             <h2 className="plan-summary-title">
               {statusLabel}
               {isCurrentActivePlan ? (
-                <span className="badge status-badge-success cm-active-badge">ACTIVE</span>
+                <span className="badge status-badge-success cm-active-badge">{appText("text_630c2f1c0ee1")}</span>
               ) : canManagePlan && !activePlanStateResolved ? (
-                <span className="badge status-badge-neutral cm-active-badge">SYNCING</span>
+                <span className="badge status-badge-neutral cm-active-badge">{appText("text_4d4d75f9968e")}</span>
               ) : null}
             </h2>
             <p className="muted">
               {isTriageBlocked
-                ? "Stage 2 was skipped intentionally."
+                ? appText("text_f4f254aca06b")
                 : `Created ${formatPlanTimestamp(plan.created_at)}`}
             </p>
           </div>
@@ -2509,14 +2514,12 @@ export function PlanViewer({
 
         {archivedPreview ? (
           <div className="quick-build-refine-banner cm-archived-banner" role="status">
-            This plan is archived history. Preview only; it does not affect Today, calendar, streaks, or notifications.
-          </div>
+            {appText("text_8363d07de3f3")}</div>
         ) : null}
 
         {completedFightCamp && !archivedPreview ? (
           <div className="quick-build-refine-banner cm-archived-banner" role="status">
-            This fight camp has ended. It remains available as completed history and cannot be set active.
-          </div>
+            {appText("text_e1d67c2c588f")}</div>
         ) : null}
 
         {planHasProfileRefreshFailed(plan) ? (
@@ -2545,13 +2548,11 @@ export function PlanViewer({
         <div className="plan-summary-actions plan-detail-actions">
           {canManagePlan && !completedFightCamp && !activePlanStateResolved ? (
             <button type="button" className="cta" disabled>
-              Checking plan state…
-            </button>
+              {appText("text_8512dc74fa3f")}</button>
           ) : null}
           {canManagePlan && isCurrentActivePlan && !nextSessionAction ? (
             <Link href="/today" className="cta">
-              Open Today
-            </Link>
+              {appText("text_f2bbf8ac9907")}</Link>
           ) : null}
           {canManagePlan && activePlanStateResolved && !isCurrentActivePlan && canSetActivePlan(plan.activation_state) ? (
             <button
@@ -2560,21 +2561,19 @@ export function PlanViewer({
               onClick={() => void handleSetActive()}
               disabled={setActivePending}
             >
-              {setActivePending ? "Setting active..." : "Set active"}
+              {setActivePending ? appText("text_b5e53d37d6ae") : appText("text_e50ca239ac42")}
             </button>
           ) : null}
           <Link href="/plans" className="ghost-button">
-            All plans
-          </Link>
+            {appText("text_55e91685e997")}</Link>
           {archivedPreview && viewerRole === "athlete" ? (
             <Link href="/onboarding" className="ghost-button">
-              Create New Plan
-            </Link>
+              {appText("text_255aec73f85a")}</Link>
           ) : null}
 
           {canManagePlan || isViewerAdmin || hasPublishedPlan ? (
             <details className="plan-action-menu">
-              <summary className="ghost-button">Manage</summary>
+              <summary className="ghost-button">{appText("text_5a23444828db")}</summary>
               <div className="plan-action-menu-popover">
                 {canManagePlan && !archivedPreview ? (
                   <>
@@ -2584,7 +2583,7 @@ export function PlanViewer({
                       onClick={handleRenamePlan}
                       disabled={planActionPending !== null}
                     >
-                      {planActionPending === "rename" ? "Renaming..." : "Rename"}
+                      {planActionPending === "rename" ? appText("text_75595af68031") : appText("text_3064d79a295c")}
                     </button>
                     <button
                       type="button"
@@ -2592,7 +2591,7 @@ export function PlanViewer({
                       onClick={handleArchiveOwnPlan}
                       disabled={planActionPending !== null}
                     >
-                      {planActionPending === "archive" ? "Archiving..." : "Archive"}
+                      {planActionPending === "archive" ? appText("text_6f3407113f07") : appText("text_66f4804ee23d")}
                     </button>
                   </>
                 ) : null}
@@ -2606,25 +2605,24 @@ export function PlanViewer({
                     onClick={handlePermanentDelete}
                     disabled={planActionPending !== null}
                   >
-                    {planActionPending === "permanent-delete" ? "Deleting..." : "Permanent delete"}
+                    {planActionPending === "permanent-delete" ? appText("text_685ecb984ac2") : appText("text_71f59235433e")}
                   </button>
                 ) : null}
                 {isViewerAdmin && plan.athlete_id ? (
                   <Link href={`/admin/athletes/${plan.athlete_id}`} className="ghost-button">
-                    View athlete profile
-                  </Link>
+                    {appText("text_4f3dd1037518")}</Link>
                 ) : null}
               </div>
             </details>
           ) : null}
         </div>
         {planActionMessage ? <div className="success-banner">{planActionMessage}</div> : null}
-        {planActionError ? <div className="error-banner">{planActionError}</div> : null}
+        {planActionError ? <div className="error-banner">{translateUiText(appText, planActionError)}</div> : null}
         {showActiveConflict ? (
           <div className="support-panel support-panel-alert">
             <div className="form-section-header">
-              <p className="kicker">Active plan conflict</p>
-              <h3>Choose how to activate this plan</h3>
+              <p className="kicker">{appText("text_938ca3ac3e5b")}</p>
+              <h3>{appText("text_81ad00044720")}</h3>
             </div>
             <p className="muted">{ACTIVE_PLAN_OVERLAP_MESSAGE}</p>
             <div className="plan-summary-actions active-conflict-actions">
@@ -2634,32 +2632,28 @@ export function PlanViewer({
                 onClick={() => void handleSetActive("replace")}
                 disabled={setActivePending}
               >
-                Replace current plan
-              </button>
+                {appText("text_1ed300e8dd25")}</button>
               <button
                 type="button"
                 className="secondary-button active-conflict-button"
                 onClick={() => void handleSetActive("pause")}
                 disabled={setActivePending}
               >
-                Pause current plan
-              </button>
+                {appText("text_e4442a988e6d")}</button>
               <button
                 type="button"
                 className="ghost-button active-conflict-button active-conflict-button-wide"
                 onClick={handleStartAfterCurrentPlan}
                 disabled={setActivePending}
               >
-                Start after current plan ends
-              </button>
+                {appText("text_a88e0234c719")}</button>
               <button
                 type="button"
                 className="ghost-button active-conflict-button active-conflict-button-cancel"
                 onClick={() => setShowActiveConflict(false)}
                 disabled={setActivePending}
               >
-                Cancel
-              </button>
+                {appText("text_19766ed6ccb2")}</button>
             </div>
           </div>
         ) : null}
@@ -2671,20 +2665,20 @@ export function PlanViewer({
           <aside className="plan-summary-stack">
             <section className="plan-summary-card">
               <div className="plan-summary-header">
-                <p className="kicker">Stage 2</p>
-                <h2 className="plan-summary-title">Automation status</h2>
+                <p className="kicker">{appText("text_bc52af22d164")}</p>
+                <h2 className="plan-summary-title">{appText("text_1a44333c7699")}</h2>
               </div>
               <div className="plan-meta-grid">
                 <article className="plan-meta-item">
-                  <p className="plan-meta-label">Stage 2 status</p>
+                  <p className="plan-meta-label">{appText("text_6c2da9ea3133")}</p>
                   <p className="plan-meta-value">{stage2Status}</p>
                 </article>
                 <article className="plan-meta-item">
-                  <p className="plan-meta-label">Attempts</p>
+                  <p className="plan-meta-label">{appText("text_06e70139fcf5")}</p>
                   <p className="plan-meta-value">{plan.admin_outputs?.stage2_attempt_count || 0}</p>
                 </article>
                 <article className="plan-meta-item">
-                  <p className="plan-meta-label">Release state</p>
+                  <p className="plan-meta-label">{appText("text_a424f31f235b")}</p>
                   <p className="plan-meta-value">
                     {describePlanReleaseState({
                       status: plan.status,
@@ -2695,7 +2689,7 @@ export function PlanViewer({
                   </p>
                 </article>
                 <article className="plan-meta-item">
-                  <p className="plan-meta-label">Blocking issues</p>
+                  <p className="plan-meta-label">{appText("text_6a19bd4215ed")}</p>
                   <p className="plan-meta-value">
                     {isTriageBlocked
                       ? "—"
@@ -2706,8 +2700,7 @@ export function PlanViewer({
               {handoffText.trim() ? (
                 <>
                   <p className="muted">
-                    The exact Stage 2 handoff is already saved for this plan, so you can run a manual Stage 2 pass quickly if you want.
-                  </p>
+                    {appText("text_57feedd8f55a")}</p>
                   <ArtifactActions
                     artifactKey="stage2_handoff_text"
                     text={handoffText}
@@ -2717,7 +2710,7 @@ export function PlanViewer({
               ) : null}
               {retryText.trim() ? (
                 <>
-                  <p className="muted">A repair prompt is also ready if you want to run the retry step manually.</p>
+                  <p className="muted">{appText("text_ba049dfc29b9")}</p>
                   <ArtifactActions
                     artifactKey="stage2_retry_text"
                     text={retryText}
@@ -2736,15 +2729,15 @@ export function PlanViewer({
           {isViewerAdmin || canUseAdminOutputs || !hasPublishedPlan || isTriageBlocked ? (
             <div className="plan-header-row">
               <div>
-                <p className="kicker">{isViewerAdmin ? "Athlete Plan" : "Your plan"}</p>
+                <p className="kicker">{isViewerAdmin ? appText("text_6a761e9026a2") : appText("text_d9ab76c650a6")}</p>
                 <h2>
                   {isTriageBlocked
                     ? blockedTitle
                     : plan.admin_outputs?.stage2_status === "triage_resume_approved"
-                      ? "Resume approved — regeneration pending"
+                      ? appText("text_4f0958421f95")
                     : hasPublishedPlan
-                      ? "Validated final plan"
-                      : "Pending finalization"}
+                      ? appText("text_bbd3d92bcc55")
+                      : appText("text_c6c7b117678b")}
                 </h2>
               </div>
               <div className="plan-header-badges">
@@ -2762,10 +2755,10 @@ export function PlanViewer({
                   {isTriageBlocked
                     ? blockedTitle
                     : plan.admin_outputs?.stage2_status === "triage_resume_approved"
-                      ? "Resume pending"
+                      ? appText("text_5ba07461e8c3")
                     : hasPublishedPlan
-                      ? "Validated"
-                      : "Review required"}
+                      ? appText("text_eeab9cd4421b")
+                      : appText("text_f0742e3a82fe")}
                 </span>
                 {isViewerAdmin ? (
                   <StructuredCardStatusChip cardState={structuredCardState} />
@@ -2783,14 +2776,13 @@ export function PlanViewer({
                 disabled={structuredCardRebuildPending || !canRebuildStructuredCard}
                 aria-describedby={`structured-card-rebuild-note-${plan.plan_id}`}
               >
-                {structuredCardRebuildPending ? "Rebuilding…" : "Rebuild enhanced card"}
+                {structuredCardRebuildPending ? appText("text_6813e3f431df") : appText("text_327268e3e9dc")}
               </button>
               <p
                 id={`structured-card-rebuild-note-${plan.plan_id}`}
                 className="structured-card-rebuild-note"
               >
-                Rebuild reruns conversion and every safety check. It cannot override a safety block.
-              </p>
+                {appText("text_c60f8aa7599e")}</p>
               {structuredCardRebuildMessage ? (
                 <div className="success-banner" role="status">
                   {structuredCardRebuildMessage}
@@ -2823,7 +2815,7 @@ export function PlanViewer({
                       onClick={handleRejectApproval}
                       disabled={rejectPending}
                     >
-                      {rejectPending ? "Rejecting..." : "Reject approval"}
+                      {rejectPending ? appText("text_47f29154e1b7") : appText("text_80480fb8d365")}
                     </button>
                   ) : null}
                   {canUseAdminOutputs ? (
@@ -2833,7 +2825,7 @@ export function PlanViewer({
                       onClick={handleArchivePlan}
                       disabled={archivePending}
                     >
-                      {archivePending ? "Archiving..." : "Archive"}
+                      {archivePending ? appText("text_6f3407113f07") : appText("text_66f4804ee23d")}
                     </button>
                   ) : null}
                 </div>
@@ -2859,14 +2851,11 @@ export function PlanViewer({
                   {isViewerAdmin && structuredCardState.state === "building" ? (
                     <section className="support-panel" role="status">
                       <div className="form-section-header">
-                        <p className="kicker">Enhanced card</p>
-                        <h3>Building the enhanced card…</h3>
+                        <p className="kicker">{appText("text_e1fbc51121eb")}</p>
+                        <h3>{appText("text_53662e756522")}</h3>
                       </div>
                       <p className="muted">
-                        Server-side structured generation is running in the background. This page
-                        checks automatically and swaps the full card in when it lands — the plan
-                        below stays live in the meantime.
-                      </p>
+                        {appText("text_87d7973f6a69")}</p>
                     </section>
                   ) : null}
                   {isViewerAdmin && structuredCardDebug ? (
@@ -2907,12 +2896,11 @@ export function PlanViewer({
                   {stage2RetryInProgress ? (
                     <section className="support-panel stage2-retry-banner stage2-retry-in-progress">
                       <div className="form-section-header">
-                        <p className="kicker">Stage 2 Retry</p>
-                        <h3>Retry in progress</h3>
+                        <p className="kicker">{appText("text_b420b5d5c7b4")}</p>
+                        <h3>{appText("text_9db5c24351f1")}</h3>
                       </div>
                       <p className="muted">
-                        Validating the submitted plan now. The validator results below are from the previous attempt and will be replaced when this retry completes.
-                      </p>
+                        {appText("text_e5edb85707ef")}</p>
                     </section>
                   ) : null}
 
@@ -2926,18 +2914,18 @@ export function PlanViewer({
                     >
                       <div className="form-section-header">
                         <p className="kicker">
-                          Stage 2 Retry — Attempt {plan.admin_outputs?.stage2_attempt_count || 1}
+                          {appText("text_73fd566befff")}{plan.admin_outputs?.stage2_attempt_count || 1}
                         </p>
                         <h3>
                           {stage2RetryJustCompleted === "passed"
-                            ? "Retry passed — plan published"
-                            : "Retry completed — new validation results below"}
+                            ? appText("text_b84992e26fe4")
+                            : appText("text_a5d96c02e560")}
                         </h3>
                       </div>
                       <p className="muted">
                         {stage2RetryJustCompleted === "passed"
-                          ? "The submitted plan passed validation and has been published to the athlete view."
-                          : "The submitted plan was validated. Hard blockers below reflect this latest attempt."}
+                          ? appText("text_4d6663c7ec46")
+                          : appText("text_7246e268d766")}
                       </p>
                     </section>
                   ) : null}
@@ -2949,16 +2937,15 @@ export function PlanViewer({
                   >
                     <div className="form-section-header">
                       <p className="kicker">
-                        Stage 2 review
-                        {plan.admin_outputs?.stage2_attempt_count
+                        {appText("text_576aa5a61700")}{plan.admin_outputs?.stage2_attempt_count
                           ? ` — attempt ${plan.admin_outputs.stage2_attempt_count}`
                           : ""}
-                        {stage2RetryInProgress ? " (previous attempt)" : ""}
+                        {stage2RetryInProgress ? appText("text_00409442fade") : ""}
                       </p>
                       <h3>
                         {stage2ReviewSummary.isPublishable
-                          ? "Release decision"
-                          : "Why this plan is being held"}
+                          ? appText("text_6cfa596743e1")
+                          : appText("text_dc89cd49a17e")}
                       </h3>
                     </div>
 
@@ -2970,11 +2957,10 @@ export function PlanViewer({
                             : "issue-badge-error"
                         }`}
                       >
-                        {stage2ReviewSummary.isPublishable ? "Ready" : "Held"}
+                        {stage2ReviewSummary.isPublishable ? appText("text_5fa7aac5375c") : appText("text_85cd61f8c3c8")}
                       </span>
                       <span className="badge issue-badge-error">
-                        {stage2ReviewSummary.errors.length + stage2ReviewSummary.blockingCount} blockers
-                      </span>
+                        {stage2ReviewSummary.errors.length + stage2ReviewSummary.blockingCount} {appText("text_e7c5f59e850a")}</span>
                     </div>
 
                     <p className="review-summary-text">{stage2ReviewSummary.headline}</p>
@@ -2991,7 +2977,7 @@ export function PlanViewer({
                         {stage2ReviewSummary.errors.length || stage2ReviewSummary.blocking.length ? (
                           <section className="review-issue-group">
                             <div className="review-issue-group-header">
-                              <p className="review-issue-group-title">Blocking issues</p>
+                              <p className="review-issue-group-title">{appText("text_6a19bd4215ed")}</p>
                               <span className="badge issue-badge-error">
                                 {stage2ReviewSummary.errors.length + stage2ReviewSummary.blockingCount}
                               </span>
@@ -3001,14 +2987,14 @@ export function PlanViewer({
                                 <article key={`${issue.code}-${index}`} className="review-issue-item">
                                   <div className="review-issue-title-row">
                                     <p className="review-issue-title">{issue.title}</p>
-                                    <span className="badge issue-badge-error">Error</span>
+                                    <span className="badge issue-badge-error">{appText("text_54a0e8c17ebb")}</span>
                                   </div>
                                   <p className="review-issue-message">{issue.message}</p>
                                   {issue.context ? (
                                     <p className="review-issue-context">{issue.context}</p>
                                   ) : null}
                                   {issue.snippet ? (
-                                    <p className="review-issue-snippet">Line: {issue.snippet}</p>
+                                    <p className="review-issue-snippet">{appText("text_9fb67c827fec")}{issue.snippet}</p>
                                   ) : null}
                                 </article>
                               ))}
@@ -3019,14 +3005,14 @@ export function PlanViewer({
                                 >
                                   <div className="review-issue-title-row">
                                     <p className="review-issue-title">{issue.title}</p>
-                                    <span className="badge issue-badge-error">Blocker</span>
+                                    <span className="badge issue-badge-error">{appText("text_8cd6bbc7db41")}</span>
                                   </div>
                                   <p className="review-issue-message">{issue.message}</p>
                                   {issue.context ? (
                                     <p className="review-issue-context">{issue.context}</p>
                                   ) : null}
                                   {issue.snippet ? (
-                                    <p className="review-issue-snippet">Line: {issue.snippet}</p>
+                                    <p className="review-issue-snippet">{appText("text_9fb67c827fec")}{issue.snippet}</p>
                                   ) : null}
                                 </article>
                               ))}
@@ -3042,19 +3028,18 @@ export function PlanViewer({
 
               <div className="support-panel">
                 <div className="form-section-header">
-                  <p className="kicker">Publishing hold</p>
-                  <h3>Plan not yet released</h3>
+                  <p className="kicker">{appText("text_b39e25c55956")}</p>
+                  <h3>{appText("text_2ae151371361")}</h3>
                 </div>
                 <p className="muted">
-                  The automation flow generated a plan that still needs manual review before it can be shown to the athlete.
-                </p>
+                  {appText("text_260c89f42318")}</p>
                 {canApproveForRelease ? (
                   <>
                     <p className="muted">
-                      Current approval source: {approvalSourceLabel}.{" "}
+                      {appText("text_16957e4a31d6")}{approvalSourceLabel}{appText("text_cdb4ee2aea69")}{" "}
                       {stage2ReviewSummary.isPublishable
-                        ? "Blocking validation is already clear, so approval is just a release decision."
-                        : "This plan still has blocking issues, so approval here is an explicit override."}
+                        ? appText("text_9581b68faf53")
+                        : appText("text_3d7b381db03c")}
                     </p>
                     <div className="plan-summary-actions">
                       <button
@@ -3063,7 +3048,7 @@ export function PlanViewer({
                         onClick={handleApproveForRelease}
                         disabled={approvePending}
                       >
-                        {approvePending ? "Approving..." : approveButtonLabel}
+                        {approvePending ? appText("text_cee0e61bdf8c") : approveButtonLabel}
                       </button>
                       {canUseAdminOutputs ? (
                         <button
@@ -3072,7 +3057,7 @@ export function PlanViewer({
                           onClick={handleRejectApproval}
                           disabled={rejectPending}
                         >
-                          {rejectPending ? "Rejecting..." : "Reject"}
+                          {rejectPending ? appText("text_47f29154e1b7") : appText("text_ab604a360777")}
                         </button>
                       ) : null}
                       {canUseAdminOutputs ? (
@@ -3082,7 +3067,7 @@ export function PlanViewer({
                           onClick={handleArchivePlan}
                           disabled={archivePending}
                         >
-                          {archivePending ? "Archiving..." : "Archive"}
+                          {archivePending ? appText("text_6f3407113f07") : appText("text_66f4804ee23d")}
                         </button>
                       ) : null}
                     </div>
@@ -3104,37 +3089,36 @@ export function PlanViewer({
         <div id={`admin-review-${plan.plan_id}`} className="admin-review-stack">
           <section className="viewer-panel">
             <div className="form-section-header">
-              <p className="kicker">ADMIN REVIEW</p>
+              <p className="kicker">{appText("text_c00ade2b6987")}</p>
               <h3>{getAdminReviewHeading({ showProtectedResumeAdminReview, hasResumeApproval })}</h3>
             </div>
             {showProtectedResumeAdminReview ? (
               <>
                 <p className="muted">
                   {injuryTriage?.mode === "restricted_rehab_only"
-                    ? "This intake requires clinician clearance before normal planning can resume. Stage 2 finalization was intentionally skipped."
+                    ? appText("text_0e5a4c193e76")
                     : injuryTriage?.mode === "medical_hold"
-                      ? "This intake contains urgent or medically disqualifying signals. No planning should continue until medical review is complete."
-                      : "Normal planning is paused for this intake. Stage 2 was skipped intentionally until additional review is complete."}
+                      ? appText("text_c0e8bd851a57")
+                      : appText("text_ca1a8dcb0c1e")}
                 </p>
                 {canRetryResumeGeneration ? (
                   <div className="support-panel support-panel-alert">
                     <div className="form-section-header">
-                      <p className="kicker">Resume generation required</p>
-                      <h3>{hasResumeApproval ? "Retry resume generation" : "Approve and resume generation"}</h3>
+                      <p className="kicker">{appText("text_83e714880741")}</p>
+                      <h3>{hasResumeApproval ? appText("text_b1c6cc5eec34") : appText("text_72b1f99f4013")}</h3>
                     </div>
                 
                     <p className="muted">
-                      This protected triage plan cannot be approved for athlete release until admin resume generation completes and a real final plan replaces the triage stub.
-                    </p>
+                      {appText("text_aaf0a30ed092")}</p>
                 
                     <div className="field">
-                      <label htmlFor="resume-generation-reason">Reason</label>
+                      <label htmlFor="resume-generation-reason">{appText("text_f81ab834de5f")}</label>
                       <input
                         id="resume-generation-reason"
                         type="text"
                         value={resumeReason}
                         onChange={(event) => setResumeReason(event.target.value)}
-                        placeholder="Short reason"
+                        placeholder={appText("text_f8457bc333c7")}
                       />
                     </div>
                 
@@ -3145,7 +3129,7 @@ export function PlanViewer({
                         onClick={handleApproveAndResumeGeneration}
                         disabled={resumePending}
                       >
-                        {resumePending ? "Resuming..." : hasResumeApproval ? "Retry resume generation" : "Approve and resume generation"}
+                        {resumePending ? appText("text_4414358c3ee7") : hasResumeApproval ? appText("text_b1c6cc5eec34") : appText("text_72b1f99f4013")}
                       </button>
                     </div>
                 
@@ -3155,12 +3139,11 @@ export function PlanViewer({
                 ) : hasResumeApproval ? (
                   <div className="support-panel support-panel-alert">
                     <div className="form-section-header">
-                      <p className="kicker">Resume unavailable</p>
-                      <h3>This plan is not currently resumable</h3>
+                      <p className="kicker">{appText("text_9210dff94804")}</p>
+                      <h3>{appText("text_acc2cf20e256")}</h3>
                     </div>
                     <p className="muted">
-                      Resume was approved before, but this plan is not currently in a resumable triage mode. Medical holds or unresolved protected states must stay blocked until the intake is corrected or reviewed.
-                    </p>
+                      {appText("text_b22feb36532b")}</p>
                     {resumeError ? <div className="error-banner">{resumeError}</div> : null}
                   </div>
                 ) : null}
@@ -3168,18 +3151,16 @@ export function PlanViewer({
             ) : (
               <>
                 <p className="muted">
-                  Paste a manual Stage 2 final plan here. The app will validate it, publish it if it passes, or refresh the retry prompt if it still needs work.
-                </p>
+                  {appText("text_52c5e4e01573")}</p>
 
                 {canApproveForRelease ? (
                   <div className="support-panel">
                     <div className="form-section-header">
-                      <p className="kicker">Quick approval</p>
-                      <h3>Release the current saved plan</h3>
+                      <p className="kicker">{appText("text_cc48d8b6467c")}</p>
+                      <h3>{appText("text_64b2e9e0f018")}</h3>
                     </div>
                     <p className="muted">
-                      If the current saved version is good enough, approve it directly for athlete view without rerunning Stage 2. Source: {approvalSourceLabel}.
-                    </p>
+                      {appText("text_c2d9fc40713f")}{approvalSourceLabel}{appText("text_cdb4ee2aea69")}</p>
                     <div className="plan-summary-actions">
                       <button
                         type="button"
@@ -3187,7 +3168,7 @@ export function PlanViewer({
                         onClick={handleApproveForRelease}
                         disabled={approvePending}
                       >
-                        {approvePending ? "Approving..." : approveButtonLabel}
+                        {approvePending ? appText("text_cee0e61bdf8c") : approveButtonLabel}
                       </button>
                     </div>
                   </div>
@@ -3198,13 +3179,13 @@ export function PlanViewer({
                     same banner in two approval panels at the same time. */}
 
                 <div className="field">
-                  <label htmlFor="manual-stage2-final-plan">Final plan text</label>
+                  <label htmlFor="manual-stage2-final-plan">{appText("text_577f263c1c8a")}</label>
                   <textarea
                     id="manual-stage2-final-plan"
                     rows={16}
                     value={manualPlanText}
                     onChange={(event) => setManualPlanText(event.target.value)}
-                    placeholder="Paste the manual Stage 2 final plan here"
+                    placeholder={appText("text_393d33aa1a6c")}
                   />
                 </div>
 
@@ -3215,7 +3196,7 @@ export function PlanViewer({
                     onClick={handleManualStage2Submit}
                     disabled={manualSubmitPending}
                   >
-                    {manualSubmitPending ? "Submitting..." : "Validate and save"}
+                    {manualSubmitPending ? appText("text_64115d5b9c79") : appText("text_11004683e17d")}
                   </button>
                 </div>
 
@@ -3227,12 +3208,11 @@ export function PlanViewer({
 
           <section className="viewer-panel">
             <div className="form-section-header">
-              <p className="kicker">Stage 2 internals</p>
-              <h3>Open one artifact at a time</h3>
+              <p className="kicker">{appText("text_4b05580cb592")}</p>
+              <h3>{appText("text_3420119e8177")}</h3>
             </div>
             <p className="muted">
-              Internal notes, planning artifacts, and validator details now stay collapsed until you open the one you need.
-            </p>
+              {appText("text_b55bb5f1fd7d")}</p>
             <div className="accordion-list">
               {adminSections.map((section) => (
                 <AdminArtifactSection

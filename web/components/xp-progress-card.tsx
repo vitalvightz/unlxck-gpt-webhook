@@ -7,6 +7,9 @@ import { Skeleton } from "@/components/skeleton";
 import { useXp } from "@/components/xp-provider";
 import { resolveXpLevel } from "@/lib/xp";
 import type { StreakState, StreakValue, XpOpportunity, XpProgress } from "@/lib/xp-progress";
+import { useTranslations as useAppTranslations } from "next-intl";
+import { translateUiText } from "@/i18n/ui-text";
+
 
 const numberFormatter = new Intl.NumberFormat("en-GB");
 
@@ -87,6 +90,7 @@ function StreakColumn({
   icon: ReactNode;
   detailed: boolean;
 }) {
+    const appText = useAppTranslations("AppText");
   const message = detailed ? streakBestMessage(streak) : null;
   // Only meaningful while the best is still ahead: 0/0 and matched bests get no bar.
   const showTrack =
@@ -99,7 +103,7 @@ function StreakColumn({
         <span className="xp-streak-label-text">{label}</span>
       </p>
       <p className="xp-streak-value">{numberFormatter.format(streak.current)}</p>
-      <p className="xp-streak-best">Best {numberFormatter.format(streak.best)}</p>
+      <p className="xp-streak-best">{appText("text_c47d21c643c0")} {numberFormatter.format(streak.best)}</p>
       {/* The optional copy shares one grid row so a column with a bar and a
           column without still line their supporting text up. */}
       {message || showTrack ? (
@@ -133,15 +137,16 @@ function StreakPanel({
   streaks: StreakState;
   mode: XpProgressCardMode;
 }) {
+    const appText = useAppTranslations("AppText");
   const detailed = mode === "page";
   return (
     <section
       className={`xp-streak-panel${detailed ? " xp-streak-panel--page" : ""}`}
-      aria-label="Streaks"
+      aria-label={appText("text_00f2bcc518e1")}
     >
       <StreakColumn
         tone="training"
-        label="Training streak"
+        label={appText("text_9bd9524f2869")}
         labelId={`${mode}-training-streak-label`}
         streak={streaks.adherence}
         icon={<StreakFlameIcon />}
@@ -149,7 +154,7 @@ function StreakPanel({
       />
       <StreakColumn
         tone="app"
-        label="App streak"
+        label={appText("text_24ea27fbfe5e")}
         labelId={`${mode}-app-streak-label`}
         streak={streaks.login}
         icon={<StreakBoltIcon />}
@@ -172,10 +177,11 @@ function OpportunityRow({
   opportunity: XpOpportunity;
   interactive: boolean;
 }) {
+    const appText = useAppTranslations("AppText");
   const content: ReactNode = (
     <>
       <span className="xp-progress-action-label">{opportunity.label}</span>
-      <span className="xp-progress-award">+{numberFormatter.format(opportunity.xp)} XP</span>
+      <span className="xp-progress-award">{appText("text_a318c24216de")}{numberFormatter.format(opportunity.xp)} {appText("text_168aad3e9812")}</span>
     </>
   );
 
@@ -237,6 +243,7 @@ export function XpProgressCardView({
   error = null,
   mode = "overview",
 }: XpProgressCardViewProps) {
+    const appText = useAppTranslations("AppText");
   const level = useMemo(() => resolveXpLevel(progress.state.totalXp), [progress.state.totalXp]);
   const ratio = level.nextLevel
     ? `${numberFormatter.format(progress.state.totalXp)} / ${numberFormatter.format(level.nextLevel.threshold)} XP`
@@ -260,10 +267,10 @@ export function XpProgressCardView({
     >
       <div className="xp-progress-heading">
         <div>
-          <p className="status-label">XP PROGRESS</p>
-          <p className="xp-progress-level">Level {level.currentLevel.level}</p>
+          <p className="status-label">{appText("text_eea402c7e65e")}</p>
+          <p className="xp-progress-level">{appText("text_1709305c9fa9")} {level.currentLevel.level}</p>
         </div>
-        <p className="xp-progress-rank">{level.currentLevel.title}</p>
+        <p className="xp-progress-rank">{translateUiText(appText, level.currentLevel.title)}</p>
       </div>
 
       <p
@@ -271,13 +278,13 @@ export function XpProgressCardView({
         aria-label={`${numberFormatter.format(progress.state.totalXp)} experience points`}
       >
         <span className="xp-progress-number">{numberFormatter.format(progress.state.totalXp)}</span>
-        <span className="xp-progress-unit">XP</span>
+        <span className="xp-progress-unit">{appText("text_168aad3e9812")}</span>
       </p>
 
       <div
         className="xp-progress-track"
         role="progressbar"
-        aria-label={level.nextLevel ? `XP progress to Level ${level.nextLevel.level}` : "Maximum XP level reached"}
+        aria-label={level.nextLevel ? `XP progress to Level ${level.nextLevel.level}` : appText("text_65ee815a01c5")}
         aria-valuemin={0}
         aria-valuemax={progressMaximum}
         aria-valuenow={progressNow}
@@ -298,16 +305,16 @@ export function XpProgressCardView({
 
       <div className="xp-progress-details">
         <section className="xp-progress-detail" aria-labelledby={`${mode}-xp-next-label`}>
-          <p id={`${mode}-xp-next-label`} className="xp-progress-section-label">NEXT</p>
+          <p id={`${mode}-xp-next-label`} className="xp-progress-section-label">{appText("text_7a66eabf637f")}</p>
           {primaryOpportunity ? (
             <OpportunityRow opportunity={primaryOpportunity} interactive={interactiveActions} />
           ) : (
-            <p className="xp-progress-detail-value xp-progress-empty">No XP action is due right now.</p>
+            <p className="xp-progress-detail-value xp-progress-empty">{appText("text_43c58be27238")}</p>
           )}
         </section>
 
         <section className="xp-progress-detail" aria-labelledby={`${mode}-xp-more-label`}>
-          <p id={`${mode}-xp-more-label`} className="xp-progress-section-label">MORE XP</p>
+          <p id={`${mode}-xp-more-label`} className="xp-progress-section-label">{appText("text_a33be6e5e91a")}</p>
           {remainingOpportunities.length > 0 ? (
             <div className="xp-progress-action-list">
               {remainingOpportunities.map((opportunity) => (
@@ -319,12 +326,12 @@ export function XpProgressCardView({
               ))}
             </div>
           ) : (
-            <p className="xp-progress-detail-value xp-progress-empty">No other action is due.</p>
+            <p className="xp-progress-detail-value xp-progress-empty">{appText("text_c83852b85bbd")}</p>
           )}
         </section>
       </div>
 
-      {error ? <p className="xp-progress-error">Showing your last saved XP view.</p> : null}
+      {error ? <p className="xp-progress-error">{appText("text_84f0c96a84f8")}</p> : null}
     </article>
   );
 
@@ -333,7 +340,7 @@ export function XpProgressCardView({
   }
 
   return (
-    <Link href="/progress" className="xp-progress-card-link" aria-label="Open XP progress">
+    <Link href="/progress" className="xp-progress-card-link" aria-label={appText("text_70774f4b846e")}>
       {card}
     </Link>
   );

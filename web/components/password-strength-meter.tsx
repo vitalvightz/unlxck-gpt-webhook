@@ -1,6 +1,8 @@
 "use client";
 
 import type { PasswordStrength } from "@/lib/password-strength";
+import { useTranslations as useAppTranslations } from "next-intl";
+
 
 type PasswordStrengthMeterProps = {
   strength: PasswordStrength;
@@ -20,12 +22,13 @@ function getActiveSegments(strength: PasswordStrength): number {
 }
 
 export function PasswordStrengthMeter({ strength }: PasswordStrengthMeterProps) {
+    const appText = useAppTranslations("AppText");
   const activeSegments = getActiveSegments(strength);
 
   return (
     <div className="password-strength" aria-live="polite">
       <div className="password-strength-header">
-        <span className="password-strength-title">Password strength</span>
+        <span className="password-strength-title">{appText("text_b198b5529e78")}</span>
         <span className={`password-strength-chip password-strength-chip-${strength.tone}`.trim()}>
           {strength.label}
         </span>

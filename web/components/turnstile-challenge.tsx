@@ -2,6 +2,7 @@
 
 import Script from "next/script";
 import { useEffect, useRef, useState } from "react";
+import { useTranslations as useAppTranslations } from "next-intl";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() ?? "";
 
@@ -43,6 +44,7 @@ export function TurnstileChallenge({
   onUnavailable?: () => void;
   resetKey: number;
 }) {
+    const appText = useAppTranslations("AppText");
   const containerRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<string | null>(null);
   const [scriptReady, setScriptReady] = useState(false);
@@ -92,7 +94,7 @@ export function TurnstileChallenge({
   }
 
   return (
-    <div className="field" aria-label="Security verification">
+    <div className="field" aria-label={appText("text_17159e6acaa1")}>
       <Script
         id="cloudflare-turnstile-script"
         src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"

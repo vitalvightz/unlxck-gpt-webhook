@@ -7,11 +7,14 @@ import { isTurnstileConfigured, TurnstileChallenge } from "@/components/turnstil
 import { AUTH_FEEDBACK, getPasswordResetErrorMessage } from "@/lib/auth-feedback";
 import { buildAuthRedirectUrl } from "@/lib/site-url";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { useTranslations as useAppTranslations } from "next-intl";
+
 
 const CAPTCHA_REQUIRED_MESSAGE = "Complete the security check, then try again.";
 const CAPTCHA_UNAVAILABLE_MESSAGE = "The security check could not load. Refresh the page and try again.";
 
 export default function ForgotPasswordPage() {
+    const appText = useAppTranslations("AppText");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +74,7 @@ export default function ForgotPasswordPage() {
         return;
       }
 
-      setMessage("If an account exists for that email, you'll receive a password reset link shortly.");
+      setMessage(appText("text_59ded8050030"));
     });
   }
 
@@ -79,16 +82,16 @@ export default function ForgotPasswordPage() {
     <section className="auth-layout">
       <div className="auth-rail">
         <div className="hero-panel-copy">
-          <p className="eyebrow">Account recovery</p>
-          <h1>Reset your password.</h1>
-          <p>Enter your email address and we&apos;ll send you a link to reset your password.</p>
+          <p className="eyebrow">{appText("text_2b291cd5cd2f")}</p>
+          <h1>{appText("text_8b5cfb67a735")}</h1>
+          <p>{appText("text_9bb47a30999c")}</p>
         </div>
         <div className="support-panel">
-          <p className="kicker">Steps</p>
+          <p className="kicker">{appText("text_1de3df70ddf4")}</p>
           <ol className="auth-flow">
-            <li>Enter the email address linked to your account.</li>
-            <li>Check your inbox for a reset link.</li>
-            <li>Follow the link to choose a new password.</li>
+            <li>{appText("text_3f2781706652")}</li>
+            <li>{appText("text_6c43ba5f7b80")}</li>
+            <li>{appText("text_a89132a1957d")}</li>
           </ol>
         </div>
       </div>
@@ -96,23 +99,22 @@ export default function ForgotPasswordPage() {
       <div className="auth-card">
         <div className="auth-header">
           <div>
-            <p className="kicker">Password reset</p>
-            <h2>Forgot your password?</h2>
+            <p className="kicker">{appText("text_359f68acb9b4")}</p>
+            <h2>{appText("text_afd25fdf17c7")}</h2>
           </div>
-          <span className="badge status-badge-neutral">Secure</span>
+          <span className="badge status-badge-neutral">{appText("text_1bced1d0ce55")}</span>
         </div>
 
         {message ? (
           <div className="auth-success-state">
             <div className="success-banner">{message}</div>
             <div className="support-panel">
-              <p className="kicker">Next step</p>
-              <p className="muted">Open your email app and look for a message from us. The reset link expires after a short window, so use it soon.</p>
+              <p className="kicker">{appText("text_298a9207a732")}</p>
+              <p className="muted">{appText("text_9bc0615d2d8b")}</p>
             </div>
             <div className="form-actions">
               <Link href="/login" className="ghost-button">
-                Back to log in
-              </Link>
+                {appText("text_30a8b4cdec88")}</Link>
             </div>
           </div>
         ) : (
@@ -120,7 +122,7 @@ export default function ForgotPasswordPage() {
             {error ? <div className="error-banner">{error}</div> : null}
             <form onSubmit={handleSubmit} className="auth-form-grid">
               <div className="field">
-                <label htmlFor="email">Email</label>
+                <label htmlFor="email">{appText("text_969ccbd3cf63")}</label>
                 <input
                   id="email"
                   name="email"
@@ -129,7 +131,7 @@ export default function ForgotPasswordPage() {
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   required
-                  placeholder="your@email.com"
+                  placeholder={appText("text_97af051a28d9")}
                 />
               </div>
 
@@ -142,11 +144,10 @@ export default function ForgotPasswordPage() {
 
               <div className="form-actions">
                 <button type="submit" className="cta" disabled={isPending || (requiresCaptcha && !captchaToken)}>
-                  {isPending ? "Sending..." : "Send reset link"}
+                  {isPending ? appText("text_286a3af7348e") : appText("text_708c5d67ba8e")}
                 </button>
                 <Link href="/login" className="ghost-button">
-                  Back to log in
-                </Link>
+                  {appText("text_30a8b4cdec88")}</Link>
               </div>
             </form>
           </>

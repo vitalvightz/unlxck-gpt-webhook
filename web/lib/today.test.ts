@@ -2,6 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 
+const ENGLISH_MESSAGES = JSON.parse(readFileSync(new URL("../messages/en.json", import.meta.url), "utf8")) as { AppText: Record<string, string> };
+const ENGLISH_COPY = Object.values(ENGLISH_MESSAGES.AppText);
+
 import {
   TODAY_EMPTY_TEXT,
   TODAY_EMPTY_TITLE,
@@ -562,17 +565,17 @@ test("Today session card uses short preview wording and Next session label", () 
   assert.equal(source.includes('kicker: "Next session"'), true);
   assert.equal(source.includes('kicker: "Next scheduled session"'), false);
   assert.equal(
-    source.includes("Preview only. Completion opens on the matched training day."),
+    source.includes("Preview only. Completion opens on the matched training day.") || ENGLISH_COPY.includes("Preview only. Completion opens on the matched training day."),
     true,
   );
   assert.equal(source.includes("resolvedDecision.blocksCurrentSession"), true);
   assert.equal(source.includes("resolvedDecision.severeInjuryBlocksCurrentSession"), true);
   assert.equal(
-    source.includes("Blocked by an active severe injury."),
+    source.includes("Blocked by an active severe injury.") || ENGLISH_COPY.includes("Blocked by an active severe injury."),
     true,
   );
   assert.equal(source.includes('href="#today-injury"'), true);
-  assert.equal(source.includes("Open injury check-in"), true);
+  assert.equal(source.includes("Open injury check-in") || ENGLISH_COPY.includes("Open injury check-in"), true);
 });
 
 test("Today recommendation styles keep preview neutral, modify amber, and pull-back red", () => {
@@ -1118,7 +1121,7 @@ test("Overview consumes the shared authoritative resolver", () => {
   assert.equal(source.includes("getOverviewCommandEyebrow(decisionTier)"), true);
   assert.equal(source.includes("overview-risk-footer"), false);
   assert.equal(source.includes("getRiskWatchText(risk)"), false);
-  assert.equal(source.includes("Review {overflow} more on Today"), true);
+  assert.equal(source.includes('appText("text_aff0766a5290")') && source.includes('appText("text_5331449eee0b")'), true);
 });
 
 // ---------------------------------------------------------------------------

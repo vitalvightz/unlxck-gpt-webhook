@@ -18,6 +18,8 @@ import {
 } from "@/lib/generation-milestone-duration";
 import { buildStageOnePreview } from "@/lib/stage-one-preview";
 import type { PlanRequest, ProgressMilestone } from "@/lib/types";
+import { useTranslations as useAppTranslations } from "next-intl";
+
 
 const WORKFLOW_STEPS = [
   {
@@ -182,6 +184,7 @@ export function PremiumLoadingScreen({
   onReturnToWorkspace = null,
   onRefineIntake = null,
 }: PremiumLoadingScreenProps) {
+    const appText = useAppTranslations("AppText");
   const phaseContent = PHASE_CONTENT[phase];
   const activeIndex = PHASE_ORDER[phase];
   const isFailed = phase === "failed";
@@ -256,17 +259,17 @@ export function PremiumLoadingScreen({
             <p className="muted loading-copy">{failure ? failure.detail : phaseContent.copy}</p>
             <GenerationProgressMilestones phase={phase} startedAtMs={startedAtMs} nowMs={now} milestones={milestones} />
             {stageOnePreview ? <StageOnePreviewCard preview={stageOnePreview} /> : null}
-            <div className="loading-operational-strip" aria-label="Generation status">
+            <div className="loading-operational-strip" aria-label={appText("text_6bb9e95b3556")}>
               <div className="loading-operational-item">
-                <span className="loading-operational-label">Job state</span>
+                <span className="loading-operational-label">{appText("text_38af1f7f0a63")}</span>
                 <span className="loading-operational-value">{phaseContent.chip}</span>
               </div>
               <div className="loading-operational-item">
-                <span className="loading-operational-label">Build</span>
+                <span className="loading-operational-label">{appText("text_bdd254b65baa")}</span>
                 <span className="loading-operational-value">{phaseContent.buildState}</span>
               </div>
               <div className="loading-operational-item">
-                <span className="loading-operational-label">{isElapsedRunning ? "Elapsed" : "Total time"}</span>
+                <span className="loading-operational-label">{isElapsedRunning ? appText("text_a194a68a45d3") : appText("text_f448bdef375a")}</span>
                 <span className="loading-operational-value loading-operational-value-mono" aria-live="polite">
                   {elapsedLabel ?? "--"}
                 </span>
@@ -276,9 +279,9 @@ export function PremiumLoadingScreen({
               <p className="loading-estimate muted">{ESTIMATE_COPY}</p>
             ) : null}
             {showMilestones ? (
-              <div className="loading-milestone-feed" aria-label="Generation milestones" aria-live="polite">
+              <div className="loading-milestone-feed" aria-label={appText("text_c5416b4c96b4")} aria-live="polite">
                 <p className="loading-eyebrow loading-milestone-eyebrow">
-                  {isFailed ? "Where the build stopped" : "Plan activity"}
+                  {isFailed ? appText("text_2ccb67bc406b") : appText("text_4cfdf163329b")}
                 </p>
                 <ol className="loading-milestone-list">
                   {milestoneDurations.map((view, index) => {
@@ -326,7 +329,7 @@ export function PremiumLoadingScreen({
             )}
             {failure ? (
               <div className="loading-failure-actions">
-                <p className="loading-failure-headline">What you can do next</p>
+                <p className="loading-failure-headline">{appText("text_05c7efd0a4c9")}</p>
                 {/*
                   Every action here changes something. A failed build is
                   terminal, so there is deliberately no "refresh status" —
@@ -350,19 +353,19 @@ export function PremiumLoadingScreen({
             ) : null}
             {phase === "already_generated" ? (
               <div className="loading-failure-actions">
-                <p className="loading-failure-headline">What would you like to do next?</p>
+                <p className="loading-failure-headline">{appText("text_8e03db08cd8b")}</p>
                 <div className="loading-failure-secondary-actions">
-                  {onOpenPlanHistory ? <button type="button" className="cta ghost" onClick={onOpenPlanHistory}>Open plan history</button> : null}
-                  {onRefineIntake ? <button type="button" className="cta ghost" onClick={onRefineIntake}>Refine intake</button> : null}
+                  {onOpenPlanHistory ? <button type="button" className="cta ghost" onClick={onOpenPlanHistory}>{appText("text_27faf7ed824c")}</button> : null}
+                  {onRefineIntake ? <button type="button" className="cta ghost" onClick={onRefineIntake}>{appText("text_0b028b4d2888")}</button> : null}
                 </div>
               </div>
             ) : null}
             {phase === "review_paused" ? (
               <div className="loading-failure-actions">
-                <p className="loading-failure-headline">No plan was created. Nothing was lost.</p>
+                <p className="loading-failure-headline">{appText("text_7cccb2da11fd")}</p>
                 <div className="loading-failure-secondary-actions">
-                  {onReturnToWorkspace ? <button type="button" className="cta" onClick={onReturnToWorkspace}>Return to workspace</button> : null}
-                  {onRefineIntake ? <button type="button" className="cta ghost" onClick={onRefineIntake}>Refine intake</button> : null}
+                  {onReturnToWorkspace ? <button type="button" className="cta" onClick={onReturnToWorkspace}>{appText("text_02e565ef63bc")}</button> : null}
+                  {onRefineIntake ? <button type="button" className="cta ghost" onClick={onRefineIntake}>{appText("text_0b028b4d2888")}</button> : null}
                 </div>
               </div>
             ) : null}
@@ -380,28 +383,25 @@ export function PremiumLoadingScreen({
           {isFailed ? (
             <div className="support-panel loading-secondary-panel">
               <div className="form-section-header">
-                <p className="loading-eyebrow">Build stopped</p>
-                <h2 className="form-section-title">What happened</h2>
+                <p className="loading-eyebrow">{appText("text_067f91a71e1b")}</p>
+                <h2 className="form-section-title">{appText("text_483bd49023ae")}</h2>
                 <p className="muted">
-                  Your intake is saved exactly as you entered it. No partial plan was written, so nothing needs
-                  cleaning up before you try again.
-                </p>
+                  {appText("text_cf35b11d488f")}</p>
               </div>
               <div className="loading-support-note">
-                <p className="kicker">Still stuck?</p>
+                <p className="kicker">{appText("text_834c08cbe8b2")}</p>
                 <p className="muted">
-                  If a retry stops the same way, refine the intake or open plan history to work from your last saved plan.
-                </p>
+                  {appText("text_da7796d1b778")}</p>
               </div>
             </div>
           ) : (
           <div className="support-panel loading-secondary-panel">
             <div className="form-section-header">
-              <p className="loading-eyebrow">Build steps</p>
-              <h2 className="form-section-title">Plan progress</h2>
-              <p className="muted">The highlighted stage follows the real saved plan state, not a fake timer.</p>
+              <p className="loading-eyebrow">{appText("text_9d37483e6217")}</p>
+              <h2 className="form-section-title">{appText("text_bfa53d99e578")}</h2>
+              <p className="muted">{appText("text_d4bc1379ba00")}</p>
             </div>
-            <ol className="loading-steps" aria-label="Generation workflow">
+            <ol className="loading-steps" aria-label={appText("text_d5be10f5d2aa")}>
               {WORKFLOW_STEPS.map((step, index) => {
                 const stepState =
                   index < activeIndex
@@ -428,10 +428,9 @@ export function PremiumLoadingScreen({
               })}
             </ol>
             <div className="loading-support-note">
-              <p className="kicker">Return flow</p>
+              <p className="kicker">{appText("text_6ce455bec741")}</p>
               <p className="muted">
-                If the browser closes or the network drops, the next visit reconnects to the same saved plan build.
-              </p>
+                {appText("text_3f68e7777cba")}</p>
             </div>
           </div>
           )}

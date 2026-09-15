@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useTranslations } from "next-intl";
-
+import { useTranslations, useTranslations as useAppTranslations } from "next-intl";
 import type { UserRole } from "@/lib/types";
 
 type RoleOption = {
@@ -40,6 +39,7 @@ export function SignupRoleSelection({
 }: {
   onSelectAthlete: () => void;
 }) {
+    const appText = useAppTranslations("AppText");
   const t = useTranslations("Auth");
   return (
     <section className="auth-layout">
@@ -49,7 +49,7 @@ export function SignupRoleSelection({
             <p className="kicker">{t("createAccount")}</p>
             <h2>{t("chooseRole")}</h2>
           </div>
-          <span className="badge status-badge-neutral">Beta</span>
+          <span className="badge status-badge-neutral">{appText("text_703390318bd5")}</span>
         </div>
 
         <p className="muted">
@@ -97,6 +97,7 @@ export function SignupRoleSelection({
 }
 
 function RoleCardBody({ option, t }: { option: RoleOption; t: ReturnType<typeof useTranslations> }) {
+    const appText = useAppTranslations("AppText");
   return (
     <>
       <span className="role-card-header">
@@ -108,8 +109,7 @@ function RoleCardBody({ option, t }: { option: RoleOption; t: ReturnType<typeof 
         <span className="role-card-note">{t(option.comingSoonKey)}</span>
       ) : (
         <span className="role-card-cue" aria-hidden="true">
-          {t("continue")} →
-        </span>
+          {t("continue")} {appText("text_161660030aa6")}</span>
       )}
     </>
   );

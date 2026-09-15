@@ -1,10 +1,12 @@
 import {
+
   PRIVATE_TRIAL_CHECKS,
   PRIVATE_TRIAL_CLOSING,
   PRIVATE_TRIAL_DUTIES,
   PRIVATE_TRIAL_INTRO,
   PRIVATE_TRIAL_TITLE,
 } from "@/lib/private-trial";
+import { useTranslations as useAppTranslations } from "next-intl";
 
 /**
  * The private trial briefing itself, with no acknowledgement and no navigation.
@@ -25,6 +27,7 @@ export function PrivateTrialGuide({
   /** Settings already titles the section, so it suppresses the banner heading. */
   showTitle?: boolean;
 }) {
+    const appText = useAppTranslations("AppText");
   return (
     <div className="private-trial-guide">
       {showTitle ? (
@@ -36,8 +39,7 @@ export function PrivateTrialGuide({
 
       <section className="private-trial-section" aria-labelledby={`${headingId}-duties`}>
         <h2 className="private-trial-section-title" id={`${headingId}-duties`}>
-          During the trial
-        </h2>
+          {appText("text_cdf50563e1e3")}</h2>
         <ul className="private-trial-list">
           {PRIVATE_TRIAL_DUTIES.map((duty) => (
             <li key={duty}>{duty}</li>
@@ -47,8 +49,7 @@ export function PrivateTrialGuide({
 
       <section className="private-trial-section" aria-labelledby={`${headingId}-checks`}>
         <h2 className="private-trial-section-title" id={`${headingId}-checks`}>
-          Please check
-        </h2>
+          {appText("text_0d61868656c3")}</h2>
         <ul className="private-trial-list">
           {PRIVATE_TRIAL_CHECKS.map((check) => (
             <li key={check}>{check}</li>

@@ -6,6 +6,9 @@ import { getAdminFeedbackScreenshot, listAdminFeedback } from "@/lib/api";
 import { formatAppDateTime } from "@/lib/date-format";
 import { formatPlanLabel } from "@/lib/plan-labels";
 import type { AdminFeedbackRecord } from "@/lib/types";
+import { translateUiText } from "@/i18n/ui-text";
+import { useTranslations as useAppTranslations } from "next-intl";
+
 
 const LABELS: Record<string, string> = {
   plan_usefulness: "Plan feedback",
@@ -271,6 +274,7 @@ function DetailRows({ rows }: { rows: Array<[string, string]> }) {
 }
 
 function CopyIdButton({ label, value }: { label: string; value: string }) {
+    const appText = useAppTranslations("AppText");
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -285,7 +289,7 @@ function CopyIdButton({ label, value }: { label: string; value: string }) {
 
   return (
     <button type="button" className="admin-feedback-copy" onClick={() => void copy()}>
-      {copied ? "Copied" : `Copy ${label}`}
+      {copied ? appText("text_8d525e5f158b") : `Copy ${label}`}
     </button>
   );
 }
@@ -303,6 +307,7 @@ function FeedbackItem({
   screenshotError: boolean;
   onLoadScreenshot: () => void;
 }) {
+    const appText = useAppTranslations("AppText");
   const signal = getFeedbackSignal(item);
   const readinessChips = getReadinessChips(item);
   const readinessRows = getReadinessRows(item);
@@ -336,46 +341,46 @@ function FeedbackItem({
       </div>
 
       <p className="admin-feedback-meta-line">
-        <span>{item.camp_phase || "Phase not set"}</span>
-        <span aria-hidden="true">·</span>
+        <span>{item.camp_phase || appText("text_118a6a98418d")}</span>
+        <span aria-hidden="true">{appText("text_a137f17a19a0")}</span>
         <time dateTime={item.created_at}>{formatCompactDateTime(item.created_at)}</time>
       </p>
 
       <p className={`admin-feedback-comment${item.comment ? "" : " admin-feedback-comment-empty"}`}>
-        {item.comment || "No written comment"}
+        {item.comment || appText("text_a08cd8a38470")}
       </p>
 
       {sessionAnswers.length ? (
-        <div className="admin-feedback-context-strip" aria-label="Session review answers">
+        <div className="admin-feedback-context-strip" aria-label={appText("text_11c1abef9864")}>
           {sessionAnswers.map(([label, value]) => (
             <span key={label}>{`${label}: ${readable(value)}`}</span>
           ))}
         </div>
       ) : null}
 
-      <div className="admin-feedback-context-strip" aria-label="Captured readiness context">
+      <div className="admin-feedback-context-strip" aria-label={appText("text_6a1ce782a5ed")}>
         {readinessChips.map((chip) => <span key={chip}>{chip}</span>)}
       </div>
 
       <div className="admin-feedback-actions">
-        {item.plan_id ? <a href={`/plans/${item.plan_id}`}>Open plan</a> : null}
-        <a href={`/admin/athletes/${item.submitted_by_profile_id}`}>Open athlete</a>
+        {item.plan_id ? <a href={`/plans/${item.plan_id}`}>{appText("text_9e70b18d5255")}</a> : null}
+        <a href={`/admin/athletes/${item.submitted_by_profile_id}`}>{appText("text_06f0029eb16e")}</a>
 
         <details className="admin-feedback-disclosure">
-          <summary>{item.today_checkin_id ? "View check-in" : "View context"}</summary>
+          <summary>{item.today_checkin_id ? appText("text_e0f8b6ab7413") : appText("text_d8d539206a8a")}</summary>
           <div className="admin-feedback-disclosure-body">
             <div>
-              <p className="kicker">Readiness</p>
+              <p className="kicker">{appText("text_d53d98c17749")}</p>
               {hasCapturedContext ? (
                 <>
                   <DetailRows rows={[...readinessRows, ...intakeRows]} />
-                  {safetyFlags.length ? <p className="admin-feedback-context-alert">Flags: {safetyFlags.join(" · ")}</p> : null}
+                  {safetyFlags.length ? <p className="admin-feedback-context-alert">{appText("text_2df88939ccfe")}{safetyFlags.join(" · ")}</p> : null}
                 </>
-              ) : <p className="muted">No readiness snapshot was captured.</p>}
+              ) : <p className="muted">{appText("text_97e2b1da5d7e")}</p>}
             </div>
             {injuryFlags.length ? (
               <div>
-                <p className="kicker">Active injuries</p>
+                <p className="kicker">{appText("text_9659fd65b1dd")}</p>
                 <ul className="admin-feedback-injury-list">
                   {injuryFlags.map((flag, index) => (
                     <li key={stringValue(flag, "id") || `${stringValue(flag, "body_area")}-${index}`}>
@@ -390,7 +395,7 @@ function FeedbackItem({
         </details>
 
         <details className="admin-feedback-disclosure admin-feedback-technical">
-          <summary>Technical details</summary>
+          <summary>{appText("text_890ab358a55d")}</summary>
           <div className="admin-feedback-disclosure-body">
             <DetailRows rows={[
               ["Page", pagePath],
@@ -400,25 +405,25 @@ function FeedbackItem({
               ["Language", language],
             ]} />
             <div className="admin-feedback-copy-actions">
-              <CopyIdButton label="feedback ID" value={item.id} />
-              {item.plan_id ? <CopyIdButton label="plan ID" value={item.plan_id} /> : null}
-              {item.today_checkin_id ? <CopyIdButton label="check-in ID" value={item.today_checkin_id} /> : null}
+              <CopyIdButton label={appText("text_46c7e87d0778")} value={item.id} />
+              {item.plan_id ? <CopyIdButton label={appText("text_19a9aaf2470a")} value={item.plan_id} /> : null}
+              {item.today_checkin_id ? <CopyIdButton label={appText("text_636be5d9a961")} value={item.today_checkin_id} /> : null}
             </div>
           </div>
         </details>
 
         {item.has_screenshot ? (
           screenshotUrl ? (
-            <a href={screenshotUrl} target="_blank" rel="noreferrer">Open screenshot</a>
+            <a href={screenshotUrl} target="_blank" rel="noreferrer">{appText("text_0cf794172126")}</a>
           ) : (
             <button type="button" className="feedback-link" onClick={onLoadScreenshot} disabled={screenshotLoading}>
-              {screenshotLoading ? "Preparing screenshot…" : "View screenshot"}
+              {screenshotLoading ? appText("text_91bc990572fb") : appText("text_acf862e2739f")}
             </button>
           )
         ) : null}
       </div>
-      {item.contact_allowed ? <p className="admin-feedback-contact">Athlete permits follow-up</p> : null}
-      {screenshotError ? <p className="error-text" role="alert">Screenshot could not be opened. Try again.</p> : null}
+      {item.contact_allowed ? <p className="admin-feedback-contact">{appText("text_2b08db0b2d9b")}</p> : null}
+      {screenshotError ? <p className="error-text" role="alert">{appText("text_a3c7a46c862c")}</p> : null}
     </article>
   );
 }
@@ -428,6 +433,7 @@ export function AdminFeedbackPanel({ token, reloadKey }: { token: string; reload
 }
 
 function AdminFeedbackLoader({ token, reloadKey }: { token: string; reloadKey: number }) {
+    const appText = useAppTranslations("AppText");
   const [feedback, setFeedback] = useState<AdminFeedbackRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -480,26 +486,25 @@ function AdminFeedbackLoader({ token, reloadKey }: { token: string; reloadKey: n
     <article className="list-card admin-feedback-panel">
       <div className="form-section-header">
         <div>
-          <p className="kicker">Athlete voice</p>
-          <h2>Feedback review</h2>
-          <p className="muted admin-panel-subtext">Safety reports stay pinned. Context opens only when you need it.</p>
+          <p className="kicker">{appText("text_dc403398d056")}</p>
+          <h2>{appText("text_19092b1bbd49")}</h2>
+          <p className="muted admin-panel-subtext">{appText("text_9b4366fa64e7")}</p>
         </div>
-        <span className="badge status-badge-neutral">{loading ? "Checking" : `${feedback.length} recent`}</span>
+        <span className="badge status-badge-neutral">{loading ? appText("text_0dfe1d63c9d8") : `${feedback.length} recent`}</span>
       </div>
 
-      {loading ? <p className="muted">Loading feedback...</p> : null}
+      {loading ? <p className="muted">{appText("text_94ec56d35dc6")}</p> : null}
       {!loading && error ? (
         <div className="support-panel">
-          <p className="error-text">{error}</p>
+          <p className="error-text">{translateUiText(appText, error)}</p>
           <button type="button" className="ghost-button" onClick={retryFeedback}>
-            Retry feedback
-          </button>
+            {appText("text_eefae8a75e3f")}</button>
         </div>
       ) : null}
       {!loading && !error && feedback.length === 0 ? (
         <div className="support-panel support-panel-success">
-          <h3 className="form-section-title">No feedback yet.</h3>
-          <p className="muted">Plan, recommendation, and global reports will appear here.</p>
+          <h3 className="form-section-title">{appText("text_aca4871a8444")}</h3>
+          <p className="muted">{appText("text_e07603714228")}</p>
         </div>
       ) : null}
       {!loading && !error && feedback.length > 0 ? (
@@ -511,7 +516,7 @@ function AdminFeedbackLoader({ token, reloadKey }: { token: string; reloadKey: n
                   <h3>{group.name}</h3>
                   <p>{group.email}</p>
                 </div>
-                <span>{group.items.length} recent {group.items.length === 1 ? "response" : "responses"}</span>
+                <span>{group.items.length} {appText("text_034a7e52c5c9")} {group.items.length === 1 ? appText("text_a9f4b3d22a52") : appText("text_e30b3910ffd9")}</span>
               </summary>
               <div className="admin-feedback-group-items">
                 {group.items.map((item) => (

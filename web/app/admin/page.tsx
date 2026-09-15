@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
+import { translateUiText } from "@/i18n/ui-text";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
@@ -34,11 +35,13 @@ import {
   summarizeProfileWarning,
 } from "@/lib/admin-profile-warning";
 import type {
+
   AdminAthleteRecord,
   AdminGenerationJobDiagnostic,
   AdminPlanSummary,
   AdminReviewRecord,
 } from "@/lib/types";
+import { useTranslations as useAppTranslations } from "next-intl";
 
 function getPlanDisplayName(plan: { plan_name?: string | null; full_name?: string | null; athlete_email: string }) {
   return plan.plan_name?.trim() || plan.full_name || plan.athlete_email;
@@ -144,6 +147,7 @@ const ACTIVE_JOBS_POLL_INTERVAL_MS = 8000;
 const SEARCH_DEBOUNCE_MS = 300;
 
 export default function AdminPage() {
+    const appText = useAppTranslations("AppText");
   const { isReady, isMeHydrated, session, me } = useAppSession();
   const [athletes, setAthletes] = useState<AdminAthleteRecord[]>([]);
   const [plans, setPlans] = useState<AdminPlanSummary[]>([]);
@@ -437,9 +441,9 @@ export default function AdminPage() {
         resolution_notes: "reviewed from admin dashboard",
       });
       setAttentionReviews((reviews) => reviews.filter((review) => review.id !== reviewId));
-      setMessage("Review resolved.");
+      setMessage(appText("text_70d055938163"));
     } catch (resolveError) {
-      setError(resolveError instanceof Error ? resolveError.message : "Failed to resolve review.");
+      setError(resolveError instanceof Error ? resolveError.message : appText("text_e0e901ce8c4c"));
     } finally {
       setResolvingReviewId(null);
     }
@@ -457,7 +461,7 @@ export default function AdminPage() {
       );
       setMessage(`${approved.full_name || approved.email} approved.`);
     } catch (approveError) {
-      setError(approveError instanceof Error ? approveError.message : "Failed to approve account.");
+      setError(approveError instanceof Error ? approveError.message : appText("text_69baa63b29c2"));
     } finally {
       setApprovingAthleteId(null);
     }
@@ -473,13 +477,13 @@ export default function AdminPage() {
       setMessage(
         result.queued > 0
           ? `Queued ${result.queued} plan${result.queued === 1 ? "" : "s"} for structured-card backfill. Cards appear as each conversion finishes.`
-          : "No plans need a structured-card backfill — every displayable plan already has one.",
+          : appText("text_736a5b75c981"),
       );
     } catch (backfillError) {
       setError(
         backfillError instanceof Error
           ? backfillError.message
-          : "Failed to queue the structured-card backfill.",
+          : appText("text_600478032f39"),
       );
     } finally {
       setBackfillPending(false);
@@ -497,10 +501,10 @@ export default function AdminPage() {
         jobId,
         { reason: "admin reviewed and approved from dashboard" },
       );
-      setMessage("Resume queued. The triage item will leave the queue after refresh.");
+      setMessage(appText("text_14ea326cd070"));
       setReloadKey((value) => value + 1);
     } catch (resumeError) {
-      setError(resumeError instanceof Error ? resumeError.message : "Failed to approve and resume generation.");
+      setError(resumeError instanceof Error ? resumeError.message : appText("text_1a48b6507271"));
     } finally {
       setResumingJobId(null);
     }
@@ -518,10 +522,10 @@ export default function AdminPage() {
     try {
       await cancelAdminGenerationJob(session.access_token, job.job_id);
       setActiveJobs((jobs) => jobs.filter((item) => item.job_id !== job.job_id));
-      setMessage("Generation cancelled. You can archive or delete the related plan now.");
+      setMessage(appText("text_1df25a56d42c"));
       setReloadKey((value) => value + 1);
     } catch (cancelError) {
-      setError(cancelError instanceof Error ? cancelError.message : "Failed to cancel generation.");
+      setError(cancelError instanceof Error ? cancelError.message : appText("text_4a3a1ebff6db"));
     } finally {
       setCancellingJobId(null);
     }
@@ -560,7 +564,7 @@ export default function AdminPage() {
           (result.skipped_count ? ` ${result.skipped_count} skipped.` : ""),
       );
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Unable to delete archived plans.");
+      setError(deleteError instanceof Error ? deleteError.message : appText("text_6ba78c22f62b"));
     } finally {
       setBulkDeletingPlans(false);
     }
@@ -604,37 +608,37 @@ export default function AdminPage() {
       <section className="panel admin-dashboard-panel">
         <div className="section-heading admin-dashboard-heading">
           <div className="admin-dashboard-copy">
-            <p className="kicker">Admin</p>
-            <h1>Fight camp control room</h1>
-            <p className="muted">Live generation queues, athlete risk signals, and plan-review decisions in one operator view.</p>
-            <div className="admin-priority-rail" role="region" aria-label="Admin priority status">
+            <p className="kicker">{appText("text_c1c224b03cd9")}</p>
+            <h1>{appText("text_eefe09120c62")}</h1>
+            <p className="muted">{appText("text_aa142be234b2")}</p>
+            <div className="admin-priority-rail" role="region" aria-label={appText("text_fe3d5f57225d")}>
               <span className="admin-priority-label">{adminActionLabel}</span>
               <span>{lastCheckedLabel}</span>
             </div>
           </div>
-          <div className="admin-summary-grid" aria-label="Admin dashboard summary">
+          <div className="admin-summary-grid" aria-label={appText("text_0e553cdb4574")}>
             <article className="status-card admin-summary-card" data-tone={activeJobs.length > 0 ? "active" : "neutral"}>
-              <p className="status-label">Generating now</p>
+              <p className="status-label">{appText("text_6ee8d88ca388")}</p>
               <h2 className="plan-summary-title">{isJobsLoading ? "-" : activeJobs.length}</h2>
               <p className="muted">
                 {isJobsLoading
-                  ? "Checking jobs."
+                  ? appText("text_ce9d8576e3c1")
                   : `${activeAthleteCount} athlete${activeAthleteCount === 1 ? "" : "s"} in progress.`}
               </p>
             </article>
             <article className="status-card admin-summary-card" data-tone={triageJobs.length > 0 ? "danger" : "neutral"}>
-              <p className="status-label">Triage queue</p>
+              <p className="status-label">{appText("text_7ac2fc7dd4db")}</p>
               <h2 className="plan-summary-title">{isJobsLoading ? "-" : triageJobs.length}</h2>
               <p className="muted">
                 {isJobsLoading
-                  ? "Checking reviews."
+                  ? appText("text_48ccb3331068")
                   : attentionReviews.length > 0
-                    ? "Athlete flags open."
-                    : "No flags open."}
+                    ? appText("text_99c3a2ad6bdf")
+                    : appText("text_490210e197cb")}
               </p>
             </article>
             <article className="status-card admin-summary-card" data-tone={attentionReviews.length > 0 ? "danger" : "neutral"}>
-              <p className="status-label">Needs attention</p>
+              <p className="status-label">{appText("text_c1ebc7817870")}</p>
               <h2 className="plan-summary-title">
                 {isJobsLoading
                   ? "-"
@@ -644,24 +648,24 @@ export default function AdminPage() {
                       ? "-"
                       : plans.length}
               </h2>
-              <p className="muted">{isJobsLoading ? "Checking reviews." : "Athlete flags open."}</p>
+              <p className="muted">{isJobsLoading ? appText("text_48ccb3331068") : appText("text_99c3a2ad6bdf")}</p>
             </article>
             <article className="status-card admin-summary-card" data-tone="neutral">
-              <p className="status-label">Athletes</p>
+              <p className="status-label">{appText("text_39822ba817e8")}</p>
               <h2 className="plan-summary-title">{isDirectoryLoading ? "-" : athletes.length}</h2>
-              <p className="muted">{searchNeedle ? "Matches on this page." : "Accounts on this page."}</p>
+              <p className="muted">{searchNeedle ? appText("text_f074b0653624") : appText("text_a065830a1fda")}</p>
             </article>
             <article className="status-card admin-summary-card" data-tone={reviewPlans.length > 0 ? "danger" : "neutral"}>
-              <p className="status-label">Plans</p>
+              <p className="status-label">{appText("text_dfe8b2f0de26")}</p>
               <h2 className="plan-summary-title">{isDirectoryLoading ? "-" : plans.length}</h2>
               <p className="muted">
                 {isJobsLoading
-                  ? "Checking reviews."
+                  ? appText("text_48ccb3331068")
                   : searchNeedle
-                    ? "Matches on this page."
+                    ? appText("text_f074b0653624")
                     : reviewPlans.length > 0
                       ? `${reviewPlans.length} held for decision.`
-                      : "Generations on this page."}
+                      : appText("text_5520412c3acd")}
               </p>
             </article>
           </div>
@@ -674,7 +678,7 @@ export default function AdminPage() {
               <span>{profileWarning.body}</span>
               {profileWarning.requestId ? (
                 <span className="muted admin-profile-warning-request">
-                  Latest request id: {profileWarning.requestId}
+                  {appText("text_9a4fca4d2609")}{profileWarning.requestId}
                 </span>
               ) : null}
             </div>
@@ -684,21 +688,21 @@ export default function AdminPage() {
               onClick={handleRetry}
               disabled={isLoading}
             >
-              {isLoading ? "Retrying..." : "Retry"}
+              {isLoading ? appText("text_84a657bcf3d9") : appText("text_942087cc2d41")}
             </button>
           </div>
         ) : null}
 
         {directoryDisplayError ? (
           <div className="error-banner" role="alert">
-            <span>{directoryDisplayError}</span>
+            <span>{translateUiText(appText, directoryDisplayError)}</span>
             <button
               type="button"
               className="ghost-button"
               onClick={handleRetry}
               disabled={isLoading}
             >
-              {isLoading ? "Retrying..." : "Try again"}
+              {isLoading ? appText("text_84a657bcf3d9") : appText("text_d8b8392e2c54")}
             </button>
           </div>
         ) : null}
@@ -707,13 +711,13 @@ export default function AdminPage() {
 
         <div className="admin-toolbar">
           <div className="field admin-search-field">
-            <label htmlFor="adminSearch">Search support records</label>
+            <label htmlFor="adminSearch">{appText("text_3b9c38abb843")}</label>
             <input
               id="adminSearch"
               type="search"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Name, email, username, status"
+              placeholder={appText("text_ceac7db32c33")}
             />
           </div>
           <button
@@ -722,16 +726,16 @@ export default function AdminPage() {
             onClick={handleRetry}
             disabled={isLoading}
           >
-            {isLoading ? "Refreshing..." : "Refresh"}
+            {isLoading ? appText("text_69d2daed978a") : appText("text_0e9161011702")}
           </button>
           <button
             type="button"
             className="ghost-button admin-backfill-button"
             onClick={() => void handleBackfillStructuredPlans()}
             disabled={backfillPending}
-            title="Re-run structured-card conversion for legacy plans that still fall back to plain text"
+            title={appText("text_480a1db80d35")}
           >
-            {backfillPending ? "Backfilling..." : "Backfill structured cards"}
+            {backfillPending ? appText("text_70ce293d99de") : appText("text_e35b8924799e")}
           </button>
         </div>
 
@@ -740,13 +744,13 @@ export default function AdminPage() {
         <article className="list-card admin-active-panel">
           <div className="form-section-header">
             <div>
-              <p className="kicker">Live generation monitor</p>
-              <h2>Plans currently being generated</h2>
+              <p className="kicker">{appText("text_6b91d0fe2435")}</p>
+              <h2>{appText("text_873479fff5d0")}</h2>
               <p className="muted admin-panel-subtext">{lastCheckedLabel}</p>
             </div>
             <span className="badge">
               {isJobsLoading
-                ? "Checking"
+                ? appText("text_0dfe1d63c9d8")
                 : searchNeedle
                   ? `${filteredActiveJobs.length}/${activeJobs.length} active`
                   : `${activeJobs.length} active`}
@@ -754,35 +758,35 @@ export default function AdminPage() {
           </div>
 
           {!isJobsLoading ? (
-            <div className="admin-active-summary" aria-label="Active generation states">
-              <span>Running {activeJobStates.running}</span>
-              <span>Queued {activeJobStates.queued}</span>
-              <span>Stale {activeJobStates.stale}</span>
+            <div className="admin-active-summary" aria-label={appText("text_98a9847e197c")}>
+              <span>{appText("text_f4ccae29e1bb")}{activeJobStates.running}</span>
+              <span>{appText("text_661ff40a07e0")}{activeJobStates.queued}</span>
+              <span>{appText("text_40c9e59c5e15")}{activeJobStates.stale}</span>
             </div>
           ) : null}
 
           {isJobsLoading ? (
             <div className="support-panel">
-              <p className="muted">Loading active generation jobs...</p>
+              <p className="muted">{appText("text_33f3c644be99")}</p>
             </div>
           ) : activeDisplayWarning ? (
             <div className="support-panel">
               <p className="error-text">{activeDisplayWarning}</p>
-              <p className="muted">Triage, athlete, and plan history can still be reviewed while this feed retries.</p>
+              <p className="muted">{appText("text_b545cc83b4fb")}</p>
             </div>
           ) : activeProfileError && activeJobs.length === 0 ? (
             <div className="support-panel">
-              <p className="muted">Live generation details are limited while the profile service recovers. See the notice above.</p>
+              <p className="muted">{appText("text_e732c55e73b7")}</p>
             </div>
           ) : activeJobs.length === 0 ? (
             <div className="support-panel support-panel-success">
-              <p className="kicker">Idle</p>
-              <h3 className="form-section-title">No plans are generating right now.</h3>
-              <p className="muted">Queued and running jobs will appear here with athlete, timing, and plan context.</p>
+              <p className="kicker">{appText("text_ab0171ca0494")}</p>
+              <h3 className="form-section-title">{appText("text_cbcc62bf9b3e")}</h3>
+              <p className="muted">{appText("text_0252b6587367")}</p>
             </div>
           ) : filteredActiveJobs.length === 0 ? (
             <div className="support-panel">
-              <p className="muted">No active generation jobs match this search.</p>
+              <p className="muted">{appText("text_aa6872336698")}</p>
             </div>
           ) : (
             <div className="admin-active-list">
@@ -794,7 +798,7 @@ export default function AdminPage() {
                   <div className="admin-active-row-main">
                     <div>
                       <h3 className="plan-card-title">{getJobDisplayName(job)}</h3>
-                      <p className="muted">{job.athlete_email || job.athlete_id || "No athlete email"}</p>
+                      <p className="muted">{job.athlete_email || job.athlete_id || appText("text_708bc3861e4b")}</p>
                       <ProfileUnavailableNote unavailable={job.profile_unavailable} />
                     </div>
                     <span className="badge">{getJobStatusLabel(job)}</span>
@@ -803,28 +807,26 @@ export default function AdminPage() {
                     <span style={{ width: `${getActiveJobProgress(job)}%` }} />
                   </div>
                   <div className="admin-job-meta">
-                    <span>Created {formatDateTime(job.created_at)}</span>
-                    <span>Started {formatDateTime(job.started_at)}</span>
-                    <span>Heartbeat {formatDateTime(job.heartbeat_at)}</span>
-                    <span>Source {formatJobSource(job.source)}</span>
+                    <span>{appText("text_d70b9e24bca2")}{formatDateTime(job.created_at)}</span>
+                    <span>{appText("text_ecbc89cd37a0")}{formatDateTime(job.started_at)}</span>
+                    <span>{appText("text_9df89427a7c8")}{formatDateTime(job.heartbeat_at)}</span>
+                    <span>{appText("text_0e570ca6fabe")}{formatJobSource(job.source)}</span>
                   </div>
                   <div className="admin-job-summary">
                     <ProfileRefreshWarningBanner job={job} />
-                    {job.is_stale ? <p className="error-text">{job.stale_reason || "This generation has stopped heartbeating."}</p> : null}
-                    <p className="muted">Fight date: {job.request_payload_summary?.fight_date ? formatAppDate(job.request_payload_summary.fight_date) : "Not set"}</p>
-                    <p className="muted">Format: {job.request_payload_summary?.fight_format || "Not set"}</p>
-                    <p className="muted">Goals: {joinOrDash(job.request_payload_summary?.goals)}</p>
+                    {job.is_stale ? <p className="error-text">{job.stale_reason || appText("text_fc6ce88b89a0")}</p> : null}
+                    <p className="muted">{appText("text_f65bea824e6f")}{job.request_payload_summary?.fight_date ? formatAppDate(job.request_payload_summary.fight_date) : appText("text_4895f73177ab")}</p>
+                    <p className="muted">{appText("text_9a5649a42cb2")}{job.request_payload_summary?.fight_format || appText("text_4895f73177ab")}</p>
+                    <p className="muted">{appText("text_d5c7aa27cc62")}{joinOrDash(job.request_payload_summary?.goals)}</p>
                   </div>
                   <div className="plan-card-actions">
                     {job.athlete_id ? (
                       <Link href={`/admin/athletes/${job.athlete_id}`} className="ghost-button">
-                        Open athlete
-                      </Link>
+                        {appText("text_06f0029eb16e")}</Link>
                     ) : null}
                     {job.plan_id ? (
                       <Link href={`/plans/${job.plan_id}`} className="ghost-button">
-                        Open plan
-                      </Link>
+                        {appText("text_9e70b18d5255")}</Link>
                     ) : null}
                     <button
                       type="button"
@@ -832,7 +834,7 @@ export default function AdminPage() {
                       onClick={() => void handleCancelGenerationJob(job)}
                       disabled={cancellingJobId !== null}
                     >
-                      {cancellingJobId === job.job_id ? "Cancelling..." : "Cancel generation"}
+                      {cancellingJobId === job.job_id ? appText("text_7b26131098bb") : appText("text_12ad4ee6d948")}
                     </button>
                   </div>
                 </article>
@@ -844,30 +846,30 @@ export default function AdminPage() {
         <article className="list-card admin-triage-panel">
           <div className="form-section-header">
             <div>
-              <p className="kicker">Triage resume queue</p>
-              <h2>Suspended generations</h2>
+              <p className="kicker">{appText("text_2e894e6185b9")}</p>
+              <h2>{appText("text_3a62ddc41ae5")}</h2>
             </div>
-            <span className="badge">{isJobsLoading ? "Checking" : `${triageJobs.length} open`}</span>
+            <span className="badge">{isJobsLoading ? appText("text_0dfe1d63c9d8") : `${triageJobs.length} open`}</span>
           </div>
 
           {isJobsLoading ? (
             <div className="support-panel">
-              <p className="muted">Loading protected triage jobs...</p>
+              <p className="muted">{appText("text_1c6cd18bb32b")}</p>
             </div>
           ) : triageDisplayWarning ? (
             <div className="support-panel">
               <p className="error-text">{triageDisplayWarning}</p>
-              <p className="muted">Athlete accounts and plan history can still be reviewed while the queue retries.</p>
+              <p className="muted">{appText("text_a9223657b71b")}</p>
             </div>
           ) : triageProfileError && triageJobs.length === 0 ? (
             <div className="support-panel">
-              <p className="muted">Triage details are limited while the profile service recovers. See the notice above.</p>
+              <p className="muted">{appText("text_87123667aaba")}</p>
             </div>
           ) : triageJobs.length === 0 ? (
             <div className="support-panel support-panel-success">
-              <p className="kicker">Clear</p>
-              <h3 className="form-section-title">No suspended triage generations need approval.</h3>
-              <p className="muted">New protected triage outcomes will appear here even when no plan row was created.</p>
+              <p className="kicker">{appText("text_83b12c2216ef")}</p>
+              <h3 className="form-section-title">{appText("text_be46e7890b1b")}</h3>
+              <p className="muted">{appText("text_cb5807426976")}</p>
             </div>
           ) : (
             <div className="plans-grid admin-queue-grid">
@@ -876,30 +878,28 @@ export default function AdminPage() {
                   <div className="plan-card-header">
                     <div>
                       <h3 className="plan-card-title">{getJobDisplayName(job)}</h3>
-                      <p className="muted">{job.athlete_email || job.athlete_id || "No athlete email"}</p>
+                      <p className="muted">{job.athlete_email || job.athlete_id || appText("text_708bc3861e4b")}</p>
                       <ProfileUnavailableNote unavailable={job.profile_unavailable} />
                     </div>
-                    <span className="badge">Needs resume</span>
+                    <span className="badge">{appText("text_17d48234f771")}</span>
                   </div>
                   <p className="muted">
-                    {job.stage2_status || "triage_blocked"} - no plan row was created, so this item is anchored to the generation job.
-                  </p>
+                    {job.stage2_status || "triage_blocked"} {appText("text_a0840a28194f")}</p>
                   <div className="admin-job-meta">
-                    <span>Created {formatDateTime(job.created_at)}</span>
-                    <span>Source {job.source || "unknown"}</span>
-                    <span>Job {job.job_id}</span>
+                    <span>{appText("text_d70b9e24bca2")}{formatDateTime(job.created_at)}</span>
+                    <span>{appText("text_0e570ca6fabe")}{job.source || "unknown"}</span>
+                    <span>{appText("text_ad617a0fdd57")}{job.job_id}</span>
                   </div>
                   <div className="admin-job-summary">
                     <ProfileRefreshWarningBanner job={job} />
-                    <p className="muted">Fight date: {job.request_payload_summary.fight_date ? formatAppDate(job.request_payload_summary.fight_date) : "Not set"}</p>
-                    <p className="muted">Goals: {joinOrDash(job.request_payload_summary.goals)}</p>
-                    <p className="muted">Injuries: {joinOrDash(job.request_payload_summary.injuries)}</p>
+                    <p className="muted">{appText("text_f65bea824e6f")}{job.request_payload_summary.fight_date ? formatAppDate(job.request_payload_summary.fight_date) : appText("text_4895f73177ab")}</p>
+                    <p className="muted">{appText("text_d5c7aa27cc62")}{joinOrDash(job.request_payload_summary.goals)}</p>
+                    <p className="muted">{appText("text_0cfd4ac7baa7")}{joinOrDash(job.request_payload_summary.injuries)}</p>
                   </div>
                   <div className="plan-card-actions">
                     {job.athlete_id ? (
                       <Link href={`/admin/athletes/${job.athlete_id}`} className="ghost-button">
-                        Open athlete
-                      </Link>
+                        {appText("text_06f0029eb16e")}</Link>
                     ) : null}
                     <button
                       type="button"
@@ -907,7 +907,7 @@ export default function AdminPage() {
                       onClick={() => void handleApproveAndResumeJob(job.job_id)}
                       disabled={resumingJobId !== null}
                     >
-                      {resumingJobId === job.job_id ? "Approving..." : "Approve & Resume"}
+                      {resumingJobId === job.job_id ? appText("text_cee0e61bdf8c") : appText("text_e2a9cd45af93")}
                     </button>
                   </div>
                 </article>
@@ -919,30 +919,30 @@ export default function AdminPage() {
         <article className="list-card admin-review-plans-panel">
           <div className="form-section-header">
             <div>
-              <p className="kicker">Held &amp; review plans</p>
-              <h2>Plans awaiting an admin decision</h2>
+              <p className="kicker">{appText("text_2223250bbc7b")}</p>
+              <h2>{appText("text_b2ecf6c9c84e")}</h2>
             </div>
-            <span className="badge">{isJobsLoading ? "Checking" : `${reviewPlans.length} held`}</span>
+            <span className="badge">{isJobsLoading ? appText("text_0dfe1d63c9d8") : `${reviewPlans.length} held`}</span>
           </div>
 
           {isJobsLoading ? (
             <div className="support-panel">
-              <p className="muted">Loading held and review plans...</p>
+              <p className="muted">{appText("text_bee03cdbc79e")}</p>
             </div>
           ) : reviewPlansDisplayWarning ? (
             <div className="support-panel">
               <p className="error-text">{reviewPlansDisplayWarning}</p>
-              <p className="muted">Live jobs, triage, and athlete records can still be reviewed while this queue retries.</p>
+              <p className="muted">{appText("text_894794ec6839")}</p>
             </div>
           ) : reviewPlansProfileError && reviewPlans.length === 0 ? (
             <div className="support-panel">
-              <p className="muted">Held plan details are limited while the profile service recovers. See the notice above.</p>
+              <p className="muted">{appText("text_05e05f824500")}</p>
             </div>
           ) : reviewPlans.length === 0 ? (
             <div className="support-panel support-panel-success">
-              <p className="kicker">Clear</p>
-              <h3 className="form-section-title">No plans are held for review.</h3>
-              <p className="muted">Held, blocked, and review-required plans appear here so they stay visible even when athlete details are unavailable.</p>
+              <p className="kicker">{appText("text_83b12c2216ef")}</p>
+              <h3 className="form-section-title">{appText("text_7f159ddf9942")}</h3>
+              <p className="muted">{appText("text_69bbe846bd2a")}</p>
             </div>
           ) : (
             <div className="plans-grid admin-queue-grid">
@@ -953,24 +953,22 @@ export default function AdminPage() {
                       <Link href={`/plans/${plan.plan_id}`}>
                         <h3 className="plan-card-title">{getPlanDisplayName(plan)}</h3>
                       </Link>
-                      <p className="muted">{plan.athlete_email || plan.athlete_id || "No athlete email"}</p>
+                      <p className="muted">{plan.athlete_email || plan.athlete_id || appText("text_708bc3861e4b")}</p>
                       <ProfileUnavailableNote unavailable={plan.profile_unavailable} />
                     </div>
                     <span className="badge">{plan.status}</span>
                   </div>
                   <div className="admin-job-meta">
-                    <span>Created {formatDateTime(plan.created_at)}</span>
-                    <span>Plan {plan.plan_id}</span>
+                    <span>{appText("text_d70b9e24bca2")}{formatDateTime(plan.created_at)}</span>
+                    <span>{appText("text_fa8ed0bdabdd")}{plan.plan_id}</span>
                   </div>
                   <div className="plan-card-actions">
                     {plan.athlete_id ? (
                       <Link href={`/admin/athletes/${plan.athlete_id}`} className="ghost-button">
-                        Open athlete
-                      </Link>
+                        {appText("text_06f0029eb16e")}</Link>
                     ) : null}
                     <Link href={`/plans/${plan.plan_id}`} className="cta">
-                      Review plan
-                    </Link>
+                      {appText("text_71146ca693e0")}</Link>
                   </div>
                 </article>
               ))}
@@ -981,15 +979,15 @@ export default function AdminPage() {
         <article className="list-card admin-attention-panel">
           <div className="form-section-header">
             <div>
-              <p className="kicker">Athlete attention queue</p>
-              <h2>Needs attention</h2>
+              <p className="kicker">{appText("text_2ace7fa7443d")}</p>
+              <h2>{appText("text_c1ebc7817870")}</h2>
             </div>
-            <span className="badge">{isJobsLoading ? "Checking" : `${attentionReviews.length} open`}</span>
+            <span className="badge">{isJobsLoading ? appText("text_0dfe1d63c9d8") : `${attentionReviews.length} open`}</span>
           </div>
 
           {isJobsLoading ? (
             <div className="support-panel">
-              <p className="muted">Loading the attention queue...</p>
+              <p className="muted">{appText("text_bee79974b1c1")}</p>
             </div>
           ) : attentionDisplayWarning ? (
             <div className="support-panel">
@@ -997,15 +995,14 @@ export default function AdminPage() {
             </div>
           ) : attentionProfileError && attentionReviews.length === 0 ? (
             <div className="support-panel">
-              <p className="muted">Attention queue details are limited while the profile service recovers. See the notice above.</p>
+              <p className="muted">{appText("text_130e269cbd6f")}</p>
             </div>
           ) : attentionReviews.length === 0 ? (
             <div className="support-panel support-panel-success">
-              <p className="kicker">Clear</p>
-              <h3 className="form-section-title">No athletes are flagged for review.</h3>
+              <p className="kicker">{appText("text_83b12c2216ef")}</p>
+              <h3 className="form-section-title">{appText("text_282b990744bf")}</h3>
               <p className="muted">
-                Injury reports, sustained high fatigue, and repeated missed sessions land here automatically from daily check-ins and session logs.
-              </p>
+                {appText("text_204323f0e5e9")}</p>
             </div>
           ) : (
             <div className="plans-grid admin-queue-grid">
@@ -1016,23 +1013,22 @@ export default function AdminPage() {
                       <h3 className="plan-card-title">{review.athlete_name || review.athlete_email || review.athlete_id}</h3>
                       <p className="muted">{review.athlete_email || review.athlete_id}</p>
                     </div>
-                    <span className="badge">{review.injury_flag_id ? "Injury flag" : "Review"}</span>
+                    <span className="badge">{review.injury_flag_id ? appText("text_a3c3593a208d") : appText("text_aff0766a5290")}</span>
                   </div>
                   <p className="muted">{review.reason}</p>
                   <div className="admin-job-meta">
-                    <span>Flagged {formatDateTime(review.created_at)}</span>
+                    <span>{appText("text_2f1978c6166e")}{formatDateTime(review.created_at)}</span>
                   </div>
                   <div className="plan-card-actions">
                     <Link href={`/admin/athletes/${review.athlete_id}`} className="ghost-button">
-                      Open athlete
-                    </Link>
+                      {appText("text_06f0029eb16e")}</Link>
                     <button
                       type="button"
                       className="cta"
                       onClick={() => void handleResolveReview(review.id)}
                       disabled={resolvingReviewId !== null}
                     >
-                      {resolvingReviewId === review.id ? "Resolving..." : "Mark resolved"}
+                      {resolvingReviewId === review.id ? appText("text_0660108e0971") : appText("text_d6d8eeddd835")}
                     </button>
                   </div>
                 </article>
@@ -1044,28 +1040,28 @@ export default function AdminPage() {
         <div className="admin-grid">
           <article className="list-card">
             <div className="form-section-header">
-              <p className="kicker">Athletes</p>
-              <h2>{searchNeedle ? "Matching accounts" : "Recent accounts"}</h2>
+              <p className="kicker">{appText("text_39822ba817e8")}</p>
+              <h2>{searchNeedle ? appText("text_1afdc8471e56") : appText("text_0ed9feb354ec")}</h2>
             </div>
 
             {isDirectoryLoading ? (
               <div className="support-panel">
-                <p className="muted">Loading athlete accounts...</p>
+                <p className="muted">{appText("text_08197549f43a")}</p>
               </div>
             ) : athletes.length === 0 && searchNeedle ? (
               <div className="support-panel">
-                <p className="muted">No athlete accounts match this search.</p>
+                <p className="muted">{appText("text_9da02817a9d1")}</p>
               </div>
             ) : athletes.length === 0 && athletesOffset > 0 ? (
               <div className="support-panel">
-                <p className="muted">No more athlete accounts on this page.</p>
+                <p className="muted">{appText("text_0f4d4e53fcc8")}</p>
               </div>
             ) : athletes.length === 0 ? (
               <EmptyState
-                eyebrow="Athlete accounts"
-                title="No athletes yet."
-                description="Athlete accounts appear here once someone signs up to the beta."
-                example="Each row will show the athlete's name, email, saved plan count, and a link into their profile for support."
+                eyebrow={appText("text_3cdb3123b86a")}
+                title={appText("text_463678ca125d")}
+                description={appText("text_53d160f2a574")}
+                example={appText("text_24fdb99caa1c")}
                 primaryAction={{ label: "Open signup page", href: "/signup" }}
               />
             ) : (
@@ -1082,11 +1078,11 @@ export default function AdminPage() {
                         </div>
                         <span className="badge">
                           {athlete.access_status === "pending"
-                            ? "Approval needed"
+                            ? appText("text_9928dd82f38f")
                             : `${athlete.plan_count} plan${athlete.plan_count === 1 ? "" : "s"}`}
                         </span>
                       </div>
-                      <p className="muted">Created {formatDateTime(athlete.created_at)}</p>
+                      <p className="muted">{appText("text_d70b9e24bca2")}{formatDateTime(athlete.created_at)}</p>
                       <div className="plan-card-actions">
                         {athlete.access_status === "pending" ? (
                           <button
@@ -1095,34 +1091,31 @@ export default function AdminPage() {
                             onClick={() => void handleApproveAthlete(athlete.athlete_id)}
                             disabled={approvingAthleteId !== null}
                           >
-                            {approvingAthleteId === athlete.athlete_id ? "Approving…" : "Approve access"}
+                            {approvingAthleteId === athlete.athlete_id ? appText("text_e99dcb0a97a2") : appText("text_3c04b868ea53")}
                           </button>
                         ) : null}
                         <Link href={`/admin/athletes/${athlete.athlete_id}`} className="ghost-button">
-                          View profile
-                        </Link>
+                          {appText("text_d4788f256f73")}</Link>
                       </div>
                     </article>
                   ))}
                 </div>
-                <div className="admin-pager" aria-label="Athlete pagination">
+                <div className="admin-pager" aria-label={appText("text_1e564ae877d1")}>
                   <button
                     type="button"
                     className="ghost-button"
                     onClick={() => goToAthletesPage(-1)}
                     disabled={isDirectoryLoading || athletesOffset === 0}
                   >
-                    Previous
-                  </button>
-                  <span className="muted">Page {athletesPage}</span>
+                    {appText("text_a57b08a480b8")}</button>
+                  <span className="muted">{appText("text_0a30a815d67d")}{athletesPage}</span>
                   <button
                     type="button"
                     className="ghost-button"
                     onClick={() => goToAthletesPage(1)}
                     disabled={isDirectoryLoading || !athletesHasMore}
                   >
-                    Next
-                  </button>
+                    {appText("text_1ff57a29d7c9")}</button>
                 </div>
               </>
             )}
@@ -1131,32 +1124,32 @@ export default function AdminPage() {
           <article className="list-card">
             <div className="form-section-header">
               <div>
-                <p className="kicker">Plans</p>
-                <h2>{searchNeedle ? "Matching generations" : "Latest generations"}</h2>
+                <p className="kicker">{appText("text_dfe8b2f0de26")}</p>
+                <h2>{searchNeedle ? appText("text_dd36083a5c53") : appText("text_7f55bd53ad7d")}</h2>
               </div>
               {archivedPlanIds.length ? (
-                <span className="badge">{archivedPlanIds.length} archived</span>
+                <span className="badge">{archivedPlanIds.length} {appText("text_dd9e881230eb")}</span>
               ) : null}
             </div>
 
             {isDirectoryLoading ? (
               <div className="support-panel">
-                <p className="muted">Loading plan history...</p>
+                <p className="muted">{appText("text_387dfae0da1c")}</p>
               </div>
             ) : plans.length === 0 && searchNeedle ? (
               <div className="support-panel">
-                <p className="muted">No plan history matches this search.</p>
+                <p className="muted">{appText("text_73bab59294e0")}</p>
               </div>
             ) : plans.length === 0 && plansOffset > 0 ? (
               <div className="support-panel">
-                <p className="muted">No more plans on this page.</p>
+                <p className="muted">{appText("text_218a4c74d949")}</p>
               </div>
             ) : plans.length === 0 ? (
               <EmptyState
-                eyebrow="Plan history"
-                title="No plans generated yet."
-                description="Generated fight camps appear here once athletes start creating them."
-                example="Each row will show plan name, athlete email, status, creation time, and a quick open link."
+                eyebrow={appText("text_09af61b7dc6a")}
+                title={appText("text_3ee77563f2fc")}
+                description={appText("text_6a8123650372")}
+                example={appText("text_c1bea7251e80")}
                 primaryAction={{ label: "Open Demo Plan", href: "/demo-plan" }}
               />
             ) : (
@@ -1169,12 +1162,12 @@ export default function AdminPage() {
                         checked={allArchivedPlansSelected}
                         onChange={toggleAllArchivedPlans}
                         disabled={bulkDeletingPlans}
-                        aria-label="Select archived plans on this page"
+                        aria-label={appText("text_cf81d197adbb")}
                       />
                       <span className="muted">
                         {selectedArchivedCount > 0
-                          ? `${selectedArchivedCount} archived selected`
-                          : `Select archived (${archivedPlanIds.length})`}
+                          ? appText("text_62ee2852ec4e", { count: selectedArchivedCount })
+                          : appText("text_ef276ee1d896", { count: archivedPlanIds.length })}
                       </span>
                     </label>
                     <button
@@ -1184,8 +1177,10 @@ export default function AdminPage() {
                       disabled={selectedArchivedCount === 0 || bulkDeletingPlans}
                     >
                       {bulkDeletingPlans
-                        ? "Deleting..."
-                        : `Delete archived${selectedArchivedCount ? ` (${selectedArchivedCount})` : ""}`}
+                        ? appText("text_685ecb984ac2")
+                        : selectedArchivedCount
+                          ? appText("text_ba8345b330fa", { count: selectedArchivedCount })
+                          : appText("text_b6d1e0fbd54f")}
                     </button>
                   </div>
                 ) : null}
@@ -1195,7 +1190,7 @@ export default function AdminPage() {
                       <div className="plan-card-header">
                         <div className="admin-plan-title-row">
                           {isArchivedPlan(plan) ? (
-                            <label className="admin-athlete-plan-select" aria-label={`Select ${getPlanDisplayName(plan)}`}>
+                            <label className="admin-athlete-plan-select" aria-label={appText("text_cbe2f0672d5f", { name: getPlanDisplayName(plan) })}>
                               <input
                                 type="checkbox"
                                 checked={selectedArchivedIds.includes(plan.plan_id)}
@@ -1213,33 +1208,30 @@ export default function AdminPage() {
                         </div>
                         <span className="badge">{plan.status}</span>
                       </div>
-                      <p className="muted">Created {formatDateTime(plan.created_at)}</p>
+                      <p className="muted">{appText("text_d70b9e24bca2")}{formatDateTime(plan.created_at)}</p>
                       <div className="plan-card-actions">
                         <Link href={`/plans/${plan.plan_id}`} className="ghost-button">
-                          Open plan
-                        </Link>
+                          {appText("text_9e70b18d5255")}</Link>
                       </div>
                     </article>
                   ))}
                 </div>
-                <div className="admin-pager" aria-label="Plan pagination">
+                <div className="admin-pager" aria-label={appText("text_dc11f2307b6e")}>
                   <button
                     type="button"
                     className="ghost-button"
                     onClick={() => goToPlansPage(-1)}
                     disabled={isDirectoryLoading || plansOffset === 0}
                   >
-                    Previous
-                  </button>
-                  <span className="muted">Page {plansPage}</span>
+                    {appText("text_a57b08a480b8")}</button>
+                  <span className="muted">{appText("text_0a30a815d67d")}{plansPage}</span>
                   <button
                     type="button"
                     className="ghost-button"
                     onClick={() => goToPlansPage(1)}
                     disabled={isDirectoryLoading || !plansHasMore}
                   >
-                    Next
-                  </button>
+                    {appText("text_1ff57a29d7c9")}</button>
                 </div>
               </>
             )}

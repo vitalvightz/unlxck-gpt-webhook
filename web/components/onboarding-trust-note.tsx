@@ -1,4 +1,6 @@
 import { TRUST_INTRO_HEADING, TRUST_POINTS } from "@/lib/trust-copy";
+import { useTranslations as useAppTranslations } from "next-intl";
+import { translateUiText } from "@/i18n/ui-text";
 
 /**
  * Sets expectations at the start of intake: what the camp is built from, that
@@ -11,6 +13,7 @@ import { TRUST_INTRO_HEADING, TRUST_POINTS } from "@/lib/trust-copy";
  * thing they signed up for.
  */
 export function OnboardingTrustNote() {
+  const appText = useAppTranslations("AppText");
   return (
     <aside className="onboarding-trust-note" aria-labelledby="onboarding-trust-heading">
       {/* No eyebrow above the heading. "Before you start" was written for a first
@@ -19,14 +22,14 @@ export function OnboardingTrustNote() {
           begun. The heading carries the section on its own in both cases. */}
       <div className="form-section-header">
         <h2 className="form-section-title" id="onboarding-trust-heading">
-          {TRUST_INTRO_HEADING}
+          {translateUiText(appText, TRUST_INTRO_HEADING)}
         </h2>
       </div>
       <ul className="onboarding-trust-points">
         {TRUST_POINTS.map((point) => (
           <li key={point.title} className="onboarding-trust-point">
-            <p className="onboarding-trust-point-title">{point.title}</p>
-            <p className="onboarding-trust-point-body">{point.body}</p>
+            <p className="onboarding-trust-point-title">{translateUiText(appText, point.title)}</p>
+            <p className="onboarding-trust-point-body">{translateUiText(appText, point.body)}</p>
           </li>
         ))}
       </ul>

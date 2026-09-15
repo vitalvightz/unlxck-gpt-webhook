@@ -13,6 +13,8 @@ const CONTEXTUAL_SOURCE = readFileSync(new URL("./contextual-feedback.tsx", impo
 const GLOBAL_SOURCE = readFileSync(new URL("./global-feedback.tsx", import.meta.url), "utf8");
 const PLAN_VIEWER_SOURCE = readFileSync(new URL("../plan-viewer.tsx", import.meta.url), "utf8");
 const TODAY_SCREEN_SOURCE = readFileSync(new URL("../today-screen.tsx", import.meta.url), "utf8");
+const ENGLISH_MESSAGES = JSON.parse(readFileSync(new URL("../../messages/en.json", import.meta.url), "utf8")) as { AppText: Record<string, string> };
+const ENGLISH_COPY = Object.values(ENGLISH_MESSAGES.AppText);
 
 test("unsafe guidance is visible from selection through the saved state", () => {
   assert.equal(shouldShowUnsafeGuidance("unsafe", null), true);
@@ -25,8 +27,8 @@ test("unsafe guidance is visible from selection through the saved state", () => 
 });
 
 test("contextual feedback contains the exact beta questions and reason codes", () => {
-  assert.match(CONTEXTUAL_SOURCE, /Is this plan useful\?/);
-  assert.match(CONTEXTUAL_SOURCE, /Did this recommendation fit how you feel today\?/);
+  assert.ok(ENGLISH_COPY.includes("Is this plan useful?"));
+  assert.ok(ENGLISH_COPY.includes("Did this recommendation fit how you feel today?"));
   for (const code of [
     "too_hard",
     "too_easy",
@@ -44,15 +46,15 @@ test("contextual feedback contains the exact beta questions and reason codes", (
   ]) {
     assert.ok(CONTEXTUAL_SOURCE.includes(`\"${code}\"`), `missing ${code}`);
   }
-  assert.match(CONTEXTUAL_SOURCE, /Feedback sent/);
-  assert.match(CONTEXTUAL_SOURCE, /Change response/);
+  assert.ok(ENGLISH_COPY.includes("Feedback sent"));
+  assert.ok(ENGLISH_COPY.includes("Change response"));
 });
 
 test("feedback choices use explicit correctly oriented thumb icons", () => {
   assert.match(THUMB_PATHS.up, /^M7 10v10/);
   assert.match(THUMB_PATHS.down, /^M7 14V4/);
-  assert.match(CONTEXTUAL_SOURCE, /<ThumbIcon direction="up" \/> Yes/);
-  assert.match(CONTEXTUAL_SOURCE, /<ThumbIcon direction="down" \/> \{isPlan \? "Needs improvement" : "No"\}/);
+  assert.match(CONTEXTUAL_SOURCE, /<ThumbIcon direction="up" \/> \{appText\("text_85a39ab345d6"\)\}/);
+  assert.match(CONTEXTUAL_SOURCE, /<ThumbIcon direction="down" \/> \{isPlan \? appText\("text_4f4eb66adacf"\) : appText\("text_1ea442a134b2"\)\}/);
 });
 
 test("feedback controls render without waiting for the existing-response request", () => {
@@ -79,13 +81,13 @@ test("submission failures remain separate from feedback loading", () => {
 test("global attachment privacy copy is explicit and adjacent to the control", () => {
   assert.match(
     GLOBAL_SOURCE,
-    /Avoid uploading screenshots containing private messages, contact details, payment information, or unrelated health information\./,
+    /appText\("text_c8309eb3bc9d"\)/,
   );
   assert.match(
     GLOBAL_SOURCE,
-    /Sanitisation removes metadata\. It does not remove sensitive information visible inside the image\./,
+    /appText\("text_aa0201ca60d5"\)/,
   );
-  assert.ok(GLOBAL_SOURCE.indexOf("global-feedback-screenshot") < GLOBAL_SOURCE.indexOf("Avoid uploading"));
+  assert.ok(GLOBAL_SOURCE.indexOf("global-feedback-screenshot") < GLOBAL_SOURCE.indexOf('appText("text_c8309eb3bc9d")'));
 });
 
 test("changing a negative response to yes clears its reason and complaint", () => {
@@ -107,7 +109,7 @@ test("changing a negative response to yes clears its reason and complaint", () =
 test("global attachment control includes preview details and explicit removal", () => {
   assert.match(GLOBAL_SOURCE, /URL\.createObjectURL/);
   assert.match(GLOBAL_SOURCE, /URL\.revokeObjectURL/);
-  assert.match(GLOBAL_SOURCE, /Selected screenshot preview/);
-  assert.match(GLOBAL_SOURCE, /Remove image/);
+  assert.match(GLOBAL_SOURCE, /appText\("text_979e3eff63e0"\)/);
+  assert.match(GLOBAL_SOURCE, /appText\("text_da7acac19683"\)/);
   assert.match(GLOBAL_SOURCE, /fileInputRef\.current\.value = ""/);
 });

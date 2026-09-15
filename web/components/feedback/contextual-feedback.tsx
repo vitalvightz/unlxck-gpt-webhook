@@ -14,6 +14,8 @@ import type {
   FeedbackResponseValue,
 } from "@/lib/types";
 import { requestXpRefresh } from "@/lib/xp-events";
+import { useTranslations as useAppTranslations } from "next-intl";
+
 
 const PLAN_REASONS = [
   ["Too hard", "too_hard"],
@@ -80,6 +82,7 @@ export function ContextualFeedback({
   planId?: string;
   className?: string;
 }>) {
+    const appText = useAppTranslations("AppText");
   const [record, setRecord] = useState<FeedbackRecord | null>(null);
   const [choice, setChoice] = useState<FeedbackResponseValue | null>(null);
   const [reason, setReason] = useState<string | null>(null);
@@ -132,7 +135,7 @@ export function ContextualFeedback({
       setComment(saved.comment);
       setEditing(false);
     } catch (saveError) {
-      setSubmissionError(saveError instanceof Error ? saveError.message : "Feedback could not be sent. Try again.");
+      setSubmissionError(saveError instanceof Error ? saveError.message : appText("text_c9e0504c42fb"));
     } finally {
       submissionInFlightRef.current = false;
       setSubmitting(false);
@@ -153,11 +156,11 @@ export function ContextualFeedback({
   return (
     <section
       className={className ? `feedback-card ${className}` : "feedback-card"}
-      aria-label={isPlan ? "Plan feedback" : "Daily recommendation feedback"}
+      aria-label={isPlan ? appText("text_8f84b05cd4aa") : appText("text_cd728be7e17a")}
     >
       {record && !editing ? (
         <div className="feedback-sent-row" role="status">
-          <span>Feedback sent</span>
+          <span>{appText("text_5ac70032199b")}</span>
           <button
             type="button"
             className="feedback-link"
@@ -166,15 +169,14 @@ export function ContextualFeedback({
               setEditing(true);
             }}
           >
-            Change response
-          </button>
+            {appText("text_d5b60e7453a8")}</button>
         </div>
       ) : (
         <>
           <p className="feedback-question">
-            {isPlan ? "Is this plan useful?" : "Did this recommendation fit how you feel today?"}
+            {isPlan ? appText("text_27ec385cf8dc") : appText("text_73b6f67fb67a")}
           </p>
-          <div className="feedback-actions" role="group" aria-label="Choose a response">
+          <div className="feedback-actions" role="group" aria-label={appText("text_40850c327bac")}>
             <button
               type="button"
               className={choice === "yes" ? "feedback-choice is-selected" : "feedback-choice"}
@@ -182,8 +184,7 @@ export function ContextualFeedback({
               disabled={submitting}
               aria-pressed={choice === "yes"}
             >
-              <ThumbIcon direction="up" /> Yes
-            </button>
+              <ThumbIcon direction="up" /> {appText("text_85a39ab345d6")}</button>
             <button
               type="button"
               className={choice === "no" ? "feedback-choice is-selected" : "feedback-choice"}
@@ -191,7 +192,7 @@ export function ContextualFeedback({
               disabled={submitting}
               aria-pressed={choice === "no"}
             >
-              <ThumbIcon direction="down" /> {isPlan ? "Needs improvement" : "No"}
+              <ThumbIcon direction="down" /> {isPlan ? appText("text_4f4eb66adacf") : appText("text_1ea442a134b2")}
             </button>
             {!isPlan ? (
               <button
@@ -201,14 +202,13 @@ export function ContextualFeedback({
                 disabled={submitting}
                 aria-pressed={choice === "unsafe"}
               >
-                Something feels off? Tell us
-              </button>
+                {appText("text_8a03a7d2c33b")}</button>
             ) : null}
           </div>
 
           {choice === "no" ? (
             <div className="feedback-details">
-              <div className="feedback-chips" role="group" aria-label="Optional reason">
+              <div className="feedback-chips" role="group" aria-label={appText("text_956688a56605")}>
                 {reasons.map(([label, code]) => (
                   <button
                     key={code}
@@ -226,7 +226,7 @@ export function ContextualFeedback({
 
           {choice === "no" || choice === "unsafe" ? (
             <div className="feedback-comment">
-              <label htmlFor={`feedback-comment-${surface}`}>Optional comment</label>
+              <label htmlFor={`feedback-comment-${surface}`}>{appText("text_75a95c5e3872")}</label>
               <textarea
                 id={`feedback-comment-${surface}`}
                 value={comment}
@@ -235,9 +235,9 @@ export function ContextualFeedback({
                 onChange={(event) => setComment(event.target.value)}
               />
               <div className="feedback-submit-row">
-                <span className="muted">{comment.length}/500</span>
+                <span className="muted">{comment.length}{appText("text_c17579733f80")}</span>
                 <button type="button" className="cta" onClick={() => void save(choice)} disabled={submitting}>
-                  {submitting ? "Sending…" : choice === "unsafe" ? "Send safety report" : "Send feedback"}
+                  {submitting ? appText("text_b8ed5279e897") : choice === "unsafe" ? appText("text_fe512d8ccbfa") : appText("text_8235980b80ad")}
                 </button>
               </div>
             </div>

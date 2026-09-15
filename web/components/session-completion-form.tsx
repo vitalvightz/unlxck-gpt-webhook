@@ -14,6 +14,8 @@ import {
   getCompletionReasonLabel,
 } from "@/lib/today";
 import type { TodayCompletionStatus } from "@/lib/types";
+import { useTranslations as useAppTranslations } from "next-intl";
+
 
 export type CompletionIntent = Extract<
   TodayCompletionStatus,
@@ -52,6 +54,7 @@ export function SessionCompletionForm({
   onSubmit: (status: Exclude<CompletionIntent, null>, payload: CompletionFormPayload) => Promise<void>;
   showStatusPicker?: boolean;
 }) {
+    const appText = useAppTranslations("AppText");
   const { me } = useAppSession();
   const canCollectPain = hasHealthDataConsent(me);
   const fieldId = useId();
@@ -75,7 +78,7 @@ export function SessionCompletionForm({
     event.preventDefault();
     setError(null);
     if (!activeIntent) {
-      setError("Choose how the session went first.");
+      setError(appText("text_2f068793bd5a"));
       return;
     }
     if (needsReason && !modificationReason.trim()) {
@@ -83,7 +86,7 @@ export function SessionCompletionForm({
       return;
     }
     if (needsReviewFields && (sessionRpe === null || (canCollectPain && painAfter === null))) {
-      setError(canCollectPain ? "Add session RPE and pain-after before saving." : "Add session RPE before saving.");
+      setError(canCollectPain ? appText("text_44ddb44a04ad") : appText("text_bc5954363faf"));
       return;
     }
     await onSubmit(activeIntent, {
@@ -98,8 +101,8 @@ export function SessionCompletionForm({
     <form className="today-completion-form" onSubmit={handleSubmit}>
       {showStatusPicker ? (
         <div className="field">
-          <span>How did this session go?</span>
-          <div className="today-action-row" role="group" aria-label="Session outcome">
+          <span>{appText("text_01c8ee34ed69")}</span>
+          <div className="today-action-row" role="group" aria-label={appText("text_1ffc39a64909")}>
             {PICKER_INTENTS.map((option) => (
               <button
                 key={option}
@@ -118,16 +121,16 @@ export function SessionCompletionForm({
       {needsReviewFields ? (
         <div className="today-completion-fields">
           <div className="field">
-            <span>Session effort</span>
+            <span>{appText("text_f3a719dc5cf3")}</span>
             <EffortSlider
               id={`${fieldId}-session-rpe`}
-              ariaLabel="Session effort"
+              ariaLabel={appText("text_f3a719dc5cf3")}
               value={sessionRpe}
               onChange={setSessionRpe}
             />
           </div>
           {canCollectPain ? <div className="field">
-            <span>Pain after</span>
+            <span>{appText("text_ff3440ed93c4")}</span>
             <FaceScale value={painAfter} onChange={setPainAfter} />
           </div> : null}
         </div>
@@ -145,7 +148,7 @@ export function SessionCompletionForm({
         </label>
       ) : null}
       <label className="field" htmlFor={`${fieldId}-notes`}>
-        <span>Notes (optional)</span>
+        <span>{appText("text_6239b93e96e9")}</span>
         <textarea
           id={`${fieldId}-notes`}
           value={notes}
@@ -158,14 +161,13 @@ export function SessionCompletionForm({
       <div className="today-action-row">
         <button type="submit" className="cta" disabled={isSubmitting}>
           {isSubmitting
-            ? "Saving..."
+            ? appText("text_dc85af8f2b1d")
             : activeIntent
               ? `Save ${getCompletionLabel(activeIntent).toLowerCase()}`
-              : "Save"}
+              : appText("text_1509f561f241")}
         </button>
         <button type="button" className="ghost-button" onClick={onCancel} disabled={isSubmitting}>
-          Cancel
-        </button>
+          {appText("text_19766ed6ccb2")}</button>
       </div>
     </form>
   );

@@ -9,6 +9,7 @@ import { submitTodayCheckin } from "@/lib/api";
 import { TODAY_RED_FLAG_SAFETY } from "@/lib/safety-copy";
 import { buildTodayCheckinPayload, getRecommendationCopy } from "@/lib/today";
 import type {
+
   TodayActiveInjury,
   TodayActivePlan,
   TodayCheckinBody,
@@ -16,6 +17,7 @@ import type {
   TodayCheckinSleep,
   TodayPreviousSession,
 } from "@/lib/types";
+import { useTranslations as useAppTranslations } from "next-intl";
 
 const SLEEP_OPTIONS: Array<{ value: TodayCheckinSleep; label: string }> = [
   { value: "poor", label: "Poor" },
@@ -83,6 +85,7 @@ export function TodayReadinessForm({
   warnings?: string[];
   onRefresh: () => Promise<void>;
 }) {
+    const appText = useAppTranslations("AppText");
   const { showToast } = useToast();
   const [sleep, setSleep] = useState<TodayCheckinSleep>("good");
   const [body, setBody] = useState<TodayCheckinBody>("normal");
@@ -128,7 +131,7 @@ export function TodayReadinessForm({
       }
       await onRefresh();
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Check-in failed.", { tone: "error" });
+      showToast(error instanceof Error ? error.message : appText("text_ccb8a0b3e511"), { tone: "error" });
     } finally {
       setIsSubmitting(false);
     }
@@ -138,22 +141,22 @@ export function TodayReadinessForm({
     <section id="today-checkin" className="today-card today-checkin-card" aria-labelledby="today-checkin-heading">
       <div className="today-card-head">
         <div>
-          <p className="kicker">Fast check-in</p>
-          <h2 id="today-checkin-heading">Set today&apos;s recommendation</h2>
+          <p className="kicker">{appText("text_db80c7a89ed7")}</p>
+          <h2 id="today-checkin-heading">{appText("text_e567f9fb6e03")}</h2>
         </div>
       </div>
       <form className="today-checkin-form" onSubmit={handleSubmit}>
-        <SegmentGroup label="Sleep" value={sleep} options={SLEEP_OPTIONS} onChange={setSleep} />
-        <SegmentGroup label="Body" value={body} options={BODY_OPTIONS} onChange={setBody} />
-        <SegmentGroup label="Pain" value={pain} options={PAIN_OPTIONS} onChange={setPain} />
+        <SegmentGroup label={appText("text_d466bcf52eb6")} value={sleep} options={SLEEP_OPTIONS} onChange={setSleep} />
+        <SegmentGroup label={appText("text_6ccaa6415b5e")} value={body} options={BODY_OPTIONS} onChange={setBody} />
+        <SegmentGroup label={appText("text_b94dac135b0b")} value={pain} options={PAIN_OPTIONS} onChange={setPain} />
         <SegmentGroup
-          label="Active injury"
+          label={appText("text_97b3131b2b70")}
           value={activeInjury}
           options={ACTIVE_INJURY_OPTIONS}
           onChange={setActiveInjury}
         />
         <SegmentGroup
-          label="Previous session"
+          label={appText("text_573eb2f16a9a")}
           value={previousSession}
           options={PREVIOUS_SESSION_OPTIONS}
           onChange={setPreviousSession}
@@ -163,7 +166,7 @@ export function TodayReadinessForm({
         ) : null}
 
         <details className="today-red-flags">
-          <summary>Any red flags?</summary>
+          <summary>{appText("text_11aee5074b8f")}</summary>
           <SafetyNote tone="warning">{TODAY_RED_FLAG_SAFETY}</SafetyNote>
           <div className="today-flag-grid">
             {SAFETY_FLAGS.map((flag) => (
@@ -185,7 +188,7 @@ export function TodayReadinessForm({
         </details>
 
         <button type="submit" className="cta today-primary-action" disabled={isSubmitting}>
-          {isSubmitting ? "Submitting..." : "Submit check-in"}
+          {isSubmitting ? appText("text_64115d5b9c79") : appText("text_a44a11d1db8e")}
         </button>
       </form>
     </section>

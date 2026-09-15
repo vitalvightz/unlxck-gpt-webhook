@@ -1,4 +1,7 @@
 import { EQUIPMENT_ACCESS_GROUPS } from "@/lib/intake-options";
+import { translateUiText } from "@/i18n/ui-text";
+import { useTranslations as useAppTranslations } from "next-intl";
+
 
 type EquipmentSelectorProps = {
   label?: string;
@@ -11,17 +14,18 @@ export function EquipmentSelector({
   selectedValues,
   onToggle,
 }: EquipmentSelectorProps) {
+    const appText = useAppTranslations("AppText");
   return (
     <div className="equipment-selector" role="group" aria-label={label}>
       <p className="equipment-selection-summary" aria-live="polite">
-        <span>Equipment available</span>
-        <span aria-hidden="true">·</span>
-        <strong>{selectedValues.length} selected</strong>
+        <span>{appText("text_8b01437676e8")}</span>
+        <span aria-hidden="true">{appText("text_a137f17a19a0")}</span>
+        <strong>{selectedValues.length} {appText("text_d7cbbb688b2e")}</strong>
       </p>
       <div className="equipment-groups">
         {EQUIPMENT_ACCESS_GROUPS.map((group) => (
           <fieldset className="equipment-group" key={group.label}>
-            <legend>{group.label}</legend>
+            <legend>{translateUiText(appText, group.label)}</legend>
             <div className="equipment-grid">
               {group.options.map((option) => {
                 const checked = selectedValues.includes(option.value);
@@ -35,7 +39,7 @@ export function EquipmentSelector({
                       checked={checked}
                       onChange={() => onToggle(option.value)}
                     />
-                    <span>{option.label}</span>
+                    <span>{translateUiText(appText, option.label)}</span>
                   </label>
                 );
               })}

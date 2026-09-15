@@ -4,9 +4,12 @@ import { useMemo, useState } from "react";
 import { GUIDED_INJURY_AREA_MAX, GUIDED_INJURY_NOTES_MAX } from "@/lib/input-limits";
 import { hasGuidedInjuryReviewRisk, type GuidedInjuryState } from "@/lib/guided-injury";
 import {
+
   GUIDED_INJURY_SEVERITY_OPTIONS,
   type IntakeOption,
 } from "@/lib/intake-options";
+import { useTranslations as useAppTranslations } from "next-intl";
+import { translateUiText } from "@/i18n/ui-text";
 
 // ── Injury-type option groups ────────────────────────────────────────
 
@@ -455,13 +458,14 @@ function ChipRow({
   onToggle: (value: string) => void;
   variant?: "default" | "danger";
 }) {
+  const appText = useAppTranslations("AppText");
   return (
     <fieldset className="gi-chip-fieldset" aria-label={label}>
       <div className="gi-chip-row" role="group">
         {options.map((opt) => (
           <ChipButton
             key={opt.value}
-            label={opt.label}
+            label={translateUiText(appText, opt.label)}
             selected={selected.includes(opt.value)}
             onClick={() => onToggle(opt.value)}
             variant={variant}
@@ -485,6 +489,7 @@ function SingleChipRow({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const appText = useAppTranslations("AppText");
   return (
     <fieldset className="gi-chip-fieldset" aria-label={label}>
       <div className="gi-chip-row" role="radiogroup" aria-label={label}>
@@ -497,7 +502,7 @@ function SingleChipRow({
             className={`gi-chip ${value === opt.value ? "gi-chip-selected" : ""}`}
             onClick={() => onChange(value === opt.value ? "" : opt.value)}
           >
-            {opt.label}
+            {translateUiText(appText, opt.label)}
           </button>
         ))}
       </div>
@@ -516,15 +521,16 @@ function FollowUpQuestions({
   family: InjuryFamily | "";
   onUpdate: <K extends keyof GuidedInjuryState>(key: K, value: GuidedInjuryState[K]) => void;
 }) {
+  const appText = useAppTranslations("AppText");
   const { injury_type, surface_type } = injury;
   if (injury_type === "unspecified" && family === "structural") {
     return <div className="gi-followup">
-      <div className="gi-field"><label className="gi-label">When did it happen?</label><SingleChipRow label="Timeframe" options={TIMEFRAME_OPTIONS} value={injury.timeframe} onChange={(v) => onUpdate("timeframe", v)} /></div>
-      <div className="gi-field"><label className="gi-label">Have you been medically cleared?</label><SingleChipRow label="Cleared" options={CLEARED_OPTIONS} value={injury.cleared} onChange={(v) => onUpdate("cleared", v)} /></div>
-      <div className="gi-field"><label className="gi-label">Can you bear weight?</label><SingleChipRow label="Bear weight" options={YES_NO_UNSURE} value={getSingleNotesFlag(injury.notes, "structural", "bear_weight")} onChange={(v) => onUpdate("notes", setSingleNotesFlag(injury.notes, "structural", "bear_weight", v))} /></div>
-      <div className="gi-field"><label className="gi-label">Is there rapid swelling?</label><SingleChipRow label="Swelling" options={YES_NO_UNSURE} value={getSingleNotesFlag(injury.notes, "structural", "swelling")} onChange={(v) => onUpdate("notes", setSingleNotesFlag(injury.notes, "structural", "swelling", v))} /></div>
-      <div className="gi-field"><label className="gi-label">Is there deformity?</label><SingleChipRow label="Deformity" options={YES_NO_UNSURE} value={getSingleNotesFlag(injury.notes, "structural", "deformity")} onChange={(v) => onUpdate("notes", setSingleNotesFlag(injury.notes, "structural", "deformity", v))} /></div>
-      <div className="gi-field"><label className="gi-label">Does it feel unstable or giving way?</label><SingleChipRow label="Unstable" options={YES_NO_UNSURE} value={injury.impact_related} onChange={(v) => onUpdate("impact_related", v)} /></div>
+      <div className="gi-field"><label className="gi-label">{appText("text_40befb12738d")}</label><SingleChipRow label={appText("text_f580cb76d847")} options={TIMEFRAME_OPTIONS} value={injury.timeframe} onChange={(v) => onUpdate("timeframe", v)} /></div>
+      <div className="gi-field"><label className="gi-label">{appText("text_33e056771dde")}</label><SingleChipRow label={appText("text_15f3a2898add")} options={CLEARED_OPTIONS} value={injury.cleared} onChange={(v) => onUpdate("cleared", v)} /></div>
+      <div className="gi-field"><label className="gi-label">{appText("text_cee6b6d550c6")}</label><SingleChipRow label={appText("text_a452391a09bf")} options={YES_NO_UNSURE} value={getSingleNotesFlag(injury.notes, "structural", "bear_weight")} onChange={(v) => onUpdate("notes", setSingleNotesFlag(injury.notes, "structural", "bear_weight", v))} /></div>
+      <div className="gi-field"><label className="gi-label">{appText("text_fbaf8a65b16d")}</label><SingleChipRow label={appText("text_b8ae499e9ff1")} options={YES_NO_UNSURE} value={getSingleNotesFlag(injury.notes, "structural", "swelling")} onChange={(v) => onUpdate("notes", setSingleNotesFlag(injury.notes, "structural", "swelling", v))} /></div>
+      <div className="gi-field"><label className="gi-label">{appText("text_d1eddbb0cc2e")}</label><SingleChipRow label={appText("text_d1774978135c")} options={YES_NO_UNSURE} value={getSingleNotesFlag(injury.notes, "structural", "deformity")} onChange={(v) => onUpdate("notes", setSingleNotesFlag(injury.notes, "structural", "deformity", v))} /></div>
+      <div className="gi-field"><label className="gi-label">{appText("text_b1ec21cc71eb")}</label><SingleChipRow label={appText("text_6ee605008933")} options={YES_NO_UNSURE} value={injury.impact_related} onChange={(v) => onUpdate("impact_related", v)} /></div>
     </div>;
   }
   if (injury_type === "unspecified" && family === "head_nerve_breathing") {
@@ -532,10 +538,10 @@ function FollowUpQuestions({
     const nerveFlags = parseNotesFlags(injury.notes, "nerve_symptoms");
     const chestFlags = parseNotesFlags(injury.notes, "chest_symptoms");
     return <div className="gi-followup">
-      <div className="gi-field"><label className="gi-label">Any head-impact red flags?</label><div className="gi-chip-row" role="group">{[...HEAD_RED_FLAGS, { label: "None", value: "none" }].map((flag) => <ChipButton key={flag.value} label={flag.label} selected={headFlags.includes(flag.value)} onClick={() => onUpdate("notes", toggleExclusiveNoneFlag(injury.notes, "red_flags", headFlags, flag.value))} variant="danger" />)}</div></div>
-      <div className="gi-field"><label className="gi-label">Any numbness, tingling, or weakness?</label><div className="gi-chip-row" role="group">{[{ label: "Numbness", value: "type_numbness" }, { label: "Tingling", value: "type_tingling" }, { label: "Weakness", value: "type_weakness" }, { label: "Mixed", value: "type_mixed" }, { label: "None", value: "none" }].map((flag) => <ChipButton key={flag.value} label={flag.label} selected={nerveFlags.includes(flag.value)} onClick={() => onUpdate("notes", toggleExclusiveNoneFlag(injury.notes, "nerve_symptoms", nerveFlags, flag.value))} />)}</div></div>
-      <div className="gi-field"><label className="gi-label">Any chest or breathing symptoms?</label><div className="gi-chip-row" role="group">{[{ label: "Pain when breathing", value: "breathing_pain" }, { label: "Shortness of breath", value: "shortness_of_breath" }, { label: "Chest pain", value: "chest_pain" }, { label: "Coughing blood", value: "coughing_blood" }, { label: "None", value: "none" }].map((flag) => <ChipButton key={flag.value} label={flag.label} selected={chestFlags.includes(flag.value)} onClick={() => onUpdate("notes", toggleExclusiveNoneFlag(injury.notes, "chest_symptoms", chestFlags, flag.value))} variant="danger" />)}</div></div>
-      <div className="gi-field"><label className="gi-label">Did it follow impact/contact?</label><SingleChipRow label="Impact related" options={YES_NO_UNSURE} value={injury.impact_related} onChange={(v) => onUpdate("impact_related", v)} /></div>
+      <div className="gi-field"><label className="gi-label">{appText("text_6147ab9e625a")}</label><div className="gi-chip-row" role="group">{[...HEAD_RED_FLAGS, { label: "None", value: "none" }].map((flag) => <ChipButton key={flag.value} label={flag.label} selected={headFlags.includes(flag.value)} onClick={() => onUpdate("notes", toggleExclusiveNoneFlag(injury.notes, "red_flags", headFlags, flag.value))} variant="danger" />)}</div></div>
+      <div className="gi-field"><label className="gi-label">{appText("text_84fc4cac0aba")}</label><div className="gi-chip-row" role="group">{[{ label: "Numbness", value: "type_numbness" }, { label: "Tingling", value: "type_tingling" }, { label: "Weakness", value: "type_weakness" }, { label: "Mixed", value: "type_mixed" }, { label: "None", value: "none" }].map((flag) => <ChipButton key={flag.value} label={flag.label} selected={nerveFlags.includes(flag.value)} onClick={() => onUpdate("notes", toggleExclusiveNoneFlag(injury.notes, "nerve_symptoms", nerveFlags, flag.value))} />)}</div></div>
+      <div className="gi-field"><label className="gi-label">{appText("text_d912607b7b33")}</label><div className="gi-chip-row" role="group">{[{ label: "Pain when breathing", value: "breathing_pain" }, { label: "Shortness of breath", value: "shortness_of_breath" }, { label: "Chest pain", value: "chest_pain" }, { label: "Coughing blood", value: "coughing_blood" }, { label: "None", value: "none" }].map((flag) => <ChipButton key={flag.value} label={flag.label} selected={chestFlags.includes(flag.value)} onClick={() => onUpdate("notes", toggleExclusiveNoneFlag(injury.notes, "chest_symptoms", chestFlags, flag.value))} variant="danger" />)}</div></div>
+      <div className="gi-field"><label className="gi-label">{appText("text_35e983f19165")}</label><SingleChipRow label={appText("text_94e04bb2f564")} options={YES_NO_UNSURE} value={injury.impact_related} onChange={(v) => onUpdate("impact_related", v)} /></div>
     </div>;
   }
 
@@ -545,12 +551,12 @@ function FollowUpQuestions({
     return (
       <div className="gi-followup">
         <div className="gi-field">
-          <label className="gi-label">When did it happen?</label>
-          <SingleChipRow label="Timeframe" options={TIMEFRAME_OPTIONS} value={injury.timeframe} onChange={(v) => onUpdate("timeframe", v)} />
+          <label className="gi-label">{appText("text_40befb12738d")}</label>
+          <SingleChipRow label={appText("text_f580cb76d847")} options={TIMEFRAME_OPTIONS} value={injury.timeframe} onChange={(v) => onUpdate("timeframe", v)} />
         </div>
         <div className="gi-field">
-          <label className="gi-label">Have you been medically cleared?</label>
-          <SingleChipRow label="Cleared" options={CLEARED_OPTIONS} value={injury.cleared} onChange={(v) => onUpdate("cleared", v)} />
+          <label className="gi-label">{appText("text_33e056771dde")}</label>
+          <SingleChipRow label={appText("text_15f3a2898add")} options={CLEARED_OPTIONS} value={injury.cleared} onChange={(v) => onUpdate("cleared", v)} />
         </div>
         <AvoidChips injury={injury} onUpdate={onUpdate} />
       </div>
@@ -561,16 +567,16 @@ function FollowUpQuestions({
     return (
       <div className="gi-followup">
         <div className="gi-field">
-          <label className="gi-label">Did it go back into place?</label>
-          <SingleChipRow label="Relocated" options={YES_NO_UNSURE} value={getSingleNotesFlag(injury.notes, "dislocation", "relocated")} onChange={(v) => onUpdate("notes", setSingleNotesFlag(injury.notes, "dislocation", "relocated", v))} />
+          <label className="gi-label">{appText("text_b0050b3b5204")}</label>
+          <SingleChipRow label={appText("text_2e71c840b043")} options={YES_NO_UNSURE} value={getSingleNotesFlag(injury.notes, "dislocation", "relocated")} onChange={(v) => onUpdate("notes", setSingleNotesFlag(injury.notes, "dislocation", "relocated", v))} />
         </div>
         <div className="gi-field">
-          <label className="gi-label">Has this happened before?</label>
-          <SingleChipRow label="Recurrent" options={YES_NO_UNSURE} value={getSingleNotesFlag(injury.notes, "dislocation", "recurrent")} onChange={(v) => onUpdate("notes", setSingleNotesFlag(injury.notes, "dislocation", "recurrent", v))} />
+          <label className="gi-label">{appText("text_4be31561f00c")}</label>
+          <SingleChipRow label={appText("text_b95797296be7")} options={YES_NO_UNSURE} value={getSingleNotesFlag(injury.notes, "dislocation", "recurrent")} onChange={(v) => onUpdate("notes", setSingleNotesFlag(injury.notes, "dislocation", "recurrent", v))} />
         </div>
         <div className="gi-field">
-          <label className="gi-label">Have you been medically cleared?</label>
-          <SingleChipRow label="Cleared" options={CLEARED_OPTIONS} value={injury.cleared} onChange={(v) => onUpdate("cleared", v)} />
+          <label className="gi-label">{appText("text_33e056771dde")}</label>
+          <SingleChipRow label={appText("text_15f3a2898add")} options={CLEARED_OPTIONS} value={injury.cleared} onChange={(v) => onUpdate("cleared", v)} />
         </div>
         <AvoidChips injury={injury} onUpdate={onUpdate} />
       </div>
@@ -581,16 +587,16 @@ function FollowUpQuestions({
     return (
       <div className="gi-followup">
         <div className="gi-field">
-          <label className="gi-label">When did it happen?</label>
-          <SingleChipRow label="Timeframe" options={TIMEFRAME_OPTIONS} value={injury.timeframe} onChange={(v) => onUpdate("timeframe", v)} />
+          <label className="gi-label">{appText("text_40befb12738d")}</label>
+          <SingleChipRow label={appText("text_f580cb76d847")} options={TIMEFRAME_OPTIONS} value={injury.timeframe} onChange={(v) => onUpdate("timeframe", v)} />
         </div>
         <div className="gi-field">
-          <label className="gi-label">Have you been medically cleared?</label>
-          <SingleChipRow label="Cleared" options={CLEARED_OPTIONS} value={injury.cleared} onChange={(v) => onUpdate("cleared", v)} />
+          <label className="gi-label">{appText("text_33e056771dde")}</label>
+          <SingleChipRow label={appText("text_15f3a2898add")} options={CLEARED_OPTIONS} value={injury.cleared} onChange={(v) => onUpdate("cleared", v)} />
         </div>
         <div className="gi-field">
-          <label className="gi-label">Does it feel unstable or giving way?</label>
-          <SingleChipRow label="Unstable" options={YES_NO_UNSURE} value={injury.impact_related} onChange={(v) => onUpdate("impact_related", v)} />
+          <label className="gi-label">{appText("text_b1ec21cc71eb")}</label>
+          <SingleChipRow label={appText("text_6ee605008933")} options={YES_NO_UNSURE} value={injury.impact_related} onChange={(v) => onUpdate("impact_related", v)} />
         </div>
         <AvoidChips injury={injury} onUpdate={onUpdate} />
       </div>
@@ -601,12 +607,12 @@ function FollowUpQuestions({
     return (
       <div className="gi-followup">
         <div className="gi-field">
-          <label className="gi-label">When was surgery?</label>
-          <SingleChipRow label="Timeframe" options={TIMEFRAME_OPTIONS} value={injury.timeframe} onChange={(v) => onUpdate("timeframe", v)} />
+          <label className="gi-label">{appText("text_23aa7a09ba3f")}</label>
+          <SingleChipRow label={appText("text_f580cb76d847")} options={TIMEFRAME_OPTIONS} value={injury.timeframe} onChange={(v) => onUpdate("timeframe", v)} />
         </div>
         <div className="gi-field">
-          <label className="gi-label">Have you been medically cleared?</label>
-          <SingleChipRow label="Cleared" options={CLEARED_OPTIONS} value={injury.cleared} onChange={(v) => onUpdate("cleared", v)} />
+          <label className="gi-label">{appText("text_33e056771dde")}</label>
+          <SingleChipRow label={appText("text_15f3a2898add")} options={CLEARED_OPTIONS} value={injury.cleared} onChange={(v) => onUpdate("cleared", v)} />
         </div>
         <AvoidChips injury={injury} onUpdate={onUpdate} />
       </div>
@@ -619,8 +625,8 @@ function FollowUpQuestions({
     return (
       <div className="gi-followup">
         <div className="gi-field">
-          <label className="gi-label gi-label-danger">Red-flag checklist</label>
-          <div className="gi-chip-row" role="group" aria-label="Red-flag symptoms">
+          <label className="gi-label gi-label-danger">{appText("text_daa937d3a9d1")}</label>
+          <div className="gi-chip-row" role="group" aria-label={appText("text_46dc6215ab51")}>
             {HEAD_RED_FLAGS.map((flag) => (
               <ChipButton
                 key={flag.value}
@@ -631,15 +637,14 @@ function FollowUpQuestions({
               />
             ))}
             <ChipButton
-              label="None of these"
+              label={appText("text_161f67caacbe")}
               selected={hasNone}
               onClick={() => onUpdate("notes", setNotesFlags(injury.notes, "red_flags", hasNone ? [] : ["none"]))}
             />
           </div>
         </div>
         <p className="gi-warning gi-warning-red" role="alert">
-          Head-impact symptoms may pause planning until review.
-        </p>
+          {appText("text_62b8916efa4a")}</p>
       </div>
     );
   }
@@ -648,9 +653,9 @@ function FollowUpQuestions({
     return (
       <div className="gi-followup">
         <div className="gi-field">
-          <label className="gi-label">What are you feeling?</label>
+          <label className="gi-label">{appText("text_114d93c53de8")}</label>
           <SingleChipRow
-            label="Symptom type"
+            label={appText("text_3692f66d8d1e")}
             options={[
               { label: "Numbness", value: "numbness" },
               { label: "Tingling", value: "tingling" },
@@ -662,16 +667,16 @@ function FollowUpQuestions({
           />
         </div>
         <div className="gi-field">
-          <label className="gi-label">Is it getting worse?</label>
-          <SingleChipRow label="Trend" options={[
+          <label className="gi-label">{appText("text_ca9414488d88")}</label>
+          <SingleChipRow label={appText("text_9e217716c4e0")} options={[
             { label: "Yes", value: "worsening" },
             { label: "No", value: "stable" },
             { label: "Not sure", value: "not_sure" },
           ]} value={injury.trend} onChange={(v) => onUpdate("trend", v)} />
         </div>
         <div className="gi-field">
-          <label className="gi-label">Did it happen after impact/contact?</label>
-          <SingleChipRow label="Impact related" options={YES_NO_UNSURE} value={injury.impact_related} onChange={(v) => onUpdate("impact_related", v)} />
+          <label className="gi-label">{appText("text_19cd6a9ae24f")}</label>
+          <SingleChipRow label={appText("text_94e04bb2f564")} options={YES_NO_UNSURE} value={injury.impact_related} onChange={(v) => onUpdate("impact_related", v)} />
         </div>
       </div>
     );
@@ -683,8 +688,8 @@ function FollowUpQuestions({
     return (
       <div className="gi-followup">
         <div className="gi-field">
-          <label className="gi-label">Which symptoms are present?</label>
-          <div className="gi-chip-row" role="group" aria-label="Chest or breathing symptoms">
+          <label className="gi-label">{appText("text_b0674e39d44a")}</label>
+          <div className="gi-chip-row" role="group" aria-label={appText("text_236e710f5fc0")}>
             {[
               { label: "Pain when breathing", value: "breathing_pain" },
               { label: "Shortness of breath", value: "shortness_of_breath" },
@@ -700,19 +705,18 @@ function FollowUpQuestions({
               />
             ))}
             <ChipButton
-              label="None of these"
+              label={appText("text_161f67caacbe")}
               selected={hasNone}
               onClick={() => onUpdate("notes", setNotesFlags(injury.notes, "chest_symptoms", hasNone ? [] : ["none"]))}
             />
           </div>
         </div>
         <div className="gi-field">
-          <label className="gi-label">Did it follow impact/contact?</label>
-          <SingleChipRow label="Impact" options={YES_NO_UNSURE} value={injury.impact_related} onChange={(v) => onUpdate("impact_related", v)} />
+          <label className="gi-label">{appText("text_35e983f19165")}</label>
+          <SingleChipRow label={appText("text_d1f23f0d1361")} options={YES_NO_UNSURE} value={injury.impact_related} onChange={(v) => onUpdate("impact_related", v)} />
         </div>
         <p className="gi-warning gi-warning-red" role="alert">
-          Chest or breathing symptoms may pause normal planning until review.
-        </p>
+          {appText("text_cc5465ada791")}</p>
       </div>
     );
   }
@@ -733,25 +737,26 @@ function SurfaceFollowUp({
   injury: GuidedInjuryState;
   onUpdate: <K extends keyof GuidedInjuryState>(key: K, value: GuidedInjuryState[K]) => void;
 }) {
+    const appText = useAppTranslations("AppText");
   const st = injury.surface_type;
   if (!st) {
     return (
       <div className="gi-followup">
         <div className="gi-field">
-          <label className="gi-label">Is the wound open?</label>
-          <SingleChipRow label="Open wound" options={OPEN_WOUND_OPTIONS} value={injury.open_wound} onChange={(v) => onUpdate("open_wound", v)} />
+          <label className="gi-label">{appText("text_f0238b624e38")}</label>
+          <SingleChipRow label={appText("text_b7b4f734cb37")} options={OPEN_WOUND_OPTIONS} value={injury.open_wound} onChange={(v) => onUpdate("open_wound", v)} />
         </div>
         <div className="gi-field">
-          <label className="gi-label">Is it still bleeding?</label>
-          <SingleChipRow label="Bleeding status" options={BLEEDING_STATUS_OPTIONS} value={injury.bleeding_status} onChange={(v) => onUpdate("bleeding_status", v)} />
+          <label className="gi-label">{appText("text_5fcd39fb0f87")}</label>
+          <SingleChipRow label={appText("text_a51637991715")} options={BLEEDING_STATUS_OPTIONS} value={injury.bleeding_status} onChange={(v) => onUpdate("bleeding_status", v)} />
         </div>
         <div className="gi-field">
-          <label className="gi-label">Signs of infection?</label>
+          <label className="gi-label">{appText("text_309748a0ea83")}</label>
           <InfectionSignsChips injury={injury} onUpdate={onUpdate} />
         </div>
         <div className="gi-field">
-          <label className="gi-label">Is it near the eye, mouth, or face?</label>
-          <SingleChipRow label="Sensitive area" options={SENSITIVE_AREA_OPTIONS} value={injury.sensitive_area} onChange={(v) => onUpdate("sensitive_area", v)} />
+          <label className="gi-label">{appText("text_70828589faab")}</label>
+          <SingleChipRow label={appText("text_b7037f455266")} options={SENSITIVE_AREA_OPTIONS} value={injury.sensitive_area} onChange={(v) => onUpdate("sensitive_area", v)} />
         </div>
       </div>
     );
@@ -761,19 +766,19 @@ function SurfaceFollowUp({
     return (
       <div className="gi-followup">
         <div className="gi-field">
-          <label className="gi-label">Is it still bleeding?</label>
-          <SingleChipRow label="Bleeding status" options={BLEEDING_STATUS_OPTIONS} value={injury.bleeding_status} onChange={(v) => onUpdate("bleeding_status", v)} />
+          <label className="gi-label">{appText("text_5fcd39fb0f87")}</label>
+          <SingleChipRow label={appText("text_a51637991715")} options={BLEEDING_STATUS_OPTIONS} value={injury.bleeding_status} onChange={(v) => onUpdate("bleeding_status", v)} />
         </div>
         <div className="gi-field">
-          <label className="gi-label">Is the wound open?</label>
-          <SingleChipRow label="Open wound" options={OPEN_WOUND_OPTIONS} value={injury.open_wound} onChange={(v) => onUpdate("open_wound", v)} />
+          <label className="gi-label">{appText("text_f0238b624e38")}</label>
+          <SingleChipRow label={appText("text_b7b4f734cb37")} options={OPEN_WOUND_OPTIONS} value={injury.open_wound} onChange={(v) => onUpdate("open_wound", v)} />
         </div>
         <div className="gi-field">
-          <label className="gi-label">Is it near the eye, mouth, or face?</label>
-          <SingleChipRow label="Sensitive area" options={SENSITIVE_AREA_OPTIONS} value={injury.sensitive_area} onChange={(v) => onUpdate("sensitive_area", v)} />
+          <label className="gi-label">{appText("text_70828589faab")}</label>
+          <SingleChipRow label={appText("text_b7037f455266")} options={SENSITIVE_AREA_OPTIONS} value={injury.sensitive_area} onChange={(v) => onUpdate("sensitive_area", v)} />
         </div>
         <div className="gi-field">
-          <label className="gi-label">Signs of infection?</label>
+          <label className="gi-label">{appText("text_309748a0ea83")}</label>
           <InfectionSignsChips injury={injury} onUpdate={onUpdate} />
         </div>
         <AvoidChips injury={injury} onUpdate={onUpdate} />
@@ -785,11 +790,11 @@ function SurfaceFollowUp({
     return (
       <div className="gi-followup">
         <div className="gi-field">
-          <label className="gi-label">Is the skin broken?</label>
-          <SingleChipRow label="Open wound" options={OPEN_WOUND_OPTIONS} value={injury.open_wound} onChange={(v) => onUpdate("open_wound", v)} />
+          <label className="gi-label">{appText("text_182c25997809")}</label>
+          <SingleChipRow label={appText("text_b7b4f734cb37")} options={OPEN_WOUND_OPTIONS} value={injury.open_wound} onChange={(v) => onUpdate("open_wound", v)} />
         </div>
         <div className="gi-field">
-          <label className="gi-label">Signs of infection?</label>
+          <label className="gi-label">{appText("text_309748a0ea83")}</label>
           <InfectionSignsChips injury={injury} onUpdate={onUpdate} />
         </div>
         <AvoidChips injury={injury} onUpdate={onUpdate} />
@@ -801,8 +806,8 @@ function SurfaceFollowUp({
     return (
       <div className="gi-followup">
         <div className="gi-field">
-          <label className="gi-label">Is it open or leaking?</label>
-          <SingleChipRow label="Open wound" options={OPEN_WOUND_OPTIONS} value={injury.open_wound} onChange={(v) => onUpdate("open_wound", v)} />
+          <label className="gi-label">{appText("text_7b80083ecc26")}</label>
+          <SingleChipRow label={appText("text_b7b4f734cb37")} options={OPEN_WOUND_OPTIONS} value={injury.open_wound} onChange={(v) => onUpdate("open_wound", v)} />
         </div>
         <AvoidChips injury={injury} onUpdate={onUpdate} />
       </div>
@@ -813,12 +818,12 @@ function SurfaceFollowUp({
     return (
       <div className="gi-followup">
         <div className="gi-field">
-          <label className="gi-label">Was it from impact?</label>
-          <SingleChipRow label="Impact related" options={YES_NO_UNSURE} value={injury.impact_related} onChange={(v) => onUpdate("impact_related", v)} />
+          <label className="gi-label">{appText("text_3d12f36d5d67")}</label>
+          <SingleChipRow label={appText("text_94e04bb2f564")} options={YES_NO_UNSURE} value={injury.impact_related} onChange={(v) => onUpdate("impact_related", v)} />
         </div>
         <div className="gi-field">
-          <label className="gi-label">Is swelling getting worse?</label>
-          <SingleChipRow label="Trend" options={[
+          <label className="gi-label">{appText("text_15f1a6c1dc36")}</label>
+          <SingleChipRow label={appText("text_9e217716c4e0")} options={[
             { label: "Yes (worsening)", value: "worsening" },
             { label: "No (stable)", value: "stable" },
           ]} value={injury.trend} onChange={(v) => onUpdate("trend", v)} />
@@ -832,11 +837,11 @@ function SurfaceFollowUp({
     return (
       <div className="gi-followup">
         <div className="gi-field">
-          <label className="gi-label">Is the skin open / leaking?</label>
-          <SingleChipRow label="Open wound" options={OPEN_WOUND_OPTIONS} value={injury.open_wound} onChange={(v) => onUpdate("open_wound", v)} />
+          <label className="gi-label">{appText("text_f8cfc4a6710f")}</label>
+          <SingleChipRow label={appText("text_b7b4f734cb37")} options={OPEN_WOUND_OPTIONS} value={injury.open_wound} onChange={(v) => onUpdate("open_wound", v)} />
         </div>
         <div className="gi-field">
-          <label className="gi-label">Signs of infection?</label>
+          <label className="gi-label">{appText("text_309748a0ea83")}</label>
           <InfectionSignsChips injury={injury} onUpdate={onUpdate} />
         </div>
         <AvoidChips injury={injury} onUpdate={onUpdate} />
@@ -856,6 +861,7 @@ function InfectionSignsChips({
   injury: GuidedInjuryState;
   onUpdate: <K extends keyof GuidedInjuryState>(key: K, value: GuidedInjuryState[K]) => void;
 }) {
+    const appText = useAppTranslations("AppText");
   function toggle(value: string) {
     const current = injury.infection_signs;
     if (value === "none") {
@@ -871,7 +877,7 @@ function InfectionSignsChips({
 
   return (
     <ChipRow
-      label="Infection signs"
+      label={appText("text_1c51a2d0ae31")}
       options={INFECTION_SIGNS_OPTIONS}
       selected={injury.infection_signs}
       onToggle={toggle}
@@ -889,13 +895,14 @@ function AvoidChips({
   injury: GuidedInjuryState;
   onUpdate: <K extends keyof GuidedInjuryState>(key: K, value: GuidedInjuryState[K]) => void;
 }) {
+    const appText = useAppTranslations("AppText");
   const chips = getAvoidChipsForInjury(injury);
   if (!chips.length) return null;
 
   return (
     <div className="gi-field">
-      <label className="gi-label">What should be avoided?</label>
-      <div className="gi-chip-row" role="group" aria-label="Movements to avoid">
+      <label className="gi-label">{appText("text_fcc4437ac408")}</label>
+      <div className="gi-chip-row" role="group" aria-label={appText("text_69ddd87cdab6")}>
         {chips.map((chip) => (
           <ChipButton
             key={chip}
@@ -928,6 +935,7 @@ export function GuidedInjuryCard({
   onUpdate,
   onRemove,
 }: GuidedInjuryCardProps) {
+    const appText = useAppTranslations("AppText");
   const notesFreeText = getNotesFreeText(injury.notes);
   const hasExtraDetail = Boolean(notesFreeText.trim());
   const [notesOpen, setNotesOpen] = useState(hasExtraDetail);
@@ -1081,8 +1089,7 @@ export function GuidedInjuryCard({
                   <svg width="11" height="11" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                     <path d="M2.5 2.5h9M2.5 5.5h9M2.5 8.5h6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
                   </svg>
-                  Note
-                </span>
+                  {appText("text_d8da2c49df39")}</span>
               ) : null}
             </div>
           ) : null}
@@ -1101,7 +1108,7 @@ export function GuidedInjuryCard({
           ) : null}
         </div>
         <div className="injury-card-controls">
-          {!isActive ? <button type="button" className="injury-card-edit-btn" onClick={(e) => { e.stopPropagation(); onToggleActive(); }}>Edit</button> : null}
+          {!isActive ? <button type="button" className="injury-card-edit-btn" onClick={(e) => { e.stopPropagation(); onToggleActive(); }}>{appText("text_464c4ffd019e")}</button> : null}
           <button
             type="button"
             className="injury-card-remove-btn"
@@ -1119,22 +1126,22 @@ export function GuidedInjuryCard({
         <div className="injury-card-form">
           {/* Step 1 — Describe it */}
           <div className="gi-field">
-            <label htmlFor={`gi-area-${index}`} className="gi-label">What happened or what feels wrong?</label>
+            <label htmlFor={`gi-area-${index}`} className="gi-label">{appText("text_4d0132580a1e")}</label>
             <textarea
               id={`gi-area-${index}`}
               value={injury.area}
               onChange={(e) => onUpdate("area", e.target.value)}
               maxLength={GUIDED_INJURY_AREA_MAX}
-              placeholder="e.g. hyperextended right knee, rolled ankle, tight hamstring"
+              placeholder={appText("text_01b914d0caf7")}
               className="gi-area-input"
               rows={3}
             />
-            <p className="gi-selection-helper">This is used to identify the injury. Include the body part and what happened.</p>
+            <p className="gi-selection-helper">{appText("text_d1d125f2b9ff")}</p>
           </div>
 
           <div className="gi-step-header">
             <p className="gi-step-track">{stepLabel}</p>
-            <div className="gi-stepper" aria-label="Injury intake progress">
+            <div className="gi-stepper" aria-label={appText("text_1a93d106642f")}>
               {stepStatus.map((step) => (
                 <div key={step.key} className={`gi-stepper-item ${step.active ? "gi-stepper-item-active" : ""} ${step.done ? "gi-stepper-item-done" : ""}`.trim()}>
                   <span className="gi-stepper-dot" aria-hidden="true">{step.done ? "✓" : "•"}</span>
@@ -1147,8 +1154,8 @@ export function GuidedInjuryCard({
           {staleNote && hasExtraDetail ? (
             <div className="gi-stale-note gi-stale-note-flash" role="alert">
               <div>
-                <strong>Old extra detail is still attached.</strong>
-                <span> Review it now or clear it before continuing.</span>
+                <strong>{appText("text_107abb9f3f54")}</strong>
+                <span> {appText("text_43540f175725")}</span>
               </div>
               <button
                 type="button"
@@ -1159,16 +1166,15 @@ export function GuidedInjuryCard({
                   setNotesOpen(false);
                 }}
               >
-                Clear old detail
-              </button>
+                {appText("text_e629c6005590")}</button>
             </div>
           ) : null}
 
           {/* Injury type — one progressive picker: family → subtype, collapsing
               to a single summary once a type is chosen. */}
           <div className="gi-field">
-            <label className="gi-label">Injury type</label>
-            <p className="gi-selection-helper">Pick the closest match so we can flag safety risks. Used as a fallback if the description is unclear.</p>
+            <label className="gi-label">{appText("text_bbb3ef4422b9")}</label>
+            <p className="gi-selection-helper">{appText("text_622deb7f51f4")}</p>
 
             {typeComplete && !isEditingType ? (
               <div className="gi-selection-summary">
@@ -1177,10 +1183,10 @@ export function GuidedInjuryCard({
                     ? `${selectedFamilyOption ? `${selectedFamilyOption.label} · ` : ""}${selectedSubtypeLabels.join(", ")}`
                     : getInjuryTypeLabel(injury)}
                 </p>
-                <button type="button" className="gi-change-btn" onClick={() => setIsEditingType(true)} aria-expanded={isEditingType}>Change</button>
+                <button type="button" className="gi-change-btn" onClick={() => setIsEditingType(true)} aria-expanded={isEditingType}>{appText("text_c0bf75bd78bf")}</button>
               </div>
             ) : !activeFamily ? (
-              <div className="gi-family-grid" role="radiogroup" aria-label="Injury family">
+              <div className="gi-family-grid" role="radiogroup" aria-label={appText("text_13ef859f06bb")}>
                 {INJURY_FAMILIES.map((family) => (
                   <button
                     key={family.family}
@@ -1199,9 +1205,9 @@ export function GuidedInjuryCard({
               <>
                 <div className="gi-selection-summary">
                   <p className="gi-selection-title">{selectedFamilyOption?.label}</p>
-                  <button type="button" className="gi-change-btn" onClick={handleChangeCategory}>Change category</button>
+                  <button type="button" className="gi-change-btn" onClick={handleChangeCategory}>{appText("text_2b31046ef3e9")}</button>
                 </div>
-                <div className="gi-subtype-grid" role="group" aria-label="Injury subtype">
+                <div className="gi-subtype-grid" role="group" aria-label={appText("text_fb879e1d3247")}>
                   {getOptionsForFamily(activeFamily).map((opt) => {
                     if (opt.value === "unspecified") return null;
                     const subtypeKey = getSubtypeKey(opt);
@@ -1228,13 +1234,13 @@ export function GuidedInjuryCard({
                           if (nextOpt) handleTypeSelect(nextOpt);
                         }
                       }}>
-                        {opt.label}
+            {translateUiText(appText, opt.label)}
                       </button>
                     );
                   })}
                 </div>
                 {typeComplete ? (
-                  <button type="button" className="gi-notes-toggle" onClick={() => setIsEditingType(false)}>Done</button>
+                  <button type="button" className="gi-notes-toggle" onClick={() => setIsEditingType(false)}>{appText("text_11a6767d5674")}</button>
                 ) : null}
               </>
             )}
@@ -1243,7 +1249,7 @@ export function GuidedInjuryCard({
           {/* Default visible: Severity + Trend */}
           <div className="form-grid">
             <div className="gi-field">
-              <label className="gi-label">Current severity</label>
+              <label className="gi-label">{appText("text_da6b91f36d7e")}</label>
               <div className="injury-severity-chips">
                 {GUIDED_INJURY_SEVERITY_OPTIONS.map((opt) => (
                   <button
@@ -1253,13 +1259,13 @@ export function GuidedInjuryCard({
                     aria-pressed={injury.severity === opt.value}
                     onClick={() => onUpdate("severity", injury.severity === opt.value ? "" : opt.value)}
                   >
-                    {opt.label}
+                    {translateUiText(appText, opt.label)}
                   </button>
                 ))}
               </div>
             </div>
             <div className="gi-field">
-              <label className="gi-label">Current trend</label>
+              <label className="gi-label">{appText("text_2f7d54a85164")}</label>
               <div className="injury-trend-chips">
                 {INJURY_TREND_OPTIONS.map((opt) => (
                   <button
@@ -1269,7 +1275,7 @@ export function GuidedInjuryCard({
                     aria-pressed={injury.trend === opt.value}
                     onClick={() => onUpdate("trend", injury.trend === opt.value ? "" : opt.value)}
                   >
-                    {TREND_ARROWS[opt.value] ?? ""} {opt.label}
+                    {TREND_ARROWS[opt.value] ?? ""} {translateUiText(appText, opt.label)}
                   </button>
                 ))}
               </div>
@@ -1291,14 +1297,14 @@ export function GuidedInjuryCard({
                 <path d="M8 1.5L1 14h14L8 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
                 <path d="M8 6v3.5M8 11.5v.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
               </svg>
-              <span>Flags here help the coach and admin review risk before release.</span>
+              <span>{appText("text_7e9663e5a749")}</span>
             </div>
           ) : null}
 
           {/* Collapsed notes */}
           {notesOpen ? (
             <div className="gi-field">
-              <label htmlFor={`gi-notes-${index}`} className="gi-label">Extra detail</label>
+              <label htmlFor={`gi-notes-${index}`} className="gi-label">{appText("text_e81f9a5430e3")}</label>
               <textarea
                 id={`gi-notes-${index}`}
                 value={notesFreeText}
@@ -1307,7 +1313,7 @@ export function GuidedInjuryCard({
                   setStaleNote(false);
                 }}
                 maxLength={GUIDED_INJURY_NOTES_MAX}
-                placeholder="What happened, what irritates it, anything else the planner should know"
+                placeholder={appText("text_8b1090342ee1")}
                 rows={2}
               />
             </div>
@@ -1317,8 +1323,7 @@ export function GuidedInjuryCard({
               className="gi-notes-toggle"
               onClick={() => setNotesOpen(true)}
             >
-              + Add extra detail
-            </button>
+              {appText("text_e9724c0b6d57")}</button>
           )}
         </div>
       ) : null}

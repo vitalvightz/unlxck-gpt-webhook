@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, type KeyboardEvent } from "react";
+import { useTranslations as useAppTranslations } from "next-intl";
+import { translateUiText } from "@/i18n/ui-text";
+
 
 export type BodyMapSide = "front" | "back";
 export type BodyMapLayer = "muscle" | "joint";
@@ -367,6 +370,7 @@ export function BodyMap({
   onZoneSelect,
   onSideChange,
 }: BodyMapProps) {
+    const appText = useAppTranslations("AppText");
   const [hoverKey, setHoverKey] = useState<string | null>(null);
   const [layer, setLayer] = useState<BodyMapLayer>("muscle");
   const hoverLabel = hoverKey
@@ -376,11 +380,11 @@ export function BodyMap({
 
   return (
     <div className="body-map-panel" data-active-side={side}>
-      <p className="body-map-title">Add injury area</p>
+      <p className="body-map-title">{appText("text_7f6e01f24f32")}</p>
       <div
         className="body-map-toggle body-map-layer-toggle"
         role="tablist"
-        aria-label="Body map layer"
+        aria-label={appText("text_324ad6a23cc0")}
       >
         {LAYER_OPTIONS.map((option) => (
           <button
@@ -391,7 +395,7 @@ export function BodyMap({
             className={`body-map-toggle-btn ${layer === option.value ? "body-map-toggle-btn-active" : ""}`}
             onClick={() => setLayer(option.value)}
           >
-            {option.label}
+            {translateUiText(appText, option.label)}
           </button>
         ))}
       </div>
@@ -416,7 +420,7 @@ export function BodyMap({
       <div
         className="body-map-toggle body-map-side-toggle"
         role="tablist"
-        aria-label="Body map side"
+        aria-label={appText("text_647ca59b22dc")}
       >
         <button
           type="button"
@@ -425,8 +429,7 @@ export function BodyMap({
           className={`body-map-toggle-btn ${side === "front" ? "body-map-toggle-btn-active" : ""}`}
           onClick={() => onSideChange("front")}
         >
-          Front
-        </button>
+          {appText("text_a61759020289")}</button>
         <button
           type="button"
           role="tab"
@@ -434,8 +437,7 @@ export function BodyMap({
           className={`body-map-toggle-btn ${side === "back" ? "body-map-toggle-btn-active" : ""}`}
           onClick={() => onSideChange("back")}
         >
-          Back
-        </button>
+          {appText("text_76900f1bfd16")}</button>
       </div>
       <p className="body-map-hint" aria-live="polite">
         {hoverLabel ? (
@@ -449,18 +451,18 @@ export function BodyMap({
         )}
       </p>
       {hasAnyMarked ? (
-        <ul className="body-map-legend" aria-label="Severity colour key">
+        <ul className="body-map-legend" aria-label={appText("text_51645be5ccbf")}>
           <li className="body-map-legend-item">
             <span className="body-map-legend-swatch body-map-legend-swatch-low" aria-hidden="true" />
-            <span>Low</span>
+            <span>{appText("text_f793de205ead")}</span>
           </li>
           <li className="body-map-legend-item">
             <span className="body-map-legend-swatch body-map-legend-swatch-moderate" aria-hidden="true" />
-            <span>Moderate</span>
+            <span>{appText("text_5c42afc7a230")}</span>
           </li>
           <li className="body-map-legend-item">
             <span className="body-map-legend-swatch body-map-legend-swatch-high" aria-hidden="true" />
-            <span>High</span>
+            <span>{appText("text_c4ebc6d4a583")}</span>
           </li>
         </ul>
       ) : null}

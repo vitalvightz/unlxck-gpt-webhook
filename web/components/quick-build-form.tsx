@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { translateUiText } from "@/i18n/ui-text";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
@@ -52,6 +53,7 @@ import { ATHLETE_FULL_NAME_MAX } from "@/lib/input-limits";
 import { hasHealthDataConsent } from "@/lib/compliance";
 import { HEALTH_CONSENT_BLOCKED_MESSAGE, withoutQuickBuildHealthData } from "@/lib/health-consent-ui";
 import {
+
   EQUIPMENT_PRESETS,
   TRAINING_PRESETS,
   deriveSetupSource,
@@ -67,6 +69,7 @@ import {
   type TrainingPreset,
   type TrainingPresetKey,
 } from "@/lib/recommended-setup";
+import { useTranslations as useAppTranslations } from "next-intl";
 
 const WEEKLY_FREQUENCY_OPTIONS: IntakeOption[] = Array.from({ length: 6 }, (_, index) => ({
   label: String(index + 1),
@@ -155,6 +158,7 @@ function ChipMultiSelect({
   disabledValueReason,
   getOptionDisabledReason,
 }: ChipMultiSelectProps) {
+    const appText = useAppTranslations("AppText");
   const disabledValueSet = disabledValues && disabledValues.length > 0 ? new Set(disabledValues) : null;
   return (
     <div className="field">
@@ -181,14 +185,14 @@ function ChipMultiSelect({
                 onChange={() => onToggle(option.value)}
               />
               <span className="checkbox-card-copy">
-                <span className="checkbox-card-title">{option.label}</span>
+                <span className="checkbox-card-title">{translateUiText(appText, option.label)}</span>
               </span>
               {disabled && reason ? (
                 <WhyTooltip
-                  title="Unavailable"
+                  title={appText("text_ca1844969742")}
                   body={reason}
                   triggerLabel="?"
-                  ariaLabel={`Why ${option.label} is unavailable`}
+                  ariaLabel={`Why ${translateUiText(appText, option.label)} is unavailable`}
                 />
               ) : null}
             </label>
@@ -209,21 +213,21 @@ function FieldError({ message }: { message?: string }) {
 }
 
 function QuickBuildGuide({ steps }: { steps: QuickBuildGuideStep[] }) {
+    const appText = useAppTranslations("AppText");
   const completedCount = steps.filter((step) => step.complete).length;
   const totalCount = steps.length;
   const nextStep = steps.find((step) => !step.complete);
   const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   return (
-    <section className="quick-build-guide" aria-label="Quick Build progress">
+    <section className="quick-build-guide" aria-label={appText("text_9422cd21f40e")}>
       <div className="quick-build-guide-header">
         <div>
-          <p className="kicker">Fast path</p>
-          <h2 className="quick-build-guide-title">Quick Build readiness</h2>
+          <p className="kicker">{appText("text_8fc00dac3b6a")}</p>
+          <h2 className="quick-build-guide-title">{appText("text_46cb184feb82")}</h2>
         </div>
         <span className={completedCount === totalCount ? "badge status-badge-success" : "badge status-badge-neutral"}>
-          {completedCount}/{totalCount} ready
-        </span>
+          {completedCount}{appText("text_8a5edab28263")}{totalCount} {appText("text_b24d6d33736e")}</span>
       </div>
       <div className="overview-progress-track quick-build-guide-track" role="presentation" aria-hidden="true">
         <span className="overview-progress-fill quick-build-guide-fill" style={{ width: `${progressPct}%` }} />
@@ -239,7 +243,7 @@ function QuickBuildGuide({ steps }: { steps: QuickBuildGuideStep[] }) {
               <span className="quick-build-guide-step-index">{String(index + 1).padStart(2, "0")}</span>
               <span className="quick-build-guide-step-copy">
                 <span className="quick-build-guide-step-label">{step.label}</span>
-                <span className="quick-build-guide-step-detail">{step.complete ? "Ready" : step.detail}</span>
+                <span className="quick-build-guide-step-detail">{step.complete ? appText("text_5fa7aac5375c") : step.detail}</span>
               </span>
             </div>
           );
@@ -293,6 +297,7 @@ function PresetSelect({
 }
 
 function QuickBuildFormInner() {
+    const appText = useAppTranslations("AppText");
   const router = useRouter();
   const { me, session, replaceMe } = useAppSession();
   const [input, setInput] = useState<QuickBuildInput>(() =>
@@ -738,7 +743,7 @@ function QuickBuildFormInner() {
       return;
     }
     if (!session?.access_token) {
-      setSubmitError("Session expired. Sign in again.");
+      setSubmitError(appText("text_95f5b7d0dc11"));
       return;
     }
 
@@ -782,7 +787,7 @@ function QuickBuildFormInner() {
           replaceMe(nextMe);
         }
         if (!writePendingGenerationPayload(planRequest, "quick_build")) {
-          setSubmitError("Unable to prepare the generation payload. Reload and try again.");
+          setSubmitError(appText("text_083352324ed7"));
           return;
         }
         markGenerationIntent();
@@ -790,11 +795,11 @@ function QuickBuildFormInner() {
       } catch (err) {
         const message = err instanceof Error ? err.message : "";
         if (message.toLowerCase().includes("session") || message.includes("401")) {
-          setSubmitError("Session expired. Sign in again.");
+          setSubmitError(appText("text_95f5b7d0dc11"));
         } else if (message.includes("Unable to reach the server") || message.includes("502") || message.includes("503") || message.includes("504")) {
-          setSubmitError("Connection issue. Try again in a minute.");
+          setSubmitError(appText("text_c0ca548a25f7"));
         } else {
-          setSubmitError(message || "Unable to save plan. Please try again.");
+          setSubmitError(message || appText("text_e5c3a9197c05"));
         }
       }
     });
@@ -807,23 +812,19 @@ function QuickBuildFormInner() {
   return (
     <form onSubmit={handleSubmit} className="onboarding-form quick-build-form">
       <section className="hero-panel">
-        <p className="eyebrow">Quick Build</p>
-        <h1 className="hero-title">Generate a plan in about two minutes.</h1>
+        <p className="eyebrow">{appText("text_383a2e3c84f6")}</p>
+        <h1 className="hero-title">{appText("text_72e619b537bc")}</h1>
         <p className="muted">
-          Quick Build uses safe defaults for fatigue, sparring intensity, and goal prioritization. Use Advanced Intake for full
-          control - you can also refine this plan afterwards.
-        </p>
+          {appText("text_6d35746195ae")}</p>
       </section>
 
       <QuickBuildGuide steps={quickBuildGuideSteps} />
 
-      <section className="quick-build-starters" aria-label="Starter setups">
+      <section className="quick-build-starters" aria-label={appText("text_cc0d67bcc7a0")}>
         <div className="quick-build-starters-copy">
-          <span className="checkbox-group-label">One-tap starters</span>
+          <span className="checkbox-group-label">{appText("text_9ebade17f860")}</span>
           <p className="muted">
-            Tap a starter to fill your schedule, equipment, and focus in one go. Adjust anything below, or tap again to
-            clear.
-          </p>
+            {appText("text_cee424a22e85")}</p>
         </div>
         <div className="quick-build-starter-grid">
           {availableStarters.map((starter) => {
@@ -836,8 +837,8 @@ function QuickBuildFormInner() {
                 aria-pressed={active}
                 onClick={() => handleStarterCardClick(starter)}
               >
-                <span className="quick-build-starter-card-label">{starter.label}</span>
-                <span className="quick-build-starter-card-detail">{starter.description}</span>
+                <span className="quick-build-starter-card-label">{translateUiText(appText, starter.label)}</span>
+                <span className="quick-build-starter-card-detail">{translateUiText(appText, starter.description)}</span>
               </button>
             );
           })}
@@ -846,11 +847,11 @@ function QuickBuildFormInner() {
 
       <article className="step-card">
         <div className="form-section-header">
-          <p className="kicker">Profile</p>
-          <h2 className="form-section-title">Athlete</h2>
+          <p className="kicker">{appText("text_d696a35bdd18")}</p>
+          <h2 className="form-section-title">{appText("text_374d1c582c2a")}</h2>
         </div>
         <div className="field">
-          <label htmlFor="qb-full-name">Full name</label>
+          <label htmlFor="qb-full-name">{appText("text_f13a64ba2fea")}</label>
           <input
             id="qb-full-name"
             type="text"
@@ -863,12 +864,12 @@ function QuickBuildFormInner() {
           <FieldError message={visibleError("full_name")} />
         </div>
         <div className="field">
-          <label htmlFor="qb-technical-style">Combat sport</label>
+          <label htmlFor="qb-technical-style">{appText("text_6cf00167f1fa")}</label>
           <CustomSelect
             id="qb-technical-style"
             value={input.technical_style[0] ?? ""}
             options={TECHNICAL_STYLE_OPTIONS}
-            placeholder="Select combat sport"
+            placeholder={appText("text_287fff31e50b")}
             includeEmptyOption
             onChange={(value) => patch("technical_style", value ? [value] : [])}
           />
@@ -877,9 +878,9 @@ function QuickBuildFormInner() {
         <details className="overview-disclosure quick-build-optional-disclosure">
           <summary className="overview-disclosure-summary">
             <div className="overview-disclosure-copy">
-              <p className="kicker">Optional</p>
-              <p className="overview-disclosure-title">Add your fighting style</p>
-              <p className="muted">How you usually fight within your combat sport.</p>
+              <p className="kicker">{appText("text_59be71333c96")}</p>
+              <p className="overview-disclosure-title">{appText("text_224a9a61f367")}</p>
+              <p className="muted">{appText("text_66cc168e4ce5")}</p>
             </div>
             <span className="overview-disclosure-meta">
               <span className="overview-disclosure-chevron" aria-hidden="true" />
@@ -887,12 +888,12 @@ function QuickBuildFormInner() {
           </summary>
           <div className="overview-disclosure-body">
             <div className="field">
-              <label htmlFor="qb-tactical-style">Tactical style</label>
+              <label htmlFor="qb-tactical-style">{appText("text_880c3e3da86a")}</label>
               <CustomSelect
                 id="qb-tactical-style"
                 value={input.tactical_style[0] ?? ""}
                 options={TACTICAL_STYLE_OPTIONS}
-                placeholder="Select tactical style"
+                placeholder={appText("text_9c1df520a354")}
                 includeEmptyOption
                 onChange={(value) => patch("tactical_style", value ? [value] : [])}
               />
@@ -904,8 +905,8 @@ function QuickBuildFormInner() {
 
       <article className="step-card">
         <div className="form-section-header">
-          <p className="kicker">Fight context</p>
-          <h2 className="form-section-title">When are you fighting?</h2>
+          <p className="kicker">{appText("text_af7f44f5e27e")}</p>
+          <h2 className="form-section-title">{appText("text_7f8abbef4b68")}</h2>
         </div>
         <div className="field">
           <label className="checkbox-card" style={{ maxWidth: "100%" }}>
@@ -922,14 +923,14 @@ function QuickBuildFormInner() {
               }}
             />
             <span className="checkbox-card-copy">
-              <span className="checkbox-card-title">No scheduled fight</span>
-              <span className="checkbox-card-tag">Open camp - General prep</span>
+              <span className="checkbox-card-title">{appText("text_4ab6ed4e0bbf")}</span>
+              <span className="checkbox-card-tag">{appText("text_ddf6fe870a2b")}</span>
             </span>
           </label>
         </div>
         {!input.no_scheduled_fight ? (
           <div className="field">
-            <label htmlFor="qb-fight-date">Fight date</label>
+            <label htmlFor="qb-fight-date">{appText("text_86a6123f76f8")}</label>
             <input
               id="qb-fight-date"
               type="date"
@@ -942,24 +943,24 @@ function QuickBuildFormInner() {
 
         <div className="form-grid">
           <div className="field">
-            <label htmlFor="qb-round-count">Rounds</label>
+            <label htmlFor="qb-round-count">{appText("text_e9af9cdec8eb")}</label>
             <CustomSelect
               id="qb-round-count"
               value={parsedRounds.roundCount}
               options={ROUND_COUNT_OPTIONS}
-              placeholder="Rounds"
+              placeholder={appText("text_e9af9cdec8eb")}
               onChange={(value) =>
                 patch("rounds_format", buildRoundsFormat(value, parsedRounds.roundDuration || "3"))
               }
             />
           </div>
           <div className="field">
-            <label htmlFor="qb-round-duration">Round length</label>
+            <label htmlFor="qb-round-duration">{appText("text_00e642c5a235")}</label>
             <CustomSelect
               id="qb-round-duration"
               value={parsedRounds.roundDuration}
               options={ROUND_DURATION_OPTIONS}
-              placeholder="Duration"
+              placeholder={appText("text_4fc52a3c4c55")}
               onChange={(value) =>
                 patch("rounds_format", buildRoundsFormat(parsedRounds.roundCount || "3", value))
               }
@@ -971,25 +972,25 @@ function QuickBuildFormInner() {
 
       <article className="step-card">
         <div className="form-section-header">
-          <p className="kicker">Training</p>
-          <h2 className="form-section-title">Weekly schedule</h2>
+          <p className="kicker">{appText("text_36a798e3f392")}</p>
+          <h2 className="form-section-title">{appText("text_6cbc7c2647d5")}</h2>
         </div>
         <PresetSelect
           id="qb-training-preset"
-          label="Recommended training (optional)"
-          placeholder="Optional training preset"
+          label={appText("text_f712e5d7e1a4")}
+          placeholder={appText("text_b81a2af12cc0")}
           options={trainingPresetOptions}
           activeKey={activeTrainingPreset}
           onSelect={handleTrainingPresetSelect}
         />
         <ChipMultiSelect
-          label="Days you can train"
+          label={appText("text_08684f8fc91c")}
           options={TRAINING_AVAILABILITY_OPTIONS}
           selectedValues={input.training_availability}
           onToggle={(value) => toggleField("training_availability", value)}
         />
         <ChipMultiSelect
-          label="Hard sparring days"
+          label={appText("text_7ef2a3f6f1a2")}
           options={TRAINING_AVAILABILITY_OPTIONS}
           selectedValues={input.hard_sparring_days}
           onToggle={(value) => toggleField("hard_sparring_days", value)}
@@ -1005,9 +1006,9 @@ function QuickBuildFormInner() {
           disableAdditionalSelections={input.hard_sparring_days.length >= HARD_SPARRING_DAY_CAP}
           capDisabledReason={`Hard sparring cap (${HARD_SPARRING_DAY_CAP}) reached`}
         />
-        <p className="muted">Used to place S&amp;C around contact load.</p>
+        <p className="muted">{appText("text_e9492a13e0c8")}</p>
         <ChipMultiSelect
-          label="Light or technical combat days"
+          label={appText("text_f5b28078f4a7")}
           options={TRAINING_AVAILABILITY_OPTIONS}
           selectedValues={input.support_work_days}
           onToggle={(value) => toggleField("support_work_days", value)}
@@ -1021,7 +1022,7 @@ function QuickBuildFormInner() {
                   : null
           }
         />
-        <p className="muted">Pads, drills, movement or other lower-intensity combat work.</p>
+        <p className="muted">{appText("text_13ce29ff5c2d")}</p>
         <FieldError message={visibleError("combat_sessions")} />
         {!input.no_scheduled_fight && !input.hard_sparring_days.length && !input.support_work_days.length ? (
           <div className="field">
@@ -1031,31 +1032,30 @@ function QuickBuildFormInner() {
               onClick={() => {
                 setSubmitError(null);
                 setInput((current) => ({ ...current, no_scheduled_fight: true, fight_date: "" }));
-                setMessage("Open Plan selected. Continue with your available training schedule.");
+                setMessage(appText("text_43f15dfa7ec4"));
               }}
             >
-              I don&apos;t currently have a scheduled combat session
-            </button>
+              {appText("text_d5ca03dcf519")}</button>
           </div>
         ) : null}
         <div className="field">
-          <label htmlFor="qb-weekly-frequency">Sessions per week</label>
+          <label htmlFor="qb-weekly-frequency">{appText("text_effe0fc0491c")}</label>
           <CustomSelect
             id="qb-weekly-frequency"
             value={String(input.weekly_training_frequency)}
             options={weeklyFrequencyOptions}
-            placeholder={sessionsSelectDisabled ? "Choose training days first" : "Sessions"}
+            placeholder={sessionsSelectDisabled ? appText("text_b242e28d3481") : appText("text_6fa3cbf451b2")}
             disabled={sessionsSelectDisabled}
             onChange={(value) => patch("weekly_training_frequency", Number(value) || 1)}
           />
-          <p className="muted">Matches your training days automatically. Lower it if some days should stay light.</p>
+          <p className="muted">{appText("text_7842c13b9c31")}</p>
           <FieldError message={visibleError("weekly_training_frequency")} />
           <FieldError message={visibleError("training_availability")} />
         </div>
         <PresetSelect
           id="qb-equipment-preset"
-          label="Recommended equipment (optional)"
-          placeholder="Optional equipment preset"
+          label={appText("text_b7e36227fcea")}
+          placeholder={appText("text_e7ae06527078")}
           options={equipmentPresetOptions}
           activeKey={activeEquipmentPreset}
           onSelect={handleEquipmentPresetSelect}
@@ -1069,13 +1069,13 @@ function QuickBuildFormInner() {
 
       <article className="step-card">
         <div className="form-section-header">
-          <p className="kicker">Performance</p>
-          <h2 className="form-section-title">Goals and weak areas</h2>
+          <p className="kicker">{appText("text_442aded87a55")}</p>
+          <h2 className="form-section-title">{appText("text_9384f84fe9b7")}</h2>
         </div>
         <PresetSelect
           id="qb-focus-preset"
-          label="Recommended focus (optional)"
-          placeholder="Optional focus preset"
+          label={appText("text_e3c1d8f1c5ab")}
+          placeholder={appText("text_021facd09f97")}
           options={focusPresetOptions}
           activeKey={activeFocusPreset}
           onSelect={handleFocusPresetSelect}
@@ -1088,7 +1088,7 @@ function QuickBuildFormInner() {
           disableAdditionalSelections={input.key_goals.length >= QUICK_BUILD_KEY_GOAL_CAP || sharedFocusCapReached}
           capDisabledReason={sharedFocusCapReached ? FOCUS_CAP_DISABLED_REASON : `Limit ${QUICK_BUILD_KEY_GOAL_CAP}`}
           disabledValues={unavailableGoalValues}
-          disabledValueReason="Not available for this fight window"
+          disabledValueReason={appText("text_037c1b3baf8c")}
           getOptionDisabledReason={(option, checked) => {
             if (checked) return null;
             const availability = getPerformanceFocusOptionAvailability(daysOutCtx, "key_goals", option.value);
@@ -1104,7 +1104,7 @@ function QuickBuildFormInner() {
           disableAdditionalSelections={input.weak_areas.length >= QUICK_BUILD_WEAK_AREA_CAP || sharedFocusCapReached}
           capDisabledReason={sharedFocusCapReached ? FOCUS_CAP_DISABLED_REASON : `Limit ${QUICK_BUILD_WEAK_AREA_CAP}`}
           disabledValues={unavailableWeakAreaValues}
-          disabledValueReason="Not available for this fight window"
+          disabledValueReason={appText("text_037c1b3baf8c")}
           getOptionDisabledReason={(option, checked) => {
             if (checked) return null;
             const availability = getPerformanceFocusOptionAvailability(daysOutCtx, "weak_areas", option.value);
@@ -1117,47 +1117,46 @@ function QuickBuildFormInner() {
 
       <article className="step-card">
         <div className="form-section-header">
-          <p className="kicker">Restrictions (optional)</p>
-          <h2 className="form-section-title">Injuries or limitations</h2>
+          <p className="kicker">{appText("text_0fcc0f6801b6")}</p>
+          <h2 className="form-section-title">{appText("text_940363372883")}</h2>
         </div>
         {healthConsentGranted ? <div className="field">
-          <label htmlFor="qb-injuries">Anything the planner should avoid (injuries, pain, or limitations)</label>
+          <label htmlFor="qb-injuries">{appText("text_5c7d580cce45")}</label>
           <textarea
             id="qb-injuries"
             value={input.injuries}
             onChange={(event) => patch("injuries", event.target.value)}
-            placeholder="Example: Left knee sprain. Avoid jumping and hard pivots for 2 weeks."
+            placeholder={appText("text_4248273a67e7")}
           />
-          <p className="muted">Be specific. Include body area, injury type, and what to avoid.</p>
+          <p className="muted">{appText("text_4cd2bcfb4239")}</p>
         </div> : <p className="muted">{HEALTH_CONSENT_BLOCKED_MESSAGE}</p>}
       </article>
 
       <div className="form-actions quick-build-action-bar">
         <div className="quick-build-action-copy">
           <p className="quick-build-action-title">
-            {readyToGenerate ? "Ready to generate." : "Quick Build is almost ready."}
+            {readyToGenerate ? appText("text_1bd7f3c4739b") : appText("text_27a4c709ef7b")}
           </p>
-          <p className="muted">Refine fatigue, sparring days, and detailed weaknesses later from the plan page.</p>
+          <p className="muted">{appText("text_0fc04e442932")}</p>
         </div>
         {message ? (
           <div className="quick-build-action-feedback" role="status" aria-live="polite">
-            <span className="quick-build-action-feedback-label">Notice</span>
-            <span>{message}</span>
+            <span className="quick-build-action-feedback-label">{appText("text_65659145569b")}</span>
+            <span>{translateUiText(appText, message)}</span>
           </div>
         ) : null}
         {submitError ? (
           <div id={submitErrorId} className="quick-build-action-feedback" role="alert" aria-live="assertive">
-            <span className="quick-build-action-feedback-label">Check</span>
-            <span>{submitError}</span>
+            <span className="quick-build-action-feedback-label">{appText("text_9d60841e0a78")}</span>
+            <span>{translateUiText(appText, submitError)}</span>
           </div>
         ) : null}
         <div className="plan-summary-actions quick-build-action-buttons">
           <button type="submit" className="cta" disabled={isPending} aria-describedby={submitError ? submitErrorId : undefined}>
-            {isPending ? "Saving..." : "Generate Plan"}
+            {isPending ? appText("text_dc85af8f2b1d") : appText("text_898b391f5d35")}
           </button>
           <Link href="/onboarding" className="ghost-button">
-            Use Advanced Intake instead
-          </Link>
+            {appText("text_d55eea9ed02d")}</Link>
         </div>
       </div>
     </form>

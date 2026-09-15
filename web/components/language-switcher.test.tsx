@@ -8,7 +8,7 @@ test("each advertised locale has a local dictionary and unsupported values fall 
   assert.deepEqual(LOCALE_OPTIONS.map((option) => option.code), [...SUPPORTED_LOCALES]);
   assert.equal(resolveLocale("it"), "it");
   assert.equal(resolveLocale("unsupported"), "en");
-  assert.equal(messages.it.PublicHome.heroTitle, "Il tuo camp. Bloccato dentro.");
+  assert.equal(messages.it.PublicHome.heroTitle, "Il tuo camp. Focus totale.");
 });
 
 test("a signed-in profile restores locale only when the cookie is absent", () => {

@@ -4,10 +4,12 @@ import { useState } from "react";
 
 import { submitRehabResponses } from "@/lib/api";
 import type {
+
   RehabDuringResponse,
   RehabLimitResponse,
   RehabResponsePrompt as RehabResponsePromptModel,
 } from "@/lib/types";
+import { useTranslations as useAppTranslations } from "next-intl";
 
 const DURING_LABELS: Record<RehabDuringResponse, string> = {
   better: "Better",
@@ -99,6 +101,7 @@ export function RehabResponsePrompt({
   prompts: RehabResponsePromptModel[];
   onDismiss: () => void;
 }>) {
+    const appText = useAppTranslations("AppText");
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSent, setIsSent] = useState(false);
@@ -136,7 +139,7 @@ export function RehabResponsePrompt({
       setError(
         submitError instanceof Error
           ? submitError.message
-          : "That could not be saved. Try again.",
+          : appText("text_e85087279418"),
       );
     } finally {
       setIsSubmitting(false);
@@ -149,21 +152,18 @@ export function RehabResponsePrompt({
 
   if (isSent) {
     return (
-      <section className="feedback-card rehab-response-card" aria-label="Injury response">
+      <section className="feedback-card rehab-response-card" aria-label={appText("text_5de6fcd221e0")}>
         <p className="feedback-question" role="status">
-          Logged against your injury. Thank you.
-        </p>
+          {appText("text_3f00439c46ee")}</p>
       </section>
     );
   }
 
   return (
-    <section className="feedback-card rehab-response-card" aria-label="Injury response">
-      <p className="session-feedback-title">How did the rehab work go?</p>
+    <section className="feedback-card rehab-response-card" aria-label={appText("text_5de6fcd221e0")}>
+      <p className="session-feedback-title">{appText("text_7dbde10feaf4")}</p>
       <p className="muted session-feedback-intro">
-        Answer for the injury you did the work for. This is kept with that injury, separately
-        from your session review.
-      </p>
+        {appText("text_4d372f388565")}</p>
 
       {prompts.map((prompt) => {
         const answer = answers[prompt.injury_id] ?? {};
@@ -215,11 +215,10 @@ export function RehabResponsePrompt({
           disabled={isSubmitting || complete.length === 0}
           onClick={submit}
         >
-          {isSubmitting ? "Saving…" : "Save"}
+          {isSubmitting ? appText("text_23e39291d613") : appText("text_1509f561f241")}
         </button>
         <button type="button" className="ghost-button" disabled={isSubmitting} onClick={onDismiss}>
-          Skip
-        </button>
+          {appText("text_28d03596d24e")}</button>
       </div>
     </section>
   );

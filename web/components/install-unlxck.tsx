@@ -6,6 +6,8 @@ import Image from "next/image";
 
 import { usePwaRuntime } from "@/components/pwa-register";
 import { rememberInstallGuideDismissal } from "@/lib/pwa";
+import { useTranslations as useAppTranslations } from "next-intl";
+
 
 function ShareIcon() {
   return (
@@ -26,6 +28,7 @@ function AddToHomeIcon() {
 }
 
 export function InstallUnlxck({ variant = "panel" }: { variant?: "panel" | "inline" }) {
+    const appText = useAppTranslations("AppText");
   const { installAvailability, isInstalled, promptInstall } = usePwaRuntime();
   const canPromptInstall = installAvailability === "native";
   const isIos = installAvailability === "ios-manual";
@@ -136,35 +139,33 @@ export function InstallUnlxck({ variant = "panel" }: { variant?: "panel" | "inli
           >
             <div className="pwa-install-sheet-header">
               <div>
-                <p className="pwa-install-label">Add to your device</p>
-                <h2 id="pwa-install-sheet-title">Install UNLXCK</h2>
+                <p className="pwa-install-label">{appText("text_b55128539700")}</p>
+                <h2 id="pwa-install-sheet-title">{appText("text_ea6a60bcb37d")}</h2>
               </div>
-              <button ref={closeRef} type="button" className="pwa-install-sheet-close" onClick={dismissGuide} aria-label="Close install instructions">
+              <button ref={closeRef} type="button" className="pwa-install-sheet-close" onClick={dismissGuide} aria-label={appText("text_87171467af2c")}>
                 <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
                   <path d="M5 5l10 10M15 5 5 15" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
                 </svg>
               </button>
             </div>
             <p id="pwa-install-sheet-description" className="muted">
-              Safari uses the Share menu to add a web app to your Home Screen.
-            </p>
+              {appText("text_65f2b9b2eb92")}</p>
             <ol className="pwa-install-steps">
               <li>
                 <span className="pwa-install-step-icon"><ShareIcon /></span>
-                <span><strong>Open the Share menu</strong><small>Tap the Share icon in Safari’s toolbar.</small></span>
+                <span><strong>{appText("text_8e34d7ea4d22")}</strong><small>{appText("text_39ec9886209c")}</small></span>
               </li>
               <li>
                 <span className="pwa-install-step-icon"><AddToHomeIcon /></span>
-                <span><strong>Select “Add to Home Screen”</strong><small>Scroll the actions list if it is not immediately visible.</small></span>
+                <span><strong>{appText("text_3baaed53bac5")}</strong><small>{appText("text_d6167c105e54")}</small></span>
               </li>
               <li>
-                <span className="pwa-install-step-number">03</span>
-                <span><strong>Tap “Add”</strong><small>UNLXCK will appear with its own icon and launch standalone.</small></span>
+                <span className="pwa-install-step-number">{appText("text_0b8efa5a3bf1")}</span>
+                <span><strong>{appText("text_154b0ca23e91")}</strong><small>{appText("text_c5079a634bd6")}</small></span>
               </li>
             </ol>
             <button type="button" className="ghost-button pwa-install-sheet-done" onClick={dismissGuide}>
-              Done
-            </button>
+              {appText("text_11a6767d5674")}</button>
           </section>
         </div>,
         document.body,
@@ -176,10 +177,9 @@ export function InstallUnlxck({ variant = "panel" }: { variant?: "panel" | "inli
       <>
         <div className="pwa-install-inline" data-testid="install-unlxck-inline">
           <div className="pwa-install-inline-copy">
-            <p className="pwa-install-label">Mobile access</p>
+            <p className="pwa-install-label">{appText("text_f1a2806d9969")}</p>
             <p className="muted pwa-install-inline-text">
-              Add UNLXCK to your phone’s home screen and open it like an app.
-            </p>
+              {appText("text_8e6193a929b0")}</p>
           </div>
           <button
             ref={triggerRef}
@@ -187,7 +187,7 @@ export function InstallUnlxck({ variant = "panel" }: { variant?: "panel" | "inli
             className="secondary-button pwa-install-inline-button"
             onClick={() => void handleInstall()}
           >
-            {canPromptInstall ? "Install UNLXCK" : "View iPhone steps"}
+            {canPromptInstall ? appText("text_ea6a60bcb37d") : appText("text_494ea53ea441")}
           </button>
         </div>
         {installSheet}
@@ -204,17 +204,16 @@ export function InstallUnlxck({ variant = "panel" }: { variant?: "panel" | "inli
         <div className="pwa-install-copy">
           <div className="settings-subsection-header">
             <div>
-              <p className="pwa-install-label">Mobile access</p>
-              <h3 className="settings-subsection-title">Install UNLXCK</h3>
+              <p className="pwa-install-label">{appText("text_f1a2806d9969")}</p>
+              <h3 className="settings-subsection-title">{appText("text_ea6a60bcb37d")}</h3>
             </div>
           </div>
           <p className="muted pwa-install-description">
-            Open your control room from a home-screen icon in a focused, standalone window.
-          </p>
+            {appText("text_a3df38cbbdeb")}</p>
         </div>
         <div className="pwa-install-actions">
           <button ref={triggerRef} type="button" className="cta" onClick={() => void handleInstall()}>
-            {canPromptInstall ? "Install UNLXCK" : "View iPhone steps"}
+            {canPromptInstall ? appText("text_ea6a60bcb37d") : appText("text_494ea53ea441")}
           </button>
         </div>
       </div>

@@ -9,6 +9,8 @@ import { formatGenerationElapsedLabel, formatJobElapsedLabel } from "@/lib/gener
 import { humanizeGenerationError } from "@/lib/generation-failure";
 import { useAppSession } from "./auth-provider";
 import { useGenerationStatus } from "./generation-status-provider";
+import { useTranslations as useAppTranslations } from "next-intl";
+
 
 const CELEBRATION_DURATION_MS = 1_600;
 
@@ -202,6 +204,7 @@ export function isGenerationRibbonAcknowledgedRoute(
 }
 
 export function GlobalGenerationStatus() {
+    const appText = useAppTranslations("AppText");
   const { session } = useAppSession();
   const pathname = usePathname();
   const {
@@ -515,24 +518,23 @@ export function GlobalGenerationStatus() {
               <span className="global-generation-status-text">
                 <span className="global-generation-status-message">
                   {isProtectedTriage
-                    ? "Plan is held for admin review."
-                    : "Your plan is saved and ready."}
+                    ? appText("text_a4da3c39e124")
+                    : appText("text_5294b1493500")}
                 </span>
                 <TotalBuildTime label={passiveTotalLabel} />
               </span>
               <span className="global-generation-status-cta-label">
-                {isProtectedTriage ? "Open admin review" : "Open plan"}
+                {isProtectedTriage ? appText("text_210aed987c44") : appText("text_9e70b18d5255")}
               </span>
             </Link>
 
             <button
               type="button"
               className="global-generation-status-dismiss"
-              aria-label="Hide generation ribbon"
+              aria-label={appText("text_18cc61e672a2")}
               onClick={dismissCurrentBanner}
             >
-              ×
-            </button>
+              {appText("text_8db71ed28b0f")}</button>
           </div>
         );
       }
@@ -550,7 +552,7 @@ export function GlobalGenerationStatus() {
 
                 {latestJob.completed_at ? (
                   <span className="global-generation-status-elapsed" suppressHydrationWarning>
-                    Completed {new Date(latestJob.completed_at).toLocaleString()}
+                    {appText("text_22a970d2e5b1")}{new Date(latestJob.completed_at).toLocaleString()}
                   </span>
                 ) : null}
               </span>
@@ -570,16 +572,15 @@ export function GlobalGenerationStatus() {
 
                     void retryGenerationJob(session.access_token, latestJob.job_id)
                       .then(() => refreshStatus())
-                      .catch(() => setRetryLatestError("Retry failed. Open Generate and try again."))
+                      .catch(() => setRetryLatestError(appText("text_c01839f91c7a")))
                       .finally(() => setIsRetryingLatest(false));
                   }}
                 >
-                  {isRetryingLatest ? "Retrying..." : "Retry"}
+                  {isRetryingLatest ? appText("text_84a657bcf3d9") : appText("text_942087cc2d41")}
                 </button>
               ) : (
                 <Link href="/plans" className="global-generation-status-cta-label">
-                  Open plan history
-                </Link>
+                  {appText("text_27faf7ed824c")}</Link>
               )}
             </div>
 
@@ -591,11 +592,10 @@ export function GlobalGenerationStatus() {
           <button
             type="button"
             className="global-generation-status-dismiss"
-            aria-label="Hide generation ribbon"
+            aria-label={appText("text_18cc61e672a2")}
             onClick={dismissCurrentBanner}
           >
-            ×
-          </button>
+            {appText("text_8db71ed28b0f")}</button>
         </div>
       );
     }
@@ -610,20 +610,19 @@ export function GlobalGenerationStatus() {
         <div className="global-generation-status global-generation-status-completed">
           <Link href={target} className="global-generation-status-main" onClick={dismissCurrentBanner}>
             <span className="global-generation-status-text">
-              <span className="global-generation-status-message">Review saved plan</span>
+              <span className="global-generation-status-message">{appText("text_fa212c081c98")}</span>
               <TotalBuildTime label={passiveTotalLabel} />
             </span>
-            <span className="global-generation-status-cta-label">Open plan</span>
+            <span className="global-generation-status-cta-label">{appText("text_9e70b18d5255")}</span>
           </Link>
 
           <button
             type="button"
             className="global-generation-status-dismiss"
-            aria-label="Hide generation ribbon"
+            aria-label={appText("text_18cc61e672a2")}
             onClick={dismissCurrentBanner}
           >
-            ×
-          </button>
+            {appText("text_8db71ed28b0f")}</button>
         </div>
       );
     }
@@ -641,11 +640,11 @@ export function GlobalGenerationStatus() {
       const content = (
         <>
           <span className="global-generation-status-text">
-            <span className="global-generation-status-message">Plan is held for admin review.</span>
+            <span className="global-generation-status-message">{appText("text_a4da3c39e124")}</span>
             <TotalBuildTime label={passiveTotalLabel} />
           </span>
           <span className="global-generation-status-cta-label">
-            {adminTarget ? "Open admin review" : "Awaiting admin"}
+            {adminTarget ? appText("text_210aed987c44") : appText("text_298bb551da8e")}
           </span>
         </>
       );
@@ -662,11 +661,10 @@ export function GlobalGenerationStatus() {
           <button
             type="button"
             className="global-generation-status-dismiss"
-            aria-label="Hide generation ribbon"
+            aria-label={appText("text_18cc61e672a2")}
             onClick={dismissCurrentBanner}
           >
-            ×
-          </button>
+            {appText("text_8db71ed28b0f")}</button>
         </div>
       );
     }
@@ -687,24 +685,23 @@ export function GlobalGenerationStatus() {
               <span className="global-generation-status-text">
                 <span className="global-generation-status-message">
                   {isProtectedTriage
-                    ? "Plan is held for admin review."
-                    : "Your plan is saved and ready."}
+                    ? appText("text_a4da3c39e124")
+                    : appText("text_5294b1493500")}
                 </span>
                 <TotalBuildTime label={passiveTotalLabel} />
               </span>
               <span className="global-generation-status-cta-label">
-                {isProtectedTriage ? "Open admin review" : "Open plan"}
+                {isProtectedTriage ? appText("text_210aed987c44") : appText("text_9e70b18d5255")}
               </span>
             </Link>
 
             <button
               type="button"
               className="global-generation-status-dismiss"
-              aria-label="Hide generation ribbon"
+              aria-label={appText("text_18cc61e672a2")}
               onClick={dismissCurrentBanner}
             >
-              ×
-            </button>
+              {appText("text_8db71ed28b0f")}</button>
           </div>
         );
       }
@@ -715,25 +712,22 @@ export function GlobalGenerationStatus() {
             <div className="global-generation-status-content">
               <span className="global-generation-status-text">
                 <span className="global-generation-status-message">
-                  Your plan finished but could not be opened. Support can recover it.
-                </span>
+                  {appText("text_389332700176")}</span>
                 <TotalBuildTime label={passiveTotalLabel} />
               </span>
 
               <Link href="/plans" className="global-generation-status-cta-label">
-                Open plan history
-              </Link>
+                {appText("text_27faf7ed824c")}</Link>
             </div>
           </div>
 
           <button
             type="button"
             className="global-generation-status-dismiss"
-            aria-label="Hide generation ribbon"
+            aria-label={appText("text_18cc61e672a2")}
             onClick={dismissCurrentBanner}
           >
-            ×
-          </button>
+            {appText("text_8db71ed28b0f")}</button>
         </div>
       );
     }
@@ -796,11 +790,11 @@ export function GlobalGenerationStatus() {
 
                   void cancelGenerationJob(session.access_token, jobId)
                     .then(() => refreshStatus())
-                    .catch(() => setCancelError("Cancel failed. Try again."))
+                    .catch(() => setCancelError(appText("text_490b4a1bc02b")))
                     .finally(() => setIsCancelling(false));
                 }}
               >
-                {isCancelling ? "Stopping..." : "Stop build"}
+                {isCancelling ? appText("text_6f68db105f37") : appText("text_d532a4c23e10")}
               </button>
             ) : null}
 
@@ -819,11 +813,11 @@ export function GlobalGenerationStatus() {
 
                   void retryGenerationJob(session.access_token, jobId)
                     .then(() => refreshStatus())
-                    .catch(() => setRetryLatestError("Retry failed. Open Generate and try again."))
+                    .catch(() => setRetryLatestError(appText("text_c01839f91c7a")))
                     .finally(() => setIsRetryingLatest(false));
                 }}
               >
-                {isRetryingLatest ? "Retrying..." : "Retry"}
+                {isRetryingLatest ? appText("text_84a657bcf3d9") : appText("text_942087cc2d41")}
               </button>
             ) : null}
           </div>
@@ -837,11 +831,10 @@ export function GlobalGenerationStatus() {
         <button
           type="button"
           className="global-generation-status-dismiss"
-          aria-label="Hide generation ribbon"
+          aria-label={appText("text_18cc61e672a2")}
           onClick={dismissCurrentBanner}
         >
-          ×
-        </button>
+          {appText("text_8db71ed28b0f")}</button>
       </div>
     );
   }
@@ -852,7 +845,7 @@ export function GlobalGenerationStatus() {
         ref={reopenRef}
         type="button"
         className="global-generation-status-reopen"
-        aria-label="Show generation ribbon"
+        aria-label={appText("text_683972f76fcf")}
         style={
           reopenPos
             ? { left: reopenPos.x, top: reopenPos.y, right: "auto", bottom: "auto" }
@@ -864,7 +857,7 @@ export function GlobalGenerationStatus() {
         onPointerCancel={handleReopenPointerUp}
         onClick={handleReopenClick}
       >
-        {isFailed ? "Show build error" : "Show plan build"}
+        {isFailed ? appText("text_bd03c393e86d") : appText("text_05ba83256f79")}
       </button>
     );
   }
@@ -874,7 +867,7 @@ export function GlobalGenerationStatus() {
       <div className="global-generation-status-content">
         <span className="global-generation-status-indicator" aria-hidden="true">
           {isCompleted ? (
-            <span className="global-generation-status-check">&#10003;</span>
+            <span className="global-generation-status-check">{appText("text_589a24b9c31d")}</span>
           ) : (
             <span className="global-generation-status-pulse" />
           )}
@@ -897,8 +890,7 @@ export function GlobalGenerationStatus() {
           <span className="global-generation-status-cta">
             <span className="global-generation-status-cta-label">{ctaLabel}</span>
             <span className="global-generation-status-arrow" aria-hidden="true">
-              →
-            </span>
+              {appText("text_161660030aa6")}</span>
           </span>
         ) : null}
       </div>
@@ -924,8 +916,8 @@ export function GlobalGenerationStatus() {
           onClick={isCompleted ? dismissCurrentBanner : undefined}
           aria-label={
             isCompleted
-              ? "Plan ready. Tap to view."
-              : "Generation in progress. Tap to open generation status."
+              ? appText("text_5a82eb96b6e9")
+              : appText("text_c92fec928a05")
           }
         >
           {content}
@@ -936,8 +928,8 @@ export function GlobalGenerationStatus() {
           className="global-generation-status-main"
           aria-label={
             isCompleted
-              ? "Plan completed. Tap to refresh status."
-              : "Generation in progress. Tap to refresh status."
+              ? appText("text_8395008a51c9")
+              : appText("text_fbf3692cbe67")
           }
           onClick={() => {
             refreshStatus();
@@ -950,11 +942,10 @@ export function GlobalGenerationStatus() {
       <button
         type="button"
         className="global-generation-status-dismiss"
-        aria-label="Hide generation ribbon"
+        aria-label={appText("text_18cc61e672a2")}
         onClick={dismissCurrentBanner}
       >
-        ×
-      </button>
+        {appText("text_8db71ed28b0f")}</button>
     </div>
   );
 }

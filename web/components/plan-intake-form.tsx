@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useTranslations as useAppTranslations } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
+import { translateUiText } from "@/i18n/ui-text";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
@@ -418,8 +419,9 @@ function StepPills({
   currentStep: number;
   onStepSelect: (step: number) => void;
 }) {
+    const appText = useAppTranslations("AppText");
   return (
-    <div className="step-progress" aria-label="Intake progress">
+    <div className="step-progress" aria-label={appText("text_22492da005a2")}>
       {steps.map((label, index) => {
         const statusClass = index < currentStep ? "step-pill-complete" : index === currentStep ? "step-pill-active" : "";
         const statusText = index < currentStep ? "Complete" : index === currentStep ? "Current" : "Upcoming";
@@ -460,6 +462,7 @@ function AutoSaveIndicator({
   onRetry: () => void;
   retryDisabled: boolean;
 }) {
+    const appText = useAppTranslations("AppText");
   if (status === "idle" && lastSavedAt === null) {
     return null;
   }
@@ -475,8 +478,7 @@ function AutoSaveIndicator({
       <span>{label}</span>
       {status === "error" ? (
         <button type="button" className="onboarding-save-indicator-retry" onClick={onRetry} disabled={retryDisabled}>
-          Retry
-        </button>
+          {appText("text_942087cc2d41")}</button>
       ) : null}
     </p>
   );
@@ -512,11 +514,12 @@ function OnboardingProgressStrip({
   onToggle?: () => void;
   controlsId?: string;
 }) {
+    const appText = useAppTranslations("AppText");
   const progress = getOnboardingProgressState(currentStep);
   const content = (
     <>
       <div className="onboarding-progress-strip-topline">
-        <p className="kicker">Intake progress</p>
+        <p className="kicker">{appText("text_22492da005a2")}</p>
         <span
           className={`onboarding-progress-badge ${progress.badgeText === "Ready" ? "onboarding-progress-badge-ready" : ""}`.trim()}
         >
@@ -524,7 +527,7 @@ function OnboardingProgressStrip({
         </span>
       </div>
       <p className="onboarding-progress-strip-title">
-        Step {progress.stepNumber} of {progress.totalSteps}
+        {appText("text_8e6a6cca7aae")}{progress.stepNumber} {appText("text_28391d3bc64e")}{progress.totalSteps}
       </p>
       <div className="overview-progress-track onboarding-progress-track" role="presentation" aria-hidden="true">
         <span className="overview-progress-fill onboarding-progress-fill" style={{ width: `${progress.progressValue}%` }} />
@@ -533,7 +536,7 @@ function OnboardingProgressStrip({
         <p className="overview-progress-helper onboarding-progress-helper">{progress.helperText}</p>
         {isExpandable ? (
           <span className="onboarding-progress-affordance" aria-hidden="true">
-            <span className="onboarding-progress-affordance-label">{isExpanded ? "Close" : "All steps"}</span>
+            <span className="onboarding-progress-affordance-label">{isExpanded ? appText("text_7d9eb7acb13e") : appText("text_7384c91d94c6")}</span>
             <span className="onboarding-progress-chevron" />
           </span>
         ) : null}
@@ -565,6 +568,7 @@ function MobileStepRail({
   currentStep: number;
   onStepSelect: (step: number) => void;
 }) {
+    const appText = useAppTranslations("AppText");
   const railRef = useRef<HTMLDivElement | null>(null);
   const itemRefs = useRef<Array<HTMLElement | null>>([]);
 
@@ -588,7 +592,7 @@ function MobileStepRail({
 
   return (
     <div className="mobile-step-rail" data-state="open">
-      <div ref={railRef} className="mobile-step-rail-scroll" aria-label="Intake steps">
+      <div ref={railRef} className="mobile-step-rail-scroll" aria-label={appText("text_1bdccfa8e4ef")}>
         {steps.map((label, index) => {
           const statusClass = index < currentStep ? "mobile-step-rail-item-complete" : index === currentStep ? "mobile-step-rail-item-active" : "";
           const pillContent = (
@@ -638,15 +642,15 @@ function MobileOnboardingHeader({
   onRetrySave: () => void;
   retrySaveDisabled: boolean;
 }) {
+    const appText = useAppTranslations("AppText");
   return (
     <div className="onboarding-heading-mobile">
       <div className="onboarding-mobile-header-copy">
-        <p className="kicker">Advanced Intake</p>
-        <p className="onboarding-mobile-title">Build your camp profile.</p>
-        <p className="muted">Saved, resumable athlete intake.</p>
+        <p className="kicker">{appText("text_2cd602ade4a6")}</p>
+        <p className="onboarding-mobile-title">{appText("text_97b9f3ff127d")}</p>
+        <p className="muted">{appText("text_ab3f8d47c2e2")}</p>
         <Link href="/quick-build" className="ghost-button onboarding-quick-build-link">
-          Use Quick Build instead
-        </Link>
+          {appText("text_0cfd4a365725")}</Link>
       </div>
       <OnboardingProgressStrip
         currentStep={currentStep}
@@ -697,6 +701,7 @@ function CheckboxGroup({
   describedBy?: string;
   hideLabel?: boolean;
 }) {
+    const appText = useAppTranslations("AppText");
   return (
     <div
       id={id}
@@ -730,14 +735,14 @@ function CheckboxGroup({
                 onChange={() => onToggle(option.value)}
               />
               <span className="checkbox-card-copy">
-                <span className="checkbox-card-title">{option.label}</span>
+                <span className="checkbox-card-title">{translateUiText(appText, option.label)}</span>
               </span>
               {labelTitle ? (
                 <WhyTooltip
-                  title="Unavailable"
+                  title={appText("text_ca1844969742")}
                   body={labelTitle}
                   triggerLabel="?"
-                  ariaLabel={`Why ${option.label} is unavailable`}
+                  ariaLabel={`Why ${translateUiText(appText, option.label)} is unavailable`}
                 />
               ) : null}
             </label>
@@ -749,11 +754,12 @@ function CheckboxGroup({
 }
 
 function OptionalDetails({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+    const appText = useAppTranslations("AppText");
   return (
     <details className="overview-disclosure onboarding-optional-disclosure">
       <summary className="overview-disclosure-summary">
         <div className="overview-disclosure-copy">
-          <p className="kicker">Optional</p>
+          <p className="kicker">{appText("text_59be71333c96")}</p>
           <p className="overview-disclosure-title">{title}</p>
           {hint ? <p className="muted">{hint}</p> : null}
         </div>
@@ -790,6 +796,7 @@ function StepValidationPanel({
   description: string;
   checks: StepValidationCheck[];
 }) {
+    const appText = useAppTranslations("AppText");
   const unresolvedChecks = checks.filter((check) => check.status !== "done");
 
   return (
@@ -800,14 +807,14 @@ function StepValidationPanel({
     >
       <div className="onboarding-validation-header">
         <div className="onboarding-validation-copy">
-          <p className="kicker">{stepLabel} check</p>
+          <p className="kicker">{stepLabel} {appText("text_20f65c28671b")}</p>
           <h2 className="form-section-title">{title}</h2>
           <p className="muted">{description}</p>
         </div>
         <span
           className={`onboarding-validation-badge ${unresolvedChecks.length ? "" : "onboarding-validation-badge-ready"}`.trim()}
         >
-          {unresolvedChecks.length ? `${unresolvedChecks.length} left` : "Ready"}
+          {unresolvedChecks.length ? `${unresolvedChecks.length} left` : appText("text_5fa7aac5375c")}
         </span>
       </div>
       <ul className="summary-list onboarding-validation-list">
@@ -890,6 +897,7 @@ type TrainingGateDecision =
   | { kind: "warning_ack_required"; message: string; shouldRedirectToTraining: boolean };
 
 export function PlanIntakeForm() {
+    const appText = useAppTranslations("AppText");
   const t = useTranslations("Onboarding");
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1887,14 +1895,14 @@ export function PlanIntakeForm() {
         return;
       }
       if (!session?.access_token) {
-        setError("You must be signed in to save a draft.");
+        setError(appText("text_4b5fdd19a96c"));
         return;
       }
       try {
         await persistDraft();
-        setMessage("Draft saved.");
+        setMessage(appText("text_be997844b2a8"));
       } catch (draftError) {
-        setError(draftError instanceof Error ? draftError.message : "Unable to save draft.");
+        setError(draftError instanceof Error ? draftError.message : appText("text_0b53da598881"));
       }
     });
   }
@@ -1983,19 +1991,19 @@ export function PlanIntakeForm() {
         return;
       }
       if (!session?.access_token) {
-        setError("You must be signed in to generate a plan.");
+        setError(appText("text_b5a7aec99051"));
         return;
       }
       try {
         await persistDraft(steps.length - 1, nextForm);
         if (!writePendingGenerationPayload(nextForm, "self_serve")) {
-          setError("Unable to prepare the generation payload. Reload and try again.");
+          setError(appText("text_083352324ed7"));
           return;
         }
         markGenerationIntent();
         router.push("/generate");
       } catch (draftError) {
-        setError(draftError instanceof Error ? draftError.message : "Unable to prepare plan generation.");
+        setError(draftError instanceof Error ? draftError.message : appText("text_61a074c4218b"));
       }
     });
   }
@@ -2390,10 +2398,9 @@ export function PlanIntakeForm() {
           <div className="athlete-motion-slot athlete-motion-header">
             <p className="kicker">{t("eyebrow")}</p>
             <h1>{t("title")}</h1>
-            <p className="muted">Saved, resumable athlete intake.</p>
+            <p className="muted">{appText("text_ab3f8d47c2e2")}</p>
             <Link href="/quick-build" className="ghost-button onboarding-quick-build-link">
-              Use Quick Build instead
-            </Link>
+              {appText("text_0cfd4a365725")}</Link>
           </div>
         </div>
 
@@ -2437,19 +2444,18 @@ export function PlanIntakeForm() {
             <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
               {refiningFromQuickBuild ? (
                 <p className="quick-build-refine-notice" role="status">
-                  Refining your Quick Build plan. Your existing plan stays until you generate again.
-                </p>
+                  {appText("text_f9c1c4eba256")}</p>
               ) : null}
               <OnboardingTrustNote />
               <article className="step-card">
                 <div className="form-section-header">
-                  <p className="kicker">Identity</p>
+                  <p className="kicker">{appText("text_999f23fcd7be")}</p>
                   <h2 className="form-section-title">{t("coreDetails")}</h2>
                 </div>
-                <p className="muted">Only your name and combat sport are required here. Everything else is optional.</p>
+                <p className="muted">{appText("text_12049a5a705e")}</p>
                 <div className="form-grid onboarding-profile-core-grid">
                   <div className="field">
-                    <label htmlFor="fullName">Full name</label>
+                    <label htmlFor="fullName">{appText("text_f13a64ba2fea")}</label>
                     <input
                       id="fullName"
                       name="name"
@@ -2461,12 +2467,12 @@ export function PlanIntakeForm() {
                     />
                   </div>
                   <div className={`field${invalidFieldId === "technicalStyle" ? " field-invalid" : ""}`}>
-                    <label htmlFor="technicalStyle">Combat sport</label>
+                    <label htmlFor="technicalStyle">{appText("text_6cf00167f1fa")}</label>
                     <CustomSelect
                       id="technicalStyle"
                       value={form.athlete.technical_style?.[0] ?? ""}
                       options={TECHNICAL_STYLE_OPTIONS}
-                      placeholder="Select combat sport"
+                      placeholder={appText("text_287fff31e50b")}
                       includeEmptyOption
                       invalid={invalidFieldId === "technicalStyle"}
                       describedBy={invalidFieldId === "technicalStyle" ? "technicalStyle-error" : undefined}
@@ -2477,56 +2483,56 @@ export function PlanIntakeForm() {
                     ) : null}
                   </div>
                   <div className="field">
-                    <label htmlFor="tacticalStyle">Tactical Style</label>
+                    <label htmlFor="tacticalStyle">{appText("text_4da9e1d10c36")}</label>
                     <CustomSelect
                       id="tacticalStyle"
                       value={form.athlete.tactical_style[0] ?? ""}
                       options={TACTICAL_STYLE_OPTIONS}
-                      placeholder="Select tactical style"
+                      placeholder={appText("text_9c1df520a354")}
                       includeEmptyOption
                       onChange={(value) => updateAthlete("tactical_style", value ? [value] : [])}
                     />
-                    <p className="muted">Tactical style = how you usually fight inside that sport.</p>
+                    <p className="muted">{appText("text_eafc3a2f6585")}</p>
                   </div>
                 </div>
               </article>
 
               <OptionalDetails
-                title="Add more detail"
-                hint="Body stats, stance, target weight, status, and record. Not required to generate a plan."
+                title={appText("text_3b3581cb91a1")}
+                hint={appText("text_1459230dc23a")}
               >
                 <div className="form-grid onboarding-profile-detail-grid">
                   <div className="field">
-                    <label htmlFor="sex">Sex</label>
+                    <label htmlFor="sex">{appText("text_953dd6f2b461")}</label>
                     <CustomSelect
                       id="sex"
                       value={form.athlete.sex ?? ""}
                       options={SEX_OPTIONS}
-                      placeholder="Select sex"
+                      placeholder={appText("text_8e99ebc415fe")}
                       includeEmptyOption
                       onChange={(value) => updateAthlete("sex", (value || null) as PlanRequest["athlete"]["sex"])}
                     />
                   </div>
                   <div className="field">
-                    <label htmlFor="age">Age</label>
+                    <label htmlFor="age">{appText("text_39b7370f30a3")}</label>
                     <input id="age" type="number" min="0" inputMode="numeric" value={form.athlete.age ?? ""} onChange={(event) => updateAthlete("age", numberOrNull(event.target.value))} />
                   </div>
                   <div className="field">
-                    <label htmlFor="weightKg">Weight (kg)</label>
+                    <label htmlFor="weightKg">{appText("text_b48ca1a31a0f")}</label>
                     <input id="weightKg" type="number" min="0" step="0.1" inputMode="decimal" disabled={!healthConsentGranted} value={healthConsentGranted ? (form.athlete.weight_kg ?? "") : ""} onChange={(event) => updateAthlete("weight_kg", numberOrNull(event.target.value))} />
-                    <p className="muted">{healthConsentGranted ? "Use current walking-around weight." : HEALTH_CONSENT_BLOCKED_MESSAGE}</p>
+                    <p className="muted">{healthConsentGranted ? appText("text_dec14b0e69ad") : HEALTH_CONSENT_BLOCKED_MESSAGE}</p>
                   </div>
                   <div className="field">
-                    <label htmlFor="heightCm">Height (cm)</label>
+                    <label htmlFor="heightCm">{appText("text_19ce4b01c53f")}</label>
                     <input id="heightCm" type="number" min="0" step="1" inputMode="numeric" value={form.athlete.height_cm ?? ""} onChange={(event) => updateAthlete("height_cm", integerOrNull(event.target.value))} />
                   </div>
                   <div className="field">
-                    <label htmlFor="stance">Stance</label>
+                    <label htmlFor="stance">{appText("text_f30eedd9ae52")}</label>
                     <CustomSelect
                       id="stance"
                       value={form.athlete.stance ?? ""}
                       options={STANCE_OPTIONS}
-                      placeholder="Select stance"
+                      placeholder={appText("text_3248d1989701")}
                       includeEmptyOption
                       onChange={(value) => updateAthlete("stance", value)}
                     />
@@ -2538,35 +2544,35 @@ export function PlanIntakeForm() {
                       too, so hiding it here is presentation, not enforcement. */}
                   {isMinorAthlete ? null : (
                     <div className="field">
-                      <label htmlFor="targetWeightKg">Target weight (kg)</label>
+                      <label htmlFor="targetWeightKg">{appText("text_33814df80c78")}</label>
                       <input id="targetWeightKg" type="number" min="0" step="0.1" inputMode="decimal" disabled={!healthConsentGranted} value={healthConsentGranted ? (form.athlete.target_weight_kg ?? "") : ""} onChange={(event) => updateAthlete("target_weight_kg", numberOrNull(event.target.value))} />
-                      <p className="muted">{healthConsentGranted ? "Use realistic fight-week target, not an ideal someday number." : HEALTH_CONSENT_BLOCKED_MESSAGE}</p>
+                      <p className="muted">{healthConsentGranted ? appText("text_bc71100118df") : HEALTH_CONSENT_BLOCKED_MESSAGE}</p>
                     </div>
                   )}
                   <div className="field">
-                    <label htmlFor="status">Professional Status</label>
+                    <label htmlFor="status">{appText("text_51f2263889c5")}</label>
                     <CustomSelect
                       id="status"
                       value={form.athlete.professional_status ?? ""}
                       options={PROFESSIONAL_STATUS_OPTIONS}
-                      placeholder="Select professional status"
+                      placeholder={appText("text_3330603e1f93")}
                       includeEmptyOption
                       onChange={(value) => updateAthlete("professional_status", value)}
                     />
                   </div>
                   <div className={`field field-span-full${invalidFieldId === "record" || recordHasError ? " field-invalid" : ""}`}>
-                    <label htmlFor="record">Record</label>
+                    <label htmlFor="record">{appText("text_bfdd510698ef")}</label>
                     <input
                       id="record"
                       value={form.athlete.record ?? ""}
                       onChange={(event) => updateAthlete("record", sanitizeRecordInput(event.target.value))}
-                      placeholder="5-1 or 12-2-1"
+                      placeholder={appText("text_77ade5f7a47e")}
                       inputMode="text"
                       maxLength={RECORD_MAX}
                       aria-invalid={invalidFieldId === "record" || recordHasError ? true : undefined}
                       aria-describedby={invalidFieldId === "record" ? "record-error" : undefined}
                     />
-                    <p className="muted">Use only <code>x-x</code> or <code>x-x-x</code>.</p>
+                    <p className="muted">{appText("text_9726eaf28407")}<code>{appText("text_8708c70236fb")}</code> {appText("text_7175517a370b")}<code>{appText("text_874ffb6fd0f5")}</code>{appText("text_cdb4ee2aea69")}</p>
                     {invalidFieldId === "record" && error ? (
                       <p id="record-error" className="error-text" role="alert">{error}</p>
                     ) : recordHasError ? (
@@ -2580,16 +2586,16 @@ export function PlanIntakeForm() {
             <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
               <div className="support-panel">
                 <div className="form-section-header">
-                  <p className="kicker">Profile snapshot</p>
+                  <p className="kicker">{appText("text_3225f9ee870f")}</p>
                   <h2 className="form-section-title">{t("currentSelections")}</h2>
                 </div>
                 <ul className="summary-list">
-                  <li>Name: {formatValue(form.athlete.full_name)}</li>
-                  <li>Technical Style: {technicalStyleLabel}</li>
-                  <li>Tactical Style: {tacticalStyleLabel}</li>
-                  <li>Stance: {stanceLabel}</li>
-                  <li>Professional Status: {statusLabel}</li>
-                  <li>Record: {formatValue(form.athlete.record)}</li>
+                  <li>{appText("text_2683cad48a14")}{formatValue(form.athlete.full_name)}</li>
+                  <li>{appText("text_10327edbbd9a")}{technicalStyleLabel}</li>
+                  <li>{appText("text_32b113b526ae")}{tacticalStyleLabel}</li>
+                  <li>{appText("text_17494fb91931")}{stanceLabel}</li>
+                  <li>{appText("text_6aef8922779c")}{statusLabel}</li>
+                  <li>{appText("text_3dffc2d69c8b")}{formatValue(form.athlete.record)}</li>
                 </ul>
               </div>
             </aside>
@@ -2601,12 +2607,12 @@ export function PlanIntakeForm() {
             <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
               <article className="step-card">
                 <div className="form-section-header">
-                  <p className="kicker">Fight context</p>
+                  <p className="kicker">{appText("text_af7f44f5e27e")}</p>
                   <h2 className="form-section-title">{t("timingLoad")}</h2>
                 </div>
                 <div className="form-grid onboarding-fight-grid">
                   <div className={`field${invalidFieldId === "fightDate" ? " field-invalid" : ""}`}>
-                    <label htmlFor="fightDate">Fight date</label>
+                    <label htmlFor="fightDate">{appText("text_86a6123f76f8")}</label>
                     <input
                       id="fightDate"
                       type="date"
@@ -2627,19 +2633,19 @@ export function PlanIntakeForm() {
                           setForm((current) => applyNoScheduledFightSnapshot(current, checked));
                         }}
                       />
-                      <span className="inline-warning-ack-copy">No scheduled fight yet</span>
+                      <span className="inline-warning-ack-copy">{appText("text_f9895e2e6121")}</span>
                     </label>
                     {invalidFieldId === "fightDate" && error ? (
                       <p id="fightDate-error" className="error-text" role="alert">{error}</p>
                     ) : null}
                   </div>
                   <div className={`field${invalidFieldId === "roundCount" ? " field-invalid" : ""}`}>
-                    <label htmlFor="roundCount">Round count</label>
+                    <label htmlFor="roundCount">{appText("text_08744ab667ea")}</label>
                     <CustomSelect
                       id="roundCount"
                       value={parsedRounds.roundCount}
                       options={ROUND_COUNT_OPTIONS}
-                      placeholder="Select rounds"
+                      placeholder={appText("text_c6d054a3317f")}
                       includeEmptyOption
                       invalid={invalidFieldId === "roundCount"}
                       describedBy={invalidFieldId === "roundCount" ? "roundCount-error" : undefined}
@@ -2650,12 +2656,12 @@ export function PlanIntakeForm() {
                     ) : null}
                   </div>
                   <div className={`field${invalidFieldId === "roundDuration" ? " field-invalid" : ""}`}>
-                    <label htmlFor="roundDuration">Minutes per round</label>
+                    <label htmlFor="roundDuration">{appText("text_1cd4f252cb74")}</label>
                     <CustomSelect
                       id="roundDuration"
                       value={parsedRounds.roundDuration}
                       options={ROUND_DURATION_OPTIONS}
-                      placeholder="Select minutes"
+                      placeholder={appText("text_9a90dae7f2ce")}
                       includeEmptyOption
                       invalid={invalidFieldId === "roundDuration"}
                       describedBy={invalidFieldId === "roundDuration" ? "roundDuration-error" : undefined}
@@ -2667,14 +2673,14 @@ export function PlanIntakeForm() {
                   </div>
                   {shouldHideField(daysOutCtx, "weekly_training_frequency") ? (
                     <div className="field field-span-full">
-                      <p className="muted" style={{ opacity: 0.5 }}>Weekly session count is not used for planning at this stage.</p>
+                      <p className="muted" style={{ opacity: 0.5 }}>{appText("text_9dfc1652fef1")}</p>
                     </div>
                   ) : (
                     <div
                       className={`field field-span-full${invalidFieldId === "sessionsPerWeek" ? " field-invalid" : ""}`}
                       style={shouldDeEmphasizeField(daysOutCtx, "weekly_training_frequency") ? { opacity: 0.55 } : undefined}
                     >
-                      <label htmlFor="sessionsPerWeek">Planned sessions per week</label>
+                      <label htmlFor="sessionsPerWeek">{appText("text_769f29d88218")}</label>
                       <input
                         id="sessionsPerWeek"
                         type="number"
@@ -2695,7 +2701,7 @@ export function PlanIntakeForm() {
                       />
                       <p className="muted">
                         {getFieldHelperText(daysOutCtx, "weekly_training_frequency") ||
-                          "Count the total training sessions the week should carry. Hard sparring days and Light Combat days are labels inside that weekly total, not extra sessions on top."}
+                          appText("text_e6c0df2df287")}
                       </p>
                       {invalidFieldId === "sessionsPerWeek" && error ? (
                         <p id="sessionsPerWeek-error" className="error-text" role="alert">{error}</p>
@@ -2706,19 +2712,19 @@ export function PlanIntakeForm() {
               </article>
 
               <OptionalDetails
-                title="Fatigue"
-                hint="Defaults to Low. Change it only if you feel tired today."
+                title={appText("text_c83bec1f0284")}
+                hint={appText("text_0ed73c07bfe1")}
               >
                 {healthConsentGranted ? (
                 <div className="field">
-                  <label htmlFor="fatigueLevel">Fatigue level</label>
+                  <label htmlFor="fatigueLevel">{appText("text_cf260a4f2c6e")}</label>
                   <LevelSlider
                     id="fatigueLevel"
-                    ariaLabel="Fatigue level"
+                    ariaLabel={appText("text_cf260a4f2c6e")}
                     value={(form.fatigue_level ?? "low") as LevelValue}
                     onChange={(value) => updateField("fatigue_level", value)}
                   />
-                  <p className="muted">Low = fresh. Moderate = tired. High = very run down.</p>
+                  <p className="muted">{appText("text_974a55c1dbdf")}</p>
                 </div>
                 ) : <p className="muted">{HEALTH_CONSENT_BLOCKED_MESSAGE}</p>}
               </OptionalDetails>
@@ -2727,19 +2733,19 @@ export function PlanIntakeForm() {
             <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
               <div className="support-panel">
                 <div className="form-section-header">
-                  <p className="kicker">Context snapshot</p>
+                  <p className="kicker">{appText("text_609ed91cf1f3")}</p>
                   <h2 className="form-section-title">{t("currentSetup")}</h2>
                 </div>
                 <ul className="summary-list">
-                  <li>Fight date: {formatFightDateValue(form.fight_date)}</li>
-                  <li>Rounds: {formatValue(form.rounds_format)}</li>
-                  <li>Planned sessions per week: {formatValue(form.weekly_training_frequency)}</li>
-                  <li>Fatigue level: {formatValue(form.fatigue_level || "low")}</li>
+                  <li>{appText("text_f65bea824e6f")}{formatFightDateValue(form.fight_date)}</li>
+                  <li>{appText("text_6b8a8e381c7d")}{formatValue(form.rounds_format)}</li>
+                  <li>{appText("text_42689438d447")}{formatValue(form.weekly_training_frequency)}</li>
+                  <li>{appText("text_a703783e38c0")}{formatValue(form.fatigue_level || "low")}</li>
                 </ul>
               </div>
               <div className="support-panel">
-                <p className="kicker">Guidance</p>
-                <p className="muted">Fight date and your planned weekly session count shape the camp timeline.</p>
+                <p className="kicker">{appText("text_10af9928ba80")}</p>
+                <p className="muted">{appText("text_c5f2f3e4becc")}</p>
               </div>
             </aside>
           </div>
@@ -2750,18 +2756,18 @@ export function PlanIntakeForm() {
             <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
               <article className="step-card">
                 <div className="form-section-header">
-                  <p className="kicker">Schedule</p>
+                  <p className="kicker">{appText("text_f4830a1dae29")}</p>
                   <h2 className="form-section-title">{t("trainingAvailability")}</h2>
                 </div>
                 {shouldHideField(daysOutCtx, "training_availability") ? (
                   <div className="field">
-                    <p className="muted" style={{ opacity: 0.5 }}>Training availability is not used for planning at this stage.</p>
+                    <p className="muted" style={{ opacity: 0.5 }}>{appText("text_c910c94861d8")}</p>
                   </div>
                 ) : (
                 <>
                   <CheckboxGroup
                     id="trainingAvailabilityGroup"
-                    label="Training Availability"
+                    label={appText("text_d0c4e32176bb")}
                     options={TRAINING_AVAILABILITY_OPTIONS}
                     selectedValues={form.training_availability}
                     onToggle={(value) => toggleFieldValue("training_availability", value)}
@@ -2781,7 +2787,7 @@ export function PlanIntakeForm() {
                     tabIndex={invalidFieldId === "availabilityConsistencyAlert" ? -1 : undefined}
                     aria-invalid={invalidFieldId === "availabilityConsistencyAlert" ? true : undefined}
                   >
-                    <p className="kicker">Consistency check</p>
+                    <p className="kicker">{appText("text_76766aa318c3")}</p>
                     <p className={availabilityConsistency.hardError ? "error-text" : "muted"}>
                       {availabilityConsistency.hardError ?? availabilityConsistency.softWarning}
                     </p>
@@ -2790,20 +2796,19 @@ export function PlanIntakeForm() {
               </article>
               <article className="step-card">
                 <div className="form-section-header">
-                  <p className="kicker">Combat load</p>
+                  <p className="kicker">{appText("text_cf1da5594e96")}</p>
                   <h2 className="form-section-title">{t("combatLoad")}</h2>
                 </div>
                 <p className="muted">
-                  Mark which combat days are hard sparring and which are light or technical. These still count within your weekly session total.
-                </p>
+                  {appText("text_ad7e27f6d751")}</p>
                 {shouldHideField(daysOutCtx, "hard_sparring_days") ? (
                   <div className="field">
-                    <p className="muted" style={{ opacity: 0.5 }}>Hard sparring day selection is not used for planning at this stage.</p>
+                    <p className="muted" style={{ opacity: 0.5 }}>{appText("text_dc29cb08269e")}</p>
                   </div>
                 ) : (
                 <>
                 <CheckboxGroup
-                  label="Hard sparring days"
+                  label={appText("text_7ef2a3f6f1a2")}
                   options={TRAINING_AVAILABILITY_OPTIONS}
                   selectedValues={form.hard_sparring_days}
                   onToggle={(value) => toggleFieldValue("hard_sparring_days", value)}
@@ -2825,7 +2830,7 @@ export function PlanIntakeForm() {
                 <div className="field">
                   <p className="muted">
                     {getFieldHelperText(daysOutCtx, "hard_sparring_days") ||
-                      "Select your usual hard sparring days."}
+                      appText("text_008fc1dbb200")}
                   </p>
                 </div>
                 {hardSparringWarning.message ? (
@@ -2836,7 +2841,7 @@ export function PlanIntakeForm() {
                     aria-invalid={invalidFieldId === "hardSparringAck" ? true : undefined}
                     aria-describedby={invalidFieldId === "hardSparringAck" ? "hardSparringAck-error" : undefined}
                   >
-                    <p className="inline-warning-banner-label">High-contact warning</p>
+                    <p className="inline-warning-banner-label">{appText("text_fad222d2101e")}</p>
                     <p className={hardSparringWarningLocked ? "error-text" : "muted"}>{hardSparringWarning.message}</p>
                     <label className={`inline-warning-ack ${hardSparringWarningAcknowledged ? "inline-warning-ack-checked" : ""}`.trim()}>
                       <input
@@ -2848,7 +2853,7 @@ export function PlanIntakeForm() {
                           );
                         }}
                       />
-                      <span className="inline-warning-ack-copy">I understand this requires deliberate recovery planning.</span>
+                      <span className="inline-warning-ack-copy">{appText("text_482e260b94ec")}</span>
                     </label>
                     {invalidFieldId === "hardSparringAck" && error ? (
                       <p id="hardSparringAck-error" className="error-text" role="alert">{error}</p>
@@ -2859,12 +2864,12 @@ export function PlanIntakeForm() {
                 )}
                 {shouldHideField(daysOutCtx, "support_work_days") ? (
                   <div className="field">
-                    <p className="muted" style={{ opacity: 0.5 }}>Light Combat day selection is not used for planning at this stage.</p>
+                    <p className="muted" style={{ opacity: 0.5 }}>{appText("text_5c4891fb37c1")}</p>
                   </div>
                 ) : (
                 <>
                 <CheckboxGroup
-                  label="Light or technical days"
+                  label={appText("text_7ea5be859a70")}
                   options={TRAINING_AVAILABILITY_OPTIONS}
                   selectedValues={form.support_work_days}
                   onToggle={(value) => toggleFieldValue("support_work_days", value)}
@@ -2884,7 +2889,7 @@ export function PlanIntakeForm() {
                 <div className="field">
                   <p className="muted">
                     {getFieldHelperText(daysOutCtx, "support_work_days") ||
-                      "Pads, drills, movement or other lower-intensity combat work."
+                      appText("text_13ce29ff5c2d")
                     }
                   </p>
                 </div>
@@ -2897,7 +2902,7 @@ export function PlanIntakeForm() {
                     tabIndex={invalidFieldId === "sparringConsistencyAlert" ? -1 : undefined}
                     aria-invalid={invalidFieldId === "sparringConsistencyAlert" ? true : undefined}
                   >
-                    <p className="kicker">Sparring check</p>
+                    <p className="kicker">{appText("text_76e350e56367")}</p>
                     <p className={sparringConsistency.hardError ? "error-text" : "muted"}>
                       {sparringConsistency.hardError ?? sparringConsistency.softWarning}
                     </p>
@@ -2914,17 +2919,16 @@ export function PlanIntakeForm() {
                         setError(null);
                         setInvalidFieldId(null);
                         setValidationFocusRequest(null);
-                        setMessage("Open Plan selected. Continue with your available training schedule.");
+                        setMessage(appText("text_43f15dfa7ec4"));
                       }}
                     >
-                      I don&apos;t currently have a scheduled combat session
-                    </button>
+                      {appText("text_d5ca03dcf519")}</button>
                   </div>
                 ) : null}
               </article>
               <article className="step-card">
                 <div className="form-section-header">
-                  <p className="kicker">Resources</p>
+                  <p className="kicker">{appText("text_e89b30aa1dc3")}</p>
                   <h2 className="form-section-title">{t("equipment")}</h2>
                 </div>
                 <EquipmentSelector
@@ -2934,22 +2938,22 @@ export function PlanIntakeForm() {
               </article>
               {shouldHideField(daysOutCtx, "training_preference") ? null : (
               <OptionalDetails
-                title="Training preference"
-                hint="Tell the planner if you have a specific feel, pace, or format preference for sessions."
+                title={appText("text_f34d9859411f")}
+                hint={appText("text_e24925d1902d")}
               >
                 <div className="field" style={shouldDeEmphasizeField(daysOutCtx, "training_preference") ? { opacity: 0.55 } : undefined}>
-                  <label htmlFor="trainingPreference">Session preference</label>
+                  <label htmlFor="trainingPreference">{appText("text_615d96e7082f")}</label>
                   <textarea
                     id="trainingPreference"
                     disabled={shouldDisableField(daysOutCtx, "training_preference")}
                     value={form.training_preference ?? ""}
                     onChange={(event) => updateField("training_preference", event.target.value)}
                     maxLength={TRAINING_PREFERENCE_MAX}
-                    placeholder="Example: shorter hard sessions, less circuit work, more technical warm-ups, avoid long grinders"
+                    placeholder={appText("text_0bf41a9dc509")}
                   />
                   <p className="muted">
                     {getFieldHelperText(daysOutCtx, "training_preference") ||
-                      "Use this only for session feel, pacing, or format preferences."}
+                      appText("text_bae5a6ce490e")}
                   </p>
                 </div>
               </OptionalDetails>
@@ -2959,19 +2963,19 @@ export function PlanIntakeForm() {
             <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
               <div className="support-panel">
                 <div className="form-section-header">
-                  <p className="kicker">Current input</p>
+                  <p className="kicker">{appText("text_48571f7d9b50")}</p>
                   <h2 className="form-section-title">{t("selectedAvailability")}</h2>
                 </div>
                 <ul className="summary-list">
-                  <li>Training Availability: {selectedTrainingAvailability}</li>
-                  <li>Hard Sparring Days: {selectedHardSparring}</li>
-                  <li>Light Combat days: {selectedSupportWorkDays}</li>
-                  <li>Equipment Access: {selectedEquipmentAccess}</li>
+                  <li>{appText("text_9fbccee24cd0")}{selectedTrainingAvailability}</li>
+                  <li>{appText("text_3e4ee11ba575")}{selectedHardSparring}</li>
+                  <li>{appText("text_691c518bfeb7")}{selectedSupportWorkDays}</li>
+                  <li>{appText("text_a8e521b6f956")}{selectedEquipmentAccess}</li>
                 </ul>
               </div>
               <div className="support-panel">
-                <p className="kicker">Preference</p>
-                <p className="muted">This field is for training feel only, not injuries or general notes.</p>
+                <p className="kicker">{appText("text_a0dc191bc1d4")}</p>
+                <p className="muted">{appText("text_a7e9aa5c9638")}</p>
               </div>
             </aside>
           </div>
@@ -2982,7 +2986,7 @@ export function PlanIntakeForm() {
             <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
               <article className="step-card">
                 <div className="form-section-header">
-                  <p className="kicker">Restrictions</p>
+                  <p className="kicker">{appText("text_25ed77282d99")}</p>
                   <h2 className="form-section-title">{t("injuries")}</h2>
                 </div>
                 {healthConsentGranted ? <SafetyNote showRedFlags>{INJURY_INTAKE_SAFETY}</SafetyNote> : null}
@@ -2994,18 +2998,17 @@ export function PlanIntakeForm() {
                   // Empty state — a single inline CTA reveals the body map and a
                   // first card, instead of asking the athlete to untick a box first.
                   <div className="support-panel gi-empty-state compact-gap">
-                    <p className="kicker">Anything to train around?</p>
-                    <p className="muted">Add any injuries, pain, or movement limits the planner should respect. Leave this empty if there&apos;s nothing to work around.</p>
+                    <p className="kicker">{appText("text_dc9beee1bf46")}</p>
+                    <p className="muted">{appText("text_75656ba82aed")}</p>
                     <button type="button" className="injury-card-add-btn" onClick={() => handleNoRestrictionsChange(false)}>
-                      <span aria-hidden="true">+</span> Add an injury or restriction
-                    </button>
+                      <span aria-hidden="true">{appText("text_a318c24216de")}</span> {appText("text_ec7993bccfaf")}</button>
                   </div>
                 ) : (
                   <>
                     {showClearInjuriesConfirm ? (
                       <div className="gi-clear-confirm-panel" role="alertdialog" aria-live="polite">
-                        <p className="gi-clear-confirm-title">Clear injury cards?</p>
-                        <p className="muted">This will remove current injury entries from this intake.</p>
+                        <p className="gi-clear-confirm-title">{appText("text_44cedb418919")}</p>
+                        <p className="muted">{appText("text_20aad01adbae")}</p>
                         <div className="gi-clear-confirm-actions">
                           <button type="button" className="secondary-button" onClick={() => setShowClearInjuriesConfirm(false)}>{t("keepInjuries")}</button>
                           <button type="button" className="danger-button" onClick={handleConfirmClearInjuries}>{t("clearInjuries")}</button>
@@ -3014,8 +3017,8 @@ export function PlanIntakeForm() {
                     ) : null}
                     {pendingInjuryRemovalIndex !== null ? (
                       <div ref={pendingRemovalRef} className="gi-clear-confirm-panel gi-remove-confirm-panel" role="alertdialog" aria-live="polite">
-                        <p className="gi-clear-confirm-title">Remove injury?</p>
-                        <p className="muted">This injury has details filled in. Removing will delete them.</p>
+                        <p className="gi-clear-confirm-title">{appText("text_75cd7c00eba0")}</p>
+                        <p className="muted">{appText("text_0550a8174cc3")}</p>
                         <div className="gi-clear-confirm-actions">
                           <button type="button" className="secondary-button" onClick={handleCancelRemovePendingInjury}>{t("keepInjury")}</button>
                           <button type="button" className="danger-button" onClick={handleConfirmRemovePendingInjury}>{t("removeInjury")}</button>
@@ -3075,14 +3078,12 @@ export function PlanIntakeForm() {
 
                         <div className="injury-card-add-row">
                           <button type="button" className="injury-card-add-btn" onClick={handleAddGuidedInjury}>
-                            <span aria-hidden="true">+</span> Add another injury
-                          </button>
+                            <span aria-hidden="true">{appText("text_a318c24216de")}</span> {appText("text_85290ffc8690")}</button>
                         </div>
                       </div>
                     </div>
                     <button type="button" className="gi-notes-toggle gi-no-restrictions-btn" onClick={() => handleNoRestrictionsChange(true)}>
-                      No current injuries or restrictions
-                    </button>
+                      {appText("text_fa5225944b3e")}</button>
                   </>
                 )}
               </article>
@@ -3101,27 +3102,27 @@ export function PlanIntakeForm() {
                   {performanceFocusCapBadge}
                 </span>
                 <div className="focus-cap-copy">
-                  <p className="focus-cap-label">Focus cap</p>
+                  <p className="focus-cap-label">{appText("text_01465d8d27b4")}</p>
                   <p className="focus-cap-hint">{performanceFocusCapHint}</p>
                 </div>
               </article>
               {shouldHideField(daysOutCtx, "key_goals") ? (
               <article className="step-card">
                 <div className="form-section-header">
-                  <p className="kicker">Target outcomes</p>
+                  <p className="kicker">{appText("text_467d76ab412f")}</p>
                   <h2 className="form-section-title">{t("goals")}</h2>
                 </div>
-                <p className="muted" style={{ opacity: 0.5 }}>Goal selection is not used for planning at this stage.</p>
+                <p className="muted" style={{ opacity: 0.5 }}>{appText("text_8c1bc22a8a2a")}</p>
               </article>
               ) : (
               <article className="step-card" style={shouldDeEmphasizeField(daysOutCtx, "key_goals") ? { opacity: 0.55 } : undefined}>
                 <div className="form-section-header">
-                  <p className="kicker">Target outcomes</p>
+                  <p className="kicker">{appText("text_467d76ab412f")}</p>
                   <h2 className="form-section-title">{t("goals")}</h2>
                 </div>
                 <CheckboxGroup
                   id="keyGoalsGroup"
-                  label="Key Goals"
+                  label={appText("text_b33c23d73364")}
                   options={KEY_GOAL_OPTIONS}
                   selectedValues={form.key_goals}
                   onToggle={(value) => toggleFieldValue("key_goals", value)}
@@ -3140,16 +3141,16 @@ export function PlanIntakeForm() {
                 ) : null}
                 {form.key_goals.length > 1 ? (
                   <div className="field">
-                    <label htmlFor="primaryGoal">Primary goal</label>
+                    <label htmlFor="primaryGoal">{appText("text_9638482b77fe")}</label>
                     <CustomSelect
                       id="primaryGoal"
                       value={form.primary_goal ?? ""}
                       options={KEY_GOAL_OPTIONS.filter((option) => form.key_goals.includes(option.value))}
-                      placeholder="Select primary goal"
+                      placeholder={appText("text_408632ac6aa6")}
                       includeEmptyOption
                       onChange={(value) => updateField("primary_goal", value)}
                     />
-                    <p className="muted">Pick which one the plan should be built around.</p>
+                    <p className="muted">{appText("text_4ef27130ec1e")}</p>
                   </div>
                 ) : null}
               </article>
@@ -3157,19 +3158,19 @@ export function PlanIntakeForm() {
               {shouldHideField(daysOutCtx, "weak_areas") ? (
               <article className="step-card">
                 <div className="form-section-header">
-                  <p className="kicker">Performance gaps</p>
+                  <p className="kicker">{appText("text_6899141ffa88")}</p>
                   <h2 className="form-section-title">{t("weakAreas")}</h2>
                 </div>
-                <p className="muted" style={{ opacity: 0.5 }}>Weak area selection is not used for planning at this stage.</p>
+                <p className="muted" style={{ opacity: 0.5 }}>{appText("text_66b0fa5f7382")}</p>
               </article>
               ) : (
               <article className="step-card" style={shouldDeEmphasizeField(daysOutCtx, "weak_areas") ? { opacity: 0.55 } : undefined}>
                 <div className="form-section-header">
-                  <p className="kicker">Performance gaps</p>
+                  <p className="kicker">{appText("text_6899141ffa88")}</p>
                   <h2 className="form-section-title">{t("weakAreas")}</h2>
                 </div>
                 <CheckboxGroup
-                  label="Weak Areas"
+                  label={appText("text_01335284ff74")}
                   options={WEAK_AREA_OPTIONS}
                   selectedValues={form.weak_areas}
                   onToggle={(value) => toggleFieldValue("weak_areas", value)}
@@ -3183,32 +3184,32 @@ export function PlanIntakeForm() {
                 ) : null}
                 {form.weak_areas.length > 1 ? (
                   <div className="field">
-                    <label htmlFor="primaryWeakArea">Primary weak area</label>
+                    <label htmlFor="primaryWeakArea">{appText("text_f64d9415a04d")}</label>
                     <CustomSelect
                       id="primaryWeakArea"
                       value={form.primary_weak_area ?? ""}
                       options={WEAK_AREA_OPTIONS.filter((option) => form.weak_areas.includes(option.value))}
-                      placeholder="Select primary weak area"
+                      placeholder={appText("text_89d3e545ad1d")}
                       includeEmptyOption
                       onChange={(value) => updateField("primary_weak_area", value)}
                     />
-                    <p className="muted">Pick which one the plan must manage first.</p>
+                    <p className="muted">{appText("text_79ca90b1ed17")}</p>
                   </div>
                 ) : null}
-                <p className="muted">Pick up to 2 weak areas.</p>
+                <p className="muted">{appText("text_9f0597f46b6c")}</p>
               </article>
               )}
               {goalWeakAreaOverlaps.length ? (
                 <article className="step-card priority-clarification-card">
                   <div className="form-section-header">
-                    <p className="kicker">Clarification</p>
+                    <p className="kicker">{appText("text_69efa4a77f7b")}</p>
                     <h2 className="form-section-title">{t("priorityDetail")}</h2>
                   </div>
                   <div className="priority-clarification-copy">
                     <p>{overlapClarificationPrompt}</p>
-                    <p className="muted">Optional. This helps capture intent without changing your selected goal or weak area.</p>
+                    <p className="muted">{appText("text_6e6369ce8f24")}</p>
                   </div>
-                  <div className="priority-clarification-options" role="radiogroup" aria-label="Goal and weak area clarification">
+                  <div className="priority-clarification-options" role="radiogroup" aria-label={appText("text_b033141c40ba")}>
                     {goalWeakAreaOverlaps.map((overlap, overlapIndex) => {
                       const overlapClarificationOptions = getClarificationOptions(overlap.normalizedTag, form.athlete.technical_style, form.athlete.tactical_style);
                       const selectedDetail = form.goal_weakness_collision_details?.[overlapIndex]?.detail ?? "";
@@ -3246,31 +3247,31 @@ export function PlanIntakeForm() {
                 </article>
               ) : null}
               <OptionalDetails
-                title="Add coach notes"
-                hint="Mental / confidence issues, or anything else the planner should know."
+                title={appText("text_7c82a1ceefad")}
+                hint={appText("text_f053dcfd615b")}
               >
                 <div className="form-grid">
                   <div className="field">
-                    <label htmlFor="mindsetChallenges">Mental / confidence issue</label>
+                    <label htmlFor="mindsetChallenges">{appText("text_f13717f1d45b")}</label>
                     <textarea
                       id="mindsetChallenges"
                       value={form.mindset_challenges ?? ""}
                       onChange={(event) => updateField("mindset_challenges", event.target.value)}
                       maxLength={MENTAL_BLOCKERS_MAX}
-                      placeholder="Optional: anxiety under pressure, low confidence late in camp, trouble switching on"
+                      placeholder={appText("text_81a51c7e6903")}
                     />
-                    <p className="muted">Only use this if there is a real mental or confidence issue the plan should respect.</p>
+                    <p className="muted">{appText("text_b84745310237")}</p>
                   </div>
                   <div className="field">
-                    <label htmlFor="notes">Anything else we should know?</label>
+                    <label htmlFor="notes">{appText("text_d1bb371ff482")}</label>
                     <textarea
                       id="notes"
                       value={form.notes ?? ""}
                       onChange={(event) => updateField("notes", event.target.value)}
                       maxLength={PREVIOUS_PLAN_FEEDBACK_MAX}
-                      placeholder="Optional: travel, school/work load, sparring schedule, recovery issue, or anything else the planner should know"
+                      placeholder={appText("text_35c46c4166d0")}
                     />
-                    <p className="muted">Use this for extra coach context that does not fit the other fields.</p>
+                    <p className="muted">{appText("text_9afc7c6c957e")}</p>
                   </div>
                 </div>
               </OptionalDetails>
@@ -3279,13 +3280,13 @@ export function PlanIntakeForm() {
             <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
               <div className="support-panel">
                 <div className="form-section-header">
-                  <p className="kicker">Performance snapshot</p>
+                  <p className="kicker">{appText("text_646e52893fd0")}</p>
                   <h2 className="form-section-title">{t("selectedFocus")}</h2>
                 </div>
                 <ul className="summary-list">
-                  <li>Key Goals: {selectedGoals}</li>
-                  <li>Weak Areas: {selectedWeakAreas}</li>
-                  <li>Mental / confidence issue: {formatValue(form.mindset_challenges)}</li>
+                  <li>{appText("text_919512d71f37")}{selectedGoals}</li>
+                  <li>{appText("text_74de0d1db889")}{selectedWeakAreas}</li>
+                  <li>{appText("text_4f355a949579")}{formatValue(form.mindset_challenges)}</li>
                 </ul>
               </div>
             </aside>
@@ -3297,21 +3298,21 @@ export function PlanIntakeForm() {
             <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
               <article className="step-card">
                 <div className="form-section-header">
-                  <p className="kicker">Review</p>
+                  <p className="kicker">{appText("text_aff0766a5290")}</p>
                   <h2 className="form-section-title">{t("capturedInput")}</h2>
                 </div>
                 <div className="review-columns">
                   <div className="review-column">
                     <article className="review-card">
                       <div className="review-card-header">
-                        <p className="kicker">Profile</p>
+                        <p className="kicker">{appText("text_d696a35bdd18")}</p>
                         <h3 className="review-card-title">{t("athleteProfile")}</h3>
                       </div>
                       <ReviewDetailList items={profileReviewItems} />
                     </article>
                     <article className="review-card">
                       <div className="review-card-header">
-                        <p className="kicker">Training</p>
+                        <p className="kicker">{appText("text_36a798e3f392")}</p>
                         <h3 className="review-card-title">{t("availabilityEquipment")}</h3>
                       </div>
                       <ReviewDetailList items={trainingReviewItems} />
@@ -3320,21 +3321,21 @@ export function PlanIntakeForm() {
                   <div className="review-column">
                     <article className="review-card">
                       <div className="review-card-header">
-                        <p className="kicker">Fight context</p>
+                        <p className="kicker">{appText("text_af7f44f5e27e")}</p>
                         <h3 className="review-card-title">{t("campSetup")}</h3>
                       </div>
                       <ReviewDetailList items={campSetupReviewItems} />
                     </article>
                     <article className="review-card">
                       <div className="review-card-header">
-                        <p className="kicker">Performance</p>
+                        <p className="kicker">{appText("text_442aded87a55")}</p>
                         <h3 className="review-card-title">{t("goalsWeakAreas")}</h3>
                       </div>
                       <ReviewDetailList items={performanceReviewItems} />
                     </article>
                     <article className="review-card">
                       <div className="review-card-header">
-                        <p className="kicker">Constraints</p>
+                        <p className="kicker">{appText("text_2b59190cc5bd")}</p>
                         <h3 className="review-card-title">{t("constraintsRisks")}</h3>
                       </div>
                       <ReviewDetailList items={constraintsReviewItems} />
@@ -3346,23 +3347,22 @@ export function PlanIntakeForm() {
 
             <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
               <div className="support-panel">
-                <p className="kicker">Restrictions</p>
-                <p className="muted">Injuries or restrictions: {restrictionSummary}</p>
+                <p className="kicker">{appText("text_25ed77282d99")}</p>
+                <p className="muted">{appText("text_5bbf3a142c4d")}{restrictionSummary}</p>
               </div>
               <div className="support-panel">
-                <p className="kicker">Nutrition foundation</p>
-                <p className="muted">Weight setup, bodyweight logging, and readiness fields now live in the dedicated nutrition workspace.</p>
+                <p className="kicker">{appText("text_975be27ceb04")}</p>
+                <p className="muted">{appText("text_ac6f7c517928")}</p>
                 <div className="plan-summary-actions">
                   <Link href="/nutrition" className="ghost-button">
-                    Open nutrition workspace
-                  </Link>
+                    {appText("text_24e7448d62b8")}</Link>
                 </div>
               </div>
             </aside>
           </div>
         ) : null}
 
-        {message ? <div className="success-banner athlete-motion-slot athlete-motion-status">{message}</div> : null}
+        {message ? <div className="success-banner athlete-motion-slot athlete-motion-status">{translateUiText(appText, message)}</div> : null}
         {error ? (
           <div
             id="onboarding-error-banner"
@@ -3370,7 +3370,7 @@ export function PlanIntakeForm() {
             role="alert"
             aria-live="assertive"
           >
-            {error}
+            {translateUiText(appText, error)}
           </div>
         ) : null}
 

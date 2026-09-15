@@ -2,6 +2,8 @@
 
 import { getCampProgress } from "@/lib/camp-map";
 import type { StructuredPlan } from "@/lib/types";
+import { useTranslations as useAppTranslations } from "next-intl";
+
 
 /**
  * Glanceable "how far through camp" bar, shared by Today and Overview so the two
@@ -18,6 +20,7 @@ export function CampProgressBar({
   trainingDay: Date | null;
   variant?: "today" | "overview";
 }) {
+    const appText = useAppTranslations("AppText");
   const progress = getCampProgress(plan, trainingDay);
   if (!progress) {
     return null;
@@ -38,7 +41,7 @@ export function CampProgressBar({
       aria-label={`Camp progress${weekLabel ? `, ${weekLabel}` : ""}${dLabel ? `, ${dLabel} to fight` : ""}`}
     >
       <div className="camp-progress-head">
-        <span className="camp-progress-label">Camp progress</span>
+        <span className="camp-progress-label">{appText("text_c8d243b8043f")}</span>
         <span className="camp-progress-meta">{meta || `${rounded}%`}</span>
       </div>
       <div className="overview-progress-track camp-progress-track" aria-hidden="true">

@@ -28,6 +28,9 @@ import {
 } from "@/lib/today";
 import { useTrainingDay } from "@/lib/use-training-day";
 import type { TodayCompletionStatus } from "@/lib/types";
+import { useTranslations as useAppTranslations } from "next-intl";
+import { translateUiText } from "@/i18n/ui-text";
+
 
 function TodayLoadingState() {
   return (
@@ -41,17 +44,17 @@ function TodayLoadingState() {
 }
 
 function NoActivePlanState() {
+    const appText = useAppTranslations("AppText");
   return (
     <section className="panel today-shell today-empty-state">
       <div className="today-hero-copy">
-        <p className="kicker">Today</p>
-        <h1>{TODAY_EMPTY_TITLE}</h1>
-        <p className="muted">{TODAY_EMPTY_TEXT}</p>
+        <p className="kicker">{appText("text_2b065c7c9ce4")}</p>
+        <h1>{translateUiText(appText, TODAY_EMPTY_TITLE)}</h1>
+        <p className="muted">{translateUiText(appText, TODAY_EMPTY_TEXT)}</p>
       </div>
       <div className="today-action-row">
         <Link href="/onboarding" className="cta">
-          Complete Intake
-        </Link>
+          {appText("text_779a45ca9e66")}</Link>
       </div>
     </section>
   );
@@ -69,6 +72,7 @@ function ReadinessValue({
   href?: string;
   actionLabel?: string;
 }) {
+    const appText = useAppTranslations("AppText");
   if (!href) {
     return <dd>{children}</dd>;
   }
@@ -76,7 +80,7 @@ function ReadinessValue({
     <dd>
       <a href={href}>
         {children}
-        {actionLabel ? <span className="sr-only"> — {actionLabel}</span> : null}
+        {actionLabel ? <span className="sr-only"> {appText("text_bda050585a00")}{actionLabel}</span> : null}
       </a>
     </dd>
   );
@@ -97,6 +101,7 @@ function TodayReadinessStrip({
   injuriesHref?: string;
   sessionHref?: string;
 }) {
+    const appText = useAppTranslations("AppText");
   const injuryLabel = openInjuryCount
     ? `${openInjuryCount} active injur${openInjuryCount === 1 ? "y" : "ies"}`
     : "No active injuries";
@@ -111,22 +116,22 @@ function TodayReadinessStrip({
   const sessionTone = sessionLogged ? "clear" : completionStatus === "started" ? "pending" : undefined;
 
   return (
-    <dl className="today-readiness-strip" aria-label="Today command status">
+    <dl className="today-readiness-strip" aria-label={appText("text_39c354d6d1ac")}>
       <div data-tone={needsCheckin ? "pending" : "clear"}>
-        <dt>Check-in</dt>
-        <ReadinessValue href={checkinHref} actionLabel="Go to today's check-in">
-          {needsCheckin ? "Due" : "Logged"}
+        <dt>{appText("text_adc719587244")}</dt>
+        <ReadinessValue href={checkinHref} actionLabel={appText("text_5a9b39c979f4")}>
+          {needsCheckin ? appText("text_9071738f1459") : appText("text_3fbb039bb986")}
         </ReadinessValue>
       </div>
       <div data-tone={openInjuryCount ? "risk" : "clear"}>
-        <dt>Injury</dt>
-        <ReadinessValue href={injuriesHref} actionLabel="Go to injury manager">
+        <dt>{appText("text_24ecca5096ee")}</dt>
+        <ReadinessValue href={injuriesHref} actionLabel={appText("text_f820dfb8a906")}>
           {injuryLabel}
         </ReadinessValue>
       </div>
       <div data-tone={sessionTone}>
-        <dt>Session</dt>
-        <ReadinessValue href={sessionHref} actionLabel="Go to today's session">
+        <dt>{appText("text_6959b4159575")}</dt>
+        <ReadinessValue href={sessionHref} actionLabel={appText("text_9e414b267bda")}>
           {getCompletionLabel(completionStatus)}
         </ReadinessValue>
       </div>
@@ -135,6 +140,7 @@ function TodayReadinessStrip({
 }
 
 export function TodayScreen() {
+    const appText = useAppTranslations("AppText");
   const { session } = useAppSession();
   const token = session?.access_token ?? null;
   const trainingDay = useTrainingDay();
@@ -159,27 +165,24 @@ export function TodayScreen() {
     return (
       <section className="panel today-shell today-error-state">
         <div className="today-hero-copy">
-          <p className="kicker">Today command feed</p>
-          <h1>{isAccessIssue ? "Access is locked" : "Today is temporarily unavailable"}</h1>
+          <p className="kicker">{appText("text_9c05050aa680")}</p>
+          <h1>{isAccessIssue ? appText("text_5817b20aa1c7") : appText("text_5fbfb0cd8f8c")}</h1>
           <p className="muted" role="alert">
             {isAccessIssue
-              ? "Sign in with an active athlete account to unlock Today."
-              : "The live check-in feed did not respond. Your saved plan has not changed."}
+              ? appText("text_131ffd591e75")
+              : appText("text_eee4fca95501")}
           </p>
           {process.env.NODE_ENV !== "production" ? (
-            <p className="today-error-detail">Technical detail: {error}</p>
+            <p className="today-error-detail">{appText("text_b5ed7ae76fac")}{error}</p>
           ) : null}
         </div>
         <div className="today-action-row">
           <button type="button" className="cta" onClick={() => void refresh()}>
-            Retry Today
-          </button>
+            {appText("text_8881aecbb777")}</button>
           <Link href="/plans" className="secondary-button">
-            Open Plans
-          </Link>
+            {appText("text_750a8ec4d071")}</Link>
           <Link href="/" className="ghost-button">
-            Overview
-          </Link>
+            {appText("text_d4b1ea5708dd")}</Link>
         </div>
       </section>
     );
@@ -225,13 +228,13 @@ export function TodayScreen() {
       <section className="panel today-shell">
         <div className="today-hero-grid">
           <div className="today-hero-copy">
-            <p className="kicker">Today</p>
+            <p className="kicker">{appText("text_2b065c7c9ce4")}</p>
             <h1>{planTitle}</h1>
             <p className="muted today-hero-meta">
               {trainingDayLabel}
-              {openOngoing || activePlan.phase ? <span aria-hidden="true"> · </span> : null}
+              {openOngoing || activePlan.phase ? <span aria-hidden="true"> {appText("text_a137f17a19a0")}</span> : null}
               {openOngoing
-                ? "Ongoing 4-week block"
+                ? appText("text_ff3af3013e5c")
                 : activePlan.phase
                   ? humanizeIfRawEnum(activePlan.phase)
                   : null}
@@ -239,14 +242,11 @@ export function TodayScreen() {
           </div>
           <div className="today-hero-actions">
             <Link href={`/plans/${activePlan.id}`} className="secondary-button">
-              Open camp plan
-            </Link>
+              {appText("text_ae9d3ef8a3d1")}</Link>
             <Link href="/history" className="ghost-button">
-              View history
-            </Link>
+              {appText("text_a5932bc4ce51")}</Link>
             <Link href="/" className="ghost-button">
-              Overview
-            </Link>
+              {appText("text_d4b1ea5708dd")}</Link>
           </div>
         </div>
         <CampProgressBar plan={structuredPlan} trainingDay={trainingDay} variant="today" />

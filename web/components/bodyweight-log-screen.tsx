@@ -32,6 +32,9 @@ import {
 } from "@/lib/nutrition-bodyweight";
 import { localDateValue, localTimeValue, toNumber, toUpdateRequest } from "@/lib/nutrition-workspace";
 import type { NutritionBodyweightLogEntry, NutritionWorkspaceState, WeightSource } from "@/lib/types";
+import { useTranslations as useAppTranslations } from "next-intl";
+import { translateUiText } from "@/i18n/ui-text";
+
 
 type FastedSelection = "unset" | "fasted" | "fed";
 
@@ -116,6 +119,7 @@ function formatBmiValue(value: number | null): string {
 }
 
 export function BodyweightLogScreen() {
+    const appText = useAppTranslations("AppText");
   const { session, me } = useAppSession();
   const [workspace, setWorkspace] = useState<NutritionWorkspaceState | null>(null);
   const [selectedRange, setSelectedRange] = useState<BodyweightRange>("30D");
@@ -143,7 +147,7 @@ export function BodyweightLogScreen() {
     };
   }, [session?.access_token]);
 
-  const athleteName = me?.profile.full_name || me?.profile.email || "Nutrition workspace";
+  const athleteName = me?.profile.full_name || me?.profile.email || appText("text_02207fbaeaef");
   const entries = workspace?.nutrition_monitoring.daily_bodyweight_log ?? [];
   const indexedEntries = getBodyweightEntriesWithIndex(entries);
   const latestEntry = workspace ? getLatestBodyweightEntry(entries) : null;
@@ -172,7 +176,7 @@ export function BodyweightLogScreen() {
         setMessage(successMessage);
         onSuccess?.();
       } catch (saveError) {
-        setError(saveError instanceof Error ? saveError.message : "Unable to save bodyweight log.");
+        setError(saveError instanceof Error ? saveError.message : appText("text_090cb0074d98"));
       }
     });
   }
@@ -184,7 +188,7 @@ export function BodyweightLogScreen() {
         setQuickAdd(createEmptyDraft());
       });
     } catch (draftError) {
-      setError(draftError instanceof Error ? draftError.message : "Unable to save bodyweight entry.");
+      setError(draftError instanceof Error ? draftError.message : appText("text_f39b4fe04e64"));
       setMessage(null);
     }
   }
@@ -214,7 +218,7 @@ export function BodyweightLogScreen() {
         setEditingDraft(null);
       });
     } catch (draftError) {
-      setError(draftError instanceof Error ? draftError.message : "Unable to update bodyweight entry.");
+      setError(draftError instanceof Error ? draftError.message : appText("text_24a10a379ec3"));
       setMessage(null);
     }
   }
@@ -238,44 +242,44 @@ export function BodyweightLogScreen() {
       <section className={`panel ${styles.bodyweightPage}`}>
         <NutritionWorkspaceHeader
           athleteName={athleteName}
-          title="Bodyweight log"
-          description="A dedicated fight-lab surface for daily weigh-ins, fasted context, disciplined trend review, and explicit history edits."
+          title={appText("text_c6284ea16536")}
+          description={appText("text_e0b800f927f0")}
         />
         <NutritionSubnav />
         <SafetyNote tone="warning">{WEIGHT_CUT_SAFETY}</SafetyNote>
 
         {!workspace ? (
-          <section className="support-panel loading-card"><p className="muted">Loading bodyweight log.</p></section>
+          <section className="support-panel loading-card"><p className="muted">{appText("text_1f23d4d3f810")}</p></section>
         ) : (
           <>
             <section className={styles.heroPanel}>
               <div className={styles.heroHeader}>
                 <div className={styles.heroHeaderCopy}>
-                  <p className="kicker">Latest readout</p>
-                  <h2 className="form-section-title">Current trace</h2>
-                  <p className="muted">The hero locks onto the latest logged number so weight stays the loudest signal on the page.</p>
+                  <p className="kicker">{appText("text_5f308508b45b")}</p>
+                  <h2 className="form-section-title">{appText("text_f34d137aba64")}</h2>
+                  <p className="muted">{appText("text_6a499a471f04")}</p>
                 </div>
               </div>
 
               <div className={styles.heroBody}>
                 <div className={styles.heroWeightRow}>
                   <p className={`${styles.heroWeight} ${latestEntry ? "" : styles.heroWeightEmpty}`.trim()}>
-                    {latestEntry ? latestEntry.weight_kg.toFixed(1) : "Await first weigh-in"}
+                    {latestEntry ? latestEntry.weight_kg.toFixed(1) : appText("text_de687550b8fa")}
                   </p>
-                  {latestEntry ? <p className={styles.heroUnit}>KG</p> : null}
+                  {latestEntry ? <p className={styles.heroUnit}>{appText("text_88ed32099fc7")}</p> : null}
                 </div>
 
                 <div className={styles.heroMetaGrid}>
                   <div className={styles.heroMetaCard}>
-                    <p className={styles.heroMetaLabel}>Last entry</p>
+                    <p className={styles.heroMetaLabel}>{appText("text_ffe191a34207")}</p>
                     <p className={styles.heroMetaValue}>{formatBodyweightDate(latestEntry?.date ?? null)}</p>
                   </div>
                   <div className={styles.heroMetaCard}>
-                    <p className={styles.heroMetaLabel}>Target</p>
+                    <p className={styles.heroMetaLabel}>{appText("text_978354db0c00")}</p>
                     <p className={styles.heroMetaValue}>{formatWeight(workspace.shared_camp_context.target_weight_kg ?? null)}</p>
                   </div>
                   <div className={styles.heroMetaCard}>
-                    <p className={styles.heroMetaLabel}>Weight source</p>
+                    <p className={styles.heroMetaLabel}>{appText("text_73b4c9a69e84")}</p>
                     <p className={styles.heroMetaValue}>{formatWeightSource(workspace.shared_camp_context.current_weight_source)}</p>
                   </div>
                 </div>
@@ -284,30 +288,30 @@ export function BodyweightLogScreen() {
 
             <section className={styles.kpiRail}>
               <article className={styles.kpiCard}>
-                <p className={styles.kpiLabel}>BMI</p>
+                <p className={styles.kpiLabel}>{appText("text_c16431b1087a")}</p>
                 <p className={styles.kpiValue}>{formatBmiValue(bmi)}</p>
                 <p className={styles.kpiHelper}>
-                  {bmi == null ? "Needs height and effective weight." : "Derived from saved height and effective current weight."}
+                  {bmi == null ? appText("text_8f392eb2b725") : appText("text_09c090f615e6")}
                 </p>
               </article>
               <article className={styles.kpiCard}>
-                <p className={styles.kpiLabel}>7-day average</p>
+                <p className={styles.kpiLabel}>{appText("text_f7da9e525d6f")}</p>
                 <p className={styles.kpiValue}>{formatWeight(sevenDayAverage)}</p>
-                <p className={styles.kpiHelper}>Calculated from the seven most recent logged entries.</p>
+                <p className={styles.kpiHelper}>{appText("text_46171ff3f475")}</p>
               </article>
               <article className={styles.kpiCard}>
-                <p className={styles.kpiLabel}>Target gap</p>
+                <p className={styles.kpiLabel}>{appText("text_066bc4277daf")}</p>
                 <p className={styles.kpiValue}>{formatTargetGapLabel(targetGap)}</p>
                 <p className={styles.kpiHelper}>
-                  {targetGap == null ? "Add a target weight in the workspace." : "Gap between effective weight and saved target."}
+                  {targetGap == null ? appText("text_d13cf3c26022") : appText("text_625ad0b0cb4f")}
                 </p>
               </article>
               <article className={styles.kpiCard}>
-                <p className={styles.kpiLabel}>Recent change</p>
+                <p className={styles.kpiLabel}>{appText("text_033f7216c0f4")}</p>
                 <p className={styles.kpiValue}>{formatWeightDelta(recentChange)}</p>
                 <p className={styles.kpiHelper}>
                   {recentChange == null
-                    ? "Needs two entries inside the selected range."
+                    ? appText("text_a92d9dc68ba5")
                     : `Latest entry vs previous entry inside ${selectedRange}.`}
                 </p>
               </article>
@@ -323,15 +327,15 @@ export function BodyweightLogScreen() {
             <section className={styles.quickAddShell} id="bodyweight-quick-add">
               <div className={styles.moduleHeader}>
                 <div className={styles.moduleHeaderCopy}>
-                  <p className="kicker">Quick add</p>
-                  <h2 className="form-section-title">New weigh-in</h2>
-                  <p className="muted">Entry-first flow: lock the number, add fasted context and notes, then save the log immediately.</p>
+                  <p className="kicker">{appText("text_ee562d59348d")}</p>
+                  <h2 className="form-section-title">{appText("text_18ae2df899f9")}</h2>
+                  <p className="muted">{appText("text_32a398c4635b")}</p>
                 </div>
               </div>
 
               <div className={styles.quickAddGrid}>
                 <div className={`field ${styles.quickWeightField}`}>
-                  <label>Weight (kg)</label>
+                  <label>{appText("text_b48ca1a31a0f")}</label>
                   <input
                     type="number"
                     inputMode="decimal"
@@ -344,7 +348,7 @@ export function BodyweightLogScreen() {
 
                 <div className={styles.quickMetaGrid}>
                   <div className="field">
-                    <label>Date</label>
+                    <label>{appText("text_99c40ab40592")}</label>
                     <input
                       type="date"
                       value={quickAdd.date}
@@ -352,7 +356,7 @@ export function BodyweightLogScreen() {
                     />
                   </div>
                   <div className="field">
-                    <label>Time</label>
+                    <label>{appText("text_33b93476cf59")}</label>
                     <input
                       type="time"
                       value={quickAdd.time}
@@ -360,8 +364,8 @@ export function BodyweightLogScreen() {
                     />
                   </div>
                   <div className="field">
-                    <label>Fasted state</label>
-                    <div className={styles.stateRail} aria-label="Quick add fasted state">
+                    <label>{appText("text_eafd37f3611b")}</label>
+                    <div className={styles.stateRail} aria-label={appText("text_400607abaacd")}>
                       {FASTED_OPTIONS.map((option) => (
                         <button
                           key={option.value}
@@ -370,13 +374,13 @@ export function BodyweightLogScreen() {
                           className={`${styles.stateButton} ${quickAdd.is_fasted === option.value ? styles.stateButtonActive : ""}`.trim()}
                           onClick={() => setQuickAdd((current) => ({ ...current, is_fasted: option.value }))}
                         >
-                          {option.label}
+                          {translateUiText(appText, option.label)}
                         </button>
                       ))}
                     </div>
                   </div>
                   <div className={`field ${styles.quickNotes}`}>
-                    <label>Notes</label>
+                    <label>{appText("text_8a7525b1492f")}</label>
                     <textarea
                       rows={3}
                       value={quickAdd.notes}
@@ -387,9 +391,9 @@ export function BodyweightLogScreen() {
               </div>
 
               <div className={styles.quickFooter}>
-                <p className="muted">Latest source behavior stays untouched. If the newest logged weight matches the effective current weight, the existing backend logic still marks it as log-driven.</p>
+                <p className="muted">{appText("text_d3adbcf991be")}</p>
                 <button type="button" className="cta" onClick={handleQuickAddSave} disabled={isPending}>
-                  {isPending ? "Saving..." : "Save entry"}
+                  {isPending ? appText("text_dc85af8f2b1d") : appText("text_e5e18267c198")}
                 </button>
               </div>
             </section>
@@ -397,9 +401,9 @@ export function BodyweightLogScreen() {
             <section className={styles.historyShell}>
               <div className={styles.historyHeaderBar}>
                 <div className={styles.moduleHeaderCopy}>
-                  <p className="kicker">History</p>
-                  <h2 className="form-section-title">Editable entries</h2>
-                  <p className="muted">Reverse chronological with explicit save affordances so changes are always deliberate.</p>
+                  <p className="kicker">{appText("text_0e7696009337")}</p>
+                  <h2 className="form-section-title">{appText("text_942daf79cc86")}</h2>
+                  <p className="muted">{appText("text_13e3203941b9")}</p>
                 </div>
               </div>
 
@@ -416,15 +420,15 @@ export function BodyweightLogScreen() {
                         <div className={styles.historyHeader}>
                           <div className={styles.historyPrimary}>
                             <p className={styles.historyDate}>{formatBodyweightDate(entry.date)}</p>
-                            <p className={styles.historyWeight}>{entry.weight_kg.toFixed(1)} kg</p>
+                            <p className={styles.historyWeight}>{entry.weight_kg.toFixed(1)} {appText("text_131ed734290d")}</p>
                             <div className={styles.historyMetaRow}>
                               <span className={styles.historyMetaTag}>{formatBodyweightTime(entry.time)}</span>
                               <span className={styles.historyMetaTag}>{formatFastedState(entry.is_fasted)}</span>
                               <span className={styles.historyMetaTag}>
                                 {latestEntry && latestEntry.date === entry.date && latestEntry.time === entry.time && latestEntry.weight_kg === entry.weight_kg
-                                  ? "Latest"
+                                  ? appText("text_8730d3c2022a")
                                   : previousEntry && previousEntry.date === entry.date && previousEntry.time === entry.time && previousEntry.weight_kg === entry.weight_kg
-                                    ? "Previous"
+                                    ? appText("text_a57b08a480b8")
                                     : `Entry ${entry.sourceIndex + 1}`}
                               </span>
                             </div>
@@ -437,16 +441,14 @@ export function BodyweightLogScreen() {
                               onClick={() => startEditing(entry, entry.sourceIndex)}
                               disabled={isPending}
                             >
-                              Edit
-                            </button>
+                              {appText("text_464c4ffd019e")}</button>
                             <button
                               type="button"
                               className="ghost-button danger-button"
                               onClick={() => handleDelete(entry.sourceIndex)}
                               disabled={isPending}
                             >
-                              Delete
-                            </button>
+                              {appText("text_e2d0a54968ea")}</button>
                           </div>
                         </div>
 
@@ -456,7 +458,7 @@ export function BodyweightLogScreen() {
                           <div className={styles.historyEditor}>
                             <div className={styles.historyEditorGrid}>
                               <div className="field">
-                                <label>Date</label>
+                                <label>{appText("text_99c40ab40592")}</label>
                                 <input
                                   type="date"
                                   value={editingDraft.date}
@@ -466,7 +468,7 @@ export function BodyweightLogScreen() {
                                 />
                               </div>
                               <div className="field">
-                                <label>Weight (kg)</label>
+                                <label>{appText("text_b48ca1a31a0f")}</label>
                                 <input
                                   type="number"
                                   step="0.1"
@@ -478,7 +480,7 @@ export function BodyweightLogScreen() {
                                 />
                               </div>
                               <div className="field">
-                                <label>Time</label>
+                                <label>{appText("text_33b93476cf59")}</label>
                                 <input
                                   type="time"
                                   value={editingDraft.time}
@@ -488,8 +490,8 @@ export function BodyweightLogScreen() {
                                 />
                               </div>
                               <div className="field">
-                                <label>Fasted state</label>
-                                <div className={styles.stateRail} aria-label="Edit fasted state">
+                                <label>{appText("text_eafd37f3611b")}</label>
+                                <div className={styles.stateRail} aria-label={appText("text_a61cc80caf68")}>
                                   {FASTED_OPTIONS.map((option) => (
                                     <button
                                       key={option.value}
@@ -500,7 +502,7 @@ export function BodyweightLogScreen() {
                                         setEditingDraft((current) => current ? { ...current, is_fasted: option.value } : current)
                                       }
                                     >
-                                      {option.label}
+                                      {translateUiText(appText, option.label)}
                                     </button>
                                   ))}
                                 </div>
@@ -508,7 +510,7 @@ export function BodyweightLogScreen() {
                             </div>
 
                             <div className="field">
-                              <label>Notes</label>
+                              <label>{appText("text_8a7525b1492f")}</label>
                               <textarea
                                 rows={3}
                                 value={editingDraft.notes}
@@ -520,11 +522,10 @@ export function BodyweightLogScreen() {
 
                             <div className={styles.historyActions}>
                               <button type="button" className="cta" onClick={() => handleEditSave(entry.sourceIndex)} disabled={isPending}>
-                                {isPending ? "Saving..." : "Save changes"}
+                                {isPending ? appText("text_dc85af8f2b1d") : appText("text_dd0ae7a5cbcf")}
                               </button>
                               <button type="button" className="ghost-button" onClick={cancelEditing} disabled={isPending}>
-                                Cancel
-                              </button>
+                                {appText("text_19766ed6ccb2")}</button>
                             </div>
                           </div>
                         ) : null}
@@ -534,10 +535,10 @@ export function BodyweightLogScreen() {
                 </div>
               ) : (
                 <EmptyState
-                  eyebrow="Weigh-in history"
-                  title="No weigh-ins logged yet."
-                  description="Use the Quick add form above to record your first weigh-in."
-                  example="Once you log an entry, this list switches into reverse-chronological history with weight delta, fasted state, and inline edits."
+                  eyebrow={appText("text_0e2135ac0a2f")}
+                  title={appText("text_eaf521638895")}
+                  description={appText("text_013ed6df79f2")}
+                  example={appText("text_c2553fbc21b1")}
                   primaryAction={{ label: "Log first weigh-in", href: "#bodyweight-quick-add" }}
                 />
               )}
@@ -546,7 +547,7 @@ export function BodyweightLogScreen() {
         )}
 
         {message ? <div className="success-banner athlete-motion-slot athlete-motion-status">{message}</div> : null}
-        {error ? <div className="error-banner athlete-motion-slot athlete-motion-status">{error}</div> : null}
+        {error ? <div className="error-banner athlete-motion-slot athlete-motion-status">{translateUiText(appText, error)}</div> : null}
       </section>
     </RequireAuth>
   );

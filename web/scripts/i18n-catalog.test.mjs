@@ -48,14 +48,38 @@ test("an Azure failure leaves every dictionary unchanged", async () => {
   let calls = 0;
   const fetchImpl = async (_url, init) => {
     calls += 1;
-    if (calls === 2) return new Response("quota exceeded", { status: 429 });
+    if (calls === 2) return new Response("translation unavailable", { status: 503 });
     const body = JSON.parse(init.body);
     return new Response(JSON.stringify(body.map(() => ({ translations: [{ text: "Tradotto, {name}" }] }))));
   };
 
-  await assert.rejects(syncCatalogs({ messagesDirectory: directory, key: "test-key", fetchImpl }), /429/);
+  await assert.rejects(syncCatalogs({ messagesDirectory: directory, key: "test-key", fetchImpl }), /503/);
   const after = await Promise.all(Object.keys(TARGET_LOCALES).map((locale) => readFile(path.join(directory, `${locale}.json`), "utf8")));
   assert.deepEqual(after, before);
+});
+
+test("a 429 response waits for Azure's retry delay and retries the batch", async () => {
+  const { directory } = await fixture();
+  const waits = [];
+  let firstRequest = true;
+  const fetchImpl = async (_url, init) => {
+    if (firstRequest) {
+      firstRequest = false;
+      return new Response("rate limited", { status: 429, headers: { "retry-after": "2" } });
+    }
+    const body = JSON.parse(init.body);
+    return new Response(JSON.stringify(body.map(({ Text }) => ({ translations: [{ text: Text.replace("Welcome", "Traduit") }] }))));
+  };
+
+  const result = await syncCatalogs({
+    messagesDirectory: directory,
+    key: "test-key",
+    fetchImpl,
+    sleepImpl: async (milliseconds) => waits.push(milliseconds),
+  });
+
+  assert.equal(result.translatedCount, Object.keys(TARGET_LOCALES).length);
+  assert.ok(waits.includes(2_000));
 });
 
 test("structural validation reports missing namespaces and keys", () => {

@@ -5,8 +5,11 @@ import { useEffect } from "react";
 
 import { useToast } from "@/components/toast-provider";
 import { useXp } from "@/components/xp-provider";
+import { useTranslations as useAppTranslations } from "next-intl";
+
 
 export function XpAwardFeedback() {
+    const appText = useAppTranslations("AppText");
   const { feedback, dismissFeedback } = useXp();
   const { showToast } = useToast();
 
@@ -39,18 +42,16 @@ export function XpAwardFeedback() {
         type="button"
         className="xp-level-up-dismiss"
         onClick={dismissFeedback}
-        aria-label="Dismiss level-up message"
+        aria-label={appText("text_d285ff223cf8")}
       >
-        ×
-      </button>
-      <p className="xp-level-up-kicker">LEVEL UP</p>
+        {appText("text_8db71ed28b0f")}</button>
+      <p className="xp-level-up-kicker">{appText("text_ec89a5737cd9")}</p>
       <h2 id="xp-level-up-title">
-        LEVEL {feedback.level}: {feedback.title.toUpperCase()}
+        {appText("text_d81674b2bdd5")} {feedback.level}{appText("text_e7ac0786668e")} {feedback.title.toUpperCase()}
       </h2>
       <p id="xp-level-up-message">{feedback.message}</p>
       <Link href="/progress" onClick={dismissFeedback}>
-        View progress
-      </Link>
+        {appText("text_c2e39c2cee78")}</Link>
     </section>
   );
 }

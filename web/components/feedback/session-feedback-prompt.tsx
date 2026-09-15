@@ -14,6 +14,8 @@ import {
   hasSessionFeedbackContent,
 } from "@/lib/session-feedback";
 import type { SessionFeedbackAnswers } from "@/lib/types";
+import { useTranslations as useAppTranslations } from "next-intl";
+
 
 type ChoiceRowProps<Value extends string> = {
   legend: string;
@@ -87,6 +89,7 @@ export function SessionFeedbackPrompt({
   trainingDay?: string;
   onDismiss: () => void;
 }>) {
+    const appText = useAppTranslations("AppText");
   const fieldId = useId();
   const [isOpen, setIsOpen] = useState(false);
   const [answers, setAnswers] = useState<SessionFeedbackAnswers>({});
@@ -137,7 +140,7 @@ export function SessionFeedbackPrompt({
       setIsSent(true);
     } catch (submitError) {
       setError(
-        submitError instanceof Error ? submitError.message : "Feedback could not be sent. Try again.",
+        submitError instanceof Error ? submitError.message : appText("text_c9e0504c42fb"),
       );
     } finally {
       submissionLockRef.current = false;
@@ -147,51 +150,48 @@ export function SessionFeedbackPrompt({
 
   if (isSent) {
     return (
-      <section className="feedback-card session-feedback-card" aria-label="Session feedback">
+      <section className="feedback-card session-feedback-card" aria-label={appText("text_cc4dc2e30dbe")}>
         <p className="feedback-question" role="status">
-          Feedback sent. Thank you.
-        </p>
+          {appText("text_6fa02c1b33aa")}</p>
       </section>
     );
   }
 
   if (!isOpen) {
     return (
-      <section className="feedback-card session-feedback-card" aria-label="Session feedback">
+      <section className="feedback-card session-feedback-card" aria-label={appText("text_cc4dc2e30dbe")}>
         <p className="feedback-question">{SESSION_FEEDBACK_PROMPT}</p>
         <div className="feedback-actions">
           <button type="button" className="secondary-button" onClick={() => setIsOpen(true)}>
-            Give feedback
-          </button>
+            {appText("text_9fe6a46e0ba3")}</button>
           <button type="button" className="ghost-button" onClick={onDismiss}>
-            Not now
-          </button>
+            {appText("text_a0e63d7c7125")}</button>
         </div>
       </section>
     );
   }
 
   return (
-    <section className="feedback-card session-feedback-card" aria-label="Session feedback">
+    <section className="feedback-card session-feedback-card" aria-label={appText("text_cc4dc2e30dbe")}>
       <p className="session-feedback-title">{SESSION_FEEDBACK_TITLE}</p>
       <p className="muted session-feedback-intro">{SESSION_FEEDBACK_INTRO}</p>
 
       <ChoiceRow
-        legend="Difficulty"
+        legend={appText("text_be44133ed57f")}
         options={SESSION_DIFFICULTY_OPTIONS}
         selected={answers.difficulty}
         onSelect={(value) => setAnswers((current) => ({ ...current, difficulty: value }))}
         disabled={isSubmitting}
       />
       <ChoiceRow
-        legend="Instructions"
+        legend={appText("text_934652dce41d")}
         options={SESSION_INSTRUCTIONS_OPTIONS}
         selected={answers.instructions}
         onSelect={(value) => setAnswers((current) => ({ ...current, instructions: value }))}
         disabled={isSubmitting}
       />
       <ChoiceRow
-        legend="Plan accuracy"
+        legend={appText("text_bfd9ada5fd44")}
         options={SESSION_PLAN_ACCURACY_OPTIONS}
         selected={answers.plan_accuracy}
         onSelect={(value) => setAnswers((current) => ({ ...current, plan_accuracy: value }))}
@@ -203,7 +203,7 @@ export function SessionFeedbackPrompt({
       {showDetails ? (
         <div className="session-feedback-details">
           <div className="field">
-            <label htmlFor={`${fieldId}-comment`}>Comments (optional)</label>
+            <label htmlFor={`${fieldId}-comment`}>{appText("text_c00cc222d7fd")}</label>
             <textarea
               id={`${fieldId}-comment`}
               value={comment}
@@ -211,10 +211,10 @@ export function SessionFeedbackPrompt({
               rows={3}
               onChange={(event) => setComment(event.target.value)}
             />
-            <span className="muted feedback-counter">{comment.length}/500</span>
+            <span className="muted feedback-counter">{comment.length}{appText("text_c17579733f80")}</span>
           </div>
           <div className="field">
-            <label htmlFor={`${fieldId}-screenshot`}>Screenshot (optional)</label>
+            <label htmlFor={`${fieldId}-screenshot`}>{appText("text_2d8df6118a59")}</label>
             <input
               ref={fileInputRef}
               id={`${fieldId}-screenshot`}
@@ -223,14 +223,12 @@ export function SessionFeedbackPrompt({
               onChange={(event) => selectScreenshot(event.target.files?.[0] ?? null)}
             />
             <p className="feedback-privacy-copy">
-              Avoid uploading screenshots containing private messages, contact details, payment
-              information, or unrelated health information.
-            </p>
+              {appText("text_c8309eb3bc9d")}</p>
             {screenshot && previewUrl ? (
               <div className="feedback-attachment-preview">
                 <Image
                   src={previewUrl}
-                  alt="Selected screenshot preview"
+                  alt={appText("text_979e3eff63e0")}
                   width={640}
                   height={360}
                   unoptimized
@@ -240,8 +238,7 @@ export function SessionFeedbackPrompt({
                     <strong>{screenshot.name}</strong>
                   </span>
                   <button type="button" className="ghost-button" onClick={removeScreenshot}>
-                    Remove image
-                  </button>
+                    {appText("text_da7acac19683")}</button>
                 </div>
               </div>
             ) : null}
@@ -253,8 +250,7 @@ export function SessionFeedbackPrompt({
           className="feedback-link session-feedback-disclosure"
           onClick={() => setShowDetails(true)}
         >
-          Add a comment or screenshot
-        </button>
+          {appText("text_ce916affa1f6")}</button>
       )}
 
       {error ? (
@@ -270,11 +266,10 @@ export function SessionFeedbackPrompt({
           onClick={() => void submit()}
           disabled={isSubmitting || !canSubmit}
         >
-          {isSubmitting ? "Sending…" : "SUBMIT FEEDBACK"}
+          {isSubmitting ? appText("text_b8ed5279e897") : appText("text_43ff4f1fd1d8")}
         </button>
         <button type="button" className="ghost-button" onClick={onDismiss} disabled={isSubmitting}>
-          NOT NOW
-        </button>
+          {appText("text_095c9dd474d6")}</button>
       </div>
     </section>
   );
