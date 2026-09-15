@@ -46,15 +46,25 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+/* The 44px touch target and vertical centring live on the row (dot + value),
+   not on the anchor's own content. An inline-flex anchor turns its wrapped
+   text and its trailing chevron into two independently cross-axis-centred
+   flex items, so once the longest label ("No active injuries") wraps to a
+   second line, the chevron ends up centred beside the whole two-line block
+   instead of trailing the label's own last line. Flexing the row instead
+   keeps the anchor a normal (block-level, since it's now a flex item) box
+   whose own text and trailing chevron still flow and wrap together as one
+   unit, exactly like any other wrapped sentence. */
 .command :global(.today-readiness-strip dd) {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
   white-space: normal;
   overflow-wrap: anywhere;
 }
 
-.command :global(.today-readiness-strip a) {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
+.command :global(.today-readiness-strip dd > a) {
+  min-width: 0;
 }
 
 @media (max-width: 720px) {
