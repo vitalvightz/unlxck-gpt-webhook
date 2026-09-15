@@ -7132,14 +7132,35 @@ button.mobile-step-rail-item {
   text-transform: uppercase;
 }
 
+/* Flex row so the leading status dot (dd::before) and the trailing chevron
+   (a::after) never separate from the label into their own wrapped line. An
+   inline-block dot with no whitespace before the label still admits a soft-wrap
+   point at that boundary in normal inline flow, so a narrow cell could wrap
+   the dot onto its own line and leave the label — and the chevron trailing it —
+   adrift underneath. Flex items don't wrap onto separate lines on their own
+   (flex-wrap defaults to nowrap), so the dot stays pinned beside the label as
+   one unit, whatever width the cell has and however many lines the label
+   itself wraps to; the chevron simply trails the label's own last line, same
+   as it would in any wrapped line of text. A bare-text cell (no href) still
+   works: its text becomes a single anonymous flex item next to the dot. */
 .today-readiness-strip dd {
-  overflow: hidden;
+  display: flex;
+  align-items: baseline;
   color: var(--text-primary);
   font-size: 13px;
   font-weight: 800;
   line-height: 1.25;
+}
+
+.today-readiness-strip dd,
+.today-readiness-strip dd > a {
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.today-readiness-strip dd > a {
+  min-width: 0;
 }
 
 .today-readiness-strip [data-tone="risk"] {
@@ -9236,7 +9257,8 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
     margin-bottom: 0;
   }
 
-  .today-readiness-strip dd {
+  .today-readiness-strip dd,
+  .today-readiness-strip dd > a {
     white-space: normal;
   }
 
@@ -19804,6 +19826,14 @@ html[data-theme="light"] .loading-operational-item {
   scroll-snap-type: x mandatory;
   scroll-padding-inline: 2px;
   -webkit-overflow-scrolling: touch;
+  /* Makes the strip itself the pill's offsetParent, so weekStripCenterOffset's
+     pill.offsetLeft reads a position in the strip's own coordinate space —
+     the space scrollLeft is set in. Without this, offsetLeft resolves against
+     whatever positioned ancestor happens to sit further up the page (or body),
+     a coordinate frame the scroll math was never written for, so the computed
+     "centre on the selected week" offset landed wherever that frame put it
+     instead of where the pill actually sits in the strip. */
+  position: relative;
 }
 
 .cm-week-navigation {
@@ -19868,7 +19898,14 @@ html[data-theme="light"] .loading-operational-item {
   color: var(--text-secondary);
   cursor: pointer;
   text-align: left;
-  scroll-snap-align: start;
+  /* Matches weekStripCenterOffset's own math, which scrolls to CENTRE the
+     selected pill rather than align its start edge. A start-aligned snap
+     point sits roughly a pill-and-a-half away from that centred target, so
+     the mandatory snap (above) was pulling the settled scroll position back
+     toward it after every selection — the strip visibly drifting toward
+     earlier weeks right after landing on the one just tapped. Snapping to
+     the same point the JS already scrolls to removes that fight entirely. */
+  scroll-snap-align: center;
   transition: transform var(--transition-fast), border-color var(--transition-fast),
     background var(--transition-fast);
 }
