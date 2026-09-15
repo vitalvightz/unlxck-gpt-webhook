@@ -3000,8 +3000,13 @@ def _build_conditioning_candidate_reservoir(
 # alternate between them: a pure speed/neural touch, a technical action, and a
 # fight-specific tactical task. Entries without the field fall back to a single
 # shared bucket, which simply leaves their relative order untouched.
+#
+# The classification itself lives in style_taper_governance so this reservoir
+# rotation and the Stage 2 dated allocator share one definition of a family.
 def _style_taper_primer_family(drill: dict) -> str:
-    return str(drill.get("primer_family") or "unclassified").strip().lower()
+    from .style_taper_governance import style_taper_primer_family
+
+    return style_taper_primer_family(drill)
 
 
 def _rotate_style_taper_primer_families(

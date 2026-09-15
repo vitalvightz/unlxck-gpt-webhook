@@ -297,3 +297,91 @@ def assert_style_taper_entry(entry: dict[str, Any]) -> None:
     if issues:
         name = str(entry.get("name") or "<unnamed>")
         raise ValueError(f"Unsafe style taper entry '{name}': {issues}")
+
+
+# ---------------------------------------------------------------------------
+# Late-tail primer sequencing doctrine
+#
+# One canonical home for the two facts the late tail needs about a Style Taper
+# primer beyond its hard eligibility: which primer family it belongs to, and how
+# expensive it is for a tapering athlete. Stage 1's reservoir rotation
+# (``conditioning._rotate_style_taper_primer_families``) and the Stage 2 dated
+# allocator both read these, so the two layers cannot drift into contradictory
+# rotation rules.
+# ---------------------------------------------------------------------------
+
+UNCLASSIFIED_PRIMER_FAMILY = "unclassified"
+PRIMER_FAMILIES = {
+    "pure_neural",
+    "technical_neural",
+    "tactical_neural",
+    "rehearsal",
+}
+
+# Cost ranks are orderings, not scores: they are only ever compared against
+# another primer's rank, never summed, weighted or subtracted from a selection
+# score. Lower is cheaper for the athlete.
+_CONTACT_COST_RANK = {"none": 0, "touch": 1, "cooperative": 2, "controlled": 3}
+_LEVEL_COST_RANK = {"none": 0, "low": 1, "moderate": 2, "high": 3}
+# An unknown value is treated as the most expensive possibility so a primer with
+# missing metadata is never promoted over one whose cost is known.
+_UNKNOWN_COST = float("inf")
+
+# Equipment tokens that need neither kit nor a training partner. Reused from the
+# D-1 allowance so "self-sufficient" has one definition in the codebase.
+_NO_DEPENDENCY_EQUIPMENT = D1_ALLOWED_EQUIPMENT
+
+
+def style_taper_primer_family(entry: dict[str, Any]) -> str:
+    """Canonical primer family for one Style Taper entry.
+
+    Entries without the field share a single bucket, which leaves their relative
+    order untouched rather than inventing a family for them.
+    """
+    return _token(entry.get("primer_family")) or UNCLASSIFIED_PRIMER_FAMILY
+
+
+def _cost_rank(table: dict[str, int], value: Any) -> float:
+    token = _token(value)
+    if not token:
+        return _UNKNOWN_COST
+    return float(table.get(token, _UNKNOWN_COST))
+
+
+def style_taper_cost_axes(entry: dict[str, Any]) -> tuple[float, ...]:
+    """Per-axis taper cost of one primer: contact, impact, movement, kit/partner
+    dependence, RPE ceiling, burst count and total active work.
+
+    Axes are compared component-wise (see ``style_taper_cost_is_not_higher``),
+    never collapsed into a single number, so "cheaper" keeps its plain meaning:
+    not more expensive on anything the athlete actually pays for.
+    """
+    rpe_max = _number(entry.get("rpe_max"))
+    rounds = _number(entry.get("rounds"))
+    work_sec = _number(entry.get("work_sec"))
+    equipment = set(_tokens(entry.get("required_equipment") or entry.get("equipment")))
+    return (
+        _cost_rank(_CONTACT_COST_RANK, entry.get("contact_level")),
+        _cost_rank(_LEVEL_COST_RANK, entry.get("impact_cost")),
+        _cost_rank(_LEVEL_COST_RANK, entry.get("movement_cost")),
+        0.0 if not equipment or equipment <= _NO_DEPENDENCY_EQUIPMENT else 1.0,
+        _UNKNOWN_COST if rpe_max is None else rpe_max,
+        _UNKNOWN_COST if rounds is None else rounds,
+        _UNKNOWN_COST if rounds is None or work_sec is None else rounds * work_sec,
+    )
+
+
+def style_taper_cost_is_not_higher(
+    candidate: dict[str, Any], reference: dict[str, Any]
+) -> bool:
+    """Whether ``candidate`` costs the athlete no more than ``reference``.
+
+    Used to keep novelty from making the taper more elaborate: an unused primer
+    may only displace a repeat when it is no more expensive on every axis.
+    """
+    return all(
+        theirs <= mine
+        for theirs, mine in zip(
+            style_taper_cost_axes(candidate), style_taper_cost_axes(reference)
+        )
+    )

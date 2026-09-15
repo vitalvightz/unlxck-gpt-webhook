@@ -231,3 +231,47 @@ def test_original_bank_authority_checks_style_taper_phase(mma_brief):
                                                 "slot_group": "conditioning_slots", "source_phase": "SPP"}]}
     brief["weekly_role_map"] = {"weeks": [{"session_roles": [role]}]}
     assert "selected_exercise_phase_ineligible" in {f["code"] for f in late_physical_planner_preflight(brief)}
+
+
+def test_production_boxing_tail_stops_repeating_one_primer_on_d12_d7_d5():
+    """Observed production regression: one primer on D-12, D-7 and D-5.
+
+    Boxing pressure fighter, D-16 at generation, power + skill refinement,
+    footwork weakness, low fatigue, no injury, active cut, 5 sessions/week. The
+    top-ranked primer is legitimate and still opens the tail; the later days now
+    take equally appropriate, no-more-expensive primers the tail has not used.
+    """
+    brief = real_brief(
+        "boxing", days_until_fight=16,
+        key_goals=["power", "skill_refinement"], weaknesses=["footwork"],
+        equipment=[*EQUIPMENT, "pads"], weight_cut_risk=True, weight_cut_pct=2.5,
+    )
+    roles = [{"scheduled_countdown_label": f"D-{day}", "role_key": key,
+              "category": "conditioning", "late_fight_tail_owned": True}
+             for day, key in ((12, "neural_primer_day"), (7, "neural_primer_day"),
+                              (5, "alactic_sharpness_day"))]
+    _, assignments = _build_late_fight_allowed_exercises_by_day(
+        spec={"visible_session_sequence": roles, "athlete_model": brief["athlete_snapshot"]},
+        candidate_pools=brief["candidate_pools"])
+    attach_late_fight_assignments(roles, assignments)
+
+    names = [role["selected_exercise_assignments"][0]["name"] for role in roles]
+    assert len(set(names)) == 3, names
+    # The relevance leader is preserved, not demoted, and still opens the tail.
+    assert names[0] == "Explosive First-Step Cue"
+    for role in roles:
+        assert_assignment(brief, role, "boxing")
+    # No later day buys variety with a costlier session than the leader's.
+    leader = BANK[names[0]]
+    for name in names[1:]:
+        item = BANK[name]
+        assert item["contact_level"] == leader["contact_level"]
+        assert item["rpe_max"] <= leader["rpe_max"]
+        assert item["rounds"] <= leader["rounds"]
+        assert item["rounds"] * item["work_sec"] <= leader["rounds"] * leader["work_sec"]
+
+    # Deterministic: the same inputs reproduce the same tail.
+    _, repeat = _build_late_fight_allowed_exercises_by_day(
+        spec={"visible_session_sequence": roles, "athlete_model": brief["athlete_snapshot"]},
+        candidate_pools=brief["candidate_pools"])
+    assert [item["name"] for day in ("D-12", "D-7", "D-5") for item in repeat[day]] == names
