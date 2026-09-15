@@ -14,6 +14,7 @@ from typing import Any
 
 from .calendar_context import role_d_day, weekly_role_map_legality
 from .conditioning import _conditioning_structured_profile
+from .camp_week_fillers import HANDOFF_UNPLACED_REASON_CODE
 from .goal_repair_effective_contact_policy import effective_goal_repair_compression_state
 from .prescription_resolver import (
     _role_kind,
@@ -1015,6 +1016,17 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
             if identity in existing or not _role_matches_goal(candidate, entry["goal"]):
                 continue
             suppressed = [r for r in week.get("suppressed_roles") or [] if r.get("role_key") == candidate.get("role_key")]
+            # The D-14/D-13 ownership handoff is not reclaimable capacity. A role
+            # it removed failed normal placement outright and its window now
+            # belongs to the finished late-fight tail, so restoring it here would
+            # re-create the stale session the handoff just resolved. This is a
+            # narrow, explicitly named authority — not readiness compression, and
+            # it deliberately does not widen any goal-deferral rule.
+            if any(r.get("reason_code") == HANDOFF_UNPLACED_REASON_CODE for r in suppressed):
+                audit.append({"week_index": week.get("week_index"), "role_key": candidate.get("role_key"),
+                              "result": "authority_preserved",
+                              "reason_codes": [HANDOFF_UNPLACED_REASON_CODE]})
+                continue
             compression, compression_codes = effective_goal_repair_compression_state(week, suppressed)
             if compression_codes or compression.get("active") or any((r.get("governance") or {}).get("hard_suppression_reasons") for r in suppressed):
                 audit.append({"week_index": week.get("week_index"), "role_key": candidate.get("role_key"),
