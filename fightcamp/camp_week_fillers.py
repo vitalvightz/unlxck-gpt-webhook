@@ -143,6 +143,98 @@ def _segment_summary_for_week(
     }
 
 
+# ── D-14 / D-13 ownership handoff: unplaced normal roles ─────────────────────
+#
+# ``fill_missing_session_days`` deliberately leaves a role dayless when no legal
+# free declared day remains ("leave a role dayless when no legal free declared
+# day remains"). Normal placement is finished by the time the handoff runs, so
+# such a role is not "waiting for a day" — it failed placement, and D-13 inward
+# has just transferred to the finished late-fight allocator. Keeping it active
+# leaves a stale normal-planner session beside the authoritative tail: it is
+# still composed downstream (composition runs after this splice), so it reaches
+# the validator as a zero-workload physical session and raises
+# ``conditioning_role_workload_underfilled`` for a session that has no day at
+# all.
+#
+# This is an ownership resolution, not readiness compression and not weight-cut
+# suppression: nothing about the athlete's readiness changed, the planner simply
+# no longer owns the only window the role could have used.
+HANDOFF_UNPLACED_REASON_CODE = "late_fight_tail_handoff_unplaced_normal_role"
+HANDOFF_UNPLACED_REASON = (
+    "Normal placement completed without a legal scheduled day for this role, and "
+    "D-13 inward has transferred to the finished late-fight allocator. A stale "
+    "normal-planner session cannot remain active beside the finished tail."
+)
+
+# Authorities that mark a role as belonging to the handed-over tail rather than
+# to the normal planner.
+_TAIL_ROLE_AUTHORITIES = frozenset(
+    {"finished_late_fight_tail", "late_fight_tail_allocator"}
+)
+
+
+def _is_unplaced_normal_physical_session(role: dict[str, Any]) -> bool:
+    """Whether a dayless role is normal-planner physical work, not metadata.
+
+    The criterion is deliberately borrowed from the downstream composition
+    authority rather than invented here: these are exactly the predicates
+    :mod:`fightcamp.session_composition` uses to decide which roles it fills as
+    physical training (``compose_normal_strength_assignments``,
+    ``compose_normal_conditioning_assignments``,
+    ``compose_normal_rehab_assignments``). If composition would treat the role as
+    a physical session, a dayless copy of it is a ghost session; if composition
+    would skip it, this leaves it alone.
+
+    Support inserts, camp-week fillers, coach-owned combat locks and anything the
+    tail already owns are never touched — an undated support/metadata object is
+    not a stale training session.
+    """
+    if role.get("late_fight_tail_owned") or role.get("camp_week_filler"):
+        return False
+    if role.get("coach_owned"):
+        return False
+    governance = role.get("governance")
+    if isinstance(governance, dict) and str(
+        governance.get("authority") or ""
+    ) in _TAIL_ROLE_AUTHORITIES:
+        return False
+
+    category = str(role.get("category") or "").strip().lower()
+    preferred_pool = str(role.get("preferred_pool") or "").strip().lower()
+    if category == "support_insert":
+        return False
+    if category == "conditioning":
+        return True
+    if category == "strength" or preferred_pool == "strength_slots":
+        return True
+    # Normal-camp recovery roles are rehab-composed physical sessions; a bare
+    # recovery marker with no pool is not.
+    if category == "recovery" and preferred_pool == "rehab_slots_or_recovery_only":
+        return True
+    return False
+
+
+def _handoff_unplaced_suppression(role: dict[str, Any]) -> dict[str, Any]:
+    """Audit record for a normal role the handoff could not leave active."""
+    suppression = {
+        "role_key": role.get("role_key"),
+        "category": role.get("category"),
+        "preferred_system": role.get("preferred_system", ""),
+        "preferred_pool": role.get("preferred_pool", ""),
+        "governance": deepcopy(role.get("governance") or {}),
+        "reason_code": HANDOFF_UNPLACED_REASON_CODE,
+        "reason": HANDOFF_UNPLACED_REASON,
+        "reasons": [HANDOFF_UNPLACED_REASON],
+        "authority": "late_fight_tail_handoff",
+        "late_fight_tail_handoff": True,
+        "normal_planner_through_d": 14,
+        "late_fight_planner_from_d": 13,
+        "unplaced_by_normal_planner": True,
+        "original_role": deepcopy(role),
+    }
+    return suppression
+
+
 def _splice_late_fight_tail(
     weekly_role_map: dict[str, Any],
     athlete_model: dict[str, Any],
@@ -219,6 +311,7 @@ def _splice_late_fight_tail(
             week.pop("late_fight_tail_segments", None)
 
         kept_roles: list[Any] = []
+        handoff_suppressions: list[dict[str, Any]] = []
         for role in week.get("session_roles") or []:
             if not isinstance(role, dict):
                 kept_roles.append(role)
@@ -226,8 +319,24 @@ def _splice_late_fight_tail(
             d_day = _role_d_day(week, role)
             if d_day is not None and 1 <= d_day <= 13:
                 continue
+            if (
+                d_day is None
+                and owned_tail_days
+                and not str(role.get("scheduled_day_hint") or role.get("real_weekday") or "").strip()
+                and _is_unplaced_normal_physical_session(role)
+            ):
+                # Unresolved normal work in a week whose tail days have just
+                # changed owner. It is not moved into D-13..D-1 and no new
+                # placement pass is run for it: it is recorded and removed.
+                handoff_suppressions.append(_handoff_unplaced_suppression(role))
+                continue
             kept_roles.append(role)
         week["session_roles"] = kept_roles
+        if handoff_suppressions:
+            week["suppressed_roles"] = [
+                *(week.get("suppressed_roles") or []),
+                *handoff_suppressions,
+            ]
 
         # Normal-planner off/recovery placeholders must not survive inside the
         # handed-over tail or later filler passes can try to repopulate it.
