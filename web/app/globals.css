@@ -7132,35 +7132,14 @@ button.mobile-step-rail-item {
   text-transform: uppercase;
 }
 
-/* Flex row so the leading status dot (dd::before) and the trailing chevron
-   (a::after) never separate from the label into their own wrapped line. An
-   inline-block dot with no whitespace before the label still admits a soft-wrap
-   point at that boundary in normal inline flow, so a narrow cell could wrap
-   the dot onto its own line and leave the label — and the chevron trailing it —
-   adrift underneath. Flex items don't wrap onto separate lines on their own
-   (flex-wrap defaults to nowrap), so the dot stays pinned beside the label as
-   one unit, whatever width the cell has and however many lines the label
-   itself wraps to; the chevron simply trails the label's own last line, same
-   as it would in any wrapped line of text. A bare-text cell (no href) still
-   works: its text becomes a single anonymous flex item next to the dot. */
 .today-readiness-strip dd {
-  display: flex;
-  align-items: baseline;
+  overflow: hidden;
   color: var(--text-primary);
   font-size: 13px;
   font-weight: 800;
   line-height: 1.25;
-}
-
-.today-readiness-strip dd,
-.today-readiness-strip dd > a {
-  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.today-readiness-strip dd > a {
-  min-width: 0;
 }
 
 .today-readiness-strip [data-tone="risk"] {
@@ -9257,8 +9236,7 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
     margin-bottom: 0;
   }
 
-  .today-readiness-strip dd,
-  .today-readiness-strip dd > a {
+  .today-readiness-strip dd {
     white-space: normal;
   }
 
