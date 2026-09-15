@@ -8610,15 +8610,37 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
   line-height: 1.45;
 }
 
-.today-sticky-actions {
-  position: sticky;
-  bottom: calc(16px + env(safe-area-inset-bottom));
-  z-index: 2;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
+/* Session lifecycle actions. These sit in normal flow at the foot of the
+ * session card, directly under the blocks they act on: a sticky shelf pinned to
+ * the viewport rode up over the exercise content on any card taller than the
+ * screen, and an opaque background made it cover the blocks outright. In flow
+ * the card simply grows to fit, so nothing is ever obscured.
+ *
+ * The grid keeps every action the same width at the same card inset and reflows
+ * to one column when the buttons can no longer sit side by side. The primary
+ * action always spans the full row so Start/Resume reads as the one obvious
+ * target rather than one pill among four. */
+.today-session-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  align-items: stretch;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
   padding: 8px;
-  background: rgba(10, 11, 13, 0.92);
-  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.022);
+}
+
+/* Primary action and the skip escape hatch each own a full row; the two
+ * mid-weight outcomes (done / modified) pair up when there's room for them. */
+.today-session-actions > .cta,
+.today-session-actions > .ghost-button {
+  grid-column: 1 / -1;
+}
+
+.today-session-actions > button {
+  width: 100%;
+  min-height: 44px;
 }
 
 .today-completion-fields {
@@ -9197,8 +9219,10 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
     font-size: var(--type-body-sm);
   }
 
-  .today-sticky-actions {
-    margin-inline: -6px;
+  /* Equal left/right inset against the card padding — the actions line up with
+     the exercise blocks above them, never wider. */
+  .today-session-actions {
+    margin-inline: 0;
   }
 }
 
@@ -15912,7 +15936,7 @@ html[data-theme="light"] .today-decision-banner,
 html[data-theme="light"] .today-red-flags,
 html[data-theme="light"] .today-injury-item,
 html[data-theme="light"] .today-risk-item,
-html[data-theme="light"] .today-sticky-actions,
+html[data-theme="light"] .today-session-actions,
 html[data-theme="light"] .today-inline-warning {
   border-color: rgba(80, 81, 84, 0.1);
   background: rgba(255, 255, 255, 0.58);
