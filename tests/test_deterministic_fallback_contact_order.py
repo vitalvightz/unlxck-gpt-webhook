@@ -1,60 +1,124 @@
-from types import SimpleNamespace
+import pytest
 
 import api.structured_plan_deterministic_fallback as fallback_module
 
 
-def test_locked_session_is_merged_before_contact_reconcile(monkeypatch):
-    """D-11 Tactical Focus must not hide deterministic technical contact."""
-    events: list[str] = []
-    brief = {"weekly_role_map": {"weeks": [{"session_roles": []}]}}
-
-    def spine(_plan, _brief):
-        return {
+def _brief(d_day: int, contact_fields: dict) -> dict:
+    """One locked Tactical Watch sharing a day with deterministic contact."""
+    return {
+        "weekly_role_map": {
             "weeks": [
                 {
-                    "week_index": 1,
-                    "days": [
+                    "phase": "SPP",
+                    "hard_sparring_plan": [],
+                    "session_roles": [
                         {
-                            "countdown_label": "D-11",
-                            "today_card": {"headline": ""},
-                            "sessions": [],
-                        }
+                            "role_key": "hard_sparring_day",
+                            "scheduled_countdown_label": f"D-{d_day}",
+                            "countdown_label": f"D-{d_day}",
+                            "countdown_offset": d_day,
+                            **contact_fields,
+                        },
+                        {
+                            "role_key": "tactical_watch",
+                            "scheduled_countdown_label": f"D-{d_day}",
+                            "countdown_label": f"D-{d_day}",
+                            "governance": {
+                                "selected_drill_locked": True,
+                                "selected_drill_name": "Pocket Exchange Map",
+                            },
+                            "tactical_watch": {
+                                "name": "Pocket Exchange Map",
+                                "duration_min": 10,
+                                "why": "Keep pocket exchanges planned rather than chaotic.",
+                                "instructions": ["Map the opponent's likely response."],
+                                "mindset": {
+                                    "intent": "Win the second decision.",
+                                    "focus": "Read the response after the first punches.",
+                                    "reset": "Smother or leave if the exchange loses shape.",
+                                },
+                                "progress": "Rehearse the chosen ending.",
+                            },
+                        },
                     ],
                 }
             ]
         }
+    }
 
-    def merge(plan, _brief):
-        events.append("merge")
-        day = plan["weeks"][0]["days"][0]
-        day["sessions"].append(
+
+def _spine(d_day: int) -> dict:
+    return {
+        "weeks": [
             {
-                "session_id": "locked-watch-11",
-                "session_type": "skill",
-                "title": "Tactical Focus",
-                "objective": "Tactical Focus",
-                "completion_status": "not_started",
-                "mindset_anchor": {"intent": "", "focus_cue": "", "reset_cue": ""},
-                "blocks": [],
+                "week_index": 1,
+                "phase_label": "SPP",
+                "days": [
+                    {
+                        "countdown_label": f"D-{d_day}",
+                        "day_type": "rest",
+                        "today_card": {"headline": ""},
+                        "sessions": [],
+                    }
+                ],
             }
-        )
-        return SimpleNamespace(plan=plan)
+        ]
+    }
 
-    def reconcile(plan, _brief):
-        events.append("reconcile")
-        day = plan["weeks"][0]["days"][0]
-        assert day["sessions"], "contact reconcile must see the locked Tactical Focus session"
-        day["today_card"]["coach_led_contact"] = "Controlled fight-speed technical rounds"
-        return []
 
-    monkeypatch.setattr(fallback_module, "reconcile_calendar_spine", spine)
-    monkeypatch.setattr(fallback_module, "merge_locked_structured_content", merge)
-    monkeypatch.setattr(fallback_module, "reconcile_coach_led_sparring_days", reconcile)
+@pytest.mark.parametrize(
+    ("d_day", "contact_fields", "expected_contact", "expected_day_type"),
+    [
+        (
+            11,
+            {
+                "downgraded": True,
+                "downgraded_to_role_key": "technical_touch_day",
+                "placement_source": "declared_hard_day_downgrade_context",
+            },
+            "Controlled fight-speed technical rounds",
+            "rest",
+        ),
+        (
+            20,
+            {
+                "downgraded": False,
+                "placement_source": "declared_hard_day_lock",
+            },
+            "Hard sparring",
+            "high",
+        ),
+        (
+            25,
+            {
+                "hard_sparring_status": "deload_suggested",
+                "hard_sparring_class": "managed_hard",
+                "hard_sparring_reason_codes": ["consecutive_hard_days"],
+            },
+            "Hard sparring — reduced dose",
+            "rest",
+        ),
+    ],
+)
+def test_locked_tactical_focus_survives_contact_reconcile(
+    monkeypatch,
+    d_day,
+    contact_fields,
+    expected_contact,
+    expected_day_type,
+):
+    """Locked Tactical Focus and deterministic contact must both survive fallback."""
+    brief = _brief(d_day, contact_fields)
+    monkeypatch.setattr(
+        fallback_module,
+        "reconcile_calendar_spine",
+        lambda _plan, _brief: _spine(d_day),
+    )
 
     plan = fallback_module.build_deterministic_structured_plan(brief)
 
     assert plan is not None
     day = plan["weeks"][0]["days"][0]
-    assert events == ["merge", "reconcile"]
-    assert day["sessions"][0]["title"] == "Tactical Focus"
-    assert day["today_card"]["coach_led_contact"] == "Controlled fight-speed technical rounds"
+    assert [session["title"] for session in day["sessions"]] == ["Tactical Focus"]
+    assert day["today_card"]["coach_led_contact"] == expected_contact
+    assert day["day_type"] == expected_day_type
