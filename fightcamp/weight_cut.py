@@ -386,3 +386,57 @@ def cut_justifies_goal_deferral(bucket: object) -> bool:
     always be preserved at reduced dose instead.
     """
     return cut_severity_rank(bucket) >= _SEVERITY_ORDER.index("critical")
+
+
+_VALID_BUCKETS = frozenset(_SEVERITY_ORDER)
+
+
+def resolve_cut_health_bucket(source: object) -> str:
+    """Resolve the STRAIN bucket from an athlete model / flags mapping.
+
+    Dose and load consumers must never silently read the capacity bucket in
+    place of the strain bucket. The two disagree by design — a 5.3% cut at D-16
+    is capacity ``moderate`` but strain ``high`` — so falling back from a
+    missing strain field straight to ``cut_severity_bucket`` would treat real
+    physical strain as milder than it is, the exact inverse of the stacked
+    penalties this module exists to prevent.
+
+    Precedence, strictest first:
+
+    1. an explicit ``cut_health_bucket``
+    2. the strain reading of a stamped ``cut_severity_score``
+    3. the strain reading of a score recomputed from ``weight_cut_pct`` and
+       ``days_until_fight``
+    4. only then a legacy ``cut_severity_bucket``, for snapshots that predate
+       the split and carry nothing else
+
+    Returns ``""`` when nothing is resolvable, so callers keep their own
+    defaults.
+    """
+    if not isinstance(source, dict):
+        return ""
+
+    explicit = str(source.get("cut_health_bucket") or "").strip().lower()
+    if explicit in _VALID_BUCKETS:
+        return explicit
+
+    raw_score = source.get("cut_severity_score")
+    if raw_score is not None:
+        try:
+            return cut_health_bucket(float(raw_score))
+        except (TypeError, ValueError):
+            pass
+
+    raw_pct = source.get("weight_cut_pct")
+    if raw_pct is not None:
+        try:
+            pct = float(raw_pct)
+        except (TypeError, ValueError):
+            pct = None
+        if pct is not None:
+            return cut_health_bucket(
+                compute_cut_severity_score(pct, source.get("days_until_fight"))
+            )
+
+    legacy = str(source.get("cut_severity_bucket") or "").strip().lower()
+    return legacy if legacy in _VALID_BUCKETS else ""

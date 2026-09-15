@@ -26,6 +26,7 @@ from fightcamp.weight_cut import (
     cut_justifies_goal_deferral,
     cut_severity_bucket,
     cut_training_compression_points,
+    resolve_cut_health_bucket,
     weight_cut_supervision_required,
 )
 
@@ -555,3 +556,79 @@ def test_declared_spar_day_without_a_combat_role_still_keeps_one_session():
     assert len(kept) >= 1
     assert _minimum_required_non_spar_exposures(athlete, combat_role_count=0) == 1
     assert _minimum_required_non_spar_exposures(athlete, combat_role_count=1) == 0
+
+
+# ── Dose consumers must never fall back to the capacity bucket ───────────────
+#
+# The two scales disagree by design: 5.3% at D-16 is capacity moderate but
+# strain high. A dose consumer that fell back from a missing cut_health_bucket
+# straight to cut_severity_bucket would treat real physical strain as milder
+# than it is — the exact inverse of the stacked penalties this work removed.
+
+def _partial_snapshot(**overrides):
+    """An athlete object with capacity stamped but the strain field missing."""
+    snapshot = {
+        "weight_cut_risk": True,
+        "weight_cut_pct": 5.3,
+        "days_until_fight": 16,
+        "cut_severity_score": 35.3,
+        "cut_severity_bucket": "moderate",
+        "readiness_flags": ["active_weight_cut"],
+    }
+    snapshot.update(overrides)
+    return snapshot
+
+
+def test_strain_resolver_prefers_recomputation_over_the_capacity_bucket():
+    assert resolve_cut_health_bucket(_partial_snapshot()) == "high"
+
+
+def test_strain_resolver_precedence_order():
+    # 1. explicit strain field wins outright
+    assert resolve_cut_health_bucket(
+        _partial_snapshot(cut_health_bucket="critical")
+    ) == "critical"
+    # 2. stamped score beats the capacity bucket
+    assert resolve_cut_health_bucket(_partial_snapshot()) == "high"
+    # 3. pct + days beat the capacity bucket when no score is stamped
+    no_score = _partial_snapshot()
+    no_score.pop("cut_severity_score")
+    assert resolve_cut_health_bucket(no_score) == "high"
+    # 4. legacy capacity bucket only when nothing else is resolvable
+    assert resolve_cut_health_bucket({"cut_severity_bucket": "critical"}) == "critical"
+    assert resolve_cut_health_bucket({}) == ""
+
+
+def test_strain_resolver_ignores_unusable_values():
+    assert resolve_cut_health_bucket(
+        {"cut_health_bucket": "nonsense", "cut_severity_score": 35.3}
+    ) == "high"
+    assert resolve_cut_health_bucket(
+        {"cut_severity_score": "n/a", "weight_cut_pct": 5.3, "days_until_fight": 16}
+    ) == "high"
+    assert resolve_cut_health_bucket({"cut_severity_bucket": "nonsense"}) == ""
+    assert resolve_cut_health_bucket(None) == ""
+
+
+def test_session_composition_does_not_downgrade_strain_on_a_partial_model():
+    from fightcamp.session_composition import _resolved_cut_bucket
+
+    assert _resolved_cut_bucket(_partial_snapshot()) == "high"
+
+
+def test_sparring_dose_does_not_downgrade_strain_on_a_partial_model():
+    from fightcamp.sparring_dose_planner import _cut_pressure
+
+    assert _cut_pressure(_partial_snapshot()) == "high"
+    # Legacy-only snapshots still resolve rather than silently going quiet.
+    assert _cut_pressure({"cut_severity_bucket": "critical"}) == "high"
+
+
+def test_conditioning_bridge_does_not_downgrade_strain_on_a_partial_model():
+    from fightcamp.weight_cut import cut_health_bucket as strain
+
+    snapshot = _partial_snapshot()
+    resolved = resolve_cut_health_bucket(
+        {**snapshot, "days_until_fight": snapshot["days_until_fight"]}
+    )
+    assert resolved == strain(snapshot["cut_severity_score"]) == "high"

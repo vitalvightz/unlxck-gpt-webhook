@@ -36,7 +36,11 @@ from .config import (
     conditioning_phase_workload_envelope as _conditioning_phase_workload_envelope,
 )
 from .bank_schema import has_meaningful_fulfillment_authority
-from .weight_cut import compute_cut_severity_score, cut_health_bucket
+from .weight_cut import (
+    compute_cut_severity_score,
+    cut_health_bucket,
+    resolve_cut_health_bucket,
+)
 
 
 _NORMAL_STRENGTH_ROLE_CAPS: dict[str, int] = {
@@ -196,13 +200,9 @@ def _normalized_fatigue(athlete_model: dict[str, Any]) -> str:
 
 def _resolved_cut_bucket(athlete_model: dict[str, Any]) -> str:
     """Strain bucket driving session composition pressure (dose, not calendar)."""
-    bucket = str(
-        athlete_model.get("cut_health_bucket")
-        or athlete_model.get("cut_severity_bucket")
-        or ""
-    ).strip().lower()
-    if bucket in _CUT_PRESSURE:
-        return bucket
+    explicit = str(athlete_model.get("cut_health_bucket") or "").strip().lower()
+    if explicit in _CUT_PRESSURE:
+        return explicit
 
     flags = {
         str(flag).strip().lower()
@@ -213,15 +213,15 @@ def _resolved_cut_bucket(athlete_model: dict[str, Any]) -> str:
         flags & {"active_weight_cut", "aggressive_weight_cut", "extreme_weight_cut"}
     )
     if not active_cut:
-        return "none"
+        # A legacy snapshot may carry a capacity bucket and no activity flags at
+        # all. That bucket is the only cut signal it has, so it still stands in
+        # for strain here rather than silently reading as "no cut".
+        legacy = str(athlete_model.get("cut_severity_bucket") or "").strip().lower()
+        return legacy if legacy in _CUT_PRESSURE else "none"
 
-    score = athlete_model.get("cut_severity_score")
-    if score is None:
-        score = compute_cut_severity_score(
-            athlete_model.get("weight_cut_pct"),
-            athlete_model.get("days_until_fight"),
-        )
-    return cut_health_bucket(score)
+    # Recompute strain from the score before ever reading the capacity bucket:
+    # the two disagree by design, so a capacity fallback understates strain.
+    return resolve_cut_health_bucket(athlete_model) or "none"
 
 
 def _injury_restricted(athlete_model: dict[str, Any]) -> bool:
