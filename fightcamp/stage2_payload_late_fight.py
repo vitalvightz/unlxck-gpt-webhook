@@ -11,6 +11,14 @@ from .late_camp_role_morph import late_fight_strength_dose_cap
 from .calendar_context import LATE_FIGHT_SCOPE, sequence_legality
 from .combat_load_policy import DAY_EXCLUSIVE_STRESSOR_ROLE_KEYS, placement_rank
 from .declared_combat_ownership import build_declared_light_combat_role
+from .combat_render_authority import (
+    CANONICAL_HARD_SPARRING_BAN_LABEL,
+    CANONICAL_HARD_SPARRING_LABEL,
+    CANONICAL_HARD_SPARRING_NOTE,
+    CANONICAL_LIGHT_COMBAT_LABEL,
+    CANONICAL_LIGHT_COMBAT_NOTE,
+    CANONICAL_TECHNICAL_ONLY_NOTE,
+)
 
 from collections import OrderedDict
 from copy import deepcopy
@@ -21,14 +29,10 @@ from typing import Any, Sequence
 logger = logging.getLogger(__name__)
 
 
-CANONICAL_HARD_SPARRING_LABEL = "Hard sparring — controlled hard contact"
-CANONICAL_HARD_SPARRING_BAN_LABEL = "Technical-only combat"
-# Two distinct notes: a hard-sparring day and a converted technical-only day must never
-# share wording, or a technical-only card would tell the athlete to spar hard. Both
-# keep the "no extra S&C" + "freshness priority" tokens the validator's minimal
-# coach-owned render check looks for.
-CANONICAL_HARD_SPARRING_NOTE = "Your declared hard-sparring/contact session — no extra S&C. Keep freshness priority."
-CANONICAL_TECHNICAL_ONLY_NOTE = "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority."
+# Canonical declared-combat copy lives in one module (see
+# ``fightcamp.combat_render_authority``) so the prompt, this visible-calendar
+# projection, the Stage 2 locked render projection and deterministic source
+# repair cannot drift apart. Re-exported here for the existing importers.
 
 
 # Routing authority (architecture ownership): which planner owns role selection
@@ -2275,8 +2279,8 @@ def _coach_owned_context_session_sequence(session_sequence: list[dict[str, Any]]
             continue
         session_copy = dict(session)
         if is_light_context and not is_hard_context:
-            session_copy["athlete_facing_label"] = "Light Combat / Technical"
-            session_copy["display_text"] = "Your declared light-combat / technical session. Keep it as scheduled."
+            session_copy["athlete_facing_label"] = CANONICAL_LIGHT_COMBAT_LABEL
+            session_copy["display_text"] = CANONICAL_LIGHT_COMBAT_NOTE
         elif role_key == "hard_sparring_day" and not session.get("downgraded"):
             session_copy["athlete_facing_label"] = CANONICAL_HARD_SPARRING_LABEL
             session_copy["display_text"] = CANONICAL_HARD_SPARRING_NOTE

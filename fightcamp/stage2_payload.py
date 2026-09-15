@@ -22,6 +22,10 @@ from .stage2_payload_open_ongoing import (
     build_open_ongoing_payload,
 )
 from . import stage2_role_map as stage2_role_map_module
+from .render_authority import (
+    AUTHORITY_CLOSED_SELECTED_ASSIGNMENTS,
+    authoritative_render_for_role,
+)
 from .stage2_payload_late_fight import (  # noqa: F401  (re-exported for tests/back-compat)
     CANONICAL_HARD_SPARRING_BAN_LABEL,
     CANONICAL_HARD_SPARRING_LABEL,
@@ -2484,12 +2488,80 @@ def _json_block(value: dict | list) -> str:
 _DOSE_UNRESOLVED_MARKER = "DOSE_UNRESOLVED"
 
 
-def _closed_membership_render_manifest(finalizer_packet: dict) -> list[dict]:
-    """Expose every closed assignment as an exact first-pass rendering line.
+def _rich_role_index(planning_brief: dict | None) -> dict[tuple[str, str, str], dict]:
+    """``(role_key, countdown_label, weekday) -> the pre-compaction Stage 1 role``.
 
-    This is a read-only projection of the finalizer packet. It does not choose
-    exercises, partition workload, infer missing prescriptions or alter the
-    calendar. Open/ongoing systems without a resolved calendar are unchanged.
+    The finalizer packet deliberately drops the long ``display_text`` of a
+    ``selected_drill_locked`` role (Tactical Watch, coordination support): the
+    server renders that body, so shipping it to a model that must not author it
+    only spends attention. The locked render projection still needs the exact
+    lines, so it reads them from the rich Stage 1 role instead of un-compacting
+    the packet. This is a lookup of already-selected content — it never reopens
+    selection.
+    """
+    index: dict[tuple[str, str, str], dict] = {}
+    if not isinstance(planning_brief, dict):
+        return index
+    role_map = planning_brief.get("weekly_role_map")
+    weeks = (role_map.get("weeks") or []) if isinstance(role_map, dict) else []
+    sequences = [
+        role
+        for week in weeks
+        if isinstance(week, dict)
+        for role in week.get("session_roles") or []
+        if isinstance(role, dict)
+    ]
+    for key in ("session_sequence", "late_fight_session_sequence"):
+        sequences.extend(
+            role for role in planning_brief.get(key) or [] if isinstance(role, dict)
+        )
+    for role in sequences:
+        role_key = str(role.get("role_key") or "").strip()
+        countdown = _manifest_countdown_label(role)
+        weekday = str(role.get("scheduled_day_hint") or role.get("real_weekday") or "").strip().lower()
+        index.setdefault((role_key, countdown, weekday), role)
+        index.setdefault((role_key, countdown, ""), role)
+        index.setdefault((role_key, "", weekday), role)
+    return index
+
+
+def _manifest_countdown_label(role: dict) -> str:
+    raw = str(
+        role.get("scheduled_countdown_label")
+        or role.get("countdown_label")
+        or role.get("countdown_display_label")
+        or ""
+    ).strip()
+    match = re.search(r"\bD-(\d{1,2})\b", raw, re.I)
+    if match:
+        return f"D-{int(match.group(1))}"
+    if isinstance(role.get("scheduled_d_day"), int):
+        return f"D-{role['scheduled_d_day']}"
+    if isinstance(role.get("countdown_offset"), int):
+        return f"D-{role['countdown_offset']}"
+    return ""
+
+
+def _closed_membership_render_manifest(
+    finalizer_packet: dict,
+    *,
+    planning_brief: dict | None = None,
+) -> list[dict]:
+    """Expose every role Stage 1 already decided as an exact first-pass render.
+
+    This is a read-only projection of the finalizer packet (plus, for a locked
+    drill whose body the packet compacts away, the exact Stage 1 ``display_text``).
+    It does not choose exercises, partition workload, infer missing prescriptions
+    or alter the calendar. Open/ongoing systems without a resolved calendar are
+    unchanged.
+
+    Historically this only recognised ``selected_exercise_assignments``, so a
+    role whose athlete-facing body the planner had *fully written* — a Recovery
+    Reset, a Breathing Reset, a bank-selected Tactical Watch, a resolved declared
+    combat day, the D-0 protocol — was invisible to the first pass and could be
+    dropped by Stage 2 without the render contract noticing. Authority is now
+    decided once, in :mod:`fightcamp.render_authority`, and the same helper backs
+    deterministic source repair.
     """
     selected = finalizer_packet.get("selected_plan") or {}
     if not isinstance(selected, dict):
@@ -2513,26 +2585,14 @@ def _closed_membership_render_manifest(finalizer_packet: dict) -> list[dict]:
         if not source_roles:
             source_roles = [({}, role) for role in sequence if isinstance(role, dict)]
 
+    rich_index = _rich_role_index(planning_brief)
+    athlete_snapshot = _manifest_athlete_snapshot(finalizer_packet, planning_brief)
+
     manifest: list[dict] = []
     for week, role in source_roles:
-        if "selected_exercise_assignments" not in role:
-            continue
         if role.get("render_mandatory") is False:
             continue
-        assignments = role.get("selected_exercise_assignments")
-        if not isinstance(assignments, list):
-            continue
-        label = str(
-            role.get("scheduled_countdown_label")
-            or role.get("countdown_label")
-            or role.get("countdown_display_label")
-            or ""
-        ).strip()
-        match = re.search(r"\bD-(\d{1,2})\b", label, re.I)
-        if not match and isinstance(role.get("scheduled_d_day"), int):
-            label = f"D-{role['scheduled_d_day']}"
-        elif match:
-            label = f"D-{int(match.group(1))}"
+        label = _manifest_countdown_label(role)
         if not label:
             weekday = str(role.get("scheduled_day_hint") or "").strip().lower()
             for day in week.get("calendar_days") or []:
@@ -2541,73 +2601,196 @@ def _closed_membership_render_manifest(finalizer_packet: dict) -> list[dict]:
                     and isinstance(day.get("d_day"), int)):
                     label = f"D-{day['d_day']}"
                     break
+        d_day_match = re.search(r"\bD-(\d{1,2})\b", label, re.I)
+        d_day = int(d_day_match.group(1)) if d_day_match else None
 
-        lines: list[str] = []
-        unresolved: list[dict] = []
-        # Strength composition records selected membership separately from the
-        # scheduled-day dose resolver.  The resolver's records are authoritative
-        # and identify a source member by its slot id plus selected name.
-        strength_doses: dict[tuple[str, str], list[Any]] = {}
-        for resolved in role.get("effective_strength_prescriptions") or []:
-            if not isinstance(resolved, dict):
-                continue
-            slot_id = str(resolved.get("slot_id") or "").strip()
-            resolved_name = str(resolved.get("name") or "").strip()
-            if slot_id and resolved_name:
-                strength_doses.setdefault((slot_id, resolved_name), []).append(
-                    resolved.get("effective_prescription")
-                )
-        for index, assignment in enumerate(assignments):
-            if not isinstance(assignment, dict):
-                unresolved.append({"index": index, "reason": "invalid_assignment"})
-                continue
-            name = str(assignment.get("name") or assignment.get("exercise_name") or "").strip()
-            prescription = assignment.get("effective_prescription")
-            if not prescription:
-                source_key = (str(assignment.get("slot_id") or "").strip(), name)
-                resolved_doses = strength_doses.get(source_key) or []
-                if resolved_doses:
-                    prescription = resolved_doses.pop(0)
-                elif not isinstance(role.get("strength_dose_cap"), dict):
-                    prescription = assignment.get("base_prescription")
-            if isinstance(prescription, dict):
-                prescription = (
-                    prescription.get("display") or prescription.get("dose")
-                    or prescription.get("text")
-                )
-            prescription = str(prescription or "").strip()
-            if not name:
-                unresolved.append({
-                    "index": index, "name": name, "reason": "missing_name",
-                })
-                continue
-            if not prescription:
-                # Membership is closed; dosing is not. Dropping the line here
-                # silently deleted a scheduled exercise from the render while
-                # selected_count still demanded it. The member is rendered and
-                # the finalizer authors a dose from athlete context instead.
-                # Deterministic caps still bind: where a countdown envelope
-                # exists the validator enforces it against the authored dose.
-                lines.append(f"- {name}: {_DOSE_UNRESOLVED_MARKER}")
-                unresolved.append({
-                    "index": index, "name": name,
-                    "reason": "missing_effective_prescription",
-                    "action": "finalizer_prescribes_from_athlete_context",
-                })
-                continue
-            lines.append(f"- {name}: {prescription}")
-        manifest.append({
+        entry = {
             "week_index": week.get("week_index"),
             "phase": week.get("phase"),
             "scheduled_countdown_label": label,
             "scheduled_day_hint": role.get("scheduled_day_hint"),
             "role_key": role.get("role_key"),
             "category": role.get("category"),
-            "selected_count": len(assignments),
-            "exercise_lines": lines,
-            "unresolved": unresolved,
-        })
+        }
+
+        assignments = role.get("selected_exercise_assignments")
+        has_membership_key = "selected_exercise_assignments" in role
+        priced_membership = (
+            isinstance(assignments, list) and bool(assignments)
+        )
+
+        if priced_membership:
+            lines, unresolved = _closed_membership_exercise_lines(role, assignments)
+            entry.update({
+                "authority": AUTHORITY_CLOSED_SELECTED_ASSIGNMENTS,
+                "selected_count": len(assignments),
+                "exercise_lines": lines,
+                "unresolved": unresolved,
+            })
+            _attach_manifest_label_and_microdose(entry, role)
+            manifest.append(entry)
+            continue
+
+        # Deterministic authority is checked BEFORE the closed-membership branch
+        # for a role with no priced members. ``selected_exercise_assignments=[]``
+        # is a deliberate closed-membership sentinel that the packet preserves
+        # (see _compact_role), and in production it sits on exactly the roles
+        # whose bodies the planner already wrote — hard_sparring_day,
+        # tactical_watch, breathing_reset, tactical_cue_card. Testing the key
+        # first classified them as zero-exercise closed roles, so the resolver
+        # never ran and their decided content never reached the first pass.
+        #
+        # The packet also compacts roles for the model (it strips the long body of
+        # a selected_drill_locked role, and internal governance keys), so
+        # authority is decided against the pre-compaction Stage 1 role where one
+        # exists: compaction can never make decided content look undecided.
+        rich_role = _manifest_rich_role(role, label, rich_index)
+        render = authoritative_render_for_role(
+            rich_role if rich_role is not None else role,
+            week=week,
+            athlete_snapshot=athlete_snapshot,
+            d_day=d_day,
+            display_text_fallback=role.get("display_text"),
+        )
+        if render is not None and render["authority"] != AUTHORITY_CLOSED_SELECTED_ASSIGNMENTS:
+            entry.update({
+                "authority": render["authority"],
+                "exact_body_lines": list(render.get("body_lines") or []),
+                "unresolved": [],
+            })
+            if render.get("athlete_facing_label"):
+                entry["athlete_facing_label"] = render["athlete_facing_label"]
+            if render.get("contact_load"):
+                entry["contact_load"] = render["contact_load"]
+            if render.get("zero_physical_load"):
+                entry["zero_physical_load"] = True
+            if render.get("priority_microdose"):
+                entry["priority_microdose"] = render["priority_microdose"]
+            if isinstance(assignments, list) and not assignments:
+                # The sentinel keeps its meaning alongside the exact body: the
+                # session carries zero exercises and membership is still closed,
+                # so Stage 2 may not open it up and select work for the day.
+                entry["selected_count"] = 0
+                entry["exercise_lines"] = []
+            manifest.append(entry)
+            continue
+
+        if has_membership_key:
+            if not isinstance(assignments, list):
+                continue
+            lines, unresolved = _closed_membership_exercise_lines(role, assignments)
+            entry.update({
+                "authority": AUTHORITY_CLOSED_SELECTED_ASSIGNMENTS,
+                "selected_count": len(assignments),
+                "exercise_lines": lines,
+                "unresolved": unresolved,
+            })
+            _attach_manifest_label_and_microdose(entry, role)
+            manifest.append(entry)
+            continue
+
+        # Genuinely open role: Stage 2 still authors it under the existing
+        # bounded rules. Inventing a body here would be a second planner.
     return manifest
+
+
+def _manifest_athlete_snapshot(
+    finalizer_packet: dict, planning_brief: dict | None
+) -> dict:
+    for source in (
+        finalizer_packet.get("athlete_snapshot"),
+        (planning_brief or {}).get("athlete_snapshot"),
+        (planning_brief or {}).get("athlete_model"),
+    ):
+        if isinstance(source, dict):
+            return source
+    return {}
+
+
+def _manifest_rich_role(
+    role: dict, label: str, rich_index: dict[tuple[str, str, str], dict]
+) -> dict | None:
+    """The pre-compaction Stage 1 role behind a packet role, when there is one."""
+    role_key = str(role.get("role_key") or "").strip()
+    weekday = str(role.get("scheduled_day_hint") or role.get("real_weekday") or "").strip().lower()
+    for key in (
+        (role_key, label, weekday),
+        (role_key, label, ""),
+        (role_key, "", weekday),
+    ):
+        found = rich_index.get(key)
+        if isinstance(found, dict):
+            return found
+    return None
+
+
+def _attach_manifest_label_and_microdose(entry: dict, role: dict) -> None:
+    label = str(role.get("athlete_facing_label") or role.get("label") or "").strip()
+    if label:
+        entry["athlete_facing_label"] = label
+    microdose = role.get("priority_microdose")
+    if isinstance(microdose, dict) and str(microdose.get("name") or "").strip():
+        entry["priority_microdose"] = microdose
+
+
+def _closed_membership_exercise_lines(
+    role: dict, assignments: list
+) -> tuple[list[str], list[dict]]:
+    lines: list[str] = []
+    unresolved: list[dict] = []
+    # Strength composition records selected membership separately from the
+    # scheduled-day dose resolver.  The resolver's records are authoritative
+    # and identify a source member by its slot id plus selected name.
+    strength_doses: dict[tuple[str, str], list[Any]] = {}
+    for resolved in role.get("effective_strength_prescriptions") or []:
+        if not isinstance(resolved, dict):
+            continue
+        slot_id = str(resolved.get("slot_id") or "").strip()
+        resolved_name = str(resolved.get("name") or "").strip()
+        if slot_id and resolved_name:
+            strength_doses.setdefault((slot_id, resolved_name), []).append(
+                resolved.get("effective_prescription")
+            )
+    for index, assignment in enumerate(assignments):
+        if not isinstance(assignment, dict):
+            unresolved.append({"index": index, "reason": "invalid_assignment"})
+            continue
+        name = str(assignment.get("name") or assignment.get("exercise_name") or "").strip()
+        prescription = assignment.get("effective_prescription")
+        if not prescription:
+            source_key = (str(assignment.get("slot_id") or "").strip(), name)
+            resolved_doses = strength_doses.get(source_key) or []
+            if resolved_doses:
+                prescription = resolved_doses.pop(0)
+            elif not isinstance(role.get("strength_dose_cap"), dict):
+                prescription = assignment.get("base_prescription")
+        if isinstance(prescription, dict):
+            prescription = (
+                prescription.get("display") or prescription.get("dose")
+                or prescription.get("text")
+            )
+        prescription = str(prescription or "").strip()
+        if not name:
+            unresolved.append({
+                "index": index, "name": name, "reason": "missing_name",
+            })
+            continue
+        if not prescription:
+            # Membership is closed; dosing is not. Dropping the line here
+            # silently deleted a scheduled exercise from the render while
+            # selected_count still demanded it. The member is rendered and
+            # the finalizer authors a dose from athlete context instead.
+            # Deterministic caps still bind: where a countdown envelope
+            # exists the validator enforces it against the authored dose.
+            lines.append(f"- {name}: {_DOSE_UNRESOLVED_MARKER}")
+            unresolved.append({
+                "index": index, "name": name,
+                "reason": "missing_effective_prescription",
+                "action": "finalizer_prescribes_from_athlete_context",
+            })
+            continue
+        lines.append(f"- {name}: {prescription}")
+    return lines, unresolved
 
 
 def _athlete_profile_block(planning_brief: dict | None, stage2_payload: dict) -> dict:
@@ -2793,11 +2976,25 @@ def build_stage2_handoff_text(
     if render_mode == "open_ongoing_system":
         sections.append(_OPEN_ONGOING_RENDER_MODE_INSTRUCTIONS.strip())
 
-    locked_manifest = _closed_membership_render_manifest(finalizer_packet)
+    locked_manifest = _closed_membership_render_manifest(
+        finalizer_packet, planning_brief=planning_brief
+    )
     if locked_manifest:
         sections.append(
             "LOCKED SESSION RENDER MANIFEST\n"
-            "This is the exact selected exercise membership for the first pass. "
+            "This is the content Stage 1 has already decided for the first pass. "
+            "Every entry must appear once, under its own day and role: these lines are "
+            "decided, so render them - never rewrite, omit, merge, replace or reinterpret "
+            "them. An entry's authority says what kind of decided content it is: "
+            "closed_selected_assignments carries exact selected exercise membership in "
+            "exercise_lines; deterministic_display_text, canonical_combat and "
+            "fight_day_protocol carry the exact athlete-facing body in exact_body_lines, "
+            "which you reproduce verbatim and do not expand, dose or embellish. "
+            "athlete_facing_label is the day's session name. A priority_microdose belongs "
+            "inside that same host session exactly once - never as its own session or day. "
+            "An entry marked zero_physical_load is review/support only and adds no physical "
+            "training load. An entry whose selected_count is 0 carries no exercises and its "
+            "membership is still closed: render its body and add no exercises to that day. "
             "Render every exercise_lines entry once under its owning day and role, "
             "then add coaching details. selected_count is the required membership count. "
             "Do not promote one member to primary and discard the others. "
@@ -2826,7 +3023,12 @@ def build_stage2_handoff_text(
     if locked_manifest:
         sections.append(
             "FIRST-PASS COMPLETENESS CHECK\n"
-            "Before returning the plan, compare each closed role against the locked "
+            "Before returning the plan, compare every manifest entry against your output: "
+            "each one must exist on its own day, with its label and its exact decided "
+            "lines. A manifest entry with no exercise_lines is not optional - a support "
+            "insert, a resolved combat day and the fight-day protocol are decided sessions "
+            "exactly like a closed exercise role. "
+            "Compare each closed role against the locked "
             "manifest. Preserve the required exercise count, exact names, authorised "
             "effective doses, and day ownership. Do not remove a legal member to "
             "shorten prose, satisfy an open-role fallback rule, or improve perceived "

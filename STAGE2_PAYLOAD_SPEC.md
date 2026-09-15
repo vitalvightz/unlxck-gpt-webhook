@@ -68,7 +68,8 @@ assembles the prompt from:
 
 1. `STAGE2_FINALIZER_PROMPT` + `UNLXCK_FINAL_RENDER_CONTRACT`,
 2. payload-mode instructions for the resolved `payload_mode`,
-3. the LOCKED SESSION RENDER MANIFEST (closed membership, when present),
+3. the LOCKED SESSION RENDER MANIFEST (every role Stage 1 already decided —
+   see "Render authority" below),
 4. the FINALIZER PACKET — `stage2_finalizer_packet` built from the
    `stage2_llm_boundary`-sanitised `planning_brief` plus `stage2_payload`,
 5. the athlete profile, optional injury context and coach notes,
@@ -77,6 +78,39 @@ assembles the prompt from:
 The FINALIZER PACKET, not the raw candidate pools, is the model's primary
 authority. The validator likewise grades the final text against the
 `planning_brief`, not against `stage2_payload`.
+
+### Render authority
+
+`fightcamp/render_authority.py` owns one question: **has Stage 1 already decided
+this session's athlete-facing body?** If it has, Stage 2 is a formatter for that
+body, not an author. `authoritative_render_for_role` recognises four kinds of
+server-owned content:
+
+| authority | what it is |
+| --- | --- |
+| `fight_day_protocol` | the D-0 protocol constant (`fight_day_override`) |
+| `canonical_combat` | a declared combat day whose **resolved** contact state has canonical copy (`fightcamp/combat_render_authority.py`) — label plus one note, never a dose |
+| `deterministic_display_text` | a planner-stamped exact body: gap-fill / camp-week support inserts, the bank-selected Tactical Watch, coordination support, bank footwork |
+| `closed_selected_assignments` | closed exercise membership where every member carries an approved effective prescription |
+
+Everything else stays model-authored under the existing bounded Stage 2 rules. A
+category such as "recovery" or "technical" is **not** authority, and the resolver
+never synthesises a body from `preferred_exercise_names`, from the category, or
+from prose that could have come from a draft. When the resolved state is
+ambiguous — an unresolved or deloaded hard-sparring day, a safety-blocked contact
+day, a partially priced closed role — it returns `None` and the caller fails
+closed rather than inventing content.
+
+The same resolver backs the first-pass locked render manifest
+(`stage2_payload._closed_membership_render_manifest`) and deterministic
+structural source repair (`stage2_pipeline.repair_stage2_structural_text`), so
+the two layers cannot develop different definitions of "already decided".
+
+`fightcamp/combat_render_authority.py` is the single source of the canonical
+hard-sparring / technical-only / light-combat labels and notes, and of the
+declared-day -> resolved-contact-status decision. The Stage 2 prompt, the repair
+prompt, the late-fight visible calendar and the structured-plan sparring
+reconciler all read from it.
 
 ## Structured plan (schema-first, additive)
 

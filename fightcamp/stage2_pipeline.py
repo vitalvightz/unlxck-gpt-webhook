@@ -9,6 +9,7 @@ from .stage2_policy import (
     is_hard_stage2_blocker,
     prompt_safe_validator_report,
 )
+from .render_authority import authoritative_render_for_role
 from .stage2_repair import build_stage2_repair_prompt
 from .stage2_validator import (
     _BULLET_PREFIX,
@@ -29,6 +30,44 @@ _COUNTDOWN_HEADER_RE = re.compile(
     r"^\s*(?:#{1,6}\s*)?D-(\d{1,2})\b",
     re.IGNORECASE | re.MULTILINE,
 )
+# The Stage 2 render contract explicitly permits an unprefixed week header:
+#
+#     SPP — Week 1 (D-14 to D-8) — Objective...
+#
+# Structural repair used to discover week sections only through _MARKDOWN_HEADER,
+# so a contract-valid plain header was invisible: every week looked unrendered and
+# repair refused to restore anything into it ("Canonical week is not rendered").
+# These two shapes are deliberately narrow - a phase-led "SPP — Week 1 ..." line or
+# a "Week 1 — ..." / "Week 1 (D-...)" line, at the start of a non-bullet line - so
+# prose that merely mentions week 1 can never become a canonical section.
+_PLAIN_PHASE_WEEK_HEADER = re.compile(
+    r"^(?:GPP|SPP|TAPER)\b[^\n]{0,40}?[—–-]\s*week\s+\d+\b",
+    re.IGNORECASE,
+)
+_PLAIN_WEEK_LED_HEADER = re.compile(
+    r"^week\s+\d+\b\s*(?:\(|[—–-])",
+    re.IGNORECASE,
+)
+_PLAIN_HEADER_BULLET_LEAD = re.compile(r"^\s*(?:[-*\u2022+>]|\d+[.)])\s")
+
+
+def _section_header_text(raw_line: str) -> str:
+    """Header text of a heading line under every form the contract accepts.
+
+    Markdown headings keep their existing behaviour. A plain line qualifies only
+    when it matches one of the contract's week-header shapes.
+    """
+    header_match = _MARKDOWN_HEADER.match(raw_line or "")
+    if header_match:
+        return header_match.group(2).strip()
+    line = (raw_line or "").strip()
+    if not line or _PLAIN_HEADER_BULLET_LEAD.match(raw_line or ""):
+        return ""
+    if _PLAIN_PHASE_WEEK_HEADER.match(line) or _PLAIN_WEEK_LED_HEADER.match(line):
+        return line
+    return ""
+
+
 STRUCTURAL_INTEGRITY_CODES = frozenset(
     {
         "phase_section_missing",
@@ -144,10 +183,6 @@ def _sequence_from_value(value: Any) -> list[dict[str, Any]]:
     return [entry for entry in value if isinstance(entry, dict)]
 
 
-def _list_value(value: Any) -> list[Any]:
-    return value if isinstance(value, list) else []
-
-
 def _selected_countdown_sequence(planning_brief: dict) -> list[dict[str, Any]]:
     # Prefer the top-level athlete-visible sequence when present because it is
     # the post-gap-fill sequence used for what the athlete actually does.
@@ -228,64 +263,6 @@ def _role_countdown_from_week(week: dict[str, Any], role: dict[str, Any]) -> str
     return ""
 
 
-def _authoritative_role_body(role: dict[str, Any]) -> list[str] | None:
-    """Return the role's authoritative athlete-facing body, or ``None``.
-
-    Authoritative means content the deterministic planner already resolved: an
-    explicit ``display_text``, or ``selected_exercise_assignments`` where every
-    entry carries both a name and an approved ``effective_prescription``. It
-    deliberately refuses to synthesise a body from ``preferred_exercise_names``
-    or from the role category, so a role whose content is not fully resolved is
-    left unrestored (and therefore held) rather than papered over with generic
-    or unapproved text.
-    """
-    display_text = str(role.get("display_text") or "").strip()
-    if display_text:
-        return [line.rstrip() for line in display_text.splitlines() if line.strip()]
-
-    assignments = _list_value(role.get("selected_exercise_assignments"))
-    if not assignments:
-        return None
-    lines: list[str] = []
-    for assignment in assignments:
-        if not isinstance(assignment, dict):
-            return None
-        name = str(assignment.get("name") or assignment.get("exercise_name") or "").strip()
-        prescription = assignment.get("effective_prescription")
-        if isinstance(prescription, dict):
-            display = str(
-                prescription.get("display")
-                or prescription.get("dose")
-                or prescription.get("text")
-                or ""
-            ).strip()
-        else:
-            display = str(prescription or "").strip()
-        # Require both an exercise name and an approved effective prescription.
-        # A single partial assignment makes the whole role non-authoritative.
-        if not name or not display:
-            return None
-        lines.append(f"- {name} — {display}")
-    return lines or None
-
-
-def _role_requires_authoritative_render(role: dict[str, Any]) -> bool:
-    """Whether a missing role is app-rendered work this repair must own.
-
-    Roles the deterministic layer marks non-mandatory, or coach-owned context
-    days (declared hard sparring / coach-led contact), are never synthesised
-    here. Their absence is not an app-content loss this repair can author, so
-    they are neither restored nor counted as its unresolved diagnostics — the
-    validator's own structural findings still hold the plan if their loss
-    matters.
-    """
-    if role.get("render_mandatory") is False:
-        return False
-    if _is_hidden_context_role(role):
-        return False
-    return True
-
-
 _WEEKDAY_CANONICAL = {
     "monday": "Monday",
     "mon": "Monday",
@@ -325,12 +302,12 @@ def _is_week_or_phase_header(header_text: str) -> bool:
 
 def _is_day_block_start(raw_line: str) -> bool:
     """A day/session heading inside a week section (never a week/phase header)."""
+    header_text = _section_header_text(raw_line)
+    if header_text and _is_week_or_phase_header(header_text):
+        return False
     if _COUNTDOWN_HEADER_RE.match(raw_line or ""):
         return True
-    header_match = _MARKDOWN_HEADER.match(raw_line or "")
-    if not header_match:
-        return False
-    return not _is_week_or_phase_header(header_match.group(2).strip())
+    return bool(header_text)
 
 
 def _week_section_layout(lines: list[str]) -> dict[int, dict[str, int]]:
@@ -343,10 +320,9 @@ def _week_section_layout(lines: list[str]) -> dict[int, dict[str, int]]:
     """
     boundaries: list[tuple[int, int | None]] = []
     for idx, raw_line in enumerate(lines):
-        header_match = _MARKDOWN_HEADER.match(raw_line)
-        if not header_match:
+        header_text = _section_header_text(raw_line)
+        if not header_text:
             continue
-        header_text = header_match.group(2).strip()
         week_match = _WEEK_HEADER.search(header_text)
         if week_match:
             boundaries.append((idx, int(week_match.group(1))))
@@ -375,8 +351,7 @@ def _day_blocks_in_section(lines: list[str], start: int, end: int) -> list[dict[
         if _is_day_block_start(raw_line):
             if current is not None:
                 blocks.append(current)
-            header_match = _MARKDOWN_HEADER.match(raw_line)
-            heading = header_match.group(2).strip() if header_match else raw_line.strip()
+            heading = _section_header_text(raw_line) or raw_line.strip()
             current = {
                 "countdown": _normalise_countdown_label(heading),
                 "weekday": _first_weekday_in_text(heading),
@@ -397,6 +372,8 @@ def _role_survives_day_block(
     role: dict[str, Any],
     countdown_label: str,
     day_blocks: list[dict[str, Any]],
+    athlete_snapshot: dict[str, Any] | None = None,
+    d_day: int | None = None,
 ) -> bool:
     """Exact role/day survival check.
 
@@ -408,6 +385,16 @@ def _role_survives_day_block(
     role_countdown = countdown_label or _role_countdown_label(role)
     role_weekday = _canonical_weekday(_role_weekday(role))
     markers = _role_render_markers(role)
+    # A declared combat day renders under its *resolved* canonical label (a
+    # converted day says "Technical-only combat", never "hard sparring"), so match
+    # on that label too rather than only on the declared role key.
+    canonical = authoritative_render_for_role(
+        role, athlete_snapshot=athlete_snapshot, d_day=d_day
+    )
+    if canonical:
+        marker = _normalise_render_match_text(canonical.get("athlete_facing_label"))
+        if marker and marker not in markers:
+            markers.append(marker)
 
     for block in day_blocks:
         block_countdown = str(block.get("countdown") or "")
@@ -425,11 +412,16 @@ def _role_survives_day_block(
     return False
 
 
-def _restored_day_heading(role: dict[str, Any], countdown_label: str) -> str:
+def _restored_day_heading(
+    role: dict[str, Any], countdown_label: str, authoritative_label: str = ""
+) -> str:
     label = (
         str(
-            role.get("athlete_facing_label")
+            authoritative_label
+            or role.get("athlete_facing_label")
             or role.get("label")
+            # A raw role_key is a scaffold label the render contract forbids; it
+            # is the last resort only, after the authoritative label.
             or role.get("role_key")
             or "Session"
         ).strip()
@@ -445,6 +437,15 @@ def _restored_day_heading(role: dict[str, Any], countdown_label: str) -> str:
     return f"### {label}"
 
 
+def _repair_athlete_snapshot(planning_brief: dict) -> dict:
+    """Athlete truth the combat resolver needs (safety reasons, sparring cutoff)."""
+    for key in ("athlete_snapshot", "athlete_model"):
+        value = planning_brief.get(key)
+        if isinstance(value, dict):
+            return value
+    return {}
+
+
 def repair_stage2_structural_text(
     *,
     planning_brief: dict,
@@ -455,11 +456,14 @@ def repair_stage2_structural_text(
 
     This is deliberately narrow and fail-closed:
 
-    * It only restores a role that carries **complete authoritative content**
-      (``display_text`` or fully-priced ``selected_exercise_assignments``); it
+    * It only restores a role that carries **complete authoritative content**,
+      as decided by :func:`fightcamp.render_authority.authoritative_render_for_role`
+      — the same resolver that builds the first-pass locked render manifest. It
       never synthesises a body from a category or from preferred exercise names.
-    * It only restores app-rendered mandatory work — non-mandatory and
-      coach-owned context roles are left to the validator.
+    * It only restores mandatory work. A coach-owned declared combat day is
+      restorable exactly when its *resolved* athlete-facing content is canonical
+      (never its dose); an unresolved, deloaded or safety-blocked contact state is
+      left to the validator.
     * It matches **exact role/day identity** and inserts the restored day into
       the role's own canonical week section. It never appends a second week or
       phase schedule, and it never restores a role whose canonical week is not
@@ -481,6 +485,7 @@ def repair_stage2_structural_text(
     if not weeks:
         return {"text": final_plan_text, "applied": [], "unresolved": findings}
 
+    athlete_snapshot = _repair_athlete_snapshot(planning_brief)
     lines = (final_plan_text or "").split("\n")
     layout = _week_section_layout(lines)
 
@@ -509,16 +514,33 @@ def repair_stage2_structural_text(
         week_insert_lines: list[str] = []
         for role in roles:
             countdown_label = _role_countdown_from_week(week, role)
+            d_day_match = re.search(r"\bD-(\d{1,2})\b", countdown_label)
+            role_d_day = int(d_day_match.group(1)) if d_day_match else None
             if section and _role_survives_day_block(
                 role=role,
                 countdown_label=countdown_label,
                 day_blocks=day_blocks,
+                athlete_snapshot=athlete_snapshot,
+                d_day=role_d_day,
             ):
                 continue
 
-            # Role is missing from its canonical day.
-            if not _role_requires_authoritative_render(role):
-                # Non-mandatory / coach-owned context: not this repair's to author.
+            # Role is missing from its canonical day. The shared resolver — the
+            # same one that builds the first-pass locked render manifest —
+            # decides whether the server already owns this role's body.
+            if role.get("render_mandatory") is False:
+                continue
+            render = authoritative_render_for_role(
+                role,
+                week=week,
+                athlete_snapshot=athlete_snapshot,
+                d_day=role_d_day,
+            )
+            if render is None and _is_hidden_context_role(role):
+                # Coach-owned combat whose resolved state the server may not
+                # phrase (unresolved, deloaded, or safety-blocked): not this
+                # repair's to author, and not its unresolved diagnostic either.
+                # The validator's own structural findings still hold the plan.
                 continue
 
             unresolved_entry = {
@@ -535,7 +557,11 @@ def repair_stage2_structural_text(
                 unresolved.append(unresolved_entry)
                 continue
 
-            body = _authoritative_role_body(role)
+            body = [
+                line
+                for line in ((render or {}).get("body_lines") or [])
+                if str(line).strip()
+            ]
             if not body:
                 unresolved_entry["message"] = (
                     "Missing role has no complete authoritative content to restore."
@@ -543,7 +569,9 @@ def repair_stage2_structural_text(
                 unresolved.append(unresolved_entry)
                 continue
 
-            heading = _restored_day_heading(role, countdown_label)
+            heading = _restored_day_heading(
+                role, countdown_label, str(render.get("athlete_facing_label") or "")
+            )
             week_insert_lines.extend(["", heading, *body])
             applied.append(
                 {

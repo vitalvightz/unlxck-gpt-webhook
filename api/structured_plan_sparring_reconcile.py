@@ -40,6 +40,7 @@ from typing import Any
 from fightcamp.weekly_schedule_view import extract_weekly_schedule
 from fightcamp.sparring_dose_planner import hard_sparring_cutoff, contact_safety_reasons
 from fightcamp.declared_combat_ownership import is_declared_light_combat_role
+from fightcamp.combat_render_authority import resolve_declared_contact_load
 
 # effective_load values from the deterministic schedule that mean coach-owned
 # contact work the athlete must see as its own card.
@@ -187,36 +188,14 @@ def _ban_clamped_load(load: str, d_day: int | None, athlete_snapshot: dict[str, 
 def _role_contact_load(role: dict[str, Any], d_day: int | None, athlete_snapshot: dict[str, Any] | None = None) -> str:
     """Effective contact load for a declared ``hard_sparring_day`` role.
 
-    ``role_key`` records only that the day was *declared* hard — never what the
-    sparring dose planner did with it. The late-fight planner marks a converted
-    day with ``downgraded`` / ``downgraded_to_role_key``, but the normal-camp role
-    map carries the planner's verdict in ``hard_sparring_status`` /
-    ``hard_sparring_reason_codes`` instead. Reading only the late-fight flags
-    labelled every normal-camp day inside the D-17 ban "Hard sparring", and since
-    roles are collected before the weekly schedule, that wrong headline won the
-    d-day dedupe over the schedule's correct technical entry.
+    Thin delegation to the shared resolver in
+    :mod:`fightcamp.combat_render_authority`, which is the single owner of
+    "declared hard day -> resolved contact status" for the structured plan, the
+    Stage 2 locked render projection and deterministic source repair alike.
     """
-    if contact_safety_reasons(athlete_snapshot or {}) or role.get("hard_sparring_status") == "blocked":
-        return "none"
-    if bool(role.get("downgraded")) or str(
-        role.get("downgraded_to_role_key") or ""
-    ).strip() == "technical_touch_day":
-        return "technical"
-
-    status = str(role.get("hard_sparring_status") or "").strip()
-    raw_codes = role.get("hard_sparring_reason_codes")
-    reason_codes = {
-        str(code).strip()
-        for code in (raw_codes if isinstance(raw_codes, (list, tuple)) else [])
-    }
-    if status == "convert_to_technical_suggested" or reason_codes & {"d14_hard_sparring_ban", "d17_hard_sparring_ban"}:
-        return "technical"
-    if (
-        status == "deload_suggested"
-        or str(role.get("hard_sparring_class") or "").strip() == "managed_hard"
-    ):
-        return "reduced"
-    return _ban_clamped_load("hard", d_day, athlete_snapshot)
+    return resolve_declared_contact_load(
+        role, d_day=d_day, athlete_snapshot=athlete_snapshot
+    )
 
 
 def _resolve_fight_date(planning_brief: dict[str, Any]) -> Any:
