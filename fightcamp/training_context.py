@@ -71,7 +71,49 @@ EQUIP_ALIASES = {
     "mini hurdle": "hurdles",
     "mini hurdles": "hurdles",
     "agility hurdles": "hurdles",
+    # --- Canonical combat pad/mitt capability -------------------------------
+    # Thai pads, focus mitts and partner mitts are separate names for the same
+    # athlete-facing capability: handheld striking pads held by a partner. The
+    # banks use all of these spellings, while intake only ever stored one, so
+    # eligibility (``required_equipment <= athlete_equipment``) used to fail for
+    # drills that happened to spell it differently. They all collapse to
+    # ``pads``. Deliberately NOT aliased: heavy/double-end bags, wall pads,
+    # kick shields, body protectors and rehab foam pads - none of those are
+    # handheld striking pads, and "pad" on its own is a squeeze pad in the
+    # strength bank, not a striking pad.
+    "thai_pads": "pads",
+    "thai pads": "pads",
+    "thai_pad": "pads",
+    "thai pad": "pads",
+    "thaipads": "pads",
+    "focus_mitts": "pads",
+    "focus mitts": "pads",
+    "focus_mitt": "pads",
+    "focus mitt": "pads",
+    "partner_mitts": "pads",
+    "partner mitts": "pads",
+    "partner_mitt": "pads",
+    "partner mitt": "pads",
+    "boxing_mitts": "pads",
+    "boxing mitts": "pads",
+    "boxing_mitt": "pads",
+    "boxing mitt": "pads",
+    "punch_mitts": "pads",
+    "punch mitts": "pads",
+    "punch_mitt": "pads",
+    "punch mitt": "pads",
+    "mitts": "pads",
+    "mitt": "pads",
+    "striking_pads": "pads",
+    "striking pads": "pads",
+    "pad_work": "pads",
+    "pad work": "pads",
+    "pads": "pads",
 }
+
+# Canonical token for handheld combat striking pads/mitts. Exposed so callers
+# (and tests) do not have to re-spell it.
+PADS = "pads"
 
 
 def _split_items(value):
@@ -95,10 +137,15 @@ def normalize_equipment_list(raw):
     for part in parts:
         key = part.lower().strip()
         if key in {"med balls / bands", "med balls/bands"}:
-            normalized.extend(["medicine_ball", "bands"])
+            for token in ("medicine_ball", "bands"):
+                if token not in normalized:
+                    normalized.append(token)
             continue
         key = EQUIP_ALIASES.get(key, key).replace(" ", "_")
-        if key:
+        # Re-check after whitespace collapsing so "Focus Mitts" and
+        # "focus_mitts" land on the same canonical token.
+        key = EQUIP_ALIASES.get(key, key)
+        if key and key not in normalized:
             normalized.append(key)
     return normalized
 
@@ -116,7 +163,7 @@ known_equipment = [
     "barbell", "dumbbell", "dumbbells", "kettlebell", "sled", "medicine_ball",
     "trap_bar", "bands", "cable", "box", "weight_vest", "landmine",
     "towel", "partner", "bench", "trx", "pullup_bar", "plate",
-    "swiss_ball", "heavy_bag", "thai_pads", "neck_harness", "log",
+    "swiss_ball", "heavy_bag", "pads", "neck_harness", "log",
     "tire", "atlas_stone", "water_jug", "bulgarian_bag", "sandbag",
     "treadmill", "rower", "agility_ladder", "battle_ropes", "sledgehammer",
     "climbing_rope", "bosu_ball", "foam_roller", "assault_bike",

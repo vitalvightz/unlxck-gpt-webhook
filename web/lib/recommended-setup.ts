@@ -76,7 +76,7 @@ export const EQUIPMENT_PRESETS: EquipmentPreset[] = [
       "pullup_bar",
       "bands",
       "heavy_bag",
-      "thai_pads",
+      "pads",
     ],
   },
   {
