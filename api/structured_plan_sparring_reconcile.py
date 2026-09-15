@@ -101,7 +101,7 @@ _COACH_LED_RE = re.compile(r"\bcoach", re.I)
 _DDAY_RE = re.compile(r"D-\s*(\d+)", re.I)
 _ALLOWED_HARD_DAY_FILLER_RE = re.compile(
     r"\b("
-    r"tactical\s+watch|tactical\s+cue\s+card|cue\s+card|"
+    r"tactical\s+(?:watch|focus)|tactical\s+cue\s+card|cue\s+card|"
     r"neural\s+visuali[sz]ation|visuali[sz]ation|breathing\s+reset"
     r")\b",
     re.I,
@@ -596,6 +596,11 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
                         f"({contact.headline!r})"
                     )
                     continue
+                if _apply_contact_day_type(day, contact):
+                    notes.append(
+                        f"lifted rest day_type to {day['day_type']!r} on "
+                        f"{date or f'D-{dday}'} ({contact.headline!r})"
+                    )
                 if str(card.get("coach_led_contact") or "").strip():
                     continue
                 card["coach_led_contact"] = contact.headline
