@@ -2282,14 +2282,6 @@ def _readiness_compression_components(athlete_model: dict) -> _CompressionCompon
     return _CompressionComponents(generic=compression, cut=cut_points)
 
 
-# Ceiling on how many non-spar slots any combination of readiness signals may
-# remove in one week. Without it a critical cut stacked on high fatigue and
-# injury could empty a low-frequency week outright, which is the failure mode
-# the cut rework exists to prevent. The allocator's ``min_non_spar_active``
-# clamp is the second guard.
-MAX_READINESS_COMPRESSION_FLOOR = 3
-
-
 def _compression_floor_value(compression: int) -> int:
     """Convert a *generic* readiness score to removed non-spar slots.
 
@@ -2311,12 +2303,71 @@ def _readiness_compression_floor(athlete_model: dict) -> int:
     The cut's charge is added rather than blended, so
     ``cut_training_compression_points`` means what it says at the allocator:
     moderate removes 0, high removes 1, critical and extreme remove 2.
+
+    This is the *raw* readiness demand. It is deliberately not bounded here: a
+    fixed ceiling cannot know the week it is being applied to, so the real
+    protection is capacity-aware and lives in
+    :func:`_effective_compression_floor`, which is what the allocator uses.
     """
     components = _readiness_compression_components(athlete_model)
-    return min(
-        MAX_READINESS_COMPRESSION_FLOOR,
-        _compression_floor_value(components.generic) + components.cut,
+    return _compression_floor_value(components.generic) + components.cut
+
+
+def _zero_physical_week_is_authorised(athlete_model: dict) -> bool:
+    """Whether an explicit safety authority may take the week to no physical work.
+
+    Readiness compression is not such an authority. Only a medical hold, a
+    red-flag injury, or fight day itself may legitimately leave an athlete with
+    nothing physical scheduled.
+    """
+    mode = str(athlete_model.get("injury_mode", "")).strip().lower()
+    if mode in {"medical_hold", "restricted_rehab_only"}:
+        return True
+    readiness = {
+        str(flag).strip().lower()
+        for flag in clean_list(athlete_model.get("readiness_flags", []))
+    }
+    if {"severe_injury", "red_flag_injury"} & readiness:
+        return True
+    days = athlete_model.get("days_until_fight")
+    return isinstance(days, int) and days <= 0
+
+
+def _minimum_required_non_spar_exposures(
+    athlete_model: dict, *, spar_count: int
+) -> int:
+    """Non-spar sessions that readiness compression may never remove.
+
+    The week still needs *some* physical work. A declared combat session is
+    physical work, so when one is already scheduled the non-spar count may
+    legitimately fall to zero late in taper — we do not manufacture filler just
+    to hit a frequency number. With no combat session in the week, one non-spar
+    exposure must survive, because otherwise a declared two-session week
+    silently becomes a zero-session week.
+    """
+    if _zero_physical_week_is_authorised(athlete_model):
+        return 0
+    if spar_count > 0:
+        return 0
+    return 1
+
+
+def _effective_compression_floor(
+    athlete_model: dict, *, non_spar_cap: int, spar_count: int
+) -> int:
+    """Readiness compression bounded by what the week can actually afford.
+
+    A fixed ceiling (this used to be a flat 3) cannot protect a low-frequency
+    week: for a two-session athlete no constant is small enough to guarantee
+    survival, and in TAPER ``min_non_spar_active`` is 0, so a critical cut could
+    take a declared 2-session week to 0/2. Clamping against the real capacity is
+    the stronger invariant.
+    """
+    minimum_required = _minimum_required_non_spar_exposures(
+        athlete_model, spar_count=spar_count
     )
+    max_removable = max(0, int(non_spar_cap) - minimum_required)
+    return min(_readiness_compression_floor(athlete_model), max_removable)
 
 
 def _can_keep_low_noise_conditioning(athlete_model: dict) -> bool:
@@ -2765,7 +2816,13 @@ def _apply_high_fatigue_week_compression(
     # No late-cut overlay here: ``_cut_severity_compression_points`` is the sole
     # cut-driven capacity charge. The former ``aggressive_cut_extra_compression``
     # re-read the same severity bucket and removed a *second* slot for it.
-    compression_floor = _readiness_compression_floor(athlete_model)
+    #
+    # Bounded against this week's actual capacity rather than a fixed ceiling,
+    # so readiness compression can never take a declared training week to zero
+    # physical sessions. Only a medical/fight-day authority may do that.
+    compression_floor = _effective_compression_floor(
+        athlete_model, non_spar_cap=non_spar_cap, spar_count=spar_count
+    )
 
     # Step 3: Compute target number of non-sparring active sessions
     phase = str(week_entry.get("phase", "")).strip().upper()

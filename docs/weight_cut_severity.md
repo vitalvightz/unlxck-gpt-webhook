@@ -66,9 +66,28 @@ to** the generic readiness floor rather than blended into it, because
 `_compression_floor_value` is deliberately lossy (1 and 2 points both mean one
 slot) — routing the cut through that curve silently halved what a critical or
 extreme cut was supposed to remove. `_readiness_compression_floor()` combines
-them and caps the total at `MAX_READINESS_COMPRESSION_FLOOR` (3) so no
-combination of signals can empty a low-frequency week; the allocator's
-`min_non_spar_active` clamp is the second guard.
+them.
+
+The raw floor is then bounded **against the week's actual capacity**, not by a
+fixed ceiling. A constant cannot protect a low-frequency week — for a
+two-session athlete no ceiling is small enough — and in TAPER
+`min_non_spar_active` is 0, so a critical cut could take a declared 2-session
+week to 0/2. `_effective_compression_floor()` clamps instead:
+
+```
+minimum_required = _minimum_required_non_spar_exposures(athlete, spar_count)
+max_removable    = max(0, non_spar_cap - minimum_required)
+effective_floor  = min(raw_floor, max_removable)
+```
+
+`minimum_required` is 1 normally, and 0 when the week already contains a
+declared combat session — that is real physical work, so non-spar sessions may
+legitimately fall to zero late in taper and we do not manufacture filler just to
+hit a frequency number.
+
+**Readiness compression is never an authority for a zero-physical week.** Only a
+medical hold, a red-flag injury, or fight day itself (`_zero_physical_week_is_authorised`)
+may leave an athlete with nothing scheduled.
 
 ## No third severity system
 

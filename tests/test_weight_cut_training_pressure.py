@@ -10,8 +10,9 @@ import pytest
 from fightcamp.athlete_model import _derive_readiness_flags
 from fightcamp.goal_preservation import classify_goal_preservation
 from fightcamp.stage2_role_map import (
-    MAX_READINESS_COMPRESSION_FLOOR,
+    _apply_high_fatigue_week_compression,
     _boxing_crowded_week_policy_state,
+    _effective_compression_floor,
     _compression_floor_value,
     _compute_readiness_compression,
     _cut_severity_compression_points,
@@ -302,20 +303,135 @@ def test_critical_and_extreme_are_not_flattened_into_one_slot():
         assert _compression_floor_value(_compute_readiness_compression(model)) == 1
 
 
-def test_compression_floor_is_bounded_so_a_week_is_never_emptied():
-    """Cut + fatigue + injury must not strip a low-frequency week outright."""
-    score = compute_cut_severity_score(15.0, 10)
+# ── Readiness compression may never empty a declared training week ──────────
+#
+# A fixed ceiling cannot protect a low-frequency week: for a two-session athlete
+# no constant is small enough, and in TAPER ``min_non_spar_active`` is 0, so a
+# critical cut could take a declared 2-session week to 0/2. These run the real
+# weekly allocator rather than inspecting the floor in isolation.
+
+def _severe_cut_athlete(cut_pct, *, days_out=5, training_days, frequency, spar_days=(), **overrides):
+    score = compute_cut_severity_score(cut_pct, days_out)
     model = {
-        "fatigue": "high",
-        "injuries": ["moderate knee sprain"],
-        "days_until_fight": 10,
+        "fatigue": "low",
+        "injuries": [],
+        "days_until_fight": days_out,
         "weight_cut_risk": True,
-        "weight_cut_pct": 15.0,
+        "weight_cut_pct": cut_pct,
         "cut_severity_score": score,
         "cut_severity_bucket": cut_severity_bucket(score),
-        "readiness_flags": ["high_fatigue", "injury_management"],
+        "cut_health_bucket": cut_health_bucket(score),
+        "readiness_flags": [],
+        "training_days": list(training_days),
+        "hard_sparring_days": list(spar_days),
+        "training_frequency": frequency,
     }
-    assert _readiness_compression_floor(model) <= MAX_READINESS_COMPRESSION_FLOOR
+    model.update(overrides)
+    return model
+
+
+def _taper_week(days):
+    return {
+        "phase": "TAPER",
+        "calendar_days": [
+            {"weekday": day, "d_day": 6 - index} for index, day in enumerate(days)
+        ],
+        "resolved_rule_state": {},
+    }
+
+
+def _role(index, day, role_key="aerobic_support_day", category="conditioning"):
+    return {
+        "session_index": index,
+        "category": category,
+        "role_key": role_key,
+        "preferred_system": "aerobic" if category == "conditioning" else None,
+        "scheduled_day_hint": day,
+    }
+
+
+@pytest.mark.parametrize(
+    "cut_pct,expected_bucket",
+    [(8.0, "critical"), (13.0, "extreme")],
+)
+def test_frequency_two_taper_no_spar_keeps_one_physical_session(cut_pct, expected_bucket):
+    """The reported hole: TAPER + no spar + severe cut emptied the week."""
+    days = ["monday", "thursday"]
+    athlete = _severe_cut_athlete(cut_pct, training_days=days, frequency=2)
+    assert cut_severity_bucket(athlete["cut_severity_score"]) == expected_bucket
+
+    kept, _suppressed = _apply_high_fatigue_week_compression(
+        _taper_week(days),
+        [_role(1, "monday"), _role(2, "thursday", "strength_touch_day", "strength")],
+        [],
+        athlete,
+    )
+    assert len(kept) >= 1, "a declared 2-session week must not compress to zero"
+
+
+def test_frequency_two_taper_with_combat_may_drop_non_spar_to_zero():
+    """A declared combat session is physical work — do not manufacture filler."""
+    days = ["monday", "thursday"]
+    athlete = _severe_cut_athlete(
+        8.0, training_days=days, frequency=2, spar_days=["thursday"]
+    )
+    kept, _suppressed = _apply_high_fatigue_week_compression(
+        _taper_week(days),
+        [
+            _role(1, "monday"),
+            _role(2, "thursday", "hard_sparring_day", "sparring"),
+        ],
+        [],
+        athlete,
+    )
+    kept_keys = {role["role_key"] for role in kept}
+    # The combat exposure survives; taper policy may legitimately take non-spar
+    # work to zero because the week still contains real physical work.
+    assert "hard_sparring_day" in kept_keys
+    assert _effective_compression_floor(athlete, non_spar_cap=1, spar_count=1) == 1
+
+
+@pytest.mark.parametrize("frequency,spar_days", [(2, ()), (3, ()), (4, ()), (5, ()), (6, ())])
+def test_no_frequency_is_compressed_to_zero_physical_sessions(frequency, spar_days):
+    days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][:frequency]
+    athlete = _severe_cut_athlete(
+        15.0, training_days=days, frequency=frequency, spar_days=spar_days
+    )
+    roles = [_role(index + 1, day) for index, day in enumerate(days)]
+    kept, _suppressed = _apply_high_fatigue_week_compression(
+        _taper_week(days), roles, [], athlete
+    )
+    assert len(kept) >= 1
+
+
+@pytest.mark.parametrize(
+    "authority",
+    [
+        {"injury_mode": "medical_hold"},
+        {"injury_mode": "restricted_rehab_only"},
+        {"readiness_flags": ["red_flag_injury"]},
+        {"days_until_fight": 0},
+    ],
+)
+def test_explicit_safety_authority_may_still_take_the_week_to_zero(authority):
+    """Only medical / fight-day authority may zero a week — never compression."""
+    days = ["monday", "thursday"]
+    athlete = _severe_cut_athlete(15.0, training_days=days, frequency=2, **authority)
+    assert _effective_compression_floor(athlete, non_spar_cap=2, spar_count=0) == 2
+
+
+def test_compression_alone_is_never_a_zero_week_authority():
+    """Every soft signal stacked together still leaves one physical session."""
+    days = ["monday", "thursday"]
+    athlete = _severe_cut_athlete(
+        15.0,
+        training_days=days,
+        frequency=2,
+        fatigue="high",
+        injuries=["moderate knee sprain"],
+        readiness_flags=["high_fatigue", "injury_management"],
+    )
+    assert _effective_compression_floor(athlete, non_spar_cap=2, spar_count=0) == 1
 
 
 # ── The compound rule is a compound rule, not a second cut penalty ───────────
