@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator
 
@@ -22,6 +24,8 @@ from api.services.notification_foundation import (
 from api.services.progress_notifications import send_coach_message_notification
 from api.services.push_notifications import push_notifications_configured, vapid_public_key
 from api.store import AppStore
+
+logger = logging.getLogger(__name__)
 
 
 class CoachMessagePushRequest(BaseModel):
@@ -78,19 +82,32 @@ def build_push_router(*, require_profile, require_admin, get_store) -> APIRouter
         enabled = push_notifications_configured()
         try:
             preferences = get_notification_preferences(store, profile.athlete_id)
-            subscriptions = store.list_push_subscriptions(profile.athlete_id)
         except NotificationStoreError as exc:
             raise _preferences_unavailable(exc) from exc
+
+        try:
+            subscriptions = store.list_push_subscriptions(profile.athlete_id)
+        except Exception:  # noqa: BLE001 - reconciliation is best-effort
+            logger.exception(
+                "[push] subscription lookup unavailable profile_id=%s",
+                profile.athlete_id,
+            )
+            subscriptions = None
+
         return PushSettingsResponse(
             enabled=enabled,
             public_key=vapid_public_key() if enabled else "",
             preferences=preferences,
-            subscription_endpoints=[
-                endpoint
-                for row in subscriptions
-                if isinstance(row, dict)
-                if (endpoint := str(row.get("endpoint") or "").strip())
-            ],
+            subscription_endpoints=(
+                None
+                if subscriptions is None
+                else [
+                    endpoint
+                    for row in subscriptions
+                    if isinstance(row, dict)
+                    if (endpoint := str(row.get("endpoint") or "").strip())
+                ]
+            ),
         )
 
     @router.put("/api/push/preferences", response_model=NotificationPreferences)
