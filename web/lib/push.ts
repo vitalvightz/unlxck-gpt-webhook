@@ -60,20 +60,30 @@ export async function getPushOptInState(token: string | null): Promise<PushOptIn
   if (Notification.permission === "denied") {
     return "denied";
   }
-  if (await getExistingPushSubscription()) {
-    return "subscribed";
-  }
+
+  const subscription = await getExistingPushSubscription();
   if (token) {
     try {
       const settings = await getPushSettings(token);
       if (!settings.enabled) {
         return "server-disabled";
       }
+      const endpoints = (
+        settings as typeof settings & { subscription_endpoints?: string[] }
+      ).subscription_endpoints;
+      if (
+        subscription &&
+        Array.isArray(endpoints) &&
+        !endpoints.includes(subscription.endpoint)
+      ) {
+        return "unsubscribed";
+      }
     } catch {
-      // Treat a transient settings failure as available; subscribing re-checks.
+      // Preserve the browser's current state during a transient settings failure.
     }
   }
-  return "unsubscribed";
+
+  return subscription ? "subscribed" : "unsubscribed";
 }
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -118,6 +128,12 @@ export async function subscribeToPushNotifications(token: string): Promise<void>
   if (permission !== "granted") {
     throw new Error("Notifications were not allowed. You can enable them in browser settings.");
   }
+
+  const existing = await registration.pushManager.getSubscription();
+  if (existing && !(await existing.unsubscribe())) {
+    throw new Error("The old notification subscription couldn't be reset. Reload the app and try again.");
+  }
+
   const subscription = await registration.pushManager.subscribe({
     userVisibleOnly: true,
     applicationServerKey: urlBase64ToUint8Array(settings.public_key) as BufferSource,
