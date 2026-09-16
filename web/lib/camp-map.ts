@@ -7,6 +7,7 @@ import { formatPlanLabel } from "./plan-labels.ts";
 import {
   cleanText,
   classifySessionlessDay,
+  getPhysicalSessions,
   formatCountdownLabel,
   formatSessionObjective,
   getBlocks,
@@ -456,15 +457,19 @@ export function weekCompletion(
   );
 }
 
-/** Sessions marked done over total sessions for a single day. When a live
+/** Physical sessions marked done over the day's physical sessions. When a live
  * completion index is supplied, real logged statuses win over the static
  * `completion_status` baked into the plan JSON at generation time (always
- * "not_started"), so the tag can actually light up. */
+ * "not_started"), so the tag can actually light up.
+ *
+ * Zero-load support (visualisation, tactical review, breathing-only) renders as
+ * its own card but is deliberately NOT counted: the tag reports training
+ * sessions, and mental/tactical work must never inflate it. */
 export function dayCompletion(
   day: StructuredDay | null | undefined,
   index?: CompletionIndex,
 ): Completion {
-  const sessions = getSessions(day);
+  const sessions = getPhysicalSessions(day);
   const done = sessions.filter((session) => {
     const live = index ? completionForSession(index, day, session) : undefined;
     const status = live?.status ?? cleanText(session.completion_status)?.toLowerCase();
@@ -666,8 +671,10 @@ export function resolveNextPlanFocusDay(
 export type WeekSessionSummary = {
   /** Days with athlete work in the app or a coach-led/contact session. */
   trainingDays: number;
-  /** Plan sessions with blocks/details owned by Unlxck. */
+  /** Physical plan sessions owned by Unlxck (zero-load support excluded). */
   appSessions: number;
+  /** Scheduled zero-load support cards (mental, tactical, breathing-only). */
+  supportSessions: number;
   /** Session-less contact days owned by the athlete's coach. */
   coachLedSessions: number;
 };
@@ -681,18 +688,22 @@ export function weekSessionSummary(
 ): WeekSessionSummary {
   return getDays(week).reduce<WeekSessionSummary>(
     (acc, day) => {
-      const appSessions = getSessions(day).length;
+      const allSessions = getSessions(day).length;
+      const appSessions = getPhysicalSessions(day).length;
       // Coach-led contact can sit alongside a plan insert. Count each
       // source independently, while counting the calendar day only once.
       const coachLed = Boolean(getCoachLedContactView(day)) || classifySessionlessDay(day).coachLed;
-      const activeDay = appSessions > 0 || coachLed;
+      // A day holding only zero-load support is still a scheduled day the
+      // athlete has to open — it just is not a physical training day.
+      const activeDay = allSessions > 0 || coachLed;
       return {
         trainingDays: acc.trainingDays + (activeDay ? 1 : 0),
         appSessions: acc.appSessions + appSessions,
+        supportSessions: acc.supportSessions + (allSessions - appSessions),
         coachLedSessions: acc.coachLedSessions + (coachLed ? 1 : 0),
       };
     },
-    { trainingDays: 0, appSessions: 0, coachLedSessions: 0 },
+    { trainingDays: 0, appSessions: 0, supportSessions: 0, coachLedSessions: 0 },
   );
 }
 

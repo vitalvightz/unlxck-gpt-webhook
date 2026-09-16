@@ -396,6 +396,15 @@ export type StructuredSession = {
   cns_demand?: string | null;
   impact_level?: string | null;
   completion_status?: string | null;
+  /**
+   * Planner stress vocabulary for the session ("support" = zero-load). Scheduled
+   * mental / tactical / breathing work renders like any other card but must
+   * never be counted as a physical training session, and this is the field that
+   * says so. Mirrors the `stress_class` the planner already stamps on support
+   * roles (fightcamp/gap_fill_inserts.py) rather than inventing a second
+   * vocabulary for the same claim.
+   */
+  stress_class?: string | null;
   mindset_anchor?: MindsetAnchor | null;
   blocks?: StructuredBlock[] | null;
 };

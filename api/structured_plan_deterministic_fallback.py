@@ -192,12 +192,30 @@ def _blocks(role: dict[str, Any], d_day: int, role_key: str) -> list[dict[str, A
     return blocks
 
 
+def _support_instruction(role: dict[str, Any]) -> str:
+    """The role's own athlete-facing instruction, verbatim, or ``""``.
+
+    Support inserts (joint prep, breathing reset, footwork walkthrough,
+    visualisation) carry their whole prescription as one banked sentence in
+    ``display_text`` and never populate ``selected_exercise_assignments``. That is
+    real scheduled content, so it is preserved as the session's instruction — it
+    is not turned into an invented exercise with an invented dose.
+    """
+    for key in ("display_text", "athlete_facing_text", "prescription"):
+        text = str(role.get(key) or "").strip()
+        if text:
+            return text
+    return ""
+
+
 def _session(role: dict[str, Any], d_day: int) -> dict[str, Any] | None:
     role_key = str(role.get("role_key") or "").strip()
     blocks = _blocks(role, d_day, role_key or "role")
-    if not blocks:
-        # A role with no selected exercise has nothing deterministic to render;
-        # inventing a session here would be the fallback making things up.
+    instruction = _support_instruction(role)
+    if not blocks and not instruction:
+        # A role with neither a selected exercise nor athlete-facing copy has
+        # nothing deterministic to render; inventing a session here would be the
+        # fallback making things up.
         return None
     category = _category(role)
     session_index = role.get("session_index")
@@ -216,7 +234,9 @@ def _session(role: dict[str, Any], d_day: int) -> dict[str, Any] | None:
         # content; using it here published that same internal reasoning straight
         # to the athlete as the card's objective. It stays on the role for
         # audit; the athlete sees the athlete-facing label instead.
-        "objective": str(title or "Session"),
+        # A blockless support insert would otherwise render as a bare title, so
+        # its banked instruction becomes the objective.
+        "objective": instruction if not blocks and instruction else str(title or "Session"),
         "completion_status": "not_started",
         "mindset_anchor": {"intent": "", "focus_cue": "", "reset_cue": ""},
         "blocks": blocks,

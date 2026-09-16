@@ -7,6 +7,7 @@
 // structured renderer's shape without another model call; every field comes
 // from the saved text, so a missing server-side structured payload can never
 // force the legacy renderer.
+import { isZeroLoadSupportSession } from "@/lib/structured-plan";
 import type {
   StructuredBlock,
   StructuredDay,
@@ -84,7 +85,7 @@ function normalizePlanTextForCards(rawText: string): string {
     .replace(/\r\n/g, "\n")
     .replace(/(^|\n)(Lead notes|Active notes)\s+[-–—]?\s*/gi, "$1$2\n")
     .replace(/\s+(?=(?:GPP|SPP|TAPER|FIGHT[ _]WEEK|REINTEGRATION)\s*[—–\-:]\s*Week\b)/gi, "\n")
-    .replace(/\s+(?=D-\d+\s*\([^)]+\)\s*[—–\-:]\s*\S)/g, "\n")
+    .replace(/\s+(?=D-\d+\s*(?:\([^)]+\))?\s*[—–\-:]\s*(?!D-\d)\S)/g, "\n")
     .replace(
       /\s+(?=(?:mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:sday)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\b[^()]*\(\s*D-\d+\s*\)\s*[—–\-:]\s*\S)/gi,
       "\n",
@@ -198,8 +199,14 @@ const PHASE_FIRST_WEEK_RE = new RegExp(`^(${PHASE_TOKEN})\\s*${HEADER_SEP}\\s*(W
 const BARE_WEEK_RE = /^Week\s+\d+\b/i;
 const PHASE_ANYWHERE_RE = new RegExp(`\\b(${PHASE_TOKEN})\\b`, "i");
 // "D-33 (Wednesday) — Aerobic support" (final/validated countdown-first form).
+// The weekday parenthetical is OPTIONAL: a scheduled item can be rendered with
+// the countdown alone ("D-10 — Joint Prep"). Requiring the weekday made such a
+// heading invisible to the parser, so its title and body were swallowed into the
+// previous day's session and the countdown gap-filler then manufactured a rest
+// row on a day that carried authoritative work. The title must not itself be
+// another countdown, so a range line ("D-14 — D-7") is never read as a session.
 const SESSION_COUNTDOWN_FIRST_RE = new RegExp(
-  `^D-(\\d+)\\s*\\(([^)]+)\\)\\s*${HEADER_SEP}\\s*(.+)$`,
+  `^D-(\\d+)\\s*(?:\\(([^)]+)\\))?\\s*${HEADER_SEP}\\s*(?!D-\\d)(.+)$`,
   "i",
 );
 // "Wednesday (D-33) — Aerobic support" (Stage 1 deterministic weekday-first form).
@@ -305,7 +312,7 @@ function classifyPlanTextHeading(
     return {
       kind: "session",
       countdown: `D-${session[1]}`,
-      weekday: session[2].trim() || null,
+      weekday: session[2]?.trim() || null,
       title: split.title,
       remainder: split.remainder,
     };
@@ -744,7 +751,7 @@ function toStructuredSession(session: PlanTextSession, index: number): Structure
   const notes = session.notes.join(" ").trim();
   const objective = [session.objective, notes].filter(Boolean).join(" ") || null;
   const sessionType = inferSessionType(session);
-  return {
+  const adapted: StructuredSession = {
     session_id: `text-session-${index + 1}`,
     session_type: sessionType,
     title: session.title,
@@ -753,6 +760,12 @@ function toStructuredSession(session: PlanTextSession, index: number): Structure
       toStructuredBlock(block, blockIndex, sessionType),
     ),
   };
+  // Scheduled mental / tactical / breathing-only work renders like any other
+  // card, but it is zero load. Stamping the planner's own `stress_class` here —
+  // once, at the point the session is built — keeps every downstream consumer
+  // (renderer tag, completion counts) on one shared rule instead of each
+  // re-guessing from the title.
+  return isZeroLoadSupportSession(adapted) ? { ...adapted, stress_class: "support" } : adapted;
 }
 
 function toStructuredDays(

@@ -427,6 +427,92 @@ export function getSessions(day: StructuredDay | null | undefined): StructuredSe
   return safeArray(day?.sessions).filter(isObject);
 }
 
+// ---------------------------------------------------------------------------
+// Zero-load support: scheduled items that must RENDER but must never count as
+// physical training. One shared rule, used by the text adapter, the renderer and
+// the completion counters, so rendering fidelity and physical-session
+// accounting stay separate concerns (the planner owns the latter in
+// fightcamp/physical_session_frequency.py and this never changes it).
+// ---------------------------------------------------------------------------
+
+/** Planner stress vocabulary that already means "zero load". */
+const SUPPORT_STRESS_CLASSES = new Set(["support", "support_insert", "zero_load", "none"]);
+
+/** Session types that are informational by construction (mental / tactical). */
+const ZERO_LOAD_SESSION_TYPES = new Set([
+  "mindset",
+  "mental",
+  "tactical",
+  "visualisation",
+  "visualization",
+  "education",
+  "protocol",
+  "fight_day",
+]);
+
+/** Session types that always prescribe real movement; they win over wording. */
+const PHYSICAL_SESSION_TYPES = new Set([
+  "strength_power",
+  "conditioning",
+  "sparring",
+  "fight_or_match",
+  "rehab",
+  "mobility",
+  "recovery",
+]);
+
+/**
+ * Content signals for scheduled zero-load work. Deliberately semantic (what the
+ * item IS) rather than a list of drill names, so a new tactical or mental insert
+ * is classified correctly without another patch. "Technical"/"footwork"/"joint
+ * prep" are NOT here: those are physical work even when they are light.
+ */
+const ZERO_LOAD_CONTENT_RE =
+  /\b(?:visuali[sz]\w*|mental rehearsal|tactical (?:watch|focus|review|cue)|cue card|self-?review|film (?:study|review)|breathing (?:reset|work|only)|fight[- ]day protocol|no physical load|zero[- ]load)\b/i;
+
+/**
+ * True when this scheduled item is zero-load support (mental, tactical,
+ * breathing-only, fight-day protocol). Such a session still renders in full —
+ * it just contributes nothing to physical-session counts.
+ */
+export function isZeroLoadSupportSession(
+  session: StructuredSession | null | undefined,
+): boolean {
+  if (!isObject(session)) {
+    return false;
+  }
+  const stressClass = cleanText(session.stress_class)?.toLowerCase().replace(/[\s-]+/g, "_");
+  if (stressClass) {
+    return SUPPORT_STRESS_CLASSES.has(stressClass);
+  }
+  const sessionType = cleanText(session.session_type)?.toLowerCase().replace(/[\s-]+/g, "_");
+  if (sessionType && ZERO_LOAD_SESSION_TYPES.has(sessionType)) {
+    return true;
+  }
+  // The title names what the item IS, so it is read first: a "Breathing Reset"
+  // is zero load even though the adapter infers a `recovery` session type from
+  // the same words. Block names only get a say when the session type does not
+  // already assert real movement, so a strength session whose accessory happens
+  // to mention a cue card is never demoted.
+  if (ZERO_LOAD_CONTENT_RE.test(cleanText(session.title) || "")) {
+    return true;
+  }
+  if (sessionType && PHYSICAL_SESSION_TYPES.has(sessionType)) {
+    return false;
+  }
+  const blockNames = getBlocks(session)
+    .map((block) => cleanText(block.display_name) || "")
+    .join(" ");
+  return ZERO_LOAD_CONTENT_RE.test(blockNames);
+}
+
+/** Sessions on this day that count toward physical training frequency. */
+export function getPhysicalSessions(
+  day: StructuredDay | null | undefined,
+): StructuredSession[] {
+  return getSessions(day).filter((session) => !isZeroLoadSupportSession(session));
+}
+
 /** Complete planner-owned microdose for this host day; malformed legacy data is hidden. */
 export function getPriorityMicrodose(day: StructuredDay | null | undefined) {
   const raw = day?.priority_microdose;
