@@ -33,7 +33,10 @@ from typing import Any
 
 from fightcamp.role_labels import athlete_facing_label_for
 
-from .structured_plan_calendar_spine import reconcile_calendar_spine
+from .structured_plan_calendar_spine import (
+    reconcile_calendar_spine,
+    reconcile_priority_microdose_representations,
+)
 from .structured_plan_locked_merge import merge_planner_owned_structured_content
 
 logger = logging.getLogger(__name__)
@@ -115,11 +118,10 @@ def _effective_prescription(role: dict[str, Any], assignment: dict[str, Any]) ->
     return str(assignment.get("base_prescription") or "").strip()
 
 
-# The weekly priority exposure floor attaches a microdose to the host role, not
-# to its selected_exercise_assignments, so a renderer that reads only the
-# assignment list drops it. Stage 2 is not allowed to be the only path that
-# surfaces it: when Stage 2 fails there is no structured_plan and this fallback
-# is the athlete-facing plan.
+# The weekly priority exposure floor carries the same microdose both as planner
+# metadata and in the host's closed selected membership.  Render that member
+# through this labelled block, and skip its mirrored assignment below, so the
+# fallback has one athlete-facing representation rather than two.
 _MICRODOSE_BLOCK_TYPE_BY_GOAL = {
     "power": "plyometric_power",
     "speed": "speed",
@@ -161,11 +163,28 @@ def _blocks(role: dict[str, Any], d_day: int, role_key: str) -> list[dict[str, A
     category = _category(role)
     block_type = _BLOCK_TYPE_BY_CATEGORY.get(category, "accessory")
     blocks: list[dict[str, Any]] = []
+    microdose = role.get("priority_microdose")
+    microdose_name = (
+        str(microdose.get("name") or "").strip().casefold()
+        if isinstance(microdose, dict)
+        else ""
+    )
+    microdose_slot = (
+        f"priority_microdose::{microdose.get('goal')}"
+        if isinstance(microdose, dict)
+        else ""
+    )
     for index, assignment in enumerate(role.get("selected_exercise_assignments") or []):
         if not isinstance(assignment, dict):
             continue
         name = str(assignment.get("name") or "").strip()
         if not name:
+            continue
+        if isinstance(microdose, dict) and (
+            assignment.get("slot_group") == "priority_microdose"
+            or str(assignment.get("slot_id") or "") == microdose_slot
+            or name.casefold() == microdose_name
+        ):
             continue
         prescription = _effective_prescription(role, assignment)
         blocks.append(
@@ -184,11 +203,11 @@ def _blocks(role: dict[str, Any], d_day: int, role_key: str) -> list[dict[str, A
     # Only ever attached to a host that already renders. A role with no selected
     # exercise renders no session at all here, and a microdose must not be the
     # thing that brings one into existence - that would be a new session.
-    microdose = _microdose_block(role, d_day, role_key) if blocks else None
-    if microdose is not None:
+    microdose_block = _microdose_block(role, d_day, role_key) if blocks else None
+    if microdose_block is not None:
         for block in blocks:
             block["order_index"] = int(block.get("order_index") or 0) + 1
-        blocks.insert(0, microdose)
+        blocks.insert(0, microdose_block)
     return blocks
 
 
@@ -297,6 +316,11 @@ def _build(planning_brief: Any) -> dict[str, Any] | None:
     # the final reconcile must see that session so it writes coach_led_contact
     # instead of leaving the contact only in a headline the renderer will hide.
     plan = merge_planner_owned_structured_content(plan, planning_brief).plan
+
+    # The first spine pass intentionally ran before sessions existed.  Re-run
+    # the same final-day invariant now that fallback and locked sessions are all
+    # present, removing a day-level card whenever its session block survived.
+    plan = reconcile_priority_microdose_representations(plan, planning_brief)
 
     weeks_out = plan.get("weeks") if isinstance(plan, dict) else None
     if not isinstance(weeks_out, list) or not weeks_out:

@@ -233,3 +233,18 @@ def test_rendering_is_idempotent_across_repeated_builds():
     second = _blocks(role, 26, "light_combat_day")
     assert [b["display_name"] for b in first] == [b["display_name"] for b in second]
     assert len(second) == 2
+
+
+def test_synced_microdose_membership_does_not_create_a_second_fallback_block():
+    """Reproduce the real role shape after `_sync_microdose_membership`."""
+    role = _host_with_microdose()
+    role["selected_exercise_assignments"].append({
+        "slot_id": "priority_microdose::power",
+        "slot_group": "priority_microdose",
+        "name": "Med-Ball Rotational Throw",
+        "effective_prescription": "2 x 3/side @ RPE 7",
+    })
+
+    blocks = _blocks(role, 26, "light_combat_day")
+    assert len(blocks) == 2
+    assert sum("Med-Ball Rotational Throw" in block["display_name"] for block in blocks) == 1
