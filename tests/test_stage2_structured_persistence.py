@@ -1530,7 +1530,20 @@ def test_structured_post_processing_converts_when_inline_was_skipped(monkeypatch
     asyncio.run(approve_review_required_plan(plan_id=plan_id, store=store, stage2=None))
     assert store.plans[plan_id].get("structured_plan") is None
 
-    automator = _StructuredAutomator(_valid_outcome("# approved plan"))
+    structured = _valid_plan()
+    structured["plan_notes"] = [
+        {
+            "category": "injury",
+            "label": "Achilles",
+            "text": "Stop if Achilles pain rises during the session.",
+        }
+    ]
+    automator = _StructuredAutomator(
+        build_structured_plan_outcome(
+            structured,
+            raw_markdown=f"# approved plan\n\n{_faithful_source(structured)}",
+        )
+    )
     asyncio.run(
         run_structured_plan_post_processing(plan_id=plan_id, store=store, stage2=automator)
     )
@@ -1540,8 +1553,17 @@ def test_structured_post_processing_converts_when_inline_was_skipped(monkeypatch
     assert len(automator.calls) == 1
     assert store.plans[plan_id]["structured_plan"] is not None
     assert store.plans[plan_id]["schema_version"] == SCHEMA_VERSION
+    assert store.plans[plan_id]["structured_plan"]["plan_notes"] == structured["plan_notes"]
     assert store.plans[plan_id]["status"] == "ready"
     assert store.plans[plan_id]["plan_text"] == "# approved plan"
+
+    # The athlete-facing mapper used by Active Notes reads the same persisted
+    # plan_notes rather than reconstructing them from markdown.
+    detail = _map_plan_detail(store.plans[plan_id], include_admin=False)
+    assert detail.outputs.structured_plan is not None
+    assert [note.model_dump(mode="json") for note in detail.outputs.structured_plan.plan_notes] == structured[
+        "plan_notes"
+    ]
 
 
 def test_structured_post_processing_persists_marker_before_conversion_and_clears_it(monkeypatch):
