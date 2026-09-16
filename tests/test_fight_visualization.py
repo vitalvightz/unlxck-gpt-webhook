@@ -475,3 +475,161 @@ def test_tactical_watch_still_selected_alongside_fight_visualization():
         assert watch["tactical_watch_key"]
         assert watch["mandatory_tactical_watch"] is True
         assert watch["governance"]["selected_drill_locked"] is True
+
+
+# --------------------------------------------------------------------------
+# Control-flow invariants: the protocol outruns every gap-fill early return
+# --------------------------------------------------------------------------
+
+
+def test_d0_only_plan_still_gets_its_protocol():
+    # The gap fill has nothing to do here (no positive countdown offset), which
+    # is precisely where an early return used to drop the mandatory D-0 card.
+    sequence = apply_gap_fill_inserts(
+        [_role(0, "fight_day_protocol", category="fight_day")],
+        _athlete(days_until_fight=0),
+    )
+    assert set(_visualizations(sequence)) == {0}
+    assert _visualizations(sequence)[0]["fight_visualization_key"]
+
+
+def test_empty_stage1_sequence_still_gets_the_protocol():
+    sequence = apply_gap_fill_inserts([], _athlete(days_until_fight=7))
+    assert set(_visualizations(sequence)) == {7, 5, 3, 1, 0}
+
+
+def test_sequence_with_no_positive_offsets_still_gets_the_protocol():
+    sequence = apply_gap_fill_inserts(
+        [_role(0, "fight_day_protocol", category="fight_day")],
+        _athlete(days_until_fight=5),
+    )
+    assert set(_visualizations(sequence)) == {5, 3, 1, 0}
+
+
+def test_early_return_path_is_still_ordered_and_indexed():
+    sequence = apply_gap_fill_inserts([], _athlete(days_until_fight=7))
+    offsets = [role["countdown_offset"] for role in sequence]
+    assert offsets == sorted(offsets, reverse=True)
+    assert [role["session_index"] for role in sequence] == list(
+        range(1, len(sequence) + 1)
+    )
+
+
+def test_unanchorable_plan_returns_untouched():
+    # No days_until_fight and no countdown offsets: nothing anchors a D-day, so
+    # there is no day to place the protocol on.
+    sequence = apply_gap_fill_inserts(
+        [{"role_key": "primary_strength_day", "category": "strength"}],
+        {"sport": "boxing", "style_tactical": ["brawler"]},
+    )
+    assert not _visualizations(sequence)
+
+
+# --------------------------------------------------------------------------
+# Freshness: an existing role is restamped, never trusted
+# --------------------------------------------------------------------------
+
+
+def test_existing_visualization_is_restamped_from_the_current_athlete():
+    stale = _role(3, "fight_visualization", category="support_insert")
+    stale.update(
+        {
+            "fight_visualization_key": "boxing.brawler.d3.pressure_reset",
+            "fight_visualization_name": "Pressure → Reset",
+            "fight_visualization": {"key": "boxing.brawler.d3.pressure_reset"},
+            "display_text": "stale boxing content",
+        }
+    )
+    # The athlete has since become an MMA grappler.
+    sequence = apply_gap_fill_inserts(
+        [_role(9, "hard_sparring_day"), stale],
+        _athlete(sport="mma", style_tactical=["grappler"]),
+    )
+    restamped = _visualizations(sequence)[3]
+    assert restamped["fight_visualization_key"] == "mma.grappler.d3.pressure_reset"
+    assert restamped["fight_visualization"]["key"] == "mma.grappler.d3.pressure_reset"
+    assert "stale boxing content" not in restamped["display_text"]
+    assert "takedown" in restamped["display_text"]
+
+
+def test_restamp_does_not_duplicate_the_day():
+    existing = _role(5, "fight_visualization", category="support_insert")
+    sequence = apply_gap_fill_inserts(
+        [_role(9, "hard_sparring_day"), existing], _athlete()
+    )
+    on_d5 = [
+        role
+        for role in sequence
+        if role["countdown_offset"] == 5 and role["role_key"] == "fight_visualization"
+    ]
+    assert len(on_d5) == 1
+
+
+# --------------------------------------------------------------------------
+# Bank fallback integrity
+# --------------------------------------------------------------------------
+
+
+def test_every_countdown_day_has_exactly_one_universal_fallback():
+    for countdown_day in FIGHT_VISUALIZATION_COUNTDOWN_DAYS:
+        universal = [
+            entry
+            for entry in all_visualizations()
+            if entry.countdown_day == countdown_day
+            and "cross_sport" in entry.sports
+            and "generic" in entry.styles
+        ]
+        assert len(universal) == 1, (countdown_day, [e.key for e in universal])
+
+
+def test_bank_load_rejects_a_missing_universal_fallback(tmp_path, monkeypatch):
+    import json
+
+    from fightcamp import fight_visualization_library as lib
+
+    bank = json.loads((lib.DATA_DIR / "fight_visualization_bank.json").read_text())
+    trimmed = [
+        entry
+        for entry in bank
+        if not (entry["countdown_day"] == 3 and entry["sports"] == ["cross_sport"])
+    ]
+    (tmp_path / "fight_visualization_bank.json").write_text(json.dumps(trimmed))
+    monkeypatch.setattr(lib, "DATA_DIR", tmp_path)
+    lib.all_visualizations.cache_clear()
+    try:
+        with pytest.raises(lib.FightVisualizationBankError, match="D-3 needs exactly one"):
+            lib.all_visualizations()
+    finally:
+        lib.all_visualizations.cache_clear()
+
+
+def test_bank_load_rejects_a_duplicate_universal_fallback(tmp_path, monkeypatch):
+    import json
+
+    from fightcamp import fight_visualization_library as lib
+
+    bank = json.loads((lib.DATA_DIR / "fight_visualization_bank.json").read_text())
+    twin = dict(
+        next(e for e in bank if e["countdown_day"] == 0 and e["sports"] == ["cross_sport"])
+    )
+    twin["key"] = twin["key"] + ".twin"
+    (tmp_path / "fight_visualization_bank.json").write_text(json.dumps(bank + [twin]))
+    monkeypatch.setattr(lib, "DATA_DIR", tmp_path)
+    lib.all_visualizations.cache_clear()
+    try:
+        with pytest.raises(lib.FightVisualizationBankError, match="D-0 needs exactly one"):
+            lib.all_visualizations()
+    finally:
+        lib.all_visualizations.cache_clear()
+
+
+def test_every_countdown_day_resolves_for_every_supported_sport_and_style():
+    from fightcamp.fight_visualization_library import BANK_SPORTS
+    from fightcamp.tactical_watch_library import STYLE_FAMILIES
+
+    for sport in (*BANK_SPORTS, "muay_thai", "bjj", "wrestling", "karate", "", "nonsense"):
+        for style in (*STYLE_FAMILIES, "", "nonsense"):
+            for countdown_day in FIGHT_VISUALIZATION_COUNTDOWN_DAYS:
+                entry = select_fight_visualization(sport, style, countdown_day)
+                assert entry is not None, (sport, style, countdown_day)
+                assert entry.countdown_day == countdown_day

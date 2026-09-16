@@ -165,6 +165,26 @@ def all_visualizations() -> tuple[FightVisualization, ...]:
         raise FightVisualizationBankError(
             f"bank is missing mandatory countdown days: {sorted(missing)!r}"
         )
+
+    # The last rung of the selection ladder. Every athlete, whatever their sport
+    # or style, must land on exactly one universal entry per countdown day --
+    # otherwise a future bank edit could delete the safety net (leaving
+    # select_fight_visualization returning None for a mandatory day) or add a
+    # second one (making the fallback depend on file order) while the JSON still
+    # validated cleanly.
+    for countdown_day in FIGHT_VISUALIZATION_COUNTDOWN_DAYS:
+        universal = [
+            entry.key
+            for entry in entries
+            if entry.countdown_day == countdown_day
+            and "cross_sport" in entry.sports
+            and "generic" in entry.styles
+        ]
+        if len(universal) != 1:
+            raise FightVisualizationBankError(
+                f"D-{countdown_day} needs exactly one cross_sport generic "
+                f"fallback, found {len(universal)}: {sorted(universal)!r}"
+            )
     return tuple(entries)
 
 

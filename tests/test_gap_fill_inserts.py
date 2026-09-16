@@ -622,10 +622,14 @@ def test_high_fatigue_blocks_physical_inserts():
     assert insert["role_key"] not in PHYSICAL_INSERTS
 
 
-def test_d0_never_gets_insert():
+def test_d0_never_gets_an_ordinary_gap_fill_insert():
     sequence = apply_gap_fill_inserts([_session(0, "fight_week_freshness_day")], _athlete(days_until_fight=0))
 
-    assert _insert_roles(sequence) == []
+    # The mandatory D-0 Fight Visualisation is countdown protocol, not a gap
+    # filler, and is placed even on a D-0-only plan. No ordinary insert may
+    # land on fight day.
+    inserts = _insert_roles(sequence)
+    assert [insert["role_key"] for insert in inserts] == ["fight_visualization"]
 
 
 def test_hard_sparring_day_blocks_physical_inserts():

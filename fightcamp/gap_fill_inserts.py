@@ -1045,8 +1045,17 @@ def _ensure_fight_visualization_days(
         )
         weekday = str(countdown_map.get(f"D-{countdown_day}") or "").strip() or None
         if existing is not None:
-            if not existing.get("fight_visualization_key"):
-                _apply_bank_visualization(existing, athlete_model, countdown_day)
+            # Always restamp, never trust what is already on the role. On a
+            # regeneration the athlete's sport, tactical style or countdown may
+            # have changed, and a role that merely *has* a bank key would
+            # otherwise carry the previous camp's content forward.
+            _apply_bank_visualization(existing, athlete_model, countdown_day)
+            if weekday:
+                existing["real_weekday"] = weekday
+                existing["scheduled_day_hint"] = weekday
+                existing["countdown_display_label"] = (
+                    f"D-{countdown_day} ({weekday.title()})"
+                )
             continue
         role = _build_insert_role(
             FIGHT_VISUALIZATION_ROLE_KEY,
@@ -1820,6 +1829,58 @@ def _ensure_weekly_tactical_watches(
     return additions
 
 
+def _offsets_owning(sequence: list[dict[str, Any]], role_key: str) -> set[int]:
+    return {
+        offset
+        for role in sequence
+        if str(role.get("role_key") or "") == role_key
+        and (offset := _role_offset(role)) is not None
+    }
+
+
+def _finalize_sequence(combined: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Apply same-day de-duplication, then order and index the sequence.
+
+    Shared by both exits of ``apply_gap_fill_inserts`` so a plan that returns
+    early (no sessions, or no positive countdown offset) still gets the same
+    de-duplication and indexing as a fully gap-filled one.
+    """
+    # A day carrying the mandatory Tactical Watch must not also keep a redundant
+    # gap-fill tactical cue card / self review. Single-day countdown windows (for
+    # example D-1) can only place both on the one available day, so this pass
+    # drops the lower-priority tactical insert there. Tactical work on other days
+    # is untouched.
+    watch_offsets = _offsets_owning(combined, "tactical_watch")
+    redundant_tactical = TACTICAL_INSERTS - {"tactical_watch"}
+    combined = [
+        role
+        for role in combined
+        if not (
+            str(role.get("role_key") or "") in redundant_tactical
+            and _role_offset(role) in watch_offsets
+        )
+    ]
+
+    # The governed D-x Fight Visualisation wins over the generic mental filler.
+    # ``neural_visualization`` stays available on every other day.
+    visualization_offsets = _offsets_owning(combined, FIGHT_VISUALIZATION_ROLE_KEY)
+    combined = [
+        role
+        for role in combined
+        if not (
+            str(role.get("role_key") or "") == "neural_visualization"
+            and _role_offset(role) in visualization_offsets
+        )
+    ]
+
+    final_sequence = sorted(
+        combined, key=lambda role: int(_role_offset(role) or 0), reverse=True
+    )
+    for index, role in enumerate(final_sequence, start=1):
+        role["session_index"] = index
+    return final_sequence
+
+
 def apply_gap_fill_inserts(
     session_sequence: list[dict[str, Any]],
     athlete_model: dict[str, Any],
@@ -1831,23 +1892,43 @@ def apply_gap_fill_inserts(
         key=lambda role: int(_role_offset(role) or 0),
         reverse=True,
     )
-    if not ordered:
-        return ordered
-
     offsets = [offset for role in ordered if (offset := _role_offset(role)) is not None and offset > 0]
-    if not offsets:
-        return ordered
 
     raw_days = athlete_model.get("days_until_fight")
+    days_until_fight: int | None = None
     if raw_days is not None and str(raw_days).strip() != "":
         try:
             days_until_fight = int(raw_days)
         except (TypeError, ValueError):
-            days_until_fight = max(offsets)
-    else:
-        days_until_fight = max(offsets)
+            days_until_fight = None
+    if days_until_fight is None:
+        days_until_fight = max(offsets) if offsets else None
+    if days_until_fight is None:
+        # Nothing anchors a countdown, so neither the protocol nor the gap fill
+        # has a day to place anything on.
+        return ordered
+
     creation_weekday = _resolve_plan_creation_weekday(days_until_fight, athlete_model)
     countdown_map = _countdown_weekday_map(creation_weekday, days_until_fight)
+    usage_ledger = _usage_ledger_from_sequence(ordered)
+
+    # The mandatory countdown protocol runs BEFORE the ordinary gap-fill early
+    # returns. It is not a filler: "never omitted" has to hold for a plan whose
+    # Stage 1 sequence is empty or carries no positive countdown offset (a
+    # D-0-only plan), which is exactly where the gap fill has nothing to do.
+    mandatory_inserts = _ensure_fight_visualization_days(
+        ordered,
+        athlete_model,
+        countdown_map,
+        days_until_fight,
+        usage_ledger,
+    )
+
+    # Now the ordinary gap fill may bail out: it needs real sessions with real
+    # positive offsets to find gaps between.
+    if not ordered or not offsets:
+        return _finalize_sequence(ordered + mandatory_inserts)
+
     training_days = clean_list(athlete_model.get("training_days", []))
     # Resolved contact truth (hard vs technical) is OWNED by the late-fight
     # module: gap-fill consumes the resolver's occurrences rather than deriving
@@ -1890,7 +1971,7 @@ def apply_gap_fill_inserts(
         eligible_offsets=eligible_gap_offsets,
     )
 
-    inserts: list[dict[str, Any]] = []
+    inserts: list[dict[str, Any]] = list(mandatory_inserts)
     physical_segment_counts: dict[int, int] = {}
     for role in ordered:
         role_key = str(role.get("role_key") or "")
@@ -1899,7 +1980,6 @@ def apply_gap_fill_inserts(
             segment = _segment_for_offset(offset)
             physical_segment_counts[segment] = physical_segment_counts.get(segment, 0) + 1
 
-    usage_ledger = _usage_ledger_from_sequence(ordered)
     tactical_present = _has_tactical_support(ordered)
     # Never stack two tactical support inserts on the SAME day: the mandatory
     # Tactical Watch already occupies its day, so the gap-fill must not add a
@@ -2013,9 +2093,9 @@ def apply_gap_fill_inserts(
             usage_ledger,
         )
     )
-    # Mandatory countdown protocol. Runs last and unconditionally: it is not a
-    # gap filler, so it ignores budget, legality and day eligibility, and it
-    # coexists with whatever already owns the day.
+    # Re-run the protocol over the finished sequence. It already placed every
+    # countdown day above; this catches a Stage 1 sequence that carried its own
+    # Fight Visualisation role and restamps it from the current athlete.
     inserts.extend(
         _ensure_fight_visualization_days(
             ordered + inserts,
@@ -2025,47 +2105,7 @@ def apply_gap_fill_inserts(
             usage_ledger,
         )
     )
-    combined = ordered + inserts
-    # The governed D-x Fight Visualisation wins over the generic mental filler.
-    # ``neural_visualization`` stays available on every other day.
-    visualization_offsets = {
-        offset
-        for role in combined
-        if str(role.get("role_key") or "") == FIGHT_VISUALIZATION_ROLE_KEY
-        and (offset := _role_offset(role)) is not None
-    }
-    combined = [
-        role
-        for role in combined
-        if not (
-            str(role.get("role_key") or "") == "neural_visualization"
-            and _role_offset(role) in visualization_offsets
-        )
-    ]
-    # Same-day tactical de-dup: a day carrying the mandatory Tactical Watch must
-    # not also keep a redundant gap-fill tactical cue card / self review. Single-day
-    # countdown windows (e.g. D-1) can only place both on the one available day, so
-    # this final pass drops the lower-priority tactical insert there. Tactical work
-    # on other days is untouched.
-    watch_offsets = {
-        offset
-        for role in combined
-        if str(role.get("role_key") or "") == "tactical_watch"
-        and (offset := _role_offset(role)) is not None
-    }
-    redundant_tactical = TACTICAL_INSERTS - {"tactical_watch"}
-    combined = [
-        role
-        for role in combined
-        if not (
-            str(role.get("role_key") or "") in redundant_tactical
-            and _role_offset(role) in watch_offsets
-        )
-    ]
-    final_sequence = sorted(combined, key=lambda role: int(_role_offset(role) or 0), reverse=True)
-    for index, role in enumerate(final_sequence, start=1):
-        role["session_index"] = index
-    return final_sequence
+    return _finalize_sequence(ordered + inserts)
 
 
 # --- Physical-occupancy completion -------------------------------------------
