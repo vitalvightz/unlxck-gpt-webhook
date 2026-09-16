@@ -23,3 +23,19 @@
 .cm-fight-week-sessionless .cm-rest-label::after {
   content: "No Planned Session";
 }
+
+/* An instruction-only session card (Joint Prep, Breathing Reset, a blockless
+   shadow-rhythm touch) carries its whole prescription in one line, with no
+   block card under it to give the card body. Styled as the prescription it is —
+   full-strength text in its own panel — rather than as the small muted subtitle
+   a "Why" line uses under real work. */
+.sp-session-instruction {
+  margin-top: var(--space-2);
+  padding: 12px;
+  background: var(--bg-stat);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-stat);
+  color: var(--text-primary);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}

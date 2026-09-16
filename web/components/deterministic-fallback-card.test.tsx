@@ -97,6 +97,58 @@ test("a blockless instruction card reads as the instruction, not as a Why", () =
   assert.equal(/>Recovery</.test(markup), false);
 });
 
+test("a single bank cue prints once, not as Focus + Reset + Coach cue", () => {
+  // The Fight Visualisation bank carries one trusted cue. Replicating it into
+  // every mindset slot printed the same sentence three times on the card.
+  const visualisationWithCue: StructuredSession = {
+    ...visualisation,
+    mindset_anchor: {
+      intent: "Take the space, do not chase it.",
+      focus_cue: "Take the space, do not chase it.",
+      reset_cue: "Take the space, do not chase it.",
+      confidence_anchor: "Take the space, do not chase it.",
+    },
+  };
+  const markup = render(planWith([day("D-9", "2026-10-06", [visualisationWithCue])]));
+
+  assert.equal(markup.split("Take the space, do not chase it").length - 1, 1);
+  // …and it occupies exactly one labelled coaching line, whichever slot held it.
+  assert.equal(markup.split("sp-coaching-label").length - 1, 1);
+});
+
+test("a bank cue emitted by the server fills only the coach-cue slot", () => {
+  // Mirrors api/structured_plan_locked_merge._mindset_anchor for a bank entry
+  // that carries a single `cue` and no four-part mindset block.
+  const markup = render(
+    planWith([
+      day("D-9", "2026-10-06", [
+        {
+          ...visualisation,
+          mindset_anchor: {
+            intent: "Take the space, do not chase it.",
+            focus_cue: "",
+            reset_cue: "",
+            confidence_anchor: null,
+          },
+        },
+      ]),
+    ]),
+  );
+
+  assert.match(markup, />Coach cue</);
+  assert.equal(markup.includes(">Focus</span>"), false);
+  assert.equal(markup.includes(">Reset</span>"), false);
+});
+
+test("an instruction-only card renders its prescription as a panel", () => {
+  const markup = render(planWith([day("D-10", "2026-10-05", [jointPrep])]));
+
+  assert.match(markup, /sp-session-instruction/);
+  // A card with real work below keeps the plain Why subtitle.
+  const withBlocks = render(planWith([day("D-9", "2026-10-06", [pressureStepCut])]));
+  assert.equal(withBlocks.includes("sp-session-instruction"), false);
+});
+
 test("mobility support is chipped Mobility, never the clinical Rehab", () => {
   // `rehab` is the schema's home for mobility work, but the athlete-facing chip
   // must not claim rehab on a joint-prep card with no injury behind it.
