@@ -503,36 +503,68 @@ def _identity_tokens(value: Any) -> set[str]:
     return {token for token in _TOKEN_RE.split(str(value or "").lower()) if token}
 
 
-def _role_is_represented(day: dict[str, Any], role: dict[str, Any]) -> bool:
-    """Whether this day already carries a representation of ``role``.
+def _role_session_suffix(role: dict[str, Any]) -> str:
+    """The ``session_index`` half of a deterministic session id, as it is built."""
+    session_index = role.get("session_index")
+    return str(session_index if isinstance(session_index, int) else 0)
 
-    Identity is the role's own key plus its athlete-facing label tokens, not a
-    title string match: a converter is free to retitle a session, but it cannot
-    rename the role it came from, and a session assembled from the role carries
-    the key in its ``session_id``.
-    """
-    role_key = str(role.get("role_key") or "").strip().lower()
+
+def _role_matches_contact(day: dict[str, Any], role: dict[str, Any]) -> bool:
+    """Whether the day's coach-owned contact copy already names this role."""
     label_tokens = _identity_tokens(role.get("athlete_facing_label"))
-    if not label_tokens and not role_key:
-        return True  # nothing to identify it by: never restore blind
+    if not label_tokens:
+        return False
     card = day.get("today_card") if isinstance(day.get("today_card"), dict) else {}
     contact_tokens = _identity_tokens(card.get("headline")) | _identity_tokens(
         card.get("coach_led_contact")
     )
-    if label_tokens and label_tokens <= contact_tokens:
-        return True
-    for session in day.get("sessions") or []:
-        if not isinstance(session, dict):
+    return label_tokens <= contact_tokens
+
+
+def _representing_session_index(
+    day: dict[str, Any], role: dict[str, Any], d_day: int, claimed: set[int]
+) -> int | None:
+    """Index of the session already representing ``role``, or ``None``.
+
+    Identity is the role's own ``(d_day, role_key, session_index)`` — what the
+    deterministic builder writes into ``session_id`` — falling back to the
+    athlete-facing label for a converter session that was retitled but is still
+    the same item.
+
+    A session represents at most ONE role: ``claimed`` carries the indices
+    already spoken for, so two roles that share a ``role_key`` on one day (two
+    ``session_index`` values) do not collapse into one, with the second wrongly
+    read as already present and dropped.
+
+    Label matching is containment in either direction ("Joint Prep" vs "Joint
+    Prep Flow"), never a count of shared words: "Technical Shadow Rhythm" and
+    "Technical Shadow Boxing" overlap in two tokens and are different items.
+    """
+    role_key = str(role.get("role_key") or "").strip().lower()
+    label_tokens = _identity_tokens(role.get("athlete_facing_label"))
+    if not label_tokens and not role_key:
+        return -1  # nothing to identify it by: never restore blind
+    exact_id = f"deterministic-{d_day}-{role_key}-{_role_session_suffix(role)}"
+    sessions = [s for s in (day.get("sessions") or [])]
+    # The full deterministic identity wins over any looser signal, wherever it
+    # sits in the day's list.
+    for index, session in enumerate(sessions):
+        if index in claimed or not isinstance(session, dict):
+            continue
+        if role_key and str(session.get("session_id") or "").lower() == exact_id:
+            return index
+    for index, session in enumerate(sessions):
+        if index in claimed or not isinstance(session, dict):
             continue
         session_id = str(session.get("session_id") or "").lower()
         if role_key and role_key in session_id:
-            return True
+            return index
         title_tokens = _identity_tokens(session.get("title"))
-        if label_tokens and (
-            label_tokens <= title_tokens or len(label_tokens & title_tokens) >= 2
+        if label_tokens and title_tokens and (
+            label_tokens <= title_tokens or title_tokens <= label_tokens
         ):
-            return True
-    return False
+            return index
+    return None
 
 
 def _restore_missing_scheduled_roles(
@@ -562,6 +594,9 @@ def _restore_missing_scheduled_roles(
         return day
     sessions = day.get("sessions")
     sessions = list(sessions) if isinstance(sessions, list) else []
+    # Sessions already spoken for by a role, so one card can never stand in for
+    # two distinct scheduled items.
+    claimed: set[int] = set()
     restored = False
     for role in roles:
         if not isinstance(role, dict):
@@ -576,12 +611,18 @@ def _restore_missing_scheduled_roles(
         # distinctive athlete-facing label.
         if role.get("selected_exercise_assignments"):
             continue
-        if _role_is_represented(day, role):
+        if _role_matches_contact(day, role):
+            continue
+        matched = _representing_session_index(day, role, d_day, claimed)
+        if matched is not None:
+            if matched >= 0:
+                claimed.add(matched)
             continue
         session = _session(role, d_day)
         if session is None:
             continue
         sessions.append(session)
+        claimed.add(len(sessions) - 1)
         day["sessions"] = sessions
         restored = True
     if restored and str(day.get("day_type") or "").strip().lower() in {"rest", "off"}:

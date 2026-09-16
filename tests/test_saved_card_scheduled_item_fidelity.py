@@ -136,3 +136,73 @@ def test_a_day_with_no_authoritative_role_stays_empty():
 
     # D-8 carries no scheduled role in the brief, so nothing is invented for it.
     assert sessions[8] == []
+
+
+def test_two_roles_sharing_a_role_key_both_survive():
+    """One card can never stand in for two distinct scheduled items.
+
+    Session identity is ``(d_day, role_key, session_index)``. Matching a role to
+    a session by ``role_key`` alone let the first restored session absorb the
+    second role, which then looked "already represented" and was dropped.
+    """
+    plan = _card_omitting_supports()
+    row = _row(plan)
+    week = row["planning_brief"]["weekly_role_map"]["weeks"][0]
+    week["session_roles"] = [
+        {
+            "role_key": "mobility_rehab",
+            "category": "support_insert",
+            "athlete_facing_label": "Shoulder Opener",
+            "display_text": "Easy range and pain-free control. Stop well before fatigue.",
+            "countdown_offset": 10,
+            "scheduled_countdown_label": "D-10",
+            "session_index": 0,
+            "selected_exercise_assignments": [],
+        },
+        {
+            "role_key": "mobility_rehab",
+            "category": "support_insert",
+            "athlete_facing_label": "Hip Opener",
+            "display_text": "Low-amplitude hip range, slow and controlled.",
+            "countdown_offset": 10,
+            "scheduled_countdown_label": "D-10",
+            "session_index": 1,
+            "selected_exercise_assignments": [],
+        },
+    ]
+
+    sessions = _sessions_by_dday(_map_plan_detail(row, include_admin=False))
+
+    assert sessions[10] == ["Shoulder Opener", "Hip Opener"]
+
+
+def test_a_similarly_titled_session_does_not_absorb_a_different_role():
+    """Two shared words are not identity.
+
+    "Technical Shadow Rhythm" and "Technical Shadow Boxing" overlap in two
+    tokens and are different scheduled items, so the second must still render.
+    """
+    plan = _card_omitting_supports()
+    day = next(d for d in plan["weeks"][0]["days"] if d["countdown_label"] == "D-9")
+    kept = copy.deepcopy(day["sessions"][0])
+    kept["session_id"] = "llm-d9-0"
+    kept["title"] = "Technical Shadow Boxing"
+    day["sessions"] = [kept]
+
+    row = _row(plan)
+    week = row["planning_brief"]["weekly_role_map"]["weeks"][0]
+    week["session_roles"] = [
+        {
+            "role_key": "technical_shadow_rhythm",
+            "category": "support_insert",
+            "athlete_facing_label": "Technical Shadow Rhythm",
+            "display_text": "Light shadow rhythm only. Smooth entries, exits, and reset cues.",
+            "countdown_offset": 9,
+            "scheduled_countdown_label": "D-9",
+            "selected_exercise_assignments": [],
+        }
+    ]
+
+    sessions = _sessions_by_dday(_map_plan_detail(row, include_admin=False))
+
+    assert sessions[9] == ["Technical Shadow Boxing", "Technical Shadow Rhythm"]

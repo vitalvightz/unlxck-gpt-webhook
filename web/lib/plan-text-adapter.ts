@@ -84,7 +84,7 @@ function normalizePlanTextForCards(rawText: string): string {
     .replace(/\r\n/g, "\n")
     .replace(/(^|\n)(Lead notes|Active notes)\s+[-–—]?\s*/gi, "$1$2\n")
     .replace(/\s+(?=(?:GPP|SPP|TAPER|FIGHT[ _]WEEK|REINTEGRATION)\s*[—–\-:]\s*Week\b)/gi, "\n")
-    .replace(/\s+(?=D-\d+\s*(?:\([^)]+\))?\s*[—–\-:]\s*(?!D-\d)\S)/g, "\n")
+    .replace(/\s+(?=D-\d+\s*(?:\([^)]+\))?\s*[—–\-:](?!\s*D-\d)\s*\S)/g, "\n")
     .replace(
       /\s+(?=(?:mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:sday)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\b[^()]*\(\s*D-\d+\s*\)\s*[—–\-:]\s*\S)/gi,
       "\n",
@@ -205,7 +205,7 @@ const PHASE_ANYWHERE_RE = new RegExp(`\\b(${PHASE_TOKEN})\\b`, "i");
 // row on a day that carried authoritative work. The title must not itself be
 // another countdown, so a range line ("D-14 — D-7") is never read as a session.
 const SESSION_COUNTDOWN_FIRST_RE = new RegExp(
-  `^D-(\\d+)\\s*(?:\\(([^)]+)\\))?\\s*${HEADER_SEP}\\s*(?!D-\\d)(.+)$`,
+  `^D-(\\d+)\\s*(?:\\(([^)]+)\\))?\\s*${HEADER_SEP}(?!\\s*D-\\d)\\s*(.+)$`,
   "i",
 );
 // "Wednesday (D-33) — Aerobic support" (Stage 1 deterministic weekday-first form).

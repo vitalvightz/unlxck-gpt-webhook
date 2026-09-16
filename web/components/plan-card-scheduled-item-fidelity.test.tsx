@@ -62,7 +62,7 @@ const PRODUCTION_PLAN_TEXT = [
   "D-5 — Fight Visualisation",
   "Quiet visualisation only. Rehearse first exchange, best entry and final-round composure.",
   "",
-  "D-4 (Tuesday) — Technical-only combat",
+  "D-4 (Sunday) — Technical-only combat",
   "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority.",
   "",
   "D-3 (Monday) — Technical Shadow Rhythm",
@@ -116,6 +116,38 @@ test("both D-9 items survive and only the physical one counts", () => {
   );
   assert.equal(isZeroLoadSupportSession(getSessions(day)[0]), true);
   assert.equal(dayCompletion(day).total, 1);
+});
+
+test("a countdown-only heading is still a scheduled day", () => {
+  // The production plan headings all carry their weekday, but a countdown-only
+  // heading is valid and used to be swallowed into the previous day's body,
+  // leaving the gap-filler to print a rest row over real work.
+  const plan = buildStructuredPlanFromText(
+    [
+      "D-12 (Saturday) — Neural speed touch",
+      "- Trap bar deadlift: 2-3 sets x 3 reps",
+      "",
+      "D-10 — Joint Prep",
+      "Neck CARs, shoulder CARs, wrist circles, hip circles, and ankle rocks.",
+      "",
+      "D-9 — Breathing Reset",
+      "Nasal breathing, 5 minutes, box pattern.",
+    ].join("\n"),
+    FIGHT_DATE,
+  );
+
+  assert.deepEqual(
+    getDays(getWeeks(plan)[0]).map((day) => day.countdown_label),
+    ["D-12", "D-10", "D-9"],
+  );
+  assert.equal(getSessions(dayFor(plan, "D-10"))[0]?.title, "Joint Prep");
+  assert.equal(getSessions(dayFor(plan, "D-9"))[0]?.title, "Breathing Reset");
+  // A countdown RANGE is not a heading: it must not become a session titled D-7.
+  const range = buildStructuredPlanFromText(
+    ["D-14 — D-7 is the sharpening block.", ""].join("\n"),
+    FIGHT_DATE,
+  );
+  assert.deepEqual(getDays(getWeeks(range)[0] ?? {}), []);
 });
 
 test("D-3 technical shadow rhythm survives as a blockless physical session", () => {
