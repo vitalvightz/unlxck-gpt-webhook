@@ -144,6 +144,7 @@ _LATE_FIGHT_ROLE_SELECTION_PRIORITY = {
 
 _COEXISTABLE_FILLER_ROLE_KEYS = {
     "tactical_watch",
+    "fight_visualization",
     "tactical_cue_card",
     "self_review",
     "neural_visualization",

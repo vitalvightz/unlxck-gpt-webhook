@@ -31,6 +31,14 @@ from .stage2_payload_late_fight import (
     is_low_cost_coexistable_filler,
     resolve_late_fight_contacts,
 )
+from .fight_visualization_library import (
+    ATHLETE_FACING_LABEL as FIGHT_VISUALIZATION_LABEL,
+    FIGHT_VISUALIZATION_COUNTDOWN_DAYS,
+    ROLE_KEY as FIGHT_VISUALIZATION_ROLE_KEY,
+    build_visualization_display_text,
+    select_for_athlete,
+    visualization_metadata,
+)
 from .tactical_watch_library import (
     build_watch_display_text,
     extract_tactical_style,
@@ -41,6 +49,7 @@ from .tactical_watch_library import (
 
 ZERO_COST_INSERTS = {
     "tactical_watch",
+    "fight_visualization",
     "tactical_cue_card",
     "self_review",
     "neural_visualization",
@@ -241,6 +250,9 @@ _FILLER_TARGET_CAPABILITY: dict[str, dict[str, float]] = {
     "sleep_downshift": {"recovery": 0.7},
     "walk_flush": {"recovery": 0.55},
     "neural_visualization": {"speed": 0.2},
+    # Mental rehearsal only: it trains no physical capability, so it claims
+    # none of the athlete's goal-coverage ledger.
+    "fight_visualization": {},
     # Normal-camp's established banked coordination role uses this same ledger.
     "coordination_support": {"coordination": 1.0},
 }
@@ -277,6 +289,15 @@ _INSERT_META = {
         "insert_category": "tactical",
         "repeat_allowed": False,
         "display_text": "Review the last clean technical work. Write three cues only: one entry, one defensive reset, one composure cue.",
+    },
+    "fight_visualization": {
+        "label": FIGHT_VISUALIZATION_LABEL,
+        # Widest span in the bank (D-7). The selected entry's own duration
+        # overwrites this when the role is stamped.
+        "duration_min": [1, 8],
+        "rpe_max": 1,
+        "insert_category": "mental",
+        "repeat_allowed": True,
     },
     "neural_visualization": {
         "label": "Neural Visualization",
@@ -828,7 +849,9 @@ def _allowed_inserts(
     if insert_offset == 0:
         return set()
 
-    allowed = set(_ALL_INSERTS)
+    # Fight Visualisation is placed by its own mandatory countdown protocol, not
+    # by gap-fill scoring: it must never be chosen to fill a hole in the calendar.
+    allowed = set(_ALL_INSERTS) - {FIGHT_VISUALIZATION_ROLE_KEY}
     injury_state = classify_injury_state(athlete_model)
 
     if _has_active_weight_cut(athlete_model):
@@ -963,6 +986,83 @@ def _apply_bank_watch(
     role["display_text"] = build_watch_display_text(watch)
     role["duration_min"] = [watch.duration_minutes, watch.duration_minutes]
     used_watch_keys.add(watch.key)
+
+def _apply_bank_visualization(
+    role: dict[str, Any], athlete_model: dict[str, Any], countdown_day: int
+) -> bool:
+    """Stamp the selected Fight Visualisation from the JSON bank onto ``role``.
+
+    Every athlete-facing string comes from ``data/fight_visualization_bank.json``;
+    this only formats what the bank already holds. Returns False when the bank
+    has nothing for this countdown day, leaving ``role`` untouched.
+    """
+    entry = select_for_athlete(athlete_model, countdown_day)
+    if entry is None:
+        return False
+    metadata = visualization_metadata(entry)
+    governance = dict(metadata.pop("governance", {}) or {})
+    role.update(metadata)
+    role["governance"] = {**dict(role.get("governance") or {}), **governance}
+    role["display_text"] = build_visualization_display_text(entry)
+    role["duration_min"] = list(entry.duration_min)
+    role["athlete_facing_label"] = FIGHT_VISUALIZATION_LABEL
+    role["mandatory_fight_visualization"] = True
+    role["stress_class"] = "support"
+    return True
+
+
+def _ensure_fight_visualization_days(
+    session_sequence: list[dict[str, Any]],
+    athlete_model: dict[str, Any],
+    countdown_map: dict[str, str],
+    days_until_fight: int,
+    usage_ledger: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Place the mandatory Fight Visualisation protocol on D-7/5/3/1/0.
+
+    These are countdown interventions, not gap fillers: they are not scored, not
+    budgeted and not subject to day-eligibility, calendar legality or training-day
+    checks. They carry zero physical load and coexist with whatever the day already
+    holds -- hard sparring, technical combat, strength, the fight-day protocol, or
+    nothing at all. The only condition is that the countdown day is inside the
+    plan's own window.
+    """
+    if not _is_fight_sport(athlete_model):
+        return []
+
+    additions: list[dict[str, Any]] = []
+    for countdown_day in FIGHT_VISUALIZATION_COUNTDOWN_DAYS:
+        if countdown_day > days_until_fight:
+            continue
+        existing = next(
+            (
+                role
+                for role in session_sequence
+                if str(role.get("role_key") or "") == FIGHT_VISUALIZATION_ROLE_KEY
+                and _role_offset(role) == countdown_day
+            ),
+            None,
+        )
+        weekday = str(countdown_map.get(f"D-{countdown_day}") or "").strip() or None
+        if existing is not None:
+            if not existing.get("fight_visualization_key"):
+                _apply_bank_visualization(existing, athlete_model, countdown_day)
+            continue
+        role = _build_insert_role(
+            FIGHT_VISUALIZATION_ROLE_KEY,
+            athlete_model,
+            countdown_day,
+            weekday,
+            usage_ledger=usage_ledger,
+        )
+        if not role.get("fight_visualization_key"):
+            # No bank content resolved for this athlete/day: never ship an
+            # empty governed card.
+            continue
+        additions.append(role)
+        _record_insert_usage(usage_ledger, FIGHT_VISUALIZATION_ROLE_KEY, countdown_day)
+    return additions
+
 
 def _time_band_preferences(insert_offset: int) -> list[str]:
     if insert_offset == 1:
@@ -1216,7 +1316,11 @@ def _build_insert_role(
         label = "Shadowboxing Aerobic Flow"
     # tactical_watch carries no static copy: its athlete-facing text is stamped
     # from the JSON drill bank below.
-    display_text = "" if role_key == "tactical_watch" else str(meta["display_text"])
+    display_text = (
+        ""
+        if role_key in {"tactical_watch", FIGHT_VISUALIZATION_ROLE_KEY}
+        else str(meta["display_text"])
+    )
     role: dict[str, Any] = {
         "session_index": None,
         "category": "support_insert",
@@ -1252,6 +1356,8 @@ def _build_insert_role(
             phase=_watch_phase_for_offset(athlete_model, insert_offset),
             used_watch_keys=used_watch_keys,
         )
+    if role_key == FIGHT_VISUALIZATION_ROLE_KEY:
+        _apply_bank_visualization(role, athlete_model, insert_offset)
     if weekday:
         role["real_weekday"] = weekday
         role["countdown_display_label"] = f"D-{insert_offset} ({weekday.title()})"
@@ -1907,7 +2013,35 @@ def apply_gap_fill_inserts(
             usage_ledger,
         )
     )
+    # Mandatory countdown protocol. Runs last and unconditionally: it is not a
+    # gap filler, so it ignores budget, legality and day eligibility, and it
+    # coexists with whatever already owns the day.
+    inserts.extend(
+        _ensure_fight_visualization_days(
+            ordered + inserts,
+            athlete_model,
+            countdown_map,
+            days_until_fight,
+            usage_ledger,
+        )
+    )
     combined = ordered + inserts
+    # The governed D-x Fight Visualisation wins over the generic mental filler.
+    # ``neural_visualization`` stays available on every other day.
+    visualization_offsets = {
+        offset
+        for role in combined
+        if str(role.get("role_key") or "") == FIGHT_VISUALIZATION_ROLE_KEY
+        and (offset := _role_offset(role)) is not None
+    }
+    combined = [
+        role
+        for role in combined
+        if not (
+            str(role.get("role_key") or "") == "neural_visualization"
+            and _role_offset(role) in visualization_offsets
+        )
+    ]
     # Same-day tactical de-dup: a day carrying the mandatory Tactical Watch must
     # not also keep a redundant gap-fill tactical cue card / self review. Single-day
     # countdown windows (e.g. D-1) can only place both on the one available day, so

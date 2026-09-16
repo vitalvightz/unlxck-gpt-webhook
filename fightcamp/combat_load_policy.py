@@ -206,6 +206,7 @@ _LIGHT_COMBAT_COEXIST_LOADS = frozenset(
 _ZERO_LOAD_ROLE_KEYS = frozenset(
     {
         "tactical_watch",
+        "fight_visualization",
         "tactical_cue_card",
         "self_review",
         "neural_visualization",

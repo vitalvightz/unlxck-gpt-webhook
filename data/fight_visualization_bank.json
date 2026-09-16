@@ -1,0 +1,957 @@
+[
+  {
+    "key": "boxing.distance_striker.d7.tactical_picture",
+    "name": "Tactical Picture",
+    "countdown_day": 7,
+    "sports": ["boxing"],
+    "styles": ["distance_striker"],
+    "duration_min": [6, 8],
+    "why": "Rehearse building and rebuilding your range against a fighter who wants to close it.",
+    "instructions": [
+      "See the opponent starting to shorten the distance.",
+      "Score on the way in with your trained lead, then move off line before they set.",
+      "Rebuild your range immediately and see the picture clearly again.",
+      "Run it again with them entering from the other side."
+    ],
+    "cue": "Score, move, see again."
+  },
+  {
+    "key": "boxing.brawler.d7.tactical_picture",
+    "name": "Tactical Picture",
+    "countdown_day": 7,
+    "sports": ["boxing"],
+    "styles": ["brawler"],
+    "duration_min": [6, 8],
+    "why": "Rehearse taking space and finishing exchanges in position rather than chasing.",
+    "instructions": [
+      "Visualise them giving ground.",
+      "See yourself taking space without following them blindly.",
+      "Cut their preferred exit, enter behind your trained setup and finish the exchange balanced.",
+      "Run it again with them changing direction and adjust instead of chasing."
+    ],
+    "cue": "Take the space, do not chase it."
+  },
+  {
+    "key": "boxing.counter_striker.d7.tactical_picture",
+    "name": "Tactical Picture",
+    "countdown_day": 7,
+    "sports": ["boxing"],
+    "styles": ["counter_striker"],
+    "duration_min": [6, 8],
+    "why": "Rehearse waiting for a real committed cue before answering.",
+    "instructions": [
+      "See the opponent step into range.",
+      "Read the first committed cue before reacting.",
+      "Make the attack miss or fall short, answer with your trained counter, then leave safely.",
+      "Run it again with a different entry and wait for the real cue."
+    ],
+    "cue": "Wait for the commitment."
+  },
+  {
+    "key": "boxing.generic.d7.tactical_picture",
+    "name": "Tactical Picture",
+    "countdown_day": 7,
+    "sports": ["boxing"],
+    "styles": ["generic"],
+    "duration_min": [6, 8],
+    "why": "Rehearse the two or three situations this fight is most likely to be decided in.",
+    "instructions": [
+      "Pick the exchange you expect to repeat most in this fight.",
+      "See your entry, your scoring action and your exit in real time.",
+      "Run the same situation with the opponent reacting differently.",
+      "Finish every repetition balanced and back on guard."
+    ],
+    "cue": "Same problem, trained answer."
+  },
+  {
+    "key": "kickboxing.distance_striker.d7.tactical_picture",
+    "name": "Tactical Picture",
+    "countdown_day": 7,
+    "sports": ["kickboxing"],
+    "styles": ["distance_striker"],
+    "duration_min": [6, 8],
+    "why": "Rehearse holding long range with kicks and leaving before the hands arrive.",
+    "instructions": [
+      "See the opponent closing to their punching range.",
+      "Meet the entry with your trained long weapon: teep, side kick or lead round kick.",
+      "Recover the leg, step off line and rebuild your range before they reset.",
+      "Run it again with them slipping under the kick and entering low."
+    ],
+    "cue": "Long weapon first, then move."
+  },
+  {
+    "key": "kickboxing.pressure_fighter.d7.tactical_picture",
+    "name": "Tactical Picture",
+    "countdown_day": 7,
+    "sports": ["kickboxing"],
+    "styles": ["pressure_fighter"],
+    "duration_min": [6, 8],
+    "why": "Rehearse walking them onto your shots instead of following them around the ring.",
+    "instructions": [
+      "See them giving ground and picking an exit side.",
+      "Cut that exit with your feet before you throw.",
+      "Enter behind your trained setup and finish with the kick or knee you have drilled.",
+      "Run it again with them circling the other way and adjust your cut."
+    ],
+    "cue": "Cut the exit, then commit."
+  },
+  {
+    "key": "kickboxing.counter_striker.d7.tactical_picture",
+    "name": "Tactical Picture",
+    "countdown_day": 7,
+    "sports": ["kickboxing"],
+    "styles": ["counter_striker"],
+    "duration_min": [6, 8],
+    "why": "Rehearse reading a committed kick or entry and answering it cleanly.",
+    "instructions": [
+      "See the opponent load a kick or step in behind their hands.",
+      "Read which one it is before you move.",
+      "Check, catch or make it fall short, then answer with your trained return.",
+      "Reset your stance and run it again with the other weapon."
+    ],
+    "cue": "Read the weapon, then answer."
+  },
+  {
+    "key": "kickboxing.clinch_fighter.d7.tactical_picture",
+    "name": "Tactical Picture",
+    "countdown_day": 7,
+    "sports": ["kickboxing"],
+    "styles": ["clinch_fighter"],
+    "duration_min": [6, 8],
+    "why": "Rehearse earning the clinch on your terms and scoring before the break.",
+    "instructions": [
+      "See the entry that gets you inside: after their kick, or behind your own hands.",
+      "Take your trained grip and win the head or inside position first.",
+      "Score with knees or off-balancing before the referee breaks it.",
+      "Run it again with them framing and turning out early."
+    ],
+    "cue": "Position first, then score."
+  },
+  {
+    "key": "kickboxing.generic.d7.tactical_picture",
+    "name": "Tactical Picture",
+    "countdown_day": 7,
+    "sports": ["kickboxing"],
+    "styles": ["generic"],
+    "duration_min": [6, 8],
+    "why": "Rehearse the main exchanges of this fight across both punching and kicking range.",
+    "instructions": [
+      "Pick the range this fight will mostly be fought at.",
+      "See your entry, your scoring action and your exit in real time.",
+      "Run the same exchange once with hands and once with legs.",
+      "Finish each repetition balanced with both feet under you."
+    ],
+    "cue": "Own the range you chose."
+  },
+  {
+    "key": "mma.distance_striker.d7.tactical_picture",
+    "name": "Tactical Picture",
+    "countdown_day": 7,
+    "sports": ["mma"],
+    "styles": ["distance_striker"],
+    "duration_min": [6, 8],
+    "why": "Rehearse striking at range while staying honest about the takedown.",
+    "instructions": [
+      "See the opponent closing distance with their hands or a level change.",
+      "Decide which it is before you commit your weight.",
+      "Score on the entry, then circle off the cage and rebuild your range.",
+      "Run it again with the entry becoming a real shot and defend without freezing."
+    ],
+    "cue": "Strike, then get your angle back."
+  },
+  {
+    "key": "mma.pressure_fighter.d7.tactical_picture",
+    "name": "Tactical Picture",
+    "countdown_day": 7,
+    "sports": ["mma"],
+    "styles": ["pressure_fighter"],
+    "duration_min": [6, 8],
+    "why": "Rehearse using the cage to take space rather than chasing in open ground.",
+    "instructions": [
+      "See them backing up and choosing an exit along the fence.",
+      "Cut that exit with your feet and put their back to the cage.",
+      "Enter behind your trained setup and finish the exchange or take the body lock.",
+      "Run it again with them circling out and adjust your angle instead of chasing."
+    ],
+    "cue": "Fence first, then work."
+  },
+  {
+    "key": "mma.counter_striker.d7.tactical_picture",
+    "name": "Tactical Picture",
+    "countdown_day": 7,
+    "sports": ["mma"],
+    "styles": ["counter_striker"],
+    "duration_min": [6, 8],
+    "why": "Rehearse answering a committed entry without being drawn onto a level change.",
+    "instructions": [
+      "See the opponent commit to an entry.",
+      "Read whether the head stays high or drops before you answer.",
+      "Counter the high entry with your trained return; meet the low entry with your frame and hips.",
+      "Reset your stance and run both versions again."
+    ],
+    "cue": "Head high or head low."
+  },
+  {
+    "key": "mma.grappler.d7.tactical_picture",
+    "name": "Tactical Picture",
+    "countdown_day": 7,
+    "sports": ["mma"],
+    "styles": ["grappler"],
+    "duration_min": [6, 8],
+    "why": "Rehearse getting to your entry and converting the first control position.",
+    "instructions": [
+      "See the strike or feint that sets up your trained entry.",
+      "Change levels on your own timing, not theirs, and finish to your control position.",
+      "See the first pass or advance you want once you are on top.",
+      "Run it again from the cage instead of open space."
+    ],
+    "cue": "Earn the entry, then hold it."
+  },
+  {
+    "key": "mma.clinch_fighter.d7.tactical_picture",
+    "name": "Tactical Picture",
+    "countdown_day": 7,
+    "sports": ["mma"],
+    "styles": ["clinch_fighter"],
+    "duration_min": [6, 8],
+    "why": "Rehearse closing to the clinch and making the cage do the work.",
+    "instructions": [
+      "See your entry into the clinch behind a strike or on their exit.",
+      "Take your trained grip and pin them to the cage before you try to score.",
+      "Work your knees, elbows or trips from that position without giving up the grip.",
+      "Run it again with them turning out and re-clinch instead of chasing."
+    ],
+    "cue": "Grip, pin, then work."
+  },
+  {
+    "key": "mma.hybrid.d7.tactical_picture",
+    "name": "Tactical Picture",
+    "countdown_day": 7,
+    "sports": ["mma"],
+    "styles": ["hybrid"],
+    "duration_min": [6, 8],
+    "why": "Rehearse moving between striking and grappling on your own decision, not theirs.",
+    "instructions": [
+      "See the striking exchange you want to start with.",
+      "Pick the moment you convert it into your trained takedown or clinch entry.",
+      "If the entry stalls, see yourself returning to striking rather than forcing it.",
+      "Run it again starting from grappling and exiting into strikes."
+    ],
+    "cue": "You choose the phase."
+  },
+  {
+    "key": "mma.generic.d7.tactical_picture",
+    "name": "Tactical Picture",
+    "countdown_day": 7,
+    "sports": ["mma"],
+    "styles": ["generic"],
+    "duration_min": [6, 8],
+    "why": "Rehearse the phases this fight is most likely to be decided in.",
+    "instructions": [
+      "Pick the phase you expect to spend most of the fight in: range, clinch or ground.",
+      "See your entry into that phase and the first thing you do once you arrive.",
+      "See how you get back out if it is not working.",
+      "Run it again with the opponent starting the phase instead of you."
+    ],
+    "cue": "Know where you want the fight."
+  },
+  {
+    "key": "cross_sport.generic.d7.tactical_picture",
+    "name": "Tactical Picture",
+    "countdown_day": 7,
+    "sports": ["cross_sport"],
+    "styles": ["generic"],
+    "duration_min": [6, 8],
+    "why": "Rehearse the main situation of this fight before the taper takes your sharpness elsewhere.",
+    "instructions": [
+      "Pick the situation you expect to repeat most in this bout.",
+      "See your entry, your scoring action and your exit in real time.",
+      "Run the same situation again with the opponent reacting differently.",
+      "Finish each repetition balanced and ready to continue."
+    ],
+    "cue": "One situation, trained answer."
+  },
+
+  {
+    "key": "boxing.distance_striker.d5.read_react",
+    "name": "Read → React",
+    "countdown_day": 5,
+    "sports": ["boxing"],
+    "styles": ["distance_striker"],
+    "duration_min": [5, 7],
+    "why": "Recognise the moment the opponent commits to closing distance.",
+    "instructions": [
+      "Picture the opponent beginning to close distance.",
+      "Notice the first committed step, rhythm change or reach.",
+      "Use your trained intercept or exit.",
+      "Rebuild your preferred range immediately and repeat with a different entry."
+    ],
+    "cue": "See the step before the shot."
+  },
+  {
+    "key": "boxing.brawler.d5.read_react",
+    "name": "Read → React",
+    "countdown_day": 5,
+    "sports": ["boxing"],
+    "styles": ["brawler"],
+    "duration_min": [5, 7],
+    "why": "Recognise how the opponent reacts to pressure before committing to the next attack.",
+    "instructions": [
+      "Picture the opponent retreating straight, covering high or planting to counter.",
+      "Recognise the reaction before choosing your response.",
+      "Use only responses already trained in camp.",
+      "Finish each exchange balanced and reset your pressure."
+    ],
+    "cue": "Read before you chase."
+  },
+  {
+    "key": "boxing.counter_striker.d5.read_react",
+    "name": "Read → React",
+    "countdown_day": 5,
+    "sports": ["boxing"],
+    "styles": ["counter_striker"],
+    "duration_min": [5, 7],
+    "why": "Separate a real committed lead from a feint meant to draw your counter.",
+    "instructions": [
+      "Picture a feint, a half-step and a fully committed lead.",
+      "Answer only the committed one; let the other two pass.",
+      "Use the counter you have already drilled for that lead.",
+      "Reset your guard and read again before anything else."
+    ],
+    "cue": "Only answer what is real."
+  },
+  {
+    "key": "boxing.generic.d5.read_react",
+    "name": "Read → React",
+    "countdown_day": 5,
+    "sports": ["boxing"],
+    "styles": ["generic"],
+    "duration_min": [5, 7],
+    "why": "Rehearse recognising the opponent's action before choosing a response.",
+    "instructions": [
+      "Picture three reactions you expect from this opponent.",
+      "See the reaction clearly before you decide what to throw.",
+      "Use only responses already trained in camp.",
+      "Reset your stance after each exchange and read again."
+    ],
+    "cue": "Recognise, then respond."
+  },
+  {
+    "key": "kickboxing.distance_striker.d5.read_react",
+    "name": "Read → React",
+    "countdown_day": 5,
+    "sports": ["kickboxing"],
+    "styles": ["distance_striker"],
+    "duration_min": [5, 7],
+    "why": "Recognise the entry early enough to use your longest weapon.",
+    "instructions": [
+      "Picture the opponent stepping in, switching stance or loading a kick.",
+      "Identify which one it is before you commit.",
+      "Answer with your trained teep, check or lateral exit.",
+      "Rebuild your range and repeat with a different entry."
+    ],
+    "cue": "Identify the entry first."
+  },
+  {
+    "key": "kickboxing.pressure_fighter.d5.read_react",
+    "name": "Read → React",
+    "countdown_day": 5,
+    "sports": ["kickboxing"],
+    "styles": ["pressure_fighter"],
+    "duration_min": [5, 7],
+    "why": "Recognise how the opponent answers pressure before you commit to the next attack.",
+    "instructions": [
+      "Picture them retreating straight, checking your kicks or planting to fire back.",
+      "See the reaction before choosing your response.",
+      "Use only the entries and finishes trained in camp.",
+      "Reset your stance and read again after each exchange."
+    ],
+    "cue": "Their reaction chooses your shot."
+  },
+  {
+    "key": "kickboxing.counter_striker.d5.read_react",
+    "name": "Read → React",
+    "countdown_day": 5,
+    "sports": ["kickboxing"],
+    "styles": ["counter_striker"],
+    "duration_min": [5, 7],
+    "why": "Tell a committed kick from a feint before you counter.",
+    "instructions": [
+      "Picture a hand feint, a low kick and a committed head kick.",
+      "Answer only the committed weapon; let the feints pass.",
+      "Use the check or catch you have drilled, then your trained return.",
+      "Reset and read again without leaning forward."
+    ],
+    "cue": "Let the feint go."
+  },
+  {
+    "key": "kickboxing.clinch_fighter.d5.read_react",
+    "name": "Read → React",
+    "countdown_day": 5,
+    "sports": ["kickboxing"],
+    "styles": ["clinch_fighter"],
+    "duration_min": [5, 7],
+    "why": "Recognise the moment the clinch is available and the moment it is gone.",
+    "instructions": [
+      "Picture them catching a kick, framing you off, or leaning in after a combination.",
+      "See which of those actually offers you the clinch.",
+      "Take your trained grip only on the real opening.",
+      "When the grip is denied, break cleanly and reset rather than wrestling for it."
+    ],
+    "cue": "Take the real opening only."
+  },
+  {
+    "key": "kickboxing.generic.d5.read_react",
+    "name": "Read → React",
+    "countdown_day": 5,
+    "sports": ["kickboxing"],
+    "styles": ["generic"],
+    "duration_min": [5, 7],
+    "why": "Rehearse recognising hand or leg attacks early enough to answer them.",
+    "instructions": [
+      "Picture three familiar attacks from this opponent, at least one with the legs.",
+      "Recognise which weapon is coming before you move.",
+      "Answer with the block, check or exit already trained in camp.",
+      "Reset your stance and read again."
+    ],
+    "cue": "Hands or legs, decide early."
+  },
+  {
+    "key": "mma.distance_striker.d5.read_react",
+    "name": "Read → React",
+    "countdown_day": 5,
+    "sports": ["mma"],
+    "styles": ["distance_striker"],
+    "duration_min": [5, 7],
+    "why": "Separate a striking entry from a takedown entry before you commit.",
+    "instructions": [
+      "Picture the opponent stepping in with hands high, then stepping in with a level change.",
+      "Read the head position before you choose.",
+      "Strike and angle off the high entry; frame and sprawl on the low one.",
+      "Rebuild your range and repeat with the two mixed."
+    ],
+    "cue": "Watch the level, not the hands."
+  },
+  {
+    "key": "mma.pressure_fighter.d5.read_react",
+    "name": "Read → React",
+    "countdown_day": 5,
+    "sports": ["mma"],
+    "styles": ["pressure_fighter"],
+    "duration_min": [5, 7],
+    "why": "Recognise how the opponent escapes your pressure at the cage.",
+    "instructions": [
+      "Picture them circling out, framing off, or shooting to escape the fence.",
+      "See which escape they choose before you commit your next attack.",
+      "Answer with the trained cut, the trained frame-break or the trained sprawl.",
+      "Re-establish the fence and read again."
+    ],
+    "cue": "See the escape before it happens."
+  },
+  {
+    "key": "mma.counter_striker.d5.read_react",
+    "name": "Read → React",
+    "countdown_day": 5,
+    "sports": ["mma"],
+    "styles": ["counter_striker"],
+    "duration_min": [5, 7],
+    "why": "Answer only genuine commitment, in striking and in grappling.",
+    "instructions": [
+      "Picture a feint, a real punch entry and a real shot.",
+      "Let the feint go; answer the punch with your trained counter.",
+      "Meet the shot with hips and frames, not with a punch.",
+      "Reset your stance and read again."
+    ],
+    "cue": "Feint, punch or shot."
+  },
+  {
+    "key": "mma.grappler.d5.read_react",
+    "name": "Read → React",
+    "countdown_day": 5,
+    "sports": ["mma"],
+    "styles": ["grappler"],
+    "duration_min": [5, 7],
+    "why": "Recognise which takedown entry the opponent's stance is actually giving you.",
+    "instructions": [
+      "Picture them square, bladed, and backing toward the cage.",
+      "See which of your trained entries each stance opens.",
+      "Enter on the one that is available rather than the one you prefer.",
+      "Reset to your stance and read the position again."
+    ],
+    "cue": "Take the entry they give you."
+  },
+  {
+    "key": "mma.clinch_fighter.d5.read_react",
+    "name": "Read → React",
+    "countdown_day": 5,
+    "sports": ["mma"],
+    "styles": ["clinch_fighter"],
+    "duration_min": [5, 7],
+    "why": "Recognise how the opponent defends the clinch so you pick the right grip.",
+    "instructions": [
+      "Picture them framing on your hips, underhooking, or turning to face you.",
+      "See which defence appears before you choose your grip.",
+      "Use the trained answer to that defence and keep them on the cage.",
+      "If you lose the grip, reset your posture and re-enter."
+    ],
+    "cue": "Their defence picks your grip."
+  },
+  {
+    "key": "mma.hybrid.d5.read_react",
+    "name": "Read → React",
+    "countdown_day": 5,
+    "sports": ["mma"],
+    "styles": ["hybrid"],
+    "duration_min": [5, 7],
+    "why": "Recognise which phase the opponent is offering and take it deliberately.",
+    "instructions": [
+      "Picture them striking at range, then backing to the cage, then reaching for the clinch.",
+      "Name the phase each one offers before you act.",
+      "Take the phase you are better in, using a trained entry.",
+      "Reset to your stance and read the next one."
+    ],
+    "cue": "Name the phase, then act."
+  },
+  {
+    "key": "mma.generic.d5.read_react",
+    "name": "Read → React",
+    "countdown_day": 5,
+    "sports": ["mma"],
+    "styles": ["generic"],
+    "duration_min": [5, 7],
+    "why": "Rehearse reading strike or grappling intent before responding.",
+    "instructions": [
+      "Picture three familiar actions from this opponent, at least one a level change.",
+      "Recognise which it is before you move.",
+      "Use only the response already trained in camp.",
+      "Reset your stance and read again."
+    ],
+    "cue": "Read the intent, then move."
+  },
+  {
+    "key": "cross_sport.generic.d5.read_react",
+    "name": "Read → React",
+    "countdown_day": 5,
+    "sports": ["cross_sport"],
+    "styles": ["generic"],
+    "duration_min": [5, 7],
+    "why": "Rehearse recognising the opponent's action before choosing a response.",
+    "instructions": [
+      "Picture three familiar actions from this opponent.",
+      "See the action clearly before you decide what to do.",
+      "Use only responses already trained in camp.",
+      "Reset your position after each exchange and read again."
+    ],
+    "cue": "Recognise, then respond."
+  },
+
+  {
+    "key": "boxing.distance_striker.d3.pressure_reset",
+    "name": "Pressure → Reset",
+    "countdown_day": 3,
+    "sports": ["boxing"],
+    "styles": ["distance_striker"],
+    "duration_min": [4, 6],
+    "why": "Rehearse recovering range after it has been taken from you.",
+    "instructions": [
+      "Picture your back finding the ropes with the opponent in your chest.",
+      "Do not trade to escape. Exhale, frame, and pivot off the ropes.",
+      "Rebuild your range and restart your jab from the centre.",
+      "Then picture them timing your exit. Change the exit side and continue working."
+    ],
+    "cue": "Get your feet back, then your range."
+  },
+  {
+    "key": "boxing.brawler.d3.pressure_reset",
+    "name": "Pressure → Reset",
+    "countdown_day": 3,
+    "sports": ["boxing"],
+    "styles": ["brawler"],
+    "duration_min": [4, 6],
+    "why": "Rehearse restarting pressure from position after being caught or escaped.",
+    "instructions": [
+      "Picture getting caught while entering.",
+      "Do not rush back in. Exhale, rebuild your stance and restart your pressure from position.",
+      "Then picture the opponent escaping your trap.",
+      "Reset the angle instead of chasing."
+    ],
+    "cue": "Reset the angle, not the pace."
+  },
+  {
+    "key": "boxing.counter_striker.d3.pressure_reset",
+    "name": "Pressure → Reset",
+    "countdown_day": 3,
+    "sports": ["boxing"],
+    "styles": ["counter_striker"],
+    "duration_min": [4, 6],
+    "why": "Rehearse staying patient after a counter is read and beaten.",
+    "instructions": [
+      "Picture your counter being anticipated and answered.",
+      "Do not start hunting. Exhale, rebuild your guard and re-establish distance.",
+      "Then picture the opponent refusing to lead at all.",
+      "Give them one trained lead of your own to react to, and go back to reading."
+    ],
+    "cue": "Patience is still the plan."
+  },
+  {
+    "key": "boxing.generic.d3.pressure_reset",
+    "name": "Pressure → Reset",
+    "countdown_day": 3,
+    "sports": ["boxing"],
+    "styles": ["generic"],
+    "duration_min": [4, 6],
+    "why": "Rehearse recovering composure and position after a bad moment.",
+    "instructions": [
+      "Picture being caught clean in an exchange.",
+      "Exhale, cover, move your feet and rebuild your stance.",
+      "Then picture your best shot being blocked twice in a row.",
+      "Change the setup rather than the intensity and continue working."
+    ],
+    "cue": "Breathe, rebuild, continue."
+  },
+  {
+    "key": "kickboxing.distance_striker.d3.pressure_reset",
+    "name": "Pressure → Reset",
+    "countdown_day": 3,
+    "sports": ["kickboxing"],
+    "styles": ["distance_striker"],
+    "duration_min": [4, 6],
+    "why": "Rehearse recovering after your long weapons are caught or walked through.",
+    "instructions": [
+      "Picture your kick being caught and your balance taken.",
+      "Recover your leg, post your stance and step out to a new angle.",
+      "Then picture them walking through your teep into punching range.",
+      "Frame, pivot off, and rebuild your range before you throw again."
+    ],
+    "cue": "Recover the leg, then the range."
+  },
+  {
+    "key": "kickboxing.pressure_fighter.d3.pressure_reset",
+    "name": "Pressure → Reset",
+    "countdown_day": 3,
+    "sports": ["kickboxing"],
+    "styles": ["pressure_fighter"],
+    "duration_min": [4, 6],
+    "why": "Rehearse restarting pressure after being checked or countered on the way in.",
+    "instructions": [
+      "Picture your entry meeting a hard check or a clean counter.",
+      "Do not rush the next entry. Exhale, reset your stance and re-enter behind a setup.",
+      "Then picture them circling out of your trap.",
+      "Cut the new exit instead of chasing the old one."
+    ],
+    "cue": "Re-enter behind a setup."
+  },
+  {
+    "key": "kickboxing.counter_striker.d3.pressure_reset",
+    "name": "Pressure → Reset",
+    "countdown_day": 3,
+    "sports": ["kickboxing"],
+    "styles": ["counter_striker"],
+    "duration_min": [4, 6],
+    "why": "Rehearse staying composed when your reads stop paying.",
+    "instructions": [
+      "Picture countering late and taking the shot instead.",
+      "Exhale, cover, check, and re-establish your distance.",
+      "Then picture an opponent who will not commit to anything.",
+      "Offer one trained lead to draw a reaction, then return to reading."
+    ],
+    "cue": "Late once, not twice."
+  },
+  {
+    "key": "kickboxing.clinch_fighter.d3.pressure_reset",
+    "name": "Pressure → Reset",
+    "countdown_day": 3,
+    "sports": ["kickboxing"],
+    "styles": ["clinch_fighter"],
+    "duration_min": [4, 6],
+    "why": "Rehearse losing the clinch without losing the round.",
+    "instructions": [
+      "Picture your grip being stripped and being turned out of the clinch.",
+      "Do not reach after it. Recover your posture and re-establish striking range.",
+      "Then picture being kneed on the way in.",
+      "Reset your entry, change the level of your grip and work again."
+    ],
+    "cue": "Lose the grip, keep the position."
+  },
+  {
+    "key": "kickboxing.generic.d3.pressure_reset",
+    "name": "Pressure → Reset",
+    "countdown_day": 3,
+    "sports": ["kickboxing"],
+    "styles": ["generic"],
+    "duration_min": [4, 6],
+    "why": "Rehearse recovering composure and stance after adversity.",
+    "instructions": [
+      "Picture being caught clean or having a kick checked hard.",
+      "Exhale, cover, move your feet and rebuild your stance.",
+      "Then picture your main weapon being read twice.",
+      "Change the setup rather than the intensity and continue working."
+    ],
+    "cue": "Breathe, rebuild, continue."
+  },
+  {
+    "key": "mma.distance_striker.d3.pressure_reset",
+    "name": "Pressure → Reset",
+    "countdown_day": 3,
+    "sports": ["mma"],
+    "styles": ["distance_striker"],
+    "duration_min": [4, 6],
+    "why": "Rehearse getting back to open space after being taken out of it.",
+    "instructions": [
+      "Picture your back hitting the cage with the opponent tied up on you.",
+      "Frame, get your hips out and circle back to open space.",
+      "Then picture being taken down cleanly.",
+      "Protect first, build your frames, get back to your feet and rebuild your range."
+    ],
+    "cue": "Feet first, range second."
+  },
+  {
+    "key": "mma.pressure_fighter.d3.pressure_reset",
+    "name": "Pressure → Reset",
+    "countdown_day": 3,
+    "sports": ["mma"],
+    "styles": ["pressure_fighter"],
+    "duration_min": [4, 6],
+    "why": "Rehearse restarting pressure after it is broken or reversed.",
+    "instructions": [
+      "Picture them escaping the fence and turning you into it.",
+      "Do not panic-swing. Frame, circle out and re-establish your forward position.",
+      "Then picture being caught coming in.",
+      "Exhale, reset your stance and re-enter behind a setup rather than a rush."
+    ],
+    "cue": "Rebuild position, then pressure."
+  },
+  {
+    "key": "mma.counter_striker.d3.pressure_reset",
+    "name": "Pressure → Reset",
+    "countdown_day": 3,
+    "sports": ["mma"],
+    "styles": ["counter_striker"],
+    "duration_min": [4, 6],
+    "why": "Rehearse composure when your counter is baited into a takedown.",
+    "instructions": [
+      "Picture your counter drawing a level change and ending on the mat.",
+      "Protect, frame, build your base and return to your feet.",
+      "Then picture them refusing to lead while the clock runs.",
+      "Give one trained lead to create the read, then go back to waiting."
+    ],
+    "cue": "Get up, then read again."
+  },
+  {
+    "key": "mma.grappler.d3.pressure_reset",
+    "name": "Pressure → Reset",
+    "countdown_day": 3,
+    "sports": ["mma"],
+    "styles": ["grappler"],
+    "duration_min": [4, 6],
+    "why": "Rehearse continuing to work after a defended entry or a lost position.",
+    "instructions": [
+      "Picture your first takedown being defended.",
+      "Stay composed. Recover position, reconnect to your next control option and continue working.",
+      "Then picture losing a dominant position.",
+      "Protect first, rebuild position and return to your next task."
+    ],
+    "cue": "Protect, rebuild, continue."
+  },
+  {
+    "key": "mma.clinch_fighter.d3.pressure_reset",
+    "name": "Pressure → Reset",
+    "countdown_day": 3,
+    "sports": ["mma"],
+    "styles": ["clinch_fighter"],
+    "duration_min": [4, 6],
+    "why": "Rehearse recovering when the clinch is reversed against you.",
+    "instructions": [
+      "Picture being turned and pinned to the cage yourself.",
+      "Frame, get your hips free and switch to your trained escape grip.",
+      "Then picture your entry being sprawled on.",
+      "Recover your posture, return to your feet and re-enter behind a strike."
+    ],
+    "cue": "Get your hips back first."
+  },
+  {
+    "key": "mma.hybrid.d3.pressure_reset",
+    "name": "Pressure → Reset",
+    "countdown_day": 3,
+    "sports": ["mma"],
+    "styles": ["hybrid"],
+    "duration_min": [4, 6],
+    "why": "Rehearse being forced into your weaker phase and getting back out.",
+    "instructions": [
+      "Picture the fight dragged into the phase you least want.",
+      "Stay composed, survive the first thirty seconds and work your trained exit.",
+      "Return to the phase you chose and restart from there.",
+      "Then run it once more where you stay and solve it instead of leaving."
+    ],
+    "cue": "Survive, exit, restart."
+  },
+  {
+    "key": "mma.generic.d3.pressure_reset",
+    "name": "Pressure → Reset",
+    "countdown_day": 3,
+    "sports": ["mma"],
+    "styles": ["generic"],
+    "duration_min": [4, 6],
+    "why": "Rehearse recovering composure and position after a bad moment.",
+    "instructions": [
+      "Picture being caught clean or taken down.",
+      "Protect first, then build your frames and your base.",
+      "Recover position, reconnect to your next task and continue working.",
+      "Then run it again from a different bad position and finish the same way."
+    ],
+    "cue": "Protect, rebuild, continue."
+  },
+  {
+    "key": "cross_sport.generic.d3.pressure_reset",
+    "name": "Pressure → Reset",
+    "countdown_day": 3,
+    "sports": ["cross_sport"],
+    "styles": ["generic"],
+    "duration_min": [4, 6],
+    "why": "Rehearse adversity that ends with a decision, not with dwelling.",
+    "instructions": [
+      "Picture the moment in this fight that would rattle you most.",
+      "Exhale, protect, and rebuild your position.",
+      "Reconnect to your next useful task and continue working.",
+      "Run it once more and finish it the same way."
+    ],
+    "cue": "Problem, reset, next decision."
+  },
+
+  {
+    "key": "boxing.generic.d1.familiar_ready",
+    "name": "Familiar & Ready",
+    "countdown_day": 1,
+    "sports": ["boxing"],
+    "styles": ["generic"],
+    "duration_min": [3, 5],
+    "why": "Make tomorrow familiar without adding new information.",
+    "instructions": [
+      "Picture arriving, wrapping up and warming up.",
+      "Hear the room and your corner.",
+      "Feel yourself getting sharper as the warm-up progresses.",
+      "See the opening bell and settle into your normal stance.",
+      "Use the same cue you have trusted in camp, then leave it there."
+    ],
+    "cue": "Same routine, same stance."
+  },
+  {
+    "key": "kickboxing.generic.d1.familiar_ready",
+    "name": "Familiar & Ready",
+    "countdown_day": 1,
+    "sports": ["kickboxing"],
+    "styles": ["generic"],
+    "duration_min": [3, 5],
+    "why": "Make tomorrow familiar without adding new information.",
+    "instructions": [
+      "Picture arriving, wrapping up, shins and pads on, and warming up.",
+      "Hear the room and your corner.",
+      "Feel yourself getting sharper as the warm-up progresses.",
+      "See the opening bell, settle into your normal stance and take the first look.",
+      "Use the same cue you have trusted in camp, then leave it there."
+    ],
+    "cue": "Same routine, same stance."
+  },
+  {
+    "key": "mma.generic.d1.familiar_ready",
+    "name": "Familiar & Ready",
+    "countdown_day": 1,
+    "sports": ["mma"],
+    "styles": ["generic"],
+    "duration_min": [3, 5],
+    "why": "Make tomorrow familiar without adding new information.",
+    "instructions": [
+      "Picture arriving, wrapping up, gloves on and warming up.",
+      "Hear the room and your corner.",
+      "See yourself walking to the cage and stepping through the door.",
+      "Settle into your normal stance and take the first look at the opening range.",
+      "Use the same cue you have trusted in camp, then leave it there."
+    ],
+    "cue": "Same routine, same stance."
+  },
+  {
+    "key": "cross_sport.generic.d1.familiar_ready",
+    "name": "Familiar & Ready",
+    "countdown_day": 1,
+    "sports": ["cross_sport"],
+    "styles": ["generic"],
+    "duration_min": [3, 5],
+    "why": "Make tomorrow familiar without adding new information.",
+    "instructions": [
+      "Picture arriving, getting ready and warming up in your normal order.",
+      "Hear the room and your corner.",
+      "See the start of the bout and settle into your normal position.",
+      "Use the same cue you have trusted in camp, then leave it there."
+    ],
+    "cue": "Same routine, same start."
+  },
+
+  {
+    "key": "boxing.generic.d0.trust_compete",
+    "name": "Trust → Compete",
+    "countdown_day": 0,
+    "sports": ["boxing"],
+    "styles": ["generic"],
+    "duration_min": [1, 3],
+    "why": "Stop conscious over-analysis and hand the fight to your trained reactions.",
+    "instructions": [
+      "See the ring and feel your feet underneath you.",
+      "See the opponent clearly. One breath.",
+      "Bring up your fight cue.",
+      "Read what is actually there and trust your reactions."
+    ],
+    "cue": "See it, trust it, go.",
+    "pre_bout": "Twenty seconds: one breath, feet under you, fight cue up, go."
+  },
+  {
+    "key": "kickboxing.generic.d0.trust_compete",
+    "name": "Trust → Compete",
+    "countdown_day": 0,
+    "sports": ["kickboxing"],
+    "styles": ["generic"],
+    "duration_min": [1, 3],
+    "why": "Stop conscious over-analysis and hand the fight to your trained reactions.",
+    "instructions": [
+      "See the ring and feel your feet and shins loose.",
+      "See the opponent clearly. One breath.",
+      "Bring up your fight cue.",
+      "Read what is actually there and trust your reactions."
+    ],
+    "cue": "See it, trust it, go.",
+    "pre_bout": "Twenty seconds: one breath, feet under you, fight cue up, go."
+  },
+  {
+    "key": "mma.generic.d0.trust_compete",
+    "name": "Trust → Compete",
+    "countdown_day": 0,
+    "sports": ["mma"],
+    "styles": ["generic"],
+    "duration_min": [1, 3],
+    "why": "Stop conscious over-analysis and hand the fight to your trained reactions.",
+    "instructions": [
+      "See the cage and feel your feet underneath you.",
+      "Feel the gloves and see the opponent clearly. One breath.",
+      "Bring up your fight cue.",
+      "Read the opening range and trust your reactions."
+    ],
+    "cue": "See it, trust it, go.",
+    "pre_bout": "Twenty seconds: one breath, feet under you, fight cue up, go."
+  },
+  {
+    "key": "cross_sport.generic.d0.trust_compete",
+    "name": "Trust → Compete",
+    "countdown_day": 0,
+    "sports": ["cross_sport"],
+    "styles": ["generic"],
+    "duration_min": [1, 3],
+    "why": "Stop conscious over-analysis and hand the bout to your trained reactions.",
+    "instructions": [
+      "See the competition area and feel your feet underneath you.",
+      "See the opponent clearly. One breath.",
+      "Bring up your trusted cue.",
+      "Read what is actually there and trust your reactions."
+    ],
+    "cue": "See it, trust it, go.",
+    "pre_bout": "Twenty seconds: one breath, feet under you, cue up, go."
+  }
+]
