@@ -68,9 +68,7 @@ export async function getPushOptInState(token: string | null): Promise<PushOptIn
       if (!settings.enabled) {
         return "server-disabled";
       }
-      const endpoints = (
-        settings as typeof settings & { subscription_endpoints?: string[] }
-      ).subscription_endpoints;
+      const endpoints = settings.subscription_endpoints;
       if (
         subscription &&
         Array.isArray(endpoints) &&
