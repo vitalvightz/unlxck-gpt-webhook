@@ -387,7 +387,10 @@ def _apply_late_camp_role_morph_once(
     return weekly_role_map
 
 
-def apply_late_camp_role_morph(weekly_role_map: dict[str, Any]) -> dict[str, Any]:
+def apply_late_camp_role_morph(
+    weekly_role_map: dict[str, Any],
+    athlete_model: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Apply countdown dose, then enforce final deterministic calendar integrity."""
     _apply_late_camp_role_morph_once(weekly_role_map)
 
@@ -400,6 +403,7 @@ def apply_late_camp_role_morph(weekly_role_map: dict[str, Any]) -> dict[str, Any
     weekly_role_map = apply_final_calendar_integrity(
         weekly_role_map,
         remorph_callback=_apply_late_camp_role_morph_once,
+        athlete_model=athlete_model,
     )
     # The pre-hard-contact consequence depends on the finished calendar, not an
     # earlier placement guess. Running it here also makes goal-repair trials pass

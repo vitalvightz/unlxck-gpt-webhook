@@ -447,10 +447,22 @@ def _apply_conditioning_priority_session_shift(session_counts: dict, training_co
 
 
 def _cap_session_counts_to_frequency(session_counts: dict, training_context: TrainingContext) -> dict:
+    """Cap a phase's role counts to the athlete's physical-session frequency.
+
+    ``allocate_sessions`` deliberately returns ``min(frequency + 1, 6)`` role
+    slots — candidate *capacity*, which downstream exercise selection uses for
+    depth (see ``training_context.candidate_role_capacity``). The weekly
+    calendar is a different quantity: ``training_frequency`` is the number of
+    physical sessions the athlete plans to do, so the persisted progression must
+    not expose more role sessions than that.
+
+    This used to return early inside D-21, on the assumption that the late-fight
+    path owned counts from there. It does not: the normal planner still builds
+    the progression for D-14 and outward, so a frequency-5 athlete inside three
+    weeks of the fight persisted a six-session SPP week ({2, 3, 1}) while
+    requesting five. Capping applies at every countdown position.
+    """
     adjusted = dict(session_counts)
-    days_until_fight = training_context.days_until_fight
-    if isinstance(days_until_fight, int) and days_until_fight <= 21:
-        return adjusted
     try:
         frequency = int(training_context.training_frequency or training_context.days_available or 0)
     except (TypeError, ValueError):

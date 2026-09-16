@@ -365,7 +365,11 @@ def test_conditioning_priority_shift_allowed_for_clean_d18_pressure_floor():
         training_context.phase_weeks,
     )
 
-    assert briefs["SPP"]["session_counts"] == {"strength": 1, "conditioning": 4, "recovery": 1}
+    # The shift still moves a strength slot into conditioning (2/2 -> 1/3); the
+    # total stays at the athlete's requested five physical sessions, because
+    # allocate_sessions' extra candidate slot is capped out of the calendar.
+    assert briefs["SPP"]["session_counts"] == {"strength": 1, "conditioning": 3, "recovery": 1}
+    assert sum(briefs["SPP"]["session_counts"].values()) == training_context.training_frequency
 
 
 def test_conditioning_priority_shift_blocked_at_d12():
@@ -376,7 +380,11 @@ def test_conditioning_priority_shift_blocked_at_d12():
         training_context.phase_weeks,
     )
 
-    assert briefs["SPP"]["session_counts"] == {"strength": 2, "conditioning": 3, "recovery": 1}
+    # No shift: strength keeps both slots. Inside D-21 the frequency cap applies
+    # exactly as it does further out, so a frequency-5 athlete persists five
+    # sessions rather than the six the candidate table offers.
+    assert briefs["SPP"]["session_counts"] == {"strength": 2, "conditioning": 2, "recovery": 1}
+    assert sum(briefs["SPP"]["session_counts"].values()) == training_context.training_frequency
 
 
 def test_conditioning_priority_shift_blocked_in_d21_to_d18_with_moderate_fatigue():
@@ -387,7 +395,8 @@ def test_conditioning_priority_shift_blocked_in_d21_to_d18_with_moderate_fatigue
         training_context.phase_weeks,
     )
 
-    assert briefs["SPP"]["session_counts"] == {"strength": 2, "conditioning": 3, "recovery": 1}
+    assert briefs["SPP"]["session_counts"] == {"strength": 2, "conditioning": 2, "recovery": 1}
+    assert sum(briefs["SPP"]["session_counts"].values()) == training_context.training_frequency
 
 
 def test_stage2_payload_injury_context_carries_rich_injury_fields():

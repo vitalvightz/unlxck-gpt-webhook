@@ -12,6 +12,7 @@ from .coordination_support_library import (
     coordination_support_metadata,
     select_coordination_support,
 )
+from .physical_occupancy_fill import fill_physical_occupancy
 from .gap_fill_inserts import (
     PHYSICAL_INSERTS,
     _new_usage_ledger,
@@ -881,6 +882,111 @@ def _splice_late_fight_tail(
     return True
 
 
+def _week_day_slots(week: dict[str, Any]) -> list[tuple[int, str]]:
+    slots: list[tuple[int, str]] = []
+    for entry in week.get("calendar_days") or []:
+        if not isinstance(entry, dict):
+            continue
+        d_day = entry.get("d_day")
+        if not isinstance(d_day, int):
+            continue
+        slots.append((d_day, str(entry.get("weekday") or "")))
+    return slots
+
+
+def _unused_day_identity(week: dict[str, Any], entry: Any) -> tuple[str, Any] | None:
+    """The calendar instance an ``intentionally_unused_days`` entry refers to.
+
+    A countdown offset identifies one day. A weekday does not: this PR exists
+    because a planner week can span eight days and repeat a weekday, so keying
+    on "thursday" alone would let a D-14 record and a D-7 record collapse into
+    one and silently drop an explanation the calendar owes. Weekday is the
+    fallback identity only for legacy records that carry no offset, and it is
+    kept in a separate namespace so it can never collide with an offset key.
+    """
+    if not isinstance(entry, dict):
+        return None
+    offset = entry.get("countdown_offset")
+    if not isinstance(offset, int) or isinstance(offset, bool):
+        label = str(entry.get("countdown_label") or "").strip().upper()
+        if label.startswith("D-") and label[2:].isdigit():
+            offset = int(label[2:])
+    if isinstance(offset, int) and not isinstance(offset, bool):
+        return ("offset", offset)
+    day = _canonical_day(str(entry.get("day") or ""))
+    if not day:
+        return None
+    # A legacy weekday-only record still resolves to a single instance when the
+    # week holds exactly one of that weekday; when it repeats, the record is
+    # genuinely ambiguous and only blocks the occurrence the calendar resolves it
+    # to, rather than every occurrence.
+    resolved = _calendar_d_day(week, day)
+    if resolved is not None:
+        return ("offset", resolved)
+    return ("weekday", day)
+
+
+def _merge_unused_day_records(
+    week: dict[str, Any], records: list[dict[str, Any]]
+) -> None:
+    """Record empty declared days without displacing an existing explanation."""
+    merged = list(week.get("intentionally_unused_days") or [])
+    seen = {
+        identity
+        for entry in merged
+        if (identity := _unused_day_identity(week, entry)) is not None
+    }
+    for record in records:
+        identity = _unused_day_identity(week, record)
+        if identity is not None and identity in seen:
+            continue
+        if identity is not None:
+            seen.add(identity)
+        merged.append(record)
+    week["intentionally_unused_days"] = merged
+
+
+def _complete_week_physical_occupancy(
+    week: dict[str, Any],
+    athlete_model: dict[str, Any],
+    usage_ledger: dict[str, Any],
+) -> None:
+    """Give every declared training day a session, or a recorded reason for not.
+
+    ``training_frequency`` is a physical-session count, so a declared training
+    day that survives the allocators with nothing on it is a contract breach —
+    not a taper decision. Taper caps own *dose*; this owns *occupancy*.
+    """
+    session_roles = week.get("session_roles")
+    if not isinstance(session_roles, list):
+        return
+    day_slots = _week_day_slots(week)
+    if not day_slots:
+        return
+    added, unused = fill_physical_occupancy(
+        day_slots=day_slots,
+        roles=[role for role in session_roles if isinstance(role, dict)],
+        athlete_model=athlete_model,
+        usage_ledger=usage_ledger,
+    )
+    for role in added:
+        role["camp_week_filler"] = True
+        if week.get("late_fight_tail_days") and role.get("countdown_offset") in set(
+            week.get("late_fight_tail_days") or []
+        ):
+            # Stay inside the finished-tail ownership contract: a day D-13 and
+            # closer remains owned by the late-fight allocator, so occupancy work
+            # placed there is tagged as its own rather than as a normal-planner
+            # role that survived the splice.
+            role["late_fight_tail_owned"] = True
+            governance = dict(role.get("governance") or {})
+            governance["authority"] = "late_fight_tail_allocator"
+            role["governance"] = governance
+        session_roles.append(role)
+        usage_ledger.setdefault("coverage_roles", []).append(role)
+    _merge_unused_day_records(week, unused)
+
+
 def apply_camp_week_fillers(
     weekly_role_map: dict[str, Any],
     athlete_model: dict[str, Any] | None = None,
@@ -948,4 +1054,9 @@ def apply_camp_week_fillers(
                 weekly_role_map=weekly_role_map,
                 week_ordinal=week_ordinal,
             )
+
+    if fight_dated:
+        for week in weekly_role_map.get("weeks", []) or []:
+            if isinstance(week, dict):
+                _complete_week_physical_occupancy(week, athlete_model, usage_ledger)
     return weekly_role_map

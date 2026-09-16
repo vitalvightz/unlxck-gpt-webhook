@@ -232,9 +232,45 @@ class TrainingContext:
     def to_flags(self) -> dict:
         return asdict(self)
 
+def candidate_role_capacity(training_frequency: int) -> int:
+    """Role-slot capacity for a requested frequency — NOT a physical-session count.
+
+    The historical ``+1`` in ``allocate_sessions`` is a *candidate depth* rule,
+    not a calendar rule. Exercise selection sizes its pools from these counts
+    (``calculate_exercise_numbers``, ``strength.num_strength_sessions``,
+    ``conditioning.num_conditioning_sessions``, ``late_fight_dosage_policy``),
+    and the extra slot keeps a frequency-N athlete from bottoming out on
+    candidate variety once governance suppresses a role. Removing it would thin
+    every downstream bank, so it stays here and the calendar-facing count is
+    capped separately (``stage2_planning_brief._cap_session_counts_to_frequency``).
+    """
+    return max(1, min(int(training_frequency) + 1, 6))
+
+
+def physical_session_target(training_frequency: int, viable_training_days: int) -> int:
+    """The number of physical sessions a week should hold.
+
+    ``training_frequency`` is the athlete's requested count; ``viable_training_days``
+    is how many declared training opportunities the calendar actually still has
+    (fight day is not one). Safety may reduce the result further, but only with a
+    recorded reason — see ``fightcamp.physical_session_frequency``.
+    """
+    try:
+        requested = int(training_frequency)
+    except (TypeError, ValueError):
+        return max(0, int(viable_training_days))
+    return max(0, min(requested, int(viable_training_days)))
+
+
 def allocate_sessions(training_frequency: int, phase: str = "GPP") -> dict:
-    """Return weekly session counts based on frequency and phase."""
-    freq = max(1, min(int(training_frequency) + 1, 6))
+    """Return weekly *candidate role* counts for a frequency and phase.
+
+    These are role opportunities, not the athlete-facing physical-session
+    frequency: the table is indexed by ``candidate_role_capacity`` (frequency + 1,
+    capped at 6) on purpose. Callers that build the visible weekly calendar must
+    cap the total back to the requested frequency.
+    """
+    freq = candidate_role_capacity(training_frequency)
     phase = phase.upper()
 
     plan = {
