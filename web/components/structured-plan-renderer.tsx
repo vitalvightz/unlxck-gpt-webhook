@@ -596,14 +596,18 @@ export function SessionCard({
           </h3>
           {/* The objective is the plan's "Why:" line, not a description of the
               work — the blocks below already carry that. Labelling it says so
-              outright, so the reason for the session is impossible to miss. */}
+              outright, so the reason for the session is impossible to miss.
+              A session with NO blocks has nothing for a rationale to explain:
+              there, the objective IS the whole prescription ("Neck CARs,
+              shoulder CARs, wrist circles…"), so the kicker is dropped and the
+              line reads as the instruction it is. */}
           {isDeclaredLightCombat ? (
             <p className="sp-today-note">{DECLARED_LIGHT_COMBAT_DESCRIPTION}</p>
           ) : isTechnicalSession ? (
             <TechnicalCombatRationale />
           ) : objective ? (
             <p className="sp-session-objective">
-              <span className="sp-session-why-label">Why</span>
+              {blocks.length > 0 ? <span className="sp-session-why-label">Why</span> : null}
               {objective}
             </p>
           ) : null}

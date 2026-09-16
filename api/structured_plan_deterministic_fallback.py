@@ -29,6 +29,8 @@ reads their verdict rather than re-deciding it.
 from __future__ import annotations
 
 import logging
+import re
+from dataclasses import dataclass, field
 from typing import Any
 
 from fightcamp.role_labels import athlete_facing_label_for
@@ -70,6 +72,79 @@ _BLOCK_TYPE_BY_CATEGORY = {
     "mindset": "mindset",
     "support_insert": "mobility_activation",
 }
+
+# A support insert is LOW-COST work, not recovery work. Mapping the whole
+# category to ``recovery`` published a technical footwork drill and a joint-prep
+# reset to the athlete under a RECOVERY tag. The planner already carries the
+# real semantics on the role (``support_insert_category`` from
+# fightcamp/gap_fill_inserts._INSERT_META, with ``support_insert_cost_category``
+# behind it), so read those rather than guessing from the title.
+#
+# Every value is an existing canonical SessionType: this schema is also the
+# strict Stage 2 response schema, so a new value would change what the model is
+# required to emit. "rehab" is the schema's home for mobility/movement-quality
+# work — the web renderer already groups rehab/prehab/mobility together and the
+# per-region policy renames it "Prehab" when nothing is injured. Tactical and
+# mental inserts are skill work that happens to carry no physical load; their
+# zero-load status is decided by the shared identity rule (#2570), never by the
+# session type.
+_SESSION_TYPE_BY_SUPPORT_CATEGORY = {
+    "technical": "skill",
+    "technical_footwork": "skill",
+    "footwork": "skill",
+    "coordination": "skill",
+    "tactical": "skill",
+    "mental": "skill",
+    "conditioning_maintenance": "conditioning",
+    "low_cost_aerobic": "conditioning",
+    "recovery": "recovery",
+    "recovery_walk": "recovery",
+    "low_cost_recovery": "recovery",
+    "mobility": "rehab",
+    "movement_quality": "rehab",
+}
+_BLOCK_TYPE_BY_SUPPORT_CATEGORY = {
+    "technical": "skill",
+    "technical_footwork": "skill",
+    "footwork": "skill",
+    "coordination": "skill",
+    "tactical": "mindset",
+    "mental": "mindset",
+    "conditioning_maintenance": "conditioning",
+    "low_cost_aerobic": "conditioning",
+    "recovery": "cooldown_recovery",
+    "recovery_walk": "cooldown_recovery",
+    "low_cost_recovery": "cooldown_recovery",
+    "mobility": "mobility_activation",
+    "movement_quality": "mobility_activation",
+}
+
+
+def _support_category(role: dict[str, Any]) -> str:
+    """The planner's own support-insert semantics, cost category as fallback."""
+    for key in ("support_insert_category", "support_insert_cost_category"):
+        value = str(role.get(key) or "").strip().lower()
+        if value:
+            return value
+    return ""
+
+
+def _session_type(role: dict[str, Any]) -> str:
+    category = _category(role)
+    if category == "support_insert":
+        support = _SESSION_TYPE_BY_SUPPORT_CATEGORY.get(_support_category(role))
+        if support:
+            return support
+    return _SESSION_TYPE_BY_CATEGORY.get(category, "mixed")
+
+
+def _block_type(role: dict[str, Any]) -> str:
+    category = _category(role)
+    if category == "support_insert":
+        support = _BLOCK_TYPE_BY_SUPPORT_CATEGORY.get(_support_category(role))
+        if support:
+            return support
+    return _BLOCK_TYPE_BY_CATEGORY.get(category, "accessory")
 
 
 def _dday(role: dict[str, Any]) -> int | None:
@@ -156,8 +231,7 @@ def _microdose_block(role: dict[str, Any], d_day: int, role_key: str) -> dict[st
 
 
 def _blocks(role: dict[str, Any], d_day: int, role_key: str) -> list[dict[str, Any]]:
-    category = _category(role)
-    block_type = _BLOCK_TYPE_BY_CATEGORY.get(category, "accessory")
+    block_type = _block_type(role)
     blocks: list[dict[str, Any]] = []
     microdose = role.get("priority_microdose")
     microdose_name = (
@@ -223,35 +297,178 @@ def _support_instruction(role: dict[str, Any]) -> str:
     return ""
 
 
+# ---------------------------------------------------------------------------
+# The planner's own athlete-facing session-body grammar.
+#
+# Every banked insert renders the SAME shape (build_watch_display_text,
+# build_visualization_display_text, build_coordination_display_text and
+# gap_fill_inserts._apply_bank_footwork all document it):
+#
+#     Why: <rationale>                  unbulleted lead line, optional
+#     - <Name>: <dose>                  one bulleted activity heading
+#       <Label>: <detail>               indented labelled lines owned by it
+#
+# This is a fixed, machine-generated grammar, so it is parsed exactly — not
+# guessed at. Copy that does not match it (the one-line instruction most
+# _INSERT_META entries carry) is left alone as instruction, never reshaped.
+# ---------------------------------------------------------------------------
+
+_WHY_LINE_RE = re.compile(r"^\s*why\s*:\s*(?P<text>.+)$", re.IGNORECASE)
+_ACTIVITY_LINE_RE = re.compile(r"^\s*[-*•]\s*(?P<body>.+)$")
+_DETAIL_LINE_RE = re.compile(r"^\s*(?P<label>[A-Za-z][A-Za-z /-]{0,28})\s*:\s*(?P<text>.+)$")
+
+#: Detail labels that already have a home in the structured block schema. Every
+#: other planner label (Cue, Cue Method, Side / Stance, Step N, Intent, Focus,
+#: Reset, Anchor, Rule, Pre-bout, Rest…) keeps its own wording as a coaching cue.
+_STOP_LABELS = {"quality stop", "stop", "stop rule"}
+_REGRESSION_LABELS = {"easier", "regress", "regression"}
+_PROGRESSION_LABELS = {"progress", "progression"}
+_PURPOSE_LABELS = {"purpose"}
+_WHY_LABELS = {"why", "why today"}
+
+
+@dataclass
+class _ParsedDisplayText:
+    """What the planner's session body says, split by what it means."""
+
+    why: str = ""
+    instruction: str = ""
+    activity_name: str = ""
+    activity_dose: str = ""
+    purpose: str = ""
+    cues: list[str] = field(default_factory=list)
+    stop_rules: list[str] = field(default_factory=list)
+    regressions: list[str] = field(default_factory=list)
+    progression: str = ""
+
+
+def _parse_display_text(display_text: str) -> _ParsedDisplayText:
+    """Split planner-authored copy into its labelled parts, wording preserved."""
+    parsed = _ParsedDisplayText()
+    lines = [line.rstrip() for line in str(display_text or "").splitlines() if line.strip()]
+    if not lines:
+        return parsed
+
+    instruction_lines: list[str] = []
+    seen_activity = False
+    for line in lines:
+        if not seen_activity:
+            why = _WHY_LINE_RE.match(line)
+            if why and not parsed.why:
+                parsed.why = why.group("text").strip()
+                continue
+        activity = _ACTIVITY_LINE_RE.match(line)
+        if activity and not seen_activity:
+            seen_activity = True
+            body = activity.group("body").strip()
+            name, separator, dose = body.partition(":")
+            if separator and name.strip():
+                parsed.activity_name = name.strip()
+                parsed.activity_dose = dose.strip()
+            else:
+                parsed.activity_name = body
+            continue
+        detail = _DETAIL_LINE_RE.match(line)
+        if seen_activity and detail:
+            label = detail.group("label").strip().lower()
+            text = detail.group("text").strip()
+            if label in _STOP_LABELS:
+                parsed.stop_rules.append(text)
+            elif label in _REGRESSION_LABELS:
+                parsed.regressions.append(text)
+            elif label in _PROGRESSION_LABELS and not parsed.progression:
+                parsed.progression = text
+            elif label in _PURPOSE_LABELS and not parsed.purpose:
+                parsed.purpose = text
+            elif label in _WHY_LABELS and not parsed.why:
+                parsed.why = text
+            else:
+                # Keep the planner's own label with its text: "Cue Method: …"
+                # reads as coaching, and dropping the label would lose meaning.
+                parsed.cues.append(line.strip())
+            continue
+        if seen_activity:
+            parsed.cues.append(line.strip())
+            continue
+        instruction_lines.append(line.strip())
+
+    parsed.instruction = " ".join(instruction_lines).strip()
+    return parsed
+
+
+def _parsed_block(
+    parsed: _ParsedDisplayText, role: dict[str, Any], d_day: int, role_key: str
+) -> dict[str, Any] | None:
+    """The planner's bulleted activity as one block, or ``None`` when it has none."""
+    if not parsed.activity_name:
+        return None
+    # The dose is a planner sentence ("2 sets x 4 clean reactions each
+    # direction, full stance reset between reps."), not a parsed set/rep
+    # structure. It is surfaced verbatim as the block's leading cue rather than
+    # split into numbers this module would have to invent.
+    cues = [parsed.activity_dose] if parsed.activity_dose else []
+    cues.extend(parsed.cues)
+    return {
+        "block_id": f"deterministic-{d_day}-{role_key or 'role'}-display",
+        "block_type": _block_type(role),
+        "display_name": parsed.activity_name,
+        "order_index": 0,
+        "purpose": parsed.purpose or None,
+        "why_today": parsed.why or None,
+        "coaching_cues": cues,
+        "regression_options": list(parsed.regressions),
+        "substitutions": [],
+        "progression_rule": parsed.progression or None,
+        "stop_rules": list(parsed.stop_rules),
+    }
+
+
 def _session(role: dict[str, Any], d_day: int) -> dict[str, Any] | None:
     role_key = str(role.get("role_key") or "").strip()
     blocks = _blocks(role, d_day, role_key or "role")
     instruction = _support_instruction(role)
+    parsed = _parse_display_text(instruction) if instruction and not blocks else None
+    if parsed is not None:
+        display_block = _parsed_block(parsed, role, d_day, role_key)
+        if display_block is not None:
+            blocks = [display_block]
     if not blocks and not instruction:
         # A role with neither a selected exercise nor athlete-facing copy has
         # nothing deterministic to render; inventing a session here would be the
         # fallback making things up.
         return None
-    category = _category(role)
     session_index = role.get("session_index")
     suffix = session_index if isinstance(session_index, int) else 0
     title = athlete_facing_label_for(
         role_key, fallback=str(role.get("athlete_facing_label") or "").strip() or None
     )
+    # ``day_assignment_reason`` is internal Stage 1 placement rationale
+    # ("Declared hard sparring day is fixed in the weekly role map", "Use the
+    # lowest-load day immediately before the primary strength anchor"). The
+    # finalizer packet already withholds it as non-athlete-facing content; using
+    # it here published that same internal reasoning straight to the athlete as
+    # the card's objective. It stays on the role for audit; the athlete sees the
+    # athlete-facing label instead.
+    #
+    # Otherwise the objective is the session's RATIONALE when the planner wrote
+    # one ("Why: read the opponent's exit lane…"), and the instruction itself
+    # only when that instruction is the whole session — a blockless card whose
+    # single line IS the prescription. Putting instructional copy behind the
+    # renderer's "Why" kicker told the athlete that "Neck CARs, shoulder CARs,
+    # wrist circles…" was a rationale.
+    objective = str(title or "Session")
+    if parsed is not None:
+        if parsed.why and blocks:
+            objective = parsed.why
+        elif parsed.instruction:
+            objective = parsed.instruction
+        elif parsed.why:
+            objective = parsed.why
     return {
         "session_id": f"deterministic-{d_day}-{role_key}-{suffix}",
-        "session_type": _SESSION_TYPE_BY_CATEGORY.get(category, "mixed"),
+        "session_type": _session_type(role),
         "title": title or "Session",
-        # ``day_assignment_reason`` is internal Stage 1 placement rationale
-        # ("Declared hard sparring day is fixed in the weekly role map", "Use
-        # the lowest-load day immediately before the primary strength anchor").
-        # The finalizer packet already withholds it as non-athlete-facing
-        # content; using it here published that same internal reasoning straight
-        # to the athlete as the card's objective. It stays on the role for
-        # audit; the athlete sees the athlete-facing label instead.
-        # A blockless support insert would otherwise render as a bare title, so
-        # its banked instruction becomes the objective.
-        "objective": instruction if not blocks and instruction else str(title or "Session"),
+        "objective": objective,
         "completion_status": "not_started",
         "mindset_anchor": {"intent": "", "focus_cue": "", "reset_cue": ""},
         "blocks": blocks,
