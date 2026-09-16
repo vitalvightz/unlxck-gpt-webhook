@@ -524,18 +524,33 @@ const COACH_LED_PHYSICAL_KINDS = new Set<SessionlessDayKind>([
 ]);
 
 /**
- * True when the day's physical training is coach-owned and carries no app
- * session of its own: declared hard sparring, and the technical / light-combat
- * days a downgrade produces.
+ * True when this day's physical training is coach-owned and the app prescribes
+ * no physical card of its own: declared hard sparring, and the technical /
+ * light-combat days a downgrade produces.
  *
  * The athlete trains physically on such a day, so it is a physical training day
- * even though the app prescribes no card for it. Fight day is excluded: D-0 is
- * the competition, not a training session.
+ * even though the app prescribes nothing for it.
+ *
+ * Two things deliberately do NOT disqualify it:
+ *
+ *   * zero-load support sharing the day. Production ships "Technical-only
+ *     combat + Tactical Focus" on D-11 and "Technical-only combat + Tactical
+ *     Cue Card" on D-4; those cards are sessions, but they are not physical
+ *     work, so the combat still has to count. Only an app PHYSICAL session on
+ *     the same day removes the addition — that day is already counted, and
+ *     counting the contact too would double it.
+ *   * where the contact is recorded. A day with no app card names it in
+ *     `today_card.headline`; a day that also carries app work names it in
+ *     `today_card.coach_led_contact` (the deterministic field
+ *     `reconcile_coach_led_sparring_days` writes), and the day classifier reads
+ *     only the headline. Both are consulted here.
+ *
+ * Fight day is excluded: D-0 is the competition, not a training session.
  */
-export function isSessionlessCoachLedPhysicalDay(
+export function isCoachLedPhysicalTrainingDay(
   day: StructuredDay | null | undefined,
 ): boolean {
-  if (!isObject(day) || getSessions(day).length > 0) {
+  if (!isObject(day) || getPhysicalSessions(day).length > 0) {
     return false;
   }
   const countdown = cleanText(day.countdown_label)?.replace(/\s+/g, "").toUpperCase();
@@ -543,7 +558,13 @@ export function isSessionlessCoachLedPhysicalDay(
   if (countdown === "D-0" || countdown === "D0" || dayType === "competition") {
     return false;
   }
-  return COACH_LED_PHYSICAL_KINDS.has(classifySessionlessDay(day).kind);
+  const contact = getCoachLedContactView(day);
+  const kind = contact
+    ? contact.kind
+    : getSessions(day).length === 0
+      ? classifySessionlessDay(day).kind
+      : null;
+  return kind !== null && COACH_LED_PHYSICAL_KINDS.has(kind);
 }
 
 /** Complete planner-owned microdose for this host day; malformed legacy data is hidden. */

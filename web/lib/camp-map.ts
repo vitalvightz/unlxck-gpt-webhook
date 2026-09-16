@@ -8,7 +8,7 @@ import {
   cleanText,
   classifySessionlessDay,
   getPhysicalSessions,
-  isSessionlessCoachLedPhysicalDay,
+  isCoachLedPhysicalTrainingDay,
   formatCountdownLabel,
   formatSessionObjective,
   getBlocks,
@@ -462,9 +462,11 @@ export function weekCompletion(
 
 /** Physical training on this day that the app prescribes no card for, and so
  * cannot be logged: coach-owned sparring / technical / light combat. It is real
- * physical work, so it belongs in the denominator — the athlete trained. */
+ * physical work, so it belongs in the denominator — the athlete trained. Zero-
+ * load cards sharing the day (a Tactical Focus, a Cue Card) do not suppress it;
+ * an app physical session does, since that day is already counted. */
 function unloggablePhysicalSessions(day: StructuredDay | null | undefined): number {
-  return isSessionlessCoachLedPhysicalDay(day) ? 1 : 0;
+  return isCoachLedPhysicalTrainingDay(day) ? 1 : 0;
 }
 
 /** Physical sessions marked done over the day's physical sessions. When a live

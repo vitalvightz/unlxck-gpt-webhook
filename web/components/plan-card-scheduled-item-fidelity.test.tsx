@@ -24,7 +24,7 @@ import {
   getPhysicalSessions,
   getSessions,
   getWeeks,
-  isSessionlessCoachLedPhysicalDay,
+  isCoachLedPhysicalTrainingDay,
   isZeroLoadSupportSession,
 } from "@/lib/structured-plan";
 import { dayCompletion, weekCompletion, weekSessionSummary } from "@/lib/camp-map";
@@ -239,15 +239,15 @@ test("a coach-led combat day counts as physical training even with no app card",
   const day = dayFor(productionPlan, "D-4");
 
   assert.deepEqual(getSessions(day), []);
-  assert.equal(isSessionlessCoachLedPhysicalDay(day), true);
+  assert.equal(isCoachLedPhysicalTrainingDay(day), true);
   // Nothing on the day can be logged, so it reads 0/1 rather than disappearing.
   assert.deepEqual(dayCompletion(day), { done: 0, total: 1 });
 });
 
 test("fight day and a true rest day are not physical training days", () => {
-  assert.equal(isSessionlessCoachLedPhysicalDay(dayFor(productionPlan, "D-0")), false);
+  assert.equal(isCoachLedPhysicalTrainingDay(dayFor(productionPlan, "D-0")), false);
   assert.equal(
-    isSessionlessCoachLedPhysicalDay({
+    isCoachLedPhysicalTrainingDay({
       date: "2026-10-11",
       countdown_label: "D-4",
       day_type: "rest",
@@ -270,13 +270,23 @@ test("week 1: three physical training days count as /3", () => {
       "D-11 (Thursday) — Technical-only combat",
       "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority.",
       "",
-      "D-13 (Tuesday) — Tactical Focus",
+      "D-11 (Thursday) — Tactical Focus",
       "- Pocket Exchange Map: 10 minutes, tactical review only. No physical load.",
     ].join("\n"),
     "2026-10-15",
   );
   const week = getWeeks(plan)[0];
+  const combatDay = getDays(week).find((day) => day.countdown_label === "D-11");
 
+  // Production shape: the combat day also carries a zero-load Tactical Focus
+  // card. The card must not suppress the combat occupancy, and must not add
+  // one of its own.
+  assert.deepEqual(
+    getSessions(combatDay).map((session) => session.title),
+    ["Tactical Focus"],
+  );
+  assert.equal(isCoachLedPhysicalTrainingDay(combatDay), true);
+  assert.deepEqual(dayCompletion(combatDay), { done: 0, total: 1 });
   assert.equal(weekCompletion(week).total, 3);
 });
 
@@ -306,19 +316,48 @@ test("week 2: five physical training days count as /5", () => {
       "",
       "D-4 (Sunday) — Technical-only combat",
       "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority.",
+      "",
+      "D-4 (Sunday) — Tactical Cue Card",
+      "Write one fight cue only: entry, exit, counter, foot position, or guard reaction.",
     ].join("\n"),
     "2026-10-15",
   );
   const week = getWeeks(plan)[0];
   const physicalDays = getDays(week).filter(
-    (day) => getPhysicalSessions(day).length > 0 || isSessionlessCoachLedPhysicalDay(day),
+    (day) => getPhysicalSessions(day).length > 0 || isCoachLedPhysicalTrainingDay(day),
   );
 
   assert.deepEqual(
     physicalDays.map((day) => day.countdown_label),
     ["D-10", "D-9", "D-7", "D-5", "D-4"],
   );
+  // D-4 is combat + a zero-load Cue Card: one physical occupancy, not zero and
+  // not two.
+  const combatDay = getDays(week).find((day) => day.countdown_label === "D-4");
+  assert.deepEqual(
+    getSessions(combatDay).map((session) => session.title),
+    ["Tactical Cue Card"],
+  );
+  assert.deepEqual(dayCompletion(combatDay), { done: 0, total: 1 });
   assert.equal(weekCompletion(week).total, 5);
+});
+
+test("coach contact alongside an app physical session is not double-counted", () => {
+  const plan = buildStructuredPlanFromText(
+    [
+      "D-6 (Wednesday) — Technical-only combat",
+      "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority.",
+      "",
+      "D-6 (Wednesday) — Freshness Primer",
+      "- Band face pull, light: 2 sets x 12 reps, RPE 3-4.",
+    ].join("\n"),
+    "2026-10-15",
+  );
+  const day = getDays(getWeeks(plan)[0])[0];
+
+  assert.equal(getPhysicalSessions(day).length, 1);
+  assert.equal(isCoachLedPhysicalTrainingDay(day), false);
+  assert.deepEqual(dayCompletion(day), { done: 0, total: 1 });
 });
 
 test("the App completed row stays app-only while the week badge counts combat", () => {
