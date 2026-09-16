@@ -38,6 +38,7 @@ def test_push_settings_reports_server_configuration_and_preferences(monkeypatch)
         "enabled": False,
         "public_key": "",
         "preferences": DEFAULT_PREFERENCES,
+        "subscription_endpoints": [],
     }
 
     monkeypatch.setenv("UNLXCK_VAPID_PRIVATE_KEY", "private")
@@ -48,6 +49,7 @@ def test_push_settings_reports_server_configuration_and_preferences(monkeypatch)
         "enabled": True,
         "public_key": "public-key",
         "preferences": DEFAULT_PREFERENCES,
+        "subscription_endpoints": [],
     }
 
 
@@ -186,6 +188,9 @@ def test_subscribe_and_unsubscribe_round_trip():
     assert rows[0]["endpoint"] == "https://push.example/browser-1"
     assert rows[0]["p256dh"] == "p256dh-key"
     assert rows[0]["timezone"] == "Europe/London"
+    assert client.get("/api/push/settings", headers=ATHLETE_HEADERS).json()[
+        "subscription_endpoints"
+    ] == ["https://push.example/browser-1"]
 
     removed = client.request(
         "DELETE",
@@ -195,6 +200,9 @@ def test_subscribe_and_unsubscribe_round_trip():
     )
     assert removed.status_code == 200
     assert store.list_push_subscriptions("athlete-1") == []
+    assert client.get("/api/push/settings", headers=ATHLETE_HEADERS).json()[
+        "subscription_endpoints"
+    ] == []
 
 
 def test_resubscribing_same_endpoint_replaces_owner():
