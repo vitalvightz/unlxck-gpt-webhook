@@ -515,6 +515,37 @@ export function getPhysicalSessions(
   return getSessions(day).filter((session) => !isZeroLoadSupportSession(session));
 }
 
+/** Coach-owned contact kinds that are real physical work the athlete performs. */
+const COACH_LED_PHYSICAL_KINDS = new Set<SessionlessDayKind>([
+  "coach_led",
+  "sparring",
+  "technical",
+  "light_combat",
+]);
+
+/**
+ * True when the day's physical training is coach-owned and carries no app
+ * session of its own: declared hard sparring, and the technical / light-combat
+ * days a downgrade produces.
+ *
+ * The athlete trains physically on such a day, so it is a physical training day
+ * even though the app prescribes no card for it. Fight day is excluded: D-0 is
+ * the competition, not a training session.
+ */
+export function isSessionlessCoachLedPhysicalDay(
+  day: StructuredDay | null | undefined,
+): boolean {
+  if (!isObject(day) || getSessions(day).length > 0) {
+    return false;
+  }
+  const countdown = cleanText(day.countdown_label)?.replace(/\s+/g, "").toUpperCase();
+  const dayType = cleanText(day.day_type)?.toLowerCase();
+  if (countdown === "D-0" || countdown === "D0" || dayType === "competition") {
+    return false;
+  }
+  return COACH_LED_PHYSICAL_KINDS.has(classifySessionlessDay(day).kind);
+}
+
 /** Complete planner-owned microdose for this host day; malformed legacy data is hidden. */
 export function getPriorityMicrodose(day: StructuredDay | null | undefined) {
   const raw = day?.priority_microdose;

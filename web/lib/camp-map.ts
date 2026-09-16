@@ -8,6 +8,7 @@ import {
   cleanText,
   classifySessionlessDay,
   getPhysicalSessions,
+  isSessionlessCoachLedPhysicalDay,
   formatCountdownLabel,
   formatSessionObjective,
   getBlocks,
@@ -443,18 +444,27 @@ export function deriveCountdownLabel(
 export type Completion = { done: number; total: number };
 const TERMINAL_SESSION_COMPLETION_STATUSES = new Set(["done", "modified", "skipped"]);
 
-/** Sessions marked done over total sessions across all of a week's days. */
+/** Training sessions marked done over the week's total, coach-owned combat
+ * days included (see `dayCompletion`). */
 export function weekCompletion(
   week: StructuredWeek | null | undefined,
   index?: CompletionIndex,
+  options?: CompletionScope,
 ): Completion {
   return getDays(week).reduce<Completion>(
     (acc, day) => {
-      const dayDone = dayCompletion(day, index);
+      const dayDone = dayCompletion(day, index, options);
       return { done: acc.done + dayDone.done, total: acc.total + dayDone.total };
     },
     { done: 0, total: 0 },
   );
+}
+
+/** Physical training on this day that the app prescribes no card for, and so
+ * cannot be logged: coach-owned sparring / technical / light combat. It is real
+ * physical work, so it belongs in the denominator — the athlete trained. */
+function unloggablePhysicalSessions(day: StructuredDay | null | undefined): number {
+  return isSessionlessCoachLedPhysicalDay(day) ? 1 : 0;
 }
 
 /** Physical sessions marked done over the day's physical sessions. When a live
@@ -464,10 +474,20 @@ export function weekCompletion(
  *
  * Zero-load support (visualisation, tactical review, breathing-only) renders as
  * its own card but is deliberately NOT counted: the tag reports training
- * sessions, and mental/tactical work must never inflate it. */
+ * sessions, and mental/tactical work must never inflate it. A coach-owned
+ * combat day with no app card IS counted — it is physical training the athlete
+ * does — even though nothing on it can be logged, so such a day reads 0/1. */
+export type CompletionScope = {
+  /** Count coach-owned combat days the app prescribes no card for. Default true:
+   * the tag reports training sessions. Pass false where the label promises app
+   * work specifically ("App completed"), which coach-led contact is not. */
+  includeCoachLed?: boolean;
+};
+
 export function dayCompletion(
   day: StructuredDay | null | undefined,
   index?: CompletionIndex,
+  options?: CompletionScope,
 ): Completion {
   const sessions = getPhysicalSessions(day);
   const done = sessions.filter((session) => {
@@ -475,7 +495,8 @@ export function dayCompletion(
     const status = live?.status ?? cleanText(session.completion_status)?.toLowerCase();
     return status === "done" || status === "modified";
   }).length;
-  return { done, total: sessions.length };
+  const coachLed = options?.includeCoachLed === false ? 0 : unloggablePhysicalSessions(day);
+  return { done, total: sessions.length + coachLed };
 }
 
 // ---------------------------------------------------------------------------

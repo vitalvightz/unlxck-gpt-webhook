@@ -1850,7 +1850,9 @@ function WeekOverview({
   openOngoing: boolean;
   scheduleContext?: PlanScheduleContext | null;
 }) {
-  const completion = weekCompletion(week, completionIndex);
+  // "App completed" promises app work: a coach-owned combat day carries no app
+  // card, so it is reported by the Coach/gym counter, not by this fraction.
+  const completion = weekCompletion(week, completionIndex, { includeCoachLed: false });
   const sessionSummary = weekSessionSummary(week);
   const countdownStart = formatCountdownLabel(week.countdown_start);
   const countdownEnd = formatCountdownLabel(week.countdown_end);

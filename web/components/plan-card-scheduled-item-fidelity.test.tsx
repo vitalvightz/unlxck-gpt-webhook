@@ -24,9 +24,10 @@ import {
   getPhysicalSessions,
   getSessions,
   getWeeks,
+  isSessionlessCoachLedPhysicalDay,
   isZeroLoadSupportSession,
 } from "@/lib/structured-plan";
-import { dayCompletion, weekSessionSummary } from "@/lib/camp-map";
+import { dayCompletion, weekCompletion, weekSessionSummary } from "@/lib/camp-map";
 import type { StructuredDay, StructuredPlan } from "@/lib/types";
 
 // D-0 is Thursday 15 Oct 2026, so D-10 is a Monday exactly as in production.
@@ -232,6 +233,106 @@ test("structured_plan = null: the rendered card shows every D-10/D-9 item", () =
   // rest rows in this week are the genuinely unprogrammed D-6.
   const restRows = markup.split("cm-rest-day").length - 1;
   assert.equal(restRows, 1);
+});
+
+test("a coach-led combat day counts as physical training even with no app card", () => {
+  const day = dayFor(productionPlan, "D-4");
+
+  assert.deepEqual(getSessions(day), []);
+  assert.equal(isSessionlessCoachLedPhysicalDay(day), true);
+  // Nothing on the day can be logged, so it reads 0/1 rather than disappearing.
+  assert.deepEqual(dayCompletion(day), { done: 0, total: 1 });
+});
+
+test("fight day and a true rest day are not physical training days", () => {
+  assert.equal(isSessionlessCoachLedPhysicalDay(dayFor(productionPlan, "D-0")), false);
+  assert.equal(
+    isSessionlessCoachLedPhysicalDay({
+      date: "2026-10-11",
+      countdown_label: "D-4",
+      day_type: "rest",
+      sessions: [],
+    }),
+    false,
+  );
+});
+
+test("week 1: three physical training days count as /3", () => {
+  // D-14 app session, D-12 app session, D-11 coach-led technical combat.
+  const plan = buildStructuredPlanFromText(
+    [
+      "D-14 (Monday) — Neural speed touch",
+      "- Trap bar deadlift: 2-3 sets x 3 reps",
+      "",
+      "D-12 (Wednesday) — Aerobic support",
+      "- Easy bike: 20 min",
+      "",
+      "D-11 (Thursday) — Technical-only combat",
+      "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority.",
+      "",
+      "D-13 (Tuesday) — Tactical Focus",
+      "- Pocket Exchange Map: 10 minutes, tactical review only. No physical load.",
+    ].join("\n"),
+    "2026-10-15",
+  );
+  const week = getWeeks(plan)[0];
+
+  assert.equal(weekCompletion(week).total, 3);
+});
+
+test("week 2: five physical training days count as /5", () => {
+  // Joint prep, step-cut reset and two primers are app sessions; the technical
+  // combat day is coach-owned with no app card. Breathing, visualisation and
+  // the tactical card share those days and must not add to the count.
+  const plan = buildStructuredPlanFromText(
+    [
+      "D-10 (Monday) — Joint Prep",
+      "Neck CARs, shoulder CARs, wrist circles, hip circles, and ankle rocks.",
+      "",
+      "D-9 (Tuesday) — Breathing Reset",
+      "Nasal breathing, 5 minutes, box pattern.",
+      "",
+      "D-9 (Tuesday) — Pressure Step-Cut Reset",
+      "- Pressure Step-Cut Reset: 2 sets x 4 clean reactions each direction, RPE 5.",
+      "",
+      "D-7 (Thursday) — Freshness Primer",
+      "- Band face pull, light: 2 sets x 12 reps, RPE 3-4.",
+      "",
+      "D-6 (Friday) — Neural Visualisation",
+      "Rehearse the opening exchange and composed reset.",
+      "",
+      "D-5 (Saturday) — Fight-Speed Primer",
+      "- Explosive Boxing Burst Intervals: 2-3 x 5-6 sec bursts, RPE 6.",
+      "",
+      "D-4 (Sunday) — Technical-only combat",
+      "Technical-only contact today — no hard sparring and no extra S&C. Keep freshness priority.",
+    ].join("\n"),
+    "2026-10-15",
+  );
+  const week = getWeeks(plan)[0];
+  const physicalDays = getDays(week).filter(
+    (day) => getPhysicalSessions(day).length > 0 || isSessionlessCoachLedPhysicalDay(day),
+  );
+
+  assert.deepEqual(
+    physicalDays.map((day) => day.countdown_label),
+    ["D-10", "D-9", "D-7", "D-5", "D-4"],
+  );
+  assert.equal(weekCompletion(week).total, 5);
+});
+
+test("the App completed row stays app-only while the week badge counts combat", () => {
+  const week = getWeeks(productionPlan).find((entry) =>
+    getDays(entry).some((day) => day.countdown_label === "D-4"),
+  );
+
+  // Week badge / day tag: training sessions, coach-owned combat included.
+  assert.equal(weekCompletion(week).total, weekCompletion(week, undefined, {}).total);
+  // "App completed": app work only, so the coach-led D-4 is not in it.
+  assert.equal(
+    weekCompletion(week, undefined, { includeCoachLed: false }).total,
+    weekCompletion(week).total - 1,
+  );
 });
 
 test("weekly counters separate physical sessions from zero-load support", () => {
