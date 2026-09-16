@@ -102,6 +102,15 @@ _SESSION_TYPE_BY_SUPPORT_CATEGORY = {
     "low_cost_recovery": "recovery",
     "mobility": "rehab",
     "movement_quality": "rehab",
+    # Cost categories are the fallback vocabulary for an older or partial role
+    # that carries no `support_insert_category`. Every value gap_fill_inserts
+    # ._cost_category can return is mapped, so such a role can never fall
+    # through to the legacy support_insert -> "recovery" default: "physical"
+    # says the work moves the athlete without saying which quality it trains
+    # ("mixed" is the schema's honest unspecified-physical value), and
+    # "zero_cost" is only ever tactical or mental work.
+    "physical": "mixed",
+    "zero_cost": "skill",
 }
 _BLOCK_TYPE_BY_SUPPORT_CATEGORY = {
     "technical": "skill",
@@ -117,31 +126,41 @@ _BLOCK_TYPE_BY_SUPPORT_CATEGORY = {
     "low_cost_recovery": "cooldown_recovery",
     "mobility": "mobility_activation",
     "movement_quality": "mobility_activation",
+    "physical": "accessory",
+    "zero_cost": "mindset",
 }
 
 
-def _support_category(role: dict[str, Any]) -> str:
-    """The planner's own support-insert semantics, cost category as fallback."""
+def _support_semantics(role: dict[str, Any], table: dict[str, str]) -> str | None:
+    """Look ``role`` up in ``table`` by category, then by cost category.
+
+    A role whose ``support_insert_category`` is unknown to the table (a new
+    planner category this module has not learned yet) still resolves through its
+    cost category rather than silently falling back to recovery.
+    """
     for key in ("support_insert_category", "support_insert_cost_category"):
         value = str(role.get(key) or "").strip().lower()
-        if value:
-            return value
-    return ""
+        if value and value in table:
+            return table[value]
+    return None
 
 
 def _session_type(role: dict[str, Any]) -> str:
     category = _category(role)
     if category == "support_insert":
-        support = _SESSION_TYPE_BY_SUPPORT_CATEGORY.get(_support_category(role))
+        support = _support_semantics(role, _SESSION_TYPE_BY_SUPPORT_CATEGORY)
         if support:
             return support
+        # A support insert with no usable planner semantics at all is still not
+        # recovery work; "mixed" claims only that it is a session.
+        return "mixed"
     return _SESSION_TYPE_BY_CATEGORY.get(category, "mixed")
 
 
 def _block_type(role: dict[str, Any]) -> str:
     category = _category(role)
     if category == "support_insert":
-        support = _BLOCK_TYPE_BY_SUPPORT_CATEGORY.get(_support_category(role))
+        support = _support_semantics(role, _BLOCK_TYPE_BY_SUPPORT_CATEGORY)
         if support:
             return support
     return _BLOCK_TYPE_BY_CATEGORY.get(category, "accessory")

@@ -94,7 +94,57 @@ test("a blockless instruction card reads as the instruction, not as a Why", () =
   // prescription, so it must not be introduced as "Why".
   assert.equal(markup.includes("sp-session-why-label"), false);
   // And it is not recovery-tagged physical support.
-  assert.equal(markup.includes(">Recovery<"), false);
+  assert.equal(/>Recovery</.test(markup), false);
+});
+
+test("mobility support is chipped Mobility, never the clinical Rehab", () => {
+  // `rehab` is the schema's home for mobility work, but the athlete-facing chip
+  // must not claim rehab on a joint-prep card with no injury behind it.
+  const markup = render(planWith([day("D-10", "2026-10-05", [jointPrep])]));
+
+  assert.match(markup, /Mobility/);
+  assert.equal(/>Rehab</.test(markup), false);
+  assert.equal(/>Prehab</.test(markup), false);
+});
+
+test("real rehab work keeps its clinical chip, through the region policy", () => {
+  const rehabSession: StructuredSession = {
+    session_id: "deterministic-14-mobility_rehab-0",
+    session_type: "rehab",
+    title: "Mobility/Rehab Reset",
+    objective: "Target the flagged restriction with easy range and pain-free control.",
+    blocks: [
+      {
+        block_id: "deterministic-14-mobility_rehab-0",
+        block_type: "rehab",
+        display_name: "Shoulder external rotation, banded",
+        coaching_cues: ["2 sets x 12 reps, pain-free range only."],
+      },
+    ],
+  };
+  const plan = planWith([day("D-14", "2026-10-01", [rehabSession])]);
+
+  const live = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={plan}
+      today={new Date("2026-10-06T12:00:00")}
+      rehabLabelPolicy={{
+        default_mode: "prehab",
+        active_regions: [{ region: "shoulder", terms: ["shoulder"] }],
+      }}
+    />,
+  );
+  const cleared = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={plan}
+      today={new Date("2026-10-06T12:00:00")}
+      rehabLabelPolicy={{ default_mode: "prehab", active_regions: [] }}
+    />,
+  );
+
+  assert.match(live, />Rehab</);
+  assert.match(cleared, />Prehab</);
+  assert.equal(/>Mobility</.test(cleared), false);
 });
 
 test("a parsed drill card keeps Why, prescription, cues and its stop rule", () => {

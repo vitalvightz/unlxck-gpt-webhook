@@ -218,3 +218,57 @@ def test_a_role_with_selected_exercises_is_unchanged():
     assert session["session_type"] == "strength_power"
     assert session["objective"] == session["title"]
     assert [block["display_name"] for block in session["blocks"]] == ["Trap bar deadlift"]
+
+
+def test_cost_category_alone_still_types_the_session():
+    """An older / partial role with no support_insert_category must not read recovery.
+
+    Every value gap_fill_inserts._cost_category can return is mapped, so the
+    legacy ``support_insert -> recovery`` default can no longer catch one.
+    """
+    by_cost = {
+        "physical": "mixed",
+        "zero_cost": "skill",
+        "low_cost_aerobic": "conditioning",
+        "low_cost_recovery": "recovery",
+    }
+    for cost_category, expected in by_cost.items():
+        session = _session(
+            _role(
+                role_key="legacy_insert",
+                support_insert_cost_category=cost_category,
+                athlete_facing_label="Legacy Insert",
+                display_text="Keep it easy and technical.",
+            ),
+            8,
+        )
+        assert session is not None
+        assert session["session_type"] == expected, cost_category
+
+
+def test_an_unknown_support_category_falls_back_through_cost_then_to_mixed():
+    known_category_unknown_to_us = _session(
+        _role(
+            role_key="future_insert",
+            support_insert_category="a_category_this_module_has_not_learned",
+            support_insert_cost_category="physical",
+            athlete_facing_label="Future Insert",
+            display_text="Move well and stop before fatigue.",
+        ),
+        6,
+    )
+    no_semantics_at_all = _session(
+        _role(
+            role_key="bare_insert",
+            athlete_facing_label="Bare Insert",
+            display_text="Keep it light.",
+        ),
+        6,
+    )
+
+    assert known_category_unknown_to_us is not None
+    assert no_semantics_at_all is not None
+    # Resolved through the cost category rather than the legacy recovery default.
+    assert known_category_unknown_to_us["session_type"] == "mixed"
+    # And with nothing at all to read, still never "recovery".
+    assert no_semantics_at_all["session_type"] == "mixed"
