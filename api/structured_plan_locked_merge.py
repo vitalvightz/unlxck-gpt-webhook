@@ -148,16 +148,34 @@ def _duration(content: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _mindset_anchor(content: Mapping[str, Any]) -> dict[str, Any]:
+    """The card's coaching lines, one distinct claim per slot.
+
+    A Tactical Watch carries a real four-part mindset block. The Fight
+    Visualisation bank carries a single trusted ``cue`` instead, and filling
+    every slot with it printed that one sentence three times on the card
+    ("Focus", "Reset" and "Coach cue" all reading "Take the space, do not chase
+    it."). A single cue is a single cue: it fills the coach-cue slot and the
+    others stay empty rather than repeating it or inventing generic filler.
+    """
     mindset = content.get("mindset")
     mindset = mindset if isinstance(mindset, Mapping) else {}
-    # The Fight Visualisation bank carries a single trusted ``cue`` instead of a
-    # four-part mindset block, so it supplies every slot it legitimately can.
     cue = str(content.get("cue") or "").strip()
+    intent = str(mindset.get("intent") or "").strip()
+    focus = str(mindset.get("focus") or "").strip()
+    reset = str(mindset.get("reset") or "").strip()
+    anchor = str(mindset.get("anchor") or "").strip()
+    if not (intent or focus or reset or anchor):
+        return {
+            "intent": cue,
+            "focus_cue": "",
+            "reset_cue": "",
+            "confidence_anchor": None,
+        }
     return {
-        "intent": str(mindset.get("intent") or cue or "Review the tactical plan."),
-        "focus_cue": str(mindset.get("focus") or cue or "Stay with the planned sequence."),
-        "reset_cue": str(mindset.get("reset") or cue or "Reset and return to the plan."),
-        "confidence_anchor": mindset.get("anchor") or (cue or None),
+        "intent": intent or cue,
+        "focus_cue": focus,
+        "reset_cue": reset,
+        "confidence_anchor": anchor or None,
     }
 
 

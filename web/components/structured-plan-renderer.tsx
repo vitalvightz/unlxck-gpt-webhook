@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useId, useMemo, useRef, useState,
 import {
   classifySessionlessDay,
   isZeroLoadSupportSession,
+  normalizeForDedupe,
   cleanText,
   formatBlockLoad,
   formatCountdownLabel,
@@ -206,16 +207,6 @@ function CollapsibleSection({
       <div className="sp-collapse-body">{children}</div>
     </details>
   );
-}
-
-/** Casefold + whitespace/trailing-punctuation normalise for equality checks, so
- * "Mobility and low-noise speed." matches "mobility and low-noise speed". */
-function normalizeForDedupe(value: string | null | undefined): string | null {
-  const clean = cleanText(value ?? null);
-  if (!clean) {
-    return null;
-  }
-  return clean.toLowerCase().replace(/\s+/g, " ").replace(/[.\s]+$/, "");
 }
 
 /**
@@ -612,7 +603,9 @@ export function SessionCard({
           ) : isTechnicalSession ? (
             <TechnicalCombatRationale />
           ) : objective ? (
-            <p className="sp-session-objective">
+            <p
+              className={`sp-session-objective${blocks.length > 0 ? "" : " sp-session-instruction"}`}
+            >
               {blocks.length > 0 ? <span className="sp-session-why-label">Why</span> : null}
               {objective}
             </p>

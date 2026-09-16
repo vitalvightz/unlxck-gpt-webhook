@@ -877,6 +877,16 @@ function coachCueValue(values: Array<string | null>): string | null {
  * coach-session dependency so generic planning rationale does not slow down the
  * in-session scan.
  */
+/** Casefold + whitespace/trailing-punctuation normalise for equality checks, so
+ * "Mobility and low-noise speed." matches "mobility and low-noise speed". */
+export function normalizeForDedupe(value: string | null | undefined): string | null {
+  const clean = cleanText(value ?? null);
+  if (!clean) {
+    return null;
+  }
+  return clean.toLowerCase().replace(/\s+/g, " ").replace(/[.\s]+$/, "");
+}
+
 export function getSessionCoachingLines(
   anchor: Parameters<typeof getMindsetLines>[0],
 ): MindsetLine[] {
@@ -891,11 +901,26 @@ export function getSessionCoachingLines(
   const coachCue = coachCueValue([intent, confidence]);
   const lines: MindsetLine[] = [];
 
-  if (focus) lines.push({ label: "Focus", value: capitalizeFirst(focus) });
-  if (reset) lines.push({ label: "Reset", value: capitalizeFirst(reset) });
-  if (coachCue) lines.push({ label: "Coach cue", value: coachCue });
+  // One sentence, one line. A payload that puts the SAME cue in several slots —
+  // the Fight Visualisation bank carries a single trusted cue, and older saved
+  // cards replicated it across intent/focus/reset — printed it as "Focus",
+  // "Reset" and "Coach cue" on one card. The first slot that carries it keeps
+  // it; the repeats are dropped rather than restated.
+  const seen = new Set<string>();
+  const push = (label: string, value: string) => {
+    const key = normalizeForDedupe(value);
+    if (!key || seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    lines.push({ label, value });
+  };
+
+  if (focus) push("Focus", capitalizeFirst(focus));
+  if (reset) push("Reset", capitalizeFirst(reset));
+  if (coachCue) push("Coach cue", coachCue);
   if (context && isImportantSessionContext(context)) {
-    lines.push({ label: "Context", value: capitalizeFirst(context) });
+    push("Context", capitalizeFirst(context));
   }
   return lines;
 }

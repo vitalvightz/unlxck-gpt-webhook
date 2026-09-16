@@ -633,3 +633,42 @@ def test_every_countdown_day_resolves_for_every_supported_sport_and_style():
                 entry = select_fight_visualization(sport, style, countdown_day)
                 assert entry is not None, (sport, style, countdown_day)
                 assert entry.countdown_day == countdown_day
+
+
+def test_single_bank_cue_fills_one_mindset_slot_not_every_slot():
+    """One cue is one claim.
+
+    The Fight Visualisation bank carries a single trusted ``cue`` instead of a
+    four-part mindset block. Copying it into intent, focus, reset and anchor
+    printed the same sentence three times on the athlete's card, under "Focus",
+    "Reset" and "Coach cue".
+    """
+    from api.structured_plan_locked_merge import _mindset_anchor
+
+    anchor = _mindset_anchor({"cue": "Take the space, do not chase it."})
+
+    assert anchor["intent"] == "Take the space, do not chase it."
+    assert anchor["focus_cue"] == ""
+    assert anchor["reset_cue"] == ""
+    assert anchor["confidence_anchor"] is None
+
+
+def test_a_full_mindset_block_keeps_all_of_its_distinct_parts():
+    from api.structured_plan_locked_merge import _mindset_anchor
+
+    anchor = _mindset_anchor(
+        {
+            "cue": "Know the next beat.",
+            "mindset": {
+                "intent": "Win the second decision.",
+                "focus": "Watch the response after the first two punches.",
+                "reset": "Smother or leave instead of trading blindly.",
+                "anchor": "Know the next beat.",
+            },
+        }
+    )
+
+    assert anchor["intent"] == "Win the second decision."
+    assert anchor["focus_cue"] == "Watch the response after the first two punches."
+    assert anchor["reset_cue"] == "Smother or leave instead of trading blindly."
+    assert anchor["confidence_anchor"] == "Know the next beat."
