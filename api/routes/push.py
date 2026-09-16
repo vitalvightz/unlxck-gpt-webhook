@@ -78,12 +78,19 @@ def build_push_router(*, require_profile, require_admin, get_store) -> APIRouter
         enabled = push_notifications_configured()
         try:
             preferences = get_notification_preferences(store, profile.athlete_id)
+            subscriptions = store.list_push_subscriptions(profile.athlete_id)
         except NotificationStoreError as exc:
             raise _preferences_unavailable(exc) from exc
         return PushSettingsResponse(
             enabled=enabled,
             public_key=vapid_public_key() if enabled else "",
             preferences=preferences,
+            subscription_endpoints=[
+                endpoint
+                for row in subscriptions
+                if isinstance(row, dict)
+                if (endpoint := str(row.get("endpoint") or "").strip())
+            ],
         )
 
     @router.put("/api/push/preferences", response_model=NotificationPreferences)
