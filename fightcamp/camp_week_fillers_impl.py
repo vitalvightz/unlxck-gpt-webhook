@@ -894,18 +894,54 @@ def _week_day_slots(week: dict[str, Any]) -> list[tuple[int, str]]:
     return slots
 
 
+def _unused_day_identity(week: dict[str, Any], entry: Any) -> tuple[str, Any] | None:
+    """The calendar instance an ``intentionally_unused_days`` entry refers to.
+
+    A countdown offset identifies one day. A weekday does not: this PR exists
+    because a planner week can span eight days and repeat a weekday, so keying
+    on "thursday" alone would let a D-14 record and a D-7 record collapse into
+    one and silently drop an explanation the calendar owes. Weekday is the
+    fallback identity only for legacy records that carry no offset, and it is
+    kept in a separate namespace so it can never collide with an offset key.
+    """
+    if not isinstance(entry, dict):
+        return None
+    offset = entry.get("countdown_offset")
+    if not isinstance(offset, int) or isinstance(offset, bool):
+        label = str(entry.get("countdown_label") or "").strip().upper()
+        if label.startswith("D-") and label[2:].isdigit():
+            offset = int(label[2:])
+    if isinstance(offset, int) and not isinstance(offset, bool):
+        return ("offset", offset)
+    day = _canonical_day(str(entry.get("day") or ""))
+    if not day:
+        return None
+    # A legacy weekday-only record still resolves to a single instance when the
+    # week holds exactly one of that weekday; when it repeats, the record is
+    # genuinely ambiguous and only blocks the occurrence the calendar resolves it
+    # to, rather than every occurrence.
+    resolved = _calendar_d_day(week, day)
+    if resolved is not None:
+        return ("offset", resolved)
+    return ("weekday", day)
+
+
 def _merge_unused_day_records(
     week: dict[str, Any], records: list[dict[str, Any]]
 ) -> None:
     """Record empty declared days without displacing an existing explanation."""
-    existing = [
-        entry for entry in week.get("intentionally_unused_days") or [] if isinstance(entry, dict)
-    ]
-    named = {_canonical_day(str(entry.get("day") or "")) for entry in existing}
     merged = list(week.get("intentionally_unused_days") or [])
+    seen = {
+        identity
+        for entry in merged
+        if (identity := _unused_day_identity(week, entry)) is not None
+    }
     for record in records:
-        if _canonical_day(str(record.get("day") or "")) in named:
+        identity = _unused_day_identity(week, record)
+        if identity is not None and identity in seen:
             continue
+        if identity is not None:
+            seen.add(identity)
         merged.append(record)
     week["intentionally_unused_days"] = merged
 

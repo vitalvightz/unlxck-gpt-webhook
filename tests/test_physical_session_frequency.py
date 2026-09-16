@@ -707,3 +707,91 @@ def test_production_spp_cadence_fills_every_declared_day_end_to_end():
     ]
     # D-7 Thursday still carries its own session in the next cadence.
     assert second.occupied_offsets == [7]
+
+
+def test_repeated_weekday_unused_records_are_not_collapsed():
+    """Two Thursdays in one planner week owe two explanations, not one.
+
+    Deduplicating by weekday name alone discarded the second record, so a week
+    that could fill neither D-14 nor D-7 reported only one of them — the exact
+    repeated-weekday ambiguity this PR exists to remove.
+    """
+    from fightcamp.camp_week_fillers_impl import _merge_unused_day_records
+    from fightcamp.physical_session_frequency import (
+        REASON_NO_LEGAL_PHYSICAL_OPTION,
+        unused_day_record,
+    )
+
+    week = {
+        "calendar_days": [
+            {"weekday": weekday, "d_day": offset}
+            for offset, weekday in PRODUCTION_SPP_WEEK_SLOTS
+        ],
+        "intentionally_unused_days": [],
+    }
+    _merge_unused_day_records(
+        week,
+        [
+            unused_day_record("thursday", 14, REASON_NO_LEGAL_PHYSICAL_OPTION),
+            unused_day_record("thursday", 7, REASON_NO_LEGAL_PHYSICAL_OPTION),
+        ],
+    )
+    assert [entry["countdown_offset"] for entry in week["intentionally_unused_days"]] == [14, 7]
+
+
+def test_unused_record_for_an_already_explained_day_is_not_duplicated():
+    from fightcamp.camp_week_fillers_impl import _merge_unused_day_records
+    from fightcamp.physical_session_frequency import (
+        REASON_NO_LEGAL_PHYSICAL_OPTION,
+        unused_day_record,
+    )
+
+    week = {
+        "calendar_days": [
+            {"weekday": weekday, "d_day": offset}
+            for offset, weekday in PRODUCTION_SPP_WEEK_SLOTS
+        ],
+        "intentionally_unused_days": [
+            {"day": "Thursday", "countdown_offset": 14, "role": "recovery_only_day"}
+        ],
+    }
+    _merge_unused_day_records(
+        week,
+        [
+            unused_day_record("thursday", 14, REASON_NO_LEGAL_PHYSICAL_OPTION),
+            unused_day_record("thursday", 7, REASON_NO_LEGAL_PHYSICAL_OPTION),
+        ],
+    )
+    entries = week["intentionally_unused_days"]
+    # D-14 keeps its original explanation; only D-7 is added.
+    assert [entry.get("countdown_offset") for entry in entries] == [14, 7]
+    assert entries[0]["role"] == "recovery_only_day"
+    assert "reason_code" not in entries[0]
+
+
+def test_legacy_weekday_only_unused_record_still_dedupes_against_its_offset():
+    """A record with no offset resolves through the week's calendar."""
+    from fightcamp.camp_week_fillers_impl import _merge_unused_day_records
+    from fightcamp.physical_session_frequency import (
+        REASON_NO_LEGAL_PHYSICAL_OPTION,
+        unused_day_record,
+    )
+
+    week = {
+        "calendar_days": [
+            {"weekday": "monday", "d_day": 10},
+            {"weekday": "tuesday", "d_day": 9},
+        ],
+        "intentionally_unused_days": [{"day": "Monday", "role": "off_day"}],
+    }
+    _merge_unused_day_records(
+        week,
+        [
+            unused_day_record("monday", 10, REASON_NO_LEGAL_PHYSICAL_OPTION),
+            unused_day_record("tuesday", 9, REASON_NO_LEGAL_PHYSICAL_OPTION),
+        ],
+    )
+    assert [entry.get("day") for entry in week["intentionally_unused_days"]] == [
+        "Monday",
+        "Tuesday",
+    ]
