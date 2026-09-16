@@ -259,17 +259,77 @@ class PhysicalOccupancyPlan:
         return max(0, self.target - self.occupancy)
 
 
+#: A weekly frequency target spans seven calendar days. Nothing else.
+CADENCE_WINDOW_DAYS = 7
+
+
+def cadence_windows(
+    day_slots: Sequence[tuple[int, str]],
+) -> list[list[tuple[int, str]]]:
+    """Split a planner week's calendar days into real seven-day cadence windows.
+
+    A planner "week" is a phase-progression object, not a week: it can span eight
+    days and therefore repeat a weekday. The D-14..D-7 week holds two Thursdays,
+    and treating it as one frequency bucket let the *second* Thursday — a full
+    week later — satisfy the first week's quota, so D-9 Tuesday stayed
+    breathing-only while the target read as met.
+
+    Frequency is a per-seven-days quantity, so windows are cut from the week's own
+    first calendar day in seven-day strides. A genuine seven-day week yields
+    exactly one window and behaves as before; the eight-day week yields
+    D-14..D-8 and then D-7 on its own, which is where D-7 belongs.
+    """
+    slots = sorted(
+        {
+            (offset, weekday)
+            for offset, weekday in day_slots
+            if isinstance(offset, int) and not isinstance(offset, bool)
+        },
+        key=lambda slot: -slot[0],
+    )
+    if not slots:
+        return []
+    anchor = slots[0][0]
+    grouped: dict[int, list[tuple[int, str]]] = {}
+    for offset, weekday in slots:
+        index = (anchor - offset) // CADENCE_WINDOW_DAYS
+        grouped.setdefault(index, []).append((offset, weekday))
+    return [grouped[index] for index in sorted(grouped)]
+
+
+def plan_week_physical_occupancy(
+    *,
+    day_slots: Sequence[tuple[int, str]],
+    roles: Iterable[Any],
+    athlete_model: dict[str, Any] | None,
+) -> list[PhysicalOccupancyPlan]:
+    """One occupancy plan per seven-day cadence window in ``day_slots``."""
+    materialised = list(roles or [])
+    return [
+        plan_physical_occupancy(
+            day_slots=window,
+            roles=materialised,
+            athlete_model=athlete_model,
+        )
+        for window in cadence_windows(day_slots)
+    ]
+
+
 def plan_physical_occupancy(
     *,
     day_slots: Sequence[tuple[int, str]],
     roles: Iterable[Any],
     athlete_model: dict[str, Any] | None,
 ) -> PhysicalOccupancyPlan:
-    """Resolve the authoritative physical-session target for one week.
+    """Resolve the authoritative physical-session target for ONE cadence window.
 
     ``physical_session_target = min(requested_frequency, viable_declared_days)``.
     Safety may reduce it further, but only by an explicit decision recorded at
     the point the reduction happens — never silently here.
+
+    Callers holding a planner week pass through ``plan_week_physical_occupancy``
+    instead: a week object can span more than seven days, and a repeated weekday
+    outside the cadence window must not consume the earlier window's quota.
     """
     viable = viable_declared_days(day_slots, athlete_model)
     occupied = sorted(physical_session_offsets(roles) & set(viable), reverse=True)
@@ -355,30 +415,33 @@ def audit_physical_session_frequency(
         week_declared = clean_list(week.get("declared_training_days"))
         if week_declared:
             week_model["training_days"] = week_declared
-        plan = plan_physical_occupancy(
+        explained = _explained_offsets(week)
+        for plan in plan_week_physical_occupancy(
             day_slots=day_slots,
             roles=roles,
             athlete_model=week_model,
-        )
-        if plan.shortfall <= 0:
-            continue
-        explained = _explained_offsets(week)
-        unexplained = [
-            offset
-            for offset in plan.fill_offsets
-            if offset not in explained
-        ]
-        if not unexplained:
-            continue
-        findings.append(
-            {
-                "reason_code": WARNING_FREQUENCY_UNMET,
-                "week_index": week.get("week_index"),
-                "phase": week.get("phase"),
-                "requested_physical_target": plan.target,
-                "viable_declared_days": list(plan.viable_offsets),
-                "actual_physical_sessions": plan.occupancy,
-                "unexplained_empty_days": sorted(unexplained, reverse=True),
-            }
-        )
+        ):
+            if plan.shortfall <= 0:
+                continue
+            unexplained = [
+                offset
+                for offset in plan.fill_offsets
+                if offset not in explained
+            ]
+            if not unexplained:
+                continue
+            findings.append(
+                {
+                    "reason_code": WARNING_FREQUENCY_UNMET,
+                    "week_index": week.get("week_index"),
+                    "phase": week.get("phase"),
+                    "cadence_window": [max(plan.viable_offsets), min(plan.viable_offsets)]
+                    if plan.viable_offsets
+                    else [],
+                    "requested_physical_target": plan.target,
+                    "viable_declared_days": list(plan.viable_offsets),
+                    "actual_physical_sessions": plan.occupancy,
+                    "unexplained_empty_days": sorted(unexplained, reverse=True),
+                }
+            )
     return findings

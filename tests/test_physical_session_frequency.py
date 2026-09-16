@@ -20,10 +20,12 @@ import pytest
 from fightcamp.physical_session_frequency import (
     WARNING_FREQUENCY_UNMET,
     audit_physical_session_frequency,
+    cadence_windows,
     count_physical_sessions,
     is_physical_session_role,
     physical_session_offsets,
     plan_physical_occupancy,
+    plan_week_physical_occupancy,
     viable_declared_days,
 )
 from fightcamp.stage2_payload import build_planning_brief
@@ -143,12 +145,18 @@ def _week_day_slots(week: dict) -> list[tuple[int, str]]:
     ]
 
 
-def _week_plan(week: dict, athlete_model: dict):
-    return plan_physical_occupancy(
+def _week_plans(week: dict, athlete_model: dict):
+    """Every seven-day cadence window in a planner week, earliest first."""
+    return plan_week_physical_occupancy(
         day_slots=_week_day_slots(week),
         roles=[r for r in week.get("session_roles") or [] if isinstance(r, dict)],
         athlete_model=athlete_model,
     )
+
+
+def _week_plan(week: dict, athlete_model: dict):
+    """The first (earliest) cadence window of a planner week."""
+    return _week_plans(week, athlete_model)[0]
 
 
 def _athlete_of(brief: dict) -> dict:
@@ -306,17 +314,26 @@ def test_persisted_phase_session_counts_never_exceed_frequency(frequency):
 
 
 def test_frequency_five_with_five_safe_days_produces_five_physical_sessions():
-    """Test 1 — the production SPP week, healthy athlete, no cut."""
+    """Test 1 — the production SPP week, healthy athlete, no cut.
+
+    The reported calendar left D-14 Thursday and D-10 Monday empty and put a
+    Breathing Reset on D-9 Tuesday. All five declared days in this cadence
+    window must now carry physical work.
+    """
     brief = _brief(days_until_fight=15, plan_creation_weekday="wednesday")
     athlete = _athlete_of(brief)
     spp_week = _week_containing(brief, 14)
     plan = _week_plan(spp_week, athlete)
 
     assert plan.requested_frequency == 5
-    # D-14 Thu, D-12 Sat, D-11 Sun, D-10 Mon, D-9 Tue (+ the trailing D-7 Thu).
-    assert {14, 12, 11, 10} <= set(plan.viable_offsets)
-    assert plan.occupancy >= 5, plan
+    # The planner week spans D-14..D-7 — eight days, two Thursdays. The first
+    # cadence window is D-14..D-8, so the trailing D-7 Thursday is a week later
+    # and belongs to the next cadence, not this quota.
+    assert plan.viable_offsets == [14, 12, 11, 10, 9]
+    assert plan.target == 5
+    assert plan.occupied_offsets == [14, 12, 11, 10, 9], plan
     assert plan.shortfall == 0
+    assert plan.fill_offsets == []
 
 
 def test_taper_pressure_keeps_occupancy_and_still_caps_meaningful_stress():
@@ -331,6 +348,7 @@ def test_taper_pressure_keeps_occupancy_and_still_caps_meaningful_stress():
     athlete = _athlete_of(brief)
     spp_week = _week_containing(brief, 14)
     plan = _week_plan(spp_week, athlete)
+    assert plan.occupied_offsets == [14, 12, 11, 10, 9], plan
     assert plan.shortfall == 0, plan
 
     budget = spp_week.get("role_budget") or {}
@@ -423,14 +441,14 @@ def test_unused_declared_days_carry_a_deterministic_reason():
     brief = _brief(days_until_fight=15, plan_creation_weekday="wednesday")
     athlete = _athlete_of(brief)
     for week in _weeks(brief):
-        plan = _week_plan(week, athlete)
         recorded = {
             entry.get("countdown_offset")
             for entry in week.get("intentionally_unused_days") or []
             if isinstance(entry, dict)
         }
-        for offset in plan.fill_offsets:
-            assert offset in recorded, (week.get("week_index"), offset)
+        for plan in _week_plans(week, athlete):
+            for offset in plan.fill_offsets:
+                assert offset in recorded, (week.get("week_index"), offset)
         for entry in week.get("intentionally_unused_days") or []:
             if isinstance(entry, dict) and entry.get("physical_session_target_authority"):
                 assert entry.get("reason_code")
@@ -509,17 +527,16 @@ def test_lower_frequencies_are_honoured_without_a_frequency_five_special_case(fr
     )
     athlete = _athlete_of(brief)
     for week in _weeks(brief):
-        plan = _week_plan(week, athlete)
-        assert plan.occupancy <= plan.target or plan.target == 0
-        assert plan.shortfall == 0 or all(
-            offset
-            in {
-                entry.get("countdown_offset")
-                for entry in week.get("intentionally_unused_days") or []
-                if isinstance(entry, dict)
-            }
-            for offset in plan.fill_offsets
-        )
+        recorded = {
+            entry.get("countdown_offset")
+            for entry in week.get("intentionally_unused_days") or []
+            if isinstance(entry, dict)
+        }
+        for plan in _week_plans(week, athlete):
+            assert plan.target <= frequency
+            assert plan.shortfall == 0 or all(
+                offset in recorded for offset in plan.fill_offsets
+            )
 
 
 def _offset(role: dict):
@@ -575,3 +592,118 @@ def test_audit_is_attached_to_the_finished_weekly_role_map():
     audit = brief["weekly_role_map"]["physical_session_frequency_audit"]
     assert audit["schema_version"] == "physical_session_frequency_audit.v1"
     assert audit["warnings"] == []
+
+
+# ── seven-day cadence windows ───────────────────────────────────────────────
+
+
+PRODUCTION_SPP_WEEK_SLOTS = [
+    (14, "thursday"),
+    (13, "friday"),
+    (12, "saturday"),
+    (11, "sunday"),
+    (10, "monday"),
+    (9, "tuesday"),
+    (8, "wednesday"),
+    (7, "thursday"),
+]
+
+
+def test_eight_day_planner_week_splits_into_real_seven_day_windows():
+    windows = cadence_windows(PRODUCTION_SPP_WEEK_SLOTS)
+    assert [[offset for offset, _wd in window] for window in windows] == [
+        [14, 13, 12, 11, 10, 9, 8],
+        [7],
+    ]
+
+
+def test_seven_day_week_is_a_single_window():
+    slots = [(6, "friday"), (5, "saturday"), (4, "sunday"), (3, "monday"),
+             (2, "tuesday"), (1, "wednesday"), (0, "thursday")]
+    assert len(cadence_windows(slots)) == 1
+
+
+def test_repeated_weekday_a_week_later_cannot_pay_the_earlier_weeks_quota():
+    """The reported bug: D-7 Thursday absorbing D-9 Tuesday's fifth session.
+
+    Treating the whole eight-day planner week as one bucket gave
+    ``min(5, 6 viable) = 5``, which the trailing Thursday satisfied — so D-9
+    stayed empty and read as intentional. Frequency is a per-seven-days
+    quantity, so D-7 belongs to the next cadence and cannot close this one.
+    """
+    athlete = {"training_frequency": 5, "training_days": PRODUCTION_TRAINING_DAYS}
+    roles = [
+        _role("aerobic_support_day", "conditioning", 14),
+        _role("strength_touch_day", "strength", 12),
+        _role("light_combat_day", "sparring", 11),
+        _role("joint_prep", "support_insert", 10),
+        _role("neural_primer_day", "strength", 7),  # a full week after D-14
+        _role("breathing_reset", "support_insert", 9),
+    ]
+    first, second = plan_week_physical_occupancy(
+        day_slots=PRODUCTION_SPP_WEEK_SLOTS,
+        roles=roles,
+        athlete_model=athlete,
+    )
+
+    assert first.viable_offsets == [14, 12, 11, 10, 9]
+    assert first.target == 5
+    # D-9 holds only a Breathing Reset, so the window is one session short and
+    # names D-9 — it does not borrow the D-7 Thursday session to look complete.
+    assert first.occupied_offsets == [14, 12, 11, 10]
+    assert first.shortfall == 1
+    assert first.fill_offsets == [9]
+
+    assert second.viable_offsets == [7]
+    assert second.target == 1
+    assert second.shortfall == 0
+
+
+def test_audit_flags_a_window_that_borrowed_from_the_next_cadence():
+    weekly_role_map = {
+        "weeks": [
+            {
+                "week_index": 1,
+                "phase": "SPP",
+                "calendar_days": [
+                    {"weekday": weekday, "d_day": offset}
+                    for offset, weekday in PRODUCTION_SPP_WEEK_SLOTS
+                ],
+                "declared_training_days": PRODUCTION_TRAINING_DAYS,
+                "session_roles": [
+                    _role("aerobic_support_day", "conditioning", 14),
+                    _role("strength_touch_day", "strength", 12),
+                    _role("light_combat_day", "sparring", 11),
+                    _role("joint_prep", "support_insert", 10),
+                    _role("neural_primer_day", "strength", 7),
+                    _role("breathing_reset", "support_insert", 9),
+                ],
+                "intentionally_unused_days": [],
+            }
+        ]
+    }
+    findings = audit_physical_session_frequency(
+        weekly_role_map,
+        {"training_frequency": 5, "training_days": PRODUCTION_TRAINING_DAYS},
+    )
+    assert len(findings) == 1
+    assert findings[0]["cadence_window"] == [14, 9]
+    assert findings[0]["unexplained_empty_days"] == [9]
+
+
+def test_production_spp_cadence_fills_every_declared_day_end_to_end():
+    """The D-15 production regression: D-14/D-12/D-11/D-10/D-9 all physical."""
+    brief = _brief(days_until_fight=15, plan_creation_weekday="wednesday")
+    athlete = _athlete_of(brief)
+    spp_week = _week_containing(brief, 14)
+    first, second = _week_plans(spp_week, athlete)
+
+    assert first.occupied_offsets == [14, 12, 11, 10, 9]
+    # Nothing in this window is written off as "frequency already met".
+    assert not [
+        entry
+        for entry in spp_week.get("intentionally_unused_days") or []
+        if isinstance(entry, dict) and entry.get("countdown_offset") in {14, 12, 11, 10, 9}
+    ]
+    # D-7 Thursday still carries its own session in the next cadence.
+    assert second.occupied_offsets == [7]
