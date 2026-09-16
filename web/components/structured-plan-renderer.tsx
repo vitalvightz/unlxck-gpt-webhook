@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useId, useMemo, useRef, useState,
 
 import {
   classifySessionlessDay,
+  isZeroLoadSupportSession,
   cleanText,
   formatBlockLoad,
   formatCountdownLabel,
@@ -565,6 +566,7 @@ export function SessionCard({
   const nutrition = showDayContext ? cleanText(card?.nutrition_summary) : null;
   const weightCut = showDayContext ? cleanText(card?.weight_cut_warning) : null;
   const blocks = getBlocks(session);
+  const isZeroLoad = isZeroLoadSupportSession(session);
   const rehabBlocks = getRehabOrMobilityBlocks(session);
   const blocksLabel = blockCountLabel(blocks.length);
   const sessionMindset =
@@ -614,6 +616,9 @@ export function SessionCard({
           ) : sessionType ? (
             <span className="sp-tag">{titleize(sessionType)}</span>
           ) : null}
+          {/* Scheduled mental / tactical / breathing-only work renders in full,
+              but must never read as physical S&C — say so on the card itself. */}
+          {isZeroLoad ? <span className="sp-tag">Zero load</span> : null}
           {duration ? <span className="sp-tag">{duration}</span> : null}
           {completionInfo?.display.label ? (
             <span className="sp-tag sp-status-tag" data-tone={completionInfo.display.tone}>
@@ -1845,7 +1850,9 @@ function WeekOverview({
   openOngoing: boolean;
   scheduleContext?: PlanScheduleContext | null;
 }) {
-  const completion = weekCompletion(week, completionIndex);
+  // "App completed" promises app work: a coach-owned combat day carries no app
+  // card, so it is reported by the Coach/gym counter, not by this fraction.
+  const completion = weekCompletion(week, completionIndex, { includeCoachLed: false });
   const sessionSummary = weekSessionSummary(week);
   const countdownStart = formatCountdownLabel(week.countdown_start);
   const countdownEnd = formatCountdownLabel(week.countdown_end);
@@ -1868,6 +1875,10 @@ function WeekOverview({
     {
       label: "App sessions",
       value: sessionSummary.appSessions > 0 ? `${sessionSummary.appSessions}` : null,
+    },
+    {
+      label: "Support cards",
+      value: sessionSummary.supportSessions > 0 ? `${sessionSummary.supportSessions}` : null,
     },
     {
       label: "Coach/gym days",

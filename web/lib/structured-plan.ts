@@ -427,6 +427,146 @@ export function getSessions(day: StructuredDay | null | undefined): StructuredSe
   return safeArray(day?.sessions).filter(isObject);
 }
 
+// ---------------------------------------------------------------------------
+// Zero-load support: scheduled items that must RENDER but must never count as
+// physical training. One shared rule, used by the text adapter, the renderer and
+// the completion counters, so rendering fidelity and physical-session
+// accounting stay separate concerns (the planner owns the latter in
+// fightcamp/physical_session_frequency.py and this never changes it).
+// ---------------------------------------------------------------------------
+
+/** Session types that are informational by construction (mental / tactical). */
+const ZERO_LOAD_SESSION_TYPES = new Set([
+  "mindset",
+  "mental",
+  "tactical",
+  "visualisation",
+  "visualization",
+  "education",
+  "protocol",
+  "fight_day",
+]);
+
+/** Session types that always prescribe real movement; they win over wording. */
+const PHYSICAL_SESSION_TYPES = new Set([
+  "strength_power",
+  "conditioning",
+  "sparring",
+  "fight_or_match",
+  "rehab",
+  "mobility",
+  "recovery",
+]);
+
+/**
+ * Content signals for scheduled zero-load work. Deliberately semantic (what the
+ * item IS) rather than a list of drill names, so a new tactical or mental insert
+ * is classified correctly without another patch. "Technical"/"footwork"/"joint
+ * prep" are NOT here: those are physical work even when they are light.
+ */
+const ZERO_LOAD_CONTENT_RE =
+  /\b(?:visuali[sz]\w*|mental rehearsal|tactical (?:watch|focus|review|cue)|cue card|self-?review|film (?:study|review)|breathing (?:reset|work|only)|fight[- ]day protocol|no physical load|zero[- ]load)\b/i;
+
+/**
+ * True when this scheduled item is zero-load support (mental, tactical,
+ * breathing-only, fight-day protocol). Such a session still renders in full —
+ * it just contributes nothing to physical-session counts.
+ *
+ * Low-cost PHYSICAL support (joint prep, footwork walkthrough, technical shadow
+ * rhythm, walk flush) is deliberately not matched here: it is light work, not
+ * absent work, and it keeps counting as a physical session.
+ */
+export function isZeroLoadSupportSession(
+  session: StructuredSession | null | undefined,
+): boolean {
+  if (!isObject(session)) {
+    return false;
+  }
+  // `stress_class: "support"` is NOT consulted. The planner stamps it on joint
+  // prep, footwork walkthroughs and technical shadow rhythm as well as on
+  // breathing resets: it means "low cost", not "no movement", and
+  // fightcamp/physical_session_frequency.py documents that it is insufficient
+  // on its own. Zero load is decided by what the item IS, below.
+  const sessionType = cleanText(session.session_type)?.toLowerCase().replace(/[\s-]+/g, "_");
+  if (sessionType && ZERO_LOAD_SESSION_TYPES.has(sessionType)) {
+    return true;
+  }
+  // The title names what the item IS, so it is read first: a "Breathing Reset"
+  // is zero load even though the adapter infers a `recovery` session type from
+  // the same words. Block names only get a say when the session type does not
+  // already assert real movement, so a strength session whose accessory happens
+  // to mention a cue card is never demoted.
+  if (ZERO_LOAD_CONTENT_RE.test(cleanText(session.title) || "")) {
+    return true;
+  }
+  if (sessionType && PHYSICAL_SESSION_TYPES.has(sessionType)) {
+    return false;
+  }
+  const blockNames = getBlocks(session)
+    .map((block) => cleanText(block.display_name) || "")
+    .join(" ");
+  return ZERO_LOAD_CONTENT_RE.test(blockNames);
+}
+
+/** Sessions on this day that count toward physical training frequency. */
+export function getPhysicalSessions(
+  day: StructuredDay | null | undefined,
+): StructuredSession[] {
+  return getSessions(day).filter((session) => !isZeroLoadSupportSession(session));
+}
+
+/** Coach-owned contact kinds that are real physical work the athlete performs. */
+const COACH_LED_PHYSICAL_KINDS = new Set<SessionlessDayKind>([
+  "coach_led",
+  "sparring",
+  "technical",
+  "light_combat",
+]);
+
+/**
+ * True when this day's physical training is coach-owned and the app prescribes
+ * no physical card of its own: declared hard sparring, and the technical /
+ * light-combat days a downgrade produces.
+ *
+ * The athlete trains physically on such a day, so it is a physical training day
+ * even though the app prescribes nothing for it.
+ *
+ * Two things deliberately do NOT disqualify it:
+ *
+ *   * zero-load support sharing the day. Production ships "Technical-only
+ *     combat + Tactical Focus" on D-11 and "Technical-only combat + Tactical
+ *     Cue Card" on D-4; those cards are sessions, but they are not physical
+ *     work, so the combat still has to count. Only an app PHYSICAL session on
+ *     the same day removes the addition — that day is already counted, and
+ *     counting the contact too would double it.
+ *   * where the contact is recorded. A day with no app card names it in
+ *     `today_card.headline`; a day that also carries app work names it in
+ *     `today_card.coach_led_contact` (the deterministic field
+ *     `reconcile_coach_led_sparring_days` writes), and the day classifier reads
+ *     only the headline. Both are consulted here.
+ *
+ * Fight day is excluded: D-0 is the competition, not a training session.
+ */
+export function isCoachLedPhysicalTrainingDay(
+  day: StructuredDay | null | undefined,
+): boolean {
+  if (!isObject(day) || getPhysicalSessions(day).length > 0) {
+    return false;
+  }
+  const countdown = cleanText(day.countdown_label)?.replace(/\s+/g, "").toUpperCase();
+  const dayType = cleanText(day.day_type)?.toLowerCase();
+  if (countdown === "D-0" || countdown === "D0" || dayType === "competition") {
+    return false;
+  }
+  const contact = getCoachLedContactView(day);
+  const kind = contact
+    ? contact.kind
+    : getSessions(day).length === 0
+      ? classifySessionlessDay(day).kind
+      : null;
+  return kind !== null && COACH_LED_PHYSICAL_KINDS.has(kind);
+}
+
 /** Complete planner-owned microdose for this host day; malformed legacy data is hidden. */
 export function getPriorityMicrodose(day: StructuredDay | null | undefined) {
   const raw = day?.priority_microdose;

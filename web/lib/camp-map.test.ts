@@ -157,6 +157,7 @@ test("weekSessionSummary separates app sessions from coach-led days", () => {
   assert.deepEqual(weekSessionSummary(week), {
     trainingDays: 4,
     appSessions: 2,
+    supportSessions: 0,
     coachLedSessions: 3,
   });
 });
