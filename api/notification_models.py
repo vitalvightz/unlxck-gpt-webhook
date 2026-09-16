@@ -86,4 +86,4 @@ class PushSettingsResponse(BaseModel):
     enabled: bool
     public_key: str = ""
     preferences: NotificationPreferences = Field(default_factory=NotificationPreferences)
-    subscription_endpoints: list[str] = Field(default_factory=list)
+    subscription_endpoints: list[str] | None = None
