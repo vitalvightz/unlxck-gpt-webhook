@@ -344,17 +344,35 @@ def _priority_microdoses_by_dday(role_map: dict[str, Any]) -> dict[int, dict[str
 
 
 def _day_already_contains_microdose(day: dict[str, Any], dose: dict[str, str]) -> bool:
-    """Avoid a second card when the deterministic fallback made it a block."""
-    wanted_name = dose["name"].casefold()
+    """Return whether the planner-owned exposure already has a session block.
+
+    Structured conversion may use the exercise name on its own or prefix the
+    deterministic ``<goal> microdose -`` label.  Compare those two canonical
+    forms after normalising display-only case, spacing and dash differences.
+    A block id alone is not enough: a different priority exposure on the same
+    day must not hide this one's fallback card.
+    """
+
+    def _normalise(value: Any) -> str:
+        return " ".join(
+            re.sub(r"[\s\-_–—]+", " ", str(value or "").casefold()).split()
+        )
+
+    wanted_name = _normalise(dose["name"])
+    goal = _normalise(dose.get("goal"))
+    labelled_names = {
+        wanted_name,
+        _normalise(f"{goal} microdose - {dose['name']}") if goal else "",
+        _normalise(f"priority microdose - {dose['name']}"),
+    }
     for session in day.get("sessions") or []:
         if not isinstance(session, dict):
             continue
         for block in session.get("blocks") or []:
             if not isinstance(block, dict):
                 continue
-            block_id = str(block.get("block_id") or "").strip().casefold()
-            display_name = str(block.get("display_name") or "").strip().casefold()
-            if block_id.endswith("-microdose") or display_name == wanted_name:
+            display_name = _normalise(block.get("display_name"))
+            if display_name and display_name in labelled_names:
                 return True
     return False
 
@@ -367,6 +385,39 @@ def _attach_priority_microdose(
     else:
         day.pop("priority_microdose", None)
     return day
+
+
+def reconcile_priority_microdose_representations(
+    structured_plan: Any, planning_brief: Any
+) -> Any:
+    """Enforce one final athlete-facing representation per priority microdose.
+
+    Unlike the full calendar rebuild, this can safely run after any composer or
+    repair that adds session blocks.  It only removes a redundant day card (or
+    restores the planner-owned fallback when no equivalent block exists).
+    """
+    if not isinstance(structured_plan, dict) or not isinstance(planning_brief, dict):
+        return structured_plan
+    role_map = planning_brief.get("weekly_role_map")
+    if not isinstance(role_map, dict):
+        return structured_plan
+    doses = _priority_microdoses_by_dday(role_map)
+    changed = False
+    reconciled = copy.deepcopy(structured_plan)
+    for week in reconciled.get("weeks") or []:
+        if not isinstance(week, dict):
+            continue
+        for day in week.get("days") or []:
+            if not isinstance(day, dict):
+                continue
+            d_day = _parse_dday(day.get("countdown_label"))
+            if d_day not in doses:
+                continue
+            before = day.get("priority_microdose")
+            _attach_priority_microdose(day, doses[d_day])
+            if day.get("priority_microdose") != before:
+                changed = True
+    return reconciled if changed else structured_plan
 
 
 def _phase_for_dday(

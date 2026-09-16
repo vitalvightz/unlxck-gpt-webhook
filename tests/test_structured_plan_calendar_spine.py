@@ -375,6 +375,79 @@ def test_existing_microdose_block_is_not_projected_as_a_duplicate_day_card():
     assert host["sessions"][0]["blocks"][0]["display_name"] == "Med-Ball Rotational Throw"
 
 
+def test_labelled_microdose_block_is_the_only_athlete_facing_representation():
+    """Normal Stage 2 may retain the planner's useful microdose label."""
+    day = _session_day(26)
+    day["sessions"][0]["blocks"] = [{
+        "block_id": "model-block-1",
+        "display_name": "  POWER   MICRODOSE — med-ball rotational throw  ",
+    }]
+
+    out = reconcile_calendar_spine(_plan([_week([day])]), _brief_with_microdose())
+    host = next(d for w in out["weeks"] for d in w["days"] if d["countdown_label"] == "D-26")
+
+    assert "priority_microdose" not in host
+    assert len(host["sessions"][0]["blocks"]) == 1
+
+
+def test_reconcile_after_a_late_fallback_block_removes_the_earlier_card():
+    """Reproduce fallback ordering: spine first, session composition second."""
+    brief = _brief_with_microdose()
+    once = reconcile_calendar_spine(
+        _plan([_week([_coach_only_day(26, headline="Aerobic Support")])]), brief
+    )
+    host = next(d for w in once["weeks"] for d in w["days"] if d["countdown_label"] == "D-26")
+    assert "priority_microdose" in host
+    host["sessions"] = [{
+        **_session(26, title="Aerobic Support"),
+        "blocks": [{
+            "block_id": "deterministic-26-conditioning-microdose",
+            "display_name": "Power microdose - Med-Ball Rotational Throw",
+        }],
+    }]
+
+    twice = reconcile_calendar_spine(once, brief)
+    final = next(d for w in twice["weeks"] for d in w["days"] if d["countdown_label"] == "D-26")
+    assert "priority_microdose" not in final
+    assert len(final["sessions"][0]["blocks"]) == 1
+    assert reconcile_calendar_spine(twice, brief) is twice
+
+
+def test_speed_block_dedupes_without_suppressing_an_unrelated_exercise():
+    brief = _brief_with_microdose()
+    role = brief["weekly_role_map"]["weeks"][0]["session_roles"][0]
+    role["priority_microdose"] = {
+        "goal": "speed",
+        "name": "Reactive Start Burst",
+        "prescription": "3 x 4 sec @ RPE 7, full rest",
+    }
+    day = _session_day(26)
+    day["sessions"][0]["blocks"] = [
+        {"block_id": "ordinary", "display_name": "Med-Ball Rotational Throw"},
+        {"block_id": "speed-touch", "display_name": "Speed microdose - Reactive Start Burst"},
+    ]
+
+    out = reconcile_calendar_spine(_plan([_week([day])]), brief)
+    host = next(d for w in out["weeks"] for d in w["days"] if d["countdown_label"] == "D-26")
+    assert "priority_microdose" not in host
+    assert [b["display_name"] for b in host["sessions"][0]["blocks"]] == [
+        "Med-Ball Rotational Throw",
+        "Speed microdose - Reactive Start Burst",
+    ]
+
+
+def test_a_different_microdose_block_does_not_hide_the_required_fallback_card():
+    day = _session_day(26)
+    day["sessions"][0]["blocks"] = [{
+        "block_id": "some-other-microdose",
+        "display_name": "Speed microdose - Reactive Start Burst",
+    }]
+
+    out = reconcile_calendar_spine(_plan([_week([day])]), _brief_with_microdose())
+    host = next(d for w in out["weeks"] for d in w["days"] if d["countdown_label"] == "D-26")
+    assert host["priority_microdose"]["name"] == "Med-Ball Rotational Throw"
+
+
 # ── Issue 2: continuity alone is not enough ───────────────────────────────────
 
 def test_dense_continuous_mega_week_is_still_regrouped_and_rephased():
