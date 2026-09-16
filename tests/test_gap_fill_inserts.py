@@ -350,7 +350,14 @@ def test_back_loaded_short_camp_fills_its_opening_days():
         _athlete(days_until_fight=6),
     )
 
-    leading = [insert for insert in _insert_roles(sequence) if insert["countdown_offset"] > 3]
+    # The mandatory Fight Visualisation countdown protocol is not a gap filler:
+    # it owns its D-day unconditionally, so it is excluded from the gap-fill count.
+    leading = [
+        insert
+        for insert in _insert_roles(sequence)
+        if insert["countdown_offset"] > 3
+        and insert["role_key"] != "fight_visualization"
+    ]
     assert len(leading) == 1
     # Zero/low cost only — the taper must not gain physical work near the fight.
     assert leading[0]["role_key"] in ZERO_COST_INSERTS | LOW_COST_RECOVERY_INSERTS | PHYSICAL_INSERTS
@@ -395,9 +402,17 @@ def test_only_mandatory_watch_may_repeat_within_seven_days():
                 abs(insert["countdown_offset"] - other["countdown_offset"]) <= 7
                 and insert["role_key"] == other["role_key"]
             ):
-                assert insert["role_key"] == "tactical_watch"
-                assert insert.get("mandatory_tactical_watch") is True
-                assert other.get("mandatory_tactical_watch") is True
+                # Only mandatory roles may repeat inside seven days: the
+                # Tactical Watch (one per weekly segment) and the Fight
+                # Visualisation countdown protocol (D-7/5/3/1/0).
+                assert insert["role_key"] in {"tactical_watch", "fight_visualization"}
+                flag = (
+                    "mandatory_tactical_watch"
+                    if insert["role_key"] == "tactical_watch"
+                    else "mandatory_fight_visualization"
+                )
+                assert insert.get(flag) is True
+                assert other.get(flag) is True
 
 
 def test_tactical_category_can_repeat_with_different_role_key():
@@ -607,10 +622,14 @@ def test_high_fatigue_blocks_physical_inserts():
     assert insert["role_key"] not in PHYSICAL_INSERTS
 
 
-def test_d0_never_gets_insert():
+def test_d0_never_gets_an_ordinary_gap_fill_insert():
     sequence = apply_gap_fill_inserts([_session(0, "fight_week_freshness_day")], _athlete(days_until_fight=0))
 
-    assert _insert_roles(sequence) == []
+    # The mandatory D-0 Fight Visualisation is countdown protocol, not a gap
+    # filler, and is placed even on a D-0-only plan. No ordinary insert may
+    # land on fight day.
+    inserts = _insert_roles(sequence)
+    assert [insert["role_key"] for insert in inserts] == ["fight_visualization"]
 
 
 def test_hard_sparring_day_blocks_physical_inserts():
@@ -655,7 +674,13 @@ def test_existing_d1_tactical_watch_is_promoted_without_extra_support():
     )
 
     d1_roles = [role for role in sequence if role.get("countdown_offset") == 1]
-    support_roles = [role for role in d1_roles if role.get("category") == "support_insert"]
+    support_roles = [
+        role
+        for role in d1_roles
+        if role.get("category") == "support_insert"
+        # The mandatory D-1 Fight Visualisation is protocol, not extra support.
+        and role.get("role_key") != "fight_visualization"
+    ]
     assert len(support_roles) == 1
     assert support_roles[0]["role_key"] == "tactical_watch"
     assert support_roles[0]["mandatory_tactical_watch"] is True

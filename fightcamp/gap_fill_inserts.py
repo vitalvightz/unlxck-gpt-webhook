@@ -31,6 +31,14 @@ from .stage2_payload_late_fight import (
     is_low_cost_coexistable_filler,
     resolve_late_fight_contacts,
 )
+from .fight_visualization_library import (
+    ATHLETE_FACING_LABEL as FIGHT_VISUALIZATION_LABEL,
+    FIGHT_VISUALIZATION_COUNTDOWN_DAYS,
+    ROLE_KEY as FIGHT_VISUALIZATION_ROLE_KEY,
+    build_visualization_display_text,
+    select_for_athlete,
+    visualization_metadata,
+)
 from .tactical_watch_library import (
     build_watch_display_text,
     extract_tactical_style,
@@ -41,6 +49,7 @@ from .tactical_watch_library import (
 
 ZERO_COST_INSERTS = {
     "tactical_watch",
+    "fight_visualization",
     "tactical_cue_card",
     "self_review",
     "neural_visualization",
@@ -241,6 +250,9 @@ _FILLER_TARGET_CAPABILITY: dict[str, dict[str, float]] = {
     "sleep_downshift": {"recovery": 0.7},
     "walk_flush": {"recovery": 0.55},
     "neural_visualization": {"speed": 0.2},
+    # Mental rehearsal only: it trains no physical capability, so it claims
+    # none of the athlete's goal-coverage ledger.
+    "fight_visualization": {},
     # Normal-camp's established banked coordination role uses this same ledger.
     "coordination_support": {"coordination": 1.0},
 }
@@ -277,6 +289,15 @@ _INSERT_META = {
         "insert_category": "tactical",
         "repeat_allowed": False,
         "display_text": "Review the last clean technical work. Write three cues only: one entry, one defensive reset, one composure cue.",
+    },
+    "fight_visualization": {
+        "label": FIGHT_VISUALIZATION_LABEL,
+        # Widest span in the bank (D-7). The selected entry's own duration
+        # overwrites this when the role is stamped.
+        "duration_min": [1, 8],
+        "rpe_max": 1,
+        "insert_category": "mental",
+        "repeat_allowed": True,
     },
     "neural_visualization": {
         "label": "Neural Visualization",
@@ -828,7 +849,9 @@ def _allowed_inserts(
     if insert_offset == 0:
         return set()
 
-    allowed = set(_ALL_INSERTS)
+    # Fight Visualisation is placed by its own mandatory countdown protocol, not
+    # by gap-fill scoring: it must never be chosen to fill a hole in the calendar.
+    allowed = set(_ALL_INSERTS) - {FIGHT_VISUALIZATION_ROLE_KEY}
     injury_state = classify_injury_state(athlete_model)
 
     if _has_active_weight_cut(athlete_model):
@@ -963,6 +986,92 @@ def _apply_bank_watch(
     role["display_text"] = build_watch_display_text(watch)
     role["duration_min"] = [watch.duration_minutes, watch.duration_minutes]
     used_watch_keys.add(watch.key)
+
+def _apply_bank_visualization(
+    role: dict[str, Any], athlete_model: dict[str, Any], countdown_day: int
+) -> bool:
+    """Stamp the selected Fight Visualisation from the JSON bank onto ``role``.
+
+    Every athlete-facing string comes from ``data/fight_visualization_bank.json``;
+    this only formats what the bank already holds. Returns False when the bank
+    has nothing for this countdown day, leaving ``role`` untouched.
+    """
+    entry = select_for_athlete(athlete_model, countdown_day)
+    if entry is None:
+        return False
+    metadata = visualization_metadata(entry)
+    governance = dict(metadata.pop("governance", {}) or {})
+    role.update(metadata)
+    role["governance"] = {**dict(role.get("governance") or {}), **governance}
+    role["display_text"] = build_visualization_display_text(entry)
+    role["duration_min"] = list(entry.duration_min)
+    role["athlete_facing_label"] = FIGHT_VISUALIZATION_LABEL
+    role["mandatory_fight_visualization"] = True
+    role["stress_class"] = "support"
+    return True
+
+
+def _ensure_fight_visualization_days(
+    session_sequence: list[dict[str, Any]],
+    athlete_model: dict[str, Any],
+    countdown_map: dict[str, str],
+    days_until_fight: int,
+    usage_ledger: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Place the mandatory Fight Visualisation protocol on D-7/5/3/1/0.
+
+    These are countdown interventions, not gap fillers: they are not scored, not
+    budgeted and not subject to day-eligibility, calendar legality or training-day
+    checks. They carry zero physical load and coexist with whatever the day already
+    holds -- hard sparring, technical combat, strength, the fight-day protocol, or
+    nothing at all. The only condition is that the countdown day is inside the
+    plan's own window.
+    """
+    if not _is_fight_sport(athlete_model):
+        return []
+
+    additions: list[dict[str, Any]] = []
+    for countdown_day in FIGHT_VISUALIZATION_COUNTDOWN_DAYS:
+        if countdown_day > days_until_fight:
+            continue
+        existing = next(
+            (
+                role
+                for role in session_sequence
+                if str(role.get("role_key") or "") == FIGHT_VISUALIZATION_ROLE_KEY
+                and _role_offset(role) == countdown_day
+            ),
+            None,
+        )
+        weekday = str(countdown_map.get(f"D-{countdown_day}") or "").strip() or None
+        if existing is not None:
+            # Always restamp, never trust what is already on the role. On a
+            # regeneration the athlete's sport, tactical style or countdown may
+            # have changed, and a role that merely *has* a bank key would
+            # otherwise carry the previous camp's content forward.
+            _apply_bank_visualization(existing, athlete_model, countdown_day)
+            if weekday:
+                existing["real_weekday"] = weekday
+                existing["scheduled_day_hint"] = weekday
+                existing["countdown_display_label"] = (
+                    f"D-{countdown_day} ({weekday.title()})"
+                )
+            continue
+        role = _build_insert_role(
+            FIGHT_VISUALIZATION_ROLE_KEY,
+            athlete_model,
+            countdown_day,
+            weekday,
+            usage_ledger=usage_ledger,
+        )
+        if not role.get("fight_visualization_key"):
+            # No bank content resolved for this athlete/day: never ship an
+            # empty governed card.
+            continue
+        additions.append(role)
+        _record_insert_usage(usage_ledger, FIGHT_VISUALIZATION_ROLE_KEY, countdown_day)
+    return additions
+
 
 def _time_band_preferences(insert_offset: int) -> list[str]:
     if insert_offset == 1:
@@ -1216,7 +1325,11 @@ def _build_insert_role(
         label = "Shadowboxing Aerobic Flow"
     # tactical_watch carries no static copy: its athlete-facing text is stamped
     # from the JSON drill bank below.
-    display_text = "" if role_key == "tactical_watch" else str(meta["display_text"])
+    display_text = (
+        ""
+        if role_key in {"tactical_watch", FIGHT_VISUALIZATION_ROLE_KEY}
+        else str(meta["display_text"])
+    )
     role: dict[str, Any] = {
         "session_index": None,
         "category": "support_insert",
@@ -1252,6 +1365,8 @@ def _build_insert_role(
             phase=_watch_phase_for_offset(athlete_model, insert_offset),
             used_watch_keys=used_watch_keys,
         )
+    if role_key == FIGHT_VISUALIZATION_ROLE_KEY:
+        _apply_bank_visualization(role, athlete_model, insert_offset)
     if weekday:
         role["real_weekday"] = weekday
         role["countdown_display_label"] = f"D-{insert_offset} ({weekday.title()})"
@@ -1714,6 +1829,58 @@ def _ensure_weekly_tactical_watches(
     return additions
 
 
+def _offsets_owning(sequence: list[dict[str, Any]], role_key: str) -> set[int]:
+    return {
+        offset
+        for role in sequence
+        if str(role.get("role_key") or "") == role_key
+        and (offset := _role_offset(role)) is not None
+    }
+
+
+def _finalize_sequence(combined: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Apply same-day de-duplication, then order and index the sequence.
+
+    Shared by both exits of ``apply_gap_fill_inserts`` so a plan that returns
+    early (no sessions, or no positive countdown offset) still gets the same
+    de-duplication and indexing as a fully gap-filled one.
+    """
+    # A day carrying the mandatory Tactical Watch must not also keep a redundant
+    # gap-fill tactical cue card / self review. Single-day countdown windows (for
+    # example D-1) can only place both on the one available day, so this pass
+    # drops the lower-priority tactical insert there. Tactical work on other days
+    # is untouched.
+    watch_offsets = _offsets_owning(combined, "tactical_watch")
+    redundant_tactical = TACTICAL_INSERTS - {"tactical_watch"}
+    combined = [
+        role
+        for role in combined
+        if not (
+            str(role.get("role_key") or "") in redundant_tactical
+            and _role_offset(role) in watch_offsets
+        )
+    ]
+
+    # The governed D-x Fight Visualisation wins over the generic mental filler.
+    # ``neural_visualization`` stays available on every other day.
+    visualization_offsets = _offsets_owning(combined, FIGHT_VISUALIZATION_ROLE_KEY)
+    combined = [
+        role
+        for role in combined
+        if not (
+            str(role.get("role_key") or "") == "neural_visualization"
+            and _role_offset(role) in visualization_offsets
+        )
+    ]
+
+    final_sequence = sorted(
+        combined, key=lambda role: int(_role_offset(role) or 0), reverse=True
+    )
+    for index, role in enumerate(final_sequence, start=1):
+        role["session_index"] = index
+    return final_sequence
+
+
 def apply_gap_fill_inserts(
     session_sequence: list[dict[str, Any]],
     athlete_model: dict[str, Any],
@@ -1725,23 +1892,43 @@ def apply_gap_fill_inserts(
         key=lambda role: int(_role_offset(role) or 0),
         reverse=True,
     )
-    if not ordered:
-        return ordered
-
     offsets = [offset for role in ordered if (offset := _role_offset(role)) is not None and offset > 0]
-    if not offsets:
-        return ordered
 
     raw_days = athlete_model.get("days_until_fight")
+    days_until_fight: int | None = None
     if raw_days is not None and str(raw_days).strip() != "":
         try:
             days_until_fight = int(raw_days)
         except (TypeError, ValueError):
-            days_until_fight = max(offsets)
-    else:
-        days_until_fight = max(offsets)
+            days_until_fight = None
+    if days_until_fight is None:
+        days_until_fight = max(offsets) if offsets else None
+    if days_until_fight is None:
+        # Nothing anchors a countdown, so neither the protocol nor the gap fill
+        # has a day to place anything on.
+        return ordered
+
     creation_weekday = _resolve_plan_creation_weekday(days_until_fight, athlete_model)
     countdown_map = _countdown_weekday_map(creation_weekday, days_until_fight)
+    usage_ledger = _usage_ledger_from_sequence(ordered)
+
+    # The mandatory countdown protocol runs BEFORE the ordinary gap-fill early
+    # returns. It is not a filler: "never omitted" has to hold for a plan whose
+    # Stage 1 sequence is empty or carries no positive countdown offset (a
+    # D-0-only plan), which is exactly where the gap fill has nothing to do.
+    mandatory_inserts = _ensure_fight_visualization_days(
+        ordered,
+        athlete_model,
+        countdown_map,
+        days_until_fight,
+        usage_ledger,
+    )
+
+    # Now the ordinary gap fill may bail out: it needs real sessions with real
+    # positive offsets to find gaps between.
+    if not ordered or not offsets:
+        return _finalize_sequence(ordered + mandatory_inserts)
+
     training_days = clean_list(athlete_model.get("training_days", []))
     # Resolved contact truth (hard vs technical) is OWNED by the late-fight
     # module: gap-fill consumes the resolver's occurrences rather than deriving
@@ -1784,7 +1971,7 @@ def apply_gap_fill_inserts(
         eligible_offsets=eligible_gap_offsets,
     )
 
-    inserts: list[dict[str, Any]] = []
+    inserts: list[dict[str, Any]] = list(mandatory_inserts)
     physical_segment_counts: dict[int, int] = {}
     for role in ordered:
         role_key = str(role.get("role_key") or "")
@@ -1793,7 +1980,6 @@ def apply_gap_fill_inserts(
             segment = _segment_for_offset(offset)
             physical_segment_counts[segment] = physical_segment_counts.get(segment, 0) + 1
 
-    usage_ledger = _usage_ledger_from_sequence(ordered)
     tactical_present = _has_tactical_support(ordered)
     # Never stack two tactical support inserts on the SAME day: the mandatory
     # Tactical Watch already occupies its day, so the gap-fill must not add a
@@ -1907,31 +2093,19 @@ def apply_gap_fill_inserts(
             usage_ledger,
         )
     )
-    combined = ordered + inserts
-    # Same-day tactical de-dup: a day carrying the mandatory Tactical Watch must
-    # not also keep a redundant gap-fill tactical cue card / self review. Single-day
-    # countdown windows (e.g. D-1) can only place both on the one available day, so
-    # this final pass drops the lower-priority tactical insert there. Tactical work
-    # on other days is untouched.
-    watch_offsets = {
-        offset
-        for role in combined
-        if str(role.get("role_key") or "") == "tactical_watch"
-        and (offset := _role_offset(role)) is not None
-    }
-    redundant_tactical = TACTICAL_INSERTS - {"tactical_watch"}
-    combined = [
-        role
-        for role in combined
-        if not (
-            str(role.get("role_key") or "") in redundant_tactical
-            and _role_offset(role) in watch_offsets
+    # Re-run the protocol over the finished sequence. It already placed every
+    # countdown day above; this catches a Stage 1 sequence that carried its own
+    # Fight Visualisation role and restamps it from the current athlete.
+    inserts.extend(
+        _ensure_fight_visualization_days(
+            ordered + inserts,
+            athlete_model,
+            countdown_map,
+            days_until_fight,
+            usage_ledger,
         )
-    ]
-    final_sequence = sorted(combined, key=lambda role: int(_role_offset(role) or 0), reverse=True)
-    for index, role in enumerate(final_sequence, start=1):
-        role["session_index"] = index
-    return final_sequence
+    )
+    return _finalize_sequence(ordered + inserts)
 
 
 # --- Physical-occupancy completion -------------------------------------------

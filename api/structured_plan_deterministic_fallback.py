@@ -45,6 +45,7 @@ _ROLES_OWNED_ELSEWHERE = frozenset(
         "hard_sparring_day",  # reconcile_coach_led_sparring_days
         "light_combat_day",  # reconcile_coach_led_sparring_days
         "tactical_watch",  # merge_locked_structured_content
+        "fight_visualization",  # merge_locked_structured_content
     }
 )
 

@@ -57,6 +57,7 @@ _DETERMINISTIC_GOVERNANCE_AUTHORITIES = frozenset(
         "camp_week_support_insert",
         "coordination_support_library",
         "tactical_watch_library",
+        "fight_visualization_library",
         "fight_day_protocol_lock",
     }
 )

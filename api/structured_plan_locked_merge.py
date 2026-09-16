@@ -1,10 +1,16 @@
-"""Deterministically render governed Tactical Watch roles in structured cards.
+"""Deterministically render governed banked roles in structured cards.
 
-Stage 1 owns a banked Tactical Watch once its role governance marks the selected
+Stage 1 owns a banked prescription once its role governance marks the selected
 drill as locked. Structured conversion may enrich the surrounding card, but it
 must not omit, rename, or paraphrase those bank-owned fields. The authoritative
 countdown day must already exist; within that day this module repairs, moves, or
-creates the Tactical Watch session and block without another model call.
+creates the governed session and block without another model call.
+
+Two banked systems share this pathway (see ``_LOCKED_CONTENT_SPECS``): the
+Tactical Watch and the Fight Visualisation countdown protocol. They differ only
+in which role field carries the bank object, the fixed session title, and how the
+bank record's own fields map onto the card's block -- so the repair, move and
+create logic below is written once and driven by that spec.
 """
 from __future__ import annotations
 
@@ -16,7 +22,43 @@ from typing import Any, Iterable, Mapping
 from .structured_plan_sparring_reconcile import reconcile_coach_led_sparring_days
 
 
-_TACTICAL_WATCH_SESSION_TITLE = "Tactical Focus"
+@dataclass(frozen=True)
+class LockedContentSpec:
+    """How one banked system projects onto a structured card."""
+
+    content_field: str
+    session_title: str
+    session_slug: str
+    session_type: str
+    block_type: str
+
+
+# Order is precedence: a role carrying more than one bank object (never expected)
+# resolves to the first match, deterministically.
+_LOCKED_CONTENT_SPECS = (
+    LockedContentSpec(
+        content_field="tactical_watch",
+        session_title="Tactical Focus",
+        session_slug="tactical-watch",
+        session_type="skill",
+        block_type="mindset",
+    ),
+    LockedContentSpec(
+        content_field="fight_visualization",
+        session_title="Fight Visualisation",
+        session_slug="fight-visualization",
+        session_type="skill",
+        block_type="mindset",
+    ),
+)
+
+
+def _spec_for_role(role: Mapping[str, Any]) -> tuple[LockedContentSpec, Mapping[str, Any]] | None:
+    for spec in _LOCKED_CONTENT_SPECS:
+        content = role.get(spec.content_field)
+        if isinstance(content, Mapping):
+            return spec, content
+    return None
 
 
 @dataclass(frozen=True)
@@ -90,25 +132,43 @@ def _stable_id(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-") or "watch"
 
 
-def _mindset_anchor(watch: Mapping[str, Any]) -> dict[str, Any]:
-    mindset = watch.get("mindset")
+def _duration(content: Mapping[str, Any]) -> dict[str, Any]:
+    """Normalise the bank's duration onto the card's single-value shape.
+
+    The Tactical Watch bank stores one integer; the Fight Visualisation bank
+    stores a ``[min, max]`` range. A card shows one number, so a range renders
+    at its upper bound -- the dose the athlete plans the day around.
+    """
+    raw = content.get("duration_min")
+    if isinstance(raw, (list, tuple)) and raw:
+        value = raw[-1]
+    else:
+        value = raw
+    return {"value": value if isinstance(value, int) else 1, "unit": "minutes"}
+
+
+def _mindset_anchor(content: Mapping[str, Any]) -> dict[str, Any]:
+    mindset = content.get("mindset")
     mindset = mindset if isinstance(mindset, Mapping) else {}
+    # The Fight Visualisation bank carries a single trusted ``cue`` instead of a
+    # four-part mindset block, so it supplies every slot it legitimately can.
+    cue = str(content.get("cue") or "").strip()
     return {
-        "intent": str(mindset.get("intent") or "Review the tactical plan."),
-        "focus_cue": str(mindset.get("focus") or "Stay with the planned sequence."),
-        "reset_cue": str(mindset.get("reset") or "Reset and return to the plan."),
-        "confidence_anchor": mindset.get("anchor"),
+        "intent": str(mindset.get("intent") or cue or "Review the tactical plan."),
+        "focus_cue": str(mindset.get("focus") or cue or "Stay with the planned sequence."),
+        "reset_cue": str(mindset.get("reset") or cue or "Reset and return to the plan."),
+        "confidence_anchor": mindset.get("anchor") or (cue or None),
     }
 
 
 def _new_watch_block(
-    *, day_label: str, name: str, watch: Mapping[str, Any]
+    *, day_label: str, name: str, watch: Mapping[str, Any], spec: LockedContentSpec
 ) -> dict[str, Any]:
     return {
         "block_id": f"locked-{_stable_id(day_label)}-{_stable_id(name)}",
-        "block_type": "mindset",
+        "block_type": spec.block_type,
         "display_name": name,
-        "duration": {"value": watch.get("duration_min") or 1, "unit": "minutes"},
+        "duration": _duration(watch),
         "coaching_cues": [],
         "regression_options": [],
         "substitutions": [],
@@ -121,10 +181,11 @@ def _new_watch_session(
     title: str,
     name: str,
     watch: Mapping[str, Any],
+    spec: LockedContentSpec,
 ) -> dict[str, Any]:
     return {
-        "session_id": f"locked-{_stable_id(day_label)}-tactical-watch",
-        "session_type": "skill",
+        "session_id": f"locked-{_stable_id(day_label)}-{spec.session_slug}",
+        "session_type": spec.session_type,
         "title": title,
         "objective": str(watch.get("why") or "Review the tactical plan."),
         "completion_status": "not_started",
@@ -173,16 +234,18 @@ def merge_locked_structured_content(
     for role in _locked_roles(planning_brief):
         governance = role.get("governance")
         governance = governance if isinstance(governance, Mapping) else {}
-        watch = role.get("tactical_watch")
-        watch = watch if isinstance(watch, Mapping) else None
+        resolved = _spec_for_role(role)
+        spec, watch = resolved if resolved is not None else (None, None)
         name = str(
             governance.get("selected_drill_name")
             or (watch or {}).get("name")
             or "locked drill"
         )
         day_label = _role_day(role)
-        if watch is None:
-            result.unresolved.append(LockedMergeIssue(day_label, name, "missing tactical_watch metadata"))
+        if watch is None or spec is None:
+            result.unresolved.append(
+                LockedMergeIssue(day_label, name, "missing locked bank metadata")
+            )
             continue
         if day_label is None:
             result.unresolved.append(LockedMergeIssue(None, name, "missing authoritative countdown label"))
@@ -204,7 +267,7 @@ def merge_locked_structured_content(
         ]
         # This is fixed product copy. The selected drill is the card's block,
         # never an alternate session title supplied by structured conversion.
-        display_title = _TACTICAL_WATCH_SESSION_TITLE
+        display_title = spec.session_title
         session_title = _normalise(display_title)
         watch_sessions = [
             session
@@ -216,7 +279,7 @@ def merge_locked_structured_content(
                 LockedMergeIssue(
                     day_label,
                     name,
-                    "Tactical Watch session not uniquely resolved",
+                    f"{spec.session_title} session not uniquely resolved",
                 )
             )
             continue
@@ -232,7 +295,7 @@ def merge_locked_structured_content(
                 LockedMergeIssue(
                     day_label,
                     name,
-                    "named Tactical Watch session not uniquely resolved",
+                    f"named {spec.session_title} session not uniquely resolved",
                 )
             )
             continue
@@ -271,6 +334,7 @@ def merge_locked_structured_content(
                 title=display_title,
                 name=name,
                 watch=watch,
+                spec=spec,
             )
             matching_days[0].setdefault("sessions", []).append(session)
             sessions.append(session)
@@ -280,6 +344,7 @@ def merge_locked_structured_content(
                 title=display_title,
                 name=name,
                 watch=watch,
+                spec=spec,
             )
             matching_days[0].setdefault("sessions", []).append(session)
             sessions.append(session)
@@ -293,7 +358,9 @@ def merge_locked_structured_content(
             # A generic mindset block is not proof that it represents this
             # governed drill. Preserve ambiguous/unrelated content and append
             # the authoritative block instead of destructively repurposing it.
-            block = _new_watch_block(day_label=day_label, name=name, watch=watch)
+            block = _new_watch_block(
+                day_label=day_label, name=name, watch=watch, spec=spec
+            )
             session.setdefault("blocks", []).append(block)
 
         mindset = watch.get("mindset")
@@ -302,15 +369,27 @@ def merge_locked_structured_content(
         session["title"] = display_title
         session["objective"] = watch.get("why")
         session["mindset_anchor"] = anchor
+        # ``coaching_cues`` carries the bank's instructions. The Fight
+        # Visualisation bank's trusted ``cue`` (and its optional immediate
+        # pre-bout version) are part of the prescription, so they ride along
+        # rather than being dropped on the floor.
+        coaching_cues = [str(value) for value in watch.get("instructions") or []]
+        for extra_field, prefix in (("cue", "Cue"), ("pre_bout", "Pre-bout")):
+            extra = str(watch.get(extra_field) or "").strip()
+            if extra:
+                coaching_cues.append(f"{prefix}: {extra}")
         block.update(
             {
                 "display_name": watch.get("name") or governance.get("selected_drill_name"),
-                "duration": {"value": watch.get("duration_min"), "unit": "minutes"},
-                "coaching_cues": list(watch.get("instructions") or []),
-                "purpose": mindset.get("context"),
-                "progression_rule": watch.get("progress"),
+                "duration": _duration(watch),
+                "coaching_cues": coaching_cues,
+                "purpose": mindset.get("context") or watch.get("why"),
             }
         )
+        # Only the Tactical Watch bank carries a progression rule. Writing a
+        # null for a system that has no such concept would just blank a field.
+        if watch.get("progress"):
+            block["progression_rule"] = watch["progress"]
 
         if (
             watch_sessions

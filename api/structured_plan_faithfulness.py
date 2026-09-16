@@ -474,7 +474,7 @@ def _locked_content_violations(
         )
         if drill_source_issue == "missing_authoritative_countdown_label":
             # Without a day there is nothing to verify against on either side.
-            if governance.get("mandatory") is True or role.get("mandatory_tactical_watch") is True:
+            if _is_mandatory_locked_role(role):
                 violations.append(
                     f"{LOCKED_CONTENT}: {drill_name!r} {drill_source_issue} on unknown day"
                 )
@@ -537,6 +537,41 @@ class LockedSourceRepairResult:
     unresolved: list[LockedSourceRepairIssue] = field(default_factory=list)
 
 
+# Banked systems whose locked roles the server repairs into Stage 2 text.
+# ``role_key`` -> (bank content field, plan-text session heading). Kept in step
+# with ``structured_plan_locked_merge._LOCKED_CONTENT_SPECS``: same two systems,
+# same headings, so the repaired text and the repaired card agree.
+_LOCKED_SOURCE_SYSTEMS = {
+    "tactical_watch": ("tactical_watch", "Tactical Focus"),
+    "fight_visualization": ("fight_visualization", "Fight Visualisation"),
+}
+_LOCKED_MANDATORY_FLAGS = (
+    "mandatory_tactical_watch",
+    "mandatory_fight_visualization",
+)
+
+
+def _is_mandatory_locked_role(role: dict[str, Any]) -> bool:
+    governance = role.get("governance") if isinstance(role.get("governance"), dict) else {}
+    return governance.get("mandatory") is True or any(
+        role.get(flag) is True for flag in _LOCKED_MANDATORY_FLAGS
+    )
+
+
+def _locked_source_system(role: dict[str, Any]) -> tuple[str, str] | None:
+    """Resolve which banked system owns this role, by role_key then by payload."""
+    role_key = str(role.get("role_key") or "").strip().lower()
+    if role_key in _LOCKED_SOURCE_SYSTEMS:
+        return _LOCKED_SOURCE_SYSTEMS[role_key]
+    if role_key:
+        return None
+    # A role_key-less locked role is identified by the bank object it carries.
+    for content_field, heading in _LOCKED_SOURCE_SYSTEMS.values():
+        if isinstance(role.get(content_field), dict):
+            return content_field, heading
+    return None
+
+
 def _is_active_locked_tactical_watch_role(role: dict[str, Any]) -> tuple[bool, str | None]:
     governance = role.get("governance") if isinstance(role.get("governance"), dict) else {}
     if role.get("active") is False or role.get("is_active") is False:
@@ -547,28 +582,31 @@ def _is_active_locked_tactical_watch_role(role: dict[str, Any]) -> tuple[bool, s
         return False, "selected drill is not locked"
     if governance.get("render_selected_drill_exactly") is not True:
         return False, "selected drill is not exact-render locked"
-    if governance.get("mandatory") is not True and role.get("mandatory_tactical_watch") is not True:
+    if not _is_mandatory_locked_role(role):
         return False, "locked role is not mandatory"
 
-    role_key = str(role.get("role_key") or "").strip().lower()
+    system = _locked_source_system(role)
+    if system is None:
+        return False, "locked role is not a repairable banked system"
+    content_field, _heading = system
     category = str(role.get("category") or "").strip().lower()
-    is_tactical_watch = (
-        role_key in {"", "tactical_watch"}
-        and (
-            role.get("mandatory_tactical_watch") is True
-            or isinstance(role.get("tactical_watch"), dict)
-            or category in {"", "tactical_watch", "mindset", "combat"}
-        )
+    is_banked_role = (
+        _is_mandatory_locked_role(role)
+        or isinstance(role.get(content_field), dict)
+        or category in {"", "tactical_watch", "mental", "mindset", "combat", "support_insert"}
     )
-    if not is_tactical_watch:
-        return False, "locked role is not tactical_watch"
+    if not is_banked_role:
+        return False, f"locked role is not {content_field}"
     return True, None
 
 
 def repair_locked_tactical_watch_source_text(
     source_markdown: str, planning_brief: Any
 ) -> LockedSourceRepairResult:
-    """Insert missing mandatory locked Tactical Watches into Stage 2 text.
+    """Insert missing mandatory locked banked sessions into Stage 2 text.
+
+    Covers every system in ``_LOCKED_SOURCE_SYSTEMS`` -- the Tactical Watch and
+    the Fight Visualisation countdown protocol. The name is kept for its callers.
 
     This keeps the existing source-of-truth model: structured conversion sees
     the repaired Stage 2 text first, then the structured merge projects the same
@@ -581,8 +619,7 @@ def repair_locked_tactical_watch_source_text(
     roles = [
         role
         for role in _locked_roles(planning_brief)
-        if (role.get("governance") or {}).get("mandatory") is True
-        or role.get("mandatory_tactical_watch") is True
+        if _is_mandatory_locked_role(role)
     ]
     if not roles:
         return LockedSourceRepairResult(source)
@@ -606,11 +643,19 @@ def repair_locked_tactical_watch_source_text(
                 LockedSourceRepairIssue(day_label, drill_name, "missing authoritative countdown label")
             )
             continue
-        tactical_watch = role.get("tactical_watch") if isinstance(role.get("tactical_watch"), dict) else {}
-        watch_name = str(tactical_watch.get("name") or "").strip()
+        content_field, session_heading = _locked_source_system(role) or (
+            "tactical_watch",
+            "Tactical Focus",
+        )
+        banked = role.get(content_field) if isinstance(role.get(content_field), dict) else {}
+        watch_name = str(banked.get("name") or "").strip()
         if watch_name and _normalise_locked_text(watch_name) != _normalise_locked_text(drill_name):
             result.unresolved.append(
-                LockedSourceRepairIssue(day_label, drill_name, "tactical_watch name conflicts with locked drill")
+                LockedSourceRepairIssue(
+                    day_label,
+                    drill_name,
+                    f"{content_field} name conflicts with locked drill",
+                )
             )
             continue
         display_text = str(role.get("display_text") or "").strip()
@@ -642,7 +687,7 @@ def repair_locked_tactical_watch_source_text(
         header_index = _source_day_header_indices(lines, role_day)[0]
         day_prefix = re.search(r"\bD-\s*\d+\b(?:\s*\([^)]+\))?", lines[header_index], re.I)
         header_prefix = day_prefix.group(0) if day_prefix else day_label
-        repair_block = ["", f"{header_prefix} — Tactical Focus", display_text, ""]
+        repair_block = ["", f"{header_prefix} — {session_heading}", display_text, ""]
         lines[insert_index:insert_index] = repair_block
         result.source_markdown = "\n".join(lines)
         result.applied.append(f"{day_label}: {drill_name}")
@@ -663,6 +708,7 @@ _SERVER_OWNED_ROLE_KEYS = frozenset(
         "hard_sparring_day",
         "light_combat_day",
         "tactical_watch",
+        "fight_visualization",
         "fight_day_protocol",
     }
 )
