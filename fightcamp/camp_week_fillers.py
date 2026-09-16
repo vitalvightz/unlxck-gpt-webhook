@@ -11,6 +11,7 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
+from .normalization import clean_list
 from . import camp_week_fillers_impl as _impl
 from .late_fight_tail import build_finished_late_fight_tail
 
@@ -26,6 +27,8 @@ for _export_name in dir(_impl):
 _FIGHT_PHASE_CAPS = _impl._FIGHT_PHASE_CAPS
 _LEGACY_PHASE_CAPS = _impl._LEGACY_PHASE_CAPS
 _calendar_d_day = _impl._calendar_d_day
+_canonical_day = _impl._canonical_day
+_complete_week_physical_occupancy = _impl._complete_week_physical_occupancy
 _ensure_coordination_support = _impl._ensure_coordination_support
 _fill_week = _impl._fill_week
 _has_future_fight = _impl._has_future_fight
@@ -312,12 +315,28 @@ def _splice_late_fight_tail(
 
         kept_roles: list[Any] = []
         handoff_suppressions: list[dict[str, Any]] = []
+        claimed_normal_days = {
+            resolved
+            for existing in week.get("session_roles") or []
+            if isinstance(existing, dict)
+            and (resolved := _role_d_day(week, existing)) is not None
+            and resolved >= _NORMAL_PLANNER_OWNED_MIN_D_DAY
+        }
         for role in week.get("session_roles") or []:
             if not isinstance(role, dict):
                 kept_roles.append(role)
                 continue
             d_day = _role_d_day(week, role)
             if d_day is not None and 1 <= d_day <= 13:
+                reanchored = _normal_planner_reanchor_d_day(week, role, claimed_normal_days)
+                if reanchored is None:
+                    continue
+                role["countdown_offset"] = reanchored
+                role["scheduled_countdown_label"] = f"D-{reanchored}"
+                role["countdown_label"] = f"D-{reanchored}"
+                role["normal_planner_reanchored_from_d_day"] = d_day
+                claimed_normal_days.add(reanchored)
+                kept_roles.append(role)
                 continue
             if (
                 d_day is None
@@ -393,6 +412,47 @@ def _splice_late_fight_tail(
         "source": "finished_existing_late_fight_path",
     }
     return True
+
+
+
+_NORMAL_PLANNER_OWNED_MIN_D_DAY = 14
+
+
+def _normal_planner_reanchor_d_day(
+    week: dict[str, Any], role: dict[str, Any], taken: set[int]
+) -> int | None:
+    """The D-14+ occurrence of this role's weekday, when the week still has one.
+
+    A week whose span exceeds seven days repeats a weekday — a D-14..D-7 week
+    holds two Thursdays. Weekday -> D-day resolution picks one of them, and when
+    it picks the occurrence inside D-13 the handoff deletes a role that the
+    normal planner still owns, leaving the *declared* D-14 training day empty.
+    That is the reported D-14 hole.
+
+    Ownership breaks the tie rather than the calendar: D-14 and outward belong to
+    the normal planner, so its role is re-anchored onto that occurrence instead of
+    being dropped. The day must be one the athlete declared and nothing else has
+    claimed; otherwise the role is dropped exactly as before. Ownership itself is
+    unchanged — nothing moves into D-13..D-1, and the tail keeps its authority.
+    """
+    weekday = _canonical_day(role.get("scheduled_day_hint") or role.get("real_weekday"))
+    if not weekday:
+        return None
+    declared = {
+        _canonical_day(day) for day in clean_list(week.get("declared_training_days"))
+    }
+    if declared and weekday not in declared:
+        return None
+    for entry in week.get("calendar_days") or []:
+        if not isinstance(entry, dict) or not isinstance(entry.get("d_day"), int):
+            continue
+        d_day = int(entry["d_day"])
+        if d_day < _NORMAL_PLANNER_OWNED_MIN_D_DAY:
+            continue
+        if _canonical_day(entry.get("weekday")) != weekday or d_day in taken:
+            continue
+        return d_day
+    return None
 
 
 def apply_camp_week_fillers(
@@ -494,4 +554,14 @@ def apply_camp_week_fillers(
                 weekly_role_map=weekly_role_map,
                 week_ordinal=week_ordinal,
             )
+
+    # Occupancy completion runs last, over every week, so it sees the final
+    # placed calendar: normal-planner roles, the spliced finished D-13 tail, and
+    # every filler above. It only ever adds low-cost *physical* work to a day the
+    # athlete declared and the planner left empty, and records a deterministic
+    # reason when it cannot.
+    if fight_dated:
+        for week in weekly_role_map.get("weeks", []) or []:
+            if isinstance(week, dict):
+                _complete_week_physical_occupancy(week, athlete_model, usage_ledger)
     return weekly_role_map

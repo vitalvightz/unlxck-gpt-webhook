@@ -161,14 +161,22 @@ def _week_calendar(week: dict) -> dict[str, int]:
 
 
 def _role_d_day(week: dict, role: dict) -> int | None:
-    cal = _week_calendar(week)
-    wd = str(role.get("scheduled_day_hint") or "").strip().lower()
-    if wd in cal:
-        return cal[wd]
+    # The role's own stamped countdown is authoritative. The weekday lookup is a
+    # fallback only: a planner week may span eight days and hold the same weekday
+    # twice, so ``_week_calendar`` cannot say which occurrence a role belongs to —
+    # it just keeps the last one. Reading it first reported a role explicitly
+    # anchored at D-14 as sitting at D-7.
+    offset = role.get("countdown_offset")
+    if isinstance(offset, int) and not isinstance(offset, bool):
+        return offset
     for key in ("scheduled_countdown_label", "countdown_label"):
         label = str(role.get(key) or "").strip().upper()
         if label.startswith("D-") and label[2:].isdigit():
             return int(label[2:])
+    cal = _week_calendar(week)
+    wd = str(role.get("scheduled_day_hint") or "").strip().lower()
+    if wd in cal:
+        return cal[wd]
     return None
 
 

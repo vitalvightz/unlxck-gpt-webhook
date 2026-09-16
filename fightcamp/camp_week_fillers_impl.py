@@ -12,6 +12,7 @@ from .coordination_support_library import (
     coordination_support_metadata,
     select_coordination_support,
 )
+from .physical_occupancy_fill import fill_physical_occupancy
 from .gap_fill_inserts import (
     PHYSICAL_INSERTS,
     _new_usage_ledger,
@@ -881,6 +882,75 @@ def _splice_late_fight_tail(
     return True
 
 
+def _week_day_slots(week: dict[str, Any]) -> list[tuple[int, str]]:
+    slots: list[tuple[int, str]] = []
+    for entry in week.get("calendar_days") or []:
+        if not isinstance(entry, dict):
+            continue
+        d_day = entry.get("d_day")
+        if not isinstance(d_day, int):
+            continue
+        slots.append((d_day, str(entry.get("weekday") or "")))
+    return slots
+
+
+def _merge_unused_day_records(
+    week: dict[str, Any], records: list[dict[str, Any]]
+) -> None:
+    """Record empty declared days without displacing an existing explanation."""
+    existing = [
+        entry for entry in week.get("intentionally_unused_days") or [] if isinstance(entry, dict)
+    ]
+    named = {_canonical_day(str(entry.get("day") or "")) for entry in existing}
+    merged = list(week.get("intentionally_unused_days") or [])
+    for record in records:
+        if _canonical_day(str(record.get("day") or "")) in named:
+            continue
+        merged.append(record)
+    week["intentionally_unused_days"] = merged
+
+
+def _complete_week_physical_occupancy(
+    week: dict[str, Any],
+    athlete_model: dict[str, Any],
+    usage_ledger: dict[str, Any],
+) -> None:
+    """Give every declared training day a session, or a recorded reason for not.
+
+    ``training_frequency`` is a physical-session count, so a declared training
+    day that survives the allocators with nothing on it is a contract breach —
+    not a taper decision. Taper caps own *dose*; this owns *occupancy*.
+    """
+    session_roles = week.get("session_roles")
+    if not isinstance(session_roles, list):
+        return
+    day_slots = _week_day_slots(week)
+    if not day_slots:
+        return
+    added, unused = fill_physical_occupancy(
+        day_slots=day_slots,
+        roles=[role for role in session_roles if isinstance(role, dict)],
+        athlete_model=athlete_model,
+        usage_ledger=usage_ledger,
+    )
+    for role in added:
+        role["camp_week_filler"] = True
+        if week.get("late_fight_tail_days") and role.get("countdown_offset") in set(
+            week.get("late_fight_tail_days") or []
+        ):
+            # Stay inside the finished-tail ownership contract: a day D-13 and
+            # closer remains owned by the late-fight allocator, so occupancy work
+            # placed there is tagged as its own rather than as a normal-planner
+            # role that survived the splice.
+            role["late_fight_tail_owned"] = True
+            governance = dict(role.get("governance") or {})
+            governance["authority"] = "late_fight_tail_allocator"
+            role["governance"] = governance
+        session_roles.append(role)
+        usage_ledger.setdefault("coverage_roles", []).append(role)
+    _merge_unused_day_records(week, unused)
+
+
 def apply_camp_week_fillers(
     weekly_role_map: dict[str, Any],
     athlete_model: dict[str, Any] | None = None,
@@ -948,4 +1018,9 @@ def apply_camp_week_fillers(
                 weekly_role_map=weekly_role_map,
                 week_ordinal=week_ordinal,
             )
+
+    if fight_dated:
+        for week in weekly_role_map.get("weeks", []) or []:
+            if isinstance(week, dict):
+                _complete_week_physical_occupancy(week, athlete_model, usage_ledger)
     return weekly_role_map

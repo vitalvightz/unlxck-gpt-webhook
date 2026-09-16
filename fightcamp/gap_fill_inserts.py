@@ -1932,3 +1932,116 @@ def apply_gap_fill_inserts(
     for index, role in enumerate(final_sequence, start=1):
         role["session_index"] = index
     return final_sequence
+
+
+# --- Physical-occupancy completion -------------------------------------------
+#
+# ``training_frequency`` is a physical-session count (see
+# ``fightcamp.physical_session_frequency``). The gap-fill pass above is driven by
+# calendar *geometry* — it closes long empty stretches — and is deliberately
+# budgeted (``MAX_INSERTS_TOTAL_D21_TO_D0``,
+# ``MAX_PHYSICAL_INSERTS_PER_7_DAY_SEGMENT``) so a normal week is not padded out.
+# Occupancy completion answers a different question: a *declared* training day is
+# sitting empty while the athlete asked for a session on it. It therefore selects
+# from the same deterministic insert banks, but only from options that count as
+# physical work, and only for days the athlete actually declared.
+
+#: Inserts that satisfy a physical training session.
+PHYSICAL_OCCUPANCY_INSERTS = PHYSICAL_INSERTS | LOW_COST_AEROBIC_INSERTS
+
+#: Low-cost technical/movement work that ``_allowed_inserts`` strips purely as a
+#: *freshness preference* while a healthy athlete is cutting weight (the strip is
+#: guarded by ``injury_state in {"none", "mild_stable"}``, so it is not an injury
+#: gate). A cut is a reason to make a session cheaper, not to delete a declared
+#: training day, so occupancy completion may fall back to these when the cut
+#: strip is the only thing standing between a declared day and a legal session.
+_CUT_PREFERENCE_STRIPPED_INSERTS = {
+    "technical_shadow_rhythm",
+    "footwork_walkthrough",
+    "movement_quality",
+}
+
+
+def _physical_occupancy_candidates(
+    athlete_model: dict[str, Any],
+    insert_offset: int,
+    *,
+    on_hard_sparring_day: bool,
+) -> tuple[set[str], set[str]]:
+    """Return ``(preferred, cut_relaxed)`` physical options for this day."""
+    preferred = _allowed_inserts(
+        athlete_model,
+        insert_offset,
+        on_hard_sparring_day=on_hard_sparring_day,
+    ) & PHYSICAL_OCCUPANCY_INSERTS
+    # Relax only the weight-cut freshness preference, and only while every hard
+    # gate still says a low-cost session is fine.
+    if (
+        not _has_active_weight_cut(athlete_model)
+        or _has_high_fatigue(athlete_model)
+        or insert_offset <= 1
+        or on_hard_sparring_day
+        or classify_injury_state(athlete_model) not in {"none", "mild_stable"}
+    ):
+        return preferred, set()
+    return preferred, set(_CUT_PREFERENCE_STRIPPED_INSERTS) - preferred
+
+
+def select_physical_occupancy_insert(
+    athlete_model: dict[str, Any],
+    insert_offset: int,
+    *,
+    on_hard_sparring_day: bool = False,
+    usage_ledger: dict[str, Any] | None = None,
+    legality: CalendarLegalityView | None = None,
+    scheduled_roles: list[dict[str, Any]] | None = None,
+    allow_repeat: bool = True,
+) -> dict[str, Any] | None:
+    """Return one low-cost *physical* insert for a declared day left empty.
+
+    Returns ``None`` whenever no legal physical option exists — the caller then
+    records the day in ``intentionally_unused_days`` with a deterministic reason
+    rather than inventing filler. D-0 and D-1 are never filled here: fight day is
+    not training, and D-1 governance stays with the late-fight safety rules.
+    """
+    if insert_offset <= 1:
+        return None
+
+    preferred, relaxed = _physical_occupancy_candidates(
+        athlete_model,
+        insert_offset,
+        on_hard_sparring_day=on_hard_sparring_day,
+    )
+    if legality is not None:
+        preferred = _legal_support_keys(legality, preferred, insert_offset)
+        relaxed = _legal_support_keys(legality, relaxed, insert_offset)
+    if not preferred and not relaxed:
+        return None
+
+    coverage_state = build_target_coverage_state(athlete_model, scheduled_roles)
+
+    def _pick(candidates: set[str], ledger: dict[str, Any] | None) -> str | None:
+        if not candidates:
+            return None
+        return _select_role_key(
+            athlete_model,
+            insert_offset,
+            candidates,
+            usage_ledger=ledger,
+            coverage_state=coverage_state,
+        )
+
+    # Variety before repetition: an unused option from either tier beats reusing
+    # one this window already spent. Repeating is still better than deleting a
+    # declared training day, so it is the last resort rather than a refusal.
+    role_key = _pick(preferred, usage_ledger) or _pick(relaxed, usage_ledger)
+    if role_key is None and allow_repeat:
+        role_key = _pick(preferred, None) or _pick(relaxed, None)
+    if role_key is None:
+        return None
+
+    role = _build_insert_role(role_key, athlete_model, insert_offset, usage_ledger=usage_ledger)
+    if role_key == "footwork_walkthrough":
+        _apply_bank_footwork(role, athlete_model, insert_offset, usage_ledger)
+    role["physical_occupancy_fill"] = True
+    return role

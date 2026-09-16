@@ -21,6 +21,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+from .physical_session_frequency import audit_physical_session_frequency
+
 from .calendar_context import (
     ContactRef as _ContactRef,
     RoleRef as _RoleRef,
@@ -457,6 +459,7 @@ def apply_final_calendar_integrity(
     weekly_role_map: dict[str, Any],
     *,
     remorph_callback: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
+    athlete_model: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Repair forbidden D-14+ placements and verify the final normal calendar."""
     if not isinstance(weekly_role_map, dict):
@@ -474,6 +477,13 @@ def apply_final_calendar_integrity(
         *_verify_normal_roles(weekly_role_map),
         *_verify_normal_contacts(weekly_role_map),
     ]
+    # Structural QA, not a blocker: an unexplained empty declared training day is
+    # reported so the sweep can see it, while the plan still ships.
+    frequency_findings = audit_physical_session_frequency(weekly_role_map, athlete_model)
+    weekly_role_map["physical_session_frequency_audit"] = {
+        "schema_version": "physical_session_frequency_audit.v1",
+        "warnings": frequency_findings,
+    }
     weekly_role_map["calendar_integrity"] = {
         "schema_version": "calendar_integrity.v1",
         "checked_roles": checked,

@@ -50,6 +50,7 @@ from .stage2_payload_late_fight import (  # noqa: F401  (re-exported for tests/b
     is_low_cost_coexistable_filler,
 )
 from .gap_fill_inserts import apply_gap_fill_inserts
+from .physical_occupancy_fill import complete_late_fight_sequence_occupancy
 from .conditioning import athlete_facing_system_label, technical_footwork_prescription_fields
 from .fight_day_override import apply_fight_day_override_to_weekly_role_map
 from .role_labels import PRIMARY_STRENGTH_ROLE_KEYS, stamp_weekly_role_map_labels
@@ -218,13 +219,41 @@ def _dedupe_preserve_order(values: list[str]) -> list[str]:
 def _compress_short_camp_priorities(athlete_model: dict) -> dict:
     return stage2_planning_brief_module._compress_short_camp_priorities(athlete_model)
 
+def _record_late_fight_unused_days(
+    weekly_role_map: dict, unused_days: list[dict]
+) -> None:
+    """Carry occupancy-completion reasons onto the late-fight week they belong to."""
+    if not unused_days or not isinstance(weekly_role_map, dict):
+        return
+    weeks = [week for week in weekly_role_map.get("weeks", []) or [] if isinstance(week, dict)]
+    if not weeks:
+        return
+    for record in unused_days:
+        offset = record.get("countdown_offset")
+        target = weeks[-1]
+        for week in weeks:
+            span = week.get("countdown_span")
+            if not isinstance(span, dict) or not isinstance(offset, int):
+                continue
+            start, end = span.get("start_day"), span.get("end_day")
+            if isinstance(start, int) and isinstance(end, int) and end <= offset <= start:
+                target = week
+                break
+        target.setdefault("intentionally_unused_days", []).append(record)
+
 
 def _build_phase_briefs(training_context: TrainingContext, phase_weeks: dict) -> dict[str, dict]:
     briefs: dict[str, dict] = {}
     for phase in ("GPP", "SPP", "TAPER"):
         if phase_weeks.get(phase, 0) <= 0 and phase_weeks.get("days", {}).get(phase, 0) < 1:
             continue
-        session_counts = allocate_sessions(training_context.training_frequency, phase)
+        # One capping authority for both phase-brief builders: ``allocate_sessions``
+        # returns candidate role capacity (frequency + 1), which must never reach
+        # the weekly calendar as a physical-session count.
+        session_counts = stage2_planning_brief_module._cap_session_counts_to_frequency(
+            allocate_sessions(training_context.training_frequency, phase),
+            training_context,
+        )
         risk_flags: list[str] = []
         if training_context.injuries:
             risk_flags.append("respect injury guardrails")
@@ -1175,9 +1204,16 @@ def _build_planning_brief(
             athlete_model,
             dict(base_late_fight_plan_spec.get("countdown_weekday_map", {})),
         )
-        session_sequence = _visible_calendar_session_sequence(
-            apply_gap_fill_inserts(pre_gap_sequence, athlete_model)
+        session_sequence, _occupancy_unused = complete_late_fight_sequence_occupancy(
+            _visible_calendar_session_sequence(
+                apply_gap_fill_inserts(pre_gap_sequence, athlete_model)
+            ),
+            athlete_model,
+            countdown_weekday_map=dict(
+                base_late_fight_plan_spec.get("countdown_weekday_map", {})
+            ),
         )
+        _record_late_fight_unused_days(weekly_role_map, _occupancy_unused)
         app_session_sequence = [
             role
             for role in session_sequence
@@ -1288,7 +1324,7 @@ def _build_planning_brief(
     compose_normal_strength_assignments(
         weekly_role_map=weekly_role_map, candidate_pools=candidate_pools,
     )
-    apply_late_camp_role_morph(weekly_role_map)
+    apply_late_camp_role_morph(weekly_role_map, athlete_model)
     compose_normal_conditioning_assignments(
         weekly_role_map=weekly_role_map, candidate_pools=candidate_pools,
     )
@@ -2160,8 +2196,14 @@ def build_stage2_payload(
             athlete_model,
             dict(base_late_fight_plan_spec.get("countdown_weekday_map", {})),
         )
-        visible_session_sequence = _visible_calendar_session_sequence(
-            apply_gap_fill_inserts(pre_gap_sequence, athlete_model)
+        visible_session_sequence, _ = complete_late_fight_sequence_occupancy(
+            _visible_calendar_session_sequence(
+                apply_gap_fill_inserts(pre_gap_sequence, athlete_model)
+            ),
+            athlete_model,
+            countdown_weekday_map=dict(
+                base_late_fight_plan_spec.get("countdown_weekday_map", {})
+            ),
         )
         app_visible_session_sequence = [
             role
