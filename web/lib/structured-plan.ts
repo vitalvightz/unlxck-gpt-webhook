@@ -58,9 +58,17 @@ function capitalizeFirst(value: string): string {
  * lower-case, occasionally sentence-case), which reads as a typo next to the
  * Title Case session name, so normalise the first letter for display and leave
  * the rest of the phrase exactly as authored. */
+// A session objective that still carries its source label ("Why: read the exit
+// lane…") would render as "WHY Why: read the exit lane…" once the card adds its
+// own kicker. The label is the source grammar, not athlete-facing copy.
+const LEADING_WHY_LABEL_RE = /^\s*why(?:\s+today)?\s*:\s*/i;
+
 export function formatSessionObjective(value: unknown): string | null {
   const text = cleanText(value);
-  return text ? capitalizeFirst(text) : null;
+  if (!text) {
+    return null;
+  }
+  return capitalizeFirst(text.replace(LEADING_WHY_LABEL_RE, "").trim()) || null;
 }
 
 /**

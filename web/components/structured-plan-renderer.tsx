@@ -66,6 +66,7 @@ import {
 import {
   isRehabBlock,
   resolveBlockRehabLabel,
+  resolveSessionTypeLabel,
   resolveRehabSummaryLabel,
 } from "@/lib/rehab-label";
 import { useTrainingDay } from "@/lib/use-training-day";
@@ -541,6 +542,7 @@ export function SessionCard({
   openWeekIntent?: OpenBlockWeekIntent | null;
 }) {
   const detailsId = useId();
+  const rehabLabelPolicy = useContext(RehabLabelContext);
   const [showDetails, setShowDetails] = useState(Boolean(defaultOpenBlocks));
   const userToggledDetails = useRef(false);
 
@@ -566,6 +568,10 @@ export function SessionCard({
   const nutrition = showDayContext ? cleanText(card?.nutrition_summary) : null;
   const weightCut = showDayContext ? cleanText(card?.weight_cut_warning) : null;
   const blocks = getBlocks(session);
+  // `rehab` is the schema's home for mobility support too, so the chip is
+  // resolved rather than printed raw: a joint-prep card must not claim rehab.
+  const sessionTypeLabel =
+    resolveSessionTypeLabel(session, rehabLabelPolicy) || titleize(sessionType ?? "");
   const isZeroLoad = isZeroLoadSupportSession(session);
   const rehabBlocks = getRehabOrMobilityBlocks(session);
   const blocksLabel = blockCountLabel(blocks.length);
@@ -596,14 +602,18 @@ export function SessionCard({
           </h3>
           {/* The objective is the plan's "Why:" line, not a description of the
               work — the blocks below already carry that. Labelling it says so
-              outright, so the reason for the session is impossible to miss. */}
+              outright, so the reason for the session is impossible to miss.
+              A session with NO blocks has nothing for a rationale to explain:
+              there, the objective IS the whole prescription ("Neck CARs,
+              shoulder CARs, wrist circles…"), so the kicker is dropped and the
+              line reads as the instruction it is. */}
           {isDeclaredLightCombat ? (
             <p className="sp-today-note">{DECLARED_LIGHT_COMBAT_DESCRIPTION}</p>
           ) : isTechnicalSession ? (
             <TechnicalCombatRationale />
           ) : objective ? (
             <p className="sp-session-objective">
-              <span className="sp-session-why-label">Why</span>
+              {blocks.length > 0 ? <span className="sp-session-why-label">Why</span> : null}
               {objective}
             </p>
           ) : null}
@@ -614,7 +624,7 @@ export function SessionCard({
           ) : isTechnicalSession ? (
             <span className="sp-tag sp-accent">{TECHNICAL_COMBAT_TAG}</span>
           ) : sessionType ? (
-            <span className="sp-tag">{titleize(sessionType)}</span>
+            <span className="sp-tag">{sessionTypeLabel}</span>
           ) : null}
           {/* Scheduled mental / tactical / breathing-only work renders in full,
               but must never read as physical S&C — say so on the card itself. */}

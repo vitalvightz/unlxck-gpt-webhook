@@ -1,4 +1,4 @@
-import type { RehabLabelPolicy, StructuredBlock } from "@/lib/types";
+import type { RehabLabelPolicy, StructuredBlock, StructuredSession } from "@/lib/types";
 
 /**
  * Rehab work is only "Rehab" while the body region it targets is actually
@@ -90,4 +90,42 @@ export function resolveRehabSummaryLabel(
   return rehabBlocks.some((block) => resolveBlockRehabLabel(block, policy) === "Rehab")
     ? "Rehab"
     : "Prehab";
+}
+
+/**
+ * The chip on a session card.
+ *
+ * `rehab` is the structured schema's home for BOTH clinical rehab and ordinary
+ * mobility support: the deterministic fallback types joint prep and movement
+ * quality that way because the schema (which doubles as the strict Stage 2
+ * response schema) has no `mobility` value. Printing the raw type put a
+ * clinical "Rehab" chip on a joint-prep card the athlete has no injury behind.
+ *
+ * So a rehab-typed session is only labelled clinically when it actually carries
+ * rehab work — a rehab-typed block, or a title that names rehab/prehab — and
+ * then through the same per-region policy the block tags use. Everything else
+ * reads "Mobility", which is what it is. Other session types are unchanged.
+ */
+export function resolveSessionTypeLabel(
+  session: StructuredSession | null | undefined,
+  policy: RehabLabelPolicy | null | undefined,
+): string | null {
+  const sessionType = String(session?.session_type ?? "").trim();
+  if (!sessionType) {
+    return null;
+  }
+  if (normalizeRehabText(sessionType) !== "rehab") {
+    return null;
+  }
+  const blocks = (session?.blocks ?? []).filter(Boolean) as StructuredBlock[];
+  const rehabBlocks = blocks.filter(isRehabBlock);
+  const titleNamesRehab = /\b(?:prehab|rehab)\b/.test(normalizeRehabText(session?.title));
+  if (rehabBlocks.length === 0 && !titleNamesRehab) {
+    return "Mobility";
+  }
+  return rehabBlocks.length > 0
+    ? resolveRehabSummaryLabel(rehabBlocks, policy)
+    : policy?.default_mode === "prehab"
+      ? "Prehab"
+      : "Rehab";
 }

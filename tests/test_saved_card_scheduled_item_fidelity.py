@@ -206,3 +206,70 @@ def test_a_similarly_titled_session_does_not_absorb_a_different_role():
     sessions = _sessions_by_dday(_map_plan_detail(row, include_admin=False))
 
     assert sessions[9] == ["Technical Shadow Boxing", "Technical Shadow Rhythm"]
+
+
+def _support_role(d_day: int, role_key: str, label: str, category: str, text: str) -> dict:
+    return {
+        "role_key": role_key,
+        "category": "support_insert",
+        "support_insert_category": category,
+        "athlete_facing_label": label,
+        "display_text": text,
+        "stress_class": "support",
+        "countdown_offset": d_day,
+        "scheduled_countdown_label": f"D-{d_day}",
+        "selected_exercise_assignments": [],
+    }
+
+
+def test_same_day_support_sessions_all_survive_with_their_own_semantics():
+    """D-9 carries breathing, a physical footwork drill and visualisation."""
+    plan = _card_omitting_supports()
+    for day in plan["weeks"][0]["days"]:
+        day["sessions"] = []
+    row = _row(plan)
+    row["planning_brief"]["weekly_role_map"]["weeks"][0]["session_roles"] = [
+        _support_role(9, "breathing_reset", "Breathing Reset", "recovery", "Nasal breathing if comfortable."),
+        _support_role(
+            9,
+            "footwork_walkthrough",
+            "Pressure Step-Cut Reset",
+            "technical_footwork",
+            "Why: Read the opponent's exit lane.\n- Pressure Step-Cut Reset: 2 sets x 4 reactions.",
+        ),
+        _support_role(9, "neural_visualization", "Neural Visualization", "mental", "Quiet visualization only."),
+    ]
+
+    detail = _map_plan_detail(row, include_admin=False)
+    day = next(
+        day
+        for week in detail.outputs.structured_plan.weeks
+        for day in week.days
+        if day.countdown_label == "D-9"
+    )
+
+    assert [session.title for session in day.sessions] == [
+        "Breathing Reset",
+        "Pressure Step-Cut Reset",
+        "Neural Visualization",
+    ]
+    types = {session.title: session.session_type for session in day.sessions}
+    assert types["Breathing Reset"] == "recovery"
+    assert types["Pressure Step-Cut Reset"] == "skill"
+    assert types["Neural Visualization"] == "skill"
+
+
+def test_a_day_with_no_authoritative_role_is_never_given_a_session():
+    plan = _card_omitting_supports()
+    for day in plan["weeks"][0]["days"]:
+        day["sessions"] = []
+    row = _row(plan)
+    row["planning_brief"]["weekly_role_map"]["weeks"][0]["session_roles"] = [
+        _support_role(9, "breathing_reset", "Breathing Reset", "recovery", "Nasal breathing if comfortable.")
+    ]
+
+    sessions = _sessions_by_dday(_map_plan_detail(row, include_admin=False))
+
+    assert sessions[9] == ["Breathing Reset"]
+    assert sessions[8] == []
+    assert sessions[5] == []
