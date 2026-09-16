@@ -199,9 +199,29 @@ def _resolve_week_span(week: dict[str, Any]) -> tuple[int, int] | None:
     return None
 
 
+#: Roles another deterministic assembler renders in full. Restoring them here as
+#: well would put two representations of one role on the day. Kept next to the
+#: spine because both the spine and the deterministic fallback read it.
+ROLES_OWNED_ELSEWHERE = frozenset(
+    {
+        "hard_sparring_day",  # reconcile_coach_led_sparring_days
+        "light_combat_day",  # reconcile_coach_led_sparring_days
+        "tactical_watch",  # merge_locked_structured_content
+        "fight_visualization",  # merge_locked_structured_content
+    }
+)
+
+
 def _authoritative_ownership_maps(
     role_map: dict[str, Any],
-) -> tuple[dict[int, str], dict[int, int], dict[int, list[str]], int | None, int | None]:
+) -> tuple[
+    dict[int, str],
+    dict[int, int],
+    dict[int, list[str]],
+    dict[int, list[dict[str, Any]]],
+    int | None,
+    int | None,
+]:
     """Map each countdown D-day the planner covers to its Stage 1 ownership.
 
     Reads the normal-camp ``calendar_days`` block (each entry carries its own
@@ -212,10 +232,11 @@ def _authoritative_ownership_maps(
     """
     weeks = role_map.get("weeks")
     if not isinstance(weeks, list):
-        return {}, {}, {}, None, None
+        return {}, {}, {}, {}, None, None
     phase_by_dday: dict[int, str] = {}
     planning_week_by_dday: dict[int, int] = {}
     role_keys_by_dday: dict[int, list[str]] = {}
+    roles_by_dday: dict[int, list[dict[str, Any]]] = {}
     for week in weeks:
         if not isinstance(week, dict):
             continue
@@ -259,9 +280,17 @@ def _authoritative_ownership_maps(
             bucket = role_keys_by_dday.setdefault(role_d_day, [])
             if role_key not in bucket:
                 bucket.append(role_key)
+            roles_by_dday.setdefault(role_d_day, []).append(role)
     if not phase_by_dday:
-        return {}, {}, {}, None, None
-    return phase_by_dday, planning_week_by_dday, role_keys_by_dday, max(phase_by_dday), min(phase_by_dday)
+        return {}, {}, {}, {}, None, None
+    return (
+        phase_by_dday,
+        planning_week_by_dday,
+        role_keys_by_dday,
+        roles_by_dday,
+        max(phase_by_dday),
+        min(phase_by_dday),
+    )
 
 
 def _role_dday(week: dict[str, Any], role: dict[str, Any]) -> int | None:
@@ -416,6 +445,100 @@ def _overlay_day(
     return day
 
 
+_TOKEN_RE = re.compile(r"[^a-z0-9]+")
+
+
+def _identity_tokens(value: Any) -> set[str]:
+    return {token for token in _TOKEN_RE.split(str(value or "").lower()) if token}
+
+
+def _role_is_represented(day: dict[str, Any], role: dict[str, Any]) -> bool:
+    """Whether this day already carries a representation of ``role``.
+
+    Identity is the role's own key plus its athlete-facing label tokens, not a
+    title string match: a converter is free to retitle a session, but it cannot
+    rename the role it came from, and a session assembled from the role carries
+    the key in its ``session_id``.
+    """
+    role_key = str(role.get("role_key") or "").strip().lower()
+    label_tokens = _identity_tokens(role.get("athlete_facing_label"))
+    if not label_tokens and not role_key:
+        return True  # nothing to identify it by: never restore blind
+    card = day.get("today_card") if isinstance(day.get("today_card"), dict) else {}
+    contact_tokens = _identity_tokens(card.get("headline")) | _identity_tokens(
+        card.get("coach_led_contact")
+    )
+    if label_tokens and label_tokens <= contact_tokens:
+        return True
+    for session in day.get("sessions") or []:
+        if not isinstance(session, dict):
+            continue
+        session_id = str(session.get("session_id") or "").lower()
+        if role_key and role_key in session_id:
+            return True
+        title_tokens = _identity_tokens(session.get("title"))
+        if label_tokens and (
+            label_tokens <= title_tokens or len(label_tokens & title_tokens) >= 2
+        ):
+            return True
+    return False
+
+
+def _restore_missing_scheduled_roles(
+    day: dict[str, Any], roles: list[dict[str, Any]], d_day: int
+) -> dict[str, Any]:
+    """Attach any authoritative scheduled role this day does not represent.
+
+    The spine guarantees the calendar DAY exists; this guarantees its scheduled
+    CONTENTS exist with it. Without it a converter (or a fallback that had
+    nothing to build a session from) could leave a day with authoritative
+    scheduled work holding ``sessions: []``, which the web renderer is right to
+    classify as rest.
+
+    Nothing is invented: a role only ever becomes a session through the shared
+    deterministic builder, which needs either a selected exercise or the role's
+    own athlete-facing copy and emits nothing otherwise. Roles another
+    deterministic assembler owns are skipped, and a role already represented on
+    the day is skipped, so nothing renders twice.
+    """
+    if not roles or d_day == 0:
+        # D-0 is fight day: its protocol ownership is decided elsewhere and is
+        # deliberately not re-derived here.
+        return day
+    try:  # deferred: the fallback imports this module
+        from .structured_plan_deterministic_fallback import _session
+    except Exception:
+        return day
+    sessions = day.get("sessions")
+    sessions = list(sessions) if isinstance(sessions, list) else []
+    restored = False
+    for role in roles:
+        if not isinstance(role, dict):
+            continue
+        if str(role.get("role_key") or "").strip() in ROLES_OWNED_ELSEWHERE:
+            continue
+        # Only instruction-only roles are restored. A role carrying selected
+        # exercises is the day's main work, which the converter renders (often
+        # retitled), and re-adding it from the role map could put the same
+        # session on the day twice. The roles that actually go missing are the
+        # support inserts: no exercise assignments, one banked instruction, a
+        # distinctive athlete-facing label.
+        if role.get("selected_exercise_assignments"):
+            continue
+        if _role_is_represented(day, role):
+            continue
+        session = _session(role, d_day)
+        if session is None:
+            continue
+        sessions.append(session)
+        day["sessions"] = sessions
+        restored = True
+    if restored and str(day.get("day_type") or "").strip().lower() in {"rest", "off"}:
+        # The day was only "rest" because its scheduled contents were missing.
+        day["day_type"] = "low"
+    return day
+
+
 def _week_phase(days: list[dict[str, Any]]) -> str:
     """The phase a Mon-Sun week owns: its days' majority, ties to the sharper phase."""
     counts: dict[str, int] = {}
@@ -538,7 +661,7 @@ def _plan_signature(weeks: Any, fight_date: date) -> tuple:
 
     Two plans share a signature only when they group the same days into the same
     weeks with the same authoritative week boundaries, date/countdown/weekday/
-    phase identity and the same has-session shape. Cosmetic differences (a
+    phase identity and the same per-day session count. Cosmetic differences (a
     datetime suffix, ``D0`` vs ``D-0``, ``Monday`` vs ``Mon``, the week id) are
     normalised away so the reconcile is a true no-op on an already-correct plan —
     but a mega-week, stale week range, mislabelled phase, dropped day or wrong date
@@ -556,7 +679,12 @@ def _plan_signature(weeks: Any, fight_date: date) -> tuple:
             iso = str(day.get("date") or "").strip()[:10]
             weekday = str(day.get("weekday") or "").strip()[:3].title()
             phase = _valid_phase(day.get("phase_label"))
-            has_sessions = bool(day.get("sessions"))
+            # The COUNT, not just "has any": a day that kept one session while a
+            # second authoritative scheduled item was dropped has to differ from
+            # the rebuilt day that carries both, or the no-op check below would
+            # throw the restored item away.
+            sessions = day.get("sessions")
+            session_count = len(sessions) if isinstance(sessions, list) else 0
             microdose = day.get("priority_microdose")
             microdose_sig = (
                 tuple(
@@ -566,7 +694,7 @@ def _plan_signature(weeks: Any, fight_date: date) -> tuple:
                 if isinstance(microdose, dict)
                 else ()
             )
-            day_sig.append((d_day, iso, weekday, phase, has_sessions, microdose_sig))
+            day_sig.append((d_day, iso, weekday, phase, session_count, microdose_sig))
         signature.append(
             (
                 _valid_phase(week.get("phase_label")),
@@ -616,7 +744,14 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> Any:
     if fight_date is None:
         return structured_plan
 
-    phase_by_dday, planning_week_by_dday, role_keys_by_dday, role_map_max, role_map_min = _authoritative_ownership_maps(role_map)
+    (
+        phase_by_dday,
+        planning_week_by_dday,
+        role_keys_by_dday,
+        roles_by_dday,
+        role_map_max,
+        role_map_min,
+    ) = _authoritative_ownership_maps(role_map)
     if role_map_max is None or role_map_min is None:
         return structured_plan
     priority_microdoses = _priority_microdoses_by_dday(role_map)
@@ -674,27 +809,24 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> Any:
         planning_week_index = planning_week_by_dday.get(d_day)
         role_keys = role_keys_by_dday.get(d_day, [])
         existing = llm_days_by_dday.get(d_day)
+        day_roles = roles_by_dday.get(d_day, [])
         if isinstance(existing, dict):
-            spine_days.append(
-                _attach_priority_microdose(
-                    _overlay_day(
-                        existing,
-                        d_day=d_day,
-                        fight_date=fight_date,
-                        phase=phase,
-                        planning_week_index=planning_week_index,
-                        role_keys=role_keys,
-                    ),
-                    priority_microdoses.get(d_day),
-                )
+            day = _overlay_day(
+                existing,
+                d_day=d_day,
+                fight_date=fight_date,
+                phase=phase,
+                planning_week_index=planning_week_index,
+                role_keys=role_keys,
             )
         else:
             day = _rest_day(d_day, fight_date, phase)
             day["planning_week_index"] = planning_week_index
             day["planning_day_role_keys"] = list(role_keys)
-            spine_days.append(
-                _attach_priority_microdose(day, priority_microdoses.get(d_day))
-            )
+        # A calendar day existing is not enough: its authoritative scheduled
+        # contents must survive with it, or the renderer calls the day rest.
+        day = _restore_missing_scheduled_roles(day, day_roles, d_day)
+        spine_days.append(_attach_priority_microdose(day, priority_microdoses.get(d_day)))
 
     # Group into the Mon-Sun calendar weeks the web view renders.
     groups: dict[str, list[dict[str, Any]]] = {}

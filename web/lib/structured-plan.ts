@@ -435,9 +435,6 @@ export function getSessions(day: StructuredDay | null | undefined): StructuredSe
 // fightcamp/physical_session_frequency.py and this never changes it).
 // ---------------------------------------------------------------------------
 
-/** Planner stress vocabulary that already means "zero load". */
-const SUPPORT_STRESS_CLASSES = new Set(["support", "support_insert", "zero_load", "none"]);
-
 /** Session types that are informational by construction (mental / tactical). */
 const ZERO_LOAD_SESSION_TYPES = new Set([
   "mindset",
@@ -474,6 +471,10 @@ const ZERO_LOAD_CONTENT_RE =
  * True when this scheduled item is zero-load support (mental, tactical,
  * breathing-only, fight-day protocol). Such a session still renders in full —
  * it just contributes nothing to physical-session counts.
+ *
+ * Low-cost PHYSICAL support (joint prep, footwork walkthrough, technical shadow
+ * rhythm, walk flush) is deliberately not matched here: it is light work, not
+ * absent work, and it keeps counting as a physical session.
  */
 export function isZeroLoadSupportSession(
   session: StructuredSession | null | undefined,
@@ -481,10 +482,11 @@ export function isZeroLoadSupportSession(
   if (!isObject(session)) {
     return false;
   }
-  const stressClass = cleanText(session.stress_class)?.toLowerCase().replace(/[\s-]+/g, "_");
-  if (stressClass) {
-    return SUPPORT_STRESS_CLASSES.has(stressClass);
-  }
+  // `stress_class: "support"` is NOT consulted. The planner stamps it on joint
+  // prep, footwork walkthroughs and technical shadow rhythm as well as on
+  // breathing resets: it means "low cost", not "no movement", and
+  // fightcamp/physical_session_frequency.py documents that it is insufficient
+  // on its own. Zero load is decided by what the item IS, below.
   const sessionType = cleanText(session.session_type)?.toLowerCase().replace(/[\s-]+/g, "_");
   if (sessionType && ZERO_LOAD_SESSION_TYPES.has(sessionType)) {
     return true;

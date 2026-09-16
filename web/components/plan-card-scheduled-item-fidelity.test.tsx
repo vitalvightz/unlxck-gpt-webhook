@@ -153,6 +153,17 @@ test("visualisation sharing a physical day keeps both, counting the day once", (
   assert.equal(dayCompletion(day).total, 1);
 });
 
+test("low-cost physical support is not demoted to zero load", () => {
+  // The planner stamps stress_class "support" on joint prep, footwork
+  // walkthroughs and technical shadow rhythm as well as on breathing resets.
+  // Support means low cost, not absent movement, so these keep counting.
+  for (const countdown of ["D-10", "D-3"]) {
+    const day = dayFor(productionPlan, countdown);
+    assert.equal(isZeroLoadSupportSession(getSessions(day)[0]), false);
+    assert.equal(dayCompletion(day).total, 1);
+  }
+});
+
 test("Tactical Watch stays visible and contributes nothing physical", () => {
   const day = dayFor(productionPlan, "D-7");
   const session = getSessions(day)[0];

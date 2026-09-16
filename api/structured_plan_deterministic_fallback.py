@@ -33,21 +33,16 @@ from typing import Any
 
 from fightcamp.role_labels import athlete_facing_label_for
 
-from .structured_plan_calendar_spine import reconcile_calendar_spine
+from .structured_plan_calendar_spine import ROLES_OWNED_ELSEWHERE, reconcile_calendar_spine
 from .structured_plan_locked_merge import merge_planner_owned_structured_content
 
 logger = logging.getLogger(__name__)
 
 # Roles another deterministic assembler already renders. Building sessions for
-# them here would put the same role on the day twice.
-_ROLES_OWNED_ELSEWHERE = frozenset(
-    {
-        "hard_sparring_day",  # reconcile_coach_led_sparring_days
-        "light_combat_day",  # reconcile_coach_led_sparring_days
-        "tactical_watch",  # merge_locked_structured_content
-        "fight_visualization",  # merge_locked_structured_content
-    }
-)
+# them here would put the same role on the day twice. Defined with the calendar
+# spine, which applies the same exclusion when it restores a dropped scheduled
+# role, so the two paths can never drift apart.
+_ROLES_OWNED_ELSEWHERE = ROLES_OWNED_ELSEWHERE
 
 _SESSION_TYPE_BY_CATEGORY = {
     "strength": "strength_power",

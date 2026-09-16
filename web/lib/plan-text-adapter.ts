@@ -7,7 +7,6 @@
 // structured renderer's shape without another model call; every field comes
 // from the saved text, so a missing server-side structured payload can never
 // force the legacy renderer.
-import { isZeroLoadSupportSession } from "@/lib/structured-plan";
 import type {
   StructuredBlock,
   StructuredDay,
@@ -751,7 +750,7 @@ function toStructuredSession(session: PlanTextSession, index: number): Structure
   const notes = session.notes.join(" ").trim();
   const objective = [session.objective, notes].filter(Boolean).join(" ") || null;
   const sessionType = inferSessionType(session);
-  const adapted: StructuredSession = {
+  return {
     session_id: `text-session-${index + 1}`,
     session_type: sessionType,
     title: session.title,
@@ -760,12 +759,6 @@ function toStructuredSession(session: PlanTextSession, index: number): Structure
       toStructuredBlock(block, blockIndex, sessionType),
     ),
   };
-  // Scheduled mental / tactical / breathing-only work renders like any other
-  // card, but it is zero load. Stamping the planner's own `stress_class` here —
-  // once, at the point the session is built — keeps every downstream consumer
-  // (renderer tag, completion counts) on one shared rule instead of each
-  // re-guessing from the title.
-  return isZeroLoadSupportSession(adapted) ? { ...adapted, stress_class: "support" } : adapted;
 }
 
 function toStructuredDays(
