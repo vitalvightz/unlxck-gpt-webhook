@@ -19,7 +19,7 @@ from typing import Any, Callable
 
 from fastapi import HTTPException, status
 
-from ..compliance import evaluate_profile_compliance
+from ..compliance import evaluate_profile_compliance, profile_age_years
 from ..error_sanitizer import sanitize_error_text
 from ..generation_health import (
     NON_HEALTH_GENERATION_MODE,
@@ -82,6 +82,36 @@ def _athlete_is_minor(store: AppStore, athlete_id: str) -> bool:
     if not profile_row:
         return True
     return evaluate_profile_compliance(profile_row).is_minor
+
+
+def _athlete_canonical_age(store: AppStore, athlete_id: str) -> int | None:
+    """The athlete's current DOB-derived age, read from the stored profile.
+
+    The request route already normalises the age before a job is created, so on
+    a freshly submitted request this re-derivation is a no-op. It is not
+    redundant: the worker also runs payloads the route never normalised — jobs
+    queued before this rule existed, admin retries, generations replayed from an
+    old intake, and stale onboarding drafts — and for those the stored age can
+    be years out of date or simply fabricated.
+
+    Fails to ``None`` rather than to the payload's age, for the same reason the
+    minor check above fails safe: a profile we cannot read is a profile we
+    cannot vouch for, and the submitted age is exactly the value this rule
+    exists to distrust.
+    """
+    try:
+        profile_row = store.get_profile(athlete_id)
+    except Exception as exc:  # noqa: BLE001 - safeguard must not depend on a clean read
+        logger.error(
+            "[jobs] generation:canonical_age_check_failed athlete_id=%s exc_type=%s error=%s",
+            athlete_id,
+            type(exc).__name__,
+            sanitize_error_text(exc),
+        )
+        return None
+    if not profile_row:
+        return None
+    return profile_age_years(profile_row)
 
 
 def _mark_profile_refresh_failed(final_result: dict[str, Any]) -> dict[str, Any]:
@@ -359,6 +389,26 @@ async def run_generation_job(
             )
             await _fail_claimed_job(f"request_parse_failed: {safe_error}")
             return
+        # Second boundary for the canonical age, after the route's own override.
+        # Everything downstream of this line — the refreshed profile draft, the
+        # intake row created below, the Stage 1 planner payload, Stage 2 and the
+        # persisted plan — reads `request_body.athlete.age`, so replacing it here
+        # is what makes a historical payload carrying `age: 25` unable to
+        # contradict a profile that resolves to 15 today. The minor fail-safe
+        # further down is unchanged and still reads the profile independently.
+        canonical_age = await _to_thread_with_heartbeat(
+            _athlete_canonical_age, store, athlete_id
+        )
+        if request_body.athlete.age != canonical_age:
+            logger.info(
+                "[jobs] generation:age_normalised_from_profile athlete_id=%s job_id=%s "
+                "stored_age_present=%s",
+                athlete_id,
+                job_id,
+                request_body.athlete.age is not None,
+            )
+            request_body.athlete.age = canonical_age
+
         await _touch_heartbeat()
         _emit_milestone(
             "request_payload_parsed",

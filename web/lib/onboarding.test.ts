@@ -331,3 +331,96 @@ test("canonicalizePerformanceFocus corrects invalid primary weak area", () => {
 
   assert.equal(canonical.primary_weak_area, "footwork");
 });
+
+// ---------------------------------------------------------------------------
+// Canonical age: profile.date_of_birth is the only source
+// ---------------------------------------------------------------------------
+
+function dobForAge(years: number): string {
+  const today = new Date();
+  const dob = new Date(Date.UTC(today.getFullYear() - years, today.getMonth(), today.getDate()));
+  return dob.toISOString().slice(0, 10);
+}
+
+function meWithDateOfBirth(overrides: Record<string, unknown> = {}) {
+  return {
+    profile: {
+      full_name: "Athlete",
+      technical_style: [],
+      tactical_style: [],
+      stance: "",
+      professional_status: "",
+      record: "",
+      athlete_timezone: "UTC",
+      nutrition_profile: null,
+      onboarding_draft: null,
+      date_of_birth: dobForAge(25),
+      is_minor: false,
+      ...overrides,
+    },
+    latest_intake: null,
+  } as any;
+}
+
+test("hydratePlanRequest derives the athlete age from the profile date of birth", () => {
+  const hydrated = hydratePlanRequest(meWithDateOfBirth());
+  assert.equal(hydrated.athlete.age, 25);
+});
+
+test("hydratePlanRequest leaves age null when the profile has no date of birth", () => {
+  // No date means no age. Falling back to any stored number would recreate the
+  // split this rule exists to close.
+  const hydrated = hydratePlanRequest(meWithDateOfBirth({ date_of_birth: null }));
+  assert.equal(hydrated.athlete.age, null);
+});
+
+test("a stale latest_intake age cannot override the profile-derived age", () => {
+  const me = meWithDateOfBirth({ date_of_birth: dobForAge(15), is_minor: true });
+  me.latest_intake = { ...emptyPlanRequest("Athlete"), athlete: { ...emptyPlanRequest("Athlete").athlete, age: 25 } };
+
+  assert.equal(hydratePlanRequest(me).athlete.age, 15);
+});
+
+test("a stale onboarding draft age cannot override the profile-derived age", () => {
+  // The draft is the last layer merged, so this is the case that produced the
+  // original contradiction: profile said 15, Camp Setup showed 25.
+  const me = meWithDateOfBirth({
+    date_of_birth: dobForAge(15),
+    is_minor: true,
+    onboarding_draft: { athlete: { age: 25 } },
+  });
+
+  assert.equal(hydratePlanRequest(me).athlete.age, 15);
+});
+
+test("the legacy nutrition_profile age cannot override the profile-derived age", () => {
+  const me = meWithDateOfBirth({
+    date_of_birth: dobForAge(15),
+    is_minor: true,
+    nutrition_profile: { age: 25, sex: "male", height_cm: 178 },
+  });
+
+  const hydrated = hydratePlanRequest(me);
+  assert.equal(hydrated.athlete.age, 15);
+  // The rest of the nutrition profile still hydrates normally — only age is
+  // taken away from it.
+  assert.equal(hydrated.athlete.height_cm, 178);
+});
+
+test("a minor's form does not resurface a target weight from an older adult draft", () => {
+  // The weight-cut field is not shown to an under-18 and the backend strips it,
+  // so a value left behind by an adult-era draft has nothing to serve.
+  const me = meWithDateOfBirth({
+    date_of_birth: dobForAge(15),
+    is_minor: true,
+    onboarding_draft: { athlete: { target_weight_kg: 70 } },
+  });
+
+  assert.equal(hydratePlanRequest(me).athlete.target_weight_kg, null);
+});
+
+test("an adult keeps a target weight carried over from a draft", () => {
+  const me = meWithDateOfBirth({ onboarding_draft: { athlete: { target_weight_kg: 70 } } });
+
+  assert.equal(hydratePlanRequest(me).athlete.target_weight_kg, 70);
+});

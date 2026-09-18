@@ -271,6 +271,13 @@ def _validate_rounds_format(value: str) -> str:
 class AthleteProfileInput(BaseModel):
     full_name: str = Field(..., max_length=ATHLETE_FULL_NAME_MAX_CHARS)
     sex: SexValue | None = None
+    # Derived compatibility value, NOT a fact the athlete supplies. The only
+    # persisted source of age truth is ``profiles.date_of_birth``; whatever
+    # arrives here is overwritten with that date's current age before the
+    # payload is hashed (api/services/generation_request_service.py) and again
+    # before the worker uses it (api/generation/orchestrator.py). The field
+    # stays on the contract because saved intakes and planner code still read
+    # it — treat it as a copy of the profile's age, never as an input.
     age: int | None = None
     weight_kg: float | None = None
     target_weight_kg: float | None = None

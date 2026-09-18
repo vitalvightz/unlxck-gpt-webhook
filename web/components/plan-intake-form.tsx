@@ -76,7 +76,7 @@ import {
   type PerformanceFocusGroup,
 } from "@/lib/days-out-policy";
 import type { PlanRequest } from "@/lib/types";
-import { hasHealthDataConsent } from "@/lib/compliance";
+import { deriveAgeFromDateOfBirth, hasHealthDataConsent } from "@/lib/compliance";
 import { HEALTH_CONSENT_BLOCKED_MESSAGE, withoutIntakeHealthData } from "@/lib/health-consent-ui";
 import {
   ATHLETE_FULL_NAME_MAX,
@@ -898,6 +898,10 @@ export function PlanIntakeForm() {
   const { me, session, replaceMe } = useAppSession();
   // Server-derived age band; the client never decides this.
   const isMinorAthlete = Boolean(me?.profile.is_minor);
+  // Displayed age, recomputed from the profile's date of birth on every render
+  // rather than read out of the form: it then follows a date-of-birth change in
+  // Settings and rolls over on a birthday with nothing for the athlete to edit.
+  const derivedAge = deriveAgeFromDateOfBirth(me?.profile.date_of_birth);
   const healthConsentGranted = hasHealthDataConsent(me);
   const [currentStep, setCurrentStep] = useState(0);
   const [isMobileProgressOpen, setIsMobileProgressOpen] = useState(false);
@@ -2127,7 +2131,8 @@ export function PlanIntakeForm() {
   const profileReviewItems = [
     { label: "Name", value: formatValue(form.athlete.full_name) },
     ...(hasValue(form.athlete.sex) ? [{ label: "Sex", value: sexLabel }] : []),
-    ...(hasValue(form.athlete.age) ? [{ label: "Age", value: formatValue(form.athlete.age) }] : []),
+    // Same derived value the profile step displays, not the form's copy.
+    ...(derivedAge !== null ? [{ label: "Age", value: formatValue(derivedAge) }] : []),
     ...(hasValue(form.athlete.height_cm) ? [{ label: "Height", value: `${form.athlete.height_cm} cm` }] : []),
     ...(hasValue(form.athlete.weight_kg) ? [{ label: "Current weight", value: `${form.athlete.weight_kg} kg` }] : []),
     ...(!isMinorAthlete && hasValue(form.athlete.target_weight_kg)
@@ -2511,9 +2516,25 @@ export function PlanIntakeForm() {
                       onChange={(value) => updateAthlete("sex", (value || null) as PlanRequest["athlete"]["sex"])}
                     />
                   </div>
+                  {/* Read-only on purpose. The date of birth collected at
+                      signup is the single source of age truth, so an age typed
+                      here could only ever disagree with it — which is how a
+                      profile whose date of birth said 15 came to show 25 in
+                      Camp Setup while the under-18 safety rules used 15. It is
+                      shown, not edited; the date of birth is changed in
+                      Settings, and the server re-derives the age from it before
+                      every generation regardless of what is sent. */}
                   <div className="field">
-                    <label htmlFor="age">Age</label>
-                    <input id="age" type="number" min="0" inputMode="numeric" value={form.athlete.age ?? ""} onChange={(event) => updateAthlete("age", numberOrNull(event.target.value))} />
+                    <label id="ageLabel">Age</label>
+                    <div className="readonly-field" aria-labelledby="ageLabel" data-testid="camp-setup-age">
+                      {derivedAge ?? "Not provided"}
+                    </div>
+                    <p className="muted">
+                      {derivedAge === null
+                        ? "Add your date of birth in Settings to set this."
+                        : "From your date of birth"}{" "}
+                      · <Link href="/settings#account">Edit in Settings</Link>
+                    </p>
                   </div>
                   <div className="field">
                     <label htmlFor="weightKg">Weight (kg)</label>

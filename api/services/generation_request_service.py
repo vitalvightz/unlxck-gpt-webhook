@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import BackgroundTasks, HTTPException, Request, status
 
-from api.compliance import evaluate_profile_compliance
+from api.compliance import evaluate_profile_compliance, profile_age_years
 from api.compliance_guards import require_health_data_consent, require_onboarding_compliance
 from api.generation_health import build_non_health_generation_payload, health_generation_fields
 from api.generation.payloads import _stable_payload_hash
@@ -105,6 +105,27 @@ async def generate_plan_for_current_user(
             status_code=status.HTTP_409_CONFLICT,
             detail=focus_validation.error_message or "Too many focus selections for this camp.",
         )
+
+    # Age is a *derived* value, never a client fact: `profiles.date_of_birth` is
+    # the only persisted source of age truth, so whatever the client submitted is
+    # overwritten with the age that date resolves to today. A stale Camp Setup
+    # draft, an old intake replayed, a direct API call or a manipulated client
+    # therefore cannot make the stored generation payload disagree with the
+    # profile the safety rules read. An unresolvable date of birth becomes
+    # `None` — the submitted age is the one input this rule exists to distrust,
+    # so it is never a fallback.
+    #
+    # This runs before `model_dump` deliberately: the payload hash below is taken
+    # from the normalised payload, so two requests differing only in a fabricated
+    # age collapse onto the same generation request instead of forking into two.
+    canonical_age = profile_age_years(profile)
+    if request_body.athlete.age != canonical_age:
+        logger.info(
+            "[generation] request:age_normalised_from_profile athlete_id=%s submitted_age_present=%s",
+            profile.athlete_id,
+            request_body.athlete.age is not None,
+        )
+        request_body.athlete.age = canonical_age
 
     client_request_id = _normalized_client_request_id(
         request.headers.get("X-Client-Request-Id"),

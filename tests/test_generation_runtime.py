@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from datetime import datetime, timezone
 
 import pytest
 from fastapi import BackgroundTasks, HTTPException
@@ -21,7 +22,14 @@ from api.generation_runtime import (
     run_stage1_planner,
 )
 from api.stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError
-from support import FakeStage2Automator, FakeStore, _build_request, finalized_result, seed_default_profiles
+from support import (
+    FakeStage2Automator,
+    FakeStore,
+    _build_request,
+    finalized_result,
+    grant_default_compliance,
+    seed_default_profiles,
+)
 
 
 _ENVIRONMENT_VARS = ("APP_ENV", "ENVIRONMENT", "UNLXCK_ENV", "NODE_ENV")
@@ -1675,3 +1683,110 @@ def test_cleanup_timeout_after_terminal_persist_preserves_plan_and_job(monkeypat
     plan_id = job.get("plan_id")
     assert plan_id
     assert store.get_plan(plan_id) is not None
+
+
+# ---------------------------------------------------------------------------
+# Canonical age: the worker re-derives it from the profile it reloads
+# ---------------------------------------------------------------------------
+#
+# The worker replaces `request_body.athlete.age` once, immediately after parsing
+# the stored payload, and everything downstream reads that one object: the
+# profile draft refreshed from it, the intake created from it, and the Stage 1
+# payload built from it. The intake and the draft are the two observable copies
+# (Stage 1 runs in a separate process, so its payload cannot be captured here),
+# and they are written on either side of the planner call — so agreeing on the
+# corrected age is what shows the replacement happened before any of it.
+
+
+def _dob_for_age(years: int) -> str:
+    today = datetime.now(timezone.utc).date()
+    return today.replace(year=today.year - years).isoformat()
+
+
+def _queue_legacy_job(store: FakeStore, *, stored_age: int | None) -> None:
+    """A job queued with an age the route never normalised."""
+    request = _build_request({"athlete": {"age": stored_age}}).model_dump(mode="json")
+    store.generation_jobs["job-1"] = {
+        "id": "job-1",
+        "athlete_id": "athlete-1",
+        "status": "queued",
+        "source": "self_serve",
+        "request_payload": request,
+        "intake_id": None,
+    }
+
+
+def _run_legacy_job(store: FakeStore) -> None:
+    asyncio.run(
+        generation_runtime.run_generation_job(
+            job_id="job-1",
+            store=store,
+            planner_fn=app_module._noop_planner,
+            stage2=FakeStage2Automator(result_factory=finalized_result),
+            active_tasks=set(),
+        )
+    )
+
+
+@pytest.mark.parametrize(("stored_age", "profile_age"), [(25, 15), (15, 25)])
+def test_worker_corrects_a_legacy_queued_job_age_from_the_current_profile(stored_age, profile_age):
+    """A payload stored before this rule existed cannot outvote the profile.
+
+    Old queued jobs, admin retries and generations replayed from an old intake
+    all reach the worker without passing the route's normalisation, so the
+    worker re-derives the age itself before any of it is used. The correction
+    runs in both directions: an over-stated age is not merely clamped down.
+    """
+    store = FakeStore()
+    seed_default_profiles(store)
+    grant_default_compliance(store, date_of_birth=_dob_for_age(profile_age))
+    _queue_legacy_job(store, stored_age=stored_age)
+
+    _run_legacy_job(store)
+
+    assert store.generation_jobs["job-1"]["status"] == "completed"
+    assert store.get_latest_intake("athlete-1")["intake"]["athlete"]["age"] == profile_age
+
+
+def test_worker_corrects_the_age_before_creating_a_new_intake():
+    # The intake this job creates is a record a future generation can be
+    # replayed from, so a stale age written here would outlive the job and
+    # contaminate the next one.
+    store = FakeStore()
+    seed_default_profiles(store)
+    grant_default_compliance(store, date_of_birth=_dob_for_age(15))
+    _queue_legacy_job(store, stored_age=25)
+    assert store.generation_jobs["job-1"]["intake_id"] is None
+
+    _run_legacy_job(store)
+
+    created_intake_id = store.generation_jobs["job-1"]["intake_id"]
+    assert created_intake_id
+    assert store.get_intake(created_intake_id)["intake"]["athlete"]["age"] == 15
+
+
+def test_worker_drops_a_stored_age_it_cannot_vouch_for():
+    # An unreadable date of birth makes the age unknown. Unknown is a usable
+    # answer; the client's claim is not, so it is never the fallback.
+    store = FakeStore()
+    seed_default_profiles(store)
+    grant_default_compliance(store)
+    store.profiles["athlete-1"]["date_of_birth"] = "not-a-date"
+    _queue_legacy_job(store, stored_age=25)
+
+    _run_legacy_job(store)
+
+    assert store.get_latest_intake("athlete-1")["intake"]["athlete"]["age"] is None
+
+
+def test_worker_keeps_an_age_that_already_matches_the_profile():
+    # The normal path: the route already normalised this payload, so the worker's
+    # second pass is a no-op rather than a second source of drift.
+    store = FakeStore()
+    seed_default_profiles(store)
+    grant_default_compliance(store, date_of_birth=_dob_for_age(25))
+    _queue_legacy_job(store, stored_age=25)
+
+    _run_legacy_job(store)
+
+    assert store.get_latest_intake("athlete-1")["intake"]["athlete"]["age"] == 25

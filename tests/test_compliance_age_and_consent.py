@@ -14,6 +14,7 @@ import pytest
 
 from api.compliance import (
     ADULT_AGE_YEARS,
+    CODE_DOB_INVALID,
     CODE_HEALTH_CONSENT_REQUIRED,
     CODE_TERMS_REQUIRED,
     CODE_UNDER_MINIMUM_AGE,
@@ -27,6 +28,7 @@ from api.compliance import (
     health_consent_active,
     is_minor,
     meets_minimum_age,
+    profile_age_years,
     terms_accepted,
 )
 from api.store import _signup_date_of_birth
@@ -661,3 +663,124 @@ def test_private_trial_acknowledgement_behaviour_is_preserved():
     assert stamped and datetime.fromisoformat(stamped)
     # Still a distinct field from the consent evidence.
     assert stamped != response.json()["profile"]["terms_accepted_at"]
+
+
+# ---------------------------------------------------------------------------
+# Date of birth as the single source of age truth
+# ---------------------------------------------------------------------------
+
+
+def test_profile_age_reads_the_stored_date_of_birth_from_a_record_or_a_row():
+    # Both sides of the mapping layer must agree, or the route and the worker —
+    # which hold a ProfileRecord and a raw row respectively — could derive
+    # different ages for the same athlete.
+    client, store, _ = _build_client()
+    grant_default_compliance(store, date_of_birth=_dob_for_age(15, reference=date.today()))
+
+    row = store.profiles[DEFAULT_ATHLETE_USER.user_id]
+    record = client.get("/api/me", headers=ATHLETE).json()["profile"]
+
+    assert profile_age_years(row) == 15
+    assert profile_age_years(record) == 15
+
+
+def test_profile_age_is_none_when_no_usable_date_of_birth_is_stored():
+    # None means "unknown", and every caller must treat it as such. Returning a
+    # number here would be worse than returning nothing: callers would trust it.
+    assert profile_age_years({"date_of_birth": None}) is None
+    assert profile_age_years({"date_of_birth": "not-a-date"}) is None
+    assert profile_age_years({}) is None
+
+
+def test_updating_the_date_of_birth_recalculates_minor_state():
+    """A date-of-birth change moves the athlete between the adult and minor flows.
+
+    `is_minor` and `age_band` are re-derived on the read, so the response that
+    records the change already carries the new safety state — nothing has to be
+    recomputed or re-fetched by the client for the under-18 rules to apply.
+    """
+    client, store, _ = _build_client()
+    grant_default_compliance(store)
+    assert client.get("/api/me", headers=ATHLETE).json()["profile"]["is_minor"] is False
+
+    minor = client.post(
+        "/api/me/compliance",
+        headers=ATHLETE,
+        json={"date_of_birth": _dob_for_age(15, reference=date.today())},
+    )
+    assert minor.status_code == 200
+    assert minor.json()["profile"]["is_minor"] is True
+    assert minor.json()["profile"]["age_band"] == "13-15"
+
+    # ...and back again. Nothing about the earlier state is sticky.
+    adult = client.post(
+        "/api/me/compliance",
+        headers=ATHLETE,
+        json={"date_of_birth": _dob_for_age(25, reference=date.today())},
+    )
+    assert adult.status_code == 200
+    assert adult.json()["profile"]["is_minor"] is False
+    assert adult.json()["profile"]["age_band"] == "adult"
+
+
+def test_updating_to_an_under_13_date_of_birth_is_rejected():
+    client, store, _ = _build_client()
+    grant_default_compliance(store)
+    stored_before = store.profiles[DEFAULT_ATHLETE_USER.user_id]["date_of_birth"]
+
+    response = client.post(
+        "/api/me/compliance",
+        headers=ATHLETE,
+        json={"date_of_birth": _dob_for_age(12, reference=date.today())},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"]["code"] == CODE_UNDER_MINIMUM_AGE
+    # The existing date survives a rejected change: a refused edit must not
+    # leave the account with no age at all.
+    assert store.profiles[DEFAULT_ATHLETE_USER.user_id]["date_of_birth"] == stored_before
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "not-a-date",
+        "2001-13-45",
+        "",
+    ],
+)
+def test_updating_to_an_unusable_date_of_birth_is_rejected(value):
+    client, store, _ = _build_client()
+    grant_default_compliance(store)
+    stored_before = store.profiles[DEFAULT_ATHLETE_USER.user_id]["date_of_birth"]
+
+    response = client.post(
+        "/api/me/compliance",
+        headers=ATHLETE,
+        json={"date_of_birth": value},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]["code"] == CODE_DOB_INVALID
+    # A rejected edit leaves the stored date alone. Blanking the only age
+    # evidence on the account would be a worse outcome than refusing the change.
+    assert store.profiles[DEFAULT_ATHLETE_USER.user_id]["date_of_birth"] == stored_before
+
+
+def test_updating_to_a_future_date_of_birth_is_rejected():
+    client, store, _ = _build_client()
+    grant_default_compliance(store)
+    stored_before = store.profiles[DEFAULT_ATHLETE_USER.user_id]["date_of_birth"]
+    future = (date.today() + timedelta(days=1)).isoformat()
+
+    response = client.post(
+        "/api/me/compliance",
+        headers=ATHLETE,
+        json={"date_of_birth": future},
+    )
+
+    # A date that has not happened yet cannot evidence any age, so it cannot
+    # clear the 13+ floor.
+    assert response.status_code == 403
+    assert response.json()["detail"]["code"] == CODE_UNDER_MINIMUM_AGE
+    assert store.profiles[DEFAULT_ATHLETE_USER.user_id]["date_of_birth"] == stored_before
