@@ -14,9 +14,11 @@ import { GlobalFeedback } from "@/components/feedback/global-feedback";
 import { ApiError, changeUsername, recordCompliance, updateMe } from "@/lib/api";
 import {
   consentCopyForBand,
+  deriveAgeFromDateOfBirth,
   hasHealthDataConsent,
   healthConsentSummary,
   termsSummary,
+  validateDateOfBirthChange,
 } from "@/lib/compliance";
 import { PRIVACY_HREF, TERMS_HREF, buildDataRequestMailto } from "@/lib/legal-documents";
 import { isSafeAvatarImageUrl } from "@/lib/avatar-image-url";
@@ -366,6 +368,18 @@ export default function SettingsPage() {
   const [privacyError, setPrivacyError] = useState<string | null>(null);
   const [isConsentSaving, setIsConsentSaving] = useState(false);
 
+  // Date of birth. `isEditingDateOfBirth` gates the input behind a deliberate
+  // action, and `isConfirmingDateOfBirth` gates the save behind a second one:
+  // this one value decides the age band, the under-18 safety rules and the age
+  // every future generation runs against, so it is not something to change by
+  // brushing a date picker on a phone.
+  const [dateOfBirthDraft, setDateOfBirthDraft] = useState("");
+  const [isEditingDateOfBirth, setIsEditingDateOfBirth] = useState(false);
+  const [isConfirmingDateOfBirth, setIsConfirmingDateOfBirth] = useState(false);
+  const [dateOfBirthError, setDateOfBirthError] = useState<string | null>(null);
+  const [dateOfBirthMessage, setDateOfBirthMessage] = useState<string | null>(null);
+  const [isDateOfBirthSaving, setIsDateOfBirthSaving] = useState(false);
+
   const isAdmin = me?.profile.role === "admin";
   const sections = isAdmin ? ADMIN_SETTINGS_SECTIONS : ATHLETE_SETTINGS_SECTIONS;
   const isReady = isMeHydrated && Boolean(me);
@@ -400,6 +414,72 @@ export default function SettingsPage() {
   const usernameMax = rateLimit?.max_changes_per_window ?? 4;
   const usernameWindowDays = rateLimit?.window_days ?? 30;
   const nextAvailableLabel = formatNextAvailable(rateLimit?.next_available_at);
+
+  // The stored date is the only source of age truth; the age beside it is a
+  // display value recomputed from it, never a second stored field.
+  const savedDateOfBirth = (me?.profile.date_of_birth ?? "").slice(0, 10);
+  const derivedAge = deriveAgeFromDateOfBirth(savedDateOfBirth || null);
+
+  function beginDateOfBirthEdit() {
+    setDateOfBirthDraft(savedDateOfBirth);
+    setIsEditingDateOfBirth(true);
+    setIsConfirmingDateOfBirth(false);
+    setDateOfBirthError(null);
+    setDateOfBirthMessage(null);
+  }
+
+  function cancelDateOfBirthEdit() {
+    setIsEditingDateOfBirth(false);
+    setIsConfirmingDateOfBirth(false);
+    setDateOfBirthDraft("");
+    setDateOfBirthError(null);
+  }
+
+  async function submitDateOfBirth() {
+    const token = session?.access_token;
+    const next = dateOfBirthDraft.trim();
+    const validationError = validateDateOfBirthChange(next);
+    if (validationError) {
+      setDateOfBirthError(validationError);
+      setIsConfirmingDateOfBirth(false);
+      return;
+    }
+    if (next !== savedDateOfBirth && !isConfirmingDateOfBirth) {
+      // First submit of a genuinely different date only asks for confirmation.
+      // An unchanged date needs none — there is nothing to confirm.
+      setIsConfirmingDateOfBirth(true);
+      setDateOfBirthError(null);
+      return;
+    }
+    if (!token || isDateOfBirthSaving) {
+      return;
+    }
+    setIsDateOfBirthSaving(true);
+    setDateOfBirthError(null);
+    setDateOfBirthMessage(null);
+    try {
+      // Goes through the compliance endpoint, never straight to Supabase: the
+      // browser has no write access to this column, and the server re-checks the
+      // 13+ floor and re-derives `is_minor`/`age_band` from what it stores.
+      const updated = await recordCompliance(token, { date_of_birth: next });
+      // Replacing the cached profile is what makes the change take effect
+      // everywhere at once — Camp Setup's displayed age, the weight-cut surface
+      // and the safety copy all read this one response.
+      replaceMe(updated);
+      setIsEditingDateOfBirth(false);
+      setIsConfirmingDateOfBirth(false);
+      setDateOfBirthMessage("Date of birth updated. Age-based guidance now uses the new date.");
+    } catch (dobError) {
+      setDateOfBirthError(
+        dobError instanceof Error
+          ? dobError.message
+          : "Your date of birth could not be saved. Try again.",
+      );
+      setIsConfirmingDateOfBirth(false);
+    } finally {
+      setIsDateOfBirthSaving(false);
+    }
+  }
 
   async function toggleHealthConsent(grant: boolean) {
     const token = session?.access_token;
@@ -884,6 +964,89 @@ export default function SettingsPage() {
             <label>Email</label>
             <div className="readonly-field">{me?.profile.email || "Unavailable"}</div>
           </div>
+        </div>
+
+        <div className="settings-subsection">
+          <div className="settings-subsection-header">
+            <h3 className="settings-subsection-title">Date of birth</h3>
+          </div>
+
+          {isEditingDateOfBirth ? (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void submitDateOfBirth();
+              }}
+            >
+              <div className="field">
+                <label htmlFor="settingsDateOfBirth">Date of birth</label>
+                <input
+                  id="settingsDateOfBirth"
+                  type="date"
+                  autoComplete="bday"
+                  value={dateOfBirthDraft}
+                  onChange={(event) => {
+                    setDateOfBirthDraft(event.target.value);
+                    setDateOfBirthError(null);
+                    // Any edit invalidates a pending confirmation: the athlete
+                    // must confirm the date they are actually saving.
+                    setIsConfirmingDateOfBirth(false);
+                  }}
+                />
+                <p className="muted">
+                  Changing this can affect age-based training and safety recommendations.
+                </p>
+              </div>
+
+              {isConfirmingDateOfBirth ? (
+                <p className="warning-text" role="alert">
+                  Confirm {formatAppDate(dateOfBirthDraft)} is your date of birth. Submit again to save it.
+                </p>
+              ) : null}
+              {dateOfBirthError ? <p className="error-text">{dateOfBirthError}</p> : null}
+
+              <div className="form-actions settings-subsection-actions">
+                <button type="submit" className="cta" disabled={isDateOfBirthSaving}>
+                  {isDateOfBirthSaving
+                    ? "Saving..."
+                    : isConfirmingDateOfBirth
+                      ? "Confirm date of birth"
+                      : "Update date of birth"}
+                </button>
+                <button type="button" className="ghost-button" onClick={cancelDateOfBirthEdit}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          ) : (
+            <>
+              <div className="form-grid settings-identity-grid">
+                <div className="field">
+                  <label>Date of birth</label>
+                  <div className="readonly-field" data-testid="settings-date-of-birth">
+                    {savedDateOfBirth ? formatAppDate(savedDateOfBirth) : "Not set"}
+                  </div>
+                </div>
+                <div className="field">
+                  <label>Age</label>
+                  <div className="readonly-field" data-testid="settings-derived-age">
+                    {derivedAge ?? "Unavailable"}
+                  </div>
+                </div>
+              </div>
+              <p className="muted">
+                Your date of birth sets your age everywhere in UNLXCK, including Camp Setup and the
+                age-based safety rules. It is not editable from Camp Setup.
+              </p>
+              {dateOfBirthMessage ? <p className="success-text">{dateOfBirthMessage}</p> : null}
+              {dateOfBirthError ? <p className="error-text">{dateOfBirthError}</p> : null}
+              <div className="form-actions settings-subsection-actions">
+                <button type="button" className="ghost-button" onClick={beginDateOfBirthEdit}>
+                  Change date of birth
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         <form className="settings-subsection" onSubmit={handleUsernameSubmit}>

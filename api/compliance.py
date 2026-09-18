@@ -220,6 +220,29 @@ class ComplianceStatus:
         return self.meets_minimum_age and self.terms_accepted
 
 
+def _read_profile_field(profile: Any, name: str) -> Any:
+    """One field from either a ``ProfileRecord`` or the raw dict a store read returns."""
+    if isinstance(profile, dict):
+        return profile.get(name)
+    return getattr(profile, name, None)
+
+
+def profile_age_years(profile: Any, *, reference: date | None = None) -> int | None:
+    """The athlete's canonical age, derived from the profile's stored date of birth.
+
+    ``profiles.date_of_birth`` is the only persisted source of age truth. Every
+    other age that travels through the system — the one in a generation request
+    payload, the one saved on an intake, the one shown in Camp Setup — is a
+    *derived* copy that this function re-computes, so a stale draft, an old
+    intake or a manipulated client cannot disagree with the profile.
+
+    Returns ``None`` when no usable date of birth is stored. Callers must treat
+    that as "unknown" and never fall back to a submitted age: an age the athlete
+    typed is exactly the input this rule exists to distrust.
+    """
+    return age_years(_read_profile_field(profile, "date_of_birth"), reference=reference)
+
+
 def evaluate_profile_compliance(profile: Any, *, reference: date | None = None) -> ComplianceStatus:
     """Derive the compliance verdict from a profile record or row.
 
@@ -228,9 +251,7 @@ def evaluate_profile_compliance(profile: Any, *, reference: date | None = None) 
     """
 
     def _read(name: str) -> Any:
-        if isinstance(profile, dict):
-            return profile.get(name)
-        return getattr(profile, name, None)
+        return _read_profile_field(profile, name)
 
     dob_raw = _read("date_of_birth")
     dob = parse_date_of_birth(dob_raw)

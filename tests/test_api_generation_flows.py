@@ -5828,3 +5828,85 @@ def test_generate_plan_rejects_overlong_list_item_with_422():
 
     assert response.status_code == 422
     assert "key_goals" in str(response.json()["detail"])
+
+
+# ---------------------------------------------------------------------------
+# Canonical age: profiles.date_of_birth wins over any submitted athlete.age
+# ---------------------------------------------------------------------------
+
+
+def _dob_for_age(years: int) -> str:
+    today = datetime.now(timezone.utc).date()
+    return today.replace(year=today.year - years).isoformat()
+
+
+def test_submitted_age_is_replaced_by_the_profile_derived_age_when_it_is_too_high():
+    """A client claiming to be an adult cannot escape the under-18 rules.
+
+    This is the contradiction the rule exists for: the profile's date of birth
+    resolved to 15 while the payload said 25, so the safety logic and the plan
+    inputs were describing two different athletes.
+    """
+    client, store, _ = _build_client()
+    grant_default_compliance(store, date_of_birth=_dob_for_age(15))
+
+    _, job = _start_generation(client, _build_request({"athlete": {"age": 25}}))
+
+    stored_job = store.get_generation_job(job["job_id"])
+    assert stored_job["request_payload"]["athlete"]["age"] == 15
+    # The intake persisted from the same request carries the corrected age too,
+    # so replaying it later cannot reintroduce the claim.
+    assert store.get_latest_intake("athlete-1")["intake"]["athlete"]["age"] == 15
+
+
+def test_submitted_age_is_replaced_by_the_profile_derived_age_when_it_is_too_low():
+    # The override is not a one-way minimum. An adult under-reporting their age
+    # would otherwise opt themselves into minor-shaped programming.
+    client, store, _ = _build_client()
+    grant_default_compliance(store, date_of_birth=_dob_for_age(25))
+
+    _, job = _start_generation(client, _build_request({"athlete": {"age": 15}}))
+
+    stored_job = store.get_generation_job(job["job_id"])
+    assert stored_job["request_payload"]["athlete"]["age"] == 25
+
+
+def test_a_profile_without_a_usable_date_of_birth_cannot_generate_at_all():
+    """No date of birth means no generation, not a generation at the claimed age.
+
+    The onboarding gate refuses first, so a submitted age never even reaches the
+    normalisation step — which is the strongest form of "the client's age is
+    never a fallback" the route can offer. The worker covers the same profile
+    state for jobs that were already queued (see test_generation_runtime.py).
+    """
+    client, store, _ = _build_client()
+    grant_default_compliance(store)
+    store.profiles["athlete-1"]["date_of_birth"] = "not-a-date"
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=_build_request({"athlete": {"age": 25}}).model_dump(mode="json"),
+    )
+
+    assert response.status_code == 403
+    assert not store.generation_jobs
+
+
+def test_age_is_normalised_before_the_generation_payload_is_hashed():
+    """Two requests differing only in a fabricated age must be one request.
+
+    If normalisation happened after hashing, changing the claimed age would mint
+    a distinct payload hash and let a caller bypass the duplicate-payload
+    recovery that collapses retries onto one generation.
+    """
+    client, store, _ = _build_client()
+    grant_default_compliance(store, date_of_birth=_dob_for_age(15))
+
+    _, first = _start_generation(client, _build_request({"athlete": {"age": 25}}))
+    _, second = _start_generation(client, _build_request({"athlete": {"age": 41}}))
+
+    first_job = store.get_generation_job(first["job_id"])
+    second_job = store.get_generation_job(second["job_id"])
+    assert first_job["payload_hash"] == second_job["payload_hash"]
+    assert first["job_id"] == second["job_id"]

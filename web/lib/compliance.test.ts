@@ -10,10 +10,15 @@ import {
   TERMS_REQUIRED_MESSAGE,
   TERMS_VERSION,
   UNDER_MINIMUM_AGE_MESSAGE,
+  DATE_OF_BIRTH_FUTURE_MESSAGE,
+  DATE_OF_BIRTH_INVALID_MESSAGE,
+  DATE_OF_BIRTH_REQUIRED_MESSAGE,
   ageInYears,
+  deriveAgeFromDateOfBirth,
   consentCopyForBand,
   provisionalAgeBand,
   signupConsentBlockReason,
+  validateDateOfBirthChange,
   hasHealthDataConsent,
   hasWithdrawnHealthConsent,
   healthConsentSummary,
@@ -335,4 +340,40 @@ test("the detailed wording survives for Settings and the consent gate", () => {
     assert.ok(copy.declineNote.length > 0, `${band} decline note should remain`);
     assert.ok(copy.privacySummary.length > 0, `${band} privacy summary should remain`);
   }
+});
+
+// ---------------------------------------------------------------------------
+// Date of birth as the single source of age truth
+// ---------------------------------------------------------------------------
+
+test("deriveAgeFromDateOfBirth counts completed years, matching the backend", () => {
+  const today = new Date(2026, 7, 17);
+  assert.equal(deriveAgeFromDateOfBirth("2001-08-17", today), 25);
+  // The day before a birthday is still the previous age. Backend `age_years`
+  // uses the same rule, and a drift of one here would show an age the server
+  // disagrees with on exactly the day it matters most.
+  assert.equal(deriveAgeFromDateOfBirth("2001-08-18", today), 24);
+});
+
+test("deriveAgeFromDateOfBirth returns null rather than guessing", () => {
+  const today = new Date(2026, 7, 17);
+  assert.equal(deriveAgeFromDateOfBirth(null, today), null);
+  assert.equal(deriveAgeFromDateOfBirth(undefined, today), null);
+  assert.equal(deriveAgeFromDateOfBirth("", today), null);
+  assert.equal(deriveAgeFromDateOfBirth("not-a-date", today), null);
+  assert.equal(deriveAgeFromDateOfBirth("2001-13-45", today), null);
+  // A date that has not happened yet evidences no age at all.
+  assert.equal(deriveAgeFromDateOfBirth("2027-01-01", today), null);
+});
+
+test("validateDateOfBirthChange names each reason a change is refused", () => {
+  const today = new Date(2026, 7, 17);
+  assert.equal(validateDateOfBirthChange("", today), DATE_OF_BIRTH_REQUIRED_MESSAGE);
+  assert.equal(validateDateOfBirthChange("17/08/2001", today), DATE_OF_BIRTH_INVALID_MESSAGE);
+  assert.equal(validateDateOfBirthChange("2001-02-30", today), DATE_OF_BIRTH_INVALID_MESSAGE);
+  // A future date is told apart from a malformed one: "that has not happened
+  // yet" says what to fix, where "invalid date" does not.
+  assert.equal(validateDateOfBirthChange("2027-01-01", today), DATE_OF_BIRTH_FUTURE_MESSAGE);
+  assert.equal(validateDateOfBirthChange("2014-08-18", today), UNDER_MINIMUM_AGE_MESSAGE);
+  assert.equal(validateDateOfBirthChange("2001-08-17", today), null);
 });

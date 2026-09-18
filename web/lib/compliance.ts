@@ -213,6 +213,28 @@ export function ageInYears(dateOfBirth: string, today: Date = new Date()): numbe
   return years;
 }
 
+/**
+ * The athlete's age in completed years, derived from a stored date of birth.
+ *
+ * Display and hydration only. `profiles.date_of_birth` is the single persisted
+ * source of age truth, so nothing calculated here is ever written back into the
+ * profile — Camp Setup shows this value and sends it along for compatibility,
+ * and the server re-derives it from the same date before generation regardless.
+ *
+ * Returns null for a missing, malformed or future date, matching the backend's
+ * `api.compliance.age_years` (same completed-years birthday semantics), so the
+ * two sides cannot disagree about whose birthday has passed.
+ */
+export function deriveAgeFromDateOfBirth(
+  dateOfBirth: string | null | undefined,
+  today: Date = new Date(),
+): number | null {
+  if (typeof dateOfBirth !== "string") {
+    return null;
+  }
+  return ageInYears(dateOfBirth, today);
+}
+
 /** Signup-form validation message for a date of birth, or null when it passes. */
 export function validateDateOfBirth(
   dateOfBirth: string,
@@ -224,6 +246,57 @@ export function validateDateOfBirth(
   const years = ageInYears(dateOfBirth, today);
   if (years === null) {
     return DATE_OF_BIRTH_INVALID_MESSAGE;
+  }
+  if (years < MINIMUM_SIGNUP_AGE_YEARS) {
+    return UNDER_MINIMUM_AGE_MESSAGE;
+  }
+  return null;
+}
+
+export const DATE_OF_BIRTH_FUTURE_MESSAGE = "Your date of birth cannot be in the future.";
+
+/**
+ * Validation message for a date of birth being *changed* in Settings, or null
+ * when it passes.
+ *
+ * Distinguishes a future date from a malformed one, which signup does not need
+ * to: at signup a future date is a typo in a field the athlete is filling for
+ * the first time, whereas here they are replacing a value the account already
+ * relies on, and "that date has not happened yet" says what to fix.
+ *
+ * Client-side courtesy only. The backend rejects the same cases — a future date
+ * cannot clear the 13+ floor — and a Postgres trigger rejects under-13 again
+ * beneath it.
+ */
+export function validateDateOfBirthChange(
+  dateOfBirth: string,
+  today: Date = new Date(),
+): string | null {
+  const trimmed = dateOfBirth.trim();
+  if (!trimmed) {
+    return DATE_OF_BIRTH_REQUIRED_MESSAGE;
+  }
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+  if (!match) {
+    return DATE_OF_BIRTH_INVALID_MESSAGE;
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  if (
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() !== month - 1 ||
+    parsed.getUTCDate() !== day
+  ) {
+    return DATE_OF_BIRTH_INVALID_MESSAGE;
+  }
+  // ageInYears returns null for both a malformed and a future date; the format
+  // and calendar checks above have already ruled the first out, so a null here
+  // can only mean the date is still to come.
+  const years = ageInYears(trimmed, today);
+  if (years === null) {
+    return DATE_OF_BIRTH_FUTURE_MESSAGE;
   }
   if (years < MINIMUM_SIGNUP_AGE_YEARS) {
     return UNDER_MINIMUM_AGE_MESSAGE;

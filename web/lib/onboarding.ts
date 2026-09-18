@@ -1,5 +1,6 @@
 import type { MeResponse, PlanRequest } from "@/lib/types";
 
+import { deriveAgeFromDateOfBirth } from "@/lib/compliance";
 import { detectDeviceTimeZone } from "@/lib/intake-options";
 
 function isEmptyValue(value: unknown): boolean {
@@ -187,10 +188,13 @@ export function hydratePlanRequest(me: MeResponse | null): PlanRequest {
   // Layer order for athlete fields: defaults < profile-derived < latest_intake.athlete < draft.athlete.
   // Each layer only overrides when its value is non-empty, so a partial draft (e.g. record: "",
   // technical_style: []) never clobbers prior values pulled from the previous intake or the profile.
+  // `age` is deliberately absent here. It is not a layer at all any more: the
+  // legacy `nutrition_profile.age` is a second, hand-edited copy that can drift
+  // from the date of birth, and layering it would only give it a chance to win.
+  // The canonical value is applied below, after every layer has been merged.
   const profileAthlete: Partial<PlanRequest["athlete"]> = {
     full_name: me.profile.full_name,
     sex: me.profile.nutrition_profile?.sex ?? null,
-    age: me.profile.nutrition_profile?.age ?? null,
     height_cm: me.profile.nutrition_profile?.height_cm ?? null,
     technical_style: me.profile.technical_style,
     tactical_style: me.profile.tactical_style,
@@ -202,7 +206,25 @@ export function hydratePlanRequest(me: MeResponse | null): PlanRequest {
 
   const withProfile = mergeAthleteLayers(fallback.athlete, profileAthlete);
   const withIntake = mergeAthleteLayers(withProfile, base.athlete);
-  const finalAthlete = mergeAthleteLayers(withIntake, normalizedDraft?.athlete, "explicit");
+  const mergedAthlete = mergeAthleteLayers(withIntake, normalizedDraft?.athlete, "explicit");
+
+  // Age is forced *after* every layer, not merged as one of them. Applying it
+  // earlier would let `latest_intake.athlete.age`, `onboarding_draft.athlete.age`
+  // or the legacy `nutrition_profile.age` overwrite it again — which is exactly
+  // how a profile whose date of birth says 15 ended up displaying 25 in Camp
+  // Setup. The date of birth is the only source; no date means no age, never a
+  // stale one, and the server re-derives it before generation either way.
+  const canonicalAge = deriveAgeFromDateOfBirth(me.profile.date_of_birth);
+
+  const finalAthlete: PlanRequest["athlete"] = {
+    ...mergedAthlete,
+    age: canonicalAge,
+    // A profile that is currently a minor has no weight-cut feature, so a target
+    // weight left behind by an older adult draft or intake has nothing to serve.
+    // The backend strips it from the request too; clearing it here stops it
+    // reappearing in a form the athlete can no longer see the field for.
+    ...(me.profile.is_minor ? { target_weight_kg: null } : {}),
+  };
 
   return canonicalizePerformanceFocus({
     ...fallback,

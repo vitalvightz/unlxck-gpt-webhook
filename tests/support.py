@@ -20,6 +20,7 @@ from api.compliance import (
     HEALTH_CONSENT_VERSION,
     TERMS_VERSION,
     UNDER_MINIMUM_AGE_MESSAGE,
+    age_years,
     meets_minimum_age,
     parse_date_of_birth,
 )
@@ -2050,7 +2051,12 @@ def _build_request(overrides: dict | None = None) -> PlanRequest:
     payload = {
         "athlete": {
             "full_name": "Ari Mensah",
-            "age": 27,
+            # Derived from the default athlete's date of birth rather than
+            # hard-coded, because the generation route overwrites `age` with
+            # exactly this value. A fixed number would leave the default payload
+            # differing from the one the route stores, and any test comparing a
+            # hand-seeded job against a posted one would fail on the hash alone.
+            "age": age_years(DEFAULT_ADULT_DATE_OF_BIRTH),
             "weight_kg": 72.5,
             "target_weight_kg": 70.0,
             "height_cm": 178,

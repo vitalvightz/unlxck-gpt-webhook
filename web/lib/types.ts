@@ -30,6 +30,12 @@ export type GenerationJobStatus = "queued" | "running" | "completed" | "review_r
 export type AthleteProfileInput = {
   full_name: string;
   sex?: SexValue | null;
+  /**
+   * Derived compatibility value, not something the athlete edits.
+   * `profiles.date_of_birth` is the only persisted source of age truth: the
+   * form hydrates this from that date (see `hydratePlanRequest`) and the server
+   * overwrites it again before generation, so anything sent here is discarded.
+   */
   age?: number | null;
   weight_kg?: number | null;
   target_weight_kg?: number | null;
