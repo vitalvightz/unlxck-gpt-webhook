@@ -51,6 +51,53 @@ export function isProtectedTriageLatestJob(
   return stage2 === "triage_blocked";
 }
 
+/**
+ * Ribbon copy for a build held by protected triage.
+ *
+ * Only an admin can act on the hold, so only an admin is offered the admin
+ * review link. An athlete used to be shown "Open admin review", which both
+ * read as their job to do and led to a page they cannot open; they now get a
+ * plain waiting notice instead.
+ */
+export function resolveAdminHoldRibbonCopy(isAdminViewer: boolean, hasAdminTarget = true): {
+  message: string;
+  ctaLabel: string;
+  canOpenAdminReview: boolean;
+} {
+  if (!isAdminViewer) {
+    return {
+      message: "Your plan is with an admin for review.",
+      ctaLabel: "Awaiting approval",
+      canOpenAdminReview: false,
+    };
+  }
+
+  return {
+    message: "Plan is held for admin review.",
+    ctaLabel: hasAdminTarget ? "Open admin review" : "Awaiting admin",
+    canOpenAdminReview: hasAdminTarget,
+  };
+}
+
+/**
+ * Copy for a build an admin has approved and resumed. The athlete's ribbon
+ * must say the build is being finished — the generic "Generating plan..."
+ * alongside a link into /generate is what made an approved plan look like it
+ * had gone back to the start.
+ */
+export const ADMIN_RESUMED_STATUS_MESSAGE = "Approved - finishing your plan.";
+
+export function resolveAthleteResumeStatusMessage(
+  phase: string | null,
+  source: string | null,
+  fallback: string | null,
+): string | null {
+  if (source === "admin_triage_resume" && (phase === "queued" || phase === "running" || phase === "finalizing")) {
+    return ADMIN_RESUMED_STATUS_MESSAGE;
+  }
+  return fallback;
+}
+
 export function shouldRenderPassiveLatestJobRibbon(
   latestJob:
     | {
@@ -147,10 +194,11 @@ export function getGenerationStatusTarget(
   terminalStatus: "completed" | "review_required" | null,
   source: string | null,
   athleteId: string | null,
+  isAdminViewer = true,
 ): `/generate` | `/admin/athletes/${string}` | `/plans/${string}` | `/plans/${string}?review_required=1` | null {
   if (phase === "queued" || phase === "running" || phase === "finalizing") {
     if (source === "admin_latest_intake" && athleteId) {
-      return `/admin/athletes/${athleteId}`;
+      return isAdminViewer ? `/admin/athletes/${athleteId}` : "/generate";
     }
 
     if (source === "admin_triage_resume") {
@@ -158,9 +206,14 @@ export function getGenerationStatusTarget(
         return `/plans/${planId}`;
       }
 
-      if (athleteId) {
+      if (isAdminViewer && athleteId) {
         return `/admin/athletes/${athleteId}`;
       }
+
+      // An athlete whose held build was just resumed has nowhere useful to go:
+      // /generate remounts the intake/build screen, which reads as the build
+      // starting over. The ribbon stays a status notice until the plan exists.
+      return null;
     }
 
     return "/generate";
@@ -202,7 +255,8 @@ export function isGenerationRibbonAcknowledgedRoute(
 }
 
 export function GlobalGenerationStatus() {
-  const { session } = useAppSession();
+  const { session, me } = useAppSession();
+  const isAdminViewer = me?.profile.role === "admin";
   const pathname = usePathname();
   const {
     isActive,
@@ -349,7 +403,14 @@ export function GlobalGenerationStatus() {
 
   const isFailed = phase === "failed";
   const isCompleted = phase === "completed";
-  const navigationTarget = getGenerationStatusTarget(phase, planId, terminalStatus, source, athleteId);
+  const navigationTarget = getGenerationStatusTarget(
+    phase,
+    planId,
+    terminalStatus,
+    source,
+    athleteId,
+    isAdminViewer,
+  );
   const passivePlanTarget = !isActive ? getPassiveLatestJobPlanTarget(latestJob) : null;
   const acknowledgementTarget = isCompleted ? navigationTarget : passivePlanTarget;
   const isRedundantRoute = isGenerationRibbonTargetRedundant(pathname, acknowledgementTarget);
@@ -359,6 +420,7 @@ export function GlobalGenerationStatus() {
   // — a finished build should say how long it took. It stops moving because
   // `endedAtMs` replaces `now` in the subtraction, not because it is hidden.
   const showElapsed = isActive && startedAtMs !== null;
+  const displayStatusMessage = resolveAthleteResumeStatusMessage(phase, source, statusMessage);
   const isElapsedRunning = showElapsed && endedAtMs === null;
 
   // The passive ribbon has no live timer to read, so its total comes from the
@@ -515,13 +577,15 @@ export function GlobalGenerationStatus() {
               <span className="global-generation-status-text">
                 <span className="global-generation-status-message">
                   {isProtectedTriage
-                    ? "Plan is held for admin review."
+                    ? resolveAdminHoldRibbonCopy(isAdminViewer).message
                     : "Your plan is saved and ready."}
                 </span>
                 <TotalBuildTime label={passiveTotalLabel} />
               </span>
               <span className="global-generation-status-cta-label">
-                {isProtectedTriage ? "Open admin review" : "Open plan"}
+                {isProtectedTriage
+                  ? resolveAdminHoldRibbonCopy(isAdminViewer).ctaLabel
+                  : "Open plan"}
               </span>
             </Link>
 
@@ -637,16 +701,16 @@ export function GlobalGenerationStatus() {
       && !latestJob.plan_id
       && isProtectedTriageLatestJob(latestJob)
     ) {
-      const adminTarget = latestJob.athlete_id ? `/admin/athletes/${latestJob.athlete_id}` : null;
+      const holdTarget = latestJob.athlete_id ? `/admin/athletes/${latestJob.athlete_id}` : null;
+      const holdCopy = resolveAdminHoldRibbonCopy(isAdminViewer, Boolean(holdTarget));
+      const adminTarget = holdCopy.canOpenAdminReview ? holdTarget : null;
       const content = (
         <>
           <span className="global-generation-status-text">
-            <span className="global-generation-status-message">Plan is held for admin review.</span>
+            <span className="global-generation-status-message">{holdCopy.message}</span>
             <TotalBuildTime label={passiveTotalLabel} />
           </span>
-          <span className="global-generation-status-cta-label">
-            {adminTarget ? "Open admin review" : "Awaiting admin"}
-          </span>
+          <span className="global-generation-status-cta-label">{holdCopy.ctaLabel}</span>
         </>
       );
       return (
@@ -687,13 +751,15 @@ export function GlobalGenerationStatus() {
               <span className="global-generation-status-text">
                 <span className="global-generation-status-message">
                   {isProtectedTriage
-                    ? "Plan is held for admin review."
+                    ? resolveAdminHoldRibbonCopy(isAdminViewer).message
                     : "Your plan is saved and ready."}
                 </span>
                 <TotalBuildTime label={passiveTotalLabel} />
               </span>
               <span className="global-generation-status-cta-label">
-                {isProtectedTriage ? "Open admin review" : "Open plan"}
+                {isProtectedTriage
+                  ? resolveAdminHoldRibbonCopy(isAdminViewer).ctaLabel
+                  : "Open plan"}
               </span>
             </Link>
 
@@ -881,7 +947,7 @@ export function GlobalGenerationStatus() {
         </span>
 
         <span className="global-generation-status-text">
-          <span className="global-generation-status-message">{statusMessage}</span>
+          <span className="global-generation-status-message">{displayStatusMessage}</span>
 
           {elapsedLabel ? (
             <span

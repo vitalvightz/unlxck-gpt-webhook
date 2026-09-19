@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   RECOVERED_PLAN_STATUS_MESSAGE,
   resolveTerminalGenerationView,
+  shouldPollAdminHoldStatus,
   shouldRetainLatestJob,
   shouldUseLocalPendingForRecovery,
 } from "./generation-status-provider";
@@ -233,4 +234,12 @@ test("triage-blocked terminal job without plan id is retained for admin-review r
     }),
     true,
   );
+});
+
+test("a build held for admin review keeps being polled so the approval lands on its own", () => {
+  // Without this the held job is terminal, nothing polls it, and the athlete's
+  // ribbon keeps saying "held for admin review" after the admin resumed it.
+  assert.equal(shouldPollAdminHoldStatus({ requires_admin_resume: true }), true);
+  assert.equal(shouldPollAdminHoldStatus({ requires_admin_resume: false }), false);
+  assert.equal(shouldPollAdminHoldStatus(null), false);
 });

@@ -176,7 +176,9 @@ const passiveCases: { name: string; job: Partial<GenerationJobResponse>; expectT
       requires_admin_resume: true,
       stage2_status: "triage_blocked",
     },
-    expectText: "Plan is held for admin review.",
+    // The harness session carries no profile, so the ribbon renders for a
+    // non-admin viewer: they get the waiting notice, not the admin link.
+    expectText: "Your plan is with an admin for review.",
   },
   {
     name: "retryable failure with no plan",

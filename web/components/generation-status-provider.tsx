@@ -46,6 +46,12 @@ export interface GenerationStatusContextValue {
 const GenerationStatusContext = createContext<GenerationStatusContextValue | null>(null);
 const PENDING_GENERATION_PREFIX = "unlxck:pending-generation:";
 const GLOBAL_STATUS_POLL_MS = 15_000;
+// A build held for admin review is terminal as far as the job poll is
+// concerned, so nothing was watching it: the athlete's ribbon kept saying
+// "held for admin review" long after an admin had approved and resumed it,
+// until something else forced a navigation. A held job is polled on its own
+// cadence so the approval lands on screen by itself.
+const ADMIN_HOLD_POLL_MS = 8_000;
 const INITIAL_STATUS_CHECK_DELAY_MS = 900;
 
 interface PendingGenerationState {
@@ -73,6 +79,12 @@ export function shouldUseLocalPendingForRecovery(pending: PendingGenerationState
  * the ribbon's timer ran forever. A job this provider is still tracking keeps
  * the poll alive on its own.
  */
+export function shouldPollAdminHoldStatus(
+  latestJob: { requires_admin_resume?: boolean | null } | null | undefined,
+): boolean {
+  return latestJob?.requires_admin_resume === true;
+}
+
 export function shouldPollGenerationStatus(
   trackedJobId: string | null | undefined,
   hasPendingRecord: boolean,
@@ -328,6 +340,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
   // in-tab terminal event delivers it).
   const trackedJobRef = useRef<PendingGenerationState | null>(null);
   const jobIdRef = useRef<string | null>(null);
+  const adminHoldRef = useRef(false);
 
   const setTrackedJob = useCallback((pending: PendingGenerationState | null) => {
     trackedJobRef.current = pending?.jobId ? pending : null;
@@ -647,6 +660,12 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
       }
     }, GLOBAL_STATUS_POLL_MS);
 
+    const adminHoldInterval = setInterval(() => {
+      if (adminHoldRef.current) {
+        void checkStatus();
+      }
+    }, ADMIN_HOLD_POLL_MS);
+
     const handleStorageChange = () => {
       void checkStatus();
     };
@@ -663,10 +682,15 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
     return () => {
       window.clearTimeout(initialCheckTimer);
       clearInterval(interval);
+      clearInterval(adminHoldInterval);
       window.removeEventListener("storage", handleStorageChange);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [checkStatus, token]);
+
+  useEffect(() => {
+    adminHoldRef.current = shouldPollAdminHoldStatus(latestJob);
+  }, [latestJob]);
 
   const value: GenerationStatusContextValue = {
     phase,
