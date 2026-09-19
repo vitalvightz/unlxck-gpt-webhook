@@ -3071,3 +3071,135 @@ def test_admin_review_queue_requires_admin_role():
     )
 
     assert response.status_code == 403
+
+
+def _seed_restricted_rehab_triage_job(store, *, athlete_id: str, intake_id: str, request) -> dict:
+    """A `restricted_rehab_only` triage outcome that lives only on the job.
+
+    Mirrors production job 7de498af-6ba8-4640-8651-30ca1105edc4: multiple
+    parsed injuries, no plan row, Stage 2 skipped.
+    """
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete_id,
+        client_request_id=f"triage_rehab_seed_{intake_id}",
+        source="self_serve",
+        request_payload=request.model_dump(mode="json"),
+        intake_id=intake_id,
+    )
+    store.update_generation_job(
+        job["id"],
+        status="running",
+        started_at="2026-01-01T00:00:00+00:00",
+        heartbeat_at="2026-01-01T00:00:00+00:00",
+    )
+    store.update_generation_job(
+        job["id"],
+        status="review_required",
+        final_result={
+            "status": "triage_blocked",
+            "stage2_status": "triage_blocked",
+            "why_log": {
+                "injury_triage": {
+                    "mode": "restricted_rehab_only",
+                    "should_block_stage2": True,
+                    "parsed_injury_count": 4,
+                }
+            },
+        },
+        heartbeat_at="2026-01-01T00:00:00+00:00",
+        completed_at="2026-01-01T00:00:00+00:00",
+    )
+    return store.get_generation_job(job["id"])
+
+
+def test_restricted_rehab_only_multi_injury_job_can_be_approved_and_resumed():
+    """restricted_rehab_only + multiple injuries is a resumable triage state.
+
+    This is the production shape that timed out in Stage 1: four parsed
+    injuries, a job-only triage outcome, and an admin approval that has to
+    produce a runnable resume job carrying the approval override.
+    """
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    admin = AuthenticatedUser(user_id="admin-1", email="ops@unlxck.test", full_name="Ops Admin", metadata={})
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request(
+        {
+            "injuries": (
+                "left shoulder impingement pressing overhead; "
+                "right knee acl reconstruction, still unstable; "
+                "lower back disc herniation with nerve pain; "
+                "rolled right ankle, still swollen"
+            )
+        }
+    )
+    intake = store.create_intake(athlete.user_id, request)
+    triage_job = _seed_restricted_rehab_triage_job(
+        store, athlete_id=athlete.user_id, intake_id=str(intake["id"]), request=request
+    )
+
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
+            planner=_planner,
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+            enable_in_process_generation=False,
+        )
+    )
+
+    response = client.post(
+        f"/api/admin/generation-jobs/{triage_job['id']}/approve-and-resume-generation",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"reason": "rehab plan reviewed"},
+    )
+
+    assert response.status_code == 202
+    resume_job = store.get_generation_job(response.json()["job_id"])
+    assert resume_job["source"] == "admin_triage_resume"
+    assert resume_job["status"] == "queued"
+    assert resume_job["intake_id"] == str(intake["id"])
+    # Job-only triage: the resume job carries no plan linkage, because no
+    # plan row exists yet. The runtime stamps plan_id once Stage 2 saves one
+    # (see test_admin_triage_resume_without_plan_id_creates_real_plan_only_after_stage2_pass).
+    assert resume_job.get("plan_id") in (None, "")
+    override = (resume_job.get("request_payload") or {}).get("_triage_resume_override") or {}
+    assert override.get("approved") is True
+    assert "restricted_rehab_only" in (override.get("allowed_modes") or [])
+
+
+def test_restricted_rehab_only_job_cannot_be_approved_twice():
+    """The approval marker must gate re-approval for this mode too."""
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    admin = AuthenticatedUser(user_id="admin-1", email="ops@unlxck.test", full_name="Ops Admin", metadata={})
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    triage_job = _seed_restricted_rehab_triage_job(
+        store, athlete_id=athlete.user_id, intake_id=str(intake["id"]), request=request
+    )
+
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
+            planner=_planner,
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+            enable_in_process_generation=False,
+        )
+    )
+    headers = {"Authorization": "Bearer admin-token"}
+    first = client.post(
+        f"/api/admin/generation-jobs/{triage_job['id']}/approve-and-resume-generation",
+        headers=headers,
+        json={"reason": "rehab plan reviewed"},
+    )
+    second = client.post(
+        f"/api/admin/generation-jobs/{triage_job['id']}/approve-and-resume-generation",
+        headers=headers,
+        json={"reason": "again"},
+    )
+
+    assert first.status_code == 202
+    assert second.status_code == 409
