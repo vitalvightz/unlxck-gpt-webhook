@@ -2673,6 +2673,11 @@ Rules:
 - Use one consistent session-card format.
 - Keep hard sparring / contact sessions separate from the programmed S&C.
 - Use a renewable 4-week block: Week 1 baseline, Week 2 small progression, Week 3 highest controlled week, Week 4 deload/reassess.
+- open_plan_spec.tactical_watch.weekly_rotation is the complete Tactical Watch set for this plan, and it does not always cover all four weeks. Render only the entries it contains, each against its own entry.week. Never invent, repeat or fill in a Tactical Watch for a week the rotation does not carry.
+- Render the first weekly_rotation entry as one session card inside Session Cards. Reproduce its display_text exactly: it is server-decided content, so do not rewrite, dose, expand or rename it.
+- Name each remaining weekly_rotation entry (its week, its name and its one-line Why) inside the 4-Week Development Block so the athlete can see what changes each week.
+- A Tactical Watch is tactical review only: zero physical load. It never replaces a training session and never counts toward weekly training frequency.
+- Never print Tactical Watch keys, style families, phase tokens, or sport ownership.
 - Do not mention GPP, SPP, TAPER, D-day, countdown, fight week, fight-day protocol, or final-week sparring cap.
 - Do not invent exercises outside the selected/session-approved data.
 - Do not expose internal candidate pools, scoring logic, tags, or unused options.

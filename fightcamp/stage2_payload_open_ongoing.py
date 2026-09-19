@@ -2,6 +2,14 @@ from __future__ import annotations
 
 from typing import Any
 
+from .tactical_watch_library import (
+    TacticalWatchBankExhausted,
+    build_watch_display_text,
+    extract_tactical_style,
+    select_tactical_watch,
+    watch_metadata,
+)
+
 
 _OPEN_PLAN_STRUCTURE = [
     "Immediate Coach Summary",
@@ -56,6 +64,99 @@ def _uses_open_ongoing_payload(athlete_model: dict[str, Any]) -> bool:
     return True
 
 
+# An open plan has no camp phase, so every Tactical Watch it renders is drawn
+# from the development-oriented (GPP) bank. The phase token itself is internal
+# and is stripped before the watch reaches the payload: "GPP" is a forbidden
+# athlete-facing term in this render mode.
+_OPEN_PLAN_WATCH_PHASE = "GPP"
+_OPEN_PLAN_WATCH_WEEKS = 4
+_TACTICAL_WATCH_LABEL = "Tactical Focus"
+
+
+def _open_plan_watch_entry(watch: Any, week: int) -> dict[str, Any]:
+    """Athlete-facing Tactical Watch card for one development-block week.
+
+    Only bank content reaches the payload. The internal selection metadata a
+    camp role carries (style family, phase, sport ownership, tags) is dropped:
+    an open plan must not surface phase vocabulary, and the finalizer has no
+    use for selection internals it is forbidden to print.
+    """
+    metadata = watch_metadata(watch)
+    block = dict(metadata.get("tactical_watch") or {})
+    key = str(block.pop("key", "") or "")
+    for internal in ("style", "phase", "sports", "fallback_reason", "competitive_maturity"):
+        block.pop(internal, None)
+    # ``context`` is the bank's phase framing ("Early-camp pattern recognition
+    # for a counter striker"). An open plan has no camp, so that one line is
+    # dropped from both the structured mindset and the rendered body; every
+    # other athlete-facing string stays exactly as the bank authored it.
+    mindset = dict(block.get("mindset") or {})
+    mindset.pop("context", None)
+    block["mindset"] = mindset
+    display_text = "\n".join(
+        line
+        for line in build_watch_display_text(watch).split("\n")
+        if not line.strip().startswith("Purpose:")
+    )
+    return {
+        "week": week,
+        "label": _TACTICAL_WATCH_LABEL,
+        "name": block.get("name") or watch.name,
+        "duration_min": watch.duration_minutes,
+        "zero_physical_load": True,
+        # Internal identity, kept for dedupe and telemetry only. Bank keys carry
+        # the phase token, which is a forbidden athlete-facing term here.
+        "tactical_watch_key": key,
+        # The server owns this body exactly as it does in a dated camp; the
+        # finalizer reproduces it and never authors or re-doses it.
+        "display_text": display_text,
+        "tactical_watch": block,
+    }
+
+
+def build_open_plan_tactical_watches(athlete_model: dict[str, Any]) -> list[dict[str, Any]]:
+    """Select one distinct Tactical Watch per week of the renewable 4-week block.
+
+    Open plans previously carried no tactical work at all: the watch is stamped
+    by the camp-week fillers, which only run for a dated countdown. An athlete
+    with no fight date still needs the weekly zero-load tactical review, so the
+    same bank is selected here, deduplicated across the block.
+    """
+    model = athlete_model if isinstance(athlete_model, dict) else {}
+    style = extract_tactical_style(model)
+    used_keys: set[str] = set()
+    entries: list[dict[str, Any]] = []
+    for week in range(1, _OPEN_PLAN_WATCH_WEEKS + 1):
+        try:
+            watch = select_tactical_watch(style, _OPEN_PLAN_WATCH_PHASE, used_keys)
+        except TacticalWatchBankExhausted:
+            # A narrow bank is not a generation failure: render the weeks the
+            # bank can actually cover rather than repeating or inventing one.
+            break
+        used_keys.add(watch.key)
+        entries.append(_open_plan_watch_entry(watch, week))
+    return entries
+
+
+def _build_open_plan_tactical_watch_spec(athlete_model: dict[str, Any]) -> dict[str, Any]:
+    """The plan's complete Tactical Watch set, plus how many weeks it covers.
+
+    A narrow style/sport bank can run out before week 4, so the rotation is not
+    guaranteed to be four entries long. ``weeks_covered`` states the real length
+    alongside the rotation so the render contract can be driven by what exists
+    rather than by an assumed four-week shape.
+    """
+    rotation = build_open_plan_tactical_watches(athlete_model)
+    return {
+        "label": _TACTICAL_WATCH_LABEL,
+        "placement": "session_cards",
+        "cadence": "one per week of the 4-week development block",
+        "zero_physical_load": True,
+        "weeks_covered": len(rotation),
+        "weekly_rotation": rotation,
+    }
+
+
 def build_open_ongoing_payload(*, athlete_model: dict[str, Any]) -> dict[str, Any]:
     return {
         "payload_mode": "open_ongoing_payload",
@@ -73,6 +174,11 @@ def build_open_ongoing_payload(*, athlete_model: dict[str, Any]) -> dict[str, An
                 "Use 4-Week Development Block + 4-Week Reassessment Gate instead of fixed phase blocks.",
                 "Preserve safety, medical stop rules, weight-cut adjustments, and fatigue adjustments.",
                 "Do not expose internal scoring, candidate pools, raw tags, or unused options.",
+                "tactical_watch.weekly_rotation is the complete Tactical Watch set for this plan. Render only the entries it contains and never invent, repeat or fill a week it does not cover.",
+                "Render the first weekly_rotation entry as its own session card inside Session Cards, reproducing its display_text exactly.",
+                "Name each remaining weekly_rotation entry against its own week inside the 4-Week Development Block so the athlete can see what changes each week.",
+                "A Tactical Watch is zero physical load: it never replaces a training session and never counts toward weekly training frequency.",
+                "Never print Tactical Watch keys, style families, phase tokens, or sport ownership.",
             ],
             "weekly_template": {
                 "training_days": athlete_model.get("training_days") or [],
@@ -90,6 +196,7 @@ def build_open_ongoing_payload(*, athlete_model: dict[str, Any]) -> dict[str, An
                 "week_3": "Highest controlled week",
                 "week_4": "Deload and reassess",
             },
+            "tactical_watch": _build_open_plan_tactical_watch_spec(athlete_model),
             "priority_hierarchy": [
                 "Protect restrictions and injury constraints first",
                 "Preserve declared hard sparring and contact schedule",
