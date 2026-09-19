@@ -50,3 +50,54 @@ def test_numeric_string_days_until_fight_does_not_route_open():
         "next_fight_date": "",
     }
     assert _uses_open_ongoing_payload(athlete) is False
+
+
+def test_open_plan_carries_weekly_tactical_watch_rotation():
+    payload = build_open_ongoing_payload(
+        athlete_model={
+            "sport": "boxing",
+            "fighting_style": "counter striker",
+            "days_until_fight": None,
+        }
+    )
+    watch_spec = payload["open_plan_spec"]["tactical_watch"]
+    assert watch_spec["label"] == "Tactical Focus"
+    assert watch_spec["placement"] == "session_cards"
+    assert watch_spec["zero_physical_load"] is True
+
+    rotation = watch_spec["weekly_rotation"]
+    assert [entry["week"] for entry in rotation] == [1, 2, 3, 4]
+    # One distinct watch per week of the renewable block.
+    assert len({entry["tactical_watch_key"] for entry in rotation}) == 4
+    for entry in rotation:
+        assert entry["zero_physical_load"] is True
+        assert entry["duration_min"] > 0
+        assert entry["display_text"].startswith("Why: ")
+        assert entry["name"] in entry["display_text"]
+        assert entry["tactical_watch"]["instructions"]
+
+
+def test_open_plan_tactical_watch_hides_phase_and_camp_vocabulary():
+    payload = build_open_ongoing_payload(
+        athlete_model={"sport": "mma", "fighting_style": "pressure fighter"}
+    )
+    spec = payload["open_plan_spec"]
+    forbidden = [term.lower() for term in spec["forbidden_terms"]]
+    for entry in spec["tactical_watch"]["weekly_rotation"]:
+        visible = entry["display_text"].lower()
+        assert "camp" not in visible
+        for term in forbidden:
+            assert term not in visible
+        block = entry["tactical_watch"]
+        # Selection internals never travel with an athlete-facing open-plan card.
+        for internal in ("key", "style", "phase", "sports", "fallback_reason"):
+            assert internal not in block
+        assert "context" not in block["mindset"]
+
+
+def test_open_plan_render_rules_cover_tactical_watch():
+    rules = " ".join(
+        build_open_ongoing_payload(athlete_model={})["open_plan_spec"]["render_rules"]
+    )
+    assert "Week 1 Tactical Watch" in rules
+    assert "zero physical load" in rules.lower()
