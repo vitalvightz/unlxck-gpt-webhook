@@ -9,6 +9,8 @@ import {
   isProtectedTriageLatestJob,
   latestCompletedJobOpenablePlanId,
   latestFailedJobHasOpenablePlan,
+  resolveAdminHoldRibbonCopy,
+  resolveAthleteResumeStatusMessage,
   shouldRenderPassiveLatestJobRibbon,
 } from "./global-generation-status";
 
@@ -207,5 +209,51 @@ test("review_required job without plan id and no admin-resume signal is not reta
       plan_id: null,
     }),
     false,
+  );
+});
+
+test("an athlete is never offered the admin review link for a held plan", () => {
+  const athlete = resolveAdminHoldRibbonCopy(false);
+  assert.equal(athlete.canOpenAdminReview, false);
+  assert.equal(athlete.message, "Your plan is with an admin for review.");
+  assert.equal(athlete.ctaLabel, "Awaiting approval");
+
+  const admin = resolveAdminHoldRibbonCopy(true);
+  assert.equal(admin.canOpenAdminReview, true);
+  assert.equal(admin.ctaLabel, "Open admin review");
+  assert.equal(resolveAdminHoldRibbonCopy(true, false).ctaLabel, "Awaiting admin");
+});
+
+test("an athlete's resumed build does not link into the build screen", () => {
+  // /generate remounts the intake/build flow, which reads as the plan
+  // starting over; the athlete's ribbon stays a status notice instead.
+  assert.equal(
+    getGenerationStatusTarget("running", null, null, "admin_triage_resume", "athlete_1", false),
+    null,
+  );
+  // An admin resuming from the athlete profile still gets their own target.
+  assert.equal(
+    getGenerationStatusTarget("running", null, null, "admin_triage_resume", "athlete_1", true),
+    "/admin/athletes/athlete_1",
+  );
+  // Once the plan exists, both roles open the plan itself.
+  assert.equal(
+    getGenerationStatusTarget("running", "plan_1", null, "admin_triage_resume", "athlete_1", false),
+    "/plans/plan_1",
+  );
+});
+
+test("a resumed build reports the approval instead of a generic generating message", () => {
+  assert.equal(
+    resolveAthleteResumeStatusMessage("running", "admin_triage_resume", "Generating plan..."),
+    "Approved - finishing your plan.",
+  );
+  assert.equal(
+    resolveAthleteResumeStatusMessage("running", "generate", "Generating plan..."),
+    "Generating plan...",
+  );
+  assert.equal(
+    resolveAthleteResumeStatusMessage("completed", "admin_triage_resume", "Plan ready!"),
+    "Plan ready!",
   );
 });
