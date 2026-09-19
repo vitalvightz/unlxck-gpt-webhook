@@ -473,6 +473,87 @@ def _compute_tags_hash(tags: Iterable[str]) -> str:
     return hashlib.sha256(tags_str.encode()).hexdigest()[:16]
 
 
+# Injury-text parsing memo.
+#
+# `_injury_context()` and `_surface_injury_assessment()` derive their results
+# from the injuries list ALONE — the exercise plays no part — yet
+# injury_decision() re-ran both on every single call, before reaching the
+# decision cache below (which keys on the region/severity those parses
+# produce, so it cannot avoid them). Profiling a four-injury free-text intake
+# put ~97% of each call inside those two parses, and a multi-injury Stage 1
+# makes hundreds of calls per phase: that is what turned an approved
+# multi-injury resume into a 600s planner timeout.
+#
+# The parses are pure and deterministic, so the same injuries list is parsed
+# once and reused. Results are handed out as copies, so a caller mutating a
+# decision's reason cannot poison the memo.
+_INJURY_PROFILE_CACHE_MAX_SIZE = max(8, int(os.environ.get("INJURY_PROFILE_CACHE_MAX_SIZE", "64")))
+_INJURY_PROFILE_CACHE: OrderedDict[str, tuple[bool, dict[str, str], tuple[int, int, list[str]]]] = OrderedDict()
+
+
+def _injury_profile_cache_key(injuries: list[str | dict]) -> str | None:
+    """A stable key for this injuries list, or None when it cannot be keyed.
+
+    Anything unserializable bypasses the memo and is parsed as before — a
+    cache miss must never change a safety decision.
+    """
+    try:
+        # Rules version included for the same reason the decision cache keys
+        # on it: a rules bump must not be served stale parses.
+        return json.dumps([INJURY_RULES_VERSION, injuries], sort_keys=True, default=str)
+    except (TypeError, ValueError):
+        return None
+
+
+def clear_injury_profile_cache() -> int:
+    """Clear the injury-text parsing memo. Mirrors clear_injury_decision_cache()."""
+    count = len(_INJURY_PROFILE_CACHE)
+    _INJURY_PROFILE_CACHE.clear()
+    return count
+
+
+def _injury_profile(
+    injuries: list[str | dict],
+    debug_entries: list[dict] | None = None,
+) -> tuple[bool, dict[str, str], tuple[int, int, list[str]]]:
+    """Concussion signal, region/severity map and surface assessment.
+
+    Memoized on the injuries list. The debug path is never served from the
+    memo: it prints per-call parse detail that the memo would swallow.
+    """
+    if debug_entries is not None:
+        return (
+            _has_concussion_signal(injuries),
+            _injury_context(injuries, debug_entries=debug_entries),
+            _surface_injury_assessment(injuries),
+        )
+
+    key = _injury_profile_cache_key(injuries)
+    if key is None:
+        return (
+            _has_concussion_signal(injuries),
+            _injury_context(injuries),
+            _surface_injury_assessment(injuries),
+        )
+
+    cached = _INJURY_PROFILE_CACHE.get(key)
+    if cached is None:
+        cached = (
+            _has_concussion_signal(injuries),
+            _injury_context(injuries),
+            _surface_injury_assessment(injuries),
+        )
+        _INJURY_PROFILE_CACHE[key] = cached
+        while len(_INJURY_PROFILE_CACHE) > _INJURY_PROFILE_CACHE_MAX_SIZE:
+            _INJURY_PROFILE_CACHE.popitem(last=False)
+    else:
+        _INJURY_PROFILE_CACHE.move_to_end(key)
+
+    concussion, region_severity, surface = cached
+    surface_count, non_surface_count, red_flags = surface
+    return concussion, dict(region_severity), (surface_count, non_surface_count, list(red_flags))
+
+
 def clear_injury_decision_cache() -> int:
     """
     Clear the injury decision cache.
@@ -484,7 +565,7 @@ def clear_injury_decision_cache() -> int:
         Number of cache entries cleared
     """
     global _INJURY_DECISION_CACHE
-    count = len(_INJURY_DECISION_CACHE)
+    count = len(_INJURY_DECISION_CACHE) + clear_injury_profile_cache()
     _INJURY_DECISION_CACHE.clear()
     if count > 0:
         logger.info("[injury-guard] Cache cleared: %d entries invalidated", count)
@@ -883,7 +964,10 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
         str(exercise.get(field, "") or "")
         for field in ("name", "notes", "method", "movement", "purpose", "description", "modality")
     ).lower()
-    if _has_concussion_signal(injuries_list):
+    has_concussion, region_severity, surface_assessment = _injury_profile(
+        injuries_list, debug_entries=debug_entries
+    )
+    if has_concussion:
         has_concussion_risk_tag = bool(exercise_tags & CONCUSSION_BLOCK_TAGS)
         has_concussion_risk_text = any(
             token in exercise_text
@@ -900,7 +984,6 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
             )
 
     item_id = str(exercise.get("id") or name or id(exercise))
-    region_severity = _injury_context(injuries_list, debug_entries=debug_entries)
     if debug_entries is not None:
         for entry in debug_entries:
             print(
@@ -911,7 +994,7 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
     modify_band, threshold = _thresholds(phase, fatigue)
     threshold_version = f"{modify_band:.2f}:{threshold:.2f}"
 
-    surface_count, non_surface_count, surface_red_flags = _surface_injury_assessment(injuries_list)
+    surface_count, non_surface_count, surface_red_flags = surface_assessment
     if surface_count > 0 and non_surface_count == 0:
         if surface_red_flags:
             return Decision(
@@ -1238,14 +1321,26 @@ def pick_safe_replacement(
     candidates: Iterable[dict],
     injuries_ctx: dict,
     fallback_candidates: Iterable[dict] | None = None,
+    *,
+    decide: Callable[[dict], Decision] | None = None,
 ) -> tuple[dict | None, Decision | None]:
+    """Pick the first candidate the injury guard does not exclude.
+
+    `decide` lets a caller supply its own decision function — in practice a
+    per-run memoized *guarded* decision. Callers that already hold one must
+    pass it: re-deriving the verdict here re-evaluates exercise/injury pairs
+    the caller has already settled, and a bare injury_decision() can also
+    disagree with the caller's guarded verdict, so a replacement chosen here
+    could be one the caller's own terminal re-check throws straight back out.
+    """
     injuries = injuries_ctx.get("injuries", [])
     phase = injuries_ctx.get("phase", "")
     fatigue = injuries_ctx.get("fatigue", "")
+    decide_fn = decide or (lambda cand: injury_decision(cand, injuries, phase, fatigue))
 
     def _first_safe(items: Iterable[dict]) -> tuple[dict | None, Decision | None]:
         for cand in items:
-            decision = injury_decision(cand, injuries, phase, fatigue)
+            decision = decide_fn(cand)
             if decision.action in {"allow", "modify"}:
                 return cand, decision
         return None, None

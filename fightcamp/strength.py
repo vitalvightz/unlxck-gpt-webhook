@@ -3153,10 +3153,15 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
                     break
 
             if candidate_pool:
+                # Reuse the per-run guarded decision cache: the same
+                # exercise/injury pairs are otherwise re-evaluated from
+                # scratch on every exclusion, and an unguarded verdict here
+                # can pick a candidate the terminal re-check below excludes.
                 replacement, replacement_decision = pick_safe_replacement(
                     ex,
                     candidate_pool,
                     injuries_ctx,
+                    decide=_cached_guarded_decision,
                 )
             if replacement and replacement_decision:
                 rep_name = replacement.get("name")
