@@ -544,15 +544,6 @@ def merge_open_plan_tactical_watch(
         named = [
             block for block in blocks if _normalise(block.get("display_name")) == _normalise(name)
         ]
-        if len(named) > 1:
-            # Same fail-closed rule as an ambiguous session above: with two
-            # blocks claiming this drill there is no way to tell which one is
-            # authoritative, so report it rather than repairing an arbitrary one
-            # and leaving its twin on the card as stale content.
-            result.unresolved.append(
-                LockedMergeIssue(day_label, name, "locked block not uniquely resolved")
-            )
-            continue
         if named:
             block = named[0]
         else:

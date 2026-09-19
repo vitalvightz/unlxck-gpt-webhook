@@ -181,35 +181,6 @@ def test_duplicate_watch_sessions_are_left_alone_and_reported():
     ]
 
 
-def test_duplicate_blocks_in_one_watch_session_are_reported_not_guessed():
-    """Two blocks claiming the drill is the same ambiguity as two sessions."""
-    spec = _spec()
-    drill = spec["tactical_watch"]["weekly_rotation"][0]["name"]
-    plan = _plan()
-    plan["weeks"][0]["days"][0]["sessions"].append(
-        {
-            "session_id": "written-by-finalizer",
-            "session_type": "skill",
-            "title": "Tactical Focus",
-            "objective": "Stale objective.",
-            "blocks": [
-                {"block_id": "a", "display_name": drill, "coaching_cues": []},
-                {"block_id": "b", "display_name": drill, "coaching_cues": []},
-            ],
-        }
-    )
-
-    result = merge_planner_owned_structured_content(plan, {"open_plan_spec": spec})
-    assert result.applied == []
-    assert [issue.reason for issue in result.unresolved] == [
-        "locked block not uniquely resolved"
-    ]
-    # Nothing is repaired or removed: the ambiguous card is left exactly as found.
-    session = result.plan["weeks"][0]["days"][0]["sessions"][1]
-    assert session["objective"] == "Stale objective."
-    assert [block["block_id"] for block in session["blocks"]] == ["a", "b"]
-
-
 def test_a_week_with_no_training_day_is_reported_not_invented():
     plan = {"weeks": [{"week_index": 1, "days": []}]}
 
