@@ -29,7 +29,7 @@ from typing import Any, Callable, Literal, get_args
 from fightcamp.weekly_schedule_view import normalize_weekday as _normalize_weekday
 
 from .state_machine import is_athlete_displayable_plan_status
-from .structured_plan_faithfulness import check_structured_faithfulness
+from .structured_plan_faithfulness import PRESCRIPTION, check_structured_faithfulness
 from .structured_plan_locked_merge import merge_planner_owned_structured_content
 from .structured_plan_safety import athlete_safe_support, audit_structured_plan, split_findings
 from .structured_plan_models import (
@@ -2469,25 +2469,46 @@ def build_structured_plan_outcome(
     card discarded, so a leaking or contradictory card can never be persisted or
     trusted for publication. DUPLICATE findings stay advisory warnings.
 
+    Faithfulness findings remain blocking except ``PRESCRIPTION`` omissions.
+    The structured schema can only store scalar measured values, so an exact raw
+    range such as ``Rest 2-3 minutes`` may be intentionally absent from the
+    converted object. The persisted plan embeds the verbatim source and the
+    renderer deterministically restores those explicit ranges; rejecting the
+    entire card would replace a recoverable field with a lossy fallback UI.
+
     Never raises: a malformed payload degrades to ``invalid_fallback_used`` so the
     raw ``plan_text`` flow keeps working.
     """
 
+    def _split_faithfulness(
+        findings: list[str],
+    ) -> tuple[list[str], list[str]]:
+        blocking: list[str] = []
+        advisory: list[str] = []
+        for issue in findings:
+            target = advisory if issue.startswith(f"{PRESCRIPTION}:") else blocking
+            target.append(f"faithfulness: {issue}")
+        return blocking, advisory
+
     def _audited_outcome(
-        status: StructuredPlanStatus, plan_dict: dict[str, Any], schema_version: str | None
+        status: StructuredPlanStatus,
+        plan_dict: dict[str, Any],
+        schema_version: str | None,
+        faithfulness_warnings: list[str] | None = None,
     ) -> StructuredPlanOutcome:
         blocking, advisory = split_findings(audit_structured_plan(plan_dict, computed_support))
+        warnings = list(dict.fromkeys([*(faithfulness_warnings or []), *advisory]))
         if blocking:
             return StructuredPlanOutcome(
                 status="blocked_by_safety_audit",
                 errors=blocking,
-                warnings=advisory,
+                warnings=warnings,
             )
         return StructuredPlanOutcome(
             status=status,
             structured_plan=plan_dict,
             schema_version=schema_version,
-            warnings=advisory,
+            warnings=warnings,
         )
 
     if raw_data is None:
@@ -2506,10 +2527,12 @@ def build_structured_plan_outcome(
         plan_dict = _with_deterministic_support(first.plan.model_dump(mode="json"), computed_support)
         plan_dict = _merge_locked_content(plan_dict, planning_brief)
         unfaithful = check_structured_faithfulness(plan_dict, raw_markdown, planning_brief)
-        first_errors = [f"faithfulness: {issue}" for issue in unfaithful]
+        first_errors, first_warnings = _split_faithfulness(unfaithful)
         first_errors.extend(_open_plan_contract_errors(plan_dict, planning_brief))
         if not first_errors:
-            return _audited_outcome("valid", plan_dict, first.plan.schema_version)
+            return _audited_outcome(
+                "valid", plan_dict, first.plan.schema_version, first_warnings
+            )
 
     if repair_fn is None:
         return StructuredPlanOutcome(
@@ -2545,7 +2568,7 @@ def build_structured_plan_outcome(
         plan_dict = _with_deterministic_support(repaired.plan.model_dump(mode="json"), computed_support)
         plan_dict = _merge_locked_content(plan_dict, planning_brief)
         unfaithful = check_structured_faithfulness(plan_dict, raw_markdown, planning_brief)
-        repaired_errors = [f"faithfulness: {issue}" for issue in unfaithful]
+        repaired_errors, repaired_warnings = _split_faithfulness(unfaithful)
         repaired_errors.extend(_open_plan_contract_errors(plan_dict, planning_brief))
         if repaired_errors:
             return StructuredPlanOutcome(
@@ -2553,7 +2576,10 @@ def build_structured_plan_outcome(
                 errors=repaired_errors,
             )
         return _audited_outcome(
-            "repair_attempted_valid", plan_dict, repaired.plan.schema_version
+            "repair_attempted_valid",
+            plan_dict,
+            repaired.plan.schema_version,
+            repaired_warnings,
         )
     return StructuredPlanOutcome(
         status="invalid_fallback_used",
