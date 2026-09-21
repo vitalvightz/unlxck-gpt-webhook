@@ -160,10 +160,10 @@ def _explicit_prescription_violations(plan: dict[str, Any], source: str) -> list
                         (_SOURCE_EFFORT_RE.search(segment), bool(block.get("effort")), "effort"),
                         (_SOURCE_CUE_RE.search(segment), bool(block.get("coaching_cues")), "cue"),
                     )
-                    for source_match, structured_present, field in checks:
+                    for source_match, structured_present, field_name in checks:
                         if source_match and not structured_present:
                             violations.append(
-                                f"{PRESCRIPTION}: {name!r} dropped explicit source {field}"
+                                f"{PRESCRIPTION}: {name!r} dropped explicit source {field_name}"
                             )
     return violations
 
