@@ -402,7 +402,11 @@ def test_prompt_carries_schema_and_safety_rules():
     assert "2026-06-13" in prompt
     # source-of-truth + no-invention guardrails
     assert "SOURCE OF TRUTH" in prompt
-    assert "Do NOT invent" in prompt
+    assert "Do NOT add new exercises" in prompt
+    assert "infer only those missing presentation fields" in prompt
+    assert "goals and weaknesses" in prompt
+    assert "current evidence-based sport-science" in prompt
+    assert "A missing identifier must never reject the card" in prompt
     # exact root skeleton with the nested objects that were failing live
     assert "EXACT ROOT SKELETON" in prompt
     for skeleton_marker in (
@@ -706,6 +710,29 @@ def test_normalize_block_null_list_fields_become_empty_lists():
     assert block["substitutions"] == ["med ball scoop toss"]
 
 
+def test_missing_identifiers_do_not_reject_an_otherwise_valid_card():
+    plan = _live_malformed_plan()
+    plan["red_flag_rules"][0].pop("rule_id", None)
+    week = plan["weeks"][0]
+    week.pop("week_id", None)
+    session = week["days"][0]["sessions"][0]
+    session.pop("session_id", None)
+    session["blocks"][0].pop("block_id", None)
+
+    outcome = build_structured_plan_outcome(plan, raw_markdown="# raw")
+
+    assert outcome.status == "valid"
+    assert outcome.structured_plan["red_flag_rules"][0]["rule_id"] is None
+    assert outcome.structured_plan["weeks"][0]["week_id"] is None
+    assert outcome.structured_plan["weeks"][0]["days"][0]["sessions"][0]["session_id"] is None
+    assert (
+        outcome.structured_plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0][
+            "block_id"
+        ]
+        is None
+    )
+
+
 def test_normalize_block_red_flags_and_string_effort():
     day = _normalize_day(
         {
@@ -957,12 +984,12 @@ def test_day_type_explosive_primer_is_not_auto_high():
     assert _normalize_day(day)["day_type"] == "low"
 
 
-def test_normalize_red_flag_rules_get_required_fields():
+def test_normalize_red_flag_rules_get_required_fields_without_fabricating_id():
     plan = normalize_structured_plan_candidate(
         {"red_flag_rules": [{"display_text": "Stop if dizzy"}]}
     )
     rule = plan["red_flag_rules"][0]
-    assert rule["rule_id"]
+    assert rule["rule_id"] is None
     assert rule["when"] == "morning_check_in"
     assert rule["severity"] == "amber"
     assert rule["action"] == ""

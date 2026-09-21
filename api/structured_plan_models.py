@@ -218,7 +218,9 @@ class RedFlagRule(BaseModel):
     ``"achilles_pain >= 6"``.
     """
 
-    rule_id: str
+    # Rendering and safety semantics do not depend on a model-authored id.  A
+    # missing identifier must not discard an otherwise valid athlete card.
+    rule_id: str | None = None
     metric: str | None = None
     metric_group: str | None = None
     when: RedFlagWhen
@@ -269,7 +271,9 @@ class CountdownLabel(BaseModel):
 class SessionBlock(BaseModel):
     """An executable unit inside a session (Section N)."""
 
-    block_id: str
+    # Optional presentation identity.  The frontend already uses a positional
+    # key when this is absent; training content must not fail validation for it.
+    block_id: str | None = None
     block_type: BlockType
     display_name: str
     category: str | None = None
@@ -318,7 +322,10 @@ class Completion(BaseModel):
 class Session(BaseModel):
     """A single training session within a day (Section M)."""
 
-    session_id: str
+    # Completion writes still require a real id, but the read-only plan card can
+    # safely render without one.  Do not replace missing identity with a generic
+    # value that can collide with another session.
+    session_id: str | None = None
     session_type: SessionType
     title: str
     objective: str
@@ -399,7 +406,8 @@ class Progression(BaseModel):
 class Week(BaseModel):
     """A training week (Section G)."""
 
-    week_id: str
+    # Display identity is optional; week order is already explicit in weeks[].
+    week_id: str | None = None
     week_index: int
     phase_label: PhaseLabel
     week_goal: str
