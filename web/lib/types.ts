@@ -389,6 +389,8 @@ export type StructuredBlock = {
   regression_options?: string[] | null;
   substitutions?: string[] | null;
   progression_rule?: string | null;
+  /** Open/ongoing plans only: the block's own week-4 deload instruction. */
+  deload_rule?: string | null;
   stop_rules?: string[] | null;
 };
 

@@ -1965,6 +1965,7 @@ const waveSession = {
       block_id: "blk-progress",
       display_name: "Trap-bar deadlift",
       progression_rule: "Add 2.5 kg when all sets feel crisp.",
+      deload_rule: "Drop to two working sets and keep the bar light.",
     },
     {
       block_id: "blk-stop",
@@ -1984,16 +1985,16 @@ test("progression week: block cards surface their own rule once, stop rules stay
   );
 
   // The rule renders as the week directive, not duplicated in the Progress aside.
-  assert.equal(countOccurrences(html, "This week"), 2);
+  assert.equal(countOccurrences(html, "This week"), 1);
   assert.equal(countOccurrences(html, "Add 2.5 kg when all sets feel crisp."), 1);
   assert.equal(html.includes(">Progress</span>"), false);
-  // The stop-rule block keeps its safety aside and gets the generic bump.
+  // The stop-rule block keeps its safety aside and invents no generic bump.
   assert.equal(countOccurrences(html, "Stop when throw speed drops."), 1);
   assert.equal(html.includes(">Stop rule</span>"), true);
-  assert.equal(html.includes("only if last week felt controlled"), true);
+  assert.equal(html.includes("only if last week felt controlled"), false);
 });
 
-test("deload week: block cards read as a volume cut, never a progression", () => {
+test("deload week: block cards use their own deload rule, never a progression", () => {
   const html = renderToStaticMarkup(
     <SessionCard
       session={waveSession}
@@ -2002,7 +2003,14 @@ test("deload week: block cards read as a volume cut, never a progression", () =>
     />,
   );
 
-  assert.equal(countOccurrences(html, "cut working sets roughly in half"), 2);
+  // Only the block that carries a deload rule gets a week directive; the other
+  // block is left alone rather than told to halve sets it does not have.
+  assert.equal(countOccurrences(html, "This week"), 1);
+  assert.equal(
+    countOccurrences(html, "Drop to two working sets and keep the bar light."),
+    1,
+  );
+  assert.equal(html.includes("cut working sets roughly in half"), false);
   assert.equal(html.includes("Add 2.5 kg when all sets feel crisp."), false);
   assert.equal(html.includes(">Stop rule</span>"), true);
 });

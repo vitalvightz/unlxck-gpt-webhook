@@ -1801,6 +1801,52 @@ def test_open_plan_prompt_carries_authoritative_weekday_contract():
     assert 'event_context.event_type to "none"' in prompt
 
 
+def test_open_plan_prompt_constrains_progression_and_deload_by_exercise_type():
+    prompt = build_structured_plan_prompt(
+        plan_markdown="# Open plan",
+        planning_brief=_open_plan_brief("Monday", "Tuesday"),
+    )
+
+    assert "PER-BLOCK PROGRESSION & DELOAD (open plans only)" in prompt
+    assert '"deload_rule"' in prompt
+    for needle in (
+        "aerobic conditioning -> duration, pace",
+        "rehab/prehab -> symptom-led only",
+        "warm-up/preparation -> normally unchanged",
+        "NEVER force progression where none is appropriate",
+    ):
+        assert needle in prompt, needle
+    # The deload instruction must stay block-specific, not a blanket set cut.
+    assert 'Do NOT write "halve the sets" for a block that has no sets.' in prompt
+
+
+def test_dated_camp_prompt_has_no_open_plan_progression_contract():
+    prompt = build_structured_plan_prompt(
+        plan_markdown="# Fight camp",
+        planning_brief={"athlete_snapshot": {"sport": "boxing"}},
+        event_date="2026-06-20",
+    )
+
+    assert "PER-BLOCK PROGRESSION & DELOAD" not in prompt
+    assert "deload_rule" not in prompt
+
+
+def _normalized_block(block: dict) -> dict:
+    return normalize_structured_plan_candidate(
+        {"weeks": [{"days": [{"sessions": [{"blocks": [block]}]}]}]}
+    )["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
+
+
+def test_block_deload_rule_is_trimmed_and_dropped_when_blank():
+    kept = _normalized_block(
+        {"display_name": "Trap-bar deadlift", "deload_rule": "  Drop to two working sets.  "}
+    )
+    assert kept["deload_rule"] == "Drop to two working sets."
+
+    blank = _normalized_block({"display_name": "Trap-bar deadlift", "deload_rule": "  "})
+    assert "deload_rule" not in blank
+
+
 def test_open_plan_contract_repairs_schema_valid_card_without_weekday_identity():
     brief = _open_plan_brief("Monday")
     broken = _open_plan_candidate(weekday=None)

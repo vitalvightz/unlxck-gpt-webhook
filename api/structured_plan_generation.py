@@ -980,7 +980,7 @@ def _normalize_block(value: Any) -> dict[str, Any]:
     for list_key in ("coaching_cues", "regression_options", "substitutions", "stop_rules"):
         if list_key in out:
             out[list_key] = _coerce_str_list(out.get(list_key))
-    for text_key in ("purpose", "why_today"):
+    for text_key in ("purpose", "why_today", "deload_rule"):
         if text_key in out:
             text_value = _coerce_str(out.get(text_key)).strip()
             if text_value:
@@ -2906,6 +2906,39 @@ values in the generic root skeleton):
 - The generic schema still requires phase_label; use the source value when
   stated, otherwise use "GPP" as a neutral internal value. Never surface phase
   labels as open-plan headings.
+
+PER-BLOCK PROGRESSION & DELOAD (open plans only). The renewable block runs
+Week 1 baseline, Week 2 small progression, Week 3 highest controlled exposure,
+Week 4 deload/reassess. The athlete reads YOUR wording on the block card, so
+each block must carry its OWN instruction rather than a generic "add a set or
+load" line:
+- "progression_rule": how to progress THIS exercise across Weeks 2 and 3 —
+  Week 2 a small justified step, Week 3 the highest controlled exposure.
+- "deload_rule": a block field alongside "progression_rule" — how THIS
+  exercise deloads or is reassessed in Week 4.
+- Match the variable to the exercise type:
+  * strength -> load, reps or sets
+  * power/speed -> quality, reps or sets, protecting speed and avoiding extra
+    fatigue
+  * aerobic conditioning -> duration, pace, or an HR/RPE ceiling
+  * intervals -> reps, work duration, recovery, or intensity
+  * technical/skill -> complexity, resistance, constraints, or live application
+  * mobility -> range or control, or no progression at all
+  * rehab/prehab -> symptom-led only; never automatically add load or volume
+  * warm-up/preparation -> normally unchanged; never force progression
+- NEVER force progression where none is appropriate. Omit "progression_rule",
+  or say plainly that it stays unchanged, when the block should not advance
+  (warm-ups, symptom-led rehab, pure mobility).
+- "deload_rule" is block-specific too: cut working sets on a strength lift, keep
+  the easy aerobic duration but stay strictly easy, drop interval reps, reduce
+  live resistance on skill work, leave a warm-up or mobility piece as written.
+  Do NOT write "halve the sets" for a block that has no sets.
+- Respect injury restrictions, fatigue rules, sparring protection and every
+  other constraint the plan states. Keep both lines athlete-facing, plain and
+  at most one short sentence.
+- These fields only reword the instruction for the block already in the plan.
+  Never change exercise membership, invent exercises, or restate the Week 1
+  dose as a progression.
 
 AUTHORITATIVE open_plan_spec:
 {spec_json}"""
