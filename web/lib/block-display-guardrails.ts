@@ -263,7 +263,8 @@ function isExactBlockLine(line: string, blockName: string): boolean {
   if (!candidate.startsWith(name)) return false;
 
   const remainder = candidate.slice(name.length);
-  return /^\s*(?:[.—–:,]\s*|-\s+)/.test(remainder);
+  if (/^\s*(?:[.—–:,]\s*|-\s+)/.test(remainder)) return true;
+  return /^\s+or\s+.+?(?:[.—–:,]\s*|-\s+)/i.test(remainder);
 }
 
 function sourceBlockLine(
