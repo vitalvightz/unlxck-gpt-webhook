@@ -1820,6 +1820,23 @@ def test_open_plan_prompt_constrains_progression_and_deload_by_exercise_type():
     assert 'Do NOT write "halve the sets" for a block that has no sets.' in prompt
 
 
+def test_open_plan_prompt_demands_a_quantified_step_without_inventing_load():
+    prompt = build_structured_plan_prompt(
+        plan_markdown="# Open plan",
+        planning_brief=_open_plan_brief("Monday", "Tuesday"),
+    )
+
+    # The step must be stated in the block's own units, not hedged.
+    assert "BE SPECIFIC" in prompt
+    assert "SAME units the block already" in prompt
+    assert '"3 x 30 sec" progresses to "Go to 3 x 40 sec"' in " ".join(prompt.split())
+    for hedge in ('"small"', '"slowly"', '"gradually"'):
+        assert hedge in prompt, hedge
+    # ... but a kilo target is never invented for an RPE-anchored lift.
+    assert "Never invent a number the plan does not have" in prompt
+    assert "do NOT name a kilo or percentage target" in " ".join(prompt.split())
+
+
 def test_dated_camp_prompt_has_no_open_plan_progression_contract():
     prompt = build_structured_plan_prompt(
         plan_markdown="# Fight camp",

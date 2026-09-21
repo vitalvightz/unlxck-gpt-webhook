@@ -2933,6 +2933,20 @@ load" line:
   the easy aerobic duration but stay strictly easy, drop interval reps, reduce
   live resistance on skill work, leave a warm-up or mobility piece as written.
   Do NOT write "halve the sets" for a block that has no sets.
+- BE SPECIFIC. You are writing these lines next to the block's own
+  prescription, so use it: name the target in the SAME units the block already
+  shows. "3 x 30 sec" progresses to "Go to 3 x 40 sec", "2 x 6/side" to "Take
+  it to 2 x 8/side", "20 min easy" to "Ride 25 min at the same easy pace",
+  "5 rounds" to "Add a sixth round". A line whose only content is "small",
+  "slowly", "gradually", "a bit" or "where you can" is NOT acceptable — every
+  progression_rule and deload_rule must state what the athlete actually does
+  this week.
+- Never invent a number the plan does not have. When the block prescribes no
+  absolute load (an RPE- or effort-anchored lift with no kg/% on the card),
+  do NOT name a kilo or percentage target: progress it in the units that ARE
+  prescribed — reps, sets, or the effort/RPE step — or say to add the smallest
+  jump available on the bar. Only cite a load number when the block itself
+  carries one, and then step it from that number.
 - Respect injury restrictions, fatigue rules, sparring protection and every
   other constraint the plan states. Keep both lines athlete-facing, plain and
   at most one short sentence.
