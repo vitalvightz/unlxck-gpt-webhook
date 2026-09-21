@@ -63,6 +63,16 @@ test("requires the exact block title rather than a substring match", () => {
   );
 });
 
+
+test("recovers source ranges after an A-or-B title is split to the chosen exercise", () => {
+  const source =
+    "- Short sprint bounds or low box jumps — 2-3 sets x 4 reps, RPE 6-7, rest 60-90 sec.";
+  assert.deepEqual(
+    getSourcePrescriptionRangeOverrides(source, "Short sprint bounds"),
+    { sets: "2-3", effort: "RPE 6-7", rest: "60-90 sec" },
+  );
+});
+
 test("treats legacy D0 and D-0 countdown labels as the same fight-day section", () => {
   const source = `D0 (Fight day): Primer
 - Fast Hands Primer — 1-2 sets x 4 punches, RPE 4-5.`;
