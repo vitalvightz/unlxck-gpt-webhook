@@ -2488,6 +2488,7 @@ def _salvage_invalid_training_nodes(
         return candidate, []
 
     salvaged = copy.deepcopy(candidate)
+    salvaged["raw_markdown_fallback"] = raw_markdown
     warnings: list[str] = []
     weeks = salvaged.get("weeks")
     if not isinstance(weeks, list):
