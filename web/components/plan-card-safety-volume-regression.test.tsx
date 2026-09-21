@@ -97,3 +97,57 @@ D-13 (Monday): Neural speed touch
   assert.equal(countOccurrences(html, "stop and seek care if bleeding"), 0);
   assert.equal(countOccurrences(html, "Stop and seek care for bleeding"), 1);
 });
+
+test("compound source stop rule stays complete when structured conversion splits it", () => {
+  const raw = `- Saturday — Power and first-step speed
+Why: Train fast, short bursts to improve punch speed and reaction.
+- Explosive first-step cue: 2 x 5 s maximal first steps from stance. Rest 120 s between reps.
+  Cue: Drive the front foot and stop quickly after the step, keep hands ready.
+  Progress: Add one more rep to the set when it feels crisp.
+  Easier: Do 2 x 3 s instead of 5 s.
+  Stop: Loss of control or pain in the arm or knee.`;
+
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Speed plan", sport: "boxing", plan_type: "open_block" },
+    raw_markdown_fallback: raw,
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        days: [
+          {
+            date: "2026-09-26",
+            weekday: "Sat",
+            day_type: "high",
+            sessions: [
+              {
+                session_id: "speed",
+                session_type: "strength_power",
+                title: "Power and first-step speed",
+                blocks: [
+                  {
+                    block_id: "first-step",
+                    block_type: "plyometric_power",
+                    display_name: "Explosive first-step cue",
+                    sets: 2,
+                    reps: "5 s maximal first steps",
+                    stop_rules: ["Loss of control", "Joint or arm pain"],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  } as StructuredPlan;
+
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer plan={plan} today={new Date(2026, 8, 26)} />,
+  );
+
+  assert.equal(countOccurrences(html, ">Stop rule</span>"), 1);
+  assert.equal(html.includes("Loss of control or pain in the arm or knee."), true);
+  assert.equal(html.includes("Loss of control; Joint or arm pain"), false);
+});

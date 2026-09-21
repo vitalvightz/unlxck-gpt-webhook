@@ -352,6 +352,41 @@ export function getSourcePrescriptionRangeOverrides(
   };
 }
 
+/**
+ * Recover the exact block-level Stop field from the authoritative source text.
+ *
+ * Structured conversion may split one compound source rule into several array
+ * entries or paraphrase individual entries. The card still has the source text,
+ * so prefer the exact field when the block title identifies it unambiguously.
+ */
+export function getSourceStopRuleOverride(
+  source: string | null | undefined,
+  blockName: string,
+  countdown?: string | null,
+): string | null {
+  const raw = clean(source);
+  const matchedLine = sourceBlockLine(raw, blockName, countdown);
+  if (!raw || !matchedLine) return null;
+
+  const scoped = clean(countdown) ? countdownSection(raw, countdown) : raw;
+  if (!scoped) return null;
+
+  const lines = scoped.split(/\r?\n/);
+  const startIndex = lines.indexOf(matchedLine);
+  if (startIndex < 0) return null;
+
+  const stopField = /(?:^|\s)stop(?:\s+rule)?\s*:\s*(.+?)(?=\s+(?:cue|purpose|why\s+today|progress(?:ion)?|easier|swaps?|substitution|rest)\s*:|$)/i;
+  for (let index = startIndex; index < lines.length; index += 1) {
+    const line = stripSourceLineFormatting(lines[index]);
+    if (index > startIndex && /^\s*(?:[-*+]\s+|#{1,6}\s*)/.test(lines[index]) && !/^stop(?:\s+rule)?\s*:/i.test(line)) {
+      break;
+    }
+    const match = line.match(stopField);
+    if (match?.[1]) return match[1].trim();
+  }
+  return null;
+}
+
 /** Put an authoritative set range back onto the existing rendered Volume row. */
 export function applySourceSetRange(
   metrics: BlockMetric[],
