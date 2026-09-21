@@ -1820,6 +1820,37 @@ def test_open_plan_prompt_constrains_progression_and_deload_by_exercise_type():
     assert 'Do NOT write "halve the sets" for a block that has no sets.' in prompt
 
 
+def test_block_name_offering_a_choice_keeps_one_exercise_and_swaps_the_other():
+    block = _normalized_block(
+        {
+            "display_name": "Short sprint bounds or low box jumps",
+            "sets": 4,
+            "reps": "3",
+        }
+    )
+    assert block["display_name"] == "Short sprint bounds"
+    assert "Low box jumps" in block["substitutions"]
+
+
+def test_block_names_that_are_not_a_choice_are_left_alone():
+    # A superset is a deliberate pairing, a parenthetical is one movement, and a
+    # single-word side ("Bike or rower intervals") would lose the prescription.
+    for name in (
+        "Trap bar deadlift",
+        "Barbell hip thrust + band walk",
+        "Lateral raise (front or side)",
+        "Bike or rower intervals",
+    ):
+        block = _normalized_block({"display_name": name})
+        assert block["display_name"] == name, name
+        assert block.get("substitutions", []) == [], name
+
+
+def test_conditional_swap_is_never_routed_into_progression_rule():
+    prompt = build_structured_plan_prompt(plan_markdown="# Plan")
+    assert "never put a conditional swap there" in " ".join(prompt.split())
+
+
 def test_open_plan_prompt_demands_a_quantified_step_without_inventing_load():
     prompt = build_structured_plan_prompt(
         plan_markdown="# Open plan",

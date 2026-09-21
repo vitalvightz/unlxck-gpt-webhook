@@ -186,3 +186,26 @@ def test_open_ongoing_render_mode_prompt_defers_to_the_rotation():
     assert "Never invent, repeat or fill in a Tactical Watch" in prompt
     # The prompt is the other place a fixed week range could over-promise.
     assert "Week 2-4" not in prompt
+
+
+def test_open_plan_render_contract_demands_one_exercise_and_a_progress_line():
+    """Source lines must name one exercise and carry their own progression.
+
+    An "A or B" main-work line leaves the athlete choosing mid-session and the
+    dose ambiguous, and a card with no Progress: line is what pushed the
+    structured conversion into recycling the Easier: line as a progression.
+    """
+    from fightcamp.stage2_payload import _OPEN_ONGOING_RENDER_MODE_INSTRUCTIONS
+
+    rules = " ".join(
+        build_open_ongoing_payload(athlete_model={})["open_plan_spec"]["render_rules"]
+    )
+    prompt = _OPEN_ONGOING_RENDER_MODE_INSTRUCTIONS
+
+    for text in (rules, prompt):
+        assert "one exercise per main-work line" in text.lower()
+        assert '"A + B"' in text
+        assert "Progress:" in text
+        assert "none this block" in text
+    # The swap/safety split must stay explicit in the authoring prompt.
+    assert 'belongs on `Easier:` or `Stop:`, never on `Progress:`' in prompt

@@ -1064,7 +1064,44 @@ def _normalize_block(value: Any) -> dict[str, Any]:
         out.pop("progression_rule", None)
     if stop_rules or "stop_rules" in out:
         out["stop_rules"] = stop_rules
+
+    # A card names the exercise the athlete is doing. Source prose sometimes
+    # offers a choice instead ("Short sprint bounds or low box jumps"), which
+    # leaves the athlete deciding mid-session and makes the dose ambiguous. Keep
+    # the first option as the exercise and demote the alternative to a swap, so
+    # nothing is lost and no card asks a question. A superset ("A + B") is a
+    # deliberate pairing and is never split.
+    name, alternative = _split_alternative_display_name(out.get("display_name"))
+    if alternative:
+        out["display_name"] = name
+        out["substitutions"] = _dedupe_text_values(
+            _coerce_str_list(out.get("substitutions")) + [alternative]
+        )
     return out
+
+
+# " or " joining two multi-word movements is a choice between exercises. Single
+# words are left alone: in "Bike or rower intervals" the trailing noun belongs
+# to both sides, so splitting would lose the prescription.
+_ALTERNATIVE_NAME_RE = re.compile(
+    r"^(?P<first>[^()]*?\S(?:\s+\S+)+?)\s+or\s+(?P<second>\S+(?:\s+\S+)+)$",
+    re.IGNORECASE,
+)
+
+
+def _split_alternative_display_name(value: Any) -> tuple[str, str]:
+    """``("A or B") -> ("A", "B")``; ``("", "")`` when the name is a single exercise."""
+    name = _coerce_str(value).strip()
+    if not name or "+" in name:
+        return name, ""
+    match = _ALTERNATIVE_NAME_RE.match(name)
+    if not match:
+        return name, ""
+    first = match.group("first").strip(" ,;-")
+    second = match.group("second").strip(" ,;-")
+    if not first or not second:
+        return name, ""
+    return first, second[:1].upper() + second[1:]
 
 
 # Fields that make a block an actual prescribed exercise rather than a mention.
@@ -2684,7 +2721,9 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   bare separator label such as "Regression /" rather than rendering it as athlete
   guidance. progression_rule may be omitted when the source gives no genuine
   exercise progression. Do NOT put taper/week dose restrictions, injury
-  restrictions, session-programming constraints, or stop criteria into it.
+  restrictions, session-programming constraints, or stop criteria into it, and
+  never put a conditional swap there: "Switch to X if the joints feel sore" is
+  a regression/substitution, not a progression.
 - Carry mental/mindset coaching into mindset_anchor at BOTH the session level and
   the day level (today_card.mindset_anchor), including "confidence_anchor" and
   "context" when the plan provides them. When STAGE 1 COMPUTED SUPPORT includes a

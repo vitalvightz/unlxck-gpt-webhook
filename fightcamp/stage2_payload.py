@@ -2811,6 +2811,9 @@ Rules:
 - If restrictions/red flags exist, render them once in the safety section and reference them briefly in session cards only when needed.
 - If symptoms, fatigue, or weight-cut pressure rise, remove optional conditioning before trimming key anchors.
 - For every programmed exercise or drill, state volume and effort. For set-, round-, or interval-based work, also state rest. Add one short `Cue:` execution line. Purpose and Why today remain separate and are never substitutes for the cue.
+- Name ONE exercise per main-work line. Never write a choice such as "A or B" as the exercise itself: pick the one the athlete is doing and put the alternative on that line's `Easier:` or `Swap:` line. A superset or contrast pair is the one exception and must be written as a deliberate pairing ("A + B") with the dose that applies to the pair.
+- Give every programmed exercise a `Progress:` line saying what changes in the block's progression weeks, stated in that exercise's own units and stepped from its own dose (3 x 30 sec -> 3 x 40 sec; 2 x 6/side -> 2 x 8/side; 20 min easy -> 25 min easy). Progress the variable that suits the work: load/reps/sets for strength, quality and reps for power and speed, duration or pace for aerobic work, reps/work/recovery for intervals, complexity or live resistance for technical work, range or control for mobility. Write `Progress: none this block` for warm-ups, mobility or symptom-led rehab that should not advance, and never name a kilo or percentage the plan has not prescribed.
+- A `Progress:` line is not a swap or a safety line. "Switch to X if it hurts" belongs on `Easier:` or `Stop:`, never on `Progress:`.
 """
 
 def _json_block(value: dict | list) -> str:
