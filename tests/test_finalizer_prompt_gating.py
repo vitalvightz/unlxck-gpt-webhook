@@ -126,9 +126,10 @@ def test_no_gated_rule_is_referenced_by_number_from_an_ungated_one():
 
 
 @pytest.mark.parametrize("source", ["payload", "brief"])
-def test_normal_camp_build_marks_policy_inactive_through_finalizer_packet(source):
-    from fightcamp.stage2_payload import build_planning_brief, build_stage2_payload
-    from fightcamp.stage2_finalizer_packet import build_stage2_finalizer_packet
+def test_normal_camp_handoff_omits_rule_without_adding_late_fight_state(source):
+    from fightcamp.stage2_payload import (
+        build_planning_brief, build_stage2_payload, build_stage2_handoff_text,
+    )
     from fightcamp.training_context import TrainingContext
 
     if source == "payload":
@@ -148,15 +149,38 @@ def test_normal_camp_build_marks_policy_inactive_through_finalizer_packet(source
             phase_weeks={"GPP": 2, "SPP": 2, "TAPER": 1},
             strength_blocks={}, conditioning_blocks={}, rehab_blocks={},
         )
-        packet = build_stage2_finalizer_packet(stage2_payload=payload)
+        brief = {}
     else:
         brief = build_planning_brief(
             athlete_model={"days_until_fight": 30, "sport": "boxing"},
             restrictions=[], phase_briefs={}, candidate_pools={},
             omission_ledger={}, rewrite_guidance={},
         )
-        packet = build_stage2_finalizer_packet(stage2_payload={}, planning_brief=brief)
+        payload = {}
 
-    selected = packet["selected_plan"]
-    assert selected["late_fight_plan_spec"]["taper_micro_support_policy"]["active"] is False
-    assert RULE_9B not in build_finalizer_prompt(selected_plan=selected)
+    assert "late_fight_plan_spec" not in payload
+    assert "late_fight_plan_spec" not in brief
+    prompt = build_stage2_handoff_text(
+        stage2_payload=payload, planning_brief=brief, plan_text="",
+    )
+    assert RULE_9B not in prompt
+
+
+@pytest.mark.parametrize("mode", [None, "unknown", "deterministic_late_fight_planner_plus_ai_finalizer"])
+def test_handoff_keeps_rule_when_architecture_is_not_known_normal(mode):
+    from fightcamp.stage2_payload import build_stage2_handoff_text
+
+    prompt = build_stage2_handoff_text(stage2_payload={"generator_mode": mode}, plan_text="")
+    assert RULE_9B in prompt
+
+
+@pytest.mark.parametrize("marker", ["payload_variant", "days_out_payload", "late_fight_plan_spec"])
+@pytest.mark.parametrize("value", [None, {}, "junk"])
+def test_handoff_keeps_rule_when_normal_mode_has_late_fight_markers(marker, value):
+    from fightcamp.stage2_payload import build_stage2_handoff_text
+
+    prompt = build_stage2_handoff_text(
+        stage2_payload={"generator_mode": "restriction_aware_candidate_generator", marker: value},
+        plan_text="",
+    )
+    assert RULE_9B in prompt

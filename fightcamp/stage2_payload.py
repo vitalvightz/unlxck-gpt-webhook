@@ -1540,8 +1540,6 @@ def _build_planning_brief(
     return {
         "schema_version": "planning_brief.v1",
         "generator_mode": "deterministic_planner_plus_ai_finalizer",
-        # This normal-camp path has no late-fight micro-support overlay.
-        "late_fight_plan_spec": {"taper_micro_support_policy": {"active": False}},
         "athlete_snapshot": athlete_model,
         "fight_demands": {
             "sport": athlete_model.get("sport"),
@@ -2436,8 +2434,6 @@ def build_stage2_payload(
     return {
         "schema_version": "stage2_payload.v1",
         "generator_mode": "restriction_aware_candidate_generator",
-        # This normal-camp path has no late-fight micro-support overlay.
-        "late_fight_plan_spec": {"taper_micro_support_policy": {"active": False}},
         "athlete_model": athlete_model,
         "injury_context": injury_context,
         "restrictions": serialized_restrictions,
@@ -2520,8 +2516,8 @@ If selected_plan.weekly_role_map.fight_day_override.active is true, or any week'
 """
 
 # Gated on selected_plan.late_fight_plan_spec.taper_micro_support_policy.active,
-# which the rule itself opens by testing. Normal-camp builders explicitly mark
-# the policy inactive; missing or malformed policy data must keep the rule.
+# which the rule itself opens by testing. The handoff also knows when the
+# normal-camp architecture makes this overlay inapplicable.
 _RULE_9B_TAPER_MICRO_SUPPORT = """\
 RULE 9B — TAPER MICRO-SUPPORT
 If selected_plan.late_fight_plan_spec.taper_micro_support_policy.active is true, treat that policy as a hard overlay.
@@ -2697,6 +2693,7 @@ def build_finalizer_prompt(
     *,
     render_guards: dict | None = None,
     selected_plan: dict | None = None,
+    normal_camp: bool = False,
 ) -> str:
     """Assemble the finalizer prompt for this plan's actual state.
 
@@ -2711,8 +2708,9 @@ def build_finalizer_prompt(
 
     sections = [_FINALIZER_SEGMENT_A]
 
-    # Only a known inactive policy may omit the rule; unknown data fails open.
-    if not _taper_micro_support_inactive(selected_plan):
+    # The caller may confirm the normal-camp architecture. Otherwise only an
+    # explicitly inactive policy may omit the rule; unknown data fails open.
+    if normal_camp is not True and not _taper_micro_support_inactive(selected_plan):
         sections.append(_RULE_9B_TAPER_MICRO_SUPPORT)
 
     sections.append(_FINALIZER_SEGMENT_B)
@@ -3303,10 +3301,24 @@ def build_stage2_handoff_text(
     # collision_details, treat derived_clarification_tags as internal-only), and
     # the packet's selected_plan.priority_focus block supplies the underlying
     # values. A parallel prose section here only duplicated those rules.
+    # Normal camps deliberately have no late-fight spec. Identify them from the
+    # existing planner mode, never from missing policy data alone. Any late-fight
+    # marker (even malformed) prevents this exemption and keeps the gate open.
+    brief = planning_brief or {}
+    normal_camp = (
+        (brief.get("generator_mode") or stage2_payload.get("generator_mode"))
+        in {"deterministic_planner_plus_ai_finalizer", "restriction_aware_candidate_generator"}
+        and all(
+            key not in source
+            for source in (brief, stage2_payload)
+            for key in ("payload_variant", "days_out_payload", "late_fight_plan_spec")
+        )
+    )
     sections = [
         build_finalizer_prompt(
             render_guards=finalizer_packet.get("render_guards"),
             selected_plan=finalizer_packet.get("selected_plan"),
+            normal_camp=normal_camp,
         ).strip(),
         UNLXCK_FINAL_RENDER_CONTRACT.strip(),
     ]
