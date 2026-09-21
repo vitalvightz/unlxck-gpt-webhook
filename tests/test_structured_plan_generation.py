@@ -791,14 +791,17 @@ def test_invalid_block_is_contained_without_discarding_valid_sibling_cards():
     bad_block["display_name"] = "Malformed accessory"
     bad_block["sets"] = {"not": "a count"}
     plan["weeks"][0]["days"][0]["sessions"][0]["blocks"].append(bad_block)
+    raw_markdown = _faithful_source(plan)
+    plan["raw_markdown_fallback"] = "stale model copy"
 
     outcome = build_structured_plan_outcome(
         plan,
-        raw_markdown=_faithful_source(plan),
+        raw_markdown=raw_markdown,
     )
 
     assert outcome.status == "valid"
     assert outcome.structured_plan is not None
+    assert outcome.structured_plan["raw_markdown_fallback"] == raw_markdown
     blocks = outcome.structured_plan["weeks"][0]["days"][0]["sessions"][0]["blocks"]
     assert [block["display_name"] for block in blocks] == ["Barbell Back Squat"]
     assert any(
