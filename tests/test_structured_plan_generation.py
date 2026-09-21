@@ -1820,6 +1820,92 @@ def test_open_plan_prompt_constrains_progression_and_deload_by_exercise_type():
     assert 'Do NOT write "halve the sets" for a block that has no sets.' in prompt
 
 
+def test_block_name_offering_a_choice_keeps_one_exercise_and_swaps_the_other():
+    block = _normalized_block(
+        {
+            "display_name": "Short sprint bounds or low box jumps",
+            "sets": 4,
+            "reps": "3",
+        }
+    )
+    assert block["display_name"] == "Short sprint bounds"
+    assert "Low box jumps" in block["substitutions"]
+
+
+def test_block_names_that_are_not_a_choice_are_left_alone():
+    # A superset is a deliberate pairing, a parenthetical is one movement, and a
+    # single-word side ("Bike or rower intervals") would lose the prescription.
+    for name in (
+        "Trap bar deadlift",
+        "Barbell hip thrust + band walk",
+        "Lateral raise (front or side)",
+        "Bike or rower intervals",
+    ):
+        block = _normalized_block({"display_name": name})
+        assert block["display_name"] == name, name
+        assert block.get("substitutions", []) == [], name
+
+
+def test_hedge_only_progression_and_deload_lines_are_dropped():
+    """The athlete cannot act on "slowly", so the card shows nothing instead.
+
+    The frontend renders no week directive when the rule is absent, so dropping
+    here is what guarantees an open card never prints an unactionable line.
+    """
+    block = _normalized_block(
+        {
+            "display_name": "Plank variation",
+            "sets": 3,
+            "progression_rule": "Increase hold time slowly while keeping form.",
+            "deload_rule": "Cut the work back a bit.",
+        }
+    )
+    assert "progression_rule" not in block
+    assert "deload_rule" not in block
+
+
+def test_a_real_target_survives_even_when_it_also_hedges():
+    """Only lines that hedge INSTEAD of instructing are stripped."""
+    for rule in (
+        "Go to 3 x 40 sec while the ribs stay down.",  # named target
+        "Add 2.5 kg, building slowly.",  # hedge alongside a real number
+        "Add the smallest jump on the bar if the bicep stayed quiet.",  # no kg exists
+        "Progress to live resistance once timing holds.",  # qualitative skill work
+        # A hedge beside a real target is only tempo: the line still says what
+        # to move to, so it must survive exactly as the unhedged wording does.
+        "Progress to live resistance gradually once timing holds.",
+        "Move to controlled partner resistance slowly once timing is stable.",
+        "Build into full range gradually.",
+        "Progress to live resistance if you can keep timing clean.",
+        "Add reps only while it stays pain-free.",  # symptom-led rehab
+        "Stays unchanged this block.",  # explicit no-progression
+    ):
+        block = _normalized_block({"display_name": "Drill", "progression_rule": rule})
+        assert block.get("progression_rule") == rule, rule
+
+
+def test_conditional_swap_is_never_routed_into_progression_rule():
+    prompt = build_structured_plan_prompt(plan_markdown="# Plan")
+    assert "never put a conditional swap there" in " ".join(prompt.split())
+
+
+def test_open_plan_prompt_demands_a_quantified_step_without_inventing_load():
+    prompt = build_structured_plan_prompt(
+        plan_markdown="# Open plan",
+        planning_brief=_open_plan_brief("Monday", "Tuesday"),
+    )
+
+    # The step must be stated in the block's own units, not hedged.
+    assert "BE SPECIFIC" in prompt
+    assert "SAME units the block already" in prompt
+    assert '"3 x 30 sec" progresses to "Go to 3 x 40 sec"' in " ".join(prompt.split())
+    for hedge in ('"small"', '"slowly"', '"gradually"'):
+        assert hedge in prompt, hedge
+    # ... but a kilo target is never invented for an RPE-anchored lift.
+    assert "Never invent a number the plan does not have" in prompt
+    assert "do NOT name a kilo or percentage target" in " ".join(prompt.split())
+
+
 def test_dated_camp_prompt_has_no_open_plan_progression_contract():
     prompt = build_structured_plan_prompt(
         plan_markdown="# Fight camp",

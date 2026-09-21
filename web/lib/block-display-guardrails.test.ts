@@ -63,6 +63,16 @@ test("requires the exact block title rather than a substring match", () => {
   );
 });
 
+
+test("recovers source ranges after an A-or-B title is split to the chosen exercise", () => {
+  const source =
+    "- Short sprint bounds or low box jumps — 2-3 sets x 4 reps, RPE 6-7, rest 60-90 sec.";
+  assert.deepEqual(
+    getSourcePrescriptionRangeOverrides(source, "Short sprint bounds"),
+    { sets: "2-3", effort: "RPE 6-7", rest: "60-90 sec" },
+  );
+});
+
 test("treats legacy D0 and D-0 countdown labels as the same fight-day section", () => {
   const source = `D0 (Fight day): Primer
 - Fast Hands Primer — 1-2 sets x 4 punches, RPE 4-5.`;
@@ -93,4 +103,29 @@ test("puts the source set range back onto an orphaned per-set volume", () => {
     applySourceSetRange([{ label: "Volume", value: "6 punches per set" }], "2-3"),
     [{ label: "Volume", value: "2-3 × 6 punches" }],
   );
+});
+
+test("an exact source title beats an earlier 'A or B' line", () => {
+  // Both lines can exist as separate exercises. The choice line comes first, so
+  // a first-match sweep would give this block the other exercise's ranges.
+  const source = [
+    "- Short sprint bounds or low box jumps — 2-3 sets, RPE 6-7, rest 60-90 sec",
+    "- Short sprint bounds — 4 sets, RPE 8, rest 120 sec",
+  ].join("\n");
+
+  const overrides = getSourcePrescriptionRangeOverrides(source, "Short sprint bounds");
+
+  assert.equal(overrides.sets, null); // "4 sets" is not a range
+  assert.equal(overrides.effort, "RPE 8");
+  assert.match(String(overrides.rest), /120/);
+  assert.doesNotMatch(String(overrides.rest), /60-90/);
+});
+
+test("the choice line is still the source when no exact title exists", () => {
+  const source = "- Short sprint bounds or low box jumps — 2-3 sets, RPE 6-7, rest 60-90 sec";
+
+  const overrides = getSourcePrescriptionRangeOverrides(source, "Short sprint bounds");
+
+  assert.equal(overrides.sets, "2-3");
+  assert.equal(overrides.effort, "RPE 6-7");
 });

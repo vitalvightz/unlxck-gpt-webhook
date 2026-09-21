@@ -257,13 +257,29 @@ function stripSourceLineFormatting(value: string): string {
     .trim();
 }
 
-function isExactBlockLine(line: string, blockName: string): boolean {
+/** The source line title, with everything after the exercise name removed. */
+function blockLineRemainder(line: string, blockName: string): string | null {
   const candidate = normalize(stripSourceLineFormatting(line));
   const name = normalize(blockName);
-  if (!candidate.startsWith(name)) return false;
+  if (!candidate.startsWith(name)) return null;
+  return candidate.slice(name.length);
+}
 
-  const remainder = candidate.slice(name.length);
+/** "Short sprint bounds — 4 sets" for the block "Short sprint bounds". */
+function isExactBlockLine(line: string, blockName: string): boolean {
+  const remainder = blockLineRemainder(line, blockName);
+  if (remainder === null) return false;
   return /^\s*(?:[.—–:,]\s*|-\s+)/.test(remainder);
+}
+
+/** "Short sprint bounds or low box jumps — 2-3 sets" for the same block: the
+ * card title is one option of a source choice, so this line is its source.
+ * Only ever consulted when the source carries no exact title — a plan may hold
+ * BOTH lines as separate exercises, and the exact one is then the right dose. */
+function isChoiceBlockLine(line: string, blockName: string): boolean {
+  const remainder = blockLineRemainder(line, blockName);
+  if (remainder === null) return false;
+  return /^\s+or\s+.+?(?:[.—–:,]\s*|-\s+)/i.test(remainder);
 }
 
 function sourceBlockLine(
@@ -280,14 +296,17 @@ function sourceBlockLine(
   const scoped = clean(countdown) ? countdownSection(raw, countdown) : raw;
   if (!scoped) return null;
 
+  const lines = scoped.split(/\r?\n/);
+  const carriesPrescription = (line: string) =>
+    /(?:\b(?:sets?|reps?|rpe|rir|rest|recovery|reset)\b|\d\s*[x×]\s*\d)/i.test(line);
+  // An exact title always wins. Falling back to the choice line only when no
+  // exact line exists stops a "Short sprint bounds or low box jumps" line that
+  // happens to appear first from handing its ranges to a separate "Short sprint
+  // bounds" block with its own dose.
   return (
-    scoped
-      .split(/\r?\n/)
-      .find(
-        (line) =>
-          isExactBlockLine(line, name) &&
-          /(?:\b(?:sets?|reps?|rpe|rir|rest|recovery|reset)\b|\d\s*[x×]\s*\d)/i.test(line),
-      ) || null
+    lines.find((line) => isExactBlockLine(line, name) && carriesPrescription(line)) ||
+    lines.find((line) => isChoiceBlockLine(line, name) && carriesPrescription(line)) ||
+    null
   );
 }
 

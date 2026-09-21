@@ -1058,13 +1058,87 @@ def _normalize_block(value: Any) -> dict[str, Any]:
     stop_rules = _dedupe_stop_rules(
         _coerce_str_list(out.get("stop_rules")) + stop_cues + embedded_stops
     )
-    if progression_rule:
+    if progression_rule and not _is_hedge_only_adjustment(progression_rule):
         out["progression_rule"] = progression_rule
     else:
         out.pop("progression_rule", None)
+    if _is_hedge_only_adjustment(out.get("deload_rule")):
+        out.pop("deload_rule", None)
     if stop_rules or "stop_rules" in out:
         out["stop_rules"] = stop_rules
+
+    # A card names the exercise the athlete is doing. Source prose sometimes
+    # offers a choice instead ("Short sprint bounds or low box jumps"), which
+    # leaves the athlete deciding mid-session and makes the dose ambiguous. Keep
+    # the first option as the exercise and demote the alternative to a swap, so
+    # nothing is lost and no card asks a question. A superset ("A + B") is a
+    # deliberate pairing and is never split.
+    name, alternative = _split_alternative_display_name(out.get("display_name"))
+    if alternative:
+        out["display_name"] = name
+        out["substitutions"] = _dedupe_text_values(
+            _coerce_str_list(out.get("substitutions")) + [alternative]
+        )
     return out
+
+
+# "Increase hold time slowly", "Add small load each week" — an instruction whose
+# only magnitude is a hedge. The athlete cannot act on it: the card already shows
+# 3 x 30 sec, so the line owed them "3 x 40 sec". A hedge alongside a real target
+# is fine ("Add 2.5 kg, building slowly"), and so is a progression that is
+# genuinely qualitative ("Progress to live resistance once timing holds") or a
+# minimal step the plan cannot number ("add the smallest jump on the bar") — this
+# only strips lines that hedge INSTEAD of instructing. \bsmall\b deliberately does
+# not match "smallest".
+_HEDGE_MAGNITUDE_RE = re.compile(
+    r"\b(?:small|slight(?:ly)?|slow(?:ly)?|gradual(?:ly)?|a bit|a little|"
+    r"marginal(?:ly)?|modest(?:ly)?)\b",
+    re.IGNORECASE,
+)
+_HAS_NUMBER_RE = re.compile(r"\d")
+# A qualitative progression names what it moves TO: "Progress to live
+# resistance", "Move onto controlled partner resistance", "Build into full
+# range". That is a real target, so the hedge beside it is only tempo — the
+# line still tells the athlete what to do this week and must survive. Without
+# such a target, a hedge is all the line has ("Increase hold time slowly"),
+# and it goes. An infinitive ("...to keep form") reads as a target here and
+# keeps the line: a false keep costs a vague line, a false delete costs the
+# athlete their whole instruction.
+_PROGRESSION_TARGET_RE = re.compile(r"\b(?:to|into|onto)\s+\w", re.IGNORECASE)
+
+
+def _is_hedge_only_adjustment(value: Any) -> bool:
+    """True when a progression/deload line hedges INSTEAD of naming a target."""
+    text = _coerce_str(value).strip()
+    if not text:
+        return False
+    if _HAS_NUMBER_RE.search(text) or _PROGRESSION_TARGET_RE.search(text):
+        return False
+    return bool(_HEDGE_MAGNITUDE_RE.search(text))
+
+
+# " or " joining two multi-word movements is a choice between exercises. Single
+# words are left alone: in "Bike or rower intervals" the trailing noun belongs
+# to both sides, so splitting would lose the prescription.
+_ALTERNATIVE_NAME_RE = re.compile(
+    r"^(?P<first>[^()]*?\S(?:\s+\S+)+?)\s+or\s+(?P<second>\S+(?:\s+\S+)+)$",
+    re.IGNORECASE,
+)
+
+
+def _split_alternative_display_name(value: Any) -> tuple[str, str]:
+    """``("A or B") -> ("A", "B")``; ``("", "")`` when the name is a single exercise."""
+    name = _coerce_str(value).strip()
+    if not name or "+" in name:
+        return name, ""
+    match = _ALTERNATIVE_NAME_RE.match(name)
+    if not match:
+        return name, ""
+    first = match.group("first").strip(" ,;-")
+    second = match.group("second").strip(" ,;-")
+    if not first or not second:
+        return name, ""
+    return first, second[:1].upper() + second[1:]
 
 
 # Fields that make a block an actual prescribed exercise rather than a mention.
@@ -2684,7 +2758,9 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   bare separator label such as "Regression /" rather than rendering it as athlete
   guidance. progression_rule may be omitted when the source gives no genuine
   exercise progression. Do NOT put taper/week dose restrictions, injury
-  restrictions, session-programming constraints, or stop criteria into it.
+  restrictions, session-programming constraints, or stop criteria into it, and
+  never put a conditional swap there: "Switch to X if the joints feel sore" is
+  a regression/substitution, not a progression.
 - Carry mental/mindset coaching into mindset_anchor at BOTH the session level and
   the day level (today_card.mindset_anchor), including "confidence_anchor" and
   "context" when the plan provides them. When STAGE 1 COMPUTED SUPPORT includes a
@@ -2933,6 +3009,20 @@ load" line:
   the easy aerobic duration but stay strictly easy, drop interval reps, reduce
   live resistance on skill work, leave a warm-up or mobility piece as written.
   Do NOT write "halve the sets" for a block that has no sets.
+- BE SPECIFIC. You are writing these lines next to the block's own
+  prescription, so use it: name the target in the SAME units the block already
+  shows. "3 x 30 sec" progresses to "Go to 3 x 40 sec", "2 x 6/side" to "Take
+  it to 2 x 8/side", "20 min easy" to "Ride 25 min at the same easy pace",
+  "5 rounds" to "Add a sixth round". A line whose only content is "small",
+  "slowly", "gradually", "a bit" or "where you can" is NOT acceptable — every
+  progression_rule and deload_rule must state what the athlete actually does
+  this week.
+- Never invent a number the plan does not have. When the block prescribes no
+  absolute load (an RPE- or effort-anchored lift with no kg/% on the card),
+  do NOT name a kilo or percentage target: progress it in the units that ARE
+  prescribed — reps, sets, or the effort/RPE step — or say to add the smallest
+  jump available on the bar. Only cite a load number when the block itself
+  carries one, and then step it from that number.
 - Respect injury restrictions, fatigue rules, sparring protection and every
   other constraint the plan states. Keep both lines athlete-facing, plain and
   at most one short sentence.

@@ -621,6 +621,38 @@ def test_open_plan_accepts_preserved_explicit_prescription_fields():
     assert check_structured_faithfulness(plan, source) == []
 
 
+def test_prescription_gate_still_matches_after_choice_title_is_split():
+    source = """Session Card — Power
+- Short sprint bounds or low box jumps — 2-3 sets x 4 reps, RPE 6-7, rest 60-90 sec.
+  Cue: Land quietly and reset before each rep.
+"""
+    plan = {
+        "weeks": [
+            {
+                "days": [
+                    {
+                        "sessions": [
+                            {
+                                "blocks": [
+                                    {
+                                        "block_type": "plyometric_power",
+                                        "display_name": "Short sprint bounds",
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+
+    violations = check_structured_faithfulness(plan, source)
+    assert any("dropped explicit source rest" in item for item in violations)
+    assert any("dropped explicit source effort" in item for item in violations)
+    assert any("dropped explicit source cue" in item for item in violations)
+
+
 # --- introduced exercises are rejected -------------------------------------
 
 
@@ -849,3 +881,31 @@ def test_internal_error_falls_back_via_outcome(monkeypatch):
     outcome = build_structured_plan_outcome(_valid_plan(), raw_markdown="### Mon (D-15) — x")
     assert outcome.status == "invalid_fallback_used"
     assert outcome.structured_plan is None
+
+
+def test_exact_source_title_wins_over_an_earlier_choice_line():
+    """A plan can carry both lines as separate exercises.
+
+    "Short sprint bounds or low box jumps" is only this block's source when the
+    plan has no exact "Short sprint bounds" line of its own. When both exist the
+    choice line appears first, so a first-match sweep would hand this block the
+    other exercise's 2-3 sets / RPE 6-7 / 60-90 sec.
+    """
+    source = (
+        "- Short sprint bounds or low box jumps - 2-3 sets, RPE 6-7, rest 60-90 sec\n"
+        "- Short sprint bounds - 4 sets, RPE 8, rest 120 sec\n"
+    )
+
+    segment = faithfulness._source_block_segment(source, "Short sprint bounds")
+
+    assert "4 sets" in segment
+    assert "RPE 8" in segment
+    assert "2-3 sets" not in segment
+
+
+def test_choice_line_is_still_the_source_when_no_exact_title_exists():
+    source = "- Short sprint bounds or low box jumps - 2-3 sets, RPE 6-7, rest 60-90 sec\n"
+
+    segment = faithfulness._source_block_segment(source, "Short sprint bounds")
+
+    assert "2-3 sets" in segment
