@@ -621,6 +621,38 @@ def test_open_plan_accepts_preserved_explicit_prescription_fields():
     assert check_structured_faithfulness(plan, source) == []
 
 
+def test_prescription_gate_still_matches_after_choice_title_is_split():
+    source = """Session Card — Power
+- Short sprint bounds or low box jumps — 2-3 sets x 4 reps, RPE 6-7, rest 60-90 sec.
+  Cue: Land quietly and reset before each rep.
+"""
+    plan = {
+        "weeks": [
+            {
+                "days": [
+                    {
+                        "sessions": [
+                            {
+                                "blocks": [
+                                    {
+                                        "block_type": "plyometric_power",
+                                        "display_name": "Short sprint bounds",
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+
+    violations = check_structured_faithfulness(plan, source)
+    assert any("dropped explicit source rest" in item for item in violations)
+    assert any("dropped explicit source effort" in item for item in violations)
+    assert any("dropped explicit source cue" in item for item in violations)
+
+
 # --- introduced exercises are rejected -------------------------------------
 
 
