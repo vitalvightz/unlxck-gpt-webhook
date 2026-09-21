@@ -61,6 +61,7 @@ def test_gates_fail_open_on_missing_or_malformed_flags(render_guards, selected_p
     """
     prompt = build_finalizer_prompt(render_guards=render_guards, selected_plan=selected_plan)
 
+    assert RULE_9B in prompt
     assert RULE_12 in prompt
     assert RULE_13_SCAFFOLD in prompt
 
@@ -93,18 +94,24 @@ def test_rule_13_scaffolding_kept_in_late_fight_mode():
     assert RULE_13_SCAFFOLD in prompt
 
 
-def test_rule_9b_kept_only_when_taper_micro_support_is_active():
-    active = build_finalizer_prompt(
-        selected_plan={"late_fight_plan_spec": {"taper_micro_support_policy": {"active": True}}}
-    )
-    inactive = build_finalizer_prompt(
-        selected_plan={"late_fight_plan_spec": {"taper_micro_support_policy": {"active": False}}}
-    )
-    absent = build_finalizer_prompt(selected_plan={})
+@pytest.mark.parametrize(
+    "selected_plan",
+    [
+        None, "junk", [], {}, {"unrelated": True},
+        *[{"late_fight_plan_spec": value} for value in (None, "junk", [], False, 0, {})],
+        *[{"late_fight_plan_spec": {"taper_micro_support_policy": value}}
+          for value in (None, "junk", [], False, 0, {})],
+        *[{"late_fight_plan_spec": {"taper_micro_support_policy": {"active": value}}}
+          for value in (None, "junk", "false", 0, 1, [], {}, True)],
+    ],
+)
+def test_rule_9b_kept_unless_policy_is_explicitly_inactive(selected_plan):
+    assert RULE_9B in build_finalizer_prompt(selected_plan=selected_plan)
 
-    assert RULE_9B in active
-    assert RULE_9B not in inactive
-    assert RULE_9B not in absent
+
+def test_rule_9b_dropped_for_explicit_false():
+    selected_plan = {"late_fight_plan_spec": {"taper_micro_support_policy": {"active": False}}}
+    assert RULE_9B not in build_finalizer_prompt(selected_plan=selected_plan)
 
 
 def test_no_gated_rule_is_referenced_by_number_from_an_ungated_one():
@@ -116,3 +123,40 @@ def test_no_gated_rule_is_referenced_by_number_from_an_ungated_one():
 
     for gated in ("RULE 9B", "RULE 12"):
         assert gated not in always_sent
+
+
+@pytest.mark.parametrize("source", ["payload", "brief"])
+def test_normal_camp_build_marks_policy_inactive_through_finalizer_packet(source):
+    from fightcamp.stage2_payload import build_planning_brief, build_stage2_payload
+    from fightcamp.stage2_finalizer_packet import build_stage2_finalizer_packet
+    from fightcamp.training_context import TrainingContext
+
+    if source == "payload":
+        payload = build_stage2_payload(
+            training_context=TrainingContext(
+                days_until_fight=30, fatigue="low", training_frequency=4,
+                days_available=4, training_days=["Mon", "Tue", "Thu", "Sat"],
+                injuries=[], style_technical=["boxing"], style_tactical=[],
+                weaknesses=[], equipment=["heavy_bag"], weight_cut_risk=False,
+                weight_cut_pct=0.0, fight_format="boxing", status="amateur",
+                key_goals=["conditioning"], training_preference="balanced",
+                mental_block=[], age=25, weight=70.0, prev_exercises=[],
+                recent_exercises=[], phase_weeks={"GPP": 2, "SPP": 2, "TAPER": 1},
+            ),
+            mapped_format="boxing", record="3-0", rounds_format="3x3",
+            camp_len=5, short_notice=False, restrictions=[],
+            phase_weeks={"GPP": 2, "SPP": 2, "TAPER": 1},
+            strength_blocks={}, conditioning_blocks={}, rehab_blocks={},
+        )
+        packet = build_stage2_finalizer_packet(stage2_payload=payload)
+    else:
+        brief = build_planning_brief(
+            athlete_model={"days_until_fight": 30, "sport": "boxing"},
+            restrictions=[], phase_briefs={}, candidate_pools={},
+            omission_ledger={}, rewrite_guidance={},
+        )
+        packet = build_stage2_finalizer_packet(stage2_payload={}, planning_brief=brief)
+
+    selected = packet["selected_plan"]
+    assert selected["late_fight_plan_spec"]["taper_micro_support_policy"]["active"] is False
+    assert RULE_9B not in build_finalizer_prompt(selected_plan=selected)

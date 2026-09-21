@@ -2716,8 +2716,11 @@ session title/objective, plan_notes, mindset_anchor, nutrition prose):
     the position" not "isometric"; "balance and body awareness" not
     "proprioception"; "brace your middle" not "anti-rotation" or "trunk
     stiffness"; "legs and hips drive it" not "posterior chain" or "triple
-    extension"; "you will feel flat" not "CNS fatigue"; "your body clears the
-    burn" not "glycolytic" / "alactic" / "lactate clearance"; "sharp and quick"
+    extension"; "you will feel flat" not "CNS fatigue"; "short explosive efforts
+    with full rest" not "alactic"; "hard efforts that create a strong burn" not
+    "glycolytic"; "clearing the burn between hard efforts" not "lactate
+    clearance"; "ability to keep working and recover" not "aerobic capacity".
+    Keep these training meanings distinct. "sharp and quick"
     not "neuromuscular sharpness"; "how it carries into the fight" not
     "transfer" or "specificity". These are examples of the standard, not the
     whole list — if a fighter would not say it in the gym, rewrite it.

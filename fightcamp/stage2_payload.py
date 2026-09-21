@@ -1540,6 +1540,8 @@ def _build_planning_brief(
     return {
         "schema_version": "planning_brief.v1",
         "generator_mode": "deterministic_planner_plus_ai_finalizer",
+        # This normal-camp path has no late-fight micro-support overlay.
+        "late_fight_plan_spec": {"taper_micro_support_policy": {"active": False}},
         "athlete_snapshot": athlete_model,
         "fight_demands": {
             "sport": athlete_model.get("sport"),
@@ -2434,6 +2436,8 @@ def build_stage2_payload(
     return {
         "schema_version": "stage2_payload.v1",
         "generator_mode": "restriction_aware_candidate_generator",
+        # This normal-camp path has no late-fight micro-support overlay.
+        "late_fight_plan_spec": {"taper_micro_support_policy": {"active": False}},
         "athlete_model": athlete_model,
         "injury_context": injury_context,
         "restrictions": serialized_restrictions,
@@ -2516,8 +2520,8 @@ If selected_plan.weekly_role_map.fight_day_override.active is true, or any week'
 """
 
 # Gated on selected_plan.late_fight_plan_spec.taper_micro_support_policy.active,
-# which the rule itself opens by testing. late_fight_plan_spec is only built on
-# the late-fight path, so every line here is unreachable on a normal camp.
+# which the rule itself opens by testing. Normal-camp builders explicitly mark
+# the policy inactive; missing or malformed policy data must keep the rule.
 _RULE_9B_TAPER_MICRO_SUPPORT = """\
 RULE 9B — TAPER MICRO-SUPPORT
 If selected_plan.late_fight_plan_spec.taper_micro_support_policy.active is true, treat that policy as a hard overlay.
@@ -2586,7 +2590,7 @@ Placement governs day assignment only; it does not change insert voice, ownershi
 RULE 11A — PLAIN LANGUAGE (KS3 READING LEVEL)
 Every athlete-facing line must be readable by a 13-year-old: UK Key Stage 3 level. This is a hard output rule, not a style preference. Keep the coach voice - direct, decisive, confident - but strip the sports-science register. A plain sentence from a coach who knows the athlete is the target, not a textbook or a lecture.
 - One idea per sentence. Aim for 12-15 words, hard cap 20. Two short sentences beat one long one with a comma splice or a "which" clause.
-- Use the everyday word. Say "power", not "rate of force development". Say "tired nervous system" or just "you will feel flat", not "CNS fatigue" or "neural load". Say "lowering phase" or "the way down", not "eccentric". Say "holding still under load" or "hold the position", not "isometric". Say "balance and body awareness", not "proprioception". Say "stiff trunk" or "brace your middle", not "trunk stiffness" / "anti-rotation" / "intra-abdominal pressure". Say "your legs and hips drive it", not "posterior chain" or "triple extension". Say "your body clears the burn", not "lactate clearance" / "glycolytic" / "alactic" / "aerobic capacity". Say "sharp and quick", not "neuromuscular sharpness" or "potentiation". Say "how it carries into the fight", not "transfer" or "specificity". Say "a small dose" or "one short exposure", not "microdose" or "stimulus".
+- Use the everyday word. Say "power", not "rate of force development". Say "tired nervous system" or just "you will feel flat", not "CNS fatigue" or "neural load". Say "lowering phase" or "the way down", not "eccentric". Say "holding still under load" or "hold the position", not "isometric". Say "balance and body awareness", not "proprioception". Say "stiff trunk" or "brace your middle", not "trunk stiffness" / "anti-rotation" / "intra-abdominal pressure". Say "your legs and hips drive it", not "posterior chain" or "triple extension". Say "short explosive efforts with full rest", not "alactic". Say "hard efforts that create a strong burn", not "glycolytic". Say "clearing the burn between hard efforts", not "lactate clearance". Say "ability to keep working and recover", not "aerobic capacity". Keep these training meanings distinct. Say "sharp and quick", not "neuromuscular sharpness" or "potentiation". Say "how it carries into the fight", not "transfer" or "specificity". Say "a small dose" or "one short exposure", not "microdose" or "stimulus".
 - These are examples of the standard, not the whole list. Apply the same test to any term the athlete would not use themselves: if a fighter would not say it in the gym, rewrite it.
 - Keep the numbers, doses and safety triggers exactly as given. Plain language changes the WORDS, never the prescription, the dose, the rule or the meaning. Never drop a safety detail to make a line shorter or simpler.
 - Some words stay because athletes use them: reps, sets, rest, RPE, sparring, rounds, taper, tempo, warm-up, drill, pad work, clinch, footwork, sprint, and the exercise names themselves. Keep them.
@@ -2677,7 +2681,7 @@ def _is_explicitly_false(value: Any) -> bool:
     return value is False
 
 
-def _taper_micro_support_active(selected_plan: Any) -> bool:
+def _taper_micro_support_inactive(selected_plan: Any) -> bool:
     if not isinstance(selected_plan, dict):
         return False
     spec = selected_plan.get("late_fight_plan_spec")
@@ -2686,7 +2690,7 @@ def _taper_micro_support_active(selected_plan: Any) -> bool:
     policy = spec.get("taper_micro_support_policy")
     if not isinstance(policy, dict):
         return False
-    return bool(policy.get("active"))
+    return _is_explicitly_false(policy.get("active"))
 
 
 def build_finalizer_prompt(
@@ -2707,10 +2711,8 @@ def build_finalizer_prompt(
 
     sections = [_FINALIZER_SEGMENT_A]
 
-    # late_fight_plan_spec is only built on the late-fight path, so on a dated
-    # camp the policy this rule governs does not exist. Positive check, so an
-    # unreadable spec keeps the rule.
-    if _taper_micro_support_active(selected_plan) or not isinstance(selected_plan, dict):
+    # Only a known inactive policy may omit the rule; unknown data fails open.
+    if not _taper_micro_support_inactive(selected_plan):
         sections.append(_RULE_9B_TAPER_MICRO_SUPPORT)
 
     sections.append(_FINALIZER_SEGMENT_B)
