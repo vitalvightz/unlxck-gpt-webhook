@@ -1871,6 +1871,7 @@ def test_a_real_target_survives_even_when_it_also_hedges():
         "Add 2.5 kg, building slowly.",  # hedge alongside a real number
         "Add the smallest jump on the bar if the bicep stayed quiet.",  # no kg exists
         "Progress to live resistance once timing holds.",  # qualitative skill work
+        "Progress to live resistance if you can keep timing clean.",
         "Add reps only while it stays pain-free.",  # symptom-led rehab
         "Stays unchanged this block.",  # explicit no-progression
     ):
