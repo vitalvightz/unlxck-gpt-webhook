@@ -892,7 +892,7 @@ def _dedupe_stop_rules(values: list[str]) -> list[str]:
 
 _BLOCK_DETAIL_LABEL_RE = re.compile(
     r"^\s*(purpose|why\s+today|easier|regress(?:ion)?|progress(?:ion)?|"
-    r"stop(?:\s+rule)?|swaps?|substitutions?)\s*:\s*(.*)$",
+    r"stop(?:\s+rule)?|swaps?|substitutions?|cue)\s*:\s*(.*)$",
     re.IGNORECASE,
 )
 
@@ -956,7 +956,10 @@ def _normalize_effort(value: Any) -> dict[str, Any] | None:
 
 def _normalize_block(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
-    out["block_id"] = _coerce_nonempty_str(out.get("block_id"), "block")
+    # Identifier metadata is not athlete-facing content.  Preserve a useful id,
+    # but leave it absent/null instead of fabricating the same collision-prone
+    # fallback for every block or rejecting the whole card.
+    out["block_id"] = _coerce_str(out.get("block_id")).strip() or None
     out["block_type"] = _enum(out.get("block_type"), _BLOCK_TYPE_VALUES, "accessory", _BLOCK_TYPE_ALIASES)
     out["display_name"] = _coerce_str(out.get("display_name"))
     if "load" in out:
@@ -1017,6 +1020,8 @@ def _normalize_block(value: Any) -> dict[str, Any]:
                 progression_cues.append(detail)
             elif label.startswith("stop"):
                 stop_cues.append(detail)
+            elif label == "cue":
+                cleaned_cues.append(detail)
             else:
                 substitution_cues.append(detail)
             continue
@@ -1114,7 +1119,7 @@ def _collapse_unprescribed_duplicate_blocks(blocks: list[dict[str, Any]]) -> lis
 
 def _normalize_session(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
-    out["session_id"] = _coerce_nonempty_str(out.get("session_id"), "session")
+    out["session_id"] = _coerce_str(out.get("session_id")).strip() or None
     raw_session_type = out.get("session_type")
     normalized_session_type = _enum(
         raw_session_type, _SESSION_TYPE_VALUES, "mixed", _SESSION_TYPE_ALIASES
@@ -1366,7 +1371,7 @@ def _normalize_progression(value: Any) -> dict[str, Any]:
 
 def _normalize_week(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
-    out["week_id"] = _coerce_nonempty_str(out.get("week_id"), "week")
+    out["week_id"] = _coerce_str(out.get("week_id")).strip() or None
     out["week_index"] = _coerce_int(out.get("week_index"), 0)
     out["phase_label"] = _normalize_phase(out.get("phase_label"))
     out["week_goal"] = _coerce_str(out.get("week_goal"))
@@ -1420,7 +1425,7 @@ def _normalize_plan_notes(value: Any) -> list[dict[str, Any]]:
 
 def _normalize_red_flag(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
-    out["rule_id"] = _coerce_nonempty_str(out.get("rule_id"), "red_flag")
+    out["rule_id"] = _coerce_str(out.get("rule_id")).strip() or None
     out["when"] = _enum(out.get("when"), _RED_FLAG_WHEN_VALUES, "morning_check_in")
     out["severity"] = _enum(out.get("severity"), _SEVERITY_VALUES, "amber")
     out["display_text"] = _coerce_str(out.get("display_text"))
@@ -2503,10 +2508,12 @@ You are converting an already-written training plan into a strict,
 machine-readable JSON object. Output ONLY a single JSON object — no markdown, no
 code fences, no commentary.
 
-The human-readable plan provided below is the SOURCE OF TRUTH. Convert it
-faithfully into structured form. Do NOT invent new training content — no new
-exercises, sessions, blocks, loads, dates, athletes, or biometrics. Only
-restructure what the plan already says.
+The human-readable plan provided below is the SOURCE OF TRUTH for exercise and
+session membership, dates, explicit volume/load, and safety constraints. Convert
+it faithfully into structured form. Do NOT add new exercises, sessions, blocks,
+dates, athletes, biometrics, or override any explicit prescription. You MAY fill
+missing rest, effort and one concise execution cue for an existing physical
+block, using the supplied athlete/session context and the rules below.
 
 The root JSON object IS the StructuredTrainingPlan.
 Do NOT wrap it inside a top-level "plan" key. Its top-level keys are exactly:
@@ -2568,7 +2575,7 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   * Bulleted prescriptions such as `- Band-Resisted Jab-Cross Primer — 3 x
     4-6 reps...` are blocks. Carry labelled follow-up lines into that same block:
     `Purpose`, `Why today`, `Progression/regression/stop`, `Progression`,
-    `Regression`, `Stop`, `Duration`, `Prescription`, `Output`, `Intensity`,
+    `Regression`, `Stop`, `Duration`, `Prescription`, `Output`, `Intensity`, `Cue`,
     `Step 1`/`Step 2`/…, `Intent`, `Focus`, `Reset`, `Anchor`, `Context`,
     and `Coach call`. An INDENTED line always belongs to the bullet above it —
     it is never a block of its own, however imperative it reads.
@@ -2591,10 +2598,22 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
     today`), keep sessions as []. If it also lists any prescribed touch on the
     same D-day, keep that touch as a session and put the contact label in
     today_card.coach_led_contact.
-- Optimize for a valid first-pass card: omit optional fields you cannot fill
-  from the source rather than emitting partial objects that fail schema
-  validation. Preserve every dated day and every listed prescription, but do not
-  invent missing numbers.
+- Optimize for a valid first-pass card. Preserve every dated day and every
+  listed prescription. Identifier fields (rule_id, week_id, session_id,
+  block_id) are optional metadata: use a stable source id when one exists,
+  otherwise emit null. A missing identifier must never reject the card and must
+  never be replaced with a generic visible fallback.
+- For each EXISTING physical exercise/drill, preserve its explicit volume,
+  load, rest, effort and cue exactly. When rest, effort or an execution cue is
+  absent, infer only those missing presentation fields from the athlete context,
+  session objective/type, sport, goals and weaknesses, phase/fight proximity,
+  fatigue, injury restrictions, equipment, and the exercise's energy-system or
+  movement demands. Use conservative current evidence-based sport-science
+  reasoning: adequate recovery for quality/power work, shorter recovery only
+  where the session targets density/conditioning, and an effort that matches the
+  intended adaptation without violating taper, fatigue, injury, or supplied
+  dose caps. Never infer sparring/contact prescriptions. Never alter membership,
+  explicit volume/load, dates, or safety rules while filling these fields.
 - daily_check_ins are OPTIONAL and must be either fully valid or omitted. Emit a
   check-in entry ONLY when the plan actually states a dated self-report; each
   entry MUST then carry "date", a "morning" object with all of "sleep_quality"
@@ -2659,7 +2678,9 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
 - Route labelled source lines deterministically: "Purpose:" -> purpose;
   "Why today:" -> why_today; "Easier:" / "Regression:" -> regression_options;
   "Progress:" / "Progression:" -> progression_rule; "Stop:" / "Stop rule:" ->
-  stop_rules; "Swap:" / "Swaps:" / "Substitution:" -> substitutions. Ignore a
+  stop_rules; "Swap:" / "Swaps:" / "Substitution:" -> substitutions; `Cue:` ->
+  coaching_cues. An explicit source volume, rest, effort/RPE, or Cue must never be
+  omitted or simplified away in the structured block. Ignore a
   bare separator label such as "Regression /" rather than rendering it as athlete
   guidance. progression_rule may be omitted when the source gives no genuine
   exercise progression. Do NOT put taper/week dose restrictions, injury
@@ -2673,8 +2694,8 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   emitting only the generic phase cue. Keep it athlete-safe and supportive; never
   quote the note verbatim if it is distressing, and never invent clinical or
   mental-health diagnoses or treatment.
-- Omit any of the above the plan does not state — leave the field out rather than
-  inventing content.
+- Except for the narrowly allowed rest, effort, and execution-cue completion
+  above, omit detail the plan/context cannot support rather than inventing it.
 
 VOICE & CONCISENESS (athlete-facing text — week_goal, today_card.headline,
 session title/objective, plan_notes, mindset_anchor, nutrition prose):

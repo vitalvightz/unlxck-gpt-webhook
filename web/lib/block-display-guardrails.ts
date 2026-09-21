@@ -263,7 +263,7 @@ function isExactBlockLine(line: string, blockName: string): boolean {
   if (!candidate.startsWith(name)) return false;
 
   const remainder = candidate.slice(name.length);
-  return /^\s*(?:[—–:]\s*|-\s+)/.test(remainder);
+  return /^\s*(?:[.—–:,]\s*|-\s+)/.test(remainder);
 }
 
 function sourceBlockLine(
@@ -285,7 +285,8 @@ function sourceBlockLine(
       .split(/\r?\n/)
       .find(
         (line) =>
-          isExactBlockLine(line, name) && /\b(?:sets?|rpe|rir)\b/i.test(line),
+          isExactBlockLine(line, name) &&
+          /(?:\b(?:sets?|reps?|rpe|rir|rest|recovery|reset)\b|\d\s*[x×]\s*\d)/i.test(line),
       ) || null
   );
 }
@@ -293,12 +294,13 @@ function sourceBlockLine(
 export type SourcePrescriptionRangeOverrides = {
   sets: string | null;
   effort: string | null;
+  rest: string | null;
 };
 
 /**
- * Recover only explicit numeric RANGES from the authoritative original plan.
- * This is deliberately narrow: no scalar guessing, no load rewriting and no
- * schema mutation. A supplied countdown and exact block title must both match;
+ * Recover explicit prescription values from the authoritative original plan.
+ * This is deliberately narrow: no guessing, no load rewriting and no schema
+ * mutation. A supplied countdown and exact block title must both match;
  * otherwise the structured value remains authoritative.
  */
 export function getSourcePrescriptionRangeOverrides(
@@ -307,13 +309,27 @@ export function getSourcePrescriptionRangeOverrides(
   countdown?: string | null,
 ): SourcePrescriptionRangeOverrides {
   const line = sourceBlockLine(source, blockName, countdown);
-  if (!line) return { sets: null, effort: null };
+  if (!line) return { sets: null, effort: null, rest: null };
 
   const setsMatch = line.match(/\b(\d+(?:\.\d+)?)\s*[-–—]\s*(\d+(?:\.\d+)?)\s+sets?\b/i);
-  const effortMatch = line.match(/\b(RPE|RIR)\s*(\d+(?:\.\d+)?)\s*[-–—]\s*(\d+(?:\.\d+)?)\b/i);
+  const effortMatch = line.match(
+    /\b(RPE|RIR)\s*(\d+(?:\.\d+)?)(?:\s*[-–—]\s*(\d+(?:\.\d+)?))?\b/i,
+  );
+  const restPrefixMatch = line.match(
+    /\b(?:rest|full\s+recovery)\s*[:=]?\s*(\d+(?:\.\d+)?)(?:\s*[-–—]\s*(\d+(?:\.\d+)?))?\s*(s|sec|secs|second|seconds|min|mins|minute|minutes)\b/i,
+  );
+  const restSuffixMatch = line.match(
+    /\b(\d+(?:\.\d+)?)(?:\s*[-–—]\s*(\d+(?:\.\d+)?))?\s*(s|sec|secs|second|seconds|min|mins|minute|minutes)\s+(?:rest|recovery|reset)\b/i,
+  );
+  const restMatch = restPrefixMatch || restSuffixMatch;
   return {
     sets: setsMatch ? `${setsMatch[1]}-${setsMatch[2]}` : null,
-    effort: effortMatch ? `${effortMatch[1].toUpperCase()} ${effortMatch[2]}-${effortMatch[3]}` : null,
+    effort: effortMatch
+      ? `${effortMatch[1].toUpperCase()} ${effortMatch[2]}${effortMatch[3] ? `-${effortMatch[3]}` : ""}`
+      : null,
+    rest: restMatch
+      ? `${restMatch[1]}${restMatch[2] ? `-${restMatch[2]}` : ""} ${restMatch[3]}`
+      : null,
   };
 }
 

@@ -88,11 +88,28 @@ def test_normalizer_routes_planning_prose_away_from_execution_cues():
     assert block["stop_rules"] == ["sharp ankle pain or uncontrolled balance loss"]
 
 
+def test_normalizer_strips_cue_label_but_keeps_execution_text():
+    block = _normalize_block(
+        {
+            "block_id": "curl",
+            "block_type": "rehab",
+            "display_name": "Suspension Curl",
+            "coaching_cues": ["Cue: Keep the angle low and lower slowly."],
+        }
+    )
+    assert block["coaching_cues"] == ["Keep the angle low and lower slowly."]
+
+
 def test_converter_prompt_keeps_reasoning_rich_but_cues_execution_only():
     prompt = build_structured_plan_prompt(plan_markdown="D-7 — Band-Resisted Punch")
+    normalized = " ".join(prompt.split())
     assert '"why_today"' in prompt
     assert "execution-only how-to instructions" in prompt
     assert '"Why today:" -> why_today' in prompt
+    assert "`Cue:` ->" in prompt
+    assert "must never be omitted or simplified away" in normalized
+
+
 def test_converter_prompt_requires_compact_athlete_facing_stop_rules():
     prompt = build_structured_plan_prompt(plan_markdown="D-7 — Band-Resisted Punch")
     normalized = " ".join(prompt.split())

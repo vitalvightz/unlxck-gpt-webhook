@@ -639,7 +639,7 @@ export function getBlockCoachingDisplay(
 }
 
 const BLOCK_DETAIL_LABEL_RE =
-  /^\s*(purpose|why\s+today|easier|regress(?:ion)?|progress(?:ion)?|stop(?:\s+rule)?|swaps?|substitutions?)\s*:\s*(.*)$/i;
+  /^\s*(purpose|why\s+today|easier|regress(?:ion)?|progress(?:ion)?|stop(?:\s+rule)?|swaps?|substitutions?|cue)\s*:\s*(.*)$/i;
 const COACHING_PURE_STOP_RE = /^\s*stop(?!-)/i;
 
 function dedupeBlockText(values: string[]): string[] {
@@ -681,6 +681,10 @@ export function getBlockExecutionDisplay(
       const detail = cleanText(labelled[2]);
       if (!detail) continue;
       if (label === "purpose" || label === "why today") continue;
+      if (label === "cue") {
+        cues.push(detail);
+        continue;
+      }
       if (label === "easier" || label === "regress" || label === "regression") {
         regressions.push(detail);
       } else if (label === "progress" || label === "progression") {

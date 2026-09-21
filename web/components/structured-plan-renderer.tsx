@@ -344,7 +344,7 @@ export function BlockCard({
   const load = formatBlockLoad(block.load);
   const metrics = applySourceSetRange(selectBlockMetric(block), sourceOverrides.sets);
   const work = formatMeasured(block.work);
-  const rest = shouldShowRest(block.rest) ? formatMeasured(block.rest) : null;
+  const rest = sourceOverrides.rest || (shouldShowRest(block.rest) ? formatMeasured(block.rest) : null);
   const effort = sourceOverrides.effort || formatEffort(block);
   // The effort card is glossed from the METHOD, not from the word "Effort":
   // EffortMethod covers RPE, RIR, intent, velocity, heart_rate_zone, pace and

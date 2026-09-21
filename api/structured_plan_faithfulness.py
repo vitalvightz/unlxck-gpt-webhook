@@ -20,6 +20,8 @@ Design rules (mirrors ``structured_plan_safety`` conventions):
     card under a *different* D-day (e.g. Pallof moved out of its session).
   - LOCKED_CONTENT: wording from a governed ``selected_drill_locked`` role that
     appears in the approved source has been removed or rewritten in the card.
+  - PRESCRIPTION: explicit rest, effort, or execution-cue data present on an
+    exact source exercise was omitted by the structured conversion.
   A reworded exercise that keeps any meaningful token (``Back Squat`` ->
   ``Barbell Back Squat``) passes. Generic/contextual blocks (mindset, nutrition,
   recovery, mobility, preparation, cooldown) are wording the conversion owns, not
@@ -46,6 +48,7 @@ COUNTDOWN = "COUNTDOWN"
 # the card (fail-closed) rather than letting an unverified card through.
 INTERNAL = "INTERNAL"
 LOCKED_CONTENT = "LOCKED_CONTENT"
+PRESCRIPTION = "PRESCRIPTION"
 LOCKED_TACTICAL_WATCH_MISSING = "locked_tactical_watch_missing_from_stage2"
 
 # ``block_type`` values that name a specific, app-owned exercise we can hold to
@@ -81,6 +84,88 @@ _ANY_DDAY_RE = re.compile(r"D-\s*\d+", re.I)
 _LEADING_DDAY_RE = re.compile(r"^\s*(?:#{1,6}\s*)?(?:[A-Za-z]{3,9}\s+)?D-\d+\b", re.I)
 # A "(D-N)" marker anywhere, e.g. "### Mon (D-30) — Strength".
 _PAREN_DDAY_RE = re.compile(r"\(D-\d+\)", re.I)
+
+_SOURCE_HEADING_RE = re.compile(r"^\s*#{1,6}\s+")
+_SOURCE_EFFORT_RE = re.compile(r"\b(?:RPE|RIR)\s*\d", re.I)
+_SOURCE_REST_RE = re.compile(
+    r"(?:\b(?:rest|recovery|reset)\b[^\n]{0,24}\d|"
+    r"\d[^\n]{0,24}\b(?:rest|recovery|reset)\b)",
+    re.I,
+)
+_SOURCE_CUE_RE = re.compile(r"^\s*Cue\s*:\s*\S", re.I | re.M)
+
+
+def _source_block_segment(source: str, display_name: str) -> str:
+    """Return one exact titled source block and its indented detail lines.
+
+    This deliberately fails closed on renamed or ambiguous titles. The general
+    faithfulness gate remains tolerant of rewording; prescription fidelity is
+    enforced only when the source/block identity is exact enough to prove.
+    """
+    name_tokens = re.findall(r"[a-z0-9]+", str(display_name or "").casefold())
+    if not name_tokens:
+        return ""
+    title_pattern = re.compile(
+        r"^\s*(?:[-*•]\s*)?"
+        + r"[\s\W]+".join(re.escape(token) for token in name_tokens)
+        + r"\s*(?:[.:,—–]|\s-\s)",
+        re.I,
+    )
+    lines = str(source or "").splitlines()
+    for index, line in enumerate(lines):
+        if not title_pattern.match(line):
+            continue
+        segment = [line]
+        for following in lines[index + 1 :]:
+            if not following.strip():
+                break
+            if _SOURCE_HEADING_RE.match(following) or re.match(r"^\s*[-*•]\s+", following):
+                break
+            if following[:1].isspace():
+                segment.append(following)
+                continue
+            break
+        return "\n".join(segment)
+    return ""
+
+
+def _explicit_prescription_violations(plan: dict[str, Any], source: str) -> list[str]:
+    """Reject only structured fields that demonstrably disappeared from raw.
+
+    The raw plan remains authoritative. This never fills or invents a value; it
+    merely prevents a lossy second conversion from being accepted as a valid
+    enhanced card when explicit volume/rest/effort/cue text was present.
+    """
+    violations: list[str] = []
+    for week in plan.get("weeks") or []:
+        if not isinstance(week, dict):
+            continue
+        for day in week.get("days") or []:
+            if not isinstance(day, dict):
+                continue
+            for session in day.get("sessions") or []:
+                if not isinstance(session, dict):
+                    continue
+                for block in session.get("blocks") or []:
+                    if not isinstance(block, dict):
+                        continue
+                    if str(block.get("block_type")) not in _EXERCISE_BLOCK_TYPES:
+                        continue
+                    name = str(block.get("display_name") or "").strip()
+                    segment = _source_block_segment(source, name)
+                    if not segment:
+                        continue
+                    checks = (
+                        (_SOURCE_REST_RE.search(segment), bool(block.get("rest")), "rest"),
+                        (_SOURCE_EFFORT_RE.search(segment), bool(block.get("effort")), "effort"),
+                        (_SOURCE_CUE_RE.search(segment), bool(block.get("coaching_cues")), "cue"),
+                    )
+                    for source_match, structured_present, field_name in checks:
+                        if source_match and not structured_present:
+                            violations.append(
+                                f"{PRESCRIPTION}: {name!r} dropped explicit source {field_name}"
+                            )
+    return violations
 
 
 def _day_header_dday(line: str) -> int | None:
@@ -753,6 +838,7 @@ def _check(structured_plan: Any, source_markdown: str, planning_brief: Any = Non
     if not plan:
         return []
     locked_violations = _locked_content_violations(plan, source, planning_brief)
+    prescription_violations = _explicit_prescription_violations(plan, source)
     if not _ANY_DDAY_RE.search(source):
         # Card-first hard gate: a card that claims a countdown structure cannot be
         # proven faithful against source text carrying no D-day marker at all, so
@@ -760,15 +846,15 @@ def _check(structured_plan: Any, source_markdown: str, planning_brief: Any = Non
         # (the raw plan_text fallback / review hold takes over). A card that makes
         # no countdown claim has nothing to project, so the schema gate stands.
         if _card_claims_countdown(plan):
-            return locked_violations + [
+            return locked_violations + prescription_violations + [
                 f"{COUNTDOWN}: source text carries no D-day marker; "
                 "card countdown is unverifiable"
             ]
-        return locked_violations
+        return locked_violations + prescription_violations
 
     source_tokens = _meaningful(_tokens(source))
     if not source_tokens:
-        return []
+        return locked_violations + prescription_violations
 
     sections = _source_day_sections(source)
     token_days = _source_token_days(sections)
@@ -780,7 +866,7 @@ def _check(structured_plan: Any, source_markdown: str, planning_brief: Any = Non
         if num is not None:
             source_ddays.add(num)
 
-    violations: list[str] = list(locked_violations)
+    violations: list[str] = [*locked_violations, *prescription_violations]
     server_owned_ddays = _server_owned_ddays(planning_brief)
 
     weeks = plan.get("weeks") if isinstance(plan.get("weeks"), list) else []
