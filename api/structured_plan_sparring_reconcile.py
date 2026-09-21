@@ -46,6 +46,17 @@ from fightcamp.combat_render_authority import resolve_declared_contact_load
 # contact work the athlete must see as its own card.
 _CONTACT_EFFECTIVE_LOADS = {"hard", "technical", "reduced"}
 
+_WEEKDAY_ALIASES = {
+    "mon": "Mon", "monday": "Mon",
+    "tue": "Tue", "tues": "Tue", "tuesday": "Tue",
+    "wed": "Wed", "wednesday": "Wed",
+    "thu": "Thu", "thur": "Thu", "thurs": "Thu", "thursday": "Thu",
+    "fri": "Fri", "friday": "Fri",
+    "sat": "Sat", "saturday": "Sat",
+    "sun": "Sun", "sunday": "Sun",
+}
+_WEEKDAY_ORDER = tuple(dict.fromkeys(_WEEKDAY_ALIASES.values()))
+
 # Contact ceilings come from the same risk-aware owner as the planner.
 
 # Canonical headlines chosen so the web classifier reliably tags the day:
@@ -232,6 +243,7 @@ class _ContactDay:
     __slots__ = (
         "date",
         "d_day",
+        "weekday",
         "load",
         "headline",
         "day_type",
@@ -244,6 +256,7 @@ class _ContactDay:
         *,
         date: str | None,
         d_day: int | None,
+        weekday: str | None,
         load: str,
         headline: str,
         day_type: str,
@@ -252,6 +265,7 @@ class _ContactDay:
     ):
         self.date = date
         self.d_day = d_day
+        self.weekday = weekday
         self.load = load
         self.headline = headline
         self.day_type = day_type
@@ -262,8 +276,65 @@ class _ContactDay:
         self.week_index = week_index
 
 
+def _normalize_weekday(value: Any) -> str | None:
+    return _WEEKDAY_ALIASES.get(str(value or "").strip().lower())
+
+
+def _open_plan_contact_days(planning_brief: dict[str, Any]) -> list[_ContactDay]:
+    """Declared open-plan combat locks, keyed by reusable week + weekday."""
+    spec = planning_brief.get("open_plan_spec")
+    if not isinstance(spec, dict) or spec.get("plan_type") != "open_ongoing_system":
+        return []
+    template = spec.get("weekly_template")
+    if not isinstance(template, dict):
+        return []
+    coach_owned = template.get("coach_owned_days")
+    coach_owned = coach_owned if isinstance(coach_owned, dict) else {}
+
+    def weekdays(values: Any) -> set[str]:
+        if not isinstance(values, (list, tuple, set)):
+            return set()
+        return {day for value in values if (day := _normalize_weekday(value))}
+
+    training = weekdays(template.get("training_days"))
+    hard = weekdays(template.get("hard_sparring_days")) & training
+    technical = weekdays(
+        template.get("support_work_days")
+        or coach_owned.get("support_work_days")
+        or coach_owned.get("technical_skill_days")
+    ) & training
+    technical -= hard
+    if not hard and not technical:
+        return []
+
+    development = spec.get("development_block")
+    week_count = max(1, len(development) if isinstance(development, dict) else 4)
+    contacts: list[_ContactDay] = []
+    for week_index in range(1, week_count + 1):
+        for weekday in _WEEKDAY_ORDER:
+            load = "hard" if weekday in hard else "technical" if weekday in technical else None
+            if load is None:
+                continue
+            contacts.append(
+                _ContactDay(
+                    date=None,
+                    d_day=None,
+                    weekday=weekday,
+                    load=load,
+                    headline=_HEADLINE_BY_LOAD[load],
+                    day_type=_DAY_TYPE_BY_LOAD[load],
+                    phase="GPP",
+                    week_index=week_index,
+                )
+            )
+    return contacts
+
+
 def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_ContactDay]:
     """Every coach-owned contact day across the camp, from the role map schedule."""
+    open_contacts = _open_plan_contact_days(planning_brief)
+    if open_contacts:
+        return open_contacts
     role_map = planning_brief.get("weekly_role_map")
     if not isinstance(role_map, dict):
         return []
@@ -338,6 +409,7 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
                 _ContactDay(
                     date=str(role.get("calendar_date") or role.get("date") or "").strip() or None,
                     d_day=d_day,
+                    weekday=None,
                     load=load,
                     headline=_headline_for_load(load, d_day),
                     day_type=_DAY_TYPE_BY_LOAD[load],
@@ -381,6 +453,7 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
                 _ContactDay(
                     date=cal,
                     d_day=d_day,
+                    weekday=None,
                     load=load,
                     headline=_headline_for_load(load, d_day),
                     day_type=_DAY_TYPE_BY_LOAD.get(load, "moderate"),
@@ -424,10 +497,18 @@ def _apply_contact_day_type(day: dict[str, Any], contact: _ContactDay) -> bool:
     return True
 
 
+def _contact_identity(contact: _ContactDay) -> str:
+    if contact.date:
+        return contact.date
+    if contact.weekday:
+        return contact.weekday
+    return f"D-{contact.d_day}"
+
+
 def _build_coach_led_day(contact: _ContactDay, *, phase_fallback: str) -> dict[str, Any]:
     """A schema-valid sessionless coach-led day for an absent contact day."""
     countdown = f"D-{contact.d_day}" if contact.d_day is not None else ""
-    return {
+    day = {
         "date": contact.date or "",
         "day_type": contact.day_type,
         "countdown_label": countdown,
@@ -439,6 +520,9 @@ def _build_coach_led_day(contact: _ContactDay, *, phase_fallback: str) -> dict[s
         },
         "sessions": [],
     }
+    if contact.weekday:
+        day["weekday"] = contact.weekday
+    return day
 
 
 def _week_day_keys(week: dict[str, Any]) -> tuple[set[str], set[int]]:
@@ -491,6 +575,7 @@ def _insert_day_in_order(week: dict[str, Any], new_day: dict[str, Any]) -> None:
         return
     new_dday = _parse_dday(new_day.get("countdown_label"))
     new_date = str(new_day.get("date") or "").strip()
+    new_weekday = _normalize_weekday(new_day.get("weekday"))
     for index, day in enumerate(days):
         if not isinstance(day, dict):
             continue
@@ -502,6 +587,14 @@ def _insert_day_in_order(week: dict[str, Any], new_day: dict[str, Any]) -> None:
         elif new_date:
             existing_date = str(day.get("date") or "").strip()
             if existing_date and existing_date > new_date:
+                days.insert(index, new_day)
+                return
+        elif new_weekday:
+            existing_weekday = _normalize_weekday(day.get("weekday"))
+            if (
+                existing_weekday
+                and _WEEKDAY_ORDER.index(existing_weekday) > _WEEKDAY_ORDER.index(new_weekday)
+            ):
                 days.insert(index, new_day)
                 return
     days.append(new_day)
@@ -537,15 +630,22 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
     present_ddays: set[int] = set()
     contact_by_date = {c.date: c for c in contact_days if c.date}
     contact_by_dday = {c.d_day: c for c in contact_days if c.d_day is not None}
+    contact_by_open_day = {
+        (c.week_index, c.weekday): c for c in contact_days if c.weekday
+    }
+    present_open_days: set[tuple[int, str]] = set()
 
     # Pass 1 — record every day the converter produced and stamp the sessionless
     # contact days whose headline would not classify as coach-led.
-    for week in weeks:
+    for week_position, week in enumerate(weeks, start=1):
         if not isinstance(week, dict):
             continue
         days = week.get("days")
         if not isinstance(days, list):
             continue
+        week_index = week.get("week_index")
+        if not isinstance(week_index, int):
+            week_index = week_position
         for day in days:
             if not isinstance(day, dict):
                 continue
@@ -555,14 +655,20 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
                 present_dates.add(date)
             if dday is not None:
                 present_ddays.add(dday)
+            weekday = _normalize_weekday(day.get("weekday"))
+            if weekday:
+                present_open_days.add((week_index, weekday))
 
             contact = None
             if date and date in contact_by_date:
                 contact = contact_by_date[date]
             elif dday is not None and dday in contact_by_dday:
                 contact = contact_by_dday[dday]
+            elif weekday:
+                contact = contact_by_open_day.get((week_index, weekday))
             if contact is None:
                 continue
+            identity = _contact_identity(contact)
             card = day.get("today_card")
             if not isinstance(card, dict):
                 card = {
@@ -594,31 +700,31 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
                         day["sessions"] = compatible_sessions
                         notes.append(
                             f"removed incompatible same-day app work from "
-                            f"{date or f'D-{dday}'} ({contact.headline!r})"
+                            f"{identity} ({contact.headline!r})"
                         )
                 if not day.get("sessions"):
                     card["headline"] = contact.headline
                     if _apply_contact_day_type(day, contact):
                         notes.append(
                             f"lifted rest day_type to {day['day_type']!r} on "
-                            f"{date or f'D-{dday}'} ({contact.headline!r})"
+                            f"{identity} ({contact.headline!r})"
                         )
                     notes.append(
-                        f"stamped contact headline on {date or f'D-{dday}'} "
+                        f"stamped contact headline on {identity} "
                         f"({contact.headline!r})"
                     )
                     continue
                 if _apply_contact_day_type(day, contact):
                     notes.append(
                         f"lifted rest day_type to {day['day_type']!r} on "
-                        f"{date or f'D-{dday}'} ({contact.headline!r})"
+                        f"{identity} ({contact.headline!r})"
                     )
                 if str(card.get("coach_led_contact") or "").strip():
                     continue
                 card["coach_led_contact"] = contact.headline
                 notes.append(
                     f"surfaced coach-led contact alongside sessions on "
-                    f"{date or f'D-{dday}'} ({contact.headline!r})"
+                    f"{identity} ({contact.headline!r})"
                 )
                 continue
             if current and _already_coach_led(current):
@@ -627,17 +733,17 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
                 if _apply_contact_day_type(day, contact):
                     notes.append(
                         f"lifted rest day_type to {day['day_type']!r} on "
-                        f"{date or f'D-{dday}'} ({current!r})"
+                        f"{identity} ({current!r})"
                     )
                 continue
             card["headline"] = contact.headline
             if _apply_contact_day_type(day, contact):
                 notes.append(
                     f"lifted rest day_type to {day['day_type']!r} on "
-                    f"{date or f'D-{dday}'} ({contact.headline!r})"
+                    f"{identity} ({contact.headline!r})"
                 )
             notes.append(
-                f"stamped contact headline on {date or f'D-{dday}'} "
+                f"stamped contact headline on {identity} "
                 f"({contact.headline!r})"
             )
 
@@ -656,6 +762,8 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
         if contact.date and contact.date in present_dates:
             continue
         if contact.d_day is not None and contact.d_day in present_ddays:
+            continue
+        if contact.weekday and (contact.week_index, contact.weekday) in present_open_days:
             continue
         # Primary: the authoritative home week from the role map (week_index). This
         # is exact and immune to the boundary case where a dropped day sits outside
@@ -683,9 +791,11 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
             present_dates.add(contact.date)
         if contact.d_day is not None:
             present_ddays.add(contact.d_day)
+        if contact.weekday:
+            present_open_days.add((contact.week_index, contact.weekday))
         notes.append(
             f"inserted contact card for "
-            f"{contact.date or f'D-{contact.d_day}'} ({contact.headline!r})"
+            f"{_contact_identity(contact)} ({contact.headline!r})"
         )
 
     return notes

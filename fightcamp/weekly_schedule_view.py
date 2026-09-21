@@ -280,12 +280,16 @@ def _open_ongoing_weekly_schedule(
     }
     coach_owned = template.get("coach_owned_days")
     coach_owned = coach_owned if isinstance(coach_owned, dict) else {}
-    technical_skill_days = {
+    support_work_days = {
         weekday
-        for value in _clean_list(coach_owned.get("technical_skill_days"))
+        for value in _clean_list(
+            template.get("support_work_days")
+            or coach_owned.get("support_work_days")
+            or coach_owned.get("technical_skill_days")
+        )
         if (weekday := _normalize_weekday(value)) is not None
     }
-    coach_led_days = hard_sparring_days | technical_skill_days
+    coach_led_days = hard_sparring_days | support_work_days
     if not training_days:
         return None
 
@@ -298,8 +302,8 @@ def _open_ongoing_weekly_schedule(
             is_hard = weekday in hard_sparring_days
             day.update(
                 {
-                    "sparring_day_class": "primary_hard" if is_hard else "none",
-                    "effective_load": "hard" if is_hard else "reduced",
+                    "sparring_day_class": "primary_hard" if is_hard else "technical",
+                    "effective_load": "hard" if is_hard else "technical",
                     "status": "hard_as_planned" if is_hard else "coach_led_session",
                     "title": f"{weekday} {'hard sparring' if is_hard else 'technical boxing'}",
                     "reason": f"Declared {'hard sparring' if is_hard else 'technical'} contact day from the renewable weekly rhythm.",
