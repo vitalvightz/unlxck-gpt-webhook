@@ -892,7 +892,7 @@ def _dedupe_stop_rules(values: list[str]) -> list[str]:
 
 _BLOCK_DETAIL_LABEL_RE = re.compile(
     r"^\s*(purpose|why\s+today|easier|regress(?:ion)?|progress(?:ion)?|"
-    r"stop(?:\s+rule)?|swaps?|substitutions?)\s*:\s*(.*)$",
+    r"stop(?:\s+rule)?|swaps?|substitutions?|cue)\s*:\s*(.*)$",
     re.IGNORECASE,
 )
 
@@ -1017,6 +1017,8 @@ def _normalize_block(value: Any) -> dict[str, Any]:
                 progression_cues.append(detail)
             elif label.startswith("stop"):
                 stop_cues.append(detail)
+            elif label == "cue":
+                cleaned_cues.append(detail)
             else:
                 substitution_cues.append(detail)
             continue
@@ -2568,7 +2570,7 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   * Bulleted prescriptions such as `- Band-Resisted Jab-Cross Primer — 3 x
     4-6 reps...` are blocks. Carry labelled follow-up lines into that same block:
     `Purpose`, `Why today`, `Progression/regression/stop`, `Progression`,
-    `Regression`, `Stop`, `Duration`, `Prescription`, `Output`, `Intensity`,
+    `Regression`, `Stop`, `Duration`, `Prescription`, `Output`, `Intensity`, `Cue`,
     `Step 1`/`Step 2`/…, `Intent`, `Focus`, `Reset`, `Anchor`, `Context`,
     and `Coach call`. An INDENTED line always belongs to the bullet above it —
     it is never a block of its own, however imperative it reads.
@@ -2659,7 +2661,9 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
 - Route labelled source lines deterministically: "Purpose:" -> purpose;
   "Why today:" -> why_today; "Easier:" / "Regression:" -> regression_options;
   "Progress:" / "Progression:" -> progression_rule; "Stop:" / "Stop rule:" ->
-  stop_rules; "Swap:" / "Swaps:" / "Substitution:" -> substitutions. Ignore a
+  stop_rules; "Swap:" / "Swaps:" / "Substitution:" -> substitutions; `Cue:` ->
+  coaching_cues. An explicit source volume, rest, effort/RPE, or Cue must never be
+  omitted or simplified away in the structured block. Ignore a
   bare separator label such as "Regression /" rather than rendering it as athlete
   guidance. progression_rule may be omitted when the source gives no genuine
   exercise progression. Do NOT put taper/week dose restrictions, injury

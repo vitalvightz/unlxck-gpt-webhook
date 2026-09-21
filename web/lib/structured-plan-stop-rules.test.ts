@@ -74,3 +74,18 @@ test("legacy labelled planning prose is hidden from execution cues", () => {
     },
   );
 });
+
+test("a labelled cue keeps its execution text without showing the label", () => {
+  assert.deepEqual(
+    getBlockExecutionDisplay({
+      coaching_cues: ["Cue: Keep the angle low and lower slowly."],
+    }),
+    {
+      cues: ["Keep the angle low and lower slowly."],
+      stopRules: [],
+      regressions: [],
+      substitutions: [],
+      progressions: [],
+    },
+  );
+});

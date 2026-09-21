@@ -552,6 +552,75 @@ def test_no_countdown_claim_and_no_source_returns_clean():
     assert check_structured_faithfulness({}, SOURCE) == []
 
 
+def test_open_plan_rejects_explicit_prescription_fields_dropped_by_card_conversion():
+    source = """Session Card — Strength
+- Trap-Bar Romanian Deadlift. 3 sets x 6 reps @ RPE 7. Rest 90-120 sec.
+  Cue: Brace before each rep and drive through the floor.
+"""
+    plan = {
+        "weeks": [
+            {
+                "days": [
+                    {
+                        "sessions": [
+                            {
+                                "blocks": [
+                                    {
+                                        "block_type": "strength",
+                                        "display_name": "Trap-Bar Romanian Deadlift",
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+
+    violations = check_structured_faithfulness(plan, source)
+
+    assert any("dropped explicit source rest" in item for item in violations)
+    assert any("dropped explicit source effort" in item for item in violations)
+    assert any("dropped explicit source cue" in item for item in violations)
+
+
+def test_open_plan_accepts_preserved_explicit_prescription_fields():
+    source = """Session Card — Strength
+- Trap-Bar Romanian Deadlift. 3 sets x 6 reps @ RPE 7. Rest 90-120 sec.
+  Cue: Brace before each rep and drive through the floor.
+"""
+    plan = {
+        "weeks": [
+            {
+                "days": [
+                    {
+                        "sessions": [
+                            {
+                                "blocks": [
+                                    {
+                                        "block_type": "strength",
+                                        "display_name": "Trap-Bar Romanian Deadlift",
+                                        "sets": 3,
+                                        "reps": 6,
+                                        "rest": {"value": 120, "unit": "seconds"},
+                                        "effort": {"method": "RPE", "value": 7},
+                                        "coaching_cues": [
+                                            "Brace before each rep and drive through the floor."
+                                        ],
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+
+    assert check_structured_faithfulness(plan, source) == []
+
+
 # --- introduced exercises are rejected -------------------------------------
 
 
