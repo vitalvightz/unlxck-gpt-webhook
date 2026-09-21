@@ -104,3 +104,28 @@ test("puts the source set range back onto an orphaned per-set volume", () => {
     [{ label: "Volume", value: "2-3 × 6 punches" }],
   );
 });
+
+test("an exact source title beats an earlier 'A or B' line", () => {
+  // Both lines can exist as separate exercises. The choice line comes first, so
+  // a first-match sweep would give this block the other exercise's ranges.
+  const source = [
+    "- Short sprint bounds or low box jumps — 2-3 sets, RPE 6-7, rest 60-90 sec",
+    "- Short sprint bounds — 4 sets, RPE 8, rest 120 sec",
+  ].join("\n");
+
+  const overrides = getSourcePrescriptionRangeOverrides(source, "Short sprint bounds");
+
+  assert.equal(overrides.sets, null); // "4 sets" is not a range
+  assert.equal(overrides.effort, "RPE 8");
+  assert.match(String(overrides.rest), /120/);
+  assert.doesNotMatch(String(overrides.rest), /60-90/);
+});
+
+test("the choice line is still the source when no exact title exists", () => {
+  const source = "- Short sprint bounds or low box jumps — 2-3 sets, RPE 6-7, rest 60-90 sec";
+
+  const overrides = getSourcePrescriptionRangeOverrides(source, "Short sprint bounds");
+
+  assert.equal(overrides.sets, "2-3");
+  assert.equal(overrides.effort, "RPE 6-7");
+});

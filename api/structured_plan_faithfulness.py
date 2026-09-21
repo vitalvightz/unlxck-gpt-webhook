@@ -105,18 +105,20 @@ def _source_block_segment(source: str, display_name: str) -> str:
     name_tokens = re.findall(r"[a-z0-9]+", str(display_name or "").casefold())
     if not name_tokens:
         return ""
-    title_pattern = re.compile(
-        r"^\s*(?:[-*•]\s*)?"
-        + r"[\s\W]+".join(re.escape(token) for token in name_tokens)
-        + r"(?:\s+or\s+[^.:,—–]+)?"
-        + r"\s*(?:[.:,—–]|\s-\s)",
-        re.I,
-    )
+    title = r"^\s*(?:[-*•]\s*)?" + r"[\s\W]+".join(re.escape(token) for token in name_tokens)
+    delimiter = r"\s*(?:[.:,—–]|\s-\s)"
+    exact_pattern = re.compile(title + delimiter, re.I)
+    # The block's title may be one option of a source choice ("Short sprint
+    # bounds or low box jumps"). That line is its source only when the plan
+    # carries no exact title of its own: a plan holding BOTH lines prescribes
+    # two different exercises, and the exact one owns this block's dose. So the
+    # exact pattern sweeps every line before the choice pattern is consulted.
+    choice_pattern = re.compile(title + r"\s+or\s+[^.:,—–]+" + delimiter, re.I)
+
     lines = str(source or "").splitlines()
-    for index, line in enumerate(lines):
-        if not title_pattern.match(line):
-            continue
-        segment = [line]
+
+    def _segment_at(index: int) -> str:
+        segment = [lines[index]]
         for following in lines[index + 1 :]:
             if not following.strip():
                 break
@@ -127,6 +129,11 @@ def _source_block_segment(source: str, display_name: str) -> str:
                 continue
             break
         return "\n".join(segment)
+
+    for pattern in (exact_pattern, choice_pattern):
+        for index, line in enumerate(lines):
+            if pattern.match(line):
+                return _segment_at(index)
     return ""
 
 

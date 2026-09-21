@@ -1096,14 +1096,23 @@ _HEDGE_MAGNITUDE_RE = re.compile(
     re.IGNORECASE,
 )
 _HAS_NUMBER_RE = re.compile(r"\d")
+# A qualitative progression names what it moves TO: "Progress to live
+# resistance", "Move onto controlled partner resistance", "Build into full
+# range". That is a real target, so the hedge beside it is only tempo — the
+# line still tells the athlete what to do this week and must survive. Without
+# such a target, a hedge is all the line has ("Increase hold time slowly"),
+# and it goes. An infinitive ("...to keep form") reads as a target here and
+# keeps the line: a false keep costs a vague line, a false delete costs the
+# athlete their whole instruction.
+_PROGRESSION_TARGET_RE = re.compile(r"\b(?:to|into|onto)\s+\w", re.IGNORECASE)
 
 
 def _is_hedge_only_adjustment(value: Any) -> bool:
-    """True when a progression/deload line hedges instead of naming a target."""
+    """True when a progression/deload line hedges INSTEAD of naming a target."""
     text = _coerce_str(value).strip()
     if not text:
         return False
-    if _HAS_NUMBER_RE.search(text):
+    if _HAS_NUMBER_RE.search(text) or _PROGRESSION_TARGET_RE.search(text):
         return False
     return bool(_HEDGE_MAGNITUDE_RE.search(text))
 
