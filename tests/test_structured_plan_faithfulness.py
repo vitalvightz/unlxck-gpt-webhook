@@ -621,6 +621,31 @@ def test_open_plan_accepts_preserved_explicit_prescription_fields():
     assert check_structured_faithfulness(plan, source) == []
 
 
+def test_prescription_omission_warns_without_discarding_source_backed_card():
+    from test_structured_plan_models import _valid_plan
+
+    plan = _valid_plan()
+    block = plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
+    block["display_name"] = "Trap bar deadlift"
+    block.pop("rest")
+    block.pop("effort")
+    block["coaching_cues"] = []
+    source = """## Week 1 (D-19 to D-13)
+### Tue (D-15) — Power Transfer Touch
+- Trap bar deadlift: 3 sets x 4 reps @ RPE 7. Rest 2-3 minutes.
+  Cue: Drive through your legs and hips, keep a tall chest.
+"""
+
+    outcome = build_structured_plan_outcome(plan, raw_markdown=source)
+
+    assert outcome.status == "valid"
+    assert outcome.structured_plan is not None
+    assert outcome.errors == []
+    assert any("dropped explicit source rest" in warning for warning in outcome.warnings)
+    assert any("dropped explicit source effort" in warning for warning in outcome.warnings)
+    assert any("dropped explicit source cue" in warning for warning in outcome.warnings)
+
+
 def test_prescription_gate_still_matches_after_choice_title_is_split():
     source = """Session Card — Power
 - Short sprint bounds or low box jumps — 2-3 sets x 4 reps, RPE 6-7, rest 60-90 sec.

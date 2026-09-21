@@ -21,7 +21,9 @@ Design rules (mirrors ``structured_plan_safety`` conventions):
   - LOCKED_CONTENT: wording from a governed ``selected_drill_locked`` role that
     appears in the approved source has been removed or rewritten in the card.
   - PRESCRIPTION: explicit rest, effort, or execution-cue data present on an
-    exact source exercise was omitted by the structured conversion.
+    exact source exercise was omitted by the structured conversion. This is an
+    advisory consumed by the source-backed renderer, not grounds to discard an
+    otherwise valid card; the other finding types remain blocking.
   A reworded exercise that keeps any meaningful token (``Back Squat`` ->
   ``Barbell Back Squat``) passes. Generic/contextual blocks (mindset, nutrition,
   recovery, mobility, preparation, cooldown) are wording the conversion owns, not
@@ -141,8 +143,8 @@ def _explicit_prescription_violations(plan: dict[str, Any], source: str) -> list
     """Reject only structured fields that demonstrably disappeared from raw.
 
     The raw plan remains authoritative. This never fills or invents a value; it
-    merely prevents a lossy second conversion from being accepted as a valid
-    enhanced card when explicit volume/rest/effort/cue text was present.
+    reports a lossy second conversion so the caller can retain the source-backed
+    rendering recovery while exposing the omission in diagnostics.
     """
     violations: list[str] = []
     for week in plan.get("weeks") or []:
