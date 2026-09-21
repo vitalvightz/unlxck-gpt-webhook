@@ -2444,6 +2444,111 @@ def _open_plan_contract_errors(
     return errors
 
 
+_TRAINING_NODE_ERROR_RE = re.compile(
+    r"^weeks\.(\d+)\.days\.(\d+)"
+    r"(?:\.sessions\.(\d+)(?:\.blocks\.(\d+))?)?(?:\.|:)"
+)
+
+
+def _salvage_invalid_training_nodes(
+    candidate: Any,
+    errors: list[str],
+    *,
+    raw_markdown: str,
+) -> tuple[Any, list[str]]:
+    """Omit the smallest invalid training nodes while retaining valid siblings.
+
+    The raw source must be present before containment is allowed. It remains
+    embedded in the saved plan, so the omitted card/day is never the only copy
+    of the prescription. Root metadata, calendar/week structure, safety rules,
+    nutrition and other plan-wide failures remain fatal; this helper handles
+    only validation locations inside days/sessions/blocks.
+    """
+    if not raw_markdown.strip() or not isinstance(candidate, dict):
+        return candidate, []
+
+    block_targets: set[tuple[int, int, int, int]] = set()
+    session_targets: set[tuple[int, int, int]] = set()
+    day_targets: set[tuple[int, int]] = set()
+    for error in errors:
+        match = _TRAINING_NODE_ERROR_RE.match(error)
+        if not match:
+            continue
+        week_index, day_index, session_index, block_index = (
+            int(value) if value is not None else None for value in match.groups()
+        )
+        if session_index is None:
+            day_targets.add((week_index, day_index))
+        elif block_index is None:
+            session_targets.add((week_index, day_index, session_index))
+        else:
+            block_targets.add((week_index, day_index, session_index, block_index))
+
+    if not (block_targets or session_targets or day_targets):
+        return candidate, []
+
+    salvaged = copy.deepcopy(candidate)
+    salvaged["raw_markdown_fallback"] = raw_markdown
+    warnings: list[str] = []
+    weeks = salvaged.get("weeks")
+    if not isinstance(weeks, list):
+        return candidate, []
+
+    def _day_at(week_index: int, day_index: int) -> dict[str, Any] | None:
+        if week_index < 0 or week_index >= len(weeks) or not isinstance(weeks[week_index], dict):
+            return None
+        days = weeks[week_index].get("days")
+        if not isinstance(days, list) or day_index < 0 or day_index >= len(days):
+            return None
+        return days[day_index] if isinstance(days[day_index], dict) else None
+
+    # Deepest nodes first. Parent targets then remove any still-invalid parent;
+    # descending indexes keep sibling positions stable during each removal.
+    for week_index, day_index, session_index, block_index in sorted(
+        block_targets, reverse=True
+    ):
+        if (week_index, day_index) in day_targets or (
+            week_index,
+            day_index,
+            session_index,
+        ) in session_targets:
+            continue
+        day = _day_at(week_index, day_index)
+        sessions = day.get("sessions") if day else None
+        if not isinstance(sessions, list) or not (0 <= session_index < len(sessions)):
+            continue
+        session = sessions[session_index]
+        blocks = session.get("blocks") if isinstance(session, dict) else None
+        if not isinstance(blocks, list) or not (0 <= block_index < len(blocks)):
+            continue
+        block = blocks.pop(block_index)
+        name = str(block.get("display_name") or "block") if isinstance(block, dict) else "block"
+        warnings.append(f"schema_salvage: omitted invalid block {name!r}")
+
+    for week_index, day_index, session_index in sorted(session_targets, reverse=True):
+        if (week_index, day_index) in day_targets:
+            continue
+        day = _day_at(week_index, day_index)
+        sessions = day.get("sessions") if day else None
+        if not isinstance(sessions, list) or not (0 <= session_index < len(sessions)):
+            continue
+        session = sessions.pop(session_index)
+        title = str(session.get("title") or "session") if isinstance(session, dict) else "session"
+        warnings.append(f"schema_salvage: omitted invalid session {title!r}")
+
+    for week_index, day_index in sorted(day_targets, reverse=True):
+        if not (0 <= week_index < len(weeks)) or not isinstance(weeks[week_index], dict):
+            continue
+        days = weeks[week_index].get("days")
+        if not isinstance(days, list) or not (0 <= day_index < len(days)):
+            continue
+        day = days.pop(day_index)
+        label = str(day.get("countdown_label") or day.get("date") or "day") if isinstance(day, dict) else "day"
+        warnings.append(f"schema_salvage: omitted invalid day {label!r}")
+
+    return salvaged, warnings
+
+
 def build_structured_plan_outcome(
     raw_data: Any,
     *,
@@ -2522,12 +2627,28 @@ def build_structured_plan_outcome(
     )
 
     first = safe_parse_structured_plan(cleaned, raw_markdown=raw_markdown or None)
+    salvage_warnings: list[str] = []
+    if not first.ok:
+        salvaged, candidate_warnings = _salvage_invalid_training_nodes(
+            cleaned,
+            list(first.errors),
+            raw_markdown=raw_markdown,
+        )
+        if candidate_warnings:
+            salvaged_parse = safe_parse_structured_plan(
+                salvaged, raw_markdown=raw_markdown or None
+            )
+            if salvaged_parse.ok:
+                cleaned = salvaged
+                first = salvaged_parse
+                salvage_warnings = candidate_warnings
     first_errors = list(first.errors)
     if first.ok and first.plan is not None:
         plan_dict = _with_deterministic_support(first.plan.model_dump(mode="json"), computed_support)
         plan_dict = _merge_locked_content(plan_dict, planning_brief)
         unfaithful = check_structured_faithfulness(plan_dict, raw_markdown, planning_brief)
         first_errors, first_warnings = _split_faithfulness(unfaithful)
+        first_warnings = [*salvage_warnings, *first_warnings]
         first_errors.extend(_open_plan_contract_errors(plan_dict, planning_brief))
         if not first_errors:
             return _audited_outcome(
