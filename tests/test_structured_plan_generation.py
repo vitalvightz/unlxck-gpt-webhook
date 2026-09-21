@@ -784,6 +784,77 @@ def test_normalize_recovers_invalid_fallback_card_shape():
     validate_structured_plan(outcome.structured_plan)
 
 
+def test_invalid_block_is_contained_without_discarding_valid_sibling_cards():
+    plan = _valid_plan()
+    bad_block = copy.deepcopy(plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0])
+    bad_block["block_id"] = "bad-block"
+    bad_block["display_name"] = "Malformed accessory"
+    bad_block["sets"] = {"not": "a count"}
+    plan["weeks"][0]["days"][0]["sessions"][0]["blocks"].append(bad_block)
+
+    outcome = build_structured_plan_outcome(
+        plan,
+        raw_markdown=_faithful_source(plan),
+    )
+
+    assert outcome.status == "valid"
+    assert outcome.structured_plan is not None
+    blocks = outcome.structured_plan["weeks"][0]["days"][0]["sessions"][0]["blocks"]
+    assert [block["display_name"] for block in blocks] == ["Barbell Back Squat"]
+    assert any(
+        "schema_salvage: omitted invalid block 'Malformed accessory'" == warning
+        for warning in outcome.warnings
+    )
+
+
+def test_invalid_session_is_contained_without_discarding_valid_day():
+    plan = _valid_plan()
+    bad_session = copy.deepcopy(plan["weeks"][0]["days"][0]["sessions"][0])
+    bad_session["session_id"] = "bad-session"
+    bad_session["title"] = "Malformed session"
+    bad_session["completion"] = "not an object"
+    plan["weeks"][0]["days"][0]["sessions"].append(bad_session)
+
+    outcome = build_structured_plan_outcome(
+        plan,
+        raw_markdown=_faithful_source(plan),
+    )
+
+    assert outcome.status == "valid"
+    sessions = outcome.structured_plan["weeks"][0]["days"][0]["sessions"]
+    assert [session["title"] for session in sessions] == ["Power Transfer Touch"]
+    assert "schema_salvage: omitted invalid session 'Malformed session'" in outcome.warnings
+
+
+def test_invalid_day_is_contained_without_discarding_valid_week():
+    plan = _valid_plan()
+    bad_day = copy.deepcopy(plan["weeks"][0]["days"][0])
+    bad_day["date"] = "2026-05-30"
+    bad_day["countdown_label"] = "D-14"
+    bad_day["priority_microdose"] = {"goal": "speed"}
+    plan["weeks"][0]["days"].append(bad_day)
+
+    outcome = build_structured_plan_outcome(
+        plan,
+        raw_markdown=_faithful_source(plan),
+    )
+
+    assert outcome.status == "valid"
+    days = outcome.structured_plan["weeks"][0]["days"]
+    assert [day["countdown_label"] for day in days] == ["D-15"]
+    assert "schema_salvage: omitted invalid day 'D-14'" in outcome.warnings
+
+
+def test_root_schema_failure_still_uses_whole_plan_fallback():
+    outcome = build_structured_plan_outcome(
+        _invalid_plan(),
+        raw_markdown="# authoritative raw plan",
+    )
+
+    assert outcome.status == "invalid_fallback_used"
+    assert outcome.structured_plan is None
+
+
 def test_normalize_invalid_event_type_maps_to_none():
     plan = normalize_structured_plan_candidate(
         {"event_context": {"event_type": "boxing_match", "fight_date": "2026-06-13"}}
