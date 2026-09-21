@@ -2443,7 +2443,15 @@ def build_stage2_payload(
         "rewrite_guidance": rewrite_guidance,
     }
 
-STAGE2_FINALIZER_PROMPT = """You are Stage 2 (finalizer). Stage 1 has already made the training decisions. Your job is to render and coach the resolved plan, not redesign it.
+# ``STAGE2_FINALIZER_PROMPT`` is assembled from these segments so that the blocks
+# whose own text states a precondition can be gated out when the build already
+# knows the precondition is false (see ``build_finalizer_prompt``). The segments
+# are verbatim slices of the original prompt: concatenating them in order
+# reproduces it byte for byte, which ``test_finalizer_prompt_gating.py`` asserts.
+
+# Intro, authority order, RULES 1-9A.
+_FINALIZER_SEGMENT_A = """\
+You are Stage 2 (finalizer). Stage 1 has already made the training decisions. Your job is to render and coach the resolved plan, not redesign it.
 
 Input = FINALIZER PACKET + LOCKED SESSION RENDER MANIFEST + Stage 1 draft + athlete profile + optional injury context.
 
@@ -2505,6 +2513,12 @@ Never chase fitness in these windows.
 RULE 9A — FIGHT-DAY (D-0) HARD OVERRIDE
 If selected_plan.weekly_role_map.fight_day_override.active is true, or any week's fight_day_override.active is true, only D-0 is the athlete's fight day. Never treat D-7 (or any other shared weekday) as fight day. D-0 must render as the countdown heading plus one body line: "Follow coach warm-up and fight protocol; no additional S&C." No extra S&C, mobility, rehab, primer, sparring, or coach-led session on D-0. This override beats every declared hard sparring lock, every weekday role, and every phase rhythm. Even when the fight weekday is also a declared hard sparring day, it never renders as sparring on D-0. Do not restore any suppressed role on that day.
 
+"""
+
+# Gated on selected_plan.late_fight_plan_spec.taper_micro_support_policy.active,
+# which the rule itself opens by testing. late_fight_plan_spec is only built on
+# the late-fight path, so every line here is unreachable on a normal camp.
+_RULE_9B_TAPER_MICRO_SUPPORT = """\
 RULE 9B — TAPER MICRO-SUPPORT
 If selected_plan.late_fight_plan_spec.taper_micro_support_policy.active is true, treat that policy as a hard overlay.
 Render taper micro-support only as "Optional micro-support:" attached to an already-valid day. Never write the internal tag `taper_micro_support` in the final plan, including in brackets or parentheses. Never render it as a session title, primary anchor, visible session role, or standalone training day.
@@ -2516,6 +2530,10 @@ For neck micro-support, keep isometric-only, one set, 10 sec each direction, RPE
 For heavy-bag micro-support, keep technical rhythm only, 1-2 x 45-60 sec, light contact only, and never let it become conditioning, power work, or shoulder-pump work.
 For boxing tapers, do not render grip work at all.
 
+"""
+
+# RULES 10, 11, 11A.
+_FINALIZER_SEGMENT_B = """\
 RULE 10 — WEIGHT CUT AND INJURY MANAGEMENT
 Active weight cut: state it plainly in one short summary note, never buried in nutrition data. Match the tone to the graded cut severity (athlete_snapshot.cut_severity_bucket: none / low / moderate / high / critical / extreme) — do NOT treat every cut as an emergency:
 * none / low / moderate: this is a routine cut. Give ONE calm summary note about protecting recovery and fuelling (light precautions are fine at moderate). Do NOT add a weight-cut stop/report rule, do NOT tell the athlete to seek medical supervision, notify their coach, or frame it as a danger.
@@ -2576,6 +2594,13 @@ Every athlete-facing line must be readable by a 13-year-old: UK Key Stage 3 leve
 - No hedging, no throat-clearing, no filler. "Keeps your legs fresh for Saturday" beats "This session is designed to help maintain lower-limb freshness ahead of competition."
 - Apply this to everything the athlete reads: session titles, why-today lines, purpose lines, coaching cues, easier/stop lines, rehab purpose, lead notes, weight-cut and nutrition notes, and mindset lines. It applies on top of every other rule here, including RULE 12's demand for precise mechanism wording: be precise in plain words, not in technical ones.
 
+"""
+
+# Gated on render_guards.has_active_injury. With no active injury the packet
+# already ships the three suppress_rehab_headings writing rules, which carry the
+# "label it Activation/Movement Prep/Mobility instead" instruction this rule
+# would otherwise supply, so the whole block is redundant in that state.
+_RULE_12_SURGICAL_REHAB = """\
 RULE 12 — SURGICAL REHAB INTEGRATION
 Rehab must be intentional, not copy-pasted. Open rehab roles retain their existing bounded integration rules. When rehab membership is closed, preserve the selected exercises and authorised doses; do not add, replace or remove them for writing quality. Hard restrictions and safety overrides still apply.
 Use the function_class tags when present as scoring guidance — not hard constraints.
@@ -2593,10 +2618,26 @@ If render_guards.suppress_rehab_headings == true, do not use this rehab format. 
 
 If a drill repeats across sessions, the Why today must make the changed role explicit. Use precise mechanism wording — not vague body-part labels. Before keeping any rehab item: confirm it solves a specific issue, belongs on this day, and does not duplicate a same-role drill already used this week. Drop it if it fails two of three.
 
+"""
+
+# RULE 13 heading. Always sent: the label rules below it apply in every mode.
+_RULE_13_HEADER = """\
 RULE 13 — LATE-FIGHT LABEL DISCIPLINE
+"""
+
+# The only part of RULE 13 that is mode-specific. Gated on
+# render_guards.suppress_phase_toolbox_sections. The "Applies when" line is part
+# of this segment on purpose: without the paragraph it introduces, it would
+# wrongly suggest the label rules below are conditional too.
+_RULE_13_COUNTDOWN_SCAFFOLDING = """\
 Applies when render_guards.suppress_phase_toolbox_sections == true.
 
 In late_fight_countdown_only mode (render_guards.render_mode == "late_fight_countdown_only") the output is countdown-led: lead every active day with countdown_display_label (D-N (Weekday)) and do not emit phase scaffolding — no "Week 1/2/3", no "PHASE N: GPP/SPP/TAPER", no "Phase Weeks", no "Phase Days", no "Phase must-keep", no "TAPER phase guidance", no "SPP insert", no "Mindset Focus" / "Strength & Power" / "Conditioning" sub-headers framed by phase. This no-week-header rule does not apply to camp_plan, which keeps the Stage 1 phase/week spine per the FINAL RENDER CONTRACT. The session-title translation and safety rules below apply regardless of mode.
+"""
+
+# "The session-title translation and safety rules below apply regardless of
+# mode" - so these are never gated.
+_RULE_13_LABEL_RULES = """\
 Do not expose internal role keys or internal system labels as session titles. Translate role keys into coach-voiced names from the intent, drills selected, and countdown day. Canonical mapping:
   strength_touch_day         -> "Power Transfer Touch"
   alactic_sharpness_day      -> "Fight-Speed Primer"
@@ -2611,6 +2652,16 @@ For conditioning drill system labels, use selected_plan session fields such as a
 
 Cut fluff: one sentence of "why today" per session maximum, no repeated explanations, no "phase preserved" menus. Coach calls only.
 """
+
+STAGE2_FINALIZER_PROMPT = (
+    _FINALIZER_SEGMENT_A
+    + _RULE_9B_TAPER_MICRO_SUPPORT
+    + _FINALIZER_SEGMENT_B
+    + _RULE_12_SURGICAL_REHAB
+    + _RULE_13_HEADER
+    + _RULE_13_COUNTDOWN_SCAFFOLDING
+    + _RULE_13_LABEL_RULES
+)
 
 
 UNLXCK_FINAL_RENDER_CONTRACT = """UNLXCK FINAL RENDER CONTRACT
