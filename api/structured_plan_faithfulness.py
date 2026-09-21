@@ -108,6 +108,7 @@ def _source_block_segment(source: str, display_name: str) -> str:
     title_pattern = re.compile(
         r"^\s*(?:[-*•]\s*)?"
         + r"[\s\W]+".join(re.escape(token) for token in name_tokens)
+        + r"(?:\s+or\s+[^.:,—–]+)?"
         + r"\s*(?:[.:,—–]|\s-\s)",
         re.I,
     )
