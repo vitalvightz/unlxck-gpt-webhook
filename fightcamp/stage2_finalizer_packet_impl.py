@@ -19,6 +19,12 @@ from typing import Any
 
 from .fight_day_override import FIGHT_DAY_PROTOCOL_TEXT
 from .stage2_render_guards import _all_active_injuries_surface_only, _render_guard_flags
+from .combat_render_authority import (
+    CANONICAL_HARD_SPARRING_BAN_LABEL,
+    CANONICAL_HARD_SPARRING_LABEL,
+    CANONICAL_HARD_SPARRING_NOTE,
+    CANONICAL_TECHNICAL_ONLY_NOTE,
+)
 
 
 _ATHLETE_KEYS = (
@@ -80,6 +86,39 @@ _FORBIDDEN_REHAB_LABELS = [
     "Prehab",
     "Rehab / Mobility",
 ]
+
+
+# Writing rules that STAGE2_FINALIZER_PROMPT / UNLXCK_FINAL_RENDER_CONTRACT already
+# state in prose. They stay in ``rewrite_guidance`` for the deterministic payload
+# and its consumers, but ``build_stage2_finalizer_packet`` strips them from the
+# packet the model receives: shipping a second, slightly reworded copy of a rule
+# inside JSON costs ~4.4k prompt chars and leaves the model reconciling two
+# versions of the same instruction (e.g. prose "The app must not prescribe" vs the
+# packet's "The app does not prescribe"). One authoritative copy reads better.
+# ``test_finalizer_packet_writing_rules.py`` fails loudly if any entry here stops
+# matching a live rule in ``rewrite_guidance["writing_rules"]``.
+FINALIZER_PROMPT_COVERED_WRITING_RULES: frozenset[str] = frozenset({
+    "Keep the final plan athlete-facing and clean.",
+    "Do not start corrective lines with generic openers such as 'focus on', 'ensure', 'make sure', or 'it's important to'; start with the action.",
+    "Use autonomy-supportive phrasing only within real guardrails; if choice is safe and useful, offer at most two practical options, and only when both options are safe and materially equivalent for the day's goal.",
+    "Do not use generic motivation such as 'stay consistent', 'trust the process', 'push yourself', or 'you've got this'.",
+    "Do not use empty safety lines such as 'listen to your body', 'be careful', or 'avoid overtraining' unless they are followed by a concrete rule, symptom trigger, or plan change.",
+    "Keep every active week present and structurally complete, including late-camp weeks.",
+    "For boxer weeks, keep the default rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a stronger planning rule forces a change.",
+    "Do not echo Primary, Fallback, Drill, or option-menu labels across most session lines.",
+    "Treat declared hard sparring days in weekly_role_map as immutable hard_sparring_day slots except when final_week_sparring_cap.active is true. In final taper weeks, final_week_sparring_cap overrides the coach-declared hard-day lock: render at most one effective hard sparring day, and do not present capped_declared_hard_sparring_days as sparring.",
+    "Hard sparring days are the athlete's own combat locks (run in their gym, with or without a coach). The app does not prescribe or lead the sparring itself, and it must respect resolved safety, readiness, and calendar restrictions on every declared hard sparring day. Only for a resolved hard-as-planned day render the label '" + CANONICAL_HARD_SPARRING_LABEL + "' (or the equivalent sport-specific label such as 'MMA — hard sparring / controlled hard contact') followed by exactly one short note: '" + CANONICAL_HARD_SPARRING_NOTE + "' From D-14 normally, or D-17 with elevated risk, hard sparring is converted to technical work: render '" + CANONICAL_HARD_SPARRING_BAN_LABEL + "' (or sport-equivalent) — the same applies whenever the day carries reason code 'd14_hard_sparring_ban' or 'd17_hard_sparring_ban' — followed by exactly one short note: '" + CANONICAL_TECHNICAL_ONLY_NOTE + "' A technical-only day must never carry the hard-sparring note. A blocked/none contact status overrides all declarations and dates: no contact or sparring; surface medical evaluation/clearance guidance and do not restore contact. Do not output round counts, time-x-rounds formulas, intensity targets, dose, RPE, work:rest, or any sparring template wording (e.g. never '6-8 x 3-min rounds at set intensity', 'X rounds technical sparring', 'live rounds at moderate intensity'). Do not narrate intent, do not add a 'why today' line, do not list focus areas, do not suggest pad/bag/clinch volume — the athlete owns that contact work. Never schedule programmed S&C on a declared hard-sparring/contact day. Anything more than the label plus that one note is a violation of this rule.",
+    "If the athlete has more available days than planned sessions, leave the spare days off or clearly optional rather than rendering another full session.",
+    "If weekly_role_map marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.",
+    "If weekly_role_map.intentional_compression.policy is boxing_crowded_week, keep hard sparring as the week owner, then one anchor, then at most one low-load support day.",
+    "In boxing crowded weeks, do not turn anchor days or recovery/support days into multi-stressor sessions by adding glycolytic, transfer, or extra sharpness work.",
+    "If a target-weight constraint is present, explicitly acknowledge that it changes recovery and training tolerance in the athlete-facing plan.",
+    "Never state 'weight cut none active' or 'recovery tolerance is standard' when readiness flags or weight_cut_pct indicate an active cut.",
+    "If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury it only in the athlete profile or nutrition numbers.",
+    "If fatigue is high or fight-week pressure is active, reduce optionality and make the directive plain.",
+    "If injury management is active, lead with constraints, substitutions, or stop rules instead of optional language.",
+    "If a target-weight constraint is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.",
+})
 
 
 def _compact_dict(source: dict[str, Any], keys: tuple[str, ...]) -> dict[str, Any]:
@@ -826,7 +865,16 @@ def build_stage2_finalizer_packet(
                 or {}
             ),
         },
-        "writing_rules": list((rewrite_guidance or {}).get("writing_rules") or []),
+        # Strip the rules STAGE2_FINALIZER_PROMPT already states in prose. The
+        # prompt and the packet used to carry the same ~20 rules in two slightly
+        # different wordings; the model reads both and has to reconcile them.
+        # Only the state-dependent rules the prose cannot know (render guards,
+        # triage, declared tactical styles) still travel in the packet.
+        "writing_rules": [
+            rule
+            for rule in ((rewrite_guidance or {}).get("writing_rules") or [])
+            if rule not in FINALIZER_PROMPT_COVERED_WRITING_RULES
+        ],
     }
 
     # Only dated camp mode needs compact phase context.
