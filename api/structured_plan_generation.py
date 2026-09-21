@@ -1058,10 +1058,12 @@ def _normalize_block(value: Any) -> dict[str, Any]:
     stop_rules = _dedupe_stop_rules(
         _coerce_str_list(out.get("stop_rules")) + stop_cues + embedded_stops
     )
-    if progression_rule:
+    if progression_rule and not _is_hedge_only_adjustment(progression_rule):
         out["progression_rule"] = progression_rule
     else:
         out.pop("progression_rule", None)
+    if _is_hedge_only_adjustment(out.get("deload_rule")):
+        out.pop("deload_rule", None)
     if stop_rules or "stop_rules" in out:
         out["stop_rules"] = stop_rules
 
@@ -1078,6 +1080,32 @@ def _normalize_block(value: Any) -> dict[str, Any]:
             _coerce_str_list(out.get("substitutions")) + [alternative]
         )
     return out
+
+
+# "Increase hold time slowly", "Add small load each week" — an instruction whose
+# only magnitude is a hedge. The athlete cannot act on it: the card already shows
+# 3 x 30 sec, so the line owed them "3 x 40 sec". A hedge alongside a real target
+# is fine ("Add 2.5 kg, building slowly"), and so is a progression that is
+# genuinely qualitative ("Progress to live resistance once timing holds") or a
+# minimal step the plan cannot number ("add the smallest jump on the bar") — this
+# only strips lines that hedge INSTEAD of instructing. \bsmall\b deliberately does
+# not match "smallest".
+_HEDGE_MAGNITUDE_RE = re.compile(
+    r"\b(?:small|slight(?:ly)?|slow(?:ly)?|gradual(?:ly)?|a bit|a little|"
+    r"marginal(?:ly)?|modest(?:ly)?|where you can|as you can|if you can)\b",
+    re.IGNORECASE,
+)
+_HAS_NUMBER_RE = re.compile(r"\d")
+
+
+def _is_hedge_only_adjustment(value: Any) -> bool:
+    """True when a progression/deload line hedges instead of naming a target."""
+    text = _coerce_str(value).strip()
+    if not text:
+        return False
+    if _HAS_NUMBER_RE.search(text):
+        return False
+    return bool(_HEDGE_MAGNITUDE_RE.search(text))
 
 
 # " or " joining two multi-word movements is a choice between exercises. Single

@@ -1846,6 +1846,38 @@ def test_block_names_that_are_not_a_choice_are_left_alone():
         assert block.get("substitutions", []) == [], name
 
 
+def test_hedge_only_progression_and_deload_lines_are_dropped():
+    """The athlete cannot act on "slowly", so the card shows nothing instead.
+
+    The frontend renders no week directive when the rule is absent, so dropping
+    here is what guarantees an open card never prints an unactionable line.
+    """
+    block = _normalized_block(
+        {
+            "display_name": "Plank variation",
+            "sets": 3,
+            "progression_rule": "Increase hold time slowly while keeping form.",
+            "deload_rule": "Cut the work back a bit.",
+        }
+    )
+    assert "progression_rule" not in block
+    assert "deload_rule" not in block
+
+
+def test_a_real_target_survives_even_when_it_also_hedges():
+    """Only lines that hedge INSTEAD of instructing are stripped."""
+    for rule in (
+        "Go to 3 x 40 sec while the ribs stay down.",  # named target
+        "Add 2.5 kg, building slowly.",  # hedge alongside a real number
+        "Add the smallest jump on the bar if the bicep stayed quiet.",  # no kg exists
+        "Progress to live resistance once timing holds.",  # qualitative skill work
+        "Add reps only while it stays pain-free.",  # symptom-led rehab
+        "Stays unchanged this block.",  # explicit no-progression
+    ):
+        block = _normalized_block({"display_name": "Drill", "progression_rule": rule})
+        assert block.get("progression_rule") == rule, rule
+
+
 def test_conditional_swap_is_never_routed_into_progression_rule():
     prompt = build_structured_plan_prompt(plan_markdown="# Plan")
     assert "never put a conditional swap there" in " ".join(prompt.split())
