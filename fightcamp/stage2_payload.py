@@ -2565,6 +2565,17 @@ If the cut is high-pressure, include one short summary-level note plus one suppo
 In short camps, every rendered session must map to one compressed week-level priority from the finalizer packet. Do not create a standalone session purpose for embedded-support or deferred items.
 Placement governs day assignment only; it does not change insert voice, ownership, or visible session count.
 
+RULE 11A — PLAIN LANGUAGE (KS3 READING LEVEL)
+Every athlete-facing line must be readable by a 13-year-old: UK Key Stage 3 level. This is a hard output rule, not a style preference. Keep the coach voice - direct, decisive, confident - but strip the sports-science register. A plain sentence from a coach who knows the athlete is the target, not a textbook or a lecture.
+- One idea per sentence. Aim for 12-15 words, hard cap 20. Two short sentences beat one long one with a comma splice or a "which" clause.
+- Use the everyday word. Say "power", not "rate of force development". Say "tired nervous system" or just "you will feel flat", not "CNS fatigue" or "neural load". Say "lowering phase" or "the way down", not "eccentric". Say "holding still under load" or "hold the position", not "isometric". Say "balance and body awareness", not "proprioception". Say "stiff trunk" or "brace your middle", not "trunk stiffness" / "anti-rotation" / "intra-abdominal pressure". Say "your legs and hips drive it", not "posterior chain" or "triple extension". Say "your body clears the burn", not "lactate clearance" / "glycolytic" / "alactic" / "aerobic capacity". Say "sharp and quick", not "neuromuscular sharpness" or "potentiation". Say "how it carries into the fight", not "transfer" or "specificity". Say "a small dose" or "one short exposure", not "microdose" or "stimulus".
+- These are examples of the standard, not the whole list. Apply the same test to any term the athlete would not use themselves: if a fighter would not say it in the gym, rewrite it.
+- Keep the numbers, doses and safety triggers exactly as given. Plain language changes the WORDS, never the prescription, the dose, the rule or the meaning. Never drop a safety detail to make a line shorter or simpler.
+- Some words stay because athletes use them: reps, sets, rest, RPE, sparring, rounds, taper, tempo, warm-up, drill, pad work, clinch, footwork, sprint, and the exercise names themselves. Keep them.
+- Do not define the jargon and then use it anyway, and do not put the plain word in brackets after the technical one. Choose the plain word and write only that.
+- No hedging, no throat-clearing, no filler. "Keeps your legs fresh for Saturday" beats "This session is designed to help maintain lower-limb freshness ahead of competition."
+- Apply this to everything the athlete reads: session titles, why-today lines, purpose lines, coaching cues, easier/stop lines, rehab purpose, lead notes, weight-cut and nutrition notes, and mindset lines. It applies on top of every other rule here, including RULE 12's demand for precise mechanism wording: be precise in plain words, not in technical ones.
+
 RULE 12 — SURGICAL REHAB INTEGRATION
 Rehab must be intentional, not copy-pasted. Open rehab roles retain their existing bounded integration rules. When rehab membership is closed, preserve the selected exercises and authorised doses; do not add, replace or remove them for writing quality. Hard restrictions and safety overrides still apply.
 Use the function_class tags when present as scoring guidance — not hard constraints.

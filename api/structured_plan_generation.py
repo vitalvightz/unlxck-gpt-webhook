@@ -2703,6 +2703,36 @@ session title/objective, plan_notes, mindset_anchor, nutrition prose):
 - Keep every athlete-facing string tight: prefer short phrases over full
   sentences, drop filler and hedging, and never repeat the same point across two
   fields.
+- PLAIN LANGUAGE (KS3 READING LEVEL). Every athlete-facing string must be
+  readable by a 13-year-old — UK Key Stage 3 level — while keeping the coach
+  voice: direct, decisive, confident. This applies to ALL athlete-facing fields,
+  not just week_goal and objective: today_card.headline, session title and
+  objective, coaching_cues, purpose, why_today, regression_options,
+  substitutions, progression_rule, stop_rules, plan_notes, red_flag_rules
+  display_text, nutrition prose, and every mindset_anchor field.
+  * One idea per sentence. Aim for 12-15 words, hard cap 20.
+  * Use the everyday word the athlete would use themselves. "power" not "rate of
+    force development"; "the way down" / "lowering phase" not "eccentric"; "hold
+    the position" not "isometric"; "balance and body awareness" not
+    "proprioception"; "brace your middle" not "anti-rotation" or "trunk
+    stiffness"; "legs and hips drive it" not "posterior chain" or "triple
+    extension"; "you will feel flat" not "CNS fatigue"; "your body clears the
+    burn" not "glycolytic" / "alactic" / "lactate clearance"; "sharp and quick"
+    not "neuromuscular sharpness"; "how it carries into the fight" not
+    "transfer" or "specificity". These are examples of the standard, not the
+    whole list — if a fighter would not say it in the gym, rewrite it.
+  * Words athletes actually use stay: reps, sets, rest, RPE, sparring, rounds,
+    taper, tempo, warm-up, drill, pad work, clinch, footwork, sprint, and the
+    exercise names themselves.
+  * Never define jargon and then use it anyway, and never put the plain word in
+    brackets after the technical one.
+  This is the ONE licensed exception to "convert faithfully": when the source
+  plan states something in technical wording, rewrite the WORDS into plain
+  language rather than copying the jargon verbatim. It never licenses changing
+  the content. Keep every number, dose, rep scheme, load, duration, restriction
+  and safety trigger exactly as the source gives it, keep the same meaning, and
+  never drop a safety detail to make a line simpler. If you cannot say it plainly
+  without changing what it means, keep the source wording.
 - Do NOT refer to "the app", "this app", "the platform", or "app sessions" in any
   athlete-facing text. The athlete is reading their own plan, so name the work
   directly ("S&C and rehab inserts on the listed D-days", "your sessions") rather
