@@ -1846,6 +1846,53 @@ def test_block_names_that_are_not_a_choice_are_left_alone():
         assert block.get("substitutions", []) == [], name
 
 
+def test_week_enumerated_progression_is_split_into_its_step_and_deload():
+    """The card shows ONE week and labels it, so the line must not list weeks.
+
+    This is the card from the app: "Week 2 add 1 more burst, week 3 add 1 more
+    burst, week 4 keep same low volume." printed in full on every week.
+    """
+    block = _normalized_block(
+        {
+            "display_name": "Explosive First-Step Bursts",
+            "sets": 4,
+            "progression_rule": (
+                "Week 2 add 1 more burst, week 3 add 1 more burst, "
+                "week 4 keep same low volume."
+            ),
+        }
+    )
+
+    assert block["progression_rule"] == "Add 1 more burst."
+    assert block["deload_rule"] == "Keep same low volume."
+
+
+def test_a_week_label_is_stripped_from_a_deload_rule():
+    block = _normalized_block(
+        {"display_name": "Trap bar deadlift", "deload_rule": "Week 4 drop to two working sets."}
+    )
+    assert block["deload_rule"] == "Drop to two working sets."
+
+
+def test_a_rule_naming_no_week_is_never_rewritten():
+    rule = "Add 2.5 kg when all sets feel crisp."
+    block = _normalized_block({"display_name": "Trap bar deadlift", "progression_rule": rule})
+    assert block["progression_rule"] == rule
+    assert "deload_rule" not in block
+
+
+def test_a_deload_source_label_routes_to_deload_rule():
+    block = _normalized_block(
+        {
+            "display_name": "Plank variation",
+            "coaching_cues": ["Deload: hold for 20 sec and stop fresh.", "Brace your middle"],
+        }
+    )
+    # Routed label text is carried verbatim, exactly as purpose/progression are.
+    assert block["deload_rule"] == "hold for 20 sec and stop fresh."
+    assert block["coaching_cues"] == ["Brace your middle"]
+
+
 def test_hedge_only_progression_and_deload_lines_are_dropped():
     """The athlete cannot act on "slowly", so the card shows nothing instead.
 

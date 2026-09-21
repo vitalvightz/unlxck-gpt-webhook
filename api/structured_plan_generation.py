@@ -892,7 +892,7 @@ def _dedupe_stop_rules(values: list[str]) -> list[str]:
 
 _BLOCK_DETAIL_LABEL_RE = re.compile(
     r"^\s*(purpose|why\s+today|easier|regress(?:ion)?|progress(?:ion)?|"
-    r"stop(?:\s+rule)?|swaps?|substitutions?|cue)\s*:\s*(.*)$",
+    r"deload|stop(?:\s+rule)?|swaps?|substitutions?|cue)\s*:\s*(.*)$",
     re.IGNORECASE,
 )
 
@@ -1018,6 +1018,8 @@ def _normalize_block(value: Any) -> dict[str, Any]:
                 regression_cues.append(detail)
             elif label in {"progress", "progression"}:
                 progression_cues.append(detail)
+            elif label == "deload":
+                out.setdefault("deload_rule", detail)
             elif label.startswith("stop"):
                 stop_cues.append(detail)
             elif label == "cue":
@@ -1058,6 +1060,18 @@ def _normalize_block(value: Any) -> dict[str, Any]:
     stop_rules = _dedupe_stop_rules(
         _coerce_str_list(out.get("stop_rules")) + stop_cues + embedded_stops
     )
+    if progression_rule:
+        progression_rule, enumerated_deload = _split_week_enumerated_rule(progression_rule)
+        if enumerated_deload and not _coerce_str(out.get("deload_rule")).strip():
+            out["deload_rule"] = enumerated_deload
+    if "deload_rule" in out:
+        # "Week 4 keep the sets light" -> "Keep the sets light."
+        deload_clauses = _week_enumerated_clauses(_coerce_str(out.get("deload_rule")))
+        if deload_clauses:
+            out["deload_rule"] = next(
+                (deload_clauses[week] for week in sorted(deload_clauses) if week >= 4),
+                next(iter(deload_clauses.values())),
+            )
     if progression_rule and not _is_hedge_only_adjustment(progression_rule):
         out["progression_rule"] = progression_rule
     else:
@@ -1095,6 +1109,68 @@ _HEDGE_MAGNITUDE_RE = re.compile(
     r"marginal(?:ly)?|modest(?:ly)?)\b",
     re.IGNORECASE,
 )
+# "Week 2 add 1 more burst, week 3 add 1 more burst, week 4 keep same low
+# volume." The card shows ONE week and already labels it, so an enumeration of
+# the whole block reads as other weeks' work on every card. Split it: the
+# progression week's step becomes the progression, and the week-4 clause becomes
+# the deload the card shows on its own deload week.
+_WEEK_CLAUSE_RE = re.compile(
+    r"\bweeks?\s*(\d+)(?:\s*(?:and|&|/|,|\+|to|-)\s*(\d+))?\b\s*[:,.\-–—]?\s*",
+    re.IGNORECASE,
+)
+
+
+def _week_enumerated_clauses(text: str) -> dict[int, str]:
+    """``{2: "add 1 more burst", 4: "keep same low volume"}`` from one line."""
+    matches = list(_WEEK_CLAUSE_RE.finditer(text))
+    if not matches:
+        return {}
+    clauses: dict[int, str] = {}
+    for position, match in enumerate(matches):
+        end = matches[position + 1].start() if position + 1 < len(matches) else len(text)
+        clause = text[match.end() : end].strip().strip(",;-–— ").strip()
+        if not clause:
+            continue
+        clause = clause[:1].upper() + clause[1:]
+        if not clause.endswith("."):
+            clause += "."
+        for group in (match.group(1), match.group(2)):
+            if group is None:
+                continue
+            try:
+                week = int(group)
+            except ValueError:
+                continue
+            clauses.setdefault(week, clause)
+    return clauses
+
+
+def _split_week_enumerated_rule(value: Any) -> tuple[str, str]:
+    """``(progression, deload)`` for a rule that spells out the block's weeks.
+
+    Returns the text unchanged as the progression when it names no week, so a
+    normal rule is never rewritten. The deload half is empty unless the line
+    actually carries a week-4 (or later) clause.
+    """
+    text = _coerce_str(value).strip()
+    if not text:
+        return "", ""
+    clauses = _week_enumerated_clauses(text)
+    if not clauses:
+        return text, ""
+    deload = next((clauses[week] for week in sorted(clauses) if week >= 4), "")
+    progression = next(
+        (clauses[week] for week in sorted(clauses) if 2 <= week <= 3),
+        "",
+    )
+    if not progression:
+        # Only a deload clause was spelled out ("Week 4 keep it light"): there is
+        # no progression step left to show, and inventing one is not this
+        # module's job.
+        return "", deload
+    return progression, deload
+
+
 _HAS_NUMBER_RE = re.compile(r"\d")
 # A qualitative progression names what it moves TO: "Progress to live
 # resistance", "Move onto controlled partner resistance", "Build into full
@@ -2992,6 +3068,12 @@ load" line:
   Week 2 a small justified step, Week 3 the highest controlled exposure.
 - "deload_rule": a block field alongside "progression_rule" — how THIS
   exercise deloads or is reassessed in Week 4.
+- NEVER write week numbers INSIDE either line. The app shows one week at a
+  time and labels it itself, so "Week 2 add 1 more burst, week 3 add 1 more
+  burst, week 4 keep same low volume" reads as a wall of other weeks' work on
+  every card. Write the step alone — "Add one more burst" — and put the week-4
+  instruction in "deload_rule", not in a clause. Same for "deload_rule": no
+  "Week 4 ..." prefix.
 - Match the variable to the exercise type:
   * strength -> load, reps or sets
   * power/speed -> quality, reps or sets, protecting speed and avoiding extra
