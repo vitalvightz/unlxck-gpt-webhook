@@ -81,6 +81,7 @@ import { PLAN_SAFETY_NOTE } from "@/lib/safety-copy";
 import {
   applySourceSetRange,
   getSourcePrescriptionRangeOverrides,
+  getSourceStopRuleOverride,
   stripSafetyOwnedClause,
   stripSafetyOwnedStopRules,
 } from "@/lib/block-display-guardrails";
@@ -354,6 +355,7 @@ export function BlockCard({
   const effortMethod = cleanText(block.effort?.method);
   const { cues, regressions, substitutions } = getBlockExecutionDisplay(block);
   const { progression, stopRules } = getBlockAdjustmentDisplay(block);
+  const sourceStopRule = getSourceStopRuleOverride(sourceText, title, sourceCountdown);
   const weekDirective = openBlockWeekDirective(openWeekIntent, block);
   // A week directive owns progression/deload programming for open plans, while
   // block stop criteria are safety instructions and must always remain visible.
@@ -365,8 +367,21 @@ export function BlockCard({
   // Drop stop-rule criteria that only restate injury-safety escalation the
   // Safety Priority card already owns, so the block keeps its own criterion
   // (technique/form/speed) instead of duplicating the centralised red flag.
-  const blockStopRules = stripSafetyOwnedStopRules(stopRules, planSafetyTexts);
-  const compactStopRule = blockStopRules.map((rule) => rule.trim().replace(/^stop(?:\s+rule)?\s*:\s*/i, "").trim()).find(Boolean) || null;
+  const sourceStopRules = sourceStopRule
+    ? stripSafetyOwnedStopRules([sourceStopRule], planSafetyTexts)
+    : [];
+  // Prefer the exact raw Stop field. If centralised safety owns that complete
+  // compound field, fall back to its structured fragments so a distinct
+  // technique/form criterion remains visible instead of disappearing with it.
+  const blockStopRules =
+    sourceStopRules.length > 0
+      ? sourceStopRules
+      : stripSafetyOwnedStopRules(stopRules, planSafetyTexts);
+  const compactStopRule =
+    blockStopRules
+      .map((rule) => rule.trim().replace(/^stop(?:\s+rule)?\s*:\s*/i, "").trim())
+      .filter(Boolean)
+      .join("; ") || null;
   const adjustmentRules = [
     ...(showProgressionAside && progression
       ? [{ label: "Progress" as const, text: progression }]

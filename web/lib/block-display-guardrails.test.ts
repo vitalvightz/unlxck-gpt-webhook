@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   applySourceSetRange,
   getSourcePrescriptionRangeOverrides,
+  getSourceStopRuleOverride,
   stripSafetyOwnedClause,
 } from "./block-display-guardrails";
 
@@ -95,6 +96,34 @@ test("recovers scalar effort and postfix rest from a period-delimited block", ()
   assert.deepEqual(
     getSourcePrescriptionRangeOverrides(source, "Trap-Bar Romanian Deadlift"),
     { sets: null, effort: "RPE 7", rest: "90 sec" },
+  );
+});
+
+test("recovers the complete source stop rule for a matching block", () => {
+  const source = `- Saturday — Power and first-step speed
+- Explosive first-step cue: 2 x 5 s maximal first steps from stance. Rest 120 s between reps.
+  Cue: Drive the front foot and stop quickly after the step, keep hands ready.
+  Progress: Add one more rep to the set when it feels crisp.
+  Easier: Do 2 x 3 s instead of 5 s.
+  Stop: Loss of control or pain in the arm or knee.
+- Low box jumps: 3 x 3 reps, rest 60 s.
+  Stop: Any unusual joint pain.`;
+
+  assert.equal(
+    getSourceStopRuleOverride(source, "Explosive first-step cue"),
+    "Loss of control or pain in the arm or knee.",
+  );
+});
+
+test("recovers an inline source stop rule without borrowing the next block", () => {
+  const source = [
+    "- Low box jumps: 3 x 3 reps, rest 60 s. Cue: Land softly. Stop: Any unusual joint pain.",
+    "- Sprint starts: 3 x 5 s. Stop: Hamstring tightness.",
+  ].join("\n");
+
+  assert.equal(
+    getSourceStopRuleOverride(source, "Low box jumps"),
+    "Any unusual joint pain.",
   );
 });
 
