@@ -2592,7 +2592,7 @@ Every athlete-facing line must be readable by a 13-year-old: UK Key Stage 3 leve
 - Some words stay because athletes use them: reps, sets, rest, RPE, sparring, rounds, taper, tempo, warm-up, drill, pad work, clinch, footwork, sprint, and the exercise names themselves. Keep them.
 - Do not define the jargon and then use it anyway, and do not put the plain word in brackets after the technical one. Choose the plain word and write only that.
 - No hedging, no throat-clearing, no filler. "Keeps your legs fresh for Saturday" beats "This session is designed to help maintain lower-limb freshness ahead of competition."
-- Apply this to everything the athlete reads: session titles, why-today lines, purpose lines, coaching cues, easier/stop lines, rehab purpose, lead notes, weight-cut and nutrition notes, and mindset lines. It applies on top of every other rule here, including RULE 12's demand for precise mechanism wording: be precise in plain words, not in technical ones.
+- Apply this to everything the athlete reads: session titles, why-today lines, purpose lines, coaching cues, easier/stop lines, rehab purpose, lead notes, weight-cut and nutrition notes, and mindset lines. It applies on top of every other rule here: where another rule asks for precise mechanism wording, be precise in plain words, not in technical ones.
 
 """
 
@@ -2662,6 +2662,71 @@ STAGE2_FINALIZER_PROMPT = (
     + _RULE_13_COUNTDOWN_SCAFFOLDING
     + _RULE_13_LABEL_RULES
 )
+
+
+def _is_explicitly_false(value: Any) -> bool:
+    """True only when the build positively says a flag is off.
+
+    Gating fails OPEN: a missing, null or malformed flag keeps the rule in the
+    prompt. Before gating, an absent flag cost nothing because every rule shipped
+    regardless; after gating, treating "I could not find it" as "it does not
+    apply" would silently drop a safety rule. So the gates below only skip a
+    block on positive evidence that its precondition is false.
+    """
+
+    return value is False
+
+
+def _taper_micro_support_active(selected_plan: Any) -> bool:
+    if not isinstance(selected_plan, dict):
+        return False
+    spec = selected_plan.get("late_fight_plan_spec")
+    if not isinstance(spec, dict):
+        return False
+    policy = spec.get("taper_micro_support_policy")
+    if not isinstance(policy, dict):
+        return False
+    return bool(policy.get("active"))
+
+
+def build_finalizer_prompt(
+    *,
+    render_guards: dict | None = None,
+    selected_plan: dict | None = None,
+) -> str:
+    """Assemble the finalizer prompt for this plan's actual state.
+
+    Three blocks state a precondition the deterministic build has already
+    resolved by the time the prompt is written. Sending them anyway makes the
+    model read and dismiss rules that cannot fire - on a normal camp with no
+    active injury that is ~3.8k chars of dead instruction. Nothing here rewrites
+    prompt text: each block is included verbatim or not at all.
+    """
+
+    guards = render_guards if isinstance(render_guards, dict) else {}
+
+    sections = [_FINALIZER_SEGMENT_A]
+
+    # late_fight_plan_spec is only built on the late-fight path, so on a dated
+    # camp the policy this rule governs does not exist. Positive check, so an
+    # unreadable spec keeps the rule.
+    if _taper_micro_support_active(selected_plan) or not isinstance(selected_plan, dict):
+        sections.append(_RULE_9B_TAPER_MICRO_SUPPORT)
+
+    sections.append(_FINALIZER_SEGMENT_B)
+
+    # has_active_injury False forces suppress_rehab_headings True, and the packet
+    # then carries the three writing rules that tell the model what to render
+    # instead of rehab. RULE 12 has nothing left to add in that state.
+    if not _is_explicitly_false(guards.get("has_active_injury")):
+        sections.append(_RULE_12_SURGICAL_REHAB)
+
+    sections.append(_RULE_13_HEADER)
+    if not _is_explicitly_false(guards.get("suppress_phase_toolbox_sections")):
+        sections.append(_RULE_13_COUNTDOWN_SCAFFOLDING)
+    sections.append(_RULE_13_LABEL_RULES)
+
+    return "".join(sections)
 
 
 UNLXCK_FINAL_RENDER_CONTRACT = """UNLXCK FINAL RENDER CONTRACT
@@ -3237,7 +3302,10 @@ def build_stage2_handoff_text(
     # the packet's selected_plan.priority_focus block supplies the underlying
     # values. A parallel prose section here only duplicated those rules.
     sections = [
-        STAGE2_FINALIZER_PROMPT.strip(),
+        build_finalizer_prompt(
+            render_guards=finalizer_packet.get("render_guards"),
+            selected_plan=finalizer_packet.get("selected_plan"),
+        ).strip(),
         UNLXCK_FINAL_RENDER_CONTRACT.strip(),
     ]
 

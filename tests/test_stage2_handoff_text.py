@@ -409,11 +409,19 @@ def test_dated_multiweek_camp_handoff_requires_phase_week_spine():
     # bare countdown list must be gone.
     assert "Late-fight plans must use D-X countdown headers." not in handoff
 
-    # RULE 13's no-week-header directive is scoped to late_fight_countdown_only,
-    # so it no longer contradicts the camp_plan phase/week spine requirement. Its
-    # session-title and safety label discipline still apply in every mode.
-    assert "This no-week-header rule does not apply to camp_plan" in handoff
+    # RULE 13's no-week-header directive is scoped to late_fight_countdown_only.
+    # In camp_plan mode suppress_phase_toolbox_sections is false, so the whole
+    # countdown-scaffolding paragraph is now gated out of the prompt rather than
+    # sent with a carve-out excusing camp_plan from it. Assert the stronger
+    # property: the directive is absent entirely, and the positive phase/week
+    # spine requirement above is what the model is left with.
+    assert "do not emit phase scaffolding" not in handoff
+    assert "This no-week-header rule does not apply to camp_plan" not in handoff
     assert "Output is countdown-led. Lead every active day" not in handoff
+    # RULE 13's session-title and safety label discipline is never gated: it
+    # applies in every mode and must survive.
+    assert "RULE 13 — LATE-FIGHT LABEL DISCIPLINE" in handoff
+    assert "Do not expose internal role keys" in handoff
     assert 'Never use the word "Glycolytic" in D-7 or tighter windows.' in handoff
 
     # The fight-week tail is handled by the countdown-continuation map, which
