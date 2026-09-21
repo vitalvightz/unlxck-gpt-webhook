@@ -1092,7 +1092,7 @@ def _normalize_block(value: Any) -> dict[str, Any]:
 # not match "smallest".
 _HEDGE_MAGNITUDE_RE = re.compile(
     r"\b(?:small|slight(?:ly)?|slow(?:ly)?|gradual(?:ly)?|a bit|a little|"
-    r"marginal(?:ly)?|modest(?:ly)?|where you can|as you can|if you can)\b",
+    r"marginal(?:ly)?|modest(?:ly)?)\b",
     re.IGNORECASE,
 )
 _HAS_NUMBER_RE = re.compile(r"\d")
