@@ -137,6 +137,79 @@ def _structured_plan(days: list[dict], *, week_index: int = 1, **week_extra) -> 
     return {"weeks": [week]}
 
 
+def _open_brief() -> dict:
+    return {
+        "open_plan_spec": {
+            "plan_type": "open_ongoing_system",
+            "weekly_template": {
+                "training_days": ["Monday", "Wednesday", "Friday"],
+                "hard_sparring_days": ["Friday"],
+                "support_work_days": ["Wednesday"],
+                "coach_owned_days": {
+                    "technical_skill_days": [],
+                    "support_work_days": ["Wednesday"],
+                },
+            },
+            "development_block": {
+                "week_1": "Baseline",
+                "week_2": "Progress",
+                "week_3": "Highest controlled week",
+                "week_4": "Deload",
+            },
+        }
+    }
+
+
+def _open_day(weekday: str, headline: str, *, sessions: list | None = None) -> dict:
+    day = _day("", headline=headline, sessions=sessions)
+    day["weekday"] = weekday
+    return day
+
+
+def test_open_plan_preserves_declared_technical_day_alongside_app_work():
+    strength = [{"title": "Support strength", "blocks": []}]
+    plan = _structured_plan(
+        [
+            _open_day("Mon", "Strength"),
+            _open_day("Wed", "Support strength", sessions=strength),
+            _open_day("Fri", "Recovery"),
+        ]
+    )
+    plan["weeks"][0]["days"][2]["day_type"] = "rest"
+
+    notes = reconcile_coach_led_sparring_days(plan, _open_brief())
+
+    wednesday = plan["weeks"][0]["days"][1]
+    friday = plan["weeks"][0]["days"][2]
+    assert wednesday["sessions"] == strength
+    assert wednesday["today_card"]["coach_led_contact"] == "Technical-only combat"
+    assert friday["today_card"]["headline"] == "Hard sparring"
+    assert friday["day_type"] == "high"
+    assert any("Wed" in note and "Technical-only combat" in note for note in notes)
+
+
+def test_open_plan_preserves_declared_technical_day_in_every_emitted_week():
+    weeks = []
+    for week_index in range(1, 5):
+        week = _structured_plan(
+            [
+                _open_day("Mon", "Strength"),
+                _open_day("Wed", "Conditioning"),
+                _open_day("Fri", "Mobility"),
+            ],
+            week_index=week_index,
+        )["weeks"][0]
+        weeks.append(week)
+    plan = {"weeks": weeks}
+
+    reconcile_coach_led_sparring_days(plan, _open_brief())
+
+    for week in plan["weeks"]:
+        by_weekday = {day["weekday"]: day for day in week["days"]}
+        assert by_weekday["Wed"]["today_card"]["headline"] == "Technical-only combat"
+        assert by_weekday["Fri"]["today_card"]["headline"] == "Hard sparring"
+
+
 def _hard_thursday() -> list[dict]:
     # Thursday in the synthetic week is the 4th day -> d_day 31 (end_d 28, span 7).
     return [

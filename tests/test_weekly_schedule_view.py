@@ -108,6 +108,33 @@ def test_extract_weekly_schedule_maps_open_ongoing_weekly_template():
     assert extract_weekly_schedule(planning_brief, week_index=4) is None
 
 
+def test_extract_weekly_schedule_preserves_open_plan_support_day_as_technical():
+    planning_brief = {
+        "open_plan_spec": {
+            "plan_type": "open_ongoing_system",
+            "weekly_template": {
+                "training_days": ["Monday", "Wednesday", "Friday"],
+                "hard_sparring_days": ["Friday"],
+                "support_work_days": ["Wednesday"],
+                "coach_owned_days": {
+                    "technical_skill_days": [],
+                    "support_work_days": ["Wednesday"],
+                },
+            },
+            "development_block": {"week_1": "Baseline"},
+        }
+    }
+
+    schedule = extract_weekly_schedule(planning_brief, week_index=0)
+
+    assert schedule is not None
+    wednesday = schedule["days"][2]
+    assert wednesday["status"] == "coach_led_session"
+    assert wednesday["sparring_day_class"] == "technical"
+    assert wednesday["effective_load"] == "technical"
+    assert wednesday["title"] == "Wed technical boxing"
+
+
 def test_extract_weekly_schedule_multi_week_brief_keeps_all_weeks_addressable():
     planning_brief = {
         "weekly_role_map": {
