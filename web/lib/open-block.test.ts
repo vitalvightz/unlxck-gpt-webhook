@@ -54,11 +54,23 @@ test("progression weeks surface the block's own progression rule", () => {
   }
 });
 
-test("progression weeks fall back to a generic bump when the block has no rule", () => {
-  const directive = openBlockWeekDirective(openBlockWeekIntent(2), block());
-  assert.ok(directive);
-  assert.equal(directive.usesProgressionRule, false);
-  assert.match(directive.text, /only if last week felt controlled/i);
+test("aerobic work keeps its own rule and never gets a load/set bump", () => {
+  const rule = "Add 5 minutes at the same easy pace if breathing stayed easy.";
+  const directive = openBlockWeekDirective(
+    openBlockWeekIntent(2),
+    block({
+      block_type: "conditioning",
+      display_name: "Easy assault bike",
+      progression_rule: rule,
+    }),
+  );
+  assert.equal(directive?.text, rule);
+  assert.doesNotMatch(directive?.text ?? "", /add (?:one|a) set|load bump/i);
+});
+
+test("a block with no progression rule gets no invented directive", () => {
+  assert.equal(openBlockWeekDirective(openBlockWeekIntent(2), block()), null);
+  assert.equal(openBlockWeekDirective(openBlockWeekIntent(3), block()), null);
 });
 
 test("a stop rule is never presented as the week's progression", () => {
@@ -66,18 +78,26 @@ test("a stop rule is never presented as the week's progression", () => {
     openBlockWeekIntent(3),
     block({ progression_rule: "Stop when bar speed drops." }),
   );
-  assert.ok(directive);
-  assert.equal(directive.usesProgressionRule, false);
-  assert.doesNotMatch(directive.text, /stop when bar speed drops/i);
+  assert.equal(directive, null);
 });
 
-test("the deload week always overrides with a volume cut", () => {
+test("the deload week uses the block's own deload rule", () => {
+  const directive = openBlockWeekDirective(
+    openBlockWeekIntent(4),
+    block({
+      progression_rule: "Add 2.5 kg when all sets complete.",
+      deload_rule: "Drop to two working sets and keep the bar light.",
+    }),
+  );
+  assert.ok(directive);
+  assert.equal(directive.usesProgressionRule, false);
+  assert.equal(directive.text, "Drop to two working sets and keep the bar light.");
+});
+
+test("the deload week invents nothing when the block has no deload rule", () => {
   const directive = openBlockWeekDirective(
     openBlockWeekIntent(4),
     block({ progression_rule: "Add 2.5 kg when all sets complete." }),
   );
-  assert.ok(directive);
-  assert.equal(directive.usesProgressionRule, false);
-  assert.match(directive.text, /deload/i);
-  assert.match(directive.text, /half/i);
+  assert.equal(directive, null);
 });

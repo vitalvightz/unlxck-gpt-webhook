@@ -296,6 +296,10 @@ class SessionBlock(BaseModel):
     coaching_cues: list[str] = Field(default_factory=list)
     regression_options: list[str] = Field(default_factory=list)
     progression_rule: str | None = None
+    # Open/ongoing plans only: the block's own week-4 deload or reassessment
+    # instruction. Dated camps prescribe their taper week by week, so they
+    # leave this unset.
+    deload_rule: str | None = None
     stop_rules: list[str] = Field(default_factory=list)
     substitutions: list[str] = Field(default_factory=list)
     red_flags: list[RedFlagRule] = Field(default_factory=list)

@@ -357,7 +357,11 @@ export function BlockCard({
   const weekDirective = openBlockWeekDirective(openWeekIntent, block);
   // A week directive owns progression/deload programming for open plans, while
   // block stop criteria are safety instructions and must always remain visible.
-  const showProgressionAside = Boolean(progression && !weekDirective);
+  // The deload week additionally hides the progression aside: a block with no
+  // deload rule of its own is simply left as written, never told to advance.
+  const showProgressionAside = Boolean(
+    progression && !weekDirective && openWeekIntent?.key !== "deload",
+  );
   // Drop stop-rule criteria that only restate injury-safety escalation the
   // Safety Priority card already owns, so the block keeps its own criterion
   // (technique/form/speed) instead of duplicating the centralised red flag.

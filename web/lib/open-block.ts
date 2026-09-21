@@ -6,9 +6,9 @@
 // they render as identical clones and the block's built-in wave never reaches
 // the athlete. These helpers turn the week position into the athlete-facing
 // intent (week strip / week overview / Today) and into a per-exercise
-// directive on each block card. Display-level only: doses are never mutated,
-// so a future Stage 2 payload that emits explicit per-week doses simply
-// replaces the fallback wording here.
+// directive on each block card. Display-level only: doses are never mutated
+// and no wording is invented here — the per-block progression/deload text is
+// written by the structured-card conversion, which knows the exercise type.
 
 import { cleanText, progressionRuleLabel } from "@/lib/structured-plan";
 import type { StructuredBlock } from "@/lib/types";
@@ -92,8 +92,14 @@ function progressionRuleText(block: StructuredBlock): string | null {
 /**
  * The week-directed instruction for one block card. Baseline weeks return null
  * (the dose is already the instruction); progression weeks surface the block's
- * own progression rule (or a safe generic bump when the block has none, or
- * only a stop rule); the deload week always overrides with a volume cut.
+ * own progression rule and the deload week its own deload rule, both written
+ * per exercise by the structured-card conversion.
+ *
+ * A block with no such rule returns null rather than a generic directive: the
+ * old "add one set or a small load bump" / "cut working sets roughly in half"
+ * fallbacks were invented here, so they told an easy aerobic ride, a mobility
+ * drill or a rehab insert to do something that does not apply to it. The week
+ * intent still carries the block-level policy for the week strip and overview.
  */
 export function openBlockWeekDirective(
   intent: OpenBlockWeekIntent | null | undefined,
@@ -104,20 +110,17 @@ export function openBlockWeekDirective(
   }
   if (intent.key === "progress" || intent.key === "peak") {
     const rule = progressionRuleText(block);
-    return {
-      label: "This week",
-      text:
-        rule ??
-        "Add one set or a small load bump, only if last week felt controlled.",
-      usesProgressionRule: rule !== null,
-    };
+    if (!rule) {
+      return null;
+    }
+    return { label: "This week", text: rule, usesProgressionRule: true };
   }
   if (intent.key === "deload") {
-    return {
-      label: "This week",
-      text: "Deload — cut working sets roughly in half, keep loads light, and stop fresh.",
-      usesProgressionRule: false,
-    };
+    const deload = cleanText(block.deload_rule);
+    if (!deload) {
+      return null;
+    }
+    return { label: "This week", text: deload, usesProgressionRule: false };
   }
   return null;
 }
