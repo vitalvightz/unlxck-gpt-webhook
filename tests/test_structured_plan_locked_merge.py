@@ -308,3 +308,94 @@ def test_schema_valid_card_with_omitted_watch_is_repaired_and_persistable():
 def test_previous_pocket_exchange_failure_is_repaired_before_faithfulness():
     result = _merged()
     assert check_structured_faithfulness(result.plan, SOURCE, _brief()) == []
+
+
+def test_open_plan_range_map_is_restored_from_weekly_rotation():
+    why = "Establish the ranges where you can score without staying available for the return."
+    steps = [
+        "Mark the range where you can score while remaining difficult to reach.",
+        "Mark the range where the opponent becomes most dangerous.",
+        "Choose the strike that best controls the space between you.",
+        "Write one distance rule to test in your next technical session.",
+    ]
+    mindset = {
+        "intent": "Control the space before increasing output.",
+        "focus": "Notice where each fighter can land without overreaching.",
+        "reset": "Return to the last range where you could see and react clearly.",
+        "anchor": "Make them cross your range before they can attack.",
+    }
+    progress = "Test the distance rule in technical work and keep it only if it holds up."
+    brief = {
+        "open_plan_spec": {
+            "tactical_watch": {
+                "weekly_rotation": [
+                    {
+                        "week": 1,
+                        "name": "Range Map",
+                        "tactical_watch": {
+                            "name": "Range Map",
+                            "why": why,
+                            "duration_min": 10,
+                            "instructions": steps,
+                            "mindset": mindset,
+                            "progress": progress,
+                        },
+                    }
+                ]
+            }
+        }
+    }
+    plan = {
+        "weeks": [
+            {
+                "days": [
+                    {
+                        "weekday": "Wed",
+                        "sessions": [
+                            {
+                                "session_type": "recovery",
+                                "title": "Tactical Focus: Range Map",
+                                "objective": "Establish where you can score without staying open.",
+                                "mindset_anchor": {
+                                    "intent": "Control space before raising output.",
+                                    "focus_cue": "Notice where you can score safely.",
+                                    "reset_cue": "Return to the last clear range if confused.",
+                                    "confidence_anchor": "A simple distance rule reduces risk.",
+                                },
+                                "blocks": [
+                                    {
+                                        "block_type": "mindset",
+                                        "display_name": "Range Map",
+                                        "duration": {"value": 10, "unit": "minutes"},
+                                        "coaching_cues": [
+                                            "Mark the scoring range while keeping out of easy return fire."
+                                        ],
+                                        "purpose": "Establish where you can score without staying open.",
+                                        "progression_rule": "Test the chosen distance rule during technical rounds.",
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ]
+            }
+        ]
+    }
+
+    result = merge_locked_structured_content(plan, brief)
+    session = result.plan["weeks"][0]["days"][0]["sessions"][0]
+    block = session["blocks"][0]
+
+    assert session["objective"] == why
+    assert session["mindset_anchor"] == {
+        "intent": mindset["intent"],
+        "focus_cue": mindset["focus"],
+        "reset_cue": mindset["reset"],
+        "confidence_anchor": mindset["anchor"],
+    }
+    assert block["coaching_cues"] == steps
+    assert block["progression_rule"] == progress
+    assert block["purpose"] == why
+    assert block["duration"] == {"value": 10, "unit": "minutes"}
+    assert session["session_type"] == "skill"
+    assert merge_locked_structured_content(result.plan, brief).plan == result.plan

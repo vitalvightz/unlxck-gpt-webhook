@@ -179,6 +179,59 @@ def _mindset_anchor(content: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _restore_open_plan_tactical_watches(
+    plan: dict[str, Any], planning_brief: Mapping[str, Any]
+) -> None:
+    """Restore open-plan Tactical Watch fields from the deterministic rotation."""
+    spec = planning_brief.get("open_plan_spec")
+    spec = spec if isinstance(spec, Mapping) else {}
+    tactical = spec.get("tactical_watch")
+    tactical = tactical if isinstance(tactical, Mapping) else {}
+    rotation = tactical.get("weekly_rotation")
+    if not isinstance(rotation, (list, tuple)):
+        return
+
+    for entry in rotation:
+        if not isinstance(entry, Mapping):
+            continue
+        watch = entry.get("tactical_watch")
+        if not isinstance(watch, Mapping):
+            continue
+        name = str(entry.get("name") or watch.get("name") or "").strip()
+        if not name:
+            continue
+
+        targets = [
+            (session, block)
+            for day in _days(plan)
+            for session in day.get("sessions") or []
+            if isinstance(session, dict)
+            for block in session.get("blocks") or []
+            if isinstance(block, dict)
+            and _normalise(block.get("display_name")) == _normalise(name)
+        ]
+        if len(targets) != 1:
+            continue
+
+        session, block = targets[0]
+        session["session_type"] = "skill"
+        session["objective"] = watch.get("why")
+        session["mindset_anchor"] = _mindset_anchor(watch)
+        block.update(
+            {
+                "block_type": "mindset",
+                "display_name": watch.get("name") or name,
+                "duration": _duration(watch),
+                "coaching_cues": [
+                    str(value) for value in watch.get("instructions") or []
+                ],
+                "purpose": watch.get("why"),
+            }
+        )
+        if watch.get("progress"):
+            block["progression_rule"] = watch["progress"]
+
+
 def _new_watch_block(
     *, day_label: str, name: str, watch: Mapping[str, Any], spec: LockedContentSpec
 ) -> dict[str, Any]:
@@ -248,6 +301,8 @@ def merge_locked_structured_content(
     result = LockedMergeResult(plan=plan)
     if not isinstance(planning_brief, Mapping):
         return result
+
+    _restore_open_plan_tactical_watches(plan, planning_brief)
 
     for role in _locked_roles(planning_brief):
         governance = role.get("governance")
