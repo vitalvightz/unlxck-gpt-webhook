@@ -591,11 +591,11 @@ def test_sessionless_hard_sparring_headline_projects_as_declared_contact():
     assert len(projected["weeks"]) == 4
 
 
-def test_support_work_day_with_contact_and_app_blocks_remains_projectable():
+def test_legacy_top_level_support_work_day_with_contact_and_app_blocks_remains_projectable():
     brief = copy.deepcopy(_open_plan_brief())
     template = brief["open_plan_spec"]["weekly_template"]
+    # Legacy briefs declared support work only at template level.
     template["support_work_days"] = ["Monday"]
-    template["coach_owned_days"]["support_work_days"] = ["Monday"]
     row = {
         "id": PLAN_ID,
         "created_at": "2026-07-12T09:00:00+00:00",
