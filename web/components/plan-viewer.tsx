@@ -128,16 +128,26 @@ export function isPlanReleasedToAthlete(
 }
 
 /**
- * A saved structured card remains authoritative even when only its calendar
- * projection fails. StructuredPlanRenderer already shows the fail-closed
- * schedule warning and keeps the raw plan available underneath, so replacing
- * the entire card with the text adapter would discard valid session detail for
- * an unrelated date/ownership mismatch.
+ * A saved structured card remains authoritative when only its calendar
+ * projection fails, unless it is one of the legacy week-shell payloads with no
+ * day rows. Those shells contain no usable session detail, so keep the existing
+ * deterministic text-adapter fallback for them.
  */
 export function shouldUseSavedStructuredPlan(
-  plan: Pick<PlanDetail, "outputs">,
+  plan: Pick<PlanDetail, "outputs" | "fight_date" | "schedule_context">,
 ): boolean {
-  return shouldRenderStructuredPlan(plan.outputs) && Boolean(plan.outputs.structured_plan);
+  const structuredPlan = plan.outputs.structured_plan;
+  if (!shouldRenderStructuredPlan(plan.outputs) || !structuredPlan) {
+    return false;
+  }
+  const hasDayRows = structuredPlan.weeks.some(
+    (week) => Array.isArray(week.days) && week.days.length > 0,
+  );
+  return !(
+    isOpenOngoingPlan(plan.fight_date) &&
+    plan.schedule_context?.projection_status === "unavailable" &&
+    !hasDayRows
+  );
 }
 
 export function canShowContextualPlanFeedback(
