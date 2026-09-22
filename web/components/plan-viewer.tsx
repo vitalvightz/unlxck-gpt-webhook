@@ -140,7 +140,8 @@ export function shouldUseSavedStructuredPlan(
   if (!shouldRenderStructuredPlan(plan.outputs) || !structuredPlan) {
     return false;
   }
-  const hasDayRows = structuredPlan.weeks.some(
+  const weeks = Array.isArray(structuredPlan.weeks) ? structuredPlan.weeks : [];
+  const hasDayRows = weeks.some(
     (week) => Array.isArray(week.days) && week.days.length > 0,
   );
   return !(
