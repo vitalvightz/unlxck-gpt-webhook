@@ -1508,3 +1508,29 @@ test("projection failure preserves a non-empty saved structured card", () => {
 
   assert.equal(shouldUseSavedStructuredPlan(plan), true);
 });
+
+test("projection failure keeps the text-adapter fallback for legacy empty week shells", () => {
+  const plan = {
+    fight_date: null,
+    outputs: {
+      plan_text: "## Weekly Rhythm\nTuesday — strength",
+      structured_plan: {
+        schema_version: "1.0",
+        plan_metadata: { title: "Open plan", sport: "boxing", plan_type: "fight_camp" },
+        weeks: [
+          { week_id: "w1", week_index: 1, days: [] },
+          { week_id: "w2", week_index: 2, days: [] },
+          { week_id: "w3", week_index: 3, days: [] },
+          { week_id: "w4", week_index: 4, days: [] },
+        ],
+      },
+    },
+    schedule_context: {
+      schedule_mode: "open_recurring",
+      projection_status: "unavailable",
+      projection_reason: "day_shape_unresolved",
+    },
+  } as unknown as PlanDetail;
+
+  assert.equal(shouldUseSavedStructuredPlan(plan), false);
+});
