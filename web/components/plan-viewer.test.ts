@@ -27,6 +27,7 @@ import {
   shouldHoldPlanForEnhancedCard,
   shouldPollForStructuredPlanUpgrade,
   shouldShowProtectedResumeAdminReview,
+  shouldUseSavedStructuredPlan,
   EnhancedCardLockInCard,
   StructuredCardStatusChip,
 } from "./plan-viewer";
@@ -1486,4 +1487,24 @@ test("the no-payload branch mounts StructuredPlanRenderer instead of legacy card
   assert.equal(adapterComponent.includes("<StructuredPlanRenderer"), true);
   assert.equal(adapterComponent.includes("legacy-plan-root"), false);
   assert.equal(adapterComponent.includes("legacy-plan-card-stack"), false);
+});
+
+test("projection failure preserves a non-empty saved structured card", () => {
+  const plan = {
+    outputs: {
+      plan_text: "## Raw fallback",
+      structured_plan: {
+        schema_version: "1.0",
+        plan_metadata: { title: "Open plan", sport: "boxing", plan_type: "fight_camp" },
+        weeks: [{ week_id: "w1", week_index: 1, days: [{ weekday: "Tue" }] }],
+      },
+    },
+    schedule_context: {
+      schedule_mode: "open_recurring",
+      projection_status: "unavailable",
+      projection_reason: "hard_day_not_coach_led",
+    },
+  } as unknown as PlanDetail;
+
+  assert.equal(shouldUseSavedStructuredPlan(plan), true);
 });

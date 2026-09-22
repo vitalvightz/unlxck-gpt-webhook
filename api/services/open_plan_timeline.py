@@ -29,7 +29,7 @@ WEEKDAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 # the coach-neutral labels ("Hard sparring", "Technical-only combat", "controlled
 # hard contact") and the legacy "coach-led" wording so stored plans still resolve.
 _COACH_LED_RE = re.compile(
-    r"\b(coach|spar|boxing|pads?|mitts?|technical[-\s]+only|controlled\s+hard\s+contact)\b",
+    r"\b(coach|spar(?:r(?:ing|ed)|s)?|boxing|pads?|mitts?|technical[-\s]+only|controlled\s+hard\s+contact)\b",
     re.I,
 )
 
@@ -150,14 +150,15 @@ def _coach_owned_days(template: Mapping[str, Any]) -> list[str]:
     coach_owned = template.get("coach_owned_days")
     coach_owned = coach_owned if isinstance(coach_owned, Mapping) else {}
     values: list[Any] = []
-    for key in ("technical_skill_days", "hard_sparring_days"):
+    for key in ("technical_skill_days", "support_work_days", "hard_sparring_days"):
         raw = coach_owned.get(key)
         if isinstance(raw, (list, tuple, set)):
             values.extend(raw)
-    # Older open-plan briefs only exposed hard_sparring_days at template level.
-    raw_hard = template.get("hard_sparring_days")
-    if isinstance(raw_hard, (list, tuple, set)):
-        values.extend(raw_hard)
+    # Older open-plan briefs exposed these declarations only at template level.
+    for key in ("support_work_days", "hard_sparring_days"):
+        raw = template.get(key)
+        if isinstance(raw, (list, tuple, set)):
+            values.extend(raw)
     return _ordered_weekdays(values)
 
 

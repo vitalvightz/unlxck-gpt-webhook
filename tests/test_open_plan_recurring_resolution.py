@@ -572,6 +572,50 @@ def test_projection_reason_hard_day_not_coach_led_when_hard_day_has_blocks():
     assert context["projection_reason"] == PROJECTION_REASON_HARD_DAY_NOT_COACH_LED
 
 
+def test_sessionless_hard_sparring_headline_projects_as_declared_contact():
+    days = _healthy_days()
+    days[2] = {
+        "date": "",
+        "day_type": "high",
+        "today_card": {"headline": "Hard sparring"},
+        "sessions": [],
+    }
+
+    projected, context = _project(
+        _anchored_row(),
+        {"weeks": [{"week_index": 1, "days": days}]},
+    )
+
+    assert context["projection_status"] == "projected"
+    assert context["projection_reason"] is None
+    assert len(projected["weeks"]) == 4
+
+
+def test_support_work_day_with_contact_and_app_blocks_remains_projectable():
+    brief = copy.deepcopy(_open_plan_brief())
+    template = brief["open_plan_spec"]["weekly_template"]
+    template["support_work_days"] = ["Monday"]
+    template["coach_owned_days"]["support_work_days"] = ["Monday"]
+    row = {
+        "id": PLAN_ID,
+        "created_at": "2026-07-12T09:00:00+00:00",
+        "planning_brief": brief,
+    }
+    days = _healthy_days()
+    days[0]["today_card"]["coach_led_contact"] = "Technical-only combat"
+
+    projected, context = _project(
+        row,
+        {"weeks": [{"week_index": 1, "days": days}]},
+    )
+
+    assert context["projection_status"] == "projected"
+    assert context["projection_reason"] is None
+    assert projected["weeks"][0]["days"][0]["today_card"]["coach_led_contact"] == (
+        "Technical-only combat"
+    )
+
+
 def test_projection_reason_week_count_unexpandable_when_card_has_two_weeks():
     weeks = [
         {"week_index": 1, "days": _healthy_days()},
