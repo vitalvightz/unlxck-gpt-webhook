@@ -127,6 +127,30 @@ export function isPlanReleasedToAthlete(
   return ATHLETE_VISIBLE_STATUSES.has(status) && Boolean(plan.outputs.plan_text.trim());
 }
 
+/**
+ * A saved structured card remains authoritative when only its calendar
+ * projection fails, unless it is one of the legacy week-shell payloads with no
+ * day rows. Those shells contain no usable session detail, so keep the existing
+ * deterministic text-adapter fallback for them.
+ */
+export function shouldUseSavedStructuredPlan(
+  plan: Pick<PlanDetail, "outputs" | "fight_date" | "schedule_context">,
+): boolean {
+  const structuredPlan = plan.outputs.structured_plan;
+  if (!shouldRenderStructuredPlan(plan.outputs) || !structuredPlan) {
+    return false;
+  }
+  const weeks = Array.isArray(structuredPlan.weeks) ? structuredPlan.weeks : [];
+  const hasDayRows = weeks.some(
+    (week) => Array.isArray(week.days) && week.days.length > 0,
+  );
+  return !(
+    isOpenOngoingPlan(plan.fight_date) &&
+    plan.schedule_context?.projection_status === "unavailable" &&
+    !hasDayRows
+  );
+}
+
 export function canShowContextualPlanFeedback(
   viewerRole: UserRole,
   viewerProfileId: string | null,
@@ -1522,8 +1546,7 @@ export function PlanViewer({
 
   const athletePlanText = plan.outputs.plan_text.trim();
   const hasPublishedPlan = isPlanReleasedToAthlete(plan);
-  const hasStructuredAthletePlan =
-    shouldRenderStructuredPlan(plan.outputs) && Boolean(plan.outputs.structured_plan);
+  const hasStructuredAthletePlan = shouldUseSavedStructuredPlan(plan);
   const structuredCardState = normalizeStructuredCardState(plan.structured_card_state);
   const structuredCardStateKey = JSON.stringify(structuredCardState);
   const canRebuildStructuredCard = canRebuildEnhancedCard(structuredCardState);
@@ -1537,13 +1560,7 @@ export function PlanViewer({
   );
 
   const openOngoing = isOpenOngoingPlan(plan.fight_date);
-  // Some legacy open-plan enhanced cards saved the four week shells but no day
-  // rows. The approved raw text still has an explicit Weekly Rhythm, so use the
-  // deterministic text adapter for those cards instead of displaying an empty
-  // "Schedule unavailable" state.
-  const useSavedStructuredPlan =
-    hasStructuredAthletePlan &&
-    !(openOngoing && plan.schedule_context?.projection_status === "unavailable");
+  const useSavedStructuredPlan = hasStructuredAthletePlan;
   const planDetailTitle = getPlanDisplayName(plan);
   const fightDateLabel = plan.fight_date ? `Fight date ${formatPlanFightDate(plan.fight_date)}` : null;
 
