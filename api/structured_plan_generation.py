@@ -2808,7 +2808,7 @@ code fences, no commentary.
 The human-readable plan provided below is the SOURCE OF TRUTH for exercise and
 session membership, dates, explicit volume/load, and safety constraints. Convert
 it faithfully into structured form. Do NOT add new exercises, sessions, blocks,
-dates, athletes, biometrics, or override any explicit prescription. You MAY fill
+dates, athletes, biometrics, or override any explicit fixed prescription. You MAY fill
 missing rest, effort and one concise execution cue for an existing physical
 block, using the supplied athlete/session context and the rules below.
 
@@ -2834,9 +2834,42 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   carry no event dates or countdown labels.
 - Each week's phase_label MUST be one of: GPP, SPP, TAPER, FIGHT_WEEK,
   REINTEGRATION.
-- Every block load MUST be a machine-readable object, NEVER a string. Use:
+- When present, a block load MUST be a machine-readable object, NEVER a string. Use:
   {{"method": "percentage", "value": 85, "unit": "percent", "ref": "1RM",
   "display": "85% 1RM"}}. Do NOT output loads like "85%" as plain strings.
+- Working-dose fields have fixed shapes: `sets` and `rounds` are positive integers;
+  `reps` is an integer for a count, or a string only for an exact source qualifier
+  such as "6 per side" or "AMRAP". Never put a range, time, distance, or a
+  combined `8x8x30` chain in `reps`. `duration`, `work`, `rest`, and `distance`
+  are separate {{"value": number, "unit": string}} objects, never bare numbers
+  or prose. Use seconds/minutes/hours for time and meters/kilometers/miles/yards
+  for distance; `work` and `rest` normally use seconds, total `duration` minutes.
+- `load.method` must be one of percentage, absolute, bodyweight, band, rpe, rir,
+  velocity, relative, other. Its `value` is one number and `unit` names that
+  number: e.g. {{"method":"absolute","value":24,"unit":"kg","display":"24 kg"}}
+  or the percentage object above. Use `ref` only for a stated reference such as
+  1RM. Never manufacture kg, percent, or 1RM from an RPE or a vague "light"
+  cue. Explicit bodyweight-only work may use
+  {{"method":"bodyweight","value":0,"unit":"bodyweight","display":"bodyweight"}};
+  zero means no external load. If band resistance has no numerical value, set
+  `load` to null and keep the qualitative band cue in the block text.
+- `effort` is separate from load: {{"method":"RPE","value":7,"scale":"1-10"}}.
+  Allowed methods are RPE, RIR, intent, velocity, heart_rate_zone, pace, and
+  max_effort_percent; use the method the source actually states. `intensity` is
+  a qualitative cue, not a substitute for a measured `load` or `effort`. `tempo`, when
+  stated, uses eccentric/pause_bottom/concentric/pause_top phases as seconds or
+  an explicit cue such as "X", never a number chain in `reps` or `duration`.
+- Keep one exact working value in each dose field. A source range is a bound:
+  choose its lower work/intensity value and longer rest unless the plan gives a
+  narrower fixed target. Preserve every fixed source value and safety cap.
+  For example, "3 sets x 8 reps @ 60% 1RM; rest 90 sec" maps to `sets`: 3,
+  `reps`: 8, `load`: {{"method":"percentage","value":60,"unit":"percent","ref":"1RM","display":"60% 1RM"}},
+  `rest`: {{"value":90,"unit":"seconds"}}. "2 sets x 20 m carries" maps to
+  `sets`: 2 and `distance`: {{"value":20,"unit":"meters"}}, with no `reps`.
+  "20 min easy run" maps to `duration`: {{"value":20,"unit":"minutes"}},
+  with no `reps`. "3 rounds x 30 sec work; rest 60 sec" maps to `rounds`: 3,
+  `work`: {{"value":30,"unit":"seconds"}}, `rest`: {{"value":60,"unit":"seconds"}}.
+  Safety limits and conditional adjustments may keep ranges.
 - Readiness is self-report ONLY. Do NOT output HRV, CNS recovery percentage,
   WHOOP-style recovery scores, strain scores, or any other biometric/wearable
   readiness field. Use the self-report today_card readiness_status and the 3-tap
@@ -2900,8 +2933,9 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   block_id) are optional metadata: use a stable source id when one exists,
   otherwise emit null. A missing identifier must never reject the card and must
   never be replaced with a generic visible fallback.
-- For each EXISTING physical exercise/drill, preserve its explicit volume,
-  load, rest, effort and cue exactly. When rest, effort or an execution cue is
+- For each EXISTING physical exercise/drill, preserve its fixed volume,
+  load, rest, effort and cue, and stay within any explicit range. When rest,
+  effort or an execution cue is
   absent, infer only those missing presentation fields from the athlete context,
   session objective/type, sport, goals and weaknesses, phase/fight proximity,
   fatigue, injury restrictions, equipment, and the exercise's energy-system or
@@ -3112,9 +3146,9 @@ EXACT ROOT SKELETON (match this shape; fill values from the plan, keep all keys)
               "mindset_anchor": {{"intent": "...", "focus_cue": "...", "reset_cue": "...", "confidence_anchor": "...", "context": "..."}},
               "blocks": [
                 {{
-                  "block_id": "blk-1", "block_type": "strength", "display_name": "...", "sets": 4, "reps": "4-6",
+                  "block_id": "blk-1", "block_type": "strength", "display_name": "...", "sets": 4, "reps": 4,
                   "load": {{"method": "percentage", "value": 85, "unit": "percent", "ref": "1RM", "display": "85% 1RM"}},
-                  "rest": {{"value": 180, "unit": "seconds"}}, "duration": {{"value": 45, "unit": "minutes"}},
+                  "rest": {{"value": 180, "unit": "seconds"}}, "duration": null,
                   "purpose": "...", "why_today": "...", "coaching_cues": ["..."],
                   "regression_options": ["..."], "substitutions": ["..."],
                   "progression_rule": "...", "stop_rules": ["..."]
