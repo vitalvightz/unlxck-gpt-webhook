@@ -196,8 +196,10 @@ export function selectBlockMetric(block: StructuredBlock | null | undefined): Bl
   const sets = finitePositiveNumber(block.sets) ? (block.sets as number) : null;
   const modeLikeReps = repsText ? isModeLikeReps(repsText) : false;
 
-  if ((!repsText || isTimeLikeReps(repsText) || modeLikeReps) && duration) {
-    metrics.push({ label: "Duration", value: duration });
+  if ((!repsText || isTimeLikeReps(repsText) || modeLikeReps || repsText === "1") && duration) {
+    // A single hold per set is timed work, not an informative "3 × 1" rep
+    // count. Keep its set count alongside the measured, unit-bearing hold.
+    metrics.push({ label: "Duration", value: sets && sets > 1 ? `${sets} × ${duration}` : duration });
   } else if (repsText && isTimeLikeReps(repsText)) {
     // The reps value is itself a duration ("30 seconds") and no separate
     // duration exists, so it is time, not a rep count — labelling it "Volume"
@@ -214,8 +216,11 @@ export function selectBlockMetric(block: StructuredBlock | null | undefined): Bl
     });
   } else if (repsText) {
     metrics.push({ label: "Volume", value: sets ? `${sets} × ${repsText}` : repsText });
+    if (duration) {
+      metrics.push({ label: "Duration", value: duration });
+    }
   } else if (duration) {
-    metrics.push({ label: "Duration", value: duration });
+    metrics.push({ label: "Duration", value: sets && sets > 1 ? `${sets} × ${duration}` : duration });
   }
 
   const distance = formatMeasured(block.distance);
@@ -1487,6 +1492,7 @@ export function weekLabel(week: StructuredWeek | null | undefined): string {
 // day (or a truly empty day) falls through to "Rest day.".
 
 const REST_DAY_TYPES = new Set(["rest", "recovery"]);
+const REST_HEADLINE_RE = /\b(rest|recovery|off|no planned session)\b/i;
 // `technical` is checked before `sparring` so a "technical only / no hard
 // sparring" headline is not mislabelled as a sparring day by the stray
 // "sparring" token, and `coach_led` is the catch-all for coach-owned contact.
@@ -1594,7 +1600,12 @@ export function classifySessionlessDay(
     // "scheduled" day. day_type is only allowed to override an unclassified
     // headline — a headline that names real combat/coach work always wins.
     if (kind === "scheduled" && dayType !== null && REST_DAY_TYPES.has(dayType)) {
-      return { kind: "rest", title: headline, tag: null, coachLed: false };
+      return {
+        kind: "rest",
+        title: REST_HEADLINE_RE.test(headline) ? headline : "No planned session",
+        tag: null,
+        coachLed: false,
+      };
     }
     return {
       kind,
