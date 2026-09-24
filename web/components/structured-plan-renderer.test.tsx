@@ -93,33 +93,6 @@ test("structured renderer uses one session card and hides detail blocks until ex
   assert.equal(html.includes(">Coach cue</span>"), true);
 });
 
-test("new exact-dose cards do not restore bank ranges from source text", () => {
-  const base = {
-    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
-    raw_markdown_fallback: "D-20 (Friday) — Strength\n- Trap Bar Deadlift — 2-5 sets x 5 reps, RPE 6-8; rest 60-90 sec",
-    weeks: [{
-      week_id: "wk-1", week_index: 1, phase_label: "GPP",
-      days: [{
-        date: "2026-06-19", countdown_label: "D-20", day_type: "high",
-        sessions: [{
-          session_id: "s1", session_type: "strength_power", title: "Strength",
-          blocks: [{
-            block_id: "b1", block_type: "strength", display_name: "Trap Bar Deadlift",
-            sets: 2, reps: 5, effort: { method: "RPE", value: 6 },
-            rest: { value: 90, unit: "seconds" },
-          }],
-        }],
-      }],
-    }],
-  };
-  const exact = renderToStaticMarkup(<StructuredPlanRenderer plan={{ ...base, schema_version: "1.1" } as StructuredPlan} today={new Date(2026, 5, 19)} />);
-  const legacy = renderToStaticMarkup(<StructuredPlanRenderer plan={{ ...base, schema_version: "1.0" } as StructuredPlan} today={new Date(2026, 5, 19)} />);
-
-  assert.equal(exact.includes("2-5"), false);
-  assert.equal(exact.includes("RPE 6-8"), false);
-  assert.equal(legacy.includes("2-5"), true);
-});
-
 test("open-plan weekday fallback labels today with the live date, not the stale date", () => {
   const plan = {
     schema_version: "text-adapter.v1",

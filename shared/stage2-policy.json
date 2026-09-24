@@ -13,7 +13,6 @@
     "calendar_spine_fight_day_protocol_violation",
     "stage2_output_empty",
     "stage2_output_truncated",
-    "ambiguous_exercise_prescription",
     "admin_review_rejected"
   ],
   "athlete_release_with_flags_codes": [

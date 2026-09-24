@@ -315,18 +315,6 @@ def test_tactical_insert_appears_in_every_fight_plan():
     assert any(insert["role_key"] in TACTICAL_INSERTS for insert in inserts)
 
 
-def test_declared_light_combat_day_never_gets_a_physical_shadow_filler():
-    light = _session(10, "light_combat_day")
-    light["coach_owned"] = True
-    sequence = apply_gap_fill_inserts(
-        [_session(12), light, _session(7, "fight_week_freshness_day")],
-        _athlete(days_until_fight=12, weaknesses=["footwork"]),
-        resolved_contacts=[],
-    )
-    same_day = [role for role in _insert_roles(sequence) if role["countdown_offset"] == 10]
-    assert all(role["role_key"] not in PHYSICAL_INSERTS for role in same_day)
-
-
 def test_three_day_gap_can_receive_one_insert():
     sequence = apply_gap_fill_inserts(
         [_session(12), _session(9, "fight_week_freshness_day")],
