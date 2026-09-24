@@ -416,6 +416,23 @@ def test_empty_shell_session_is_filled_not_duplicated():
     )
 
 
+def test_mental_rehearsal_copy_does_not_duplicate_tactical_picture():
+    entry = select_fight_visualization("kickboxing", "clinch_fighter", 7)
+    brief, _role = _locked_brief(entry, day_label="D-7")
+    plan = _plan_with_day("D-7", [{
+        "title": "Fight Visualisation",
+        "blocks": [
+            {"display_name": f"{entry.name} mental rehearsal", "duration": {"value": 6, "unit": "minutes"}},
+            {"display_name": entry.name, "duration": {"value": 8, "unit": "minutes"}},
+        ],
+    }])
+
+    result = merge_locked_structured_content(plan, brief)
+    blocks = result.plan["weeks"][0]["days"][0]["sessions"][0]["blocks"]
+    assert [block["display_name"] for block in blocks] == [entry.name]
+    assert blocks[0]["duration"] == {"value": entry.duration_min[1], "unit": "minutes"}
+
+
 def test_missing_day_is_fail_closed():
     entry = select_fight_visualization("boxing", "brawler", 3)
     brief, _role = _locked_brief(entry)

@@ -95,3 +95,25 @@ test("converted sparring title and summary survive when contact shares a day wit
     true,
   );
 });
+
+test("hard sparring context keeps its coaching cues inside the contact card", () => {
+  const day = {
+    date: "2026-08-26",
+    countdown_label: "D-20",
+    today_card: {
+      headline: "Self-Review Cues",
+      coach_led_contact: "Hard sparring",
+      mindset_anchor: {
+        focus_cue: "Control contact and protect energy for the week.",
+        reset_cue: "Breathe out on your guard after each exchange.",
+        intent: "Keep freshness while doing declared sparring.",
+      },
+    },
+    sessions: [{ session_id: "review", title: "Self-Review Cues", blocks: [] }],
+  } as StructuredDay;
+
+  const html = renderToStaticMarkup(<DaySessionContext day={day} />);
+  assert.match(html, /class="cm-day-context cm-day-context-contact"/);
+  assert.match(html, /class="sp-coaching"/);
+  assert.match(html, /Control contact and protect energy for the week/);
+});

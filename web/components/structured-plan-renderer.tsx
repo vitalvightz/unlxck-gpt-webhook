@@ -929,7 +929,7 @@ export function DaySessionContext({ day }: { day: StructuredDay }) {
   }
 
   return (
-    <div className="cm-day-context">
+    <div className={`cm-day-context${coachLedContact ? " cm-day-context-contact" : ""}`}>
       {showLightTechnicalContext ? (
         <LightTechnicalDayContext tag={sessionlessDay.tag} />
       ) : null}
