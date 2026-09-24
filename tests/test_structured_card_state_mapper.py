@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from copy import deepcopy
 
 import pytest
 
@@ -275,3 +276,34 @@ def test_plan_detail_carries_planner_contact_after_locked_tactical_merge(
 
     assert [session.title for session in mapped_day.sessions] == ["Tactical Focus"]
     assert mapped_day.today_card.coach_led_contact == expected_contact
+@pytest.mark.parametrize("legacy_role", [False, True])
+def test_saved_light_technical_day_is_projected_as_declared_contact_without_mutating_row(legacy_role):
+    saved = _valid_plan()
+    saved["schema_version"] = "1.0"
+    day = saved["weeks"][0]["days"][0]
+    day["today_card"]["headline"] = "Technical Shadow Rhythm"
+    day["sessions"] = [{
+        "session_id": "shadow", "session_type": "skill", "title": "Technical Shadow Rhythm",
+        "objective": "Light rhythm", "mindset_anchor": {"intent": "", "focus_cue": "", "reset_cue": ""}, "blocks": [{
+            "block_id": "shadow-block", "block_type": "skill", "display_name": "Technical Shadow Rhythm",
+        }],
+    }]
+    brief = {"weekly_role_map": {"weeks": [{
+        "phase": "SPP",
+        "calendar_days": [{"weekday": "Fri", "d_day": 15, "calendar_date": "2026-05-29"}],
+        "session_roles": [] if legacy_role else [{"role_key": "light_combat_day", "scheduled_day_hint": "Friday", "coach_owned": True}],
+        "declared_support_work_days": ["Friday"],
+    }]}}
+    row = _row(debug={"status": "valid", "schema_version": "1.0"})
+    row["structured_plan"] = saved
+    row["planning_brief"] = brief
+    original = deepcopy(saved)
+
+    detail = _map_plan_detail(row, include_admin=False)
+    displayed = detail.outputs.structured_plan
+    assert displayed is not None
+    projected = displayed.model_dump(mode="json")
+    shown_day = projected["weeks"][0]["days"][0]
+    assert shown_day["today_card"]["headline"] == "Light Combat / Technical"
+    assert shown_day["sessions"] == []
+    assert row["structured_plan"] == original

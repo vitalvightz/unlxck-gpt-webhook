@@ -1944,6 +1944,17 @@ def apply_gap_fill_inserts(
     # target or mark a day as an exclusive hard-sparring day. This keeps the filler
     # pre-check and the final governor reading one existing-contact set.
     contact_offsets = resolved_contact_offsets(resolved_contacts)
+    # Declared light-combat days are coach-owned contact too. They are present
+    # in the sequence, not in the hard-sparring resolver's occurrence list.
+    # Prevent a generic physical gap filler (especially Technical Shadow
+    # Rhythm) from impersonating the athlete's own technical appointment.
+    contact_offsets |= {
+        offset
+        for role in ordered
+        if role.get("role_key") == "light_combat_day"
+        and role.get("coach_owned") is True
+        and (offset := _role_offset(role)) is not None
+    }
 
     existing_exclusive_offsets = {
         offset

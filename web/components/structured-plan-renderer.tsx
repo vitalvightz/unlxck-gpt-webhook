@@ -301,6 +301,7 @@ export function MindsetAnchorCard({
 // component. Null (no provider) keeps the unchanged "Rehab" wording.
 const RehabLabelContext = createContext<RehabLabelPolicy | null>(null);
 const PlanSourceTextContext = createContext<string | null>(null);
+const ExactDoseCardContext = createContext(false);
 const PlanSafetyTextContext = createContext<string[]>([]);
 
 /** Relays the Rehab/Prehab policy to the block cards below it. Standalone
@@ -338,9 +339,12 @@ export function BlockCard({
 }) {
   const rehabLabelPolicy = useContext(RehabLabelContext);
   const sourceText = useContext(PlanSourceTextContext);
+  const exactDoseCard = useContext(ExactDoseCardContext);
   const planSafetyTexts = useContext(PlanSafetyTextContext);
   const title = cleanText(block.display_name) || "Block";
-  const sourceOverrides = getSourcePrescriptionRangeOverrides(sourceText, title, sourceCountdown);
+  const sourceOverrides = exactDoseCard
+    ? { sets: null, rest: null, effort: null }
+    : getSourcePrescriptionRangeOverrides(sourceText, title, sourceCountdown);
   const blockType = cleanText(block.block_type);
   const load = formatBlockLoad(block.load);
   const metrics = applySourceSetRange(selectBlockMetric(block), sourceOverrides.sets);
@@ -2183,6 +2187,7 @@ export function StructuredPlanRenderer({
   return (
     <RehabLabelProvider policy={rehabLabelPolicy}>
     <PlanSourceTextContext.Provider value={rawFallback}>
+    <ExactDoseCardContext.Provider value={plan.schema_version === "1.1"}>
     <PlanSafetyTextContext.Provider value={safetyOwnershipTexts}>
     <div className="sp-root cm-root">
       {weeks.length > 0 ? (
@@ -2351,6 +2356,7 @@ export function StructuredPlanRenderer({
       ) : null}
     </div>
     </PlanSafetyTextContext.Provider>
+    </ExactDoseCardContext.Provider>
     </PlanSourceTextContext.Provider>
     </RehabLabelProvider>
   );

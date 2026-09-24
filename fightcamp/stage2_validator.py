@@ -13,6 +13,7 @@ from .late_selector_windows import classify_late_selector_window
 from .fight_day_override import FIGHT_DAY_PROTOCOL_TEXT
 from .stage2_render_guards import _has_active_injury_from_athlete_model
 from .calendar_context import role_d_day
+from .exact_prescription import ambiguous_working_dose, missing_working_units
 
 _BULLET_PREFIX = compile_regex("stage2_validator", "bullet_prefix")
 _PHASE_HEADER = PHASE_HEADER_PATTERN
@@ -3848,6 +3849,22 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     if not plan_lines:
         errors.append(_issue(code="stage2_output_empty", message="Stage 2 output is empty.", severity="blocker", confidence="high"))
     errors.extend(_stage2_output_incomplete_errors(final_plan_text))
+    dose_lines = [line for block in countdown_blocks for line in block["lines"]] if countdown_blocks else plan_lines
+    for line in dose_lines:
+        cleaned = line.strip()
+        if re.match(r"^(?:[-*•]\s*)?(?:why|cue|purpose|easier|regress(?:ion)?|progress(?:ion)?|stop|safety|coach call|adjustment)\s*:", cleaned, re.I):
+            continue
+        if re.match(r"^[-*•]\s*(?:if|when|reduce|stop|regress|progress)\b", cleaned, re.I):
+            continue
+        is_prescription = bool(re.match(r"^(?:[-*•]\s+|(?:prescription|dose|work|rest|intensity)\s*:)", cleaned, re.I))
+        is_prescription = is_prescription or bool(re.match(r"^[^:]{3,70}\s+[—–]\s+", cleaned))
+        is_prescription = is_prescription or bool(re.match(r"^[A-Z][^:]{3,70}:\s+", cleaned))
+        if is_prescription and (ambiguous_working_dose(cleaned) or missing_working_units(cleaned)):
+            errors.append(_issue(
+                code="ambiguous_exercise_prescription",
+                message="Exercise instructions need one exact, labelled working dose.",
+                severity="blocker", confidence="high", line=cleaned,
+            ))
     errors.extend(
         _issue(code="restriction_violation", message=f"Restriction {hit['restriction']} matched line.", severity="blocker", confidence="high", line=hit["line"], restriction=hit["restriction"], strength=hit.get("strength"))
         for hit in restricted_hits

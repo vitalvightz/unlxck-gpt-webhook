@@ -31,7 +31,7 @@ from pydantic import BaseModel, Field, ValidationError
 # Bump this whenever the structured shape changes in a backward-incompatible
 # way. Stored plans keep the version they were generated with so the renderer
 # can branch on it.
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
 
 
 # ---------------------------------------------------------------------------

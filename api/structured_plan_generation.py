@@ -1308,7 +1308,7 @@ def _normalize_today_card(value: Any) -> dict[str, Any]:
 
 
 _COACH_LED_CONTACT_RE = re.compile(
-    r"\b(coach|spar|technical\s+only|no\s+hard\s+sparring|boxing|pad\s?work|pads|mitts?)\b",
+    r"\b(coach|spar|technical\s+only|light\s+(?:technical\s+)?combat|no\s+hard\s+sparring|boxing|pad\s?work|pads|mitts?)\b",
     re.I,
 )
 
@@ -2619,6 +2619,47 @@ def build_structured_plan_outcome(
     if raw_data is None:
         return StructuredPlanOutcome(status="not_attempted")
 
+    def _card_dose_errors(candidate: Any) -> list[str]:
+        if not isinstance(candidate, dict):
+            return []
+        if candidate.get("schema_version") not in (None, "", SCHEMA_VERSION):
+            return [f"new card must use schema {SCHEMA_VERSION}"]
+        from fightcamp.exact_prescription import ambiguous_working_dose
+        errors: list[str] = []
+        for week in candidate.get("weeks") or []:
+            if not isinstance(week, dict):
+                continue
+            for day in week.get("days") or []:
+                if not isinstance(day, dict):
+                    continue
+                for session in day.get("sessions") or []:
+                    if not isinstance(session, dict):
+                        continue
+                    for block in session.get("blocks") or []:
+                        if not isinstance(block, dict):
+                            continue
+                        for dose_field in ("display_name", "sets", "reps", "rounds", "rest", "work", "duration", "load", "effort"):
+                            value = block.get(dose_field)
+                            values = (
+                                (value.get("value"), value.get("display")) if dose_field == "load" and isinstance(value, dict)
+                                else (value.get("value"),) if isinstance(value, dict)
+                                else (value,)
+                            )
+                            if any(
+                                ambiguous_working_dose(str(item or ""))
+                                or (dose_field in {"reps", "load"} and bool(re.search(
+                                    r"\b\d+\s*[x×]\s*\d+\b", str(item or ""), re.I
+                                )))
+                                or (dose_field != "display_name" and bool(re.fullmatch(
+                                    r"\s*\d+(?:\.\d+)?\s*[-–—]\s*\d+(?:\.\d+)?\s*", str(item or "")
+                                )))
+                                for item in values
+                            ):
+                                errors.append(f"ambiguous card {dose_field}: {block.get('display_name')!r}")
+        return errors
+
+    candidate_dose_errors = _card_dose_errors(raw_data)
+
     cleaned = _strip_and_normalize(
         reconcile_rehab_drill_ids(
             reconcile_late_fight_week_context(raw_data, planning_brief),
@@ -2642,12 +2683,13 @@ def build_structured_plan_outcome(
                 cleaned = salvaged
                 first = salvaged_parse
                 salvage_warnings = candidate_warnings
-    first_errors = list(first.errors)
+    first_errors = list(first.errors) + candidate_dose_errors
     if first.ok and first.plan is not None:
         plan_dict = _with_deterministic_support(first.plan.model_dump(mode="json"), computed_support)
         plan_dict = _merge_locked_content(plan_dict, planning_brief)
         unfaithful = check_structured_faithfulness(plan_dict, raw_markdown, planning_brief)
         first_errors, first_warnings = _split_faithfulness(unfaithful)
+        first_errors.extend(candidate_dose_errors)
         first_warnings = [*salvage_warnings, *first_warnings]
         first_errors.extend(_open_plan_contract_errors(plan_dict, planning_brief))
         if not first_errors:
@@ -2663,8 +2705,11 @@ def build_structured_plan_outcome(
 
     # Strip biometric keys + conservatively normalize anything the repair attempt
     # introduces too, mirroring the first-pass treatment.
+    repaired_dose_errors: list[str] = []
     def _clean_repair(data: Any, errors: list[str]) -> Any:
-        return _strip_and_normalize(repair_fn(data, errors))
+        repaired_raw = repair_fn(data, errors)
+        repaired_dose_errors[:] = _card_dose_errors(repaired_raw)
+        return _strip_and_normalize(repaired_raw)
 
     if first.ok and first.plan is not None:
         # The generic schema can be valid while the open-plan scheduling contract
@@ -2690,6 +2735,7 @@ def build_structured_plan_outcome(
         plan_dict = _merge_locked_content(plan_dict, planning_brief)
         unfaithful = check_structured_faithfulness(plan_dict, raw_markdown, planning_brief)
         repaired_errors, repaired_warnings = _split_faithfulness(unfaithful)
+        repaired_errors.extend(repaired_dose_errors)
         repaired_errors.extend(_open_plan_contract_errors(plan_dict, planning_brief))
         if repaired_errors:
             return StructuredPlanOutcome(
@@ -2837,6 +2883,10 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
 - Every block load MUST be a machine-readable object, NEVER a string. Use:
   {{"method": "percentage", "value": 85, "unit": "percent", "ref": "1RM",
   "display": "85% 1RM"}}. Do NOT output loads like "85%" as plain strings.
+- Give each exercise one exact working dose. Copy sets, reps, load or effort,
+  work duration and rest into their separate numeric fields with units. Never
+  carry a source-bank range or an unlabeled chain such as 8x8x30 into a card.
+  Keep conditional safety and progression guidance in their own text fields.
 - Readiness is self-report ONLY. Do NOT output HRV, CNS recovery percentage,
   WHOOP-style recovery scores, strain scores, or any other biometric/wearable
   readiness field. Use the self-report today_card readiness_status and the 3-tap
@@ -2870,7 +2920,7 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   * A day header like `D-18 (Wednesday) — Power Transfer Touch` starts a day.
     A following `Why:` line is the session/day objective, not a separate block.
   * Bulleted prescriptions such as `- Band-Resisted Jab-Cross Primer — 3 x
-    4-6 reps...` are blocks. Carry labelled follow-up lines into that same block:
+    5 reps...` are blocks. Carry labelled follow-up lines into that same block:
     `Purpose`, `Why today`, `Progression/regression/stop`, `Progression`,
     `Regression`, `Stop`, `Duration`, `Prescription`, `Output`, `Intensity`, `Cue`,
     `Step 1`/`Step 2`/…, `Intent`, `Focus`, `Reset`, `Anchor`, `Context`,
@@ -3112,7 +3162,7 @@ EXACT ROOT SKELETON (match this shape; fill values from the plan, keep all keys)
               "mindset_anchor": {{"intent": "...", "focus_cue": "...", "reset_cue": "...", "confidence_anchor": "...", "context": "..."}},
               "blocks": [
                 {{
-                  "block_id": "blk-1", "block_type": "strength", "display_name": "...", "sets": 4, "reps": "4-6",
+                  "block_id": "blk-1", "block_type": "strength", "display_name": "...", "sets": 4, "reps": 5,
                   "load": {{"method": "percentage", "value": 85, "unit": "percent", "ref": "1RM", "display": "85% 1RM"}},
                   "rest": {{"value": 180, "unit": "seconds"}}, "duration": {{"value": 45, "unit": "minutes"}},
                   "purpose": "...", "why_today": "...", "coaching_cues": ["..."],
