@@ -195,8 +195,10 @@ export function selectBlockMetric(block: StructuredBlock | null | undefined): Bl
   // The set multiplier must be a finite positive number, or it is omitted.
   const sets = finitePositiveNumber(block.sets) ? (block.sets as number) : null;
   const modeLikeReps = repsText ? isModeLikeReps(repsText) : false;
+  const timedHold =
+    repsText === "1" && /\b(hold|isometric)\b/i.test(cleanText(block.display_name) ?? "");
 
-  if ((!repsText || isTimeLikeReps(repsText) || modeLikeReps || repsText === "1") && duration) {
+  if ((!repsText || isTimeLikeReps(repsText) || modeLikeReps || timedHold) && duration) {
     // A single hold per set is timed work, not an informative "3 × 1" rep
     // count. Keep its set count alongside the measured, unit-bearing hold.
     metrics.push({ label: "Duration", value: sets && sets > 1 ? `${sets} × ${duration}` : duration });

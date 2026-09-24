@@ -622,12 +622,25 @@ test("prefers duration over reps when reps looks like a time string", () => {
 test("timed holds show their measured seconds instead of a one-rep volume", () => {
   assert.deepEqual(
     selectBlockMetric({
+      display_name: "Punch-Specific Max Isometric Hold",
       sets: 3,
       reps: 1,
       duration: { value: 10, unit: "seconds" },
       rest: { value: 180, unit: "seconds" },
     } as never),
     [{ label: "Duration", value: "3 × 10 seconds" }],
+  );
+  assert.deepEqual(
+    selectBlockMetric({
+      display_name: "Single-rep strength drill",
+      sets: 3,
+      reps: 1,
+      duration: { value: 10, unit: "seconds" },
+    } as never),
+    [
+      { label: "Volume", value: "3 × 1" },
+      { label: "Duration", value: "10 seconds" },
+    ],
   );
   assert.deepEqual(
     selectBlockMetric({ sets: 3, duration: { value: 10, unit: "seconds" } } as never),
