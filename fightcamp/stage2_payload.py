@@ -59,7 +59,6 @@ from .bank_authority import original_bank_entries
 from .bank_schema import has_meaningful_fulfillment_authority
 from .late_camp_role_morph import apply_late_camp_role_morph
 from .prescription_resolver import apply_effective_strength_prescriptions
-from .exact_prescription import resolve_working_prescription
 from .session_composition import (
     _conditioning_prescription,
     _selected_coaching_notes,
@@ -2488,7 +2487,6 @@ RULE 6 — SPORT SPECIFICITY
 The plan must read as a real combat-sport camp for this athlete. Conditioning, power work, weekly rhythm, and taper choices must match the athlete's sport, style, fight date, fatigue, injury context, weight cut, equipment, goals, weak areas, sparring/contact schedule, and phase.
 
 RULE 6A — SESSION COACHING STANDARD
-Give every exercise ONE exact working prescription: fixed sets, reps, rounds, work time, rest time, and load or effort where applicable. Treat bank ranges as bounds to resolve using the phase, session role, readiness and taper ceiling; when no narrower target exists choose the lower workload/intensity bound and longer rest. Use explicit units and labels. Never print an exercise set/rep/load/work/rest range, an unlabeled numeric chain such as 8x8x30, or a guessed absolute weight. Conditional Easier/Stop guidance is separate from the working dose.
 Every app-owned session must include exact drill/exercise, sets/reps/duration, rest, intensity or RPE, one concise execution cue, purpose, why today, and a progression/regression or stop rule. If a selected drill or exercise has an authoritative volume but does not supply rest or intensity/RPE, create and state the missing value using a conservative dose appropriate to its exercise type, phase, fight proximity, and safety restrictions. Missing rest or effort does not make an otherwise authorised exercise an unresolved-dose conflict. Never exceed an authoritative RPE, volume, or rest constraint when one is supplied. Write the execution instruction as `Cue: ...`; it must tell the athlete how to perform the movement, not why it was selected. From D-10 to the fight, that line must offer regressions and stop rules only — never a progression/advance option (no "add load/sets", "heavier ball", "stronger band", or "to progress"). Strength & conditioning sessions (strength, power, alactic, aerobic, fight-pace, neural speed work) lock earlier: from D-13 they too offer regressions and stop rules only. Fillers, rehab, mobility, and light recovery work may still progress on D-13 to D-11; D-14 and earlier may progress everywhere. Do not render generic slot labels such as "Strength", "Aerobic support", or "Low-load mobility support" without actual coaching content.
 If selected_plan.weekly_role_map.weeks[*].session_count_summary.reduced_from_planned is true, explain the smaller week once in the week lead using the provided reduction_reasons. Do not restore suppressed sessions to make the week look fuller.
 If a wrist sprain or wrist restriction exists, repeat the exact restrictions and include wrist-safe isometric or rehab exposure where appropriate; do not prescribe loaded wrist extension, gripping volume, catching, front-rack, or punch-volume work that violates the restriction.
@@ -3112,7 +3110,6 @@ def _closed_membership_exercise_lines(
                 or prescription.get("text")
             )
         prescription = str(prescription or "").strip()
-        prescription = resolve_working_prescription(prescription)
         if not name:
             unresolved.append({
                 "index": index, "name": name, "reason": "missing_name",

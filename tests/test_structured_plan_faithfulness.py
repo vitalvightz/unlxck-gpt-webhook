@@ -676,48 +676,6 @@ def test_prescription_gate_still_matches_after_choice_title_is_split():
     assert any("dropped explicit source rest" in item for item in violations)
     assert any("dropped explicit source effort" in item for item in violations)
     assert any("dropped explicit source cue" in item for item in violations)
-def test_exact_card_rejects_changed_dose_and_accepts_matching_fields():
-    source = """D-20 (Monday) — Strength
-- Trap-Bar Romanian Deadlift. 3 sets x 6 reps @ RPE 7. Rest 90 sec.
-"""
-    block = {
-        "block_type": "strength", "display_name": "Trap-Bar Romanian Deadlift",
-        "sets": 3, "reps": 6, "effort": {"method": "RPE", "value": 7},
-        "rest": {"value": 90, "unit": "seconds"},
-    }
-    plan = {"schema_version": "1.1", "weeks": [{"days": [{"sessions": [{"blocks": [block]}]}]}]}
-    assert check_structured_faithfulness(plan, source) == []
-    block["sets"] = 4
-    block["rest"]["value"] = 60
-    violations = check_structured_faithfulness(plan, source)
-    assert any("sets disagrees" in item for item in violations)
-    assert any("rest disagrees" in item for item in violations)
-
-
-def test_exact_card_requires_timed_rehab_hold_in_a_measured_field():
-    source = "D-20 (Monday) — Rehab\n- Calf Isometric: 3 sets x 20 sec hold; rest 60 sec.\n"
-    block = {
-        "block_type": "rehab", "display_name": "Calf Isometric", "sets": 3,
-        "work": {"value": 20, "unit": "seconds"}, "rest": {"value": 60, "unit": "seconds"},
-    }
-    plan = {"schema_version": "1.1", "weeks": [{"days": [{"sessions": [{"blocks": [block]}]}]}]}
-    assert check_structured_faithfulness(plan, source) == []
-    block["work"]["value"] = 30
-    assert any("timed hold disagrees" in issue for issue in check_structured_faithfulness(plan, source))
-
-
-def test_exact_card_rejects_changed_load_and_work_time():
-    source = "D-20 (Monday) — Intervals\n- Bike Sprint: 3 rounds; work 20 sec; rest 90 sec; load 60 kg.\n"
-    block = {
-        "block_type": "conditioning", "display_name": "Bike Sprint", "rounds": 3,
-        "work": {"value": 30, "unit": "seconds"},
-        "rest": {"value": 90, "unit": "seconds"},
-        "load": {"method": "absolute", "value": 50, "unit": "kg"},
-    }
-    plan = {"schema_version": "1.1", "weeks": [{"days": [{"sessions": [{"blocks": [block]}]}]}]}
-    violations = check_structured_faithfulness(plan, source)
-    assert any("work disagrees" in issue for issue in violations)
-    assert any("load disagrees" in issue for issue in violations)
 
 
 # --- introduced exercises are rejected -------------------------------------

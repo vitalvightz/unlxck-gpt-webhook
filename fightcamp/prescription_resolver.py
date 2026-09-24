@@ -36,7 +36,6 @@ import re
 from typing import Any
 
 from .calendar_context import role_d_day
-from .exact_prescription import label_strength_sets_reps, resolve_working_prescription
 from .late_camp_role_morph import (
     FULL_STRENGTH_ROLE_KEYS,
     STRENGTH_NEURAL_MORPH_MAX_D,
@@ -102,7 +101,7 @@ _NON_REP_SECOND_TERM = re.compile(
 
 def _parse_sets_reps(prescription: str) -> tuple[int | None, int | None]:
     text = str(prescription or "")
-    for match in re.finditer(r"\b(\d+)\s*(?:sets?\s*)?[xX×]\s*(\d+)\b", text, re.I):
+    for match in re.finditer(r"\b(\d+)\s*[xX×]\s*(\d+)\b", text):
         if _NON_REP_SECOND_TERM.match(text[match.end():]):
             # Distance/time dose: leave it to the non-rep handling, which keeps
             # the unit and reduces the leading count instead.
@@ -412,18 +411,9 @@ def _format_effective_prescription(
         return base_prescription
     if sets == 0 or reps == 0:
         return _NO_LOADED_LIFTING
-    dose = f"{sets} {'set' if sets == 1 else 'sets'} x {reps} {'rep' if reps == 1 else 'reps'}"
+    dose = f"{sets} x {reps}"
     if rpe_cap:
-        dose += f" @ RPE {rpe_cap}"
-    rest = re.search(
-        r"\brest\s*[:=]?\s*(\d+(?:\.\d+)?)\s*(s|sec|seconds?|min|minutes?)\b"
-        r"|\b(\d+(?:\.\d+)?)\s*(s|sec|seconds?|min|minutes?)\s*rest\b",
-        base_prescription, re.I,
-    )
-    if rest:
-        value = rest.group(1) or rest.group(3)
-        unit = rest.group(2) or rest.group(4)
-        dose += f"; rest {value} {unit}"
+        dose += f" @ RPE {rpe_cap} max"
     return dose
 
 
@@ -599,18 +589,17 @@ def resolve_strength_slot_prescription(
     """
     selected = _slot_selected(slot)
     base_prescription = str(selected.get("prescription") or "").strip()
-    working_base = label_strength_sets_reps(resolve_working_prescription(base_prescription))
     cap = role.get("strength_dose_cap") if isinstance(role.get("strength_dose_cap"), dict) else None
     if not cap or not base_prescription:
         return {
             "base_prescription": base_prescription,
-            "effective_prescription": working_base,
+            "effective_prescription": base_prescription,
             "dose_authority": "exercise_bank",
         }
 
     semantic_kind = _role_kind(slot)
     kind = force_kind or semantic_kind
-    base_sets, base_reps = _parse_sets_reps(working_base)
+    base_sets, base_reps = _parse_sets_reps(base_prescription)
     sets, reps, loaded = _effective_counts(
         base_sets=base_sets,
         base_reps=base_reps,
@@ -624,13 +613,9 @@ def resolve_strength_slot_prescription(
     if reduction and loaded and isinstance(sets, int) and sets > 1:
         sets = max(1, sets - reduction)
 
-    rpe_cap_raw = str(role.get("rpe_cap") or "").strip()
-    rpe_cap = (
-        resolve_working_prescription(f"RPE {rpe_cap_raw}").removeprefix("RPE ")
-        if rpe_cap_raw else None
-    )
+    rpe_cap = str(role.get("rpe_cap") or "").strip() or None
     effective = _format_effective_prescription(
-        base_prescription=working_base,
+        base_prescription=base_prescription,
         sets=sets,
         reps=reps,
         rpe_cap=rpe_cap,

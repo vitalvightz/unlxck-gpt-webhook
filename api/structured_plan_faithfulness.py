@@ -41,7 +41,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import re
 from typing import Any
-from fightcamp.exact_prescription import ambiguous_working_dose
 
 # Violation prefixes so findings are greppable in debug metadata / logs.
 INTRODUCED = "INTRODUCED"
@@ -176,106 +175,7 @@ def _explicit_prescription_violations(plan: dict[str, Any], source: str) -> list
                             violations.append(
                                 f"{PRESCRIPTION}: {name!r} dropped explicit source {field_name}"
                             )
-                    if str(plan.get("schema_version") or "") != "1.1":
-                        continue
-                    if ambiguous_working_dose(name):
-                        violations.append(f"{PRESCRIPTION}: {name!r} has ambiguous card dose")
-                    exact = _exact_source_dose(segment)
-                    for dose_field, expected in exact.items():
-                        actual = block.get(dose_field)
-                        if dose_field == "load" and isinstance(actual, dict):
-                            source_unit = "percent" if re.search(rf"\b{expected:g}\s*%", segment) else (
-                                "kg" if re.search(rf"\b{expected:g}\s*kgs?\b", segment, re.I) else "lb"
-                            )
-                            actual_unit = str(actual.get("unit") or "").lower()
-                            valid_units = {"percent", "%"} if source_unit == "percent" else (
-                                {"kg", "kgs"} if source_unit == "kg" else {"lb", "lbs"}
-                            )
-                            if actual_unit not in valid_units:
-                                violations.append(f"{PRESCRIPTION}: {name!r} load unit disagrees with source {source_unit}")
-                                continue
-                        if dose_field == "effort" and isinstance(actual, dict) and str(actual.get("method") or "").upper() != "RPE":
-                            violations.append(f"{PRESCRIPTION}: {name!r} effort method disagrees with source RPE")
-                            continue
-                        if dose_field in {"rest", "work", "duration", "load", "effort"}:
-                            if isinstance(actual, dict):
-                                unit = str(actual.get("unit") or "").lower()
-                                actual = actual.get("value")
-                                if dose_field in {"rest", "work", "duration"} and unit.startswith("min") and actual is not None:
-                                    actual = float(actual) * 60
-                            else:
-                                actual = None
-                        if dose_field == "reps" and isinstance(actual, str) and actual.isdigit():
-                            actual = int(actual)
-                        try:
-                            matches = actual is not None and float(actual) == expected
-                        except (TypeError, ValueError):
-                            matches = False
-                        if not matches:
-                            violations.append(
-                                f"{PRESCRIPTION}: {name!r} {dose_field} disagrees with exact source dose {expected:g}"
-                            )
-                    hold = re.search(r"\b(\d+(?:\.\d+)?)\s*(?:s|sec|seconds?)\s*hold\b", segment, re.I)
-                    if hold:
-                        target = float(hold.group(1))
-                        measured = []
-                        for field in ("work", "duration"):
-                            item = block.get(field)
-                            if not isinstance(item, dict):
-                                continue
-                            try:
-                                amount = float(item.get("value"))
-                            except (TypeError, ValueError):
-                                continue
-                            unit = str(item.get("unit") or "").lower()
-                            measured.append(amount * 60 if unit.startswith("min") else amount)
-                        if target not in measured:
-                            violations.append(f"{PRESCRIPTION}: {name!r} timed hold disagrees with source {target:g} seconds")
     return violations
-
-
-def _exact_source_dose(segment: str) -> dict[str, float]:
-    """Read only unambiguous, explicitly labelled quantities from a source block."""
-    result: dict[str, float] = {}
-    dose = " ".join(
-        line.strip() for index, line in enumerate(segment.splitlines())
-        if index == 0 or re.match(r"\s*(?:prescription|duration|output|intensity|rest|work)\s*:", line, re.I)
-    )
-    pairs = re.search(r"\b(\d+)\s*(?:sets?\s*(?:x|×|of)\s*|[x×]\s*)(\d+)\s*reps?\b", dose, re.I)
-    if pairs:
-        result["sets"] = float(pairs.group(1))
-        result["reps"] = float(pairs.group(2))
-    else:
-        for field, pattern in (
-            ("sets", r"\b(\d+)\s*sets?\b"),
-            ("reps", r"\b(\d+)\s*reps?\b"),
-        ):
-            match = re.search(pattern, dose, re.I)
-            if match:
-                result[field] = float(match.group(1))
-    for field, pattern in (
-        ("rest", r"\brest\s*[:=]?\s*(\d+(?:\.\d+)?)\s*(?:s|sec|seconds?)\b|\b(\d+(?:\.\d+)?)\s*(?:s|sec|seconds?)\s*rest\b"),
-        ("work", r"\bwork\s*[:=]?\s*(\d+(?:\.\d+)?)\s*(?:s|sec|seconds?)\b|\b(\d+(?:\.\d+)?)\s*(?:s|sec|seconds?)\s*work\b"),
-        ("effort", r"\bRPE\s*[:=]?\s*(\d+(?:\.\d+)?)\b"),
-        ("load", r"\b(\d+(?:\.\d+)?)\s*%"),
-    ):
-        match = re.search(pattern, dose, re.I)
-        if match:
-            result[field] = float(next(value for value in match.groups() if value is not None))
-    for field in ("rest", "work", "duration"):
-        if field in result:
-            continue
-        match = re.search(rf"\b{field}\s*[:=]?\s*(\d+(?:\.\d+)?)\s*(min|mins|minutes?)\b", dose, re.I)
-        if match:
-            result[field] = float(match.group(1)) * 60
-    rounds = re.search(r"\b(\d+)\s*rounds?\b", dose, re.I)
-    if rounds:
-        result["rounds"] = float(rounds.group(1))
-    if "load" not in result:
-        absolute = re.search(r"\b(\d+(?:\.\d+)?)\s*(?:kg|kgs|lb|lbs)\b", dose, re.I)
-        if absolute:
-            result["load"] = float(absolute.group(1))
-    return result
 
 
 def _day_header_dday(line: str) -> int | None:

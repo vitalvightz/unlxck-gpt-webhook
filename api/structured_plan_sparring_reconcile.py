@@ -26,9 +26,9 @@ reconciles the converted plan against the deterministic schedule:
   contact surfaced on a dedicated ``today_card.coach_led_contact`` field so it
   renders as a context block above the session cards.
 
-Technical-contact sessions keep their app work unless a single generic
-``Technical Shadow Rhythm`` filler merely duplicates the athlete's declared
-light-combat appointment. The function mutates the plan dict in place and returns a list of
+Technical-contact session headlines and blocks are never overwritten or
+filtered: the coach-owned contact is added alongside, never in place of, the
+app work. The function mutates the plan dict in place and returns a list of
 human-readable change notes for admin/debug telemetry. It never raises: a
 malformed brief or plan is a no-op.
 """
@@ -41,7 +41,6 @@ from fightcamp.weekly_schedule_view import extract_weekly_schedule
 from fightcamp.sparring_dose_planner import hard_sparring_cutoff, contact_safety_reasons
 from fightcamp.declared_combat_ownership import is_declared_light_combat_role
 from fightcamp.combat_render_authority import resolve_declared_contact_load
-from fightcamp.declared_combat_ownership import LIGHT_COMBAT_ATHLETE_FACING_LABEL
 
 # effective_load values from the deterministic schedule that mean coach-owned
 # contact work the athlete must see as its own card.
@@ -198,20 +197,6 @@ def _is_allowed_nontechnical_contact_filler(session: Any) -> bool:
     if _BLOCKED_CONTACT_FILLER_RE.search(text) or _HIGH_RPE_RE.search(text):
         return False
     return bool(_ALLOWED_HARD_DAY_FILLER_RE.search(text))
-
-
-def _is_redundant_shadow_filler(session: Any) -> bool:
-    if not isinstance(session, dict):
-        return False
-    if str(session.get("title") or "").strip().lower() == "technical shadow rhythm":
-        return True
-    blocks = session.get("blocks")
-    return bool(
-        isinstance(blocks, list)
-        and len(blocks) == 1
-        and isinstance(blocks[0], dict)
-        and str(blocks[0].get("display_name") or "").strip().lower() == "technical shadow rhythm"
-    )
 
 
 def _ban_clamped_load(load: str, d_day: int | None, athlete_snapshot: dict[str, Any] | None = None) -> str:
@@ -389,12 +374,6 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
         role_phase = str(week.get("phase") or "").strip().upper()
         session_roles = week.get("session_roles")
         role_entries = session_roles if isinstance(session_roles, list) else []
-        # A declared hard day owns an overlapping light declaration. Process it
-        # first so the D-day dedupe never downgrades hard contact to light combat.
-        role_entries = sorted(
-            role_entries,
-            key=lambda role: 0 if isinstance(role, dict) and role.get("role_key") == "hard_sparring_day" else 1,
-        )
         for role in role_entries:
             if not isinstance(role, dict):
                 continue
@@ -409,23 +388,10 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
                 d_day = _parse_dday(
                     role.get("scheduled_countdown_label") or role.get("countdown_label")
                 )
-            calendar_day = next(
-                (
-                    day for day in week.get("calendar_days") or []
-                    if isinstance(day, dict)
-                    and str(day.get("weekday") or "").strip().lower()[:3]
-                    == str(role.get("scheduled_day_hint") or "").strip().lower()[:3]
-                ),
-                {},
-            )
-            if d_day is None and isinstance(calendar_day.get("d_day"), int):
-                d_day = calendar_day["d_day"]
             if d_day is None or d_day == 0:
                 continue
 
             if is_declared_light_combat:
-                if resolved_loads.get(d_day) in {"hard", "reduced"}:
-                    continue
                 # A declared light-combat / technical day is coach-owned calendar
                 # context the athlete stated, exactly like a declared hard-sparring
                 # day. It carries technical contact load and is never clamped down
@@ -441,45 +407,16 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
                 continue
             append_contact(
                 _ContactDay(
-                    date=str(role.get("calendar_date") or role.get("date") or calendar_day.get("calendar_date") or "").strip() or None,
+                    date=str(role.get("calendar_date") or role.get("date") or "").strip() or None,
                     d_day=d_day,
                     weekday=None,
                     load=load,
-                    headline=LIGHT_COMBAT_ATHLETE_FACING_LABEL if is_declared_light_combat else _headline_for_load(load, d_day),
-                    day_type="low" if is_declared_light_combat else _DAY_TYPE_BY_LOAD[load],
+                    headline=_headline_for_load(load, d_day),
+                    day_type=_DAY_TYPE_BY_LOAD[load],
                     phase=role_phase,
                     week_index=week_index + 1,
                 )
             )
-
-        # Older saved briefs kept the athlete's declared light-combat weekdays
-        # but predate the immutable role stamp. Use only an exact calendar-day
-        # match; never infer a new contact appointment from a free-text session.
-        for key in ("declared_support_work_days", "declared_technical_skill_days"):
-            declared_days = week.get(key)
-            if not isinstance(declared_days, list):
-                continue
-            for declared in declared_days:
-                weekday = str(declared or "").strip().lower()[:3]
-                if not weekday:
-                    continue
-                calendar_day = next(
-                    (day for day in week.get("calendar_days") or []
-                     if isinstance(day, dict) and str(day.get("weekday") or "").strip().lower()[:3] == weekday),
-                    None,
-                )
-                if not isinstance(calendar_day, dict):
-                    continue
-                d_day = calendar_day.get("d_day")
-                if (not isinstance(d_day, int) or d_day <= 0
-                        or resolved_loads.get(d_day) in _CONTACT_EFFECTIVE_LOADS
-                        or contact_safety_reasons(athlete_snapshot)):
-                    continue
-                append_contact(_ContactDay(
-                    date=str(calendar_day.get("calendar_date") or "").strip() or None,
-                    d_day=d_day, weekday=None, load="technical", headline=LIGHT_COMBAT_ATHLETE_FACING_LABEL,
-                    day_type="low", phase=role_phase, week_index=week_index + 1,
-                ))
 
         if not isinstance(schedule, dict):
             continue
@@ -664,7 +601,7 @@ def _insert_day_in_order(week: dict[str, Any], new_day: dict[str, Any]) -> None:
 
 
 def reconcile_coach_led_sparring_days(
-    structured_plan: Any, planning_brief: Any, *, light_only: bool = False
+    structured_plan: Any, planning_brief: Any
 ) -> list[str]:
     """Guarantee declared coach-led/sparring days render as cards. Mutates in place.
 
@@ -673,20 +610,18 @@ def reconcile_coach_led_sparring_days(
     pipeline degrades to whatever the converter produced.
     """
     try:
-        return _reconcile(structured_plan, planning_brief, light_only=light_only)
+        return _reconcile(structured_plan, planning_brief)
     except Exception:  # never block the card pipeline on reconciliation
         return []
 
 
-def _reconcile(structured_plan: Any, planning_brief: Any, *, light_only: bool = False) -> list[str]:
+def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
     if not isinstance(structured_plan, dict) or not isinstance(planning_brief, dict):
         return []
     weeks = structured_plan.get("weeks")
     if not isinstance(weeks, list) or not weeks:
         return []
     contact_days = _deterministic_contact_days(planning_brief)
-    if light_only:
-        contact_days = [contact for contact in contact_days if contact.headline == LIGHT_COMBAT_ATHLETE_FACING_LABEL]
     if not contact_days:
         return []
 
@@ -755,14 +690,6 @@ def _reconcile(structured_plan: Any, planning_brief: Any, *, light_only: bool = 
             # coach-led — or the coexisting contact stays hidden.
             if day.get("sessions"):
                 sessions = day.get("sessions")
-                if contact.headline == LIGHT_COMBAT_ATHLETE_FACING_LABEL and isinstance(sessions, list):
-                    # Older cards can carry the generic gap filler as the only
-                    # visible technical work. It duplicates the athlete's
-                    # declared session, so keep any other app work and show the
-                    # declared contact instead.
-                    day["sessions"] = [
-                        session for session in sessions if not _is_redundant_shadow_filler(session)
-                    ]
                 if contact.load != "technical" and isinstance(sessions, list):
                     compatible_sessions = [
                         session

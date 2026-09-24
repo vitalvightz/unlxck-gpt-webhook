@@ -107,11 +107,6 @@ def _light_support_friday_brief(*, hard_plan: list[dict] | None = None) -> dict:
                     "calendar_days": calendar_days,
                     "declared_support_work_days": ["Friday"],
                     "declared_technical_skill_days": [],
-                    "session_roles": [{
-                        "role_key": "light_combat_day",
-                        "scheduled_day_hint": "friday",
-                        "coach_owned": True,
-                    }],
                     "hard_sparring_plan": hard_plan or [],
                 }
             ]
@@ -649,36 +644,22 @@ def test_span_fallback_inserts_when_week_index_does_not_match():
     assert [d["countdown_label"] for d in plan["weeks"][0]["days"]] == ["D-33", "D-31", "D-30"]
 
 
-def test_declared_support_work_day_inserts_light_combat_card():
+def test_declared_support_work_day_does_not_insert_light_combat_card():
     plan = _structured_plan([_day("D-31", headline="Strength"), _day("D-29", headline="Aerobic")])
     notes = reconcile_coach_led_sparring_days(plan, _light_support_friday_brief())
 
     days = plan["weeks"][0]["days"]
-    assert [d["countdown_label"] for d in days] == ["D-31", "D-30", "D-29"]
-    assert days[1]["today_card"]["headline"] == "Light Combat / Technical"
-    assert days[1]["sessions"] == []
-    assert any("inserted contact card" in note for note in notes)
+    assert [d["countdown_label"] for d in days] == ["D-31", "D-29"]
+    assert notes == []
 
 
-def test_declared_support_work_day_stamps_light_combat_card():
+def test_declared_support_work_day_does_not_stamp_light_combat_card():
     friday = _day("D-30", headline="Mobility support")
     plan = _structured_plan([friday])
     notes = reconcile_coach_led_sparring_days(plan, _light_support_friday_brief())
 
-    assert friday["today_card"]["headline"] == "Light Combat / Technical"
-    assert any("stamped contact headline" in note for note in notes)
-
-
-def test_legacy_declared_support_weekday_without_role_still_stamps_contact():
-    brief = _light_support_friday_brief()
-    brief["weekly_role_map"]["weeks"][0]["session_roles"] = []
-    friday = _day("D-30", headline="Technical Shadow Rhythm", sessions=[
-        {"title": "Technical Shadow Rhythm", "blocks": [{"display_name": "Technical Shadow Rhythm"}]}
-    ])
-    plan = _structured_plan([friday])
-    reconcile_coach_led_sparring_days(plan, brief, light_only=True)
-    assert friday["today_card"]["headline"] == "Light Combat / Technical"
-    assert friday["sessions"] == []
+    assert friday["today_card"]["headline"] == "Mobility support"
+    assert notes == []
 
 
 def test_hard_sparring_wins_when_support_work_overlaps_same_day():
@@ -703,7 +684,7 @@ def test_malformed_support_work_brief_is_noop():
     assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == before
 
 
-def test_support_work_day_keeps_existing_app_session_with_contact_note():
+def test_support_work_day_keeps_existing_app_session_without_contact_note():
     real_session = [{"title": "Mobility support", "blocks": []}]
     plan = _structured_plan([_day("D-30", headline="Mobility support", sessions=real_session)])
     notes = reconcile_coach_led_sparring_days(plan, _light_support_friday_brief())
@@ -712,24 +693,4 @@ def test_support_work_day_keeps_existing_app_session_with_contact_note():
     assert day["today_card"]["headline"] == "Mobility support"
     assert day["sessions"] == real_session
     assert len(plan["weeks"][0]["days"]) == 1
-    assert day["today_card"]["coach_led_contact"] == "Light Combat / Technical"
-    assert any("surfaced coach-led contact" in note for note in notes)
-
-
-def test_support_work_day_replaces_redundant_shadow_filler_with_declared_contact():
-    filler = [{"title": "Technical Shadow Rhythm", "blocks": [{"display_name": "Technical Shadow Rhythm"}]}]
-    plan = _structured_plan([_day("D-30", headline="Technical Shadow Rhythm", sessions=filler)])
-    reconcile_coach_led_sparring_days(plan, _light_support_friday_brief())
-
-    day = plan["weeks"][0]["days"][0]
-    assert day["sessions"] == []
-    assert day["today_card"]["headline"] == "Light Combat / Technical"
-
-
-def test_light_contact_replaces_single_shadow_block_even_with_generic_session_title():
-    filler = [{"title": "Skill practice", "blocks": [{"display_name": "Technical Shadow Rhythm"}]}]
-    plan = _structured_plan([_day("D-30", headline="Skill practice", sessions=filler)])
-    reconcile_coach_led_sparring_days(plan, _light_support_friday_brief())
-    day = plan["weeks"][0]["days"][0]
-    assert day["sessions"] == []
-    assert day["today_card"]["headline"] == "Light Combat / Technical"
+    assert notes == []
