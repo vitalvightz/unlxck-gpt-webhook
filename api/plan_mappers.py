@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
+from copy import deepcopy
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
@@ -45,6 +46,7 @@ from .structured_card_lifecycle import (
 )
 from .structured_plan_models import StructuredTrainingPlan, safe_parse_structured_plan
 from .structured_plan_calendar_spine import reconcile_calendar_spine
+from .structured_plan_sparring_reconcile import reconcile_coach_led_sparring_days
 from .structured_plan_generation import (
     reconcile_late_fight_week_context,
     reconcile_rehab_drill_ids,
@@ -649,6 +651,28 @@ def _map_plan_detail(
         if spine_result.ok and spine_result.plan is not None:
             structured_plan = spine_result.plan
             structured_payload = spine_payload
+    # Project declared light-combat locks on read as well as at card creation.
+    # This repairs the visible coach-owned day on older saved cards without
+    # changing their stored structured_plan or final plan text.
+    role_map = planning_brief.get("weekly_role_map") if isinstance(planning_brief, dict) else None
+    role_weeks = role_map.get("weeks") if isinstance(role_map, dict) else []
+    has_light_combat_lock = any(
+        any(isinstance(role, dict) and role.get("role_key") == "light_combat_day"
+            for role in week.get("session_roles") or [])
+        or any(isinstance(week.get(key), list) and bool(week[key])
+               for key in ("declared_support_work_days", "declared_technical_skill_days"))
+        for week in role_weeks or [] if isinstance(week, dict)
+    )
+    if structured_plan is not None and has_light_combat_lock:
+        contact_payload = deepcopy(structured_payload)
+        if reconcile_coach_led_sparring_days(contact_payload, planning_brief, light_only=True):
+            contact_result = safe_parse_structured_plan(
+                contact_payload,
+                raw_markdown=display_plan_text or None,
+            )
+            if contact_result.ok and contact_result.plan is not None:
+                structured_plan = contact_result.plan
+                structured_payload = contact_payload
     projected_payload, raw_schedule_context = project_open_structured_plan(
         row,
         structured_payload,

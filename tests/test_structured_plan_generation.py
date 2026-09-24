@@ -9,6 +9,7 @@ from __future__ import annotations
 import copy
 import json
 from pathlib import Path
+import pytest
 
 from api.structured_plan_generation import (
     BANNED_BIOMETRIC_KEYS,
@@ -106,6 +107,15 @@ def test_valid_plan_outcome_is_valid_and_carries_schema_version():
     # Raw markdown fallback is preserved on the structured object.
     assert outcome.structured_plan["raw_markdown_fallback"]
     assert outcome.errors == []
+
+
+@pytest.mark.parametrize("reps", ["4-6", "8x8x30", "3 x 6"])
+def test_new_card_rejects_ranged_or_compound_numeric_field_before_normalization(reps):
+    plan = _valid_plan()
+    plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]["reps"] = reps
+    outcome = build_structured_plan_outcome(plan, raw_markdown=_faithful_source(plan))
+    assert outcome.status == "invalid_fallback_used"
+    assert any("ambiguous card reps" in error for error in outcome.errors)
 
 
 def test_d10_structured_generation_restores_week_context_and_cleans_adjustment_cues():

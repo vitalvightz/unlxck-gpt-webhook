@@ -63,7 +63,7 @@ def _block() -> dict:
         "display_name": "Barbell Back Squat",
         "order_index": 1,
         "sets": 4,
-        "reps": "4-6",
+        "reps": 4,
         "load": {
             "method": "percentage",
             "value": 85,
