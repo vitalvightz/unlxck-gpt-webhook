@@ -424,12 +424,15 @@ def merge_locked_structured_content(
         # The converter can emit both "Tactical Picture mental rehearsal" and
         # the exact bank title. Keep the exact block; the qualified copy is the
         # same locked prescription with invented duration and cues.
+        emptied_alias_owners: list[dict[str, Any]] = []
         if exact_targets:
             for owner, duplicate in targets:
-                if (owner, duplicate) not in exact_targets:
+                if all(duplicate is not exact_block for _, exact_block in exact_targets):
                     owner["blocks"] = [
                         item for item in owner.get("blocks") or [] if item is not duplicate
                     ]
+                    if not owner["blocks"] and _is_safe_named_watch_shell(owner, authoritative_names):
+                        emptied_alias_owners.append(owner)
         targets = exact_targets or targets
 
         if watch_sessions:
@@ -502,6 +505,13 @@ def merge_locked_structured_content(
         # null for a system that has no such concept would just blank a field.
         if watch.get("progress"):
             block["progression_rule"] = watch["progress"]
+
+        if emptied_alias_owners:
+            matching_days[0]["sessions"] = [
+                item
+                for item in matching_days[0].get("sessions") or []
+                if item is session or all(item is not owner for owner in emptied_alias_owners)
+            ]
 
         if (
             watch_sessions

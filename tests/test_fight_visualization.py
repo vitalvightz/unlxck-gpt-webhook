@@ -433,6 +433,63 @@ def test_mental_rehearsal_copy_does_not_duplicate_tactical_picture():
     assert blocks[0]["duration"] == {"value": entry.duration_min[1], "unit": "minutes"}
 
 
+def test_mental_rehearsal_alias_only_session_is_removed_with_its_block():
+    entry = select_fight_visualization("kickboxing", "clinch_fighter", 7)
+    brief, _role = _locked_brief(entry, day_label="D-7")
+    plan = _plan_with_day("D-7", [
+        {"title": "Fight Visualisation", "blocks": [{"display_name": entry.name}]},
+        {
+            "title": "Mental Rehearsal",
+            "completion_status": "not_started",
+            "blocks": [{"display_name": f"{entry.name} mental rehearsal"}],
+        },
+    ])
+
+    result = merge_locked_structured_content(plan, brief)
+    sessions = result.plan["weeks"][0]["days"][0]["sessions"]
+    assert [session["title"] for session in sessions] == ["Fight Visualisation"]
+    assert [block["display_name"] for block in sessions[0]["blocks"]] == [entry.name]
+    assert merge_locked_structured_content(result.plan, brief).plan == result.plan
+
+
+def test_completed_mental_rehearsal_session_is_kept():
+    entry = select_fight_visualization("kickboxing", "clinch_fighter", 7)
+    brief, _role = _locked_brief(entry, day_label="D-7")
+    plan = _plan_with_day("D-7", [
+        {"title": "Fight Visualisation", "blocks": [{"display_name": entry.name}]},
+        {
+            "title": "Mental Rehearsal",
+            "completion_status": "completed",
+            "blocks": [{"display_name": f"{entry.name} mental rehearsal"}],
+        },
+    ])
+
+    result = merge_locked_structured_content(plan, brief)
+    sessions = result.plan["weeks"][0]["days"][0]["sessions"]
+    assert [session["title"] for session in sessions] == ["Fight Visualisation", "Mental Rehearsal"]
+
+
+def test_mental_rehearsal_session_with_unrelated_work_is_kept():
+    entry = select_fight_visualization("kickboxing", "clinch_fighter", 7)
+    brief, _role = _locked_brief(entry, day_label="D-7")
+    plan = _plan_with_day("D-7", [
+        {"title": "Fight Visualisation", "blocks": [{"display_name": entry.name}]},
+        {
+            "title": "Mental Rehearsal",
+            "completion_status": "not_started",
+            "blocks": [
+                {"display_name": f"{entry.name} mental rehearsal"},
+                {"display_name": "Breathing reset"},
+            ],
+        },
+    ])
+
+    result = merge_locked_structured_content(plan, brief)
+    sessions = result.plan["weeks"][0]["days"][0]["sessions"]
+    assert [session["title"] for session in sessions] == ["Fight Visualisation", "Mental Rehearsal"]
+    assert [block["display_name"] for block in sessions[1]["blocks"]] == ["Breathing reset"]
+
+
 def test_missing_day_is_fail_closed():
     entry = select_fight_visualization("boxing", "brawler", 3)
     brief, _role = _locked_brief(entry)
