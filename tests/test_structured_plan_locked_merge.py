@@ -191,6 +191,34 @@ def test_stale_drill_titled_shell_is_collapsed_into_existing_tactical_watch():
     assert merge_locked_structured_content(result.plan, _brief()).plan == result.plan
 
 
+def test_qualified_tactical_focus_shell_is_collapsed():
+    plan = _plan()
+    plan["weeks"][0]["days"][0]["sessions"].insert(0, {
+        "title": "Tactical Focus — Pocket Exchange Map",
+        "completion_status": "not_started",
+        "blocks": [],
+    })
+
+    result = _merged(plan)
+    sessions = result.plan["weeks"][0]["days"][0]["sessions"]
+    assert [session["title"] for session in sessions] == ["Tactical Focus"]
+    assert merge_locked_structured_content(result.plan, _brief()).plan == result.plan
+
+
+def test_qualified_bank_block_is_replaced_by_exact_block():
+    plan = _plan()
+    plan["weeks"][0]["days"][0]["sessions"][0]["blocks"].insert(0, {
+        "display_name": "Pocket Exchange Map mental rehearsal",
+        "duration": {"value": 6, "unit": "minutes"},
+        "coaching_cues": ["AI paraphrase."],
+    })
+
+    result = _merged(plan)
+    blocks = result.plan["weeks"][0]["days"][0]["sessions"][0]["blocks"]
+    assert [block["display_name"] for block in blocks] == ["Pocket Exchange Map"]
+    assert blocks[0]["duration"] == {"value": 10, "unit": "minutes"}
+
+
 def test_completed_drill_titled_session_is_preserved():
     plan = _plan()
     plan["weeks"][0]["days"][0]["sessions"].append(

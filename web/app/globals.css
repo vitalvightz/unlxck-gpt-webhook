@@ -20193,6 +20193,19 @@ html[data-theme="light"] .loading-operational-item {
   background: var(--bg-support);
 }
 
+.cm-day-context-contact {
+  padding: 14px;
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--brand-red);
+  border-radius: var(--radius-support);
+  background: var(--bg-surface-alt);
+}
+
+.cm-day-context-contact .sp-coaching {
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-support);
+}
+
 .cm-light-technical-head {
   display: flex;
   flex-wrap: wrap;

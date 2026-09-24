@@ -105,6 +105,21 @@ def _normalise(value: Any) -> str:
     )
 
 
+def _is_named_variant(value: Any, name: str, *, session_title: str | None = None) -> bool:
+    """Recognise converter labels that explicitly name the locked bank drill."""
+    label = _normalise(value)
+    drill = _normalise(name)
+    if label in {drill, f"{drill} mental rehearsal"}:
+        return True
+    return bool(
+        session_title
+        and label in {
+            f"{_normalise(session_title)}: {drill}",
+            f"{_normalise(session_title)} - {drill}",
+        }
+    )
+
+
 def _countdown(value: Any) -> str | None:
     match = re.search(r"D-\s*(\d+)", str(value or ""), re.IGNORECASE)
     return f"D-{int(match.group(1))}" if match else None
@@ -282,7 +297,10 @@ def _is_safe_named_watch_shell(
     blocks = session.get("blocks") or []
     return isinstance(blocks, list) and all(
         isinstance(block, Mapping)
-        and _normalise(block.get("display_name")) in authoritative_names
+        and any(
+            _is_named_variant(block.get("display_name"), name)
+            for name in authoritative_names
+        )
         for block in blocks
     )
 
@@ -360,7 +378,10 @@ def merge_locked_structured_content(
         named_watch_sessions = [
             session
             for session in sessions
-            if _normalise(session.get("title")) in authoritative_names
+            if any(
+                _is_named_variant(session.get("title"), candidate, session_title=display_title)
+                for candidate in authoritative_names
+            )
             and _normalise(session.get("title")) != session_title
         ]
         if len(named_watch_sessions) > 1:
@@ -385,13 +406,34 @@ def merge_locked_structured_content(
             for session in sessions
             for block in session.get("blocks") or []
             if isinstance(block, dict)
-            and _normalise(block.get("display_name")) in authoritative_names
+            and any(
+                _is_named_variant(block.get("display_name"), candidate)
+                for candidate in authoritative_names
+            )
         ]
-        if len(targets) > 1:
+        exact_targets = [
+            pair for pair in targets
+            if _normalise(pair[1].get("display_name")) in authoritative_names
+        ]
+        if len(exact_targets) > 1 or (not exact_targets and len(targets) > 1):
             result.unresolved.append(
                 LockedMergeIssue(day_label, name, "locked block not uniquely resolved")
             )
             continue
+
+        # The converter can emit both "Tactical Picture mental rehearsal" and
+        # the exact bank title. Keep the exact block; the qualified copy is the
+        # same locked prescription with invented duration and cues.
+        emptied_alias_owners: list[dict[str, Any]] = []
+        if exact_targets:
+            for owner, duplicate in targets:
+                if all(duplicate is not exact_block for _, exact_block in exact_targets):
+                    owner["blocks"] = [
+                        item for item in owner.get("blocks") or [] if item is not duplicate
+                    ]
+                    if not owner["blocks"] and _is_safe_named_watch_shell(owner, authoritative_names):
+                        emptied_alias_owners.append(owner)
+        targets = exact_targets or targets
 
         if watch_sessions:
             session = watch_sessions[0]
@@ -463,6 +505,13 @@ def merge_locked_structured_content(
         # null for a system that has no such concept would just blank a field.
         if watch.get("progress"):
             block["progression_rule"] = watch["progress"]
+
+        if emptied_alias_owners:
+            matching_days[0]["sessions"] = [
+                item
+                for item in matching_days[0].get("sessions") or []
+                if item is session or all(item is not owner for owner in emptied_alias_owners)
+            ]
 
         if (
             watch_sessions
