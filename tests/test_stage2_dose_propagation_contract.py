@@ -177,6 +177,7 @@ def test_carry_microdose_keeps_its_unit_through_the_countdown_overlay():
     resolved = resolve_strength_slot_prescription(role=role, slot=slot, athlete_state={})
     assert resolved["effective_prescription"] == assignment["effective_prescription"]
     assert "20 m" in resolved["effective_prescription"]
+    assert "reps" not in resolved["effective_prescription"]
 
     # Still reduce-only: a tighter band lowers the carry count, keeps the unit.
     role["strength_dose_cap"] = {"max_sets": 1, "max_reps": 3, "loaded_allowed": True}

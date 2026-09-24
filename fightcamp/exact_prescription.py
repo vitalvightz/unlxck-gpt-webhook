@@ -10,6 +10,15 @@ from __future__ import annotations
 import re
 
 _RANGE = re.compile(r"(?<![\w.])(?P<low>\d+(?:\.\d+)?)\s*[-–—]\s*(?P<high>\d+(?:\.\d+)?)")
+_STRENGTH_SHORTHAND = re.compile(
+    r"(?<![\w.])(?P<sets>\d+)(?:\s*[-–—]\s*\d+)?\s*[x×]\s*"
+    r"(?P<reps>\d+)(?:\s*[-–—]\s*\d+)?\b",
+    re.I,
+)
+# The second number in these doses measures distance or time, never reps.
+_NON_REP_SECOND_TERM = re.compile(
+    r"\s*(?:m|km|s|sec|secs|second|seconds|min|mins|minute|minutes)\b", re.I,
+)
 _DOSE_UNIT = re.compile(
     r"^\s*(?:sets?\b|reps?\b|rounds?\b|holds?\b|bursts?\b|"
     r"%|kg\b|kgs\b|lb\b|lbs\b|s\b|sec\b|secs\b|seconds?\b|"
@@ -74,6 +83,16 @@ def resolve_working_prescription(text: str) -> str:
         ))
         return match.group("high" if rest_context else "low")
 
+    # Resolve both sides of a bank's sets x reps shorthand together. The
+    # generic range pass cannot identify the second range in "3–5x3–5" because
+    # it has no trailing unit. Preserve the original unit for distance/time.
+    source = _STRENGTH_SHORTHAND.sub(
+        lambda match: (
+            f"{match.group('sets')} x {match.group('reps')}"
+            if re.search(r"[-–—]", match.group(0)) else match.group(0)
+        ),
+        source,
+    )
     return _RANGE.sub(choose, source)
 
 
@@ -85,7 +104,7 @@ def label_strength_sets_reps(text: str) -> str:
         return source
     before = source[max(0, match.start() - 8):match.start()]
     after = source[match.end():]
-    if re.search(r"sets?\s*$", before, re.I) or re.match(r"\s*(?:s|sec|seconds?|min|minutes?)\b", after, re.I):
+    if re.search(r"sets?\s*$", before, re.I) or _NON_REP_SECOND_TERM.match(after):
         return source
     sets, reps = int(match.group(1)), int(match.group(2))
     labelled = f"{sets} {'set' if sets == 1 else 'sets'} x {reps} {'rep' if reps == 1 else 'reps'}"
