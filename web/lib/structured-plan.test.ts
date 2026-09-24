@@ -619,6 +619,56 @@ test("prefers duration over reps when reps looks like a time string", () => {
   assert.deepEqual(selectBlockMetric(null), []);
 });
 
+test("timed holds show their measured seconds instead of a one-rep volume", () => {
+  assert.deepEqual(
+    selectBlockMetric({
+      display_name: "Punch-Specific Max Isometric Hold",
+      sets: 3,
+      reps: 1,
+      duration: { value: 10, unit: "seconds" },
+      rest: { value: 180, unit: "seconds" },
+    } as never),
+    [{ label: "Duration", value: "3 × 10 seconds" }],
+  );
+  assert.deepEqual(
+    selectBlockMetric({
+      display_name: "Single-rep strength drill",
+      sets: 3,
+      reps: 1,
+      duration: { value: 10, unit: "seconds" },
+    } as never),
+    [
+      { label: "Volume", value: "3 × 1" },
+      { label: "Duration", value: "10 seconds" },
+    ],
+  );
+  assert.deepEqual(
+    selectBlockMetric({ sets: 3, duration: { value: 10, unit: "seconds" } } as never),
+    [{ label: "Duration", value: "3 × 10 seconds" }],
+  );
+  assert.deepEqual(
+    selectBlockMetric({ sets: 3, reps: 5, duration: { value: 10, unit: "seconds" } } as never),
+    [
+      { label: "Volume", value: "3 × 5" },
+      { label: "Duration", value: "10 seconds" },
+    ],
+  );
+  assert.deepEqual(selectBlockMetric({ rounds: 4, work: { value: 2, unit: "minutes" } } as never), [
+    { label: "Rounds", value: "4" },
+  ]);
+});
+
+test("an empty rest day cannot advertise an unscheduled training role", () => {
+  assert.deepEqual(
+    classifySessionlessDay({
+      day_type: "rest",
+      today_card: { headline: "Fight-pace conditioning" },
+      sessions: [],
+    } as never),
+    { kind: "rest", title: "No planned session", tag: null, coachLed: false },
+  );
+});
+
 test("continuous prescriptions prefer duration and never render as volume", () => {
   assert.deepEqual(
     selectBlockMetric({

@@ -2869,6 +2869,8 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   "20 min easy run" maps to `duration`: {{"value":20,"unit":"minutes"}},
   with no `reps`. "3 rounds x 30 sec work; rest 60 sec" maps to `rounds`: 3,
   `work`: {{"value":30,"unit":"seconds"}}, `rest`: {{"value":60,"unit":"seconds"}}.
+  "3 holds x 10-20 sec" maps to `sets`: 3, `reps`: null, and
+  `duration`: {{"value":10,"unit":"seconds"}}; a hold is timed work, not one rep.
   Safety limits and conditional adjustments may keep ranges.
 - Readiness is self-report ONLY. Do NOT output HRV, CNS recovery percentage,
   WHOOP-style recovery scores, strain scores, or any other biometric/wearable
@@ -2887,6 +2889,9 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   its own card. Do NOT invent S&C blocks for these days and do NOT drop the day.
   Never label these days "coach-led" or "coach-owned" — name the contact work as
   the athlete's own hard sparring / contact work.
+- For a day with no programmed session and no declared combat work, use
+  `day_type`: "rest" and a headline such as "No planned session". Do not reuse
+  a conditioning or strength role label as the headline of an empty day.
 - A hard-sparring / sparring / technical contact day can ALSO carry a low-load
   programmed session on the SAME day (e.g. the plan lists "Technical-only combat"
   AND a short touch such as a tactical cue card, mobility reset, or freshness
