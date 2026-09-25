@@ -1183,6 +1183,35 @@ def _validate_retro_log_day(
     )
 
 
+def _completion_timestamps(
+    existing: Mapping[str, Any], status_value: str, now_iso: str
+) -> tuple[str | None, str | None]:
+    """started_at / completed_at for a status transition. Both are preserved once
+    set (idempotent re-saves keep the original time) and cleared when the status
+    moves back to a state that should not have them."""
+    started_at = (
+        existing.get("started_at") or now_iso
+        if status_value in {"started", "done", "modified"}
+        else None
+    )
+    completed_at = (
+        existing.get("completed_at") or now_iso
+        if status_value in {"done", "modified"}
+        else None
+    )
+    return started_at, completed_at
+
+
+def _day_session_ids(plan_row: Mapping[str, Any], training_day: str) -> list[str]:
+    """Every addressable session the card schedules on ``training_day``, in order."""
+    ids: list[str] = []
+    for entry in _structured_today(plan_row, training_day).entries:
+        session_id = _session_id_for_entry(entry)
+        if session_id and session_id not in ids:
+            ids.append(session_id)
+    return ids
+
+
 def upsert_session_completion(
     store: AppStore,
     *,
@@ -1296,18 +1325,7 @@ def upsert_session_completion(
     # started_at; done/modified carry completed_at. Both are preserved once set
     # (idempotent re-saves keep the original time) and cleared when the status
     # moves back to a state that should not have them.
-    existing_started_at = existing.get("started_at")
-    existing_completed_at = existing.get("completed_at")
-
-    if status_value in {"started", "done", "modified"}:
-        started_at = existing_started_at or now_iso
-    else:
-        started_at = None
-
-    if status_value in {"done", "modified"}:
-        completed_at = existing_completed_at or now_iso
-    else:
-        completed_at = None
+    started_at, completed_at = _completion_timestamps(existing, status_value, now_iso)
 
     modification_reason = str(payload.get("modification_reason") or "")
     notes = str(payload.get("notes") or "")
@@ -1347,6 +1365,32 @@ def upsert_session_completion(
         "completed_at": completed_at,
     }
     row = store.upsert_session_completion(athlete_id, fields)
+    # A training day is one unit for the athlete: one start, one RPE, one log.
+    # When the card schedules several sessions that day (a conditioning block
+    # plus a breathing reset), the same outcome is written to each of them so
+    # Today, week progress and the full-week checks all read the day as logged.
+    # Only the submitted row drives XP, streak and rehab follow-up in the route.
+    day_session_ids = _day_session_ids(plan_row, training_day)
+    if session_id in day_session_ids:
+        for sibling_id in day_session_ids:
+            if sibling_id == session_id:
+                continue
+            sibling = store.get_session_completion(athlete_id, sibling_id, training_day) or {}
+            sibling_plan_id = str(sibling.get("plan_id") or "")
+            if sibling_plan_id and sibling_plan_id != plan_id:
+                continue
+            sibling_started_at, sibling_completed_at = _completion_timestamps(
+                sibling, status_value, now_iso
+            )
+            store.upsert_session_completion(
+                athlete_id,
+                {
+                    **fields,
+                    "session_id": sibling_id,
+                    "started_at": sibling_started_at,
+                    "completed_at": sibling_completed_at,
+                },
+            )
     # Response-only transition marker. It is deliberately added after the
     # database write so it can never become part of the completion schema. The
     # rehab-response capture path uses it to initialize durable context exactly
@@ -1828,11 +1872,9 @@ def _structured_day_session_entries(
 ) -> list[dict[str, Any]]:
     """Every session the card schedules on ``day``, in the order Today offers them.
 
-    The day's primary session leads (unchanged single-session behaviour); the
-    remaining sessions follow in card order so a day carrying two sessions can
-    still offer the second one once the first is logged. Previously only the
-    primary session was ever considered, so completing it advanced Today to the
-    next *day* while the athlete's own plan card still showed work left.
+    The day's primary session leads; the remaining sessions follow in card
+    order. The day is logged as one unit, so the full list is what a single
+    completion is written to and what "is this day logged" is asked of.
     """
     primary = _structured_session_entry_for_day(day, week=week)
     entries = [primary] if primary is not None else []
@@ -1885,17 +1927,19 @@ def _structured_next_session_entry(
             parsed_day_date = _parse_structured_date(day_date)
             if parsed_day_date is None or parsed_day_date <= training_date:
                 continue
-            # A future day offers its first session that is still outstanding, so
-            # a session already logged ahead of time never becomes "next".
-            for entry in _structured_day_session_entries(day, week=week):
-                if not has_scheduled_day_content(entry):
-                    continue
-                if _session_entry_is_complete(
-                    entry, is_complete=is_complete, calendar_date=day_date
-                ):
-                    continue
-                candidates.append((parsed_day_date, entry))
-                break
+            # A future day is one unit like today: it offers its primary session,
+            # and a day already logged ahead of time never becomes "next".
+            entries = [
+                entry
+                for entry in _structured_day_session_entries(day, week=week)
+                if has_scheduled_day_content(entry)
+            ]
+            if not entries or any(
+                _session_entry_is_complete(entry, is_complete=is_complete, calendar_date=day_date)
+                for entry in entries
+            ):
+                continue
+            candidates.append((parsed_day_date, entries[0]))
     if not candidates:
         return None
     candidates.sort(key=lambda item: item[0])
@@ -2553,24 +2597,28 @@ def build_today_command_view(
     # without this it resurrects a session on a day the athlete's own card reads
     # "Rest or active recovery" — and Today then offers to start it.
     structured_today = _structured_today(plan_row, training_day)
-    # Today offers the first session on the card that is still outstanding. A day
-    # can schedule more than one, so "the primary session is logged" is not the
-    # same as "today is done" — completing the first used to advance Today to the
-    # next day while the athlete's own card still showed work left.
+    # A training day is one session to the athlete, however many sessions the
+    # card splits it into: Today offers the day's primary session, and one log
+    # (written to every session that day) finishes the day. Any logged session
+    # therefore means today is done — including days logged before the write
+    # covered the whole day, where only one of the sessions carries the log.
     today_candidates = (
         []
         if structured_today.is_rest_day
         else (structured_today.entries or ([today_entry] if today_entry is not None else []))
     )
-    today_session_entry = next(
+    today_logged_entry = next(
         (
             entry
             for entry in today_candidates
-            if not _session_entry_is_complete(
+            if _session_entry_is_complete(
                 entry, is_complete=_session_is_complete, calendar_date=training_day
             )
         ),
         None,
+    )
+    today_session_entry = (
+        today_candidates[0] if today_candidates and today_logged_entry is None else None
     )
     has_today_session = has_scheduled_day_content(today_session_entry)
     target_entry = today_session_entry if has_today_session else next_entry
@@ -2604,9 +2652,7 @@ def build_today_command_view(
     # fall-forward to tomorrow still reports today's session as done. With work
     # still outstanding today it reports that session, so a day whose first of
     # two sessions is logged does not read as finished.
-    today_completion_entry = today_session_entry or (
-        today_candidates[0] if today_candidates else None
-    )
+    today_completion_entry = today_logged_entry or today_session_entry
     today_completion_id = (
         _session_id_for_entry(today_completion_entry)
         if has_scheduled_day_content(today_completion_entry)

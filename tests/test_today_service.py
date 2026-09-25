@@ -3274,20 +3274,60 @@ class TestSessionTimingAuthority:
         assert view.today.next_session["session_id"] == "2026-06-23-strength"
         assert view.today.completion_status == "not_started"
 
-    def test_a_second_session_keeps_the_day_scoped_to_today(self):
+    def test_one_log_finishes_a_two_session_day(self):
         store = self._store()
         self._complete(store, "2026-06-23-strength", "2026-06-23")
 
         view = self._view(store, day=23)
 
-        # The day still has outstanding work, so it must not roll to tomorrow —
-        # completing the first of two sessions used to advance Today a whole day.
+        # A day is one session to the athlete: one start, one RPE, one log. The
+        # log is written to every session the card schedules that day, so Today
+        # rolls forward instead of asking for the conditioning block separately.
+        assert view.today.session_scope == "next"
+        assert view.today.next_session["session_id"] == "2026-06-24-sparring"
+        assert view.today.completion_status == "done"
+        sibling = store.get_session_completion(ATHLETE, "2026-06-23-conditioning", "2026-06-23")
+        assert sibling is not None and sibling["status"] == "done"
+
+    def test_starting_the_day_starts_every_session_on_it(self):
+        store = self._store()
+        self._complete(store, "2026-06-23-strength", "2026-06-23", status="started")
+
+        view = self._view(store, day=23)
+
         assert view.today.session_scope == "today"
-        assert view.today.next_session["session_id"] == "2026-06-23-conditioning"
-        assert view.today.next_session["title"] == "Aerobic support"
-        # Today is not finished while a session is outstanding: the notification
-        # services and XP read completion_status for exactly that question.
-        assert view.today.completion_status == "not_started"
+        assert view.today.next_session["session_id"] == "2026-06-23-strength"
+        assert view.today.completion_status == "started"
+        sibling = store.get_session_completion(ATHLETE, "2026-06-23-conditioning", "2026-06-23")
+        assert sibling is not None and sibling["status"] == "started"
+
+    def test_a_day_logged_on_only_one_of_its_sessions_reads_as_done(self):
+        store = self._store()
+        # Logged before one completion covered the whole day: the primary is
+        # done while the second session was left started.
+        store.upsert_session_completion(
+            ATHLETE,
+            {
+                "plan_id": PLAN,
+                "session_id": "2026-06-23-strength",
+                "training_day": "2026-06-23",
+                "status": "done",
+            },
+        )
+        store.upsert_session_completion(
+            ATHLETE,
+            {
+                "plan_id": PLAN,
+                "session_id": "2026-06-23-conditioning",
+                "training_day": "2026-06-23",
+                "status": "started",
+            },
+        )
+
+        view = self._view(store, day=23)
+
+        assert view.today.session_scope == "next"
+        assert view.today.completion_status == "done"
 
     def test_completing_every_session_rolls_forward_and_reports_today_done(self):
         store = self._store()
@@ -3316,14 +3356,16 @@ class TestSessionTimingAuthority:
         assert view.today.session_scope != "today"
         assert view.today.next_session.get("session_id") != "2026-06-24-sparring"
 
-    def test_a_skipped_session_does_not_reopen_the_day(self):
+    def test_skipping_the_day_skips_every_session_on_it(self):
         store = self._store()
         self._complete(store, "2026-06-23-strength", "2026-06-23", status="skipped")
 
         view = self._view(store, day=23)
 
-        assert view.today.session_scope == "today"
-        assert view.today.next_session["session_id"] == "2026-06-23-conditioning"
+        assert view.today.session_scope == "next"
+        assert view.today.completion_status == "skipped"
+        sibling = store.get_session_completion(ATHLETE, "2026-06-23-conditioning", "2026-06-23")
+        assert sibling is not None and sibling["status"] == "skipped"
 
     def test_every_surface_reads_one_answer(self):
         from api.contracts.command_view import session_is_today

@@ -7593,16 +7593,6 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
   font-size: 0.85rem;
 }
 
-.today-logged-sessions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 8px;
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-}
-
 .today-card-head {
   gap: 10px;
   align-items: flex-start;
