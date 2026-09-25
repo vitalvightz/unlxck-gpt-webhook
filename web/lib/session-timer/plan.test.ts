@@ -10,7 +10,7 @@ import {
   parseCountRange,
   parseDurationRange,
   plannedSparringIntensity,
-  sessionTimerItems,
+  dayTimerItems,
   timerSessionFor,
 } from "./plan.ts";
 import type { StructuredBlock, StructuredSession } from "../types.ts";
@@ -194,19 +194,16 @@ const TACTICAL_FOCUS: StructuredSession = {
 
 test("a zero-load Tactical Focus session has no timer items, never generic rounds", () => {
   assert.deepEqual(buildTimerItems([TACTICAL_FOCUS]), []);
-  assert.deepEqual(sessionTimerItems([TACTICAL_FOCUS], "s3"), []);
+  assert.deepEqual(dayTimerItems([TACTICAL_FOCUS], "s3"), []);
 });
 
-test("the timer only ever holds the session being completed", () => {
+test("the timer runs the whole day, logged as one session", () => {
   const day = [LOWER_POWER, SPRINT, TACTICAL_FOCUS];
-  // Start s1: only s1's blocks.
-  const first = sessionTimerItems(day, "s1");
-  assert.deepEqual(first.map((item) => item.title), ["Trap bar jump"]);
-  // s1 completed, the backend advances to s2: only s2's blocks, s1 is not repeated.
-  const second = sessionTimerItems(day, "s2");
-  assert.deepEqual(second.map((item) => item.title), ["Hill sprints"]);
-  // s3 is zero-load: no session timer.
-  assert.deepEqual(sessionTimerItems(day, "s3"), []);
+  // Starting the day from its primary session times every timeable block.
+  const items = dayTimerItems(day, "s1");
+  assert.deepEqual(items.map((item) => item.title), ["Trap bar jump", "Hill sprints"]);
+  // A session id that is not one of the day's gets no timer.
+  assert.deepEqual(dayTimerItems(day, "s9"), []);
 });
 
 test("a session that cannot be identified confidently gets no timer", () => {

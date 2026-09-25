@@ -326,17 +326,18 @@ export function timerSessionFor(
 }
 
 /**
- * Timer items for the planned session being completed: that session's own
- * timeable blocks, or [] when it cannot be identified or has none (in which
- * case Today offers no session timer rather than generic rounds).
+ * Timer items for a whole training day. The athlete logs a day as one session
+ * (the backend writes that one log to every session the card schedules), so
+ * starting it times every timeable block of the day in card order, provided the
+ * session being logged is one of that day's. [] when it is not, or when the day
+ * has nothing timeable.
  */
-export function sessionTimerItems(
+export function dayTimerItems(
   sessions: StructuredSession[],
   sessionId: string | null | undefined,
   options: { sourceText?: string | null; countdown?: string | null } = {},
 ): TimerItem[] {
-  const session = timerSessionFor(sessions, sessionId);
-  return session ? buildTimerItems([session], options) : [];
+  return timerSessionFor(sessions, sessionId) ? buildTimerItems(sessions, options) : [];
 }
 
 export function formatRange(range: DoseRange, format: (value: number) => string = String): string {

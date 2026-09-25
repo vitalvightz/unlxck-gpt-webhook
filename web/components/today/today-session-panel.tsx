@@ -30,7 +30,7 @@ import {
   savedRoundFormat,
   type ContactTimerTarget,
 } from "@/lib/session-timer/contact";
-import { sessionTimerItems, timerSessionFor, type TimerItem } from "@/lib/session-timer/plan";
+import { dayTimerItems, type TimerItem } from "@/lib/session-timer/plan";
 import {
   resolveCurrentDay,
   resolveOpenPlanWeekNumber,
@@ -142,22 +142,8 @@ function textValue(value: string | null | undefined): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-/** Position of the session being completed within its day, or -1 when unmatched. */
-function activeSessionIndex(
-  current: CurrentDayResolution,
-  sessionId: string | null | undefined,
-): number {
-  const active = timerSessionFor(current.sessions, sessionId);
-  return active ? current.sessions.indexOf(active) : -1;
-}
-
-function getStructuredTodaySessionTitle(
-  current: CurrentDayResolution,
-  sessionId: string | null | undefined,
-): string {
-  // Headline the session being completed, not the day's first: once the first of
-  // two is logged, the backend targets the second and the card must follow it.
-  const session = current.sessions[Math.max(activeSessionIndex(current, sessionId), 0)];
+function getStructuredTodaySessionTitle(current: CurrentDayResolution): string {
+  const session = current.sessions[0];
   const card = current.day?.today_card;
   return (
     textValue(session?.title) ||
@@ -239,14 +225,9 @@ export function TodaySessionBlocks({
   current,
   openWeekIntent,
   rehabLabelPolicy,
-  activeSessionId,
 }: {
   planId?: string;
   current: CurrentDayResolution;
-  /** Today's session being completed. The backend offers a day's sessions in
-   * order, first outstanding first, so every session ahead of it is already
-   * logged: those collapse to a "Logged today" line instead of full cards. */
-  activeSessionId?: string | null;
   /** Development-block week intent of an open (renewable) plan: headlines where
    * today sits in the block and forwards the per-block directive to the cards. */
   openWeekIntent?: OpenBlockWeekIntent | null;
@@ -282,42 +263,29 @@ export function TodaySessionBlocks({
       </div>
     );
   }
-  const firstOpenIndex = Math.max(activeSessionIndex(current, activeSessionId), 0);
-  const loggedTitles = current.sessions
-    .slice(0, firstOpenIndex)
-    .map((session) => textValue(session.title) || humanizeIfRawEnum(textValue(session.session_type)))
-    .filter(Boolean);
   return (
     <RehabLabelProvider policy={rehabLabelPolicy}>
       <div className="today-blocks">
         {weekIntentNote}
         <DaySessionContext day={displayDay} />
-        {loggedTitles.length ? (
-          <p className="today-logged-sessions">
-            <span className="sp-tag">Logged today</span>
-            {loggedTitles.join(" · ")}
-          </p>
-        ) : null}
-        {current.sessions.map((session, index) =>
-          index < firstOpenIndex ? null : (
-            <StructuredSessionCard
-              key={sessionIdentity({
-                planId,
-                weekPos: current.weekPos ?? 0,
-                dayPos: current.dayPos ?? 0,
-                sessionPos: index,
-                week: current.week,
-                day: current.day,
-                session,
-              })}
-              session={session}
-              day={index === firstOpenIndex ? displayDay : undefined}
-              defaultOpenBlocks
-              showDayContext={false}
-              openWeekIntent={openWeekIntent}
-            />
-          ),
-        )}
+        {current.sessions.map((session, index) => (
+          <StructuredSessionCard
+            key={sessionIdentity({
+              planId,
+              weekPos: current.weekPos ?? 0,
+              dayPos: current.dayPos ?? 0,
+              sessionPos: index,
+              week: current.week,
+              day: current.day,
+              session,
+            })}
+            session={session}
+            day={index === 0 ? displayDay : undefined}
+            defaultOpenBlocks
+            showDayContext={false}
+            openWeekIntent={openWeekIntent}
+          />
+        ))}
       </div>
     </RehabLabelProvider>
   );
@@ -464,25 +432,21 @@ export function TodaySessionPanel({
   // resolves the plan card — and rejects completion writes on a rest day — so
   // scope "today" is the single answer both sides use.
   const canCompleteSession = resolvedDecision.canCompleteSession;
-  // The timer runs the blocks of the ONE session being completed, never the
-  // whole day (a day can carry several sessions, and completion is written
-  // against this session's id). No timeable blocks means no session timer:
-  // a zero-load session such as Tactical Focus is never turned into rounds.
+  // A training day is one session to the athlete: one start, one RPE, one log,
+  // written by the backend to every session the card schedules that day. So the
+  // timer runs every timeable block of the day. No timeable blocks means no
+  // session timer: a zero-load session such as Tactical Focus is never turned
+  // into rounds.
   const timerSourceText = structuredPlan?.raw_markdown_fallback ?? null;
   const timerCountdown = current.day?.countdown_label ?? null;
   const timerItems: TimerItem[] = hasResolvedDaySessions
-    ? sessionTimerItems(current.sessions, session.session_id, {
+    ? dayTimerItems(current.sessions, session.session_id, {
         sourceText: timerSourceText,
         countdown: timerCountdown,
       })
     : [];
   const timerAvailable =
     canCompleteSession && !safeSession && Boolean(session.session_id) && timerItems.length > 0;
-  // Titled from the matched session itself: the card headline follows the
-  // day's first session, which is not necessarily the one being completed.
-  const timerSessionTitle = hasResolvedDaySessions
-    ? textValue(timerSessionFor(current.sessions, session.session_id)?.title)
-    : "";
   const timerKeys: Record<TimerSource, string> = {
     session: `unlxck.session-timer.run:${activePlanId}:${session.session_id ?? ""}:${state.today.training_day}`,
     contact: `unlxck.session-timer.contact:${activePlanId}:${state.today.training_day}`,
@@ -730,7 +694,7 @@ export function TodaySessionPanel({
     if (source === "session") {
       if (!timerAvailable) return null;
       items = timerItems;
-      title = timerSessionTitle || sessionTitle;
+      title = sessionTitle;
     } else if (source === "contact") {
       if (!contactTimerAvailable || !contactTarget) return null;
       items = [contactRoundsItem(contactTarget, savedRoundFormat(CONTACT_FORMAT_MEMORY_KEY))];
@@ -839,7 +803,7 @@ export function TodaySessionPanel({
   }
 
   const sessionTitle = hasResolvedDaySessions
-    ? getStructuredTodaySessionTitle(current, session.session_id) || getSessionTitle(session)
+    ? getStructuredTodaySessionTitle(current) || getSessionTitle(session)
     : getSessionTitle(session);
   // Avoid the "Today's session / Today's session" stutter: when the session has
   // no real name and falls back to the generic title that already matches the
@@ -881,7 +845,6 @@ export function TodaySessionPanel({
           current={current}
           openWeekIntent={openWeekIntent}
           rehabLabelPolicy={rehabLabelPolicy}
-          activeSessionId={resolvedDecision.sessionIsToday ? session.session_id : null}
         />
       ) : (
         <div className="today-session-summary">
