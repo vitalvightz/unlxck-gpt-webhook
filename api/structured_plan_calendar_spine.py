@@ -514,8 +514,10 @@ def _role_matches_contact(day: dict[str, Any], role: dict[str, Any]) -> bool:
     return label_tokens <= contact_tokens
 
 
-def _role_present_as_block(sessions: list[Any], role: dict[str, Any]) -> bool:
-    """Whether a block folded into another session already is this role.
+def _claim_folded_block(
+    sessions: list[Any], role: dict[str, Any], claimed_blocks: set[tuple[int, int]]
+) -> bool:
+    """Claim a block folded into another session that already is this role.
 
     A converter often folds a support insert into the main session as its own
     block (a recovery flush ending on a "Breathing Reset" cooldown). The session
@@ -527,19 +529,27 @@ def _role_present_as_block(sessions: list[Any], role: dict[str, Any]) -> bool:
     A session that is itself this item (its title carries the label) is skipped:
     it is session-level identity's to claim, and its own blocks must not make a
     second scheduled copy of the role read as present.
+
+    Like a session, a block represents at most ONE role: ``claimed_blocks``
+    carries the ``(session_index, block_index)`` pairs already spoken for, so
+    two same-day copies of a role cannot both be satisfied by one folded block.
     """
     label_tokens = _identity_tokens(role.get("athlete_facing_label"))
     if not label_tokens:
         return False
-    for session in sessions or []:
+    for session_index, session in enumerate(sessions or []):
         if not isinstance(session, dict):
             continue
         if label_tokens <= _identity_tokens(session.get("title")):
             continue
-        for block in session.get("blocks") or []:
-            if isinstance(block, dict) and label_tokens <= _identity_tokens(
-                block.get("display_name")
+        for block_index, block in enumerate(session.get("blocks") or []):
+            key = (session_index, block_index)
+            if (
+                key not in claimed_blocks
+                and isinstance(block, dict)
+                and label_tokens <= _identity_tokens(block.get("display_name"))
             ):
+                claimed_blocks.add(key)
                 return True
     return False
 
@@ -577,6 +587,8 @@ def _restore_missing_scheduled_roles(
     # Sessions already spoken for by a role, so one card can never stand in for
     # two distinct scheduled items.
     claimed: set[int] = set()
+    # Folded blocks already spoken for, under the same one-role rule.
+    claimed_blocks: set[tuple[int, int]] = set()
     restored = False
     for role in roles:
         if not isinstance(role, dict):
@@ -598,7 +610,7 @@ def _restore_missing_scheduled_roles(
             if matched >= 0:
                 claimed.add(matched)
             continue
-        if _role_present_as_block(converted_sessions, role):
+        if _claim_folded_block(converted_sessions, role, claimed_blocks):
             continue
         session = _session(role, d_day)
         if session is None:

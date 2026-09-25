@@ -319,3 +319,22 @@ def test_a_block_naming_only_part_of_a_role_label_does_not_absorb_it():
     sessions = _sessions_by_dday(_map_plan_detail(row, include_admin=False))
 
     assert sessions[9] == ["Low-load recovery flush", "Breathing Reset"]
+
+
+def test_one_folded_block_satisfies_only_one_of_two_same_day_roles():
+    """A block, like a session, represents at most ONE scheduled role.
+
+    Two ``breathing_reset`` roles on one day and one folded "Breathing Reset"
+    block: the block covers the first, the second is still restored.
+    """
+    row = _row(_recovery_flush_with_breathing_cooldown(_card_omitting_supports()))
+    roles = []
+    for session_index in (1, 2):
+        role = _support_role(9, "breathing_reset", "Breathing Reset", "recovery", "Nasal breathing if comfortable.")
+        role["session_index"] = session_index
+        roles.append(role)
+    row["planning_brief"]["weekly_role_map"]["weeks"][0]["session_roles"] = roles
+
+    sessions = _sessions_by_dday(_map_plan_detail(row, include_admin=False))
+
+    assert sessions[9] == ["Low-load recovery flush", "Breathing Reset"]
