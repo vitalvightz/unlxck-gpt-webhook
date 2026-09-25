@@ -156,19 +156,60 @@ def test_taper_phase_is_not_lifted():
     assert _count(role) <= 3
 
 
+_MODERATE_ATHLETES = [
+    {"fatigue": "moderate", "cut_severity_bucket": "none"},
+    {"fatigue": "low", "cut_severity_bucket": "moderate"},
+    {"fatigue": "low", "cut_severity_bucket": "none", "injuries": ["ankle sprain"]},
+]
+
+
+@pytest.mark.parametrize("athlete", _MODERATE_ATHLETES)
+@pytest.mark.parametrize(
+    ("role_key", "phase"),
+    [
+        ("primary_strength_day", "GPP"),
+        ("secondary_strength_day", "GPP"),
+        ("neural_plus_strength_day", "SPP"),
+    ],
+)
+def test_moderate_fatigue_cut_or_injury_still_lifts_to_four(athlete, role_key, phase):
+    role = _compose(role_key, phase=phase, athlete=athlete)
+    policy = role["strength_composition_policy"]
+    assert policy["pressure"] == 1
+    assert policy["standalone_minimum_applied"] is True
+    assert policy["effective_exercise_cap"] == 4
+    # Moderate pressure keeps its one-per-family limit.
+    assert policy["major_family_limit"] == 1
+    assert _count(role) == 4
+
+
+def test_moderate_pressure_on_hard_sparring_day_is_not_lifted():
+    role = _compose(
+        "neural_plus_strength_day",
+        phase="SPP",
+        athlete=_MODERATE_ATHLETES[0],
+        hard_sparring_plan=[{"d_day": 30, "status": "hard_as_planned"}],
+    )
+    policy = role["strength_composition_policy"]
+    assert policy["standalone_minimum_applied"] is False
+    assert policy["effective_exercise_cap"] == 2
+
+
 @pytest.mark.parametrize(
     "athlete",
     [
-        {"fatigue": "moderate", "cut_severity_bucket": "none"},
         {"fatigue": "high", "cut_severity_bucket": "none"},
-        {"fatigue": "low", "cut_severity_bucket": "moderate"},
-        {"fatigue": "low", "cut_severity_bucket": "none", "injuries": ["ankle sprain"]},
+        {"fatigue": "low", "cut_severity_bucket": "high"},
+        {"fatigue": "low", "cut_severity_bucket": "critical"},
+        # Two moderate stressors combine above moderate.
+        {"fatigue": "moderate", "cut_severity_bucket": "moderate"},
+        {"fatigue": "moderate", "cut_severity_bucket": "none", "injuries": ["ankle sprain"]},
     ],
 )
-def test_readiness_cut_and_injury_caps_override_the_minimum(athlete):
+def test_above_moderate_pressure_overrides_the_minimum(athlete):
     role = _compose("neural_plus_strength_day", phase="SPP", athlete=athlete)
     policy = role["strength_composition_policy"]
-    assert policy["pressure"] > 0
+    assert policy["pressure"] >= 2
     assert policy["standalone_minimum_applied"] is False
     assert policy["effective_exercise_cap"] < 3
     assert _count(role) == policy["effective_exercise_cap"]

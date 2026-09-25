@@ -255,8 +255,10 @@ def test_injury_recovery_pressure_still_tightens_composition():
     _compose(
         role_map,
         slots,
+        # Injury plus moderate fatigue combine above moderate pressure, so the
+        # standalone four-exercise minimum does not apply.
         athlete={
-            "fatigue": "low",
+            "fatigue": "moderate",
             "cut_severity_bucket": "none",
             "injuries": ["shoulder strain"],
         },

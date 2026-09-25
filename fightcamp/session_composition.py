@@ -54,13 +54,21 @@ _NORMAL_STRENGTH_ROLE_CAPS: dict[str, int] = {
     "small_strength_touch_day": 2,
 }
 _DEFAULT_NORMAL_STRENGTH_CAP = 3
-# Full strength / strength+power roles whose role cap sits below the preferred
-# session size. On a clear day at zero readiness pressure the cap lifts to the
-# minimum; everything else (pressure, family limits, Stage 1 membership) still
-# bounds the result, so this never invents an exercise.
+# Full strength / strength+power roles lift to the preferred session size on a
+# clear day when readiness pressure is at most moderate (pressure 1). High
+# fatigue/cut, or two combined stressors (pressure 2+), keep the reduced cap.
+# Family limits and Stage 1 membership still bound the result, so this never
+# invents an exercise.
 _STANDALONE_STRENGTH_MINIMUM = 4
+_STANDALONE_STRENGTH_MAX_PRESSURE = 1
 _STANDALONE_STRENGTH_MINIMUM_ROLE_KEYS = frozenset(
-    {"secondary_strength_day", "neural_plus_strength_day", "transfer_strength_day"}
+    {
+        "primary_strength_day",
+        "structural_strength_day",
+        "secondary_strength_day",
+        "neural_plus_strength_day",
+        "transfer_strength_day",
+    }
 )
 
 _FATIGUE_PRESSURE = {"low": 0, "moderate": 1, "high": 2}
@@ -1226,7 +1234,7 @@ def compose_normal_strength_assignments(
             role_key = str(role.get("role_key") or "").strip()
             base_cap, effective_cap = _effective_role_cap(role_key, pressure)
             standalone_minimum_applied = (
-                pressure == 0
+                pressure <= _STANDALONE_STRENGTH_MAX_PRESSURE
                 and phase in {"GPP", "SPP"}
                 and role_key in _STANDALONE_STRENGTH_MINIMUM_ROLE_KEYS
                 and effective_cap < _STANDALONE_STRENGTH_MINIMUM
