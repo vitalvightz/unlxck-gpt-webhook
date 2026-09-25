@@ -960,6 +960,9 @@ class PlanInput:
     # dehydration or water-cut guidance (docs/children-age-appropriate-use-policy.md).
     is_minor: bool = False
     sparring_readiness: dict = field(default_factory=dict)
+    # Account-level override set by the backend (never from intake answers):
+    # plan from the generation day itself instead of starting the camp tomorrow.
+    include_generation_day: bool = False
 
     @classmethod
     def from_payload(cls, data: dict) -> "PlanInput":
@@ -1070,13 +1073,22 @@ class PlanInput:
             effective_athlete_timezone = raw_athlete_timezone
             athlete_timezone_metadata = _metadata("user_supplied")
 
+        include_generation_day = (
+            _coerce_bool_flag(data.get("include_generation_day"))
+            if isinstance(data, dict)
+            else False
+        )
+
         weeks_out: int | str = "N/A"
         days_until_fight = None
         if fight_date:
+            # The camp calendar starts the day after the reference date, so
+            # anchoring one day earlier makes the generation day plannable.
             days_until_fight = _compute_days_until_fight(
                 next_fight_date,
                 fight_date,
                 athlete_timezone=effective_athlete_timezone,
+                now_utc=(_utc_now() - timedelta(days=1)) if include_generation_day else None,
             )
             weeks_out = max(1, days_until_fight // 7) if days_until_fight is not None else "N/A"
 
@@ -1156,6 +1168,7 @@ class PlanInput:
             camp_timeline_type=camp_timeline_type,
             open_camp_weeks=open_camp_weeks,
             is_minor=is_minor,
+            include_generation_day=include_generation_day,
             parsing_metadata={
                 "training_frequency": training_frequency_metadata,
                 "available_days": available_days_metadata,
