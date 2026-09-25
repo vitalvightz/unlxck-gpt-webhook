@@ -38,6 +38,7 @@ Design rules (mirrors ``structured_plan_safety`` conventions):
 """
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass, field
 import re
 from typing import Any
@@ -940,6 +941,103 @@ def _is_calendar_only_day(day: dict[str, Any], day_num: int | None) -> bool:
     return headline in _CALENDAR_ONLY_HEADLINES or (day_num == 0 and headline == "fight day")
 
 
+@dataclass
+class _SourceIndex:
+    """What the source text proves: its D-days and which D-day owns each token."""
+
+    source_tokens: set[str]
+    token_days: dict[str, set[int]]
+    source_ddays: set[int]
+    server_owned_ddays: set[int]
+
+
+def _source_index(source: str, planning_brief: Any) -> _SourceIndex | None:
+    """``None`` when the source carries no countdown or no meaningful tokens."""
+    if not _ANY_DDAY_RE.search(source):
+        return None
+    source_tokens = _meaningful(_tokens(source))
+    if not source_tokens:
+        return None
+    sections = _source_day_sections(source)
+    # Every D-day the source actually mentions (day headers + any inline D-N).
+    source_ddays: set[int] = set(sections)
+    for match in _DDAY_RE.finditer(source):
+        num = _dday_num(match.group(0))
+        if num is not None:
+            source_ddays.add(num)
+    return _SourceIndex(
+        source_tokens=source_tokens,
+        token_days=_source_token_days(sections),
+        source_ddays=source_ddays,
+        server_owned_ddays=_server_owned_ddays(planning_brief),
+    )
+
+
+def _plan_weeks(plan: dict[str, Any]) -> list[Any]:
+    return plan.get("weeks") if isinstance(plan.get("weeks"), list) else []
+
+
+def _calendar_only_ddays(weeks: list[Any]) -> set[int]:
+    # Calendar-only days (see _is_calendar_only_day) are the spine's, not the
+    # converter's; a week boundary landing on one is derived from that calendar.
+    return {
+        day_num
+        for week in weeks
+        if isinstance(week, dict)
+        for day in week.get("days") or []
+        if isinstance(day, dict)
+        and (day_num := _dday_num(day.get("countdown_label"))) is not None
+        and _is_calendar_only_day(day, day_num)
+    }
+
+
+def _countdown_unbacked(num: int | None, index: _SourceIndex, calendar_only: set[int]) -> bool:
+    # A server-owned day is exempt: the deterministic assemblers place it from
+    # the role map, so Stage 2's text is not its authority.
+    return (
+        num is not None
+        and num not in index.source_ddays
+        and num not in index.server_owned_ddays
+        and num not in calendar_only
+    )
+
+
+def _is_model_session(session: Any) -> bool:
+    # A server-assembled session was written from deterministic state; it is
+    # verified against that state, never against model prose.
+    return isinstance(session, dict) and not _is_server_assembled(session, "session_id")
+
+
+def _block_violation(block: Any, day_num: int | None, index: _SourceIndex) -> str | None:
+    """INTRODUCED / MISPLACED finding for one converter block, else ``None``."""
+    if not isinstance(block, dict) or _is_server_assembled(block, "block_id"):
+        return None
+    if str(block.get("block_type")) not in _EXERCISE_BLOCK_TYPES:
+        return None
+    name = str(block.get("display_name") or "")
+    name_tokens = _meaningful(_tokens(name))
+    if not name_tokens:
+        return None
+
+    # 1) INTRODUCED: shares no meaningful token with the source.
+    if not any(_present_in_source(tok, index.source_tokens) for tok in name_tokens):
+        return f"{INTRODUCED}: exercise {name!r} not present in source text"
+
+    # 2) MISPLACED: a token the source assigns to exactly one D-day, placed by
+    #    the card under a different D-day.
+    if day_num is None:
+        return None
+    for tok in sorted(name_tokens):
+        days = index.token_days.get(tok)
+        if days and len(days) == 1 and day_num not in days:
+            (src_day,) = tuple(days)
+            return (
+                f"{MISPLACED}: {name!r} (token {tok!r}) is in source D-{src_day} "
+                f"but card placed it in D-{day_num}"
+            )
+    return None
+
+
 def _check(structured_plan: Any, source_markdown: str, planning_brief: Any = None) -> list[str]:
     plan = structured_plan if isinstance(structured_plan, dict) else {}
     source = str(source_markdown or "")
@@ -960,103 +1058,35 @@ def _check(structured_plan: Any, source_markdown: str, planning_brief: Any = Non
             ]
         return locked_violations + prescription_violations
 
-    source_tokens = _meaningful(_tokens(source))
-    if not source_tokens:
+    index = _source_index(source, planning_brief)
+    if index is None:
         return locked_violations + prescription_violations
 
-    sections = _source_day_sections(source)
-    token_days = _source_token_days(sections)
-
-    # Every D-day the source actually mentions (day headers + any inline D-N).
-    source_ddays: set[int] = set(sections)
-    for match in _DDAY_RE.finditer(source):
-        num = _dday_num(match.group(0))
-        if num is not None:
-            source_ddays.add(num)
-
     violations: list[str] = [*locked_violations, *prescription_violations]
-    server_owned_ddays = _server_owned_ddays(planning_brief)
-
-    weeks = plan.get("weeks") if isinstance(plan.get("weeks"), list) else []
-    # Calendar-only days (see _is_calendar_only_day) are the spine's, not the
-    # converter's; a week boundary landing on one is derived from that calendar.
-    calendar_only_ddays = {
-        day_num
-        for week in weeks
-        if isinstance(week, dict)
-        for day in week.get("days") or []
-        if isinstance(day, dict)
-        and (day_num := _dday_num(day.get("countdown_label"))) is not None
-        and _is_calendar_only_day(day, day_num)
-    }
+    weeks = _plan_weeks(plan)
+    calendar_only = _calendar_only_ddays(weeks)
     for week in weeks:
         if not isinstance(week, dict):
             continue
         for label in (week.get("countdown_start"), week.get("countdown_end")):
-            num = _dday_num(label)
-            if (
-                num is not None
-                and num not in source_ddays
-                and num not in server_owned_ddays
-                and num not in calendar_only_ddays
-            ):
+            if _countdown_unbacked(_dday_num(label), index, calendar_only):
                 violations.append(f"{COUNTDOWN}: week countdown {label!r} absent from source text")
 
         for day in week.get("days") or []:
             if not isinstance(day, dict):
                 continue
             day_num = _dday_num(day.get("countdown_label"))
-            if (
-                day_num is not None
-                and day_num not in source_ddays
-                and day_num not in server_owned_ddays
-                and day_num not in calendar_only_ddays
-            ):
-                # A server-owned day is exempt: the deterministic assemblers place
-                # it from the role map, so Stage 2's text is not its authority.
+            if _countdown_unbacked(day_num, index, calendar_only):
                 violations.append(
                     f"{COUNTDOWN}: day countdown {day.get('countdown_label')!r} absent from source text"
                 )
-
             for session in day.get("sessions") or []:
-                if not isinstance(session, dict):
-                    continue
-                if _is_server_assembled(session, "session_id"):
-                    # The server wrote this session from deterministic state; it is
-                    # verified against that state, never against model prose.
+                if not _is_model_session(session):
                     continue
                 for block in session.get("blocks") or []:
-                    if not isinstance(block, dict):
-                        continue
-                    if _is_server_assembled(block, "block_id"):
-                        continue
-                    if str(block.get("block_type")) not in _EXERCISE_BLOCK_TYPES:
-                        continue
-                    name = str(block.get("display_name") or "")
-                    name_tokens = _meaningful(_tokens(name))
-                    if not name_tokens:
-                        continue
-
-                    # 1) INTRODUCED: shares no meaningful token with the source.
-                    if not any(_present_in_source(tok, source_tokens) for tok in name_tokens):
-                        violations.append(
-                            f"{INTRODUCED}: exercise {name!r} not present in source text"
-                        )
-                        continue
-
-                    # 2) MISPLACED: a token the source assigns to exactly one
-                    #    D-day, placed by the card under a different D-day.
-                    if day_num is None:
-                        continue
-                    for tok in sorted(name_tokens):
-                        days = token_days.get(tok)
-                        if days and len(days) == 1 and day_num not in days:
-                            (src_day,) = tuple(days)
-                            violations.append(
-                                f"{MISPLACED}: {name!r} (token {tok!r}) is in source D-{src_day} "
-                                f"but card placed it in D-{day_num}"
-                            )
-                            break
+                    finding = _block_violation(block, day_num, index)
+                    if finding:
+                        violations.append(finding)
 
     # De-duplicate while preserving order.
     seen: set[str] = set()
@@ -1066,3 +1096,123 @@ def _check(structured_plan: Any, source_markdown: str, planning_brief: Any = Non
             seen.add(item)
             unique.append(item)
     return unique
+
+
+# ---------------------------------------------------------------------------
+# Salvage: drop only what the source does not back.
+#
+# One invented exercise, one misplaced drill or one model session on a day the
+# text never mentions used to reject the whole card, so a single slip put the
+# athlete on the rebuilt fallback. The pruner removes exactly the content the
+# checks above reject, using the same rules, and leaves everything else. It is a
+# last resort after the model repair, and it refuses when so much would go that
+# the card would no longer represent the plan.
+# ---------------------------------------------------------------------------
+
+#: At most this share of the converter's exercise blocks may be dropped ...
+SALVAGE_MAX_DROPPED_SHARE = 0.2
+#: ... except that a small card may always lose this many ...
+SALVAGE_MIN_DROP_ALLOWANCE = 2
+#: ... and never more than half: a card that was mostly unbacked is not the plan.
+SALVAGE_MAX_DROPPED_FRACTION_CEILING = 0.5
+
+
+def _exercise_block_count(sessions: list[Any]) -> int:
+    return sum(
+        1
+        for session in sessions
+        if _is_model_session(session)
+        for block in session.get("blocks") or []
+        if isinstance(block, dict)
+        and not _is_server_assembled(block, "block_id")
+        and str(block.get("block_type")) in _EXERCISE_BLOCK_TYPES
+    )
+
+
+def prune_unfaithful_content(
+    structured_plan: Any, source_markdown: str, planning_brief: Any = None
+) -> tuple[dict[str, Any] | None, list[str]]:
+    """``(pruned_plan, removed)`` with unbacked converter content removed.
+
+    Removes an exercise block the source does not name or places on another
+    D-day, and every converter session on a day the source never mentions.
+    Server-assembled sessions and blocks are never touched. Week boundaries are
+    re-derived from the surviving days. Returns ``(None, removed)`` when the
+    source cannot verify the card at all or when more than the allowed share of
+    exercise blocks would go.
+    """
+    plan = copy.deepcopy(structured_plan) if isinstance(structured_plan, dict) else None
+    source = str(source_markdown or "")
+    index = _source_index(source, planning_brief) if plan else None
+    if plan is None or index is None:
+        return None, []
+
+    weeks = _plan_weeks(plan)
+    calendar_only = _calendar_only_ddays(weeks)
+    removed: list[str] = []
+    total_blocks = 0
+    dropped_blocks = 0
+    for week in weeks:
+        if not isinstance(week, dict):
+            continue
+        for day in week.get("days") or []:
+            if not isinstance(day, dict):
+                continue
+            day_num = _dday_num(day.get("countdown_label"))
+            sessions = [s for s in day.get("sessions") or [] if isinstance(s, dict)]
+            total_blocks += _exercise_block_count(sessions)
+
+            if _countdown_unbacked(day_num, index, calendar_only):
+                model_sessions = [s for s in sessions if _is_model_session(s)]
+                dropped_blocks += _exercise_block_count(model_sessions)
+                for session in model_sessions:
+                    removed.append(
+                        f"{COUNTDOWN}: dropped session {session.get('title') or 'untitled'!r} "
+                        f"on {day.get('countdown_label')!r}, a day the source does not have"
+                    )
+                sessions = [s for s in sessions if not _is_model_session(s)]
+                card = day.get("today_card")
+                if isinstance(card, dict):
+                    card["headline"] = ""
+            else:
+                kept_sessions: list[dict[str, Any]] = []
+                for session in sessions:
+                    if not _is_model_session(session):
+                        kept_sessions.append(session)
+                        continue
+                    blocks = [b for b in session.get("blocks") or [] if isinstance(b, dict)]
+                    kept_blocks = []
+                    for block in blocks:
+                        finding = _block_violation(block, day_num, index)
+                        if finding:
+                            dropped_blocks += 1
+                            removed.append(f"{finding}; block dropped")
+                        else:
+                            kept_blocks.append(block)
+                    if blocks and not kept_blocks:
+                        # Every exercise was unbacked: the session is empty shell.
+                        removed.append(
+                            f"dropped session {session.get('title') or 'untitled'!r} on "
+                            f"{day.get('countdown_label')!r} after its blocks were removed"
+                        )
+                        continue
+                    session["blocks"] = kept_blocks
+                    kept_sessions.append(session)
+                sessions = kept_sessions
+            day["sessions"] = sessions
+            if not sessions and str(day.get("day_type") or "") not in {"rest", "competition"}:
+                day["day_type"] = "rest"
+
+        labels = [
+            num
+            for day in week.get("days") or []
+            if isinstance(day, dict) and (num := _dday_num(day.get("countdown_label"))) is not None
+        ]
+        if labels:
+            week["countdown_start"] = f"D-{max(labels)}"
+            week["countdown_end"] = f"D-{min(labels)}"
+
+    allowance = max(SALVAGE_MIN_DROP_ALLOWANCE, int(total_blocks * SALVAGE_MAX_DROPPED_SHARE))
+    if dropped_blocks > allowance or dropped_blocks > total_blocks * SALVAGE_MAX_DROPPED_FRACTION_CEILING:
+        return None, removed
+    return plan, removed

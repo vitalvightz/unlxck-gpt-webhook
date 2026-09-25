@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -521,7 +522,94 @@ async def attempt_structured_plan_for_result(
         log_context=log_context,
     )
     _record_structured_outcome(result, outcome)
+    report_structured_card_outcome(outcome, source=source, log_context=log_context)
     return result, costs
+
+
+_CARD_FAILED_STATUSES = frozenset({"invalid_fallback_used", "blocked_by_safety_audit"})
+_SALVAGED_PREFIX = "salvaged: "
+
+
+def _card_finding_kind(finding: str) -> str:
+    """"COUNTDOWN" / "INTRODUCED" / "schema" ... for grouping, never the detail."""
+    text = str(finding or "")
+    for prefix in (_SALVAGED_PREFIX, "faithfulness: "):
+        if text.startswith(prefix):
+            text = text[len(prefix):]
+    labelled = re.match(r"^([A-Z][A-Z_]+):", text)
+    if labelled:
+        return labelled.group(1)
+    if re.match(r"^weeks\.\d|^[a-z_]+(?:\.\d+)?\.", text):
+        return "schema"
+    return "other"
+
+
+def report_structured_card_outcome(
+    outcome: StructuredPlanOutcome,
+    *,
+    source: str,
+    log_context: dict[str, str] | None = None,
+) -> str | None:
+    """Alert when an enhanced card failed or shipped only after salvage.
+
+    A failed card silently drops the athlete onto the rebuilt fallback, which is
+    how a regression can break every card for hours unnoticed. Each failure is
+    logged at ERROR and sent to Sentry grouped by status and finding kind, so a
+    systematic break is one loud, growing issue. A salvaged card is a WARNING:
+    it shipped, but content was dropped. Returns ``"failed"`` / ``"salvaged"``
+    or ``None``. Never raises.
+    """
+    try:
+        salvaged = [w for w in outcome.warnings if str(w).startswith(_SALVAGED_PREFIX)]
+        failed = outcome.status in _CARD_FAILED_STATUSES or (
+            outcome.status == "not_attempted" and bool(outcome.errors)
+        )
+        if not failed and not salvaged:
+            return None
+        kind = "failed" if failed else "salvaged"
+        findings = list(outcome.errors) if failed else salvaged
+        kinds = sorted({_card_finding_kind(item) for item in findings}) or ["unknown"]
+        context = log_context or {}
+        logger.log(
+            logging.ERROR if failed else logging.WARNING,
+            "[stage2] structured_card_%s status=%s source=%s job_id=%s athlete_id=%s kinds=%s count=%d first=%s",
+            kind,
+            outcome.status,
+            source,
+            context.get("job_id", "unknown"),
+            context.get("athlete_id", "unknown"),
+            ",".join(kinds),
+            len(findings),
+            findings[0] if findings else "",
+        )
+        try:
+            import sentry_sdk
+
+            with sentry_sdk.push_scope() as scope:
+                scope.set_level("error" if failed else "warning")
+                scope.set_tag("structured_card_outcome", kind)
+                scope.set_tag("structured_card_status", outcome.status)
+                scope.set_tag("structured_card_kinds", ",".join(kinds))
+                scope.set_tag("stage2_source", source)
+                scope.fingerprint = ["structured-card", kind, outcome.status, *kinds]
+                scope.set_context(
+                    "structured_card",
+                    {
+                        "job_id": context.get("job_id"),
+                        "findings": findings[:20],
+                        "finding_count": len(findings),
+                    },
+                )
+                sentry_sdk.capture_message(
+                    f"Enhanced card {kind}: {outcome.status} ({', '.join(kinds)})"
+                )
+        except Exception:
+            # Observability must not become another availability dependency.
+            logger.debug("Unable to report structured card outcome to Sentry", exc_info=True)
+        return kind
+    except Exception:
+        logger.debug("structured card outcome report failed", exc_info=True)
+        return None
 
 
 def _stage2_source(stage1_result: dict[str, Any]) -> str:
@@ -1604,11 +1692,14 @@ class OpenAIStage2Automator:
         computed_support = (
             planning_brief.get("computed_support") if isinstance(planning_brief, dict) else None
         )
+        # With a model repair still to come, a complete repaired card beats a
+        # pruned first pass, so salvage waits for the repaired outcome.
         first_outcome = build_structured_plan_outcome(
             first_json,
             raw_markdown=final_plan_text,
             computed_support=computed_support,
             planning_brief=planning_brief,
+            allow_salvage=not _structured_repair_enabled(),
         )
         # A safety-blocked card is terminal: it was schema-valid, so the repair
         # path would re-validate the same JSON and hit the same blocking
