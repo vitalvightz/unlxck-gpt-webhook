@@ -34,6 +34,8 @@
     "planMeta": "Plans actifs et économisés",
     "history": "Histoire",
     "historyMeta": "Séances, bilès, blessures",
+    "timer": "Minuteur de rounds",
+    "timerMeta": "Rounds et repos, à tout moment",
     "campSetup": "Installation du camp",
     "campSetupMeta": "Construis ton camp",
     "settings": "Décors",

@@ -294,6 +294,7 @@ export function AppNav() {
     "/today": { label: t("today"), meta: t("todayMeta") },
     "/plans": { label: t("plan"), meta: t("planMeta") },
     "/history": { label: t("history"), meta: t("historyMeta") },
+    "/timer": { label: t("timer"), meta: t("timerMeta") },
     "/onboarding": { label: t("campSetup"), meta: t("campSetupMeta") },
     "/settings": { label: t("settings"), meta: t("settingsMeta") },
   };
