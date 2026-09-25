@@ -705,8 +705,32 @@ def test_spine_builds_the_deterministic_calendar_with_no_converter_content():
     assert labels[-1] == "D-0"
     ddays = [int(label.split("-")[1]) for label in labels]
     assert ddays == sorted(range(min(ddays), max(ddays) + 1), reverse=True)
-    # It supplies calendar identity only; it invents no sessions.
-    assert all(not day.get("sessions") for day in days)
+    # It invents no sessions. The only content it may carry is an authoritative
+    # instruction-only role restored onto its own scheduled day (see
+    # _restore_missing_scheduled_roles), identified by its deterministic id.
+    from api.structured_plan_calendar_spine import ROLES_OWNED_ELSEWHERE
+    from fightcamp.calendar_context import role_d_day
+    from fightcamp.structured_session_identity import deterministic_session_id
+
+    restorable = {
+        deterministic_session_id(role, d_day)
+        for week in planning_brief["weekly_role_map"]["weeks"]
+        for role in week.get("session_roles") or []
+        if not role.get("selected_exercise_assignments")
+        and role.get("role_key") not in ROLES_OWNED_ELSEWHERE
+        and isinstance(d_day := role_d_day(week, role), int)
+        and d_day != 0
+    }
+    session_ids = [
+        str(session.get("session_id"))
+        for day in days
+        for session in day.get("sessions") or []
+    ]
+    assert set(session_ids) <= restorable
+    assert len(session_ids) == len(set(session_ids)), "a role was restored twice"
+    for day in days:
+        for session in day.get("sessions") or []:
+            assert str(session["session_id"]).startswith(f"deterministic-{day['countdown_label'][2:]}-")
 
 
 def test_spine_still_stands_down_when_content_has_no_calendar_identity():
