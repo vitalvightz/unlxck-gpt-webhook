@@ -721,7 +721,7 @@ def strip_locked_sessions_for_conversion(source_markdown: str, planning_brief: A
     for line in source_markdown.splitlines():
         day = _day_header_dday(line)
         if day is not None:
-            title = re.split(r"\s+[—–-]\s+|:\s+", line.strip())[-1]
+            title = re.split(r"\s+[—–-]\s+|:\s+", line.strip(), maxsplit=1)[-1]
             title = re.sub(r"\s*\([^)]*\)\s*$", "", title)
             title = _normalise_locked_text(title)
             skipping = any(
@@ -742,8 +742,9 @@ def _remove_generic_visualization_source_alias(source: str, day: int) -> str:
     for start, line in enumerate(lines):
         if _day_header_dday(line) != day:
             continue
-        title = _normalise_locked_text(re.split(r"\s+[—–-]\s+|:\s+", line.strip())[-1])
-        if title not in {"fight visualisation (mental)", "fight visualisation - mental rehearse"}:
+        # Split once so dashes inside the title ("Fight Visualisation - ...") survive.
+        title = _normalise_locked_text(re.split(r"\s+[—–-]\s+|:\s+", line.strip(), maxsplit=1)[-1])
+        if title != "fight visualisation (mental)" and not title.startswith("fight visualisation - "):
             continue
         end = start + 1
         while end < len(lines) and _day_header_dday(lines[end]) is None:

@@ -630,6 +630,41 @@ def test_generic_same_day_visualisation_source_copy_is_removed():
     assert "D-6 (Friday) — Recovery" in result.source_markdown
 
 
+@pytest.mark.parametrize(
+    "ghost_title", ["Fight Visualisation - Mental Rehearse", "Fight Visualisation - Range Rehearse"]
+)
+def test_hyphenated_same_day_visualisation_source_copy_is_removed(ghost_title):
+    entry = select_fight_visualization("boxing", "pressure_fighter", 7)
+    brief, _role = _locked_brief(entry, day_label="D-7")
+    source = (
+        "D-7 — Fight Visualisation\n"
+        + build_visualization_display_text(entry)
+        + f"\n\nD-7 — {ghost_title}\n- Fight Visualisation: 8 minutes.\n\n"
+        "D-6 — Recovery\nRest.\n"
+    )
+    result = repair_locked_tactical_watch_source_text(source, brief)
+    assert ghost_title not in result.source_markdown
+    assert result.source_markdown.count("D-7 — Fight Visualisation") == 1
+    assert "D-6 — Recovery" in result.source_markdown
+
+
+@pytest.mark.parametrize(
+    "ghost_title", ["Fight Visualisation - Mental Rehearse", "Fight Visualisation - Range Rehearse"]
+)
+def test_hyphenated_visualisation_session_is_stripped_for_conversion(ghost_title):
+    entry = select_fight_visualization("boxing", "pressure_fighter", 7)
+    brief, _role = _locked_brief(entry, day_label="D-7")
+    source = (
+        "D-7 — Strength\n- Trap Bar Deadlift: 3 x 3\n\n"
+        f"D-7 — {ghost_title}\n- Fight Visualisation: 8 minutes\n\n"
+        "D-6 — Recovery\nRest.\n"
+    )
+    converted = strip_locked_sessions_for_conversion(source, brief)
+    assert "Trap Bar Deadlift" in converted
+    assert "D-6 — Recovery" in converted
+    assert "Fight Visualisation" not in converted
+
+
 def test_deterministic_fallback_defers_to_the_locked_merge():
     from api.structured_plan_deterministic_fallback import _ROLES_OWNED_ELSEWHERE
 
