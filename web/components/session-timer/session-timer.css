@@ -474,6 +474,14 @@
 
 .st-primary:active { transform: scale(0.985); }
 
+.st-primary:disabled {
+  cursor: default;
+  color: var(--st-ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.st-primary:disabled:active { transform: none; }
+
 .st-primary[data-variant="ghost"] {
   background: var(--st-surface-strong);
   color: var(--st-ink);

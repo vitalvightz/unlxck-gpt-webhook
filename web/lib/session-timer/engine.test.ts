@@ -139,15 +139,33 @@ test("a set range: rest stays rest until the athlete starts the set, finish once
   assert.equal(step.state.phaseStartedAt, T0 + 145_000);
 
   step = completeSet(step.state, T0 + 160_000);
-  step = skipRest(step.state, T0 + 170_000);
-  step = completeSet(step.state, T0 + 200_000);
+  // Set 3 only unlocks once the 90 s minimum has passed.
+  step = skipRest(step.state, T0 + 250_000);
+  step = completeSet(step.state, T0 + 280_000);
   assert.deepEqual(step.state.completed, [3, 0]);
   assert.equal(step.state.phase, "rest");
 
-  step = finishItem(step.state, T0 + 205_000);
+  step = finishItem(step.state, T0 + 285_000);
   assert.deepEqual(step.events, ["item_complete"]);
   assert.equal(step.state.index, 1);
   assert.equal(step.state.phase, "ready");
+});
+
+test("a ranged rest refuses Start set before its minimum and accepts it after", () => {
+  let state = startItem(createTimerState([SQUAT]), T0).state;
+  state = completeSet(state, T0).state;
+  // 90-120 s rest: a tap at +30 s is refused and the athlete keeps resting.
+  const early = skipRest(state, T0 + 30_000);
+  assert.equal(early.state, state);
+  assert.deepEqual(early.events, []);
+  assert.equal(early.state.phase, "rest");
+  // A tap at +100 s (inside the range) starts the next set.
+  const late = skipRest(advance(state, T0 + 100_000).state, T0 + 100_000);
+  assert.deepEqual(late.events, ["set_start"]);
+  assert.equal(late.state.phase, "work");
+  assert.equal(late.state.unit, 2);
+  // Even before a tick announces "ready", a tap past the minimum is accepted.
+  assert.equal(skipRest(state, T0 + 95_000).state.phase, "work");
 });
 
 test("a ranged rest starts the next set by itself only at its maximum", () => {
@@ -188,6 +206,7 @@ test("timed holds with a 90-120 s rest: no hold starts or finishes inside the re
   let tapped = startItem(createTimerState([hold]), T0);
   tapped = advance(tapped.state, T0 + 20_000);
   tapped = skipRest(advance(tapped.state, restStart + 100_000).state, restStart + 100_000);
+  assert.equal(skipRest(advance(tapped.state, restStart).state, restStart + 30_000).events.length, 0);
   assert.deepEqual(tapped.events, ["hold_start"]);
   assert.equal(viewAt(tapped.state, restStart + 100_000).remainingMs, 20_000);
 });

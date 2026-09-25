@@ -345,10 +345,13 @@ function PrimaryAction({
   timer,
   item,
   canFinishItem,
+  readyRemainingMs,
 }: {
   timer: SessionTimerController;
   item: TimerItem | null;
   canFinishItem: boolean;
+  /** Ranged rest only: time until the minimum rest, when the next set unlocks. */
+  readyRemainingMs: number | null;
 }) {
   const { state } = timer;
   if (!item || state.phase === "done") return null;
@@ -381,6 +384,13 @@ function PrimaryAction({
     return (
       <button type="button" className="st-primary" onClick={() => timer.run(finishItem)}>
         Done
+      </button>
+    );
+  }
+  if (state.phase === "rest" && readyRemainingMs !== null && readyRemainingMs > 0) {
+    return (
+      <button type="button" className="st-primary" data-variant="ghost" disabled>
+        Set {state.unit} unlocks in {formatClock(Math.ceil(readyRemainingMs / 1000))}
       </button>
     );
   }
@@ -610,7 +620,12 @@ export function SessionTimer({
 
       {state.phase !== "done" ? (
         <footer className="st-controls">
-          <PrimaryAction timer={timer} item={item} canFinishItem={canFinishItem} />
+          <PrimaryAction
+            timer={timer}
+            item={item}
+            canFinishItem={canFinishItem}
+            readyRemainingMs={view.readyRemainingMs}
+          />
           <div className="st-secondary">
             {/* Pause is the primary action during a round, and Resume is primary
                 whenever paused, so it only repeats here for sets and rest. */}

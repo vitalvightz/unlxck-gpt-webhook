@@ -231,9 +231,16 @@ export function completeSet(state: TimerState, now: number): TimerStep {
   return { state: finishSet(state, now, events), events };
 }
 
-/** Start the next set without waiting out the rest (or from an untimed rest). */
+/**
+ * Start the next set without waiting out the rest (or from an untimed rest).
+ * A ranged rest's minimum is binding: before it, the tap is refused.
+ */
 export function skipRest(state: TimerState, now: number): TimerStep {
-  if (state.phase !== "rest" || state.pausedAt !== null) {
+  if (
+    state.phase !== "rest" ||
+    state.pausedAt !== null ||
+    (state.readyAt !== null && now < state.readyAt)
+  ) {
     return { state, events: [] };
   }
   const events: TimerEvent[] = [];
