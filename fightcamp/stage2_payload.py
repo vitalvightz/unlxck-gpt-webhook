@@ -64,6 +64,7 @@ from .session_composition import (
     _selected_coaching_notes,
     attach_late_fight_assignments,
     apply_realised_load_calendar_revalidation,
+    apply_standalone_strength_minimum,
     compose_normal_conditioning_assignments,
     compose_normal_rehab_assignments,
     compose_normal_strength_assignments,
@@ -1534,6 +1535,14 @@ def _build_planning_brief(
             only_roles=only_roles,
         )
 
+    # A proposed extra standalone-strength exercise is kept only when the
+    # revalidation below would place every session exactly as it does without it.
+    apply_standalone_strength_minimum(
+        weekly_role_map,
+        candidate_pools=candidate_pools,
+        redose_callback=_resolve_strength_doses,
+        recompose_conditioning_callback=_recompose_conditioning,
+    )
     apply_realised_load_calendar_revalidation(
         weekly_role_map,
         redose_callback=_resolve_strength_doses,
