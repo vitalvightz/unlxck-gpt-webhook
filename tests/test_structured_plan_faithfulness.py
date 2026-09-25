@@ -934,3 +934,63 @@ def test_choice_line_is_still_the_source_when_no_exact_title_exists():
     segment = faithfulness._source_block_segment(source, "Short sprint bounds")
 
     assert "2-3 sets" in segment
+
+
+# --- calendar-only days (spine rest rows, server-assembled sessions) --------
+#
+# The calendar spine runs before this gate (so a locked card has its D-day to
+# land on) and writes every countdown day. Stage 2 text rarely names rest days,
+# so holding those rows to the source's markers rejected nearly every card.
+
+
+def _rest_row(label: str, headline: str = "") -> dict:
+    return {
+        "countdown_label": label,
+        "day_type": "rest",
+        "today_card": {"headline": headline},
+        "sessions": [],
+    }
+
+
+def test_spine_rest_days_absent_from_source_are_not_countdown_violations():
+    plan = copy.deepcopy(_FAITHFUL)
+    week = plan["weeks"][0]
+    week["countdown_start"], week["countdown_end"] = "D-34", "D-29"
+    week["days"] = [
+        _rest_row("D-34"),
+        _rest_row("D-33", "Rest day"),
+        week["days"][0],
+        _rest_row("D-31"),
+        week["days"][1],
+        _rest_row("D-29"),
+    ]
+    assert check_structured_faithfulness(plan, SOURCE) == []
+
+
+def test_server_assembled_only_day_absent_from_source_passes():
+    plan = copy.deepcopy(_FAITHFUL)
+    plan["weeks"][0]["days"].append(
+        {
+            "countdown_label": "D-29",
+            "today_card": {"headline": ""},
+            "sessions": [
+                {
+                    "session_id": "deterministic-29-joint_prep-0",
+                    "blocks": [{"block_type": "mobility_activation", "display_name": "Neck CARs"}],
+                }
+            ],
+        }
+    )
+    assert check_structured_faithfulness(plan, SOURCE) == []
+
+
+def test_model_content_on_a_day_absent_from_source_is_still_rejected():
+    plan = copy.deepcopy(_FAITHFUL)
+    plan["weeks"][0]["days"].append(_rest_row("D-29", "Hard sparring"))
+    violations = check_structured_faithfulness(plan, SOURCE)
+    assert any("'D-29'" in v for v in violations), violations
+
+    plan = _plan([("D-99", [("strength", "Barbell Back Squat")])])
+    plan["weeks"][0]["days"][0]["today_card"] = {"headline": ""}
+    violations = check_structured_faithfulness(plan, SOURCE)
+    assert any(v.startswith("COUNTDOWN") and "'D-99'" in v for v in violations), violations

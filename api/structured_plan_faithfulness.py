@@ -917,6 +917,29 @@ def _is_server_assembled(entry: Any, key: str) -> bool:
     return str(entry.get(key) or "").startswith(_SERVER_ASSEMBLED_ID_PREFIXES)
 
 
+_CALENDAR_ONLY_HEADLINES = frozenset({"", "rest", "rest day", "off", "day off"})
+
+
+def _is_calendar_only_day(day: dict[str, Any], day_num: int | None) -> bool:
+    """True for a day that carries no converter-authored claim to verify.
+
+    The calendar spine writes every countdown day of the camp, and it now runs
+    before this gate so locked cards have their authoritative day to land on.
+    The days it adds are rest rows (no sessions, empty headline) or rows holding
+    only server-assembled sessions. Stage 2 text rarely spells out rest days, so
+    holding such a day to the source's countdown markers rejected nearly every
+    card. A day with any model-authored session, or a model headline naming
+    work, is still checked.
+    """
+    for session in day.get("sessions") or []:
+        if isinstance(session, dict) and not _is_server_assembled(session, "session_id"):
+            return False
+    card = day.get("today_card")
+    headline = str(card.get("headline") or "") if isinstance(card, dict) else ""
+    headline = re.sub(r"[\s.]+", " ", headline).strip().casefold()
+    return headline in _CALENDAR_ONLY_HEADLINES or (day_num == 0 and headline == "fight day")
+
+
 def _check(structured_plan: Any, source_markdown: str, planning_brief: Any = None) -> list[str]:
     plan = structured_plan if isinstance(structured_plan, dict) else {}
     source = str(source_markdown or "")
@@ -955,12 +978,28 @@ def _check(structured_plan: Any, source_markdown: str, planning_brief: Any = Non
     server_owned_ddays = _server_owned_ddays(planning_brief)
 
     weeks = plan.get("weeks") if isinstance(plan.get("weeks"), list) else []
+    # Calendar-only days (see _is_calendar_only_day) are the spine's, not the
+    # converter's; a week boundary landing on one is derived from that calendar.
+    calendar_only_ddays = {
+        day_num
+        for week in weeks
+        if isinstance(week, dict)
+        for day in week.get("days") or []
+        if isinstance(day, dict)
+        and (day_num := _dday_num(day.get("countdown_label"))) is not None
+        and _is_calendar_only_day(day, day_num)
+    }
     for week in weeks:
         if not isinstance(week, dict):
             continue
         for label in (week.get("countdown_start"), week.get("countdown_end")):
             num = _dday_num(label)
-            if num is not None and num not in source_ddays:
+            if (
+                num is not None
+                and num not in source_ddays
+                and num not in server_owned_ddays
+                and num not in calendar_only_ddays
+            ):
                 violations.append(f"{COUNTDOWN}: week countdown {label!r} absent from source text")
 
         for day in week.get("days") or []:
@@ -971,6 +1010,7 @@ def _check(structured_plan: Any, source_markdown: str, planning_brief: Any = Non
                 day_num is not None
                 and day_num not in source_ddays
                 and day_num not in server_owned_ddays
+                and day_num not in calendar_only_ddays
             ):
                 # A server-owned day is exempt: the deterministic assemblers place
                 # it from the role map, so Stage 2's text is not its authority.
