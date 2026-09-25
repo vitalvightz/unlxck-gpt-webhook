@@ -17,6 +17,11 @@ import { XP_REFRESH_EVENT } from "@/lib/xp-events";
 import { createFreshXpProgress, type XpProgress } from "@/lib/xp-progress";
 
 export const XP_PROGRESS_POLL_MS = 60_000;
+// Passive refreshes (tab focus, visibility, the poll) are skipped when progress
+// was loaded this recently. Returning to the tab fires both `focus` and
+// `visibilitychange`; without this each return cost two back-to-back progress
+// reads. Explicit refreshes (XP_REFRESH_EVENT after a write) always run.
+export const XP_PASSIVE_REFRESH_MIN_INTERVAL_MS = 30_000;
 
 export type XpFeedbackEvent =
   | {
@@ -113,6 +118,7 @@ export function XpProvider({ children }: Readonly<{ children: ReactNode }>) {
   const seenAwardIdsRef = useRef<Set<string>>(new Set());
   const inFlightRef = useRef<Promise<void> | null>(null);
   const trailingRefreshRef = useRef(false);
+  const lastLoadedAtRef = useRef(0);
 
   useEffect(() => {
     activeIdentityRef.current = identityKey;
@@ -124,6 +130,7 @@ export function XpProvider({ children }: Readonly<{ children: ReactNode }>) {
     seenAwardIdsRef.current = new Set();
     inFlightRef.current = null;
     trailingRefreshRef.current = false;
+    lastLoadedAtRef.current = 0;
     setView({
       ...initialViewState(),
       athleteId: athleteId || null,
@@ -202,6 +209,7 @@ export function XpProvider({ children }: Readonly<{ children: ReactNode }>) {
         try {
           const progress = await getXpProgress(accessToken);
           applyProgress(progress, targetAthleteId, targetIdentityKey);
+          lastLoadedAtRef.current = Date.now();
         } catch {
           if (activeIdentityRef.current !== targetIdentityKey) return;
           setView((current) => ({
@@ -233,19 +241,21 @@ export function XpProvider({ children }: Readonly<{ children: ReactNode }>) {
     void recordAppActivity(accessToken).then(load, load);
 
     const refresh = () => void load();
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") void load();
+    const passiveRefresh = () => {
+      if (document.visibilityState !== "visible") return;
+      if (inFlightRef.current) return;
+      if (Date.now() - lastLoadedAtRef.current < XP_PASSIVE_REFRESH_MIN_INTERVAL_MS) return;
+      void load();
     };
+    const handleVisibility = () => passiveRefresh();
     window.addEventListener(XP_REFRESH_EVENT, refresh);
-    window.addEventListener("focus", refresh);
+    window.addEventListener("focus", passiveRefresh);
     document.addEventListener("visibilitychange", handleVisibility);
-    const interval = window.setInterval(() => {
-      if (document.visibilityState === "visible") void load();
-    }, XP_PROGRESS_POLL_MS);
+    const interval = window.setInterval(passiveRefresh, XP_PROGRESS_POLL_MS);
 
     return () => {
       window.removeEventListener(XP_REFRESH_EVENT, refresh);
-      window.removeEventListener("focus", refresh);
+      window.removeEventListener("focus", passiveRefresh);
       document.removeEventListener("visibilitychange", handleVisibility);
       window.clearInterval(interval);
     };

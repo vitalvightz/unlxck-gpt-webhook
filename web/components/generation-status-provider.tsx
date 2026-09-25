@@ -53,6 +53,30 @@ const GLOBAL_STATUS_POLL_MS = 15_000;
 // cadence so the approval lands on screen by itself.
 const ADMIN_HOLD_POLL_MS = 8_000;
 const INITIAL_STATUS_CHECK_DELAY_MS = 900;
+// Returning to the tab re-checks generation status. With nothing in flight that
+// check is two authenticated reads (active, then latest) that almost always
+// report "no build", so it is skipped when the last check finished recently.
+// A tracked job, a local pending record or an admin hold always re-checks.
+export const PASSIVE_STATUS_RECHECK_MIN_INTERVAL_MS = 60_000;
+
+export function shouldRunPassiveStatusCheck({
+  trackedJobId,
+  hasPendingRecord,
+  adminHold,
+  lastCheckedAtMs,
+  nowMs = Date.now(),
+}: {
+  trackedJobId: string | null | undefined;
+  hasPendingRecord: boolean;
+  adminHold: boolean;
+  lastCheckedAtMs: number;
+  nowMs?: number;
+}): boolean {
+  if (shouldPollGenerationStatus(trackedJobId, hasPendingRecord) || adminHold) {
+    return true;
+  }
+  return nowMs - lastCheckedAtMs >= PASSIVE_STATUS_RECHECK_MIN_INTERVAL_MS;
+}
 
 interface PendingGenerationState {
   clientRequestId: string;
@@ -341,6 +365,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
   const trackedJobRef = useRef<PendingGenerationState | null>(null);
   const jobIdRef = useRef<string | null>(null);
   const adminHoldRef = useRef(false);
+  const lastCheckedAtRef = useRef(0);
 
   const setTrackedJob = useCallback((pending: PendingGenerationState | null) => {
     trackedJobRef.current = pending?.jobId ? pending : null;
@@ -569,6 +594,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
       }
     } finally {
       isCheckingRef.current = false;
+      lastCheckedAtRef.current = Date.now();
     }
   }, [clearActiveJobState, resetGenerationState, setActiveJobId, setTrackedJob, token]);
 
@@ -671,7 +697,15 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
     };
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
+      if (
+        document.visibilityState === "visible" &&
+        shouldRunPassiveStatusCheck({
+          trackedJobId: trackedJobRef.current?.jobId,
+          hasPendingRecord: Boolean(getPendingGeneration()),
+          adminHold: adminHoldRef.current,
+          lastCheckedAtMs: lastCheckedAtRef.current,
+        })
+      ) {
         void checkStatus();
       }
     };

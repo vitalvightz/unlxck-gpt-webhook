@@ -16,7 +16,12 @@ from api.models import (
     UsernameChangeRequest,
 )
 from api.plan_mappers import _build_me_response, _map_profile_row
-from api.services.xp_awards import plan_activation_ready, reconcile_activation_xp
+from api.services.xp_awards import (
+    activation_xp_settled,
+    plan_activation_ready,
+    reconcile_activation_xp,
+    settled_activation_milestones,
+)
 from api.store import AppStore
 
 logger = logging.getLogger(__name__)
@@ -52,13 +57,22 @@ def build_profile_router(*, require_profile, get_store) -> APIRouter:
         response = _build_me_response(profile, store)
         if profile.role != "athlete":
             return response
+        # Established athletes have every activation milestone already awarded;
+        # once this process has seen that, profile reads stay reads.
+        if activation_xp_settled(store, profile.athlete_id):
+            return response
         try:
+            plan_settled = "first_plan_ready" in settled_activation_milestones(
+                store, profile.athlete_id
+            )
             reconcile_activation_xp(
                 store,
                 athlete_id=profile.athlete_id,
                 profile=response.profile,
                 latest_intake=response.latest_intake,
-                latest_plan=_activation_ready_plan(
+                latest_plan=None
+                if plan_settled
+                else _activation_ready_plan(
                     response,
                     store,
                     profile.athlete_id,
