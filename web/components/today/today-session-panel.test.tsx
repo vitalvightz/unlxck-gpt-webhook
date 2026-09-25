@@ -255,3 +255,58 @@ test("safe replacement renders without blocked terminal or completion controls",
   assert.doesNotMatch(html, /Blocked by an active severe injury/);
   assert.doesNotMatch(html, />Start session<|>Mark done<|>Mark modified<|>Resume session</);
 });
+
+function contactDayState(decisionTier: TodayCommandView["today"]["decision_tier"]): TodayCommandView {
+  return {
+    active_plan: { id: "plan-1", name: "Camp", phase: "SPP" },
+    today: {
+      training_day: "2026-09-25",
+      recommendation_state: decisionTier === "not_checked_in" ? "not_checked_in" : "train_as_planned",
+      decision_tier: decisionTier,
+      warnings: [],
+      next_session: {
+        session_id: "2026-09-25-flush",
+        title: "Mobility flush",
+        calendar_date: "2026-09-25",
+        session_relation: "today",
+        effective_load: "low",
+        coach_led_contact: "Hard sparring (coach-led)",
+      },
+      session_scope: "today",
+      session_label: "Today's session",
+      completion_status: "not_started",
+    },
+    risk_watch: [],
+    open_injuries: [],
+    week_summary: {},
+    quick_actions: [],
+  };
+}
+
+function renderPanel(state: TodayCommandView): string {
+  return renderToStaticMarkup(
+    <AuthProvider>
+      <ToastProvider>
+        <TodaySessionPanel state={state} structuredPlan={null} token="token" onRefresh={async () => {}} />
+      </ToastProvider>
+    </AuthProvider>,
+  );
+}
+
+test("a cleared day with coach-led sparring offers Start rounds and the round timer", () => {
+  const html = renderPanel(contactDayState("green"));
+  assert.match(html, /Today&#x27;s contact/);
+  assert.match(html, /Hard sparring \(coach-led\)/);
+  assert.match(html, />Start rounds</);
+  assert.match(html, />Round timer</);
+});
+
+test("sparring rounds stay locked until check-in, and are never offered under a stop", () => {
+  const unchecked = renderPanel(contactDayState("not_checked_in"));
+  assert.doesNotMatch(unchecked, />Start rounds</);
+  assert.match(unchecked, /Check in to unlock sparring rounds/);
+
+  const stopped = renderPanel(contactDayState("stop"));
+  assert.doesNotMatch(stopped, />Start rounds</);
+  assert.doesNotMatch(stopped, />Round timer</);
+});

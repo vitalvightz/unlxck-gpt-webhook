@@ -20,7 +20,13 @@ import { RehabResponsePrompt } from "@/components/today/rehab-response-prompt";
 import { useToast } from "@/components/toast-provider";
 import { listPendingRehabResponses, submitTodaySessionCompletion } from "@/lib/api";
 import { timerAudio } from "@/lib/session-timer/audio";
-import { buildTimerItems, defaultRoundsItem } from "@/lib/session-timer/plan";
+import {
+  contactRoundsItem,
+  contactTimerTarget,
+  freeRoundsItem,
+  type ContactTimerTarget,
+} from "@/lib/session-timer/contact";
+import { buildTimerItems, defaultRoundsItem, type TimerItem } from "@/lib/session-timer/plan";
 import {
   resolveCurrentDay,
   resolveOpenPlanWeekNumber,
@@ -46,6 +52,7 @@ import {
 import type {
   RehabLabelPolicy,
   PendingRehabResponseSet,
+  StructuredDay,
   StructuredPlan,
   TodayCommandView,
   TodayCompletionStatus,
@@ -82,6 +89,15 @@ function getSessionDuration(session: TodaySession): string | null {
   }
   return null;
 }
+
+/** Which timer is running: today's planned session, today's coach-led contact
+ * (sparring the athlete declared, with no app session to start), or plain rounds. */
+type TimerSource = "session" | "contact" | "free";
+
+const CONTACT_LOCK_COPY = {
+  not_checked_in: "Check in to unlock sparring rounds.",
+  blocked: "Sparring rounds are locked by today's decision.",
+};
 
 /** Saved timer runs only change through this tab's own actions, which re-render. */
 function subscribeToNothing(): () => void {
@@ -271,8 +287,10 @@ export function TodaySessionPanel({
   // This is an array so two completed sessions on one day cannot hide each
   // other's independently pending injury response.
   const [rehabResponses, setRehabResponses] = useState<PendingRehabResponseSet[]>([]);
-  // Session timer: closed, full screen, or minimised to a bar while it keeps time.
-  const [timerMode, setTimerMode] = useState<"closed" | "open" | "minimized">("closed");
+  // The running timer, full screen or minimised to a bar while it keeps time.
+  const [activeTimer, setActiveTimer] = useState<
+    { source: TimerSource; mode: "open" | "minimized" } | null
+  >(null);
   // What the timer recorded, pre-filled (editable) into the completion notes.
   const [timerNotes, setTimerNotes] = useState("");
   const session = state.today.next_session;
@@ -376,7 +394,12 @@ export function TodaySessionPanel({
   // The timer runs today's resolved blocks. Same gate as completion, and never
   // under a STOP: the safe replacement session is not something to time.
   const timerAvailable = canCompleteSession && !safeSession && Boolean(session.session_id);
-  const timerStorageKey = `unlxck.session-timer.run:${activePlanId}:${session.session_id ?? ""}:${state.today.training_day}`;
+  const timerKeys: Record<TimerSource, string> = {
+    session: `unlxck.session-timer.run:${activePlanId}:${session.session_id ?? ""}:${state.today.training_day}`,
+    contact: `unlxck.session-timer.contact:${activePlanId}:${state.today.training_day}`,
+    free: `unlxck.session-timer.free:${state.today.training_day}`,
+  };
+  const timerStorageKey = timerKeys.session;
   const timerSourceText = structuredPlan?.raw_markdown_fallback ?? null;
   const timerCountdown = current.day?.countdown_label ?? null;
   const timerSessions = hasResolvedDaySessions ? current.sessions : null;
@@ -384,17 +407,55 @@ export function TodaySessionPanel({
     ? buildTimerItems(timerSessions, { sourceText: timerSourceText, countdown: timerCountdown })
     : [];
   const timerItems = builtTimerItems.length ? builtTimerItems : [defaultRoundsItem()];
+  // Coach-led contact is timed from TODAY's plan day, even when the card above
+  // has moved on to the next app session (a sparring-only day has none).
+  const todayOpenWeekNumber = resolveOpenPlanWeekNumber(structuredPlan, trainingDay, {
+    currentWeekNumber: planSchedule?.scheduleContext?.current_week_number,
+    anchorDate: planSchedule?.scheduleContext?.anchor_date,
+    createdAt: planSchedule?.createdAt,
+  });
+  const todayResolved =
+    focusDate === trainingDay
+      ? current
+      : resolveCurrentDay(structuredPlan, trainingDay, {
+          openWeekNumber: todayOpenWeekNumber,
+          allowDatedWeekdayMatch: openOngoing,
+        });
+  const contactTarget: ContactTimerTarget | null =
+    (todayResolved.inRange ? contactTimerTarget(todayResolved.day) : null) ??
+    (resolvedDecision.sessionIsToday && session.coach_led_contact
+      ? contactTimerTarget({ today_card: { coach_led_contact: session.coach_led_contact } } as StructuredDay)
+      : null);
+  // Hard contact follows the same readiness authority as a session: only a
+  // go / follow-the-limits day, never under pull back, stop or a severe injury.
+  const contactCleared =
+    (resolvedDecision.authoritativeTier === "green" ||
+      resolvedDecision.authoritativeTier === "modify") &&
+    !severeInjuryBlocksCurrentSession &&
+    !safeSession;
+  const contactTimerAvailable = Boolean(contactTarget) && contactCleared;
+  const contactLockCopy =
+    resolvedDecision.authoritativeTier === "not_checked_in"
+      ? CONTACT_LOCK_COPY.not_checked_in
+      : CONTACT_LOCK_COPY.blocked;
+  const freeTimerAvailable =
+    resolvedDecision.authoritativeTier !== "stop" && !severeInjuryBlocksCurrentSession;
   // A run left in progress (app closed mid-session) comes back as the mini bar.
   // Read from storage on the client only, so server and first client render agree.
-  const hasTimerRun = useSyncExternalStore(
+  const savedTimerSource = useSyncExternalStore<TimerSource | null>(
     subscribeToNothing,
-    () => hasSavedRun(timerStorageKey),
-    () => false,
+    () =>
+      timerAvailable && status === "started" && hasSavedRun(timerKeys.session)
+        ? "session"
+        : contactTimerAvailable && hasSavedRun(timerKeys.contact)
+          ? "contact"
+          : freeTimerAvailable && hasSavedRun(timerKeys.free)
+            ? "free"
+            : null,
+    () => null,
   );
-  const activeTimerMode =
-    timerMode === "closed" && timerAvailable && status === "started" && hasTimerRun
-      ? "minimized"
-      : timerMode;
+  const shownTimer =
+    activeTimer ?? (savedTimerSource ? { source: savedTimerSource, mode: "minimized" as const } : null);
   // Tint the session card to match today's decision (green/amber/red) so the page
   // reads at a glance instead of being a wall of identical dark cards. Neutral
   // (not-checked-in) carries no tone — the card stays default until check-in.
@@ -440,7 +501,7 @@ export function TodaySessionPanel({
       setIntent(null);
       if (nextStatus !== "started") {
         clearSavedRun(timerStorageKey);
-        setTimerMode("closed");
+        setActiveTimer((timer) => (timer?.source === "session" ? null : timer));
         setTimerNotes("");
       }
       // Non-empty only when the server established that this session contained
@@ -484,6 +545,86 @@ export function TodaySessionPanel({
     }
   }
 
+  function openTimer(source: TimerSource) {
+    // Audio only unlocks inside the tap itself.
+    timerAudio().unlock();
+    setActiveTimer({ source, mode: "open" });
+  }
+
+  const roundsLauncher =
+    !shownTimer && (contactTarget || freeTimerAvailable) ? (
+      <div className="today-rounds-launcher">
+        {contactTarget ? (
+          <div className="today-rounds-contact" data-kind={contactTarget.kind}>
+            <div>
+              <p className="today-detail-label">Today&apos;s contact</p>
+              <p className="today-rounds-contact-title">{contactTarget.headline}</p>
+            </div>
+            {contactTimerAvailable ? (
+              <button type="button" className="cta" onClick={() => openTimer("contact")}>
+                Start rounds
+              </button>
+            ) : (
+              <p className="today-rounds-lock">{contactLockCopy}</p>
+            )}
+          </div>
+        ) : null}
+        {freeTimerAvailable ? (
+          <button type="button" className="ghost-button today-rounds-free" onClick={() => openTimer("free")}>
+            Round timer
+          </button>
+        ) : null}
+      </div>
+    ) : null;
+
+  function renderTimer(sessionTitle: string) {
+    if (!shownTimer) {
+      return null;
+    }
+    const { source, mode } = shownTimer;
+    let items: TimerItem[];
+    let title: string;
+    if (source === "session") {
+      if (!timerAvailable) return null;
+      items = timerItems;
+      title = sessionTitle;
+    } else if (source === "contact") {
+      if (!contactTimerAvailable || !contactTarget) return null;
+      items = [contactRoundsItem(contactTarget)];
+      title = items[0].title;
+    } else {
+      if (!freeTimerAvailable) return null;
+      items = [freeRoundsItem()];
+      title = "Round timer";
+    }
+    const storageKey = timerKeys[source];
+    return (
+      <SessionTimer
+        key={storageKey}
+        items={items}
+        storageKey={storageKey}
+        sessionTitle={title}
+        visible={mode === "open"}
+        finishLabel={source === "session" ? "Log session" : "Done"}
+        onMinimize={() => setActiveTimer({ source, mode: "minimized" })}
+        onExpand={() => openTimer(source)}
+        onFinish={(summary: SessionTimerSummary) => {
+          clearSavedRun(storageKey);
+          setActiveTimer(null);
+          if (source === "session") {
+            setTimerNotes(summary.notes.slice(0, 2000));
+            // A run that fell short of the plan is logged as modified, so the
+            // athlete gives the reason instead of it silently reading as done.
+            setIntent(summary.complete ? "done" : "modified");
+            return;
+          }
+          const recorded = summary.notes.replace(/^Timer:\s*/, "");
+          showToast(recorded || "Timer closed.", { tone: recorded ? "success" : "info" });
+        }}
+      />
+    );
+  }
+
   if (!hasSession) {
     return (
       <section
@@ -513,6 +654,8 @@ export function TodaySessionPanel({
         ) : (
           <p className="muted">No active plan card matched today. Use Open camp plan to find the next training target.</p>
         )}
+        {roundsLauncher}
+        {renderTimer(formatTrainingDay(state.today.training_day))}
       </section>
     );
   }
@@ -623,7 +766,7 @@ export function TodaySessionPanel({
               // Audio only unlocks inside the tap itself, before any await.
               if (timerAvailable) timerAudio().unlock();
               void saveCompletion("started").then((started) => {
-                if (started && timerAvailable) setTimerMode("open");
+                if (started && timerAvailable) setActiveTimer({ source: "session", mode: "open" });
               });
             }}
             disabled={isSubmitting}
@@ -646,8 +789,7 @@ export function TodaySessionPanel({
                 showToast("Session is in progress.", { tone: "info" });
                 return;
               }
-              timerAudio().unlock();
-              setTimerMode("open");
+              openTimer("session");
             }}
             disabled={isSubmitting}
           >
@@ -668,6 +810,8 @@ export function TodaySessionPanel({
       {canCompleteSession && (status === "done" || status === "modified" || status === "skipped") ? (
         <p className="today-terminal-status">{getCompletionLabel(status)}</p>
       ) : null}
+
+      {roundsLauncher}
 
       {canCompleteSession ? (
         <SessionCompletionForm
@@ -706,27 +850,7 @@ export function TodaySessionPanel({
         />
       ))}
 
-      {timerAvailable && activeTimerMode !== "closed" ? (
-        <SessionTimer
-          items={timerItems}
-          storageKey={timerStorageKey}
-          sessionTitle={headline}
-          visible={activeTimerMode === "open"}
-          onMinimize={() => setTimerMode("minimized")}
-          onExpand={() => {
-            timerAudio().unlock();
-            setTimerMode("open");
-          }}
-          onFinish={(summary: SessionTimerSummary) => {
-            clearSavedRun(timerStorageKey);
-            setTimerMode("closed");
-            setTimerNotes(summary.notes.slice(0, 2000));
-            // A run that fell short of the plan is logged as modified, so the
-            // athlete gives the reason instead of it silently reading as done.
-            setIntent(summary.complete ? "done" : "modified");
-          }}
-        />
-      ) : null}
+      {renderTimer(headline)}
 
       {reviewableSession ? (
         <SessionFeedbackPrompt

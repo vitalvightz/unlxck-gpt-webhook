@@ -24,6 +24,7 @@ import {
   type TimerState,
   type TimerView,
 } from "@/lib/session-timer/engine";
+import { ROUND_PRESETS } from "@/lib/session-timer/contact";
 import {
   formatClock,
   formatRange,
@@ -163,7 +164,30 @@ function ReadyPanel({ timer, item }: { timer: SessionTimerController; item: Time
   return (
     <div className="st-setup">
       {item.needsSetup ? (
-        <p className="st-setup-note">Round length isn&apos;t in your plan. Check it before you start.</p>
+        <p className="st-setup-note">
+          Round length isn&apos;t in your plan. Match what your coach is running.
+        </p>
+      ) : null}
+      {item.presets ? (
+        <div className="st-round-presets" role="group" aria-label="Round format">
+          {ROUND_PRESETS.map((preset) => {
+            const active = preset.workSec === item.workSec && preset.restSec === item.restSec;
+            return (
+              <button
+                key={preset.label}
+                type="button"
+                aria-pressed={active}
+                onClick={() =>
+                  timer.update((s) =>
+                    updateIntervalItem(s, { workSec: preset.workSec, restSec: preset.restSec }),
+                  )
+                }
+              >
+                {preset.label}
+              </button>
+            );
+          })}
+        </div>
       ) : null}
       <div className="st-steppers">
         <Stepper
@@ -314,6 +338,7 @@ export function SessionTimer({
   storageKey,
   sessionTitle,
   visible,
+  finishLabel = "Log session",
   onMinimize,
   onExpand,
   onFinish,
@@ -322,6 +347,8 @@ export function SessionTimer({
   storageKey: string;
   sessionTitle: string;
   visible: boolean;
+  /** The done screen's button: logging a planned session, or just closing. */
+  finishLabel?: string;
   onMinimize: () => void;
   onExpand: () => void;
   onFinish: (summary: SessionTimerSummary) => void;
@@ -435,7 +462,7 @@ export function SessionTimer({
           </ul>
           <div className="st-actions">
             <button type="button" className="st-primary" onClick={finish}>
-              Log session
+              {finishLabel}
             </button>
           </div>
         </main>

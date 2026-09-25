@@ -26,6 +26,8 @@ export type IntervalItem = TimerItemBase & {
   restSec: number;
   sparring: boolean;
   needsSetup: boolean;
+  /** Offer the common fight round formats on the ready screen. */
+  presets?: boolean;
 };
 
 /**
@@ -197,6 +199,7 @@ export function blockToTimerItem(
       restSec: rest ?? (roundCount > 1 && !workSec ? DEFAULT_ROUND_REST_SEC : 0),
       sparring: blockType === "sparring",
       needsSetup: !workSec,
+      presets: !workSec,
     };
   }
 
@@ -277,6 +280,7 @@ export function defaultRoundsItem(): IntervalItem {
     restSec: DEFAULT_ROUND_REST_SEC,
     sparring: false,
     needsSetup: true,
+    presets: true,
   };
 }
 

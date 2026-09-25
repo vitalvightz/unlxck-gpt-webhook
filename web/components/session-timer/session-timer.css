@@ -471,3 +471,79 @@
     bottom: calc(var(--mobile-tab-bar-clearance, 0px) + 12px);
   }
 }
+
+.st-round-presets {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  max-width: 420px;
+}
+
+.st-round-presets button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--st-line);
+  border-radius: 999px;
+  background: var(--st-button);
+  color: var(--st-ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.st-round-presets button[aria-pressed="true"] {
+  background: var(--st-ink);
+  color: #0d0f12;
+  border-color: transparent;
+}
+
+/* Today card: launch rounds for coach-led contact, or a plain round timer. */
+.today-rounds-launcher {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.today-rounds-contact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-default, #2a2f37);
+  border-left: 3px solid var(--brand-red, #b5122b);
+  border-radius: 14px;
+  background: var(--bg-surface, #15181c);
+}
+
+.today-rounds-contact[data-kind="light_combat"],
+.today-rounds-contact[data-kind="technical"] {
+  border-left-color: var(--progress-gold, #d6af6a);
+}
+
+.today-rounds-contact .today-detail-label {
+  margin: 0 0 2px;
+}
+
+.today-rounds-contact-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.today-rounds-contact .cta {
+  min-width: 148px;
+}
+
+.today-rounds-lock {
+  margin: 0;
+  font-size: var(--type-body-sm, 13px);
+  color: var(--text-secondary, #a7adb7);
+}
+
+.today-rounds-free {
+  align-self: flex-start;
+}
