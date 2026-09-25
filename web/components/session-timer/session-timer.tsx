@@ -249,13 +249,15 @@ function Stepper({
   return (
     <div className="st-stepper">
       <span className="st-stepper-label">{label}</span>
-      <button type="button" onClick={onDown} aria-label={`Decrease ${label.toLowerCase()}`}>
-        −
-      </button>
-      <span className="st-stepper-value">{value}</span>
-      <button type="button" onClick={onUp} aria-label={`Increase ${label.toLowerCase()}`}>
-        +
-      </button>
+      <div className="st-stepper-control">
+        <button type="button" onClick={onDown} aria-label={`Decrease ${label.toLowerCase()}`}>
+          −
+        </button>
+        <span className="st-stepper-value">{value}</span>
+        <button type="button" onClick={onUp} aria-label={`Increase ${label.toLowerCase()}`}>
+          +
+        </button>
+      </div>
     </div>
   );
 }
@@ -276,7 +278,7 @@ function ReadyPanel({
   // when the plan left it open. Everything else lives behind Adjust.
   return (
     <div className="st-setup">
-      <button type="button" className="st-plan-summary" onClick={onAdjust} aria-label="Edit rounds, round and rest">
+      <button type="button" className="st-plan-summary" onClick={onAdjust} aria-label="Edit rounds and timing">
         <span>{item.rounds}</span> × <span>{formatClock(item.workSec)}</span>
         {item.restSec > 0 ? (
           <>
@@ -320,7 +322,7 @@ function ReadyPanel({
 }
 
 /** The current exercise's numbers, adjustable at any point (behind the header icon). */
-function AdjustSheet({ timer, onClose }: { timer: SessionTimerController; onClose: () => void }) {
+function AdjustSheet({ timer }: { timer: SessionTimerController }) {
   const item = currentItem(timer.state);
   if (!item || item.kind === "task") return null;
   // run(), not update(): lowering a target to what is done completes the
@@ -338,7 +340,7 @@ function AdjustSheet({ timer, onClose }: { timer: SessionTimerController; onClos
               onUp={() => adjust({ rounds: item.rounds + 1 })}
             />
             <Stepper
-              label="Round"
+              label="Round length"
               value={formatClock(item.workSec)}
               onDown={() => adjust({ workSec: item.workSec - 15 })}
               onUp={() => adjust({ workSec: item.workSec + 15 })}
@@ -367,9 +369,6 @@ function AdjustSheet({ timer, onClose }: { timer: SessionTimerController; onClos
           </>
         )}
       </div>
-      <button type="button" className="st-sheet-done" onClick={onClose}>
-        Done
-      </button>
     </div>
   );
 }
@@ -684,7 +683,7 @@ export function SessionTimer({
         </div>
         {canAdjust && adjustHint && sheet === null ? (
           <button type="button" className="st-hint" onClick={dismissAdjustHint}>
-            Tap to change rounds, round &amp; rest
+            Tap to edit rounds &amp; timing
             <span aria-hidden="true">×</span>
           </button>
         ) : null}
@@ -692,7 +691,9 @@ export function SessionTimer({
       <StepBar state={state} />
 
       {sheet === "sound" ? <SettingsSheet timer={timer} onClose={() => setSheet(null)} /> : null}
-      {sheet === "adjust" ? <AdjustSheet timer={timer} onClose={() => setSheet(null)} /> : null}
+      {sheet === "adjust" ? <AdjustSheet timer={timer} /> : null}
+      {/* Tapping anywhere off an open sheet closes it. */}
+      {sheet !== null ? <div className="st-scrim" aria-hidden="true" onClick={() => setSheet(null)} /> : null}
 
       {state.phase === "done" ? (
         <main className="st-main st-done">

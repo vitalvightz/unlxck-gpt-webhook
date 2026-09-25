@@ -101,7 +101,7 @@ test("an unstarted timer offers Close timer instead of ending a session", () => 
 
 test("the plan summary opens the adjust sheet and the first-run hint waits for storage", () => {
   const html = render(ITEMS);
-  assert.match(html, /class="st-plan-summary"[^>]*aria-label="Edit rounds, round and rest"/);
+  assert.match(html, /class="st-plan-summary"[^>]*aria-label="Edit rounds and timing"/);
   // Hidden on the server so it never flashes for athletes who have seen it.
   assert.doesNotMatch(html, /st-hint/);
 });
