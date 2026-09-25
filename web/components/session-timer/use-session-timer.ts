@@ -6,6 +6,7 @@ import {
   loadSoundSettings,
   saveSoundSettings,
   timerAudio,
+  type TimerSound,
   type TimerSoundSettings,
 } from "@/lib/session-timer/audio";
 import {
@@ -25,6 +26,8 @@ import type { TimerItem } from "@/lib/session-timer/plan";
 // 2: ranged rest stays in rest until its maximum (readyAt replaced windowEndsAt).
 const RUN_VERSION = 2;
 const TICK_MS = 100;
+/** The fight-ring bells still ring while the timer is minimised. */
+const MINIMIZED_SOUNDS: ReadonlySet<TimerSound> = new Set(["bell", "triple_bell", "finish"]);
 
 type SavedRun = { version: number; key: string; itemIds: string[]; state: TimerState };
 
@@ -144,7 +147,7 @@ export function useSessionTimer({
 }: {
   items: TimerItem[];
   storageKey: string;
-  /** False while the timer is minimised: the clock keeps running silently. */
+  /** False while the timer is minimised: the clock keeps running, and only the round bells ring. */
   audible: boolean;
 }): SessionTimerController {
   const [state, setState] = useState<TimerState>(
@@ -165,8 +168,14 @@ export function useSessionTimer({
   }, [settings]);
 
   const announce = useCallback((events: TimerEvent[], next: TimerState) => {
-    if (!audibleRef.current || events.length === 0) return;
+    if (events.length === 0) return;
     const sound = soundForEvents(events);
+    // Minimised, the round bells still ring so the athlete hears each round
+    // end; beeps, chimes and callouts stay quiet.
+    if (!audibleRef.current) {
+      if (sound && MINIMIZED_SOUNDS.has(sound)) timerAudio().play(sound);
+      return;
+    }
     if (sound) timerAudio().play(sound);
     const callout = calloutForEvents(events, next);
     if (callout) timerAudio().say(callout);

@@ -528,7 +528,7 @@ function ToBody({ children }: { children: ReactNode }) {
 /**
  * Full-screen session timer. Rounds for sparring / conditioning, sets with
  * auto rest for strength, holds and rest for rehab. Minimising keeps the clock
- * running (silently) and shows a mini bar; closing only ever minimises, so an
+ * running (only the round bells ring) and shows a mini bar; closing only ever minimises, so an
  * accidental tap never loses a session.
  */
 export function SessionTimer({
