@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { SessionFeedbackPrompt } from "@/components/feedback/session-feedback-prompt";
 import {
@@ -14,9 +14,13 @@ import {
   SessionlessDayCard,
 } from "@/components/structured-plan-renderer";
 import { formatTrainingDay } from "@/components/today/format";
+import { SessionTimer, type SessionTimerSummary } from "@/components/session-timer/session-timer";
+import { clearSavedRun, hasSavedRun } from "@/components/session-timer/use-session-timer";
 import { RehabResponsePrompt } from "@/components/today/rehab-response-prompt";
 import { useToast } from "@/components/toast-provider";
 import { listPendingRehabResponses, submitTodaySessionCompletion } from "@/lib/api";
+import { timerAudio } from "@/lib/session-timer/audio";
+import { buildTimerItems, defaultRoundsItem } from "@/lib/session-timer/plan";
 import {
   resolveCurrentDay,
   resolveOpenPlanWeekNumber,
@@ -77,6 +81,11 @@ function getSessionDuration(session: TodaySession): string | null {
     return `${session.planned_duration.value} ${session.planned_duration.unit || "min"}`;
   }
   return null;
+}
+
+/** Saved timer runs only change through this tab's own actions, which re-render. */
+function subscribeToNothing(): () => void {
+  return () => undefined;
 }
 
 function textValue(value: string | null | undefined): string {
@@ -262,6 +271,10 @@ export function TodaySessionPanel({
   // This is an array so two completed sessions on one day cannot hide each
   // other's independently pending injury response.
   const [rehabResponses, setRehabResponses] = useState<PendingRehabResponseSet[]>([]);
+  // Session timer: closed, full screen, or minimised to a bar while it keeps time.
+  const [timerMode, setTimerMode] = useState<"closed" | "open" | "minimized">("closed");
+  // What the timer recorded, pre-filled (editable) into the completion notes.
+  const [timerNotes, setTimerNotes] = useState("");
   const session = state.today.next_session;
   const status = state.today.completion_status;
   const duration = getSessionDuration(session);
@@ -360,6 +373,28 @@ export function TodaySessionPanel({
   // resolves the plan card — and rejects completion writes on a rest day — so
   // scope "today" is the single answer both sides use.
   const canCompleteSession = resolvedDecision.canCompleteSession;
+  // The timer runs today's resolved blocks. Same gate as completion, and never
+  // under a STOP: the safe replacement session is not something to time.
+  const timerAvailable = canCompleteSession && !safeSession && Boolean(session.session_id);
+  const timerStorageKey = `unlxck.session-timer.run:${activePlanId}:${session.session_id ?? ""}:${state.today.training_day}`;
+  const timerSourceText = structuredPlan?.raw_markdown_fallback ?? null;
+  const timerCountdown = current.day?.countdown_label ?? null;
+  const timerSessions = hasResolvedDaySessions ? current.sessions : null;
+  const builtTimerItems = timerSessions
+    ? buildTimerItems(timerSessions, { sourceText: timerSourceText, countdown: timerCountdown })
+    : [];
+  const timerItems = builtTimerItems.length ? builtTimerItems : [defaultRoundsItem()];
+  // A run left in progress (app closed mid-session) comes back as the mini bar.
+  // Read from storage on the client only, so server and first client render agree.
+  const hasTimerRun = useSyncExternalStore(
+    subscribeToNothing,
+    () => hasSavedRun(timerStorageKey),
+    () => false,
+  );
+  const activeTimerMode =
+    timerMode === "closed" && timerAvailable && status === "started" && hasTimerRun
+      ? "minimized"
+      : timerMode;
   // Tint the session card to match today's decision (green/amber/red) so the page
   // reads at a glance instead of being a wall of identical dark cards. Neutral
   // (not-checked-in) carries no tone — the card stays default until check-in.
@@ -387,9 +422,9 @@ export function TodaySessionPanel({
       modificationReason?: string;
       notes?: string;
     } = {},
-  ) {
+  ): Promise<boolean> {
     if (!state.active_plan.id || !session.session_id || isSubmitting) {
-      return;
+      return false;
     }
     setIsSubmitting(true);
     try {
@@ -403,6 +438,11 @@ export function TodaySessionPanel({
         notes: details.notes ?? "",
       });
       setIntent(null);
+      if (nextStatus !== "started") {
+        clearSavedRun(timerStorageKey);
+        setTimerMode("closed");
+        setTimerNotes("");
+      }
       // Non-empty only when the server established that this session contained
       // rehab attributable to a known injury, so a normal session never shows
       // this block.
@@ -435,8 +475,10 @@ export function TodaySessionPanel({
           : null,
       );
       await onRefresh();
+      return true;
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Session update failed.", { tone: "error" });
+      return false;
     } finally {
       setIsSubmitting(false);
     }
@@ -574,7 +616,18 @@ export function TodaySessionPanel({
 
       {canCompleteSession && status === "not_started" ? (
         <div className="today-session-actions">
-          <button type="button" className="cta" onClick={() => void saveCompletion("started")} disabled={isSubmitting}>
+          <button
+            type="button"
+            className="cta"
+            onClick={() => {
+              // Audio only unlocks inside the tap itself, before any await.
+              if (timerAvailable) timerAudio().unlock();
+              void saveCompletion("started").then((started) => {
+                if (started && timerAvailable) setTimerMode("open");
+              });
+            }}
+            disabled={isSubmitting}
+          >
             Start session
           </button>
           <button type="button" className="ghost-button" onClick={() => setIntent("skipped")} disabled={isSubmitting}>
@@ -588,7 +641,14 @@ export function TodaySessionPanel({
           <button
             type="button"
             className="cta"
-            onClick={() => showToast("Session is in progress.", { tone: "info" })}
+            onClick={() => {
+              if (!timerAvailable) {
+                showToast("Session is in progress.", { tone: "info" });
+                return;
+              }
+              timerAudio().unlock();
+              setTimerMode("open");
+            }}
             disabled={isSubmitting}
           >
             Resume session
@@ -611,18 +671,19 @@ export function TodaySessionPanel({
 
       {canCompleteSession ? (
         <SessionCompletionForm
-          key={intent ?? "closed"}
+          key={`${intent ?? "closed"}:${timerNotes}`}
           intent={intent}
+          initialNotes={timerNotes}
           isSubmitting={isSubmitting}
           onCancel={() => setIntent(null)}
-          onSubmit={(nextStatus, details) =>
-            saveCompletion(nextStatus, {
+          onSubmit={async (nextStatus, details) => {
+            await saveCompletion(nextStatus, {
               sessionRpe: details.sessionRpe,
               painAfter: details.painAfter,
               modificationReason: details.modificationReason,
               notes: details.notes,
-            })
-          }
+            });
+          }}
         />
       ) : null}
 
@@ -644,6 +705,28 @@ export function TodaySessionPanel({
           }
         />
       ))}
+
+      {timerAvailable && activeTimerMode !== "closed" ? (
+        <SessionTimer
+          items={timerItems}
+          storageKey={timerStorageKey}
+          sessionTitle={headline}
+          visible={activeTimerMode === "open"}
+          onMinimize={() => setTimerMode("minimized")}
+          onExpand={() => {
+            timerAudio().unlock();
+            setTimerMode("open");
+          }}
+          onFinish={(summary: SessionTimerSummary) => {
+            clearSavedRun(timerStorageKey);
+            setTimerMode("closed");
+            setTimerNotes(summary.notes.slice(0, 2000));
+            // A run that fell short of the plan is logged as modified, so the
+            // athlete gives the reason instead of it silently reading as done.
+            setIntent(summary.complete ? "done" : "modified");
+          }}
+        />
+      ) : null}
 
       {reviewableSession ? (
         <SessionFeedbackPrompt

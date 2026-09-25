@@ -45,12 +45,15 @@ export function SessionCompletionForm({
   onCancel,
   onSubmit,
   showStatusPicker = false,
+  initialNotes = "",
 }: {
   intent: CompletionIntent;
   isSubmitting: boolean;
   onCancel: () => void;
   onSubmit: (status: Exclude<CompletionIntent, null>, payload: CompletionFormPayload) => Promise<void>;
   showStatusPicker?: boolean;
+  /** Pre-filled, editable notes (e.g. what the session timer recorded). */
+  initialNotes?: string;
 }) {
   const { me } = useAppSession();
   const canCollectPain = hasHealthDataConsent(me);
@@ -59,7 +62,7 @@ export function SessionCompletionForm({
   const [sessionRpe, setSessionRpe] = useState<number | null>(null);
   const [painAfter, setPainAfter] = useState<number | null>(null);
   const [modificationReason, setModificationReason] = useState("");
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState(initialNotes);
   const [error, setError] = useState<string | null>(null);
 
   const activeIntent = showStatusPicker ? pickedIntent : intent;
