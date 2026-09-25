@@ -200,6 +200,13 @@
 
 .st-plan-summary {
   margin: 14px 0 2px;
+  padding: 2px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 140ms ease;
   font-size: clamp(26px, 7.5vw, 40px);
   font-weight: 600;
   letter-spacing: -0.02em;
@@ -211,13 +218,8 @@
   color: var(--st-ink);
 }
 
-.st-adjust .st-steppers {
-  width: 100%;
-}
-
-.st-adjust:has(.st-stepper:nth-child(2):last-child) .st-steppers {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
+.st-plan-summary:hover,
+.st-plan-summary:focus-visible { background: var(--st-surface); }
 
 .st-detail,
 .st-plan-line {
@@ -378,22 +380,24 @@
   margin-top: 12px;
 }
 
+/* Adjust sheet: one hairline-divided row per number, label left,
+   − value + right. Compact enough to sit over the screen, not fill it. */
 .st-steppers {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
   width: 100%;
 }
 
 .st-stepper {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr 40px 78px 40px;
   align-items: center;
-  gap: 8px;
-  padding: 14px 6px 10px;
-  border: 1px solid var(--st-line);
-  border-radius: 18px;
-  background: var(--st-surface);
+  gap: 4px;
+  padding: 10px 2px;
+}
+
+.st-stepper + .st-stepper {
+  border-top: 1px solid var(--st-line);
 }
 
 .st-stepper-label {
@@ -407,35 +411,92 @@
 .st-stepper-value {
   font-family: var(--st-digits);
   font-variant-numeric: tabular-nums;
-  font-size: 30px;
+  font-size: 24px;
   font-weight: 600;
   letter-spacing: -0.03em;
   line-height: 1;
+  text-align: center;
 }
 
-.st-stepper-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-areas: "value value" "down up";
-  gap: 10px 6px;
-  width: 100%;
-  padding: 0 8px;
+.st-stepper button {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--st-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--st-ink);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 140ms ease, transform 100ms ease;
 }
 
-.st-stepper-row .st-stepper-value { grid-area: value; justify-self: center; }
-.st-stepper-row button:first-child { grid-area: down; }
-.st-stepper-row button:last-child { grid-area: up; }
+.st-stepper button:hover { background: var(--st-surface-strong); }
+.st-stepper button:active { transform: scale(0.92); }
 
-.st-stepper-row button {
-  width: 100%;
-  height: 36px;
+.st-sheet-done {
+  align-self: stretch;
+  height: 40px;
   border: 0;
   border-radius: 12px;
   background: var(--st-surface-strong);
   color: var(--st-ink);
-  font-size: 20px;
-  line-height: 1;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
+}
+
+/* One-time coach mark under the Adjust icon. Never shown again once
+   dismissed or once the sheet is opened. */
+.st-top { position: relative; }
+
+.st-hint {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 52px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 8px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--st-ink);
+  color: #0b0c0f;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  animation: st-hint-in 260ms ease-out 400ms both;
+}
+
+.st-hint::before {
+  content: "";
+  position: absolute;
+  top: -5px;
+  right: 17px;
+  width: 10px;
+  height: 10px;
+  background: inherit;
+  transform: rotate(45deg);
+  border-radius: 2px;
+}
+
+.st-hint span {
+  font-size: 16px;
+  line-height: 1;
+  opacity: 0.45;
+}
+
+@keyframes st-hint-in {
+  from { opacity: 0; transform: translateY(-4px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-hint { animation: none; }
 }
 
 .st-round-presets {

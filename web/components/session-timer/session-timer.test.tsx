@@ -40,6 +40,7 @@ function render(items: TimerItem[], visible = true): string {
       onMinimize={() => undefined}
       onExpand={() => undefined}
       onFinish={() => undefined}
+      onClose={() => undefined}
     />,
   );
 }
@@ -77,16 +78,30 @@ test("a minimised timer on its ready screen renders the mini bar", () => {
   assert.doesNotMatch(html, /role="dialog"/);
 });
 
-test("the last exercise has no button that ends the session except End session", () => {
+test("the last exercise has no button that ends the session except the end link", () => {
   const last = ITEMS[1];
   // A single-exercise run is always on its last exercise.
   const html = render([last]);
   assert.doesNotMatch(html, />Finish</);
   assert.doesNotMatch(html, /Finish exercise/);
   assert.doesNotMatch(html, /Next exercise/);
-  assert.match(html, />End session</);
+  // Unstarted, that link only closes the timer.
+  assert.match(html, />Close timer</);
 });
 
 test("Next exercise only appears when there is a next exercise", () => {
   assert.match(render(ITEMS), /Next exercise/);
+});
+
+test("an unstarted timer offers Close timer instead of ending a session", () => {
+  const html = render(ITEMS);
+  assert.match(html, />Close timer</);
+  assert.doesNotMatch(html, />End session</);
+});
+
+test("the plan summary opens the adjust sheet and the first-run hint waits for storage", () => {
+  const html = render(ITEMS);
+  assert.match(html, /class="st-plan-summary"[^>]*aria-label="Edit rounds, round and rest"/);
+  // Hidden on the server so it never flashes for athletes who have seen it.
+  assert.doesNotMatch(html, /st-hint/);
 });

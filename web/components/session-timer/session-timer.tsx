@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 import { useSessionTimer, type SessionTimerController } from "@/components/session-timer/use-session-timer";
@@ -100,7 +100,7 @@ function describeItem(item: TimerItem): string {
 }
 
 function phaseLabel(state: TimerState, item: TimerItem | null, view: TimerView): string {
-  if (state.phase === "done") return "Session complete";
+  if (state.phase === "done") return metPlan(state) ? "Session complete" : "Session ended";
   if (state.phase === "ready") return "Up next";
   if (view.paused) return "Paused";
   if (state.phase === "rest") return view.readyRemainingMs === 0 ? "Ready" : "Rest";
@@ -249,20 +249,26 @@ function Stepper({
   return (
     <div className="st-stepper">
       <span className="st-stepper-label">{label}</span>
-      <div className="st-stepper-row">
-        <button type="button" onClick={onDown} aria-label={`Decrease ${label.toLowerCase()}`}>
-          −
-        </button>
-        <span className="st-stepper-value">{value}</span>
-        <button type="button" onClick={onUp} aria-label={`Increase ${label.toLowerCase()}`}>
-          +
-        </button>
-      </div>
+      <button type="button" onClick={onDown} aria-label={`Decrease ${label.toLowerCase()}`}>
+        −
+      </button>
+      <span className="st-stepper-value">{value}</span>
+      <button type="button" onClick={onUp} aria-label={`Increase ${label.toLowerCase()}`}>
+        +
+      </button>
     </div>
   );
 }
 
-function ReadyPanel({ timer, item }: { timer: SessionTimerController; item: TimerItem }) {
+function ReadyPanel({
+  timer,
+  item,
+  onAdjust,
+}: {
+  timer: SessionTimerController;
+  item: TimerItem;
+  onAdjust: () => void;
+}) {
   if (item.kind !== "interval") {
     return <p className="st-plan-line">{describeItem(item)}</p>;
   }
@@ -270,7 +276,7 @@ function ReadyPanel({ timer, item }: { timer: SessionTimerController; item: Time
   // when the plan left it open. Everything else lives behind Adjust.
   return (
     <div className="st-setup">
-      <p className="st-plan-summary">
+      <button type="button" className="st-plan-summary" onClick={onAdjust} aria-label="Edit rounds, round and rest">
         <span>{item.rounds}</span> × <span>{formatClock(item.workSec)}</span>
         {item.restSec > 0 ? (
           <>
@@ -278,7 +284,7 @@ function ReadyPanel({ timer, item }: { timer: SessionTimerController; item: Time
             · <span>{formatClock(item.restSec)}</span> rest
           </>
         ) : null}
-      </p>
+      </button>
       {item.needsSetup ? (
         <p className="st-setup-note">
           {item.setupNote || "Round length isn't set in your plan. Pick a format."}
@@ -361,11 +367,39 @@ function AdjustSheet({ timer, onClose }: { timer: SessionTimerController; onClos
           </>
         )}
       </div>
-      <button type="button" className="st-link" onClick={onClose}>
-        Close
+      <button type="button" className="st-sheet-done" onClick={onClose}>
+        Done
       </button>
     </div>
   );
+}
+
+const ADJUST_HINT_KEY = "st-adjust-hint-seen";
+
+/** Whether the one-time "you can edit these" hint should show. Hidden on the
+ * server (and when storage is blocked), so it never flashes for returning users. */
+function useAdjustHint(): [boolean, () => void] {
+  const [dismissed, setDismissed] = useState(false);
+  const unseen = useSyncExternalStore(
+    () => () => undefined,
+    () => {
+      try {
+        return window.localStorage.getItem(ADJUST_HINT_KEY) === null;
+      } catch {
+        return false;
+      }
+    },
+    () => false,
+  );
+  const dismiss = () => {
+    setDismissed(true);
+    try {
+      window.localStorage.setItem(ADJUST_HINT_KEY, "1");
+    } catch {
+      // Nothing to remember it in.
+    }
+  };
+  return [unseen && !dismissed, dismiss];
 }
 
 function SettingsSheet({ timer, onClose }: { timer: SessionTimerController; onClose: () => void }) {
@@ -507,6 +541,7 @@ export function SessionTimer({
   onMinimize,
   onExpand,
   onFinish,
+  onClose,
 }: {
   items: TimerItem[];
   storageKey: string;
@@ -517,11 +552,14 @@ export function SessionTimer({
   onMinimize: () => void;
   onExpand: () => void;
   onFinish: (summary: SessionTimerSummary) => void;
+  /** Closes a timer that was never started, without logging anything. */
+  onClose: () => void;
 }) {
   const timer = useSessionTimer({ items, storageKey, audible: visible });
   const { state, now } = timer;
   const [sheet, setSheet] = useState<"sound" | "adjust" | null>(null);
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [adjustHint, dismissAdjustHint] = useAdjustHint();
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const item = currentItem(state);
   const view = viewAt(state, now);
@@ -566,6 +604,14 @@ export function SessionTimer({
       </ToBody>
     );
   }
+
+  const canAdjust = state.phase !== "done" && !!item && item.kind !== "task";
+  const toggleAdjust = () => {
+    dismissAdjustHint();
+    setSheet((open) => (open === "adjust" ? null : "adjust"));
+  };
+  // Never started: ending just closes, there is nothing to log or call complete.
+  const started = state.startedAt !== null;
 
   const togglePause = () => {
     if (state.phase !== "work" && state.phase !== "rest") return;
@@ -613,11 +659,11 @@ export function SessionTimer({
           </p>
         </div>
         <div className="st-top-actions">
-          {state.phase !== "done" && item && item.kind !== "task" ? (
+          {canAdjust ? (
             <button
               type="button"
               className="st-icon"
-              onClick={() => setSheet((open) => (open === "adjust" ? null : "adjust"))}
+              onClick={toggleAdjust}
               aria-label="Adjust timer"
               aria-expanded={sheet === "adjust"}
               data-active={sheet === "adjust" ? "true" : undefined}
@@ -636,6 +682,12 @@ export function SessionTimer({
             <Icon name="sound" />
           </button>
         </div>
+        {canAdjust && adjustHint && sheet === null ? (
+          <button type="button" className="st-hint" onClick={dismissAdjustHint}>
+            Tap to change rounds, round &amp; rest
+            <span aria-hidden="true">×</span>
+          </button>
+        ) : null}
       </header>
       <StepBar state={state} />
 
@@ -647,7 +699,7 @@ export function SessionTimer({
           <div className="st-done-badge" aria-hidden="true">
             <Icon name="check" />
           </div>
-          <p className="st-done-title">Session complete</p>
+          <p className="st-done-title">{metPlan(state) ? "Session complete" : "Session ended"}</p>
           {sessionElapsed ? <p className="st-done-time">{sessionElapsed} total</p> : null}
           <ul className="st-summary">
             {state.items.map((entry, index) => (
@@ -673,7 +725,14 @@ export function SessionTimer({
           {item?.detail ? <p className="st-detail">{item.detail}</p> : null}
 
           {state.phase === "ready" && item ? (
-            <ReadyPanel timer={timer} item={item} />
+            <ReadyPanel
+              timer={timer}
+              item={item}
+              onAdjust={() => {
+                dismissAdjustHint();
+                setSheet("adjust");
+              }}
+            />
           ) : (
             <>
               <button
@@ -781,8 +840,12 @@ export function SessionTimer({
               </button>
             </div>
           ) : (
-            <button type="button" className="st-link" onClick={() => setConfirmEnd(true)}>
-              End session
+            <button
+              type="button"
+              className="st-link"
+              onClick={() => (started ? setConfirmEnd(true) : onClose())}
+            >
+              {started ? "End session" : "Close timer"}
             </button>
           )}
         </footer>
