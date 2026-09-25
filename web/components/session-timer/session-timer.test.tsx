@@ -72,3 +72,17 @@ test("a minimised timer on its ready screen renders the mini bar", () => {
   assert.match(html, /Hard sparring/);
   assert.doesNotMatch(html, /role="dialog"/);
 });
+
+test("the last exercise has no button that ends the session except End session", () => {
+  const last = ITEMS[1];
+  // A single-exercise run is always on its last exercise.
+  const html = render([last]);
+  assert.doesNotMatch(html, />Finish</);
+  assert.doesNotMatch(html, /Finish exercise/);
+  assert.doesNotMatch(html, /Next exercise/);
+  assert.match(html, />End session</);
+});
+
+test("Next exercise only appears when there is a next exercise", () => {
+  assert.match(render(ITEMS), /Next exercise/);
+});

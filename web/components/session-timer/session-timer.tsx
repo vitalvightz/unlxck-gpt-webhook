@@ -344,7 +344,7 @@ function AdjustSheet({ timer, onClose }: { timer: SessionTimerController; onClos
         )}
       </div>
       <button type="button" className="st-link" onClick={onClose}>
-        Done
+        Close
       </button>
     </div>
   );
@@ -443,7 +443,7 @@ function PrimaryAction({
   if (state.phase === "work" && item.kind === "task") {
     return (
       <button type="button" className="st-primary" onClick={() => timer.run(finishItem)}>
-        Done
+        Complete
       </button>
     );
   }
@@ -724,15 +724,17 @@ export function SessionTimer({
                 End round
               </button>
             ) : null}
-            {canFinishItem ? (
-              <button type="button" data-emphasis="true" onClick={() => timer.run(finishItem)}>
-                <Icon name="flag" />
-                Finish exercise
-              </button>
-            ) : state.phase !== "ready" || state.index + 1 < state.items.length ? (
-              <button type="button" onClick={() => timer.run(finishItem)}>
+            {/* Only ever moves to the next exercise. Nothing here can end the
+                session: that is End session, which asks first. Highlighted once
+                a set range's minimum is met, as the natural way on. */}
+            {state.index + 1 < state.items.length ? (
+              <button
+                type="button"
+                data-emphasis={canFinishItem ? "true" : undefined}
+                onClick={() => timer.run(finishItem)}
+              >
                 <Icon name="next" />
-                {state.index + 1 < state.items.length ? "Next exercise" : "Finish"}
+                Next exercise
               </button>
             ) : null}
           </div>
