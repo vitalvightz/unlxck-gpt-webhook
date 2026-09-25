@@ -321,7 +321,7 @@ _INSERT_META = {
         "rpe_max": 1,
         "insert_category": "recovery",
         "repeat_allowed": False,
-        "display_text": "Nasal breathing if comfortable. Use a 4-6 second inhale and 6-8 second exhale. Finish calmer than you started.",
+        "display_text": "Nasal breathing if comfortable. Use a 4 second inhale and 6 second exhale. Finish calmer than you started.",
     },
     "sleep_downshift": {
         "label": "Sleep Downshift",
@@ -385,7 +385,7 @@ _INSERT_META = {
         "rpe_max": 4,
         "insert_category": "conditioning_maintenance",
         "repeat_allowed": False,
-        "display_text": "3-5 x 2 min easy solo movement rounds, 60 sec rest. Use smooth sport-specific movement at RPE 3-4. No contact, no power and no impact. Keep the gas tank ticking over without costing freshness.",
+        "display_text": "4 x 2 min easy solo movement rounds, 60 sec rest. Use smooth sport-specific movement at RPE 3. No contact, no power and no impact. Keep the gas tank ticking over without costing freshness.",
     },
     "aerobic_walk_flush": {
         "label": "Brisk Walk Flush",
@@ -393,7 +393,7 @@ _INSERT_META = {
         "rpe_max": 4,
         "insert_category": "conditioning_maintenance",
         "repeat_allowed": False,
-        "display_text": "Brisk or incline walk at a nose-breathing pace, RPE 3-4. Low-impact aerobic maintenance and recovery support - finish fresher than you started.",
+        "display_text": "Brisk or incline walk at a nose-breathing pace, RPE 3. Low-impact aerobic maintenance and recovery support - finish fresher than you started.",
     },
     "aerobic_footwork_rhythm": {
         "label": "Footwork Rhythm Flush",
@@ -401,7 +401,7 @@ _INSERT_META = {
         "rpe_max": 4,
         "insert_category": "conditioning_maintenance",
         "repeat_allowed": False,
-        "display_text": "Light in-out steps, pivots, and stance resets, RPE 3-4. Movement-economy work so you waste less energy in exchanges. No sprinting or sharp cuts.",
+        "display_text": "Light in-out steps, pivots, and stance resets, RPE 3. Movement-economy work so you waste less energy in exchanges. No sprinting or sharp cuts.",
     },
     "aerobic_skip_flush": {
         "label": "Light Skipping Flush",
@@ -409,7 +409,7 @@ _INSERT_META = {
         "rpe_max": 4,
         "insert_category": "conditioning_maintenance",
         "repeat_allowed": False,
-        "display_text": "30-45 sec easy skip / 30-45 sec rest, RPE 3-4. Keeps rhythm, calf stiffness, and breathing control without hard conditioning stress. Skip only while calves and Achilles are healthy.",
+        "display_text": "30 sec easy skip / 30 sec rest, RPE 3. Keeps rhythm, calf stiffness, and breathing control without hard conditioning stress. Skip only while calves and Achilles are healthy.",
     },
     "aerobic_jog_flush": {
         "label": "Easy Jog Flush",
@@ -417,7 +417,7 @@ _INSERT_META = {
         "rpe_max": 4,
         "insert_category": "conditioning_maintenance",
         "repeat_allowed": False,
-        "display_text": "Easy continuous jog or walk-jog, RPE 3-4. Maintains aerobic rhythm without fatigue. Keep it conversational.",
+        "display_text": "Easy continuous jog or walk-jog, RPE 3. Maintains aerobic rhythm without fatigue. Keep it conversational.",
     },
 }
 
@@ -985,6 +985,7 @@ def _apply_bank_watch(
     }
     role["display_text"] = build_watch_display_text(watch)
     role["duration_min"] = [watch.duration_minutes, watch.duration_minutes]
+    role["prescribed_duration_min"] = watch.duration_minutes
     used_watch_keys.add(watch.key)
 
 def _apply_bank_visualization(
@@ -999,12 +1000,18 @@ def _apply_bank_visualization(
     entry = select_for_athlete(athlete_model, countdown_day)
     if entry is None:
         return False
-    metadata = visualization_metadata(entry)
+    # The selected bank entry already reflects sport, style and countdown day.
+    # Shorten its zero-load rehearsal only when the athlete reports high fatigue.
+    prescribed_duration = entry.duration_min[0 if _has_high_fatigue(athlete_model) else 1]
+    metadata = visualization_metadata(entry, prescribed_duration_min=prescribed_duration)
     governance = dict(metadata.pop("governance", {}) or {})
     role.update(metadata)
     role["governance"] = {**dict(role.get("governance") or {}), **governance}
-    role["display_text"] = build_visualization_display_text(entry)
+    role["display_text"] = build_visualization_display_text(
+        entry, prescribed_duration_min=prescribed_duration
+    )
     role["duration_min"] = list(entry.duration_min)
+    role["prescribed_duration_min"] = prescribed_duration
     role["athlete_facing_label"] = FIGHT_VISUALIZATION_LABEL
     role["mandatory_fight_visualization"] = True
     role["stress_class"] = "support"
@@ -1330,6 +1337,12 @@ def _build_insert_role(
         if role_key in {"tactical_watch", FIGHT_VISUALIZATION_ROLE_KEY}
         else str(meta["display_text"])
     )
+    lower_dose = _has_high_fatigue(athlete_model) or _has_active_weight_cut(athlete_model)
+    if role_key == "aerobic_shadow_flow" and lower_dose:
+        display_text = display_text.replace("4 x 2 min", "3 x 2 min")
+    prescribed_duration = (
+        8 if lower_dose else 11
+    ) if role_key == "aerobic_shadow_flow" else int(meta["duration_min"][0 if lower_dose else 1])
     role: dict[str, Any] = {
         "session_index": None,
         "category": "support_insert",
@@ -1338,6 +1351,7 @@ def _build_insert_role(
         "athlete_facing_label": label,
         "display_text": display_text,
         "duration_min": list(meta["duration_min"]),
+        "prescribed_duration_min": prescribed_duration,
         "rpe_max": int(meta["rpe_max"]),
         "support_insert_category": _insert_category(role_key),
         "support_insert_cost_category": _cost_category(role_key),

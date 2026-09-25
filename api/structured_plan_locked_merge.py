@@ -151,10 +151,10 @@ def _duration(content: Mapping[str, Any]) -> dict[str, Any]:
     """Normalise the bank's duration onto the card's single-value shape.
 
     The Tactical Watch bank stores one integer; the Fight Visualisation bank
-    stores a ``[min, max]`` range. A card shows one number, so a range renders
-    at its upper bound -- the dose the athlete plans the day around.
+    stores a ``[min, max]`` bound. The selected duration takes precedence on
+    the card; older roles without that field retain the upper-bound fallback.
     """
-    raw = content.get("duration_min")
+    raw = content.get("prescribed_duration_min") or content.get("duration_min")
     if isinstance(raw, (list, tuple)) and raw:
         value = raw[-1]
     else:

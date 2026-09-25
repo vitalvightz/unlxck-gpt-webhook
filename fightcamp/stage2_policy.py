@@ -133,17 +133,9 @@ def _normalised_collection(validator_report: dict, key: str) -> list[dict]:
 
 
 def apply_stage2_release_policy(validator_report: dict) -> dict:
-    """Attach the non-blocking Stage 2 release decision.
+    """Release usable plans while holding unresolved workload or primary-dose gaps.
 
-    Once Stage 2 has produced usable athlete-facing plan text, validators are
-    observational only. Every validator finding remains available for telemetry,
-    QA and admin review, but no error, warning, severity label, unknown code or
-    malformed validator collection may convert that usable plan into a hold.
-
-    True no-plan/runtime/persistence failures are handled outside this policy,
-    before or after a usable Stage 2 result exists. This function therefore has
-    only two release outcomes: ``publish`` for a clean report and
-    ``publish_with_flags`` when anything needs audit.
+    Other validator findings remain observational for telemetry and admin review.
     """
 
     report = validator_report if isinstance(validator_report, dict) else {}
@@ -179,8 +171,8 @@ def apply_stage2_release_policy(validator_report: dict) -> dict:
     ]
     quality_findings = _dedupe_findings([*all_findings, *malformed_findings])
     admin_findings = admin_review_blocking_findings(collections)
-    conditioning_underfilled = any(
-        item.get("code") == "conditioning_role_workload_underfilled"
+    dose_or_workload_unresolved = any(
+        item.get("code") in {"conditioning_role_workload_underfilled", "ambiguous_working_dose"}
         for item in collections["errors"]
     )
     release_decision = "publish_with_flags" if quality_findings else "publish"
@@ -195,9 +187,9 @@ def apply_stage2_release_policy(validator_report: dict) -> dict:
         "admin_review_blocking_flag_count": len(admin_findings),
         "release_policy_malformed_fields": malformed_fields,
         "validator_findings_observational": True,
-        "release_decision": "hold" if conditioning_underfilled else release_decision,
-        "is_athlete_releasable": not conditioning_underfilled,
-        "is_publishable": not conditioning_underfilled,
+        "release_decision": "hold" if dose_or_workload_unresolved else release_decision,
+        "is_athlete_releasable": not dose_or_workload_unresolved,
+        "is_publishable": not dose_or_workload_unresolved,
     }
 
 

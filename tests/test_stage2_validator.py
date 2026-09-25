@@ -2829,3 +2829,21 @@ def test_late_fight_tactical_advance_language_is_not_flagged_as_progression():
 
     warning_codes = {warning["code"] for warning in report["warnings"]}
     assert "late_fight_progression_suggested" not in warning_codes
+
+
+def test_working_dose_ranges_are_blocked_but_easier_and_safety_bounds_are_allowed():
+    from fightcamp.stage2_validator import _ambiguous_working_dose_errors
+
+    plan = """
+    SPP — Week 1 (D-19 to D-13)
+    D-19 (Saturday) — Conditioning
+    - Tempo Shadowboxing: 20-30min continuous; 3-5 x 2 min; 10–20 sec holds.
+    - Rest 90 to 120 sec; RPE 6-7; move after 8-12 punches.
+    - Easier: Do 20-30 min if tired.
+    - Safety: Stay below 70-80% of maximum heart rate.
+    D-18 (Sunday) — Conditioning
+    - 3 x 3 min rounds; rest 60 sec; RPE 6.
+    """
+    errors = _ambiguous_working_dose_errors(plan)
+    assert len(errors) == 2
+    assert all(error["code"] == "ambiguous_working_dose" for error in errors)
