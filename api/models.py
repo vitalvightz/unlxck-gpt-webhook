@@ -2138,6 +2138,71 @@ class SessionCompletionRecordResponse(BaseModel):
     updated_at: str = ""
 
 
+SparringIntensity = Literal["light", "medium", "hard"]
+SparringPlannedIntensity = Literal["hard", "light", "technical", "contact"]
+SparringHeadContact = Literal["none", "light", "heavy"]
+SparringLogSource = Literal["contact", "session", "free"]
+SPARRING_NOTE_MAX_CHARS = 1000
+
+
+class SparringLogRequest(BaseModel):
+    """A post-sparring entry from the round timer.
+
+    The training day is always the server's athlete-local day; the client never
+    back-dates contact. ``planned_intensity`` is what the plan called for,
+    ``intensity`` what the athlete says actually happened.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    plan_id: str | None = Field(default=None, max_length=64)
+    session_id: str | None = Field(default=None, max_length=200)
+    source: SparringLogSource
+    planned_intensity: SparringPlannedIntensity | None = None
+    intensity: SparringIntensity
+    rounds_completed: int = Field(ge=0, le=30)
+    round_seconds: int | None = Field(default=None, ge=5, le=3600)
+    head_contact: SparringHeadContact
+    rocked: bool = False
+    notes: str = Field(default="", max_length=SPARRING_NOTE_MAX_CHARS)
+
+    @field_validator("notes", mode="before")
+    @classmethod
+    def clean_notes(cls, value: Any) -> str:
+        return str(value or "").strip()
+
+    @field_validator("plan_id", "session_id", mode="before")
+    @classmethod
+    def clean_optional_id(cls, value: Any) -> str | None:
+        cleaned = str(value or "").strip()
+        return cleaned or None
+
+
+class SparringLogRecord(BaseModel):
+    id: str
+    athlete_id: str
+    plan_id: str | None = None
+    session_id: str | None = None
+    training_day: str
+    source: SparringLogSource
+    planned_intensity: SparringPlannedIntensity | None = None
+    intensity: SparringIntensity
+    rounds_completed: int
+    round_seconds: int | None = None
+    head_contact: SparringHeadContact
+    rocked: bool = False
+    notes: str = ""
+    created_at: str = ""
+
+
+class SparringLogResponse(BaseModel):
+    log: SparringLogRecord
+    # True when the entry raised an admin review (a reported rocked/dropped).
+    review_created: bool = False
+    # Shown to the athlete as-is when the entry needs a safety message.
+    safety_notice: str | None = None
+
+
 class RehabResponsePromptResponse(BaseModel):
     """One injury's post-rehab question, as the athlete is shown it.
 

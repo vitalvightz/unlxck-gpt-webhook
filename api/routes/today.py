@@ -28,6 +28,9 @@ from api.models import (
     SessionCompletionRecordResponse,
     SessionCompletionRequest,
     SessionCompletionResponse,
+    SparringLogRecord,
+    SparringLogRequest,
+    SparringLogResponse,
     TodayCheckinRecord,
     TodayCheckinRequest,
     TodayCheckinResponse,
@@ -64,6 +67,26 @@ from api.store import AppStore
 
 logger = logging.getLogger(__name__)
 PENDING_REHAB_COMPLETION_LIMIT = 500
+
+# Shown to the athlete whenever they log being rocked or dropped. It is a
+# safety message, not a diagnosis: stop contact, watch for red flags, tell the
+# coach, and get checked if any appear.
+ROCKED_SAFETY_NOTICE = (
+    "You logged being rocked or dropped. No more contact today. If you get a "
+    "headache, dizziness, nausea, confusion, memory problems or blurred vision, "
+    "stop training and get checked by a medical professional. Tell your coach."
+)
+_SPARRING_INTENSITY_LABEL = {"light": "light", "medium": "medium", "hard": "hard"}
+_HEAD_CONTACT_LABEL = {"none": "no head contact", "light": "light head contact", "heavy": "heavy head contact"}
+
+
+def _rocked_review_reason(body: SparringLogRequest) -> str:
+    rounds = f"{body.rounds_completed} round{'s' if body.rounds_completed != 1 else ''}"
+    return (
+        "Sparring log: athlete reported being rocked or dropped "
+        f"({_SPARRING_INTENSITY_LABEL[body.intensity]} sparring, {rounds}, "
+        f"{_HEAD_CONTACT_LABEL[body.head_contact]}). Check in before their next contact session."
+    )
 
 
 def _checkin_record(row: dict[str, Any]) -> TodayCheckinRecord:
@@ -444,6 +467,71 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         return PendingRehabResponsesResponse(
             response_sets=response_sets,
             history_truncated=history_truncated,
+        )
+
+    @router.post(
+        "/api/today/sparring-log",
+        response_model=SparringLogResponse,
+        status_code=status.HTTP_201_CREATED,
+    )
+    def submit_sparring_log(
+        request_body: SparringLogRequest,
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> SparringLogResponse:
+        """Record one block of sparring rounds from the round timer.
+
+        Head contact and a rocked/dropped report are health data, so the
+        health-feature gate applies. The day is the server's athlete-local
+        training day. A rocked/dropped report always opens an admin review (not
+        deduplicated against other pending reviews: each one is a separate
+        head-impact event a human should see). It does not change readiness.
+        """
+        require_health_feature_access(profile)
+        plan_id = request_body.plan_id
+        if plan_id is not None:
+            try:
+                UUID(plan_id)
+            except ValueError:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+            plan_row = store.get_plan(plan_id)
+            if not plan_row or str(plan_row.get("athlete_id")) != str(profile.athlete_id):
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+
+        fields = request_body.model_dump(exclude={"plan_id"})
+        # The log and (for a rocked report) its admin review are written in one
+        # transaction. If either fails, nothing is kept and the athlete is told
+        # to retry: a rocked report is never acknowledged without its review.
+        try:
+            result = store.record_sparring_log(
+                profile.athlete_id,
+                {
+                    **fields,
+                    "plan_id": plan_id,
+                    "training_day": resolve_training_day(profile.athlete_timezone),
+                },
+                review_reason=_rocked_review_reason(request_body) if request_body.rocked else None,
+            )
+        except Exception as exc:  # noqa: BLE001 - surfaced as a retryable failure
+            logger.exception("[sparring] log write failed athlete_id=%s", profile.athlete_id)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Your sparring log was not saved. Please try again.",
+            ) from exc
+        row = result["log"]
+        review_created = result.get("review") is not None
+        if request_body.rocked and not review_created:
+            logger.error("[sparring] rocked log without review athlete_id=%s", profile.athlete_id)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Your sparring log was not saved. Please try again.",
+            )
+        return SparringLogResponse(
+            log=SparringLogRecord.model_validate(
+                {**row, "training_day": str(row.get("training_day")), "created_at": str(row.get("created_at") or "")}
+            ),
+            review_created=review_created,
+            safety_notice=ROCKED_SAFETY_NOTICE if request_body.rocked else None,
         )
 
     @router.post(

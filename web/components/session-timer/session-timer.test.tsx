@@ -50,18 +50,20 @@ test("the ready screen shows the first exercise, its adjustable rounds and what 
   assert.match(html, /Up next/);
   assert.match(html, /Hard sparring/);
   assert.match(html, /Start round 1/);
-  assert.match(html, /aria-label="Increase rounds"/);
-  assert.match(html, />3:00</);
+  // One summary line; the steppers live behind the Adjust icon.
+  assert.match(html, /<span>6<\/span> × <span>3:00<\/span>/);
+  assert.match(html, /aria-label="Adjust timer"/);
+  assert.doesNotMatch(html, /aria-label="Increase rounds"/);
   assert.match(html, /Up next<\/span><span class="st-next-title">Back squat<\/span>/);
   assert.match(html, /3–5 sets · 90s–2 min rest/);
-  assert.doesNotMatch(html, /Round length isn/);
+  assert.doesNotMatch(html, /Not in your plan/);
 });
 
 test("rounds with no length in the plan ask the athlete to check them", () => {
   const first = ITEMS[0];
   assert.ok(first.kind === "interval");
   const html = render([{ ...first, needsSetup: true }]);
-  assert.match(html, /Round length isn&#x27;t in your plan/);
+  assert.match(html, /Not in your plan\. Pick a format\./);
 });
 
 test("a minimised timer on its ready screen renders the mini bar", () => {
@@ -69,4 +71,18 @@ test("a minimised timer on its ready screen renders the mini bar", () => {
   assert.match(html, /class="st-mini"/);
   assert.match(html, /Hard sparring/);
   assert.doesNotMatch(html, /role="dialog"/);
+});
+
+test("the last exercise has no button that ends the session except End session", () => {
+  const last = ITEMS[1];
+  // A single-exercise run is always on its last exercise.
+  const html = render([last]);
+  assert.doesNotMatch(html, />Finish</);
+  assert.doesNotMatch(html, /Finish exercise/);
+  assert.doesNotMatch(html, /Next exercise/);
+  assert.match(html, />End session</);
+});
+
+test("Next exercise only appears when there is a next exercise", () => {
+  assert.match(render(ITEMS), /Next exercise/);
 });

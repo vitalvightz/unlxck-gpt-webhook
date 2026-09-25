@@ -1093,6 +1093,38 @@ export type TodayCheckinResponse = {
   warnings?: string[];
 };
 
+export type SparringIntensity = "light" | "medium" | "hard";
+export type SparringPlannedIntensity = "hard" | "light" | "technical" | "contact";
+export type SparringHeadContact = "none" | "light" | "heavy";
+export type SparringLogSource = "contact" | "session" | "free";
+
+/** A post-sparring entry. The server stamps the athlete-local training day. */
+export type SparringLogRequest = {
+  plan_id: string | null;
+  session_id: string | null;
+  source: SparringLogSource;
+  planned_intensity: SparringPlannedIntensity | null;
+  intensity: SparringIntensity;
+  rounds_completed: number;
+  round_seconds: number | null;
+  head_contact: SparringHeadContact;
+  rocked: boolean;
+  notes: string;
+};
+
+export type SparringLogRecord = SparringLogRequest & {
+  id: string;
+  athlete_id: string;
+  training_day: string;
+  created_at: string;
+};
+
+export type SparringLogResponse = {
+  log: SparringLogRecord;
+  review_created: boolean;
+  safety_notice: string | null;
+};
+
 export type TodaySessionCompletionRequest = {
   plan_id: string;
   session_id: string;

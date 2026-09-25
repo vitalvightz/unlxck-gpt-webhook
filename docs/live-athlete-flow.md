@@ -31,6 +31,7 @@ plans, injury flags, rule-based adaptations, and the admin attention queue.
 | training sessions  | derived per-day entries of the weekly schedule (existing)                       |
 | daily check-ins    | `today_checkins` (`/api/today`); legacy `daily_checkins` retained, unused       |
 | session logs       | `session_completions` (`/api/today`); legacy `session_logs` retained, unused    |
+| sparring logs      | `sparring_logs` (`POST /api/today/sparring-log`, health data; rocked → review)  |
 | injury flags       | `injury_flags` (new)                                                            |
 | adaptation notes   | `adaptation_notes` (new, append-only)                                           |
 | generation jobs    | `generation_jobs` (existing, worker-owned)                                      |

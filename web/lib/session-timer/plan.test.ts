@@ -9,6 +9,7 @@ import {
   measuredSeconds,
   parseCountRange,
   parseDurationRange,
+  plannedSparringIntensity,
   sessionTimerItems,
   timerSessionFor,
 } from "./plan.ts";
@@ -218,4 +219,20 @@ test("a session that cannot be identified confidently gets no timer", () => {
   assert.equal(timerSessionFor([unnamed], "2026-09-25"), unnamed);
   // A lone session with a different explicit id is not silently adopted.
   assert.equal(timerSessionFor([LOWER_POWER], "s9"), null);
+});
+
+test("planned sparring intensity comes only from the block's structured field", () => {
+  assert.equal(plannedSparringIntensity({ block_type: "sparring", intensity: "hard" }), "hard");
+  assert.equal(plannedSparringIntensity({ block_type: "sparring", intensity: "Light" }), "light");
+  assert.equal(plannedSparringIntensity({ block_type: "sparring", intensity: "technical" }), "technical");
+  assert.equal(plannedSparringIntensity({ block_type: "sparring", intensity: "moderate" }), "contact");
+  // Free text is not guessed at.
+  assert.equal(plannedSparringIntensity({ block_type: "sparring", intensity: "go hard-ish today" }), null);
+  assert.equal(plannedSparringIntensity({ block_type: "sparring" }), null);
+  const item = blockToTimerItem(
+    { block_type: "sparring", display_name: "Sparring", rounds: 5, work: { value: 3, unit: "min" }, intensity: "hard" },
+    0,
+  );
+  assert.ok(item?.kind === "interval");
+  assert.equal(item.plannedIntensity, "hard");
 });
