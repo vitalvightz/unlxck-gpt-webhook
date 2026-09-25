@@ -36,6 +36,8 @@ import type {
   TodayInjuryCheckinResponse,
   TodaySessionCompletionRecord,
   PendingRehabResponsesResponse,
+  SparringLogRequest,
+  SparringLogResponse,
   TodaySessionCompletionRequest,
   TodaySessionCompletionResponse,
   UsernameChangeRequest,
@@ -1135,6 +1137,18 @@ export function submitTodaySessionCompletion(
   payload: TodaySessionCompletionRequest,
 ): Promise<TodaySessionCompletionResponse> {
   return readJson<TodaySessionCompletionResponse>("/api/today/session-completion", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+/** Record one block of sparring rounds (from the round timer). */
+export function submitSparringLog(
+  token: string,
+  payload: SparringLogRequest,
+): Promise<SparringLogResponse> {
+  return readJson<SparringLogResponse>("/api/today/sparring-log", {
     method: "POST",
     token,
     body: JSON.stringify(payload),

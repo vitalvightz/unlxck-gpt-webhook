@@ -128,6 +128,7 @@ class FakeStore:
         self.rehab_exposures: dict[str, dict] = {}
         self.adaptation_notes: dict[str, list[dict]] = {}
         self.admin_reviews: list[dict] = []
+        self.sparring_logs: list[dict] = []
         self.push_subscriptions: dict[str, dict] = {}
         self.beta_feedback: list[dict] = []
         self.feedback_screenshots: dict[str, tuple[bytes, str]] = {}
@@ -1799,6 +1800,11 @@ class FakeStore:
             "created_at": _now(),
         }
         self.adaptation_notes.setdefault(athlete_id, []).append(row)
+        return dict(row)
+
+    def create_sparring_log(self, athlete_id: str, fields: dict) -> dict:
+        row = {"id": str(uuid4()), "athlete_id": athlete_id, "created_at": _now(), **fields}
+        self.sparring_logs.append(row)
         return dict(row)
 
     def create_admin_review(self, athlete_id: str, fields: dict) -> dict:

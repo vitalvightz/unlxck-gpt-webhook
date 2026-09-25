@@ -37,7 +37,24 @@ export type SessionTimerSummary = {
   complete: boolean;
   /** Plain-text record of the run for the session notes. */
   notes: string;
+  /** Sparring rounds the run completed (for the sparring log), or null. */
+  sparring: { rounds: number; roundSeconds: number | null } | null;
 };
+
+/** Completed sparring rounds across the run's sparring items. */
+export function sparringSummary(state: TimerState): SessionTimerSummary["sparring"] {
+  let rounds = 0;
+  let roundSeconds: number | null = null;
+  let hasSparring = false;
+  state.items.forEach((item, index) => {
+    if (item.kind === "interval" && item.sparring) {
+      hasSparring = true;
+      rounds += state.completed[index] ?? 0;
+      roundSeconds ??= item.workSec;
+    }
+  });
+  return hasSparring ? { rounds, roundSeconds } : null;
+}
 
 const REST_PRESETS = [60, 90, 120, 180];
 /** The last stretch of a timed phase, when the screen turns amber. */
@@ -474,7 +491,7 @@ export function SessionTimer({
   }, [visible, onMinimize]);
 
   const finish = () =>
-    onFinish({ complete: metPlan(state), notes: summarizeRun(state) });
+    onFinish({ complete: metPlan(state), notes: summarizeRun(state), sparring: sparringSummary(state) });
 
   if (!visible) {
     if (state.phase === "done") return null;

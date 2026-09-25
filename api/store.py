@@ -605,6 +605,8 @@ class AppStore(Protocol):
 
     def create_adaptation_note(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
 
+    def create_sparring_log(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
+
     def create_admin_review(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
 
     def list_admin_reviews(self, *, status_filter: str | None = "pending", limit: int = 50) -> list[dict[str, Any]]: ...
@@ -4950,6 +4952,13 @@ class SupabaseAppStore:
             .update({"morning_last_sent_day": sent_day})
             .eq("id", subscription_id)
             .execute()
+        )
+
+    def create_sparring_log(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
+        return self._insert_row(
+            "sparring_logs",
+            {"athlete_id": athlete_id, **fields},
+            operation=f"create_sparring_log athlete_id={athlete_id}",
         )
 
     def create_admin_review(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:

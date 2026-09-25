@@ -17,6 +17,7 @@ import { formatTrainingDay } from "@/components/today/format";
 import { SessionTimer, type SessionTimerSummary } from "@/components/session-timer/session-timer";
 import { clearSavedRun, hasSavedRun } from "@/components/session-timer/use-session-timer";
 import { RehabResponsePrompt } from "@/components/today/rehab-response-prompt";
+import { SparringLogPrompt, type SparringDraft } from "@/components/today/sparring-log-prompt";
 import { useToast } from "@/components/toast-provider";
 import { listPendingRehabResponses, submitTodaySessionCompletion } from "@/lib/api";
 import { timerAudio } from "@/lib/session-timer/audio";
@@ -52,6 +53,7 @@ import {
 import type {
   RehabLabelPolicy,
   PendingRehabResponseSet,
+  SparringPlannedIntensity,
   StructuredDay,
   StructuredPlan,
   TodayCommandView,
@@ -97,6 +99,13 @@ type TimerSource = "session" | "contact" | "free";
 const CONTACT_LOCK_COPY = {
   not_checked_in: "Check in to unlock sparring rounds.",
   blocked: "Sparring rounds are locked by today's decision.",
+};
+
+const PLANNED_SPARRING_INTENSITY: Record<ContactTimerTarget["kind"], SparringPlannedIntensity> = {
+  sparring: "hard",
+  light_combat: "light",
+  technical: "technical",
+  coach_led: "contact",
 };
 
 /** Saved timer runs only change through this tab's own actions, which re-render. */
@@ -293,6 +302,8 @@ export function TodaySessionPanel({
   >(null);
   // What the timer recorded, pre-filled (editable) into the completion notes.
   const [timerNotes, setTimerNotes] = useState("");
+  // Finished sparring rounds waiting for the athlete's quick log entry.
+  const [sparringDraft, setSparringDraft] = useState<SparringDraft | null>(null);
   const session = state.today.next_session;
   const status = state.today.completion_status;
   const duration = getSessionDuration(session);
@@ -560,6 +571,15 @@ export function TodaySessionPanel({
     setActiveTimer({ source, mode: "open" });
   }
 
+  const sparringPrompt = sparringDraft ? (
+    <SparringLogPrompt
+      key={`${sparringDraft.source}:${sparringDraft.rounds}:${sparringDraft.title}`}
+      token={token}
+      draft={sparringDraft}
+      onDismiss={() => setSparringDraft(null)}
+    />
+  ) : null;
+
   const roundsLauncher =
     !shownTimer && (contactTarget || freeTimerAvailable) ? (
       <div className="today-rounds-launcher">
@@ -620,6 +640,19 @@ export function TodaySessionPanel({
         onFinish={(summary: SessionTimerSummary) => {
           clearSavedRun(storageKey);
           setActiveTimer(null);
+          // Any sparring rounds actually done get the quick sparring log.
+          if (summary.sparring && summary.sparring.rounds > 0 && source !== "free") {
+            setSparringDraft({
+              source,
+              planId: activePlanId || null,
+              sessionId: source === "session" ? session.session_id ?? null : null,
+              plannedIntensity:
+                source === "contact" && contactTarget ? PLANNED_SPARRING_INTENSITY[contactTarget.kind] : null,
+              title: title,
+              rounds: summary.sparring.rounds,
+              roundSeconds: summary.sparring.roundSeconds,
+            });
+          }
           if (source === "session") {
             setTimerNotes(summary.notes.slice(0, 2000));
             // A run that fell short of the plan is logged as modified, so the
@@ -663,6 +696,7 @@ export function TodaySessionPanel({
         ) : (
           <p className="muted">No active plan card matched today. Use Open camp plan to find the next training target.</p>
         )}
+        {sparringPrompt}
         {roundsLauncher}
         {renderTimer(formatTrainingDay(state.today.training_day))}
       </section>
@@ -820,6 +854,7 @@ export function TodaySessionPanel({
         <p className="today-terminal-status">{getCompletionLabel(status)}</p>
       ) : null}
 
+      {sparringPrompt}
       {roundsLauncher}
 
       {canCompleteSession ? (

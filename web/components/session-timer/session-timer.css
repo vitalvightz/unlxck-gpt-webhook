@@ -832,3 +832,40 @@
 .today-rounds-free {
   align-self: flex-start;
 }
+
+/* Post-sparring log card (reuses the feedback-card / chip styles). */
+.sparring-log-card {
+  margin-top: 12px;
+}
+
+.sparring-log-rounds {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sparring-log-rounds .feedback-chip {
+  min-width: 44px;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.sparring-log-rounds-value {
+  min-width: 2ch;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.sparring-log-safety {
+  margin: 4px 0 8px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 176, 32, 0.35);
+  border-left: 3px solid #ffb020;
+  border-radius: 12px;
+  background: rgba(255, 176, 32, 0.08);
+  color: var(--text-primary, #f5f7fa);
+  font-size: var(--type-body-sm, 13px);
+  line-height: 1.5;
+}
