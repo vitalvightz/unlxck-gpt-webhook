@@ -310,8 +310,7 @@ def test_weight_cut_pressure_recalculates_from_each_roles_d_day():
     late_policy = role_map["weeks"][1]["session_roles"][0]["strength_composition_policy"]
     assert early_policy["role_days_until_fight"] == 35
     assert early_policy["cut_severity_bucket"] == "moderate"
-    # A moderate cut alone no longer blocks the standalone four-exercise minimum.
-    assert early_policy["effective_exercise_cap"] == 4
+    assert early_policy["effective_exercise_cap"] == 3
     assert late_policy["role_days_until_fight"] == 7
     assert late_policy["cut_severity_bucket"] == "high"
     assert late_policy["effective_exercise_cap"] == 2
@@ -400,9 +399,8 @@ def test_current_fatigue_applies_to_first_week_with_normal_strength():
 @pytest.mark.parametrize(
     ("role_key", "d_day", "expected_cap"),
     [
-        # Moderate cut pressure still lifts standalone sessions to four.
-        ("primary_strength_day", 26, 4),
-        ("neural_plus_strength_day", 19, 4),
+        ("primary_strength_day", 26, 3),
+        ("neural_plus_strength_day", 19, 2),
     ],
 )
 def test_active_three_point_four_percent_cut_uses_canonical_role_pressure(
