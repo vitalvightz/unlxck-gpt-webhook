@@ -14,6 +14,7 @@ import {
   SessionlessDayCard,
 } from "@/components/structured-plan-renderer";
 import { formatTrainingDay } from "@/components/today/format";
+import { useRoundTimer } from "@/components/session-timer/round-timer-provider";
 import { SessionTimer, type SessionTimerSummary } from "@/components/session-timer/session-timer";
 import { clearSavedRun, hasSavedRun } from "@/components/session-timer/use-session-timer";
 import { RehabResponsePrompt } from "@/components/today/rehab-response-prompt";
@@ -26,7 +27,6 @@ import {
   contactRoundsItem,
   contactTimerTarget,
   contactTitle,
-  freeRoundsItem,
   savedRoundFormat,
   type ContactTimerTarget,
 } from "@/lib/session-timer/contact";
@@ -95,9 +95,10 @@ function getSessionDuration(session: TodaySession): string | null {
   return null;
 }
 
-/** Which timer is running: today's planned session, today's coach-led contact
- * (sparring the athlete declared, with no app session to start), or plain rounds. */
-type TimerSource = "session" | "contact" | "free";
+/** Which timer is running: today's planned session, or today's coach-led contact
+ * (sparring the athlete declared, with no app session to start). Plain rounds
+ * run on the app-wide round timer. */
+type TimerSource = "session" | "contact";
 
 const CONTACT_LOCK_COPY = {
   not_checked_in: "Sparring rounds unlock after check-in",
@@ -450,7 +451,6 @@ export function TodaySessionPanel({
   const timerKeys: Record<TimerSource, string> = {
     session: `unlxck.session-timer.run:${activePlanId}:${session.session_id ?? ""}:${state.today.training_day}`,
     contact: `unlxck.session-timer.contact:${activePlanId}:${state.today.training_day}`,
-    free: `unlxck.session-timer.free:${state.today.training_day}`,
   };
   const timerStorageKey = timerKeys.session;
   // Coach-led contact is timed from TODAY's plan day, even when the card above
@@ -513,13 +513,14 @@ export function TodaySessionPanel({
         ? "session"
         : contactTimerAvailable && hasSavedRun(timerKeys.contact)
           ? "contact"
-          : freeTimerAvailable && hasSavedRun(timerKeys.free)
-            ? "free"
-            : null,
+          : null,
     () => null,
   );
   const shownTimer =
     activeTimer ?? (savedTimerSource ? { source: savedTimerSource, mode: "minimized" as const } : null);
+  // The app-wide round timer; while it is up, its mini bar is the way back in.
+  const roundTimer = useRoundTimer();
+  const anyTimerShown = Boolean(shownTimer) || roundTimer.shown;
   // Tint the session card to match today's decision (green/amber/red) so the page
   // reads at a glance instead of being a wall of identical dark cards. Neutral
   // (not-checked-in) carries no tone — the card stays default until check-in.
@@ -637,7 +638,7 @@ export function TodaySessionPanel({
   // timer is running: its mini bar is the way back in.
   function timerTools(trailing?: ReactNode, options: { contactAsPrimary?: boolean } = {}) {
     const showContact = Boolean(contactTarget) && !options.contactAsPrimary;
-    const tools = !shownTimer && (showContact || freeTimerAvailable);
+    const tools = !anyTimerShown && (showContact || freeTimerAvailable);
     if (!tools && !trailing) {
       return null;
     }
@@ -659,7 +660,7 @@ export function TodaySessionPanel({
           )
         ) : null}
         {tools && freeTimerAvailable ? (
-          <button type="button" className="today-tool-button" onClick={() => openTimer("free")}>
+          <button type="button" className="today-tool-button" onClick={roundTimer.open}>
             <ToolIcon name="timer" />
             Round timer
           </button>
@@ -673,7 +674,7 @@ export function TodaySessionPanel({
 
   // A sparring-only day has no session actions: its tray leads with the rounds.
   const contactOnlyTray =
-    !shownTimer && (contactTarget || freeTimerAvailable) ? (
+    !anyTimerShown && (contactTarget || freeTimerAvailable) ? (
       <div className="today-session-actions today-action-tray">
         {contactTarget && contactTimerAvailable ? (
           <button type="button" className="cta" onClick={() => openTimer("contact")}>
@@ -695,14 +696,10 @@ export function TodaySessionPanel({
       if (!timerAvailable) return null;
       items = timerItems;
       title = sessionTitle;
-    } else if (source === "contact") {
+    } else {
       if (!contactTimerAvailable || !contactTarget) return null;
       items = [contactRoundsItem(contactTarget, savedRoundFormat(CONTACT_FORMAT_MEMORY_KEY))];
       title = items[0].title;
-    } else {
-      if (!freeTimerAvailable) return null;
-      items = [freeRoundsItem()];
-      title = "Round timer";
     }
     const storageKey = timerKeys[source];
     return (
@@ -723,7 +720,7 @@ export function TodaySessionPanel({
           clearSavedRun(storageKey);
           setActiveTimer(null);
           // Any sparring rounds actually done get the quick sparring log.
-          if (summary.sparring && summary.sparring.rounds > 0 && source !== "free") {
+          if (summary.sparring && summary.sparring.rounds > 0) {
             setSparringDraft({
               source,
               planId: activePlanId || null,
@@ -815,7 +812,7 @@ export function TodaySessionPanel({
       : sessionTitle;
   const headline = contactLeads ? contactHeadline : sessionHeadline;
   // The contact rounds lead the tray while no timer is already running.
-  const contactCta = contactLeads && contactTimerAvailable && !shownTimer;
+  const contactCta = contactLeads && contactTimerAvailable && !anyTimerShown;
   // The app work that comes with the day's contact, named under the headline.
   const alongsideTitle = contactLeads && !contactIsSession ? sessionTitle.trim() : "";
 
@@ -997,7 +994,7 @@ export function TodaySessionPanel({
       {/* Locked, logged or blocked sessions still get the timer shortcuts. */}
       {!(canCompleteSession && (status === "not_started" || status === "started")) &&
       (contactTarget || freeTimerAvailable) &&
-      !shownTimer ? (
+      !anyTimerShown ? (
         <div className="today-session-actions today-action-tray">{timerTools()}</div>
       ) : null}
 
