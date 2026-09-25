@@ -1,4 +1,4 @@
-import type { IntervalItem, TimerItem } from "./plan";
+import type { IntervalItem, SetsItem, TimerItem } from "./plan";
 
 /**
  * Session timer state machine.
@@ -319,23 +319,72 @@ export function resume(state: TimerState, now: number): TimerState {
   };
 }
 
-/** Adjust a queued round item before it starts (ready screen steppers). */
+export type ItemAdjustment = {
+  rounds?: number;
+  workSec?: number;
+  /** Rest between rounds, or between sets (a set rest becomes exact). */
+  restSec?: number;
+  /** Target set count (becomes exact). */
+  sets?: number;
+};
+
+/**
+ * Adjust the current exercise at any point: before it starts, or mid-run when
+ * the coach changes the round length or rest. A change to the phase that is
+ * running applies to it at once. Counts never drop below what is already
+ * done, so an adjustment can never erase logged work.
+ */
+export function adjustItem(state: TimerState, patch: ItemAdjustment): TimerState {
+  const item = currentItem(state);
+  if (!item || state.phase === "done" || item.kind === "task") {
+    return state;
+  }
+  const done = state.completed[state.index] ?? 0;
+  let next: TimerState = state;
+  if (item.kind === "interval") {
+    // During a round or the rest before one, that round is already committed.
+    const floor = state.phase === "ready" ? 1 : Math.max(1, state.unit);
+    const updated: IntervalItem = {
+      ...item,
+      rounds: Math.min(30, Math.max(floor, done, patch.rounds ?? item.rounds)),
+      workSec: Math.min(3600, Math.max(5, patch.workSec ?? item.workSec)),
+      restSec: Math.min(1800, Math.max(0, patch.restSec ?? item.restSec)),
+      needsSetup: false,
+    };
+    next = { ...state, items: state.items.map((entry, index) => (index === state.index ? updated : entry)) };
+    if (state.phase === "work" && patch.workSec !== undefined) {
+      next = { ...next, phaseMs: updated.workSec * 1000 };
+    }
+    if (state.phase === "rest" && patch.restSec !== undefined) {
+      next = { ...next, phaseMs: updated.restSec * 1000 };
+    }
+    return next;
+  }
+  const restSec =
+    patch.restSec !== undefined ? Math.min(900, Math.max(15, patch.restSec)) : null;
+  const sets =
+    patch.sets !== undefined
+      ? Math.min(20, Math.max(Math.max(1, done), patch.sets))
+      : null;
+  const updated: SetsItem = {
+    ...item,
+    restSec: restSec !== null ? { min: restSec, max: restSec } : item.restSec,
+    sets: sets !== null ? { min: sets, max: sets } : item.sets,
+  };
+  next = { ...state, items: state.items.map((entry, index) => (index === state.index ? updated : entry)) };
+  if (state.phase === "rest" && restSec !== null) {
+    // The rest is now exact: no separate minimum left to wait for.
+    next = { ...next, phaseMs: restSec * 1000, readyAt: null };
+  }
+  return next;
+}
+
+/** Ready-screen round presets and legacy callers: same rules as adjustItem. */
 export function updateIntervalItem(
   state: TimerState,
   patch: Partial<Pick<IntervalItem, "rounds" | "workSec" | "restSec">>,
 ): TimerState {
-  const item = currentItem(state);
-  if (state.phase !== "ready" || item?.kind !== "interval") {
-    return state;
-  }
-  const next: IntervalItem = {
-    ...item,
-    rounds: Math.min(30, Math.max(1, patch.rounds ?? item.rounds)),
-    workSec: Math.min(3600, Math.max(5, patch.workSec ?? item.workSec)),
-    restSec: Math.min(1800, Math.max(0, patch.restSec ?? item.restSec)),
-    needsSetup: false,
-  };
-  return { ...state, items: state.items.map((entry, index) => (index === state.index ? next : entry)) };
+  return currentItem(state)?.kind === "interval" ? adjustItem(state, patch) : state;
 }
 
 export type TimerView = {

@@ -7,6 +7,7 @@ import { useSessionTimer, type SessionTimerController } from "@/components/sessi
 import { timerAudio } from "@/lib/session-timer/audio";
 import {
   addTime,
+  adjustItem,
   currentItem,
   endRound,
   endSession,
@@ -21,6 +22,7 @@ import {
   summarizeRun,
   updateIntervalItem,
   viewAt,
+  type ItemAdjustment,
   type TimerState,
   type TimerView,
 } from "@/lib/session-timer/engine";
@@ -183,7 +185,7 @@ function Ring({ progress, children }: { progress: number | null; children: React
   );
 }
 
-type IconName = "pause" | "play" | "plus" | "skip" | "next" | "flag" | "chevron" | "sound" | "check";
+type IconName = "pause" | "play" | "plus" | "skip" | "next" | "flag" | "chevron" | "sound" | "check" | "sliders";
 
 const ICON_PATHS: Record<IconName, ReactNode> = {
   pause: <path d="M8 5v14M16 5v14" />,
@@ -195,6 +197,7 @@ const ICON_PATHS: Record<IconName, ReactNode> = {
   chevron: <path d="M6 9l6 6 6-6" />,
   sound: <path d="M4 10v4h4l5 4V6L8 10H4zM16 9a4 4 0 010 6M18.5 6.5a7.5 7.5 0 010 11" />,
   check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
+  sliders: <path d="M4 8h9M17 8h3M4 16h3M11 16h9M15 6v4M9 14v4" />,
 };
 
 function Icon({ name }: { name: IconName }) {
@@ -255,13 +258,20 @@ function ReadyPanel({ timer, item }: { timer: SessionTimerController; item: Time
   if (item.kind !== "interval") {
     return <p className="st-plan-line">{describeItem(item)}</p>;
   }
+  // One line, not a wall of controls: the plan's format, plus quick presets
+  // when the plan left it open. Everything else lives behind Adjust.
   return (
     <div className="st-setup">
-      {item.needsSetup ? (
-        <p className="st-setup-note">
-          Round length isn&apos;t in your plan. Match what your coach is running.
-        </p>
-      ) : null}
+      <p className="st-plan-summary">
+        <span>{item.rounds}</span> × <span>{formatClock(item.workSec)}</span>
+        {item.restSec > 0 ? (
+          <>
+            {" "}
+            · <span>{formatClock(item.restSec)}</span> rest
+          </>
+        ) : null}
+      </p>
+      {item.needsSetup ? <p className="st-setup-note">Not in your plan. Pick a format.</p> : null}
       {item.presets ? (
         <div className="st-round-presets" role="group" aria-label="Round format">
           {ROUND_PRESETS.map((preset) => {
@@ -283,26 +293,59 @@ function ReadyPanel({ timer, item }: { timer: SessionTimerController; item: Time
           })}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/** The current exercise's numbers, adjustable at any point (behind the header icon). */
+function AdjustSheet({ timer, onClose }: { timer: SessionTimerController; onClose: () => void }) {
+  const item = currentItem(timer.state);
+  if (!item || item.kind === "task") return null;
+  const adjust = (patch: ItemAdjustment) => timer.update((s) => adjustItem(s, patch));
+  return (
+    <div className="st-sheet st-adjust" role="group" aria-label="Adjust timer">
       <div className="st-steppers">
-        <Stepper
-          label="Rounds"
-          value={String(item.rounds)}
-          onDown={() => timer.update((s) => updateIntervalItem(s, { rounds: item.rounds - 1 }))}
-          onUp={() => timer.update((s) => updateIntervalItem(s, { rounds: item.rounds + 1 }))}
-        />
-        <Stepper
-          label="Round length"
-          value={formatClock(item.workSec)}
-          onDown={() => timer.update((s) => updateIntervalItem(s, { workSec: item.workSec - 15 }))}
-          onUp={() => timer.update((s) => updateIntervalItem(s, { workSec: item.workSec + 15 }))}
-        />
-        <Stepper
-          label="Rest"
-          value={formatClock(item.restSec)}
-          onDown={() => timer.update((s) => updateIntervalItem(s, { restSec: item.restSec - 15 }))}
-          onUp={() => timer.update((s) => updateIntervalItem(s, { restSec: item.restSec + 15 }))}
-        />
+        {item.kind === "interval" ? (
+          <>
+            <Stepper
+              label="Rounds"
+              value={String(item.rounds)}
+              onDown={() => adjust({ rounds: item.rounds - 1 })}
+              onUp={() => adjust({ rounds: item.rounds + 1 })}
+            />
+            <Stepper
+              label="Round"
+              value={formatClock(item.workSec)}
+              onDown={() => adjust({ workSec: item.workSec - 15 })}
+              onUp={() => adjust({ workSec: item.workSec + 15 })}
+            />
+            <Stepper
+              label="Rest"
+              value={formatClock(item.restSec)}
+              onDown={() => adjust({ restSec: item.restSec - 15 })}
+              onUp={() => adjust({ restSec: item.restSec + 15 })}
+            />
+          </>
+        ) : (
+          <>
+            <Stepper
+              label="Sets"
+              value={item.sets ? formatRange(item.sets) : "–"}
+              onDown={() => adjust({ sets: (item.sets?.min ?? 2) - 1 })}
+              onUp={() => adjust({ sets: (item.sets?.max ?? 0) + 1 })}
+            />
+            <Stepper
+              label="Rest"
+              value={item.restSec ? formatRange(item.restSec, formatClock) : "–"}
+              onDown={() => adjust({ restSec: (item.restSec?.min ?? 90) - 15 })}
+              onUp={() => adjust({ restSec: (item.restSec?.max ?? 75) + 15 })}
+            />
+          </>
+        )}
       </div>
+      <button type="button" className="st-link" onClick={onClose}>
+        Done
+      </button>
     </div>
   );
 }
@@ -459,7 +502,7 @@ export function SessionTimer({
 }) {
   const timer = useSessionTimer({ items, storageKey, audible: visible });
   const { state, now } = timer;
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [sheet, setSheet] = useState<"sound" | "adjust" | null>(null);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const item = currentItem(state);
@@ -551,19 +594,35 @@ export function SessionTimer({
             {sessionElapsed ? <span className="st-meta-clock">{sessionElapsed}</span> : null}
           </p>
         </div>
-        <button
-          type="button"
-          className="st-icon"
-          onClick={() => setSettingsOpen((open) => !open)}
-          aria-label="Sound settings"
-          aria-expanded={settingsOpen}
-        >
-          <Icon name="sound" />
-        </button>
+        <div className="st-top-actions">
+          {state.phase !== "done" && item && item.kind !== "task" ? (
+            <button
+              type="button"
+              className="st-icon"
+              onClick={() => setSheet((open) => (open === "adjust" ? null : "adjust"))}
+              aria-label="Adjust timer"
+              aria-expanded={sheet === "adjust"}
+              data-active={sheet === "adjust" ? "true" : undefined}
+            >
+              <Icon name="sliders" />
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="st-icon"
+            onClick={() => setSheet((open) => (open === "sound" ? null : "sound"))}
+            aria-label="Sound settings"
+            aria-expanded={sheet === "sound"}
+            data-active={sheet === "sound" ? "true" : undefined}
+          >
+            <Icon name="sound" />
+          </button>
+        </div>
       </header>
       <StepBar state={state} />
 
-      {settingsOpen ? <SettingsSheet timer={timer} onClose={() => setSettingsOpen(false)} /> : null}
+      {sheet === "sound" ? <SettingsSheet timer={timer} onClose={() => setSheet(null)} /> : null}
+      {sheet === "adjust" ? <AdjustSheet timer={timer} onClose={() => setSheet(null)} /> : null}
 
       {state.phase === "done" ? (
         <main className="st-main st-done">

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   addTime,
+  adjustItem,
   advance,
   completeSet,
   createTimerState,
@@ -263,9 +264,40 @@ test("ready-screen adjustments clamp and clear the setup flag", () => {
   assert.equal(item.workSec, 5);
   assert.equal(item.restSec, 0);
   assert.equal(item.needsSetup, false);
-  // Not adjustable once running.
-  const running = startItem(state, T0).state;
-  assert.equal(updateIntervalItem(running, { rounds: 9 }), running);
+});
+
+test("mid-round adjustments apply to the running phase and never erase done work", () => {
+  let state = startItem(createTimerState([ROUNDS]), T0).state;
+  // Coach calls 2-minute rounds 30 s into round 1.
+  state = adjustItem(state, { workSec: 120 });
+  assert.equal(viewAt(state, T0 + 30_000).remainingMs, 90_000);
+  state = advance(state, T0 + 120_000).state;
+  assert.equal(state.phase, "rest");
+  // Shorter rest, applied to the rest already running.
+  state = adjustItem(state, { restSec: 30 });
+  assert.equal(viewAt(state, T0 + 120_000).remainingMs, 30_000);
+  // Rounds cannot drop below the round that is already under way.
+  state = adjustItem(state, { rounds: 1 });
+  const item = state.items[0];
+  assert.ok(item.kind === "interval");
+  assert.equal(item.rounds, 2);
+});
+
+test("set adjustments make the target and rest exact, even mid-rest", () => {
+  let state = startItem(createTimerState([SQUAT]), T0).state;
+  state = completeSet(state, T0).state;
+  state = completeSet(skipRest(state, T0 + 100_000).state, T0 + 110_000).state;
+  // Two sets done: the target can't go below that.
+  state = adjustItem(state, { sets: 1, restSec: 60 });
+  const item = state.items[0];
+  assert.ok(item.kind === "sets");
+  assert.deepEqual(item.sets, { min: 2, max: 2 });
+  assert.deepEqual(item.restSec, { min: 60, max: 60 });
+  // The running rest is now an exact 60 s with no separate minimum.
+  assert.equal(state.readyAt, null);
+  assert.equal(viewAt(state, T0 + 110_000).remainingMs, 60_000);
+  assert.equal(adjustItem(state, { restSec: 5 }).items[0].kind === "sets" &&
+    (adjustItem(state, { restSec: 5 }).items[0] as SetsItem).restSec?.min, 15);
 });
 
 test("warning cues: clapper at ten seconds of work, 3-2-1 at the end of rest", () => {
