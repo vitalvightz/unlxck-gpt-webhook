@@ -514,6 +514,36 @@ def _role_matches_contact(day: dict[str, Any], role: dict[str, Any]) -> bool:
     return label_tokens <= contact_tokens
 
 
+def _role_present_as_block(sessions: list[Any], role: dict[str, Any]) -> bool:
+    """Whether a block folded into another session already is this role.
+
+    A converter often folds a support insert into the main session as its own
+    block (a recovery flush ending on a "Breathing Reset" cooldown). The session
+    is titled for the main work, so session-level identity misses it, and
+    restoring the role would put the same item on the day twice. The block's
+    name must contain the role's whole athlete-facing label, so a generic block
+    ("Breathing") never stands in for a more specific role.
+
+    A session that is itself this item (its title carries the label) is skipped:
+    it is session-level identity's to claim, and its own blocks must not make a
+    second scheduled copy of the role read as present.
+    """
+    label_tokens = _identity_tokens(role.get("athlete_facing_label"))
+    if not label_tokens:
+        return False
+    for session in sessions or []:
+        if not isinstance(session, dict):
+            continue
+        if label_tokens <= _identity_tokens(session.get("title")):
+            continue
+        for block in session.get("blocks") or []:
+            if isinstance(block, dict) and label_tokens <= _identity_tokens(
+                block.get("display_name")
+            ):
+                return True
+    return False
+
+
 def _restore_missing_scheduled_roles(
     day: dict[str, Any], roles: list[dict[str, Any]], d_day: int
 ) -> dict[str, Any]:
@@ -541,6 +571,9 @@ def _restore_missing_scheduled_roles(
         return day
     sessions = day.get("sessions")
     sessions = list(sessions) if isinstance(sessions, list) else []
+    # The day as the converter left it: a block this pass restores is never
+    # evidence that another scheduled role is already present.
+    converted_sessions = list(sessions)
     # Sessions already spoken for by a role, so one card can never stand in for
     # two distinct scheduled items.
     claimed: set[int] = set()
@@ -564,6 +597,8 @@ def _restore_missing_scheduled_roles(
         if matched is not None:
             if matched >= 0:
                 claimed.add(matched)
+            continue
+        if _role_present_as_block(converted_sessions, role):
             continue
         session = _session(role, d_day)
         if session is None:

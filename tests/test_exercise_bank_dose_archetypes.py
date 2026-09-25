@@ -401,3 +401,55 @@ def test_taper_is_lower_volume_than_gpp(key):
     gpp_top = max(int(v) for v in re.findall(r"\d+", gpp.split("@")[0]))
     taper_top = max(int(v) for v in re.findall(r"\d+", taper.split("@")[0]))
     assert taper_top <= gpp_top, (gpp, taper)
+
+
+# --------------------------------------------------------------------------- #
+# Conditioning drills: work time, never sets x reps.
+# --------------------------------------------------------------------------- #
+TIMED_ARCHETYPES = ("timed_interval", "combat_round", "tabata")
+
+
+def test_every_bank_conditioning_drill_is_dosed_in_time_not_reps():
+    """"3 sets x 4 reps" of jump rope was the production failure."""
+    for entry in BANK:
+        if entry.get("method") != "conditioning":
+            continue
+        ptype = _classify_prescription_type(entry)
+        assert ptype in TIMED_ARCHETYPES + ("carry",), (entry["name"], ptype)
+        for phase in PHASES:
+            dose = _prescription_templates(phase)[ptype]
+            assert _parse_sets_reps(dose) == (None, None), (entry["name"], phase, dose)
+            assert "reps" not in dose, (entry["name"], phase, dose)
+
+
+def test_weighted_vest_jump_rope_is_named_and_dosed_as_rope_work():
+    assert "Rope Jumping (Weighted Vest)" not in BY_NAME
+    entry = BY_NAME["Jump Rope (Weighted Vest)"]
+    assert _classify_prescription_type(entry) == "timed_interval"
+    assert _doses("Jump Rope (Weighted Vest)")["GPP"].startswith("3–5 rounds of 60–90s")
+
+
+def test_named_round_structures_are_kept():
+    assert _classify_prescription_type(BY_NAME["3-Minute Heavy Bag Interval"]) == "combat_round"
+    assert _classify_prescription_type(BY_NAME["3-Minute Round (Striking + Takedowns)"]) == "combat_round"
+    assert _classify_prescription_type(BY_NAME["Tabata Sprints (Treadmill/Row)"]) == "tabata"
+    assert _classify_prescription_type(BY_NAME["Burpee-to-Punch (Tabata)"]) == "tabata"
+    for dose in _doses("3-Minute Heavy Bag Interval").values():
+        assert "3 min" in dose, dose
+    for dose in _doses("Burpee-to-Punch (Tabata)").values():
+        assert "20s" in dose and "10s rest" in dose, dose
+
+
+def test_conditioning_carry_stays_a_carry():
+    assert _classify_prescription_type(BY_NAME["Death by Carry (Sandbag/Sled)"]) == "carry"
+
+
+@pytest.mark.parametrize("key", TIMED_ARCHETYPES)
+@pytest.mark.parametrize("role_kind", ROLE_KINDS)
+def test_countdown_cap_reduces_rounds_and_keeps_the_seconds(key, role_kind):
+    for phase in PHASES:
+        base = _prescription_templates(phase)[key]
+        capped = _under_countdown_cap(base, role_kind, max_sets=1)
+        assert capped.startswith("1 round of "), (phase, role_kind, capped)
+        assert capped.split(" of ", 1)[1] == base.split(" of ", 1)[1], (base, capped)
+        assert _under_countdown_cap(base, "anchor", max_sets=99) == base
