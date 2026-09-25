@@ -75,6 +75,7 @@ import { describeRelativeDay, formatAppDate, formatAppDateRange } from "@/lib/da
 import { resolveFiniteWeekNumber } from "@/lib/plan-format";
 import { formatPlanLabel } from "@/lib/plan-labels";
 import { GlossaryTooltip } from "@/components/glossary-tooltip";
+import { glossaryEntry } from "@/lib/glossary";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { SafetyNote } from "@/components/safety-note";
 import { PLAN_SAFETY_NOTE } from "@/lib/safety-copy";
@@ -1935,12 +1936,23 @@ function WeekOverview({
     ? `Block ${scheduleContext?.block_number ?? 1} · ${openWeekHeading}`
     : `Week ${weekNumber}`;
   const weekIntent = openOngoing ? openBlockWeekIntent(weekNumber) : null;
+  // The pill only names the phase (GPP / SPP / Taper); the selected week's
+  // heading is where it gets explained, one tap away.
+  const phaseEntry = openOngoing ? null : glossaryEntry(resolvedWeekPhase(week));
 
   return (
     <section className="sp-card cm-week-overview">
       <div className="cm-week-overview-head">
         <p className="sp-eyebrow">Week overview</p>
-        <h2 className="sp-redflags-title">{heading}</h2>
+        <h2 className="sp-redflags-title">
+          {heading}
+          {phaseEntry ? (
+            <span className="cm-week-phase">
+              <span className="sp-tag sp-accent">{phaseEntry.term}</span>
+              <GlossaryTooltip term={phaseEntry.term} />
+            </span>
+          ) : null}
+        </h2>
       </div>
 
       {weekIntent ? (

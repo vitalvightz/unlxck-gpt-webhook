@@ -20022,6 +20022,14 @@ html[data-theme="light"] .loading-operational-item {
   margin-bottom: 8px;
 }
 
+/* The week's phase beside its heading, with the "i" that explains it. */
+.cm-week-phase {
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: 10px;
+  vertical-align: middle;
+}
+
 .cm-week-intent {
   display: flex;
   flex-wrap: wrap;

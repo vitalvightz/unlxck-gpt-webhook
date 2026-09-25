@@ -1523,7 +1523,7 @@ test("marks the current day and keeps the camp overview title compact", () => {
 
   // Countdown + week focus surface via the week strip / overview.
   assert.equal(html.includes("D-28"), true);
-  assert.equal(html.includes(">Week 1</h2>"), true);
+  assert.equal(html.includes("sp-redflags-title\">Week 1<"), true);
   assert.equal(html.includes("Convert strength into speed."), false);
   // The day's readiness_status must never leak the exact train/modify/pull-back
   // call — that stays on Today.
@@ -1597,7 +1597,7 @@ test("compresses the plan: dedupes safety, folds the disclaimer, trims the week 
   // status chips and the week pill).
   assert.equal(html.includes(">Phase</span>"), false);
   // Fight-camp overviews intentionally show only the selected week number.
-  assert.equal(html.includes(">Week 1</h2>"), true);
+  assert.equal(html.includes("sp-redflags-title\">Week 1<"), true);
   assert.equal(count("Build single-leg drive."), 0);
 });
 
@@ -2410,7 +2410,7 @@ test("D-10 countdown plans render taper mini-titles with a compact week overview
 
   assert.equal(countOccurrences(html, 'class="cm-week-pill-phase"'), 2);
   assert.equal(countOccurrences(html, 'title="Taper"'), 2);
-  assert.equal(html.includes(">Week 1</h2>"), true);
+  assert.equal(html.includes("sp-redflags-title\">Week 1<"), true);
   assert.equal(html.includes("Week 1 — Compressed Pre-Fight Week"), false);
 });
 
@@ -2692,4 +2692,32 @@ test("a cleared region's Prehab summary is glossed with the prehab definition", 
 
   assert.equal(html.includes("Prehab / Mobility"), true);
   assert.equal(glossaryTerms(html).includes("Prehab"), true);
+});
+
+test("the week overview explains the selected week's camp phase", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "SPP",
+        days: [
+          {
+            date: "2026-06-20",
+            countdown_label: "D-20",
+            day_type: "rest",
+            today_card: {},
+            sessions: [],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+
+  assert.equal(html.includes("cm-week-phase"), true);
+  assert.equal(glossaryTerms(html).includes("SPP"), true);
 });
