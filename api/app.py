@@ -48,6 +48,7 @@ from .generation.time_utils import utc_now_iso
 from .store import AppStore, SupabaseAppStore, is_effective_admin_profile, is_startup_stale_generation_job
 from .sentry_config import init_sentry
 from .services.generation_request_service import generate_plan_for_current_user
+from .services.today_command_cache import forget_today_command
 from .services.admin_stage2_service import (
     approve_review_required_plan as approve_review_required_plan_service,
     backfill_structured_plans as backfill_structured_plans_service,
@@ -422,6 +423,9 @@ async def _self_heal_structured_cards_on_startup(store: AppStore) -> None:
         logger.exception("[stage2] structured-card self-heal task failed")
 
 
+_SAFE_HTTP_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
+
+
 def create_app(
     *,
     store: AppStore,
@@ -541,6 +545,24 @@ def create_app(
 
         return await call_next(request)
         
+    @app.middleware("http")
+    async def invalidate_athlete_read_caches(request: Request, call_next):
+        # Derived read caches (the Today view reused by XP progress, the
+        # profile row behind require_profile) must never answer a read that
+        # follows the athlete's own write. Drop them once any mutating request
+        # by that athlete has run, whatever its outcome.
+        try:
+            return await call_next(request)
+        finally:
+            if request.method not in _SAFE_HTTP_METHODS:
+                athlete_id = getattr(request.state, "athlete_id", None)
+                if athlete_id:
+                    app_store = request.app.state.store
+                    forget_today_command(app_store, athlete_id)
+                    invalidate_profile = getattr(app_store, "invalidate_cached_profile", None)
+                    if callable(invalidate_profile):
+                        invalidate_profile(athlete_id)
+
     @app.middleware("http")
     async def log_requests(request: Request, call_next):
         request_id = str(uuid.uuid4())[:8]
@@ -787,6 +809,7 @@ def create_app(
         request_id = getattr(request.state, "request_id", "")
         try:
             profile = _map_profile_row(store.ensure_profile(user))
+            request.state.athlete_id = profile.athlete_id
             if profile.access_status != "approved":
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,

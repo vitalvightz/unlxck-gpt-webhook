@@ -48,6 +48,7 @@ from api.services.rehab_completion_service import (
     record_rehab_exposures,
 )
 from api.services.notification_foundation import invalidate_notification_action
+from api.services.today_command_cache import remember_today_command
 from api.services.today_service import resolve_training_day
 from api.services.week_progress import try_award_completed_week_for_completion
 from api.services.streaks import reconcile_adherence_streak, reconcile_training_streak
@@ -241,11 +242,20 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> CommandView:
-        return build_today_command_view(
+        view = build_today_command_view(
             store,
             athlete_id=profile.athlete_id,
             athlete_timezone=profile.athlete_timezone,
         )
+        # XP progress refreshes right after every Today load; let it reuse
+        # this build instead of assembling the whole command view again.
+        remember_today_command(
+            store,
+            athlete_id=profile.athlete_id,
+            athlete_timezone=profile.athlete_timezone,
+            view=view,
+        )
+        return view
 
     @router.get("/api/today/landing", response_model=LandingResponse)
     def get_landing(

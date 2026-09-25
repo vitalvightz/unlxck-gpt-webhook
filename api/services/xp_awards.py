@@ -174,6 +174,68 @@ def plan_completion_xp_eligible(
     return bool(active_plan_id and active_plan_id == plan_id)
 
 
+ACTIVATION_MILESTONE_ACTIONS = (
+    "profile_completed",
+    "first_intake_completed",
+    "first_plan_ready",
+)
+_SETTLED_ACTIVATION_ATTR = "_unlxck_settled_activation_milestones"
+_SETTLED_ACTIVATION_MAX_ATHLETES = 5000
+_SETTLED_ACTIVATION_LOCK = Lock()
+
+
+def _settled_activation_registry(store: AppStore) -> dict[str, set[str]] | None:
+    registry = getattr(store, _SETTLED_ACTIVATION_ATTR, None)
+    if isinstance(registry, dict):
+        return registry
+    with _SETTLED_ACTIVATION_LOCK:
+        registry = getattr(store, _SETTLED_ACTIVATION_ATTR, None)
+        if isinstance(registry, dict):
+            return registry
+        registry = {}
+        try:
+            setattr(store, _SETTLED_ACTIVATION_ATTR, registry)
+        except Exception:  # noqa: BLE001 - an unmemoizable store just re-reconciles
+            return None
+        return registry
+
+
+def settled_activation_milestones(store: AppStore, athlete_id: str) -> frozenset[str]:
+    """Activation milestones this process has already seen land in the ledger.
+
+    Activation awards are monotonic and athlete-wide idempotent, so once the XP
+    RPC has returned an award row for a milestone there is nothing left to
+    reconcile. Remembering that on the store instance keeps ``/api/me`` a read
+    for established athletes instead of re-issuing up to three RPCs (plus a plan
+    list) on every profile fetch. The memo is per process, so a restart simply
+    re-reconciles once.
+    """
+
+    registry = _settled_activation_registry(store)
+    if registry is None:
+        return frozenset()
+    with _SETTLED_ACTIVATION_LOCK:
+        return frozenset(registry.get(athlete_id, ()))
+
+
+def _mark_activation_settled(store: AppStore, athlete_id: str, action: str) -> None:
+    registry = _settled_activation_registry(store)
+    if registry is None:
+        return
+    with _SETTLED_ACTIVATION_LOCK:
+        if athlete_id not in registry and len(registry) >= _SETTLED_ACTIVATION_MAX_ATHLETES:
+            registry.clear()
+        registry.setdefault(athlete_id, set()).add(action)
+
+
+def activation_xp_settled(store: AppStore, athlete_id: str) -> bool:
+    """Whether every activation milestone is already known to be awarded."""
+
+    return settled_activation_milestones(store, athlete_id).issuperset(
+        ACTIVATION_MILESTONE_ACTIONS
+    )
+
+
 def _reconcile_activation_milestone(
     store: AppStore,
     *,
@@ -185,14 +247,19 @@ def _reconcile_activation_milestone(
     """Reconcile one activation milestone without affecting later milestones."""
 
     try:
+        if action in settled_activation_milestones(store, athlete_id):
+            return None
         if not eligible():
             return None
-        return _award(
+        result = _award(
             store,
             athlete_id=athlete_id,
             action=action,
             idempotency_key=idempotency_key,
         )
+        if result is not None:
+            _mark_activation_settled(store, athlete_id, action)
+        return result
     except Exception:  # noqa: BLE001 - one milestone cannot block another
         logger.exception(
             "[xp] activation milestone failed athlete_id=%s action=%s key=%s",
@@ -218,7 +285,8 @@ def reconcile_activation_xp(
     ``/api/me`` request, while athlete-wide idempotency keys prevent duplicates.
     Each milestone is isolated so a failure in one cannot block reconciliation
     of the remaining eligible milestones. Awards are monotonic: later profile
-    edits or plan archival never remove XP.
+    edits or plan archival never remove XP. A milestone this process has already
+    seen awarded is skipped without a database call.
     """
 
     results: list[dict] = []

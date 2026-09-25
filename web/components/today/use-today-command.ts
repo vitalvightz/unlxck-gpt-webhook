@@ -57,6 +57,20 @@ export type TodayCommand = {
 
 const EMPTY_PLAN_SCHEDULE: TodayPlanSchedule = { scheduleContext: null, createdAt: null };
 
+// The active plan id the last Today read returned for this session. The plan
+// read used to start only after /api/today resolved, stacking two full round
+// trips on every Today load and refresh. With this remembered, the plan read
+// starts alongside Today and is used only when Today confirms the same plan.
+let rememberedActivePlan: { token: string; planId: string } | null = null;
+
+function rememberedActivePlanId(token: string): string | null {
+  return rememberedActivePlan?.token === token ? rememberedActivePlan.planId : null;
+}
+
+function rememberActivePlanId(token: string, planId: string | null | undefined): void {
+  rememberedActivePlan = planId ? { token, planId } : null;
+}
+
 /**
  * Loads the backend Today command view and keeps it refreshable after every
  * check-in / injury / completion write. Also pulls the active plan's
@@ -78,8 +92,13 @@ export function useTodayCommand(token: string | null): TodayCommand {
       return;
     }
     try {
+      const guessedPlanId = rememberedActivePlanId(token);
+      const speculativePlan: Promise<PlanDetail | null> | null = guessedPlanId
+        ? getPlan(token, guessedPlanId).catch(() => null)
+        : null;
       const nextState = await getToday(token);
       const activePlanId = nextState.active_plan.id;
+      rememberActivePlanId(token, activePlanId);
       let nextStructuredPlan: StructuredPlan | null = null;
       let nextPlanSchedule = EMPTY_PLAN_SCHEDULE;
       let nextRehabLabelPolicy: RehabLabelPolicy | null = null;
@@ -90,7 +109,9 @@ export function useTodayCommand(token: string | null): TodayCommand {
         // today is settled by the backend in `nextState` and is never
         // recomputed from this plan — see today_service.build_today_command_view.
         try {
-          const detail = await getPlan(token, activePlanId);
+          const speculativeDetail =
+            speculativePlan && guessedPlanId === activePlanId ? await speculativePlan : null;
+          const detail = speculativeDetail ?? (await getPlan(token, activePlanId));
           nextStructuredPlan = resolveTodayStructuredPlan(detail);
           nextPlanSchedule = {
             scheduleContext: detail?.schedule_context ?? null,

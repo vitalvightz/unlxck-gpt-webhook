@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import copy
+import functools
 import json
 import logging
 import os
 import re
+import threading
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -961,6 +964,104 @@ def _positive_float_env(name: str, default: float) -> float:
     return parsed
 
 
+DEFAULT_PROFILE_CACHE_TTL_SECONDS = 10.0
+
+
+def _profile_cache_ttl_seconds() -> float:
+    """TTL for the per-process profile cache behind ``ensure_profile``.
+
+    ``0`` disables the cache. Invalid values fall back to the default.
+    """
+    raw_value = os.getenv("PROFILE_CACHE_TTL_SECONDS")
+    if raw_value is None or not raw_value.strip():
+        return DEFAULT_PROFILE_CACHE_TTL_SECONDS
+    try:
+        parsed = float(raw_value.strip())
+    except ValueError:
+        return DEFAULT_PROFILE_CACHE_TTL_SECONDS
+    import math
+    if not math.isfinite(parsed) or parsed < 0:
+        return DEFAULT_PROFILE_CACHE_TTL_SECONDS
+    return parsed
+
+
+class _ProfileRowCache:
+    """Short-lived, per-process cache of profile rows keyed by athlete id.
+
+    Every authenticated request resolves the caller's profile, so without this a
+    single screen load re-read the same ``profiles`` row once per API call. The
+    TTL is deliberately short: it collapses a burst of requests (login, a
+    navigation) into one read while bounding staleness from writes made by other
+    processes. Writes made through this store invalidate the entry immediately.
+    """
+
+    def __init__(self, ttl_seconds: float, max_size: int = 2000) -> None:
+        self.ttl_seconds = ttl_seconds
+        self.max_size = max_size
+        self._rows: dict[str, tuple[dict[str, Any], float]] = {}
+        self._lock = threading.Lock()
+
+    def get(self, athlete_id: str) -> dict[str, Any] | None:
+        if self.ttl_seconds <= 0:
+            return None
+        with self._lock:
+            cached = self._rows.get(athlete_id)
+            if cached is None:
+                return None
+            row, expires_at = cached
+            if expires_at <= time.monotonic():
+                self._rows.pop(athlete_id, None)
+                return None
+        return copy.deepcopy(row)
+
+    def put(self, athlete_id: str, row: dict[str, Any]) -> None:
+        if self.ttl_seconds <= 0 or not athlete_id or not isinstance(row, dict):
+            return
+        now = time.monotonic()
+        with self._lock:
+            if len(self._rows) >= self.max_size:
+                self._rows = {
+                    key: value for key, value in self._rows.items() if value[1] > now
+                }
+                if len(self._rows) >= self.max_size:
+                    self._rows.clear()
+            self._rows[athlete_id] = (copy.deepcopy(row), now + self.ttl_seconds)
+
+    def invalidate(self, athlete_id: str | None = None) -> None:
+        with self._lock:
+            if athlete_id is None:
+                self._rows.clear()
+            else:
+                self._rows.pop(athlete_id, None)
+
+
+_PROFILE_CACHE_INIT_LOCK = threading.Lock()
+
+
+def _invalidates_profile_cache(*, all_profiles: bool = False):
+    """Drop the cached profile row once a profile-writing store method returns.
+
+    Invalidation runs after the write (success or failure) so a concurrent read
+    cannot repopulate the cache with the pre-write row after it was cleared.
+    """
+
+    def decorator(fn):
+        @functools.wraps(fn)
+        def wrapper(self, *args, **kwargs):
+            try:
+                return fn(self, *args, **kwargs)
+            finally:
+                if all_profiles:
+                    self.invalidate_cached_profile()
+                else:
+                    athlete_id = kwargs.get("athlete_id", args[0] if args else None)
+                    self.invalidate_cached_profile(str(athlete_id) if athlete_id else None)
+
+        return wrapper
+
+    return decorator
+
+
 def _job_loaded_milestone(now_iso: str) -> dict[str, Any]:
     return {
         "code": "job_loaded",
@@ -1022,6 +1123,22 @@ class SupabaseAppStore:
         if not email:
             return False
         return email.strip().lower() in self.admin_emails
+
+    def _profile_cache(self) -> _ProfileRowCache:
+        # Created lazily (not as a dataclass field) so stores built with
+        # object.__new__ in tests still get one.
+        cache = self.__dict__.get("_profile_row_cache")
+        if cache is None:
+            with _PROFILE_CACHE_INIT_LOCK:
+                cache = self.__dict__.get("_profile_row_cache")
+                if cache is None:
+                    cache = _ProfileRowCache(_profile_cache_ttl_seconds())
+                    self.__dict__["_profile_row_cache"] = cache
+        return cache
+
+    def invalidate_cached_profile(self, athlete_id: str | None = None) -> None:
+        """Drop one athlete's cached profile row, or every row when ``None``."""
+        self._profile_cache().invalidate(athlete_id)
 
     def _select_first(self, query) -> dict[str, Any] | None:
         response = query.limit(1).execute()
@@ -1477,6 +1594,7 @@ class SupabaseAppStore:
         """
         return self._get_profile_by_id(athlete_id)
 
+    @_invalidates_profile_cache()
     def record_compliance_acceptance(
         self,
         athlete_id: str,
@@ -1638,6 +1756,9 @@ class SupabaseAppStore:
 
     def ensure_profile(self, user: AuthenticatedUser) -> dict[str, Any]:
         try:
+            cached = self._profile_cache().get(user.user_id)
+            if cached:
+                return cached
             self._log_profile_event(operation="ensure_start", user=user)
             existing = self._run_with_transient_retry(
                 operation=f"ensure_profile:read athlete_id={user.user_id}",
@@ -1649,6 +1770,7 @@ class SupabaseAppStore:
                     user=user,
                     role=existing.get("role"),
                 )
+                self._profile_cache().put(user.user_id, existing)
                 return existing
 
             payload = self._build_profile_payload(user=user, existing=None)
@@ -1712,6 +1834,7 @@ class SupabaseAppStore:
                 detail="failed to ensure profile",
             ) from exc
 
+    @_invalidates_profile_cache()
     def update_profile(self, athlete_id: str, update: ProfileUpdateRequest) -> dict[str, Any]:
         try:
             fields = update.model_dump(mode="json", exclude_none=True)
@@ -1800,6 +1923,7 @@ class SupabaseAppStore:
     def count_admin_profiles(self) -> int:
         return len(self.list_admin_profiles())
 
+    @_invalidates_profile_cache(all_profiles=True)
     def set_profile_role(
         self,
         *,
@@ -1905,6 +2029,7 @@ class SupabaseAppStore:
             "action": authoritative_action,
         }
 
+    @_invalidates_profile_cache()
     def change_username(self, athlete_id: str, username: str) -> dict[str, Any]:
         try:
             profile = self._require_profile(athlete_id)
@@ -2300,6 +2425,7 @@ class SupabaseAppStore:
                 exc=exc,
             )
 
+    @_invalidates_profile_cache()
     def set_active_plan_id(self, athlete_id: str, plan_id: str) -> None:
         try:
             self._run_with_transient_retry(
@@ -4433,6 +4559,7 @@ class SupabaseAppStore:
             self.client.table("admin_athlete_rollups").select("*").eq("id", athlete_id)
         )
 
+    @_invalidates_profile_cache()
     def approve_profile_access(self, athlete_id: str) -> dict[str, Any]:
         response = (
             self.client.table("profiles")
@@ -4460,6 +4587,7 @@ class SupabaseAppStore:
         )
         return getattr(response, "data", None) or []
 
+    @_invalidates_profile_cache()
     def clear_onboarding_draft(self, athlete_id: str) -> None:
         try:
             logger.info("[store] clear_onboarding_draft:start athlete_id=%s", athlete_id)

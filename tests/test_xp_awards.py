@@ -157,7 +157,9 @@ def test_repeated_activation_reconciliation_repairs_without_duplicate_awards():
     repeated = reconcile_activation_xp(store, **state)
 
     assert [result["awarded"] for result in first] == [True, True, True]
-    assert [result["awarded"] for result in repeated] == [False, False, False]
+    # Once a milestone is known to be in the ledger the repeat read makes no
+    # XP call at all, rather than asking the RPC to confirm a duplicate.
+    assert repeated == []
     assert store.seen_keys == {
         "profile-completed:athlete-1",
         "first-intake-completed:athlete-1",
