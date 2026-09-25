@@ -16,6 +16,7 @@ import {
 import { formatTrainingDay } from "@/components/today/format";
 import {
   CONTACT_RUN_KEY_PREFIX,
+  pruneSavedTodayRuns,
   SESSION_RUN_KEY_PREFIX,
   useRoundTimer,
 } from "@/components/session-timer/round-timer-provider";
@@ -525,6 +526,19 @@ export function TodaySessionPanel({
   // The app-wide round timer; while it is up, its mini bar is the way back in.
   const roundTimer = useRoundTimer();
   const anyTimerShown = Boolean(shownTimer) || roundTimer.shown;
+  // Drop today's saved runs this Today can no longer resume (the plan or
+  // session changed, or the session was logged elsewhere), so they cannot
+  // keep blocking the round timer. Only server facts decide: a plan that
+  // failed to load leaves the contact run alone rather than guessing.
+  const resumableSession = status === "started" ? timerKeys.session : null;
+  const resumableContact =
+    contactTimerAvailable || (!contactTarget && !structuredPlan) ? timerKeys.contact : null;
+  useEffect(() => {
+    pruneSavedTodayRuns(
+      state.today.training_day,
+      [resumableSession, resumableContact].filter((key): key is string => Boolean(key)),
+    );
+  }, [state.today.training_day, resumableSession, resumableContact]);
   // Tint the session card to match today's decision (green/amber/red) so the page
   // reads at a glance instead of being a wall of identical dark cards. Neutral
   // (not-checked-in) carries no tone — the card stays default until check-in.

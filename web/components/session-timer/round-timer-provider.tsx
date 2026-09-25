@@ -39,6 +39,34 @@ export function hasSavedTodayRun(now: Date = new Date()): boolean {
   return false;
 }
 
+/**
+ * Today is the authority on which of its runs it can resume. It calls this
+ * with the runs it can resume, and every other planned-session or contact run
+ * saved for that training day is dropped: a run left behind by a plan or
+ * session that changed, or a session already logged, would otherwise block
+ * the round timer with nothing on Today to resume.
+ */
+export function pruneSavedTodayRuns(trainingDay: string, resumable: readonly string[]): void {
+  try {
+    const suffix = `:${trainingDay}`;
+    const stale: string[] = [];
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index);
+      if (
+        key &&
+        (key.startsWith(SESSION_RUN_KEY_PREFIX) || key.startsWith(CONTACT_RUN_KEY_PREFIX)) &&
+        key.endsWith(suffix) &&
+        !resumable.includes(key)
+      ) {
+        stale.push(key);
+      }
+    }
+    for (const key of stale) window.localStorage.removeItem(key);
+  } catch {
+    // No storage, nothing saved.
+  }
+}
+
 /** Re-read on every render of the caller, client only (server says no). */
 export function useSavedTodayRun(): boolean {
   return useSyncExternalStore(subscribeToNothing, () => hasSavedTodayRun(), () => false);
