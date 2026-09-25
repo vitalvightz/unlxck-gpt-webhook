@@ -111,6 +111,15 @@ const STRUCTURED_PLAN_POLL_INTERVAL_MS = 2500;
 // when it lands. The window covers the backend conversion timeout plus a buffer.
 const STRUCTURED_PLAN_UPGRADE_POLL_WINDOW_MS = 220_000;
 const STRUCTURED_PLAN_RECENT_PLAN_THRESHOLD_MS = 5 * 60_000;
+// When the inline card fails during generation, the job still completes with a
+// terminal `failed` card state and the worker immediately queues a retry
+// conversion. The athlete usually lands before that retry stamps its
+// `building` marker, so a fresh arrival holds the lock-in card through this
+// grace window instead of flashing the fallback. The plan row is inserted
+// ~15-25s before the job completes, so 2 minutes of plan age safely identifies
+// a straight-from-generation arrival.
+const ENHANCED_CARD_FRESH_ARRIVAL_MS = 2 * 60_000;
+const ENHANCED_CARD_RETRY_GRACE_MS = 30_000;
 
 const ATHLETE_VISIBLE_STATUSES = new Set(["ready", "publishable_with_flags"]);
 
@@ -205,9 +214,15 @@ export function shouldAwaitStructuredPlanUpgrade(params: {
  * same await conditions as the background upgrade (recent plan, open poll
  * window, access token, published, not triage-blocked) AND a card lifecycle
  * that has not already terminally failed. Failed / not-attempted / lost-card
- * plans fall back to the deterministic renderer immediately, and the
- * mount-scoped poll window bounds the hold even if a build hangs. Admins are
- * never held — they keep the text view plus diagnostics for review.
+ * plans fall back to the deterministic renderer, and the mount-scoped poll
+ * window bounds the hold even if a build hangs. Admins are never held — they
+ * keep the text view plus diagnostics for review.
+ *
+ * Exception: `awaitingCardRetry` is set for a straight-from-generation arrival
+ * during the short grace window before the worker's retry conversion stamps
+ * `building`. There, `failed` / `not_attempted` are the inline attempt's stale
+ * outcome, not the final word, so the hold stays up instead of flashing the
+ * fallback.
  */
 export function shouldHoldPlanForEnhancedCard(params: {
   isViewerAdmin: boolean;
@@ -218,20 +233,37 @@ export function shouldHoldPlanForEnhancedCard(params: {
   hasAccessToken: boolean;
   isRecentPlan: boolean;
   isTriageBlocked?: boolean;
+  awaitingCardRetry?: boolean;
 }): boolean {
   if (params.isViewerAdmin) {
     return false;
   }
+  const state = params.structuredCardLifecycleState;
   // "none" covers the moment right after publish before the lifecycle record
-  // lands; "building" is an active server-side conversion. Every other state
-  // means no richer payload is coming, so the fallback must show.
-  if (
-    params.structuredCardLifecycleState !== "building" &&
-    params.structuredCardLifecycleState !== "none"
-  ) {
+  // lands; "building" is an active server-side conversion.
+  const cardMayStillLand =
+    state === "building" ||
+    state === "none" ||
+    (params.awaitingCardRetry === true && (state === "failed" || state === "not_attempted"));
+  if (!cardMayStillLand) {
     return false;
   }
   return shouldAwaitStructuredPlanUpgrade(params);
+}
+
+/**
+ * Whether a plan view opened now is a straight-from-generation arrival, i.e.
+ * the window in which the worker may still be queueing a retry conversion.
+ */
+export function isFreshGenerationArrival(
+  plan: Pick<PlanDetail, "created_at">,
+  now: number = Date.now(),
+): boolean {
+  const createdAt = Date.parse(plan.created_at || "");
+  if (Number.isNaN(createdAt)) {
+    return false;
+  }
+  return now - createdAt <= ENHANCED_CARD_FRESH_ARRIVAL_MS;
 }
 
 /**
@@ -1808,9 +1840,32 @@ export function PlanViewer({
   }, [plan.plan_id, hasStructuredAthletePlan, isViewerAdmin, showToast]);
 
   const structuredPlanPollExpired = Boolean(pollExpiredPlans[plan.plan_id]);
+  // Retry grace for a fresh non-admin arrival: covers the gap between the job
+  // completing on a failed inline card and the worker retry stamping
+  // `building`. Ends on timeout, or as soon as the poll sees the retry building
+  // or the card land, so a retry that then fails drops straight to the fallback.
+  const [cardRetryGraceEndedPlans, setCardRetryGraceEndedPlans] = useState<
+    Record<string, boolean>
+  >({});
+  const cardRetryGraceActive =
+    !isViewerAdmin &&
+    !cardRetryGraceEndedPlans[plan.plan_id] &&
+    isFreshGenerationArrival(plan);
+  useEffect(() => {
+    if (!cardRetryGraceActive) {
+      return;
+    }
+    const planId = plan.plan_id;
+    const timeoutId = window.setTimeout(() => {
+      setCardRetryGraceEndedPlans((prev) => ({ ...prev, [planId]: true }));
+    }, ENHANCED_CARD_RETRY_GRACE_MS);
+    return () => window.clearTimeout(timeoutId);
+  }, [cardRetryGraceActive, plan.plan_id]);
+
   // Hold the athlete's first view on the lock-in card until the enhanced card
-  // lands. Bounded by the poll window and skipped for terminal card states, so
-  // the deterministic fallback still shows when no richer payload is coming.
+  // lands. Bounded by the poll window and skipped for terminal card states
+  // (outside the retry grace), so the deterministic fallback still shows when
+  // no richer payload is coming.
   const holdPlanForEnhancedCard = shouldHoldPlanForEnhancedCard({
     isViewerAdmin,
     structuredCardLifecycleState: structuredCardState.state,
@@ -1820,6 +1875,7 @@ export function PlanViewer({
     hasAccessToken: Boolean(accessToken),
     isRecentPlan: isRecentlyCreatedPlan(plan),
     isTriageBlocked,
+    awaitingCardRetry: cardRetryGraceActive,
   });
   // The server field is authoritative after reload. Old failure details are
   // hidden only while a newer attempt is actively building.
@@ -1937,9 +1993,20 @@ export function PlanViewer({
       }
       try {
         const refreshedPlan = await getPlan(accessToken, plan.plan_id);
-        const refreshedStateKey = JSON.stringify(
-          normalizeStructuredCardState(refreshedPlan.structured_card_state),
+        const refreshedCardState = normalizeStructuredCardState(
+          refreshedPlan.structured_card_state,
         );
+        const refreshedStateKey = JSON.stringify(refreshedCardState);
+        // The worker retry is now visible (or already done): the lifecycle
+        // state is authoritative from here, so end the retry grace.
+        if (
+          !cancelled &&
+          (refreshedCardState.state === "building" || refreshedCardState.state === "live")
+        ) {
+          setCardRetryGraceEndedPlans((prev) =>
+            prev[plan.plan_id] ? prev : { ...prev, [plan.plan_id]: true },
+          );
+        }
         // Keep the chip current when a build fails or completes, and only swap
         // the actual plan renderer once the richer saved payload exists.
         if (
