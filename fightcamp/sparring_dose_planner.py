@@ -915,6 +915,57 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
     return _finalize_plan(plan, hard_days=hard_days, protected_day=protected_day, week=week, athlete_snapshot=athlete_snapshot)
 
 
+def repeated_weekday_hard_sparring_entries(
+    *, week: dict[str, Any], athlete_snapshot: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """Resolve declared hard days that repeat inside one planner week.
+
+    A planner week can span eight or more days (the generation day is plannable),
+    so a declared weekday can occur twice: D-22 Friday and D-15 Friday. The
+    weekday-keyed ``hard_sparring_plan`` resolves each weekday to its occurrence
+    closest to the fight, which silently dropped the earlier session — D-22 had no
+    sparring at all while D-15 was converted by the countdown cutoff.
+
+    Each earlier occurrence is resolved on its own through
+    ``compute_hard_sparring_plan`` over the seven-day cadence window that holds it,
+    so every countdown, readiness and density rule applies to that exact date.
+    Entries carry ``scheduled_d_day`` and are never merged into the weekday plan.
+    """
+    hard_days = _ordered_weekdays(
+        week.get("declared_hard_sparring_days") or athlete_snapshot.get("hard_sparring_days")
+    )
+    fight_weekday = week.get("fight_weekday")
+    end_d = week.get("projected_days_until_fight_end")
+    span = week.get("span_days")
+    if not hard_days or not fight_weekday or not isinstance(end_d, int) or not isinstance(span, int):
+        return []
+    start_d = end_d + span - 1
+    entries: list[dict[str, Any]] = []
+    for day in hard_days:
+        resolved = d_day_for_weekday(
+            day, fight_weekday=fight_weekday, projected_days_until_fight_end=end_d, span_days=span
+        )
+        if resolved is None:
+            continue
+        for d_day in range(resolved + 7, start_d + 1, 7):
+            window_start = start_d - 7 * ((start_d - d_day) // 7)
+            window_end = max(end_d, window_start - 6)
+            window = {
+                **week,
+                "projected_days_until_fight_start": window_start,
+                "projected_days_until_fight_end": window_end,
+                "span_days": window_start - window_end + 1,
+            }
+            plan = compute_hard_sparring_plan(week=window, athlete_snapshot=athlete_snapshot)
+            entry = next((item for item in plan if item.get("day") == day), None)
+            if entry is None or entry.get("d_day") != d_day:
+                continue
+            entries.append(
+                {**entry, "scheduled_d_day": d_day, "repeated_weekday_occurrence": True}
+            )
+    return sorted(entries, key=lambda item: -int(item["scheduled_d_day"]))
+
+
 _COUNTDOWN_COACH_NOTES: dict[int, str] = {
     1: (
         "Fight is tomorrow. If sparring happens at all, keep it controlled technical flow "

@@ -121,6 +121,9 @@ def role_d_day(week: dict[str, Any], role: dict[str, Any]) -> int | None:
 
 
 def contact_d_day(week: dict[str, Any], entry: dict[str, Any]) -> int | None:
+    # A repeated-weekday occurrence is pinned; its weekday resolves elsewhere.
+    if (pinned := _integer_d_day(entry.get("scheduled_d_day"))) is not None:
+        return pinned
     calendar = _calendar_by_day(week)
     weekday = _normalise(entry.get("day"))
     if weekday in calendar:
@@ -248,7 +251,10 @@ def contact_refs(weekly_role_map: dict[str, Any]) -> list[ContactRef]:
     for ordinal, week in enumerate(weekly_role_map.get("weeks", []) or [], start=1):
         if not isinstance(week, dict):
             continue
-        for entry in week.get("hard_sparring_plan") or []:
+        entries = list(week.get("hard_sparring_plan") or []) + list(
+            week.get("repeated_weekday_hard_sparring") or []
+        )
+        for entry in entries:
             if not isinstance(entry, dict):
                 continue
             profile = contact_load_profile(entry)
