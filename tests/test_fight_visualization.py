@@ -508,12 +508,12 @@ def test_mental_rehearsal_session_with_unrelated_work_is_kept():
     assert [block["display_name"] for block in sessions[1]["blocks"]] == ["Breathing reset"]
 
 
-def test_missing_day_is_fail_closed():
+def test_missing_day_without_fight_date_is_fail_closed():
     entry = select_fight_visualization("boxing", "brawler", 3)
     brief, _role = _locked_brief(entry)
     result = merge_locked_structured_content(_plan_with_day("D-9", []), brief)
     assert not result.applied
-    assert result.unresolved[0].reason == "structured day not uniquely resolved"
+    assert result.unresolved[0].reason == "structured day missing and fight date unknown"
 
 
 def test_stage2_source_text_omission_is_repaired():

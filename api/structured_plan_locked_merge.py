@@ -2,9 +2,13 @@
 
 Stage 1 owns a banked prescription once its role governance marks the selected
 drill as locked. Structured conversion may enrich the surrounding card, but it
-must not omit, rename, or paraphrase those bank-owned fields. The authoritative
-countdown day must already exist; within that day this module repairs, moves, or
-creates the governed session and block without another model call.
+must not omit, rename, or paraphrase those bank-owned fields. The role's
+countdown day is authoritative: converter slips in the day itself (the day split
+across two rows, a blank label on a dated row, or the day dropped outright) are
+repaired onto that day, and within it this module repairs, moves, or creates the
+governed session and block without another model call. Only a drill the
+converter placed on a different day stays unresolved, since moving it would be
+guessing.
 
 Two banked systems share this pathway (see ``_LOCKED_CONTENT_SPECS``): the
 Tactical Watch and the Fight Visualisation countdown protocol. They differ only
@@ -17,8 +21,12 @@ from __future__ import annotations
 import copy
 import re
 from dataclasses import dataclass, field
+from datetime import date
 from typing import Any, Iterable, Mapping
 
+from fightcamp.fight_date_utils import parse_fight_date
+
+from .structured_plan_calendar_spine import _resolve_fight_date, _rest_day, _valid_phase
 from .structured_plan_sparring_reconcile import reconcile_coach_led_sparring_days
 
 
@@ -141,6 +149,137 @@ def _days(plan: Mapping[str, Any]) -> Iterable[dict[str, Any]]:
         for day in week.get("days") or []:
             if isinstance(day, dict):
                 yield day
+
+
+def _day_dday(day: Mapping[str, Any], fight_date: date | None) -> int | None:
+    """A day's countdown distance from its label, else from its ISO date."""
+    label = _countdown(day.get("countdown_label"))
+    if label is not None:
+        return int(label[2:])
+    if fight_date is None:
+        return None
+    parsed = parse_fight_date(str(day.get("date") or "").strip())
+    if parsed is None:
+        return None
+    delta = (fight_date - parsed).days
+    return delta if delta >= 0 else None
+
+
+def _drill_on_card(plan: Mapping[str, Any], names: set[str]) -> bool:
+    return any(
+        _is_named_variant(value, name)
+        for day in _days(plan)
+        for session in day.get("sessions") or []
+        if isinstance(session, Mapping)
+        for value in [session.get("title")]
+        + [
+            block.get("display_name")
+            for block in session.get("blocks") or []
+            if isinstance(block, Mapping)
+        ]
+        for name in names
+    )
+
+
+def _insert_day(plan: dict[str, Any], day: dict[str, Any], d_day: int, fight_date: date) -> None:
+    """Place a new day in the week whose countdown span covers it, else the nearest."""
+    best: tuple[int, list[Any]] | None = None
+    for week in plan.get("weeks") or []:
+        if not isinstance(week, dict) or not isinstance(week.get("days"), list):
+            continue
+        ddays = [
+            value
+            for value in (
+                _day_dday(item, fight_date) for item in week["days"] if isinstance(item, Mapping)
+            )
+            if value is not None
+        ]
+        if not ddays:
+            continue
+        distance = 0 if min(ddays) <= d_day <= max(ddays) else min(abs(v - d_day) for v in ddays)
+        if best is None or distance < best[0]:
+            best = (distance, week["days"])
+    days = best[1] if best else None
+    if days is None:
+        weeks = plan.get("weeks")
+        if not isinstance(weeks, list) or not weeks or not isinstance(weeks[0], dict):
+            return
+        days = weeks[0].setdefault("days", [])
+    index = next(
+        (
+            position
+            for position, item in enumerate(days)
+            if isinstance(item, Mapping)
+            and (_day_dday(item, fight_date) is not None)
+            and _day_dday(item, fight_date) < d_day
+        ),
+        len(days),
+    )
+    days.insert(index, day)
+
+
+def _resolve_authoritative_day(
+    plan: dict[str, Any],
+    *,
+    day_label: str,
+    names: set[str],
+    role: Mapping[str, Any],
+    planning_brief: Mapping[str, Any],
+) -> tuple[dict[str, Any] | None, str | None]:
+    """Find the one card day for the role's countdown, repairing converter slips.
+
+    The role's day is authoritative, so the card's day structure is repaired to
+    it rather than rejecting the whole card:
+
+    * a day split across two rows is coalesced into the first (no session lost),
+    * a dated row with a blank/garbled label is matched by date and relabelled,
+    * a dropped day is recreated as an empty day for the watch to land on.
+
+    A dropped day is only recreated when the drill is nowhere else on the card.
+    If the converter put it on another day, moving it would be guessing, so that
+    stays unresolved and faithfulness rejects the card.
+    """
+    fight_date = parse_fight_date(_resolve_fight_date(dict(planning_brief)))
+    d_day = int(day_label[2:])
+    matches: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    for week in plan.get("weeks") or []:
+        if not isinstance(week, dict):
+            continue
+        for day in week.get("days") or []:
+            if isinstance(day, dict) and _day_dday(day, fight_date) == d_day:
+                matches.append((week, day))
+
+    if matches:
+        _, keep = matches[0]
+        for week, duplicate in matches[1:]:
+            keep.setdefault("sessions", []).extend(
+                session for session in duplicate.get("sessions") or [] if isinstance(session, dict)
+            )
+            week["days"] = [item for item in week.get("days") or [] if item is not duplicate]
+        if _countdown(keep.get("countdown_label")) is None:
+            keep["countdown_label"] = day_label
+        return keep, None
+
+    if _drill_on_card(plan, names):
+        return None, "locked drill is on a different structured day"
+    if fight_date is None:
+        return None, "structured day missing and fight date unknown"
+    dated = [
+        (distance, day)
+        for day in _days(plan)
+        if (distance := _day_dday(day, fight_date)) is not None
+        and _valid_phase(day.get("phase_label"))
+    ]
+    neighbour_phase = (
+        _valid_phase(min(dated, key=lambda pair: abs(pair[0] - d_day))[1].get("phase_label"))
+        if dated
+        else ""
+    )
+    day = _rest_day(d_day, fight_date, _valid_phase(role.get("camp_phase"), neighbour_phase))
+    # It will carry the zero-load watch, so it is not a rest day.
+    day["day_type"] = "low"
+    _insert_day(plan, day, d_day, fight_date)
+    return day, None
 
 
 def _stable_id(value: str) -> str:
@@ -310,10 +449,12 @@ def merge_locked_structured_content(
 ) -> LockedMergeResult:
     """Apply locked fields on their authoritative day.
 
-    Day placement stays fail-closed: a missing or ambiguous countdown day is
-    unresolved. Inside that verified day, Stage 1 is authoritative, so harmless
-    converter drift (renamed/moved/missing Tactical Watch structure) is repaired
-    deterministically instead of rejecting the entire athlete card.
+    The role's countdown day is authoritative: a split, unlabelled or dropped
+    day is repaired onto it (see ``_resolve_authoritative_day``), while a drill
+    the converter placed on another day stays unresolved. Inside that day,
+    Stage 1 is authoritative, so harmless converter drift (renamed/moved/missing
+    Tactical Watch structure) is repaired deterministically instead of rejecting
+    the entire athlete card.
     """
     plan = copy.deepcopy(structured_plan)
     result = LockedMergeResult(plan=plan)
@@ -342,15 +483,21 @@ def merge_locked_structured_content(
             result.unresolved.append(LockedMergeIssue(None, name, "missing authoritative countdown label"))
             continue
 
-        matching_days = [day for day in _days(plan) if _countdown(day.get("countdown_label")) == day_label]
-        if len(matching_days) != 1:
-            result.unresolved.append(LockedMergeIssue(day_label, name, "structured day not uniquely resolved"))
-            continue
-
         authoritative_names = {
             _normalise(governance.get("selected_drill_name")),
             _normalise(watch.get("name")),
         } - {""}
+        target_day, day_issue = _resolve_authoritative_day(
+            plan,
+            day_label=day_label,
+            names=authoritative_names,
+            role=role,
+            planning_brief=planning_brief,
+        )
+        if target_day is None:
+            result.unresolved.append(LockedMergeIssue(day_label, name, day_issue or "structured day not resolved"))
+            continue
+        matching_days = [target_day]
         sessions = [
             session
             for session in matching_days[0].get("sessions") or []
@@ -415,25 +562,28 @@ def merge_locked_structured_content(
             pair for pair in targets
             if _normalise(pair[1].get("display_name")) in authoritative_names
         ]
-        if len(exact_targets) > 1 or (not exact_targets and len(targets) > 1):
+        if len(exact_targets) > 1:
             result.unresolved.append(
                 LockedMergeIssue(day_label, name, "locked block not uniquely resolved")
             )
             continue
 
         # The converter can emit both "Tactical Picture mental rehearsal" and
-        # the exact bank title. Keep the exact block; the qualified copy is the
-        # same locked prescription with invented duration and cues.
+        # the exact bank title, or only qualified copies. Keep the exact block,
+        # else the first qualified one; every other copy is the same locked
+        # prescription with invented duration and cues, and the kept block is
+        # overwritten from the bank below.
         emptied_alias_owners: list[dict[str, Any]] = []
-        if exact_targets:
+        kept_targets = exact_targets or targets[:1]
+        if len(targets) > len(kept_targets):
             for owner, duplicate in targets:
-                if all(duplicate is not exact_block for _, exact_block in exact_targets):
+                if all(duplicate is not kept_block for _, kept_block in kept_targets):
                     owner["blocks"] = [
                         item for item in owner.get("blocks") or [] if item is not duplicate
                     ]
                     if not owner["blocks"] and _is_safe_named_watch_shell(owner, authoritative_names):
                         emptied_alias_owners.append(owner)
-        targets = exact_targets or targets
+        targets = kept_targets
 
         if watch_sessions:
             session = watch_sessions[0]

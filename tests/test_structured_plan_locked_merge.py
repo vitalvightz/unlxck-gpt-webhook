@@ -131,6 +131,99 @@ def test_wrong_day_is_unresolved_and_not_moved_then_faithfulness_rejects():
     assert any("LOCKED_CONTENT" in issue for issue in check_structured_faithfulness(result.plan, SOURCE, _brief()))
 
 
+def _dated_brief():
+    # Fight on 2026-10-01, so D-11 is 2026-09-20.
+    return {**_brief(), "fight_date": "2026-10-01"}
+
+
+def test_wrong_day_stays_unresolved_even_when_the_day_could_be_recreated():
+    plan = _plan(day="D-8")
+    result = _merged(plan, _dated_brief())
+    assert result.plan == plan and result.applied == []
+    assert [issue.reason for issue in result.unresolved] == [
+        "locked drill is on a different structured day"
+    ]
+
+
+def test_day_split_across_two_rows_is_coalesced_and_repaired():
+    # Stage 2 wrote two "D-11" headers; the converter kept one row per header.
+    plan = _plan()
+    recovery = {"title": "Recovery Reset", "session_type": "recovery", "blocks": []}
+    plan["weeks"][0]["days"].append({"countdown_label": "D-11", "sessions": [recovery]})
+
+    result = _merged(plan)
+
+    days = result.plan["weeks"][0]["days"]
+    assert len(days) == 1 and result.unresolved == []
+    assert [s["title"] for s in days[0]["sessions"]] == ["Tactical Focus", "Recovery Reset"]
+    assert check_structured_faithfulness(result.plan, SOURCE, _brief()) == []
+
+
+def test_dated_row_with_blank_label_is_matched_by_date_and_relabelled():
+    plan = _plan()
+    day = plan["weeks"][0]["days"][0]
+    day["countdown_label"] = ""
+    day["date"] = "2026-09-20"
+
+    result = _merged(plan, _dated_brief())
+
+    assert result.unresolved == []
+    assert result.plan["weeks"][0]["days"][0]["countdown_label"] == "D-11"
+    assert check_structured_faithfulness(result.plan, SOURCE, _dated_brief()) == []
+
+
+def test_dropped_day_is_recreated_in_countdown_order():
+    # The converter dropped D-11 entirely (e.g. schema salvage removed it).
+    plan = {"weeks": [{"days": [
+        {"countdown_label": "D-12", "phase_label": "SPP", "sessions": []},
+        {"countdown_label": "D-10", "phase_label": "SPP", "sessions": []},
+    ]}]}
+
+    result = _merged(plan, _dated_brief())
+
+    days = result.plan["weeks"][0]["days"]
+    assert [d["countdown_label"] for d in days] == ["D-12", "D-11", "D-10"]
+    assert days[1]["date"] == "2026-09-20"
+    assert days[1]["phase_label"] == "SPP"
+    assert days[1]["sessions"][0]["title"] == "Tactical Focus"
+    assert days[1]["sessions"][0]["blocks"][0]["coaching_cues"] == STEPS
+    assert result.unresolved == []
+    # The neighbouring days are fixture scaffolding absent from SOURCE, so only
+    # the locked-content verdict is in scope here.
+    assert not [
+        issue
+        for issue in check_structured_faithfulness(result.plan, SOURCE, _dated_brief())
+        if "LOCKED_CONTENT" in issue
+    ]
+
+
+def test_qualified_only_twins_collapse_to_one_repaired_block():
+    plan = _plan(include=False)
+    day = plan["weeks"][0]["days"][0]
+    day["sessions"][0]["title"] = "Condition and Tactical Focus"
+    day["sessions"][0]["blocks"] = [
+        {"display_name": "Lateral Shuffle + Strike Drills"},
+        {"display_name": "Pocket Exchange Map mental rehearsal"},
+    ]
+    day["sessions"].append({
+        "title": "Tactical Focus: Pocket Exchange Map",
+        "blocks": [{"display_name": "Pocket Exchange Map mental rehearsal"}],
+    })
+
+    result = _merged(plan)
+
+    assert result.unresolved == []
+    blocks = [
+        block["display_name"]
+        for session in result.plan["weeks"][0]["days"][0]["sessions"]
+        for block in session["blocks"]
+    ]
+    assert blocks.count("Pocket Exchange Map") == 1
+    assert "Pocket Exchange Map mental rehearsal" not in blocks
+    assert "Lateral Shuffle + Strike Drills" in blocks
+    assert check_structured_faithfulness(result.plan, SOURCE, _brief()) == []
+
+
 def test_missing_block_is_restored_from_authoritative_role():
     plan = _plan(include=False)
     result = _merged(plan)
