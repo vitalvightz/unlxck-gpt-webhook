@@ -52,7 +52,8 @@ test("the ready screen shows the first exercise, its adjustable rounds and what 
   assert.match(html, /Start round 1/);
   assert.match(html, /aria-label="Increase rounds"/);
   assert.match(html, />3:00</);
-  assert.match(html, /Back squat · 3–5 sets · 90s–2 min rest/);
+  assert.match(html, /Up next<\/span><span class="st-next-title">Back squat<\/span>/);
+  assert.match(html, /3–5 sets · 90s–2 min rest/);
   assert.doesNotMatch(html, /Round length isn/);
 });
 

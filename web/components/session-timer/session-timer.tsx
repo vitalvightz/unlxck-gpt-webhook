@@ -118,12 +118,89 @@ function Progress({ state, item }: { state: TimerState; item: TimerItem | null }
   const done = state.completed[state.index] ?? 0;
   const min = item.kind === "sets" && item.sets ? item.sets.min : total;
   return (
-    <ol className="st-dots" aria-hidden="true">
+    <ol className="st-segments" aria-hidden="true">
       {Array.from({ length: total }, (_, index) => (
         <li
           key={index}
           data-state={index < done ? "done" : index === done && state.phase !== "ready" ? "current" : "todo"}
           data-optional={index >= min ? "true" : undefined}
+        />
+      ))}
+    </ol>
+  );
+}
+
+/** How far through the current countdown the ring is (0..1), or null when untimed. */
+function ringProgress(state: TimerState, item: TimerItem | null, view: TimerView): number | null {
+  if (view.remainingMs === null || state.phaseMs === null || state.phaseMs <= 0) return null;
+  const rest = item?.kind === "sets" ? item.restSec : null;
+  if (view.readyRemainingMs !== null && rest && rest.max > rest.min) {
+    // A ranged rest fills once to its minimum, then again across the optional window.
+    const minMs = rest.min * 1000;
+    return view.readyRemainingMs > 0
+      ? 1 - view.readyRemainingMs / minMs
+      : 1 - (view.remainingMs ?? 0) / (rest.max * 1000 - minMs);
+  }
+  return 1 - view.remainingMs / state.phaseMs;
+}
+
+function Ring({ progress, children }: { progress: number | null; children: ReactNode }) {
+  const clamped = progress === null ? 1 : Math.min(1, Math.max(0, progress));
+  return (
+    <div className="st-ring" data-timed={progress === null ? "false" : "true"}>
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <circle className="st-ring-track" cx="60" cy="60" r="55" />
+        <circle
+          className="st-ring-fill"
+          cx="60"
+          cy="60"
+          r="55"
+          pathLength={100}
+          strokeDasharray="100"
+          strokeDashoffset={100 - clamped * 100}
+          transform="rotate(-90 60 60)"
+        />
+      </svg>
+      <div className="st-ring-inner">{children}</div>
+    </div>
+  );
+}
+
+type IconName = "pause" | "play" | "plus" | "skip" | "next" | "flag" | "chevron" | "sound" | "check";
+
+const ICON_PATHS: Record<IconName, ReactNode> = {
+  pause: <path d="M8 5v14M16 5v14" />,
+  play: <path d="M7 5l12 7-12 7z" fill="currentColor" stroke="none" />,
+  plus: <path d="M12 6v12M6 12h12" />,
+  skip: <path d="M6 5l9 7-9 7zM18 5v14" />,
+  next: <path d="M9 6l6 6-6 6" />,
+  flag: <path d="M6 20V5M6 5h11l-2 4 2 4H6" />,
+  chevron: <path d="M6 9l6 6 6-6" />,
+  sound: <path d="M4 10v4h4l5 4V6L8 10H4zM16 9a4 4 0 010 6M18.5 6.5a7.5 7.5 0 010 11" />,
+  check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
+};
+
+function Icon({ name }: { name: IconName }) {
+  return (
+    <svg className="st-glyph" viewBox="0 0 24 24" aria-hidden="true">
+      <g fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        {ICON_PATHS[name]}
+      </g>
+    </svg>
+  );
+}
+
+/** Exercise progress across the session, under the header. */
+function StepBar({ state }: { state: TimerState }) {
+  if (state.items.length < 2) return null;
+  return (
+    <ol className="st-steps" aria-hidden="true">
+      {state.items.map((entry, index) => (
+        <li
+          key={entry.id}
+          data-state={
+            state.phase === "done" || index < state.index ? "done" : index === state.index ? "current" : "todo"
+          }
         />
       ))}
     </ol>
@@ -408,6 +485,19 @@ export function SessionTimer({
     timer.update(state.pausedAt === null ? pause : resume);
   };
 
+  const phaseText = phaseLabel(state, item, view);
+  const counter = counterLabel(state, item);
+  const sessionElapsed =
+    state.startedAt !== null ? formatClock(Math.floor(((state.endedAt ?? now) - state.startedAt) / 1000)) : null;
+  const restNote =
+    view.readyRemainingMs !== null && item?.kind === "sets" && item.restSec
+      ? view.readyRemainingMs > 0
+        ? `Minimum rest. Up to ${formatShortDuration(item.restSec.max - item.restSec.min)} more is allowed after this.`
+        : `Go when ready. Set ${state.unit} starts itself in ${formatClock(Math.ceil((view.remainingMs ?? 0) / 1000))}.`
+      : canFinishItem && item?.kind === "sets" && item.sets && item.sets.min !== item.sets.max && state.phase === "rest"
+        ? "Minimum hit. Only add sets if you're moving well."
+        : null;
+
   return (
     <ToBody>
     <div
@@ -419,21 +509,21 @@ export function SessionTimer({
       aria-label={`${sessionTitle} timer`}
       tabIndex={-1}
     >
+      <div className="st-glow" aria-hidden="true" />
       <header className="st-top">
         <button type="button" className="st-icon" onClick={onMinimize} aria-label="Minimise timer">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-          </svg>
+          <Icon name="chevron" />
         </button>
-        <p className="st-session">
-          {sessionTitle}
-          {state.items.length > 1 && state.phase !== "done" ? (
-            <span>
-              {" "}
-              · {state.index + 1}/{state.items.length}
-            </span>
-          ) : null}
-        </p>
+        <div className="st-heading">
+          <p className="st-session">{sessionTitle}</p>
+          <p className="st-meta">
+            {state.items.length > 1 && state.phase !== "done"
+              ? `Exercise ${state.index + 1} of ${state.items.length}`
+              : null}
+            {state.items.length > 1 && state.phase !== "done" && sessionElapsed ? " · " : null}
+            {sessionElapsed ? <span className="st-meta-clock">{sessionElapsed}</span> : null}
+          </p>
+        </div>
         <button
           type="button"
           className="st-icon"
@@ -441,23 +531,23 @@ export function SessionTimer({
           aria-label="Sound settings"
           aria-expanded={settingsOpen}
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d="M4 10v4h4l5 4V6L8 10H4zm12.5 2a4.5 4.5 0 00-2.5-4v8a4.5 4.5 0 002.5-4z"
-              fill="currentColor"
-            />
-          </svg>
+          <Icon name="sound" />
         </button>
       </header>
+      <StepBar state={state} />
 
       {settingsOpen ? <SettingsSheet timer={timer} onClose={() => setSettingsOpen(false)} /> : null}
 
       {state.phase === "done" ? (
         <main className="st-main st-done">
-          <p className="st-phase">Session complete</p>
+          <div className="st-done-badge" aria-hidden="true">
+            <Icon name="check" />
+          </div>
+          <p className="st-done-title">Session complete</p>
+          {sessionElapsed ? <p className="st-done-time">{sessionElapsed} total</p> : null}
           <ul className="st-summary">
             {state.items.map((entry, index) => (
-              <li key={entry.id}>
+              <li key={entry.id} data-skipped={(state.completed[index] ?? 0) === 0 ? "true" : undefined}>
                 <span>{entry.title}</span>
                 <span>{doneLabel(entry, state.completed[index] ?? 0)}</span>
               </li>
@@ -470,9 +560,10 @@ export function SessionTimer({
           </div>
         </main>
       ) : (
-        <main className="st-main">
+        <main className="st-main" data-phase={state.phase}>
           <p className="st-phase" aria-live="polite">
-            {phaseLabel(state, item, view)}
+            <span className="st-phase-dot" aria-hidden="true" />
+            {phaseText}
           </p>
           <h2 className="st-title">{item?.title}</h2>
           {item?.detail ? <p className="st-detail">{item.detail}</p> : null}
@@ -486,21 +577,17 @@ export function SessionTimer({
                 className="st-clock"
                 onClick={togglePause}
                 aria-label={view.paused ? "Resume timer" : "Pause timer"}
-                data-counting={timed ? "down" : "up"}
               >
-                <span className="st-clock-digits" role="timer">
-                  {formatClock(clockSeconds)}
-                </span>
-                {!timed ? <span className="st-clock-caption">elapsed</span> : null}
+                <Ring progress={ringProgress(state, item, view)}>
+                  <span className="st-clock-digits" role="timer">
+                    {formatClock(clockSeconds)}
+                  </span>
+                  <span className="st-clock-caption">
+                    {view.paused ? "Tap to resume" : counter ?? (timed ? "remaining" : "elapsed")}
+                  </span>
+                </Ring>
               </button>
-              {counterLabel(state, item) ? <p className="st-counter">{counterLabel(state, item)}</p> : null}
-              {view.readyRemainingMs !== null && item?.kind === "sets" && item.restSec ? (
-                <p className="st-window">
-                  {view.readyRemainingMs > 0
-                    ? `Minimum rest. You can take up to ${formatShortDuration(item.restSec.max - item.restSec.min)} more after this.`
-                    : `Go when ready. Set ${state.unit} starts itself in ${formatClock(Math.ceil((view.remainingMs ?? 0) / 1000))}.`}
-                </p>
-              ) : null}
+              {restNote ? <p className="st-note">{restNote}</p> : null}
               {state.phase === "rest" && state.phaseMs === null && !view.paused ? (
                 <div className="st-presets" role="group" aria-label="Rest length">
                   <span>No rest in your plan. Pick one:</span>
@@ -514,11 +601,6 @@ export function SessionTimer({
                     </button>
                   ))}
                 </div>
-              ) : null}
-              {canFinishItem && item?.kind === "sets" && item.sets && item.sets.min !== item.sets.max ? (
-                <p className="st-window">
-                  Minimum hit. Only add sets if you&apos;re moving well.
-                </p>
               ) : null}
             </>
           )}
@@ -535,39 +617,47 @@ export function SessionTimer({
             {(state.phase === "rest" || (state.phase === "work" && item?.kind !== "interval")) &&
             !view.paused ? (
               <button type="button" onClick={togglePause}>
+                <Icon name="pause" />
                 Pause
               </button>
             ) : null}
             {timed && !view.paused ? (
               <button type="button" onClick={() => timer.update((s) => addTime(s, 30))}>
-                +30s
+                <Icon name="plus" />
+                30s
               </button>
             ) : null}
             {state.phase === "work" && item?.kind === "interval" && !view.paused ? (
               <button type="button" onClick={() => timer.run(endRound)}>
+                <Icon name="skip" />
                 End round
               </button>
             ) : null}
             {canFinishItem ? (
               <button type="button" data-emphasis="true" onClick={() => timer.run(finishItem)}>
+                <Icon name="flag" />
                 Finish exercise
               </button>
             ) : state.phase !== "ready" || state.index + 1 < state.items.length ? (
               <button type="button" onClick={() => timer.run(finishItem)}>
+                <Icon name="next" />
                 {state.index + 1 < state.items.length ? "Next exercise" : "Finish"}
               </button>
             ) : null}
           </div>
           {nextItem ? (
-            <p className="st-next">
-              <span>Next</span> {nextItem.title} · {describeItem(nextItem)}
-            </p>
+            <div className="st-next">
+              <span className="st-next-label">Up next</span>
+              <span className="st-next-title">{nextItem.title}</span>
+              <span className="st-next-plan">{describeItem(nextItem)}</span>
+            </div>
           ) : null}
           {confirmEnd ? (
             <div className="st-confirm" role="alertdialog" aria-label="End session">
               <span>End the session now?</span>
               <button
                 type="button"
+                data-danger="true"
                 onClick={() => {
                   setConfirmEnd(false);
                   timer.update(endSession);
