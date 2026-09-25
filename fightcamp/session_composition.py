@@ -54,22 +54,16 @@ _NORMAL_STRENGTH_ROLE_CAPS: dict[str, int] = {
     "small_strength_touch_day": 2,
 }
 _DEFAULT_NORMAL_STRENGTH_CAP = 3
-# Full strength / strength+power roles below the preferred session size may
-# take ONE extra compatible Stage 1 exercise on a clear day when readiness
-# pressure is at most moderate (pressure 1). High fatigue/cut, or two combined
-# stressors (pressure 2+), never do. Composition only proposes the extra item;
+# Full strength / strength+power roles capped below the preferred session size
+# may take ONE extra compatible Stage 1 exercise on a clear day, and only for a
+# fresh athlete (pressure 0): any fatigue, cut or injury pressure keeps its own
+# reduced cap. Composition only proposes the extra item;
 # ``apply_standalone_strength_minimum`` keeps it only when the realised-load
 # revalidation outcome and every existing dose are unchanged by it.
 _STANDALONE_STRENGTH_MINIMUM = 4
-_STANDALONE_STRENGTH_MAX_PRESSURE = 1
+_STANDALONE_STRENGTH_MAX_PRESSURE = 0
 _STANDALONE_STRENGTH_MINIMUM_ROLE_KEYS = frozenset(
-    {
-        "primary_strength_day",
-        "structural_strength_day",
-        "secondary_strength_day",
-        "neural_plus_strength_day",
-        "transfer_strength_day",
-    }
+    {"secondary_strength_day", "neural_plus_strength_day", "transfer_strength_day"}
 )
 
 _FATIGUE_PRESSURE = {"low": 0, "moderate": 1, "high": 2}

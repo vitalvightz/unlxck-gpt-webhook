@@ -192,38 +192,26 @@ def test_taper_phase_is_not_lifted():
 
 
 @pytest.mark.parametrize(
-    ("athlete", "role_key", "before"),
+    ("athlete", "role_key"),
     [
-        ({"fatigue": "moderate", "cut_severity_bucket": "none"}, "primary_strength_day", 3),
-        ({"fatigue": "low", "cut_severity_bucket": "moderate"}, "neural_plus_strength_day", 2),
-        ({"fatigue": "low", "cut_severity_bucket": "none", "injuries": ["ankle sprain"]}, "secondary_strength_day", 2),
+        ({"fatigue": "moderate", "cut_severity_bucket": "none"}, "primary_strength_day"),
+        ({"fatigue": "moderate", "cut_severity_bucket": "none"}, "secondary_strength_day"),
+        ({"fatigue": "low", "cut_severity_bucket": "moderate"}, "neural_plus_strength_day"),
+        ({"fatigue": "low", "cut_severity_bucket": "none", "injuries": ["ankle sprain"]}, "secondary_strength_day"),
+        ({"fatigue": "high", "cut_severity_bucket": "none"}, "neural_plus_strength_day"),
+        ({"fatigue": "low", "cut_severity_bucket": "high"}, "transfer_strength_day"),
+        ({"fatigue": "moderate", "cut_severity_bucket": "moderate"}, "neural_plus_strength_day"),
     ],
 )
-def test_moderate_pressure_still_allows_exactly_one_extra(athlete, role_key, before):
-    phase = "SPP" if role_key == "neural_plus_strength_day" else "GPP"
+def test_any_readiness_cut_or_injury_pressure_keeps_its_existing_cap(athlete, role_key):
+    phase = "GPP" if role_key in {"primary_strength_day", "secondary_strength_day"} else "SPP"
     role = _single(role_key, phase=phase, athlete=athlete)
     policy = role["strength_composition_policy"]
-    assert policy["pressure"] == 1
-    assert policy["effective_exercise_cap"] == before
-    assert _decision(role)["status"] == "applied"
-    assert _count(role) == before + 1
-
-
-@pytest.mark.parametrize(
-    "athlete",
-    [
-        {"fatigue": "high", "cut_severity_bucket": "none"},
-        {"fatigue": "low", "cut_severity_bucket": "high"},
-        {"fatigue": "moderate", "cut_severity_bucket": "moderate"},
-        {"fatigue": "moderate", "cut_severity_bucket": "none", "injuries": ["ankle sprain"]},
-    ],
-)
-def test_above_moderate_pressure_overrides_the_minimum(athlete):
-    role = _single("neural_plus_strength_day", phase="SPP", athlete=athlete)
-    policy = role["strength_composition_policy"]
-    assert policy["pressure"] >= 2
+    assert policy["pressure"] >= 1
     assert _decision(role) is None
-    assert _count(role) == policy["effective_exercise_cap"] == 2
+    assert policy["standalone_minimum_applied"] is False
+    assert policy["effective_exercise_cap"] < policy["base_exercise_cap"]
+    assert _count(role) == policy["effective_exercise_cap"]
 
 
 def _mech_slot(name: str, priority: int, session_index: int, mech: str, **kwargs) -> dict:
