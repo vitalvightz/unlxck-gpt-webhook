@@ -394,6 +394,8 @@ def _format_effective_prescription(
     rpe_cap: str | None,
     loaded: bool,
     suppressed_loaded_lift: bool = False,
+    athlete_risk: bool = False,
+    exercise_name: str = "",
 ) -> str:
     if sets is None or reps is None:
         # Only a loaded lift forbidden by the countdown band is suppressed.
@@ -412,6 +414,17 @@ def _format_effective_prescription(
     if sets == 0 or reps == 0:
         return _NO_LOADED_LIFTING
     dose = f"{sets} x {reps}"
+    # The trap-bar bank prescribes %1RM. Its original 85-90% load exceeds the
+    # late-camp ceiling, so keep that measurable method at a reduced target
+    # instead of replacing the load entirely with an RPE-only instruction.
+    percent = re.search(r"(\d+(?:\.\d+)?)\s*(?:[-\u2013]\s*\d+(?:\.\d+)?)?\s*%\s*1\s*RM", base_prescription, re.I)
+    if loaded and exercise_name.casefold() == "trap bar deadlift" and percent and rpe_cap:
+        target = min(float(percent.group(1)), 75 if athlete_risk or (_rpe_ceiling(rpe_cap) or 10) <= 6 else 80)
+        target_text = f"{target:g}"
+        return f"{dose} @ {target_text}% 1RM (established max only); stop if bar speed slows"
+    if not loaded and re.search(r"\bat max speed\b", base_prescription, re.I):
+        rest = re.search(r"full rest\s+\d+\s*[-\u2013]\s*(\d+)\s*s\b", base_prescription, re.I)
+        return f"{dose} at max speed" + (f"; rest {rest.group(1)}s" if rest else "; full rest")
     if rpe_cap:
         dose += f" @ RPE {rpe_cap} max"
     return dose
@@ -621,6 +634,8 @@ def resolve_strength_slot_prescription(
         rpe_cap=rpe_cap,
         loaded=loaded,
         suppressed_loaded_lift=kind in {"anchor", "secondary", "hybrid"} and not loaded,
+        athlete_risk=bool(reduction),
+        exercise_name=str(selected.get("name") or ""),
     )
     # ``dose_role_kind`` is the existing persisted validator-facing vocabulary.
     # Loaded-power hybrid is an internal semantic used to resolve the right dose;

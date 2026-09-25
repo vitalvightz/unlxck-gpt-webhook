@@ -1,6 +1,11 @@
 import { getSourcePrescriptionRangeOverrides } from "../block-display-guardrails";
 import { cleanText, finitePositiveNumber, formatBlockLoad, formatEffort } from "../structured-plan";
-import type { MeasuredValue, StructuredBlock, StructuredSession } from "../types";
+import type {
+  MeasuredValue,
+  SparringPlannedIntensity,
+  StructuredBlock,
+  StructuredSession,
+} from "../types";
 
 /** An inclusive dose range. `min === max` is an exact prescription. */
 export type DoseRange = { min: number; max: number };
@@ -25,6 +30,8 @@ export type IntervalItem = TimerItemBase & {
   workSec: number;
   restSec: number;
   sparring: boolean;
+  /** Sparring only: the block's planned intensity, when its structured field states one. */
+  plannedIntensity?: SparringPlannedIntensity | null;
   needsSetup: boolean;
   /** Offer the common fight round formats on the ready screen. */
   presets?: boolean;
@@ -147,6 +154,26 @@ function joinDetail(parts: Array<string | null>): string | null {
   return shown.length ? shown.join(" · ") : null;
 }
 
+const PLANNED_INTENSITY_BY_FIELD: Record<string, SparringPlannedIntensity> = {
+  hard: "hard",
+  high: "hard",
+  light: "light",
+  low: "light",
+  technical: "technical",
+  moderate: "contact",
+  medium: "contact",
+};
+
+/**
+ * The planned intensity from a sparring block's structured ``intensity`` field.
+ * Exact vocabulary only (e.g. "hard", "light", "technical"): free-text wording
+ * is not guessed at, so anything else is null and the log starts unselected.
+ */
+export function plannedSparringIntensity(block: StructuredBlock): SparringPlannedIntensity | null {
+  const value = cleanText(block.intensity)?.toLowerCase() ?? "";
+  return PLANNED_INTENSITY_BY_FIELD[value] ?? null;
+}
+
 function isHoldName(name: string): boolean {
   return /\b(hold|isometric|plank|carry)\b/i.test(name);
 }
@@ -198,6 +225,7 @@ export function blockToTimerItem(
       workSec: workSec ?? DEFAULT_ROUND_SEC,
       restSec: rest ?? (roundCount > 1 && !workSec ? DEFAULT_ROUND_REST_SEC : 0),
       sparring: blockType === "sparring",
+      plannedIntensity: blockType === "sparring" ? plannedSparringIntensity(block) : null,
       needsSetup: !workSec,
       presets: !workSec,
     };
