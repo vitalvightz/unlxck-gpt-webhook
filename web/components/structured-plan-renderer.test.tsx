@@ -2466,7 +2466,7 @@ test("a non-RPE effort method is glossed as itself, never as the RPE scale", () 
 
   assert.equal(html.includes("intent max"), true);
   assert.deepEqual(glossaryTerms(html), ["Intent"]);
-  assert.equal(html.includes("Rate of Perceived Exertion"), false);
+  assert.equal(html.includes("hard but controlled"), false);
 });
 
 test("every EffortMethod in the schema is glossed with its own definition", () => {
@@ -2525,9 +2525,9 @@ test("an unrecognised effort method shows no tooltip rather than a wrong one", (
   }
 });
 
-test("the effort stat carries a ? that explains the RPE scale", () => {
+test("the effort stat carries an i that explains the RPE scale", () => {
   // The card prints "RPE 1.5" with no scale attached — the number is meaningless
-  // to an athlete who has never met Rate of Perceived Exertion.
+  // to an athlete who has never met the RPE scale.
   const session = {
     session_id: "ses-mobility",
     session_type: "mobility",

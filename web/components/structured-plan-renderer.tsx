@@ -137,7 +137,7 @@ const HARD_SPARRING_SESSIONLESS_NOTE =
   "No extra S&C today — this is your declared hard-sparring/contact work. Keep freshness the priority.";
 const TECHNICAL_COMBAT_TITLE = "Technical Combat";
 const TECHNICAL_COMBAT_HELP =
-  "Hard sparring is reduced close to competition to lower fatigue and injury risk while keeping timing and skills sharp.";
+  "Near fight day, hard sparring is reduced. This lowers fatigue and injury risk while keeping your timing and skills sharp.";
 const TECHNICAL_COMBAT_TAG = "Low load";
 const TECHNICAL_COMBAT_RATIONALE =
   "Technical only — no hard sparring. Stay sharp and leave fresh.";
