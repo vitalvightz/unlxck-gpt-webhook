@@ -784,53 +784,187 @@
   }
 }
 
-/* Today card: launch rounds for coach-led contact, or a plain round timer. */
-.today-rounds-launcher {
+/* Today action tray: the primary action, a segmented "Log as" control and a
+   quiet row of timer shortcuts, all inside the one existing tray surface. */
+.today-session-actions.today-action-tray {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 10px;
+  padding: 10px;
 }
 
-.today-rounds-contact {
+.today-log-row {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  border: 1px solid var(--border-default, #2a2f37);
-  border-left: 3px solid var(--brand-red, #b5122b);
-  border-radius: 14px;
-  background: var(--bg-surface, #15181c);
+  flex-direction: column;
+  gap: 6px;
 }
 
-.today-rounds-contact[data-kind="light_combat"],
-.today-rounds-contact[data-kind="technical"] {
-  border-left-color: var(--progress-gold, #d6af6a);
-}
-
-.today-rounds-contact .today-detail-label {
-  margin: 0 0 2px;
-}
-
-.today-rounds-contact-title {
-  margin: 0;
+.today-log-label {
+  flex: none;
+  font-size: var(--type-label-sm, 11px);
   font-weight: 600;
+  letter-spacing: var(--tracking-label, 0.16em);
+  text-transform: uppercase;
+  color: var(--text-muted, #9aa1ac);
 }
 
-.today-rounds-contact .cta {
-  min-width: 148px;
+.today-log-group {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border-default, #2a2f37);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
 }
 
-.today-rounds-lock {
-  margin: 0;
+.today-log-group button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-secondary, #a7adb7);
+  font: inherit;
   font-size: var(--type-body-sm, 13px);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.today-log-group button:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary, #f5f7fa);
+}
+
+.today-log-group button[aria-pressed="true"] {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary, #f5f7fa);
+}
+
+.today-log-group button[data-value="done"]:hover .today-tool-icon,
+.today-log-group button[data-value="done"][aria-pressed="true"] .today-tool-icon {
+  color: var(--success-ink, #7de2a8);
+}
+
+/* Equal-width shortcuts on one line, however many there are. */
+.today-action-tools {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.today-action-tray > .today-action-tools:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.today-action-tools .today-tool-button,
+.today-action-tools .today-tool-lock {
+  justify-content: center;
+  width: 100%;
+}
+
+.today-action-footer {
+  display: flex;
+  justify-content: center;
+  margin-top: -2px;
+}
+
+.today-tool-button,
+.today-tool-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  white-space: nowrap;
+  padding: 0 12px;
+  border: 1px solid var(--border-default, #2a2f37);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary, #f5f7fa);
+  font: inherit;
+  font-size: var(--type-body-sm, 13px);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.today-tool-button:hover {
+  border-color: var(--border-strong, #363d47);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.today-tool-button[data-accent="true"] {
+  border-color: color-mix(in srgb, var(--brand-red, #b5122b) 45%, transparent);
+  background: var(--brand-red-soft, rgba(181, 18, 43, 0.14));
+}
+
+.today-tool-button[data-accent="true"] .today-tool-icon {
+  color: #ff5a6e;
+}
+
+.today-tool-link {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-muted, #9aa1ac);
+}
+
+.today-tool-link:hover {
+  color: var(--text-primary, #f5f7fa);
+}
+
+.today-tool-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 4px;
+  font-size: var(--type-body-sm, 13px);
+  color: var(--text-muted, #9aa1ac);
+}
+
+.today-tool-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
   color: var(--text-secondary, #a7adb7);
 }
 
-.today-rounds-free {
-  align-self: flex-start;
+@media (max-width: 400px) {
+  .today-log-group button .today-tool-icon { display: none; }
+}
+
+html[data-theme="light"] .today-log-group,
+html[data-theme="light"] .today-tool-button {
+  border-color: rgba(80, 81, 84, 0.14);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+html[data-theme="light"] .today-log-group button:hover,
+html[data-theme="light"] .today-log-group button[aria-pressed="true"] {
+  background: rgba(35, 36, 39, 0.07);
+}
+
+html[data-theme="light"] .today-action-tools {
+  border-top-color: rgba(80, 81, 84, 0.1);
+}
+
+html[data-theme="light"] .today-tool-button[data-accent="true"] {
+  border-color: color-mix(in srgb, var(--brand-red, #b5122b) 35%, transparent);
+  background: color-mix(in srgb, var(--brand-red, #b5122b) 8%, white);
+}
+
+html[data-theme="light"] .today-tool-button[data-accent="true"] .today-tool-icon {
+  color: var(--brand-red, #b5122b);
 }
 
 /* Post-sparring log card (reuses the feedback-card / chip styles). */
@@ -856,6 +990,22 @@
   font-size: 22px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+.sparring-log-notes {
+  display: grid;
+  gap: 8px;
+}
+
+.sparring-log-notes textarea {
+  min-height: 64px;
+  resize: vertical;
+}
+
+.sparring-log-actions {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
 }
 
 .sparring-log-safety {

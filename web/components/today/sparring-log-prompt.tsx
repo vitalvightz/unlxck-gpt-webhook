@@ -236,8 +236,8 @@ export function SparringLogPrompt({
         </p>
       ) : null}
 
-      <label className="field" htmlFor={notesId}>
-        <span>Notes (optional)</span>
+      <label className="field sparring-log-notes" htmlFor={notesId}>
+        <span className="session-feedback-legend">Notes (optional)</span>
         <textarea
           id={notesId}
           value={notes}
@@ -254,12 +254,12 @@ export function SparringLogPrompt({
           {error}
         </p>
       ) : null}
-      <div className="feedback-actions">
-        <button type="button" className="cta" disabled={isSubmitting} onClick={() => void save()}>
-          {isSubmitting ? "Saving…" : "Save"}
-        </button>
+      <div className="feedback-actions sparring-log-actions">
         <button type="button" className="ghost-button" disabled={isSubmitting} onClick={onDismiss}>
           Skip
+        </button>
+        <button type="button" className="cta" disabled={isSubmitting} onClick={() => void save()}>
+          {isSubmitting ? "Saving…" : "Save"}
         </button>
       </div>
     </section>

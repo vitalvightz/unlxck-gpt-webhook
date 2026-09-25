@@ -119,7 +119,7 @@ test("a session the backend scopes to next stays a locked preview", () => {
   assert.match(html, /Next session/);
   assert.match(html, /Sat 08 Aug 2026/);
   assert.match(html, /Preview only/);
-  assert.doesNotMatch(html, />Start session<|>Mark skipped</);
+  assert.doesNotMatch(html, />Start session<|>Skip session<|>Mark skipped</);
 });
 
 test("today's session actions stay locked until check-in is submitted", () => {
@@ -158,7 +158,7 @@ test("today's session actions stay locked until check-in is submitted", () => {
   );
 
   assert.match(html, /Submit today&#x27;s check-in to unlock session actions\./);
-  assert.doesNotMatch(html, />Start session<|>Mark skipped</);
+  assert.doesNotMatch(html, />Start session<|>Skip session<|>Mark skipped</);
 });
 
 test("a session the backend scopes to today unlocks on that scope alone", () => {
@@ -202,7 +202,7 @@ test("a session the backend scopes to today unlocks on that scope alone", () => 
 
   assert.match(html, /Today&#x27;s session/);
   assert.match(html, />Start session</);
-  assert.match(html, />Mark skipped</);
+  assert.match(html, />Skip session</);
   assert.doesNotMatch(html, /Preview only|Check in on the day/);
 });
 
@@ -253,7 +253,7 @@ test("safe replacement renders without blocked terminal or completion controls",
 
   assert.match(html, /Rest and recover/i);
   assert.doesNotMatch(html, /Blocked by an active severe injury/);
-  assert.doesNotMatch(html, />Start session<|>Mark done<|>Mark modified<|>Resume session</);
+  assert.doesNotMatch(html, />Start session<|>Resume session<|Log as|>Mark done<|>Mark modified</);
 });
 
 function contactDayState(decisionTier: TodayCommandView["today"]["decision_tier"]): TodayCommandView {
@@ -293,20 +293,20 @@ function renderPanel(state: TodayCommandView): string {
   );
 }
 
-test("a cleared day with coach-led sparring offers Start rounds and the round timer", () => {
+test("a cleared day with coach-led sparring offers sparring rounds and the round timer", () => {
   const html = renderPanel(contactDayState("green"));
-  assert.match(html, /Today&#x27;s contact/);
-  assert.match(html, /Hard sparring \(coach-led\)/);
-  assert.match(html, />Start rounds</);
-  assert.match(html, />Round timer</);
+  assert.match(html, /<\/svg>Sparring rounds<\/button>/);
+  assert.match(html, /<\/svg>Round timer<\/button>/);
+  // One tidy tray: the shortcuts sit under Start session, not in their own card.
+  assert.match(html, /today-action-tray[\s\S]*>Start session<[\s\S]*Sparring rounds/);
 });
 
 test("sparring rounds stay locked until check-in, and are never offered under a stop", () => {
   const unchecked = renderPanel(contactDayState("not_checked_in"));
-  assert.doesNotMatch(unchecked, />Start rounds</);
-  assert.match(unchecked, /Check in to unlock sparring rounds/);
+  assert.doesNotMatch(unchecked, /Sparring rounds<\/button>/);
+  assert.match(unchecked, /Sparring rounds unlock after check-in/);
 
   const stopped = renderPanel(contactDayState("stop"));
-  assert.doesNotMatch(stopped, />Start rounds</);
-  assert.doesNotMatch(stopped, />Round timer</);
+  assert.doesNotMatch(stopped, /Sparring rounds<\/button>/);
+  assert.doesNotMatch(stopped, /Round timer<\/button>/);
 });

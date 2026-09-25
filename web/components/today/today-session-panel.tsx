@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import { SessionFeedbackPrompt } from "@/components/feedback/session-feedback-prompt";
 import {
@@ -97,8 +97,8 @@ function getSessionDuration(session: TodaySession): string | null {
 type TimerSource = "session" | "contact" | "free";
 
 const CONTACT_LOCK_COPY = {
-  not_checked_in: "Check in to unlock sparring rounds.",
-  blocked: "Sparring rounds are locked by today's decision.",
+  not_checked_in: "Sparring rounds unlock after check-in",
+  blocked: "Sparring rounds locked today",
 };
 
 const PLANNED_SPARRING_INTENSITY: Record<ContactTimerTarget["kind"], SparringPlannedIntensity> = {
@@ -107,6 +107,28 @@ const PLANNED_SPARRING_INTENSITY: Record<ContactTimerTarget["kind"], SparringPla
   technical: "technical",
   coach_led: "contact",
 };
+
+type ToolIconName = "bell" | "timer" | "lock" | "check" | "adjust" | "skip";
+
+const TOOL_ICON_PATHS: Record<ToolIconName, ReactNode> = {
+  // A ring bell: sparring rounds.
+  bell: <path d="M6 16h12M8 16a4 4 0 118 0M12 8V6M10 19h4" />,
+  timer: <path d="M12 13V9.5M9.5 3h5M12 21a8 8 0 100-16 8 8 0 000 16zM18.5 6.5l1.5-1.5" />,
+  lock: <path d="M7 11V8a5 5 0 0110 0v3M6 11h12v9H6z" />,
+  check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
+  adjust: <path d="M4 8h9M17 8h3M4 16h3M11 16h9M15 6v4M9 14v4" />,
+  skip: <path d="M6 6l12 12M18 6L6 18" />,
+};
+
+function ToolIcon({ name }: { name: ToolIconName }) {
+  return (
+    <svg className="today-tool-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {TOOL_ICON_PATHS[name]}
+      </g>
+    </svg>
+  );
+}
 
 /** Saved timer runs only change through this tab's own actions, which re-render. */
 function subscribeToNothing(): () => void {
@@ -580,29 +602,54 @@ export function TodaySessionPanel({
     />
   ) : null;
 
-  const roundsLauncher =
-    !shownTimer && (contactTarget || freeTimerAvailable) ? (
-      <div className="today-rounds-launcher">
-        {contactTarget ? (
-          <div className="today-rounds-contact" data-kind={contactTarget.kind}>
-            <div>
-              <p className="today-detail-label">Today&apos;s contact</p>
-              <p className="today-rounds-contact-title">{contactTarget.headline}</p>
-            </div>
-            {contactTimerAvailable ? (
-              <button type="button" className="cta" onClick={() => openTimer("contact")}>
-                Start rounds
-              </button>
-            ) : (
-              <p className="today-rounds-lock">{contactLockCopy}</p>
-            )}
-          </div>
+  // Timer shortcuts shown along the bottom of the action tray. Hidden while a
+  // timer is running: its mini bar is the way back in.
+  function timerTools(trailing?: ReactNode, options: { contactAsPrimary?: boolean } = {}) {
+    const showContact = Boolean(contactTarget) && !options.contactAsPrimary;
+    const tools = !shownTimer && (showContact || freeTimerAvailable);
+    if (!tools && !trailing) {
+      return null;
+    }
+    return (
+      <>
+      {tools ? (
+      <div className="today-action-tools">
+        {tools && showContact ? (
+          contactTimerAvailable ? (
+            <button type="button" className="today-tool-button" data-accent="true" onClick={() => openTimer("contact")}>
+              <ToolIcon name="bell" />
+              Sparring rounds
+            </button>
+          ) : (
+            <span className="today-tool-lock">
+              <ToolIcon name="lock" />
+              {contactLockCopy}
+            </span>
+          )
         ) : null}
-        {freeTimerAvailable ? (
-          <button type="button" className="ghost-button today-rounds-free" onClick={() => openTimer("free")}>
+        {tools && freeTimerAvailable ? (
+          <button type="button" className="today-tool-button" onClick={() => openTimer("free")}>
+            <ToolIcon name="timer" />
             Round timer
           </button>
         ) : null}
+      </div>
+      ) : null}
+      {trailing ? <div className="today-action-footer">{trailing}</div> : null}
+      </>
+    );
+  }
+
+  // A sparring-only day has no session actions: its tray leads with the rounds.
+  const contactOnlyTray =
+    !shownTimer && (contactTarget || freeTimerAvailable) ? (
+      <div className="today-session-actions today-action-tray">
+        {contactTarget && contactTimerAvailable ? (
+          <button type="button" className="cta" onClick={() => openTimer("contact")}>
+            Start sparring rounds
+          </button>
+        ) : null}
+        {timerTools(undefined, { contactAsPrimary: Boolean(contactTarget && contactTimerAvailable) })}
       </div>
     ) : null;
 
@@ -696,8 +743,8 @@ export function TodaySessionPanel({
         ) : (
           <p className="muted">No active plan card matched today. Use Open camp plan to find the next training target.</p>
         )}
+        {contactOnlyTray}
         {sparringPrompt}
-        {roundsLauncher}
         {renderTimer(formatTrainingDay(state.today.training_day))}
       </section>
     );
@@ -801,7 +848,7 @@ export function TodaySessionPanel({
       ) : null}
 
       {canCompleteSession && status === "not_started" ? (
-        <div className="today-session-actions">
+        <div className="today-session-actions today-action-tray">
           <button
             type="button"
             className="cta"
@@ -816,14 +863,21 @@ export function TodaySessionPanel({
           >
             Start session
           </button>
-          <button type="button" className="ghost-button" onClick={() => setIntent("skipped")} disabled={isSubmitting}>
-            Mark skipped
-          </button>
+          {timerTools(
+            <button
+              type="button"
+              className="today-tool-link"
+              onClick={() => setIntent("skipped")}
+              disabled={isSubmitting}
+            >
+              Skip session
+            </button>,
+          )}
         </div>
       ) : null}
 
       {canCompleteSession && status === "started" ? (
-        <div className="today-session-actions">
+        <div className="today-session-actions today-action-tray">
           <button
             type="button"
             className="cta"
@@ -838,15 +892,27 @@ export function TodaySessionPanel({
           >
             Resume session
           </button>
-          <button type="button" className="secondary-button" onClick={() => setIntent("done")} disabled={isSubmitting}>
-            Mark done
-          </button>
-          <button type="button" className="secondary-button" onClick={() => setIntent("modified")} disabled={isSubmitting}>
-            Mark modified
-          </button>
-          <button type="button" className="ghost-button" onClick={() => setIntent("skipped")} disabled={isSubmitting}>
-            Mark skipped
-          </button>
+          <div className="today-log-row">
+            <span className="today-log-label" id="today-log-label">
+              Log as
+            </span>
+            <div className="today-log-group" role="group" aria-labelledby="today-log-label">
+              {(["done", "modified", "skipped"] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  data-value={value}
+                  aria-pressed={intent === value}
+                  onClick={() => setIntent(value)}
+                  disabled={isSubmitting}
+                >
+                  <ToolIcon name={value === "done" ? "check" : value === "modified" ? "adjust" : "skip"} />
+                  {value === "done" ? "Done" : value === "modified" ? "Modified" : "Skipped"}
+                </button>
+              ))}
+            </div>
+          </div>
+          {timerTools()}
         </div>
       ) : null}
 
@@ -854,8 +920,14 @@ export function TodaySessionPanel({
         <p className="today-terminal-status">{getCompletionLabel(status)}</p>
       ) : null}
 
+      {/* Locked, logged or blocked sessions still get the timer shortcuts. */}
+      {!(canCompleteSession && (status === "not_started" || status === "started")) &&
+      (contactTarget || freeTimerAvailable) &&
+      !shownTimer ? (
+        <div className="today-session-actions today-action-tray">{timerTools()}</div>
+      ) : null}
+
       {sparringPrompt}
-      {roundsLauncher}
 
       {canCompleteSession ? (
         <SessionCompletionForm
