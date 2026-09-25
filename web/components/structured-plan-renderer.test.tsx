@@ -1278,6 +1278,62 @@ test("normalizes standalone declared light-combat day and session titles", () =>
   assert.equal(html.includes("Keep technical rhythm and timing without adding fatigue."), false);
 });
 
+test("a technical day the athlete declared never reads as converted hard sparring", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "SPP",
+        days: [
+          {
+            date: "2026-06-20",
+            countdown_label: "D-9",
+            day_type: "moderate",
+            today_card: { headline: "Technical sparring" },
+            sessions: [],
+          },
+          {
+            date: "2026-06-21",
+            countdown_label: "D-8",
+            day_type: "moderate",
+            today_card: {
+              headline: "Fight-week freshness",
+              coach_led_contact: "Pad work",
+            },
+            sessions: [
+              {
+                session_id: "s1",
+                session_type: "strength",
+                title: "Fight-week freshness",
+                blocks: [{
+                  block_id: "band-face-pull",
+                  block_type: "strength",
+                  display_name: "Band face pull, light",
+                }],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+
+  // Both days keep the athlete's own wording and the plain light-combat note:
+  // no "hard sparring is reduced" tooltip, no conversion tag or rationale.
+  assert.equal(html.includes("Technical sparring"), true);
+  assert.equal(html.includes("Pad work"), true);
+  assert.equal(countOccurrences(html, "Pads, drills, movement or other lower-intensity combat work."), 2);
+  assert.equal(html.includes("Why this changed"), false);
+  assert.equal(html.includes("hard sparring is reduced"), false);
+  assert.equal(html.includes(">Low load<"), false);
+  assert.equal(html.includes("no hard sparring"), false);
+});
+
 test("surfaces technical contact alongside prescribed app work in the same day card", () => {
   const plan = {
     schema_version: "1.0",
