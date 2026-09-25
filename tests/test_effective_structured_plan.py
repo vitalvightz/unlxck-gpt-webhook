@@ -57,7 +57,7 @@ def test_effective_resolver_prefers_stored_then_reconstructs_and_fails_safe(monk
     rebuilt = _production_calendar()
     calls = []
 
-    def build(brief):
+    def build(brief, plan_text=None):
         calls.append(brief)
         return rebuilt
 
@@ -80,7 +80,7 @@ def test_effective_resolver_prefers_stored_then_reconstructs_and_fails_safe(monk
 
     monkeypatch.setattr(
         "api.services.effective_structured_plan.build_deterministic_structured_plan",
-        lambda _brief: None,
+        lambda _brief, plan_text=None: None,
     )
     assert resolve_effective_structured_plan({"structured_plan": None}) is None
 
@@ -89,7 +89,7 @@ def test_missing_card_uses_canonical_calendar_across_today_xp_and_notifications(
     calendar = _production_calendar()
     monkeypatch.setattr(
         "api.services.effective_structured_plan.build_deterministic_structured_plan",
-        lambda _brief: calendar,
+        lambda _brief, plan_text=None: calendar,
     )
     store = FakeStore()
     store.plans[PLAN] = {
@@ -161,11 +161,36 @@ def test_missing_card_uses_canonical_calendar_across_today_xp_and_notifications(
     assert d31.today.next_session["title"] == "Hard sparring"
 
 
+def test_rebuilt_card_reads_the_same_plan_text_on_every_surface(monkeypatch):
+    """Today/progress pass no markdown; they must still get the row's plan text."""
+    seen = []
+
+    def build(_brief, plan_text=None):
+        seen.append(plan_text)
+        return _production_calendar()
+
+    monkeypatch.setattr(
+        "api.services.effective_structured_plan.build_deterministic_structured_plan", build
+    )
+    row = {
+        "structured_plan": None,
+        "planning_brief": {"hard_sparring_days": ["Monday"]},
+        "plan_text": "D-17 — Flush\n- Tempo Shadowboxing: duration 20 min.",
+        "final_plan_text": "held for review",
+    }
+    resolve_effective_structured_plan(row)
+    resolve_effective_structured_plan(row, raw_markdown=row["plan_text"])
+    # A held plan shows no text, so its unreleased Stage 2 copy is never read.
+    resolve_effective_structured_plan({**row, "plan_text": ""})
+
+    assert seen == [row["plan_text"], row["plan_text"], None]
+
+
 def test_populated_structured_plan_is_unchanged(monkeypatch):
     stored = _production_calendar()
     monkeypatch.setattr(
         "api.services.effective_structured_plan.build_deterministic_structured_plan",
-        lambda _brief: pytest.fail("stored structured plan must win"),
+        lambda _brief, plan_text=None: pytest.fail("stored structured plan must win"),
     )
     assert resolve_effective_structured_plan(
         {"structured_plan": stored, "planning_brief": {"hard_sparring_days": ["Monday"]}}

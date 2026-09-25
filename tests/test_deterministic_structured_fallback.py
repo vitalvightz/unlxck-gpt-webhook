@@ -10,7 +10,10 @@ import datetime
 
 import pytest
 
-from api.structured_plan_deterministic_fallback import build_deterministic_structured_plan
+from api.structured_plan_deterministic_fallback import (
+    _ROLES_OWNED_ELSEWHERE,
+    build_deterministic_structured_plan,
+)
 from api.structured_plan_faithfulness import _authoritative_locked_day, _locked_roles
 from api.structured_plan_models import safe_parse_structured_plan
 from support import _build_request
@@ -167,6 +170,45 @@ def test_fallback_carries_authoritative_doses_not_invented_ones(camp_brief, fall
         assert str(block.get("display_name")) in assignments, (
             f"{block.get('display_name')!r} was not a deterministic selection"
         )
+
+
+def test_plan_text_dose_reaches_the_full_card_and_stays_schema_valid(camp_brief):
+    """A selected exercise shows the text's exact dose in the assembled plan."""
+    target = next(
+        (role, item)
+        for week in (camp_brief.get("weekly_role_map") or {}).get("weeks") or []
+        for role in week.get("session_roles") or []
+        if isinstance(role.get("scheduled_d_day"), int)
+        and role.get("role_key") not in _ROLES_OWNED_ELSEWHERE
+        for item in role.get("selected_exercise_assignments") or []
+        if isinstance(item, dict)
+        and item.get("name")
+        and item.get("slot_group") != "priority_microdose"
+    )
+    role, item = target
+    d_day = role["scheduled_d_day"]
+    text = (
+        f"D-{d_day} (Monday) — Session\n"
+        "Why: the text's own rationale.\n"
+        f"- {item['name']}: duration 17 min; RPE 3.\n"
+        "  Stop: if form breaks.\n"
+    )
+
+    plan = build_deterministic_structured_plan(camp_brief, plan_text=text)
+
+    assert plan is not None
+    assert safe_parse_structured_plan(plan).ok
+    sessions = _days(plan)[d_day].get("sessions") or []
+    block = next(
+        block
+        for session in sessions
+        for block in session.get("blocks") or []
+        if block.get("display_name") == item["name"]
+    )
+    assert block["duration"] == {"value": 17, "unit": "minutes"}
+    assert block["effort"]["value"] == 3
+    assert block["stop_rules"] == ["if form breaks."]
+    assert any(session.get("objective") == "the text's own rationale." for session in sessions)
 
 
 def test_fallback_invents_no_nutrition_guidance(fallback):
