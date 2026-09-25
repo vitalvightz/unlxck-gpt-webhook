@@ -43,6 +43,25 @@ def _planning_brief(value: Any) -> dict[str, Any]:
     return {}
 
 
+def _release_status(final_result: dict[str, Any]) -> str:
+    """The status this result will actually be released with.
+
+    Persistence never holds a plan that has content: a held status is rewritten
+    to ``publishable_with_flags`` on save (``_release_held_plan_with_flags``).
+    Stage 2's inline card gate runs before that, sees the held status and skips
+    the card, so the card decision has to use the release status instead.
+    """
+    from .persistence import _RELEASE_OVERRIDE_HELD_STATUSES, _RELEASE_OVERRIDE_STATUS
+
+    status = str(final_result.get("status") or "").strip().lower()
+    has_text = bool(
+        str(final_result.get("final_plan_text") or final_result.get("plan_text") or "").strip()
+    )
+    if status in _RELEASE_OVERRIDE_HELD_STATUSES and has_text:
+        return _RELEASE_OVERRIDE_STATUS
+    return status
+
+
 async def retry_structured_card_before_release(
     *,
     stage2: Stage2Automator,
@@ -50,15 +69,15 @@ async def retry_structured_card_before_release(
     emit_milestone: Callable[..., None],
     log_context: dict[str, str] | None = None,
 ) -> dict[str, Any]:
-    """Give a failed inline enhanced card its one retry before the job completes.
+    """Make sure the enhanced card has been attempted before the job completes.
 
     The athlete stays on the generation screen until the job completes, so the
-    retry must happen here, not after release. Doing it after release showed the
-    plain-text fallback while the retry was still running. Runs the same
-    conversion the post-release retry used (``attempt_structured_plan_for_result``
-    through the canonical trigger), so only plans the inline pass could have
-    converted are retried. Never raises: on any failure or timeout the inline
-    outcome stands and the plan releases on the text fallback.
+    card must be built here, never after release. This covers both a failed
+    inline card and one Stage 2 never attempted because the plan was held at
+    that point and only released with flags on save. Runs the canonical
+    conversion (``attempt_structured_plan_for_result``) against the status the
+    plan will be released with. Never raises: on any failure or timeout the
+    plan releases on the text fallback.
     """
     from ..stage2_automation import (
         _merge_stage2_costs,
@@ -70,18 +89,18 @@ async def retry_structured_card_before_release(
 
     if has_clean_structured_card(final_result):
         return final_result
-    # Without a converter a retry can only record "unavailable" again.
+    # Without a converter an attempt can only record "unavailable" again.
     if getattr(stage2, "_attempt_structured_plan", None) is None:
         return final_result
-    if not should_attempt_structured_plan(final_result, _structured_plan_enabled()):
+    candidate = {**final_result, "status": _release_status(final_result)}
+    if not should_attempt_structured_plan(candidate, _structured_plan_enabled()):
         return final_result
 
     emit_milestone(
         "structured_card_retry_started",
-        "Retrying your enhanced card",
-        "The first enhanced card attempt did not validate; building it again before release.",
+        "Building your enhanced card",
+        "No valid enhanced card yet; building it before release.",
     )
-    candidate = dict(final_result)
     report = candidate.get("stage2_validator_report")
     candidate["stage2_validator_report"] = dict(report) if isinstance(report, dict) else {}
     try:
@@ -105,19 +124,21 @@ async def retry_structured_card_before_release(
         )
         emit_milestone(
             "structured_card_retry_finished",
-            "Enhanced card retry finished",
-            "The retry could not complete; releasing the plan.",
+            "Enhanced card attempt finished",
+            "The card could not be built; releasing the plan.",
         )
         return final_result
 
+    # Only the card is decided here. The release status stays persistence's call.
+    retried["status"] = final_result.get("status")
     if costs:
         retried["stage2_cost"] = _merge_stage2_costs(final_result.get("stage2_cost"), *costs)
     emit_milestone(
         "structured_card_retry_finished",
-        "Enhanced card retry finished",
+        "Enhanced card attempt finished",
         "Enhanced card ready."
         if has_clean_structured_card(retried)
-        else "The retry did not validate either; releasing the plan.",
+        else "The card did not validate; releasing the plan.",
     )
     return retried
 

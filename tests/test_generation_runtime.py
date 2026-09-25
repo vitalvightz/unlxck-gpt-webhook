@@ -1912,3 +1912,42 @@ def test_clean_inline_card_is_not_retried():
     assert job["status"] == "completed"
     assert stage2.conversions == []
     assert "structured_card_retry_started" not in _milestone_codes(job)
+
+
+def test_card_skipped_because_stage2_held_the_plan_is_built_before_release():
+    """Stage 2 held the plan, so its inline gate never attempted the card.
+
+    Persistence then releases the held plan with flags. The card must be
+    attempted against that release status, before the job completes.
+    """
+    from api.stage2_automation import StructuredPlanOutcome
+
+    store = FakeStore()
+    seed_default_profiles(store)
+    not_attempted_report = {
+        "errors": [],
+        "warnings": [],
+        "structured_plan": {"status": "not_attempted", "errors": [], "warnings": [], "schema_version": None},
+    }
+    stage2 = _CardConvertingStage2(
+        inline_report=not_attempted_report,
+        retry_outcome=StructuredPlanOutcome(
+            status="valid", structured_plan={"weeks": [{"days": []}]}, schema_version="1.1"
+        ),
+    )
+    stage2.result_factory = lambda: finalized_result(
+        status="review_required",
+        stage2_status="stage2_failed",
+        structured_plan=None,
+        schema_version=None,
+        stage2_validator_report=dict(not_attempted_report),
+    )
+
+    job = _run_stage2_failure_job(store, stage2, client_request_id="card-held-then-released")
+
+    assert job["status"] == "completed"
+    assert stage2.conversions == ["generation_card_retry"]
+    plan = store.plans[job["plan_id"]]
+    assert plan["status"] == "publishable_with_flags"
+    assert plan["structured_plan"] == {"weeks": [{"days": []}]}
+    assert plan["stage2_validator_report"]["structured_plan"]["status"] == "valid"
