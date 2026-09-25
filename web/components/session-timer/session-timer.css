@@ -200,6 +200,13 @@
 
 .st-plan-summary {
   margin: 14px 0 2px;
+  padding: 2px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 140ms ease;
   font-size: clamp(26px, 7.5vw, 40px);
   font-weight: 600;
   letter-spacing: -0.02em;
@@ -211,13 +218,8 @@
   color: var(--st-ink);
 }
 
-.st-adjust .st-steppers {
-  width: 100%;
-}
-
-.st-adjust:has(.st-stepper:nth-child(2):last-child) .st-steppers {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
+.st-plan-summary:hover,
+.st-plan-summary:focus-visible { background: var(--st-surface); }
 
 .st-detail,
 .st-plan-line {
@@ -378,64 +380,140 @@
   margin-top: 12px;
 }
 
+/* Adjust sheet: one row per number, label left and an iOS-style capsule
+   stepper right. Compact enough to float over the screen, not fill it. */
+.st-sheet.st-adjust {
+  gap: 0;
+  padding: 6px 16px;
+}
+
 .st-steppers {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
   width: 100%;
 }
 
 .st-stepper {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 14px 6px 10px;
-  border: 1px solid var(--st-line);
-  border-radius: 18px;
-  background: var(--st-surface);
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+}
+
+.st-stepper + .st-stepper {
+  border-top: 1px solid var(--st-line);
 }
 
 .st-stepper-label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--st-ink-faint);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--st-ink-soft);
+}
+
+.st-stepper-control {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--st-surface-strong);
 }
 
 .st-stepper-value {
+  min-width: 56px;
   font-family: var(--st-digits);
   font-variant-numeric: tabular-nums;
-  font-size: 30px;
+  font-size: 19px;
   font-weight: 600;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
   line-height: 1;
+  text-align: center;
 }
 
-.st-stepper-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-areas: "value value" "down up";
-  gap: 10px 6px;
-  width: 100%;
-  padding: 0 8px;
-}
-
-.st-stepper-row .st-stepper-value { grid-area: value; justify-self: center; }
-.st-stepper-row button:first-child { grid-area: down; }
-.st-stepper-row button:last-child { grid-area: up; }
-
-.st-stepper-row button {
-  width: 100%;
-  height: 36px;
+.st-stepper-control button {
+  width: 42px;
+  height: 40px;
   border: 0;
-  border-radius: 12px;
-  background: var(--st-surface-strong);
-  color: var(--st-ink);
-  font-size: 20px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--st-ink-soft);
+  font-size: 18px;
   line-height: 1;
   cursor: pointer;
+  transition: color 140ms ease, background 140ms ease;
+}
+
+.st-stepper-control button:hover { color: var(--st-ink); }
+.st-stepper-control button:active { background: var(--st-surface-strong); color: var(--st-ink); }
+
+/* Dims the screen behind an open sheet; a tap on it closes the sheet. */
+.st-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: rgba(0, 0, 0, 0.4);
+  animation: st-fade-in 160ms ease-out;
+}
+
+@keyframes st-fade-in {
+  from { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-scrim { animation: none; }
+}
+
+/* One-time coach mark under the Adjust icon. Never shown again once
+   dismissed or once the sheet is opened. */
+.st-top { position: relative; z-index: 6; }
+
+.st-hint {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 52px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px 7px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--st-ink);
+  color: #0b0c0f;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  animation: st-hint-in 260ms ease-out 400ms both;
+  transform-origin: calc(100% - 22px) 0;
+}
+
+.st-hint::before {
+  content: "";
+  position: absolute;
+  top: -5px;
+  right: 17px;
+  width: 10px;
+  height: 10px;
+  background: inherit;
+  transform: rotate(45deg);
+  border-radius: 2px;
+}
+
+.st-hint span {
+  font-size: 15px;
+  line-height: 1;
+  opacity: 0.45;
+}
+
+@keyframes st-hint-in {
+  from { opacity: 0; transform: translateY(-4px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-hint { animation: none; }
 }
 
 .st-round-presets {

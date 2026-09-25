@@ -719,6 +719,10 @@ export function TodaySessionPanel({
         finishLabel={source === "session" ? "Log session" : "Done"}
         onMinimize={() => setActiveTimer({ source, mode: "minimized" })}
         onExpand={() => openTimer(source)}
+        onClose={() => {
+          clearSavedRun(storageKey);
+          setActiveTimer(null);
+        }}
         onFinish={(summary: SessionTimerSummary) => {
           clearSavedRun(storageKey);
           setActiveTimer(null);
