@@ -9,6 +9,8 @@ import {
   measuredSeconds,
   parseCountRange,
   parseDurationRange,
+  sessionTimerItems,
+  timerSessionFor,
 } from "./plan.ts";
 import type { StructuredBlock, StructuredSession } from "../types.ts";
 
@@ -163,4 +165,57 @@ test("formatting helpers", () => {
   assert.equal(formatClock(0), "0:00");
   assert.equal(formatRange({ min: 3, max: 5 }), "3–5");
   assert.equal(formatRange({ min: 4, max: 4 }), "4");
+});
+
+const LOWER_POWER: StructuredSession = {
+  session_id: "s1",
+  title: "Lower power",
+  blocks: [{ block_type: "strength", display_name: "Trap bar jump", sets: 4, reps: 3 }],
+};
+const SPRINT: StructuredSession = {
+  session_id: "s2",
+  title: "Sprint",
+  blocks: [
+    {
+      block_type: "conditioning",
+      display_name: "Hill sprints",
+      rounds: 6,
+      work: { value: 10, unit: "s" },
+      rest: { value: 90, unit: "s" },
+    },
+  ],
+};
+const TACTICAL_FOCUS: StructuredSession = {
+  session_id: "s3",
+  title: "Tactical Focus",
+  blocks: [{ block_type: "mindset", display_name: "Pocket Exchange Map" }],
+};
+
+test("a zero-load Tactical Focus session has no timer items, never generic rounds", () => {
+  assert.deepEqual(buildTimerItems([TACTICAL_FOCUS]), []);
+  assert.deepEqual(sessionTimerItems([TACTICAL_FOCUS], "s3"), []);
+});
+
+test("the timer only ever holds the session being completed", () => {
+  const day = [LOWER_POWER, SPRINT, TACTICAL_FOCUS];
+  // Start s1: only s1's blocks.
+  const first = sessionTimerItems(day, "s1");
+  assert.deepEqual(first.map((item) => item.title), ["Trap bar jump"]);
+  // s1 completed, the backend advances to s2: only s2's blocks, s1 is not repeated.
+  const second = sessionTimerItems(day, "s2");
+  assert.deepEqual(second.map((item) => item.title), ["Hill sprints"]);
+  // s3 is zero-load: no session timer.
+  assert.deepEqual(sessionTimerItems(day, "s3"), []);
+});
+
+test("a session that cannot be identified confidently gets no timer", () => {
+  assert.equal(timerSessionFor([LOWER_POWER, SPRINT], "missing"), null);
+  assert.equal(timerSessionFor([LOWER_POWER, SPRINT], null), null);
+  assert.equal(timerSessionFor([LOWER_POWER, { ...SPRINT, session_id: "s1" }], "s1"), null);
+  // Several id-less sessions are ambiguous; a lone id-less (legacy) session is not.
+  const unnamed = { ...LOWER_POWER, session_id: null };
+  assert.equal(timerSessionFor([unnamed, { ...SPRINT, session_id: null }], "2026-09-25"), null);
+  assert.equal(timerSessionFor([unnamed], "2026-09-25"), unnamed);
+  // A lone session with a different explicit id is not silently adopted.
+  assert.equal(timerSessionFor([LOWER_POWER], "s9"), null);
 });

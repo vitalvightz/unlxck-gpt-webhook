@@ -26,7 +26,7 @@ import {
   freeRoundsItem,
   type ContactTimerTarget,
 } from "@/lib/session-timer/contact";
-import { buildTimerItems, defaultRoundsItem, type TimerItem } from "@/lib/session-timer/plan";
+import { sessionTimerItems, timerSessionFor, type TimerItem } from "@/lib/session-timer/plan";
 import {
   resolveCurrentDay,
   resolveOpenPlanWeekNumber,
@@ -391,22 +391,31 @@ export function TodaySessionPanel({
   // resolves the plan card — and rejects completion writes on a rest day — so
   // scope "today" is the single answer both sides use.
   const canCompleteSession = resolvedDecision.canCompleteSession;
-  // The timer runs today's resolved blocks. Same gate as completion, and never
-  // under a STOP: the safe replacement session is not something to time.
-  const timerAvailable = canCompleteSession && !safeSession && Boolean(session.session_id);
+  // The timer runs the blocks of the ONE session being completed, never the
+  // whole day (a day can carry several sessions, and completion is written
+  // against this session's id). No timeable blocks means no session timer:
+  // a zero-load session such as Tactical Focus is never turned into rounds.
+  const timerSourceText = structuredPlan?.raw_markdown_fallback ?? null;
+  const timerCountdown = current.day?.countdown_label ?? null;
+  const timerItems: TimerItem[] = hasResolvedDaySessions
+    ? sessionTimerItems(current.sessions, session.session_id, {
+        sourceText: timerSourceText,
+        countdown: timerCountdown,
+      })
+    : [];
+  const timerAvailable =
+    canCompleteSession && !safeSession && Boolean(session.session_id) && timerItems.length > 0;
+  // Titled from the matched session itself: the card headline follows the
+  // day's first session, which is not necessarily the one being completed.
+  const timerSessionTitle = hasResolvedDaySessions
+    ? textValue(timerSessionFor(current.sessions, session.session_id)?.title)
+    : "";
   const timerKeys: Record<TimerSource, string> = {
     session: `unlxck.session-timer.run:${activePlanId}:${session.session_id ?? ""}:${state.today.training_day}`,
     contact: `unlxck.session-timer.contact:${activePlanId}:${state.today.training_day}`,
     free: `unlxck.session-timer.free:${state.today.training_day}`,
   };
   const timerStorageKey = timerKeys.session;
-  const timerSourceText = structuredPlan?.raw_markdown_fallback ?? null;
-  const timerCountdown = current.day?.countdown_label ?? null;
-  const timerSessions = hasResolvedDaySessions ? current.sessions : null;
-  const builtTimerItems = timerSessions
-    ? buildTimerItems(timerSessions, { sourceText: timerSourceText, countdown: timerCountdown })
-    : [];
-  const timerItems = builtTimerItems.length ? builtTimerItems : [defaultRoundsItem()];
   // Coach-led contact is timed from TODAY's plan day, even when the card above
   // has moved on to the next app session (a sparring-only day has none).
   const todayOpenWeekNumber = resolveOpenPlanWeekNumber(structuredPlan, trainingDay, {
@@ -587,7 +596,7 @@ export function TodaySessionPanel({
     if (source === "session") {
       if (!timerAvailable) return null;
       items = timerItems;
-      title = sessionTitle;
+      title = timerSessionTitle || sessionTitle;
     } else if (source === "contact") {
       if (!contactTimerAvailable || !contactTarget) return null;
       items = [contactRoundsItem(contactTarget)];

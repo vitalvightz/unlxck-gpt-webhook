@@ -108,7 +108,7 @@ test("+30s and end round", () => {
   assert.deepEqual(ended.state.completed, [1]);
 });
 
-test("a set range: rest to the minimum, optional window to the maximum, finish once the minimum is met", () => {
+test("a set range: rest stays rest until the athlete starts the set, finish once the minimum is met", () => {
   let step = startItem(createTimerState([SQUAT, MOBILITY]), T0);
   assert.deepEqual(step.events, ["set_start"]);
   assert.equal(viewAt(step.state, T0).remainingMs, null);
@@ -116,17 +116,27 @@ test("a set range: rest to the minimum, optional window to the maximum, finish o
   step = completeSet(step.state, T0 + 30_000);
   assert.deepEqual(step.events, ["rest_start"]);
   assert.equal(step.state.phase, "rest");
-  assert.equal(step.state.phaseMs, 90_000);
+  // The rest runs to its maximum; the minimum is only a "ready" signal.
+  assert.equal(step.state.phaseMs, 120_000);
+  assert.equal(viewAt(step.state, T0 + 30_000).readyRemainingMs, 90_000);
 
   step = advance(step.state, T0 + 120_000);
-  assert.deepEqual(step.events, ["rest_end", "set_start"]);
-  assert.equal(step.state.phase, "work");
-  assert.equal(step.state.unit, 2);
-  assert.equal(viewAt(step.state, T0 + 120_000).windowRemainingMs, 30_000);
-
-  step = advance(step.state, T0 + 150_000);
-  assert.deepEqual(step.events, ["window_closed"]);
+  assert.deepEqual(step.events, ["rest_ready"]);
   assert.equal(soundForEvents(step.events), "soft_chime");
+  assert.equal(step.state.phase, "rest");
+  assert.equal(step.state.unit, 2);
+  assert.equal(viewAt(step.state, T0 + 120_000).readyRemainingMs, 0);
+  assert.equal(viewAt(step.state, T0 + 120_000).remainingMs, 30_000);
+
+  // Still resting 20 s later: nothing has started behind the athlete's back.
+  step = advance(step.state, T0 + 140_000);
+  assert.deepEqual(step.events, []);
+  assert.equal(step.state.phase, "rest");
+
+  step = skipRest(step.state, T0 + 145_000);
+  assert.deepEqual(step.events, ["set_start"]);
+  assert.equal(step.state.phase, "work");
+  assert.equal(step.state.phaseStartedAt, T0 + 145_000);
 
   step = completeSet(step.state, T0 + 160_000);
   step = skipRest(step.state, T0 + 170_000);
@@ -138,6 +148,56 @@ test("a set range: rest to the minimum, optional window to the maximum, finish o
   assert.deepEqual(step.events, ["item_complete"]);
   assert.equal(step.state.index, 1);
   assert.equal(step.state.phase, "ready");
+});
+
+test("a ranged rest starts the next set by itself only at its maximum", () => {
+  let step = startItem(createTimerState([SQUAT]), T0);
+  step = completeSet(step.state, T0 + 10_000);
+  step = advance(step.state, T0 + 10_000 + 120_000);
+  assert.deepEqual(step.events, ["rest_ready", "rest_end", "set_start"]);
+  assert.equal(step.state.phase, "work");
+  assert.equal(step.state.phaseStartedAt, T0 + 130_000);
+});
+
+test("timed holds with a 90-120 s rest: no hold starts or finishes inside the rest range", () => {
+  const hold: SetsItem = { ...HOLD, sets: { min: 3, max: 3 }, holdSec: 20, restSec: { min: 90, max: 120 } };
+  let step = startItem(createTimerState([hold]), T0);
+  step = advance(step.state, T0 + 20_000);
+  assert.deepEqual(step.events, ["hold_end", "rest_start"]);
+  assert.deepEqual(step.state.completed, [1]);
+  const restStart = T0 + 20_000;
+
+  // At the minimum: ready, but the next hold has not started.
+  step = advance(step.state, restStart + 90_000);
+  assert.deepEqual(step.events, ["rest_ready"]);
+  assert.equal(step.state.phase, "rest");
+
+  // Where the old behaviour had already run and logged a whole hold.
+  step = advance(step.state, restStart + 110_000);
+  assert.deepEqual(step.events, []);
+  assert.equal(step.state.phase, "rest");
+  assert.deepEqual(step.state.completed, [1]);
+
+  // The maximum runs out: only now does hold 2 begin, and it runs its full 20 s.
+  step = advance(step.state, restStart + 120_000);
+  assert.deepEqual(step.events, ["rest_end", "hold_start"]);
+  assert.equal(viewAt(step.state, restStart + 120_000).remainingMs, 20_000);
+  assert.deepEqual(step.state.completed, [1]);
+
+  // Tapping Start set inside the range begins the hold at the tap.
+  let tapped = startItem(createTimerState([hold]), T0);
+  tapped = advance(tapped.state, T0 + 20_000);
+  tapped = skipRest(advance(tapped.state, restStart + 100_000).state, restStart + 100_000);
+  assert.deepEqual(tapped.events, ["hold_start"]);
+  assert.equal(viewAt(tapped.state, restStart + 100_000).remainingMs, 20_000);
+});
+
+test("pausing a ranged rest shifts both its minimum and maximum", () => {
+  let state = completeSet(startItem(createTimerState([SQUAT]), T0).state, T0).state;
+  state = pause(state, T0 + 30_000);
+  state = resume(state, T0 + 90_000);
+  assert.deepEqual(advance(state, T0 + 140_000).events, []);
+  assert.deepEqual(advance(state, T0 + 150_000).events, ["rest_ready"]);
 });
 
 test("hitting the set maximum moves straight to the next item", () => {

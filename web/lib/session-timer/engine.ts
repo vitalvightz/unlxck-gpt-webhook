@@ -12,6 +12,9 @@ import type { IntervalItem, TimerItem } from "./plan";
  * - ready: an exercise is queued; the athlete taps Start.
  * - work:  a round, a timed hold, or an untimed set the athlete ends with "Set done".
  * - rest:  between rounds or sets. Untimed only when the plan gave no rest.
+ *          A ranged rest (90–120 s) stays in rest until its maximum: at the
+ *          minimum it only signals "ready", and the next set begins when the
+ *          athlete taps Start set or the maximum runs out, never earlier.
  * - done:  every item finished.
  */
 export type TimerPhase = "ready" | "work" | "rest" | "done";
@@ -27,8 +30,8 @@ export type TimerState = {
   phaseStartedAt: number | null;
   /** Length of a timed phase; null for an untimed one. */
   phaseMs: number | null;
-  /** End of the optional extra rest a rest range allows beyond its minimum. */
-  windowEndsAt: number | null;
+  /** Ranged rest only: when the minimum rest is reached, until announced. */
+  readyAt: number | null;
   pausedAt: number | null;
   startedAt: number | null;
   endedAt: number | null;
@@ -41,8 +44,8 @@ export type TimerEvent =
   | "hold_start"
   | "hold_end"
   | "set_start"
+  | "rest_ready"
   | "rest_end"
-  | "window_closed"
   | "item_complete"
   | "session_complete";
 
@@ -57,7 +60,7 @@ export function createTimerState(items: TimerItem[]): TimerState {
     completed: items.map(() => 0),
     phaseStartedAt: null,
     phaseMs: null,
-    windowEndsAt: null,
+    readyAt: null,
     pausedAt: null,
     startedAt: null,
     endedAt: null,
@@ -75,7 +78,7 @@ function setPhase(
   phaseMs: number | null,
   patch: Partial<TimerState> = {},
 ): TimerState {
-  return { ...state, phase, phaseStartedAt: at, phaseMs, windowEndsAt: null, ...patch };
+  return { ...state, phase, phaseStartedAt: at, phaseMs, readyAt: null, ...patch };
 }
 
 function bumpCompleted(state: TimerState): number[] {
@@ -92,7 +95,7 @@ function completeItem(state: TimerState, at: number, events: TimerEvent[]): Time
       unit: 1,
       phaseStartedAt: null,
       phaseMs: null,
-      windowEndsAt: null,
+      readyAt: null,
     };
   }
   events.push("session_complete");
@@ -101,7 +104,7 @@ function completeItem(state: TimerState, at: number, events: TimerEvent[]): Time
     phase: "done",
     phaseStartedAt: null,
     phaseMs: null,
-    windowEndsAt: null,
+    readyAt: null,
     endedAt: at,
   };
 }
@@ -146,8 +149,10 @@ function finishSet(state: TimerState, at: number, events: TimerEvent[]): TimerSt
     return completeItem(withCount, at, events);
   }
   events.push("rest_start");
-  return setPhase(withCount, "rest", at, item.restSec ? item.restSec.min * 1000 : null, {
+  const rest = item.restSec;
+  return setPhase(withCount, "rest", at, rest ? rest.max * 1000 : null, {
     unit: done + 1,
+    readyAt: rest && rest.max > rest.min ? at + rest.min * 1000 : null,
   });
 }
 
@@ -179,9 +184,7 @@ function expirePhase(state: TimerState, at: number, events: TimerEvent[]): Timer
       return finishSet(state, at, events);
     }
     events.push("rest_end");
-    const next = beginWork(state, at, events);
-    const extraMs = item.restSec ? (item.restSec.max - item.restSec.min) * 1000 : 0;
-    return extraMs > 0 ? { ...next, windowEndsAt: at + extraMs } : next;
+    return beginWork(state, at, events);
   }
   return state;
 }
@@ -202,14 +205,15 @@ export function advance(state: TimerState, now: number): TimerStep {
   let next = state;
   // Bounded so a corrupt persisted state can never spin forever.
   for (let guard = 0; guard < 500; guard += 1) {
+    // The minimum of a ranged rest always falls before its maximum.
+    if (next.readyAt !== null && now >= next.readyAt) {
+      events.push("rest_ready");
+      next = { ...next, readyAt: null };
+      continue;
+    }
     const endsAt = phaseEndsAt(next);
     if (endsAt !== null && now >= endsAt && (next.phase === "work" || next.phase === "rest")) {
       next = expirePhase(next, endsAt, events);
-      continue;
-    }
-    if (next.windowEndsAt !== null && now >= next.windowEndsAt) {
-      events.push("window_closed");
-      next = { ...next, windowEndsAt: null };
       continue;
     }
     break;
@@ -233,7 +237,7 @@ export function skipRest(state: TimerState, now: number): TimerStep {
     return { state, events: [] };
   }
   const events: TimerEvent[] = [];
-  return { state: beginWork({ ...state, windowEndsAt: null }, now, events), events };
+  return { state: beginWork(state, now, events), events };
 }
 
 /** End the current round now; it still counts as a round done. */
@@ -267,7 +271,7 @@ export function endSession(state: TimerState, now: number): TimerState {
     phase: "done",
     phaseStartedAt: null,
     phaseMs: null,
-    windowEndsAt: null,
+    readyAt: null,
     pausedAt: null,
     endedAt: now,
   };
@@ -304,7 +308,7 @@ export function resume(state: TimerState, now: number): TimerState {
     ...state,
     pausedAt: null,
     phaseStartedAt: state.phaseStartedAt === null ? null : state.phaseStartedAt + pausedFor,
-    windowEndsAt: state.windowEndsAt === null ? null : state.windowEndsAt + pausedFor,
+    readyAt: state.readyAt === null ? null : state.readyAt + pausedFor,
   };
 }
 
@@ -332,21 +336,35 @@ export type TimerView = {
   remainingMs: number | null;
   /** Time spent in the current phase. */
   elapsedMs: number;
-  /** Time left in the optional rest window, when one is open. */
-  windowRemainingMs: number | null;
+  /** Ranged rest only: time left until the minimum rest (0 once ready). */
+  readyRemainingMs: number | null;
   paused: boolean;
 };
 
 export function viewAt(state: TimerState, now: number): TimerView {
   const clock = state.pausedAt ?? now;
   const endsAt = phaseEndsAt(state);
+  const item = currentItem(state);
+  const rest = item?.kind === "sets" ? item.restSec : null;
+  const ranged = state.phase === "rest" && rest !== null && rest.max > rest.min;
+  const elapsedMs = state.phaseStartedAt === null ? 0 : Math.max(0, clock - state.phaseStartedAt);
   return {
     remainingMs: endsAt === null ? null : Math.max(0, endsAt - clock),
-    elapsedMs: state.phaseStartedAt === null ? 0 : Math.max(0, clock - state.phaseStartedAt),
-    windowRemainingMs:
-      state.windowEndsAt === null ? null : Math.max(0, state.windowEndsAt - clock),
+    elapsedMs,
+    readyRemainingMs: ranged && rest ? Math.max(0, rest.min * 1000 - elapsedMs) : null,
     paused: state.pausedAt !== null,
   };
+}
+
+/**
+ * The countdown the warning cues lead into: the minimum of a ranged rest
+ * while it is still ahead (that is when the athlete is ready), otherwise the
+ * end of the phase.
+ */
+export function cueRemainingMs(view: TimerView): number | null {
+  return view.readyRemainingMs !== null && view.readyRemainingMs > 0
+    ? view.readyRemainingMs
+    : view.remainingMs;
 }
 
 export type TimerCue = "ten_seconds" | "count_3" | "count_2" | "count_1";
@@ -422,7 +440,7 @@ export function soundForEvents(
   if (events.includes("round_start")) return "bell";
   if (events.includes("rest_end") || events.includes("hold_start")) return "go";
   if (events.includes("hold_end") || events.includes("item_complete")) return "chime";
-  if (events.includes("window_closed")) return "soft_chime";
+  if (events.includes("rest_ready")) return "soft_chime";
   return null;
 }
 
@@ -434,6 +452,7 @@ export function calloutForEvents(events: TimerEvent[], state: TimerState): strin
     return state.unit >= item.rounds && item.rounds > 1 ? "Last round" : `Round ${state.unit}`;
   }
   if (events.includes("rest_start")) return "Rest";
+  if (events.includes("rest_ready")) return "Ready";
   if (events.includes("item_complete") && item) return `Next: ${item.title}`;
   if (events.includes("rest_end") && item?.kind === "sets") return `Set ${state.unit}`;
   return null;

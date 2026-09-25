@@ -76,7 +76,7 @@ function phaseLabel(state: TimerState, item: TimerItem | null, view: TimerView):
   if (state.phase === "done") return "Session complete";
   if (state.phase === "ready") return "Up next";
   if (view.paused) return "Paused";
-  if (state.phase === "rest") return "Rest";
+  if (state.phase === "rest") return view.readyRemainingMs === 0 ? "Ready" : "Rest";
   if (item?.kind === "interval") return item.sparring ? "Spar" : "Work";
   if (item?.kind === "sets") return item.holdSec ? "Hold" : "Lift";
   return "Go";
@@ -366,7 +366,10 @@ export function SessionTimer({
   const canFinishItem =
     item?.kind === "sets" ? (item.sets ? done >= item.sets.min : done > 0) : false;
   const timed = view.remainingMs !== null;
-  const clockSeconds = timed ? Math.ceil((view.remainingMs ?? 0) / 1000) : Math.floor(view.elapsedMs / 1000);
+  // A ranged rest counts down to its minimum first, then to its maximum.
+  const countdownMs =
+    view.readyRemainingMs !== null && view.readyRemainingMs > 0 ? view.readyRemainingMs : view.remainingMs;
+  const clockSeconds = timed ? Math.ceil((countdownMs ?? 0) / 1000) : Math.floor(view.elapsedMs / 1000);
 
   useEffect(() => {
     if (!visible) return;
@@ -491,9 +494,11 @@ export function SessionTimer({
                 {!timed ? <span className="st-clock-caption">elapsed</span> : null}
               </button>
               {counterLabel(state, item) ? <p className="st-counter">{counterLabel(state, item)}</p> : null}
-              {view.windowRemainingMs !== null && state.phase === "work" ? (
+              {view.readyRemainingMs !== null && item?.kind === "sets" && item.restSec ? (
                 <p className="st-window">
-                  Ready. Go now, or take up to {formatClock(Math.ceil(view.windowRemainingMs / 1000))} more rest.
+                  {view.readyRemainingMs > 0
+                    ? `Minimum rest. You can take up to ${formatShortDuration(item.restSec.max - item.restSec.min)} more after this.`
+                    : `Go when ready. Set ${state.unit} starts itself in ${formatClock(Math.ceil((view.remainingMs ?? 0) / 1000))}.`}
                 </p>
               ) : null}
               {state.phase === "rest" && state.phaseMs === null && !view.paused ? (

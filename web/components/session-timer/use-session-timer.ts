@@ -13,6 +13,7 @@ import {
   calloutForEvents,
   createTimerState,
   crossedCues,
+  cueRemainingMs,
   soundForEvents,
   viewAt,
   type TimerEvent,
@@ -21,7 +22,8 @@ import {
 } from "@/lib/session-timer/engine";
 import type { TimerItem } from "@/lib/session-timer/plan";
 
-const RUN_VERSION = 1;
+// 2: ranged rest stays in rest until its maximum (readyAt replaced windowEndsAt).
+const RUN_VERSION = 2;
 const TICK_MS = 100;
 
 type SavedRun = { version: number; key: string; itemIds: string[]; state: TimerState };
@@ -173,7 +175,7 @@ export function useSessionTimer({
   const commit = useCallback(
     (next: TimerState) => {
       stateRef.current = next;
-      lastRemainingRef.current = viewAt(next, Date.now()).remainingMs;
+      lastRemainingRef.current = cueRemainingMs(viewAt(next, Date.now()));
       setState(next);
       if (next.phase === "done" && next.endedAt !== null) {
         clearSavedRun(storageKey);
@@ -220,14 +222,14 @@ export function useSessionTimer({
         announce(events, next);
         commit(next);
       } else if (audibleRef.current) {
-        const remaining = viewAt(current, at).remainingMs;
+        const remaining = cueRemainingMs(viewAt(current, at));
         const cues = crossedCues(current.phase, current.phaseMs, lastRemainingRef.current, remaining);
         lastRemainingRef.current = remaining;
         const audio = timerAudio();
         if (cues.includes("ten_seconds")) audio.play("clapper");
         if (cues.some((cue) => cue.startsWith("count_"))) audio.play("beep");
       } else {
-        lastRemainingRef.current = viewAt(current, at).remainingMs;
+        lastRemainingRef.current = cueRemainingMs(viewAt(current, at));
       }
       setNow(at);
     };

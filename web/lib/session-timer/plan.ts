@@ -267,21 +267,44 @@ export function buildTimerItems(
   return items;
 }
 
-/** A plain rounds item for when the session has nothing timeable. */
-export function defaultRoundsItem(): IntervalItem {
-  return {
-    kind: "interval",
-    id: "rounds",
-    title: "Rounds",
-    detail: null,
-    blockType: null,
-    rounds: 3,
-    workSec: DEFAULT_ROUND_SEC,
-    restSec: DEFAULT_ROUND_REST_SEC,
-    sparring: false,
-    needsSetup: true,
-    presets: true,
-  };
+/**
+ * The one structured session the backend is completing, matched on its
+ * explicit session id. Completion is written against a single session, so the
+ * timer must never merge a multi-session day. A day with exactly one session
+ * that carries no id of its own (legacy plans key completion on the date) is
+ * still unambiguous; anything else that does not match returns null, and no
+ * planned-session timer is offered.
+ */
+export function timerSessionFor(
+  sessions: StructuredSession[],
+  sessionId: string | null | undefined,
+): StructuredSession | null {
+  const target = (sessionId ?? "").trim();
+  if (!target) {
+    return null;
+  }
+  const matched = sessions.filter((session) => cleanText(session.session_id) === target);
+  if (matched.length === 1) {
+    return matched[0];
+  }
+  if (matched.length === 0 && sessions.length === 1 && !cleanText(sessions[0].session_id)) {
+    return sessions[0];
+  }
+  return null;
+}
+
+/**
+ * Timer items for the planned session being completed: that session's own
+ * timeable blocks, or [] when it cannot be identified or has none (in which
+ * case Today offers no session timer rather than generic rounds).
+ */
+export function sessionTimerItems(
+  sessions: StructuredSession[],
+  sessionId: string | null | undefined,
+  options: { sourceText?: string | null; countdown?: string | null } = {},
+): TimerItem[] {
+  const session = timerSessionFor(sessions, sessionId);
+  return session ? buildTimerItems([session], options) : [];
 }
 
 export function formatRange(range: DoseRange, format: (value: number) => string = String): string {
