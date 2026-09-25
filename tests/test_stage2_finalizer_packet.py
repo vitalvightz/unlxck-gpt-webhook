@@ -1,6 +1,11 @@
 from fightcamp.stage2_finalizer_packet import _compact_role, build_stage2_finalizer_packet
 
 
+def test_compact_support_role_preserves_selected_duration():
+    role = _compact_role({"role_key": "aerobic_shadow_flow", "prescribed_duration_min": 8})
+    assert role["prescribed_duration_min"] == 8
+
+
 def test_finalizer_packet_passes_open_plan_spec_and_render_mode():
     stage2_payload = {
         "payload_mode": "open_ongoing_payload",

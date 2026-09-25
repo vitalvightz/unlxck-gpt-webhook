@@ -325,7 +325,9 @@ def select_for_athlete(
     return select_fight_visualization(sport, style, days_to_fight)
 
 
-def build_visualization_display_text(entry: FightVisualization) -> str:
+def build_visualization_display_text(
+    entry: FightVisualization, *, prescribed_duration_min: int | None = None
+) -> str:
     """Render the prescription in the shared athlete-facing session-body shape.
 
     Same contract as ``build_watch_display_text``: an unbulleted ``Why:``, one
@@ -333,11 +335,10 @@ def build_visualization_display_text(entry: FightVisualization) -> str:
     Both renderers read peer-level lines as separate exercises, so the whole
     prescription must stay inside one bulleted activity.
     """
-    low, high = entry.duration_min
-    dose = f"{low}-{high} minutes" if low != high else f"{low} minutes"
+    dose = prescribed_duration_min or entry.duration_min[1]
     lines = [
         f"Why: {entry.why}",
-        f"- {entry.name}: {dose}, mental rehearsal only. No physical load.",
+        f"- {entry.name}: {dose} minutes, mental rehearsal only. No physical load.",
         *(
             f"  Step {index}: {instruction}"
             for index, instruction in enumerate(entry.instructions, start=1)
@@ -349,9 +350,12 @@ def build_visualization_display_text(entry: FightVisualization) -> str:
     return "\n".join(lines)
 
 
-def visualization_metadata(entry: FightVisualization) -> dict[str, Any]:
+def visualization_metadata(
+    entry: FightVisualization, *, prescribed_duration_min: int | None = None
+) -> dict[str, Any]:
     """Stamp the governed role fields, mirroring ``watch_metadata``."""
     low, high = entry.duration_min
+    selected = prescribed_duration_min or high
     return {
         "fight_visualization_key": entry.key,
         "fight_visualization_name": entry.name,
@@ -369,6 +373,7 @@ def visualization_metadata(entry: FightVisualization) -> dict[str, Any]:
             "requested_style": entry.requested_style or None,
             "fallback_reason": entry.fallback_reason or None,
             "duration_min": [low, high],
+            "prescribed_duration_min": selected,
             "why": entry.why,
             "instructions": list(entry.instructions),
             "cue": entry.cue,

@@ -153,6 +153,14 @@ def test_low_risk_quality_code_releases_with_flags(code: str) -> None:
     assert report["quality_review_flags"] == [{"code": code}]
 
 
+def test_ambiguous_primary_dose_is_not_released():
+    report = stage2_policy.apply_stage2_release_policy(
+        {"errors": [{"code": "ambiguous_working_dose", "line": "20-30 min"}]}
+    )
+    assert report["release_decision"] == "hold"
+    assert report["is_athlete_releasable"] is False
+
+
 @pytest.mark.parametrize("code", sorted(stage2_policy.ADMIN_REVIEW_BLOCKING_CODES))
 def test_context_or_programme_failure_routes_to_admin_without_holding(code: str) -> None:
     """Observational release: the admin is told, the athlete still gets the plan.

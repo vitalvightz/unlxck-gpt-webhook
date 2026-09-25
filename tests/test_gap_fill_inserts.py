@@ -223,6 +223,18 @@ def test_boxing_aerobic_shadow_flow_keeps_shadowboxing_label():
     assert role["athlete_facing_label"] == "Shadowboxing Aerobic Flow"
 
 
+def test_aerobic_shadow_flow_chooses_one_dose_for_readiness():
+    fresh = _build_insert_role("aerobic_shadow_flow", _athlete(sport="boxing"), 5)
+    fatigued = _build_insert_role(
+        "aerobic_shadow_flow", _athlete(sport="boxing", fatigue="high"), 5
+    )
+    assert "4 x 2 min" in fresh["display_text"]
+    assert fresh["prescribed_duration_min"] == 11
+    assert "3 x 2 min" in fatigued["display_text"]
+    assert fatigued["prescribed_duration_min"] == 8
+    assert "3-5 x" not in fresh["display_text"] + fatigued["display_text"]
+
+
 def test_non_boxing_aerobic_shadow_flow_label_is_sport_neutral():
     for sport in ("mma", "kickboxing", "muay_thai", "wrestling", "bjj"):
         role = _build_insert_role("aerobic_shadow_flow", _athlete(sport=sport), 5)

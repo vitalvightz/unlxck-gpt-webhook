@@ -3105,6 +3105,40 @@ def _countdown_blocks(final_plan_text: str) -> list[dict[str, Any]]:
     return blocks
 
 
+_WORKING_DOSE_NUMBER = r"\d+(?:\.\d+)?"
+_WORKING_DOSE_RANGE = rf"{_WORKING_DOSE_NUMBER}\s*(?:[-–—]|\bto\b)\s*{_WORKING_DOSE_NUMBER}"
+_AMBIGUOUS_WORKING_DOSE = re.compile(
+    rf"\bRPE\s*{_WORKING_DOSE_RANGE}"
+    rf"|\b{_WORKING_DOSE_RANGE}\s*(?:[x×]\s*\d+|%|"
+    r"sec(?:onds?)?|s\b|min(?:utes?)?|rounds?|holds?|reps?|sets?|"
+    r"punches?|strikes?|kg|lbs?)(?!\w)",
+    re.IGNORECASE,
+)
+_OPTIONAL_DOSE_LINE = re.compile(
+    r"^(?:easier|alternative|regression|stop|safety|red flags?|warning|limit|cap)\s*:",
+    re.IGNORECASE,
+)
+
+
+def _ambiguous_working_dose_errors(final_plan_text: str) -> list[dict[str, Any]]:
+    """Leave source bounds available to the planner, but never as the work order."""
+    errors: list[dict[str, Any]] = []
+    for block in _countdown_blocks(final_plan_text):
+        for line in block["lines"]:
+            content = _BULLET_PREFIX.sub("", line).strip()
+            if _OPTIONAL_DOSE_LINE.match(content):
+                continue
+            if _AMBIGUOUS_WORKING_DOSE.search(content):
+                errors.append(_issue(
+                    code="ambiguous_working_dose",
+                    message="Choose one exact working value within the authorised range.",
+                    severity="blocker",
+                    confidence="high",
+                    line=line,
+                ))
+    return errors
+
+
 HARD_SPARRING_TERMS = (
     "hard spar",
     "hard sparring",
@@ -3848,6 +3882,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     if not plan_lines:
         errors.append(_issue(code="stage2_output_empty", message="Stage 2 output is empty.", severity="blocker", confidence="high"))
     errors.extend(_stage2_output_incomplete_errors(final_plan_text))
+    errors.extend(_ambiguous_working_dose_errors(final_plan_text))
     errors.extend(
         _issue(code="restriction_violation", message=f"Restriction {hit['restriction']} matched line.", severity="blocker", confidence="high", line=hit["line"], restriction=hit["restriction"], strength=hit.get("strength"))
         for hit in restricted_hits

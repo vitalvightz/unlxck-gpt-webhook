@@ -311,6 +311,24 @@ def test_stage1_owns_locked_governance():
     assert governance["selected_drill_name"] == role["fight_visualization"]["name"]
 
 
+@pytest.mark.parametrize("fatigue,expected_duration", [("low", 8), ("high", 6)])
+def test_visualization_uses_one_duration_from_source_through_card(fatigue, expected_duration):
+    sequence = apply_gap_fill_inserts(
+        [_role(12, "hard_sparring_day")], _athlete(fatigue=fatigue)
+    )
+    role = _visualizations(sequence)[7]
+    entry = select_fight_visualization("boxing", "pressure_fighter", 7)
+    assert role["prescribed_duration_min"] == expected_duration
+    assert role["fight_visualization"]["prescribed_duration_min"] == expected_duration
+    assert f"- {entry.name}: {expected_duration} minutes" in role["display_text"]
+    assert "6-8 minutes" not in role["display_text"]
+
+    brief = {"weeks": [{"session_roles": [role]}]}
+    result = merge_locked_structured_content(_plan_with_day("D-7", []), brief)
+    block = result.plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
+    assert block["duration"] == {"value": expected_duration, "unit": "minutes"}
+
+
 def _locked_brief(entry, day_label="D-3"):
     metadata = visualization_metadata(entry)
     role = {
