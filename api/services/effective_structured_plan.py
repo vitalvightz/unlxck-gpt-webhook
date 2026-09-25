@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from collections.abc import Mapping
 from collections.abc import Sequence
 from datetime import date
@@ -74,14 +75,114 @@ def _has_usable_open_weekly_calendar(
     return True
 
 
+_SLUG_RE = re.compile(r"[^a-z0-9]+")
+
+
+def _slug(value: Any) -> str:
+    return _SLUG_RE.sub("-", str(value or "").strip().lower()).strip("-")[:32].strip("-")
+
+
+def _session_rows(day: Any) -> list[Any]:
+    sessions = day.get("sessions") if isinstance(day, Mapping) else None
+    return sessions if isinstance(sessions, list) else []
+
+
+def _needs_session_ids(plan: Mapping[str, Any]) -> bool:
+    weeks = plan.get("weeks")
+    if not isinstance(weeks, list):
+        return False
+    return any(
+        isinstance(session, Mapping) and not str(session.get("session_id") or "").strip()
+        for week in weeks
+        if isinstance(week, Mapping)
+        for day in (week.get("days") if isinstance(week.get("days"), list) else [])
+        for session in _session_rows(day)
+    )
+
+
+def ensure_structured_session_ids(
+    plan: Mapping[str, Any], *, plan_id: Any = None
+) -> dict[str, Any]:
+    """Give every structured session a stable id, deriving the missing ones.
+
+    Completion, the session timer, streaks and week progress all key on
+    ``session_id``. The converter is told identifiers are optional and usually
+    emits null, which left most model-written sessions impossible to start or
+    log ("completion is unavailable") and invisible to week progress. The
+    derived id is a pure function of the stored card, so every reader of the
+    same plan agrees on it without a write:
+    ``ses-<plan>-<date or week/day slot>-<title>``, with a numeric suffix for a
+    repeated title on the same day. The plan prefix keeps a regenerated plan's
+    sessions from colliding with the old plan's completion rows on the same day.
+    Existing ids are never changed. The input is not mutated.
+    """
+    if not _needs_session_ids(plan):
+        return dict(plan)
+    # Copy only the week -> day -> session path being written; blocks and every
+    # other nested value stay shared with the (possibly cached) stored card.
+    result = dict(plan)
+    result["weeks"] = weeks = [
+        dict(week) if isinstance(week, Mapping) else week for week in plan.get("weeks") or []
+    ]
+    plan_part = _slug(plan_id)[:8]
+    for week_index, week in enumerate(weeks):
+        if not isinstance(week, dict) or not isinstance(week.get("days"), list):
+            continue
+        week["days"] = days = [dict(day) if isinstance(day, Mapping) else day for day in week["days"]]
+        for day_index, day in enumerate(days):
+            if not isinstance(day, dict):
+                continue
+            sessions = [
+                dict(session) if isinstance(session, Mapping) else session
+                for session in _session_rows(day)
+            ]
+            if isinstance(day.get("sessions"), list):
+                day["sessions"] = sessions
+            taken = {
+                str(session.get("session_id") or "").strip()
+                for session in sessions
+                if isinstance(session, Mapping)
+            }
+            date_part = str(day.get("date") or "").strip()[:10]
+            try:
+                date.fromisoformat(date_part)
+            except ValueError:
+                date_part = f"w{week_index + 1}d{day_index + 1}"
+            for session_index, session in enumerate(sessions):
+                if not isinstance(session, dict) or str(session.get("session_id") or "").strip():
+                    continue
+                title = _slug(session.get("title")) or _slug(session.get("session_type")) or str(
+                    session_index + 1
+                )
+                base = "-".join(part for part in ("ses", plan_part, date_part, title) if part)
+                candidate = base
+                suffix = 2
+                while candidate in taken:
+                    candidate = f"{base}-{suffix}"
+                    suffix += 1
+                taken.add(candidate)
+                session["session_id"] = candidate
+    return result
+
+
 def resolve_effective_structured_plan(
     plan_row: Mapping[str, Any], *, raw_markdown: str | None = None
 ) -> dict[str, Any] | None:
     """Return the valid stored card, or rebuild it from deterministic planner truth.
 
     Missing and malformed inputs fail closed. In particular, this resolver does
-    not derive a calendar from broad recurring metadata.
+    not derive a calendar from broad recurring metadata. Every session in the
+    returned card carries a ``session_id`` (see ensure_structured_session_ids).
     """
+    resolved = _resolve_effective_structured_plan(plan_row, raw_markdown=raw_markdown)
+    if resolved is None:
+        return None
+    return ensure_structured_session_ids(resolved, plan_id=plan_row.get("id"))
+
+
+def _resolve_effective_structured_plan(
+    plan_row: Mapping[str, Any], *, raw_markdown: str | None = None
+) -> dict[str, Any] | None:
 
     legacy_open_calendar: dict[str, Any] | None = None
     stored = _mapping(plan_row.get("structured_plan"))
@@ -123,4 +224,4 @@ def resolve_effective_structured_plan(
     return fallback
 
 
-__all__ = ["resolve_effective_structured_plan"]
+__all__ = ["ensure_structured_session_ids", "resolve_effective_structured_plan"]

@@ -7698,6 +7698,17 @@ html[data-theme="light"] .today-terminal-status {
   gap: 8px;
 }
 
+/* The app work that comes with a declared sparring/contact day. */
+.today-session-alongside {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+
+.today-session-alongside .today-detail-label {
+  margin-right: 6px;
+}
+
 .today-field-label,
 .today-detail-label,
 .today-risk-label {

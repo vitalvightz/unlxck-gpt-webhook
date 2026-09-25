@@ -22,9 +22,12 @@ import { useToast } from "@/components/toast-provider";
 import { listPendingRehabResponses, submitTodaySessionCompletion } from "@/lib/api";
 import { timerAudio } from "@/lib/session-timer/audio";
 import {
+  CONTACT_FORMAT_MEMORY_KEY,
   contactRoundsItem,
   contactTimerTarget,
+  contactTitle,
   freeRoundsItem,
+  savedRoundFormat,
   type ContactTimerTarget,
 } from "@/lib/session-timer/contact";
 import { sessionTimerItems, timerSessionFor, type TimerItem } from "@/lib/session-timer/plan";
@@ -147,6 +150,11 @@ function getStructuredTodaySessionTitle(current: CurrentDayResolution): string {
     textValue(card?.headline) ||
     humanizeIfRawEnum(textValue(session?.session_type))
   );
+}
+
+function sameTitle(a: string, b: string): boolean {
+  const normalize = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return Boolean(normalize(a)) && normalize(a) === normalize(b);
 }
 
 function getSessionRelationCopy(
@@ -476,6 +484,24 @@ export function TodaySessionPanel({
     !severeInjuryBlocksCurrentSession &&
     !safeSession;
   const contactTimerAvailable = Boolean(contactTarget) && contactCleared;
+  // The athlete's declared gym work (hard sparring, technical rounds) is the
+  // day's main event: it owns the headline and the primary button, and any app
+  // work that day reads as what comes with it. Contact never leads a day the
+  // decision blocks (pull back, stop): it is not happening, so it cannot be
+  // the day's headline.
+  const contactLeads =
+    Boolean(contactTarget) &&
+    resolvedDecision.sessionIsToday &&
+    !safeSession &&
+    !decisionBlocksCurrentSession;
+  const contactHeadline = contactTarget ? contactTitle(contactTarget) : "";
+  // Is the session being logged the contact itself? A sparring-only day has no
+  // session objects, so the server logs it against the day's headline entry.
+  const contactIsSession =
+    contactLeads &&
+    ((current.inRange && Boolean(current.day) && current.sessions.length === 0) ||
+      sameTitle(getSessionTitle(session), contactTarget?.headline ?? "") ||
+      sameTitle(getSessionTitle(session), contactHeadline));
   const contactLockCopy =
     resolvedDecision.authoritativeTier === "not_checked_in"
       ? CONTACT_LOCK_COPY.not_checked_in
@@ -515,7 +541,7 @@ export function TodaySessionPanel({
         ? "Preview only. Completion opens on the matched training day."
         : resolvedDecision.authoritativeTier === "not_checked_in"
           ? "Submit today's check-in to unlock session actions."
-          : "Session details available, but completion is unavailable for this entry.";
+          : "This entry has nothing to log. Follow it as written.";
 
   async function saveCompletion(
     nextStatus: TodayCompletionStatus,
@@ -593,6 +619,15 @@ export function TodaySessionPanel({
     setActiveTimer({ source, mode: "open" });
   }
 
+  /** Lead button on a contact day: time the rounds, and when the contact IS
+   * today's session, mark it started so it can be logged when the rounds end. */
+  function startContact() {
+    openTimer("contact");
+    if (contactIsSession && canCompleteSession && status === "not_started") {
+      void saveCompletion("started");
+    }
+  }
+
   const sparringPrompt = sparringDraft ? (
     <SparringLogPrompt
       key={`${sparringDraft.source}:${sparringDraft.rounds}:${sparringDraft.title}`}
@@ -666,7 +701,7 @@ export function TodaySessionPanel({
       title = timerSessionTitle || sessionTitle;
     } else if (source === "contact") {
       if (!contactTimerAvailable || !contactTarget) return null;
-      items = [contactRoundsItem(contactTarget)];
+      items = [contactRoundsItem(contactTarget, savedRoundFormat(CONTACT_FORMAT_MEMORY_KEY))];
       title = items[0].title;
     } else {
       if (!freeTimerAvailable) return null;
@@ -711,6 +746,19 @@ export function TodaySessionPanel({
             setIntent(summary.complete ? "done" : "modified");
             return;
           }
+          if (
+            source === "contact" &&
+            contactIsSession &&
+            canCompleteSession &&
+            (status === "not_started" || status === "started") &&
+            (summary.sparring?.rounds ?? 0) > 0
+          ) {
+            // The gym sets the round count, so fewer rounds than the timer's
+            // default is not a modified session: the rounds done are the log.
+            setTimerNotes(summary.notes.slice(0, 2000));
+            setIntent("done");
+            return;
+          }
           const recorded = summary.notes.replace(/^Timer:\s*/, "");
           showToast(recorded || "Timer closed.", { tone: recorded ? "success" : "info" });
         }}
@@ -733,7 +781,7 @@ export function TodaySessionPanel({
                 it unconditionally — gating on the async-loaded structuredPlan
                 caused a flash from "No session scheduled" to the date on load. */}
             <h2 id="today-session-heading">
-              {formatTrainingDay(state.today.training_day)}
+              {contactTarget ? contactHeadline : formatTrainingDay(state.today.training_day)}
             </h2>
           </div>
         </div>
@@ -760,11 +808,16 @@ export function TodaySessionPanel({
   // Avoid the "Today's session / Today's session" stutter: when the session has
   // no real name and falls back to the generic title that already matches the
   // kicker, headline the training day instead so the eyebrow and heading differ.
-  const headline =
+  const sessionHeadline =
     sessionTitle.trim().toLowerCase() === "today's session" ||
     sessionTitle.trim().toLowerCase() === relationCopy.kicker.trim().toLowerCase()
       ? formatSessionDate(session)
       : sessionTitle;
+  const headline = contactLeads ? contactHeadline : sessionHeadline;
+  // The contact rounds lead the tray while no timer is already running.
+  const contactCta = contactLeads && contactTimerAvailable && !shownTimer;
+  // The app work that comes with the day's contact, named under the headline.
+  const alongsideTitle = contactLeads && !contactIsSession ? sessionTitle.trim() : "";
 
   return (
     <section
@@ -777,6 +830,11 @@ export function TodaySessionPanel({
         <div>
           <p className="kicker">{relationCopy.kicker}</p>
           <h2 id="today-session-heading">{headline}</h2>
+          {alongsideTitle ? (
+            <p className="today-session-alongside">
+              <span className="today-detail-label">Also today</span> {alongsideTitle}
+            </p>
+          ) : null}
         </div>
       </div>
       {safeSession ? (
@@ -853,20 +911,27 @@ export function TodaySessionPanel({
 
       {canCompleteSession && status === "not_started" ? (
         <div className="today-session-actions today-action-tray">
-          <button
-            type="button"
-            className="cta"
-            onClick={() => {
-              // Audio only unlocks inside the tap itself, before any await.
-              if (timerAvailable) timerAudio().unlock();
-              void saveCompletion("started").then((started) => {
-                if (started && timerAvailable) setActiveTimer({ source: "session", mode: "open" });
-              });
-            }}
-            disabled={isSubmitting}
-          >
-            Start session
-          </button>
+          {contactCta ? (
+            <button type="button" className="cta" onClick={startContact} disabled={isSubmitting}>
+              Start {contactHeadline.toLowerCase()}
+            </button>
+          ) : null}
+          {contactLeads && contactTimerAvailable && contactIsSession ? null : (
+            <button
+              type="button"
+              className={contactCta ? "secondary-button" : "cta"}
+              onClick={() => {
+                // Audio only unlocks inside the tap itself, before any await.
+                if (timerAvailable) timerAudio().unlock();
+                void saveCompletion("started").then((started) => {
+                  if (started && timerAvailable) setActiveTimer({ source: "session", mode: "open" });
+                });
+              }}
+              disabled={isSubmitting}
+            >
+              {alongsideTitle ? `Start ${alongsideTitle}` : "Start session"}
+            </button>
+          )}
           {timerTools(
             <button
               type="button"
@@ -876,6 +941,7 @@ export function TodaySessionPanel({
             >
               Skip session
             </button>,
+            { contactAsPrimary: contactLeads && contactTimerAvailable },
           )}
         </div>
       ) : null}
@@ -886,11 +952,15 @@ export function TodaySessionPanel({
             type="button"
             className="cta"
             onClick={() => {
-              if (!timerAvailable) {
-                showToast("Session is in progress.", { tone: "info" });
+              if (timerAvailable) {
+                openTimer("session");
                 return;
               }
-              openTimer("session");
+              if (contactIsSession && contactTimerAvailable) {
+                openTimer("contact");
+                return;
+              }
+              showToast("Session is in progress.", { tone: "info" });
             }}
             disabled={isSubmitting}
           >

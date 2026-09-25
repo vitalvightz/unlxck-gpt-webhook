@@ -293,12 +293,43 @@ function renderPanel(state: TodayCommandView): string {
   );
 }
 
-test("a cleared day with coach-led sparring offers sparring rounds and the round timer", () => {
+test("a declared sparring day leads with the sparring, with the app work alongside", () => {
   const html = renderPanel(contactDayState("green"));
-  assert.match(html, /<\/svg>Sparring rounds<\/button>/);
+  // The athlete's gym day owns the headline; the app session is named under it.
+  assert.match(html, /<h2 id="today-session-heading">Hard sparring<\/h2>/);
+  assert.match(html, /Also today<\/span> Mobility flush/);
+  // The sparring rounds are the primary button, the app session its own start.
+  assert.match(
+    html,
+    /today-action-tray[\s\S]*class="cta"[^>]*>Start hard sparring<[\s\S]*class="secondary-button"[^>]*>Start Mobility flush</,
+  );
   assert.match(html, /<\/svg>Round timer<\/button>/);
-  // One tidy tray: the shortcuts sit under Start session, not in their own card.
-  assert.match(html, /today-action-tray[\s\S]*>Start session<[\s\S]*Sparring rounds/);
+  // The lead button already starts the rounds, so no duplicate shortcut.
+  assert.doesNotMatch(html, /<\/svg>Sparring rounds<\/button>/);
+  assert.doesNotMatch(html, /completion is unavailable|nothing to log/);
+});
+
+test("a sparring-only day is one session: the lead button starts and logs it", () => {
+  const state = contactDayState("green");
+  state.today.next_session = {
+    ...state.today.next_session,
+    session_id: "2026-09-25",
+    title: "Hard sparring",
+    coach_led_contact: "Hard sparring",
+  };
+  const html = renderPanel(state);
+  assert.match(html, /<h2 id="today-session-heading">Hard sparring<\/h2>/);
+  assert.match(html, />Start hard sparring</);
+  assert.doesNotMatch(html, /Also today|>Start session<|>Start Hard sparring</);
+  assert.match(html, />Skip session</);
+});
+
+test("an idless day falls back to honest copy instead of a dead end", () => {
+  const state = contactDayState("green");
+  state.today.next_session = { ...state.today.next_session, session_id: undefined, coach_led_contact: undefined };
+  const html = renderPanel(state);
+  assert.match(html, /This entry has nothing to log/);
+  assert.doesNotMatch(html, /completion is unavailable for this entry/);
 });
 
 test("sparring rounds stay locked until check-in, and are never offered under a stop", () => {
@@ -309,4 +340,11 @@ test("sparring rounds stay locked until check-in, and are never offered under a 
   const stopped = renderPanel(contactDayState("stop"));
   assert.doesNotMatch(stopped, /Sparring rounds<\/button>/);
   assert.doesNotMatch(stopped, /Round timer<\/button>/);
+});
+
+test("a pull-back day never headlines the sparring it blocks", () => {
+  const html = renderPanel(contactDayState("pull_back"));
+  assert.doesNotMatch(html, /<h2 id="today-session-heading">Hard sparring<\/h2>/);
+  assert.doesNotMatch(html, />Start hard sparring</);
+  assert.match(html, /<h2 id="today-session-heading">Mobility flush<\/h2>/);
 });

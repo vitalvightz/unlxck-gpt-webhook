@@ -56,14 +56,18 @@ test("the ready screen shows the first exercise, its adjustable rounds and what 
   assert.doesNotMatch(html, /aria-label="Increase rounds"/);
   assert.match(html, /Up next<\/span><span class="st-next-title">Back squat<\/span>/);
   assert.match(html, /3–5 sets · 90s–2 min rest/);
-  assert.doesNotMatch(html, /Not in your plan/);
+  assert.doesNotMatch(html, /Pick a format/);
 });
 
 test("rounds with no length in the plan ask the athlete to check them", () => {
   const first = ITEMS[0];
   assert.ok(first.kind === "interval");
   const html = render([{ ...first, needsSetup: true }]);
-  assert.match(html, /Not in your plan\. Pick a format\./);
+  assert.match(html, /Round length isn&#x27;t set in your plan\. Pick a format\./);
+  // The athlete's own gym work is never framed as missing from their plan.
+  const gym = render([{ ...first, needsSetup: true, setupNote: "Match your gym's rounds. Pick a format." }]);
+  assert.match(gym, /Match your gym&#x27;s rounds\. Pick a format\./);
+  assert.doesNotMatch(gym, /Not in your plan|isn&#x27;t set in your plan/);
 });
 
 test("a minimised timer on its ready screen renders the mini bar", () => {
