@@ -34,6 +34,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from fightcamp.role_labels import athlete_facing_label_for
+from fightcamp.session_sequencing import sequence_structured_plan
 
 from .structured_plan_calendar_spine import (
     ROLES_OWNED_ELSEWHERE,
@@ -843,6 +844,11 @@ def _build(planning_brief: Any, plan_text: str | None = None) -> dict[str, Any] 
     # the same final-day invariant now that fallback and locked sessions are all
     # present, removing a day-level card whenever its session block survived.
     plan = reconcile_priority_microdose_representations(plan, planning_brief)
+
+    # Sessions entered each day in role-map order and locked cards were
+    # appended after them; neither is an execution order. Sequence the finished
+    # days by intent (fightcamp.session_sequencing) now that membership is final.
+    plan = sequence_structured_plan(plan, planning_brief)
 
     weeks_out = plan.get("weeks") if isinstance(plan, dict) else None
     if not isinstance(weeks_out, list) or not weeks_out:

@@ -785,6 +785,27 @@ test("completionForSession does not treat a date as an id for an id-less session
   assert.equal(completionForSession(index, day, day.sessions![1]!), undefined);
 });
 
+test("primary session skips support work that leads the day in execution order", () => {
+  const day = {
+    date: "2026-06-20",
+    sessions: [
+      { title: "Joint Prep", session_type: "rehab", blocks: [{ block_type: "mobility_activation" }] },
+      { title: "Tactical Focus", session_type: "skill", blocks: [{ block_type: "mindset" }] },
+      { title: "Strength", session_type: "strength_power", blocks: [{ block_type: "strength" }] },
+      { title: "Breathing Reset", session_type: "recovery", blocks: [{ block_type: "cooldown_recovery" }] },
+    ],
+  };
+  assert.equal(primarySessionOf(day)?.title, "Strength");
+  const supportOnly = {
+    date: "2026-06-21",
+    sessions: [
+      { title: "Joint Prep", session_type: "rehab", blocks: [{ block_type: "mobility_activation" }] },
+      { title: "Breathing Reset", session_type: "recovery", blocks: [{ block_type: "cooldown_recovery" }] },
+    ],
+  };
+  assert.equal(primarySessionOf(supportOnly)?.title, "Joint Prep");
+});
+
 test("primary session is the first session with executable blocks", () => {
   const day = {
     date: "2026-06-20",

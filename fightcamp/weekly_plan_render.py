@@ -348,15 +348,18 @@ def _render_week(week: dict[str, Any], blocks: Any) -> list[str]:
 
     role_weekday = _resolve_role_weekdays(session_roles)
 
-    # Render in chronological order (furthest from fight first).
-    def _sort_key(item: tuple[int, dict[str, Any]]) -> tuple[int, int]:
-        idx, _role = item
+    # Render in chronological order (furthest from fight first); same-day roles
+    # follow the planner's stamped execution_order (fightcamp.session_sequencing).
+    def _sort_key(item: tuple[int, dict[str, Any]]) -> tuple[int, int, int]:
+        idx, role = item
         weekday = role_weekday.get(idx, "")
         d_day = d_to_day.get(weekday)
+        execution_order = role.get("execution_order")
+        within_day = execution_order if isinstance(execution_order, int) else 0
         if isinstance(d_day, int):
-            return (0, -d_day)
+            return (0, -d_day, within_day)
         order = _WEEKDAY_ORDER.index(weekday) if weekday in _WEEKDAY_ORDER else 99
-        return (1, order)
+        return (1, order, within_day)
 
     seen_primary_strength = False
     lines: list[str] = [header, ""]

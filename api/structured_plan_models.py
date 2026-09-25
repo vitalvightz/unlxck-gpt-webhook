@@ -341,6 +341,11 @@ class Session(BaseModel):
     mindset_anchor: MindsetAnchor
     blocks: list[SessionBlock] = Field(default_factory=list)
     completion: Completion | None = None
+    # 1-based position of this session within its day. Server-owned: set by
+    # fightcamp.session_sequencing after the day's membership is final (never
+    # model-generated), and the day's ``sessions`` list is already in this
+    # order. Distinct from any planning identity such as ``session_index``.
+    execution_order: int | None = None
 
 
 class TodayCard(BaseModel):

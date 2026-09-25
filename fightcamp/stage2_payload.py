@@ -1239,6 +1239,7 @@ def build_planning_brief(
     computed_support: dict | None = None,
 ) -> dict:
     from .goal_preservation import reconcile_goal_preservation
+    from .session_sequencing import stamp_role_execution_order
 
     brief = _build_planning_brief(
         athlete_model=athlete_model, restrictions=restrictions, phase_briefs=phase_briefs,
@@ -1257,7 +1258,9 @@ def build_planning_brief(
         apply_effective_strength_prescriptions(
             weekly_role_map=role_map, candidate_pools=candidate_pools, athlete_model=athlete_model,
         )
-    return reconcile_goal_preservation(brief)
+    # Within-day execution order is decided once the calendar and membership are
+    # final; it reads the finished days and writes only ``execution_order``.
+    return stamp_role_execution_order(reconcile_goal_preservation(brief))
 
 
 def _build_planning_brief(

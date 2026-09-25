@@ -305,6 +305,9 @@ def _drops_locked_display_text(role: dict[str, Any]) -> bool:
 def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
     keep = (
         "session_index",
+        # Planner-decided within-day order (fightcamp.session_sequencing). Distinct
+        # from session_index, which is planning identity, not execution order.
+        "execution_order",
         "category",
         "role_key",
         "scheduled_day_hint",
@@ -795,6 +798,7 @@ def build_stage2_finalizer_packet(
             "Do not infer D-days from weekday order.",
             "Do not invent D-days from the fight date manually.",
             "Only render session_roles whose scheduled_day_hint exists in that week's calendar_days.",
+            "When one calendar day carries more than one session role, render them in ascending execution_order. The deterministic planner decided that order from each session's purpose (prepare, prime, skill, contact, strength, conditioning, restore, review); explain it if useful, but never reorder it.",
             "Use session_count_summary to explain reduced weeks; do not restore suppressed roles to match the athlete's planned weekly frequency.",
             "Stage 1 draft exercise text is candidate material only. For a role with selected_exercise_assignments, those assignments are the deterministic planner's complete session membership: render every assigned exercise and do not add candidates, alternates, substitutes, or other S&C exercises. Use each assignment's effective_prescription when present; it is the dose authority. Final exercise rendering must obey weekly_role_map role, count, day ownership, restrictions, and taper rules first.",
             "Prescribe one exact working value for every round count, set count, rep count, duration, hold, rest interval, load and RPE. For support roles, prescribed_duration_min is the chosen duration; render it instead of the duration_min bounds. When an authorised effective prescription gives a range, choose one value inside it using the athlete's fight format, goals, phase, days to fight, fatigue, injury restrictions and session purpose; do not simply repeat the range or always choose the same endpoint. Preserve every already-exact value and all hard safety caps. Do not turn coach-owned sparring into an app dose. An optional easier alternative or safety limit may remain conditional, but the primary work must never leave a numeric range for the athlete to decide.",
