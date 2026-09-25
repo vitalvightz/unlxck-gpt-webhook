@@ -33,6 +33,7 @@ from .structured_plan_calendar_spine import reconcile_calendar_spine
 from .structured_plan_faithfulness import (
     PRESCRIPTION,
     check_structured_faithfulness,
+    prune_unfaithful_content,
     strip_locked_sessions_for_conversion,
 )
 from .structured_plan_locked_merge import merge_planner_owned_structured_content
@@ -2621,6 +2622,7 @@ def build_structured_plan_outcome(
     repair_fn: Callable[[Any, list[str]], Any] | None = None,
     computed_support: dict[str, Any] | None = None,
     planning_brief: dict[str, Any] | None = None,
+    allow_salvage: bool = True,
 ) -> StructuredPlanOutcome:
     """Validate a candidate structured payload into a persistable outcome.
 
@@ -2645,6 +2647,13 @@ def build_structured_plan_outcome(
     converted object. The persisted plan embeds the verbatim source and the
     renderer deterministically restores those explicit ranges; rejecting the
     entire card would replace a recoverable field with a lossy fallback UI.
+
+    Salvage is the last step before giving up: when the only remaining blockers
+    are content the source does not back, that content is pruned
+    (:func:`prune_unfaithful_content`) and the rest of the card ships, with each
+    removal recorded as a ``salvaged:`` warning. A caller that will spend a model
+    repair next passes ``allow_salvage=False`` so a complete repaired card is
+    preferred to a pruned first pass.
 
     Never raises: a malformed payload degrades to ``invalid_fallback_used`` so the
     raw ``plan_text`` flow keeps working.
@@ -2681,9 +2690,36 @@ def build_structured_plan_outcome(
             warnings=warnings,
         )
 
+    def _salvaged(
+        candidates: list[tuple[StructuredPlanStatus, dict[str, Any], str | None]],
+        failed: StructuredPlanOutcome,
+    ) -> StructuredPlanOutcome:
+        if not allow_salvage:
+            return failed
+        for status, candidate, schema_version in candidates:
+            pruned, removed = prune_unfaithful_content(candidate, raw_markdown, planning_brief)
+            if pruned is None or not removed:
+                continue
+            if not safe_parse_structured_plan(pruned, raw_markdown=raw_markdown or None).ok:
+                continue
+            errors, advisory = _split_faithfulness(
+                check_structured_faithfulness(pruned, raw_markdown, planning_brief)
+            )
+            errors.extend(_open_plan_contract_errors(pruned, planning_brief))
+            if errors:
+                continue
+            return _audited_outcome(
+                status,
+                pruned,
+                schema_version,
+                [*(f"salvaged: {item}" for item in removed), *advisory],
+            )
+        return failed
+
     if raw_data is None:
         return StructuredPlanOutcome(status="not_attempted")
 
+    first_candidate: list[tuple[StructuredPlanStatus, dict[str, Any], str | None]] = []
     cleaned = _strip_and_normalize(
         reconcile_rehab_drill_ids(
             reconcile_late_fight_week_context(raw_data, planning_brief),
@@ -2719,11 +2755,12 @@ def build_structured_plan_outcome(
             return _audited_outcome(
                 "valid", plan_dict, first.plan.schema_version, first_warnings
             )
+        first_candidate = [("valid", plan_dict, first.plan.schema_version)]
 
     if repair_fn is None:
-        return StructuredPlanOutcome(
-            status="invalid_fallback_used",
-            errors=first_errors,
+        return _salvaged(
+            first_candidate,
+            StructuredPlanOutcome(status="invalid_fallback_used", errors=first_errors),
         )
 
     # Strip biometric keys + conservatively normalize anything the repair attempt
@@ -2742,9 +2779,12 @@ def build_structured_plan_outcome(
                 repaired_data, raw_markdown=raw_markdown or None
             )
         except Exception as exc:  # noqa: BLE001 - raw fallback must always survive
-            return StructuredPlanOutcome(
-                status="invalid_fallback_used",
-                errors=[f"structured repair failed: {type(exc).__name__}"],
+            return _salvaged(
+                first_candidate,
+                StructuredPlanOutcome(
+                    status="invalid_fallback_used",
+                    errors=[f"structured repair failed: {type(exc).__name__}"],
+                ),
             )
     else:
         repaired = repair_structured_plan_once(
@@ -2757,9 +2797,12 @@ def build_structured_plan_outcome(
         repaired_errors, repaired_warnings = _split_faithfulness(unfaithful)
         repaired_errors.extend(_open_plan_contract_errors(plan_dict, planning_brief))
         if repaired_errors:
-            return StructuredPlanOutcome(
-                status="invalid_fallback_used",
-                errors=repaired_errors,
+            return _salvaged(
+                [
+                    ("repair_attempted_valid", plan_dict, repaired.plan.schema_version),
+                    *first_candidate,
+                ],
+                StructuredPlanOutcome(status="invalid_fallback_used", errors=repaired_errors),
             )
         return _audited_outcome(
             "repair_attempted_valid",
@@ -2767,9 +2810,9 @@ def build_structured_plan_outcome(
             repaired.plan.schema_version,
             repaired_warnings,
         )
-    return StructuredPlanOutcome(
-        status="invalid_fallback_used",
-        errors=list(repaired.errors),
+    return _salvaged(
+        first_candidate,
+        StructuredPlanOutcome(status="invalid_fallback_used", errors=list(repaired.errors)),
     )
 
 
