@@ -51,7 +51,12 @@ from .milestones import build_progress_recorder
 from .payloads import parse_plan_request
 from .persistence import persist_plan_and_finalize, persist_triage_review_required
 from .stage1_runner import Stage1PlannerError, run_stage1_planner
-from .stage2_runner import _OPENAI_QUOTA_ADMIN_ERROR, finalize_stage2_with_timeout, is_openai_quota_error
+from .stage2_runner import (
+    _OPENAI_QUOTA_ADMIN_ERROR,
+    finalize_stage2_with_timeout,
+    is_openai_quota_error,
+    retry_structured_card_before_release,
+)
 from .timeouts import _stage1_planner_timeout_seconds
 from .time_utils import utc_now_iso
 from .triage import _is_triage_skipped_final_result, should_skip_stage2
@@ -753,6 +758,17 @@ async def run_generation_job(
                 t_start=t_start,
             )
             return
+
+        # The job's completion is what moves the athlete off the generation
+        # screen, so a failed inline enhanced card gets its retry here, before
+        # the plan row is released, never after it.
+        final_result = await retry_structured_card_before_release(
+            stage2=stage2,
+            final_result=final_result,
+            emit_milestone=_emit_milestone,
+            log_context={"job_id": job_id, "athlete_id": athlete_id},
+        )
+        await _touch_heartbeat()
 
         await persist_plan_and_finalize(
             job=job,
