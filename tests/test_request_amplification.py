@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 
 from api.auth import AuthenticatedUser
 from api.models import ProfileUpdateRequest
+from api.routes import xp as xp_routes
 from api.services import xp_progress
 from api.store import SupabaseAppStore
 from support import _build_client, _build_request, finalized_result
@@ -124,6 +125,50 @@ def test_xp_progress_reuses_the_today_view_until_the_athlete_writes(monkeypatch)
     assert builds == ["athlete-1"]
 
 
+
+def test_login_activity_write_keeps_the_today_view_and_the_profile_cache(monkeypatch):
+    """GET /api/today -> POST /api/xp/activity -> GET /api/xp/progress.
+
+    Recording app activity touches neither Today nor the profile, so it must not
+    throw away the Today build XP is about to reuse or the cached profile row.
+    """
+
+    client, store = _activated_client()
+    builds = []
+    original_build = xp_progress.build_today_command_view
+
+    def counting_build(*args, **kwargs):
+        builds.append(kwargs.get("athlete_id"))
+        return original_build(*args, **kwargs)
+
+    monkeypatch.setattr(xp_progress, "build_today_command_view", counting_build)
+    monkeypatch.setattr(xp_progress, "get_streak_state", lambda *_a, **_k: {})
+    monkeypatch.setattr(xp_routes, "record_daily_activity", lambda *_a, **_k: {})
+    monkeypatch.setattr(xp_routes, "claim_daily_login_reward", lambda *_a, **_k: None)
+    profile_invalidations = []
+    store.invalidate_cached_profile = lambda athlete_id=None: profile_invalidations.append(
+        athlete_id
+    )
+
+    assert client.get("/api/today", headers=ATHLETE_HEADERS).status_code == 200
+    activity = client.post("/api/xp/activity", headers=ATHLETE_HEADERS)
+    assert activity.status_code == 200
+    assert client.get("/api/xp/progress", headers=ATHLETE_HEADERS).status_code == 200
+
+    assert builds == []
+    assert profile_invalidations == []
+
+
+def test_profile_cache_survives_requests_that_do_not_write_the_profile(monkeypatch):
+    store, reads = _supabase_store_with_profile_reads(monkeypatch)
+
+    store.ensure_profile(USER)  # GET /api/me resolves the caller
+    store.ensure_profile(USER)  # POST /api/xp/activity resolves the caller
+    store.ensure_profile(USER)  # GET /api/xp/progress resolves the caller
+
+    assert reads == ["athlete-1"]
+
+
 def test_xp_progress_without_a_recent_today_view_builds_its_own(monkeypatch):
     client, _ = _activated_client()
     builds = []
@@ -199,3 +244,47 @@ def test_explicit_invalidation_and_zero_ttl_disable_profile_reuse(monkeypatch):
     uncached.ensure_profile(USER)
     uncached.ensure_profile(USER)
     assert len(uncached_reads) == 2
+
+
+def test_newly_created_profile_is_cached_for_the_following_requests(monkeypatch):
+    monkeypatch.delenv("PROFILE_CACHE_TTL_SECONDS", raising=False)
+    store = SupabaseAppStore(client=MagicMock(), admin_emails=set())
+    created = {"id": "athlete-1", "role": "athlete", "full_name": "Ari Mensah"}
+    reads = []
+
+    def read_profile(athlete_id):
+        reads.append(athlete_id)
+        # First read: no row yet. After the upsert the row exists.
+        return None if len(reads) == 1 else dict(created)
+
+    store._get_profile_by_id = read_profile
+    store._require_profile = lambda athlete_id: read_profile(athlete_id)
+    store._upsert_profile_with_retry = lambda **_kwargs: None
+
+    assert store.ensure_profile(USER)["id"] == "athlete-1"
+    assert store.ensure_profile(USER)["id"] == "athlete-1"
+    assert len(reads) == 2
+
+
+def test_fallback_read_after_a_failed_upsert_is_cached(monkeypatch):
+    import httpx
+
+    monkeypatch.delenv("PROFILE_CACHE_TTL_SECONDS", raising=False)
+    store = SupabaseAppStore(client=MagicMock(), admin_emails=set())
+    reads = []
+
+    def read_profile(athlete_id):
+        reads.append(athlete_id)
+        if len(reads) == 1:
+            return None
+        return {"id": athlete_id, "role": "athlete"}
+
+    def failing_upsert(**_kwargs):
+        raise httpx.ConnectError("upsert raced")
+
+    store._get_profile_by_id = read_profile
+    store._upsert_profile_with_retry = failing_upsert
+
+    assert store.ensure_profile(USER)["id"] == "athlete-1"
+    assert store.ensure_profile(USER)["id"] == "athlete-1"
+    assert len(reads) == 2

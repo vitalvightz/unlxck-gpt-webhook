@@ -424,6 +424,23 @@ async def _self_heal_structured_cards_on_startup(store: AppStore) -> None:
 
 
 _SAFE_HTTP_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
+# Mutations that cannot change the Today command view, so they keep the reusable
+# Today build (see api.services.today_command_cache). Anything not listed here
+# drops it, so a missing entry costs a rebuild, never a stale view.
+_TODAY_NEUTRAL_MUTATION_PREFIXES = (
+    "/api/xp/",
+    "/api/feedback/",
+    "/api/push/",
+    "/api/generation-jobs/",
+)
+_TODAY_NEUTRAL_MUTATION_PATHS = frozenset({"/api/me/username", "/api/onboarding/draft"})
+
+
+def _is_today_neutral_mutation(path: str) -> bool:
+    normalized = path.rstrip("/") or "/"
+    return normalized in _TODAY_NEUTRAL_MUTATION_PATHS or normalized.startswith(
+        _TODAY_NEUTRAL_MUTATION_PREFIXES
+    )
 
 
 def create_app(
@@ -547,21 +564,20 @@ def create_app(
         
     @app.middleware("http")
     async def invalidate_athlete_read_caches(request: Request, call_next):
-        # Derived read caches (the Today view reused by XP progress, the
-        # profile row behind require_profile) must never answer a read that
-        # follows the athlete's own write. Drop them once any mutating request
-        # by that athlete has run, whatever its outcome.
+        # The Today view reused by XP progress must never answer a read that
+        # follows an athlete write that could change Today. Writes default to
+        # dropping it; only paths known not to touch Today keep it. The profile
+        # cache is not handled here: the store methods that write profiles
+        # invalidate it themselves.
         try:
             return await call_next(request)
         finally:
-            if request.method not in _SAFE_HTTP_METHODS:
+            if request.method not in _SAFE_HTTP_METHODS and not _is_today_neutral_mutation(
+                request.url.path
+            ):
                 athlete_id = getattr(request.state, "athlete_id", None)
                 if athlete_id:
-                    app_store = request.app.state.store
-                    forget_today_command(app_store, athlete_id)
-                    invalidate_profile = getattr(app_store, "invalidate_cached_profile", None)
-                    if callable(invalidate_profile):
-                        invalidate_profile(athlete_id)
+                    forget_today_command(request.app.state.store, athlete_id)
 
     @app.middleware("http")
     async def log_requests(request: Request, call_next):

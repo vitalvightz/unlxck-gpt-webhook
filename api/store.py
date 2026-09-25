@@ -1795,6 +1795,7 @@ class SupabaseAppStore:
                 )
                 if fallback:
                     self._log_profile_event(operation="ensure_fallback_read_success", user=user)
+                    self._profile_cache().put(user.user_id, fallback)
                     return fallback
                 if self._is_transient_profile_error(exc):
                     raise HTTPException(
@@ -1808,6 +1809,7 @@ class SupabaseAppStore:
                 fn=lambda: self._require_profile(user.user_id),
             )
             self._log_profile_event(operation="ensure_created", user=user, role=profile.get("role"))
+            self._profile_cache().put(user.user_id, profile)
             return profile
         except HTTPException:
             raise
