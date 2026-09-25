@@ -25,6 +25,7 @@ import {
   resolvePlanActiveState,
   shouldAwaitStructuredPlanUpgrade,
   shouldHoldPlanForEnhancedCard,
+  isFreshGenerationArrival,
   shouldPollForStructuredPlanUpgrade,
   shouldShowProtectedResumeAdminReview,
   shouldUseSavedStructuredPlan,
@@ -530,6 +531,55 @@ test("terminal card states fall back to the deterministic plan instead of holdin
       `state ${state} must not hold the athlete view`,
     );
   }
+});
+
+test("a fresh arrival holds through a failed inline card while the worker retry is queued", () => {
+  for (const state of ["failed", "not_attempted"] as const) {
+    assert.equal(
+      shouldHoldPlanForEnhancedCard({
+        ...LOCKIN_HOLD_BASE,
+        structuredCardLifecycleState: state,
+        awaitingCardRetry: true,
+      }),
+      true,
+      `state ${state} must hold during the retry grace`,
+    );
+  }
+  // A live card never holds, grace or not.
+  assert.equal(
+    shouldHoldPlanForEnhancedCard({
+      ...LOCKIN_HOLD_BASE,
+      structuredCardLifecycleState: "live",
+      awaitingCardRetry: true,
+    }),
+    false,
+  );
+  // Grace never overrides the admin exclusion or the upgrade bounds.
+  assert.equal(
+    shouldHoldPlanForEnhancedCard({
+      ...LOCKIN_HOLD_BASE,
+      structuredCardLifecycleState: "failed",
+      awaitingCardRetry: true,
+      isViewerAdmin: true,
+    }),
+    false,
+  );
+  assert.equal(
+    shouldHoldPlanForEnhancedCard({
+      ...LOCKIN_HOLD_BASE,
+      structuredCardLifecycleState: "failed",
+      awaitingCardRetry: true,
+      pollWindowExpired: true,
+    }),
+    false,
+  );
+});
+
+test("fresh generation arrival is bounded by plan age", () => {
+  const now = Date.parse("2026-09-25T01:10:00Z");
+  assert.equal(isFreshGenerationArrival({ created_at: "2026-09-25T01:09:30Z" }, now), true);
+  assert.equal(isFreshGenerationArrival({ created_at: "2026-09-25T01:05:00Z" }, now), false);
+  assert.equal(isFreshGenerationArrival({ created_at: "" }, now), false);
 });
 
 test("the lock-in hold is bounded and only applies to plans that can still upgrade", () => {
