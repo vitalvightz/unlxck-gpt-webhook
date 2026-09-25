@@ -6,6 +6,31 @@ def test_compact_support_role_preserves_selected_duration():
     assert role["prescribed_duration_min"] == 8
 
 
+def test_server_owned_tactical_roles_are_absent_from_model_handoff():
+    stage2_payload = {
+        "athlete_model": {"days_until_fight": 7},
+        "weekly_role_map": {"weeks": [{
+            "week_index": 1,
+            "phase": "TAPER",
+            "calendar_days": [{"weekday": "thursday", "d_day": 7}],
+            "session_roles": [
+                {"role_key": "fight_visualization", "display_text": "Tactical Picture"},
+                {"role_key": "tactical_watch", "display_text": "First-Round Range Script"},
+                {"role_key": "neural_speed_touch", "display_text": "2 x 5 sec"},
+            ],
+        }]},
+        "session_sequence": [
+            {"role_key": "fight_visualization", "countdown_label": "D-7"},
+            {"role_key": "neural_speed_touch", "countdown_label": "D-7"},
+        ],
+    }
+    packet = build_stage2_finalizer_packet(stage2_payload=stage2_payload, planning_brief={})
+    selected = packet["selected_plan"]
+    assert [role["role_key"] for role in selected["weekly_role_map"]["weeks"][0]["session_roles"]] == ["neural_speed_touch"]
+    assert [entry["role_key"] for entry in selected["session_sequence"]] == ["neural_speed_touch"]
+    assert selected["weekly_role_map"]["weeks"][0]["calendar_days"][0]["d_day"] == 7
+
+
 def test_finalizer_packet_passes_open_plan_spec_and_render_mode():
     stage2_payload = {
         "payload_mode": "open_ongoing_payload",

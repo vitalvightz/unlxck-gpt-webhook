@@ -3,7 +3,11 @@ from __future__ import annotations
 
 import pytest
 
-from api.structured_plan_faithfulness import repair_locked_tactical_watch_source_text
+from api.structured_plan_faithfulness import (
+    repair_locked_tactical_watch_source_text,
+    strip_locked_sessions_for_conversion,
+)
+from api.structured_plan_generation import build_structured_plan_prompt
 from api.structured_plan_locked_merge import merge_locked_structured_content
 from fightcamp.fight_visualization_library import (
     FIGHT_VISUALIZATION_COUNTDOWN_DAYS,
@@ -470,6 +474,56 @@ def test_mental_rehearsal_alias_only_session_is_removed_with_its_block():
     assert merge_locked_structured_content(result.plan, brief).plan == result.plan
 
 
+@pytest.mark.parametrize("day", [3, 5])
+def test_named_visualisation_shell_is_reused_for_the_locked_drill(day):
+    entry = select_fight_visualization("boxing", "pressure_fighter", day)
+    brief, _role = _locked_brief(entry, day_label=f"D-{day}")
+    plan = _plan_with_day(f"D-{day}", [{
+        "title": entry.name,
+        "completion_status": "not_started",
+        "blocks": [{"display_name": f"{entry.name} Visualisation", "block_type": "mindset"}],
+    }])
+
+    result = merge_locked_structured_content(plan, brief)
+    sessions = result.plan["weeks"][0]["days"][0]["sessions"]
+    assert len(sessions) == 1
+    assert sessions[0]["title"] == "Fight Visualisation"
+    assert [block["display_name"] for block in sessions[0]["blocks"]] == [entry.name]
+    assert merge_locked_structured_content(result.plan, brief).plan == result.plan
+
+
+def test_generic_visualisation_shells_do_not_survive_the_locked_d7_card():
+    entry = select_fight_visualization("boxing", "pressure_fighter", 7)
+    brief, _role = _locked_brief(entry, day_label="D-7")
+    plan = _plan_with_day("D-7", [
+        {"title": "Fight Visualisation - Range Rehearse", "completion_status": "not_started", "blocks": []},
+        {"title": "Fight Visualisation - Mental Rehearse", "completion_status": "not_started", "blocks": [
+            {"display_name": "Fight Visualisation", "block_type": "mindset"}
+        ]},
+        {"title": "Tactical Focus", "blocks": [{"display_name": "First-Round Range Script"}]},
+    ])
+
+    result = merge_locked_structured_content(plan, brief)
+    sessions = result.plan["weeks"][0]["days"][0]["sessions"]
+    assert [session["title"] for session in sessions] == ["Tactical Focus", "Fight Visualisation"]
+    assert sessions[1]["blocks"][0]["display_name"] == entry.name
+
+
+def test_completed_visualisation_alias_is_preserved():
+    entry = select_fight_visualization("boxing", "pressure_fighter", 5)
+    brief, _role = _locked_brief(entry, day_label="D-5")
+    plan = _plan_with_day("D-5", [{
+        "title": entry.name,
+        "completion_status": "completed",
+        "blocks": [{"display_name": f"{entry.name} Visualisation", "block_type": "mindset"}],
+    }])
+    result = merge_locked_structured_content(plan, brief)
+    sessions = result.plan["weeks"][0]["days"][0]["sessions"]
+    assert len(sessions) == 2
+    assert sessions[0]["blocks"][0]["display_name"] == f"{entry.name} Visualisation"
+    assert sessions[1]["blocks"][0]["display_name"] == entry.name
+
+
 def test_completed_mental_rehearsal_session_is_kept():
     entry = select_fight_visualization("kickboxing", "clinch_fighter", 7)
     brief, _role = _locked_brief(entry, day_label="D-7")
@@ -528,6 +582,52 @@ def test_stage2_source_text_omission_is_repaired():
         assert instruction in result.source_markdown
     # Repair is scoped to the authoritative day only.
     assert result.source_markdown.index(entry.name) < result.source_markdown.index("D-0:")
+
+
+def test_locked_visualisation_does_not_enter_structured_model_prompt():
+    entry = select_fight_visualization("boxing", "pressure_fighter", 7)
+    brief, _role = _locked_brief(entry, day_label="D-7")
+    source = (
+        "D-7 (Thursday) — Strength\n- Trap Bar Deadlift: 3 x 3\n\n"
+        "D-7 (Thursday) — Fight Visualisation\n"
+        + build_visualization_display_text(entry)
+        + "\n\nD-7 (Thursday) — Fight Visualisation (mental)\n"
+        "- Fight Visualisation: 8 minutes\n\nD-6 (Friday) — Recovery\n"
+    )
+    converted = strip_locked_sessions_for_conversion(source, brief)
+    assert "Trap Bar Deadlift" in converted
+    assert "D-6 (Friday) — Recovery" in converted
+    assert "Fight Visualisation" not in converted
+    assert entry.name not in build_structured_plan_prompt(plan_markdown=source, planning_brief=brief)
+
+
+def test_missing_locked_only_day_is_inserted_by_server_into_source():
+    entry = select_fight_visualization("boxing", "pressure_fighter", 5)
+    brief, _role = _locked_brief(entry, day_label="D-5")
+    result = repair_locked_tactical_watch_source_text(
+        "D-6 (Friday) — Recovery\nRest.\n\nD-4 (Sunday) — Technical\nMove lightly.", brief
+    )
+    assert not result.unresolved
+    assert result.source_markdown.index("D-6") < result.source_markdown.index("D-5")
+    assert result.source_markdown.index("D-5") < result.source_markdown.index("D-4")
+    assert entry.name in result.source_markdown
+
+
+def test_generic_same_day_visualisation_source_copy_is_removed():
+    entry = select_fight_visualization("boxing", "pressure_fighter", 7)
+    brief, _role = _locked_brief(entry, day_label="D-7")
+    source = (
+        "D-7 (Thursday) — Fight Visualisation\n"
+        + build_visualization_display_text(entry)
+        + "\n\nD-7 (Thursday) — Tactical Focus\n- First-Round Range Script: 8 minutes\n\n"
+        "D-7 (Thursday) — Fight Visualisation (mental)\n"
+        "Why: Confirm the picture.\n- Fight Visualisation: 8 minutes.\n\n"
+        "D-6 (Friday) — Recovery\nRest.\n"
+    )
+    result = repair_locked_tactical_watch_source_text(source, brief)
+    assert result.source_markdown.count("D-7 (Thursday) — Fight Visualisation") == 1
+    assert "First-Round Range Script" in result.source_markdown
+    assert "D-6 (Friday) — Recovery" in result.source_markdown
 
 
 def test_deterministic_fallback_defers_to_the_locked_merge():

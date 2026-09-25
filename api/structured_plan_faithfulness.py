@@ -319,7 +319,14 @@ def _source_day_insert_index(lines: list[str], day: int) -> tuple[int | None, st
     """
     indices = _source_day_header_indices(lines, day)
     if not indices:
-        return None, "authoritative day missing from stage2"
+        headers = [
+            (index, found)
+            for index, line in enumerate(lines)
+            if (found := _day_header_dday(line)) is not None
+        ]
+        if any(later > earlier for (_, earlier), (_, later) in zip(headers, headers[1:])):
+            return None, "countdown days are not in descending order"
+        return next((index for index, found in headers if found < day), len(lines)), None
 
     start = indices[0]
     end = len(lines)
@@ -695,6 +702,60 @@ def _is_active_locked_tactical_watch_role(role: dict[str, Any]) -> tuple[bool, s
     return True, None
 
 
+def strip_locked_sessions_for_conversion(source_markdown: str, planning_brief: Any) -> str:
+    """Keep server-owned session bodies out of the structured model's input."""
+    if not isinstance(planning_brief, dict):
+        return source_markdown
+    owned: dict[int, set[str]] = {}
+    for role in _locked_roles(planning_brief):
+        active, _issue = _is_active_locked_tactical_watch_role(role)
+        day = _authoritative_locked_day(role)
+        system = _locked_source_system(role)
+        if active and day is not None and system:
+            owned.setdefault(day, set()).add(_normalise_locked_text(system[1]))
+    if not owned:
+        return source_markdown
+
+    kept: list[str] = []
+    skipping = False
+    for line in source_markdown.splitlines():
+        day = _day_header_dday(line)
+        if day is not None:
+            title = re.split(r"\s+[—–-]\s+|:\s+", line.strip())[-1]
+            title = re.sub(r"\s*\([^)]*\)\s*$", "", title)
+            title = _normalise_locked_text(title)
+            skipping = any(
+                title == name or title.startswith(f"{name} ")
+                for name in owned.get(day, set())
+            )
+        elif re.match(r"^(?:#{1,6}\s*)?(?:GPP|SPP|TAPER|FIGHT_WEEK)\s*[—–-]\s*Week\b", line.strip(), re.I):
+            skipping = False
+        if not skipping:
+            kept.append(line)
+    return "\n".join(kept)
+
+
+def _remove_generic_visualization_source_alias(source: str, day: int) -> str:
+    """Remove only a same-day generic visualisation copy beside the bank drill."""
+    lines = source.splitlines()
+    remove: set[int] = set()
+    for start, line in enumerate(lines):
+        if _day_header_dday(line) != day:
+            continue
+        title = _normalise_locked_text(re.split(r"\s+[—–-]\s+|:\s+", line.strip())[-1])
+        if title not in {"fight visualisation (mental)", "fight visualisation - mental rehearse"}:
+            continue
+        end = start + 1
+        while end < len(lines) and _day_header_dday(lines[end]) is None:
+            if re.match(r"^(?:#{1,6}\s*)?(?:GPP|SPP|TAPER|FIGHT_WEEK)\s*[—–-]\s*Week\b", lines[end].strip(), re.I):
+                break
+            end += 1
+        activities = [item.strip() for item in lines[start + 1:end] if item.strip().startswith("- ")]
+        if len(activities) == 1 and _normalise_locked_text(activities[0]).startswith("- fight visualisation:"):
+            remove.update(range(start, end))
+    return "\n".join(line for index, line in enumerate(lines) if index not in remove)
+
+
 def repair_locked_tactical_watch_source_text(
     source_markdown: str, planning_brief: Any
 ) -> LockedSourceRepairResult:
@@ -769,7 +830,7 @@ def repair_locked_tactical_watch_source_text(
         )
         if issue is None:
             continue
-        if issue != LOCKED_TACTICAL_WATCH_MISSING:
+        if issue not in {LOCKED_TACTICAL_WATCH_MISSING, "authoritative_day_missing_from_stage2"}:
             result.unresolved.append(LockedSourceRepairIssue(day_label, drill_name, issue))
             continue
 
@@ -779,13 +840,26 @@ def repair_locked_tactical_watch_source_text(
             result.unresolved.append(LockedSourceRepairIssue(day_label, drill_name, insert_issue or "invalid day"))
             continue
 
-        header_index = _source_day_header_indices(lines, role_day)[0]
-        day_prefix = re.search(r"\bD-\s*\d+\b(?:\s*\([^)]+\))?", lines[header_index], re.I)
+        header_indices = _source_day_header_indices(lines, role_day)
+        day_prefix = (
+            re.search(r"\bD-\s*\d+\b(?:\s*\([^)]+\))?", lines[header_indices[0]], re.I)
+            if header_indices else None
+        )
         header_prefix = day_prefix.group(0) if day_prefix else day_label
         repair_block = ["", f"{header_prefix} — {session_heading}", display_text, ""]
         lines[insert_index:insert_index] = repair_block
         result.source_markdown = "\n".join(lines)
         result.applied.append(f"{day_label}: {drill_name}")
+    for role in roles:
+        if str(role.get("role_key") or "").lower() != "fight_visualization":
+            continue
+        day = _authoritative_locked_day(role)
+        if day is None:
+            continue
+        governance = role.get("governance") or {}
+        name = str(governance.get("selected_drill_name") or (role.get("fight_visualization") or {}).get("name") or "")
+        if name and _locked_source_drill_text(result.source_markdown, role, name)[2] is None:
+            result.source_markdown = _remove_generic_visualization_source_alias(result.source_markdown, day)
     return result
 
 

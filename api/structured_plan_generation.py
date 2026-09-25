@@ -29,7 +29,12 @@ from typing import Any, Callable, Literal, get_args
 from fightcamp.weekly_schedule_view import normalize_weekday as _normalize_weekday
 
 from .state_machine import is_athlete_displayable_plan_status
-from .structured_plan_faithfulness import PRESCRIPTION, check_structured_faithfulness
+from .structured_plan_calendar_spine import reconcile_calendar_spine
+from .structured_plan_faithfulness import (
+    PRESCRIPTION,
+    check_structured_faithfulness,
+    strip_locked_sessions_for_conversion,
+)
 from .structured_plan_locked_merge import merge_planner_owned_structured_content
 from .structured_plan_safety import athlete_safe_support, audit_structured_plan, split_findings
 from .structured_plan_models import (
@@ -100,6 +105,10 @@ def _merge_locked_content(
     plan_dict: dict[str, Any], planning_brief: Any
 ) -> dict[str, Any]:
     """Apply Stage 1 locked truth and emit compact, profile-free diagnostics."""
+    # The converter never sees server-owned sessions. A day containing only one
+    # of them may therefore be absent from its JSON; restore the planner's day
+    # spine before projecting the locked card onto its authoritative D-day.
+    plan_dict = reconcile_calendar_spine(plan_dict, planning_brief)
     result = merge_planner_owned_structured_content(plan_dict, planning_brief)
     locked_roles = len(result.applied) + len(result.unresolved)
     if locked_roles:
@@ -3316,6 +3325,7 @@ def build_structured_plan_prompt(
     to fix a previous invalid attempt (the single repair retry).
     """
 
+    plan_markdown = strip_locked_sessions_for_conversion(plan_markdown, planning_brief)
     sections: list[str] = [_STRUCTURED_PLAN_RULES, _ROOT_SKELETON]
     open_plan_contract = _open_plan_prompt_contract(planning_brief)
     if open_plan_contract:
