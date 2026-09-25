@@ -84,6 +84,22 @@ def _athlete_is_minor(store: AppStore, athlete_id: str) -> bool:
     return evaluate_profile_compliance(profile_row).is_minor
 
 
+# Accounts whose plans may schedule training on the generation day itself. The
+# normal pathway starts the camp the day after generation.
+_GENERATION_DAY_INCLUDED_EMAILS = frozenset({"vitalvightz@gmail.com", "jjjjjjj@hotmail.com"})
+
+
+def _athlete_includes_generation_day(store: AppStore, athlete_id: str) -> bool:
+    try:
+        profile_row = store.get_profile(athlete_id)
+    except Exception:  # noqa: BLE001 - optional override; default pathway on failure
+        return False
+    if not isinstance(profile_row, dict):
+        return False
+    email = str(profile_row.get("email") or "").strip().lower()
+    return email in _GENERATION_DAY_INCLUDED_EMAILS
+
+
 def _athlete_canonical_age(store: AppStore, athlete_id: str) -> int | None:
     """The athlete's current DOB-derived age, read from the stored profile.
 
@@ -512,6 +528,8 @@ async def run_generation_job(
                     athlete_id,
                     job_id,
                 )
+            if await _to_thread_with_heartbeat(_athlete_includes_generation_day, store, athlete_id):
+                planner_payload["include_generation_day"] = True
             if isinstance(raw_request_payload, dict):
                 triage_override = raw_request_payload.get(_TRIAGE_RESUME_OVERRIDE_KEY)
                 if isinstance(triage_override, dict):

@@ -1044,6 +1044,24 @@ def test_plan_input_accepts_supported_fight_date_formats(monkeypatch, fight_date
     assert parsed.weeks_out == 1
 
 
+def test_include_generation_day_anchors_camp_one_day_earlier(monkeypatch):
+    monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 1, 12, 0))
+    fields = [
+        {"label": "When is your next fight?", "value": "2026-03-14"},
+        {"label": "Athlete Time Zone", "value": "UTC"},
+    ]
+
+    default = PlanInput.from_payload(_payload(fields))
+    included = PlanInput.from_payload({**_payload(fields), "include_generation_day": True})
+
+    # The camp calendar starts at D-(days_until_fight - 1); one extra day out
+    # makes the generation day (D-13) the first plannable day.
+    assert default.days_until_fight == 13
+    assert default.include_generation_day is False
+    assert included.days_until_fight == 14
+    assert included.include_generation_day is True
+
+
 def test_date_only_fight_date_with_missing_timezone_uses_platform_default_timezone(monkeypatch):
     monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 14, 0, 30))
 

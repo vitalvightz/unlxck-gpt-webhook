@@ -210,6 +210,8 @@ class TrainingContext:
     # carries the *reason* through to the flags so athlete-facing blocks can say
     # why cut guidance is absent instead of silently omitting it.
     is_minor: bool = False
+    # Plan from the generation day itself (see ``PlanInput.include_generation_day``).
+    include_generation_day: bool = False
     sparring_readiness: dict = field(default_factory=dict)
     training_split: dict[str, Any] = field(default_factory=dict)
     hard_sparring_days: list[str] = field(default_factory=list)

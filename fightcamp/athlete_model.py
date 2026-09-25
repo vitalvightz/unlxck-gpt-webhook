@@ -13,6 +13,7 @@ silently flip the athlete into an injured state.
 from __future__ import annotations
 
 import re
+from datetime import timedelta
 
 from .sports import normalize_sport
 
@@ -171,9 +172,17 @@ def _build_athlete_model(
     from . import stage2_planning_brief as _planning_brief
 
     record_profile = _derive_competitive_maturity(training_context.status, record)
+    now_utc = _planning_brief._utc_now()
+    if (
+        getattr(training_context, "include_generation_day", False)
+        and training_context.days_until_fight is not None
+    ):
+        # Mirror the one-day-earlier anchor used for ``days_until_fight`` so the
+        # fight weekday (creation weekday + days out) stays correct.
+        now_utc -= timedelta(days=1)
     plan_creation_dt = _planning_brief._athlete_calendar_now(
         training_context.athlete_timezone,
-        now_utc=_planning_brief._utc_now(),
+        now_utc=now_utc,
     )
     cut_severity_score = compute_cut_severity_score(
         training_context.weight_cut_pct,

@@ -396,6 +396,7 @@ def build_runtime_context(
         mental_block_raw=(plan_input.mental_block or "").strip(),
         age=parse_int_or_none(plan_input.age),
         is_minor=plan_input.is_minor,
+        include_generation_day=plan_input.include_generation_day,
         weight=parse_float_or_none(weight),
         prev_exercises=[],
         recent_exercises=[],
