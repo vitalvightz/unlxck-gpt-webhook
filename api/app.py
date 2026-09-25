@@ -297,8 +297,16 @@ def _daily_generation_cap_exempt_emails() -> frozenset[str]:
     )
 
 
+# Always exempt from the daily generation cap, on top of the env-configured list.
+_ALWAYS_DAILY_GENERATION_CAP_EXEMPT_EMAILS = frozenset({"vitalvightz@gmail.com", "jjjjjjj@hotmail.com"})
+
+
 def _is_exempt_from_daily_generation_cap(email: str) -> bool:
-    return email.strip().lower() in _daily_generation_cap_exempt_emails()
+    normalized = email.strip().lower()
+    return (
+        normalized in _ALWAYS_DAILY_GENERATION_CAP_EXEMPT_EMAILS
+        or normalized in _daily_generation_cap_exempt_emails()
+    )
 
 
 def _default_planner(

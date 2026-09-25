@@ -5045,6 +5045,12 @@ def test_daily_generation_cap_exemptions_default_to_empty(monkeypatch: pytest.Mo
     assert app_module._is_exempt_from_daily_generation_cap("michaelokaforjr@gmail.com") is False
 
 
+def test_daily_generation_cap_always_exempts_hardcoded_accounts(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("APP_DAILY_GENERATION_CAP_EXEMPT_EMAILS", raising=False)
+    assert app_module._is_exempt_from_daily_generation_cap("Vitalvightz@gmail.com") is True
+    assert app_module._is_exempt_from_daily_generation_cap(" jjjjjjj@hotmail.com ") is True
+
+
 def test_daily_generation_cap_exemptions_use_env_var(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("APP_DAILY_GENERATION_CAP_EXEMPT_EMAILS", "test@example.com")
     assert app_module._is_exempt_from_daily_generation_cap("test@example.com") is True
