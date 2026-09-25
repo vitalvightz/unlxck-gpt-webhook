@@ -348,3 +348,42 @@ test("a pull-back day never headlines the sparring it blocks", () => {
   assert.doesNotMatch(html, />Start hard sparring</);
   assert.match(html, /<h2 id="today-session-heading">Mobility flush<\/h2>/);
 });
+
+test("a two-session day advances the card to the second once the first is logged", () => {
+  const plan = {
+    schema_version: "text-adapter.v1",
+    plan_metadata: { title: "Bow" },
+    weeks: [
+      {
+        week_id: "wk1",
+        week_index: 1,
+        days: [
+          {
+            date: "2026-09-25",
+            weekday: "Fri",
+            sessions: [
+              { session_id: "wk1-20260925-ses1", title: "Read & Counter Flow", session_type: "conditioning", blocks: [] },
+              { session_id: "wk1-20260925-ses2", title: "Breathing Reset", session_type: "recovery", blocks: [] },
+            ],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+  const current = resolveCurrentDay(plan, new Date(2026, 8, 25));
+
+  // The backend targets the first outstanding session: ses2 once ses1 is done.
+  const html = renderToStaticMarkup(
+    <TodaySessionBlocks current={current} activeSessionId="wk1-20260925-ses2" />,
+  );
+  assert.match(html, /Logged today<\/span>Read &amp; Counter Flow/);
+  assert.equal((html.match(/Read &amp; Counter Flow/g) ?? []).length, 1);
+  assert.match(html, /Breathing Reset/);
+
+  // Before anything is logged both sessions show in full, nothing marked logged.
+  const fresh = renderToStaticMarkup(
+    <TodaySessionBlocks current={current} activeSessionId="wk1-20260925-ses1" />,
+  );
+  assert.doesNotMatch(fresh, /Logged today/);
+  assert.match(fresh, /Read &amp; Counter Flow[\s\S]*Breathing Reset/);
+});
