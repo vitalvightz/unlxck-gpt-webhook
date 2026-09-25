@@ -1602,6 +1602,9 @@ _POWER_LIFT_NAME_PATTERN = re.compile(
 # "Glute Medius", routing a static hold to the ballistic speed template.
 _MED_BALL_NAME_PATTERN = re.compile(r"\bmed(?:icine)?[-\s]?ball\b")
 
+# "3-Minute Round", "3-Minute Heavy Bag Interval": a fight-length round drill.
+_COMBAT_ROUND_NAME_PATTERN = re.compile(r"\b3[-\s]?minute\b")
+
 
 def _classify_prescription_type(exercise: dict) -> str:
     tags = set(normalize_tags(exercise.get("tags") or []))
@@ -1633,6 +1636,18 @@ def _classify_prescription_type(exercise: dict) -> str:
 
     if tags & _CARRY_TAGS or _CARRY_NAME_PATTERN.search(name):
         return "carry"
+
+    # The bank's own ``method: "conditioning"`` drills (jump rope, bag rounds,
+    # rope waves, shadow boxing) are dosed in work time, never sets x reps:
+    # "3 sets x 4 reps" of jump rope is not a prescription. Resolved before the
+    # jump pattern, which a rope's ``mech_lower_jump`` tag would otherwise hit.
+    # A name that carries its own round structure keeps it.
+    if method == "conditioning":
+        if "tabata" in name:
+            return "tabata"
+        if _COMBAT_ROUND_NAME_PATTERN.search(name):
+            return "combat_round"
+        return "timed_interval"
 
     if _LOADED_CYCLE_NAME_PATTERN.search(name):
         return "quality_cycle"
@@ -1724,8 +1739,29 @@ def _prescription_templates(phase: str) -> dict[str, str]:
         ),
         "TAPER": "1 set of 1 rep per side; movement quality only, no fatigue.",
     }
+    # Conditioning drills from the exercise bank are dosed in work time. Like
+    # the carry dose these avoid a bare "NxM" token, so the countdown overlay
+    # reduces the leading round count and keeps the seconds.
+    timed_interval = {
+        "GPP": "3–5 rounds of 60–90s work at a steady, repeatable rhythm; rest 30–60s.",
+        "SPP": "4–6 rounds of 20–30s hard work; rest 40–60s.",
+        "TAPER": "2–3 rounds of 20–30s sharp work; full rest 60s, never to fatigue.",
+    }
+    combat_round = {
+        "GPP": "3–4 rounds of 3 min at a controlled pace; rest 60s between rounds.",
+        "SPP": "3–5 rounds of 3 min at fight pace; rest 60s between rounds.",
+        "TAPER": "1–2 rounds of 3 min, crisp and relaxed; rest 60–90s.",
+    }
+    tabata = {
+        "GPP": "6–8 rounds of 20s hard work / 10s rest; 1–2 blocks, 2–3 min between blocks.",
+        "SPP": "8 rounds of 20s all-out work / 10s rest; 1–2 blocks, 2–3 min between blocks.",
+        "TAPER": "4–6 rounds of 20s fast work / 10s rest; one block only.",
+    }
     return {
         "barbell": barbell.get(phase, barbell["GPP"]),
+        "timed_interval": timed_interval.get(phase, timed_interval["GPP"]),
+        "combat_round": combat_round.get(phase, combat_round["GPP"]),
+        "tabata": tabata.get(phase, tabata["GPP"]),
         "contrast": contrast.get(phase, contrast["GPP"]),
         "ballistic": ballistic.get(phase, ballistic["GPP"]),
         "quality_cycle": quality_cycle.get(phase, quality_cycle["GPP"]),
@@ -1831,6 +1867,9 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
         "max_isometric",
         "isometric",
         "core",
+        "timed_interval",
+        "combat_round",
+        "tabata",
         "general",
     ]
     present_types = []
@@ -1852,6 +1891,9 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
             "max_isometric": "Maximal Overcoming Isometrics",
             "isometric": "Isometrics",
             "core": "Core Control",
+            "timed_interval": "Conditioning Drills (Timed Rounds)",
+            "combat_round": "Fight-Length Rounds",
+            "tabata": "Tabata Intervals",
             "general": "General Strength",
         }[ex_type]
         strength_output.append(f"- **{label}:** {prescriptions[ex_type]}")

@@ -273,3 +273,68 @@ def test_a_day_with_no_authoritative_role_is_never_given_a_session():
     assert sessions[9] == ["Breathing Reset"]
     assert sessions[8] == []
     assert sessions[5] == []
+
+
+def _recovery_flush_with_breathing_cooldown(plan: dict) -> dict:
+    """D-9 as the converter folds it: one flush session ending on the reset."""
+    day = next(d for d in plan["weeks"][0]["days"] if d["countdown_label"] == "D-9")
+    flush = copy.deepcopy(day["sessions"][0])
+    flush["session_id"] = "llm-d9-flush"
+    flush["title"] = "Low-load recovery flush"
+    cooldown = copy.deepcopy(flush["blocks"][0])
+    cooldown["display_name"] = "Breathing Reset"
+    cooldown["block_type"] = "cooldown_recovery"
+    flush["blocks"] = [flush["blocks"][0], cooldown]
+    day["sessions"] = [flush]
+    return plan
+
+
+def test_a_support_insert_folded_into_another_session_as_a_block_is_not_restored():
+    """A recovery flush that already ends on "Breathing Reset" keeps one reset.
+
+    Session-level identity only reads the flush's title, so the scheduled
+    Breathing Reset looked missing and was re-added as a second session holding
+    the same instruction the flush's cooldown block already carries.
+    """
+    row = _row(_recovery_flush_with_breathing_cooldown(_card_omitting_supports()))
+    row["planning_brief"]["weekly_role_map"]["weeks"][0]["session_roles"] = [
+        _support_role(9, "breathing_reset", "Breathing Reset", "recovery", "Nasal breathing if comfortable.")
+    ]
+
+    sessions = _sessions_by_dday(_map_plan_detail(row, include_admin=False))
+
+    assert sessions[9] == ["Low-load recovery flush"]
+
+
+def test_a_block_naming_only_part_of_a_role_label_does_not_absorb_it():
+    """A generic "Breathing" block is not the scheduled "Breathing Reset"."""
+    plan = _recovery_flush_with_breathing_cooldown(_card_omitting_supports())
+    day = next(d for d in plan["weeks"][0]["days"] if d["countdown_label"] == "D-9")
+    day["sessions"][0]["blocks"][1]["display_name"] = "Breathing"
+    row = _row(plan)
+    row["planning_brief"]["weekly_role_map"]["weeks"][0]["session_roles"] = [
+        _support_role(9, "breathing_reset", "Breathing Reset", "recovery", "Nasal breathing if comfortable.")
+    ]
+
+    sessions = _sessions_by_dday(_map_plan_detail(row, include_admin=False))
+
+    assert sessions[9] == ["Low-load recovery flush", "Breathing Reset"]
+
+
+def test_one_folded_block_satisfies_only_one_of_two_same_day_roles():
+    """A block, like a session, represents at most ONE scheduled role.
+
+    Two ``breathing_reset`` roles on one day and one folded "Breathing Reset"
+    block: the block covers the first, the second is still restored.
+    """
+    row = _row(_recovery_flush_with_breathing_cooldown(_card_omitting_supports()))
+    roles = []
+    for session_index in (1, 2):
+        role = _support_role(9, "breathing_reset", "Breathing Reset", "recovery", "Nasal breathing if comfortable.")
+        role["session_index"] = session_index
+        roles.append(role)
+    row["planning_brief"]["weekly_role_map"]["weeks"][0]["session_roles"] = roles
+
+    sessions = _sessions_by_dday(_map_plan_detail(row, include_admin=False))
+
+    assert sessions[9] == ["Low-load recovery flush", "Breathing Reset"]
