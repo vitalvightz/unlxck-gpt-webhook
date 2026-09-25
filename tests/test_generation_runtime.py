@@ -1790,3 +1790,125 @@ def test_worker_keeps_an_age_that_already_matches_the_profile():
     _run_legacy_job(store)
 
     assert store.get_latest_intake("athlete-1")["intake"]["athlete"]["age"] == 25
+
+
+# ---------------------------------------------------------------------------
+# A failed inline enhanced card is retried before the job completes.
+#
+# The job completing is what moves the athlete off the generation screen, so
+# the retry must finish first. Retrying after release showed the text fallback
+# while the card was still being built.
+# ---------------------------------------------------------------------------
+
+
+_FAILED_INLINE_CARD_REPORT = {
+    "errors": [],
+    "warnings": [],
+    "structured_plan": {
+        "status": "invalid_fallback_used",
+        "errors": ["faithfulness: LOCKED_CONTENT: 'Body Attack Opportunity' lost required source content"],
+        "warnings": [],
+        "schema_version": None,
+    },
+}
+
+
+class _CardConvertingStage2(FakeStage2Automator):
+    """Finalizes with a failed inline card; the retry returns ``retry_outcome``."""
+
+    def __init__(self, *, inline_report=None, retry_outcome=None, retry_error=None):
+        super().__init__(
+            result_factory=lambda: finalized_result(
+                structured_plan=None,
+                schema_version=None,
+                stage2_validator_report=dict(inline_report or _FAILED_INLINE_CARD_REPORT),
+            )
+        )
+        self.retry_outcome = retry_outcome
+        self.retry_error = retry_error
+        self.conversions: list[str] = []
+
+    async def _attempt_structured_plan(self, *, final_plan_text, planning_brief, source, log_context=None):
+        self.conversions.append(source)
+        if self.retry_error is not None:
+            raise self.retry_error
+        return self.retry_outcome, [{"stage2_total_tokens": 10, "stage2_estimated_cost_usd": 0.01}]
+
+
+def _milestone_codes(job):
+    return [milestone["code"] for milestone in job["progress_milestones"]]
+
+
+def test_failed_inline_card_is_retried_and_saved_before_the_job_completes():
+    from api.stage2_automation import StructuredPlanOutcome
+
+    store = FakeStore()
+    seed_default_profiles(store)
+    stage2 = _CardConvertingStage2(
+        retry_outcome=StructuredPlanOutcome(
+            status="valid", structured_plan={"weeks": [{"days": []}]}, schema_version="1.1"
+        )
+    )
+
+    job = _run_stage2_failure_job(store, stage2, client_request_id="card-retry-succeeds")
+
+    assert job["status"] == "completed"
+    assert stage2.conversions == ["generation_card_retry"]
+    plan = store.plans[job["plan_id"]]
+    assert plan["structured_plan"] == {"weeks": [{"days": []}]}
+    assert plan["stage2_validator_report"]["structured_plan"]["status"] == "valid"
+    codes = _milestone_codes(job)
+    assert codes.index("structured_card_retry_started") < codes.index("structured_card_retry_finished")
+
+
+def test_card_retry_that_fails_again_still_releases_the_plan():
+    from api.stage2_automation import StructuredPlanOutcome
+
+    store = FakeStore()
+    seed_default_profiles(store)
+    stage2 = _CardConvertingStage2(
+        retry_outcome=StructuredPlanOutcome(status="invalid_fallback_used", errors=["still unfaithful"])
+    )
+
+    job = _run_stage2_failure_job(store, stage2, client_request_id="card-retry-fails")
+
+    assert job["status"] == "completed"
+    assert stage2.conversions == ["generation_card_retry"]
+    plan = store.plans[job["plan_id"]]
+    assert plan.get("structured_plan") is None
+    assert plan["stage2_validator_report"]["structured_plan"]["errors"] == ["still unfaithful"]
+
+
+def test_card_retry_crash_releases_on_the_inline_outcome():
+    store = FakeStore()
+    seed_default_profiles(store)
+    stage2 = _CardConvertingStage2(retry_error=RuntimeError("converter blew up"))
+
+    job = _run_stage2_failure_job(store, stage2, client_request_id="card-retry-crashes")
+
+    assert job["status"] == "completed"
+    plan = store.plans[job["plan_id"]]
+    assert plan["stage2_validator_report"]["structured_plan"]["status"] == "invalid_fallback_used"
+    assert "structured_card_retry_finished" in _milestone_codes(job)
+
+
+def test_clean_inline_card_is_not_retried():
+    store = FakeStore()
+    seed_default_profiles(store)
+    clean_report = {
+        "errors": [],
+        "warnings": [],
+        "structured_plan": {"status": "valid", "errors": [], "warnings": [], "schema_version": "1.1"},
+    }
+    stage2 = _CardConvertingStage2(inline_report=clean_report)
+    stage2.result_factory = lambda: finalized_result(
+        structured_plan={"weeks": []},
+        schema_version="1.1",
+        stage2_validator_report=dict(clean_report),
+    )
+
+    job = _run_stage2_failure_job(store, stage2, client_request_id="card-clean")
+
+    assert job["status"] == "completed"
+    assert stage2.conversions == []
+    assert "structured_card_retry_started" not in _milestone_codes(job)

@@ -124,8 +124,15 @@ def test_run_claimed_job_sanitizes_pre_runtime_error(monkeypatch: pytest.MonkeyP
     assert active_tasks == set()
 
 
-def test_completed_generation_schedules_structured_card_conversion(monkeypatch: pytest.MonkeyPatch):
-    """A completed worker plan must get the structured persistence pass."""
+def test_completed_generation_does_not_schedule_a_post_release_card_conversion(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """The card retry runs inside the job, before release, never after it.
+
+    A conversion queued after completion ran while the athlete was already
+    looking at the text fallback, and would be a third attempt on top of the
+    inline pass and the in-job retry.
+    """
     import api.worker as worker
     from api.services import admin_stage2_service
 
@@ -158,7 +165,4 @@ def test_completed_generation_schedules_structured_card_conversion(monkeypatch: 
         assert active_tasks == set()
 
     asyncio.run(scenario())
-    assert len(scheduled) == 1
-    assert scheduled[0]["plan_id"] == "plan-1"
-    assert scheduled[0]["stage2"] == "stage2"
-    assert scheduled[0]["notify"] is False
+    assert scheduled == []

@@ -191,33 +191,9 @@ async def _run_claimed_job(
             stage2=stage2,
             active_tasks=active_tasks,
         )
-        # The generation path may publish the text fallback before structured
-        # conversion has produced a valid card.  Queue the same durable,
-        # narrow-field conversion used by admin approval after the job reaches
-        # its terminal state; otherwise worker-generated plans can remain
-        # permanently without structured_plan/schema_version.
-        completed_job = await asyncio.to_thread(store.get_generation_job, job_id)
-        plan_id = str((completed_job or {}).get("plan_id") or "").strip()
-        is_completed = str((completed_job or {}).get("status") or "").strip().lower() == "completed"
-        if is_completed and plan_id:
-            from .services.admin_stage2_service import run_structured_plan_post_processing
-
-            card_task = asyncio.create_task(
-                run_structured_plan_post_processing(
-                    plan_id=plan_id,
-                    store=store,
-                    stage2=stage2,
-                    notify=False,
-                )
-            )
-            if detached_tasks is not None:
-                detached_tasks.add(card_task)
-                card_task.add_done_callback(
-                    lambda completed_task: _cleanup_worker_task(
-                        completed_task,
-                        detached_tasks=detached_tasks,
-                    )
-                )
+        # A failed inline enhanced card is retried inside run_generation_job,
+        # before the job completes, so the athlete never leaves the generation
+        # screen for the text fallback while a card is still being built.
     except Exception as exc:
         logger.exception("[worker] job failed before generation runtime job_id=%s", job_id)
         # The full traceback is in the server log above. The stored job error is
