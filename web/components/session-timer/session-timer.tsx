@@ -27,6 +27,7 @@ import {
   type TimerView,
 } from "@/lib/session-timer/engine";
 import { ROUND_PRESETS } from "@/lib/session-timer/contact";
+import type { SparringPlannedIntensity } from "@/lib/types";
 import {
   formatClock,
   formatRange,
@@ -40,22 +41,29 @@ export type SessionTimerSummary = {
   /** Plain-text record of the run for the session notes. */
   notes: string;
   /** Sparring rounds the run completed (for the sparring log), or null. */
-  sparring: { rounds: number; roundSeconds: number | null } | null;
+  sparring: {
+    rounds: number;
+    roundSeconds: number | null;
+    /** From the first sparring block's structured intensity, when stated. */
+    plannedIntensity: SparringPlannedIntensity | null;
+  } | null;
 };
 
 /** Completed sparring rounds across the run's sparring items. */
 export function sparringSummary(state: TimerState): SessionTimerSummary["sparring"] {
   let rounds = 0;
   let roundSeconds: number | null = null;
+  let plannedIntensity: SparringPlannedIntensity | null = null;
   let hasSparring = false;
   state.items.forEach((item, index) => {
     if (item.kind === "interval" && item.sparring) {
       hasSparring = true;
       rounds += state.completed[index] ?? 0;
       roundSeconds ??= item.workSec;
+      plannedIntensity ??= item.plannedIntensity ?? null;
     }
   });
-  return hasSparring ? { rounds, roundSeconds } : null;
+  return hasSparring ? { rounds, roundSeconds, plannedIntensity } : null;
 }
 
 const REST_PRESETS = [60, 90, 120, 180];
@@ -301,7 +309,9 @@ function ReadyPanel({ timer, item }: { timer: SessionTimerController; item: Time
 function AdjustSheet({ timer, onClose }: { timer: SessionTimerController; onClose: () => void }) {
   const item = currentItem(timer.state);
   if (!item || item.kind === "task") return null;
-  const adjust = (patch: ItemAdjustment) => timer.update((s) => adjustItem(s, patch));
+  // run(), not update(): lowering a target to what is done completes the
+  // exercise, and that transition plays its sound like any other.
+  const adjust = (patch: ItemAdjustment) => timer.run((s, at) => adjustItem(s, patch, at));
   return (
     <div className="st-sheet st-adjust" role="group" aria-label="Adjust timer">
       <div className="st-steppers">

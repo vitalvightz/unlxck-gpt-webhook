@@ -693,8 +693,12 @@ export function TodaySessionPanel({
               source,
               planId: activePlanId || null,
               sessionId: source === "session" ? session.session_id ?? null : null,
-              plannedIntensity:
-                source === "contact" && contactTarget ? PLANNED_SPARRING_INTENSITY[contactTarget.kind] : null,
+              // The day's deterministic contact classification is authoritative
+              // for both contact rounds and sparring inside a planned session;
+              // the sparring block's own structured intensity is the fallback.
+              plannedIntensity: contactTarget
+                ? PLANNED_SPARRING_INTENSITY[contactTarget.kind]
+                : summary.sparring.plannedIntensity,
               title: title,
               rounds: summary.sparring.rounds,
               roundSeconds: summary.sparring.roundSeconds,

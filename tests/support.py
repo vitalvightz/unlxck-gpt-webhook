@@ -129,6 +129,8 @@ class FakeStore:
         self.adaptation_notes: dict[str, list[dict]] = {}
         self.admin_reviews: list[dict] = []
         self.sparring_logs: list[dict] = []
+        # Simulates the admin-review insert failing inside record_sparring_log.
+        self.fail_sparring_review_insert = False
         self.push_subscriptions: dict[str, dict] = {}
         self.beta_feedback: list[dict] = []
         self.feedback_screenshots: dict[str, tuple[bytes, str]] = {}
@@ -1802,10 +1804,19 @@ class FakeStore:
         self.adaptation_notes.setdefault(athlete_id, []).append(row)
         return dict(row)
 
-    def create_sparring_log(self, athlete_id: str, fields: dict) -> dict:
+    def record_sparring_log(self, athlete_id: str, fields: dict, *, review_reason: str | None) -> dict:
+        # Mirrors the single-transaction RPC: nothing is kept unless everything is.
+        rocked = bool(fields.get("rocked"))
+        if rocked and not (review_reason or "").strip():
+            raise ValueError("rocked report requires a review reason")
+        if rocked and self.fail_sparring_review_insert:
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="review insert failed")
         row = {"id": str(uuid4()), "athlete_id": athlete_id, "created_at": _now(), **fields}
+        review = None
+        if rocked:
+            review = self.create_admin_review(athlete_id, {"reason": review_reason, "status": "pending"})
         self.sparring_logs.append(row)
-        return dict(row)
+        return {"log": dict(row), "review": review}
 
     def create_admin_review(self, athlete_id: str, fields: dict) -> dict:
         row = {

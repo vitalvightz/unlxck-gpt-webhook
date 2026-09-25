@@ -86,6 +86,8 @@ test("the sparring summary counts only completed sparring rounds", () => {
     },
   ];
   const state = { ...createTimerState(items), completed: [4, 3] };
-  assert.deepEqual(sparringSummary(state), { rounds: 4, roundSeconds: 180 });
+  assert.deepEqual(sparringSummary(state), { rounds: 4, roundSeconds: 180, plannedIntensity: null });
+  const planned = { ...state, items: [{ ...items[0], plannedIntensity: "hard" as const }, items[1]] };
+  assert.equal(sparringSummary(planned)?.plannedIntensity, "hard");
   assert.equal(sparringSummary(createTimerState([items[1]])), null);
 });

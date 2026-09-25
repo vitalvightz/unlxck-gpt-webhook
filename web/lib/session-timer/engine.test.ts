@@ -269,35 +269,92 @@ test("ready-screen adjustments clamp and clear the setup flag", () => {
 test("mid-round adjustments apply to the running phase and never erase done work", () => {
   let state = startItem(createTimerState([ROUNDS]), T0).state;
   // Coach calls 2-minute rounds 30 s into round 1.
-  state = adjustItem(state, { workSec: 120 });
+  state = adjustItem(state, { workSec: 120 }, T0 + 30_000).state;
   assert.equal(viewAt(state, T0 + 30_000).remainingMs, 90_000);
   state = advance(state, T0 + 120_000).state;
   assert.equal(state.phase, "rest");
   // Shorter rest, applied to the rest already running.
-  state = adjustItem(state, { restSec: 30 });
+  state = adjustItem(state, { restSec: 30 }, T0 + 120_000).state;
   assert.equal(viewAt(state, T0 + 120_000).remainingMs, 30_000);
-  // Rounds cannot drop below the round that is already under way.
-  state = adjustItem(state, { rounds: 1 });
-  const item = state.items[0];
-  assert.ok(item.kind === "interval");
-  assert.equal(item.rounds, 2);
 });
 
-test("set adjustments make the target and rest exact, even mid-rest", () => {
+test("a round in progress cannot be cut from the target", () => {
+  let state = startItem(createTimerState([ROUNDS]), T0).state;
+  state = advance(state, T0 + 240_000).state; // round 1 done, rest done, round 2 running
+  assert.equal(state.phase, "work");
+  assert.equal(state.unit, 2);
+  const step = adjustItem(state, { rounds: 1 }, T0 + 250_000);
+  const item = step.state.items[0];
+  assert.ok(item.kind === "interval");
+  assert.equal(item.rounds, 2);
+  assert.equal(step.state.phase, "work");
+});
+
+test("lowering rounds to what is done while resting completes the exercise", () => {
+  let state = startItem(createTimerState([ROUNDS, MOBILITY]), T0).state;
+  state = advance(state, T0 + 180_000).state; // round 1 done, resting before round 2
+  assert.equal(state.phase, "rest");
+  const step = adjustItem(state, { rounds: 1 }, T0 + 185_000);
+  assert.deepEqual(step.events, ["item_complete"]);
+  assert.equal(step.state.index, 1);
+  // Round 2 never starts, however long the old rest would have run.
+  assert.equal(advance(step.state, T0 + 600_000).state.phase, "ready");
+});
+
+test("sets: 2 done and resting, target lowered to 2 -> the exercise completes, no set 3", () => {
+  let state = startItem(createTimerState([SQUAT, MOBILITY]), T0).state;
+  state = completeSet(state, T0).state;
+  state = completeSet(skipRest(state, T0 + 100_000).state, T0 + 110_000).state;
+  assert.equal(state.phase, "rest");
+  assert.equal(state.unit, 3);
+  const step = adjustItem(state, { sets: 2 }, T0 + 115_000);
+  assert.deepEqual(step.events, ["item_complete"]);
+  assert.deepEqual(step.state.completed, [2, 0]);
+  assert.equal(step.state.index, 1);
+  assert.equal(step.state.phase, "ready");
+  // The target can't go below the sets already done either.
+  const tooLow = adjustItem(state, { sets: 1 }, T0 + 115_000);
+  assert.deepEqual(tooLow.state.completed, [2, 0]);
+  assert.equal(tooLow.state.index, 1);
+
+  // Session-ending case: the same on the last exercise ends in done, not set 3.
+  let last = startItem(createTimerState([SQUAT]), T0).state;
+  last = completeSet(last, T0).state;
+  last = completeSet(skipRest(last, T0 + 100_000).state, T0 + 110_000).state;
+  const ended = adjustItem(last, { sets: 2 }, T0 + 115_000);
+  assert.deepEqual(ended.events, ["session_complete"]);
+  assert.equal(advance(ended.state, T0 + 900_000).state.phase, "done");
+});
+
+test("sets: while performing set 3, the target cannot become 2", () => {
   let state = startItem(createTimerState([SQUAT]), T0).state;
   state = completeSet(state, T0).state;
   state = completeSet(skipRest(state, T0 + 100_000).state, T0 + 110_000).state;
-  // Two sets done: the target can't go below that.
-  state = adjustItem(state, { sets: 1, restSec: 60 });
+  state = skipRest(state, T0 + 210_000).state; // set 3 under way
+  assert.equal(state.phase, "work");
+  assert.equal(state.unit, 3);
+  const step = adjustItem(state, { sets: 2 }, T0 + 215_000);
+  const item = step.state.items[0];
+  assert.ok(item.kind === "sets");
+  assert.deepEqual(item.sets, { min: 3, max: 3 });
+  assert.deepEqual(step.events, []);
+  assert.equal(step.state.phase, "work");
+  // Finishing set 3 then completes the exercise at the adjusted target.
+  assert.equal(completeSet(step.state, T0 + 240_000).state.phase, "done");
+});
+
+test("a set rest adjustment becomes exact, even mid-rest", () => {
+  let state = startItem(createTimerState([SQUAT]), T0).state;
+  state = completeSet(state, T0).state;
+  state = adjustItem(state, { restSec: 60 }, T0 + 5_000).state;
   const item = state.items[0];
   assert.ok(item.kind === "sets");
-  assert.deepEqual(item.sets, { min: 2, max: 2 });
   assert.deepEqual(item.restSec, { min: 60, max: 60 });
-  // The running rest is now an exact 60 s with no separate minimum.
   assert.equal(state.readyAt, null);
-  assert.equal(viewAt(state, T0 + 110_000).remainingMs, 60_000);
-  assert.equal(adjustItem(state, { restSec: 5 }).items[0].kind === "sets" &&
-    (adjustItem(state, { restSec: 5 }).items[0] as SetsItem).restSec?.min, 15);
+  assert.equal(viewAt(state, T0 + 5_000).remainingMs, 55_000);
+  const clamped = adjustItem(state, { restSec: 5 }, T0 + 5_000).state.items[0];
+  assert.ok(clamped.kind === "sets");
+  assert.equal(clamped.restSec?.min, 15);
 });
 
 test("warning cues: clapper at ten seconds of work, 3-2-1 at the end of rest", () => {

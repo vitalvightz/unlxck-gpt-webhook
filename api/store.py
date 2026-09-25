@@ -605,7 +605,9 @@ class AppStore(Protocol):
 
     def create_adaptation_note(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
 
-    def create_sparring_log(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
+    def record_sparring_log(
+        self, athlete_id: str, fields: dict[str, Any], *, review_reason: str | None
+    ) -> dict[str, Any]: ...
 
     def create_admin_review(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
 
@@ -4954,12 +4956,36 @@ class SupabaseAppStore:
             .execute()
         )
 
-    def create_sparring_log(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
-        return self._insert_row(
-            "sparring_logs",
-            {"athlete_id": athlete_id, **fields},
-            operation=f"create_sparring_log athlete_id={athlete_id}",
-        )
+    def record_sparring_log(
+        self, athlete_id: str, fields: dict[str, Any], *, review_reason: str | None
+    ) -> dict[str, Any]:
+        """Insert a sparring log and, for a rocked report, its admin review in
+        one transaction (public.record_sparring_log). Returns {"log", "review"}.
+        """
+        operation = f"record_sparring_log athlete_id={athlete_id}"
+        try:
+            response = self._run_with_transient_retry(
+                operation=operation,
+                fn=lambda: self.client.rpc(
+                    "record_sparring_log",
+                    {"p_athlete_id": athlete_id, "p_log": fields, "p_review_reason": review_reason},
+                ).execute(),
+            )
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=operation,
+                detail="failed to save sparring log",
+                exc=exc,
+            )
+        payload = getattr(response, "data", None)
+        if isinstance(payload, list):
+            payload = payload[0] if payload else None
+        if not isinstance(payload, dict) or not isinstance(payload.get("log"), dict):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Sparring log service temporarily unavailable",
+            )
+        return payload
 
     def create_admin_review(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
         return self._insert_row(

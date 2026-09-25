@@ -153,3 +153,34 @@ def test_rejects_out_of_range_values():
     assert _post(client, head_contact="some").status_code == 422
     assert _post(client, notes="x" * 1001).status_code == 422
     assert store.sparring_logs == []
+
+
+def test_rocked_report_is_never_acknowledged_without_a_durable_review():
+    """The log and its review are one transaction: if the review insert fails,
+    nothing is saved and the athlete is told to retry, never "logged"."""
+    client, store, _ = _build_client()
+    _seed_plan(store)
+    store.fail_sparring_review_insert = True
+
+    resp = _post(client, rocked=True, head_contact="heavy")
+
+    assert resp.status_code == 503
+    assert "not saved" in resp.json()["detail"]
+    assert store.sparring_logs == []
+    assert store.admin_reviews == []
+
+    # A non-rocked entry is unaffected by the review path.
+    assert _post(client, rocked=False).status_code == 201
+    assert len(store.sparring_logs) == 1
+
+
+def test_rocked_log_and_review_are_written_together():
+    client, store, _ = _build_client()
+    _seed_plan(store)
+
+    resp = _post(client, rocked=True)
+
+    assert resp.status_code == 201
+    assert resp.json()["review_created"] is True
+    assert len(store.sparring_logs) == 1
+    assert len(store.admin_reviews) == 1

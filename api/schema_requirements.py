@@ -56,6 +56,10 @@ REQUIRED_TABLES: tuple[str, ...] = (
     # must fail the deploy gate just like the daily-tracking tables above.
     "today_checkins",
     "session_completions",
+    # Post-sparring entries from the round timer (POST /api/today/sparring-log).
+    # A missing migration must fail the gate: the endpoint writes this table
+    # and, for rocked reports, its admin review in one RPC.
+    "sparring_logs",
     # Durable XP aggregate + immutable award ledger. Award writes are atomic
     # through public.award_athlete_xp and never browser-controlled.
     "xp_accounts",
@@ -331,6 +335,23 @@ REQUIRED_SESSION_COMPLETIONS_COLUMNS: tuple[str, ...] = (
     "updated_at",
 )
 
+REQUIRED_SPARRING_LOGS_COLUMNS: tuple[str, ...] = (
+    "id",
+    "athlete_id",
+    "plan_id",
+    "session_id",
+    "training_day",
+    "source",
+    "planned_intensity",
+    "intensity",
+    "rounds_completed",
+    "round_seconds",
+    "head_contact",
+    "rocked",
+    "notes",
+    "created_at",
+)
+
 REQUIRED_XP_ACCOUNTS_COLUMNS: tuple[str, ...] = (
     "athlete_id",
     "total_xp",
@@ -437,6 +458,7 @@ REQUIRED_COLUMNS: Mapping[str, tuple[str, ...]] = {
     "admin_reviews": REQUIRED_ADMIN_REVIEWS_COLUMNS,
     "today_checkins": REQUIRED_TODAY_CHECKINS_COLUMNS,
     "session_completions": REQUIRED_SESSION_COMPLETIONS_COLUMNS,
+    "sparring_logs": REQUIRED_SPARRING_LOGS_COLUMNS,
     "xp_accounts": REQUIRED_XP_ACCOUNTS_COLUMNS,
     "xp_awards": REQUIRED_XP_AWARDS_COLUMNS,
     "beta_feedback": REQUIRED_BETA_FEEDBACK_COLUMNS,
@@ -477,6 +499,8 @@ REQUIRED_FUNCTIONS: tuple[str, ...] = (
     "public.claim_notification_delivery_v2",
     "public.record_notification_evaluation",
     "public.invalidate_notification_action",
+    # Atomic sparring log + rocked/dropped admin review (api/store.py::record_sparring_log).
+    "public.record_sparring_log",
 )
 
 # ---------------------------------------------------------------------------
@@ -547,6 +571,10 @@ INDEX_REQUIREMENTS: tuple[IndexRequirement, ...] = (
         accepted_names=("session_completions_athlete_session_day_key",),
     ),
     IndexRequirement(
+        label="sparring_logs athlete/training-day index",
+        accepted_names=("sparring_logs_athlete_day_idx",),
+    ),
+    IndexRequirement(
         label="xp awards athlete/idempotency uniqueness",
         accepted_names=("xp_awards_athlete_idempotency_key",),
     ),
@@ -594,6 +622,7 @@ RLS_REQUIRED_TABLES: tuple[str, ...] = (
     "admin_reviews",
     "today_checkins",
     "session_completions",
+    "sparring_logs",
     "xp_accounts",
     "xp_awards",
     "beta_feedback",

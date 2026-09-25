@@ -499,28 +499,33 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
 
         fields = request_body.model_dump(exclude={"plan_id"})
-        row = store.create_sparring_log(
-            profile.athlete_id,
-            {
-                **fields,
-                "plan_id": plan_id,
-                "training_day": resolve_training_day(profile.athlete_timezone),
-            },
-        )
-
-        review_created = False
-        if request_body.rocked:
-            try:
-                store.create_admin_review(
-                    profile.athlete_id,
-                    {"reason": _rocked_review_reason(request_body), "status": "pending"},
-                )
-                review_created = True
-            except Exception:  # noqa: BLE001 - the athlete's log is already saved
-                logger.exception(
-                    "[sparring] rocked review creation failed athlete_id=%s",
-                    profile.athlete_id,
-                )
+        # The log and (for a rocked report) its admin review are written in one
+        # transaction. If either fails, nothing is kept and the athlete is told
+        # to retry: a rocked report is never acknowledged without its review.
+        try:
+            result = store.record_sparring_log(
+                profile.athlete_id,
+                {
+                    **fields,
+                    "plan_id": plan_id,
+                    "training_day": resolve_training_day(profile.athlete_timezone),
+                },
+                review_reason=_rocked_review_reason(request_body) if request_body.rocked else None,
+            )
+        except Exception as exc:  # noqa: BLE001 - surfaced as a retryable failure
+            logger.exception("[sparring] log write failed athlete_id=%s", profile.athlete_id)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Your sparring log was not saved. Please try again.",
+            ) from exc
+        row = result["log"]
+        review_created = result.get("review") is not None
+        if request_body.rocked and not review_created:
+            logger.error("[sparring] rocked log without review athlete_id=%s", profile.athlete_id)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Your sparring log was not saved. Please try again.",
+            )
         return SparringLogResponse(
             log=SparringLogRecord.model_validate(
                 {**row, "training_day": str(row.get("training_day")), "created_at": str(row.get("created_at") or "")}

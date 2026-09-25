@@ -157,6 +157,12 @@ export function SparringLogPrompt({
         rocked: rocked === "yes",
         notes: notes.trim(),
       });
+      // A rocked report only counts once its review is queued. The server
+      // writes both atomically; this guards against any response without it.
+      if (rocked === "yes" && !result.review_created) {
+        setError("Your report wasn't sent. Please try again.");
+        return;
+      }
       if (result.safety_notice) {
         setSavedNotice(result.safety_notice);
       } else {

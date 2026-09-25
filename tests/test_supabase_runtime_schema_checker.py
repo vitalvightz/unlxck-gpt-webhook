@@ -136,6 +136,7 @@ def test_index_requirement_satisfied_by_constraint_alias():
         "daily_checkins_athlete_date_key",
         "today_checkins_athlete_plan_day_key",
         "session_completions_athlete_session_day_key",
+        "sparring_logs_athlete_day_idx",
         "xp_awards_athlete_idempotency_key",
         "xp_awards_one_daily_login_per_calendar_date",
         "beta_feedback_submitter_context_key",
@@ -287,3 +288,17 @@ def test_summarize_exc_redacts_long_secrets():
     summary = _summarize_exc(RuntimeError(f"connect failed key={secret}"))
     assert secret not in summary
     assert "[redacted_secret]" in summary
+
+
+def test_sparring_log_schema_is_required_by_the_deploy_gate():
+    from api.schema_requirements import INDEX_REQUIREMENTS, REQUIRED_COLUMNS
+
+    assert "sparring_logs" in REQUIRED_TABLES
+    assert "sparring_logs" in RLS_REQUIRED_TABLES
+    assert "public.record_sparring_log" in REQUIRED_FUNCTIONS
+    for column in ("athlete_id", "training_day", "intensity", "head_contact", "rocked"):
+        assert column in REQUIRED_COLUMNS["sparring_logs"]
+    assert any(
+        "sparring_logs_athlete_day_idx" in requirement.accepted_names
+        for requirement in INDEX_REQUIREMENTS
+    )
