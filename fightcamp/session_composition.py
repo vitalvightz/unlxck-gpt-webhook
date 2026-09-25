@@ -54,6 +54,14 @@ _NORMAL_STRENGTH_ROLE_CAPS: dict[str, int] = {
     "small_strength_touch_day": 2,
 }
 _DEFAULT_NORMAL_STRENGTH_CAP = 3
+# Full strength / strength+power roles whose role cap sits below the preferred
+# session size. On a clear day at zero readiness pressure the cap lifts to the
+# minimum; everything else (pressure, family limits, Stage 1 membership) still
+# bounds the result, so this never invents an exercise.
+_STANDALONE_STRENGTH_MINIMUM = 4
+_STANDALONE_STRENGTH_MINIMUM_ROLE_KEYS = frozenset(
+    {"secondary_strength_day", "neural_plus_strength_day", "transfer_strength_day"}
+)
 
 _FATIGUE_PRESSURE = {"low": 0, "moderate": 1, "high": 2}
 _CUT_PRESSURE = {
@@ -338,6 +346,46 @@ def _effective_role_cap(role_key: str, pressure: int) -> tuple[int, int]:
     if pressure == 2:
         return base_cap, max(2, base_cap - 2)
     return base_cap, 2
+
+
+def _strength_role_is_standalone(
+    weekly_role_map: dict[str, Any], week: dict[str, Any], week_ordinal: int, role: dict[str, Any]
+) -> bool:
+    """True only when the role's day holds no contact or other meaningful session.
+
+    Fails closed: an undated or unclassifiable role, a same-day contact or
+    meaningful strength/conditioning session, or any non-ALLOW verdict from the
+    shared calendar policy (e.g. the day before hard contact) is not standalone.
+    """
+    from .calendar_context import build_events, classify_role, week_scope
+    from .combat_load_policy import (
+        CONTACT_LOAD_CLASSES,
+        LoadClass,
+        PlacementDirective,
+        evaluate_candidate_at_position,
+    )
+
+    d_day = role_d_day(week, role)
+    profile = classify_role(role)
+    if d_day is None or profile is None:
+        return False
+    events = build_events(weekly_role_map, exclude_role=role)
+    blocking = CONTACT_LOAD_CLASSES | {
+        LoadClass.MEANINGFUL_STRENGTH,
+        LoadClass.MEANINGFUL_CONDITIONING,
+    }
+    if any(
+        event.position == -d_day and event.profile.load_class in blocking
+        for event in events
+    ):
+        return False
+    decision = evaluate_candidate_at_position(
+        profile,
+        candidate_position=-d_day,
+        events=events,
+        candidate_scope=week_scope(week, week_ordinal),
+    )
+    return decision.directive is PlacementDirective.ALLOW
 
 
 def _slot_selected_item(slot: dict[str, Any]) -> dict[str, Any]:
@@ -1177,6 +1225,17 @@ def compose_normal_strength_assignments(
             records = _candidate_records(owned_slots)
             role_key = str(role.get("role_key") or "").strip()
             base_cap, effective_cap = _effective_role_cap(role_key, pressure)
+            standalone_minimum_applied = (
+                pressure == 0
+                and phase in {"GPP", "SPP"}
+                and role_key in _STANDALONE_STRENGTH_MINIMUM_ROLE_KEYS
+                and effective_cap < _STANDALONE_STRENGTH_MINIMUM
+                and _strength_role_is_standalone(
+                    weekly_role_map, week, week_position + 1, role
+                )
+            )
+            if standalone_minimum_applied:
+                effective_cap = _STANDALONE_STRENGTH_MINIMUM
             selected_records, dropped = _select_bounded_records(
                 records,
                 role_key=role_key,
@@ -1196,6 +1255,7 @@ def compose_normal_strength_assignments(
                 "role_key": role_key,
                 "base_exercise_cap": base_cap,
                 "effective_exercise_cap": effective_cap,
+                "standalone_minimum_applied": standalone_minimum_applied,
                 "major_family_limit": 2 if pressure == 0 else 1,
                 "selected_count": len(assignments),
                 "selected_names": [item["name"] for item in assignments],
