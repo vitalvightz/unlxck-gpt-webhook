@@ -105,7 +105,11 @@ def resolve_effective_structured_plan(
         )
 
     planning_brief = _mapping(plan_row.get("planning_brief"))
-    fallback = build_deterministic_structured_plan(planning_brief)
+    # Every surface (plan view, Today, progress) reads the same athlete-visible
+    # plan text, so the rebuilt card carries the doses the athlete was given
+    # wherever it renders. A held plan's unreleased text is never read here.
+    plan_text = raw_markdown or str(plan_row.get("plan_text") or "")
+    fallback = build_deterministic_structured_plan(planning_brief, plan_text=plan_text or None)
     if fallback is None:
         return legacy_open_calendar
     parsed = safe_parse_structured_plan(fallback, raw_markdown=raw_markdown or None)

@@ -40,6 +40,11 @@ from .structured_plan_calendar_spine import (
     reconcile_calendar_spine,
     reconcile_priority_microdose_representations,
 )
+from .structured_plan_faithfulness import (
+    _day_header_dday,
+    _source_block_segment,
+    _source_day_section_lines,
+)
 from .structured_plan_locked_merge import merge_planner_owned_structured_content
 
 logger = logging.getLogger(__name__)
@@ -188,7 +193,8 @@ def _effective_prescription(role: dict[str, Any], assignment: dict[str, Any]) ->
     """The planner's authoritative dose for one assignment.
 
     ``effective_strength_prescriptions`` is the resolved authority (it carries any
-    late-camp dose cap); the assignment's own bank dose is the fallback.
+    late-camp dose cap); the assignment's own effective dose, then its bank
+    dose, are the fallbacks.
     """
     slot_id = str(assignment.get("slot_id") or "").strip()
     name = str(assignment.get("name") or "").strip()
@@ -205,7 +211,240 @@ def _effective_prescription(role: dict[str, Any], assignment: dict[str, Any]) ->
             ).strip()
             if prescription:
                 return prescription
-    return str(assignment.get("base_prescription") or "").strip()
+    return str(
+        assignment.get("effective_prescription")
+        or assignment.get("base_prescription")
+        or ""
+    ).strip()
+
+
+# ---------------------------------------------------------------------------
+# Exact working doses.
+#
+# Stage 1 keeps a bank dose as authorised bounds ("20-30min continuous") and
+# Stage 2 is required to prescribe one exact value inside them (the validator's
+# ``ambiguous_working_dose`` rule). This fallback only exists when Stage 2 did
+# not produce a usable card, so the value the athlete was actually given lives
+# in the plan text. That text is read first; the bounds are only resolved here
+# when the text carries no line for the exercise, and then by the same rule the
+# athlete copy follows: workload and intensity take the lower bound, rest takes
+# the upper bound.
+# ---------------------------------------------------------------------------
+
+# A bank's "4–6x2–5" shorthand glues the reps range to its multiplier, so an
+# "x" directly before the number still starts a range.
+_DOSE_RANGE_RE = re.compile(
+    r"(?:(?<=[x×X])|(?<![\w.]))"
+    r"(?P<low>\d+(?:\.\d+)?)\s*[-–—]\s*(?P<high>\d+(?:\.\d+)?)(?![\d.])"
+)
+_DOSE_UNIT_AFTER_RE = re.compile(
+    r"^\s*(?:[x×]|/\s*10\b|%|sets?\b|reps?\b|rounds?\b|holds?\b|bursts?\b|"
+    r"kg\b|kgs\b|lbs?\b|s\b|sec\b|secs\b|seconds?\b|min\b|mins\b|minutes?\b|m\b)",
+    re.IGNORECASE,
+)
+_DOSE_LABEL_BEFORE_RE = re.compile(
+    r"\b(?:RPE|RIR|sets?|reps?|rounds?|work|rest|recovery|reset|duration|load)\s*[:=]?\s*$",
+    re.IGNORECASE,
+)
+_REST_BEFORE_RE = re.compile(r"\b(?:rest|recovery|reset|RIR)\s*[:=]?\s*$", re.IGNORECASE)
+_REST_AFTER_RE = re.compile(
+    r"^\s*(?:s|sec|secs|seconds?|min|mins|minutes?)\s+(?:rest|recovery|reset)\b",
+    re.IGNORECASE,
+)
+
+
+def _exact_working_dose(prescription: str) -> str:
+    """One exact value for every unit-bearing range in a planner dose.
+
+    Numbers that are not a dose (a ``D-21 to D-8`` window, a name) are left as
+    written: a range is only resolved when a dose unit follows it or a dose
+    label precedes it.
+    """
+    source = str(prescription or "")
+
+    def choose(match: re.Match[str]) -> str:
+        head = source[max(0, match.start() - 28) : match.start()]
+        tail = source[match.end() :]
+        if not (_DOSE_UNIT_AFTER_RE.match(tail) or _DOSE_LABEL_BEFORE_RE.search(head)):
+            return match.group(0)
+        is_rest = bool(_REST_BEFORE_RE.search(head) or _REST_AFTER_RE.match(tail))
+        return match.group("high" if is_rest else "low")
+
+    return _DOSE_RANGE_RE.sub(choose, source)
+
+
+# ---------------------------------------------------------------------------
+# The plan text's own line for a selected exercise.
+#
+# Stage 2 writes each exercise in the planner's session-body grammar:
+#
+#     Why: <rationale>
+#     - <Exercise>: <clause>; <clause>; ...
+#       Cue: ... / Purpose: ... / Easier: ... / Stop: ...
+#
+# The exercise is matched by its exact title inside its own D-day only, so a
+# same-named drill on another day never lends this block its dose.
+# ---------------------------------------------------------------------------
+
+_UNIT_NAMES = {
+    "s": "seconds",
+    "sec": "seconds",
+    "secs": "seconds",
+    "second": "seconds",
+    "seconds": "seconds",
+    "min": "minutes",
+    "mins": "minutes",
+    "minute": "minutes",
+    "minutes": "minutes",
+}
+_TIME_UNIT = r"(?P<unit>s|secs?|seconds?|mins?|minutes?)"
+_NUMBER = r"(?P<value>\d+(?:\.\d+)?)"
+_DURATION_CLAUSE_RE = re.compile(rf"(?:duration\s*:?\s*)?{_NUMBER}\s*{_TIME_UNIT}", re.IGNORECASE)
+_REST_CLAUSE_RES = (
+    re.compile(rf"(?:full\s+)?rest\s*:?\s*{_NUMBER}\s*{_TIME_UNIT}", re.IGNORECASE),
+    re.compile(rf"{_NUMBER}\s*{_TIME_UNIT}\s+rest", re.IGNORECASE),
+)
+_EFFORT_CLAUSE_RE = re.compile(
+    r"(?P<method>RPE|RIR)\s*(?P<value>\d+(?:\.\d+)?(?:\s*[-–—]\s*\d+(?:\.\d+)?)?)",
+    re.IGNORECASE,
+)
+_SETS_REPS_CLAUSE_RE = re.compile(
+    r"(?P<sets>\d+)\s*sets?\s*[x×]\s*(?P<reps>\d+)\s*reps?", re.IGNORECASE
+)
+_SETS_TIME_CLAUSE_RE = re.compile(
+    rf"(?P<sets>\d+)\s*(?:sets?|holds?)\s*[x×]\s*{_NUMBER}\s*{_TIME_UNIT}", re.IGNORECASE
+)
+
+
+def _number(text: str) -> int | float:
+    value = float(text)
+    return int(value) if value.is_integer() else value
+
+
+def _measured(match: re.Match[str]) -> dict[str, Any]:
+    return {
+        "value": _number(match.group("value")),
+        "unit": _UNIT_NAMES[match.group("unit").lower()],
+    }
+
+
+def _lift_dose_fields(dose: str) -> tuple[dict[str, Any], str]:
+    """Structured fields for the whole clauses the card renders as stats.
+
+    Only a clause that is *entirely* one quantity is lifted ("duration 20 min",
+    "rest 120 sec", "RPE 6", "2 sets x 2 reps"); every other clause keeps the
+    text's own wording and stays on the card as the leading cue. A value the
+    text wrote is never changed. "3 holds x 10 sec" is timed work: its count
+    becomes ``sets`` and its time ``duration``.
+    """
+    fields: dict[str, Any] = {}
+    kept: list[str] = []
+    for raw_clause in re.split(r"\s*;\s*", dose.strip().rstrip(".").strip()):
+        clause = raw_clause.strip().rstrip(".").strip()
+        if not clause:
+            continue
+        rest = next(
+            (m for pattern in _REST_CLAUSE_RES if (m := pattern.fullmatch(clause))), None
+        )
+        if "rest" not in fields and rest:
+            fields["rest"] = _measured(rest)
+            continue
+        if "duration" not in fields and (match := _DURATION_CLAUSE_RE.fullmatch(clause)):
+            fields["duration"] = _measured(match)
+            continue
+        if "effort" not in fields and (match := _EFFORT_CLAUSE_RE.fullmatch(clause)):
+            raw_value = re.sub(r"\s*[-–—]\s*", "-", match.group("value"))
+            fields["effort"] = {
+                "method": match.group("method").upper(),
+                "value": _number(raw_value) if "-" not in raw_value else raw_value,
+                "scale": "1-10" if match.group("method").upper() == "RPE" else None,
+            }
+            continue
+        if "sets" not in fields and (match := _SETS_REPS_CLAUSE_RE.fullmatch(clause)):
+            fields["sets"] = int(match.group("sets"))
+            fields["reps"] = int(match.group("reps"))
+            continue
+        if (
+            "sets" not in fields
+            and "duration" not in fields
+            and (match := _SETS_TIME_CLAUSE_RE.fullmatch(clause))
+        ):
+            fields["sets"] = int(match.group("sets"))
+            fields["duration"] = _measured(match)
+            continue
+        kept.append(clause)
+    return fields, "; ".join(kept)
+
+
+def _source_title_re(name: str) -> re.Pattern[str] | None:
+    """The exercise title as ``_source_block_segment`` matches it, dose excluded.
+
+    Also accepts the title as one option of a source choice ("Short sprint
+    bounds or low box jumps — ..."), which that helper falls back to.
+    """
+    tokens = re.findall(r"[a-z0-9]+", str(name or "").casefold())
+    if not tokens:
+        return None
+    title = r"[\s\W]+".join(re.escape(token) for token in tokens)
+    return re.compile(
+        rf"^\s*(?:[-*•]\s*)?{title}(?:\s+or\s+[^.:,—–]+)?\s*(?:[.:,—–]|\s-\s)", re.IGNORECASE
+    )
+
+
+def _source_session_why(section_lines: list[str] | None, names: list[str]) -> str:
+    """The text's ``Why:`` for the session holding the first of ``names``.
+
+    Only the lines between that exercise and its own day header are read, so a
+    second session on the same D-day never lends this one its rationale.
+    """
+    if not section_lines:
+        return ""
+    for name in names:
+        title_re = _source_title_re(name)
+        if title_re is None:
+            continue
+        index = next(
+            (i for i, line in enumerate(section_lines) if title_re.match(line)), None
+        )
+        if index is None:
+            continue
+        for previous in reversed(section_lines[:index]):
+            why = _WHY_LINE_RE.match(previous)
+            if why:
+                return why.group("text").strip()
+            if _day_header_dday(previous) is not None:
+                break
+        return ""
+    return ""
+
+
+def _source_block(
+    section_lines: list[str] | None, name: str
+) -> dict[str, Any] | None:
+    """The fields the plan text prescribes for ``name`` on its own D-day.
+
+    ``None`` when the day carries no exact line for this exercise, so the
+    caller keeps the planner's dose instead of borrowing another drill's.
+    """
+    title_re = _source_title_re(name)
+    if not section_lines or title_re is None:
+        return None
+    segment = _source_block_segment("\n".join(section_lines), name)
+    first, _, details = segment.partition("\n")
+    title = title_re.match(first)
+    if title is None:
+        return None
+    dose = first[title.end() :].strip()
+    parsed = _parse_display_text(f"- {name}: {dose}\n{details}")
+    fields, remainder = _lift_dose_fields(parsed.activity_dose)
+    return {
+        **fields,
+        "purpose": parsed.purpose or None,
+        "coaching_cues": ([remainder] if remainder else []) + list(parsed.cues),
+        "regression_options": list(parsed.regressions),
+        "progression_rule": parsed.progression or None,
+        "stop_rules": list(parsed.stop_rules),
+    }
 
 
 # The weekly priority exposure floor carries the same microdose both as planner
@@ -249,7 +488,12 @@ def _microdose_block(role: dict[str, Any], d_day: int, role_key: str) -> dict[st
     }
 
 
-def _blocks(role: dict[str, Any], d_day: int, role_key: str) -> list[dict[str, Any]]:
+def _blocks(
+    role: dict[str, Any],
+    d_day: int,
+    role_key: str,
+    source_lines: list[str] | None = None,
+) -> list[dict[str, Any]]:
     block_type = _block_type(role)
     blocks: list[dict[str, Any]] = []
     microdose = role.get("priority_microdose")
@@ -275,20 +519,27 @@ def _blocks(role: dict[str, Any], d_day: int, role_key: str) -> list[dict[str, A
             or name.casefold() == microdose_name
         ):
             continue
-        prescription = _effective_prescription(role, assignment)
-        blocks.append(
-            {
-                "block_id": f"deterministic-{d_day}-{role_key}-{index}",
-                "block_type": block_type,
-                "display_name": name,
-                "order_index": index,
-                # The resolved dose is a planner string, not a parsed set/rep
-                # structure. It is surfaced verbatim rather than guessed apart.
-                "coaching_cues": [prescription] if prescription else [],
-                "regression_options": [],
-                "substitutions": [],
-            }
-        )
+        block: dict[str, Any] = {
+            "block_id": f"deterministic-{d_day}-{role_key}-{index}",
+            "block_type": block_type,
+            "display_name": name,
+            "order_index": index,
+            "regression_options": [],
+            "substitutions": [],
+        }
+        source = _source_block(source_lines, name)
+        if source is not None:
+            # The plan text is what the athlete was given: its exact dose and
+            # its own Cue / Purpose / Easier / Stop lines are the card.
+            block.update({key: value for key, value in source.items() if value not in (None, [])})
+            block.setdefault("coaching_cues", [])
+        else:
+            # No text line for this exercise: the planner's dose, surfaced
+            # verbatim as the leading cue except that authorised bounds are
+            # resolved to one exact working value.
+            prescription = _exact_working_dose(_effective_prescription(role, assignment))
+            block["coaching_cues"] = [prescription] if prescription else []
+        blocks.append(block)
     # Only ever attached to a host that already renders. A role with no selected
     # exercise renders no session at all here, and a microdose must not be the
     # thing that brings one into existence - that would be a new session.
@@ -442,9 +693,11 @@ def _parsed_block(
     }
 
 
-def _session(role: dict[str, Any], d_day: int) -> dict[str, Any] | None:
+def _session(
+    role: dict[str, Any], d_day: int, source_lines: list[str] | None = None
+) -> dict[str, Any] | None:
     role_key = str(role.get("role_key") or "").strip()
-    blocks = _blocks(role, d_day, role_key or "role")
+    blocks = _blocks(role, d_day, role_key or "role", source_lines)
     instruction = _support_instruction(role)
     parsed = _parse_display_text(instruction) if instruction and not blocks else None
     if parsed is not None:
@@ -475,6 +728,9 @@ def _session(role: dict[str, Any], d_day: int) -> dict[str, Any] | None:
     # single line IS the prescription. Putting instructional copy behind the
     # renderer's "Why" kicker told the athlete that "Neck CARs, shoulder CARs,
     # wrist circles…" was a rationale.
+    #
+    # A session built from selected exercises takes the plan text's own "Why:"
+    # for that session, so the card does not repeat its title as a rationale.
     objective = str(title or "Session")
     if parsed is not None:
         if parsed.why and blocks:
@@ -483,6 +739,13 @@ def _session(role: dict[str, Any], d_day: int) -> dict[str, Any] | None:
             objective = parsed.instruction
         elif parsed.why:
             objective = parsed.why
+    elif blocks:
+        names = [
+            str(assignment.get("name") or "").strip()
+            for assignment in role.get("selected_exercise_assignments") or []
+            if isinstance(assignment, dict)
+        ]
+        objective = _source_session_why(source_lines, [n for n in names if n]) or objective
     return {
         "session_id": f"deterministic-{d_day}-{role_key}-{suffix}",
         "session_type": _session_type(role),
@@ -494,20 +757,26 @@ def _session(role: dict[str, Any], d_day: int) -> dict[str, Any] | None:
     }
 
 
-def build_deterministic_structured_plan(planning_brief: Any) -> dict[str, Any] | None:
+def build_deterministic_structured_plan(
+    planning_brief: Any, plan_text: str | None = None
+) -> dict[str, Any] | None:
     """Assemble the canonical fallback plan, or ``None`` when not applicable.
+
+    ``plan_text`` is the plan the athlete was given. The planner still decides
+    which days and exercises exist; the text supplies each selected exercise's
+    exact dose and coaching lines where it carries that exercise on that day.
 
     Never raises: an unusable brief returns ``None`` so the caller keeps whatever
     behaviour it had before.
     """
     try:
-        return _build(planning_brief)
+        return _build(planning_brief, plan_text)
     except Exception:  # a fallback that raises is worse than no fallback
         logger.exception("[deterministic_fallback] assembly failed")
         return None
 
 
-def _build(planning_brief: Any) -> dict[str, Any] | None:
+def _build(planning_brief: Any, plan_text: str | None = None) -> dict[str, Any] | None:
     if not isinstance(planning_brief, dict):
         return None
     role_map = planning_brief.get("weekly_role_map")
@@ -521,6 +790,7 @@ def _build(planning_brief: Any) -> dict[str, Any] | None:
     # are two sessions, and the same role is never emitted twice.
     sessions_by_dday: dict[int, list[dict[str, Any]]] = {}
     seen: set[tuple[int, str, Any]] = set()
+    source_days = _source_day_section_lines(plan_text) if isinstance(plan_text, str) else {}
     for week in weeks:
         if not isinstance(week, dict):
             continue
@@ -536,7 +806,7 @@ def _build(planning_brief: Any) -> dict[str, Any] | None:
             identity = (d_day, role_key, role.get("session_index"))
             if identity in seen:
                 continue
-            session = _session(role, d_day)
+            session = _session(role, d_day, source_days.get(d_day))
             if session is None:
                 continue
             seen.add(identity)

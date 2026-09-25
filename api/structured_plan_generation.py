@@ -963,6 +963,57 @@ def _normalize_effort(value: Any) -> dict[str, Any] | None:
     return None
 
 
+_TEMPO_PHASES = ("eccentric", "pause_bottom", "concentric", "pause_top")
+_TEMPO_CHAIN_RE = re.compile(
+    r"\s*([0-9xX])\s*[-:/ ]?\s*([0-9xX])\s*[-:/ ]?\s*([0-9xX])(?:\s*[-:/ ]?\s*([0-9xX]))?\s*"
+)
+
+
+def _tempo_phase(value: Any) -> int | str | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    text = _coerce_str(value).strip()
+    if not text:
+        return None
+    return int(text) if text.isdigit() else ("X" if text.casefold() == "x" else text)
+
+
+def _normalize_tempo(value: Any) -> tuple[dict[str, Any] | None, str | None]:
+    """``(tempo, cue)``: the schema's phase object, or the source wording as a cue.
+
+    The converter sometimes writes tempo as a chain ("3-1-1-0", "31X0") or as
+    prose ("slow 3 sec lower"). A string there failed the whole card on one
+    field, so a chain becomes phases and any other wording stays on the block
+    as a "Tempo:" cue rather than being dropped.
+    """
+    if value is None:
+        return None, None
+    if isinstance(value, dict):
+        phases = {key: _tempo_phase(value.get(key)) for key in _TEMPO_PHASES}
+        phases = {key: phase for key, phase in phases.items() if phase is not None}
+        return (phases or None), None
+    if isinstance(value, (list, tuple)):
+        items = [_tempo_phase(item) for item in value][: len(_TEMPO_PHASES)]
+        phases = {key: item for key, item in zip(_TEMPO_PHASES, items) if item is not None}
+        return (phases or None), None
+    text = _coerce_str(value).strip()
+    if not text:
+        return None, None
+    chain = _TEMPO_CHAIN_RE.fullmatch(text)
+    if chain:
+        phases = {
+            key: _tempo_phase(item)
+            for key, item in zip(_TEMPO_PHASES, chain.groups())
+            if item is not None
+        }
+        return phases, None
+    return None, f"Tempo: {text}"
+
+
 def _normalize_block(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
     # Identifier metadata is not athlete-facing content.  Preserve a useful id,
@@ -983,6 +1034,11 @@ def _normalize_block(value: Any) -> dict[str, Any]:
     ):
         if measured_key in out:
             out[measured_key] = _normalize_measured(out.get(measured_key), default_unit)
+    if "tempo" in out:
+        tempo, tempo_cue = _normalize_tempo(out.get("tempo"))
+        out["tempo"] = tempo
+        if tempo_cue:
+            out["coaching_cues"] = [*_coerce_str_list(out.get("coaching_cues")), tempo_cue]
     # Carry coaching detail through, tolerating a single string instead of a
     # list. An explicit null must also become [] — the schema fields are
     # non-optional lists, so a passed-through None rejects the whole card.
