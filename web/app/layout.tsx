@@ -24,6 +24,7 @@ import "./xp-overview-card.css";
 import "./xp-progress-page.css";
 import "./plan-display-polish.css";
 import "../components/language-switcher.css";
+import "../components/session-timer/session-timer.css";
 
 const THEME_INIT_SCRIPT = `(function(){try{var m=localStorage.getItem(${JSON.stringify(
   APPEARANCE_STORAGE_KEY,
