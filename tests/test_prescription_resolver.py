@@ -50,3 +50,30 @@ def test_uncapped_strength_keeps_bank_prescription():
     )
     assert result["effective_prescription"] == "4 x 3 @ RPE 7"
     assert result["dose_authority"] == "exercise_bank"
+
+
+def test_late_trap_bar_uses_bank_load_unit_at_reduced_exact_target():
+    slot = _slot("3–5x3–5 @ 85–90% 1RM", anchor=True)
+    slot["selected"]["name"] = "Trap Bar Deadlift"
+    fresh = resolve_strength_slot_prescription(role=_role(3, 3), slot=slot)
+    fatigued = resolve_strength_slot_prescription(
+        role=_role(3, 3), slot=slot, athlete_state={"high_fatigue": True}
+    )
+    assert fresh["effective_prescription"] == "3 x 3 @ 80% 1RM (established max only); stop if bar speed slows"
+    assert fatigued["effective_prescription"] == "2 x 3 @ 75% 1RM (established max only); stop if bar speed slows"
+    assert fresh["effective_rpe_cap"] == 7
+
+
+def test_late_max_speed_power_keeps_speed_and_exact_rest_instead_of_rpe():
+    slot = {
+        "role": "jump",
+        "quality_class": "anchor_power",
+        "anchor_capable": True,
+        "selected": {
+            "name": "Box Jump",
+            "prescription": "4–6x2–5 reps at max speed; full rest 60–120s.",
+            "quality_class": "anchor_power",
+        },
+    }
+    result = resolve_strength_slot_prescription(role=_role(3, 2), slot=slot)
+    assert result["effective_prescription"] == "3 x 2 at max speed; rest 120s"

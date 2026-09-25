@@ -559,6 +559,12 @@ def _session_count_summary(week: dict[str, Any], athlete_model: dict[str, Any]) 
     return {key: value for key, value in summary.items() if value not in (None, "", [])}
 
 
+def _server_owned_locked_role(role: dict[str, Any]) -> bool:
+    return str(role.get("role_key") or "").strip().lower() in {
+        "tactical_watch", "fight_visualization"
+    }
+
+
 def _compact_weekly_role_map(weekly_role_map: Any, athlete_model: dict[str, Any] | None = None) -> dict[str, Any]:
     if not isinstance(weekly_role_map, dict):
         return {}
@@ -579,12 +585,12 @@ def _compact_weekly_role_map(weekly_role_map: Any, athlete_model: dict[str, Any]
                     "session_roles": [
                         _compact_role(role)
                         for role in (week.get("session_roles") or [])
-                        if isinstance(role, dict)
+                        if isinstance(role, dict) and not _server_owned_locked_role(role)
                     ],
                     "suppressed_roles": [
                         _compact_role(role)
                         for role in (week.get("suppressed_roles") or [])
-                        if isinstance(role, dict)
+                        if isinstance(role, dict) and not _server_owned_locked_role(role)
                     ],
                     "fight_day_override": week.get("fight_day_override"),
                     "projected_days_until_fight_start": week.get("projected_days_until_fight_start"),
@@ -628,6 +634,8 @@ def _compact_weekly_role_map(weekly_role_map: Any, athlete_model: dict[str, Any]
 # spec top level and is preserved; only these internal-only keys are stripped.
 _LATE_FIGHT_SPEC_INTERNAL_KEYS = (
     "visible_session_sequence",
+    "session_sequence",
+    "sessions",
     "allocator",
     "role_budget",
     "permission_policy",
@@ -656,7 +664,7 @@ def _compact_session_sequence(stage2_payload: dict[str, Any]) -> list[dict[str, 
     if isinstance(plan_spec, dict):
         value = plan_spec.get("visible_session_sequence")
         if isinstance(value, list):
-            return [entry for entry in value if isinstance(entry, dict)]
+            return [entry for entry in value if isinstance(entry, dict) and not _server_owned_locked_role(entry)]
 
     for key in (
         "late_fight_session_sequence",
@@ -665,12 +673,12 @@ def _compact_session_sequence(stage2_payload: dict[str, Any]) -> list[dict[str, 
     ):
         value = stage2_payload.get(key)
         if isinstance(value, list):
-            return [entry for entry in value if isinstance(entry, dict)]
+            return [entry for entry in value if isinstance(entry, dict) and not _server_owned_locked_role(entry)]
 
     if isinstance(plan_spec, dict):
         value = plan_spec.get("session_sequence") or plan_spec.get("sessions")
         if isinstance(value, list):
-            return [entry for entry in value if isinstance(entry, dict)]
+            return [entry for entry in value if isinstance(entry, dict) and not _server_owned_locked_role(entry)]
 
     return []
 
@@ -794,6 +802,7 @@ def build_stage2_finalizer_packet(
             "For every role with selected_exercise_assignments, closed membership overrides all Stage 2 prompt, writing-rule, decision-rule, anchor-standard, safe-strong, goal-support, accessory, equipment-replacement, and substitution guidance, including Rules 4, 5, 6A, 7, and 8. Those rules may change wording or reduce dose only within the selected set. If a hard restriction makes a selected exercise illegal, remove/hold that selected exercise and leave the gap; never choose a downstream replacement. Exercise selection must return upstream to deterministic composition.",
             # Late-camp effective strength dose is authoritative over the bank dose.
             "If a session role carries effective_strength_prescriptions, each entry's effective_prescription is the authoritative dose or dose bound for that exercise on that day. Render one exact value within any bound, never the base_prescription, and never a dose above it. Its base_prescription is the original exercise-bank dose kept only for provenance — do not render it as the prescription.",
+            "Preserve the effective prescription's exertion method: a %1RM load stays %1RM, and max-speed jump/throw work stays a speed-and-quality cue. Do not replace either with generic RPE.",
             "A selected_exercise_assignments entry may carry coaching_notes: the authored exercise-bank guidance for that exercise. Use it as source-backed execution evidence — choose the one or two most relevant cues (technique, load, or a stop/quality rule) and phrase them in your own words. Do not dump every note verbatim or repeat generic advice. coaching_notes is never a dose: it can never override effective_prescription, effective_strength_envelope, restrictions, taper rules, or closed membership.",
             "If a session role carries effective_strength_envelope, treat it as a hard ceiling: do not render more sets than effective_strength_envelope.max_sets, more reps than max_reps (for the loaded anchor/secondary lifts), or a higher RPE than rpe_cap_high. If effective_strength_envelope.loaded_allowed is false, render no loaded strength lifting on that day — neural/primer, readiness, or mobility work only.",
             "If effective_strength_envelope.complete_exercise_allow_list is true, effective_strength_envelope.allowed_exercise_names is the complete S&C exercise allow-list selected by the deterministic planner for that role. Render only those named exercises; do not restore omitted candidates, alternates, substitutes, add another loaded lift, or invent another strength, power, plyometric, trunk, or support exercise for that session. An individually legal dose does not make an unselected exercise legal. If effective_strength_envelope.forbid_slow_eccentric_emphasis is true, do not restore a slow/tempo eccentric prescription from the base exercise-bank text.",
@@ -810,15 +819,15 @@ def build_stage2_finalizer_packet(
             # no longer authors any of it. What remains is the one thing only the
             # finalizer can get wrong: the day must exist and must stay free of
             # adaptive S&C.
-            "A session role with governance.selected_drill_locked=true is a deterministic, server-rendered session. Keep its D-X card in the plan so the day exists, but do not author, rename, expand or restate its content: the server writes that session's own body. Never move it to suppressed_roles, and do not place additional S&C work on it beyond what its own role allows.",
+            "Tactical Focus and Fight Visualisation are server-owned. Their roles are omitted from this handoff; do not create substitute or generic sessions for them. The server inserts their exact cards after conversion. Keep the calendar days available for that insertion.",
             "Do not collapse a selected countdown session into Lead notes, another day, movement prep, mobility finisher, rationale, or a generic note. It must keep its own D-X card.",
             "If selected_plan.session_sequence contains D-3 fight_week_freshness_day, render a D-3 freshness/reset card even when it is support-class and low RPE.",
             "Render selected countdown cards in descending countdown order, then append D-0 last.",
-            "If a calendar day has is_fight_day=true, render fight_day_protocol and no other app-led training. The governed Fight Visualisation role, if the day carries one, is server-rendered alongside it and does not weaken fight_day_protocol ownership.",
+            "If a calendar day has is_fight_day=true, render fight_day_protocol and no other app-led training. Any governed visualisation is inserted by the server afterward.",
             "If a calendar day has is_after_fight_day=true, render no app-led training.",
             "If a weekday is not present in calendar_days, do not render it.",
             "Do not render any session after D-0 unless a post-fight recovery mode is explicitly active.",
-            "D-0 always renders as fight-day protocol, plus the server-rendered Fight Visualisation card when D-0 carries that governed role. No other training.",
+            "D-0 renders as fight-day protocol with no other model-authored training; the server inserts any governed visualisation afterward.",
             "If late_fight_plan_spec is present, append a terminal D-0 fight-day protocol block after the final active countdown day. D-0 is not an app training session, does not count toward max_active_roles, and must be the final athlete-facing block.",
             "Do not append Coach note, Final coach notes, summary, nutrition, recovery, or any footer after D-0. Put summary notes in Lead notes before the first week or omit them.",
             f"Fight-day protocol text: {FIGHT_DAY_PROTOCOL_TEXT}",

@@ -270,9 +270,15 @@ def test_calendar_identity_and_same_day_multi_role_survive(generated, packet):
 
     multi = {day: keys for day, keys in source.items() if len(keys) > 1}
     assert multi, "fixture must contain at least one multi-role day"
+    server_owned = {"tactical_watch", "fight_visualization"}
+    calendar_days = {
+        str(day.get("countdown_label") or f"D-{day.get('d_day')}")
+        for week in packet["selected_plan"]["weekly_role_map"]["weeks"]
+        for day in week.get("calendar_days") or []
+    }
     for day, keys in source.items():
-        assert day in delivered, f"{day} disappeared from the calendar"
-        assert keys <= delivered[day], f"{day} lost role(s) {keys - delivered[day]}"
+        assert day in calendar_days, f"{day} disappeared from the calendar"
+        assert keys - server_owned <= delivered.get(day, set()), f"{day} lost model-owned roles"
 
 
 def test_combat_status_and_safety_envelopes_survive(generated, packet):
@@ -318,21 +324,30 @@ def test_suppressed_roles_still_name_what_cannot_be_restored(packet):
 # ---------------------------------------------------------------------------
 
 
-def test_locked_drill_body_is_not_shipped_but_its_identity_is(packet):
-    """Stage 2 must know the Watch is there; it must not be handed the script."""
+def test_locked_drill_roles_are_not_shipped_to_the_finalizer(packet):
+    """The server owns these cards end to end; the model gets the day calendar."""
     locked = [
         role
         for role in _roles(packet)
         if (role.get("governance") or {}).get("selected_drill_locked") is True
     ]
-    assert locked, "fixture must produce deterministic locked drills"
-    for role in locked:
-        assert "display_text" not in role, "the server writes this body, not Stage 2"
-        governance = role.get("governance") or {}
-        # Identity and calendar position survive, so surrounding work is planned
-        # around a day the finalizer can still see.
-        assert governance.get("selected_drill_name") or role.get("preferred_exercise_names")
-        assert role.get("scheduled_countdown_label") or role.get("countdown_label")
+    assert not locked
+    assert not any(
+        role.get("role_key") in {"tactical_watch", "fight_visualization"}
+        for role in _roles(packet)
+    )
+
+
+def test_locked_drill_names_are_absent_from_the_entire_model_packet(generated, packet):
+    from api.structured_plan_faithfulness import _locked_roles
+
+    names = {
+        str((role.get("governance") or {}).get("selected_drill_name") or "")
+        for role in _locked_roles(generated["planning_brief"])
+    } - {""}
+    packet_text = json.dumps(packet, ensure_ascii=False)
+    assert names
+    assert all(name not in packet_text for name in names)
 
 
 def test_adaptive_roles_keep_their_display_text(packet):
@@ -346,15 +361,11 @@ def test_adaptive_roles_keep_their_display_text(packet):
     assert adaptive, "adaptive roles must keep the text Stage 2 renders"
 
 
-def test_the_locked_rule_asks_for_the_day_not_the_content(packet):
+def test_the_locked_rule_assigns_the_card_to_the_server(packet):
     rules = [str(rule) for rule in packet.get("hard_rules") or []]
-    locked_rules = [rule for rule in rules if "selected_drill_locked" in rule]
-    # One context rule replaced three authorship rules.
+    locked_rules = [rule for rule in rules if "Tactical Focus and Fight Visualisation" in rule]
     assert len(locked_rules) == 1
-    rule = locked_rules[0]
-    assert "do not author" in rule.lower()
-    assert "suppressed_roles" in rule
-    assert "display_text" not in rule
+    assert "server inserts" in locked_rules[0]
 
 
 def test_faithfulness_still_reads_the_body_from_the_planning_brief(generated):

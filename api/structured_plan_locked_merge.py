@@ -109,7 +109,12 @@ def _is_named_variant(value: Any, name: str, *, session_title: str | None = None
     """Recognise converter labels that explicitly name the locked bank drill."""
     label = _normalise(value)
     drill = _normalise(name)
-    if label in {drill, f"{drill} mental rehearsal"}:
+    if label in {
+        drill,
+        f"{drill} mental rehearsal",
+        f"{drill} visualisation",
+        f"{drill} visualization",
+    }:
         return True
     return bool(
         session_title
@@ -290,8 +295,7 @@ def _is_safe_named_watch_shell(
     athlete session. Only reuse or remove that shell when it has not been
     started and carries no independent blocks.
     """
-    completion_status = _normalise(session.get("completion_status"))
-    if completion_status not in {"", "not_started", "not started"}:
+    if not _is_unstarted(session):
         return False
 
     blocks = session.get("blocks") or []
@@ -300,6 +304,29 @@ def _is_safe_named_watch_shell(
         and any(
             _is_named_variant(block.get("display_name"), name)
             for name in authoritative_names
+        )
+        for block in blocks
+    )
+
+
+def _is_unstarted(session: Mapping[str, Any]) -> bool:
+    return _normalise(session.get("completion_status")) in {"", "not_started", "not started"}
+
+
+def _is_generic_visualization_shell(session: Mapping[str, Any], name: str) -> bool:
+    """Only remove an unstarted converter session explicitly titled as a visualisation."""
+    if not _is_unstarted(session):
+        return False
+    title = _normalise(session.get("title"))
+    if not title.startswith("fight visualisation -"):
+        return False
+    blocks = session.get("blocks") or []
+    return isinstance(blocks, list) and all(
+        isinstance(block, Mapping)
+        and _normalise(block.get("block_type")) in {"", "mindset"}
+        and (
+            _normalise(block.get("display_name")) == "fight visualisation"
+            or _is_named_variant(block.get("display_name"), name)
         )
         for block in blocks
     )
@@ -404,6 +431,7 @@ def merge_locked_structured_content(
         targets = [
             (session, block)
             for session in sessions
+            if _is_unstarted(session) or any(session is watch_session for watch_session in watch_sessions)
             for block in session.get("blocks") or []
             if isinstance(block, dict)
             and any(
@@ -427,7 +455,7 @@ def merge_locked_structured_content(
         emptied_alias_owners: list[dict[str, Any]] = []
         if exact_targets:
             for owner, duplicate in targets:
-                if all(duplicate is not exact_block for _, exact_block in exact_targets):
+                if _is_unstarted(owner) and all(duplicate is not exact_block for _, exact_block in exact_targets):
                     owner["blocks"] = [
                         item for item in owner.get("blocks") or [] if item is not duplicate
                     ]
@@ -511,6 +539,13 @@ def merge_locked_structured_content(
                 item
                 for item in matching_days[0].get("sessions") or []
                 if item is session or all(item is not owner for owner in emptied_alias_owners)
+            ]
+
+        if spec.content_field == "fight_visualization":
+            matching_days[0]["sessions"] = [
+                item
+                for item in matching_days[0].get("sessions") or []
+                if item is session or not _is_generic_visualization_shell(item, name)
             ]
 
         if (
