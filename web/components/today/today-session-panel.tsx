@@ -14,7 +14,11 @@ import {
   SessionlessDayCard,
 } from "@/components/structured-plan-renderer";
 import { formatTrainingDay } from "@/components/today/format";
-import { useRoundTimer } from "@/components/session-timer/round-timer-provider";
+import {
+  CONTACT_RUN_KEY_PREFIX,
+  SESSION_RUN_KEY_PREFIX,
+  useRoundTimer,
+} from "@/components/session-timer/round-timer-provider";
 import { SessionTimer, type SessionTimerSummary } from "@/components/session-timer/session-timer";
 import { clearSavedRun, hasSavedRun } from "@/components/session-timer/use-session-timer";
 import { RehabResponsePrompt } from "@/components/today/rehab-response-prompt";
@@ -449,8 +453,8 @@ export function TodaySessionPanel({
   const timerAvailable =
     canCompleteSession && !safeSession && Boolean(session.session_id) && timerItems.length > 0;
   const timerKeys: Record<TimerSource, string> = {
-    session: `unlxck.session-timer.run:${activePlanId}:${session.session_id ?? ""}:${state.today.training_day}`,
-    contact: `unlxck.session-timer.contact:${activePlanId}:${state.today.training_day}`,
+    session: `${SESSION_RUN_KEY_PREFIX}${activePlanId}:${session.session_id ?? ""}:${state.today.training_day}`,
+    contact: `${CONTACT_RUN_KEY_PREFIX}${activePlanId}:${state.today.training_day}`,
   };
   const timerStorageKey = timerKeys.session;
   // Coach-led contact is timed from TODAY's plan day, even when the card above
@@ -611,6 +615,8 @@ export function TodaySessionPanel({
   }
 
   function openTimer(source: TimerSource) {
+    // The round timer is up: it keeps the screen until it closes.
+    if (roundTimer.shown) return;
     // Audio only unlocks inside the tap itself.
     timerAudio().unlock();
     setActiveTimer({ source, mode: "open" });
@@ -686,7 +692,9 @@ export function TodaySessionPanel({
     ) : null;
 
   function renderTimer(sessionTitle: string) {
-    if (!shownTimer) {
+    // One timer on screen at a time: while the round timer is up, a saved
+    // session or contact run waits and comes back once it closes.
+    if (!shownTimer || roundTimer.shown) {
       return null;
     }
     const { source, mode } = shownTimer;
@@ -921,7 +929,9 @@ export function TodaySessionPanel({
                 // Audio only unlocks inside the tap itself, before any await.
                 if (timerAvailable) timerAudio().unlock();
                 void saveCompletion("started").then((started) => {
-                  if (started && timerAvailable) setActiveTimer({ source: "session", mode: "open" });
+                  if (started && timerAvailable && !roundTimer.shown) {
+                    setActiveTimer({ source: "session", mode: "open" });
+                  }
                 });
               }}
               disabled={isSubmitting}
@@ -949,6 +959,10 @@ export function TodaySessionPanel({
             type="button"
             className="cta"
             onClick={() => {
+              if (roundTimer.shown && (timerAvailable || (contactIsSession && contactTimerAvailable))) {
+                showToast("Close the round timer to resume your session timer.", { tone: "info" });
+                return;
+              }
               if (timerAvailable) {
                 openTimer("session");
                 return;
