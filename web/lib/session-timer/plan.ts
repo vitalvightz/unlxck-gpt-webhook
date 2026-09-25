@@ -33,8 +33,12 @@ export type IntervalItem = TimerItemBase & {
   /** Sparring only: the block's planned intensity, when its structured field states one. */
   plannedIntensity?: SparringPlannedIntensity | null;
   needsSetup: boolean;
+  /** Ready-screen line shown while `needsSetup`; defaults to the plan-block copy. */
+  setupNote?: string | null;
   /** Offer the common fight round formats on the ready screen. */
   presets?: boolean;
+  /** Remember the athlete's picked round format under this key for next time. */
+  formatMemoryKey?: string | null;
 };
 
 /**

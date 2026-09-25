@@ -66,7 +66,7 @@ def _plan_for_training_day(
 ) -> Mapping[str, Any]:
     """Project renewable open-plan templates onto the requested calendar block.
 
-    Dated plans and non-open legacy plans pass through unchanged. Projection is
+    Dated plans read their resolved card unchanged. Projection is
     fail-closed: when the saved open template cannot be reconciled safely, the
     original undated plan remains in place and no week can be awarded.
     """
@@ -79,10 +79,18 @@ def _plan_for_training_day(
         structured,
         current_training_day=training_day,
     )
-    if str(context.get("projection_status") or "") != "projected":
+    projection_status = str(context.get("projection_status") or "")
+    if projection_status == "projected":
+        chosen = projected
+    elif projection_status == "not_required":
+        # A dated camp needs no projection, but it still reads the resolved
+        # card: that card carries the derived session ids Today completes
+        # against, and the raw row would never match those completions.
+        chosen = structured
+    else:
         return plan
     normalized = dict(plan)
-    normalized["structured_plan"] = projected
+    normalized["structured_plan"] = chosen
     return normalized
 
 

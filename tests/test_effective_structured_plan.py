@@ -195,3 +195,88 @@ def test_populated_structured_plan_is_unchanged(monkeypatch):
     assert resolve_effective_structured_plan(
         {"structured_plan": stored, "planning_brief": {"hard_sparring_days": ["Monday"]}}
     ) == stored
+
+
+def _idless_sparring_day_calendar() -> dict:
+    """Production shape from 2026-09-25: the converter emitted ``session_id: null``
+    for a Breathing Reset placed on the athlete's declared hard-sparring day."""
+    plan = _production_calendar()
+    day = plan["weeks"][0]["days"][2]
+    day["sessions"][0]["session_id"] = None
+    day["sessions"][0]["title"] = "Breathing Reset"
+    day["sessions"].append(copy.deepcopy(day["sessions"][0]))
+    day["today_card"]["headline"] = "Hard sparring"
+    day["today_card"]["coach_led_contact"] = "Hard sparring"
+    return plan
+
+
+def test_idless_sessions_get_stable_plan_scoped_ids_without_mutating_the_card():
+    from api.services.effective_structured_plan import ensure_structured_session_ids
+
+    stored = _idless_sparring_day_calendar()
+    before = copy.deepcopy(stored)
+    row = {"id": PLAN, "structured_plan": stored}
+
+    first = resolve_effective_structured_plan(row)
+    second = resolve_effective_structured_plan(copy.deepcopy(row))
+    ids = [s["session_id"] for s in first["weeks"][0]["days"][2]["sessions"]]
+
+    # Every reader derives the same ids; a repeated title on one day stays unique.
+    assert ids == [s["session_id"] for s in second["weeks"][0]["days"][2]["sessions"]]
+    assert ids == [
+        "ses-22222222-2026-09-21-breathing-reset",
+        "ses-22222222-2026-09-21-breathing-reset-2",
+    ]
+    # Explicit ids are never rewritten, and the stored card is untouched.
+    assert first["weeks"][0]["days"][1]["sessions"][0]["session_id"] == "2026-09-15-aerobic-support"
+    assert stored == before
+    # A regenerated plan cannot collide with the old plan's completion rows.
+    other = resolve_effective_structured_plan({"id": "33333333-0000", "structured_plan": stored})
+    assert other["weeks"][0]["days"][2]["sessions"][0]["session_id"].startswith("ses-33333333-")
+    # Undated weekday templates fall back to their week/day slot.
+    template = copy.deepcopy(stored)
+    template["weeks"][0]["days"][2]["date"] = None
+    slotted = ensure_structured_session_ids(template, plan_id=PLAN)
+    assert slotted["weeks"][0]["days"][2]["sessions"][0]["session_id"] == (
+        "ses-22222222-w1d3-breathing-reset"
+    )
+
+
+def test_idless_session_on_declared_sparring_day_is_startable_and_counts(monkeypatch):
+    from api.services.week_progress import evaluate_week_completion, find_week_for_training_day
+
+    store = FakeStore()
+    store.plans[PLAN] = {
+        "id": PLAN,
+        "athlete_id": ATHLETE,
+        "status": "ready",
+        "name": "September camp",
+        "fight_date": "2026-10-22",
+        "created_at": "2026-09-14T08:00:00+00:00",
+        "structured_plan": _idless_sparring_day_calendar(),
+        "planning_brief": {"hard_sparring_days": ["Monday"]},
+    }
+    store.set_active_plan_id(ATHLETE, PLAN)
+    monday = datetime(2026, 9, 21, 12, tzinfo=timezone.utc)
+
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=monday)
+    session_id = view.today.next_session.get("session_id")
+    assert view.today.session_scope == "today"
+    assert session_id == "ses-22222222-2026-09-21-breathing-reset"
+    assert view.today.next_session.get("coach_led_contact") == "Hard sparring"
+
+    upsert_session_completion(
+        store,
+        athlete_id=ATHLETE,
+        athlete_timezone="UTC",
+        payload={"plan_id": PLAN, "session_id": session_id, "status": "started"},
+        now=monday,
+    )
+    after = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=monday)
+    assert after.today.completion_status == "started"
+
+    # Week progress sees the derived ids too, so the idless work is planned work.
+    week = find_week_for_training_day(store.plans[PLAN], "2026-09-21")
+    result = evaluate_week_completion(week=week, completions=[])
+    assert result["planned"] == 3
+    assert "ses-22222222-2026-09-21-breathing-reset" in result["unresolved_session_ids"]

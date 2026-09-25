@@ -77,14 +77,58 @@ export function parseRoundsFromText(text: string): ParsedRounds {
   };
 }
 
+/** Where the athlete's last picked contact round format is remembered. */
+export const CONTACT_FORMAT_MEMORY_KEY = "unlxck.session-timer.contact-format";
+
+export type RoundFormat = { workSec: number; restSec: number };
+
+/** The last round format the athlete picked, or null (never throws). */
+export function savedRoundFormat(key: string | null | undefined): RoundFormat | null {
+  if (!key || typeof window === "undefined") {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(key) ?? "null") as Partial<RoundFormat> | null;
+    const workSec = Number(parsed?.workSec);
+    const restSec = Number(parsed?.restSec);
+    if (Number.isFinite(workSec) && workSec >= 5 && workSec <= 3600 && Number.isFinite(restSec) && restSec >= 0 && restSec <= 1800) {
+      return { workSec, restSec };
+    }
+  } catch {
+    // Storage blocked or corrupt: fall back to the defaults.
+  }
+  return null;
+}
+
+export function rememberRoundFormat(key: string | null | undefined, format: RoundFormat): void {
+  if (!key || typeof window === "undefined") {
+    return;
+  }
+  try {
+    window.localStorage.setItem(key, JSON.stringify(format));
+  } catch {
+    // A convenience only: the timer works without it.
+  }
+}
+
+/** The display name for the day's contact work, e.g. "Hard sparring". */
+export function contactTitle(target: ContactTimerTarget): string {
+  return CONTACT_TITLES[target.kind];
+}
+
 /**
- * The rounds item for today's contact. Coach-led work rarely carries a round
- * structure in the plan, so unless the plan states one the item opens with
- * the round presets and asks the athlete to match what the coach is running.
+ * The rounds item for today's contact. This is the athlete's own gym work, so
+ * the plan deliberately carries no round structure: the gym sets it. Unless the
+ * plan states one, the item opens on the format the athlete last used (or
+ * boxing rounds) with the presets to match what their gym is running.
  */
-export function contactRoundsItem(target: ContactTimerTarget): IntervalItem {
+export function contactRoundsItem(
+  target: ContactTimerTarget,
+  saved: RoundFormat | null = null,
+): IntervalItem {
   const parsed = parseRoundsFromText(target.headline);
   const title = CONTACT_TITLES[target.kind];
+  const planned = parsed.workSec !== null;
   return {
     kind: "interval",
     id: `contact-${target.kind}`,
@@ -92,11 +136,13 @@ export function contactRoundsItem(target: ContactTimerTarget): IntervalItem {
     detail: target.headline.toLowerCase() === title.toLowerCase() ? null : target.headline,
     blockType: "sparring",
     rounds: parsed.rounds ?? 5,
-    workSec: parsed.workSec ?? 180,
-    restSec: parsed.restSec ?? 60,
+    workSec: parsed.workSec ?? saved?.workSec ?? 180,
+    restSec: parsed.restSec ?? (planned ? null : saved?.restSec) ?? 60,
     sparring: true,
-    needsSetup: parsed.workSec === null,
+    needsSetup: !planned && !saved,
+    setupNote: "Match your gym's rounds. Pick a format.",
     presets: true,
+    formatMemoryKey: planned ? null : CONTACT_FORMAT_MEMORY_KEY,
   };
 }
 

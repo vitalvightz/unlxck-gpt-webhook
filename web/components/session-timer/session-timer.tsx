@@ -26,7 +26,7 @@ import {
   type TimerState,
   type TimerView,
 } from "@/lib/session-timer/engine";
-import { ROUND_PRESETS } from "@/lib/session-timer/contact";
+import { rememberRoundFormat, ROUND_PRESETS } from "@/lib/session-timer/contact";
 import type { SparringPlannedIntensity } from "@/lib/types";
 import {
   formatClock,
@@ -279,7 +279,11 @@ function ReadyPanel({ timer, item }: { timer: SessionTimerController; item: Time
           </>
         ) : null}
       </p>
-      {item.needsSetup ? <p className="st-setup-note">Not in your plan. Pick a format.</p> : null}
+      {item.needsSetup ? (
+        <p className="st-setup-note">
+          {item.setupNote || "Round length isn't set in your plan. Pick a format."}
+        </p>
+      ) : null}
       {item.presets ? (
         <div className="st-round-presets" role="group" aria-label="Round format">
           {ROUND_PRESETS.map((preset) => {
@@ -289,11 +293,15 @@ function ReadyPanel({ timer, item }: { timer: SessionTimerController; item: Time
                 key={preset.label}
                 type="button"
                 aria-pressed={active}
-                onClick={() =>
+                onClick={() => {
+                  rememberRoundFormat(item.formatMemoryKey, {
+                    workSec: preset.workSec,
+                    restSec: preset.restSec,
+                  });
                   timer.update((s) =>
                     updateIntervalItem(s, { workSec: preset.workSec, restSec: preset.restSec }),
-                  )
-                }
+                  );
+                }}
               >
                 {preset.label}
               </button>
