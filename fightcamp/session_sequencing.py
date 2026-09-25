@@ -54,6 +54,7 @@ from typing import Any, Callable, Iterable, Mapping, Sequence, TypeVar
 from .calendar_context import role_d_day
 from .gap_fill_inserts import _INSERT_META
 from .role_labels import ROLE_LABELS
+from .structured_session_identity import match_sessions_to_roles
 
 logger = logging.getLogger(__name__)
 
@@ -685,37 +686,6 @@ def _brief_roles_by_dday(planning_brief: Any) -> dict[int, list[dict[str, Any]]]
     return by_dday
 
 
-def _role_matcher(
-    roles: list[dict[str, Any]],
-) -> Callable[[dict[str, Any]], Mapping[str, Any] | None]:
-    """Match a card session to the one planner role it represents, if any.
-
-    Exact identity only: the ``(role_key, session_index)`` a deterministic
-    session id encodes, else the role's athlete-facing label equal to the
-    session title and held by exactly one role that day.
-    """
-
-    def match(session: dict[str, Any]) -> Mapping[str, Any] | None:
-        session_id = _clean(session.get("session_id"))
-        found = _DETERMINISTIC_SESSION_ID_RE.match(session_id)
-        if found:
-            for role in roles:
-                index = role.get("session_index")
-                if _clean(role.get("role_key")) == found.group("role_key") and str(
-                    index if isinstance(index, int) else 0
-                ) == found.group("index"):
-                    return role
-        title = _normalise_label(session.get("title"))
-        if not title:
-            return None
-        labelled = [
-            role for role in roles if _normalise_label(role.get("athlete_facing_label")) == title
-        ]
-        return labelled[0] if len(labelled) == 1 else None
-
-    return match
-
-
 def sequence_structured_plan(structured_plan: Any, planning_brief: Any = None) -> Any:
     """Put every day's sessions, and every session's blocks, in execution order.
 
@@ -746,9 +716,20 @@ def _sequence_plan_days(structured_plan: dict[str, Any], planning_brief: Any) ->
             if not isinstance(day, dict) or not isinstance(day.get("sessions"), list):
                 continue
             d_day = _countdown_dday(day.get("countdown_label"))
-            matcher = _role_matcher(roles_by_dday.get(d_day, [])) if d_day is not None else None
             non_sessions = [item for item in day["sessions"] if not isinstance(item, dict)]
-            ordered = sequence_day_sessions(day["sessions"], matcher)
+            sessions = [item for item in day["sessions"] if isinstance(item, dict)]
+            # Converted sessions carry no role key, so identity is recovered with
+            # the same matcher the calendar spine uses; the matched role's intent
+            # and any explicit sequence_override then decide the position.
+            by_index = (
+                match_sessions_to_roles(sessions, roles_by_dday.get(d_day, []), d_day)
+                if d_day is not None
+                else {}
+            )
+            role_by_session = {id(sessions[index]): role for index, role in by_index.items()}
+            ordered = sequence_day_sessions(
+                sessions, lambda session: role_by_session.get(id(session))
+            )
             for position, session in enumerate(ordered, start=1):
                 session["execution_order"] = position
                 blocks = session.get("blocks")

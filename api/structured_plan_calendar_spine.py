@@ -71,6 +71,7 @@ from datetime import date, timedelta
 from typing import Any
 
 from fightcamp.fight_date_utils import parse_fight_date
+from fightcamp.structured_session_identity import identity_tokens, representing_session_index
 
 _PHASE_VALUES = {"GPP", "SPP", "TAPER", "FIGHT_WEEK", "REINTEGRATION"}
 # Countdown ordering toward (and past) the fight, used to break a phase tie inside
@@ -496,17 +497,9 @@ def _overlay_day(
     return day
 
 
-_TOKEN_RE = re.compile(r"[^a-z0-9]+")
-
-
-def _identity_tokens(value: Any) -> set[str]:
-    return {token for token in _TOKEN_RE.split(str(value or "").lower()) if token}
-
-
-def _role_session_suffix(role: dict[str, Any]) -> str:
-    """The ``session_index`` half of a deterministic session id, as it is built."""
-    session_index = role.get("session_index")
-    return str(session_index if isinstance(session_index, int) else 0)
+# Role <-> session identity is shared with fightcamp.session_sequencing so the
+# two can never disagree about which role a converted session represents.
+_identity_tokens = identity_tokens
 
 
 def _role_matches_contact(day: dict[str, Any], role: dict[str, Any]) -> bool:
@@ -519,52 +512,6 @@ def _role_matches_contact(day: dict[str, Any], role: dict[str, Any]) -> bool:
         card.get("coach_led_contact")
     )
     return label_tokens <= contact_tokens
-
-
-def _representing_session_index(
-    day: dict[str, Any], role: dict[str, Any], d_day: int, claimed: set[int]
-) -> int | None:
-    """Index of the session already representing ``role``, or ``None``.
-
-    Identity is the role's own ``(d_day, role_key, session_index)`` — what the
-    deterministic builder writes into ``session_id`` — falling back to the
-    athlete-facing label for a converter session that was retitled but is still
-    the same item.
-
-    A session represents at most ONE role: ``claimed`` carries the indices
-    already spoken for, so two roles that share a ``role_key`` on one day (two
-    ``session_index`` values) do not collapse into one, with the second wrongly
-    read as already present and dropped.
-
-    Label matching is containment in either direction ("Joint Prep" vs "Joint
-    Prep Flow"), never a count of shared words: "Technical Shadow Rhythm" and
-    "Technical Shadow Boxing" overlap in two tokens and are different items.
-    """
-    role_key = str(role.get("role_key") or "").strip().lower()
-    label_tokens = _identity_tokens(role.get("athlete_facing_label"))
-    if not label_tokens and not role_key:
-        return -1  # nothing to identify it by: never restore blind
-    exact_id = f"deterministic-{d_day}-{role_key}-{_role_session_suffix(role)}"
-    sessions = [s for s in (day.get("sessions") or [])]
-    # The full deterministic identity wins over any looser signal, wherever it
-    # sits in the day's list.
-    for index, session in enumerate(sessions):
-        if index in claimed or not isinstance(session, dict):
-            continue
-        if role_key and str(session.get("session_id") or "").lower() == exact_id:
-            return index
-    for index, session in enumerate(sessions):
-        if index in claimed or not isinstance(session, dict):
-            continue
-        session_id = str(session.get("session_id") or "").lower()
-        if role_key and role_key in session_id:
-            return index
-        title_tokens = _identity_tokens(session.get("title"))
-        if label_tokens and title_tokens and (
-            label_tokens <= title_tokens or title_tokens <= label_tokens
-        ):
-            return index
-    return None
 
 
 def _restore_missing_scheduled_roles(
@@ -613,7 +560,7 @@ def _restore_missing_scheduled_roles(
             continue
         if _role_matches_contact(day, role):
             continue
-        matched = _representing_session_index(day, role, d_day, claimed)
+        matched = representing_session_index(day.get("sessions") or [], role, d_day, claimed)
         if matched is not None:
             if matched >= 0:
                 claimed.add(matched)

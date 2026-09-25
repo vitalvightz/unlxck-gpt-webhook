@@ -528,3 +528,101 @@ def test_today_primary_session_skips_support_that_now_leads_the_day():
 def test_sequencing_never_raises_on_a_malformed_card():
     plan = {"weeks": [{"days": [{"countdown_label": "D-3", "sessions": [None, {"blocks": "bad"}]}]}]}
     assert sequence_structured_plan(plan) is plan
+
+
+# ---------------------------------------------------------------------------
+# Converted cards keep their planner role's position (PR #2616 review)
+# ---------------------------------------------------------------------------
+
+
+def _brief_for(roles: list[dict]) -> dict:
+    return {"weekly_role_map": {"weeks": [{"session_roles": roles}]}}
+
+
+def test_converted_card_keeps_an_explicit_after_conditioning_override():
+    """Converter ids and retitled cards must not undo a deliberate exception."""
+    brief = _brief_for(
+        [
+            {
+                "role_key": "technical_shadow_rhythm",
+                "athlete_facing_label": "Technical Shadow Rhythm",
+                "scheduled_countdown_label": "D-10",
+                "session_index": 1,
+                "sequence_override": "after_conditioning",
+            },
+            {
+                "role_key": "fight_pace_repeatability_day",
+                "athlete_facing_label": "Fight-pace conditioning",
+                "scheduled_countdown_label": "D-10",
+                "session_index": 2,
+            },
+        ]
+    )
+    # What the converter emits: its own ids, retitled cards, generic types that
+    # alone would read as LEARN before FATIGUE.
+    plan = _card(
+        [
+            {"session_id": "ses-1", "session_type": "skill", "title": "Technical Shadow Rhythm - Entries and Exits", "blocks": []},
+            {"session_id": "ses-2", "session_type": "conditioning", "title": "Fight-Pace Conditioning Intervals", "blocks": []},
+        ]
+    )
+    sequence_structured_plan(plan, brief)
+    assert [s["session_id"] for s in plan["weeks"][0]["days"][0]["sessions"]] == ["ses-2", "ses-1"]
+
+
+def test_converted_strength_touch_stays_prime_not_generic_develop():
+    brief = _brief_for(
+        [
+            {
+                "role_key": "primary_strength_day",
+                "athlete_facing_label": "Strength",
+                "scheduled_countdown_label": "D-10",
+                "session_index": 1,
+            },
+            {
+                "role_key": "strength_touch_day",
+                "athlete_facing_label": "Neural speed touch",
+                "scheduled_countdown_label": "D-10",
+                "session_index": 2,
+            },
+        ]
+    )
+    plan = _card(
+        [
+            {"session_id": "ses-1", "session_type": "strength_power", "title": "Lower Body Strength", "blocks": []},
+            {"session_id": "ses-2", "session_type": "strength_power", "title": "Neural Speed Touch: Contrast Primer", "blocks": []},
+        ]
+    )
+    touch = plan["weeks"][0]["days"][0]["sessions"][1]
+    # Without its role, the card alone would degrade to DEVELOP.
+    assert session_sequence_slot(touch).intent is SequenceIntent.DEVELOP
+
+    sequence_structured_plan(plan, brief)
+    assert [s["title"] for s in plan["weeks"][0]["days"][0]["sessions"]] == [
+        "Neural Speed Touch: Contrast Primer",
+        "Lower Body Strength",
+    ]
+
+
+def test_calendar_spine_and_sequencer_share_one_identity_matcher():
+    import api.structured_plan_calendar_spine as spine
+    import fightcamp.session_sequencing as sequencing
+    from fightcamp import structured_session_identity as identity
+
+    assert spine.representing_session_index is identity.representing_session_index
+    assert sequencing.match_sessions_to_roles is identity.match_sessions_to_roles
+    assert not hasattr(spine, "_representing_session_index")
+    assert not hasattr(sequencing, "_role_matcher")
+
+
+def test_exact_evidence_is_claimed_before_a_broad_label():
+    from fightcamp.structured_session_identity import match_sessions_to_roles
+
+    roles = [
+        {"role_key": "primary_strength_day", "athlete_facing_label": "Strength", "session_index": 1},
+        {"role_key": "strength_touch_day", "athlete_facing_label": "Strength touch", "session_index": 2},
+    ]
+    sessions = [{"title": "Strength touch"}, {"title": "Strength"}]
+    matched = match_sessions_to_roles(sessions, roles, 10)
+    assert matched[0]["role_key"] == "strength_touch_day"
+    assert matched[1]["role_key"] == "primary_strength_day"
