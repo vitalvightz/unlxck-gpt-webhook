@@ -22,6 +22,7 @@ from .plan_pipeline_runtime import (
 )
 from .lead_summary import render_lead_summary
 from .plan_rendering_utils import sanitize_phase_text, sanitize_stage_output
+from .session_sequencing import in_stamped_execution_order
 from .stage2_payload import (
     build_computed_support,
     build_planning_brief,
@@ -220,7 +221,11 @@ def _render_late_fight_stage1_draft(
     if not isinstance(spec, dict) or not spec:
         return None
 
-    sequence = _late_fight_sequence_from_brief(planning_brief)
+    # Same-day roles follow the planner's stamped execution order.
+    sequence = in_stamped_execution_order(
+        _late_fight_sequence_from_brief(planning_brief),
+        _late_fight_role_countdown_label,
+    )
     lines = ["# LATE-FIGHT COUNTDOWN"]
     phase_notes = _render_late_fight_phase_notes(planning_brief)
     if phase_notes:

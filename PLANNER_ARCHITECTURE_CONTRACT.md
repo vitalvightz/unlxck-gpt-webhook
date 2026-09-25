@@ -259,6 +259,11 @@ build athlete model / candidate pools
   -> goal_preservation.reconcile_goal_preservation
        (coverage verdict; a bounded restore re-runs morph + governor +
         composition + dose resolution on a trial copy before committing)
+  -> session_sequencing.stamp_role_execution_order
+       (within-day execution order by intent: PREPARE -> PRIME -> LEARN ->
+        PERFORM -> DEVELOP -> FATIGUE -> RESTORE -> REFLECT. Reads the finished
+        calendar and writes only `execution_order`; never membership, day,
+        list order or `session_index`)
   -> [late-fight only] _render_late_fight_stage1_draft replaces the draft text
   -> render_lead_summary inserted after the plan title
   -> build_stage2_handoff_text (LLM-boundary projection + finalizer packet)
@@ -304,6 +309,13 @@ Only the calendar allocator / placement layer may originate or relocate:
 - `countdown_offset`
 - `real_weekday`
 - authoritative session ordering / day ownership
+
+Within-day execution order is a separate question from placement. Only
+`session_sequencing.py` writes `execution_order` (Stage 1 roles and structured
+card sessions) and reorders a day's sessions or a session's blocks; it runs
+after placement and membership are final and may never add, drop, or move work
+to another day. `session_index` stays planning identity and is never reused
+as execution order.
 
 Support inserts may create these fields only for the new support role they own, after a legality check.
 
@@ -432,6 +444,7 @@ canonical owner in `Main` today:
 | Closed session membership | `session_composition.py`; late-fight assignment builder for D-13 inward |
 | Effective render prescription | `prescription_resolver.py` |
 | Goal coverage verdict + bounded restore | `goal_preservation.py` |
+| Within-day execution order (sessions in a day, blocks in a session) | `session_sequencing.py` — ordering only, after membership is final |
 | Stage 1 draft rendering | `plan_pipeline_rendering.py` — read only |
 | AI finalizer | wording / coaching detail; compliant substitution only for roles without closed membership |
 | Validation | `stage2_validator.py` (+ postprocess), `plan_contract_validator.py` — never repairs architecture |
@@ -709,6 +722,7 @@ New features enter through the existing owners:
 | New session-membership rule | `session_composition.py` / the late-fight assignment builder |
 | New effective-dose rule | `prescription_resolver.py` (bands stay in `late_camp_role_morph.py`) |
 | New goal-coverage rule | `goal_preservation.py`, inside its bounded-restore constraints |
+| New within-day ordering rule, or a new role key's execution position | `session_sequencing.py` (`ROLE_SEQUENCE`) — every role key needs an intent |
 | New card field | `api/structured_plan_models.py` + `api/structured_plan_generation.py`, non-blocking |
 
 ### Specifically prohibited

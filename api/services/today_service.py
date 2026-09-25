@@ -26,6 +26,7 @@ from fastapi import HTTPException, status
 from pydantic import ValidationError
 
 from fightcamp.injury_body_region import injury_body_region_context
+from fightcamp.session_sequencing import is_support_session as _is_day_support_session
 from fightcamp.weekly_schedule_view import normalize_weekday
 
 from api.contracts.command_view import CommandView, RiskWatchItem, build_command_view, make_risk
@@ -1601,10 +1602,17 @@ def _select_structured_primary_session(sessions: list[Mapping[str, Any]]) -> Map
     session on the same day. Overview/Today only have one compact session slot,
     so prefer the first session with executable blocks; the structured blocks UI
     still renders every session from the full card.
+
+    Sessions are listed in execution order (fightcamp.session_sequencing), so
+    joint prep or a tactical card can lead the day. Support-only work is passed
+    over when the day also holds main training, keeping the slot on that work.
     """
     if not sessions:
         return None
     with_blocks = [session for session in sessions if _structured_session_blocks(session)]
+    main = [session for session in with_blocks if not _is_day_support_session(session)]
+    if main:
+        return main[0]
     if with_blocks:
         return with_blocks[0]
     return sessions[0]

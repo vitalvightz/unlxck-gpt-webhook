@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 from collections.abc import Mapping
 from typing import Any, Callable, Literal, get_args
 
+from fightcamp.session_sequencing import sequence_structured_plan
 from fightcamp.weekly_schedule_view import normalize_weekday as _normalize_weekday
 
 from .state_machine import is_athlete_displayable_plan_status
@@ -2675,6 +2676,10 @@ def build_structured_plan_outcome(
         schema_version: str | None,
         faithfulness_warnings: list[str] | None = None,
     ) -> StructuredPlanOutcome:
+        # Every card that can be published passes through here, after the
+        # locked merge and any salvage pruning, so its day membership is final:
+        # order each day's sessions and each session's blocks for execution.
+        plan_dict = sequence_structured_plan(plan_dict, planning_brief)
         blocking, advisory = split_findings(audit_structured_plan(plan_dict, computed_support))
         warnings = list(dict.fromkeys([*(faithfulness_warnings or []), *advisory]))
         if blocking:
@@ -3041,6 +3046,9 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
     today`), keep sessions as []. If it also lists any prescribed touch on the
     same D-day, keep that touch as a session and put the contact label in
     today_card.coach_led_contact.
+- Emit each day's sessions, and each session's blocks, in the order the source
+  lists them, and set every session's `execution_order` to null. The server
+  decides the within-day execution order after conversion.
 - Optimize for a valid first-pass card. Preserve every dated day and every
   listed prescription. Identifier fields (rule_id, week_id, session_id,
   block_id) are optional metadata: use a stable source id when one exists,

@@ -406,6 +406,8 @@ export type StructuredSession = {
   completion_status?: string | null;
   mindset_anchor?: MindsetAnchor | null;
   blocks?: StructuredBlock[] | null;
+  /** 1-based, server-decided position within the day; `sessions` is already in this order. */
+  execution_order?: number | null;
 };
 
 export type StructuredTodayCard = {

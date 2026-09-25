@@ -526,9 +526,36 @@ export function buildCompletionIndex(
   return index;
 }
 
+// Mirrors fightcamp/session_sequencing.py SUPPORT_SESSION_TYPES /
+// SUPPORT_BLOCK_TYPES: prep, recovery and mindset work that surrounds the day's
+// main training rather than being it.
+const SUPPORT_SESSION_TYPES = new Set(["recovery", "rehab"]);
+const SUPPORT_BLOCK_TYPES = new Set([
+  "preparation",
+  "mobility_activation",
+  "cooldown_recovery",
+  "mindset",
+  "nutrition",
+  "rehab",
+]);
+
+function isSupportSession(session: StructuredSession): boolean {
+  const sessionType = (session.session_type ?? "").trim().toLowerCase();
+  if (SUPPORT_SESSION_TYPES.has(sessionType)) {
+    return true;
+  }
+  const blocks = getBlocks(session);
+  return (
+    blocks.length > 0 &&
+    blocks.every((block) => SUPPORT_BLOCK_TYPES.has((block.block_type ?? "").trim().toLowerCase()))
+  );
+}
+
 /** The day's primary (loggable) session, mirroring the backend's
- * `_select_structured_primary_session`: first session with executable blocks,
- * else the first session. */
+ * `_select_structured_primary_session`: sessions arrive in execution order, so
+ * the first session with executable blocks that is main work (not prep,
+ * recovery or mindset support), else the first session with blocks, else the
+ * first session. */
 export function primarySessionOf(
   day: StructuredDay | null | undefined,
 ): StructuredSession | null {
@@ -536,7 +563,8 @@ export function primarySessionOf(
   if (sessions.length === 0) {
     return null;
   }
-  return sessions.find((session) => getBlocks(session).length > 0) ?? sessions[0];
+  const withBlocks = sessions.filter((session) => getBlocks(session).length > 0);
+  return withBlocks.find((session) => !isSupportSession(session)) ?? withBlocks[0] ?? sessions[0];
 }
 
 /**
