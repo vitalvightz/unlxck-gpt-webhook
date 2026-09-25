@@ -2431,9 +2431,9 @@ test("weekStripCenterOffset centres the active card and clamps at the start", ()
   assert.equal(weekStripCenterOffset(300, 0, 80), 0);
 });
 
-// --- jargon glossary "?" affordances ---------------------------------------
+// --- jargon glossary "i" affordances ---------------------------------------
 
-/** The aria-labels of every glossary "?" in a rendered markup string. */
+/** The aria-labels of every glossary "i" in a rendered markup string. */
 function glossaryTerms(html: string): string[] {
   return Array.from(html.matchAll(/aria-label="What ([^"]+) means"/g)).map((match) => match[1]);
 }
@@ -2491,7 +2491,7 @@ test("every EffortMethod in the schema is glossed with its own definition", () =
 });
 
 test("the compact coach cue stays unglossed, so it cannot borrow an effort definition", () => {
-  // The coaching card deliberately renders no "?" at all; this pins that,
+  // The coaching card deliberately renders no "i" at all; this pins that,
   // because glossing it from the label would explain a mental cue as bar speed.
   const session = {
     session_id: "ses-mindset",

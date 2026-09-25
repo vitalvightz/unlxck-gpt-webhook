@@ -245,9 +245,10 @@ function TechnicalCombatRationale({ title }: { title?: string }) {
 function TechnicalCombatWhyTooltip() {
   return (
     <WhyTooltip
+      className="info-tooltip"
       title={TECHNICAL_COMBAT_TITLE}
       body={TECHNICAL_COMBAT_HELP}
-      triggerLabel="?"
+      triggerLabel="i"
     />
   );
 }
