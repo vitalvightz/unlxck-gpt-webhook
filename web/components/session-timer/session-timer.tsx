@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } fro
 import { createPortal } from "react-dom";
 
 import { useSessionTimer, type SessionTimerController } from "@/components/session-timer/use-session-timer";
-import { timerAudio } from "@/lib/session-timer/audio";
+import { PREP_OPTIONS, timerAudio } from "@/lib/session-timer/audio";
 import {
   addTime,
   adjustItem,
@@ -12,6 +12,7 @@ import {
   endRound,
   endSession,
   finishItem,
+  isPrep,
   metPlan,
   pause,
   resume,
@@ -103,6 +104,7 @@ function phaseLabel(state: TimerState, item: TimerItem | null, view: TimerView):
   if (state.phase === "done") return metPlan(state) ? "Session complete" : "Session ended";
   if (state.phase === "ready") return "Up next";
   if (view.paused) return "Paused";
+  if (isPrep(state)) return "Get ready";
   if (state.phase === "rest") return view.readyRemainingMs === 0 ? "Ready" : "Rest";
   if (item?.kind === "interval") return item.sparring ? "Spar" : "Work";
   if (item?.kind === "sets") return item.holdSec ? "Hold" : "Lift";
@@ -113,7 +115,7 @@ function counterLabel(state: TimerState, item: TimerItem | null): string | null 
   if (!item || state.phase === "ready" || state.phase === "done") return null;
   if (item.kind === "interval") {
     if (item.rounds <= 1) return null;
-    const label = state.phase === "rest" ? "Next: round" : "Round";
+    const label = state.phase === "rest" && !isPrep(state) ? "Next: round" : "Round";
     return `${label} ${state.unit} / ${item.rounds}`;
   }
   if (item.kind === "sets") {
@@ -193,17 +195,23 @@ function Ring({ progress, children }: { progress: number | null; children: React
   );
 }
 
-type IconName = "pause" | "play" | "plus" | "skip" | "next" | "flag" | "chevron" | "sound" | "check" | "sliders";
+type IconName = "pause" | "play" | "plus" | "minus" | "skip" | "next" | "flag" | "chevron" | "settings" | "check" | "sliders";
 
 const ICON_PATHS: Record<IconName, ReactNode> = {
   pause: <path d="M8 5v14M16 5v14" />,
   play: <path d="M7 5l12 7-12 7z" fill="currentColor" stroke="none" />,
   plus: <path d="M12 6v12M6 12h12" />,
+  minus: <path d="M6 12h12" />,
   skip: <path d="M6 5l9 7-9 7zM18 5v14" />,
   next: <path d="M9 6l6 6-6 6" />,
   flag: <path d="M6 20V5M6 5h11l-2 4 2 4H6" />,
   chevron: <path d="M6 9l6 6 6-6" />,
-  sound: <path d="M4 10v4h4l5 4V6L8 10H4zM16 9a4 4 0 010 6M18.5 6.5a7.5 7.5 0 010 11" />,
+  settings: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </>
+  ),
   check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
   sliders: <path d="M4 8h9M17 8h3M4 16h3M11 16h9M15 6v4M9 14v4" />,
 };
@@ -303,6 +311,7 @@ function ReadyPanel({
                 aria-pressed={active}
                 onClick={() => {
                   rememberRoundFormat(item.formatMemoryKey, {
+                    rounds: item.rounds,
                     workSec: preset.workSec,
                     restSec: preset.restSec,
                   });
@@ -404,43 +413,89 @@ function useAdjustHint(): [boolean, () => void] {
 function SettingsSheet({ timer, onClose }: { timer: SessionTimerController; onClose: () => void }) {
   const { settings, setSettings } = timer;
   return (
-    <div className="st-sheet" role="group" aria-label="Timer sound settings">
-      <label className="st-toggle">
-        <input
-          type="checkbox"
-          checked={settings.sound}
-          onChange={(event) => setSettings({ ...settings, sound: event.target.checked })}
-        />
-        <span>Bell and beeps</span>
-      </label>
-      <label className="st-range">
-        <span>Volume</span>
-        <input
-          type="range"
-          min={0}
-          max={1}
-          step={0.05}
-          value={settings.volume}
-          onChange={(event) => setSettings({ ...settings, volume: Number(event.target.value) })}
-          onPointerUp={() => timerAudio().play("bell")}
-        />
-      </label>
-      <label className="st-toggle">
-        <input
-          type="checkbox"
-          checked={settings.voice}
-          onChange={(event) => setSettings({ ...settings, voice: event.target.checked })}
-        />
-        <span>Voice callouts (&ldquo;Round 3&rdquo;, &ldquo;Rest&rdquo;)</span>
-      </label>
-      <label className="st-toggle">
-        <input
-          type="checkbox"
-          checked={settings.vibrate}
-          onChange={(event) => setSettings({ ...settings, vibrate: event.target.checked })}
-        />
-        <span>Vibrate (Android)</span>
-      </label>
+    <div className="st-sheet" role="group" aria-label="Timer settings">
+      <fieldset className="st-group">
+        <legend>Sound</legend>
+        <label className="st-toggle">
+          <input
+            type="checkbox"
+            checked={settings.sound}
+            onChange={(event) => setSettings({ ...settings, sound: event.target.checked })}
+          />
+          <span>Bell and beeps</span>
+        </label>
+        <label className="st-range">
+          <span>Volume</span>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={settings.volume}
+            onChange={(event) => setSettings({ ...settings, volume: Number(event.target.value) })}
+            onPointerUp={() => timerAudio().play("bell")}
+          />
+        </label>
+        <label className="st-toggle">
+          <input
+            type="checkbox"
+            checked={settings.voice}
+            onChange={(event) => setSettings({ ...settings, voice: event.target.checked })}
+          />
+          <span>Voice callouts (&ldquo;Round 3&rdquo;, &ldquo;Halfway&rdquo;, &ldquo;10 seconds&rdquo;)</span>
+        </label>
+        <label className="st-toggle">
+          <input
+            type="checkbox"
+            checked={settings.vibrate}
+            onChange={(event) => setSettings({ ...settings, vibrate: event.target.checked })}
+          />
+          <span>Vibrate (Android)</span>
+        </label>
+      </fieldset>
+      <fieldset className="st-group">
+        <legend>Round warnings</legend>
+        <label className="st-toggle">
+          <input
+            type="checkbox"
+            checked={settings.warnTen}
+            onChange={(event) => setSettings({ ...settings, warnTen: event.target.checked })}
+          />
+          <span>10 seconds left</span>
+        </label>
+        <label className="st-toggle">
+          <input
+            type="checkbox"
+            checked={settings.warnThirty}
+            onChange={(event) => setSettings({ ...settings, warnThirty: event.target.checked })}
+          />
+          <span>30 seconds left</span>
+        </label>
+        <label className="st-toggle">
+          <input
+            type="checkbox"
+            checked={settings.warnHalfway}
+            onChange={(event) => setSettings({ ...settings, warnHalfway: event.target.checked })}
+          />
+          <span>Halfway</span>
+        </label>
+      </fieldset>
+      <div className="st-choice" role="radiogroup" aria-label="Countdown before round 1">
+        <span>Get-ready countdown</span>
+        <div className="st-choice-options">
+          {PREP_OPTIONS.map((seconds) => (
+            <button
+              key={seconds}
+              type="button"
+              role="radio"
+              aria-checked={settings.prepSec === seconds}
+              onClick={() => setSettings({ ...settings, prepSec: seconds })}
+            >
+              {seconds === 0 ? "Off" : `${seconds}s`}
+            </button>
+          ))}
+        </div>
+      </div>
       <p className="st-sheet-note">
         Keep this screen open: the clock stays exact if your phone locks, but the bell can&apos;t ring
         while the screen is off.
@@ -471,8 +526,19 @@ function PrimaryAction({
     fn();
   };
   if (state.phase === "ready") {
+    const start = () => {
+      // What they start with is what the timer opens on next time.
+      if (item.kind === "interval" && item.formatMemoryKey) {
+        rememberRoundFormat(item.formatMemoryKey, {
+          rounds: item.rounds,
+          workSec: item.workSec,
+          restSec: item.restSec,
+        });
+      }
+      timer.run((s, at) => startItem(s, at, { prepSec: timer.settings.prepSec }));
+    };
     return (
-      <button type="button" className="st-primary" onClick={unlockThen(() => timer.run(startItem))}>
+      <button type="button" className="st-primary" onClick={unlockThen(start)}>
         {item.kind === "interval" && item.rounds > 1 ? "Start round 1" : "Start"}
       </button>
     );
@@ -508,7 +574,7 @@ function PrimaryAction({
   if (state.phase === "rest") {
     return (
       <button type="button" className="st-primary" data-variant="ghost" onClick={() => timer.run(skipRest)}>
-        {item.kind === "sets" ? `Start set ${state.unit}` : "Skip rest"}
+        {item.kind === "sets" ? `Start set ${state.unit}` : isPrep(state) ? "Start now" : "Skip rest"}
       </button>
     );
   }
@@ -528,7 +594,7 @@ function ToBody({ children }: { children: ReactNode }) {
 /**
  * Full-screen session timer. Rounds for sparring / conditioning, sets with
  * auto rest for strength, holds and rest for rehab. Minimising keeps the clock
- * running (silently) and shows a mini bar; closing only ever minimises, so an
+ * running (the round bells and warnings still ring) and shows a mini bar; closing only ever minimises, so an
  * accidental tap never loses a session.
  */
 export function SessionTimer({
@@ -556,7 +622,7 @@ export function SessionTimer({
 }) {
   const timer = useSessionTimer({ items, storageKey, audible: visible });
   const { state, now } = timer;
-  const [sheet, setSheet] = useState<"sound" | "adjust" | null>(null);
+  const [sheet, setSheet] = useState<"settings" | "adjust" | null>(null);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [adjustHint, dismissAdjustHint] = useAdjustHint();
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -673,12 +739,12 @@ export function SessionTimer({
           <button
             type="button"
             className="st-icon"
-            onClick={() => setSheet((open) => (open === "sound" ? null : "sound"))}
-            aria-label="Sound settings"
-            aria-expanded={sheet === "sound"}
-            data-active={sheet === "sound" ? "true" : undefined}
+            onClick={() => setSheet((open) => (open === "settings" ? null : "settings"))}
+            aria-label="Timer settings"
+            aria-expanded={sheet === "settings"}
+            data-active={sheet === "settings" ? "true" : undefined}
           >
-            <Icon name="sound" />
+            <Icon name="settings" />
           </button>
         </div>
         {canAdjust && adjustHint && sheet === null ? (
@@ -690,7 +756,7 @@ export function SessionTimer({
       </header>
       <StepBar state={state} />
 
-      {sheet === "sound" ? <SettingsSheet timer={timer} onClose={() => setSheet(null)} /> : null}
+      {sheet === "settings" ? <SettingsSheet timer={timer} onClose={() => setSheet(null)} /> : null}
       {sheet === "adjust" ? <AdjustSheet timer={timer} /> : null}
       {/* Tapping anywhere off an open sheet closes it. */}
       {sheet !== null ? <div className="st-scrim" aria-hidden="true" onClick={() => setSheet(null)} /> : null}
@@ -791,10 +857,24 @@ export function SessionTimer({
               </button>
             ) : null}
             {timed && !view.paused ? (
-              <button type="button" onClick={() => timer.update((s) => addTime(s, 30))}>
-                <Icon name="plus" />
-                30s
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => timer.update((s, at) => addTime(s, -10, at))}
+                  aria-label="Take 10 seconds off"
+                >
+                  <Icon name="minus" />
+                  10s
+                </button>
+                <button
+                  type="button"
+                  onClick={() => timer.update((s, at) => addTime(s, 10, at))}
+                  aria-label="Add 10 seconds"
+                >
+                  <Icon name="plus" />
+                  10s
+                </button>
+              </>
             ) : null}
             {state.phase === "work" && item?.kind === "interval" && !view.paused ? (
               <button type="button" onClick={() => timer.run(endRound)}>

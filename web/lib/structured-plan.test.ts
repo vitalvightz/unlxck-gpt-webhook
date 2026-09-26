@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   classifySessionlessDay,
   getCoachLedContactView,
+  isConvertedTechnicalHeadline,
   cleanText,
   finitePositiveNumber,
   formatBlockLoad,
@@ -658,6 +659,26 @@ test("timed holds show their measured seconds instead of a one-rep volume", () =
   ]);
 });
 
+test("only a converted hard-sparring headline is flagged as converted", () => {
+  for (const headline of [
+    "Technical-only combat",
+    "Technical combat",
+    "Coach-led boxing — technical only",
+    "Controlled fight-speed technical rounds",
+    "Technical rhythm only",
+    "Technical touch — pads / shadow",
+    "Technical activation — no contact",
+  ]) {
+    assert.equal(isConvertedTechnicalHeadline(headline), true, headline);
+  }
+  for (const headline of ["Technical sparring", "Pad work", "Shadow boxing and footwork", "Skill drills"]) {
+    assert.equal(isConvertedTechnicalHeadline(headline), false, headline);
+    const view = classifySessionlessDay({ today_card: { headline }, sessions: [] } as never);
+    assert.equal(view.kind, "technical", headline);
+    assert.equal(view.converted, false, headline);
+  }
+});
+
 test("an empty rest day cannot advertise an unscheduled training role", () => {
   assert.deepEqual(
     classifySessionlessDay({
@@ -665,7 +686,7 @@ test("an empty rest day cannot advertise an unscheduled training role", () => {
       today_card: { headline: "Fight-pace conditioning" },
       sessions: [],
     } as never),
-    { kind: "rest", title: "No planned session", tag: null, coachLed: false },
+    { kind: "rest", title: "No planned session", tag: null, coachLed: false, converted: false },
   );
 });
 
@@ -715,6 +736,30 @@ test("selectBlockMetric combines duration, distance, and rounds in order", () =>
     { label: "Distance", value: "400 meters" },
     { label: "Rounds", value: "8" },
   ]);
+});
+
+test("selectBlockMetric drops a rep count that only echoes interval work seconds", () => {
+  // "2x3s" converted to rounds 2, work 3 sec and a stray reps 3.
+  assert.deepEqual(
+    selectBlockMetric({ reps: 3, rounds: 2, work: { value: 3, unit: "seconds" } } as never),
+    [{ label: "Rounds", value: "2" }],
+  );
+  // A real per-round rep count that differs from the work seconds stays.
+  assert.deepEqual(
+    selectBlockMetric({ reps: 5, rounds: 2, work: { value: 20, unit: "seconds" } } as never),
+    [
+      { label: "Volume", value: "5" },
+      { label: "Rounds", value: "2" },
+    ],
+  );
+  // With sets, the reps are a real sets x reps volume.
+  assert.deepEqual(
+    selectBlockMetric({ sets: 2, reps: 3, rounds: 2, work: { value: 3, unit: "seconds" } } as never),
+    [
+      { label: "Volume", value: "2 × 3" },
+      { label: "Rounds", value: "2" },
+    ],
+  );
 });
 
 // --- content presence: blocks / mindset / nutrition / red flags -------------

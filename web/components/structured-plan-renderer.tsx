@@ -75,6 +75,7 @@ import { describeRelativeDay, formatAppDate, formatAppDateRange } from "@/lib/da
 import { resolveFiniteWeekNumber } from "@/lib/plan-format";
 import { formatPlanLabel } from "@/lib/plan-labels";
 import { GlossaryTooltip } from "@/components/glossary-tooltip";
+import { glossaryEntry } from "@/lib/glossary";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { SafetyNote } from "@/components/safety-note";
 import { PLAN_SAFETY_NOTE } from "@/lib/safety-copy";
@@ -137,7 +138,7 @@ const HARD_SPARRING_SESSIONLESS_NOTE =
   "No extra S&C today — this is your declared hard-sparring/contact work. Keep freshness the priority.";
 const TECHNICAL_COMBAT_TITLE = "Technical Combat";
 const TECHNICAL_COMBAT_HELP =
-  "Hard sparring is reduced close to competition to lower fatigue and injury risk while keeping timing and skills sharp.";
+  "Near fight day, hard sparring is reduced. This lowers fatigue and injury risk while keeping your timing and skills sharp.";
 const TECHNICAL_COMBAT_TAG = "Low load";
 const TECHNICAL_COMBAT_RATIONALE =
   "Technical only — no hard sparring. Stay sharp and leave fresh.";
@@ -245,9 +246,10 @@ function TechnicalCombatRationale({ title }: { title?: string }) {
 function TechnicalCombatWhyTooltip() {
   return (
     <WhyTooltip
+      className="info-tooltip"
       title={TECHNICAL_COMBAT_TITLE}
       body={TECHNICAL_COMBAT_HELP}
-      triggerLabel="?"
+      triggerLabel="i"
     />
   );
 }
@@ -783,14 +785,17 @@ export function SessionlessDayCard({
   const warning = cleanText(card?.primary_warning);
   const nutrition = cleanText(card?.nutrition_summary);
   const weightCut = cleanText(card?.weight_cut_warning);
-  const { kind, title, tag, coachLed } = classifySessionlessDay(day);
+  const { kind, title, tag, coachLed, converted } = classifySessionlessDay(day);
+  // Only a converted hard-sparring day gets the "hard sparring is reduced"
+  // treatment; a technical day the athlete declared keeps its own wording.
+  const isConverted = kind === "technical" && converted;
   const displayTitle =
     kind === "light_combat"
       ? DECLARED_LIGHT_COMBAT_TITLE
-      : kind === "technical"
+      : isConverted
         ? (title === "Technical-only combat" ? TECHNICAL_COMBAT_TITLE : title)
         : title;
-  const displayTag = kind === "technical" ? TECHNICAL_COMBAT_TAG : tag;
+  const displayTag = isConverted ? TECHNICAL_COMBAT_TAG : tag;
   const isRest = kind === "rest";
 
   return (
@@ -805,16 +810,16 @@ export function SessionlessDayCard({
           ) : null}
           <h3 className="sp-session-title">
             {displayTitle}
-            {kind === "technical" ? <TechnicalCombatWhyTooltip /> : null}
+            {isConverted ? <TechnicalCombatWhyTooltip /> : null}
           </h3>
         </div>
         <div className="sp-session-meta">
           {displayTag ? <span className="sp-tag sp-accent">{displayTag}</span> : null}
         </div>
       </header>
-      {kind === "light_combat" ? (
+      {kind === "light_combat" || (kind === "technical" && !isConverted) ? (
         <p className="sp-today-note">{DECLARED_LIGHT_COMBAT_DESCRIPTION}</p>
-      ) : kind === "technical" ? (
+      ) : isConverted ? (
         <TechnicalCombatRationale title={displayTitle} />
       ) : coachLed ? (
         <p className="sp-today-note">{HARD_SPARRING_SESSIONLESS_NOTE}</p>
@@ -857,20 +862,25 @@ function CoachLedDayContext({
   title,
   tag,
   kind,
+  converted,
 }: {
   title: string;
   tag: string | null;
   kind: SessionlessDayKind;
+  converted: boolean;
 }) {
   const isLightCombat = kind === "light_combat";
-  const isTechnical = kind === "technical";
+  // Only a converted hard-sparring day reads as "Technical Combat"; a technical
+  // day the athlete declared keeps its own wording and the light-combat note.
+  const isTechnical = kind === "technical" && converted;
+  const isDeclaredTechnical = kind === "technical" && !converted;
   const displayTitle = isLightCombat
     ? DECLARED_LIGHT_COMBAT_TITLE
     : isTechnical
       ? (title === "Technical-only combat" ? TECHNICAL_COMBAT_TITLE : title)
       : title;
   const displayTag = isTechnical ? TECHNICAL_COMBAT_TAG : tag;
-  const description = isLightCombat
+  const description = isLightCombat || isDeclaredTechnical
     ? DECLARED_LIGHT_COMBAT_DESCRIPTION
     : HARD_SPARRING_CONTACT_NOTE;
 
@@ -938,6 +948,7 @@ export function DaySessionContext({ day }: { day: StructuredDay }) {
           title={coachLedContact.title}
           tag={coachLedContact.tag}
           kind={coachLedContact.kind}
+          converted={coachLedContact.converted}
         />
       ) : null}
       {priorityMicrodose ? <PriorityMicrodoseCard day={day} /> : null}
@@ -1925,12 +1936,23 @@ function WeekOverview({
     ? `Block ${scheduleContext?.block_number ?? 1} · ${openWeekHeading}`
     : `Week ${weekNumber}`;
   const weekIntent = openOngoing ? openBlockWeekIntent(weekNumber) : null;
+  // The pill only names the phase (GPP / SPP / Taper); the selected week's
+  // heading is where it gets explained, one tap away.
+  const phaseEntry = openOngoing ? null : glossaryEntry(resolvedWeekPhase(week));
 
   return (
     <section className="sp-card cm-week-overview">
       <div className="cm-week-overview-head">
         <p className="sp-eyebrow">Week overview</p>
-        <h2 className="sp-redflags-title">{heading}</h2>
+        <h2 className="sp-redflags-title">
+          {heading}
+          {phaseEntry ? (
+            <span className="cm-week-phase">
+              <span className="sp-tag sp-accent">{phaseEntry.term}</span>
+              <GlossaryTooltip term={phaseEntry.term} />
+            </span>
+          ) : null}
+        </h2>
       </div>
 
       {weekIntent ? (

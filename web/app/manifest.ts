@@ -48,6 +48,13 @@ export default function manifest(): MetadataRoute.Manifest {
         icons: [{ src: APP_ICON_192, sizes: "192x192", type: "image/png" }],
       },
       {
+        name: "Round timer",
+        short_name: "Timer",
+        description: "Start a round timer straight away.",
+        url: "/timer?source=pwa-shortcut",
+        icons: [{ src: APP_ICON_192, sizes: "192x192", type: "image/png" }],
+      },
+      {
         name: "Plans",
         short_name: "Plans",
         description: "Open your active and saved fight camps.",

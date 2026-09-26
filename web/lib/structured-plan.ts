@@ -156,6 +156,20 @@ function isModeLikeReps(reps: string): boolean {
   return /\b(continuous|amrap|emom)\b/i.test(reps);
 }
 
+function repsEchoesIntervalWork(block: StructuredBlock, repsText: string): boolean {
+  const work = block.work;
+  if (
+    !finitePositiveNumber(block.rounds) ||
+    finitePositiveNumber(block.sets) ||
+    !isObject(work) ||
+    !finitePositiveNumber(work.value) ||
+    !/^s(?:ec(?:ond)?s?)?$/i.test(cleanText(work.unit) ?? "")
+  ) {
+    return false;
+  }
+  return /^\d+(?:\.\d+)?$/.test(repsText) && Number(repsText) === work.value;
+}
+
 export type BlockMetric = { label: string; value: string };
 
 /**
@@ -190,6 +204,12 @@ export function selectBlockMetric(block: StructuredBlock | null | undefined): Bl
   // A bare non-finite spelling as text ("NaN", "Infinity", "-Infinity") never
   // renders — a range "4-6" or time "30 seconds" is untouched.
   if (repsText !== null && isNonFiniteNumericToken(repsText)) {
+    repsText = null;
+  }
+  // An interval block (rounds x work) whose bare rep count only repeats the
+  // work seconds ("2x3s" read as rounds 2, work 3 sec, reps 3) is an echo, not
+  // a volume: "Volume 3" beside "Work 3 seconds" means nothing to the athlete.
+  if (repsText !== null && repsEchoesIntervalWork(block, repsText)) {
     repsText = null;
   }
   // The set multiplier must be a finite positive number, or it is omitted.
@@ -1537,6 +1557,28 @@ function technicalContactTitleForCountdown(headline: string, countdownLabel: unk
   return headline;
 }
 
+// Headlines the planner only ever stamps on a declared hard-sparring day it
+// converted to technical work (D-17 inward): the canonical "technical only" /
+// "no hard sparring" wording, its legacy spelling, and the countdown ladder above. A technical / light day the athlete
+// declared keeps its own wording and must never read as a converted one.
+const CONVERTED_TECHNICAL_LADDER_TITLES = new Set([
+  "controlled fight-speed technical rounds",
+  "technical rhythm only",
+  "technical touch — pads / shadow",
+  "technical activation — no contact",
+]);
+const CONVERTED_TECHNICAL_RE = /\btechnical[\s-]+only\b|\bno\s+hard\s+sparring\b/i;
+
+/** Whether a technical contact headline marks a converted hard-sparring day. */
+export function isConvertedTechnicalHeadline(headline: string): boolean {
+  const normalized = headline.trim().toLowerCase();
+  return (
+    CONVERTED_TECHNICAL_RE.test(normalized) ||
+    GENERIC_TECHNICAL_CONTACT_TITLES.has(normalized) ||
+    CONVERTED_TECHNICAL_LADDER_TITLES.has(normalized)
+  );
+}
+
 export type SessionlessDayKind =
   | "coach_led"
   | "light_combat"
@@ -1552,6 +1594,8 @@ export type SessionlessDayView = {
   tag: string | null;
   /** Whether to surface the "no app S&C — your own hard sparring/contact work" note. */
   coachLed: boolean;
+  /** A technical day the planner converted from declared hard sparring. */
+  converted: boolean;
 };
 
 const SESSIONLESS_DAY_TAGS: Record<SessionlessDayKind, string | null> = {
@@ -1607,6 +1651,7 @@ export function classifySessionlessDay(
         title: REST_HEADLINE_RE.test(headline) ? headline : "No planned session",
         tag: null,
         coachLed: false,
+        converted: false,
       };
     }
     return {
@@ -1620,19 +1665,22 @@ export function classifySessionlessDay(
         kind === "coach_led" ||
         kind === "sparring" ||
         kind === "technical",
+      converted: kind === "technical" && isConvertedTechnicalHeadline(headline),
     };
   }
 
   // No headline to classify from: fall back to a plain rest day. The converter
   // is instructed to always headline a coach-led/sparring/technical day, so a
   // headline-less session-less day is treated as genuine rest.
-  return { kind: "rest", title: "Rest day", tag: null, coachLed: false };
+  return { kind: "rest", title: "Rest day", tag: null, coachLed: false, converted: false };
 }
 
 export type CoachLedContactView = {
   kind: SessionlessDayKind;
   title: string;
   tag: string | null;
+  /** A technical day the planner converted from declared hard sparring. */
+  converted: boolean;
 };
 
 /**
@@ -1655,5 +1703,10 @@ export function getCoachLedContactView(
     kind === "technical"
       ? technicalContactTitleForCountdown(headline, day?.countdown_label)
       : headline;
-  return { kind, title, tag: SESSIONLESS_DAY_TAGS[kind] };
+  return {
+    kind,
+    title,
+    tag: SESSIONLESS_DAY_TAGS[kind],
+    converted: kind === "technical" && isConvertedTechnicalHeadline(headline),
+  };
 }

@@ -18267,7 +18267,15 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
   border-bottom-color: rgba(18, 12, 14, 0.96);
 }
 
-/* The compact "?" that glosses a jargon label on the plan surfaces. Sized to sit
+/* "Explain this term" reads as an info mark, not a question: a serif "i" so it
+   never looks like "I don't know". */
+.info-tooltip .why-tooltip-trigger {
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-weight: 700;
+}
+
+/* The compact "i" that glosses a jargon label on the plan surfaces. Sized to sit
    beside a 0.68rem small-caps label without inflating the line. */
 .glossary-tooltip {
   margin-inline-start: 4px;
@@ -18279,10 +18287,10 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
   min-width: 15px;
   height: 15px;
   padding: 0;
-  font-size: 9px;
+  font-size: 10px;
 }
 
-/* The stat label and its "?" share one row above the value; without this the
+/* The stat label and its "i" share one row above the value; without this the
    tooltip would become a third row in the .sp-stat column. */
 .sp-stat-head {
   display: inline-flex;
@@ -20012,6 +20020,14 @@ html[data-theme="light"] .loading-operational-item {
   display: grid;
   gap: 2px;
   margin-bottom: 8px;
+}
+
+/* The week's phase beside its heading, with the "i" that explains it. */
+.cm-week-phase {
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: 10px;
+  vertical-align: middle;
 }
 
 .cm-week-intent {

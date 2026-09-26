@@ -53,6 +53,9 @@ function NoActivePlanState() {
         <Link href="/onboarding" className="cta">
           Complete Intake
         </Link>
+        <Link href="/timer" className="secondary-button">
+          Round timer
+        </Link>
       </div>
     </section>
   );
@@ -177,6 +180,9 @@ export function TodayScreen() {
           </button>
           <Link href="/plans" className="secondary-button">
             Open Plans
+          </Link>
+          <Link href="/timer" className="secondary-button">
+            Round timer
           </Link>
           <Link href="/" className="ghost-button">
             Overview

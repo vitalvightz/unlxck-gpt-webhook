@@ -54,6 +54,17 @@ _NORMAL_STRENGTH_ROLE_CAPS: dict[str, int] = {
     "small_strength_touch_day": 2,
 }
 _DEFAULT_NORMAL_STRENGTH_CAP = 3
+# Full strength / strength+power roles capped below the preferred session size
+# may take ONE extra compatible Stage 1 exercise on a clear day, and only for a
+# fresh athlete (pressure 0): any fatigue, cut or injury pressure keeps its own
+# reduced cap. Composition only proposes the extra item;
+# ``apply_standalone_strength_minimum`` keeps it only when the realised-load
+# revalidation outcome and every existing dose are unchanged by it.
+_STANDALONE_STRENGTH_MINIMUM = 4
+_STANDALONE_STRENGTH_MAX_PRESSURE = 0
+_STANDALONE_STRENGTH_MINIMUM_ROLE_KEYS = frozenset(
+    {"secondary_strength_day", "neural_plus_strength_day", "transfer_strength_day"}
+)
 
 _FATIGUE_PRESSURE = {"low": 0, "moderate": 1, "high": 2}
 _CUT_PRESSURE = {
@@ -338,6 +349,46 @@ def _effective_role_cap(role_key: str, pressure: int) -> tuple[int, int]:
     if pressure == 2:
         return base_cap, max(2, base_cap - 2)
     return base_cap, 2
+
+
+def _strength_role_is_standalone(
+    weekly_role_map: dict[str, Any], week: dict[str, Any], week_ordinal: int, role: dict[str, Any]
+) -> bool:
+    """True only when the role's day holds no contact or other meaningful session.
+
+    Fails closed: an undated or unclassifiable role, a same-day contact or
+    meaningful strength/conditioning session, or any non-ALLOW verdict from the
+    shared calendar policy (e.g. the day before hard contact) is not standalone.
+    """
+    from .calendar_context import build_events, classify_role, week_scope
+    from .combat_load_policy import (
+        CONTACT_LOAD_CLASSES,
+        LoadClass,
+        PlacementDirective,
+        evaluate_candidate_at_position,
+    )
+
+    d_day = role_d_day(week, role)
+    profile = classify_role(role)
+    if d_day is None or profile is None:
+        return False
+    events = build_events(weekly_role_map, exclude_role=role)
+    blocking = CONTACT_LOAD_CLASSES | {
+        LoadClass.MEANINGFUL_STRENGTH,
+        LoadClass.MEANINGFUL_CONDITIONING,
+    }
+    if any(
+        event.position == -d_day and event.profile.load_class in blocking
+        for event in events
+    ):
+        return False
+    decision = evaluate_candidate_at_position(
+        profile,
+        candidate_position=-d_day,
+        events=events,
+        candidate_scope=week_scope(week, week_ordinal),
+    )
+    return decision.directive is PlacementDirective.ALLOW
 
 
 def _slot_selected_item(slot: dict[str, Any]) -> dict[str, Any]:
@@ -684,6 +735,31 @@ def _low_load_trunk_support_records(slots: list[dict[str, Any]]) -> list[dict[st
         ):
             records.append(record)
     return records
+
+
+_EMBEDDED_TRUNK_HOLD_PRESCRIPTION = "1-2 controlled sets x 15-20 sec hold; stop before fatigue"
+_EMBEDDED_TRUNK_REP_PRESCRIPTION = (
+    "1-2 controlled sets x 3-5 slow reps (each side if one-sided); stop before fatigue"
+)
+_HOLD_NAME_RE = re.compile(r"\b(?:hold|holds|plank|isometric|iso)\b", re.IGNORECASE)
+
+
+def _embedded_trunk_support_prescription(record: dict[str, Any]) -> str:
+    """A complete dose for an embedded trunk-support drill.
+
+    A set count alone ("1-2 controlled sets") leaves the athlete with no hold
+    time or rep count, so the card renders a hold with nothing to hold for.
+    Holds get a hold time; everything else gets a small rep count.
+    """
+    slot = record.get("slot") if isinstance(record.get("slot"), dict) else {}
+    selected = slot.get("selected") if isinstance(slot.get("selected"), dict) else {}
+    movement = str(selected.get("movement") or "").strip().lower()
+    is_hold = (
+        record.get("quality_class") == "support_isometric"
+        or movement == "isometric"
+        or bool(_HOLD_NAME_RE.search(str(record.get("name") or "")))
+    )
+    return _EMBEDDED_TRUNK_HOLD_PRESCRIPTION if is_hold else _EMBEDDED_TRUNK_REP_PRESCRIPTION
 
 
 def _role_days_until_fight(role: dict[str, Any]) -> int | None:
@@ -1177,6 +1253,12 @@ def compose_normal_strength_assignments(
             records = _candidate_records(owned_slots)
             role_key = str(role.get("role_key") or "").strip()
             base_cap, effective_cap = _effective_role_cap(role_key, pressure)
+            prior_policy = role.get("strength_composition_policy")
+            prior_standalone_minimum = (
+                prior_policy.get("standalone_minimum")
+                if isinstance(prior_policy, dict)
+                else None
+            )
             selected_records, dropped = _select_bounded_records(
                 records,
                 role_key=role_key,
@@ -1196,6 +1278,7 @@ def compose_normal_strength_assignments(
                 "role_key": role_key,
                 "base_exercise_cap": base_cap,
                 "effective_exercise_cap": effective_cap,
+                "standalone_minimum_applied": False,
                 "major_family_limit": 2 if pressure == 0 else 1,
                 "selected_count": len(assignments),
                 "selected_names": [item["name"] for item in assignments],
@@ -1215,9 +1298,258 @@ def compose_normal_strength_assignments(
                     "effective_cap": effective_cap,
                     "pressure": pressure,
                     "preserve_trunk_support": trunk_strength_selected,
+                    "week_ordinal": week_position + 1,
+                    "standalone_eligible": (
+                        pressure <= _STANDALONE_STRENGTH_MAX_PRESSURE
+                        and phase in {"GPP", "SPP"}
+                        and role_key in _STANDALONE_STRENGTH_MINIMUM_ROLE_KEYS
+                    ),
+                    "prior_standalone_minimum": prior_standalone_minimum,
                 }
             )
     _apply_adjacent_strength_recovery(weekly_role_map, composed_roles)
+    _propose_standalone_strength_minimum(weekly_role_map, composed_roles)
+    return weekly_role_map
+
+
+def _propose_standalone_strength_minimum(
+    weekly_role_map: dict[str, Any], entries: list[dict[str, Any]]
+) -> None:
+    """Record at most one extra compatible exercise per eligible standalone role.
+
+    Runs after the adjacent-strength-recovery pass so it sees final composition
+    placement. A new proposal never touches ``selected_exercise_assignments``:
+    only ``apply_standalone_strength_minimum`` can confirm it. A decision already
+    confirmed or rejected for the same exercise (a goal-repair trial recomposes
+    the whole map) is carried forward rather than re-judged, so only an
+    already-confirmed extra is re-added here.
+    """
+    for entry in entries:
+        role = entry["role"]
+        week = entry["week"]
+        policy = role.get("strength_composition_policy")
+        if not entry.get("standalone_eligible") or not isinstance(policy, dict):
+            continue
+        if role not in (week.get("session_roles") or []):
+            continue
+        if (policy.get("adjacent_strength_recovery") or {}).get("decision") not in {
+            None,
+            "compatible",
+        }:
+            continue
+        selected = entry["selected_records"]
+        if len(selected) >= _STANDALONE_STRENGTH_MINIMUM:
+            continue
+        if not _strength_role_is_standalone(
+            weekly_role_map, week, entry["week_ordinal"], role
+        ):
+            continue
+
+        d_day = role_d_day(week, role)
+        neighbour_substantial_tags = _substantial_mechanical_tags(
+            [
+                record
+                for other in entries
+                if other is not entry
+                and other["role"] in (other["week"].get("session_roles") or [])
+                and role_d_day(other["week"], other["role"]) in {d_day - 1, d_day + 1}
+                for record in other["selected_records"]
+            ]
+        )
+        family_limit = 2 if entry["pressure"] == 0 else 1
+        family_counts: dict[str, int] = {}
+        for record in selected:
+            for family in record["families"]:
+                family_counts[family] = family_counts.get(family, 0) + 1
+        extra = next(
+            (
+                record
+                for record in entry["records"]
+                if record not in selected
+                and not _would_exceed_family_limit(
+                    record["families"], family_counts, family_limit
+                )
+                and (
+                    not record["material_movement_cost"]
+                    or not (record["mechanical_risk_tags"] & neighbour_substantial_tags)
+                )
+            ),
+            None,
+        )
+        if extra is None:
+            continue
+        assignment = assignment_from_slot(entry["phase"], "strength_slots", extra["slot"])
+        if not assignment:
+            continue
+
+        prior = entry.get("prior_standalone_minimum")
+        prior = prior if isinstance(prior, dict) else {}
+        same_exercise = (
+            prior.get("exercise") == assignment["name"]
+            and prior.get("slot_id") == assignment.get("slot_id")
+        )
+        decision = {
+            "status": prior.get("status") if same_exercise else "proposed",
+            "exercise": assignment["name"],
+            "slot_id": assignment.get("slot_id"),
+            "source_phase": entry["phase"],
+        }
+        if same_exercise and prior.get("reason"):
+            decision["reason"] = prior["reason"]
+        policy["standalone_minimum"] = decision
+        if decision["status"] == "applied":
+            _assign_selected_records(entry, [*selected, extra])
+            policy["standalone_minimum_applied"] = True
+
+
+def _placement_signature(weekly_role_map: dict[str, Any]) -> tuple:
+    weeks = []
+    for week in weekly_role_map.get("weeks", []) or []:
+        if not isinstance(week, dict):
+            continue
+        scheduled = sorted(
+            tuple(
+                str(role.get(key))
+                for key in (
+                    "role_key",
+                    "category",
+                    "strength_session_index",
+                    "session_index",
+                    "scheduled_countdown_label",
+                    "scheduled_day_hint",
+                )
+            )
+            for role in week.get("session_roles") or []
+            if isinstance(role, dict)
+        )
+        suppressed = sorted(
+            str(role.get("role_key"))
+            for role in week.get("suppressed_roles") or []
+            if isinstance(role, dict)
+        )
+        weeks.append((tuple(scheduled), tuple(suppressed)))
+    return tuple(weeks)
+
+
+def _strength_roles_by_position(
+    weekly_role_map: dict[str, Any],
+) -> dict[tuple[int, int], dict[str, Any]]:
+    return {
+        (week_index, role_index): role
+        for week_index, week in enumerate(weekly_role_map.get("weeks", []) or [])
+        if isinstance(week, dict)
+        for role_index, role in enumerate(week.get("session_roles") or [])
+        if isinstance(role, dict)
+        and isinstance(role.get("strength_composition_policy"), dict)
+    }
+
+
+def apply_standalone_strength_minimum(
+    weekly_role_map: dict[str, Any],
+    *,
+    candidate_pools: dict[str, Any],
+    redose_callback: Callable[[dict[str, Any]], Any],
+    recompose_conditioning_callback: Callable[[dict[str, Any], set[int]], Any] | None = None,
+) -> dict[str, Any]:
+    """Confirm or reject each proposed standalone-strength extra exercise.
+
+    Must run after dose resolution and immediately before
+    ``apply_realised_load_calendar_revalidation``. The existing revalidation is
+    run on copies of the map, first without any extra exercise (the baseline)
+    and then with each proposal added on top of those already accepted. A
+    proposal is kept only when the revalidation outcome -- every role's
+    placement, every relocation/suppression action, and every residual conflict
+    -- is identical to the baseline, and every existing exercise keeps its
+    resolved dose. Otherwise the session stays at its original exercise count,
+    so this can never alter session placement.
+    """
+    from copy import deepcopy
+
+    if not isinstance(weekly_role_map, dict):
+        return weekly_role_map
+
+    proposals: list[tuple[tuple[int, int], dict[str, Any]]] = []
+    for position, role in _strength_roles_by_position(weekly_role_map).items():
+        decision = role["strength_composition_policy"].get("standalone_minimum")
+        if not isinstance(decision, dict) or decision.get("status") != "proposed":
+            continue
+        phase = str(decision.get("source_phase") or "")
+        pool = candidate_pools.get(phase) if isinstance(candidate_pools, dict) else None
+        slot = next(
+            (
+                slot
+                for slot in (pool or {}).get("strength_slots", []) or []
+                if isinstance(slot, dict) and slot.get("slot_id") == decision.get("slot_id")
+            ),
+            None,
+        )
+        assignment = assignment_from_slot(phase, "strength_slots", slot) if slot else None
+        if not assignment or assignment["name"] != decision.get("exercise"):
+            decision.update(status="rejected", reason="candidate_unavailable")
+            continue
+        proposals.append((position, assignment))
+    if not proposals:
+        return weekly_role_map
+
+    def _add(role_map: dict[str, Any], accepted: list) -> None:
+        roles = _strength_roles_by_position(role_map)
+        for position, assignment in accepted:
+            role = roles[position]
+            role["selected_exercise_assignments"] = [
+                *(role.get("selected_exercise_assignments") or []),
+                deepcopy(assignment),
+            ]
+            policy = role["strength_composition_policy"]
+            policy["selected_count"] = len(role["selected_exercise_assignments"])
+            policy["selected_names"] = [
+                item["name"] for item in role["selected_exercise_assignments"]
+            ]
+
+    def _outcome(role_map: dict[str, Any]) -> tuple:
+        apply_realised_load_calendar_revalidation(
+            role_map,
+            redose_callback=redose_callback,
+            recompose_conditioning_callback=recompose_conditioning_callback,
+        )
+        return (
+            _placement_signature(role_map),
+            repr(role_map.get("realised_load_revalidation")),
+        )
+
+    original_doses = {
+        position: _resolved_strength_doses(role)
+        for position, role in _strength_roles_by_position(weekly_role_map).items()
+    }
+    baseline = _outcome(deepcopy(weekly_role_map))
+    accepted: list[tuple[tuple[int, int], dict[str, Any]]] = []
+    for proposal in proposals:
+        trial = deepcopy(weekly_role_map)
+        _add(trial, [*accepted, proposal])
+        redose_callback(trial)
+        trial_roles = _strength_roles_by_position(trial)
+        doses_kept = all(
+            _resolved_strength_doses(trial_roles[position]).get(key) == dose
+            for position, doses in original_doses.items()
+            for key, dose in doses.items()
+        )
+        position, _assignment = proposal
+        decision = _strength_roles_by_position(weekly_role_map)[position][
+            "strength_composition_policy"
+        ]["standalone_minimum"]
+        if not doses_kept:
+            decision.update(status="rejected", reason="existing_dose_changed")
+        elif _outcome(trial) != baseline:
+            decision.update(status="rejected", reason="realised_load_placement_changed")
+        else:
+            decision["status"] = "applied"
+            accepted.append(proposal)
+
+    if accepted:
+        _add(weekly_role_map, accepted)
+        roles = _strength_roles_by_position(weekly_role_map)
+        for position, _assignment in accepted:
+            roles[position]["strength_composition_policy"]["standalone_minimum_applied"] = True
+        redose_callback(weekly_role_map)
     return weekly_role_map
 
 
@@ -1733,7 +2065,7 @@ def compose_normal_conditioning_assignments(
                             {
                                 "embedded_support": True,
                                 "support_dose_category": "low_load_trunk",
-                                "effective_prescription": "1-2 controlled sets; stop before fatigue",
+                                "effective_prescription": _embedded_trunk_support_prescription(record),
                             }
                         )
                         assignments.append(assignment)

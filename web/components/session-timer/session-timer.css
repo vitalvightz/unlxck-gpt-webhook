@@ -13,6 +13,12 @@
   --st-line: rgba(255, 255, 255, 0.09);
   --st-surface: rgba(255, 255, 255, 0.045);
   --st-surface-strong: rgba(255, 255, 255, 0.08);
+  /* Text on an ink-filled control (primary button, selected chip, hint). */
+  --st-on-ink: #0b0c0f;
+  --st-sheet: rgba(16, 17, 21, 0.94);
+  --st-scrim: rgba(0, 0, 0, 0.4);
+  --st-shadow: rgba(0, 0, 0, 0.45);
+  --st-note-ink: #e3c48c;
   --st-digits: var(--font-display, "Space Grotesk", system-ui, sans-serif);
   position: fixed;
   inset: 0;
@@ -28,6 +34,7 @@
   overflow-y: auto;
   outline: none;
   isolation: isolate;
+  color-scheme: dark;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -66,7 +73,7 @@
 
 .st-top-actions .st-icon[data-active="true"] {
   background: var(--st-ink);
-  color: #0b0c0f;
+  color: var(--st-on-ink);
 }
 
 .st-heading {
@@ -339,7 +346,7 @@
   border: 1px solid rgba(214, 175, 106, 0.28);
   border-radius: 14px;
   background: rgba(214, 175, 106, 0.08);
-  color: #e3c48c;
+  color: var(--st-note-ink);
 }
 
 /* Rounds / sets: slim segments; dashed = optional sets above the minimum. */
@@ -451,7 +458,7 @@
   position: absolute;
   inset: 0;
   z-index: 4;
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--st-scrim);
   animation: st-fade-in 160ms ease-out;
 }
 
@@ -479,13 +486,13 @@
   border: 0;
   border-radius: 10px;
   background: var(--st-ink);
-  color: #0b0c0f;
+  color: var(--st-on-ink);
   font: inherit;
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 10px 30px var(--st-shadow);
   animation: st-hint-in 260ms ease-out 400ms both;
   transform-origin: calc(100% - 22px) 0;
 }
@@ -541,7 +548,7 @@
 .st-round-presets button[aria-pressed="true"] {
   background: var(--st-ink);
   border-color: transparent;
-  color: #0b0c0f;
+  color: var(--st-on-ink);
 }
 
 .st-presets {
@@ -572,7 +579,7 @@
   border: 0;
   border-radius: 20px;
   background: var(--st-ink);
-  color: #0b0c0f;
+  color: var(--st-on-ink);
   font: inherit;
   font-size: 19px;
   font-weight: 700;
@@ -722,6 +729,7 @@
 .st-confirm button[data-danger="true"] {
   background: #b5122b;
   border-color: transparent;
+  color: #fff;
 }
 
 /* Done */
@@ -807,10 +815,13 @@
   padding: 16px;
   border: 1px solid var(--st-line);
   border-radius: 20px;
-  background: rgba(16, 17, 21, 0.94);
+  background: var(--st-sheet);
   backdrop-filter: blur(16px);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 24px 60px var(--st-shadow);
   animation: st-sheet-in 160ms ease-out;
+  /* The settings sheet is the tallest: it scrolls on a short phone instead of spilling off. */
+  max-height: calc(100dvh - max(10px, env(safe-area-inset-top)) - 90px);
+  overflow-y: auto;
 }
 
 @keyframes st-sheet-in {
@@ -832,6 +843,62 @@
 .st-toggle input { width: 20px; height: 20px; accent-color: #d4163a; }
 .st-range input { flex: 1; accent-color: #d4163a; }
 
+.st-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 12px 0 0;
+  border: 0;
+  border-top: 1px solid var(--st-line);
+}
+
+.st-group:first-child { padding-top: 0; border-top: 0; }
+
+.st-group legend,
+.st-choice > span {
+  padding: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--st-ink-soft);
+}
+
+.st-group legend { float: left; width: 100%; }
+
+.st-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--st-line);
+}
+
+.st-choice-options {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.st-choice-options button {
+  min-height: 40px;
+  border: 1px solid var(--st-line);
+  border-radius: 999px;
+  background: var(--st-surface);
+  color: var(--st-ink-soft);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.st-choice-options button[aria-checked="true"] {
+  background: var(--st-ink);
+  border-color: transparent;
+  color: var(--st-on-ink);
+}
+
 .st-sheet-note {
   margin: 0;
   font-size: 13px;
@@ -844,6 +911,7 @@
 /* Minimised: a floating pill above the page with a live progress hairline. */
 .st-mini {
   --st-accent: #9aa3b2;
+  --st-mini-ink: #f6f7f9;
   position: fixed;
   left: 16px;
   right: 16px;
@@ -857,13 +925,14 @@
   margin: 0 auto;
   min-height: 58px;
   padding: 0 18px 0 14px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--st-mini-line, rgba(255, 255, 255, 0.1));
   border-radius: 20px;
-  background: rgba(14, 15, 18, 0.9);
+  background: var(--st-mini-bg, rgba(14, 15, 18, 0.9));
   backdrop-filter: blur(16px);
-  color: #f6f7f9;
+  color: var(--st-mini-ink);
   font: inherit;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 18px 40px var(--st-mini-shadow, rgba(0, 0, 0, 0.45));
+  color-scheme: dark;
   cursor: pointer;
 }
 
@@ -908,6 +977,48 @@
     bottom: calc(var(--mobile-tab-bar-clearance, 0px) + 12px);
   }
 }
+
+/* Light appearance: a bright stage, the same phase colours deepened so the
+   pill, ring and glow still read against white in a lit gym. */
+html[data-theme="light"] .st-root {
+  --st-base: #f6f6f8;
+  --st-accent: #5f6673;
+  --st-glow: rgba(95, 102, 115, 0.12);
+  --st-ink: #111216;
+  --st-ink-soft: rgba(17, 18, 22, 0.66);
+  --st-ink-faint: rgba(17, 18, 22, 0.44);
+  --st-line: rgba(17, 18, 22, 0.12);
+  --st-surface: rgba(17, 18, 22, 0.045);
+  --st-surface-strong: rgba(17, 18, 22, 0.09);
+  --st-on-ink: #ffffff;
+  --st-sheet: rgba(255, 255, 255, 0.97);
+  --st-scrim: rgba(17, 18, 22, 0.22);
+  --st-shadow: rgba(17, 18, 22, 0.16);
+  --st-note-ink: #7a5a12;
+  color-scheme: light;
+}
+
+html[data-theme="light"] .st-root[data-tone="work"] { --st-accent: #d4163a; --st-glow: rgba(214, 22, 58, 0.2); }
+html[data-theme="light"] .st-root[data-tone="open"] { --st-accent: #d4163a; --st-glow: rgba(214, 22, 58, 0.14); }
+html[data-theme="light"] .st-root[data-tone="rest"] { --st-accent: #0e9f53; --st-glow: rgba(14, 159, 83, 0.2); }
+html[data-theme="light"] .st-root[data-tone="warn"] { --st-accent: #c26b00; --st-glow: rgba(230, 140, 0, 0.26); }
+html[data-theme="light"] .st-root[data-tone="paused"] { --st-accent: #5f6673; --st-glow: rgba(95, 102, 115, 0.12); }
+html[data-theme="light"] .st-root[data-tone="ready"] { --st-accent: #d4163a; --st-glow: rgba(214, 22, 58, 0.1); }
+html[data-theme="light"] .st-root[data-tone="done"] { --st-accent: #0e9f53; --st-glow: rgba(14, 159, 83, 0.14); }
+
+html[data-theme="light"] .st-mini {
+  --st-accent: #5f6673;
+  --st-mini-ink: #111216;
+  --st-mini-bg: rgba(255, 255, 255, 0.94);
+  --st-mini-line: rgba(17, 18, 22, 0.1);
+  --st-mini-shadow: rgba(17, 18, 22, 0.16);
+  color-scheme: light;
+}
+
+html[data-theme="light"] .st-mini[data-tone="work"],
+html[data-theme="light"] .st-mini[data-tone="open"] { --st-accent: #d4163a; }
+html[data-theme="light"] .st-mini[data-tone="rest"] { --st-accent: #0e9f53; }
+html[data-theme="light"] .st-mini[data-tone="warn"] { --st-accent: #c26b00; }
 
 /* Today action tray: the primary action, a segmented "Log as" control and a
    quiet row of timer shortcuts, all inside the one existing tray surface. */
