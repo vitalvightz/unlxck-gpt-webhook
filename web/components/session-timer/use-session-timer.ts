@@ -16,6 +16,8 @@ import {
   crossedCues,
   cueRemainingMs,
   cueSounds,
+  samePhaseRun,
+  warningLengthMs,
   soundForEvents,
   viewAt,
   type TimerEvent,
@@ -186,8 +188,13 @@ export function useSessionTimer({
 
   const commit = useCallback(
     (next: TimerState) => {
+      // Within the same round or rest (−10s, +10s, a new length) the next tick
+      // compares against the time before the edit, so a jump past a warning
+      // mark still sounds it. A new phase starts counting fresh.
+      if (!samePhaseRun(stateRef.current, next)) {
+        lastRemainingRef.current = cueRemainingMs(viewAt(next, Date.now()));
+      }
       stateRef.current = next;
-      lastRemainingRef.current = cueRemainingMs(viewAt(next, Date.now()));
       setState(next);
       if (next.phase === "done" && next.endedAt !== null) {
         clearSavedRun(storageKey);
@@ -236,11 +243,14 @@ export function useSessionTimer({
       } else {
         const remaining = cueRemainingMs(viewAt(current, at));
         const { warnTen, warnThirty, warnHalfway } = settingsRef.current;
-        const cues = crossedCues(current.phase, current.phaseMs, lastRemainingRef.current, remaining, {
-          ten: warnTen,
-          thirty: warnThirty,
-          halfway: warnHalfway,
-        });
+        const cues = crossedCues(
+          current.phase,
+          current.phaseMs,
+          lastRemainingRef.current,
+          remaining,
+          { ten: warnTen, thirty: warnThirty, halfway: warnHalfway },
+          warningLengthMs(current),
+        );
         lastRemainingRef.current = remaining;
         // The round warnings ring minimised too: the athlete is training, not
         // looking at the phone. Callouts and the 3-2-1 beeps stay on screen only.

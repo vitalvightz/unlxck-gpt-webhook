@@ -10,6 +10,7 @@ import { AuthProvider } from "@/components/auth-provider";
 import { TodaySessionPanel } from "@/components/today/today-session-panel";
 import { ToastProvider } from "@/components/toast-provider";
 import { resolveTrainingDay, toISODate } from "@/lib/camp-map";
+import { timerAudio } from "@/lib/session-timer/audio";
 import { FREE_FORMAT_MEMORY_KEY } from "@/lib/session-timer/contact";
 import type { TodayCommandView } from "@/lib/types";
 import {
@@ -243,6 +244,49 @@ test("the settings sheet, behind the gear, sets the round warnings and the get-r
 
   await act(async () => root.unmount());
   container.remove();
+});
+
+test("taking time off past a warning mark still sounds that warning", async () => {
+  window.localStorage.clear();
+  window.localStorage.setItem(FREE_FORMAT_MEMORY_KEY, JSON.stringify({ rounds: 3, workSec: 90, restSec: 60 }));
+  window.localStorage.setItem(
+    "unlxck.session-timer.settings",
+    JSON.stringify({ warnTen: true, warnThirty: true, warnHalfway: false, prepSec: 0 }),
+  );
+  const audio = timerAudio();
+  const played: string[] = [];
+  const realPlay = audio.play;
+  audio.play = (sound) => void played.push(sound);
+  try {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(
+        <RoundTimerProvider>
+          <TimerPage />
+        </RoundTimerProvider>,
+      );
+    });
+    await act(async () => timerButton("Start round 1")?.click());
+    // A tick runs every 100 ms; give one the chance to see each jump.
+    const takeTen = async () => {
+      await act(async () => timerButton("Take 10 seconds off")?.click());
+      await act(async () => new Promise((resolve) => setTimeout(resolve, 150)));
+    };
+    for (let tap = 0; tap < 5; tap += 1) await takeTen(); // 1:30 → 0:40
+    assert.ok(!played.includes("double_beep"));
+    await takeTen(); // → 0:30
+    assert.equal(played.filter((sound) => sound === "double_beep").length, 1);
+    await takeTen(); // → 0:20
+    await takeTen(); // → 0:10
+    assert.equal(played.filter((sound) => sound === "clapper").length, 1);
+
+    await act(async () => root.unmount());
+    container.remove();
+  } finally {
+    audio.play = realPlay;
+  }
 });
 
 test("without a provider the round timer reads as closed", async () => {
