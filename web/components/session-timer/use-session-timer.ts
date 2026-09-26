@@ -150,7 +150,7 @@ export function useSessionTimer({
 }: {
   items: TimerItem[];
   storageKey: string;
-  /** False while the timer is minimised: the clock keeps running, and only the round bells and warnings ring. */
+  /** False while the timer is minimised: the clock keeps running, and only the round bells, warnings and voice sound. */
   audible: boolean;
 }): SessionTimerController {
   const [state, setState] = useState<TimerState>(
@@ -175,13 +175,10 @@ export function useSessionTimer({
   const announce = useCallback((events: TimerEvent[], next: TimerState) => {
     if (events.length === 0) return;
     const sound = soundForEvents(events);
-    // Minimised, the round bells still ring so the athlete hears each round
-    // end; beeps, chimes and callouts stay quiet.
-    if (!audibleRef.current) {
-      if (sound && MINIMIZED_SOUNDS.has(sound)) timerAudio().play(sound);
-      return;
-    }
-    if (sound) timerAudio().play(sound);
+    // Minimised, the round bells still ring and the voice (when it is on)
+    // still calls the rounds, so the athlete never has to look; the other
+    // beeps and chimes stay quiet.
+    if (sound && (audibleRef.current || MINIMIZED_SOUNDS.has(sound))) timerAudio().play(sound);
     const callout = calloutForEvents(events, next);
     if (callout) timerAudio().say(callout);
   }, []);
@@ -252,8 +249,8 @@ export function useSessionTimer({
           warningLengthMs(current),
         );
         lastRemainingRef.current = remaining;
-        // The round warnings ring minimised too: the athlete is training, not
-        // looking at the phone. Callouts and the 3-2-1 beeps stay on screen only.
+        // The round warnings ring and speak minimised too: the athlete is
+        // training, not looking at the phone. Only the 3-2-1 beeps stay on screen.
         const { sounds, callout } = cueSounds(cues, audibleRef.current);
         const audio = timerAudio();
         for (const sound of sounds) audio.play(sound);

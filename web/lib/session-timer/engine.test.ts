@@ -446,19 +446,17 @@ test("-10s never takes the clock below a second left", () => {
   assert.equal(viewAt(addTime(paused, -10, T0 + 500_000), T0 + 500_000).remainingMs, 70_000);
 });
 
-test("the round warnings ring while minimised; the 3-2-1 beeps and callouts only on screen", () => {
-  assert.deepEqual(cueSounds(["thirty_seconds"], false), { sounds: ["double_beep"], callout: null });
-  assert.deepEqual(cueSounds(["halfway"], false), { sounds: ["halfway"], callout: null });
-  assert.deepEqual(cueSounds(["ten_seconds"], false), { sounds: ["clapper"], callout: null });
+test("every round warning is spoken like the round callouts, minimised or not; the 3-2-1 beeps only on screen", () => {
+  for (const onScreen of [true, false]) {
+    assert.deepEqual(cueSounds(["thirty_seconds"], onScreen), { sounds: ["double_beep"], callout: "30 seconds" });
+    assert.deepEqual(cueSounds(["halfway"], onScreen), { sounds: ["halfway"], callout: "Halfway" });
+    assert.deepEqual(cueSounds(["ten_seconds"], onScreen), { sounds: ["clapper"], callout: "10 seconds" });
+  }
   assert.deepEqual(cueSounds(["count_3"], false), { sounds: [], callout: null });
-
-  assert.deepEqual(cueSounds(["thirty_seconds"], true), { sounds: ["double_beep"], callout: "30 seconds" });
-  assert.deepEqual(cueSounds(["halfway"], true), { sounds: ["halfway"], callout: "Halfway" });
   assert.deepEqual(cueSounds(["count_1"], true), { sounds: ["beep"], callout: null });
   // A one-minute round: halfway and 30 seconds are the same moment, one cue.
   assert.deepEqual(cueSounds(["halfway", "thirty_seconds"], true), { sounds: ["double_beep"], callout: "30 seconds" });
 });
-
 test("an edit keeps the same phase run; a transition starts a new one", () => {
   const work = startItem(createTimerState([ROUNDS]), T0).state;
   assert.ok(samePhaseRun(work, addTime(work, -10, T0 + 1_000)));
