@@ -737,6 +737,31 @@ def _low_load_trunk_support_records(slots: list[dict[str, Any]]) -> list[dict[st
     return records
 
 
+_EMBEDDED_TRUNK_HOLD_PRESCRIPTION = "1-2 controlled sets x 15-20 sec hold; stop before fatigue"
+_EMBEDDED_TRUNK_REP_PRESCRIPTION = (
+    "1-2 controlled sets x 3-5 slow reps (each side if one-sided); stop before fatigue"
+)
+_HOLD_NAME_RE = re.compile(r"\b(?:hold|holds|plank|isometric|iso)\b", re.IGNORECASE)
+
+
+def _embedded_trunk_support_prescription(record: dict[str, Any]) -> str:
+    """A complete dose for an embedded trunk-support drill.
+
+    A set count alone ("1-2 controlled sets") leaves the athlete with no hold
+    time or rep count, so the card renders a hold with nothing to hold for.
+    Holds get a hold time; everything else gets a small rep count.
+    """
+    slot = record.get("slot") if isinstance(record.get("slot"), dict) else {}
+    selected = slot.get("selected") if isinstance(slot.get("selected"), dict) else {}
+    movement = str(selected.get("movement") or "").strip().lower()
+    is_hold = (
+        record.get("quality_class") == "support_isometric"
+        or movement == "isometric"
+        or bool(_HOLD_NAME_RE.search(str(record.get("name") or "")))
+    )
+    return _EMBEDDED_TRUNK_HOLD_PRESCRIPTION if is_hold else _EMBEDDED_TRUNK_REP_PRESCRIPTION
+
+
 def _role_days_until_fight(role: dict[str, Any]) -> int | None:
     for key in ("countdown_offset", "scheduled_countdown_offset"):
         value = _int_or_none(role.get(key))
@@ -2040,7 +2065,7 @@ def compose_normal_conditioning_assignments(
                             {
                                 "embedded_support": True,
                                 "support_dose_category": "low_load_trunk",
-                                "effective_prescription": "1-2 controlled sets; stop before fatigue",
+                                "effective_prescription": _embedded_trunk_support_prescription(record),
                             }
                         )
                         assignments.append(assignment)

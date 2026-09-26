@@ -156,6 +156,20 @@ function isModeLikeReps(reps: string): boolean {
   return /\b(continuous|amrap|emom)\b/i.test(reps);
 }
 
+function repsEchoesIntervalWork(block: StructuredBlock, repsText: string): boolean {
+  const work = block.work;
+  if (
+    !finitePositiveNumber(block.rounds) ||
+    finitePositiveNumber(block.sets) ||
+    !isObject(work) ||
+    !finitePositiveNumber(work.value) ||
+    !/^s(?:ec(?:ond)?s?)?$/i.test(cleanText(work.unit) ?? "")
+  ) {
+    return false;
+  }
+  return /^\d+(?:\.\d+)?$/.test(repsText) && Number(repsText) === work.value;
+}
+
 export type BlockMetric = { label: string; value: string };
 
 /**
@@ -190,6 +204,12 @@ export function selectBlockMetric(block: StructuredBlock | null | undefined): Bl
   // A bare non-finite spelling as text ("NaN", "Infinity", "-Infinity") never
   // renders — a range "4-6" or time "30 seconds" is untouched.
   if (repsText !== null && isNonFiniteNumericToken(repsText)) {
+    repsText = null;
+  }
+  // An interval block (rounds x work) whose bare rep count only repeats the
+  // work seconds ("2x3s" read as rounds 2, work 3 sec, reps 3) is an echo, not
+  // a volume: "Volume 3" beside "Work 3 seconds" means nothing to the athlete.
+  if (repsText !== null && repsEchoesIntervalWork(block, repsText)) {
     repsText = null;
   }
   // The set multiplier must be a finite positive number, or it is omitted.

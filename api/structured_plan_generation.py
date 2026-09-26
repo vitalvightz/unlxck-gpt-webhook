@@ -1016,6 +1016,38 @@ def _normalize_tempo(value: Any) -> tuple[dict[str, Any] | None, str | None]:
     return None, f"Tempo: {text}"
 
 
+def _reps_echo_interval_work(block: Mapping[str, Any]) -> bool:
+    """True when a rounds x work block's bare rep count only repeats the work seconds.
+
+    The converter reads "2x3s" as rounds 2, work 3 sec and, wrongly, reps 3.
+    That rep count is not a volume and renders as a meaningless "Volume 3".
+    """
+    rounds = block.get("rounds")
+    sets = block.get("sets")
+    work = block.get("work")
+    reps = block.get("reps")
+    if isinstance(rounds, bool) or not isinstance(rounds, (int, float)) or rounds <= 0:
+        return False
+    if isinstance(sets, (int, float)) and not isinstance(sets, bool) and sets > 0:
+        return False
+    if not isinstance(work, Mapping) or str(work.get("unit") or "").strip().lower() not in {
+        "s", "sec", "secs", "second", "seconds"
+    }:
+        return False
+    work_value = work.get("value")
+    if isinstance(work_value, bool) or not isinstance(work_value, (int, float)) or work_value <= 0:
+        return False
+    if isinstance(reps, bool):
+        return False
+    if isinstance(reps, (int, float)):
+        reps_value: float | None = float(reps)
+    elif isinstance(reps, str) and re.fullmatch(r"\s*\d+(?:\.\d+)?\s*", reps):
+        reps_value = float(reps)
+    else:
+        reps_value = None
+    return reps_value is not None and reps_value == float(work_value)
+
+
 def _normalize_block(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
     # Identifier metadata is not athlete-facing content.  Preserve a useful id,
@@ -1036,6 +1068,8 @@ def _normalize_block(value: Any) -> dict[str, Any]:
     ):
         if measured_key in out:
             out[measured_key] = _normalize_measured(out.get(measured_key), default_unit)
+    if _reps_echo_interval_work(out):
+        out["reps"] = None
     if "tempo" in out:
         tempo, tempo_cue = _normalize_tempo(out.get("tempo"))
         out["tempo"] = tempo

@@ -158,6 +158,28 @@ def test_support_is_appended_only_after_conditioning_workload_is_met():
 
     assert [item["name"] for item in role["selected_exercise_assignments"]] == ["Tempo", "Bike", "Turkish Get-Up"]
     assert role["selected_exercise_assignments"][-1]["embedded_support"] is True
+    assert role["selected_exercise_assignments"][-1]["effective_prescription"] == (
+        "1-2 controlled sets x 3-5 slow reps (each side if one-sided); stop before fatigue"
+    )
+
+
+def test_embedded_trunk_hold_carries_a_hold_time():
+    pools = _pool(_option("Tempo", duration=4), _option("Bike", duration=4))
+    slot = _tgu_support_slot()
+    slot["quality_class"] = "support_isometric"
+    slot["selected"] = {
+        **slot["selected"],
+        "name": "Staggered Stance Hold",
+        "quality_class": "support_isometric",
+        "movement": "isometric",
+    }
+    pools["SPP"]["strength_slots"] = [slot]
+
+    role = _compose_with_trunk_support(_role_map(), pools)
+
+    support = role["selected_exercise_assignments"][-1]
+    assert support["name"] == "Staggered Stance Hold"
+    assert support["effective_prescription"] == "1-2 controlled sets x 15-20 sec hold; stop before fatigue"
 
 
 def test_exhausted_conditioning_candidates_remain_underfilled():
