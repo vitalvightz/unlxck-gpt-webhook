@@ -38,13 +38,7 @@ from .structured_plan_faithfulness import (
     strip_locked_sessions_for_conversion,
 )
 from .structured_plan_locked_merge import merge_planner_owned_structured_content
-from .minor_safety import contains_blocked_minor_guidance, scrub_minor_guidance_tree
-from .structured_plan_safety import (
-    athlete_safe_support,
-    audit_structured_plan,
-    is_minor_support,
-    split_findings,
-)
+from .structured_plan_safety import athlete_safe_support, audit_structured_plan, split_findings
 from .structured_plan_models import (
     SCHEMA_VERSION,
     BlockType,
@@ -2720,11 +2714,8 @@ def build_structured_plan_outcome(
         # locked merge and any salvage pruning, so its day membership is final:
         # order each day's sessions and each session's blocks for execution.
         plan_dict = sequence_structured_plan(plan_dict, planning_brief)
-        plan_dict, minor_warnings = _scrub_minor_card(plan_dict)
         blocking, advisory = split_findings(audit_structured_plan(plan_dict, computed_support))
-        warnings = list(
-            dict.fromkeys([*(faithfulness_warnings or []), *minor_warnings, *advisory])
-        )
+        warnings = list(dict.fromkeys([*(faithfulness_warnings or []), *advisory]))
         if blocking:
             return StructuredPlanOutcome(
                 status="blocked_by_safety_audit",
@@ -2737,21 +2728,6 @@ def build_structured_plan_outcome(
             schema_version=schema_version,
             warnings=warnings,
         )
-
-    def _scrub_minor_card(plan_dict: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
-        # An under-18 card that mentions a cut (usually Stage 2 rewording the
-        # refusal note) is scrubbed the same way the read-time guard scrubs it,
-        # rather than rejected outright: rejecting threw the whole card away over
-        # one sentence. The audit still runs afterwards as the backstop, and a
-        # scrub that breaks the schema leaves the card for the audit to block.
-        if not is_minor_support(computed_support):
-            return plan_dict, []
-        if not contains_blocked_minor_guidance(json.dumps(plan_dict, ensure_ascii=False)):
-            return plan_dict, []
-        scrubbed = scrub_minor_guidance_tree(plan_dict)
-        if not safe_parse_structured_plan(scrubbed, raw_markdown=raw_markdown or None).ok:
-            return plan_dict, []
-        return scrubbed, ["minor_guard: scrubbed weight-cut/dehydration wording from under-18 card"]
 
     def _salvaged(
         candidates: list[tuple[StructuredPlanStatus, dict[str, Any], str | None]],
