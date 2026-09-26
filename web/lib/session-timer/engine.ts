@@ -536,10 +536,12 @@ export function crossedCues(
 }
 
 /**
- * What a tick's warning cues sound like. The round warnings (clapper, 30-second
- * double beep, halfway chime) ring whether or not the timer is on screen; the
- * 3-2-1 beeps and the spoken callouts only while it is (`onScreen`). A
- * one-minute round's halfway is its thirty-second mark: one cue, not two.
+ * What a tick's warning cues sound like. Each round warning is its tone plus
+ * a spoken callout in the same voice as "Round 3" / "Last round" ("Halfway",
+ * "30 seconds", "10 seconds"; spoken only when voice callouts are on). The
+ * warnings ring and speak whether or not the timer is on screen; only the
+ * 3-2-1 beeps are on-screen only (`onScreen`). A one-minute round's halfway is
+ * its thirty-second mark: one cue, not two, and one callout per tick.
  */
 export function cueSounds(
   cues: TimerCue[],
@@ -547,7 +549,6 @@ export function cueSounds(
 ): { sounds: Array<"clapper" | "double_beep" | "halfway" | "beep">; callout: string | null } {
   const sounds: Array<"clapper" | "double_beep" | "halfway" | "beep"> = [];
   let callout: string | null = null;
-  if (cues.includes("ten_seconds")) sounds.push("clapper");
   if (cues.includes("thirty_seconds")) {
     sounds.push("double_beep");
     callout = "30 seconds";
@@ -555,8 +556,12 @@ export function cueSounds(
     sounds.push("halfway");
     callout = "Halfway";
   }
+  if (cues.includes("ten_seconds")) {
+    sounds.push("clapper");
+    callout = "10 seconds";
+  }
   if (onScreen && cues.some((cue) => cue.startsWith("count_"))) sounds.push("beep");
-  return { sounds, callout: onScreen ? callout : null };
+  return { sounds, callout };
 }
 
 /** True when every item reached its planned minimum. */

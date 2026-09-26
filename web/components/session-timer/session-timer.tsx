@@ -442,7 +442,7 @@ function SettingsSheet({ timer, onClose }: { timer: SessionTimerController; onCl
             checked={settings.voice}
             onChange={(event) => setSettings({ ...settings, voice: event.target.checked })}
           />
-          <span>Voice callouts (&ldquo;Round 3&rdquo;, &ldquo;Rest&rdquo;)</span>
+          <span>Voice callouts (&ldquo;Round 3&rdquo;, &ldquo;Halfway&rdquo;, &ldquo;10 seconds&rdquo;)</span>
         </label>
         <label className="st-toggle">
           <input
