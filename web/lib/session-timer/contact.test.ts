@@ -4,8 +4,11 @@ import assert from "node:assert/strict";
 import {
   contactRoundsItem,
   contactTimerTarget,
+  FREE_FORMAT_MEMORY_KEY,
   freeRoundsItem,
   parseRoundsFromText,
+  rememberRoundFormat,
+  savedRoundFormat,
 } from "./contact.ts";
 import type { StructuredDay } from "../types.ts";
 
@@ -78,4 +81,44 @@ test("the plain round timer starts on boxing rounds with presets", () => {
   assert.equal(item.restSec, 60);
   assert.equal(item.presets, true);
   assert.equal(item.needsSetup, false);
+});
+
+/** Run `fn` with a throwaway `window.localStorage`. */
+function withStorage(fn: () => void) {
+  const store = new Map<string, string>();
+  const g = globalThis as { window?: unknown };
+  const previous = g.window;
+  g.window = {
+    localStorage: {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => void store.set(key, value),
+    },
+  };
+  try {
+    fn();
+  } finally {
+    g.window = previous;
+  }
+}
+
+test("the plain round timer opens on the athlete's last setup", () => {
+  withStorage(() => {
+    rememberRoundFormat(FREE_FORMAT_MEMORY_KEY, { rounds: 6, workSec: 120, restSec: 30 });
+    const item = freeRoundsItem();
+    assert.equal(item.rounds, 6);
+    assert.equal(item.workSec, 120);
+    assert.equal(item.restSec, 30);
+    assert.equal(item.id, "free-rounds");
+    assert.equal(item.formatMemoryKey, FREE_FORMAT_MEMORY_KEY);
+  });
+});
+
+test("a saved round count out of range is dropped, the rest of the format kept", () => {
+  withStorage(() => {
+    for (const rounds of [0, 31, 2.5, "six"]) {
+      window.localStorage.setItem(FREE_FORMAT_MEMORY_KEY, JSON.stringify({ rounds, workSec: 120, restSec: 30 }));
+      assert.deepEqual(savedRoundFormat(FREE_FORMAT_MEMORY_KEY), { workSec: 120, restSec: 30 });
+      assert.equal(freeRoundsItem().rounds, 3);
+    }
+  });
 });

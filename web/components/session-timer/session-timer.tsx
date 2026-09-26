@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } fro
 import { createPortal } from "react-dom";
 
 import { useSessionTimer, type SessionTimerController } from "@/components/session-timer/use-session-timer";
-import { timerAudio } from "@/lib/session-timer/audio";
+import { PREP_OPTIONS, timerAudio } from "@/lib/session-timer/audio";
 import {
   addTime,
   adjustItem,
@@ -12,6 +12,7 @@ import {
   endRound,
   endSession,
   finishItem,
+  isPrep,
   metPlan,
   pause,
   resume,
@@ -103,6 +104,7 @@ function phaseLabel(state: TimerState, item: TimerItem | null, view: TimerView):
   if (state.phase === "done") return metPlan(state) ? "Session complete" : "Session ended";
   if (state.phase === "ready") return "Up next";
   if (view.paused) return "Paused";
+  if (isPrep(state)) return "Get ready";
   if (state.phase === "rest") return view.readyRemainingMs === 0 ? "Ready" : "Rest";
   if (item?.kind === "interval") return item.sparring ? "Spar" : "Work";
   if (item?.kind === "sets") return item.holdSec ? "Hold" : "Lift";
@@ -113,7 +115,7 @@ function counterLabel(state: TimerState, item: TimerItem | null): string | null 
   if (!item || state.phase === "ready" || state.phase === "done") return null;
   if (item.kind === "interval") {
     if (item.rounds <= 1) return null;
-    const label = state.phase === "rest" ? "Next: round" : "Round";
+    const label = state.phase === "rest" && !isPrep(state) ? "Next: round" : "Round";
     return `${label} ${state.unit} / ${item.rounds}`;
   }
   if (item.kind === "sets") {
@@ -193,12 +195,13 @@ function Ring({ progress, children }: { progress: number | null; children: React
   );
 }
 
-type IconName = "pause" | "play" | "plus" | "skip" | "next" | "flag" | "chevron" | "sound" | "check" | "sliders";
+type IconName = "pause" | "play" | "plus" | "minus" | "skip" | "next" | "flag" | "chevron" | "sound" | "check" | "sliders";
 
 const ICON_PATHS: Record<IconName, ReactNode> = {
   pause: <path d="M8 5v14M16 5v14" />,
   play: <path d="M7 5l12 7-12 7z" fill="currentColor" stroke="none" />,
   plus: <path d="M12 6v12M6 12h12" />,
+  minus: <path d="M6 12h12" />,
   skip: <path d="M6 5l9 7-9 7zM18 5v14" />,
   next: <path d="M9 6l6 6-6 6" />,
   flag: <path d="M6 20V5M6 5h11l-2 4 2 4H6" />,
@@ -303,6 +306,7 @@ function ReadyPanel({
                 aria-pressed={active}
                 onClick={() => {
                   rememberRoundFormat(item.formatMemoryKey, {
+                    rounds: item.rounds,
                     workSec: preset.workSec,
                     restSec: preset.restSec,
                   });
@@ -441,6 +445,49 @@ function SettingsSheet({ timer, onClose }: { timer: SessionTimerController; onCl
         />
         <span>Vibrate (Android)</span>
       </label>
+      <fieldset className="st-group">
+        <legend>Round warnings</legend>
+        <label className="st-toggle">
+          <input
+            type="checkbox"
+            checked={settings.warnTen}
+            onChange={(event) => setSettings({ ...settings, warnTen: event.target.checked })}
+          />
+          <span>10 seconds left</span>
+        </label>
+        <label className="st-toggle">
+          <input
+            type="checkbox"
+            checked={settings.warnThirty}
+            onChange={(event) => setSettings({ ...settings, warnThirty: event.target.checked })}
+          />
+          <span>30 seconds left</span>
+        </label>
+        <label className="st-toggle">
+          <input
+            type="checkbox"
+            checked={settings.warnHalfway}
+            onChange={(event) => setSettings({ ...settings, warnHalfway: event.target.checked })}
+          />
+          <span>Halfway</span>
+        </label>
+      </fieldset>
+      <div className="st-choice" role="radiogroup" aria-label="Countdown before round 1">
+        <span>Get-ready countdown</span>
+        <div className="st-choice-options">
+          {PREP_OPTIONS.map((seconds) => (
+            <button
+              key={seconds}
+              type="button"
+              role="radio"
+              aria-checked={settings.prepSec === seconds}
+              onClick={() => setSettings({ ...settings, prepSec: seconds })}
+            >
+              {seconds === 0 ? "Off" : `${seconds}s`}
+            </button>
+          ))}
+        </div>
+      </div>
       <p className="st-sheet-note">
         Keep this screen open: the clock stays exact if your phone locks, but the bell can&apos;t ring
         while the screen is off.
@@ -471,8 +518,19 @@ function PrimaryAction({
     fn();
   };
   if (state.phase === "ready") {
+    const start = () => {
+      // What they start with is what the timer opens on next time.
+      if (item.kind === "interval" && item.formatMemoryKey) {
+        rememberRoundFormat(item.formatMemoryKey, {
+          rounds: item.rounds,
+          workSec: item.workSec,
+          restSec: item.restSec,
+        });
+      }
+      timer.run((s, at) => startItem(s, at, { prepSec: timer.settings.prepSec }));
+    };
     return (
-      <button type="button" className="st-primary" onClick={unlockThen(() => timer.run(startItem))}>
+      <button type="button" className="st-primary" onClick={unlockThen(start)}>
         {item.kind === "interval" && item.rounds > 1 ? "Start round 1" : "Start"}
       </button>
     );
@@ -508,7 +566,7 @@ function PrimaryAction({
   if (state.phase === "rest") {
     return (
       <button type="button" className="st-primary" data-variant="ghost" onClick={() => timer.run(skipRest)}>
-        {item.kind === "sets" ? `Start set ${state.unit}` : "Skip rest"}
+        {item.kind === "sets" ? `Start set ${state.unit}` : isPrep(state) ? "Start now" : "Skip rest"}
       </button>
     );
   }
@@ -791,10 +849,24 @@ export function SessionTimer({
               </button>
             ) : null}
             {timed && !view.paused ? (
-              <button type="button" onClick={() => timer.update((s) => addTime(s, 30))}>
-                <Icon name="plus" />
-                30s
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => timer.update((s, at) => addTime(s, -10, at))}
+                  aria-label="Take 10 seconds off"
+                >
+                  <Icon name="minus" />
+                  10s
+                </button>
+                <button
+                  type="button"
+                  onClick={() => timer.update((s, at) => addTime(s, 10, at))}
+                  aria-label="Add 10 seconds"
+                >
+                  <Icon name="plus" />
+                  10s
+                </button>
+              </>
             ) : null}
             {state.phase === "work" && item?.kind === "interval" && !view.paused ? (
               <button type="button" onClick={() => timer.run(endRound)}>

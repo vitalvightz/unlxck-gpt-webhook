@@ -46,6 +46,7 @@ export type TimerEvent =
   | "set_start"
   | "rest_ready"
   | "rest_end"
+  | "prep_start"
   | "item_complete"
   | "session_complete";
 
@@ -126,14 +127,33 @@ function beginWork(state: TimerState, at: number, events: TimerEvent[]): TimerSt
   return setPhase(state, "work", at, null);
 }
 
-/** The ready screen's Start: begins the queued exercise. */
-export function startItem(state: TimerState, now: number): TimerStep {
+/**
+ * The ready screen's Start: begins the queued exercise. Rounds can open with a
+ * prep countdown (`prepSec`), timed as a rest before round 1 so the 3-2-1 beeps
+ * and the round bell lead into it like any other round.
+ */
+export function startItem(state: TimerState, now: number, options: { prepSec?: number } = {}): TimerStep {
   if (state.phase !== "ready" || state.pausedAt !== null) {
     return { state, events: [] };
   }
   const events: TimerEvent[] = [];
-  const next = beginWork({ ...state, unit: 1, startedAt: state.startedAt ?? now }, now, events);
-  return { state: next, events };
+  const started = { ...state, unit: 1, startedAt: state.startedAt ?? now };
+  const prepSec = options.prepSec ?? 0;
+  if (currentItem(state)?.kind === "interval" && prepSec > 0) {
+    events.push("prep_start");
+    return { state: setPhase(started, "rest", now, prepSec * 1000), events };
+  }
+  return { state: beginWork(started, now, events), events };
+}
+
+/** The countdown before round 1: the only rest an interval takes before any round is done. */
+export function isPrep(state: TimerState): boolean {
+  return (
+    state.phase === "rest" &&
+    currentItem(state)?.kind === "interval" &&
+    state.unit === 1 &&
+    (state.completed[state.index] ?? 0) === 0
+  );
 }
 
 /** A finished set (tapped, or a hold that ran out) moves to rest or the next item. */
@@ -292,11 +312,15 @@ export function setRestLength(state: TimerState, seconds: number, now: number): 
   return { ...state, phaseStartedAt: state.pausedAt ?? now, phaseMs: seconds * 1000 };
 }
 
-export function addTime(state: TimerState, seconds: number): TimerState {
+/** Add (or, negative, take) time from the running phase; at least a second is always left. */
+export function addTime(state: TimerState, seconds: number, now: number): TimerState {
   if (state.phaseMs === null || (state.phase !== "work" && state.phase !== "rest")) {
     return state;
   }
-  return { ...state, phaseMs: state.phaseMs + seconds * 1000 };
+  const elapsed = state.phaseStartedAt === null ? 0 : Math.max(0, (state.pausedAt ?? now) - state.phaseStartedAt);
+  // Taking time off never adds any back, even with under a second to go.
+  const phaseMs = Math.max(state.phaseMs + seconds * 1000, Math.min(state.phaseMs, elapsed + 1000));
+  return phaseMs === state.phaseMs ? state : { ...state, phaseMs };
 }
 
 export function pause(state: TimerState, now: number): TimerState {
@@ -371,7 +395,8 @@ export function adjustItem(state: TimerState, patch: ItemAdjustment, now: number
     if (state.phase === "work" && patch.workSec !== undefined) {
       next = { ...next, phaseMs: updated.workSec * 1000 };
     }
-    if (state.phase === "rest" && patch.restSec !== undefined) {
+    // The prep countdown is not a between-rounds rest: a new rest length leaves it alone.
+    if (state.phase === "rest" && patch.restSec !== undefined && !isPrep(state)) {
       next = { ...next, phaseMs: updated.restSec * 1000 };
     }
     return finishIfMet(next, updated.rounds);
@@ -438,11 +463,17 @@ export function cueRemainingMs(view: TimerView): number | null {
     : view.remainingMs;
 }
 
-export type TimerCue = "ten_seconds" | "count_3" | "count_2" | "count_1";
+export type TimerCue = "halfway" | "thirty_seconds" | "ten_seconds" | "count_3" | "count_2" | "count_1";
+
+/** Which of the optional round warnings the athlete wants. */
+export type WarningOptions = { ten: boolean; thirty: boolean; halfway: boolean };
+
+export const DEFAULT_WARNINGS: WarningOptions = { ten: true, thirty: false, halfway: false };
 
 /**
- * Warning cues crossed between two ticks of the same phase. The ten-second
- * clapper only fires on phases long enough for it to be a warning, and the
+ * Warning cues crossed between two ticks of the same phase. Each round warning
+ * only fires on a round long enough for it to be a warning (the ten-second
+ * clapper from 30 s, the 30-second and halfway cues from a minute), and the
  * 3-2-1 count only leads into work (the end of a rest).
  */
 export function crossedCues(
@@ -450,13 +481,20 @@ export function crossedCues(
   phaseMs: number | null,
   previousRemainingMs: number | null,
   remainingMs: number | null,
+  warnings: WarningOptions = DEFAULT_WARNINGS,
 ): TimerCue[] {
   if (previousRemainingMs === null || remainingMs === null || phaseMs === null) {
     return [];
   }
   const crossed = (mark: number) => previousRemainingMs > mark && remainingMs <= mark && remainingMs > 0;
   const cues: TimerCue[] = [];
-  if (phase === "work" && phaseMs >= 30_000 && crossed(10_000)) {
+  if (phase === "work" && warnings.halfway && phaseMs >= 60_000 && crossed(phaseMs / 2)) {
+    cues.push("halfway");
+  }
+  if (phase === "work" && warnings.thirty && phaseMs >= 60_000 && crossed(30_000)) {
+    cues.push("thirty_seconds");
+  }
+  if (phase === "work" && warnings.ten && phaseMs >= 30_000 && crossed(10_000)) {
     cues.push("ten_seconds");
   }
   if (phase === "rest") {
@@ -519,6 +557,7 @@ export function soundForEvents(
 export function calloutForEvents(events: TimerEvent[], state: TimerState): string | null {
   const item = currentItem(state);
   if (events.includes("session_complete")) return "Session complete";
+  if (events.includes("prep_start")) return "Get ready";
   if (events.includes("round_start") && item?.kind === "interval") {
     return state.unit >= item.rounds && item.rounds > 1 ? "Last round" : `Round ${state.unit}`;
   }

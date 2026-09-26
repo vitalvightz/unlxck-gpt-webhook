@@ -157,6 +157,7 @@ export function useSessionTimer({
   const [settings, setSettingsState] = useState<TimerSoundSettings>(() => loadSoundSettings());
   const stateRef = useRef(state);
   const audibleRef = useRef(audible);
+  const settingsRef = useRef(settings);
   const lastRemainingRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -164,6 +165,7 @@ export function useSessionTimer({
   }, [audible]);
 
   useEffect(() => {
+    settingsRef.current = settings;
     timerAudio().configure(settings);
   }, [settings]);
 
@@ -232,10 +234,23 @@ export function useSessionTimer({
         commit(next);
       } else if (audibleRef.current) {
         const remaining = cueRemainingMs(viewAt(current, at));
-        const cues = crossedCues(current.phase, current.phaseMs, lastRemainingRef.current, remaining);
+        const { warnTen, warnThirty, warnHalfway } = settingsRef.current;
+        const cues = crossedCues(current.phase, current.phaseMs, lastRemainingRef.current, remaining, {
+          ten: warnTen,
+          thirty: warnThirty,
+          halfway: warnHalfway,
+        });
         lastRemainingRef.current = remaining;
         const audio = timerAudio();
         if (cues.includes("ten_seconds")) audio.play("clapper");
+        // A one-minute round's halfway is its thirty-second mark: one cue, not two.
+        if (cues.includes("thirty_seconds")) {
+          audio.play("double_beep");
+          audio.say("30 seconds");
+        } else if (cues.includes("halfway")) {
+          audio.play("soft_chime");
+          audio.say("Halfway");
+        }
         if (cues.some((cue) => cue.startsWith("count_"))) audio.play("beep");
       } else {
         lastRemainingRef.current = cueRemainingMs(viewAt(current, at));

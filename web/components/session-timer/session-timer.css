@@ -811,6 +811,9 @@
   backdrop-filter: blur(16px);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
   animation: st-sheet-in 160ms ease-out;
+  /* The sound sheet is the tallest: it scrolls on a short phone instead of spilling off. */
+  max-height: calc(100dvh - max(10px, env(safe-area-inset-top)) - 90px);
+  overflow-y: auto;
 }
 
 @keyframes st-sheet-in {
@@ -831,6 +834,60 @@
 
 .st-toggle input { width: 20px; height: 20px; accent-color: #d4163a; }
 .st-range input { flex: 1; accent-color: #d4163a; }
+
+.st-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 12px 0 0;
+  border: 0;
+  border-top: 1px solid var(--st-line);
+}
+
+.st-group legend,
+.st-choice > span {
+  padding: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--st-ink-soft);
+}
+
+.st-group legend { float: left; width: 100%; }
+
+.st-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--st-line);
+}
+
+.st-choice-options {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.st-choice-options button {
+  min-height: 40px;
+  border: 1px solid var(--st-line);
+  border-radius: 999px;
+  background: var(--st-surface);
+  color: var(--st-ink-soft);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.st-choice-options button[aria-checked="true"] {
+  background: var(--st-ink);
+  border-color: transparent;
+  color: #0b0c0f;
+}
 
 .st-sheet-note {
   margin: 0;

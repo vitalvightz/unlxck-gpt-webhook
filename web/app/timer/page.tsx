@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 
 import { useRoundTimer, useSavedTodayRun } from "@/components/session-timer/round-timer-provider";
 
@@ -10,16 +11,26 @@ export default function TimerPage() {
   // One timer at a time: a session or sparring run already going is resumed on Today.
   const todayRunSaved = useSavedTodayRun() && !roundTimer.shown;
 
+  // Open straight into the timer on its last setup: no screen to tap through
+  // first. Once only, so closing it leaves the athlete here, not in a loop.
+  const { show } = roundTimer;
+  const opened = useRef(false);
+  useEffect(() => {
+    if (opened.current) return;
+    opened.current = true;
+    show();
+  }, [show]);
+
+  // Only seen behind the timer: once it is minimised, closed or blocked.
   return (
     <section className="panel today-shell today-empty-state">
       <div className="today-hero-copy">
-        <p className="kicker">Tools</p>
         <h1>Round timer</h1>
-        <p className="muted">
-          {todayRunSaved
-            ? "Your session timer is still running. Finish or close it on Today before starting the round timer."
-            : "Rounds and rest with the bell. Pick a format and go. It keeps time while you move around the app."}
-        </p>
+        {todayRunSaved ? (
+          <p className="muted">
+            Your session timer is still running. Finish or close it on Today before starting the round timer.
+          </p>
+        ) : null}
       </div>
       <div className="today-action-row">
         {todayRunSaved ? (

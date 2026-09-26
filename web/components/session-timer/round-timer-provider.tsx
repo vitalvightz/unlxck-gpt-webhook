@@ -80,9 +80,18 @@ type RoundTimerContextValue = {
    * nothing while Today has a session or contact run saved: resume that one.
    */
   open: () => void;
+  /**
+   * Put the round timer on screen without a tap (the /timer page opening
+   * straight into it). Audio unlocks later, on the Start tap. Same guard as open.
+   */
+  show: () => void;
 };
 
-const RoundTimerContext = createContext<RoundTimerContextValue>({ shown: false, open: () => {} });
+const RoundTimerContext = createContext<RoundTimerContextValue>({
+  shown: false,
+  open: () => {},
+  show: () => {},
+});
 
 export function useRoundTimer(): RoundTimerContextValue {
   return useContext(RoundTimerContext);
@@ -107,20 +116,26 @@ export function RoundTimerProvider({ children }: { children: ReactNode }) {
     () => false,
   );
   const shownMode = mode ?? (hasSaved ? "minimized" : null);
-  const items = useMemo(() => [freeRoundsItem()], []);
+  // Built afresh each time the timer comes up, so it opens on the last setup.
+  // A saved run brings back its own items, under the same id.
+  const [items, setItems] = useState(() => [freeRoundsItem()]);
 
-  const value = useMemo<RoundTimerContextValue>(
-    () => ({
+  const value = useMemo<RoundTimerContextValue>(() => {
+    const show = (unlockAudio: boolean) => {
+      if (shownMode === null) {
+        if (hasSavedTodayRun()) return;
+        setItems([freeRoundsItem()]);
+      }
+      // Audio only unlocks inside the tap itself.
+      if (unlockAudio) timerAudio().unlock();
+      setMode("open");
+    };
+    return {
       shown: shownMode !== null,
-      open: () => {
-        if (shownMode === null && hasSavedTodayRun()) return;
-        // Audio only unlocks inside the tap itself.
-        timerAudio().unlock();
-        setMode("open");
-      },
-    }),
-    [shownMode],
-  );
+      open: () => show(true),
+      show: () => show(false),
+    };
+  }, [shownMode]);
 
   const close = () => {
     clearSavedRun(ROUND_TIMER_STORAGE_KEY);
