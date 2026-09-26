@@ -133,20 +133,26 @@ def compute_nutrition_targets(*, flags: dict) -> dict:
         targets["protein_g_per_day"] = _macro_range(1.6, 2.2, weight)
         targets["fats_g_per_day"] = _macro_range(0.7, 1.0, weight)
     elif phase == "TAPER":
-        targets["calorie_adjustment"] = "reduced volume; freshness + weight making"
+        # Under-18: the taper is about freshness only. The carb and fibre
+        # reductions below are weight-making tactics, which minors do not get.
+        is_minor = bool(flags.get("is_minor"))
+        carb_note = "match to reduced training volume" if is_minor else "reduce in days before weigh-in"
+        targets["calorie_adjustment"] = (
+            "reduced volume; freshness" if is_minor else "reduced volume; freshness + weight making"
+        )
         targets["carbs_g_per_day"] = (
             {
                 "min": None,
                 "max": round(5 * weight, 1),
                 "per_kg": [None, 5],
-                "note": "reduce in days before weigh-in",
+                "note": carb_note,
             }
             if weight is not None
             else {
                 "min": None,
                 "max": None,
                 "per_kg": [None, 5],
-                "note": "<5 g/kg — reduce in days before weigh-in; provide bodyweight for exact grams",
+                "note": f"<5 g/kg — {carb_note}; provide bodyweight for exact grams",
             }
         )
         targets["protein_g_per_day"] = _macro_range(1.8, 2.5, weight)
@@ -154,7 +160,9 @@ def compute_nutrition_targets(*, flags: dict) -> dict:
             "min": None,
             "max": None,
             "per_kg": None,
-            "note": "moderate (~20% calories); reduce fiber 1-2 days out",
+            "note": "moderate (~20% calories)"
+            if is_minor
+            else "moderate (~20% calories); reduce fiber 1-2 days out",
         }
 
     if phase in ("GPP", "SPP"):
@@ -281,14 +289,25 @@ def generate_nutrition_block(*, flags: dict) -> str:
         nutrition_block += f"- Protein: 1.6-2.2 g/kg{_daily(1.6, 2.2)}\n"
         nutrition_block += f"- Fats: 0.7-1.0 g/kg (20-25% calories){_daily(0.7, 1.0)}\n"
     elif phase == "TAPER":
+        # Under-18: freshness only — no weight-making, weigh-in carb cut or
+        # fibre reduction (see compute_nutrition_targets).
+        is_minor = bool(flags.get("is_minor"))
         nutrition_block += "\n**Taper Phase Focus:**\n"
-        nutrition_block += "- Reduced training volume, focus on freshness and weight making\n"
-        if weight is None:
-            nutrition_block += "- Carbohydrates: reduce to <5 g/kg in days before weigh-in (exact daily targets need your bodyweight)\n"
+        if is_minor:
+            nutrition_block += "- Reduced training volume, focus on freshness\n"
+            carb_timing = "to match the reduced training volume"
         else:
-            nutrition_block += f"- Carbohydrates: reduce to <5 g/kg in days before weigh-in -> <{round(5 * weight, 1)} g/day\n"
+            nutrition_block += "- Reduced training volume, focus on freshness and weight making\n"
+            carb_timing = "in days before weigh-in"
+        if weight is None:
+            nutrition_block += f"- Carbohydrates: reduce to <5 g/kg {carb_timing} (exact daily targets need your bodyweight)\n"
+        else:
+            nutrition_block += f"- Carbohydrates: reduce to <5 g/kg {carb_timing} -> <{round(5 * weight, 1)} g/day\n"
         nutrition_block += f"- Protein: maintain high intake 1.8-2.5 g/kg{_daily(1.8, 2.5)}\n"
-        nutrition_block += "- Moderate fat intake (~20% calories), reduce fiber 1-2 days out\n"
+        if is_minor:
+            nutrition_block += "- Moderate fat intake (~20% calories)\n"
+        else:
+            nutrition_block += "- Moderate fat intake (~20% calories), reduce fiber 1-2 days out\n"
         nutrition_block += "- Emphasize gut-friendly carbs (white rice, bananas, oats)\n"
 
     # Exact supplement/electrolyte dosing is coach/medical-gated (it lives under
