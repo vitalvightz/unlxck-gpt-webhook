@@ -553,3 +553,81 @@ def test_a_minors_card_with_real_cut_guidance_is_still_blocked():
     assert outcome.status == "blocked_by_safety_audit"
     assert outcome.structured_plan is None
     assert any("sweat_protocol" in error for error in outcome.errors), outcome.errors
+
+
+# ---------------------------------------------------------------------------
+# The conversion model never sees cut wording; the note is added in code
+# ---------------------------------------------------------------------------
+
+
+def _conversion_prompt(*, is_minor: bool) -> str:
+    from api.structured_plan_generation import build_structured_plan_prompt
+
+    flags = _flags(is_minor=is_minor, weight_cut_risk=False)
+    markdown = "# PLAN\n\n**Nutrition:**\n" + generate_nutrition_block(flags=flags)
+    return build_structured_plan_prompt(
+        plan_markdown=markdown,
+        planning_brief={"computed_support": build_computed_support(flags=flags)},
+    )
+
+
+def test_a_minors_conversion_prompt_carries_no_cut_wording():
+    from api.structured_plan_generation import (
+        _MINOR_CONVERSION_RULE,
+        _ROOT_SKELETON,
+        _STRUCTURED_PLAN_RULES,
+    )
+
+    prompt = _conversion_prompt(is_minor=True)
+
+    assert _MINOR_CONVERSION_RULE in prompt
+    assert MINOR_WEIGHT_CUT_NOTE.split(". ")[0] not in prompt
+    assert "coach_gated" not in prompt.replace(_STRUCTURED_PLAN_RULES, "")
+    # Everything the model is asked to convert is free of cut vocabulary; only
+    # the fixed rules (and the rule forbidding it) name it.
+    variable = (
+        prompt.replace(_STRUCTURED_PLAN_RULES, "")
+        .replace(_ROOT_SKELETON, "")
+        .replace(_MINOR_CONVERSION_RULE, "")
+    )
+    assert blocked_guidance_reasons(variable) == []
+
+
+def test_an_adults_conversion_prompt_is_unchanged():
+    from api.structured_plan_generation import _MINOR_CONVERSION_RULE
+
+    prompt = _conversion_prompt(is_minor=False)
+
+    assert _MINOR_CONVERSION_RULE not in prompt
+    assert "NEVER surface them directly" in prompt
+
+
+def test_a_published_minor_card_carries_the_note_verbatim_once():
+    outcome = _minor_outcome("Eat to fuel training.")
+
+    assert outcome.status != "blocked_by_safety_audit", outcome.errors
+    summary = outcome.structured_plan["nutrition"]["summary"]
+    assert summary == f"Eat to fuel training. {MINOR_WEIGHT_CUT_NOTE}"
+
+    already_noted = _minor_outcome(f"Eat to fuel training. {MINOR_WEIGHT_CUT_NOTE}")
+    assert already_noted.structured_plan["nutrition"]["summary"].count(
+        MINOR_WEIGHT_CUT_NOTE
+    ) == 1
+
+
+def test_an_adults_card_gets_no_minor_note():
+    from api.structured_plan_generation import build_structured_plan_outcome
+    from test_structured_plan_models import _valid_plan
+    from test_structured_plan_safety import _faithful_source
+
+    plan = _valid_plan()
+    outcome = build_structured_plan_outcome(
+        plan,
+        raw_markdown=_faithful_source(plan),
+        computed_support=build_computed_support(
+            flags=_flags(is_minor=False, weight_cut_risk=False)
+        ),
+    )
+
+    assert outcome.structured_plan is not None
+    assert MINOR_WEIGHT_CUT_NOTE not in outcome.structured_plan["nutrition"]["summary"]

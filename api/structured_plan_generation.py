@@ -38,7 +38,13 @@ from .structured_plan_faithfulness import (
     strip_locked_sessions_for_conversion,
 )
 from .structured_plan_locked_merge import merge_planner_owned_structured_content
-from .structured_plan_safety import athlete_safe_support, audit_structured_plan, split_findings
+from .minor_safety import MINOR_WEIGHT_CUT_NOTE
+from .structured_plan_safety import (
+    athlete_safe_support,
+    audit_structured_plan,
+    is_minor_support,
+    split_findings,
+)
 from .structured_plan_models import (
     SCHEMA_VERSION,
     BlockType,
@@ -2435,6 +2441,55 @@ def _with_deterministic_support(
     return plan_dict
 
 
+# Under-18 cards: the conversion model never sees the refusal note or any
+# weight-cut vocabulary, so it has nothing to reword into wording the safety
+# audit would (rightly) block. The note is added back verbatim, in code, once
+# the card has passed the audit.
+_MINOR_CONVERSION_RULE = (
+    "UNDER-18 ATHLETE: never mention weight cuts, cutting weight, making weight, "
+    "dehydration, rehydration, water cuts or loading, sauna, sweat suits, "
+    "diuretics or refeeds anywhere in the JSON. Set nutrition.weight_cut_warning "
+    "to null. Weight-cut guidance is added separately by the server."
+)
+
+
+def _minor_conversion_markdown(plan_markdown: str) -> str:
+    """Plan markdown with the under-18 refusal note removed for conversion."""
+    return "\n".join(
+        line for line in plan_markdown.splitlines() if MINOR_WEIGHT_CUT_NOTE not in line
+    )
+
+
+def _minor_conversion_support(node: Any) -> Any:
+    """computed_support without the refusal note or coach-only cut sections.
+
+    ``coach_gated`` is never athlete-facing and holds no cut for a minor (Stage 1
+    computes none), and ``athlete_facing_note`` only exists to warn about it.
+    """
+    if isinstance(node, dict):
+        return {
+            key: _minor_conversion_support(value)
+            for key, value in node.items()
+            if key not in ("coach_gated", "athlete_facing_note")
+            and value != MINOR_WEIGHT_CUT_NOTE
+        }
+    if isinstance(node, list):
+        return [_minor_conversion_support(item) for item in node]
+    return node
+
+
+def _with_minor_weight_cut_note(plan_dict: dict[str, Any]) -> dict[str, Any]:
+    """Append the verbatim refusal note to a minor card's nutrition summary."""
+    nutrition = plan_dict.get("nutrition")
+    if not isinstance(nutrition, dict):
+        return plan_dict
+    summary = str(nutrition.get("summary") or "").strip()
+    if MINOR_WEIGHT_CUT_NOTE in summary:
+        return plan_dict
+    note_summary = f"{summary} {MINOR_WEIGHT_CUT_NOTE}".strip()
+    return {**plan_dict, "nutrition": {**nutrition, "summary": note_summary}}
+
+
 def _open_plan_spec_from_brief(planning_brief: Any) -> dict[str, Any] | None:
     if not isinstance(planning_brief, dict):
         return None
@@ -2722,6 +2777,8 @@ def build_structured_plan_outcome(
                 errors=blocking,
                 warnings=warnings,
             )
+        if is_minor_support(computed_support):
+            plan_dict = _with_minor_weight_cut_note(plan_dict)
         return StructuredPlanOutcome(
             status=status,
             structured_plan=plan_dict,
@@ -3467,7 +3524,14 @@ def build_structured_plan_prompt(
     """
 
     plan_markdown = strip_locked_sessions_for_conversion(plan_markdown, planning_brief)
+    is_minor = isinstance(planning_brief, dict) and is_minor_support(
+        planning_brief.get("computed_support")
+    )
+    if is_minor:
+        plan_markdown = _minor_conversion_markdown(plan_markdown)
     sections: list[str] = [_STRUCTURED_PLAN_RULES, _ROOT_SKELETON]
+    if is_minor:
+        sections.append(_MINOR_CONVERSION_RULE)
     open_plan_contract = _open_plan_prompt_contract(planning_brief)
     if open_plan_contract:
         sections.append(open_plan_contract)
@@ -3483,6 +3547,8 @@ def build_structured_plan_prompt(
         computed_support = None
         if isinstance(planning_brief, dict) and "computed_support" in planning_brief:
             computed_support = planning_brief.get("computed_support")
+            if is_minor:
+                computed_support = _minor_conversion_support(computed_support)
 
         # Select only the athlete/event/phase context keys. The full brief is
         # huge (100k+ chars: candidate_pools, weekly_role_map, selection
@@ -3507,7 +3573,14 @@ def build_structured_plan_prompt(
                 support_json = json.dumps(computed_support, ensure_ascii=False)
             except (TypeError, ValueError):
                 support_json = ""
-            if support_json:
+            if support_json and is_minor:
+                sections.append(
+                    "STAGE 1 COMPUTED SUPPORT (authoritative nutrition/recovery/"
+                    "mindset numbers — use these exact values when the plan "
+                    "covers nutrition, recovery, or mental coaching; do not "
+                    "invent or round differently):\n" + support_json
+                )
+            elif support_json:
                 sections.append(
                     "STAGE 1 COMPUTED SUPPORT (authoritative nutrition/recovery/"
                     "mindset numbers — use these exact values when the plan "
