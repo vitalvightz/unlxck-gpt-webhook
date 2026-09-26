@@ -503,3 +503,58 @@ def test_a_minors_onboarding_draft_never_stores_a_target_weight():
     draft = store.profiles[DEFAULT_ATHLETE_USER.user_id]["onboarding_draft"]
     assert "target_weight_kg" not in draft["athlete"]
     assert draft["athlete"]["weight_kg"] == 62.0
+
+
+# ---------------------------------------------------------------------------
+# The refusal note, reworded by Stage 2, must not sink an under-18 card
+# ---------------------------------------------------------------------------
+
+
+def test_a_shortened_refusal_note_is_not_read_as_cut_guidance():
+    first_sentence = MINOR_WEIGHT_CUT_NOTE.split(". ")[0] + "."
+
+    assert blocked_guidance_reasons(first_sentence) == []
+    assert blocked_guidance_reasons(first_sentence.rstrip(".").lower()) == []
+    # Re-wrapped across lines, as a card label or markdown bullet may be.
+    assert blocked_guidance_reasons(first_sentence.replace(" and ", "\nand ")) == []
+    # The note does not launder real guidance that sits next to it.
+    assert blocked_guidance_reasons(f"{first_sentence} Sit in the sauna Friday.") == [
+        "sweat_protocol"
+    ]
+
+
+def test_a_minors_card_with_cut_wording_is_scrubbed_not_rejected():
+    from api.structured_plan_generation import build_structured_plan_outcome
+    from test_structured_plan_models import _valid_plan
+    from test_structured_plan_safety import _faithful_source
+
+    support = build_computed_support(flags=_flags(is_minor=True, weight_cut_risk=False))
+    plan = _valid_plan()
+    plan["nutrition"]["summary"] = "Eat to fuel training. No weight cut is planned for this camp."
+
+    outcome = build_structured_plan_outcome(
+        plan, raw_markdown=_faithful_source(plan), computed_support=support
+    )
+
+    assert outcome.status != "blocked_by_safety_audit", outcome.errors
+    assert outcome.structured_plan is not None
+    assert not detect_minor_guidance_leakage(outcome.structured_plan, is_minor=True)
+    assert outcome.structured_plan["nutrition"]["summary"] == "Eat to fuel training."
+    assert any(w.startswith("minor_guard:") for w in outcome.warnings)
+
+
+def test_an_adults_card_keeps_its_cut_wording():
+    from api.structured_plan_generation import build_structured_plan_outcome
+    from test_structured_plan_models import _valid_plan
+    from test_structured_plan_safety import _faithful_source
+
+    support = build_computed_support(flags=_flags(is_minor=False, weight_cut_risk=False))
+    plan = _valid_plan()
+    plan["nutrition"]["summary"] = "Eat to fuel training. No weight cut is planned for this camp."
+
+    outcome = build_structured_plan_outcome(
+        plan, raw_markdown=_faithful_source(plan), computed_support=support
+    )
+
+    assert outcome.structured_plan is not None
+    assert "weight cut" in outcome.structured_plan["nutrition"]["summary"]
