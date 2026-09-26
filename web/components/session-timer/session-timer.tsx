@@ -38,9 +38,11 @@ import {
 import { rememberRoundFormat, ROUND_PRESETS } from "@/lib/session-timer/contact";
 import type { SparringPlannedIntensity } from "@/lib/types";
 import {
+  countNoun,
   formatClock,
   formatRange,
   formatShortDuration,
+  type SetsItem,
   type TimerItem,
 } from "@/lib/session-timer/plan";
 
@@ -92,20 +94,65 @@ function toneFor(state: TimerState, view: TimerView): Tone {
   return view.remainingMs === null ? "open" : "work";
 }
 
+function capitalize(text: string): string {
+  return `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
+}
+
+/** "Set" / "Round", for a sets item's labels. */
+function unitWord(item: SetsItem): string {
+  return capitalize(countNoun(item));
+}
+
+/**
+ * What each set or round asks for: its hold, or every target the plan gives
+ * (reps / mode, time, distance), e.g. "AMRAP, 60 s". Comma-joined so the
+ * parts read as one unit beside the " · " separated rest.
+ */
+function perUnitTarget(item: SetsItem): string | null {
+  if (item.holdSec) return `${formatShortDuration(item.holdSec)} hold`;
+  const targets = (item.stats ?? []).filter((stat) => stat.kind === "target").map((stat) => stat.value);
+  return targets.length ? targets.join(", ") : null;
+}
+
+/** One line for an exercise's plan, e.g. "4 × 5 reps · 2 min rest" or "6 × 3:00 · 1:00 rest". */
 function describeItem(item: TimerItem): string {
   if (item.kind === "interval") {
+    if (item.rounds <= 1) return formatClock(item.workSec);
     const round = `${item.rounds} × ${formatClock(item.workSec)}`;
     return item.restSec > 0 ? `${round} · ${formatClock(item.restSec)} rest` : round;
   }
   if (item.kind === "sets") {
-    const parts = [
-      item.sets ? `${formatRange(item.sets)} sets` : "Sets as needed",
-      item.holdSec ? `${formatShortDuration(item.holdSec)} hold` : null,
-      item.restSec ? `${formatRange(item.restSec, formatShortDuration)} rest` : null,
-    ];
-    return parts.filter(Boolean).join(" · ");
+    const noun = countNoun(item);
+    const target = perUnitTarget(item);
+    const count = item.sets
+      ? target
+        ? `${formatRange(item.sets)} × ${target}`
+        : `${formatRange(item.sets)} ${noun}s`
+      : [target, `${capitalize(noun)}s as needed`].filter(Boolean).join(" · ");
+    const rest = item.restSec ? `${formatRange(item.restSec, formatShortDuration)} rest` : null;
+    return [count, rest].filter(Boolean).join(" · ");
   }
   return "Tap done when finished";
+}
+
+/**
+ * The exercise's dose as chips under its name: the per-set target first and
+ * brightest, then load and effort. A run saved before chips existed falls back
+ * to its one-line detail.
+ */
+function DoseChips({ item }: { item: TimerItem }) {
+  if (!item.stats) return item.detail ? <p className="st-detail">{item.detail}</p> : null;
+  // A hold's time is on the clock; everything else stays in view.
+  if (item.stats.length === 0) return null;
+  return (
+    <ul className="st-stats" aria-label="Prescription">
+      {item.stats.map((stat, index) => (
+        <li key={`${stat.kind}-${index}`} data-kind={stat.kind}>
+          {stat.value}
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 function phaseLabel(state: TimerState, item: TimerItem | null, view: TimerView): string {
@@ -115,7 +162,7 @@ function phaseLabel(state: TimerState, item: TimerItem | null, view: TimerView):
   if (isPrep(state)) return "Get ready";
   if (state.phase === "rest") return view.readyRemainingMs === 0 ? "Ready" : "Rest";
   if (item?.kind === "interval") return item.sparring ? "Spar" : "Work";
-  if (item?.kind === "sets") return item.holdSec ? "Hold" : "Lift";
+  if (item?.kind === "sets") return item.holdSec ? "Hold" : countNoun(item) === "round" ? "Work" : "Lift";
   return "Go";
 }
 
@@ -132,7 +179,8 @@ function counterLabel(state: TimerState, item: TimerItem | null): string | null 
         ? ` of ${item.sets.min}`
         : ` · target ${formatRange(item.sets)}`
       : "";
-    return state.phase === "rest" ? `Next: set ${state.unit}${target}` : `Set ${state.unit}${target}`;
+    const noun = countNoun(item);
+    return state.phase === "rest" ? `Next: ${noun} ${state.unit}${target}` : `${unitWord(item)} ${state.unit}${target}`;
   }
   return null;
 }
@@ -141,8 +189,9 @@ function doneLabel(item: TimerItem, done: number): string {
   if (done === 0) return "Skipped";
   if (item.kind === "interval") return `${done}/${item.rounds} rounds`;
   if (item.kind === "sets") {
-    if (item.sets && item.sets.min === item.sets.max) return `${done}/${item.sets.min} sets`;
-    const count = `${done} ${done === 1 ? "set" : "sets"}`;
+    const noun = countNoun(item);
+    if (item.sets && item.sets.min === item.sets.max) return `${done}/${item.sets.min} ${noun}s`;
+    const count = `${done} ${done === 1 ? noun : `${noun}s`}`;
     return item.sets ? `${count} · plan ${formatRange(item.sets)}` : count;
   }
   return "Done";
@@ -413,15 +462,64 @@ function ReadyPanel({
   item: TimerItem;
   onAdjust: () => void;
 }) {
-  if (item.kind !== "interval") {
+  if (item.kind === "task") {
     return <p className="st-plan-line">{describeItem(item)}</p>;
+  }
+  if (item.kind === "sets") {
+    const noun = countNoun(item);
+    return (
+      <div className="st-setup">
+        <button
+          type="button"
+          className="st-plan-summary"
+          data-size={
+            (item.sets && item.sets.min !== item.sets.max) ||
+            (item.restSec && item.restSec.min !== item.restSec.max) ||
+            (item.holdSec && item.restSec)
+              ? "long"
+              : undefined
+          }
+          onClick={onAdjust}
+          aria-label={`Edit ${noun}s and rest`}
+        >
+          {/* A no-break space keeps each number with its unit when the line wraps. */}
+          {item.sets ? (
+            <>
+              <span>{formatRange(item.sets)}</span>
+              {`\u00a0${item.sets.max === 1 ? noun : `${noun}s`}`}
+            </>
+          ) : (
+            <>{capitalize(noun)}s as needed</>
+          )}
+          {item.holdSec ? (
+            <>
+              {" "}
+              · <span>{formatClock(item.holdSec)}</span>
+              {"\u00a0hold"}
+            </>
+          ) : null}
+          {item.restSec ? (
+            <>
+              {" "}
+              · <span>{formatRange(item.restSec, formatClock)}</span>
+              {"\u00a0rest"}
+            </>
+          ) : null}
+        </button>
+      </div>
+    );
   }
   // One line, not a wall of controls: the plan's format, plus quick presets
   // when the plan left it open. Everything else lives behind Adjust.
   return (
     <div className="st-setup">
       <button type="button" className="st-plan-summary" onClick={onAdjust} aria-label="Edit rounds and timing">
-        <span>{item.rounds}</span> × <span>{formatClock(item.workSec)}</span>
+        {item.rounds > 1 ? (
+          <>
+            <span>{item.rounds}</span> ×{" "}
+          </>
+        ) : null}
+        <span>{formatClock(item.workSec)}</span>
         {item.restSec > 0 ? (
           <>
             {" "}
@@ -501,7 +599,7 @@ function AdjustSheet({ timer }: { timer: SessionTimerController }) {
         ) : (
           <>
             <Stepper
-              label="Sets"
+              label={countNoun(item) === "round" ? "Rounds" : "Sets"}
               value={item.sets ? formatRange(item.sets) : "–"}
               onDown={() => adjust({ sets: (item.sets?.min ?? 2) - 1 })}
               onUp={() => adjust({ sets: (item.sets?.max ?? 0) + 1 })}
@@ -692,7 +790,7 @@ function PrimaryAction({
   if (state.phase === "work" && item.kind === "sets") {
     return (
       <button type="button" className="st-primary" onClick={() => timer.run(completeSet)}>
-        {item.holdSec ? "End hold" : `Set ${state.unit} done`}
+        {item.holdSec ? "End hold" : `${unitWord(item)} ${state.unit} done`}
       </button>
     );
   }
@@ -706,14 +804,19 @@ function PrimaryAction({
   if (state.phase === "rest" && readyRemainingMs !== null && readyRemainingMs > 0) {
     return (
       <button type="button" className="st-primary" data-variant="ghost" disabled>
-        Set {state.unit} unlocks in {formatClock(Math.ceil(readyRemainingMs / 1000))}
+        {item.kind === "sets" ? unitWord(item) : "Set"} {state.unit} unlocks in{" "}
+        {formatClock(Math.ceil(readyRemainingMs / 1000))}
       </button>
     );
   }
   if (state.phase === "rest") {
     return (
       <button type="button" className="st-primary" data-variant="ghost" onClick={() => timer.run(skipRest)}>
-        {item.kind === "sets" ? `Start set ${state.unit}` : isPrep(state) ? "Start now" : "Skip rest"}
+        {item.kind === "sets"
+          ? `Start ${countNoun(item)} ${state.unit}`
+          : isPrep(state)
+            ? "Start now"
+            : "Skip rest"}
       </button>
     );
   }
@@ -935,9 +1038,9 @@ export function SessionTimer({
     view.readyRemainingMs !== null && item?.kind === "sets" && item.restSec
       ? view.readyRemainingMs > 0
         ? `Minimum rest. Up to ${formatShortDuration(item.restSec.max - item.restSec.min)} more is allowed after this.`
-        : `Go when ready. Set ${state.unit} starts itself in ${formatClock(Math.ceil((view.remainingMs ?? 0) / 1000))}.`
+        : `Go when ready. ${unitWord(item)} ${state.unit} starts itself in ${formatClock(Math.ceil((view.remainingMs ?? 0) / 1000))}.`
       : canFinishItem && item?.kind === "sets" && item.sets && item.sets.min !== item.sets.max && state.phase === "rest"
-        ? "Minimum hit. Only add sets if you're moving well."
+        ? `Minimum hit. Only add ${countNoun(item)}s if you're moving well.`
         : null;
 
   return (
@@ -992,7 +1095,7 @@ export function SessionTimer({
         </div>
         {canAdjust && adjustHint && sheet === null ? (
           <button type="button" className="st-hint" onClick={dismissAdjustHint}>
-            Tap to edit rounds &amp; timing
+            {item?.kind === "sets" ? `Tap to edit ${countNoun(item)}s & rest` : "Tap to edit rounds & timing"}
             <span aria-hidden="true">×</span>
           </button>
         ) : null}
@@ -1032,7 +1135,7 @@ export function SessionTimer({
             {phaseText}
           </p>
           <h2 className="st-title">{item?.title}</h2>
-          {item?.detail ? <p className="st-detail">{item.detail}</p> : null}
+          {item ? <DoseChips item={item} /> : null}
 
           {state.phase === "ready" && item ? (
             <ReadyPanel
@@ -1141,7 +1244,7 @@ export function SessionTimer({
           </div>
           {nextItem ? (
             <div className="st-next">
-              <span className="st-next-label">Up next</span>
+              <span className="st-next-label">Then</span>
               <span className="st-next-title">{nextItem.title}</span>
               <span className="st-next-plan">{describeItem(nextItem)}</span>
             </div>

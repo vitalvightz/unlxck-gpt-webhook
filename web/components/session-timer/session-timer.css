@@ -228,6 +228,44 @@
 .st-plan-summary:hover,
 .st-plan-summary:focus-visible { background: var(--st-surface); }
 
+.st-plan-summary[data-size="long"] {
+  font-size: clamp(20px, 5.4vw, 32px);
+}
+
+/* The dose under the exercise name: what each set asks for reads first and
+   brightest (it is what the athlete checks between reps), then load and
+   effort as quieter chips. Wraps, never scrolls. */
+.st-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  max-width: 34ch;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.st-stats li {
+  padding: 5px 11px;
+  border: 1px solid var(--st-line);
+  border-radius: 999px;
+  background: var(--st-surface);
+  color: var(--st-ink-soft);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+
+.st-stats li[data-kind="target"] {
+  border-color: color-mix(in srgb, var(--st-ink) 22%, transparent);
+  background: var(--st-surface-strong);
+  color: var(--st-ink);
+  font-size: 16px;
+  font-weight: 700;
+}
+
 .st-detail,
 .st-plan-line {
   margin: 0;

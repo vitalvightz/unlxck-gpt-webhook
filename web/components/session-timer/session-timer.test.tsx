@@ -55,7 +55,7 @@ test("the ready screen shows the first exercise, its adjustable rounds and what 
   assert.match(html, /<span>6<\/span> × <span>3:00<\/span>/);
   assert.match(html, /aria-label="Adjust timer"/);
   assert.doesNotMatch(html, /aria-label="Increase rounds"/);
-  assert.match(html, /Up next<\/span><span class="st-next-title">Back squat<\/span>/);
+  assert.match(html, /Then<\/span><span class="st-next-title">Back squat<\/span>/);
   assert.match(html, /3–5 sets · 90s–2 min rest/);
   assert.doesNotMatch(html, /Pick a format/);
 });
@@ -104,4 +104,73 @@ test("the plan summary opens the adjust sheet and the first-run hint waits for s
   assert.match(html, /class="st-plan-summary"[^>]*aria-label="Edit rounds and timing"/);
   // Hidden on the server so it never flashes for athletes who have seen it.
   assert.doesNotMatch(html, /st-hint/);
+});
+
+const SHUTTLE: TimerItem = {
+  kind: "sets",
+  id: "shuttle",
+  title: "Shuttle sprints",
+  detail: "200 m · RPE 8",
+  stats: [
+    { kind: "target", value: "200 m" },
+    { kind: "effort", value: "RPE 8" },
+  ],
+  blockType: "conditioning",
+  sets: { min: 6, max: 6 },
+  holdSec: null,
+  restSec: { min: 90, max: 90 },
+  unit: "round",
+};
+
+test("the dose shows as chips, and tapped rounds are summarised as rounds", () => {
+  const html = render([SHUTTLE, ITEMS[0]]);
+  assert.match(html, /<ul class="st-stats" aria-label="Prescription"><li data-kind="target">200 m<\/li><li data-kind="effort">RPE 8<\/li><\/ul>/);
+  assert.match(html, /aria-label="Edit rounds and rest"><span>6<\/span>\u00a0rounds · <span>1:30<\/span>\u00a0rest/);
+  // What comes after carries its own dose too.
+  const before = render([ITEMS[0], SHUTTLE]);
+  assert.match(before, /st-next-plan">6 × 200 m · 90s rest</);
+});
+
+test("a run saved before chips existed still shows its one-line detail", () => {
+  const html = render([ITEMS[1]]);
+  assert.match(html, /<p class="st-detail">5 reps · RPE 7<\/p>/);
+  assert.doesNotMatch(html, /st-stats/);
+});
+
+test("a single timed block reads as its length, not 1 × length", () => {
+  const html = render([
+    { kind: "interval", id: "bike", title: "Bike", detail: null, stats: [], blockType: "conditioning", rounds: 1, workSec: 1200, restSec: 0, sparring: false, needsSetup: false },
+  ]);
+  assert.match(html, /aria-label="Edit rounds and timing"><span>20:00<\/span><\/button>/);
+});
+
+test("the next-exercise line keeps every per-set target, not just the first", () => {
+  const amrap: TimerItem = {
+    kind: "sets",
+    id: "pushups",
+    title: "Push-ups",
+    detail: "AMRAP · 60 s",
+    stats: [
+      { kind: "target", value: "AMRAP" },
+      { kind: "target", value: "60 s" },
+    ],
+    blockType: "strength",
+    sets: { min: 3, max: 3 },
+    holdSec: null,
+    restSec: { min: 90, max: 90 },
+  };
+  assert.match(render([ITEMS[0], amrap]), /st-next-plan">3 × AMRAP, 60 s · 90s rest</);
+  const drill: TimerItem = {
+    ...amrap,
+    id: "drill",
+    title: "Shadow drill",
+    stats: [
+      { kind: "target", value: "10 reps" },
+      { kind: "target", value: "5 min" },
+      { kind: "effort", value: "RPE 6" },
+    ],
+    sets: { min: 2, max: 2 },
+    restSec: null,
+  };
+  assert.match(render([ITEMS[0], drill]), /st-next-plan">2 × 10 reps, 5 min</);
 });
