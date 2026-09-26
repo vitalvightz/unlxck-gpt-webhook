@@ -418,6 +418,19 @@ export function adjustItem(state: TimerState, patch: ItemAdjustment, now: number
   return sets !== null ? finishIfMet(next, sets) : { state: next, events: [] };
 }
 
+/** Seconds between the adjust steppers' duration steps. */
+export const DURATION_STEP_SEC = 15;
+
+/**
+ * The next duration mark up or down, so a step always lands on a round
+ * number: 1:05 steps to 1:15 or 1:00, never 1:20 or 0:50.
+ */
+export function stepDuration(seconds: number, direction: 1 | -1, step: number = DURATION_STEP_SEC): number {
+  return direction > 0
+    ? Math.floor(seconds / step) * step + step
+    : Math.ceil(seconds / step) * step - step;
+}
+
 /** Ready-screen round presets and legacy callers: same rules as adjustItem. */
 export function updateIntervalItem(
   state: TimerState,

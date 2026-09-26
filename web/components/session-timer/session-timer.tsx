@@ -19,6 +19,7 @@ import {
   setRestLength,
   skipRest,
   startItem,
+  stepDuration,
   completeSet,
   summarizeRun,
   updateIntervalItem,
@@ -243,29 +244,155 @@ function StepBar({ state }: { state: TimerState }) {
   );
 }
 
+/** A typed-in field: whole, non-negative numbers only; empty reads as 0. */
+function wholeNumber(text: string): number | null {
+  const trimmed = text.trim();
+  if (trimmed === "") return 0;
+  return /^\d+$/.test(trimmed) ? Number(trimmed) : null;
+}
+
+/**
+ * Type a value instead of stepping to it. A duration takes minutes and
+ * seconds in two fields (a phone's number pad has no ":" key); a count takes
+ * one. Enter, the tick or tapping away applies it; Escape leaves it unchanged.
+ * The engine still clamps whatever is typed to what it allows.
+ */
+function StepperEditor({
+  label,
+  kind,
+  initial,
+  onSet,
+  onDone,
+}: {
+  label: string;
+  kind: "count" | "duration";
+  initial: number;
+  onSet: (value: number) => void;
+  onDone: () => void;
+}) {
+  const [minutes, setMinutes] = useState(String(Math.floor(initial / 60)));
+  const [seconds, setSeconds] = useState(String(initial % 60).padStart(2, "0"));
+  const [count, setCount] = useState(String(initial));
+  const name = label.toLowerCase();
+
+  const apply = () => {
+    if (kind === "count") {
+      const value = wholeNumber(count);
+      if (value !== null) onSet(value);
+    } else {
+      const mins = wholeNumber(minutes);
+      const secs = wholeNumber(seconds);
+      if (mins !== null && secs !== null) onSet(mins * 60 + secs);
+    }
+    onDone();
+  };
+
+  return (
+    <form
+      className="st-stepper-edit"
+      // Our own parsing rejects bad input; the browser's pattern check would
+      // only block the submit and leave the editor stuck open.
+      noValidate
+      onSubmit={(event) => {
+        event.preventDefault();
+        apply();
+      }}
+      onBlur={(event) => {
+        // Moving between the minutes and seconds fields is not leaving.
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) apply();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          // The sheet's own Escape handling would close the timer view.
+          event.stopPropagation();
+          onDone();
+        }
+      }}
+    >
+      {kind === "count" ? (
+        <input
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          autoFocus
+          aria-label={name}
+          value={count}
+          onChange={(event) => setCount(event.target.value)}
+          onFocus={(event) => event.target.select()}
+        />
+      ) : (
+        <>
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            autoFocus
+            aria-label={`${name} minutes`}
+            value={minutes}
+            onChange={(event) => setMinutes(event.target.value)}
+            onFocus={(event) => event.target.select()}
+          />
+          <span aria-hidden="true">:</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            aria-label={`${name} seconds`}
+            value={seconds}
+            onChange={(event) => setSeconds(event.target.value)}
+            onFocus={(event) => event.target.select()}
+          />
+        </>
+      )}
+      <button type="submit" aria-label={`Set ${name}`}>
+        ✓
+      </button>
+    </form>
+  );
+}
+
 function Stepper({
   label,
   value,
   onDown,
   onUp,
+  edit,
 }: {
   label: string;
   value: string;
   onDown: () => void;
   onUp: () => void;
+  /** Tap the value to type it: the starting number and how to apply it. */
+  edit?: { kind: "count" | "duration"; initial: number; onSet: (value: number) => void };
 }) {
+  const [editing, setEditing] = useState(false);
   return (
     <div className="st-stepper">
       <span className="st-stepper-label">{label}</span>
-      <div className="st-stepper-control">
-        <button type="button" onClick={onDown} aria-label={`Decrease ${label.toLowerCase()}`}>
-          −
-        </button>
-        <span className="st-stepper-value">{value}</span>
-        <button type="button" onClick={onUp} aria-label={`Increase ${label.toLowerCase()}`}>
-          +
-        </button>
-      </div>
+      {editing && edit ? (
+        <StepperEditor label={label} {...edit} onDone={() => setEditing(false)} />
+      ) : (
+        <div className="st-stepper-control">
+          <button type="button" onClick={onDown} aria-label={`Decrease ${label.toLowerCase()}`}>
+            −
+          </button>
+          {edit ? (
+            <button
+              type="button"
+              className="st-stepper-value"
+              onClick={() => setEditing(true)}
+              aria-label={`${label} ${value}, tap to type`}
+            >
+              {value}
+            </button>
+          ) : (
+            <span className="st-stepper-value">{value}</span>
+          )}
+          <button type="button" onClick={onUp} aria-label={`Increase ${label.toLowerCase()}`}>
+            +
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -347,18 +474,21 @@ function AdjustSheet({ timer }: { timer: SessionTimerController }) {
               value={String(item.rounds)}
               onDown={() => adjust({ rounds: item.rounds - 1 })}
               onUp={() => adjust({ rounds: item.rounds + 1 })}
+              edit={{ kind: "count", initial: item.rounds, onSet: (rounds) => adjust({ rounds }) }}
             />
             <Stepper
               label="Round length"
               value={formatClock(item.workSec)}
-              onDown={() => adjust({ workSec: item.workSec - 15 })}
-              onUp={() => adjust({ workSec: item.workSec + 15 })}
+              onDown={() => adjust({ workSec: stepDuration(item.workSec, -1) })}
+              onUp={() => adjust({ workSec: stepDuration(item.workSec, 1) })}
+              edit={{ kind: "duration", initial: item.workSec, onSet: (workSec) => adjust({ workSec }) }}
             />
             <Stepper
               label="Rest"
               value={formatClock(item.restSec)}
-              onDown={() => adjust({ restSec: item.restSec - 15 })}
-              onUp={() => adjust({ restSec: item.restSec + 15 })}
+              onDown={() => adjust({ restSec: stepDuration(item.restSec, -1) })}
+              onUp={() => adjust({ restSec: stepDuration(item.restSec, 1) })}
+              edit={{ kind: "duration", initial: item.restSec, onSet: (restSec) => adjust({ restSec }) }}
             />
           </>
         ) : (
@@ -368,12 +498,14 @@ function AdjustSheet({ timer }: { timer: SessionTimerController }) {
               value={item.sets ? formatRange(item.sets) : "–"}
               onDown={() => adjust({ sets: (item.sets?.min ?? 2) - 1 })}
               onUp={() => adjust({ sets: (item.sets?.max ?? 0) + 1 })}
+              edit={{ kind: "count", initial: item.sets?.max ?? 3, onSet: (sets) => adjust({ sets }) }}
             />
             <Stepper
               label="Rest"
               value={item.restSec ? formatRange(item.restSec, formatClock) : "–"}
-              onDown={() => adjust({ restSec: (item.restSec?.min ?? 90) - 15 })}
-              onUp={() => adjust({ restSec: (item.restSec?.max ?? 75) + 15 })}
+              onDown={() => adjust({ restSec: stepDuration(item.restSec?.min ?? 90, -1) })}
+              onUp={() => adjust({ restSec: stepDuration(item.restSec?.max ?? 75, 1) })}
+              edit={{ kind: "duration", initial: item.restSec?.min ?? 90, onSet: (restSec) => adjust({ restSec }) }}
             />
           </>
         )}

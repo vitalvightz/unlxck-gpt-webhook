@@ -22,6 +22,7 @@ import {
   calloutForEvents,
   soundForEvents,
   startItem,
+  stepDuration,
   summarizeRun,
   updateIntervalItem,
   viewAt,
@@ -486,3 +487,46 @@ test("a round trimmed with −10s keeps the warnings of the round as set", () =>
   // Rests are judged by their own length.
   assert.equal(warningLengthMs(endRound(work, T0 + 1_000).state), 60_000);
 });
+
+test("duration steps land on 15 s marks, whatever the value starts at", () => {
+  // The reported case: round length clamped to 0:05, then stepped up.
+  assert.equal(stepDuration(5, 1), 15);
+  assert.equal(stepDuration(65, 1), 75);
+  assert.equal(stepDuration(65, -1), 60);
+  // On a mark, a step is a plain 15 s.
+  assert.equal(stepDuration(60, 1), 75);
+  assert.equal(stepDuration(60, -1), 45);
+  assert.equal(stepDuration(15, -1), 0);
+  // An off-mark plan value (1:40) rounds to its neighbours.
+  assert.equal(stepDuration(100, 1), 105);
+  assert.equal(stepDuration(100, -1), 90);
+});
+
+test("stepping round length down then up again comes back to round numbers", () => {
+  const item: IntervalItem = {
+    kind: "interval",
+    id: "free",
+    title: "Rounds",
+    detail: null,
+    blockType: null,
+    rounds: 3,
+    workSec: 15,
+    restSec: 60,
+    sparring: false,
+    needsSetup: false,
+  };
+  let state = createTimerState([item]);
+  const step = (direction: 1 | -1) => {
+    const current = state.items[0] as IntervalItem;
+    state = adjustItem(state, { workSec: stepDuration(current.workSec, direction) }, T0).state;
+    return formatSec((state.items[0] as IntervalItem).workSec);
+  };
+  // 0:15 down is clamped to the 0:05 floor...
+  assert.equal(step(-1), "0:05");
+  // ...and back up it snaps to 0:15, 0:30 ... 1:00, never 0:20 ... 1:05.
+  assert.deepEqual([step(1), step(1), step(1), step(1), step(1)], ["0:15", "0:30", "0:45", "1:00", "1:15"]);
+});
+
+function formatSec(total: number): string {
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+}
