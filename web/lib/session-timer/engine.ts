@@ -505,6 +505,30 @@ export function crossedCues(
   return cues;
 }
 
+/**
+ * What a tick's warning cues sound like. The round warnings (clapper, 30-second
+ * double beep, halfway chime) ring whether or not the timer is on screen; the
+ * 3-2-1 beeps and the spoken callouts only while it is (`onScreen`). A
+ * one-minute round's halfway is its thirty-second mark: one cue, not two.
+ */
+export function cueSounds(
+  cues: TimerCue[],
+  onScreen: boolean,
+): { sounds: Array<"clapper" | "double_beep" | "soft_chime" | "beep">; callout: string | null } {
+  const sounds: Array<"clapper" | "double_beep" | "soft_chime" | "beep"> = [];
+  let callout: string | null = null;
+  if (cues.includes("ten_seconds")) sounds.push("clapper");
+  if (cues.includes("thirty_seconds")) {
+    sounds.push("double_beep");
+    callout = "30 seconds";
+  } else if (cues.includes("halfway")) {
+    sounds.push("soft_chime");
+    callout = "Halfway";
+  }
+  if (onScreen && cues.some((cue) => cue.startsWith("count_"))) sounds.push("beep");
+  return { sounds, callout: onScreen ? callout : null };
+}
+
 /** True when every item reached its planned minimum. */
 export function metPlan(state: TimerState): boolean {
   return state.items.every((item, index) => {

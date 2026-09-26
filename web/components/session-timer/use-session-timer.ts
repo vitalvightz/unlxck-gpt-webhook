@@ -15,6 +15,7 @@ import {
   createTimerState,
   crossedCues,
   cueRemainingMs,
+  cueSounds,
   soundForEvents,
   viewAt,
   type TimerEvent,
@@ -147,7 +148,7 @@ export function useSessionTimer({
 }: {
   items: TimerItem[];
   storageKey: string;
-  /** False while the timer is minimised: the clock keeps running, and only the round bells ring. */
+  /** False while the timer is minimised: the clock keeps running, and only the round bells and warnings ring. */
   audible: boolean;
 }): SessionTimerController {
   const [state, setState] = useState<TimerState>(
@@ -232,7 +233,7 @@ export function useSessionTimer({
       if (next !== current) {
         announce(events, next);
         commit(next);
-      } else if (audibleRef.current) {
+      } else {
         const remaining = cueRemainingMs(viewAt(current, at));
         const { warnTen, warnThirty, warnHalfway } = settingsRef.current;
         const cues = crossedCues(current.phase, current.phaseMs, lastRemainingRef.current, remaining, {
@@ -241,19 +242,12 @@ export function useSessionTimer({
           halfway: warnHalfway,
         });
         lastRemainingRef.current = remaining;
+        // The round warnings ring minimised too: the athlete is training, not
+        // looking at the phone. Callouts and the 3-2-1 beeps stay on screen only.
+        const { sounds, callout } = cueSounds(cues, audibleRef.current);
         const audio = timerAudio();
-        if (cues.includes("ten_seconds")) audio.play("clapper");
-        // A one-minute round's halfway is its thirty-second mark: one cue, not two.
-        if (cues.includes("thirty_seconds")) {
-          audio.play("double_beep");
-          audio.say("30 seconds");
-        } else if (cues.includes("halfway")) {
-          audio.play("soft_chime");
-          audio.say("Halfway");
-        }
-        if (cues.some((cue) => cue.startsWith("count_"))) audio.play("beep");
-      } else {
-        lastRemainingRef.current = cueRemainingMs(viewAt(current, at));
+        for (const sound of sounds) audio.play(sound);
+        if (callout) audio.say(callout);
       }
       setNow(at);
     };

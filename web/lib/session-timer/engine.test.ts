@@ -8,6 +8,7 @@ import {
   completeSet,
   createTimerState,
   crossedCues,
+  cueSounds,
   endRound,
   endSession,
   finishItem,
@@ -441,4 +442,17 @@ test("-10s never takes the clock below a second left", () => {
   assert.equal(nearlyOut, state);
   const paused = pause(state, T0 + 100_000);
   assert.equal(viewAt(addTime(paused, -10, T0 + 500_000), T0 + 500_000).remainingMs, 70_000);
+});
+
+test("the round warnings ring while minimised; the 3-2-1 beeps and callouts only on screen", () => {
+  assert.deepEqual(cueSounds(["thirty_seconds"], false), { sounds: ["double_beep"], callout: null });
+  assert.deepEqual(cueSounds(["halfway"], false), { sounds: ["soft_chime"], callout: null });
+  assert.deepEqual(cueSounds(["ten_seconds"], false), { sounds: ["clapper"], callout: null });
+  assert.deepEqual(cueSounds(["count_3"], false), { sounds: [], callout: null });
+
+  assert.deepEqual(cueSounds(["thirty_seconds"], true), { sounds: ["double_beep"], callout: "30 seconds" });
+  assert.deepEqual(cueSounds(["halfway"], true), { sounds: ["soft_chime"], callout: "Halfway" });
+  assert.deepEqual(cueSounds(["count_1"], true), { sounds: ["beep"], callout: null });
+  // A one-minute round: halfway and 30 seconds are the same moment, one cue.
+  assert.deepEqual(cueSounds(["halfway", "thirty_seconds"], true), { sounds: ["double_beep"], callout: "30 seconds" });
 });
