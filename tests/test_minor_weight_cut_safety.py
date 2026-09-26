@@ -503,3 +503,53 @@ def test_a_minors_onboarding_draft_never_stores_a_target_weight():
     draft = store.profiles[DEFAULT_ATHLETE_USER.user_id]["onboarding_draft"]
     assert "target_weight_kg" not in draft["athlete"]
     assert draft["athlete"]["weight_kg"] == 62.0
+
+
+# ---------------------------------------------------------------------------
+# The refusal note, reworded by Stage 2, must not sink an under-18 card
+# ---------------------------------------------------------------------------
+
+
+def test_a_shortened_refusal_note_is_not_read_as_cut_guidance():
+    first_sentence = MINOR_WEIGHT_CUT_NOTE.split(". ")[0] + "."
+
+    assert blocked_guidance_reasons(first_sentence) == []
+    assert blocked_guidance_reasons(first_sentence.rstrip(".").lower()) == []
+    # Re-wrapped across lines, as a card label or markdown bullet may be.
+    assert blocked_guidance_reasons(first_sentence.replace(" and ", "\nand ")) == []
+    # The note does not launder real guidance that sits next to it.
+    assert blocked_guidance_reasons(f"{first_sentence} Sit in the sauna Friday.") == [
+        "sweat_protocol"
+    ]
+
+
+def _minor_outcome(summary: str):
+    from api.structured_plan_generation import build_structured_plan_outcome
+    from test_structured_plan_models import _valid_plan
+    from test_structured_plan_safety import _faithful_source
+
+    support = build_computed_support(flags=_flags(is_minor=True, weight_cut_risk=False))
+    plan = _valid_plan()
+    plan["nutrition"]["summary"] = summary
+    return build_structured_plan_outcome(
+        plan, raw_markdown=_faithful_source(plan), computed_support=support
+    )
+
+
+def test_a_minors_card_carrying_a_shortened_refusal_note_publishes():
+    first_sentence = MINOR_WEIGHT_CUT_NOTE.split(". ")[0] + "."
+
+    outcome = _minor_outcome(f"Eat to fuel training. {first_sentence}")
+
+    assert outcome.status != "blocked_by_safety_audit", outcome.errors
+    assert outcome.structured_plan is not None
+
+
+def test_a_minors_card_with_real_cut_guidance_is_still_blocked():
+    # Fail closed: genuine protocol wording is never scrubbed into a
+    # publishable card — the whole card is blocked.
+    outcome = _minor_outcome("Eat to fuel training. Sit in the sauna Friday.")
+
+    assert outcome.status == "blocked_by_safety_audit"
+    assert outcome.structured_plan is None
+    assert any("sweat_protocol" in error for error in outcome.errors), outcome.errors
