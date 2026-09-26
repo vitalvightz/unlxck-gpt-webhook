@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 
 import { useSessionTimer, type SessionTimerController } from "@/components/session-timer/use-session-timer";
@@ -717,6 +724,109 @@ function PrimaryAction({
   );
 }
 
+type MiniPos = { x: number; y: number; width: number };
+
+/**
+ * Lets the minimised timer bar be dragged anywhere on screen, the same way the
+ * "Show plan build" pill works: a small movement threshold keeps a tap a tap,
+ * the click that ends a drag is swallowed, and the bar is clamped on-screen
+ * (also on resize). The width is pinned on the first drag so the bar keeps its
+ * shape once it stops being stretched between the page gutters.
+ */
+function useDraggableMini(onTap: () => void) {
+  const [pos, setPos] = useState<MiniPos | null>(null);
+  const ref = useRef<HTMLButtonElement>(null);
+  const dragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+    width: number;
+    moved: boolean;
+  } | null>(null);
+  const justDraggedRef = useRef(false);
+
+  const clampTo = (x: number, y: number, width: number): MiniPos => {
+    const w = Math.min(width, Math.max(0, window.innerWidth - 16));
+    const height = ref.current?.offsetHeight ?? 0;
+    const maxX = Math.max(8, window.innerWidth - w - 8);
+    const maxY = Math.max(8, window.innerHeight - height - 8);
+    return { x: Math.min(Math.max(8, x), maxX), y: Math.min(Math.max(8, y), maxY), width: w };
+  };
+
+  useEffect(() => {
+    if (!pos) return;
+    const clamp = () => setPos((prev) => (prev ? clampTo(prev.x, prev.y, prev.width) : prev));
+    window.addEventListener("resize", clamp);
+    return () => window.removeEventListener("resize", clamp);
+  }, [pos]);
+
+  const onPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: rect.left,
+      originY: rect.top,
+      width: rect.width,
+      moved: false,
+    };
+    try {
+      el.setPointerCapture(event.pointerId);
+    } catch {
+      // Pointer capture unsupported; dragging still works via window coords.
+    }
+  };
+
+  const onPointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const dx = event.clientX - drag.startX;
+    const dy = event.clientY - drag.startY;
+    // Ignore micro-movements so a tap still opens the timer.
+    if (!drag.moved && Math.hypot(dx, dy) < 6) return;
+    drag.moved = true;
+    setPos(clampTo(drag.originX + dx, drag.originY + dy, drag.width));
+  };
+
+  const onPointerUp = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    justDraggedRef.current = drag.moved;
+    dragRef.current = null;
+    try {
+      ref.current?.releasePointerCapture(event.pointerId);
+    } catch {
+      // Ignore release failures.
+    }
+  };
+
+  const onClick = () => {
+    // Suppress the click that ends a drag so the timer doesn't open on drop.
+    if (justDraggedRef.current) {
+      justDraggedRef.current = false;
+      return;
+    }
+    onTap();
+  };
+
+  return {
+    ref,
+    style: pos
+      ? { left: pos.x, top: pos.y, right: "auto", bottom: "auto", width: pos.width, margin: 0 }
+      : undefined,
+    onPointerDown,
+    onPointerMove,
+    onPointerUp,
+    onPointerCancel: onPointerUp,
+    onClick,
+  };
+}
+
 /** Portal to <body> so a transformed ancestor card can never trap the
  * fixed-position overlay; server rendering (tests) renders in place. */
 function ToBody({ children }: { children: ReactNode }) {
@@ -758,6 +868,7 @@ export function SessionTimer({
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [adjustHint, dismissAdjustHint] = useAdjustHint();
   const dialogRef = useRef<HTMLDivElement | null>(null);
+  const miniDrag = useDraggableMini(onExpand);
   const item = currentItem(state);
   const view = viewAt(state, now);
   const tone = toneFor(state, view);
@@ -793,7 +904,7 @@ export function SessionTimer({
     if (state.phase === "done") return null;
     return (
       <ToBody>
-        <button type="button" className="st-mini" data-tone={tone} onClick={onExpand}>
+        <button type="button" className="st-mini" data-tone={tone} {...miniDrag}>
           <span className="st-mini-phase">{phaseLabel(state, item, view)}</span>
           <span className="st-mini-title">{item?.title}</span>
           <span className="st-mini-clock">{state.phase === "ready" ? "Open" : formatClock(clockSeconds)}</span>

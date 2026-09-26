@@ -987,8 +987,13 @@
   font: inherit;
   box-shadow: 0 18px 40px var(--st-mini-shadow, rgba(0, 0, 0, 0.45));
   color-scheme: dark;
-  cursor: pointer;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
+
+.st-mini:active { cursor: grabbing; }
 
 .st-mini[data-tone="work"] { --st-accent: #ff3b55; }
 .st-mini[data-tone="open"] { --st-accent: #ff5a6e; }
