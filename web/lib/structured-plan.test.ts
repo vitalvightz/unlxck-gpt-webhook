@@ -738,6 +738,30 @@ test("selectBlockMetric combines duration, distance, and rounds in order", () =>
   ]);
 });
 
+test("selectBlockMetric drops a rep count that only echoes interval work seconds", () => {
+  // "2x3s" converted to rounds 2, work 3 sec and a stray reps 3.
+  assert.deepEqual(
+    selectBlockMetric({ reps: 3, rounds: 2, work: { value: 3, unit: "seconds" } } as never),
+    [{ label: "Rounds", value: "2" }],
+  );
+  // A real per-round rep count that differs from the work seconds stays.
+  assert.deepEqual(
+    selectBlockMetric({ reps: 5, rounds: 2, work: { value: 20, unit: "seconds" } } as never),
+    [
+      { label: "Volume", value: "5" },
+      { label: "Rounds", value: "2" },
+    ],
+  );
+  // With sets, the reps are a real sets x reps volume.
+  assert.deepEqual(
+    selectBlockMetric({ sets: 2, reps: 3, rounds: 2, work: { value: 3, unit: "seconds" } } as never),
+    [
+      { label: "Volume", value: "2 × 3" },
+      { label: "Rounds", value: "2" },
+    ],
+  );
+});
+
 // --- content presence: blocks / mindset / nutrition / red flags -------------
 
 test("extracts session blocks from a valid plan", () => {
