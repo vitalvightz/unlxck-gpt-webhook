@@ -103,10 +103,15 @@ function unitWord(item: SetsItem): string {
   return capitalize(countNoun(item));
 }
 
-/** What each set or round asks for: its hold, or the plan's reps / distance / time. */
+/**
+ * What each set or round asks for: its hold, or every target the plan gives
+ * (reps / mode, time, distance), e.g. "AMRAP, 60 s". Comma-joined so the
+ * parts read as one unit beside the " · " separated rest.
+ */
 function perUnitTarget(item: SetsItem): string | null {
   if (item.holdSec) return `${formatShortDuration(item.holdSec)} hold`;
-  return item.stats?.find((stat) => stat.kind === "target")?.value ?? null;
+  const targets = (item.stats ?? []).filter((stat) => stat.kind === "target").map((stat) => stat.value);
+  return targets.length ? targets.join(", ") : null;
 }
 
 /** One line for an exercise's plan, e.g. "4 × 5 reps · 2 min rest" or "6 × 3:00 · 1:00 rest". */

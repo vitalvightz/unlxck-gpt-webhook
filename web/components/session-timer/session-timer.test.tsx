@@ -143,3 +143,34 @@ test("a single timed block reads as its length, not 1 × length", () => {
   ]);
   assert.match(html, /aria-label="Edit rounds and timing"><span>20:00<\/span><\/button>/);
 });
+
+test("the next-exercise line keeps every per-set target, not just the first", () => {
+  const amrap: TimerItem = {
+    kind: "sets",
+    id: "pushups",
+    title: "Push-ups",
+    detail: "AMRAP · 60 s",
+    stats: [
+      { kind: "target", value: "AMRAP" },
+      { kind: "target", value: "60 s" },
+    ],
+    blockType: "strength",
+    sets: { min: 3, max: 3 },
+    holdSec: null,
+    restSec: { min: 90, max: 90 },
+  };
+  assert.match(render([ITEMS[0], amrap]), /st-next-plan">3 × AMRAP, 60 s · 90s rest</);
+  const drill: TimerItem = {
+    ...amrap,
+    id: "drill",
+    title: "Shadow drill",
+    stats: [
+      { kind: "target", value: "10 reps" },
+      { kind: "target", value: "5 min" },
+      { kind: "effort", value: "RPE 6" },
+    ],
+    sets: { min: 2, max: 2 },
+    restSec: null,
+  };
+  assert.match(render([ITEMS[0], drill]), /st-next-plan">2 × 10 reps, 5 min</);
+});
