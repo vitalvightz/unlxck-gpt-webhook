@@ -811,7 +811,7 @@
   backdrop-filter: blur(16px);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
   animation: st-sheet-in 160ms ease-out;
-  /* The sound sheet is the tallest: it scrolls on a short phone instead of spilling off. */
+  /* The settings sheet is the tallest: it scrolls on a short phone instead of spilling off. */
   max-height: calc(100dvh - max(10px, env(safe-area-inset-top)) - 90px);
   overflow-y: auto;
 }
@@ -844,6 +844,8 @@
   border: 0;
   border-top: 1px solid var(--st-line);
 }
+
+.st-group:first-child { padding-top: 0; border-top: 0; }
 
 .st-group legend,
 .st-choice > span {

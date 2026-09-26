@@ -209,7 +209,7 @@ test("Start counts down to round 1, remembers the setup, and gives −10s / +10s
   container.remove();
 });
 
-test("the sound sheet sets the round warnings and the get-ready countdown", async () => {
+test("the settings sheet, behind the gear, sets the round warnings and the get-ready countdown", async () => {
   window.localStorage.clear();
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -222,7 +222,7 @@ test("the sound sheet sets the round warnings and the get-ready countdown", asyn
     );
   });
 
-  await act(async () => timerButton("Sound settings")?.click());
+  await act(async () => timerButton("Timer settings")?.click());
   const toggle = (label: string) =>
     [...document.querySelectorAll<HTMLLabelElement>(".st-group .st-toggle")]
       .find((l) => l.textContent === label)
