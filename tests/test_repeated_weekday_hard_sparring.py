@@ -14,23 +14,25 @@ import datetime
 import pytest
 
 from api.structured_plan_deterministic_fallback import build_deterministic_structured_plan
-from fightcamp import input_parsing
+from fightcamp import input_parsing, stage2_planning_brief
 from fightcamp.sparring_dose_planner import repeated_weekday_hard_sparring_entries
 from support import _build_request
 
 _GENERATED_AT = datetime.datetime(2026, 9, 25, 18, 54)  # Friday, D-22
 
 
-@pytest.fixture(scope="module")
-def brief() -> dict:
+def _generate(hard_sparring_days: list[str], support_work_days: list[str]) -> dict:
     generate_plan_sync = pytest.importorskip("fightcamp.main").generate_plan_sync
     patch = pytest.MonkeyPatch()
+    # Both clocks: days_until_fight and the plan-creation weekday.
     patch.setattr(input_parsing, "_utc_now", lambda: _GENERATED_AT)
+    patch.setattr(stage2_planning_brief, "_utc_now", lambda: _GENERATED_AT)
     try:
         payload = _build_request(
             {
                 "fight_date": "2026-10-17",
-                "hard_sparring_days": ["Friday", "Sunday"],
+                "hard_sparring_days": hard_sparring_days,
+                "support_work_days": support_work_days,
                 "technical_skill_days": [],
                 "training_availability": ["Monday", "Tuesday", "Thursday", "Friday", "Sunday"],
                 "weekly_training_frequency": 4,
@@ -47,6 +49,16 @@ def brief() -> dict:
         return generate_plan_sync(payload)["planning_brief"]
     finally:
         patch.undo()
+
+
+@pytest.fixture(scope="module")
+def brief() -> dict:
+    return _generate(["Friday", "Sunday"], [])
+
+
+@pytest.fixture(scope="module")
+def light_brief() -> dict:
+    return _generate(["Sunday"], ["Friday"])
 
 
 def _structured_days(brief: dict) -> dict[int, dict]:
@@ -96,6 +108,30 @@ def test_later_occurrence_is_not_duplicated_as_hard_contact(brief):
     friday = next(e for e in first_week["hard_sparring_plan"] if e["day"] == "Friday")
     assert friday["d_day"] == 15
     assert friday["effective_load"] == "technical"
+
+
+def test_generation_day_friday_keeps_declared_light_combat(light_brief):
+    first_week = light_brief["weekly_role_map"]["weeks"][0]
+    light_ddays = sorted(
+        role.get("scheduled_d_day") or int(role["scheduled_countdown_label"][2:])
+        for role in first_week["session_roles"]
+        if role["role_key"] == "light_combat_day"
+    )
+    assert light_ddays == [15, 22]
+    days = _structured_days(light_brief)
+    assert "light_combat_day" in days[22]["planning_day_role_keys"]
+    # App S&C must not take the declared light day's slot.
+    assert not any("strength" in key for key in days[22]["planning_day_role_keys"])
+    assert "Technical" in _contact(days[22])
+
+
+def test_late_weeks_keep_declared_weekdays_on_their_real_dates(light_brief):
+    days = _structured_days(light_brief)
+    # 2026-10-17 is a Saturday, so D-8 and D-1 are Fridays, D-13 and D-6 Sundays.
+    for d_day in (8, 1):
+        assert "light_combat_day" in days[d_day]["planning_day_role_keys"]
+    for d_day in (13, 6):
+        assert "hard_sparring_day" in days[d_day]["planning_day_role_keys"]
 
 
 def test_seven_day_week_has_no_repeated_occurrences():
