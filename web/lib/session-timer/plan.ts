@@ -1,5 +1,12 @@
 import { getSourcePrescriptionRangeOverrides } from "../block-display-guardrails";
-import { cleanText, finitePositiveNumber, formatBlockLoad, formatEffort } from "../structured-plan";
+import {
+  cleanText,
+  finitePositiveNumber,
+  formatBlockLoad,
+  formatEffort,
+  formatMeasured,
+  isModeLikeReps,
+} from "../structured-plan";
 import type {
   MeasuredValue,
   SparringPlannedIntensity,
@@ -153,6 +160,34 @@ function describeReps(reps: string | null): string | null {
   return /^\d+(?:\s*[-–—]\s*\d+)?$/.test(reps) ? `${reps.replace(/\s*[-–—]\s*/, "–")} reps` : reps;
 }
 
+const SHORT_UNITS: Record<string, string> = {
+  meter: "m",
+  meters: "m",
+  metre: "m",
+  metres: "m",
+  kilometer: "km",
+  kilometers: "km",
+  kilometre: "km",
+  kilometres: "km",
+  mile: "mi",
+  miles: "mi",
+  yard: "yd",
+  yards: "yd",
+  second: "s",
+  seconds: "s",
+  minute: "min",
+  minutes: "min",
+};
+
+/** A positive measured value as a compact line ("20 m", "10 min"), or null. */
+function describeMeasured(measured: MeasuredValue | null | undefined): string | null {
+  if (!measured || !finitePositiveNumber(measured.value)) {
+    return null;
+  }
+  const unit = cleanText(measured.unit)?.toLowerCase() ?? "";
+  return unit in SHORT_UNITS ? `${measured.value} ${SHORT_UNITS[unit]}` : formatMeasured(measured);
+}
+
 function joinDetail(parts: Array<string | null>): string | null {
   const shown = parts.filter((part): part is string => Boolean(part));
   return shown.length ? shown.join(" · ") : null;
@@ -206,14 +241,18 @@ export function blockToTimerItem(
   const rest = measuredSeconds(block.rest);
   const duration = measuredSeconds(block.duration);
   const reps = repsText(block);
-  const repsAsTime = parseDurationRange(reps);
+  // "continuous" / AMRAP / EMOM describe how the work is done, not a rep count,
+  // so they never turn a timed block into counted sets.
+  const countReps = reps && !isModeLikeReps(reps) ? reps : null;
+  const repsAsTime = parseDurationRange(countReps);
   const load = formatBlockLoad(block.load);
   const effort = source.effort || formatEffort(block);
+  const distance = describeMeasured(block.distance);
   const isRoundType = blockType !== null && ROUND_BLOCK_TYPES.has(blockType);
 
   // Rounds: an explicit round count or work interval, or a round-type block
   // (sparring / conditioning / skill) that is timed rather than counted in reps.
-  if (rounds || work || (isRoundType && !reps && (duration || blockType === "sparring"))) {
+  if (rounds || work || (isRoundType && !countReps && (duration || blockType === "sparring"))) {
     let workSec = work;
     if (!workSec && duration) {
       workSec = rounds && duration > MAX_PER_ROUND_SEC ? Math.round(duration / rounds) : duration;
@@ -223,7 +262,7 @@ export function blockToTimerItem(
       kind: "interval",
       id,
       title,
-      detail: joinDetail([describeReps(reps), load, effort]),
+      detail: joinDetail([describeReps(reps), distance, load, effort]),
       blockType,
       rounds: roundCount,
       workSec: workSec ?? DEFAULT_ROUND_SEC,
@@ -239,7 +278,7 @@ export function blockToTimerItem(
   const restRange =
     parseDurationRange(source.rest) ?? (rest ? { min: rest, max: rest } : null);
 
-  if (setRange || reps) {
+  if (setRange || countReps) {
     let holdSec: number | null = null;
     if (repsAsTime) {
       holdSec = repsAsTime.min;
@@ -250,7 +289,14 @@ export function blockToTimerItem(
       kind: "sets",
       id,
       title,
-      detail: joinDetail([holdSec ? null : describeReps(reps), load, effort]),
+      detail: joinDetail([
+        holdSec ? null : describeReps(reps),
+        // A duration that is not the per-set hold is still part of the dose.
+        duration && !holdSec ? describeMeasured(block.duration) : null,
+        distance,
+        load,
+        effort,
+      ]),
       blockType,
       sets: setRange,
       holdSec,
@@ -263,7 +309,7 @@ export function blockToTimerItem(
       kind: "interval",
       id,
       title,
-      detail: joinDetail([load, effort]),
+      detail: joinDetail([describeReps(reps), distance, load, effort]),
       blockType,
       rounds: 1,
       workSec: duration,
@@ -273,7 +319,13 @@ export function blockToTimerItem(
     };
   }
 
-  return { kind: "task", id, title, detail: joinDetail([load, effort]), blockType };
+  return {
+    kind: "task",
+    id,
+    title,
+    detail: joinDetail([describeReps(reps), distance, load, effort]),
+    blockType,
+  };
 }
 
 /** The ordered timer items for the given sessions (normally today's). */

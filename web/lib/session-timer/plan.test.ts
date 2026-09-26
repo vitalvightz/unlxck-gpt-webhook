@@ -233,3 +233,91 @@ test("planned sparring intensity comes only from the block's structured field", 
   assert.ok(item?.kind === "interval");
   assert.equal(item.plannedIntensity, "hard");
 });
+
+test("distance is shown on every kind of timer item", () => {
+  const sled = blockToTimerItem(
+    {
+      block_type: "strength",
+      display_name: "Sled Pull Backward",
+      sets: 3,
+      distance: { value: 20, unit: "meters" },
+      rest: { value: 90, unit: "seconds" },
+      effort: { method: "RPE", value: 7 },
+    },
+    0,
+  );
+  assert.ok(sled?.kind === "sets");
+  assert.equal(sled.detail, "20 m · RPE 7");
+
+  const repeats = blockToTimerItem(
+    {
+      block_type: "conditioning",
+      display_name: "Shuttle runs",
+      rounds: 6,
+      work: { value: 30, unit: "s" },
+      distance: { value: 200, unit: "m" },
+    },
+    0,
+  );
+  assert.ok(repeats?.kind === "interval");
+  assert.equal(repeats.detail, "200 m");
+
+  const run = blockToTimerItem(
+    { block_type: "conditioning", display_name: "Tempo run", duration: { value: 20, unit: "min" }, distance: { value: 3, unit: "km" } },
+    0,
+  );
+  assert.ok(run?.kind === "interval");
+  assert.equal(run.detail, "3 km");
+
+  const carry = blockToTimerItem(
+    { block_type: "accessory", display_name: "Farmer walk", distance: { value: 40, unit: "yards" }, load: { display: "2 × 32 kg" } },
+    0,
+  );
+  assert.equal(carry?.kind, "task");
+  assert.equal(carry?.detail, "40 yd · 2 × 32 kg");
+
+  // A zero or malformed distance is not printed.
+  const none = blockToTimerItem(
+    { block_type: "strength", display_name: "Squat", sets: 3, reps: 5, distance: { value: 0, unit: "m" } },
+    0,
+  );
+  assert.equal(none?.detail, "5 reps");
+});
+
+test("a duration beside reps is kept in the detail instead of dropped", () => {
+  const item = blockToTimerItem(
+    { block_type: "skill", display_name: "Shadow boxing drill", sets: 2, reps: "10", duration: { value: 5, unit: "minutes" } },
+    0,
+  );
+  assert.ok(item?.kind === "sets");
+  assert.equal(item.holdSec, null);
+  assert.equal(item.detail, "10 reps · 5 min");
+});
+
+test("continuous / AMRAP work is timed from its duration, not counted as sets", () => {
+  const steady = blockToTimerItem(
+    { block_type: "conditioning", display_name: "Zone 2 bike", reps: "continuous", duration: { value: 30, unit: "minutes" } },
+    0,
+  );
+  assert.ok(steady?.kind === "interval");
+  assert.equal(steady.workSec, 1800);
+  assert.equal(steady.needsSetup, false);
+  assert.equal(steady.detail, "continuous");
+
+  const amrap = blockToTimerItem(
+    { block_type: "strength", display_name: "Circuit", reps: "AMRAP", duration: { value: 8, unit: "min" } },
+    0,
+  );
+  assert.ok(amrap?.kind === "interval");
+  assert.equal(amrap.workSec, 480);
+  assert.equal(amrap.detail, "AMRAP");
+
+  // With sets, the mode and its per-set time are both shown; it is not a hold.
+  const sets = blockToTimerItem(
+    { block_type: "strength", display_name: "Push-ups", sets: 3, reps: "AMRAP", duration: { value: 60, unit: "seconds" } },
+    0,
+  );
+  assert.ok(sets?.kind === "sets");
+  assert.equal(sets.holdSec, null);
+  assert.equal(sets.detail, "AMRAP · 60 s");
+});

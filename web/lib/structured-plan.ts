@@ -152,7 +152,7 @@ export function isTimeLikeReps(reps: unknown): boolean {
 
 /** A prescription mode stored in `reps` by some structured-plan payloads.
  * These values describe how work is performed, not a repetition count. */
-function isModeLikeReps(reps: string): boolean {
+export function isModeLikeReps(reps: string): boolean {
   return /\b(continuous|amrap|emom)\b/i.test(reps);
 }
 
