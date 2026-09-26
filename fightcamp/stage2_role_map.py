@@ -1290,6 +1290,51 @@ def _repeated_weekday_hard_sparring_roles(
     return roles
 
 
+def _repeated_weekday_light_combat_roles(
+    week_entry: dict, athlete_model: dict
+) -> list[dict[str, Any]]:
+    """Light-combat locks for declared light days that repeat inside the week.
+
+    ``_lock_declared_light_combat_roles`` places one lock per weekday, which the
+    weekday-to-date mapping resolves to the occurrence nearest the fight. In an
+    eight-day planner week the earlier occurrence (the generation day, D-22 in a
+    23-day camp) was left unlocked and later filled with app S&C. Each earlier
+    occurrence gets its own lock, pinned to its countdown day.
+    """
+    training_days = [
+        normalised
+        for day in _ordered_weekdays(clean_list(athlete_model.get("training_days", [])))
+        if (normalised := str(day or "").strip().lower())
+    ]
+    declared = set(
+        declared_light_combat_weekdays(
+            athlete_model, training_days=training_days, exclude_hard_sparring=True
+        )
+    )
+    if not declared:
+        return []
+    occurrences: dict[str, list[int]] = {}
+    for calendar_day in week_entry.get("calendar_days") or []:
+        weekday = str(calendar_day.get("weekday") or "").strip().lower()
+        d_day = calendar_day.get("d_day")
+        if weekday in declared and isinstance(d_day, int) and d_day > 0:
+            occurrences.setdefault(weekday, []).append(d_day)
+    roles: list[dict[str, Any]] = []
+    for weekday, d_days in occurrences.items():
+        # The weekday lock already owns the occurrence nearest the fight.
+        for d_day in sorted(d_days, reverse=True)[:-1]:
+            role = build_declared_light_combat_role(weekday)
+            role.update(
+                scheduled_d_day=d_day,
+                countdown_offset=d_day,
+                countdown_label=f"D-{d_day}",
+                scheduled_countdown_label=f"D-{d_day}",
+                repeated_weekday_occurrence=True,
+            )
+            roles.append(role)
+    return roles
+
+
 def _make_hard_sparring_lock_suppression(role: dict, day: str) -> dict[str, Any]:
     return {
         "category": role.get("category"),
@@ -3741,6 +3786,9 @@ def _build_weekly_role_map(
         )
         session_roles = session_roles + _repeated_weekday_hard_sparring_roles(
             week_entry, repeated_hard_sparring
+        )
+        session_roles = session_roles + _repeated_weekday_light_combat_roles(
+            week_entry, athlete_model
         )
 
         calendar_days = list(week_entry.get("calendar_days") or [])

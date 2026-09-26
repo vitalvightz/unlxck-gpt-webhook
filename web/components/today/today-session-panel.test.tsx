@@ -342,6 +342,61 @@ test("sparring rounds stay locked until check-in, and are never offered under a 
   assert.doesNotMatch(stopped, /Round timer<\/button>/);
 });
 
+function nextContactDayState(): TodayCommandView {
+  const state = contactDayState("green");
+  state.today.next_session = {
+    session_id: "2026-09-27-breathing",
+    title: "Breathing Reset",
+    calendar_date: "2026-09-27",
+    session_relation: "next",
+    effective_load: "low",
+    coach_led_contact: "Hard sparring",
+  };
+  state.today.session_scope = "next";
+  state.today.session_label = "Next session";
+  return state;
+}
+
+test("a next session on a declared sparring day is headlined by the sparring", () => {
+  const html = renderPanel(nextContactDayState());
+  assert.match(html, /Next session/);
+  assert.match(html, /<h2 id="today-session-heading">Hard sparring<\/h2>/);
+  assert.match(html, /Also that day<\/span> Breathing Reset/);
+  // Preview only: nothing about tomorrow's contact can be started today.
+  assert.doesNotMatch(html, />Start hard sparring<|>Start session</);
+});
+
+test("a next sparring day read from the plan card is headlined by the sparring", () => {
+  const state = nextContactDayState();
+  state.today.next_session = { ...state.today.next_session, coach_led_contact: undefined };
+  const structuredPlan = {
+    weeks: [
+      {
+        week_index: 1,
+        days: [
+          {
+            date: "2026-09-27",
+            weekday: "Sun",
+            countdown_label: "D-20",
+            day_type: "high",
+            today_card: { headline: "Breathing Reset", coach_led_contact: "Hard sparring" },
+            sessions: [{ session_id: "2026-09-27-breathing", title: "Breathing Reset", blocks: [] }],
+          },
+        ],
+      },
+    ],
+  } as unknown as StructuredPlan;
+  const html = renderToStaticMarkup(
+    <AuthProvider>
+      <ToastProvider>
+        <TodaySessionPanel state={state} structuredPlan={structuredPlan} token="token" onRefresh={async () => {}} />
+      </ToastProvider>
+    </AuthProvider>,
+  );
+  assert.match(html, /<h2 id="today-session-heading">Hard sparring<\/h2>/);
+  assert.match(html, /Also that day<\/span> Breathing Reset/);
+});
+
 test("a pull-back day never headlines the sparring it blocks", () => {
   const html = renderPanel(contactDayState("pull_back"));
   assert.doesNotMatch(html, /<h2 id="today-session-heading">Hard sparring<\/h2>/);

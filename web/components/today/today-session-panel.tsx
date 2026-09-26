@@ -496,6 +496,16 @@ export function TodaySessionPanel({
     !safeSession &&
     !decisionBlocksCurrentSession;
   const contactHeadline = contactTarget ? contactTitle(contactTarget) : "";
+  // The same authority holds for the day the card previews: a declared contact
+  // day shown as "Next session" is headlined by its contact, not by whichever
+  // app session sits first that day. Timer and start stay with today's contact.
+  const previewContactTarget =
+    resolvedDecision.sessionIsToday || safeSession
+      ? null
+      : (current.inRange ? contactTimerTarget(current.day) : null) ??
+        (session.coach_led_contact
+          ? contactTimerTarget({ today_card: { coach_led_contact: session.coach_led_contact } } as StructuredDay)
+          : null);
   // Is the session being logged the contact itself? A sparring-only day has no
   // session objects, so the server logs it against the day's headline entry.
   const contactIsSession =
@@ -832,11 +842,25 @@ export function TodaySessionPanel({
     sessionTitle.trim().toLowerCase() === relationCopy.kicker.trim().toLowerCase()
       ? formatSessionDate(session)
       : sessionTitle;
-  const headline = contactLeads ? contactHeadline : sessionHeadline;
+  const previewContactHeadline = previewContactTarget ? contactTitle(previewContactTarget) : "";
+  const previewContactIsSession =
+    Boolean(previewContactTarget) &&
+    ((current.inRange && Boolean(current.day) && current.sessions.length === 0) ||
+      sameTitle(sessionTitle, previewContactTarget?.headline ?? "") ||
+      sameTitle(sessionTitle, previewContactHeadline));
+  const headline = contactLeads
+    ? contactHeadline
+    : previewContactTarget
+      ? previewContactHeadline
+      : sessionHeadline;
   // The contact rounds lead the tray while no timer is already running.
   const contactCta = contactLeads && contactTimerAvailable && !anyTimerShown;
   // The app work that comes with the day's contact, named under the headline.
-  const alongsideTitle = contactLeads && !contactIsSession ? sessionTitle.trim() : "";
+  const alongsideTitle =
+    (contactLeads && !contactIsSession) || (previewContactTarget && !previewContactIsSession)
+      ? sessionTitle.trim()
+      : "";
+  const alongsideLabel = contactLeads ? "Also today" : "Also that day";
 
   return (
     <section
@@ -851,7 +875,7 @@ export function TodaySessionPanel({
           <h2 id="today-session-heading">{headline}</h2>
           {alongsideTitle ? (
             <p className="today-session-alongside">
-              <span className="today-detail-label">Also today</span> {alongsideTitle}
+              <span className="today-detail-label">{alongsideLabel}</span> {alongsideTitle}
             </p>
           ) : null}
         </div>
