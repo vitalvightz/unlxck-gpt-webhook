@@ -560,10 +560,11 @@ def test_a_minors_card_with_real_cut_guidance_is_still_blocked():
 # ---------------------------------------------------------------------------
 
 
-def _conversion_prompt(*, is_minor: bool) -> str:
+def _conversion_prompt(*, is_minor: bool, weight: float | None = 72.5) -> str:
     from api.structured_plan_generation import build_structured_plan_prompt
 
-    flags = _flags(is_minor=is_minor, weight_cut_risk=False)
+    # _flags defaults to the TAPER phase, where the weight-making wording lived.
+    flags = _flags(is_minor=is_minor, weight_cut_risk=False, weight=weight)
     markdown = "# PLAN\n\n**Nutrition:**\n" + generate_nutrition_block(flags=flags)
     return build_structured_plan_prompt(
         plan_markdown=markdown,
@@ -571,14 +572,15 @@ def _conversion_prompt(*, is_minor: bool) -> str:
     )
 
 
-def test_a_minors_conversion_prompt_carries_no_cut_wording():
+@pytest.mark.parametrize("weight", [72.5, None])
+def test_a_minors_conversion_prompt_carries_no_cut_wording(weight):
     from api.structured_plan_generation import (
         _MINOR_CONVERSION_RULE,
         _ROOT_SKELETON,
         _STRUCTURED_PLAN_RULES,
     )
 
-    prompt = _conversion_prompt(is_minor=True)
+    prompt = _conversion_prompt(is_minor=True, weight=weight)
 
     assert _MINOR_CONVERSION_RULE in prompt
     assert MINOR_WEIGHT_CUT_NOTE.split(". ")[0] not in prompt
@@ -591,6 +593,11 @@ def test_a_minors_conversion_prompt_carries_no_cut_wording():
         .replace(_MINOR_CONVERSION_RULE, "")
     )
     assert blocked_guidance_reasons(variable) == []
+    # blocked_guidance_reasons only knows acute-cut protocols; weight-making
+    # wording and the weight_cut key are checked directly.
+    lowered = variable.lower()
+    for phrase in ("weight making", "making weight", "weigh-in", "reduce fiber", "weight_cut"):
+        assert phrase not in lowered, phrase
 
 
 def test_an_adults_conversion_prompt_is_unchanged():
@@ -600,6 +607,10 @@ def test_an_adults_conversion_prompt_is_unchanged():
 
     assert _MINOR_CONVERSION_RULE not in prompt
     assert "NEVER surface them directly" in prompt
+    # An adult's taper still gets its weight-making guidance.
+    assert "weight making" in prompt
+    assert "days before weigh-in" in prompt
+    assert "reduce fiber 1-2 days out" in prompt
 
 
 def test_a_published_minor_card_carries_the_note_verbatim_once():

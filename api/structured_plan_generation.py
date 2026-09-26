@@ -2453,6 +2453,9 @@ _MINOR_CONVERSION_RULE = (
 )
 
 
+_MINOR_CONVERSION_DROPPED_KEYS = frozenset({"coach_gated", "athlete_facing_note", "weight_cut"})
+
+
 def _minor_conversion_markdown(plan_markdown: str) -> str:
     """Plan markdown with the under-18 refusal note removed for conversion."""
     return "\n".join(
@@ -2461,16 +2464,18 @@ def _minor_conversion_markdown(plan_markdown: str) -> str:
 
 
 def _minor_conversion_support(node: Any) -> Any:
-    """computed_support without the refusal note or coach-only cut sections.
+    """computed_support without the refusal note or any cut sections.
 
     ``coach_gated`` is never athlete-facing and holds no cut for a minor (Stage 1
-    computes none), and ``athlete_facing_note`` only exists to warn about it.
+    computes none), ``athlete_facing_note`` only exists to warn about it, and
+    ``weight_cut`` only records that the cut is blocked — none of it is anything
+    the conversion needs, and all of it is cut wording it could echo.
     """
     if isinstance(node, dict):
         return {
             key: _minor_conversion_support(value)
             for key, value in node.items()
-            if key not in ("coach_gated", "athlete_facing_note")
+            if key not in _MINOR_CONVERSION_DROPPED_KEYS
             and value != MINOR_WEIGHT_CUT_NOTE
         }
     if isinstance(node, list):
