@@ -530,3 +530,24 @@ test("stepping round length down then up again comes back to round numbers", () 
 function formatSec(total: number): string {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 }
+
+test("tapped rounds count and speak as rounds, not sets", () => {
+  const SHUTTLE: SetsItem = {
+    kind: "sets",
+    id: "shuttle",
+    title: "Shuttle sprints",
+    detail: "200 m",
+    blockType: "conditioning",
+    sets: { min: 3, max: 3 },
+    holdSec: null,
+    restSec: { min: 60, max: 60 },
+    unit: "round",
+  };
+  let state = startItem(createTimerState([SHUTTLE]), T0).state;
+  state = completeSet(state, T0 + 40_000).state;
+  assert.equal(state.phase, "rest");
+  const step = advance(state, T0 + 100_000);
+  assert.equal(calloutForEvents(step.events, step.state), "Round 2");
+  state = endSession(step.state, T0 + 120_000);
+  assert.equal(summarizeRun(state), "Timer: Shuttle sprints: 1/3 rounds");
+});

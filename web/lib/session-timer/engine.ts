@@ -1,4 +1,4 @@
-import type { IntervalItem, SetsItem, TimerItem } from "./plan";
+import { countNoun, type IntervalItem, type SetsItem, type TimerItem } from "./plan";
 
 /**
  * Session timer state machine.
@@ -596,11 +596,12 @@ export function summarizeRun(state: TimerState): string {
     }
     if (item.kind === "sets") {
       if (done === 0) return [];
+      const noun = countNoun(item);
       if (item.sets && item.sets.min === item.sets.max) {
-        return [`${item.title}: ${done}/${item.sets.min} sets`];
+        return [`${item.title}: ${done}/${item.sets.min} ${noun}s`];
       }
       const plan = item.sets ? ` (plan ${item.sets.min}–${item.sets.max})` : "";
-      return [`${item.title}: ${done} ${done === 1 ? "set" : "sets"}${plan}`];
+      return [`${item.title}: ${done} ${done === 1 ? noun : `${noun}s`}${plan}`];
     }
     return done > 0 ? [`${item.title}: done`] : [];
   });
@@ -636,6 +637,8 @@ export function calloutForEvents(events: TimerEvent[], state: TimerState): strin
   if (events.includes("rest_start")) return "Rest";
   if (events.includes("rest_ready")) return "Ready";
   if (events.includes("item_complete") && item) return `Next: ${item.title}`;
-  if (events.includes("rest_end") && item?.kind === "sets") return `Set ${state.unit}`;
+  if (events.includes("rest_end") && item?.kind === "sets") {
+    return `${countNoun(item) === "round" ? "Round" : "Set"} ${state.unit}`;
+  }
   return null;
 }

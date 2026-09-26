@@ -321,3 +321,61 @@ test("continuous / AMRAP work is timed from its duration, not counted as sets", 
   assert.equal(sets.holdSec, null);
   assert.equal(sets.detail, "AMRAP · 60 s");
 });
+
+test("rounds of a distance with no time are tapped done, not given a made-up round clock", () => {
+  const item = blockToTimerItem(
+    {
+      block_type: "conditioning",
+      display_name: "Shuttle sprints",
+      rounds: 6,
+      distance: { value: 200, unit: "meters" },
+      rest: { value: 90, unit: "seconds" },
+      effort: { method: "RPE", value: 8 },
+    },
+    0,
+  );
+  assert.ok(item?.kind === "sets");
+  assert.equal(item.unit, "round");
+  assert.deepEqual(item.sets, { min: 6, max: 6 });
+  assert.deepEqual(item.restSec, { min: 90, max: 90 });
+  assert.equal(item.holdSec, null);
+  assert.equal(item.detail, "200 m · RPE 8");
+  // A timed round is still a round clock, and sparring always is.
+  const timed = blockToTimerItem(
+    { block_type: "conditioning", display_name: "Row", rounds: 4, work: { value: 60, unit: "s" }, distance: { value: 250, unit: "m" } },
+    0,
+  );
+  assert.equal(timed?.kind, "interval");
+  const spar = blockToTimerItem(
+    { block_type: "sparring", display_name: "Sparring", rounds: 5, distance: { value: 1, unit: "m" } },
+    0,
+  );
+  assert.equal(spar?.kind, "interval");
+});
+
+test("the dose is also carried as chips: the target first, then load and effort", () => {
+  const item = blockToTimerItem(
+    {
+      block_type: "strength",
+      display_name: "Trap bar deadlift",
+      sets: 4,
+      reps: "3-5",
+      load: { display: "80% 1RM" },
+      effort: { method: "RPE", value: 7 },
+    },
+    0,
+  );
+  assert.deepEqual(item?.stats, [
+    { kind: "target", value: "3–5 reps" },
+    { kind: "load", value: "80% 1RM" },
+    { kind: "effort", value: "RPE 7" },
+  ]);
+  const mode = blockToTimerItem(
+    { block_type: "conditioning", display_name: "Bike", reps: "continuous", duration: { value: 20, unit: "min" } },
+    0,
+  );
+  assert.deepEqual(mode?.stats, [{ kind: "target", value: "Continuous" }]);
+  // A hold's time is on the clock, so it is not repeated as a chip.
+  const hold = blockToTimerItem({ block_type: "rehab", display_name: "Wall sit", sets: 2, reps: "30s" }, 0);
+  assert.deepEqual(hold?.stats, []);
+});
