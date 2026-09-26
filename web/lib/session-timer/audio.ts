@@ -15,6 +15,7 @@ export type TimerSound =
   | "clapper"
   | "beep"
   | "double_beep"
+  | "halfway"
   | "go"
   | "chime"
   | "soft_chime"
@@ -102,6 +103,7 @@ const VIBRATION: Partial<Record<TimerSound, number[]>> = {
   triple_bell: [180, 90, 180, 90, 180],
   clapper: [60, 60, 60],
   double_beep: [90, 90, 90],
+  halfway: [150],
   go: [120],
   finish: [300, 120, 300],
 };
@@ -178,19 +180,26 @@ class TimerAudio {
         this.bell(t + 0.32, 0.95);
         this.bell(t + 0.64, 0.95);
         break;
+      // Warnings and counts are pitched to cut through a gym at about the
+      // bell's loudness: a quiet cue is a missing cue.
       case "clapper":
         this.clack(t);
-        this.clack(t + 0.13);
+        this.clack(t + 0.14);
+        this.clack(t + 0.28);
         break;
       case "beep":
-        this.tone(t, 880, 0.13, 0.5, "square");
+        this.tone(t, 880, 0.22, 2.4, "square");
         break;
       case "double_beep":
-        this.tone(t, 988, 0.12, 0.5, "square");
-        this.tone(t + 0.2, 988, 0.12, 0.5, "square");
+        this.tone(t, 988, 0.17, 1.7, "square");
+        this.tone(t + 0.25, 988, 0.17, 1.7, "square");
+        break;
+      case "halfway":
+        this.tone(t, 1046.5, 0.7, 0.3, "sine");
+        this.tone(t + 0.18, 1568, 0.8, 0.26, "sine");
         break;
       case "go":
-        this.tone(t, 1320, 0.28, 0.55, "square");
+        this.tone(t, 1320, 0.3, 1.5, "square");
         break;
       case "chime":
         this.tone(t, 1046.5, 0.9, 0.45, "sine");
@@ -248,8 +257,8 @@ class TimerAudio {
 
   /** Two wooden sticks knocked together (the ten-second warning). */
   private clack(at: number): void {
-    this.noise(at, 0.05, 2400, 6, 0.9);
-    this.tone(at, 1900, 0.04, 0.25, "triangle");
+    this.noise(at, 0.08, 2200, 2, 2.4);
+    this.tone(at, 1900, 0.07, 0.9, "triangle");
   }
 
   private tone(at: number, frequency: number, length: number, level: number, type: OscillatorType): void {

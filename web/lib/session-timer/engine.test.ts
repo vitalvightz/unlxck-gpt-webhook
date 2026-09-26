@@ -16,6 +16,7 @@ import {
   metPlan,
   pause,
   resume,
+  samePhaseRun,
   setRestLength,
   skipRest,
   calloutForEvents,
@@ -24,6 +25,7 @@ import {
   summarizeRun,
   updateIntervalItem,
   viewAt,
+  warningLengthMs,
 } from "./engine.ts";
 import type { IntervalItem, SetsItem, TaskItem } from "./plan.ts";
 
@@ -446,13 +448,43 @@ test("-10s never takes the clock below a second left", () => {
 
 test("the round warnings ring while minimised; the 3-2-1 beeps and callouts only on screen", () => {
   assert.deepEqual(cueSounds(["thirty_seconds"], false), { sounds: ["double_beep"], callout: null });
-  assert.deepEqual(cueSounds(["halfway"], false), { sounds: ["soft_chime"], callout: null });
+  assert.deepEqual(cueSounds(["halfway"], false), { sounds: ["halfway"], callout: null });
   assert.deepEqual(cueSounds(["ten_seconds"], false), { sounds: ["clapper"], callout: null });
   assert.deepEqual(cueSounds(["count_3"], false), { sounds: [], callout: null });
 
   assert.deepEqual(cueSounds(["thirty_seconds"], true), { sounds: ["double_beep"], callout: "30 seconds" });
-  assert.deepEqual(cueSounds(["halfway"], true), { sounds: ["soft_chime"], callout: "Halfway" });
+  assert.deepEqual(cueSounds(["halfway"], true), { sounds: ["halfway"], callout: "Halfway" });
   assert.deepEqual(cueSounds(["count_1"], true), { sounds: ["beep"], callout: null });
   // A one-minute round: halfway and 30 seconds are the same moment, one cue.
   assert.deepEqual(cueSounds(["halfway", "thirty_seconds"], true), { sounds: ["double_beep"], callout: "30 seconds" });
+});
+
+test("an edit keeps the same phase run; a transition starts a new one", () => {
+  const work = startItem(createTimerState([ROUNDS]), T0).state;
+  assert.ok(samePhaseRun(work, addTime(work, -10, T0 + 1_000)));
+  assert.ok(samePhaseRun(work, pause(work, T0 + 1_000)));
+  assert.ok(samePhaseRun(work, adjustItem(work, { workSec: 120 }, T0 + 1_000).state));
+  const rest = endRound(work, T0 + 5_000).state;
+  assert.ok(!samePhaseRun(work, rest));
+  assert.ok(!samePhaseRun(rest, skipRest(rest, T0 + 6_000).state));
+  const prep = startItem(createTimerState([ROUNDS]), T0, { prepSec: 10 }).state;
+  assert.ok(!samePhaseRun(prep, advance(prep, T0 + 10_000).state));
+});
+
+test("a round trimmed with −10s keeps the warnings of the round as set", () => {
+  const work = startItem(createTimerState([{ ...ROUNDS, workSec: 90 }]), T0).state;
+  let trimmed = work;
+  for (let tap = 0; tap < 6; tap += 1) trimmed = addTime(trimmed, -10, T0);
+  assert.equal(trimmed.phaseMs, 30_000);
+  assert.equal(warningLengthMs(trimmed), 90_000);
+  const all = { ten: true, thirty: true, halfway: false };
+  assert.deepEqual(
+    crossedCues("work", trimmed.phaseMs, 40_000, 29_900, all, warningLengthMs(trimmed)),
+    ["thirty_seconds"],
+  );
+  // A short round as set still has no 30-second warning.
+  const short = startItem(createTimerState([{ ...ROUNDS, workSec: 45 }]), T0).state;
+  assert.deepEqual(crossedCues("work", short.phaseMs, 30_100, 29_900, all, warningLengthMs(short)), []);
+  // Rests are judged by their own length.
+  assert.equal(warningLengthMs(endRound(work, T0 + 1_000).state), 60_000);
 });

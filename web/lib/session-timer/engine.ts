@@ -463,6 +463,21 @@ export function cueRemainingMs(view: TimerView): number | null {
     : view.remainingMs;
 }
 
+/**
+ * Whether `next` is still the same round, set or rest as `previous` (an edit
+ * such as −10s, +10s, pause or a new length, not a transition). Warning cues
+ * keep counting across such an edit, so taking time off past a mark still
+ * plays that mark's warning; a new phase starts its count fresh.
+ */
+export function samePhaseRun(previous: TimerState, next: TimerState): boolean {
+  return (
+    previous.index === next.index &&
+    previous.phase === next.phase &&
+    previous.unit === next.unit &&
+    previous.readyAt === next.readyAt
+  );
+}
+
 export type TimerCue = "halfway" | "thirty_seconds" | "ten_seconds" | "count_3" | "count_2" | "count_1";
 
 /** Which of the optional round warnings the athlete wants. */
@@ -471,10 +486,24 @@ export type WarningOptions = { ten: boolean; thirty: boolean; halfway: boolean }
 export const DEFAULT_WARNINGS: WarningOptions = { ten: true, thirty: false, halfway: false };
 
 /**
+ * The length a round's warnings are judged by: the round as set, not as
+ * trimmed. Taking time off a 3:00 round never makes it a "short round" that
+ * loses its warnings.
+ */
+export function warningLengthMs(state: TimerState): number | null {
+  const item = currentItem(state);
+  if (state.phaseMs === null) return null;
+  return state.phase === "work" && item?.kind === "interval"
+    ? Math.max(state.phaseMs, item.workSec * 1000)
+    : state.phaseMs;
+}
+
+/**
  * Warning cues crossed between two ticks of the same phase. Each round warning
  * only fires on a round long enough for it to be a warning (the ten-second
- * clapper from 30 s, the 30-second and halfway cues from a minute), and the
- * 3-2-1 count only leads into work (the end of a rest).
+ * clapper from 30 s, the 30-second and halfway cues from a minute), judged by
+ * `lengthMs` (see warningLengthMs), and the 3-2-1 count only leads into work
+ * (the end of a rest). Halfway is half of the phase as it now runs.
  */
 export function crossedCues(
   phase: TimerPhase,
@@ -482,19 +511,20 @@ export function crossedCues(
   previousRemainingMs: number | null,
   remainingMs: number | null,
   warnings: WarningOptions = DEFAULT_WARNINGS,
+  lengthMs: number | null = phaseMs,
 ): TimerCue[] {
-  if (previousRemainingMs === null || remainingMs === null || phaseMs === null) {
+  if (previousRemainingMs === null || remainingMs === null || phaseMs === null || lengthMs === null) {
     return [];
   }
   const crossed = (mark: number) => previousRemainingMs > mark && remainingMs <= mark && remainingMs > 0;
   const cues: TimerCue[] = [];
-  if (phase === "work" && warnings.halfway && phaseMs >= 60_000 && crossed(phaseMs / 2)) {
+  if (phase === "work" && warnings.halfway && lengthMs >= 60_000 && crossed(phaseMs / 2)) {
     cues.push("halfway");
   }
-  if (phase === "work" && warnings.thirty && phaseMs >= 60_000 && crossed(30_000)) {
+  if (phase === "work" && warnings.thirty && lengthMs >= 60_000 && crossed(30_000)) {
     cues.push("thirty_seconds");
   }
-  if (phase === "work" && warnings.ten && phaseMs >= 30_000 && crossed(10_000)) {
+  if (phase === "work" && warnings.ten && lengthMs >= 30_000 && crossed(10_000)) {
     cues.push("ten_seconds");
   }
   if (phase === "rest") {
@@ -514,15 +544,15 @@ export function crossedCues(
 export function cueSounds(
   cues: TimerCue[],
   onScreen: boolean,
-): { sounds: Array<"clapper" | "double_beep" | "soft_chime" | "beep">; callout: string | null } {
-  const sounds: Array<"clapper" | "double_beep" | "soft_chime" | "beep"> = [];
+): { sounds: Array<"clapper" | "double_beep" | "halfway" | "beep">; callout: string | null } {
+  const sounds: Array<"clapper" | "double_beep" | "halfway" | "beep"> = [];
   let callout: string | null = null;
   if (cues.includes("ten_seconds")) sounds.push("clapper");
   if (cues.includes("thirty_seconds")) {
     sounds.push("double_beep");
     callout = "30 seconds";
   } else if (cues.includes("halfway")) {
-    sounds.push("soft_chime");
+    sounds.push("halfway");
     callout = "Halfway";
   }
   if (onScreen && cues.some((cue) => cue.startsWith("count_"))) sounds.push("beep");
