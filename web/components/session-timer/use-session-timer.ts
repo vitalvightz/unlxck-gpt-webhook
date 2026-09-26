@@ -15,6 +15,7 @@ import {
   createTimerState,
   crossedCues,
   cueRemainingMs,
+  cueSounds,
   soundForEvents,
   viewAt,
   type TimerEvent,
@@ -147,7 +148,7 @@ export function useSessionTimer({
 }: {
   items: TimerItem[];
   storageKey: string;
-  /** False while the timer is minimised: the clock keeps running, and only the round bells ring. */
+  /** False while the timer is minimised: the clock keeps running, and only the round bells and warnings ring. */
   audible: boolean;
 }): SessionTimerController {
   const [state, setState] = useState<TimerState>(
@@ -157,6 +158,7 @@ export function useSessionTimer({
   const [settings, setSettingsState] = useState<TimerSoundSettings>(() => loadSoundSettings());
   const stateRef = useRef(state);
   const audibleRef = useRef(audible);
+  const settingsRef = useRef(settings);
   const lastRemainingRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -164,6 +166,7 @@ export function useSessionTimer({
   }, [audible]);
 
   useEffect(() => {
+    settingsRef.current = settings;
     timerAudio().configure(settings);
   }, [settings]);
 
@@ -230,15 +233,21 @@ export function useSessionTimer({
       if (next !== current) {
         announce(events, next);
         commit(next);
-      } else if (audibleRef.current) {
-        const remaining = cueRemainingMs(viewAt(current, at));
-        const cues = crossedCues(current.phase, current.phaseMs, lastRemainingRef.current, remaining);
-        lastRemainingRef.current = remaining;
-        const audio = timerAudio();
-        if (cues.includes("ten_seconds")) audio.play("clapper");
-        if (cues.some((cue) => cue.startsWith("count_"))) audio.play("beep");
       } else {
-        lastRemainingRef.current = cueRemainingMs(viewAt(current, at));
+        const remaining = cueRemainingMs(viewAt(current, at));
+        const { warnTen, warnThirty, warnHalfway } = settingsRef.current;
+        const cues = crossedCues(current.phase, current.phaseMs, lastRemainingRef.current, remaining, {
+          ten: warnTen,
+          thirty: warnThirty,
+          halfway: warnHalfway,
+        });
+        lastRemainingRef.current = remaining;
+        // The round warnings ring minimised too: the athlete is training, not
+        // looking at the phone. Callouts and the 3-2-1 beeps stay on screen only.
+        const { sounds, callout } = cueSounds(cues, audibleRef.current);
+        const audio = timerAudio();
+        for (const sound of sounds) audio.play(sound);
+        if (callout) audio.say(callout);
       }
       setNow(at);
     };

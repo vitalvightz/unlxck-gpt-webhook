@@ -10,6 +10,7 @@ import { AuthProvider } from "@/components/auth-provider";
 import { TodaySessionPanel } from "@/components/today/today-session-panel";
 import { ToastProvider } from "@/components/toast-provider";
 import { resolveTrainingDay, toISODate } from "@/lib/camp-map";
+import { FREE_FORMAT_MEMORY_KEY } from "@/lib/session-timer/contact";
 import type { TodayCommandView } from "@/lib/types";
 import {
   CONTACT_RUN_KEY_PREFIX,
@@ -89,7 +90,7 @@ function ShownFlag() {
   return <p data-testid="flag">{useRoundTimer().shown ? "shown" : "hidden"}</p>;
 }
 
-test("the round timer opens from the timer page, minimises to its mini bar, and closes", async () => {
+test("the timer page opens straight into the round timer, which minimises to its mini bar", async () => {
   window.localStorage.clear();
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -103,15 +104,11 @@ test("the round timer opens from the timer page, minimises to its mini bar, and 
     );
   });
 
+  // No tap: the timer is up on its setup, ready for Start round 1.
   const flag = () => container.querySelector('[data-testid="flag"]')?.textContent;
-  assert.equal(flag(), "hidden");
-  assert.equal(document.querySelector(".st-root"), null);
-
-  const start = [...container.querySelectorAll("button")].find((b) => b.textContent === "Start round timer");
-  assert.ok(start);
-  await act(async () => start.click());
   assert.equal(flag(), "shown");
   assert.ok(document.querySelector('.st-root[role="dialog"]'));
+  assert.ok([...document.querySelectorAll(".st-primary")].some((b) => b.textContent === "Start round 1"));
   assert.ok([...container.querySelectorAll("button")].some((b) => b.textContent === "Open round timer"));
 
   const minimise = document.querySelector<HTMLButtonElement>('[aria-label="Minimise timer"]');
@@ -124,6 +121,125 @@ test("the round timer opens from the timer page, minimises to its mini bar, and 
 
   await act(async () => mini.click());
   assert.ok(document.querySelector(".st-root"));
+
+  // Closing it leaves the page, which can start it again.
+  const close = [...document.querySelectorAll<HTMLButtonElement>(".st-link")].find(
+    (b) => b.textContent === "Close timer",
+  );
+  assert.ok(close);
+  await act(async () => close.click());
+  assert.equal(flag(), "hidden");
+  assert.equal(timersOnScreen(), 0);
+  const start = [...container.querySelectorAll("button")].find((b) => b.textContent === "Start round timer");
+  assert.ok(start);
+  await act(async () => start.click());
+  assert.equal(timersOnScreen(), 1);
+
+  await act(async () => root.unmount());
+  container.remove();
+});
+
+test("the timer page opens on the athlete's last round setup", async () => {
+  window.localStorage.clear();
+  window.localStorage.setItem(FREE_FORMAT_MEMORY_KEY, JSON.stringify({ rounds: 6, workSec: 120, restSec: 30 }));
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  await act(async () => {
+    root.render(
+      <RoundTimerProvider>
+        <TimerPage />
+      </RoundTimerProvider>,
+    );
+  });
+  const summary = document.querySelector(".st-plan-summary");
+  assert.equal(summary?.textContent, "6 × 2:00 · 0:30 rest");
+
+  await act(async () => root.unmount());
+  container.remove();
+});
+
+/** A button in the timer overlay by its visible text or aria-label. */
+function timerButton(label: string): HTMLButtonElement | undefined {
+  return [...document.querySelectorAll<HTMLButtonElement>(".st-root button")].find(
+    (b) => b.textContent?.trim() === label || b.getAttribute("aria-label") === label,
+  );
+}
+
+test("Start counts down to round 1, remembers the setup, and gives −10s / +10s", async () => {
+  window.localStorage.clear();
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  await act(async () => {
+    root.render(
+      <RoundTimerProvider>
+        <TimerPage />
+      </RoundTimerProvider>,
+    );
+  });
+
+  // The Amateur preset, then Start: that setup is what /timer opens on next time.
+  await act(async () => timerButton("Amateur 2/1")?.click());
+  await act(async () => timerButton("Start round 1")?.click());
+  assert.deepEqual(JSON.parse(window.localStorage.getItem(FREE_FORMAT_MEMORY_KEY) ?? "null"), {
+    rounds: 3,
+    workSec: 120,
+    restSec: 60,
+  });
+
+  // The default 10-second get-ready countdown leads into round 1.
+  assert.match(document.querySelector(".st-phase")?.textContent ?? "", /Get ready/);
+  assert.equal(document.querySelector(".st-clock-digits")?.textContent, "0:10");
+  assert.equal(document.querySelector(".st-clock-caption")?.textContent, "Round 1 / 3");
+  assert.ok(timerButton("Take 10 seconds off"));
+  assert.ok(timerButton("Add 10 seconds"));
+
+  await act(async () => timerButton("Start now")?.click());
+  assert.match(document.querySelector(".st-phase")?.textContent ?? "", /Work/);
+  assert.equal(document.querySelector(".st-clock-digits")?.textContent, "2:00");
+
+  await act(async () => timerButton("Add 10 seconds")?.click());
+  assert.equal(document.querySelector(".st-clock-digits")?.textContent, "2:10");
+  await act(async () => timerButton("Take 10 seconds off")?.click());
+  await act(async () => timerButton("Take 10 seconds off")?.click());
+  assert.equal(document.querySelector(".st-clock-digits")?.textContent, "1:50");
+
+  await act(async () => root.unmount());
+  container.remove();
+});
+
+test("the sound sheet sets the round warnings and the get-ready countdown", async () => {
+  window.localStorage.clear();
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  await act(async () => {
+    root.render(
+      <RoundTimerProvider>
+        <TimerPage />
+      </RoundTimerProvider>,
+    );
+  });
+
+  await act(async () => timerButton("Sound settings")?.click());
+  const toggle = (label: string) =>
+    [...document.querySelectorAll<HTMLLabelElement>(".st-group .st-toggle")]
+      .find((l) => l.textContent === label)
+      ?.querySelector("input");
+  assert.equal(toggle("10 seconds left")?.checked, true);
+  assert.equal(toggle("30 seconds left")?.checked, false);
+  assert.equal(toggle("Halfway")?.checked, false);
+  await act(async () => toggle("30 seconds left")?.click());
+  await act(async () => timerButton("Off")?.click());
+  const saved = JSON.parse(window.localStorage.getItem("unlxck.session-timer.settings") ?? "{}");
+  assert.equal(saved.warnThirty, true);
+  assert.equal(saved.prepSec, 0);
+
+  // With the countdown off, Start rings round 1 straight away.
+  await act(async () => timerButton("Close settings")?.click());
+  await act(async () => timerButton("Start round 1")?.click());
+  assert.match(document.querySelector(".st-phase")?.textContent ?? "", /Work/);
 
   await act(async () => root.unmount());
   container.remove();
@@ -235,9 +351,6 @@ test("a run saved on an earlier training day never blocks the round timer", asyn
       </RoundTimerProvider>,
     );
   });
-  const start = [...container.querySelectorAll("button")].find((b) => b.textContent === "Start round timer");
-  assert.ok(start);
-  await act(async () => start.click());
   assert.equal(timersOnScreen(), 1);
 
   await act(async () => root.unmount());
@@ -292,9 +405,6 @@ test("a run left by a session that changed is dropped on Today, so the round tim
   view.container.remove();
   const again = renderTodayThenTimerPage(contactDay());
   await act(async () => again.renderTimerPage());
-  const start = [...again.container.querySelectorAll("button")].find((b) => b.textContent === "Start round timer");
-  assert.ok(start);
-  await act(async () => start.click());
   assert.equal(timersOnScreen(), 1);
 
   await act(async () => again.root.unmount());

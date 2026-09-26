@@ -14,6 +14,7 @@ export type TimerSound =
   | "triple_bell"
   | "clapper"
   | "beep"
+  | "double_beep"
   | "go"
   | "chime"
   | "soft_chime"
@@ -25,14 +26,31 @@ export type TimerSoundSettings = {
   volume: number;
   voice: boolean;
   vibrate: boolean;
+  /** Round warnings: the ten-second clapper, a 30-second double beep, a halfway chime. */
+  warnTen: boolean;
+  warnThirty: boolean;
+  warnHalfway: boolean;
+  /** Countdown before round 1, so the athlete can put the phone down and get set. */
+  prepSec: PrepSeconds;
 };
+
+export const PREP_OPTIONS = [0, 5, 10, 30] as const;
+export type PrepSeconds = (typeof PREP_OPTIONS)[number];
 
 export const DEFAULT_SOUND_SETTINGS: TimerSoundSettings = {
   sound: true,
   volume: 0.9,
   voice: false,
   vibrate: true,
+  warnTen: true,
+  warnThirty: false,
+  warnHalfway: false,
+  prepSec: 10,
 };
+
+function flag(value: unknown, fallback: boolean): boolean {
+  return typeof value === "boolean" ? value : fallback;
+}
 
 const SETTINGS_KEY = "unlxck.session-timer.settings";
 
@@ -42,13 +60,19 @@ export function loadSoundSettings(): TimerSoundSettings {
     if (!raw) return DEFAULT_SOUND_SETTINGS;
     const parsed = JSON.parse(raw) as Partial<TimerSoundSettings>;
     return {
-      sound: typeof parsed.sound === "boolean" ? parsed.sound : DEFAULT_SOUND_SETTINGS.sound,
+      sound: flag(parsed.sound, DEFAULT_SOUND_SETTINGS.sound),
       volume:
         typeof parsed.volume === "number" && parsed.volume >= 0 && parsed.volume <= 1
           ? parsed.volume
           : DEFAULT_SOUND_SETTINGS.volume,
-      voice: typeof parsed.voice === "boolean" ? parsed.voice : DEFAULT_SOUND_SETTINGS.voice,
-      vibrate: typeof parsed.vibrate === "boolean" ? parsed.vibrate : DEFAULT_SOUND_SETTINGS.vibrate,
+      voice: flag(parsed.voice, DEFAULT_SOUND_SETTINGS.voice),
+      vibrate: flag(parsed.vibrate, DEFAULT_SOUND_SETTINGS.vibrate),
+      warnTen: flag(parsed.warnTen, DEFAULT_SOUND_SETTINGS.warnTen),
+      warnThirty: flag(parsed.warnThirty, DEFAULT_SOUND_SETTINGS.warnThirty),
+      warnHalfway: flag(parsed.warnHalfway, DEFAULT_SOUND_SETTINGS.warnHalfway),
+      prepSec: PREP_OPTIONS.includes(parsed.prepSec as PrepSeconds)
+        ? (parsed.prepSec as PrepSeconds)
+        : DEFAULT_SOUND_SETTINGS.prepSec,
     };
   } catch {
     return DEFAULT_SOUND_SETTINGS;
@@ -77,6 +101,7 @@ const VIBRATION: Partial<Record<TimerSound, number[]>> = {
   bell: [250],
   triple_bell: [180, 90, 180, 90, 180],
   clapper: [60, 60, 60],
+  double_beep: [90, 90, 90],
   go: [120],
   finish: [300, 120, 300],
 };
@@ -159,6 +184,10 @@ class TimerAudio {
         break;
       case "beep":
         this.tone(t, 880, 0.13, 0.5, "square");
+        break;
+      case "double_beep":
+        this.tone(t, 988, 0.12, 0.5, "square");
+        this.tone(t + 0.2, 988, 0.12, 0.5, "square");
         break;
       case "go":
         this.tone(t, 1320, 0.28, 0.55, "square");

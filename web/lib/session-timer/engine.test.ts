@@ -8,14 +8,17 @@ import {
   completeSet,
   createTimerState,
   crossedCues,
+  cueSounds,
   endRound,
   endSession,
   finishItem,
+  isPrep,
   metPlan,
   pause,
   resume,
   setRestLength,
   skipRest,
+  calloutForEvents,
   soundForEvents,
   startItem,
   summarizeRun,
@@ -102,7 +105,7 @@ test("pause freezes the clock and resume shifts the phase", () => {
 
 test("+30s and end round", () => {
   let state = startItem(createTimerState([ROUNDS]), T0).state;
-  state = addTime(state, 30);
+  state = addTime(state, 30, T0);
   assert.equal(viewAt(state, T0).remainingMs, 210_000);
   const ended = endRound(state, T0 + 5_000);
   assert.deepEqual(ended.events, ["round_end", "rest_start"]);
@@ -375,4 +378,81 @@ test("ending early is not a met plan, and the summary records what was done", ()
   assert.equal(state.phase, "done");
   assert.equal(metPlan(state), false);
   assert.equal(summarizeRun(state), "Timer: Sparring: 1/3 rounds · Back squat: 1 set (plan 3–5)");
+});
+
+test("the 30-second and halfway warnings fire only when asked for, on rounds of a minute or more", () => {
+  const all = { ten: true, thirty: true, halfway: true };
+  assert.deepEqual(crossedCues("work", 180_000, 30_100, 29_900), []);
+  assert.deepEqual(crossedCues("work", 180_000, 30_100, 29_900, all), ["thirty_seconds"]);
+  assert.deepEqual(crossedCues("work", 180_000, 90_100, 89_900, all), ["halfway"]);
+  assert.deepEqual(crossedCues("work", 45_000, 30_100, 29_900, all), []);
+  assert.deepEqual(crossedCues("work", 45_000, 22_600, 22_400, all), []);
+  assert.deepEqual(crossedCues("rest", 180_000, 30_100, 29_900, all), []);
+  // A one-minute round's halfway is its thirty-second mark: both fire together.
+  assert.deepEqual(crossedCues("work", 60_000, 30_100, 29_900, all), ["halfway", "thirty_seconds"]);
+});
+
+test("the ten-second clapper can be turned off", () => {
+  assert.deepEqual(crossedCues("work", 180_000, 10_100, 9_900, { ten: false, thirty: true, halfway: true }), []);
+});
+
+test("a prep countdown runs as a rest before round 1, then rings the round in", () => {
+  const step = startItem(createTimerState([ROUNDS]), T0, { prepSec: 10 });
+  assert.deepEqual(step.events, ["prep_start"]);
+  assert.equal(step.state.phase, "rest");
+  assert.equal(step.state.startedAt, T0);
+  assert.equal(viewAt(step.state, T0).remainingMs, 10_000);
+  assert.ok(isPrep(step.state));
+  assert.equal(calloutForEvents(step.events, step.state), "Get ready");
+  assert.equal(soundForEvents(step.events), null);
+
+  assert.equal(advance(step.state, T0 + 9_999).state.phase, "rest");
+  const rung = advance(step.state, T0 + 10_000);
+  assert.deepEqual(rung.events, ["round_start"]);
+  assert.equal(rung.state.phase, "work");
+  assert.equal(rung.state.unit, 1);
+  assert.equal(viewAt(rung.state, T0 + 10_000).remainingMs, 180_000);
+  assert.ok(!isPrep(rung.state));
+
+  // The rest after round 1 is not a prep.
+  const rest = advance(rung.state, T0 + 190_000).state;
+  assert.equal(rest.phase, "rest");
+  assert.ok(!isPrep(rest));
+});
+
+test("the prep countdown can be skipped, is only for rounds, and ignores rest adjustments", () => {
+  const prep = startItem(createTimerState([ROUNDS]), T0, { prepSec: 30 }).state;
+  const skipped = skipRest(prep, T0 + 2_000);
+  assert.deepEqual(skipped.events, ["round_start"]);
+  assert.equal(skipped.state.phase, "work");
+
+  const adjusted = adjustItem(prep, { restSec: 90 }, T0 + 1_000).state;
+  assert.equal(adjusted.phaseMs, 30_000);
+  assert.equal((adjusted.items[0] as IntervalItem).restSec, 90);
+
+  assert.deepEqual(startItem(createTimerState([SQUAT]), T0, { prepSec: 10 }).events, ["set_start"]);
+  assert.deepEqual(startItem(createTimerState([ROUNDS]), T0, { prepSec: 0 }).events, ["round_start"]);
+});
+
+test("-10s never takes the clock below a second left", () => {
+  const state = startItem(createTimerState([ROUNDS]), T0).state;
+  assert.equal(viewAt(addTime(state, -10, T0), T0).remainingMs, 170_000);
+  assert.equal(viewAt(addTime(state, -10, T0 + 175_000), T0 + 175_000).remainingMs, 1_000);
+  const nearlyOut = addTime(state, -10, T0 + 179_500);
+  assert.equal(nearlyOut, state);
+  const paused = pause(state, T0 + 100_000);
+  assert.equal(viewAt(addTime(paused, -10, T0 + 500_000), T0 + 500_000).remainingMs, 70_000);
+});
+
+test("the round warnings ring while minimised; the 3-2-1 beeps and callouts only on screen", () => {
+  assert.deepEqual(cueSounds(["thirty_seconds"], false), { sounds: ["double_beep"], callout: null });
+  assert.deepEqual(cueSounds(["halfway"], false), { sounds: ["soft_chime"], callout: null });
+  assert.deepEqual(cueSounds(["ten_seconds"], false), { sounds: ["clapper"], callout: null });
+  assert.deepEqual(cueSounds(["count_3"], false), { sounds: [], callout: null });
+
+  assert.deepEqual(cueSounds(["thirty_seconds"], true), { sounds: ["double_beep"], callout: "30 seconds" });
+  assert.deepEqual(cueSounds(["halfway"], true), { sounds: ["soft_chime"], callout: "Halfway" });
+  assert.deepEqual(cueSounds(["count_1"], true), { sounds: ["beep"], callout: null });
+  // A one-minute round: halfway and 30 seconds are the same moment, one cue.
+  assert.deepEqual(cueSounds(["halfway", "thirty_seconds"], true), { sounds: ["double_beep"], callout: "30 seconds" });
 });
