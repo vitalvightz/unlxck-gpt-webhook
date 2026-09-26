@@ -30,6 +30,7 @@ from .declared_combat_ownership import (
     declared_light_combat_weekdays,
 )
 from .sparring_dose_planner import (
+    MAX_REPEATED_WEEKDAY_SPAN,
     compute_hard_sparring_plan,
     repeated_weekday_hard_sparring_entries,
     effective_hard_day_count,
@@ -1311,10 +1312,11 @@ def _repeated_weekday_light_combat_roles(
             athlete_model, training_days=training_days, exclude_hard_sparring=True
         )
     )
-    if not declared:
+    calendar_days = week_entry.get("calendar_days") or []
+    if not declared or len(calendar_days) > MAX_REPEATED_WEEKDAY_SPAN:
         return []
     occurrences: dict[str, list[int]] = {}
-    for calendar_day in week_entry.get("calendar_days") or []:
+    for calendar_day in calendar_days:
         weekday = str(calendar_day.get("weekday") or "").strip().lower()
         d_day = calendar_day.get("d_day")
         if weekday in declared and isinstance(d_day, int) and d_day > 0:

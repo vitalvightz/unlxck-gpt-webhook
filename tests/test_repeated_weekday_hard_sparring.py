@@ -142,3 +142,15 @@ def test_seven_day_week_has_no_repeated_occurrences():
         "declared_hard_sparring_days": ["Friday", "Sunday"],
     }
     assert repeated_weekday_hard_sparring_entries(week=week, athlete_snapshot={}) == []
+
+
+def test_degenerate_multi_year_week_is_not_expanded():
+    # A far-future fight date yields a "week" thousands of days long; resolving
+    # every repeat there ran the dose planner thousands of times and timed out.
+    week = {
+        "fight_weekday": "saturday",
+        "projected_days_until_fight_end": 7,
+        "span_days": 11595,
+        "declared_hard_sparring_days": ["Friday", "Sunday"],
+    }
+    assert repeated_weekday_hard_sparring_entries(week=week, athlete_snapshot={}) == []

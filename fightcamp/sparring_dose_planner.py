@@ -915,6 +915,13 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
     return _finalize_plan(plan, hard_days=hard_days, protected_day=protected_day, week=week, athlete_snapshot=athlete_snapshot)
 
 
+# A real camp week repeats a weekday only when it runs 8-13 days, so at most one
+# earlier occurrence. Far-future fight dates can produce "weeks" thousands of
+# days long; resolving every occurrence there would run the dose planner
+# thousands of times, and weekday locks mean nothing at that span anyway.
+MAX_REPEATED_WEEKDAY_SPAN = 14
+
+
 def repeated_weekday_hard_sparring_entries(
     *, week: dict[str, Any], athlete_snapshot: dict[str, Any]
 ) -> list[dict[str, Any]]:
@@ -938,6 +945,8 @@ def repeated_weekday_hard_sparring_entries(
     end_d = week.get("projected_days_until_fight_end")
     span = week.get("span_days")
     if not hard_days or not fight_weekday or not isinstance(end_d, int) or not isinstance(span, int):
+        return []
+    if span > MAX_REPEATED_WEEKDAY_SPAN:
         return []
     start_d = end_d + span - 1
     entries: list[dict[str, Any]] = []
