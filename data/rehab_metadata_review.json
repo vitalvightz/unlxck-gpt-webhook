@@ -11698,6 +11698,35 @@
     "review_version": 1
   },
   {
+    "drill_id": "shoulder_unspecified_scapular_wall_slide_band_external_rotation_reset",
+    "source_hash": "1bca5a0bd5e94698d51c276959638751897b5af64c93a8fa9c6f53bcfc8a2961",
+    "location": "shoulder",
+    "injury_type": "unspecified",
+    "name": "Scapular Wall Slide + Band External Rotation Reset",
+    "notes": "GPP: 1–2 x 6–10 controlled reps to restore shoulder rhythm → TAPER: 1 light set; stop before fatigue.",
+    "movement_archetype": "banded_resistance",
+    "proposed": {
+      "rehab_stage": null,
+      "function": "control",
+      "equipment": null,
+      "impact": null,
+      "load": null,
+      "velocity": null,
+      "target_regions": [
+        "shoulder"
+      ],
+      "laterality_applicability": null,
+      "target_tissues": null,
+      "contraction_type": null,
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": null
+    },
+    "flags": [],
+    "review_state": "needs_review",
+    "review_version": 1
+  },
+  {
     "drill_id": "shoulder_stiffness_pvc_pass_throughs",
     "source_hash": "0879e49f88cdded09abc8fbc8723bd1e86d17f6880be74f17c0e1ad12598d7c6",
     "location": "shoulder",
@@ -16456,6 +16485,36 @@
       "laterality_applicability": null,
       "target_tissues": null,
       "contraction_type": "isometric",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": null
+    },
+    "flags": [],
+    "review_state": "needs_review",
+    "review_version": 1
+  },
+  {
+    "drill_id": "wrist_unspecified_wrist_finger_activation_micro_reset",
+    "source_hash": "7c6c0dc2958148ff3c6f86f9a0e7ace74ab9badb378352a494497ad17dbc404e",
+    "location": "wrist",
+    "injury_type": "unspecified",
+    "name": "Wrist/Finger Activation Micro-Reset",
+    "notes": "GPP: 1–2 x 10–12 light reps for hand and wrist activation → TAPER: 1 x 10–12 light reps or 30–45s; stop before fatigue.",
+    "movement_archetype": "activation",
+    "proposed": {
+      "rehab_stage": null,
+      "function": "activation",
+      "equipment": null,
+      "impact": "none",
+      "load": null,
+      "velocity": "low",
+      "target_regions": [
+        "wrist",
+        "fingers"
+      ],
+      "laterality_applicability": null,
+      "target_tissues": null,
+      "contraction_type": null,
       "sport_specificity": "general_rehab",
       "contact_level": "none",
       "evidence_notes": null
