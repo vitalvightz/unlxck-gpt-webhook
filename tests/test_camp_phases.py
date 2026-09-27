@@ -211,3 +211,35 @@ def test_calculate_phase_weeks_preserves_basic_invariants_across_style_matrix():
         assert phases["TAPER"] >= 0
         assert phases["GPP"] + phases["SPP"] + phases["TAPER"] == normalized_weeks
         assert sum(phases["days"].values()) == total_days
+
+
+def test_fight_beyond_sixteen_weeks_is_planned_as_its_final_sixteen_weeks():
+    """A longer countdown must not stretch the capped weeks past seven days."""
+    from fightcamp.camp_phases import MAX_CAMP_DAYS, MAX_CAMP_WEEKS
+
+    capped = calculate_phase_weeks(16, "boxing", days_until_fight=MAX_CAMP_DAYS)
+    for days_out in (MAX_CAMP_DAYS + 1, 26 * 7, 26_502):
+        phases = calculate_phase_weeks(16, "boxing", days_until_fight=days_out)
+        assert phases == capped
+        assert sum(phases[phase] for phase in PHASE_VALUES) == MAX_CAMP_WEEKS
+        assert sum(phases["days"].values()) == MAX_CAMP_DAYS
+
+
+def test_long_lead_in_keeps_seven_day_planner_weeks_anchored_on_fight_day():
+    import datetime
+
+    import pytest
+
+    generate_plan_sync = pytest.importorskip("fightcamp.main").generate_plan_sync
+    from support import _build_request
+
+    fight_date = (datetime.date.today() + datetime.timedelta(days=26 * 7)).isoformat()
+    request = _build_request({"fight_date": fight_date}).to_payload()
+    request["random_seed"] = 3
+    weeks = generate_plan_sync(request)["planning_brief"]["weekly_role_map"]["weeks"]
+
+    assert len(weeks) == 16
+    assert {len(week["calendar_days"]) for week in weeks} == {7}
+    d_days = [day["d_day"] for week in weeks for day in week["calendar_days"]]
+    assert max(d_days) == 16 * 7 - 1
+    assert min(d_days) == 0

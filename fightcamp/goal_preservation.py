@@ -1105,6 +1105,31 @@ def _restore_goal_roles(brief: dict, entry: dict) -> list[dict]:
     return audit
 
 
+def _repair_refusal_reasons(week: dict, goal: str, window: dict) -> list[dict]:
+    """Live compression codes that stop this week's goal candidates being restored.
+
+    Mirrors the refusal in ``_restore_goal_roles`` exactly (same candidates, same
+    ``effective_goal_repair_compression_state``), so repair and deferral cannot
+    disagree about whether a compressed week is higher authority.
+    """
+    reasons: list[dict] = []
+    existing = {(r.get("role_key"), r.get("strength_session_index")) for r in week.get("session_roles") or []}
+    for candidate in week.get("goal_repair_candidates") or []:
+        identity = (candidate.get("role_key"), candidate.get("strength_session_index"))
+        if identity in existing or not _role_matches_goal(candidate, goal):
+            continue
+        suppressed = [r for r in week.get("suppressed_roles") or [] if r.get("role_key") == candidate.get("role_key")]
+        _, codes = effective_goal_repair_compression_state(week, suppressed)
+        for code in sorted(set(codes)):
+            reason = {"reason_code": _COMPRESSION_REASONS.get(code, "planner_compression"),
+                      "authority": "planner_compression", "source_reason_code": code,
+                      "week_index": week.get("week_index"), "role_key": candidate.get("role_key"),
+                      "coverage_window": window}
+            if reason not in reasons:
+                reasons.append(reason)
+    return reasons
+
+
 def _deferral_constraints(entry: dict, brief: dict, missing: list[dict]) -> list[dict]:
     """Every uncovered window needs a live, causal higher-authority reason."""
     if not missing:
@@ -1131,6 +1156,12 @@ def _deferral_constraints(entry: dict, brief: dict, missing: list[dict]) -> list
                     window_reasons.append({"reason_code": "calendar_capacity", "authority": "final_calendar_integrity",
                         "source_reason_code": row["reason_code"], "week_index": week.get("week_index"), "role_key": row.get("role_key"),
                         "coverage_window": window})
+            # The same compression authority _restore_goal_roles honours when it
+            # refuses to reopen this week's retained candidate. Without it, a
+            # compressed week (e.g. crowded-week `low_session_budget_high_combat_load`)
+            # blocked the repair yet left the gap unexplained, so the goal stayed
+            # an unsatisfiable `build` blocker instead of a cited deferral.
+            window_reasons.extend(_repair_refusal_reasons(week, entry["goal"], window))
             if entry["goal"] == "strength":
                 readiness = athlete_dose_state(_athlete(brief))
                 for role in week.get("session_roles") or []:
