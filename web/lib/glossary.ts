@@ -112,17 +112,17 @@ const GLOSSARY: Readonly<Record<string, GlossaryEntry>> = {
   taper: {
     term: "Taper",
     definition:
-      "The run-in to fight day. Training volume comes down while sharpness is kept, so you arrive fresh rather than fatigued.",
+      "Training volume drops before the fight so you arrive fresh but still sharp.",
   },
   gpp: {
     term: "GPP",
     definition:
-      "General Physical Preparation: the base-building phase. Broad strength, conditioning and durability work that is not yet specific to your opponent or ruleset.",
+      "General Physical Preparation: building a broad base of strength, fitness and durability.",
   },
   spp: {
     term: "SPP",
     definition:
-      "Specific Physical Preparation. Training narrows to the demands of your fight: your rounds, your positions, your pace.",
+      "Specific Physical Preparation: training shifts to match the demands of your fight.",
   },
 };
 
