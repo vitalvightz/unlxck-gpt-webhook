@@ -656,7 +656,35 @@ test("timed holds show their measured seconds instead of a one-rep volume", () =
   );
   assert.deepEqual(selectBlockMetric({ rounds: 4, work: { value: 2, unit: "minutes" } } as never), [
     { label: "Rounds", value: "4" },
+    { label: "Work", value: "2 minutes" },
   ]);
+});
+
+test("selectBlockMetric never drops a set count that only work or distance can carry", () => {
+  // "Pull-Counter-Reset: 2 x 5 sec; rest 120 sec" converts to sets 2 + work 5 s
+  // with no reps/duration. The card must read "2 × 5 seconds", not "5 seconds".
+  assert.deepEqual(
+    selectBlockMetric({ sets: 2, work: { value: 5, unit: "seconds" } } as never),
+    [{ label: "Work", value: "2 × 5 seconds" }],
+  );
+  // Sets per distance with no work time: the distance row carries them.
+  assert.deepEqual(
+    selectBlockMetric({ sets: 4, distance: { value: 200, unit: "meters" } } as never),
+    [{ label: "Distance", value: "4 × 200 meters" }],
+  );
+  // A single set needs no multiplier.
+  assert.deepEqual(
+    selectBlockMetric({ sets: 1, work: { value: 20, unit: "seconds" } } as never),
+    [{ label: "Work", value: "20 seconds" }],
+  );
+  // Sets already printed on Volume are not repeated on Work.
+  assert.deepEqual(
+    selectBlockMetric({ sets: 3, reps: 5, work: { value: 20, unit: "seconds" } } as never),
+    [
+      { label: "Volume", value: "3 × 5" },
+      { label: "Work", value: "20 seconds" },
+    ],
+  );
 });
 
 test("only a converted hard-sparring headline is flagged as converted", () => {
@@ -742,7 +770,10 @@ test("selectBlockMetric drops a rep count that only echoes interval work seconds
   // "2x3s" converted to rounds 2, work 3 sec and a stray reps 3.
   assert.deepEqual(
     selectBlockMetric({ reps: 3, rounds: 2, work: { value: 3, unit: "seconds" } } as never),
-    [{ label: "Rounds", value: "2" }],
+    [
+      { label: "Rounds", value: "2" },
+      { label: "Work", value: "3 seconds" },
+    ],
   );
   // A real per-round rep count that differs from the work seconds stays.
   assert.deepEqual(
@@ -750,6 +781,7 @@ test("selectBlockMetric drops a rep count that only echoes interval work seconds
     [
       { label: "Volume", value: "5" },
       { label: "Rounds", value: "2" },
+      { label: "Work", value: "20 seconds" },
     ],
   );
   // With sets, the reps are a real sets x reps volume.
@@ -758,6 +790,7 @@ test("selectBlockMetric drops a rep count that only echoes interval work seconds
     [
       { label: "Volume", value: "2 × 3" },
       { label: "Rounds", value: "2" },
+      { label: "Work", value: "3 seconds" },
     ],
   );
 });

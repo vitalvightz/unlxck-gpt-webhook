@@ -134,6 +134,27 @@ test("puts the source set range back onto an orphaned per-set volume", () => {
   );
 });
 
+test("puts the source set range onto the work row when work carries the sets", () => {
+  assert.deepEqual(
+    applySourceSetRange([{ label: "Work", value: "2 × 5 seconds" }], "2-3"),
+    [{ label: "Work", value: "2-3 × 5 seconds" }],
+  );
+  // Volume owns the set count when present; work is left alone.
+  assert.deepEqual(
+    applySourceSetRange(
+      [
+        { label: "Volume", value: "3 × 5" },
+        { label: "Work", value: "20 seconds" },
+      ],
+      "2-3",
+    ),
+    [
+      { label: "Volume", value: "2-3 × 5" },
+      { label: "Work", value: "20 seconds" },
+    ],
+  );
+});
+
 test("an exact source title beats an earlier 'A or B' line", () => {
   // Both lines can exist as separate exercises. The choice line comes first, so
   // a first-match sweep would give this block the other exercise's ranges.
