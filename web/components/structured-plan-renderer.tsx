@@ -346,7 +346,6 @@ export function BlockCard({
   const blockType = cleanText(block.block_type);
   const load = formatBlockLoad(block.load);
   const metrics = applySourceSetRange(selectBlockMetric(block), sourceOverrides.sets);
-  const work = formatMeasured(block.work);
   const rest = sourceOverrides.rest || (shouldShowRest(block.rest) ? formatMeasured(block.rest) : null);
   const effort = sourceOverrides.effort || formatEffort(block);
   // The effort card is glossed from the METHOD, not from the word "Effort":
@@ -408,25 +407,19 @@ export function BlockCard({
           </span>
         ) : null}
       </div>
-      {metrics.length > 0 || work || load || rest || effort ? (
+      {metrics.length > 0 || load || rest || effort ? (
         <div className="sp-block-stats">
           {metrics.map((metric) => (
             <span key={metric.label} className="sp-stat">
               <span className="sp-stat-head">
                 <span className="sp-stat-label">{metric.label}</span>
-                {/* Volume and Mode are glossed; Duration/Distance/Rounds are
-                    plain English and stay unadorned. */}
+                {/* Volume and Mode are glossed; Duration/Distance/Rounds/Work
+                    are plain English and stay unadorned. */}
                 <GlossaryTooltip term={metric.label} />
               </span>
               {metric.value}
             </span>
           ))}
-          {work ? (
-            <span className="sp-stat">
-              <span className="sp-stat-label">Work</span>
-              {work}
-            </span>
-          ) : null}
           {load ? (
             <span className="sp-stat">
               <span className="sp-stat-head">

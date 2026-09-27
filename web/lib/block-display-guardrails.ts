@@ -393,8 +393,15 @@ export function applySourceSetRange(
   setsRange: string | null,
 ): BlockMetric[] {
   if (!setsRange) return metrics;
+  // Volume/Duration carry the set count when present; otherwise a timed block
+  // (sets x work) or a distance block (sets x distance) carries it instead.
+  const carrier =
+    ["Volume", "Duration", "Work", "Distance"].find((label) =>
+      metrics.some((metric) => metric.label === label),
+    ) ?? null;
+  const carriers = carrier === "Volume" || carrier === "Duration" ? ["Volume", "Duration"] : [carrier];
   return metrics.map((metric) => {
-    if (metric.label !== "Volume" && metric.label !== "Duration") return metric;
+    if (!carriers.includes(metric.label)) return metric;
     let value = metric.value.replace(/\s+per\s+set\b/i, "").trim();
     const multiplier = /^\d+(?:\.\d+)?(?:\s*[-–—]\s*\d+(?:\.\d+)?)?\s*×\s*/;
     value = multiplier.test(value)

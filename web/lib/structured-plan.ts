@@ -219,16 +219,22 @@ export function selectBlockMetric(block: StructuredBlock | null | undefined): Bl
   const timedHold =
     repsText === "1" && /\b(hold|isometric)\b/i.test(cleanText(block.display_name) ?? "");
 
+  // Whether a metric row already prints the set multiplier. A set count that no
+  // row carries is a lost prescription ("2 x 5 sec" rendering as "5 seconds"),
+  // so the work/distance rows below pick it up when nothing else did.
+  let setsShown = false;
   if ((!repsText || isTimeLikeReps(repsText) || modeLikeReps || timedHold) && duration) {
     // A single hold per set is timed work, not an informative "3 × 1" rep
     // count. Keep its set count alongside the measured, unit-bearing hold.
     metrics.push({ label: "Duration", value: sets && sets > 1 ? `${sets} × ${duration}` : duration });
+    setsShown = true;
   } else if (repsText && isTimeLikeReps(repsText)) {
     // The reps value is itself a duration ("30 seconds") and no separate
     // duration exists, so it is time, not a rep count — labelling it "Volume"
     // ("5 × 30 seconds") is semantically wrong. Surface it as Duration, keeping
     // any sets multiplier for the interval count.
     metrics.push({ label: "Duration", value: sets ? `${sets} × ${repsText}` : repsText });
+    setsShown = true;
   } else if (repsText && modeLikeReps) {
     // "continuous" / AMRAP / EMOM are execution modes, not volume. When the
     // payload omitted a quantitative duration, keep the card truthful instead
@@ -239,20 +245,37 @@ export function selectBlockMetric(block: StructuredBlock | null | undefined): Bl
     });
   } else if (repsText) {
     metrics.push({ label: "Volume", value: sets ? `${sets} × ${repsText}` : repsText });
+    setsShown = true;
     if (duration) {
       metrics.push({ label: "Duration", value: duration });
     }
   } else if (duration) {
     metrics.push({ label: "Duration", value: sets && sets > 1 ? `${sets} × ${duration}` : duration });
+    setsShown = true;
   }
 
+  const work = formatMeasured(block.work);
   const distance = formatMeasured(block.distance);
+  // "1 ×" says nothing, so a single set never needs a carrier.
+  const pendingSets = !setsShown && sets && sets > 1 ? sets : null;
+  // Timed work per set (sets 2, work 5 sec) prefers the work row; a distance
+  // per set (sets 4, distance 200 m) with no work takes it on the distance row.
+  const workTakesSets = pendingSets !== null && work !== null;
+  const distanceTakesSets = pendingSets !== null && !workTakesSets && distance !== null;
+
   if (distance) {
-    metrics.push({ label: "Distance", value: distance });
+    metrics.push({
+      label: "Distance",
+      value: distanceTakesSets ? `${pendingSets} × ${distance}` : distance,
+    });
   }
 
   if (finitePositiveNumber(block.rounds)) {
     metrics.push({ label: "Rounds", value: String(block.rounds) });
+  }
+
+  if (work) {
+    metrics.push({ label: "Work", value: workTakesSets ? `${pendingSets} × ${work}` : work });
   }
 
   return metrics;
