@@ -1280,14 +1280,12 @@ class OpenAIStage2Automator:
 
         first_review = reviewed_report(first_review)
         final_text = first_pass_text
-        final_cost = first_pass_cost
-        attempt_count = 1
-        retry_text = ""
 
-        # Effective-dose violations are deterministic safety failures. Unlike
-        # subjective review findings, they get one immediate repair attempt so
-        # an over-cap loaded prescription is not released without first asking
-        # the renderer to conform to the scheduled-day source of truth.
+        # Stage 2 makes one plan-text model call. A conditioning render gap is
+        # repaired deterministically from the selected assignments; anything that
+        # repair cannot fix is held for admin review below, never re-rendered by a
+        # second model call (that prompt carried the whole planning brief and was
+        # always over the Stage 2 prompt budget, so it could only fail the build).
         first_codes = {
             str(item.get("code") or "")
             for item in [
@@ -1316,7 +1314,6 @@ class OpenAIStage2Automator:
             requires_planner_regeneration = bool(
                 requires_planner_regeneration or retry.get("requires_planner_regeneration")
             )
-            retry_text = str(retry.get("repair_prompt") or "")
             missing_conditioning = bool(
                 first_codes
                 & {
@@ -1334,7 +1331,7 @@ class OpenAIStage2Automator:
                     )
                 except Exception:
                     logger.exception(
-                        "[stage2] deterministic conditioning render reconciliation failed; using bounded render retry"
+                        "[stage2] deterministic conditioning render reconciliation failed; holding for review"
                     )
                     deterministic_repair = {
                         "text": first_pass_text,
@@ -1362,7 +1359,6 @@ class OpenAIStage2Automator:
                         final_text = deterministic_text
                         first_review = deterministic_review
                         repair_source_report = original_review_report
-                        retry_text = ""
                         conditioning_repair_audit = {
                             "status": "applied",
                             "source": "authoritative_selected_assignments",
@@ -1375,42 +1371,7 @@ class OpenAIStage2Automator:
                 conditioning_repair_audit
                 and conditioning_repair_audit.get("status") == "applied"
             )
-            deterministic_unsafe = bool(
-                missing_conditioning
-                and deterministic_repair
-                and deterministic_repair.get("unresolved")
-            )
-            if retry.get("needs_retry") and retry_text and not deterministic_complete and not deterministic_unsafe:
-                # ``needs_retry`` is only ever True for missing closed conditioning
-                # membership. ``build_stage2_retry`` returns False for a goal failure
-                # on its own, and the one other route to True — release_decision
-                # "hold" — is unreachable here because a hold is raised solely by
-                # planner-authority blockers, which the same module's
-                # ``authority_build_stage2_retry`` wrapper then forces back to False.
-                # So this repair is always the conditioning render repair; the old
-                # "effective_dose_repair" branch of this label was dead.
-                final_text, final_cost = await self._generate_text(
-                    retry_text,
-                    attempt_label="render_repair",
-                    source=source,
-                    log_context=log_context,
-                )
-                attempt_count = 2
-                first_review = review_stage2_output(
-                    planning_brief=package["planning_brief"], final_plan_text=final_text
-                )
-                first_review = reviewed_report(first_review)
-                repair_source_report = original_review_report
-                if missing_conditioning:
-                    conditioning_repair_audit = {
-                        "status": "model_repair_attempted",
-                        "source": "authoritative_selected_assignments",
-                        "applied": [],
-                        "unresolved": [],
-                        "model_call_used": True,
-                        "attempted_text": final_text,
-                    }
-            elif missing_conditioning and not deterministic_complete:
+            if missing_conditioning and not deterministic_complete:
                 conditioning_repair_audit = {
                     "status": "unresolved",
                     "source": "authoritative_selected_assignments",
@@ -1418,11 +1379,7 @@ class OpenAIStage2Automator:
                     "unresolved": list((deterministic_repair or {}).get("unresolved") or []),
                     "model_call_used": False,
                 }
-        plan_text_cost = (
-            _merge_stage2_costs(first_pass_cost, final_cost)
-            if attempt_count == 2
-            else first_pass_cost
-        )
+        plan_text_cost = first_pass_cost
 
         conditioning_integrity_findings: list[dict[str, Any]] = []
         if conditioning_repair_audit is not None and final_text != first_pass_text:
@@ -1445,7 +1402,7 @@ class OpenAIStage2Automator:
         if conditioning_repair_audit is not None:
             first_review["validator_report"]["conditioning_render_repair"] = conditioning_repair_audit
 
-        if final_cost.get("stage2_incomplete_response"):
+        if plan_text_cost.get("stage2_incomplete_response"):
             report = dict(first_review["validator_report"])
             report["errors"] = [
                 *(report.get("errors") or []),
@@ -1471,7 +1428,7 @@ class OpenAIStage2Automator:
         )
         incomplete_conditioning_repair = bool(
             conditioning_repair_audit
-            and final_cost.get("stage2_incomplete_response")
+            and plan_text_cost.get("stage2_incomplete_response")
         )
         conditioning_repair_integrity_failure = bool(conditioning_integrity_findings)
         if requires_planner_regeneration:
@@ -1518,8 +1475,7 @@ class OpenAIStage2Automator:
             draft_plan_text=draft_plan_text,
             final_plan_text=final_text,
             validator_report=first_review["validator_report"],
-            attempt_count=attempt_count,
-            retry_text=retry_text,
+            attempt_count=1,
             stage2_cost=plan_text_cost,
         )
         if first_review["validator_report"].get("requires_planner_regeneration"):
