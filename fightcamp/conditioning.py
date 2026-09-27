@@ -4516,8 +4516,6 @@ def generate_conditioning_block(flags):
                     priority = 99
                     if name == preferred_names[0]:
                         priority = 0
-                    elif name == preferred_names[1]:
-                        priority = 1
                     elif "bike" in name.lower():
                         priority = 2
                     elif "shadowbox" in name.lower() or "shadow boxing" in name.lower():
