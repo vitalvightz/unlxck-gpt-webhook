@@ -939,6 +939,26 @@ def _normalize_mindset(value: Any) -> dict[str, Any]:
     return out
 
 
+def _normalize_fractional_intent(effort: dict[str, Any]) -> None:
+    """Rewrite an intent written as a fraction of full effort into words.
+
+    The model writes ``{"method": "intent", "value": 1}`` meaning full intent;
+    the card reads a bare number as a 10-point scale, so a power block showed
+    "Intent 1/10". A value in (0, 1] becomes "max" (1) or a percentage.
+    """
+    raw = effort.get("value")
+    if isinstance(raw, bool):
+        return
+    if isinstance(raw, str):
+        if not re.fullmatch(r"\s*\d+(?:\.\d+)?\s*", raw):
+            return
+        raw = float(raw)
+    if not isinstance(raw, (int, float)) or not 0 < raw <= 1:
+        return
+    effort["value"] = "max" if raw == 1 else f"{round(raw * 100)}%"
+    effort["scale"] = None
+
+
 def _normalize_effort(value: Any) -> dict[str, Any] | None:
     """Effort as an ``EffortPrescription`` dict; tolerate a bare "RPE 7-8" string.
 
@@ -957,6 +977,8 @@ def _normalize_effort(value: Any) -> dict[str, Any] | None:
             out["value"] = number
         if out.get("scale") is not None:
             out["scale"] = _coerce_str(out.get("scale")).strip() or None
+        if out["method"] == "intent":
+            _normalize_fractional_intent(out)
         return out
     if isinstance(value, bool):
         return None
@@ -3064,7 +3086,10 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   `load` to null and keep the qualitative band cue in the block text.
 - `effort` is separate from load: {{"method":"RPE","value":7,"scale":"1-10"}}.
   Allowed methods are RPE, RIR, intent, velocity, heart_rate_zone, pace, and
-  max_effort_percent; use the method the source actually states. `intensity` is
+  max_effort_percent; use the method the source actually states. An `intent`
+  value is a word, never a bare number: "max" for full-intent power, speed,
+  jump and throw work, or a short phrase such as "max speed" or "explosive"
+  with scale null (never {{"method":"intent","value":1}}). `intensity` is
   a qualitative cue, not a substitute for a measured `load` or `effort`. `tempo`, when
   stated, uses eccentric/pause_bottom/concentric/pause_top phases as seconds or
   an explicit cue such as "X", never a number chain in `reps` or `duration`.

@@ -795,6 +795,26 @@ def test_normalize_block_red_flags_and_string_effort():
     assert second["effort"] is None
 
 
+def test_normalize_intent_one_reads_as_full_intent_not_one_of_ten():
+    """The live bug: power blocks came back as intent 1 and showed "Intent 1/10"."""
+    blocks = [
+        {"display_name": "Med-Ball Rotational Slam", "effort": {"method": "intent", "value": 1, "scale": "1-10"}},
+        {"display_name": "Barbell Thruster", "effort": {"method": "intent", "value": "1"}},
+        {"display_name": "Bound", "effort": {"method": "intent", "value": 0.8}},
+        {"display_name": "Sprint", "effort": {"method": "intent", "value": 9, "scale": "1-10"}},
+        {"display_name": "Squat", "effort": {"method": "RPE", "value": 1}},
+    ]
+    day = _normalize_day({"sessions": [{"blocks": blocks}]})
+    efforts = [block["effort"] for block in day["sessions"][0]["blocks"]]
+    assert efforts == [
+        {"method": "intent", "value": "max", "scale": None},
+        {"method": "intent", "value": "max", "scale": None},
+        {"method": "intent", "value": "80%", "scale": None},
+        {"method": "intent", "value": 9, "scale": "1-10"},
+        {"method": "RPE", "value": 1},
+    ]
+
+
 def test_normalize_recovers_invalid_fallback_card_shape():
     """The live failure: string red-flag thresholds + a null block list."""
     plan = _live_malformed_plan()

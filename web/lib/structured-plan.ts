@@ -348,10 +348,15 @@ function effortWithMethod(methodKey: string, method: string, rawValue: string): 
       return `RIR ${value}`;
     case "intent":
       if (BARE_INTENT_LEVELS.has(lower)) return `${capitalizeFirst(lower)} intent`;
-      // A bare number has no unit on its own: up to 10 reads as a 10-point
-      // scale, anything larger as a percentage of full intent.
+      // A bare number has no unit on its own. Up to 1 is a fraction of full
+      // intent (the model writes 1 for "full", never meaning 1/10 on a power
+      // block), up to 10 a 10-point scale, anything larger a percentage.
       if (/^\d+(?:\.\d+)?$/.test(value)) {
-        return Number(value) <= 10 ? `Intent ${value}/10` : `${value}% intent`;
+        const intent = Number(value);
+        if (intent > 0 && intent <= 1) {
+          return intent === 1 ? "Max intent" : `${Math.round(intent * 100)}% intent`;
+        }
+        return intent <= 10 ? `Intent ${value}/10` : `${value}% intent`;
       }
       if (/^\d+(?:\.\d+)?\s*%$/.test(value)) return `${value} intent`;
       return capitalizeFirst(value);
