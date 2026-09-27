@@ -2515,12 +2515,12 @@ function effortSession(effort: unknown): StructuredSession {
 test("a non-RPE effort method is glossed as itself, never as the RPE scale", () => {
   // The blocker: EffortMethod also covers RIR, intent, velocity, heart_rate_zone,
   // pace and max_effort_percent. A fixed RPE tooltip would have told an athlete
-  // that "intent max" is a 10-out-of-10 perceived-exertion score.
+  // that "Max intent" is a 10-out-of-10 perceived-exertion score.
   const html = renderToStaticMarkup(
     <SessionCard session={effortSession({ method: "intent", value: "max" })} defaultOpenBlocks />,
   );
 
-  assert.equal(html.includes("intent max"), true);
+  assert.equal(html.includes("Max intent"), true);
   assert.deepEqual(glossaryTerms(html), ["Intent"]);
   assert.equal(html.includes("hard but controlled"), false);
 });
@@ -2720,4 +2720,15 @@ test("the week overview explains the selected week's camp phase", () => {
 
   assert.equal(html.includes("cm-week-phase"), true);
   assert.equal(glossaryTerms(html).includes("SPP"), true);
+});
+
+test("the effort stat reads in plain words, never as a raw enum token", () => {
+  // Reported on the plan card: "intent max_speed" under Effort.
+  const html = renderToStaticMarkup(
+    <SessionCard session={effortSession({ method: "intent", value: "max_speed" })} defaultOpenBlocks />,
+  );
+  assert.equal(html.includes("Max speed"), true);
+  assert.equal(html.includes("max_speed"), false);
+  assert.equal(html.includes("intent max"), false);
+  assert.deepEqual(glossaryTerms(html), ["Intent"]);
 });

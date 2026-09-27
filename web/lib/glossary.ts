@@ -24,7 +24,7 @@ export type GlossaryEntry = {
  * The effort keys are the EffortMethod enum values from
  * api/structured_plan_models.py, because a block's effort card is glossed from
  * block.effort.method, never from the word "Effort". A block prescribing
- * "intent max" or "RIR 2" must not be explained with the RPE scale. There is
+ * "Max intent" or "RIR 2" must not be explained with the RPE scale. There is
  * deliberately NO "effort" entry: the label alone does not say which scale is in
  * play, so an unrecognised method renders no tooltip at all.
  *

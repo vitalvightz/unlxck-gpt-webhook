@@ -136,7 +136,8 @@ export function formatMeasured(measured: MeasuredValue | null | undefined): stri
   ) {
     return null;
   }
-  const unit = cleanText(measured.unit);
+  // The unit is free text from the model; "sec_per_side" must read as words.
+  const unit = cleanText(measured.unit)?.replace(/_+/g, " ").replace(/\s+/g, " ").trim();
   return unit ? `${measured.value} ${unit}` : `${measured.value}`;
 }
 
@@ -257,7 +258,108 @@ export function selectBlockMetric(block: StructuredBlock | null | undefined): Bl
   return metrics;
 }
 
-/** Effort like "RPE 7" / "intent: max" / null. */
+// Athlete-facing names for an effort method printed without a value.
+const EFFORT_METHOD_LABELS: Readonly<Record<string, string>> = {
+  rpe: "RPE",
+  rir: "RIR",
+  intent: "Intent",
+  velocity: "Velocity",
+  heart_rate_zone: "Heart rate zone",
+  pace: "Pace",
+  max_effort_percent: "Max effort %",
+};
+
+// Intent values that are a bare intensity word read as "Max intent"; anything
+// more descriptive ("max_speed", "explosive") already says how to move.
+const BARE_INTENT_LEVELS = new Set([
+  "max",
+  "maximal",
+  "maximum",
+  "full",
+  "high",
+  "moderate",
+  "medium",
+  "low",
+  "submaximal",
+  "sub-maximal",
+]);
+
+const NUMERIC_OR_RANGE_RE = /^\d+(?:\.\d+)?(?:\s*[-–—]\s*\d+(?:\.\d+)?)?$/;
+
+/** Machine spellings ("max_speed", "zone_2") as plain words ("max speed"). An
+ * all-caps token ("MAX_SPEED") is lowered so the card does not shout. */
+function humanizeEffortToken(text: string): string {
+  const spaced = text.replace(/_+/g, " ").replace(/\s+/g, " ").trim();
+  return /[a-z]/.test(spaced) || !/[A-Z]{2}/.test(spaced) ? spaced : spaced.toLowerCase();
+}
+
+/** "RPE 7" / "7 RPE" as a value under method RPE is just "7": the method is
+ * printed once by the caller. */
+function stripRepeatedMethod(value: string, method: string): string {
+  const escaped = method.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return value
+    .replace(new RegExp(`^${escaped}\\s*:?\\s*`, "i"), "")
+    .replace(new RegExp(`\\s*${escaped}$`, "i"), "")
+    .trim();
+}
+
+/** "2", "z2", "zone2", "Zone 2", "z2 z3" -> the zone number(s), else null. */
+function heartRateZoneNumbers(value: string): string | null {
+  if (NUMERIC_OR_RANGE_RE.test(value)) return value;
+  const zones = value.match(/^(?:z|zone)\s*(\d)(?:\s*(?:[-–—]|to|\s)\s*(?:z|zone)?\s*(\d))?$/i);
+  if (!zones) return null;
+  return zones[2] ? `${zones[1]}-${zones[2]}` : zones[1];
+}
+
+function effortWithMethod(methodKey: string, method: string, rawValue: string): string {
+  const value =
+    methodKey in EFFORT_METHOD_LABELS
+      ? stripRepeatedMethod(rawValue, methodKey === "heart_rate_zone" ? "heart rate zone" : methodKey) ||
+        rawValue
+      : rawValue;
+  const lower = value.toLowerCase();
+  switch (methodKey) {
+    case "rpe":
+      return `RPE ${value}`;
+    case "rir":
+      return `RIR ${value}`;
+    case "intent":
+      if (BARE_INTENT_LEVELS.has(lower)) return `${capitalizeFirst(lower)} intent`;
+      // A bare number has no unit on its own: up to 10 reads as a 10-point
+      // scale, anything larger as a percentage of full intent.
+      if (/^\d+(?:\.\d+)?$/.test(value)) {
+        return Number(value) <= 10 ? `Intent ${value}/10` : `${value}% intent`;
+      }
+      if (/^\d+(?:\.\d+)?\s*%$/.test(value)) return `${value} intent`;
+      return capitalizeFirst(value);
+    case "velocity":
+      if (NUMERIC_OR_RANGE_RE.test(value)) return `${value} m/s`;
+      return capitalizeFirst(value.replace(/(\d)\s*m\/s\b/i, "$1 m/s"));
+    case "heart_rate_zone": {
+      const zone = heartRateZoneNumbers(value);
+      if (zone) return `Zone ${zone}`;
+      return capitalizeFirst(/\bzone\b/i.test(value) ? value : `${value} zone`);
+    }
+    case "pace":
+      if (/\bpace\b/i.test(value)) return capitalizeFirst(value);
+      return /\d/.test(value) ? `Pace ${value}` : `${capitalizeFirst(value)} pace`;
+    case "max_effort_percent":
+      if (/^\d+(?:\.\d+)?$/.test(value) && Number(value) > 0 && Number(value) <= 1) {
+        // A fraction (0.8) is 80%, never "0.8% of max".
+        return `${Math.round(Number(value) * 100)}% of max`;
+      }
+      if (NUMERIC_OR_RANGE_RE.test(value)) return `${value}% of max`;
+      return /\bmax/i.test(value) ? value : `${value} of max`;
+    default:
+      return capitalizeFirst(`${humanizeEffortToken(method)} ${value}`);
+  }
+}
+
+/**
+ * Athlete-facing effort: "RPE 7", "Max intent", "Max speed", "Zone 2",
+ * "80% of max" or null. The payload's method is an enum and its value is often
+ * a machine token from the model ("max_speed"), so neither is printed raw.
+ */
 export function formatEffort(block: StructuredBlock | null | undefined): string | null {
   const effort = block?.effort;
   if (!isObject(effort)) {
@@ -273,11 +375,16 @@ export function formatEffort(block: StructuredBlock | null | undefined): string 
         ? String(effort.value)
         : null
       : cleanText(effort.value as string);
-  const value = rawValue !== null && isNonFiniteNumericToken(rawValue) ? null : rawValue;
+  const cleanValue = rawValue !== null && isNonFiniteNumericToken(rawValue) ? null : rawValue;
+  const value = cleanValue ? humanizeEffortToken(cleanValue) || null : null;
+  const methodKey = method ? method.toLowerCase() : "";
   if (method && value) {
-    return `${method} ${value}`;
+    return effortWithMethod(methodKey, method, value);
   }
-  return method || value || null;
+  if (method) {
+    return EFFORT_METHOD_LABELS[methodKey] ?? capitalizeFirst(humanizeEffortToken(method));
+  }
+  return value ? capitalizeFirst(value) : null;
 }
 
 // --- safe structural selectors (never throw on partial data) ----------------

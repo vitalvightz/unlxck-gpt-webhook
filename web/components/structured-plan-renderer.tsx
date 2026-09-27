@@ -351,7 +351,7 @@ export function BlockCard({
   const effort = sourceOverrides.effort || formatEffort(block);
   // The effort card is glossed from the METHOD, not from the word "Effort":
   // EffortMethod covers RPE, RIR, intent, velocity, heart_rate_zone, pace and
-  // max_effort_percent, so a fixed RPE definition would mis-explain "intent max"
+  // max_effort_percent, so a fixed RPE definition would mis-explain "Max intent"
   // as a 1-10 perceived-exertion score. An unrecognised or missing method falls
   // through to no tooltip rather than to a guess.
   const effortMethod = cleanText(block.effort?.method);
@@ -446,7 +446,7 @@ export function BlockCard({
             <span className="sp-stat">
               <span className="sp-stat-head">
                 <span className="sp-stat-label">Effort</span>
-                {/* The value reads "RPE 1.5" / "intent max" with no scale
+                {/* The value reads "RPE 1.5" / "Max speed" with no scale
                     attached, so the gloss explains whichever scale is in play. */}
                 <GlossaryTooltip term={effortMethod} />
               </span>
