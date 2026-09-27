@@ -1172,6 +1172,12 @@ def _normalize_block(value: Any) -> dict[str, Any]:
         out["red_flags"] = [_normalize_red_flag(rule) for rule in _as_dict_list(out.get("red_flags"))]
     if "effort" in out:
         out["effort"] = _normalize_effort(out.get("effort"))
+    # Accessory work is never dosed by intent: a block prescribed "at max
+    # speed" is a jump, bound or throw the model filed under the enum's
+    # default bucket, so the card would tag a power drill "Accessory".
+    effort = out.get("effort")
+    if out["block_type"] == "accessory" and isinstance(effort, dict) and effort.get("method") == "intent":
+        out["block_type"] = "plyometric_power"
 
     progression_rule = ""
     embedded_stops: list[str] = []
@@ -3158,6 +3164,11 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
     `Purpose` / `Progress` line below it is that block's own detail. Never emit
     one block per step, and never push the drill name or its duration up into
     the session objective — the objective is the day's `Why:` line.
+  * Label a block by what the athlete does, not by its slot: jumps, bounds,
+    hops, throws, slams and any drill done "at max speed" / with max intent are
+    "plyometric_power" (sprints and reaction drills "speed"). "accessory" is
+    only for trunk, prehab, isolation and other support work, which is dosed by
+    RPE or RIR, never by intent.
   * Tactical watch, cue-card, film-review, and visualization work is tactical /
     mindset support, NOT physical conditioning. Use session_type "skill" or
     "recovery" as appropriate and block_type "skill" or "mindset"; do not label
