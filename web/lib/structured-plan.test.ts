@@ -1266,8 +1266,54 @@ test("formatMeasured and formatEffort reject non-finite numbers", () => {
   assert.equal(formatEffort({ effort: { method: "RPE", value: Number.NaN } } as never), "RPE");
   assert.equal(formatEffort({ effort: { method: "RPE", value: Number.POSITIVE_INFINITY } } as never), "RPE");
   assert.equal(formatEffort({ effort: { method: "RPE", value: 7 } } as never), "RPE 7");
-  // A non-numeric effort value still passes through.
-  assert.equal(formatEffort({ effort: { method: "Intent", value: "max" } } as never), "Intent max");
+  // A non-numeric effort value still passes through, in plain words.
+  assert.equal(formatEffort({ effort: { method: "Intent", value: "max" } } as never), "Max intent");
+});
+
+test("formatEffort never prints a raw enum or machine token", () => {
+  const effort = (method: unknown, value?: unknown) =>
+    formatEffort({ effort: { method, value } } as never);
+  // The reported bug: the card read "intent max_speed".
+  assert.equal(effort("intent", "max_speed"), "Max speed");
+  assert.equal(effort("intent", "max"), "Max intent");
+  assert.equal(effort("intent", "explosive"), "Explosive");
+  assert.equal(effort("RIR", 2), "RIR 2");
+  assert.equal(effort("velocity", 0.8), "0.8 m/s");
+  assert.equal(effort("heart_rate_zone", 2), "Zone 2");
+  assert.equal(effort("heart_rate_zone", "2-3"), "Zone 2-3");
+  assert.equal(effort("heart_rate_zone", "zone_2"), "Zone 2");
+  assert.equal(effort("pace", "conversational"), "Conversational pace");
+  assert.equal(effort("pace", "5:00/km"), "Pace 5:00/km");
+  assert.equal(effort("max_effort_percent", 80), "80% of max");
+  // A method with no usable value names the scale, not the enum.
+  assert.equal(effort("heart_rate_zone"), "Heart rate zone");
+  assert.equal(effort("max_effort_percent"), "Max effort %");
+  // Unknown methods and bare values are de-underscored too.
+  assert.equal(effort("bar_speed", "fast"), "Bar speed fast");
+  assert.equal(effort("", "max_speed"), "Max speed");
+  // Messy model spellings of each scale.
+  assert.equal(effort("intent", "MAX_SPEED"), "Max speed");
+  assert.equal(effort("intent", 10), "Intent 10/10");
+  assert.equal(effort("intent", "100%"), "100% intent");
+  assert.equal(effort("RPE", "RPE 7"), "RPE 7");
+  assert.equal(effort("RPE", "rpe_7"), "RPE 7");
+  assert.equal(effort("RIR", "2 RIR"), "RIR 2");
+  assert.equal(effort("velocity", "0.8m/s"), "0.8 m/s");
+  assert.equal(effort("heart_rate_zone", "Z2"), "Zone 2");
+  assert.equal(effort("heart_rate_zone", "zone2"), "Zone 2");
+  assert.equal(effort("heart_rate_zone", "z2_z3"), "Zone 2-3");
+  assert.equal(effort("heart_rate_zone", "easy_aerobic"), "Easy aerobic zone");
+  assert.equal(effort("max_effort_percent", 0.8), "80% of max");
+  assert.equal(effort("max_effort_percent", "80-85%"), "80-85% of max");
+  assert.equal(effort("intent", "_"), "Intent");
+  assert.equal(formatMeasured({ value: 30, unit: "sec_per_side" } as never), "30 sec per side");
+  for (const [method, value] of [
+    ["intent", "max_speed"],
+    ["heart_rate_zone", 2],
+    ["max_effort_percent", 80],
+  ]) {
+    assert.equal(/_/.test(effort(method, value) ?? ""), false);
+  }
 });
 
 test("macro ranges reject NaN / Infinity / negative values", () => {
