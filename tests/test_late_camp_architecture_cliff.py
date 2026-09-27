@@ -38,7 +38,14 @@ from fightcamp.plan_pipeline_runtime import (
 )
 from fightcamp.stage2_payload_late_fight import _is_app_owned_visible_role
 
-logging.disable(logging.CRITICAL)
+@pytest.fixture(scope="module", autouse=True)
+def _quiet_logging():
+    # Scoped to this module: a module-level logging.disable() runs at collection
+    # and silences logging (and every caplog assertion) for the whole session.
+    logging.disable(logging.CRITICAL)
+    yield
+    logging.disable(logging.NOTSET)
+
 
 # A fixed Friday fight anchors the production weekday geometry.
 FIGHT_FRIDAY = _dt.date(2026, 1, 30)

@@ -222,6 +222,7 @@ async def _exercise_tick(monkeypatch) -> tuple[list[str], _RecoveryStore]:
         job_id: str,
         store: Any,
         active_tasks: set[str],
+        detached_tasks: set[asyncio.Task[None]] | None = None,
     ) -> None:
         claimed.append(job_id)
         active_tasks.discard(job_id)
