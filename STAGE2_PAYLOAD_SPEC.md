@@ -196,12 +196,15 @@ four codes:
 
 | Code | What happens |
 |---|---|
-| `missing_selected_conditioning_assignment` | Deterministic `reconcile_selected_conditioning_assignments` first; a model `render_repair` call only if that cannot fix it |
+| `missing_selected_conditioning_assignment` | Deterministic `reconcile_selected_conditioning_assignments`; if that cannot fix it the plan is held for admin review (`conditioning_render_hold`) |
 | `selected_conditioning_effective_prescription_mismatch` | Same |
 | `late_camp_effective_prescription_exceeded` | Currently no repair fires — see the caveat below |
 | `goal_preservation_render_mismatch` | Currently no repair fires — see the caveat below |
 
-There is exactly one repair round. There is no loop.
+`finalize` never sends `repair_prompt` to the model: Stage 2 makes one plan-text
+call. The former `render_repair` call embedded the whole planning brief, which was
+always over the Stage 2 prompt budget, so it could only fail the build.
+`build_stage2_retry` is still consulted for `requires_planner_regeneration`.
 
 > **Known gap.** `build_stage2_retry` early-returns `needs_retry: False` unless
 > `release_decision == "hold"` or there is a conditioning-membership or

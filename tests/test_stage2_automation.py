@@ -250,7 +250,13 @@ def test_conditioning_repair_preserves_goal_failure_and_holds_publication(monkey
     assert report["conditioning_render_repair"]["status"] == "applied"
 
 
-def test_incomplete_conditioning_render_repair_is_held_and_not_retried_again(monkeypatch):
+@pytest.mark.parametrize("reconciliation", ["unresolved", "raises"])
+def test_unresolved_conditioning_render_is_held_without_a_second_model_call(
+    monkeypatch, reconciliation
+):
+    # Production (job b2106af0): the render-repair prompt carried the whole
+    # planning brief, came to 1,257,368 chars against the 400,000 budget, and
+    # failed the build. An unrepaired render must be held, never re-rendered.
     finding = {
         "code": "missing_selected_conditioning_assignment",
         "scheduled_d_day": 16,
@@ -267,34 +273,37 @@ def test_incomplete_conditioning_render_repair_is_held_and_not_retried_again(mon
         },
     )
     monkeypatch.setattr(stage2_module, "validate_goal_preservation", lambda _: [])
-
-    def _failed_reconciliation(**_: object) -> dict:
-        raise RuntimeError("synthetic reconciliation failure")
-
     monkeypatch.setattr(
         stage2_module,
-        "reconcile_selected_conditioning_assignments",
-        _failed_reconciliation,
+        "build_stage2_retry",
+        lambda **_: {"needs_retry": True, "repair_prompt": "x" * 1_257_368},
     )
-    client = FakeClient([
-        _response("D-16 — Conditioning\n- Zone 2 Run: 20 min at RPE 4"),
-        _incomplete_response(),
-    ])
+
+    first_pass = "D-16 — Conditioning\n- Zone 2 Run: 20 min at RPE 4"
+
+    def _reconcile(**_: object) -> dict:
+        if reconciliation == "raises":
+            raise RuntimeError("synthetic reconciliation failure")
+        return {"text": first_pass, "applied": [], "unresolved": []}
+
+    monkeypatch.setattr(stage2_module, "reconcile_selected_conditioning_assignments", _reconcile)
+    client = FakeClient([_response(first_pass)])
 
     result = asyncio.run(OpenAIStage2Automator(client=client, model="test").finalize(
         stage1_result=_stage1_result()
     ))
 
-    assert len(client.responses.calls) == 2
-    assert result["stage2_attempt_count"] == 2
+    assert len(client.responses.calls) == 1
+    assert result["stage2_attempt_count"] == 1
+    assert result["stage2_retry_text"] == ""
     assert result["status"] == "review_required"
     assert result["plan_text"] == ""
-    assert result["final_plan_text"] == "# Fight Camp Plan\n\nWeek 1 of a cut-off pl"
-    assert "D-16 — Conditioning" in result["stage2_retry_text"]
+    assert result["final_plan_text"] == first_pass
     report = result["stage2_validator_report"]
+    assert report["release_decision"] == "hold"
     assert report["conditioning_render_hold"] is True
-    assert report["repair_source_report"]
-    assert report["conditioning_render_repair"]["attempted_text"] == result["final_plan_text"]
+    assert report["conditioning_render_repair"]["status"] == "unresolved"
+    assert report["conditioning_render_repair"]["model_call_used"] is False
 
 
 def test_first_pass_pass_returns_ready_with_one_provider_call(

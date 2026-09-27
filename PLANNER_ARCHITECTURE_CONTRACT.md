@@ -605,7 +605,10 @@ behaviour change to resolve.
    `authority_build_stage2_retry` wrapper immediately forces `needs_retry: False` anyway.
    So for `late_camp_effective_prescription_exceeded` or `goal_preservation_render_mismatch`
    on their own, no repair prompt is ever produced. Only the two conditioning codes
-   actually reach a second model call.
+   actually reached a second model call, and that `render_repair` call has since been
+   removed: its prompt embedded the whole planning brief, was always over the Stage 2
+   prompt budget and could only fail the build. An unrepaired conditioning render is
+   now held for admin review instead.
 
    Step 11 correction, from re-deriving this in code rather than from this note: the
    `effective_dose_repair` attempt label in `api/stage2_automation.finalize` was indeed
