@@ -125,6 +125,32 @@ def test_generate_conditioning_block_scope_audit_all_phases_no_name_or_unbound()
         assert len(result) == 6
 
 
+def test_taper_aerobic_maintenance_insert_survives_non_preferred_candidates():
+    # D-13 taper with bike access reaches the aerobic-maintenance insert with
+    # candidates other than the one preferred rower drill; ranking them used to
+    # index a preferred-name slot that no longer exists and raise IndexError.
+    flags = {
+        "phase": "TAPER",
+        "fatigue": "low",
+        "sport": "boxing",
+        "fight_format": "boxing",
+        "style_tactical": ["counter_striker"],
+        "style_technical": ["boxing"],
+        "equipment": ["bodyweight", "bands", "medicine_ball", "heavy_bag", "pads",
+                      "assault_bike", "stationary_bike", "battle_ropes"],
+        "key_goals": ["conditioning", "power"],
+        "weaknesses": [],
+        "injuries": [],
+        "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+        "training_frequency": 5,
+        "days_available": 5,
+        "days_until_fight": 13,
+    }
+    result = conditioning.generate_conditioning_block(flags)
+    assert isinstance(result, tuple)
+    assert len(result) == 6
+
+
 def test_generate_conditioning_block_knee_instability_emits_base_bank_progress():
     captured: list[str] = []
 

@@ -58,7 +58,14 @@ from fightcamp.stage2_payload_late_fight import (
     _uses_late_fight_stage2_payload,
 )
 
-logging.disable(logging.CRITICAL)
+@pytest.fixture(scope="module", autouse=True)
+def _quiet_logging():
+    # Scoped to this module: a module-level logging.disable() runs at collection
+    # and silences logging (and every caplog assertion) for the whole session.
+    logging.disable(logging.CRITICAL)
+    yield
+    logging.disable(logging.NOTSET)
+
 
 FIGHT_FRIDAY = _dt.date(2026, 1, 30)
 assert FIGHT_FRIDAY.weekday() == 4, "fixture fight date must be a Friday"

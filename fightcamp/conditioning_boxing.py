@@ -382,7 +382,21 @@ def _alactic_maintenance_fallback(phase: str) -> dict:
     }
 
 
-def _suppress_alactic_maintenance(*, fatigue: str, injuries: list[str]) -> bool:
+def _injury_risk_text(injury: str | dict) -> str:
+    # Parsed injuries arrive as dicts; read the fields that name the injury so
+    # "region: hamstring, type: tear" still reads as "hamstring tear".
+    if isinstance(injury, dict):
+        parts = (
+            injury.get("region"),
+            injury.get("injury_type") or injury.get("type"),
+            injury.get("triage_category"),
+            injury.get("original_phrase") or injury.get("raw"),
+        )
+        return " ".join(str(part) for part in parts if part).lower()
+    return str(injury or "").lower()
+
+
+def _suppress_alactic_maintenance(*, fatigue: str, injuries: list[str | dict]) -> bool:
     if (fatigue or "").lower() == "high":
         return True
     risk_terms = {
@@ -393,7 +407,7 @@ def _suppress_alactic_maintenance(*, fatigue: str, injuries: list[str]) -> bool:
         "achilles",
         "calf tear",
     }
-    joined = " ".join(i.lower() for i in injuries)
+    joined = " ".join(_injury_risk_text(i) for i in injuries)
     return any(term in joined for term in risk_terms)
 
 

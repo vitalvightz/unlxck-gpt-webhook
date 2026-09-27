@@ -1,5 +1,6 @@
 import importlib
 import logging
+from contextlib import contextmanager
 
 from fightcamp import build_block
 
@@ -56,23 +57,36 @@ def test_build_html_document_sanitizes_raw_html_fragments():
     assert "<p>Selection</p>" in rendered
 
 
+@contextmanager
+def _freshly_reloaded(*module_names: str):
+    # A reload re-executes into the same module dict, dropping anything patched
+    # onto it at package import (the late-fight dosage policy wraps conditioning).
+    # Restore each namespace afterwards so later tests see the installed modules.
+    modules = [importlib.import_module(name) for name in module_names]
+    saved = [dict(vars(module)) for module in modules]
+    try:
+        yield [importlib.reload(module) for module in modules]
+    finally:
+        for module, namespace in zip(modules, saved):
+            vars(module).update(namespace)
+
+
 def test_plan_banks_start_lazy_and_prime_on_demand():
-    conditioning_mod = importlib.reload(importlib.import_module("fightcamp.conditioning"))
-    strength_mod = importlib.reload(importlib.import_module("fightcamp.strength"))
-    rehab_mod = importlib.reload(importlib.import_module("fightcamp.rehab_protocols"))
+    with _freshly_reloaded(
+        "fightcamp.conditioning", "fightcamp.strength", "fightcamp.rehab_protocols"
+    ) as (conditioning_mod, strength_mod, rehab_mod):
+        assert conditioning_mod._conditioning_bank_cache is None
+        assert conditioning_mod._style_conditioning_bank_cache is None
+        assert conditioning_mod._format_weights_cache is None
+        assert strength_mod._exercise_bank_cache is None
+        assert rehab_mod._REHAB_BANK_CACHE is None
 
-    assert conditioning_mod._conditioning_bank_cache is None
-    assert conditioning_mod._style_conditioning_bank_cache is None
-    assert conditioning_mod._format_weights_cache is None
-    assert strength_mod._exercise_bank_cache is None
-    assert rehab_mod._REHAB_BANK_CACHE is None
+        conditioning_mod.prime_conditioning_banks()
+        strength_mod.prime_strength_banks()
+        rehab_mod.prime_rehab_bank()
 
-    conditioning_mod.prime_conditioning_banks()
-    strength_mod.prime_strength_banks()
-    rehab_mod.prime_rehab_bank()
-
-    assert conditioning_mod._conditioning_bank_cache is not None
-    assert conditioning_mod._style_conditioning_bank_cache is not None
-    assert conditioning_mod._format_weights_cache is not None
-    assert strength_mod._exercise_bank_cache is not None
-    assert rehab_mod._REHAB_BANK_CACHE is not None
+        assert conditioning_mod._conditioning_bank_cache is not None
+        assert conditioning_mod._style_conditioning_bank_cache is not None
+        assert conditioning_mod._format_weights_cache is not None
+        assert strength_mod._exercise_bank_cache is not None
+        assert rehab_mod._REHAB_BANK_CACHE is not None

@@ -660,3 +660,27 @@ class TestSuppressAlacticMaintenance:
         assert _suppress_alactic_maintenance(
             fatigue="low", injuries=["shoulder soreness", "achilles pain"]
         )
+
+    def test_parsed_injury_dicts_do_not_crash(self):
+        # Parsed injuries reach this helper as dicts; it used to call .lower()
+        # on each item and crash conditioning generation.
+        assert not _suppress_alactic_maintenance(
+            fatigue="low",
+            injuries=[{"region": "knee", "severity": "low", "type": "instability"}],
+        )
+
+    def test_parsed_injury_dict_fields_trigger(self):
+        assert _suppress_alactic_maintenance(
+            fatigue="low", injuries=[{"region": "hamstring", "injury_type": "tear"}]
+        )
+        assert _suppress_alactic_maintenance(
+            fatigue="low", injuries=[{"region": "head", "triage_category": "concussion"}]
+        )
+        assert _suppress_alactic_maintenance(
+            fatigue="low", injuries=[{"region": "ankle", "original_phrase": "sore Achilles"}]
+        )
+
+    def test_mixed_string_and_dict_injuries(self):
+        assert _suppress_alactic_maintenance(
+            fatigue="low", injuries=["shoulder soreness", {"region": "calf", "type": "tear"}]
+        )
