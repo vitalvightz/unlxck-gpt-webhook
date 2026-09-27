@@ -11,6 +11,16 @@ def _phase_ratios(gpp: float, spp: float, taper: float) -> dict[str, float]:
     return {GPP: gpp, SPP: spp, TAPER: taper}
 
 
+# A fight camp is at most this many seven-day weeks. A fight further out is
+# planned as its final MAX_CAMP_WEEKS weeks, anchored on fight day; the lead-in
+# before that is not part of this camp. Spreading a longer countdown across the
+# capped block count instead stretched every planner "week" (26 weeks out gave
+# 11-12 day weeks) and, for a far-future date, made Stage 1 fill thousands of
+# days per week until it timed out.
+MAX_CAMP_WEEKS = 16
+MAX_CAMP_DAYS = MAX_CAMP_WEEKS * 7
+
+
 def _effective_phase_block_count(total_days: int) -> int:
     # A 7-to-13 day camp needs two phase blocks so the window can carry sharpening
     # work AND a taper. At exactly 7 days ``round(7 / 7)`` gives a single block,
@@ -19,7 +29,7 @@ def _effective_phase_block_count(total_days: int) -> int:
     # D-8. D-7 also falls through both existing taper guards: the ultra-short
     # override only covers ``days < 7`` and the taper guarantee requires
     # ``camp_length >= 2``.
-    base = max(1, min(16, round(total_days / 7)))
+    base = max(1, min(MAX_CAMP_WEEKS, round(total_days / 7)))
     if 7 <= total_days <= 13:
         return 2
     return base
@@ -199,6 +209,7 @@ def calculate_phase_weeks(
 ) -> dict:
     """Return weeks per phase for a fight camp."""
     total_days = days_until_fight if isinstance(days_until_fight, int) and days_until_fight >= 0 else camp_length * 7
+    total_days = min(total_days, MAX_CAMP_DAYS)
     camp_length = _effective_phase_block_count(total_days)
     closest = min(BASE_PHASE_RATIOS.keys(), key=lambda value: abs((value * 7) - total_days))
     ratios = BASE_PHASE_RATIOS[closest][sport].copy()
