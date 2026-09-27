@@ -815,6 +815,19 @@ def test_normalize_intent_one_reads_as_full_intent_not_one_of_ten():
     ]
 
 
+def test_intent_dosed_accessory_block_is_relabelled_as_power():
+    """The live bug: Lateral Bound-to-Slip, a ballistic drill, was tagged "Accessory"."""
+    blocks = [
+        {"display_name": "Lateral Bound-to-Slip", "block_type": "accessory", "effort": {"method": "intent", "value": "max"}},
+        {"display_name": "Pallof Press", "block_type": "accessory", "effort": {"method": "RPE", "value": 6}},
+        {"display_name": "Dead Bug", "block_type": "accessory"},
+        {"display_name": "Barbell Thruster", "block_type": "strength", "effort": {"method": "intent", "value": 1}},
+    ]
+    day = _normalize_day({"sessions": [{"blocks": blocks}]})
+    types = [block["block_type"] for block in day["sessions"][0]["blocks"]]
+    assert types == ["plyometric_power", "accessory", "accessory", "strength"]
+
+
 def test_normalize_recovers_invalid_fallback_card_shape():
     """The live failure: string red-flag thresholds + a null block list."""
     plan = _live_malformed_plan()
