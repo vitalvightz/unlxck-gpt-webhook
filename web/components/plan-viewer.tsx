@@ -63,6 +63,7 @@ import {
   resolveFiniteWeekNumber,
 } from "@/lib/plan-format";
 import { describeRelativeDay, formatAppDate } from "@/lib/date-format";
+import { contactTimerTarget, contactTitle } from "@/lib/session-timer/contact";
 import {
   buildBlockedInjuryContextSummary,
   buildBlockedWhy,
@@ -2404,7 +2405,16 @@ export function PlanViewer({
 
   const activePlanStateResolved = activePlanId !== undefined;
   const isCurrentActivePlan = activePlanId === plan.plan_id;
-  const nextSessionTitle = nextSessionAction?.title?.trim() || nextSessionAction?.label?.trim() || "Open the next session";
+  // A declared contact day is named by its contact, as on Today, not by the
+  // app session that happens to ride along with it.
+  const nextSessionContact = nextSessionAction?.coach_led_contact
+    ? contactTimerTarget({ today_card: { coach_led_contact: nextSessionAction.coach_led_contact } } as StructuredDay)
+    : null;
+  const nextSessionTitle =
+    (nextSessionContact ? contactTitle(nextSessionContact) : "") ||
+    nextSessionAction?.title?.trim() ||
+    nextSessionAction?.label?.trim() ||
+    "Open the next session";
   const nextSessionRelation = nextSessionAction?.session_relation === "next" ? "Next session" : "Today";
   // The app's authoritative "today" — same source the plan renderer uses for its
   // current-day marker — so the countdown is deterministic across server render,

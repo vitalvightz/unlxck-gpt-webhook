@@ -1278,6 +1278,62 @@ test("normalizes standalone declared light-combat day and session titles", () =>
   assert.equal(html.includes("Keep technical rhythm and timing without adding fatigue."), false);
 });
 
+test("a technical day the athlete declared never reads as converted hard sparring", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "SPP",
+        days: [
+          {
+            date: "2026-06-20",
+            countdown_label: "D-9",
+            day_type: "moderate",
+            today_card: { headline: "Technical sparring" },
+            sessions: [],
+          },
+          {
+            date: "2026-06-21",
+            countdown_label: "D-8",
+            day_type: "moderate",
+            today_card: {
+              headline: "Fight-week freshness",
+              coach_led_contact: "Pad work",
+            },
+            sessions: [
+              {
+                session_id: "s1",
+                session_type: "strength",
+                title: "Fight-week freshness",
+                blocks: [{
+                  block_id: "band-face-pull",
+                  block_type: "strength",
+                  display_name: "Band face pull, light",
+                }],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+
+  // Both days keep the athlete's own wording and the plain light-combat note:
+  // no "hard sparring is reduced" tooltip, no conversion tag or rationale.
+  assert.equal(html.includes("Technical sparring"), true);
+  assert.equal(html.includes("Pad work"), true);
+  assert.equal(countOccurrences(html, "Pads, drills, movement or other lower-intensity combat work."), 2);
+  assert.equal(html.includes("Why this changed"), false);
+  assert.equal(html.includes("hard sparring is reduced"), false);
+  assert.equal(html.includes(">Low load<"), false);
+  assert.equal(html.includes("no hard sparring"), false);
+});
+
 test("surfaces technical contact alongside prescribed app work in the same day card", () => {
   const plan = {
     schema_version: "1.0",
@@ -1467,7 +1523,7 @@ test("marks the current day and keeps the camp overview title compact", () => {
 
   // Countdown + week focus surface via the week strip / overview.
   assert.equal(html.includes("D-28"), true);
-  assert.equal(html.includes(">Week 1</h2>"), true);
+  assert.equal(html.includes("sp-redflags-title\">Week 1<"), true);
   assert.equal(html.includes("Convert strength into speed."), false);
   // The day's readiness_status must never leak the exact train/modify/pull-back
   // call — that stays on Today.
@@ -1541,7 +1597,7 @@ test("compresses the plan: dedupes safety, folds the disclaimer, trims the week 
   // status chips and the week pill).
   assert.equal(html.includes(">Phase</span>"), false);
   // Fight-camp overviews intentionally show only the selected week number.
-  assert.equal(html.includes(">Week 1</h2>"), true);
+  assert.equal(html.includes("sp-redflags-title\">Week 1<"), true);
   assert.equal(count("Build single-leg drive."), 0);
 });
 
@@ -2354,7 +2410,7 @@ test("D-10 countdown plans render taper mini-titles with a compact week overview
 
   assert.equal(countOccurrences(html, 'class="cm-week-pill-phase"'), 2);
   assert.equal(countOccurrences(html, 'title="Taper"'), 2);
-  assert.equal(html.includes(">Week 1</h2>"), true);
+  assert.equal(html.includes("sp-redflags-title\">Week 1<"), true);
   assert.equal(html.includes("Week 1 — Compressed Pre-Fight Week"), false);
 });
 
@@ -2431,9 +2487,9 @@ test("weekStripCenterOffset centres the active card and clamps at the start", ()
   assert.equal(weekStripCenterOffset(300, 0, 80), 0);
 });
 
-// --- jargon glossary "?" affordances ---------------------------------------
+// --- jargon glossary "i" affordances ---------------------------------------
 
-/** The aria-labels of every glossary "?" in a rendered markup string. */
+/** The aria-labels of every glossary "i" in a rendered markup string. */
 function glossaryTerms(html: string): string[] {
   return Array.from(html.matchAll(/aria-label="What ([^"]+) means"/g)).map((match) => match[1]);
 }
@@ -2466,7 +2522,7 @@ test("a non-RPE effort method is glossed as itself, never as the RPE scale", () 
 
   assert.equal(html.includes("intent max"), true);
   assert.deepEqual(glossaryTerms(html), ["Intent"]);
-  assert.equal(html.includes("Rate of Perceived Exertion"), false);
+  assert.equal(html.includes("hard but controlled"), false);
 });
 
 test("every EffortMethod in the schema is glossed with its own definition", () => {
@@ -2491,7 +2547,7 @@ test("every EffortMethod in the schema is glossed with its own definition", () =
 });
 
 test("the compact coach cue stays unglossed, so it cannot borrow an effort definition", () => {
-  // The coaching card deliberately renders no "?" at all; this pins that,
+  // The coaching card deliberately renders no "i" at all; this pins that,
   // because glossing it from the label would explain a mental cue as bar speed.
   const session = {
     session_id: "ses-mindset",
@@ -2525,9 +2581,9 @@ test("an unrecognised effort method shows no tooltip rather than a wrong one", (
   }
 });
 
-test("the effort stat carries a ? that explains the RPE scale", () => {
+test("the effort stat carries an i that explains the RPE scale", () => {
   // The card prints "RPE 1.5" with no scale attached — the number is meaningless
-  // to an athlete who has never met Rate of Perceived Exertion.
+  // to an athlete who has never met the RPE scale.
   const session = {
     session_id: "ses-mobility",
     session_type: "mobility",
@@ -2636,4 +2692,32 @@ test("a cleared region's Prehab summary is glossed with the prehab definition", 
 
   assert.equal(html.includes("Prehab / Mobility"), true);
   assert.equal(glossaryTerms(html).includes("Prehab"), true);
+});
+
+test("the week overview explains the selected week's camp phase", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "SPP",
+        days: [
+          {
+            date: "2026-06-20",
+            countdown_label: "D-20",
+            day_type: "rest",
+            today_card: {},
+            sessions: [],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+
+  assert.equal(html.includes("cm-week-phase"), true);
+  assert.equal(glossaryTerms(html).includes("SPP"), true);
 });

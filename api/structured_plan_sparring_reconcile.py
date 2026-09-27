@@ -471,6 +471,9 @@ def _valid_phase_label(phase: str, fallback: str) -> str:
 
 
 _REST_DAY_TYPES = {"rest", "off", "none", "travel"}
+# A zero-load companion (Breathing Reset, Tactical Focus) makes the converter
+# type the day low/recovery; the hard contact is still the day's real load.
+_HARD_CONTACT_LIFTABLE_DAY_TYPES = _REST_DAY_TYPES | {"low", "recovery"}
 
 
 def _apply_contact_day_type(day: dict[str, Any], contact: _ContactDay) -> bool:
@@ -483,7 +486,9 @@ def _apply_contact_day_type(day: dict[str, Any], contact: _ContactDay) -> bool:
     sees rest. That understated the athlete's hardest day as reduced load on
     Today/Overview and dropped it from week-progress and streak counts.
 
-    Only a declared *hard* contact is lifted, and only off a rest-ish day_type.
+    Only a declared *hard* contact is lifted, and only off a rest-ish or
+    low/recovery day_type (a zero-load companion session makes the converter pick
+    those).
     Reduced and technical contact genuinely belong on an easy day — light
     technical touches on a recovery day are a normal prescription, and calling
     that day "moderate" would inflate it — so those keep the day_type the
@@ -491,7 +496,7 @@ def _apply_contact_day_type(day: dict[str, Any], contact: _ContactDay) -> bool:
     """
     if contact.load != "hard":
         return False
-    if str(day.get("day_type") or "").strip().lower() not in _REST_DAY_TYPES:
+    if str(day.get("day_type") or "").strip().lower() not in _HARD_CONTACT_LIFTABLE_DAY_TYPES:
         return False
     day["day_type"] = _DAY_TYPE_BY_LOAD["hard"]
     return True

@@ -38,7 +38,13 @@ from .structured_plan_faithfulness import (
     strip_locked_sessions_for_conversion,
 )
 from .structured_plan_locked_merge import merge_planner_owned_structured_content
-from .structured_plan_safety import athlete_safe_support, audit_structured_plan, split_findings
+from .minor_safety import MINOR_WEIGHT_CUT_NOTE
+from .structured_plan_safety import (
+    athlete_safe_support,
+    audit_structured_plan,
+    is_minor_support,
+    split_findings,
+)
 from .structured_plan_models import (
     SCHEMA_VERSION,
     BlockType,
@@ -1016,6 +1022,38 @@ def _normalize_tempo(value: Any) -> tuple[dict[str, Any] | None, str | None]:
     return None, f"Tempo: {text}"
 
 
+def _reps_echo_interval_work(block: Mapping[str, Any]) -> bool:
+    """True when a rounds x work block's bare rep count only repeats the work seconds.
+
+    The converter reads "2x3s" as rounds 2, work 3 sec and, wrongly, reps 3.
+    That rep count is not a volume and renders as a meaningless "Volume 3".
+    """
+    rounds = block.get("rounds")
+    sets = block.get("sets")
+    work = block.get("work")
+    reps = block.get("reps")
+    if isinstance(rounds, bool) or not isinstance(rounds, (int, float)) or rounds <= 0:
+        return False
+    if isinstance(sets, (int, float)) and not isinstance(sets, bool) and sets > 0:
+        return False
+    if not isinstance(work, Mapping) or str(work.get("unit") or "").strip().lower() not in {
+        "s", "sec", "secs", "second", "seconds"
+    }:
+        return False
+    work_value = work.get("value")
+    if isinstance(work_value, bool) or not isinstance(work_value, (int, float)) or work_value <= 0:
+        return False
+    if isinstance(reps, bool):
+        return False
+    if isinstance(reps, (int, float)):
+        reps_value: float | None = float(reps)
+    elif isinstance(reps, str) and re.fullmatch(r"\s*\d+(?:\.\d+)?\s*", reps):
+        reps_value = float(reps)
+    else:
+        reps_value = None
+    return reps_value is not None and reps_value == float(work_value)
+
+
 def _normalize_block(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
     # Identifier metadata is not athlete-facing content.  Preserve a useful id,
@@ -1036,6 +1074,8 @@ def _normalize_block(value: Any) -> dict[str, Any]:
     ):
         if measured_key in out:
             out[measured_key] = _normalize_measured(out.get(measured_key), default_unit)
+    if _reps_echo_interval_work(out):
+        out["reps"] = None
     if "tempo" in out:
         tempo, tempo_cue = _normalize_tempo(out.get("tempo"))
         out["tempo"] = tempo
@@ -2401,6 +2441,60 @@ def _with_deterministic_support(
     return plan_dict
 
 
+# Under-18 cards: the conversion model never sees the refusal note or any
+# weight-cut vocabulary, so it has nothing to reword into wording the safety
+# audit would (rightly) block. The note is added back verbatim, in code, once
+# the card has passed the audit.
+_MINOR_CONVERSION_RULE = (
+    "UNDER-18 ATHLETE: never mention weight cuts, cutting weight, making weight, "
+    "dehydration, rehydration, water cuts or loading, sauna, sweat suits, "
+    "diuretics or refeeds anywhere in the JSON. Set nutrition.weight_cut_warning "
+    "to null. Weight-cut guidance is added separately by the server."
+)
+
+
+_MINOR_CONVERSION_DROPPED_KEYS = frozenset({"coach_gated", "athlete_facing_note", "weight_cut"})
+
+
+def _minor_conversion_markdown(plan_markdown: str) -> str:
+    """Plan markdown with the under-18 refusal note removed for conversion."""
+    return "\n".join(
+        line for line in plan_markdown.splitlines() if MINOR_WEIGHT_CUT_NOTE not in line
+    )
+
+
+def _minor_conversion_support(node: Any) -> Any:
+    """computed_support without the refusal note or any cut sections.
+
+    ``coach_gated`` is never athlete-facing and holds no cut for a minor (Stage 1
+    computes none), ``athlete_facing_note`` only exists to warn about it, and
+    ``weight_cut`` only records that the cut is blocked — none of it is anything
+    the conversion needs, and all of it is cut wording it could echo.
+    """
+    if isinstance(node, dict):
+        return {
+            key: _minor_conversion_support(value)
+            for key, value in node.items()
+            if key not in _MINOR_CONVERSION_DROPPED_KEYS
+            and value != MINOR_WEIGHT_CUT_NOTE
+        }
+    if isinstance(node, list):
+        return [_minor_conversion_support(item) for item in node]
+    return node
+
+
+def _with_minor_weight_cut_note(plan_dict: dict[str, Any]) -> dict[str, Any]:
+    """Append the verbatim refusal note to a minor card's nutrition summary."""
+    nutrition = plan_dict.get("nutrition")
+    if not isinstance(nutrition, dict):
+        return plan_dict
+    summary = str(nutrition.get("summary") or "").strip()
+    if MINOR_WEIGHT_CUT_NOTE in summary:
+        return plan_dict
+    note_summary = f"{summary} {MINOR_WEIGHT_CUT_NOTE}".strip()
+    return {**plan_dict, "nutrition": {**nutrition, "summary": note_summary}}
+
+
 def _open_plan_spec_from_brief(planning_brief: Any) -> dict[str, Any] | None:
     if not isinstance(planning_brief, dict):
         return None
@@ -2688,6 +2782,8 @@ def build_structured_plan_outcome(
                 errors=blocking,
                 warnings=warnings,
             )
+        if is_minor_support(computed_support):
+            plan_dict = _with_minor_weight_cut_note(plan_dict)
         return StructuredPlanOutcome(
             status=status,
             structured_plan=plan_dict,
@@ -3433,7 +3529,14 @@ def build_structured_plan_prompt(
     """
 
     plan_markdown = strip_locked_sessions_for_conversion(plan_markdown, planning_brief)
+    is_minor = isinstance(planning_brief, dict) and is_minor_support(
+        planning_brief.get("computed_support")
+    )
+    if is_minor:
+        plan_markdown = _minor_conversion_markdown(plan_markdown)
     sections: list[str] = [_STRUCTURED_PLAN_RULES, _ROOT_SKELETON]
+    if is_minor:
+        sections.append(_MINOR_CONVERSION_RULE)
     open_plan_contract = _open_plan_prompt_contract(planning_brief)
     if open_plan_contract:
         sections.append(open_plan_contract)
@@ -3449,6 +3552,8 @@ def build_structured_plan_prompt(
         computed_support = None
         if isinstance(planning_brief, dict) and "computed_support" in planning_brief:
             computed_support = planning_brief.get("computed_support")
+            if is_minor:
+                computed_support = _minor_conversion_support(computed_support)
 
         # Select only the athlete/event/phase context keys. The full brief is
         # huge (100k+ chars: candidate_pools, weekly_role_map, selection
@@ -3473,7 +3578,14 @@ def build_structured_plan_prompt(
                 support_json = json.dumps(computed_support, ensure_ascii=False)
             except (TypeError, ValueError):
                 support_json = ""
-            if support_json:
+            if support_json and is_minor:
+                sections.append(
+                    "STAGE 1 COMPUTED SUPPORT (authoritative nutrition/recovery/"
+                    "mindset numbers — use these exact values when the plan "
+                    "covers nutrition, recovery, or mental coaching; do not "
+                    "invent or round differently):\n" + support_json
+                )
+            elif support_json:
                 sections.append(
                     "STAGE 1 COMPUTED SUPPORT (authoritative nutrition/recovery/"
                     "mindset numbers — use these exact values when the plan "

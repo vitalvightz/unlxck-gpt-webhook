@@ -30,7 +30,9 @@ from .declared_combat_ownership import (
     declared_light_combat_weekdays,
 )
 from .sparring_dose_planner import (
+    MAX_REPEATED_WEEKDAY_SPAN,
     compute_hard_sparring_plan,
+    repeated_weekday_hard_sparring_entries,
     effective_hard_day_count,
     effective_hard_days,
     sandwiched_training_days,
@@ -1256,6 +1258,83 @@ def _hard_sparring_role(week_entry: dict, day: str, plan_entry: dict[str, Any] |
     if role["coach_note_flags"]:
         role["placement_rule"] += " Deload the sparring dose instead of changing the slot."
     return role
+
+
+def _repeated_weekday_hard_sparring_roles(
+    week_entry: dict, entries: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Visible roles for declared hard days that repeat inside the planner week.
+
+    Each role is pinned to its own countdown day, so the weekday-to-date mapping
+    (which resolves a weekday to its occurrence nearest the fight) cannot fold it
+    onto the later occurrence.
+    """
+    roles: list[dict[str, Any]] = []
+    for entry in entries:
+        d_day = entry.get("scheduled_d_day")
+        day = str(entry.get("day") or "").strip()
+        if not day or not isinstance(d_day, int) or entry.get("effective_load") == "none":
+            continue
+        role = _hard_sparring_role(week_entry, day, entry)
+        role.update(
+            scheduled_d_day=d_day,
+            countdown_offset=d_day,
+            countdown_label=f"D-{d_day}",
+            scheduled_countdown_label=f"D-{d_day}",
+            repeated_weekday_occurrence=True,
+            day_assignment_reason=(
+                f"Declared hard sparring day; {day} repeats in this planner week, so "
+                f"D-{d_day} is its own session."
+            ),
+        )
+        roles.append(role)
+    return roles
+
+
+def _repeated_weekday_light_combat_roles(
+    week_entry: dict, athlete_model: dict
+) -> list[dict[str, Any]]:
+    """Light-combat locks for declared light days that repeat inside the week.
+
+    ``_lock_declared_light_combat_roles`` places one lock per weekday, which the
+    weekday-to-date mapping resolves to the occurrence nearest the fight. In an
+    eight-day planner week the earlier occurrence (the generation day, D-22 in a
+    23-day camp) was left unlocked and later filled with app S&C. Each earlier
+    occurrence gets its own lock, pinned to its countdown day.
+    """
+    training_days = [
+        normalised
+        for day in _ordered_weekdays(clean_list(athlete_model.get("training_days", [])))
+        if (normalised := str(day or "").strip().lower())
+    ]
+    declared = set(
+        declared_light_combat_weekdays(
+            athlete_model, training_days=training_days, exclude_hard_sparring=True
+        )
+    )
+    calendar_days = week_entry.get("calendar_days") or []
+    if not declared or len(calendar_days) > MAX_REPEATED_WEEKDAY_SPAN:
+        return []
+    occurrences: dict[str, list[int]] = {}
+    for calendar_day in calendar_days:
+        weekday = str(calendar_day.get("weekday") or "").strip().lower()
+        d_day = calendar_day.get("d_day")
+        if weekday in declared and isinstance(d_day, int) and d_day > 0:
+            occurrences.setdefault(weekday, []).append(d_day)
+    roles: list[dict[str, Any]] = []
+    for weekday, d_days in occurrences.items():
+        # The weekday lock already owns the occurrence nearest the fight.
+        for d_day in sorted(d_days, reverse=True)[:-1]:
+            role = build_declared_light_combat_role(weekday)
+            role.update(
+                scheduled_d_day=d_day,
+                countdown_offset=d_day,
+                countdown_label=f"D-{d_day}",
+                scheduled_countdown_label=f"D-{d_day}",
+                repeated_weekday_occurrence=True,
+            )
+            roles.append(role)
+    return roles
 
 
 def _make_hard_sparring_lock_suppression(role: dict, day: str) -> dict[str, Any]:
@@ -3593,20 +3672,25 @@ def _build_weekly_role_map(
             suppressed_roles,
             athlete_model,
         )
+        sparring_week = {
+            "phase": week_entry.get("phase"),
+            "stage_key": week_entry.get("stage_key"),
+            "week_index": week_entry.get("week_index"),
+            "phase_week_index": week_entry.get("phase_week_index"),
+            "phase_week_total": week_entry.get("phase_week_total"),
+            "projected_days_until_fight_start": projected_days_until_fight_start[week_idx],
+            "projected_days_until_fight_end": projected_days_until_fight_end[week_idx],
+            "span_days": week_span_days[week_idx],
+            "fight_weekday": fight_weekday,
+            "declared_hard_sparring_days": _ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))),
+            "session_roles": session_roles,
+        }
         hard_sparring_plan = compute_hard_sparring_plan(
-            week={
-                "phase": week_entry.get("phase"),
-                "stage_key": week_entry.get("stage_key"),
-                "week_index": week_entry.get("week_index"),
-                "phase_week_index": week_entry.get("phase_week_index"),
-                "phase_week_total": week_entry.get("phase_week_total"),
-                "projected_days_until_fight_start": projected_days_until_fight_start[week_idx],
-                "projected_days_until_fight_end": projected_days_until_fight_end[week_idx],
-                "span_days": week_span_days[week_idx],
-                "fight_weekday": fight_weekday,
-                "declared_hard_sparring_days": _ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))),
-                "session_roles": session_roles,
-            },
+            week=sparring_week,
+            athlete_snapshot=athlete_model,
+        )
+        repeated_hard_sparring = repeated_weekday_hard_sparring_entries(
+            week=sparring_week,
             athlete_snapshot=athlete_model,
         )
         effective_days = effective_hard_days(hard_sparring_plan)
@@ -3702,6 +3786,12 @@ def _build_weekly_role_map(
             athlete_model,
             hard_sparring_plan=hard_sparring_plan,
         )
+        session_roles = session_roles + _repeated_weekday_hard_sparring_roles(
+            week_entry, repeated_hard_sparring
+        )
+        session_roles = session_roles + _repeated_weekday_light_combat_roles(
+            week_entry, athlete_model
+        )
 
         calendar_days = list(week_entry.get("calendar_days") or [])
         d_day_by_weekday = {
@@ -3724,6 +3814,10 @@ def _build_weekly_role_map(
                 role["gas_tank_recovery_touch"] = True
                 role["priority_recovery_touch"] = True
             if not weekday or weekday not in d_day_by_weekday:
+                continue
+            # A role pinned to an earlier occurrence of a repeated weekday keeps
+            # its date; the weekday map only knows the occurrence nearest the fight.
+            if isinstance(role.get("scheduled_d_day"), int):
                 continue
             d_day = d_day_by_weekday[weekday]
             role["scheduled_countdown_label"] = f"D-{d_day}"
@@ -3750,6 +3844,7 @@ def _build_weekly_role_map(
                 "declared_support_work_days": _ordered_weekdays(clean_list(athlete_model.get("support_work_days", athlete_model.get("technical_skill_days", [])))),
                 "declared_technical_skill_days": _ordered_weekdays(clean_list(athlete_model.get("technical_skill_days", []))),
                 "hard_sparring_plan": hard_sparring_plan,
+                "repeated_weekday_hard_sparring": repeated_hard_sparring,
                 "effective_hard_sparring_days": list(effective_days),
                 "final_week_sparring_cap": _final_week_sparring_cap_summary(hard_sparring_plan, list(effective_days)),
                 "coach_note_flags": _dedupe_clean_strings(clean_list(week_entry.get("coach_note_flags", []))),

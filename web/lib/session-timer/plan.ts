@@ -1,5 +1,12 @@
 import { getSourcePrescriptionRangeOverrides } from "../block-display-guardrails";
-import { cleanText, finitePositiveNumber, formatBlockLoad, formatEffort } from "../structured-plan";
+import {
+  cleanText,
+  finitePositiveNumber,
+  formatBlockLoad,
+  formatEffort,
+  formatMeasured,
+  isModeLikeReps,
+} from "../structured-plan";
 import type {
   MeasuredValue,
   SparringPlannedIntensity,
@@ -10,11 +17,20 @@ import type {
 /** An inclusive dose range. `min === max` is an exact prescription. */
 export type DoseRange = { min: number; max: number };
 
+/**
+ * One part of an exercise's dose, shown as a chip under its name. `target` is
+ * what each set or round asks for (reps, distance, time, or a mode such as
+ * AMRAP); `load` and `effort` are how heavy and how hard.
+ */
+export type TimerStat = { kind: "target" | "load" | "effort"; value: string };
+
 type TimerItemBase = {
   id: string;
   title: string;
-  /** Reps / load / effort line shown under the exercise name. */
+  /** Reps / distance / load / effort as one line (notes, and runs saved before `stats`). */
   detail: string | null;
+  /** The same dose as separate chips. Absent on runs saved by an older timer. */
+  stats?: TimerStat[];
   blockType: string | null;
 };
 
@@ -52,12 +68,22 @@ export type SetsItem = TimerItemBase & {
   sets: DoseRange | null;
   holdSec: number | null;
   restSec: DoseRange | null;
+  /**
+   * "round" for rounds the athlete ends by tapping (e.g. 6 × 200 m with no
+   * time in the plan): counted like sets, but called rounds. Default "set".
+   */
+  unit?: "set" | "round";
 };
 
 /** A block with no timeable dose (e.g. a mobility circuit): one tap to finish. */
 export type TaskItem = TimerItemBase & { kind: "task" };
 
 export type TimerItem = IntervalItem | SetsItem | TaskItem;
+
+/** What one tapped unit of a sets item is called. */
+export function countNoun(item: SetsItem): "set" | "round" {
+  return item.unit === "round" ? "round" : "set";
+}
 
 /** Blocks the timer never runs: they are guidance, not executable work. */
 const UNTIMED_BLOCK_TYPES = new Set(["nutrition", "mindset"]);
@@ -146,16 +172,62 @@ function repsText(block: StructuredBlock): string | null {
   return cleanText(block.reps);
 }
 
-function describeReps(reps: string | null): string | null {
+type DosePart = TimerStat & { text: string };
+
+/** The per-set target a reps value asks for, or null. */
+function repsPart(reps: string | null): DosePart | null {
   if (!reps) {
     return null;
   }
-  return /^\d+(?:\s*[-–—]\s*\d+)?$/.test(reps) ? `${reps.replace(/\s*[-–—]\s*/, "–")} reps` : reps;
+  if (isModeLikeReps(reps)) {
+    return { kind: "target", value: `${reps.charAt(0).toUpperCase()}${reps.slice(1)}`, text: reps };
+  }
+  if (/^\d+(?:\s*[-–—]\s*\d+)?$/.test(reps)) {
+    const text = `${reps.replace(/\s*[-–—]\s*/, "–")} reps`;
+    return { kind: "target", value: text, text };
+  }
+  return { kind: "target", value: reps, text: reps };
 }
 
-function joinDetail(parts: Array<string | null>): string | null {
-  const shown = parts.filter((part): part is string => Boolean(part));
-  return shown.length ? shown.join(" · ") : null;
+function part(kind: TimerStat["kind"], value: string | null): DosePart | null {
+  return value ? { kind, value, text: value } : null;
+}
+
+/** The dose as chips and as one line; parts in display order, nulls skipped. */
+function describeDose(parts: Array<DosePart | null>): Pick<TimerItemBase, "detail" | "stats"> {
+  const shown = parts.filter((entry): entry is DosePart => entry !== null);
+  return {
+    detail: shown.length ? shown.map((entry) => entry.text).join(" · ") : null,
+    stats: shown.map(({ kind, value }) => ({ kind, value })),
+  };
+}
+
+const SHORT_UNITS: Record<string, string> = {
+  meter: "m",
+  meters: "m",
+  metre: "m",
+  metres: "m",
+  kilometer: "km",
+  kilometers: "km",
+  kilometre: "km",
+  kilometres: "km",
+  mile: "mi",
+  miles: "mi",
+  yard: "yd",
+  yards: "yd",
+  second: "s",
+  seconds: "s",
+  minute: "min",
+  minutes: "min",
+};
+
+/** A positive measured value as a compact line ("20 m", "10 min"), or null. */
+function describeMeasured(measured: MeasuredValue | null | undefined): string | null {
+  if (!measured || !finitePositiveNumber(measured.value)) {
+    return null;
+  }
+  const unit = cleanText(measured.unit)?.toLowerCase() ?? "";
+  return unit in SHORT_UNITS ? `${measured.value} ${SHORT_UNITS[unit]}` : formatMeasured(measured);
 }
 
 const PLANNED_INTENSITY_BY_FIELD: Record<string, SparringPlannedIntensity> = {
@@ -206,14 +278,36 @@ export function blockToTimerItem(
   const rest = measuredSeconds(block.rest);
   const duration = measuredSeconds(block.duration);
   const reps = repsText(block);
-  const repsAsTime = parseDurationRange(reps);
-  const load = formatBlockLoad(block.load);
-  const effort = source.effort || formatEffort(block);
+  // "continuous" / AMRAP / EMOM describe how the work is done, not a rep count,
+  // so they never turn a timed block into counted sets.
+  const countReps = reps && !isModeLikeReps(reps) ? reps : null;
+  const repsAsTime = parseDurationRange(countReps);
+  const load = part("load", formatBlockLoad(block.load));
+  const effort = part("effort", source.effort || formatEffort(block));
+  const distance = part("target", describeMeasured(block.distance));
   const isRoundType = blockType !== null && ROUND_BLOCK_TYPES.has(blockType);
+  const restRange =
+    parseDurationRange(source.rest) ?? (rest ? { min: rest, max: rest } : null);
+
+  // Rounds of a set distance with no time in the plan (6 × 200 m): the athlete
+  // taps each round done, rather than running a round clock the plan never set.
+  if (rounds && distance && !work && !duration && blockType !== "sparring") {
+    return {
+      kind: "sets",
+      id,
+      title,
+      ...describeDose([repsPart(reps), distance, load, effort]),
+      blockType,
+      sets: { min: rounds, max: rounds },
+      holdSec: null,
+      restSec: restRange,
+      unit: "round",
+    };
+  }
 
   // Rounds: an explicit round count or work interval, or a round-type block
   // (sparring / conditioning / skill) that is timed rather than counted in reps.
-  if (rounds || work || (isRoundType && !reps && (duration || blockType === "sparring"))) {
+  if (rounds || work || (isRoundType && !countReps && (duration || blockType === "sparring"))) {
     let workSec = work;
     if (!workSec && duration) {
       workSec = rounds && duration > MAX_PER_ROUND_SEC ? Math.round(duration / rounds) : duration;
@@ -223,7 +317,7 @@ export function blockToTimerItem(
       kind: "interval",
       id,
       title,
-      detail: joinDetail([describeReps(reps), load, effort]),
+      ...describeDose([repsPart(reps), distance, load, effort]),
       blockType,
       rounds: roundCount,
       workSec: workSec ?? DEFAULT_ROUND_SEC,
@@ -236,10 +330,8 @@ export function blockToTimerItem(
   }
 
   const setRange = parseCountRange(source.sets) ?? (sets ? { min: sets, max: sets } : null);
-  const restRange =
-    parseDurationRange(source.rest) ?? (rest ? { min: rest, max: rest } : null);
 
-  if (setRange || reps) {
+  if (setRange || countReps) {
     let holdSec: number | null = null;
     if (repsAsTime) {
       holdSec = repsAsTime.min;
@@ -250,7 +342,14 @@ export function blockToTimerItem(
       kind: "sets",
       id,
       title,
-      detail: joinDetail([holdSec ? null : describeReps(reps), load, effort]),
+      ...describeDose([
+        holdSec ? null : repsPart(reps),
+        // A duration that is not the per-set hold is still part of the dose.
+        duration && !holdSec ? part("target", describeMeasured(block.duration)) : null,
+        distance,
+        load,
+        effort,
+      ]),
       blockType,
       sets: setRange,
       holdSec,
@@ -263,7 +362,7 @@ export function blockToTimerItem(
       kind: "interval",
       id,
       title,
-      detail: joinDetail([load, effort]),
+      ...describeDose([repsPart(reps), distance, load, effort]),
       blockType,
       rounds: 1,
       workSec: duration,
@@ -273,7 +372,13 @@ export function blockToTimerItem(
     };
   }
 
-  return { kind: "task", id, title, detail: joinDetail([load, effort]), blockType };
+  return {
+    kind: "task",
+    id,
+    title,
+    ...describeDose([repsPart(reps), distance, load, effort]),
+    blockType,
+  };
 }
 
 /** The ordered timer items for the given sessions (normally today's). */

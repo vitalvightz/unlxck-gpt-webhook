@@ -80,7 +80,11 @@ export function parseRoundsFromText(text: string): ParsedRounds {
 /** Where the athlete's last picked contact round format is remembered. */
 export const CONTACT_FORMAT_MEMORY_KEY = "unlxck.session-timer.contact-format";
 
-export type RoundFormat = { workSec: number; restSec: number };
+/** Where the plain round timer remembers the athlete's last setup. */
+export const FREE_FORMAT_MEMORY_KEY = "unlxck.session-timer.free-format";
+
+/** A round format; `rounds` is only remembered by the plain round timer. */
+export type RoundFormat = { workSec: number; restSec: number; rounds?: number };
 
 /** The last round format the athlete picked, or null (never throws). */
 export function savedRoundFormat(key: string | null | undefined): RoundFormat | null {
@@ -92,7 +96,10 @@ export function savedRoundFormat(key: string | null | undefined): RoundFormat | 
     const workSec = Number(parsed?.workSec);
     const restSec = Number(parsed?.restSec);
     if (Number.isFinite(workSec) && workSec >= 5 && workSec <= 3600 && Number.isFinite(restSec) && restSec >= 0 && restSec <= 1800) {
-      return { workSec, restSec };
+      const rounds = Number(parsed?.rounds);
+      return Number.isInteger(rounds) && rounds >= 1 && rounds <= 30
+        ? { workSec, restSec, rounds }
+        : { workSec, restSec };
     }
   } catch {
     // Storage blocked or corrupt: fall back to the defaults.
@@ -146,20 +153,21 @@ export function contactRoundsItem(
   };
 }
 
-/** The plain round timer: no plan, pick a round format. */
-export function freeRoundsItem(): IntervalItem {
+/** The plain round timer: no plan, opens on the athlete's last setup (else 3 × 3:00 / 1:00). */
+export function freeRoundsItem(saved: RoundFormat | null = savedRoundFormat(FREE_FORMAT_MEMORY_KEY)): IntervalItem {
   return {
     kind: "interval",
     id: "free-rounds",
     title: "Rounds",
     detail: null,
     blockType: null,
-    rounds: 3,
-    workSec: 180,
-    restSec: 60,
+    rounds: saved?.rounds ?? 3,
+    workSec: saved?.workSec ?? 180,
+    restSec: saved?.restSec ?? 60,
     sparring: false,
     needsSetup: false,
     presets: true,
+    formatMemoryKey: FREE_FORMAT_MEMORY_KEY,
   };
 }
 

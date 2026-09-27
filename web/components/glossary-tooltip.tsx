@@ -4,7 +4,7 @@ import { WhyTooltip } from "@/components/why-tooltip";
 import { glossaryEntry } from "@/lib/glossary";
 
 /**
- * The "?" that explains a jargon label on a plan surface. Same affordance the
+ * The "i" that explains a jargon label on a plan surface. Same affordance the
  * intake form uses for its unavailable options, sized down to sit beside a
  * small-caps stat label.
  *
@@ -19,10 +19,10 @@ export function GlossaryTooltip({ term }: { term: string | null | undefined }) {
   }
   return (
     <WhyTooltip
-      className="glossary-tooltip"
+      className="glossary-tooltip info-tooltip"
       title={entry.term}
       body={entry.definition}
-      triggerLabel="?"
+      triggerLabel="i"
       ariaLabel={`What ${entry.term} means`}
     />
   );

@@ -34,6 +34,8 @@
     "planMeta": "Active and saved plans",
     "history": "History",
     "historyMeta": "Sessions, check-ins, injuries",
+    "timer": "Round timer",
+    "timerMeta": "Rounds and rest, any time",
     "campSetup": "Camp Setup",
     "campSetupMeta": "Build your camp",
     "settings": "Settings",

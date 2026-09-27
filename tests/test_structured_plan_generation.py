@@ -710,6 +710,36 @@ def test_normalize_block_null_list_fields_become_empty_lists():
     assert block["substitutions"] == ["med ball scoop toss"]
 
 
+def test_normalize_block_drops_reps_that_echo_interval_work_seconds():
+    day = _normalize_day(
+        {
+            "sessions": [
+                {
+                    "blocks": [
+                        {
+                            "display_name": "Standing Stance-Set Cue",
+                            "reps": 3,
+                            "rounds": 2,
+                            "work": {"value": 3, "unit": "seconds"},
+                            "rest": {"value": 120, "unit": "seconds"},
+                        },
+                        {
+                            "display_name": "Sprint Starts",
+                            "reps": 5,
+                            "rounds": 2,
+                            "work": {"value": 6, "unit": "seconds"},
+                        },
+                    ]
+                }
+            ]
+        }
+    )
+    echo, real = day["sessions"][0]["blocks"]
+    assert echo["reps"] is None
+    assert echo["rounds"] == 2
+    assert real["reps"] == 5
+
+
 def test_missing_identifiers_do_not_reject_an_otherwise_valid_card():
     plan = _live_malformed_plan()
     plan["red_flag_rules"][0].pop("rule_id", None)

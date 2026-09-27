@@ -2,12 +2,12 @@
 //
 // The plan renderer speaks S&C shorthand ("RPE 7", "AMRAP", "Prehab") that a
 // fighter reading their own plan has no reason to know. Every term here is
-// rendered with the same "?" affordance the intake form already uses, so the
+// rendered with an "i" affordance, so the
 // definition is one tap away instead of something the athlete has to look up.
 //
 // Keep definitions to one or two sentences: the bubble is a glance, not a
 // lesson. Add a term only when the label itself is opaque. Plain words like
-// Duration, Rest or Swaps do not belong here, and a "?" on every label would
+// Duration, Rest or Swaps do not belong here, and an "i" on every label would
 // bury the ones that matter.
 
 export type GlossaryEntry = {
@@ -37,7 +37,7 @@ const GLOSSARY: Readonly<Record<string, GlossaryEntry>> = {
   rpe: {
     term: "RPE",
     definition:
-      "Rate of Perceived Exertion: how hard the work should feel, from 1 (barely working) to 10 (all-out). Around 7-8 you could still manage 2-3 more reps; anything under 3 is easy, recovery-pace work.",
+      "How hard the work should feel, from 1 (very easy) to 10 (maximum effort). RPE 7–8 feels hard but controlled. RPE 3 or below is easy recovery work.",
   },
   rir: {
     term: "RIR",
@@ -77,7 +77,7 @@ const GLOSSARY: Readonly<Record<string, GlossaryEntry>> = {
   volume: {
     term: "Volume",
     definition:
-      "How much work to do, written as sets × reps. “3 × 8” means 8 repetitions, rested, then repeated 3 times.",
+      "How much work to do. For example, 3 × 8 means 8 reps, rest, then repeat for 3 sets.",
   },
   mode: {
     term: "Mode",
@@ -102,7 +102,7 @@ const GLOSSARY: Readonly<Record<string, GlossaryEntry>> = {
   "stop rule": {
     term: "Stop rule",
     definition:
-      "The signal to end this block early. If it shows up, stop. Finishing the prescription is never worth the setback.",
+      "When to stop this block early. If this happens, stop. Finishing the session is not worth risking injury or illness.",
   },
   deload: {
     term: "Deload",

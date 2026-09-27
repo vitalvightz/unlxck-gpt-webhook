@@ -6,6 +6,7 @@ import {
   loadSoundSettings,
   saveSoundSettings,
   timerAudio,
+  type TimerSound,
   type TimerSoundSettings,
 } from "@/lib/session-timer/audio";
 import {
@@ -14,6 +15,9 @@ import {
   createTimerState,
   crossedCues,
   cueRemainingMs,
+  cueSounds,
+  samePhaseRun,
+  warningLengthMs,
   soundForEvents,
   viewAt,
   type TimerEvent,
@@ -25,6 +29,8 @@ import type { TimerItem } from "@/lib/session-timer/plan";
 // 2: ranged rest stays in rest until its maximum (readyAt replaced windowEndsAt).
 const RUN_VERSION = 2;
 const TICK_MS = 100;
+/** The fight-ring bells still ring while the timer is minimised. */
+const MINIMIZED_SOUNDS: ReadonlySet<TimerSound> = new Set(["bell", "triple_bell", "finish"]);
 
 type SavedRun = { version: number; key: string; itemIds: string[]; state: TimerState };
 
@@ -144,7 +150,7 @@ export function useSessionTimer({
 }: {
   items: TimerItem[];
   storageKey: string;
-  /** False while the timer is minimised: the clock keeps running silently. */
+  /** False while the timer is minimised: the clock keeps running, and only the round bells, warnings and voice sound. */
   audible: boolean;
 }): SessionTimerController {
   const [state, setState] = useState<TimerState>(
@@ -154,6 +160,7 @@ export function useSessionTimer({
   const [settings, setSettingsState] = useState<TimerSoundSettings>(() => loadSoundSettings());
   const stateRef = useRef(state);
   const audibleRef = useRef(audible);
+  const settingsRef = useRef(settings);
   const lastRemainingRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -161,21 +168,30 @@ export function useSessionTimer({
   }, [audible]);
 
   useEffect(() => {
+    settingsRef.current = settings;
     timerAudio().configure(settings);
   }, [settings]);
 
   const announce = useCallback((events: TimerEvent[], next: TimerState) => {
-    if (!audibleRef.current || events.length === 0) return;
+    if (events.length === 0) return;
     const sound = soundForEvents(events);
-    if (sound) timerAudio().play(sound);
+    // Minimised, the round bells still ring and the voice (when it is on)
+    // still calls the rounds, so the athlete never has to look; the other
+    // beeps and chimes stay quiet.
+    if (sound && (audibleRef.current || MINIMIZED_SOUNDS.has(sound))) timerAudio().play(sound);
     const callout = calloutForEvents(events, next);
     if (callout) timerAudio().say(callout);
   }, []);
 
   const commit = useCallback(
     (next: TimerState) => {
+      // Within the same round or rest (−10s, +10s, a new length) the next tick
+      // compares against the time before the edit, so a jump past a warning
+      // mark still sounds it. A new phase starts counting fresh.
+      if (!samePhaseRun(stateRef.current, next)) {
+        lastRemainingRef.current = cueRemainingMs(viewAt(next, Date.now()));
+      }
       stateRef.current = next;
-      lastRemainingRef.current = cueRemainingMs(viewAt(next, Date.now()));
       setState(next);
       if (next.phase === "done" && next.endedAt !== null) {
         clearSavedRun(storageKey);
@@ -221,15 +237,24 @@ export function useSessionTimer({
       if (next !== current) {
         announce(events, next);
         commit(next);
-      } else if (audibleRef.current) {
-        const remaining = cueRemainingMs(viewAt(current, at));
-        const cues = crossedCues(current.phase, current.phaseMs, lastRemainingRef.current, remaining);
-        lastRemainingRef.current = remaining;
-        const audio = timerAudio();
-        if (cues.includes("ten_seconds")) audio.play("clapper");
-        if (cues.some((cue) => cue.startsWith("count_"))) audio.play("beep");
       } else {
-        lastRemainingRef.current = cueRemainingMs(viewAt(current, at));
+        const remaining = cueRemainingMs(viewAt(current, at));
+        const { warnTen, warnThirty, warnHalfway } = settingsRef.current;
+        const cues = crossedCues(
+          current.phase,
+          current.phaseMs,
+          lastRemainingRef.current,
+          remaining,
+          { ten: warnTen, thirty: warnThirty, halfway: warnHalfway },
+          warningLengthMs(current),
+        );
+        lastRemainingRef.current = remaining;
+        // The round warnings ring and speak minimised too: the athlete is
+        // training, not looking at the phone. Only the 3-2-1 beeps stay on screen.
+        const { sounds, callout } = cueSounds(cues, audibleRef.current);
+        const audio = timerAudio();
+        for (const sound of sounds) audio.play(sound);
+        if (callout) audio.say(callout);
       }
       setNow(at);
     };

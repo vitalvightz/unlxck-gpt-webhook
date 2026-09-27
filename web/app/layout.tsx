@@ -12,6 +12,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { PasswordRecoveryRedirect } from "@/components/password-recovery-redirect";
 import { PrivateBetaNutritionGate } from "@/components/private-beta-nutrition-link";
 import { PwaRegister } from "@/components/pwa-register";
+import { RoundTimerProvider } from "@/components/session-timer/round-timer-provider";
 import { ToastProvider } from "@/components/toast-provider";
 import { XpAwardFeedback } from "@/components/xp-award-feedback";
 import { XpProvider } from "@/components/xp-provider";
@@ -118,6 +119,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
                 <LanguageSwitcher />
                 <PwaRegister buildVersion={pwaBuildVersion}>
                   <GenerationStatusShell>
+                    <RoundTimerProvider>
                     <div className="app-shell">
                       <AppNav />
                       <div className="app-content">
@@ -130,6 +132,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
                         </footer>
                       </div>
                     </div>
+                    </RoundTimerProvider>
                   </GenerationStatusShell>
                 </PwaRegister>
               </ToastProvider>

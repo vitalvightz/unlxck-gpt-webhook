@@ -56,6 +56,28 @@ _BLOCKED_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
 )
 
 
+# Each sentence of the refusal note, whitespace-normalised. The structured card
+# is rewritten by Stage 2, which routinely keeps only the first sentence or
+# re-wraps it; matching the whole note verbatim meant a shortened copy of the
+# note tripped the patterns it names and the audit rejected the entire card.
+_REFUSAL_NOTE_SENTENCES: tuple[str, ...] = tuple(
+    sentence.strip()
+    for sentence in re.split(r"(?<=[.!?])\s+", MINOR_WEIGHT_CUT_NOTE)
+    if sentence.strip()
+)
+
+
+def _strip_refusal_note(text: Any) -> str:
+    """Text with the refusal note (whole or any sentence of it) removed."""
+    value = re.sub(r"\s+", " ", str(text or ""))
+    for sentence in (MINOR_WEIGHT_CUT_NOTE, *_REFUSAL_NOTE_SENTENCES):
+        pattern = re.escape(sentence).replace(r"\ ", r"\s+")
+        # The trailing full stop is optional: a card label may drop it.
+        pattern = re.sub(r"\\\.$", r"\\.?", pattern)
+        value = re.sub(pattern, " ", value, flags=re.I)
+    return value
+
+
 def blocked_guidance_reasons(text: Any) -> list[str]:
     """Names of the blocked-guidance rules a piece of text trips (may be empty).
 
@@ -63,7 +85,7 @@ def blocked_guidance_reasons(text: Any) -> list[str]:
     things it is refusing to provide, so without this it would trip the very
     patterns it exists to satisfy — and scrubbed text would never read as clean.
     """
-    value = str(text or "").replace(MINOR_WEIGHT_CUT_NOTE, " ")
+    value = _strip_refusal_note(text)
     if not value.strip():
         return []
     return [name for name, pattern in _BLOCKED_PATTERNS if pattern.search(value)]

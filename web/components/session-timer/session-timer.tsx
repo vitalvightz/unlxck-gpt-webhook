@@ -1,10 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 
 import { useSessionTimer, type SessionTimerController } from "@/components/session-timer/use-session-timer";
-import { timerAudio } from "@/lib/session-timer/audio";
+import { PREP_OPTIONS, timerAudio } from "@/lib/session-timer/audio";
 import {
   addTime,
   adjustItem,
@@ -12,12 +19,14 @@ import {
   endRound,
   endSession,
   finishItem,
+  isPrep,
   metPlan,
   pause,
   resume,
   setRestLength,
   skipRest,
   startItem,
+  stepDuration,
   completeSet,
   summarizeRun,
   updateIntervalItem,
@@ -29,9 +38,11 @@ import {
 import { rememberRoundFormat, ROUND_PRESETS } from "@/lib/session-timer/contact";
 import type { SparringPlannedIntensity } from "@/lib/types";
 import {
+  countNoun,
   formatClock,
   formatRange,
   formatShortDuration,
+  type SetsItem,
   type TimerItem,
 } from "@/lib/session-timer/plan";
 
@@ -83,29 +94,75 @@ function toneFor(state: TimerState, view: TimerView): Tone {
   return view.remainingMs === null ? "open" : "work";
 }
 
+function capitalize(text: string): string {
+  return `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
+}
+
+/** "Set" / "Round", for a sets item's labels. */
+function unitWord(item: SetsItem): string {
+  return capitalize(countNoun(item));
+}
+
+/**
+ * What each set or round asks for: its hold, or every target the plan gives
+ * (reps / mode, time, distance), e.g. "AMRAP, 60 s". Comma-joined so the
+ * parts read as one unit beside the " · " separated rest.
+ */
+function perUnitTarget(item: SetsItem): string | null {
+  if (item.holdSec) return `${formatShortDuration(item.holdSec)} hold`;
+  const targets = (item.stats ?? []).filter((stat) => stat.kind === "target").map((stat) => stat.value);
+  return targets.length ? targets.join(", ") : null;
+}
+
+/** One line for an exercise's plan, e.g. "4 × 5 reps · 2 min rest" or "6 × 3:00 · 1:00 rest". */
 function describeItem(item: TimerItem): string {
   if (item.kind === "interval") {
+    if (item.rounds <= 1) return formatClock(item.workSec);
     const round = `${item.rounds} × ${formatClock(item.workSec)}`;
     return item.restSec > 0 ? `${round} · ${formatClock(item.restSec)} rest` : round;
   }
   if (item.kind === "sets") {
-    const parts = [
-      item.sets ? `${formatRange(item.sets)} sets` : "Sets as needed",
-      item.holdSec ? `${formatShortDuration(item.holdSec)} hold` : null,
-      item.restSec ? `${formatRange(item.restSec, formatShortDuration)} rest` : null,
-    ];
-    return parts.filter(Boolean).join(" · ");
+    const noun = countNoun(item);
+    const target = perUnitTarget(item);
+    const count = item.sets
+      ? target
+        ? `${formatRange(item.sets)} × ${target}`
+        : `${formatRange(item.sets)} ${noun}s`
+      : [target, `${capitalize(noun)}s as needed`].filter(Boolean).join(" · ");
+    const rest = item.restSec ? `${formatRange(item.restSec, formatShortDuration)} rest` : null;
+    return [count, rest].filter(Boolean).join(" · ");
   }
   return "Tap done when finished";
+}
+
+/**
+ * The exercise's dose as chips under its name: the per-set target first and
+ * brightest, then load and effort. A run saved before chips existed falls back
+ * to its one-line detail.
+ */
+function DoseChips({ item }: { item: TimerItem }) {
+  if (!item.stats) return item.detail ? <p className="st-detail">{item.detail}</p> : null;
+  // A hold's time is on the clock; everything else stays in view.
+  if (item.stats.length === 0) return null;
+  return (
+    <ul className="st-stats" aria-label="Prescription">
+      {item.stats.map((stat, index) => (
+        <li key={`${stat.kind}-${index}`} data-kind={stat.kind}>
+          {stat.value}
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 function phaseLabel(state: TimerState, item: TimerItem | null, view: TimerView): string {
   if (state.phase === "done") return metPlan(state) ? "Session complete" : "Session ended";
   if (state.phase === "ready") return "Up next";
   if (view.paused) return "Paused";
+  if (isPrep(state)) return "Get ready";
   if (state.phase === "rest") return view.readyRemainingMs === 0 ? "Ready" : "Rest";
   if (item?.kind === "interval") return item.sparring ? "Spar" : "Work";
-  if (item?.kind === "sets") return item.holdSec ? "Hold" : "Lift";
+  if (item?.kind === "sets") return item.holdSec ? "Hold" : countNoun(item) === "round" ? "Work" : "Lift";
   return "Go";
 }
 
@@ -113,7 +170,7 @@ function counterLabel(state: TimerState, item: TimerItem | null): string | null 
   if (!item || state.phase === "ready" || state.phase === "done") return null;
   if (item.kind === "interval") {
     if (item.rounds <= 1) return null;
-    const label = state.phase === "rest" ? "Next: round" : "Round";
+    const label = state.phase === "rest" && !isPrep(state) ? "Next: round" : "Round";
     return `${label} ${state.unit} / ${item.rounds}`;
   }
   if (item.kind === "sets") {
@@ -122,7 +179,8 @@ function counterLabel(state: TimerState, item: TimerItem | null): string | null 
         ? ` of ${item.sets.min}`
         : ` · target ${formatRange(item.sets)}`
       : "";
-    return state.phase === "rest" ? `Next: set ${state.unit}${target}` : `Set ${state.unit}${target}`;
+    const noun = countNoun(item);
+    return state.phase === "rest" ? `Next: ${noun} ${state.unit}${target}` : `${unitWord(item)} ${state.unit}${target}`;
   }
   return null;
 }
@@ -131,8 +189,9 @@ function doneLabel(item: TimerItem, done: number): string {
   if (done === 0) return "Skipped";
   if (item.kind === "interval") return `${done}/${item.rounds} rounds`;
   if (item.kind === "sets") {
-    if (item.sets && item.sets.min === item.sets.max) return `${done}/${item.sets.min} sets`;
-    const count = `${done} ${done === 1 ? "set" : "sets"}`;
+    const noun = countNoun(item);
+    if (item.sets && item.sets.min === item.sets.max) return `${done}/${item.sets.min} ${noun}s`;
+    const count = `${done} ${done === 1 ? noun : `${noun}s`}`;
     return item.sets ? `${count} · plan ${formatRange(item.sets)}` : count;
   }
   return "Done";
@@ -193,17 +252,23 @@ function Ring({ progress, children }: { progress: number | null; children: React
   );
 }
 
-type IconName = "pause" | "play" | "plus" | "skip" | "next" | "flag" | "chevron" | "sound" | "check" | "sliders";
+type IconName = "pause" | "play" | "plus" | "minus" | "skip" | "next" | "flag" | "chevron" | "settings" | "check" | "sliders";
 
 const ICON_PATHS: Record<IconName, ReactNode> = {
   pause: <path d="M8 5v14M16 5v14" />,
   play: <path d="M7 5l12 7-12 7z" fill="currentColor" stroke="none" />,
   plus: <path d="M12 6v12M6 12h12" />,
+  minus: <path d="M6 12h12" />,
   skip: <path d="M6 5l9 7-9 7zM18 5v14" />,
   next: <path d="M9 6l6 6-6 6" />,
   flag: <path d="M6 20V5M6 5h11l-2 4 2 4H6" />,
   chevron: <path d="M6 9l6 6 6-6" />,
-  sound: <path d="M4 10v4h4l5 4V6L8 10H4zM16 9a4 4 0 010 6M18.5 6.5a7.5 7.5 0 010 11" />,
+  settings: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </>
+  ),
   check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
   sliders: <path d="M4 8h9M17 8h3M4 16h3M11 16h9M15 6v4M9 14v4" />,
 };
@@ -235,29 +300,155 @@ function StepBar({ state }: { state: TimerState }) {
   );
 }
 
+/** A typed-in field: whole, non-negative numbers only; empty reads as 0. */
+function wholeNumber(text: string): number | null {
+  const trimmed = text.trim();
+  if (trimmed === "") return 0;
+  return /^\d+$/.test(trimmed) ? Number(trimmed) : null;
+}
+
+/**
+ * Type a value instead of stepping to it. A duration takes minutes and
+ * seconds in two fields (a phone's number pad has no ":" key); a count takes
+ * one. Enter, the tick or tapping away applies it; Escape leaves it unchanged.
+ * The engine still clamps whatever is typed to what it allows.
+ */
+function StepperEditor({
+  label,
+  kind,
+  initial,
+  onSet,
+  onDone,
+}: {
+  label: string;
+  kind: "count" | "duration";
+  initial: number;
+  onSet: (value: number) => void;
+  onDone: () => void;
+}) {
+  const [minutes, setMinutes] = useState(String(Math.floor(initial / 60)));
+  const [seconds, setSeconds] = useState(String(initial % 60).padStart(2, "0"));
+  const [count, setCount] = useState(String(initial));
+  const name = label.toLowerCase();
+
+  const apply = () => {
+    if (kind === "count") {
+      const value = wholeNumber(count);
+      if (value !== null) onSet(value);
+    } else {
+      const mins = wholeNumber(minutes);
+      const secs = wholeNumber(seconds);
+      if (mins !== null && secs !== null) onSet(mins * 60 + secs);
+    }
+    onDone();
+  };
+
+  return (
+    <form
+      className="st-stepper-edit"
+      // Our own parsing rejects bad input; the browser's pattern check would
+      // only block the submit and leave the editor stuck open.
+      noValidate
+      onSubmit={(event) => {
+        event.preventDefault();
+        apply();
+      }}
+      onBlur={(event) => {
+        // Moving between the minutes and seconds fields is not leaving.
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) apply();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          // The sheet's own Escape handling would close the timer view.
+          event.stopPropagation();
+          onDone();
+        }
+      }}
+    >
+      {kind === "count" ? (
+        <input
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          autoFocus
+          aria-label={name}
+          value={count}
+          onChange={(event) => setCount(event.target.value)}
+          onFocus={(event) => event.target.select()}
+        />
+      ) : (
+        <>
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            autoFocus
+            aria-label={`${name} minutes`}
+            value={minutes}
+            onChange={(event) => setMinutes(event.target.value)}
+            onFocus={(event) => event.target.select()}
+          />
+          <span aria-hidden="true">:</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            aria-label={`${name} seconds`}
+            value={seconds}
+            onChange={(event) => setSeconds(event.target.value)}
+            onFocus={(event) => event.target.select()}
+          />
+        </>
+      )}
+      <button type="submit" aria-label={`Set ${name}`}>
+        ✓
+      </button>
+    </form>
+  );
+}
+
 function Stepper({
   label,
   value,
   onDown,
   onUp,
+  edit,
 }: {
   label: string;
   value: string;
   onDown: () => void;
   onUp: () => void;
+  /** Tap the value to type it: the starting number and how to apply it. */
+  edit?: { kind: "count" | "duration"; initial: number; onSet: (value: number) => void };
 }) {
+  const [editing, setEditing] = useState(false);
   return (
     <div className="st-stepper">
       <span className="st-stepper-label">{label}</span>
-      <div className="st-stepper-control">
-        <button type="button" onClick={onDown} aria-label={`Decrease ${label.toLowerCase()}`}>
-          −
-        </button>
-        <span className="st-stepper-value">{value}</span>
-        <button type="button" onClick={onUp} aria-label={`Increase ${label.toLowerCase()}`}>
-          +
-        </button>
-      </div>
+      {editing && edit ? (
+        <StepperEditor label={label} {...edit} onDone={() => setEditing(false)} />
+      ) : (
+        <div className="st-stepper-control">
+          <button type="button" onClick={onDown} aria-label={`Decrease ${label.toLowerCase()}`}>
+            −
+          </button>
+          {edit ? (
+            <button
+              type="button"
+              className="st-stepper-value"
+              onClick={() => setEditing(true)}
+              aria-label={`${label} ${value}, tap to type`}
+            >
+              {value}
+            </button>
+          ) : (
+            <span className="st-stepper-value">{value}</span>
+          )}
+          <button type="button" onClick={onUp} aria-label={`Increase ${label.toLowerCase()}`}>
+            +
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -271,15 +462,64 @@ function ReadyPanel({
   item: TimerItem;
   onAdjust: () => void;
 }) {
-  if (item.kind !== "interval") {
+  if (item.kind === "task") {
     return <p className="st-plan-line">{describeItem(item)}</p>;
+  }
+  if (item.kind === "sets") {
+    const noun = countNoun(item);
+    return (
+      <div className="st-setup">
+        <button
+          type="button"
+          className="st-plan-summary"
+          data-size={
+            (item.sets && item.sets.min !== item.sets.max) ||
+            (item.restSec && item.restSec.min !== item.restSec.max) ||
+            (item.holdSec && item.restSec)
+              ? "long"
+              : undefined
+          }
+          onClick={onAdjust}
+          aria-label={`Edit ${noun}s and rest`}
+        >
+          {/* A no-break space keeps each number with its unit when the line wraps. */}
+          {item.sets ? (
+            <>
+              <span>{formatRange(item.sets)}</span>
+              {`\u00a0${item.sets.max === 1 ? noun : `${noun}s`}`}
+            </>
+          ) : (
+            <>{capitalize(noun)}s as needed</>
+          )}
+          {item.holdSec ? (
+            <>
+              {" "}
+              · <span>{formatClock(item.holdSec)}</span>
+              {"\u00a0hold"}
+            </>
+          ) : null}
+          {item.restSec ? (
+            <>
+              {" "}
+              · <span>{formatRange(item.restSec, formatClock)}</span>
+              {"\u00a0rest"}
+            </>
+          ) : null}
+        </button>
+      </div>
+    );
   }
   // One line, not a wall of controls: the plan's format, plus quick presets
   // when the plan left it open. Everything else lives behind Adjust.
   return (
     <div className="st-setup">
       <button type="button" className="st-plan-summary" onClick={onAdjust} aria-label="Edit rounds and timing">
-        <span>{item.rounds}</span> × <span>{formatClock(item.workSec)}</span>
+        {item.rounds > 1 ? (
+          <>
+            <span>{item.rounds}</span> ×{" "}
+          </>
+        ) : null}
+        <span>{formatClock(item.workSec)}</span>
         {item.restSec > 0 ? (
           <>
             {" "}
@@ -303,6 +543,7 @@ function ReadyPanel({
                 aria-pressed={active}
                 onClick={() => {
                   rememberRoundFormat(item.formatMemoryKey, {
+                    rounds: item.rounds,
                     workSec: preset.workSec,
                     restSec: preset.restSec,
                   });
@@ -338,33 +579,38 @@ function AdjustSheet({ timer }: { timer: SessionTimerController }) {
               value={String(item.rounds)}
               onDown={() => adjust({ rounds: item.rounds - 1 })}
               onUp={() => adjust({ rounds: item.rounds + 1 })}
+              edit={{ kind: "count", initial: item.rounds, onSet: (rounds) => adjust({ rounds }) }}
             />
             <Stepper
               label="Round length"
               value={formatClock(item.workSec)}
-              onDown={() => adjust({ workSec: item.workSec - 15 })}
-              onUp={() => adjust({ workSec: item.workSec + 15 })}
+              onDown={() => adjust({ workSec: stepDuration(item.workSec, -1) })}
+              onUp={() => adjust({ workSec: stepDuration(item.workSec, 1) })}
+              edit={{ kind: "duration", initial: item.workSec, onSet: (workSec) => adjust({ workSec }) }}
             />
             <Stepper
               label="Rest"
               value={formatClock(item.restSec)}
-              onDown={() => adjust({ restSec: item.restSec - 15 })}
-              onUp={() => adjust({ restSec: item.restSec + 15 })}
+              onDown={() => adjust({ restSec: stepDuration(item.restSec, -1) })}
+              onUp={() => adjust({ restSec: stepDuration(item.restSec, 1) })}
+              edit={{ kind: "duration", initial: item.restSec, onSet: (restSec) => adjust({ restSec }) }}
             />
           </>
         ) : (
           <>
             <Stepper
-              label="Sets"
+              label={countNoun(item) === "round" ? "Rounds" : "Sets"}
               value={item.sets ? formatRange(item.sets) : "–"}
               onDown={() => adjust({ sets: (item.sets?.min ?? 2) - 1 })}
               onUp={() => adjust({ sets: (item.sets?.max ?? 0) + 1 })}
+              edit={{ kind: "count", initial: item.sets?.max ?? 3, onSet: (sets) => adjust({ sets }) }}
             />
             <Stepper
               label="Rest"
               value={item.restSec ? formatRange(item.restSec, formatClock) : "–"}
-              onDown={() => adjust({ restSec: (item.restSec?.min ?? 90) - 15 })}
-              onUp={() => adjust({ restSec: (item.restSec?.max ?? 75) + 15 })}
+              onDown={() => adjust({ restSec: stepDuration(item.restSec?.min ?? 90, -1) })}
+              onUp={() => adjust({ restSec: stepDuration(item.restSec?.max ?? 75, 1) })}
+              edit={{ kind: "duration", initial: item.restSec?.min ?? 90, onSet: (restSec) => adjust({ restSec }) }}
             />
           </>
         )}
@@ -404,43 +650,89 @@ function useAdjustHint(): [boolean, () => void] {
 function SettingsSheet({ timer, onClose }: { timer: SessionTimerController; onClose: () => void }) {
   const { settings, setSettings } = timer;
   return (
-    <div className="st-sheet" role="group" aria-label="Timer sound settings">
-      <label className="st-toggle">
-        <input
-          type="checkbox"
-          checked={settings.sound}
-          onChange={(event) => setSettings({ ...settings, sound: event.target.checked })}
-        />
-        <span>Bell and beeps</span>
-      </label>
-      <label className="st-range">
-        <span>Volume</span>
-        <input
-          type="range"
-          min={0}
-          max={1}
-          step={0.05}
-          value={settings.volume}
-          onChange={(event) => setSettings({ ...settings, volume: Number(event.target.value) })}
-          onPointerUp={() => timerAudio().play("bell")}
-        />
-      </label>
-      <label className="st-toggle">
-        <input
-          type="checkbox"
-          checked={settings.voice}
-          onChange={(event) => setSettings({ ...settings, voice: event.target.checked })}
-        />
-        <span>Voice callouts (&ldquo;Round 3&rdquo;, &ldquo;Rest&rdquo;)</span>
-      </label>
-      <label className="st-toggle">
-        <input
-          type="checkbox"
-          checked={settings.vibrate}
-          onChange={(event) => setSettings({ ...settings, vibrate: event.target.checked })}
-        />
-        <span>Vibrate (Android)</span>
-      </label>
+    <div className="st-sheet" role="group" aria-label="Timer settings">
+      <fieldset className="st-group">
+        <legend>Sound</legend>
+        <label className="st-toggle">
+          <input
+            type="checkbox"
+            checked={settings.sound}
+            onChange={(event) => setSettings({ ...settings, sound: event.target.checked })}
+          />
+          <span>Bell and beeps</span>
+        </label>
+        <label className="st-range">
+          <span>Volume</span>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={settings.volume}
+            onChange={(event) => setSettings({ ...settings, volume: Number(event.target.value) })}
+            onPointerUp={() => timerAudio().play("bell")}
+          />
+        </label>
+        <label className="st-toggle">
+          <input
+            type="checkbox"
+            checked={settings.voice}
+            onChange={(event) => setSettings({ ...settings, voice: event.target.checked })}
+          />
+          <span>Voice callouts (&ldquo;Round 3&rdquo;, &ldquo;Halfway&rdquo;, &ldquo;10 seconds&rdquo;)</span>
+        </label>
+        <label className="st-toggle">
+          <input
+            type="checkbox"
+            checked={settings.vibrate}
+            onChange={(event) => setSettings({ ...settings, vibrate: event.target.checked })}
+          />
+          <span>Vibrate (Android)</span>
+        </label>
+      </fieldset>
+      <fieldset className="st-group">
+        <legend>Round warnings</legend>
+        <label className="st-toggle">
+          <input
+            type="checkbox"
+            checked={settings.warnTen}
+            onChange={(event) => setSettings({ ...settings, warnTen: event.target.checked })}
+          />
+          <span>10 seconds left</span>
+        </label>
+        <label className="st-toggle">
+          <input
+            type="checkbox"
+            checked={settings.warnThirty}
+            onChange={(event) => setSettings({ ...settings, warnThirty: event.target.checked })}
+          />
+          <span>30 seconds left</span>
+        </label>
+        <label className="st-toggle">
+          <input
+            type="checkbox"
+            checked={settings.warnHalfway}
+            onChange={(event) => setSettings({ ...settings, warnHalfway: event.target.checked })}
+          />
+          <span>Halfway</span>
+        </label>
+      </fieldset>
+      <div className="st-choice" role="radiogroup" aria-label="Countdown before round 1">
+        <span>Get-ready countdown</span>
+        <div className="st-choice-options">
+          {PREP_OPTIONS.map((seconds) => (
+            <button
+              key={seconds}
+              type="button"
+              role="radio"
+              aria-checked={settings.prepSec === seconds}
+              onClick={() => setSettings({ ...settings, prepSec: seconds })}
+            >
+              {seconds === 0 ? "Off" : `${seconds}s`}
+            </button>
+          ))}
+        </div>
+      </div>
       <p className="st-sheet-note">
         Keep this screen open: the clock stays exact if your phone locks, but the bell can&apos;t ring
         while the screen is off.
@@ -471,8 +763,19 @@ function PrimaryAction({
     fn();
   };
   if (state.phase === "ready") {
+    const start = () => {
+      // What they start with is what the timer opens on next time.
+      if (item.kind === "interval" && item.formatMemoryKey) {
+        rememberRoundFormat(item.formatMemoryKey, {
+          rounds: item.rounds,
+          workSec: item.workSec,
+          restSec: item.restSec,
+        });
+      }
+      timer.run((s, at) => startItem(s, at, { prepSec: timer.settings.prepSec }));
+    };
     return (
-      <button type="button" className="st-primary" onClick={unlockThen(() => timer.run(startItem))}>
+      <button type="button" className="st-primary" onClick={unlockThen(start)}>
         {item.kind === "interval" && item.rounds > 1 ? "Start round 1" : "Start"}
       </button>
     );
@@ -487,7 +790,7 @@ function PrimaryAction({
   if (state.phase === "work" && item.kind === "sets") {
     return (
       <button type="button" className="st-primary" onClick={() => timer.run(completeSet)}>
-        {item.holdSec ? "End hold" : `Set ${state.unit} done`}
+        {item.holdSec ? "End hold" : `${unitWord(item)} ${state.unit} done`}
       </button>
     );
   }
@@ -501,14 +804,19 @@ function PrimaryAction({
   if (state.phase === "rest" && readyRemainingMs !== null && readyRemainingMs > 0) {
     return (
       <button type="button" className="st-primary" data-variant="ghost" disabled>
-        Set {state.unit} unlocks in {formatClock(Math.ceil(readyRemainingMs / 1000))}
+        {item.kind === "sets" ? unitWord(item) : "Set"} {state.unit} unlocks in{" "}
+        {formatClock(Math.ceil(readyRemainingMs / 1000))}
       </button>
     );
   }
   if (state.phase === "rest") {
     return (
       <button type="button" className="st-primary" data-variant="ghost" onClick={() => timer.run(skipRest)}>
-        {item.kind === "sets" ? `Start set ${state.unit}` : "Skip rest"}
+        {item.kind === "sets"
+          ? `Start ${countNoun(item)} ${state.unit}`
+          : isPrep(state)
+            ? "Start now"
+            : "Skip rest"}
       </button>
     );
   }
@@ -517,6 +825,109 @@ function PrimaryAction({
       Pause
     </button>
   );
+}
+
+type MiniPos = { x: number; y: number; width: number };
+
+/**
+ * Lets the minimised timer bar be dragged anywhere on screen, the same way the
+ * "Show plan build" pill works: a small movement threshold keeps a tap a tap,
+ * the click that ends a drag is swallowed, and the bar is clamped on-screen
+ * (also on resize). The width is pinned on the first drag so the bar keeps its
+ * shape once it stops being stretched between the page gutters.
+ */
+function useDraggableMini(onTap: () => void) {
+  const [pos, setPos] = useState<MiniPos | null>(null);
+  const ref = useRef<HTMLButtonElement>(null);
+  const dragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+    width: number;
+    moved: boolean;
+  } | null>(null);
+  const justDraggedRef = useRef(false);
+
+  const clampTo = (x: number, y: number, width: number): MiniPos => {
+    const w = Math.min(width, Math.max(0, window.innerWidth - 16));
+    const height = ref.current?.offsetHeight ?? 0;
+    const maxX = Math.max(8, window.innerWidth - w - 8);
+    const maxY = Math.max(8, window.innerHeight - height - 8);
+    return { x: Math.min(Math.max(8, x), maxX), y: Math.min(Math.max(8, y), maxY), width: w };
+  };
+
+  useEffect(() => {
+    if (!pos) return;
+    const clamp = () => setPos((prev) => (prev ? clampTo(prev.x, prev.y, prev.width) : prev));
+    window.addEventListener("resize", clamp);
+    return () => window.removeEventListener("resize", clamp);
+  }, [pos]);
+
+  const onPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: rect.left,
+      originY: rect.top,
+      width: rect.width,
+      moved: false,
+    };
+    try {
+      el.setPointerCapture(event.pointerId);
+    } catch {
+      // Pointer capture unsupported; dragging still works via window coords.
+    }
+  };
+
+  const onPointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const dx = event.clientX - drag.startX;
+    const dy = event.clientY - drag.startY;
+    // Ignore micro-movements so a tap still opens the timer.
+    if (!drag.moved && Math.hypot(dx, dy) < 6) return;
+    drag.moved = true;
+    setPos(clampTo(drag.originX + dx, drag.originY + dy, drag.width));
+  };
+
+  const onPointerUp = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    justDraggedRef.current = drag.moved;
+    dragRef.current = null;
+    try {
+      ref.current?.releasePointerCapture(event.pointerId);
+    } catch {
+      // Ignore release failures.
+    }
+  };
+
+  const onClick = () => {
+    // Suppress the click that ends a drag so the timer doesn't open on drop.
+    if (justDraggedRef.current) {
+      justDraggedRef.current = false;
+      return;
+    }
+    onTap();
+  };
+
+  return {
+    ref,
+    style: pos
+      ? { left: pos.x, top: pos.y, right: "auto", bottom: "auto", width: pos.width, margin: 0 }
+      : undefined,
+    onPointerDown,
+    onPointerMove,
+    onPointerUp,
+    onPointerCancel: onPointerUp,
+    onClick,
+  };
 }
 
 /** Portal to <body> so a transformed ancestor card can never trap the
@@ -528,7 +939,7 @@ function ToBody({ children }: { children: ReactNode }) {
 /**
  * Full-screen session timer. Rounds for sparring / conditioning, sets with
  * auto rest for strength, holds and rest for rehab. Minimising keeps the clock
- * running (silently) and shows a mini bar; closing only ever minimises, so an
+ * running (the round bells and warnings still ring) and shows a mini bar; closing only ever minimises, so an
  * accidental tap never loses a session.
  */
 export function SessionTimer({
@@ -556,10 +967,11 @@ export function SessionTimer({
 }) {
   const timer = useSessionTimer({ items, storageKey, audible: visible });
   const { state, now } = timer;
-  const [sheet, setSheet] = useState<"sound" | "adjust" | null>(null);
+  const [sheet, setSheet] = useState<"settings" | "adjust" | null>(null);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [adjustHint, dismissAdjustHint] = useAdjustHint();
   const dialogRef = useRef<HTMLDivElement | null>(null);
+  const miniDrag = useDraggableMini(onExpand);
   const item = currentItem(state);
   const view = viewAt(state, now);
   const tone = toneFor(state, view);
@@ -595,7 +1007,7 @@ export function SessionTimer({
     if (state.phase === "done") return null;
     return (
       <ToBody>
-        <button type="button" className="st-mini" data-tone={tone} onClick={onExpand}>
+        <button type="button" className="st-mini" data-tone={tone} {...miniDrag}>
           <span className="st-mini-phase">{phaseLabel(state, item, view)}</span>
           <span className="st-mini-title">{item?.title}</span>
           <span className="st-mini-clock">{state.phase === "ready" ? "Open" : formatClock(clockSeconds)}</span>
@@ -626,9 +1038,9 @@ export function SessionTimer({
     view.readyRemainingMs !== null && item?.kind === "sets" && item.restSec
       ? view.readyRemainingMs > 0
         ? `Minimum rest. Up to ${formatShortDuration(item.restSec.max - item.restSec.min)} more is allowed after this.`
-        : `Go when ready. Set ${state.unit} starts itself in ${formatClock(Math.ceil((view.remainingMs ?? 0) / 1000))}.`
+        : `Go when ready. ${unitWord(item)} ${state.unit} starts itself in ${formatClock(Math.ceil((view.remainingMs ?? 0) / 1000))}.`
       : canFinishItem && item?.kind === "sets" && item.sets && item.sets.min !== item.sets.max && state.phase === "rest"
-        ? "Minimum hit. Only add sets if you're moving well."
+        ? `Minimum hit. Only add ${countNoun(item)}s if you're moving well.`
         : null;
 
   return (
@@ -673,24 +1085,24 @@ export function SessionTimer({
           <button
             type="button"
             className="st-icon"
-            onClick={() => setSheet((open) => (open === "sound" ? null : "sound"))}
-            aria-label="Sound settings"
-            aria-expanded={sheet === "sound"}
-            data-active={sheet === "sound" ? "true" : undefined}
+            onClick={() => setSheet((open) => (open === "settings" ? null : "settings"))}
+            aria-label="Timer settings"
+            aria-expanded={sheet === "settings"}
+            data-active={sheet === "settings" ? "true" : undefined}
           >
-            <Icon name="sound" />
+            <Icon name="settings" />
           </button>
         </div>
         {canAdjust && adjustHint && sheet === null ? (
           <button type="button" className="st-hint" onClick={dismissAdjustHint}>
-            Tap to edit rounds &amp; timing
+            {item?.kind === "sets" ? `Tap to edit ${countNoun(item)}s & rest` : "Tap to edit rounds & timing"}
             <span aria-hidden="true">×</span>
           </button>
         ) : null}
       </header>
       <StepBar state={state} />
 
-      {sheet === "sound" ? <SettingsSheet timer={timer} onClose={() => setSheet(null)} /> : null}
+      {sheet === "settings" ? <SettingsSheet timer={timer} onClose={() => setSheet(null)} /> : null}
       {sheet === "adjust" ? <AdjustSheet timer={timer} /> : null}
       {/* Tapping anywhere off an open sheet closes it. */}
       {sheet !== null ? <div className="st-scrim" aria-hidden="true" onClick={() => setSheet(null)} /> : null}
@@ -723,7 +1135,7 @@ export function SessionTimer({
             {phaseText}
           </p>
           <h2 className="st-title">{item?.title}</h2>
-          {item?.detail ? <p className="st-detail">{item.detail}</p> : null}
+          {item ? <DoseChips item={item} /> : null}
 
           {state.phase === "ready" && item ? (
             <ReadyPanel
@@ -791,10 +1203,24 @@ export function SessionTimer({
               </button>
             ) : null}
             {timed && !view.paused ? (
-              <button type="button" onClick={() => timer.update((s) => addTime(s, 30))}>
-                <Icon name="plus" />
-                30s
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => timer.update((s, at) => addTime(s, -10, at))}
+                  aria-label="Take 10 seconds off"
+                >
+                  <Icon name="minus" />
+                  10s
+                </button>
+                <button
+                  type="button"
+                  onClick={() => timer.update((s, at) => addTime(s, 10, at))}
+                  aria-label="Add 10 seconds"
+                >
+                  <Icon name="plus" />
+                  10s
+                </button>
+              </>
             ) : null}
             {state.phase === "work" && item?.kind === "interval" && !view.paused ? (
               <button type="button" onClick={() => timer.run(endRound)}>
@@ -818,7 +1244,7 @@ export function SessionTimer({
           </div>
           {nextItem ? (
             <div className="st-next">
-              <span className="st-next-label">Up next</span>
+              <span className="st-next-label">Then</span>
               <span className="st-next-title">{nextItem.title}</span>
               <span className="st-next-plan">{describeItem(nextItem)}</span>
             </div>

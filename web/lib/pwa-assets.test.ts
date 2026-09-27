@@ -50,7 +50,7 @@ test("manifest exposes the production install contract and shortcuts", () => {
   );
   assert.deepEqual(
     value.shortcuts?.map((shortcut) => shortcut.name),
-    ["Dashboard", "Today", "Plans"],
+    ["Dashboard", "Today", "Round timer", "Plans"],
   );
   assert.ok(
     value.shortcuts?.every(

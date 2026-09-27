@@ -8,7 +8,6 @@ test("RPE resolves however the label is cased or spaced", () => {
     const entry = glossaryEntry(spelling);
     assert.ok(entry, `expected an entry for "${spelling}"`);
     assert.equal(entry.term, "RPE");
-    assert.match(entry.definition, /Rate of Perceived Exertion/);
     // The scale itself is the thing the athlete cannot infer from "RPE 1.5",
     // so both ends of it have to be spelled out.
     assert.match(entry.definition, /\bfrom 1\b/);
@@ -22,9 +21,9 @@ test("multi-word labels resolve from the text the card prints", () => {
   assert.equal(entry.term, "Stop rule");
 });
 
-test("plain-English labels carry no gloss, so no stray question marks render", () => {
+test("plain-English labels carry no gloss, so no stray info marks render", () => {
   // These are rendered through the same GlossaryTooltip call as Volume/Mode, and
-  // must stay silent — a "?" on every stat would bury the ones that matter.
+  // must stay silent — an "i" on every stat would bury the ones that matter.
   for (const plain of ["Duration", "Distance", "Rounds", "Work", "Rest", "Swaps", "Easier", "Progress", "Strength", "Conditioning"]) {
     assert.equal(glossaryEntry(plain), null, `"${plain}" should need no definition`);
   }
@@ -55,9 +54,9 @@ test("each effort method resolves to its own definition, not to RPE's", () => {
     assert.ok(entry, `expected an entry for effort method "${method}"`);
     assert.equal(entry.term, term);
     if (method !== "RPE") {
-      assert.doesNotMatch(
+      assert.notEqual(
         entry.definition,
-        /Rate of Perceived Exertion/,
+        glossaryEntry("RPE")?.definition,
         `"${method}" must not be explained as RPE`,
       );
     }
