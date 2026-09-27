@@ -1327,6 +1327,11 @@ test("formatEffort never prints a raw enum or machine token", () => {
   // Messy model spellings of each scale.
   assert.equal(effort("intent", "MAX_SPEED"), "Max speed");
   assert.equal(effort("intent", 10), "Intent 10/10");
+  // 1 is "full intent" from the model, never 1/10 on a power block.
+  assert.equal(effort("intent", 1), "Max intent");
+  assert.equal(effort("intent", "1"), "Max intent");
+  assert.equal(effort("intent", 0.8), "80% intent");
+  assert.equal(effort("intent", 8), "Intent 8/10");
   assert.equal(effort("intent", "100%"), "100% intent");
   assert.equal(effort("RPE", "RPE 7"), "RPE 7");
   assert.equal(effort("RPE", "rpe_7"), "RPE 7");
