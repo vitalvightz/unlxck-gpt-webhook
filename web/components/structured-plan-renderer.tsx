@@ -1812,7 +1812,9 @@ function WeekStrip({
       aria-label={openOngoing ? "Training block weeks" : "Camp weeks"}
     >
       {weeks.map((week, pos) => {
-        const completion = weekCompletion(week, completionIndex);
+        // This compact fraction is a progress action: count the same app sessions
+        // as the week overview, not coach-owned days that cannot be logged here.
+        const completion = weekCompletion(week, completionIndex, { includeCoachLed: false });
         const phase = openOngoing
           ? OPEN_BLOCK_WEEK_LABELS[pos] || `Week ${pos + 1}`
           : resolvedWeekPhase(week);
@@ -1846,7 +1848,7 @@ function WeekStrip({
             ) : null}
             {completion.total > 0 ? (
               <span className="cm-week-pill-completion">
-                {completion.done}/{completion.total}
+                {completion.done}/{completion.total} app
                 <span className="sr-only"> sessions completed</span>
               </span>
             ) : null}

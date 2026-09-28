@@ -212,22 +212,18 @@ function QuickBuildGuide({ steps }: { steps: QuickBuildGuideStep[] }) {
   const completedCount = steps.filter((step) => step.complete).length;
   const totalCount = steps.length;
   const nextStep = steps.find((step) => !step.complete);
-  const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   return (
-    <section className="quick-build-guide" aria-label="Quick Build progress">
-      <div className="quick-build-guide-header">
-        <div>
-          <p className="kicker">Fast path</p>
-          <h2 className="quick-build-guide-title">Quick Build readiness</h2>
-        </div>
+    <details className="quick-build-guide" aria-label="Quick Build progress">
+      <summary className="quick-build-guide-summary">
+        <span className="quick-build-guide-summary-title">Setup status</span>
+        <span className="quick-build-guide-summary-next">
+          {nextStep ? `Next: ${nextStep.label}` : "Ready to generate"}
+        </span>
         <span className={completedCount === totalCount ? "badge status-badge-success" : "badge status-badge-neutral"}>
           {completedCount}/{totalCount} ready
         </span>
-      </div>
-      <div className="overview-progress-track quick-build-guide-track" role="presentation" aria-hidden="true">
-        <span className="overview-progress-fill quick-build-guide-fill" style={{ width: `${progressPct}%` }} />
-      </div>
+      </summary>
       <div className="quick-build-guide-steps">
         {steps.map((step, index) => {
           const isCurrent = nextStep?.key === step.key;
@@ -245,7 +241,7 @@ function QuickBuildGuide({ steps }: { steps: QuickBuildGuideStep[] }) {
           );
         })}
       </div>
-    </section>
+    </details>
   );
 }
 
@@ -815,8 +811,6 @@ function QuickBuildFormInner() {
         </p>
       </section>
 
-      <QuickBuildGuide steps={quickBuildGuideSteps} />
-
       <section className="quick-build-starters" aria-label="Starter setups">
         <div className="quick-build-starters-copy">
           <span className="checkbox-group-label">One-tap starters</span>
@@ -843,6 +837,8 @@ function QuickBuildFormInner() {
           })}
         </div>
       </section>
+
+      <QuickBuildGuide steps={quickBuildGuideSteps} />
 
       <article className="step-card">
         <div className="form-section-header">
@@ -1060,10 +1056,13 @@ function QuickBuildFormInner() {
           activeKey={activeEquipmentPreset}
           onSelect={handleEquipmentPresetSelect}
         />
-        <EquipmentSelector
-          selectedValues={input.equipment_access}
-          onToggle={(value) => toggleField("equipment_access", value)}
-        />
+        <details className="quick-build-equipment-details" open={Boolean(visibleError("equipment_access"))}>
+          <summary>Fine-tune equipment <span>{input.equipment_access.length} selected</span></summary>
+          <EquipmentSelector
+            selectedValues={input.equipment_access}
+            onToggle={(value) => toggleField("equipment_access", value)}
+          />
+        </details>
         <FieldError message={visibleError("equipment_access")} />
       </article>
 

@@ -14,6 +14,7 @@ import {
   TECHNICAL_STYLE_OPTIONS,
 } from "@/lib/intake-options";
 import { XP_ACTIONS } from "@/lib/xp";
+import { xpWeekHeading } from "@/lib/xp-progress";
 
 const numberFormatter = new Intl.NumberFormat("en-GB");
 const dateFormatter = new Intl.DateTimeFormat("en-GB", {
@@ -177,11 +178,7 @@ export default function ProgressPage() {
               <p className="status-label">THIS WEEK</p>
               <h2 id="xp-week-title">
                 {xp.progress.currentWeek
-                  ? `Week ${
-                      xp.progress.currentWeek.weekIndex === null
-                        ? ""
-                        : xp.progress.currentWeek.weekIndex + 1
-                    }${xp.progress.currentWeek.phaseLabel ? ` — ${xp.progress.currentWeek.phaseLabel}` : ""}`
+                  ? xpWeekHeading(xp.progress.currentWeek)
                   : "No active training week"}
               </h2>
             </div>
@@ -190,8 +187,9 @@ export default function ProgressPage() {
             <>
               <p className="xp-week-count">
                 <strong>{xp.progress.currentWeek.completedSessions}</strong>
-                <span>/ {xp.progress.currentWeek.plannedSessions} sessions</span>
+                <span>/ {xp.progress.currentWeek.plannedSessions} XP-eligible cards</span>
               </p>
+              <p className="muted">App sessions and trackable support cards. Coach-led days are separate.</p>
               <div className="xp-week-track" aria-hidden="true">
                 <span
                   style={{
@@ -210,7 +208,7 @@ export default function ProgressPage() {
                   ? xp.progress.currentWeek.weekXpEarned
                     ? "+100 XP earned for the completed week."
                     : "Week complete. XP reconciliation is pending."
-                  : `${xp.progress.currentWeek.remainingSessions} session${
+                  : `${xp.progress.currentWeek.remainingSessions} card${
                       xp.progress.currentWeek.remainingSessions === 1 ? "" : "s"
                     } remaining. +100 XP when complete.`}
               </p>

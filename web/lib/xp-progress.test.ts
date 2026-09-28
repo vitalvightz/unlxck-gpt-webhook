@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { parseXpProgressResponse } from "./xp-progress";
+import { parseXpProgressResponse, xpWeekHeading } from "./xp-progress";
 
 function response(overrides: Record<string, unknown> = {}) {
   return {
@@ -33,7 +33,7 @@ function response(overrides: Record<string, unknown> = {}) {
     current_week: {
       plan_id: "plan-1",
       week_id: "week-1",
-      week_index: 0,
+      week_index: 1,
       phase_label: "GPP",
       start_date: "2026-08-03",
       end_date: "2026-08-09",
@@ -67,6 +67,11 @@ test("parses the full progress contract", () => {
   assert.equal(parsed.currentWeek?.plannedSessions, 3);
   assert.equal(parsed.currentWeek?.remainingSessions, 1);
   assert.equal(parsed.majorMilestones[0]?.displayLabel, "GPP phase complete");
+});
+
+test("XP week heading uses the plan's one-based week number", () => {
+  assert.equal(xpWeekHeading({ weekIndex: 2, phaseLabel: "GPP" }), "Week 2 — GPP");
+  assert.equal(xpWeekHeading({ weekIndex: null, phaseLabel: "GPP" }), "Training week — GPP");
 });
 
 test("rejects more than three opportunity rows", () => {

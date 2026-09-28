@@ -28,6 +28,14 @@ export type XpWeekProgress = {
   weekXpEarned: boolean;
 };
 
+/** Structured plan week_index is already one-based; do not add one in the UI. */
+export function xpWeekHeading(week: Pick<XpWeekProgress, "weekIndex" | "phaseLabel">): string {
+  const number = week.weekIndex !== null && week.weekIndex > 0
+    ? `Week ${week.weekIndex}`
+    : "Training week";
+  return `${number}${week.phaseLabel ? ` — ${week.phaseLabel}` : ""}`;
+}
+
 export type XpMilestone = {
   id: string;
   planId: string;
