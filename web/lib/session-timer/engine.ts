@@ -32,6 +32,8 @@ export type TimerState = {
   phaseMs: number | null;
   /** Ranged rest only: when the minimum rest is reached, until announced. */
   readyAt: number | null;
+  /** A get-ready countdown (timed as a rest) before a round or hold starts. */
+  prep?: boolean;
   pausedAt: number | null;
   startedAt: number | null;
   endedAt: number | null;
@@ -79,7 +81,7 @@ function setPhase(
   phaseMs: number | null,
   patch: Partial<TimerState> = {},
 ): TimerState {
-  return { ...state, phase, phaseStartedAt: at, phaseMs, readyAt: null, ...patch };
+  return { ...state, phase, phaseStartedAt: at, phaseMs, readyAt: null, prep: false, ...patch };
 }
 
 function bumpCompleted(state: TimerState): number[] {
@@ -127,6 +129,19 @@ function beginWork(state: TimerState, at: number, events: TimerEvent[]): TimerSt
   return setPhase(state, "work", at, null);
 }
 
+/** Seconds of get-ready before every isometric hold, so the athlete can set up. */
+export const HOLD_PREP_SEC = 5;
+
+function isHold(item: TimerItem | null): boolean {
+  return item?.kind === "sets" && !!item.holdSec;
+}
+
+/** Lead into a hold with its get-ready countdown. */
+function beginHoldPrep(state: TimerState, at: number, events: TimerEvent[]): TimerState {
+  events.push("prep_start");
+  return setPhase(state, "rest", at, HOLD_PREP_SEC * 1000, { prep: true });
+}
+
 /**
  * The ready screen's Start: begins the queued exercise. Rounds can open with a
  * prep countdown (`prepSec`), timed as a rest before round 1 so the 3-2-1 beeps
@@ -141,13 +156,17 @@ export function startItem(state: TimerState, now: number, options: { prepSec?: n
   const prepSec = options.prepSec ?? 0;
   if (currentItem(state)?.kind === "interval" && prepSec > 0) {
     events.push("prep_start");
-    return { state: setPhase(started, "rest", now, prepSec * 1000), events };
+    return { state: setPhase(started, "rest", now, prepSec * 1000, { prep: true }), events };
+  }
+  if (isHold(currentItem(state))) {
+    return { state: beginHoldPrep(started, now, events), events };
   }
   return { state: beginWork(started, now, events), events };
 }
 
-/** The countdown before round 1: the only rest an interval takes before any round is done. */
+/** A get-ready countdown: before round 1 of an interval, or before a hold. */
 export function isPrep(state: TimerState): boolean {
+  if (state.phase === "rest" && state.prep) return true;
   return (
     state.phase === "rest" &&
     currentItem(state)?.kind === "interval" &&
@@ -264,6 +283,10 @@ export function skipRest(state: TimerState, now: number): TimerStep {
     return { state, events: [] };
   }
   const events: TimerEvent[] = [];
+  // Cutting a rest short still leaves the hold's get-ready countdown.
+  if (isHold(currentItem(state)) && !isPrep(state)) {
+    return { state: beginHoldPrep(state, now, events), events };
+  }
   return { state: beginWork(state, now, events), events };
 }
 
@@ -411,7 +434,7 @@ export function adjustItem(state: TimerState, patch: ItemAdjustment, now: number
     sets: sets !== null ? { min: sets, max: sets } : item.sets,
   };
   let next = replace(updated);
-  if (state.phase === "rest" && restSec !== null) {
+  if (state.phase === "rest" && restSec !== null && !isPrep(state)) {
     // The rest is now exact: no separate minimum left to wait for.
     next = { ...next, phaseMs: restSec * 1000, readyAt: null };
   }
@@ -455,7 +478,7 @@ export function viewAt(state: TimerState, now: number): TimerView {
   const endsAt = phaseEndsAt(state);
   const item = currentItem(state);
   const rest = item?.kind === "sets" ? item.restSec : null;
-  const ranged = state.phase === "rest" && rest !== null && rest.max > rest.min;
+  const ranged = state.phase === "rest" && !state.prep && rest !== null && rest.max > rest.min;
   const elapsedMs = state.phaseStartedAt === null ? 0 : Math.max(0, clock - state.phaseStartedAt);
   return {
     remainingMs: endsAt === null ? null : Math.max(0, endsAt - clock),

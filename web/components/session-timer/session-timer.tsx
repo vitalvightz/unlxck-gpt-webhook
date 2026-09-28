@@ -812,10 +812,10 @@ function PrimaryAction({
   if (state.phase === "rest") {
     return (
       <button type="button" className="st-primary" data-variant="ghost" onClick={() => timer.run(skipRest)}>
-        {item.kind === "sets"
-          ? `Start ${countNoun(item)} ${state.unit}`
-          : isPrep(state)
-            ? "Start now"
+        {isPrep(state)
+          ? "Start now"
+          : item.kind === "sets"
+            ? `Start ${countNoun(item)} ${state.unit}`
             : "Skip rest"}
       </button>
     );
