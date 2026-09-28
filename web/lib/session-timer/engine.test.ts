@@ -12,6 +12,7 @@ import {
   endRound,
   endSession,
   finishItem,
+  HOLD_PREP_SEC,
   isPrep,
   metPlan,
   pause,
@@ -186,9 +187,10 @@ test("a ranged rest starts the next set by itself only at its maximum", () => {
 
 test("timed holds with a 90-120 s rest: no hold starts or finishes inside the rest range", () => {
   const hold: SetsItem = { ...HOLD, sets: { min: 3, max: 3 }, holdSec: 20, restSec: { min: 90, max: 120 } };
-  let step = startItem(createTimerState([hold]), T0);
+  // Start early enough that the get-ready countdown ends, and hold 1 begins, at T0.
+  let step = startItem(createTimerState([hold]), T0 - HOLD_PREP_SEC * 1000);
   step = advance(step.state, T0 + 20_000);
-  assert.deepEqual(step.events, ["hold_end", "rest_start"]);
+  assert.deepEqual(step.events, ["rest_end", "hold_start", "hold_end", "rest_start"]);
   assert.deepEqual(step.state.completed, [1]);
   const restStart = T0 + 20_000;
 
@@ -209,13 +211,18 @@ test("timed holds with a 90-120 s rest: no hold starts or finishes inside the re
   assert.equal(viewAt(step.state, restStart + 120_000).remainingMs, 20_000);
   assert.deepEqual(step.state.completed, [1]);
 
-  // Tapping Start set inside the range begins the hold at the tap.
-  let tapped = startItem(createTimerState([hold]), T0);
+  // Tapping Start set inside the range begins the get-ready countdown, then the hold.
+  let tapped = startItem(createTimerState([hold]), T0 - HOLD_PREP_SEC * 1000);
   tapped = advance(tapped.state, T0 + 20_000);
-  tapped = skipRest(advance(tapped.state, restStart + 100_000).state, restStart + 100_000);
-  assert.equal(skipRest(advance(tapped.state, restStart).state, restStart + 30_000).events.length, 0);
-  assert.deepEqual(tapped.events, ["hold_start"]);
-  assert.equal(viewAt(tapped.state, restStart + 100_000).remainingMs, 20_000);
+  const resting = tapped.state;
+  assert.equal(skipRest(resting, restStart + 30_000).events.length, 0);
+  tapped = skipRest(advance(resting, restStart + 100_000).state, restStart + 100_000);
+  assert.deepEqual(tapped.events, ["prep_start"]);
+  assert.ok(isPrep(tapped.state));
+  assert.equal(viewAt(tapped.state, restStart + 100_000).readyRemainingMs, null);
+  tapped = advance(tapped.state, restStart + 105_000);
+  assert.deepEqual(tapped.events, ["rest_end", "hold_start"]);
+  assert.equal(viewAt(tapped.state, restStart + 105_000).remainingMs, 20_000);
 });
 
 test("pausing a ranged rest shifts both its minimum and maximum", () => {
@@ -250,8 +257,12 @@ test("an untimed rest can be given a preset length", () => {
 });
 
 test("timed holds end themselves and rest between sets", () => {
-  let step = startItem(createTimerState([HOLD]), T0);
-  assert.deepEqual(step.events, ["hold_start"]);
+  let step = startItem(createTimerState([HOLD]), T0 - HOLD_PREP_SEC * 1000);
+  // A get-ready countdown leads into the first hold.
+  assert.deepEqual(step.events, ["prep_start"]);
+  assert.ok(isPrep(step.state));
+  step = advance(step.state, T0);
+  assert.deepEqual(step.events, ["rest_end", "hold_start"]);
   step = advance(step.state, T0 + 30_000);
   assert.deepEqual(step.events, ["hold_end", "rest_start"]);
   step = advance(step.state, T0 + 60_000);
