@@ -92,7 +92,7 @@ It never caches authenticated HTML, `/api` responses, Supabase or OpenAI traffic
 
 The registration URL and cache names use the current Vercel deployment fingerprint, so old static chunks cannot accumulate across deployments.
 
-The worker does not call `skipWaiting()` during installation. When a new worker is waiting, the app shows **New version available** with a **Refresh** action only on a safe route. Intake/onboarding, generation, triage, admin review, and pages with unsaved input defer that actionable notice. The waiting worker is preserved, and the action returns after the user navigates to a safe route. Only an explicit Refresh activates the worker; repeated controller-change events cannot create a refresh loop.
+The worker does not call `skipWaiting()` during installation. Updated workers activate through the browser’s normal service worker lifecycle on a later visit.
 
 ## Final real-device readiness checklist
 
@@ -119,7 +119,6 @@ The worker does not call `skipWaiting()` during installation. When a new worker 
 - Install with Chrome and Edge and verify standalone launch.
 - Confirm unsupported browsers hide the install panel instead of showing generic instructions.
 - Uninstall, clear the site worker/cache in DevTools, and reinstall.
-- Verify one explicit update refresh causes only one reload.
 
 ## Resetting during debugging
 

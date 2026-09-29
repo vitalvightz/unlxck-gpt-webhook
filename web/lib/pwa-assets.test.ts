@@ -91,7 +91,6 @@ test("service worker only runtime-caches safe static assets", () => {
   assert.match(source, /caches\.match\(OFFLINE_URL\)/);
   assert.match(source, /url\.pathname\.startsWith\("\/_next\/static\/"\)/);
   assert.match(source, /isVersionedNextAsset \|\| SAFE_STATIC_PATHS\.has\(url\.pathname\)/);
-  assert.match(source, /event\.data\?\.type === "SKIP_WAITING"/);
   assert.match(source, /const APP_ICON_192 = "\/brand\/unlxck-one-angle-192\.png"/);
   assert.match(source, /icon: APP_ICON_192/);
   assert.match(source, /badge: APP_ICON_192/);

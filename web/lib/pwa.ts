@@ -8,15 +8,6 @@ export type PwaInstallAvailability =
   | "native"
   | "unsupported";
 
-const CRITICAL_WORKFLOW_PREFIXES = [
-  "/admin",
-  "/generate",
-  "/intake",
-  "/new-plan",
-  "/onboarding",
-  "/quick-build",
-] as const;
-
 export function isStandaloneDisplay(
   matchesStandalone: boolean,
   navigatorStandalone: boolean | undefined,
@@ -42,31 +33,6 @@ export function resolvePwaInstallAvailability({
   if (hasNativePrompt) return "native";
   if (ios) return "ios-manual";
   return "unsupported";
-}
-
-export function isPwaCriticalWorkflow(pathname: string, search = ""): boolean {
-  const normalizedPath = pathname !== "/" ? pathname.replace(/\/$/, "") : pathname;
-  if (
-    CRITICAL_WORKFLOW_PREFIXES.some(
-      (prefix) => normalizedPath === prefix || normalizedPath.startsWith(`${prefix}/`),
-    )
-  ) {
-    return true;
-  }
-
-  if (!normalizedPath.startsWith("/plans/")) {
-    return false;
-  }
-
-  const params = new URLSearchParams(search);
-  return params.get("review_required") === "1" || params.get("protected_triage") === "1";
-}
-
-export function shouldReloadForPwaControllerChange(
-  refreshRequested: boolean,
-  reloadStarted: boolean,
-): boolean {
-  return refreshRequested && !reloadStarted;
 }
 
 export function shouldRegisterServiceWorker(
