@@ -295,3 +295,43 @@ def test_old_cleared_timeframe_remains_history_only() -> None:
 
     assert view.open_injuries == []
     assert store.injury_flags.get(ATHLETE, []) == []
+
+
+def test_the_latest_resolution_is_adopted_among_resolved_legacy_rows() -> None:
+    # The RPC orders legacy candidates by status rank, then resolved_at desc.
+    store = FakeStore()
+    plan = _seed_generated_plan(store, intake_id="intake-current")
+    _create_legacy_ankle_flag(
+        store,
+        plan_id=plan["id"],
+        status="resolved",
+        resolved_at="2026-08-01T09:00:00+00:00",
+    )
+    latest = _create_legacy_ankle_flag(
+        store,
+        plan_id=plan["id"],
+        status="resolved",
+        resolved_at="2026-08-03T09:00:00+00:00",
+    )
+
+    sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=plan)
+
+    keys = {flag["id"]: flag["source_key"] for flag in store.injury_flags[ATHLETE]}
+    canonical_key = keys[latest["id"]]
+    assert canonical_key.startswith(f"intake:{plan['id']}:")
+    assert ":legacy-duplicate:" not in canonical_key
+    assert sum(":legacy-duplicate:" in key for key in keys.values()) == 1
+
+
+def test_a_keyed_row_resolves_later_unkeyed_duplicates() -> None:
+    store = FakeStore()
+    plan = _seed_generated_plan(store, intake_id="intake-current")
+    (keyed,) = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=plan)
+    duplicate = _create_legacy_ankle_flag(store, plan_id=plan["id"], status="open")
+
+    active = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=plan)
+
+    assert [flag["id"] for flag in active] == [keyed["id"]]
+    row = store.get_injury_flag_for_athlete(duplicate["id"], ATHLETE)
+    assert row["status"] == "resolved" and row["resolved_at"]
+    assert row["source_key"] == f"{keyed['source_key']}:legacy-duplicate:{duplicate['id']}"

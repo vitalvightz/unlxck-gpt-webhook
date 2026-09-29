@@ -15,7 +15,7 @@ class _FakeHeartbeatStore:
         self.status_reads = 0
         self.refresh_flags: list[bool] = []
 
-    def get_generation_job(self, job_id: str) -> dict:
+    def get_generation_job_status(self, job_id: str) -> dict:
         self.status_reads += 1
         return {"id": job_id, "status": self.status}
 

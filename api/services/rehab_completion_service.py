@@ -232,10 +232,7 @@ def session_rehab_items(
 
 
 def _open_injuries(store: Any, athlete_id: str) -> list[Mapping[str, Any]]:
-    lister = getattr(store, "list_injury_flags", None)
-    if not callable(lister):
-        return []
-    return _mappings(lister(athlete_id, statuses=("open", "monitoring")) or [])
+    return _mappings(store.list_injury_flags(athlete_id, statuses=("open", "monitoring")) or [])
 
 
 def resolve_completed_session_rehab(
@@ -529,12 +526,7 @@ def list_pending_rehab_response_sets(
                     _clean(completion.get("id")),
                 )
                 continue
-            injury_reader = getattr(store, "get_injury_flag_for_athlete", None)
-            injury = (
-                injury_reader(_clean(context.get("injury_id")), athlete_id)
-                if callable(injury_reader)
-                else None
-            )
+            injury = store.get_injury_flag_for_athlete(_clean(context.get("injury_id")), athlete_id)
             current_episode = _clean((injury or {}).get("episode_id"))
             saved_episode = _clean(context.get("injury_episode_id"))
             current_status = _clean((injury or {}).get("status")).lower()
@@ -573,8 +565,7 @@ def list_pending_rehab_response_sets(
             for exposure_id in _expected_exposure_ids(context)
         )
     )
-    reader = getattr(store, "list_rehab_exposures_by_ids", None)
-    stored_rows = reader(athlete_id, all_ids) if callable(reader) and all_ids else []
+    stored_rows = store.list_rehab_exposures_by_ids(athlete_id, all_ids) if all_ids else []
     stored_by_id = {
         _clean(row.get("id") or (row.get("event_json") or {}).get("exposure_id")): row
         for row in stored_rows or []
@@ -718,13 +709,7 @@ def record_rehab_exposures(
             for injury_id in answers
             for exposure_id in _expected_exposure_ids(expected_contexts[injury_id])
         }
-        reader = getattr(store, "list_rehab_exposures_by_ids", None)
-        if not callable(reader):
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="rehab exposure recovery unavailable",
-            )
-        stored_rows = reader(athlete_id, list(contexts_by_exposure_id))
+        stored_rows = store.list_rehab_exposures_by_ids(athlete_id, list(contexts_by_exposure_id))
         for row in stored_rows or []:
             if not isinstance(row, Mapping):
                 continue

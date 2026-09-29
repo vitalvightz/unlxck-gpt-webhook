@@ -415,10 +415,9 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
     def _plan_row_for_completion(
         store: AppStore, *, profile: ProfileRecord, plan_id: str
     ) -> dict[str, Any] | None:
-        reader = getattr(store, "get_plan_for_athlete", None)
-        if not callable(reader) or not plan_id:
+        if not plan_id:
             return None
-        return reader(plan_id, profile.athlete_id)
+        return store.get_plan_for_athlete(plan_id, profile.athlete_id)
 
     def _rehab_prompts_for_completion(
         store: AppStore, *, profile: ProfileRecord, completion: dict[str, Any]
@@ -456,10 +455,7 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
                     session_id=str(completion.get("session_id") or ""),
                     completion=completion,
                 )
-                initializer = getattr(store, "initialize_session_completion_rehab_contexts", None)
-                if not callable(initializer):
-                    raise RuntimeError("rehab response context persistence is unavailable")
-                persisted = initializer(
+                persisted = store.initialize_session_completion_rehab_contexts(
                     profile.athlete_id,
                     completion_id=str(completion.get("id") or ""),
                     plan_id=str(completion.get("plan_id") or ""),
@@ -498,16 +494,10 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         plan_id_value = str(plan_id)
         if not _plan_row_for_completion(store, profile=profile, plan_id=plan_id_value):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-        lister = getattr(store, "list_plan_session_completions", None)
-        if not callable(lister):
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="pending rehab responses unavailable",
-            )
         # Read one sentinel row beyond the bounded window. Omitted history is
         # never treated as answered or mutated; the explicit flag lets clients
         # and monitoring distinguish a complete read from a bounded one.
-        completions = lister(
+        completions = store.list_plan_session_completions(
             profile.athlete_id,
             plan_id_value,
             limit=PENDING_REHAB_COMPLETION_LIMIT + 1,

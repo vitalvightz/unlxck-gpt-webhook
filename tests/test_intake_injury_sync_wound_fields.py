@@ -7,6 +7,7 @@ from typing import Any
 from api.auth import AuthenticatedUser
 from api.contracts.readiness_message import classify_injury_surface
 from api.services.intake_injury_sync import sync_intake_injuries_for_plan
+from api.store import SupabaseAppStore
 from tests.support import FakeStore, _build_request, finalized_result
 
 ATHLETE = "athlete-wound-rpc"
@@ -48,6 +49,13 @@ class _WoundRpcClient:
             },
         )
         return _RpcResponse(row)
+
+
+class _ProductionAdoptStore(FakeStore):
+    """FakeStore whose adopt/create runs SupabaseAppStore's RPC call."""
+
+    def adopt_or_create_intake_injury_flag(self, params: dict[str, Any]) -> dict[str, Any] | None:
+        return SupabaseAppStore.adopt_or_create_intake_injury_flag(self, params)
 
 
 def _seed_surface_wound(store: FakeStore) -> dict[str, Any]:
@@ -96,7 +104,7 @@ def _seed_surface_wound(store: FakeStore) -> dict[str, Any]:
 
 
 def test_production_rpc_preserves_wound_fields_and_medical_review() -> None:
-    store = FakeStore()
+    store = _ProductionAdoptStore()
     plan = _seed_surface_wound(store)
     rpc_client = _WoundRpcClient(store)
     store.client = rpc_client
@@ -110,14 +118,67 @@ def test_production_rpc_preserves_wound_fields_and_medical_review() -> None:
     assert len(rpc_client.calls) == 1
     rpc_name, params = rpc_client.calls[0]
     assert rpc_name == "adopt_or_create_intake_injury_flag_with_wound_fields"
-    assert params["p_skin_integrity"] == "open"
-    assert params["p_bleeding_status"] == "uncontrolled"
-    assert params["p_infection_signs"] == ["pus"]
-    assert params["p_coverable"] == "no"
-    assert params["p_drainage"] == "present"
+    assert params == {
+        "p_athlete_id": ATHLETE,
+        "p_plan_id": plan["id"],
+        "p_source_key": params["p_source_key"],
+        "p_body_area": params["p_body_area"],
+        "p_description": params["p_description"],
+        "p_severity": "moderate",
+        "p_status": "open",
+        "p_resolved_at": None,
+        "p_skin_integrity": "open",
+        "p_bleeding_status": "uncontrolled",
+        "p_infection_signs": ["pus"],
+        "p_coverable": "no",
+        "p_drainage": "present",
+    }
+    assert params["p_source_key"].startswith(f"intake:{plan['id']}:")
+    assert params["p_body_area"] and params["p_description"]
 
     assert len(active) == 1
     assert active[0]["skin_integrity"] == "open"
     assert active[0]["bleeding_status"] == "uncontrolled"
     assert active[0]["infection_signs"] == ["pus"]
     assert classify_injury_surface(active[0]) == "surface_medical_review"
+
+
+def test_in_memory_store_keeps_the_same_wound_fields() -> None:
+    store = FakeStore()
+    plan = _seed_surface_wound(store)
+
+    (active,) = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=plan)
+
+    assert active["skin_integrity"] == "open"
+    assert active["bleeding_status"] == "uncontrolled"
+    assert active["infection_signs"] == ["pus"]
+    assert classify_injury_surface(active) == "surface_medical_review"
+
+
+def test_an_adopted_legacy_row_gains_only_the_wound_fields_it_lacks() -> None:
+    # The wrapper RPC coalesces: existing values win, missing ones are filled.
+    store = FakeStore()
+    plan = _seed_surface_wound(store)
+    candidate_area = "Right shoulder"
+    (seeded,) = sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=plan)
+    store.injury_flags[ATHLETE].clear()
+    legacy = store.create_injury_flag(
+        ATHLETE,
+        {
+            "plan_id": plan["id"],
+            "source": "intake",
+            "source_key": None,
+            "body_area": candidate_area,
+            "description": seeded["description"],
+            "bleeding_status": "controlled",
+        },
+    )
+
+    sync_intake_injuries_for_plan(store, athlete_id=ATHLETE, plan_row=plan)
+
+    (row,) = store.injury_flags[ATHLETE]
+    assert row["id"] == legacy["id"]
+    assert row["source_key"] == seeded["source_key"]
+    assert row["bleeding_status"] == "controlled"
+    assert row["skin_integrity"] == "open"
+    assert row["infection_signs"] == ["pus"]

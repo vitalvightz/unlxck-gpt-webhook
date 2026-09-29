@@ -4,16 +4,16 @@ Guided intake's ``cleared`` field answers "Have you been medically cleared?".
 It does not mean the injury has healed. The explicit ``timeframe=old_cleared``
 choice is the history-only signal.
 
-Each generated-plan injury receives a stable ``source_key``. Production writes
-use one database RPC that atomically adopts matching legacy rows or inserts a
-new row. This preserves old resolved states and prevents concurrent duplicates.
+Each generated-plan injury receives a stable ``source_key``. The store writes
+it atomically (production: one database RPC), adopting a matching legacy row or
+inserting a new one. This preserves old resolved states and prevents concurrent
+duplicates.
 """
 
 from __future__ import annotations
 
 import hashlib
 import logging
-import threading
 from datetime import datetime, timezone
 from typing import Any, Mapping
 
@@ -34,7 +34,6 @@ logger = logging.getLogger(__name__)
 _ACTIVE_STATUSES = ("open", "monitoring")
 _DEDUPE_STATUSES = ("open", "monitoring", "resolved")
 _HISTORICAL_CLEARED_TIMEFRAME = "old_cleared"
-_FALLBACK_LOCK = threading.RLock()
 
 
 def _normalized_token(value: object) -> str:
@@ -112,13 +111,10 @@ def _list_flags(
     *,
     statuses: tuple[str, ...],
 ) -> tuple[bool, list[dict[str, Any]]]:
-    lister = getattr(store, "list_injury_flags", None)
-    if not callable(lister):
-        return False, []
     try:
         return True, [
             dict(flag)
-            for flag in (lister(athlete_id, statuses=statuses, limit=500) or [])
+            for flag in (store.list_injury_flags(athlete_id, statuses=statuses, limit=500) or [])
         ]
     except Exception:
         logger.exception(
@@ -129,43 +125,6 @@ def _list_flags(
         return False, []
 
 
-def _is_legacy_match(
-    flag: Mapping[str, Any],
-    *,
-    plan_id: str,
-    candidate: Mapping[str, Any],
-) -> bool:
-    return (
-        str(flag.get("source") or "").strip().lower() == "intake"
-        and str(flag.get("plan_id") or "").strip() == plan_id
-        and not str(flag.get("source_key") or "").strip()
-        and _normalized_token(flag.get("body_area"))
-        == _normalized_token(candidate.get("body_area"))
-        and _normalized_description(flag.get("description"))
-        == _normalized_description(candidate.get("description"))
-    )
-
-
-def _canonical_legacy_match(flags: list[dict[str, Any]]) -> dict[str, Any]:
-    status_rank = {"resolved": 0, "monitoring": 1, "open": 2}
-    return min(
-        flags,
-        key=lambda flag: (
-            status_rank.get(str(flag.get("status") or "").strip().lower(), 3),
-            str(flag.get("created_at") or ""),
-            str(flag.get("id") or ""),
-        ),
-    )
-
-
-def _rpc_result_row(data: object) -> dict[str, Any] | None:
-    if isinstance(data, Mapping):
-        return dict(data)
-    if isinstance(data, list) and data and isinstance(data[0], Mapping):
-        return dict(data[0])
-    return None
-
-
 def _atomic_adopt_or_create(
     store: AppStore,
     *,
@@ -174,127 +133,40 @@ def _atomic_adopt_or_create(
 ) -> dict[str, Any] | None:
     """Adopt a legacy row or insert once by ``(athlete_id, source_key)``.
 
-    Production delegates the whole read/adopt/dedupe/insert sequence to one
-    transaction-scoped database RPC. In-memory stores use one process lock and
-    re-read inside it, mirroring the same decision for regression tests.
+    The store runs the whole read/adopt/dedupe/insert sequence atomically; in
+    production that is one transaction-scoped database RPC.
     """
     source_key = str(candidate.get("source_key") or "").strip()
     plan_id = str(candidate.get("plan_id") or "").strip()
     if not source_key or not plan_id:
         return None
 
-    client = getattr(store, "client", None)
-    if client is not None:
-        try:
-            response = client.rpc(
-                "adopt_or_create_intake_injury_flag_with_wound_fields",
-                {
-                    "p_athlete_id": athlete_id,
-                    "p_plan_id": plan_id,
-                    "p_source_key": source_key,
-                    "p_body_area": str(candidate.get("body_area") or ""),
-                    "p_description": str(candidate.get("description") or ""),
-                    "p_severity": str(candidate.get("severity") or "moderate"),
-                    "p_status": str(candidate.get("status") or "open"),
-                    "p_resolved_at": candidate.get("resolved_at"),
-                    "p_skin_integrity": candidate.get("skin_integrity"),
-                    "p_bleeding_status": candidate.get("bleeding_status"),
-                    "p_infection_signs": candidate.get("infection_signs") or [],
-                    "p_coverable": candidate.get("coverable"),
-                    "p_drainage": candidate.get("drainage"),
-                },
-            ).execute()
-            return _rpc_result_row(response.data)
-        except Exception:
-            logger.exception(
-                "[intake_injury_sync] atomic adopt/create failed "
-                "athlete_id=%s source_key=%s",
-                athlete_id,
-                source_key,
-            )
-            return None
-
-    create_flag = getattr(store, "create_injury_flag", None)
-    update_flag = getattr(store, "update_injury_flag", None)
-    if not callable(create_flag):
-        return None
-
-    with _FALLBACK_LOCK:
-        readable, flags = _list_flags(store, athlete_id, statuses=_DEDUPE_STATUSES)
-        if not readable:
-            return None
-
-        existing = next(
-            (
-                flag
-                for flag in flags
-                if str(flag.get("source_key") or "").strip() == source_key
-            ),
-            None,
+    try:
+        return store.adopt_or_create_intake_injury_flag(
+            {
+                "athlete_id": athlete_id,
+                "plan_id": plan_id,
+                "source_key": source_key,
+                "body_area": str(candidate.get("body_area") or ""),
+                "description": str(candidate.get("description") or ""),
+                "severity": str(candidate.get("severity") or "moderate"),
+                "status": str(candidate.get("status") or "open"),
+                "resolved_at": candidate.get("resolved_at"),
+                "skin_integrity": candidate.get("skin_integrity"),
+                "bleeding_status": candidate.get("bleeding_status"),
+                "infection_signs": candidate.get("infection_signs") or [],
+                "coverable": candidate.get("coverable"),
+                "drainage": candidate.get("drainage"),
+            }
         )
-        legacy_matches = [
-            flag
-            for flag in flags
-            if _is_legacy_match(flag, plan_id=plan_id, candidate=candidate)
-        ]
-
-        if existing:
-            # Clean up any leftover unkeyed duplicates without touching the
-            # already-adopted row's status or resolved timestamp.
-            if legacy_matches and callable(update_flag):
-                now_iso = datetime.now(timezone.utc).isoformat()
-                for duplicate in legacy_matches:
-                    duplicate_id = str(duplicate.get("id") or "")
-                    if not duplicate_id:
-                        continue
-                    update_flag(
-                        duplicate_id,
-                        {
-                            "source_key": f"{source_key}:legacy-duplicate:{duplicate_id}",
-                            "status": "resolved",
-                            "resolved_at": duplicate.get("resolved_at") or now_iso,
-                        },
-                    )
-            return existing
-
-        if legacy_matches:
-            # If we cannot update the legacy row, fail closed rather than create
-            # a second injury beside it.
-            if not callable(update_flag):
-                return None
-            canonical = _canonical_legacy_match(legacy_matches)
-            canonical_id = str(canonical.get("id") or "")
-            if not canonical_id:
-                return None
-
-            now_iso = datetime.now(timezone.utc).isoformat()
-            for duplicate in legacy_matches:
-                duplicate_id = str(duplicate.get("id") or "")
-                if not duplicate_id or duplicate_id == canonical_id:
-                    continue
-                update_flag(
-                    duplicate_id,
-                    {
-                        "source_key": f"{source_key}:legacy-duplicate:{duplicate_id}",
-                        "status": "resolved",
-                        "resolved_at": duplicate.get("resolved_at") or now_iso,
-                    },
-                )
-
-            # Only attach identity to the canonical row. Its existing status and
-            # resolved_at are deliberately left unchanged.
-            return dict(update_flag(canonical_id, {"source_key": source_key}))
-
-        try:
-            return dict(create_flag(athlete_id, dict(candidate)))
-        except Exception:
-            logger.exception(
-                "[intake_injury_sync] injury flag create failed "
-                "athlete_id=%s source_key=%s",
-                athlete_id,
-                source_key,
-            )
-            return None
+    except Exception:
+        logger.exception(
+            "[intake_injury_sync] atomic adopt/create failed "
+            "athlete_id=%s source_key=%s",
+            athlete_id,
+            source_key,
+        )
+        return None
 
 
 def sync_intake_injuries_for_plan(

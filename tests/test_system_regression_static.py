@@ -159,7 +159,7 @@ def test_settings_page_keeps_username_and_password_sections():
 
 def test_store_change_username_uses_shared_validator():
     store = _read("api/store.py")
-    supabase_store = store.split("class SupabaseAppStore:", 1)[1]
+    supabase_store = store.split("class SupabaseAppStore(", 1)[1]
 
     change_username = re.search(
         r"def change_username\(self, athlete_id: str, username: str\).*?def get_latest_intake",

@@ -26,7 +26,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 from fastapi import HTTPException, status
 
@@ -145,19 +145,10 @@ class _ReadinessTrackingStore:
     def _call_list(
         self,
         component: str,
-        method_name: str,
-        *args: Any,
-        **kwargs: Any,
+        read: Callable[[], Any],
     ) -> list[dict[str, Any]]:
-        method = getattr(self._store, method_name, None)
-        if not callable(method):
-            self.health.record(
-                component,
-                RuntimeError(f"required store method {method_name} is unavailable"),
-            )
-            return []
         try:
-            return [dict(row) for row in (method(*args, **kwargs) or [])]
+            return [dict(row) for row in (read() or [])]
         except Exception as exc:
             self.health.record(component, exc)
             return []
@@ -168,7 +159,9 @@ class _ReadinessTrackingStore:
         *,
         limit: int = 14,
     ) -> list[dict[str, Any]]:
-        return self._call_list("recent_checkins", "list_today_checkins", athlete_id, limit=limit)
+        return self._call_list(
+            "recent_checkins", lambda: self._store.list_today_checkins(athlete_id, limit=limit)
+        )
 
     def list_session_completions(
         self,
@@ -177,7 +170,7 @@ class _ReadinessTrackingStore:
         limit: int = 30,
     ) -> list[dict[str, Any]]:
         return self._call_list(
-            "recent_sessions", "list_session_completions", athlete_id, limit=limit
+            "recent_sessions", lambda: self._store.list_session_completions(athlete_id, limit=limit)
         )
 
     def list_injury_flags(
@@ -191,7 +184,8 @@ class _ReadinessTrackingStore:
             return [dict(row) for row in self._injury_flags_cache[:limit]]
 
         rows = self._call_list(
-            "injury_flags", "list_injury_flags", athlete_id, statuses=statuses, limit=limit
+            "injury_flags",
+            lambda: self._store.list_injury_flags(athlete_id, statuses=statuses, limit=limit),
         )
         if self._cache_injury_flags and not self.health.failures:
             self._injury_flags_cache = [dict(row) for row in rows]
@@ -212,15 +206,8 @@ class _ReadinessTrackingStore:
         return rows
 
     def get_intake(self, intake_id: str) -> Mapping[str, Any] | None:
-        method = getattr(self._store, "get_intake", None)
-        if not callable(method):
-            self.health.record(
-                "intake",
-                RuntimeError("required store method get_intake is unavailable"),
-            )
-            return None
         try:
-            row = method(intake_id)
+            row = self._store.get_intake(intake_id)
         except Exception as exc:
             self.health.record("intake", exc)
             return None
@@ -314,15 +301,8 @@ def _injury_flags_readable(store: AppStore, athlete_id: str) -> bool:
     injury state.
     """
     health = ReadinessContextHealth()
-    method = getattr(store, "list_injury_flags", None)
-    if not callable(method):
-        health.record(
-            "injury_flags",
-            RuntimeError("required store method list_injury_flags is unavailable"),
-        )
-        return False
     try:
-        method(athlete_id, statuses=("open", "monitoring"))
+        store.list_injury_flags(athlete_id, statuses=("open", "monitoring"))
     except Exception as exc:
         health.record("injury_flags", exc)
         return False

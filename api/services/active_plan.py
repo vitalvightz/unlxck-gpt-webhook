@@ -53,6 +53,9 @@ NEVER_ACTIVE_PLAN_STATUSES = {
 class ActivePlanStore(Protocol):
     def list_user_plans(self, athlete_id: str) -> list[dict[str, Any]]: ...
     def get_plan_for_athlete(self, plan_id: str, athlete_id: str) -> dict[str, Any] | None: ...
+    def get_active_plan_id(self, athlete_id: str) -> str | None: ...
+    def set_active_plan_id(self, athlete_id: str, plan_id: str) -> None: ...
+    def archive_plan_for_athlete(self, plan_id: str, athlete_id: str) -> dict[str, Any]: ...
 
 
 @dataclass(frozen=True)
@@ -87,10 +90,7 @@ def is_active_plan_eligible(
 
 
 def _explicit_active_plan_id(store: ActivePlanStore, athlete_id: str) -> str | None:
-    getter = getattr(store, "get_active_plan_id", None)
-    if not callable(getter):
-        return None
-    value = getter(athlete_id)
+    value = store.get_active_plan_id(athlete_id)
     return str(value).strip() or None if value is not None else None
 
 
@@ -357,24 +357,18 @@ def set_active_plan(
                 "message": ACTIVE_PLAN_OVERLAP_CONFLICT_MESSAGE,
             },
         )
-    setter = getattr(store, "set_active_plan_id", None)
-    if not callable(setter):
-        raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="explicit active plan storage is unavailable")
     if overlapping_active and normalized_action == "pause":
         # The active pointer is the pause state. Preserve the previous plan row
         # unchanged so it remains available for deliberate reactivation later.
-        setter(athlete_id, plan_id)
+        store.set_active_plan_id(athlete_id, plan_id)
         return plan
     if overlapping_active and normalized_action == "replace":
-        archiver = getattr(store, "archive_plan_for_athlete", None)
-        if not callable(archiver):
-            raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="plan replacement is unavailable")
         current_plan_id = str(overlapping_active.get("id") or "")
-        setter(athlete_id, plan_id)
+        store.set_active_plan_id(athlete_id, plan_id)
         try:
-            archiver(current_plan_id, athlete_id)
+            store.archive_plan_for_athlete(current_plan_id, athlete_id)
         except Exception as exc:
-            setter(athlete_id, current_plan_id)
+            store.set_active_plan_id(athlete_id, current_plan_id)
             if isinstance(exc, HTTPException):
                 raise HTTPException(
                     status_code=exc.status_code,
@@ -385,5 +379,5 @@ def set_active_plan(
                 detail=ACTIVE_PLAN_REPLACE_FAILED_MESSAGE,
             ) from exc
         return plan
-    setter(athlete_id, plan_id)
+    store.set_active_plan_id(athlete_id, plan_id)
     return plan

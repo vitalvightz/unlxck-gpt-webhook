@@ -104,7 +104,7 @@ class _RecoveryStore:
         self.complete_calls: list[str] = []
         self.fail_calls: list[str] = []
 
-    def list_admin_active_generation_jobs(self, *, limit: int = 50) -> list[dict[str, Any]]:
+    def list_generation_job_recovery_candidates(self, *, limit: int) -> list[dict[str, Any]]:
         return [
             {"id": job_id, "status": job["status"], "created_at": job["created_at"]}
             for job_id, job in list(self.jobs.items())[:limit]
@@ -211,9 +211,10 @@ async def _exercise_tick(monkeypatch) -> tuple[list[str], _RecoveryStore]:
     # already requeued the durable row. The worker must still reject the old
     # later-stage snapshot from claim/start.
     monkeypatch.setattr(
-        worker,
-        "list_claimable_generation_jobs",
-        lambda *_args, **_kwargs: [queued, startup, stale_worker_claim_snapshot],
+        store,
+        "poll_claimable_generation_jobs",
+        lambda **_kwargs: [queued, startup, stale_worker_claim_snapshot],
+        raising=False,
     )
     claimed: list[str] = []
 

@@ -256,11 +256,12 @@ def test_capped_read_out_of_order_falls_back_to_exact_reads(monkeypatch):
     assert "2026-06-04" in exact_read_days
 
 
-def test_store_without_ranged_read_keeps_exact_reads():
-    class LegacyStore(FakeStore):
-        list_session_completions_from_day = None
+def test_unusable_ranged_read_keeps_exact_reads():
+    class UnusableRangeStore(FakeStore):
+        def list_session_completions_from_day(self, *args, **kwargs):
+            return None
 
-    store = LegacyStore()
+    store = UnusableRangeStore()
     _add_camp(store, athlete_id=ATHLETE, plan_id=PLAN)
     _log(store, "2026-06-04-conditioning", "2026-06-04")
 

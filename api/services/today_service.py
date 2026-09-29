@@ -206,10 +206,7 @@ def _same_day_checkin_warnings(
     training_day: str,
     include_current_plan: bool = False,
 ) -> list[str]:
-    lister = getattr(store, "list_today_checkins_for_day", None)
-    if not callable(lister):
-        return []
-    rows = lister(athlete_id, training_day) or []
+    rows = store.list_today_checkins_for_day(athlete_id, training_day) or []
     if include_current_plan:
         has_same_day_checkin = bool(rows)
     else:
@@ -221,13 +218,10 @@ def _checked_recent_today_checkins(
     store: AppStore, athlete_id: str, *, limit: int = 4
 ) -> tuple[list[dict[str, Any]], bool]:
     """Return ``(rows, ok)``. ``ok`` is False only when the read RAISED — a
-    genuinely empty history (or a minimal test double without the method) is a
-    healthy ``ok=True`` case. A raised read must not look like "no history"."""
-    lister = getattr(store, "list_today_checkins", None)
-    if not callable(lister):
-        return [], True
+    genuinely empty history is a healthy ``ok=True`` case. A raised read must
+    not look like "no history"."""
     try:
-        return list(lister(athlete_id, limit=limit) or []), True
+        return list(store.list_today_checkins(athlete_id, limit=limit) or []), True
     except Exception:
         logger.exception("[today] recent_checkins_read_failed athlete_id=%s", athlete_id)
         return [], False
@@ -253,11 +247,8 @@ def _checked_today_checkin(
 def _checked_recent_session_completions(
     store: AppStore, athlete_id: str, *, limit: int = 3
 ) -> tuple[list[dict[str, Any]], bool]:
-    lister = getattr(store, "list_session_completions", None)
-    if not callable(lister):
-        return [], True
     try:
-        return list(lister(athlete_id, limit=limit) or []), True
+        return list(store.list_session_completions(athlete_id, limit=limit) or []), True
     except Exception:
         logger.exception("[today] recent_completions_read_failed athlete_id=%s", athlete_id)
         return [], False
@@ -338,15 +329,14 @@ def _checked_today_session_for_readiness(
 def _checked_intake_payload_for_readiness(
     store: AppStore, plan_row: Mapping[str, Any]
 ) -> tuple[Mapping[str, Any], bool]:
-    """Return ``(intake_payload, ok)``. A missing ``intake_id`` / absent store
-    method is a normal ``ok=True`` empty result; only a RAISED read marks intake
-    context unavailable (degraded)."""
+    """Return ``(intake_payload, ok)``. A missing ``intake_id`` is a normal
+    ``ok=True`` empty result; only a RAISED read marks intake context
+    unavailable (degraded)."""
     intake_id = str(plan_row.get("intake_id") or "").strip()
-    getter = getattr(store, "get_intake", None)
-    if not intake_id or not callable(getter):
+    if not intake_id:
         return {}, True
     try:
-        return _intake_payload_from_row(getter(intake_id)), True
+        return _intake_payload_from_row(store.get_intake(intake_id)), True
     except Exception:
         logger.exception("[today] intake_read_failed intake_id=%s", intake_id)
         return {}, False
@@ -357,13 +347,10 @@ def _checked_open_injury_flags(
 ) -> tuple[list[dict[str, Any]], bool]:
     """Return ``(open_flags, ok)``. Injury state is the most safety-critical
     input, so a RAISED read is a hard signal (``ok=False``) — we cannot rule out a
-    severe injury, and an empty list must not be assumed. A minimal test double
-    without the method is a normal ``ok=True`` empty case."""
-    lister = getattr(store, "list_injury_flags", None)
-    if not callable(lister):
-        return [], True
+    severe injury, and an empty list must not be assumed."""
     try:
-        return [dict(flag) for flag in (lister(athlete_id, statuses=("open", "monitoring")) or [])], True
+        flags = store.list_injury_flags(athlete_id, statuses=("open", "monitoring"))
+        return [dict(flag) for flag in (flags or [])], True
     except Exception:
         logger.exception("[today] injury_flags_read_failed athlete_id=%s", athlete_id)
         return [], False
@@ -1460,11 +1447,9 @@ def submit_today_injury_checkin(
     ).plan
     plan_id = str(active_plan_row.get("id") or "").strip() if active_plan_row else None
     if active_plan_row and plan_id:
-        plan_reader = getattr(store, "get_plan_for_athlete", None)
-        if callable(plan_reader):
-            full_plan_row = plan_reader(plan_id, athlete_id)
-            if full_plan_row:
-                active_plan_row = full_plan_row
+        full_plan_row = store.get_plan_for_athlete(plan_id, athlete_id)
+        if full_plan_row:
+            active_plan_row = full_plan_row
 
     for fields in plan.creates:
         identity = injury_evidence_identity(str(fields.get("body_area") or ""), str(fields.get("description") or ""))
@@ -2146,15 +2131,11 @@ def _history_injury_risks(
 ) -> list[RiskWatchItem]:
     """Derive an injury-risk item from logged post-session pain history.
 
-    Defensive about the store surface: the completion-history reader is optional
-    on minimal test doubles, and a transient read failure must never crash
-    Overview — in either case the derived signal is simply skipped.
+    A transient read failure must never crash Overview; the derived signal is
+    simply skipped.
     """
-    list_completions = getattr(store, "list_session_completions", None)
-    if not callable(list_completions):
-        return []
     try:
-        completions = list_completions(athlete_id) or []
+        completions = store.list_session_completions(athlete_id) or []
     except Exception:
         return []
     return derive_injury_signal(
@@ -2167,14 +2148,12 @@ def _history_injury_risks(
 def _open_injury_flags(store: AppStore, athlete_id: str) -> list[dict[str, Any]]:
     """Open/monitoring injury flags for this athlete, defensively.
 
-    Optional on minimal test doubles and resilient to a read failure — Overview
-    must never crash because the injury list could not be loaded.
+    Resilient to a read failure — Overview must never crash because the injury
+    list could not be loaded.
     """
-    lister = getattr(store, "list_injury_flags", None)
-    if not callable(lister):
-        return []
     try:
-        return [dict(flag) for flag in (lister(athlete_id, statuses=("open", "monitoring")) or [])]
+        flags = store.list_injury_flags(athlete_id, statuses=("open", "monitoring"))
+        return [dict(flag) for flag in (flags or [])]
     except Exception:
         return []
 
@@ -2452,15 +2431,10 @@ def _intake_row_for_plan(
 ) -> Mapping[str, Any] | None:
     intake_id = str(plan_row.get("intake_id") or "").strip()
     if intake_id:
-        reader = getattr(store, "get_intake", None)
-        if callable(reader):
-            row = reader(intake_id)
-            if row:
-                return row
-    latest_reader = getattr(store, "get_latest_intake", None)
-    if callable(latest_reader):
-        return latest_reader(athlete_id)
-    return None
+        row = store.get_intake(intake_id)
+        if row:
+            return row
+    return store.get_latest_intake(athlete_id)
 
 
 def _intake_injury_candidates(
@@ -2508,28 +2482,21 @@ def _ensure_intake_injury_flags(
     if not intake_payload:
         return open_flags
 
-    create_flag = getattr(store, "create_injury_flag", None)
-    if not callable(create_flag):
-        return open_flags
-
     # Dedupe against resolved flags too, not just open/monitoring ones. When an
     # athlete clears an intake-seeded injury its flag moves to ``resolved``; if we
     # only looked at the still-open set the next Today load would re-create the
     # flag from the unchanged intake payload and the cleared injury would
     # reappear. Including ``resolved`` keeps a cleared injury cleared.
-    dedupe_flags = list(open_flags)
-    lister = getattr(store, "list_injury_flags", None)
-    if callable(lister):
-        try:
-            dedupe_flags = [
-                dict(flag)
-                for flag in (
-                    lister(athlete_id, statuses=("open", "monitoring", "resolved"), limit=500)
-                    or []
-                )
-            ]
-        except Exception:
-            dedupe_flags = list(open_flags)
+    try:
+        dedupe_flags = [
+            dict(flag)
+            for flag in (
+                store.list_injury_flags(athlete_id, statuses=("open", "monitoring", "resolved"), limit=500)
+                or []
+            )
+        ]
+    except Exception:
+        dedupe_flags = list(open_flags)
 
     seen_keys: set[str] = set()
     for flag in dedupe_flags:
@@ -2541,7 +2508,7 @@ def _ensure_intake_injury_flags(
         if not candidate_keys or candidate_keys & seen_keys:
             continue
         try:
-            created = dict(create_flag(athlete_id, candidate))
+            created = dict(store.create_injury_flag(athlete_id, candidate))
         except Exception:
             # Today should still load if the best-effort intake bootstrap write
             # hits a transient store/schema issue.
@@ -2594,8 +2561,8 @@ class _UpcomingCompletions:
     Today asks whether a session is logged for each of today's sessions and for
     every future day it passes while finding the next session. Completions are
     unique per (athlete, session, training day), so one ranged read answers all
-    of those questions. A day before ``from_day`` or a store without the ranged
-    read falls back to the exact per-session read.
+    of those questions. A day before ``from_day``, or a ranged read that did not
+    return a list, falls back to the exact per-session read.
 
     A read that hit the limit is cut somewhere inside its last training day.
     Rows arrive in training-day order, so every earlier day is complete and is
@@ -2616,10 +2583,9 @@ class _UpcomingCompletions:
         if self._loaded:
             return self._rows
         self._loaded = True
-        reader = getattr(self._store, "list_session_completions_from_day", None)
-        if not callable(reader):
-            return None
-        rows = reader(self._athlete_id, self._from_day, limit=_UPCOMING_COMPLETION_READ_LIMIT + 1)
+        rows = self._store.list_session_completions_from_day(
+            self._athlete_id, self._from_day, limit=_UPCOMING_COMPLETION_READ_LIMIT + 1
+        )
         if not isinstance(rows, list):
             return None
         rows = [row for row in rows if isinstance(row, Mapping)]
