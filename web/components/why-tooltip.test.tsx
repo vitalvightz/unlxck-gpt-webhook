@@ -334,3 +334,28 @@ test("hover alone opens the bubble and moving away closes it", async () => {
     cleanup(container, root);
   }
 });
+
+test("the bubble is placed in document coordinates, so it stays by its trigger on a scrolled page", async () => {
+  // iOS can draw the fixed layer offset from the page (the same glitch that
+  // floats the tab bar), which left a fixed bubble far from its "i". The bubble
+  // now sits in document coordinates: viewport position plus the page scroll.
+  const { container, root } = mount();
+  const previous = { x: window.scrollX, y: window.scrollY };
+  Object.defineProperty(window, "scrollY", { configurable: true, value: 900 });
+  Object.defineProperty(window, "scrollX", { configurable: true, value: 0 });
+  try {
+    const bubble = await openTooltip(
+      container,
+      root,
+      { top: 400, left: 400, width: 16, height: 16 },
+      { width: 320, height: 120 },
+    );
+    // Above the trigger: 400 - 8 (gap) - 120 = 272 in the viewport, +900 scroll.
+    assert.equal(Number.parseFloat(bubble.style.top), 272 + 900);
+    assert.equal(Number.parseFloat(bubble.style.left), 400 + 8 - 160);
+  } finally {
+    Object.defineProperty(window, "scrollY", { configurable: true, value: previous.y });
+    Object.defineProperty(window, "scrollX", { configurable: true, value: previous.x });
+    cleanup(container, root);
+  }
+});

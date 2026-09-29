@@ -10,6 +10,7 @@ import {
 } from "@/components/session-completion-form";
 import {
   DaySessionContext,
+  ExerciseRationaleProvider,
   RehabLabelProvider,
   SessionCard as StructuredSessionCard,
   SessionlessDayCard,
@@ -277,6 +278,7 @@ export function TodaySessionBlocks({
   return (
     <RehabLabelProvider policy={rehabLabelPolicy}>
     <ExerciseMediaProvider media={exerciseMedia}>
+    <ExerciseRationaleProvider>
       <div className="today-blocks">
         {weekIntentNote}
         <DaySessionContext day={displayDay} />
@@ -299,6 +301,7 @@ export function TodaySessionBlocks({
           />
         ))}
       </div>
+    </ExerciseRationaleProvider>
     </ExerciseMediaProvider>
     </RehabLabelProvider>
   );

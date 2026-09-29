@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import {
   buildDayTimeline,
+  ExerciseRationaleProvider,
   ExerciseRow,
   SessionCard,
   StructuredPlanRenderer,
@@ -1491,15 +1492,20 @@ test("keeps engine rationale out of athlete-facing mindset and block copy", () =
   // "Builds" line, with the engine's phase prefix and style tail stripped.
   // Checked on the row itself: the mindset anchor also sanitizes to "Pocket
   // planning.", so the session markup alone would pass without the purpose.
+  // (Today is where these lines show, so the rows are rendered as Today does.)
   const purposeHtml = renderToStaticMarkup(
-    <ExerciseRow block={session.blocks![0]!} open onToggle={() => {}} />,
+    <ExerciseRationaleProvider>
+      <ExerciseRow block={session.blocks![0]!} open onToggle={() => {}} />
+    </ExerciseRationaleProvider>,
   );
   assert.equal(purposeHtml.includes(">Builds</span>Pocket planning."), true);
 
   // An engine timing rule is not a reason an athlete can act on: when it is the
   // whole purpose, the open row prints no "Builds" line at all.
   const timingHtml = renderToStaticMarkup(
-    <ExerciseRow block={session.blocks![1]!} open onToggle={() => {}} />,
+    <ExerciseRationaleProvider>
+      <ExerciseRow block={session.blocks![1]!} open onToggle={() => {}} />
+    </ExerciseRationaleProvider>,
   );
   assert.equal(timingHtml.includes("D-17"), false);
   assert.equal(timingHtml.includes(">Builds</span>"), false);
