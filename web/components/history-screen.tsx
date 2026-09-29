@@ -78,10 +78,11 @@ function SessionRows({ rows }: { rows: TodaySessionCompletionRecord[] }) {
       {rows.map((row) => (
         <li key={row.id} className="history-row">
           <div className="history-row-head">
-            <span className="history-row-date">{formatAppDate(row.training_day)}</span>
+            <span className="history-row-title">{row.session_title?.trim() || "Session"}</span>
             <StatusBadge tone={sessionStatusTone(row.status)} label={sessionStatusLabel(row.status)} />
           </div>
           <div className="history-row-meta">
+            <span>{formatAppDate(row.training_day)}</span>
             {row.session_rpe != null ? (
               <span>
                 RPE {row.session_rpe}/10

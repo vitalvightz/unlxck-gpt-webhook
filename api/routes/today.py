@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import logging
-from typing import Any
+from typing import Any, Mapping
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -25,6 +25,7 @@ from api.models import (
     ProfileRecord,
     RehabResponseRequest,
     RehabResponseResult,
+    SessionCompletionHistoryResponse,
     SessionCompletionRecordResponse,
     SessionCompletionRequest,
     SessionCompletionResponse,
@@ -50,6 +51,8 @@ from api.services.rehab_completion_service import (
 from api.services.notification_foundation import invalidate_notification_action
 from api.services.today_command_cache import remember_today_command
 from api.services.today_service import resolve_training_day
+from api.services.effective_structured_plan import resolve_effective_structured_plan
+from api.services.open_plan_timeline import project_open_structured_plan
 from api.services.week_progress import try_award_completed_week_for_completion
 from api.services.streaks import reconcile_adherence_streak, reconcile_training_streak
 from api.services.xp_awards import (
@@ -95,6 +98,40 @@ def _checkin_record(row: dict[str, Any]) -> TodayCheckinRecord:
     if not isinstance(triggers, list):
         triggers = []
     return TodayCheckinRecord(**{**row, "recommendation_triggers": list(triggers)})
+
+
+def _session_history_title(
+    plan_row: Mapping[str, Any],
+    structured_plan: Mapping[str, Any],
+    completion: Mapping[str, Any],
+) -> str | None:
+    training_day = str(completion.get("training_day") or "")
+    session_id = str(completion.get("session_id") or "")
+    projected, _ = project_open_structured_plan(
+        plan_row, structured_plan, current_training_day=training_day
+    )
+    for week in projected.get("weeks") or []:
+        if not isinstance(week, Mapping):
+            continue
+        for day in week.get("days") or []:
+            if not isinstance(day, Mapping) or str(day.get("date") or "")[:10] != training_day:
+                continue
+            sessions = [session for session in day.get("sessions") or [] if isinstance(session, Mapping)]
+            matched = next(
+                (session for session in sessions if str(session.get("session_id") or "") == session_id),
+                None,
+            )
+            if matched is None and len(sessions) == 1 and session_id == training_day:
+                matched = sessions[0]
+            today_card = day.get("today_card") if isinstance(day.get("today_card"), Mapping) else {}
+            if matched is not None:
+                title = matched.get("title") or today_card.get("headline") or matched.get("session_type")
+            elif not sessions and session_id == training_day:
+                title = today_card.get("headline")
+            else:
+                continue
+            return str(title).strip() or None
+    return None
 
 
 def build_today_router(*, require_profile, get_store) -> APIRouter:
@@ -215,15 +252,26 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
 
     @router.get(
         "/api/today/session-completions",
-        response_model=list[SessionCompletionRecordResponse],
+        response_model=list[SessionCompletionHistoryResponse],
     )
     def list_session_completion_history(
         limit: int = Query(default=30, ge=1, le=200),
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
-    ) -> list[SessionCompletionRecordResponse]:
+    ) -> list[SessionCompletionHistoryResponse]:
         rows = store.list_session_completions(profile.athlete_id, limit=limit)
-        return [SessionCompletionRecordResponse(**row) for row in rows]
+        plans: dict[str, tuple[dict[str, Any], dict[str, Any]] | None] = {}
+        history = []
+        for row in rows:
+            plan_id = str(row.get("plan_id") or "")
+            if plan_id and plan_id not in plans:
+                plan_row = store.get_plan_for_athlete(plan_id, profile.athlete_id)
+                structured = resolve_effective_structured_plan(plan_row) if plan_row else None
+                plans[plan_id] = (plan_row, structured) if plan_row and structured else None
+            plan = plans.get(plan_id)
+            title = _session_history_title(*plan, row) if plan else None
+            history.append(SessionCompletionHistoryResponse(**row, session_title=title))
+        return history
 
     @router.get(
         "/api/today/checkins",
