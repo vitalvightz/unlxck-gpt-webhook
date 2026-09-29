@@ -2583,8 +2583,8 @@ def _plan_with_resolved_phase(
 
 
 # Rows on or after today are the current day's log plus anything logged ahead,
-# so this bound is not reached in practice. A read that fills it may be
-# truncated, and lookups then fall back to exact per-session reads.
+# so this bound is not reached in practice. One extra row is requested so that
+# exactly this many rows is still known to be the whole range.
 _UPCOMING_COMPLETION_READ_LIMIT = 200
 
 
@@ -2594,8 +2594,13 @@ class _UpcomingCompletions:
     Today asks whether a session is logged for each of today's sessions and for
     every future day it passes while finding the next session. Completions are
     unique per (athlete, session, training day), so one ranged read answers all
-    of those questions. A day before ``from_day``, a store without the ranged
-    read, or a truncated read falls back to the exact per-session read.
+    of those questions. A day before ``from_day`` or a store without the ranged
+    read falls back to the exact per-session read.
+
+    A read that hit the limit is cut somewhere inside its last training day.
+    Rows arrive in training-day order, so every earlier day is complete and is
+    still answered from the read; only the last day read and later days fall
+    back to exact reads. Rows out of order drop the whole read to exact reads.
     """
 
     def __init__(self, store: AppStore, *, athlete_id: str, from_day: str) -> None:
@@ -2603,6 +2608,8 @@ class _UpcomingCompletions:
         self._athlete_id = athlete_id
         self._from_day = from_day
         self._rows: dict[tuple[str, str], Mapping[str, Any]] | None = None
+        # Exclusive upper bound of the days the read covers; None = all of them.
+        self._covered_before: str | None = None
         self._loaded = False
 
     def _upcoming_rows(self) -> dict[tuple[str, str], Mapping[str, Any]] | None:
@@ -2612,20 +2619,26 @@ class _UpcomingCompletions:
         reader = getattr(self._store, "list_session_completions_from_day", None)
         if not callable(reader):
             return None
-        rows = reader(self._athlete_id, self._from_day, limit=_UPCOMING_COMPLETION_READ_LIMIT)
-        if not isinstance(rows, list) or len(rows) >= _UPCOMING_COMPLETION_READ_LIMIT:
+        rows = reader(self._athlete_id, self._from_day, limit=_UPCOMING_COMPLETION_READ_LIMIT + 1)
+        if not isinstance(rows, list):
             return None
+        rows = [row for row in rows if isinstance(row, Mapping)]
+        days = [str(row.get("training_day") or "")[:10] for row in rows]
+        if len(rows) > _UPCOMING_COMPLETION_READ_LIMIT:
+            if days != sorted(days):
+                return None
+            self._covered_before = days[-1]
         self._rows = {
-            (str(row.get("session_id") or ""), str(row.get("training_day") or "")[:10]): row
-            for row in rows
-            if isinstance(row, Mapping)
+            (str(row.get("session_id") or ""), day): row for row, day in zip(rows, days)
         }
         return self._rows
 
     def get(self, session_id: str, training_day: str) -> dict[str, Any] | None:
         if len(training_day) == 10 and training_day >= self._from_day:
             rows = self._upcoming_rows()
-            if rows is not None:
+            if rows is not None and (
+                self._covered_before is None or training_day < self._covered_before
+            ):
                 row = rows.get((session_id, training_day))
                 return dict(row) if row is not None else None
         return self._store.get_session_completion(self._athlete_id, session_id, training_day)

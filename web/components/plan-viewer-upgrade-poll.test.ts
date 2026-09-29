@@ -24,6 +24,9 @@ function fakeDocument(initial: DocumentVisibilityState = "visible") {
 
 const INTERVAL = 2_500;
 const WINDOW = 10_000;
+// Longer than any stretch the ordinary tests advance, so only the hang tests
+// reach it.
+const FETCH_TIMEOUT = 60_000;
 
 async function flush() {
   for (let i = 0; i < 20; i += 1) {
@@ -60,6 +63,7 @@ test("upgrade poll fetches on each interval while the tab is visible", async (t)
     onWindowExpired: () => {},
     intervalMs: INTERVAL,
     windowMs: WINDOW,
+    fetchTimeoutMs: FETCH_TIMEOUT,
     doc,
   });
 
@@ -87,6 +91,7 @@ test("upgrade poll never starts a fetch while the previous one is still out", as
     onWindowExpired: () => {},
     intervalMs: INTERVAL,
     windowMs: WINDOW,
+    fetchTimeoutMs: FETCH_TIMEOUT,
     doc,
   });
 
@@ -115,6 +120,7 @@ test("upgrade poll is silent while hidden and checks at once on return", async (
     onWindowExpired: () => {},
     intervalMs: INTERVAL,
     windowMs: WINDOW,
+    fetchTimeoutMs: FETCH_TIMEOUT,
     doc,
   });
 
@@ -139,6 +145,7 @@ test("upgrade poll window closes on time while the tab is visible", async (t) =>
     },
     intervalMs: INTERVAL,
     windowMs: WINDOW,
+    fetchTimeoutMs: FETCH_TIMEOUT,
     doc,
   });
 
@@ -162,6 +169,7 @@ test("a window that ends while hidden closes only after the return check", async
     },
     intervalMs: INTERVAL,
     windowMs: WINDOW,
+    fetchTimeoutMs: FETCH_TIMEOUT,
     doc,
   });
 
@@ -188,6 +196,7 @@ test("a fetch still out from before the tab was hidden does not count as the ret
     },
     intervalMs: INTERVAL,
     windowMs: WINDOW,
+    fetchTimeoutMs: FETCH_TIMEOUT,
     doc,
   });
 
@@ -223,6 +232,7 @@ test("a return that is hidden again before its check keeps the window open", asy
     },
     intervalMs: INTERVAL,
     windowMs: WINDOW,
+    fetchTimeoutMs: FETCH_TIMEOUT,
     doc,
   });
 
@@ -256,6 +266,7 @@ test("with overlapping returns only the latest return's check closes the window"
     },
     intervalMs: INTERVAL,
     windowMs: WINDOW,
+    fetchTimeoutMs: FETCH_TIMEOUT,
     doc,
   });
 
@@ -289,6 +300,7 @@ test("stopping the upgrade poll ends fetches, expiry and the visibility listener
     },
     intervalMs: INTERVAL,
     windowMs: WINDOW,
+    fetchTimeoutMs: FETCH_TIMEOUT,
     doc,
   });
 
@@ -300,4 +312,95 @@ test("stopping the upgrade poll ends fetches, expiry and the visibility listener
 
   assert.equal(polls, 0);
   assert.equal(expired, 0);
+});
+
+/** Advance mock time in interval-sized steps, letting promises settle between. */
+async function advance(t: { mock: { timers: { tick: (ms: number) => void } } }, ms: number) {
+  for (let elapsed = 0; elapsed < ms; elapsed += 500) {
+    t.mock.timers.tick(Math.min(500, ms - elapsed));
+    await flush();
+  }
+}
+
+test("a fetch that never settles cannot hold the window open after the return", async (t) => {
+  t.mock.timers.enable({ apis: ["setInterval", "setTimeout"] });
+  const { doc, setVisibility } = fakeDocument();
+  const events: string[] = [];
+  const { poll } = controlledPoll(events); // no fetch ever finishes
+  const fetchTimeout = 20_000;
+  const stop = startStructuredPlanUpgradePoll({
+    poll,
+    onWindowExpired: () => {
+      events.push("expired");
+    },
+    intervalMs: INTERVAL,
+    windowMs: WINDOW,
+    fetchTimeoutMs: fetchTimeout,
+    doc,
+  });
+
+  await advance(t, INTERVAL);
+  setVisibility("hidden");
+  await advance(t, WINDOW); // the window ends while hidden, fetch 1 still out
+  setVisibility("visible");
+  await flush();
+  assert.deepEqual(events, ["start 1"]);
+
+  // Fetch 1 is abandoned at its deadline and a fresh check starts; that one
+  // hangs too, and its own deadline closes the window.
+  await advance(t, fetchTimeout);
+  assert.deepEqual(events, ["start 1", "start 2"]);
+  await advance(t, fetchTimeout);
+  assert.deepEqual(events, ["start 1", "start 2", "expired"]);
+  stop();
+});
+
+test("a fetch that never settles does not stall later ticks", async (t) => {
+  t.mock.timers.enable({ apis: ["setInterval", "setTimeout"] });
+  const { doc } = fakeDocument();
+  const events: string[] = [];
+  const { poll } = controlledPoll(events);
+  const stop = startStructuredPlanUpgradePoll({
+    poll,
+    onWindowExpired: () => {},
+    intervalMs: INTERVAL,
+    windowMs: 60_000,
+    fetchTimeoutMs: 5_000,
+    doc,
+  });
+
+  await advance(t, INTERVAL * 2);
+  assert.deepEqual(events, ["start 1"]); // no overlap before the deadline
+  await advance(t, INTERVAL * 2);
+  assert.deepEqual(events, ["start 1", "start 2"]); // deadline passed, polling resumes
+  stop();
+});
+
+test("the window closing stops the poll without waiting for the component", async (t) => {
+  t.mock.timers.enable({ apis: ["setInterval", "setTimeout"] });
+  const { doc, setVisibility } = fakeDocument();
+  let polls = 0;
+  let pollsAtExpiry = -1;
+  startStructuredPlanUpgradePoll({
+    poll: async () => {
+      polls += 1;
+    },
+    onWindowExpired: () => {
+      pollsAtExpiry = polls;
+    },
+    intervalMs: INTERVAL,
+    windowMs: WINDOW,
+    fetchTimeoutMs: FETCH_TIMEOUT,
+    doc,
+  });
+
+  await advance(t, WINDOW);
+  assert.ok(pollsAtExpiry >= 0);
+
+  // No stop() call here: the component's cleanup has not run yet.
+  await advance(t, INTERVAL * 4);
+  setVisibility("hidden");
+  setVisibility("visible");
+  await flush();
+  assert.equal(polls, pollsAtExpiry);
 });

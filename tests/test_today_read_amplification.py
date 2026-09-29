@@ -185,18 +185,62 @@ def test_today_completion_comes_from_the_single_read():
     assert store.reads["get_session_completion"] == 0
 
 
-def test_truncated_upcoming_read_falls_back_to_exact_reads(monkeypatch):
+def _record_exact_read_days(store: FakeStore) -> list[str]:
+    days: list[str] = []
+    exact_read = store.get_session_completion
+
+    def recording(athlete_id, session_id, training_day):
+        days.append(training_day)
+        return exact_read(athlete_id, session_id, training_day)
+
+    store.get_session_completion = recording
+    return days
+
+
+def test_exactly_the_limit_of_rows_is_still_a_complete_read(monkeypatch):
+    monkeypatch.setattr(today_service, "_UPCOMING_COMPLETION_READ_LIMIT", 2)
+    store = _store_with_camp()
+    _log(store, "2026-06-04-strength", "2026-06-04")
+    _log(store, "2026-06-05-strength", "2026-06-05")
+    exact_read_days = _record_exact_read_days(store)
+
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW)
+
+    assert _next_session(view)["calendar_date"] == "2026-06-06"
+    assert exact_read_days == []
+
+
+def test_capped_read_still_answers_every_day_before_its_last(monkeypatch):
+    monkeypatch.setattr(today_service, "_UPCOMING_COMPLETION_READ_LIMIT", 2)
+    store = _store_with_camp()
+    _log(store, "2026-06-04-strength", "2026-06-04")
+    _log(store, "2026-06-05-strength", "2026-06-05")
+    _log(store, "2026-06-06-strength", "2026-06-06", status="in_progress")
+    exact_read_days = _record_exact_read_days(store)
+
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW)
+
+    # The read stopped inside 6 June, so only that day needs exact reads; the
+    # logged 4th and 5th are still skipped from the read itself.
+    assert _next_session(view)["calendar_date"] == "2026-06-06"
+    assert exact_read_days and set(exact_read_days) == {"2026-06-06"}
+
+
+def test_capped_read_out_of_order_falls_back_to_exact_reads(monkeypatch):
     monkeypatch.setattr(today_service, "_UPCOMING_COMPLETION_READ_LIMIT", 1)
     store = _store_with_camp()
     _log(store, "2026-06-04-strength", "2026-06-04")
     _log(store, "2026-06-05-strength", "2026-06-05")
-    store.reads.clear()
+    store.list_session_completions_from_day = lambda *_a, **_k: [
+        {"session_id": "2026-06-05-strength", "training_day": "2026-06-05", "status": "done"},
+        {"session_id": "2026-06-04-strength", "training_day": "2026-06-04", "status": "done"},
+    ]
+    exact_read_days = _record_exact_read_days(store)
 
     view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW)
 
-    # The capped read cannot prove a day is unlogged, so exact reads decide.
     assert _next_session(view)["calendar_date"] == "2026-06-06"
-    assert store.reads["get_session_completion"] > 0
+    assert "2026-06-04" in exact_read_days
 
 
 def test_store_without_ranged_read_keeps_exact_reads():
