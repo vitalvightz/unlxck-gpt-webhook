@@ -8,18 +8,29 @@ type PollDocument = NonNullable<Parameters<typeof startStructuredPlanUpgradePoll
 function fakeDocument(initial: DocumentVisibilityState = "visible") {
   const target = new EventTarget();
   const state = { visibilityState: initial };
+  const listeners = new Set<EventListenerOrEventListenerObject>();
   const doc = {
     get visibilityState() {
       return state.visibilityState;
     },
-    addEventListener: target.addEventListener.bind(target),
-    removeEventListener: target.removeEventListener.bind(target),
+    addEventListener: (type: string, listener: EventListenerOrEventListenerObject) => {
+      listeners.add(listener);
+      target.addEventListener(type, listener);
+    },
+    removeEventListener: (type: string, listener: EventListenerOrEventListenerObject) => {
+      listeners.delete(listener);
+      target.removeEventListener(type, listener);
+    },
   };
   const setVisibility = (next: DocumentVisibilityState) => {
     state.visibilityState = next;
     target.dispatchEvent(new Event("visibilitychange"));
   };
-  return { doc: doc as unknown as PollDocument, setVisibility };
+  return {
+    doc: doc as unknown as PollDocument,
+    setVisibility,
+    listenerCount: () => listeners.size,
+  };
 }
 
 const INTERVAL = 2_500;
@@ -322,7 +333,13 @@ test("with overlapping returns only the latest return's check closes the window"
 
 test("stopping the upgrade poll ends fetches, expiry and the visibility listener", async (t) => {
   t.mock.timers.enable({ apis: ["setInterval", "setTimeout"] });
-  const { doc, setVisibility } = fakeDocument();
+  // Spy on the (mocked) timer functions so the cleanup itself is checked, not
+  // only its effect: the stopped flag alone would hide a leaked timer.
+  const setIntervalSpy = t.mock.method(globalThis, "setInterval");
+  const setTimeoutSpy = t.mock.method(globalThis, "setTimeout");
+  const clearIntervalSpy = t.mock.method(globalThis, "clearInterval");
+  const clearTimeoutSpy = t.mock.method(globalThis, "clearTimeout");
+  const { doc, setVisibility, listenerCount } = fakeDocument();
   let polls = 0;
   let expired = 0;
   const stop = startStructuredPlanUpgradePoll({
@@ -338,7 +355,18 @@ test("stopping the upgrade poll ends fetches, expiry and the visibility listener
     doc,
   });
 
+  assert.equal(listenerCount(), 1);
+  const intervalId = setIntervalSpy.mock.calls[0].result;
+  const windowTimeoutId = setTimeoutSpy.mock.calls[0].result;
+
   stop();
+  assert.equal(listenerCount(), 0);
+  assert.deepEqual(
+    clearIntervalSpy.mock.calls.map((call) => call.arguments[0]),
+    [intervalId],
+  );
+  assert.ok(clearTimeoutSpy.mock.calls.some((call) => call.arguments[0] === windowTimeoutId));
+
   t.mock.timers.tick(WINDOW * 2);
   setVisibility("hidden");
   setVisibility("visible");
@@ -412,7 +440,7 @@ test("a fetch that never settles does not stall later ticks", async (t) => {
 
 test("the window closing stops the poll without waiting for the component", async (t) => {
   t.mock.timers.enable({ apis: ["setInterval", "setTimeout"] });
-  const { doc, setVisibility } = fakeDocument();
+  const { doc, setVisibility, listenerCount } = fakeDocument();
   let polls = 0;
   let pollsAtExpiry = -1;
   startStructuredPlanUpgradePoll({
@@ -430,6 +458,7 @@ test("the window closing stops the poll without waiting for the component", asyn
 
   await advance(t, WINDOW);
   assert.ok(pollsAtExpiry >= 0);
+  assert.equal(listenerCount(), 0);
 
   // No stop() call here: the component's cleanup has not run yet.
   await advance(t, INTERVAL * 4);

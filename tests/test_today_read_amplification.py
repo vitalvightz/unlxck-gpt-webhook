@@ -12,7 +12,11 @@ from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
+from api.services import fight_camp_notifications
+from api.services import intelligent_notifications
 from api.services import morning_push
+from api.services import session_timing_notifications
+from api.services import streak_notifications
 from api.services import today_service
 from api.services.fight_camp_notifications import FightCampDispatchResult
 from api.services import today_readiness_boundary_core
@@ -95,15 +99,15 @@ def _store_with_camp(athlete_id: str = ATHLETE, plan_id: str = PLAN) -> Counting
     return store
 
 
-def _add_camp(store: FakeStore, *, athlete_id: str, plan_id: str) -> None:
+def _add_camp(store: FakeStore, *, athlete_id: str, plan_id: str, weeks: int = 12) -> None:
     store.plans[plan_id] = {
         "id": plan_id,
         "athlete_id": athlete_id,
         "status": "ready",
         "plan_name": "Camp",
-        "fight_date": (CAMP_START + timedelta(weeks=12)).isoformat(),
+        "fight_date": (CAMP_START + timedelta(weeks=weeks)).isoformat(),
         "created_at": f"{CAMP_START.isoformat()}T00:00:00+00:00",
-        "structured_plan": _camp(),
+        "structured_plan": _camp(weeks),
     }
     store.set_active_plan_id(athlete_id, plan_id)
 
@@ -124,17 +128,26 @@ def _next_session(view) -> dict:
     return view.today.next_session or {}
 
 
-def test_today_reads_completions_once_however_long_the_camp():
-    store = _store_with_camp()
-
+def _reads_for_camp(weeks: int) -> Counter:
+    store = CountingStore()
+    _add_camp(store, athlete_id=ATHLETE, plan_id=PLAN, weeks=weeks)
+    store.reads.clear()
     view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW)
-
     assert _next_session(view)["calendar_date"] == "2026-06-04"
-    assert store.reads["get_session_completion"] == 0
-    assert store.reads["list_session_completions_from_day"] == 1
-    # One owner-scoped plan read for the injury sync and one for the build.
-    assert store.reads["get_plan_for_athlete"] == 2
-    assert sum(store.reads.values()) <= 13
+    return store.reads
+
+
+def test_today_reads_completions_once_however_long_the_camp():
+    short_camp = _reads_for_camp(weeks=2)
+    long_camp = _reads_for_camp(weeks=16)
+
+    # The property under test: nothing Today reads grows with the camp.
+    assert long_camp == short_camp
+    assert long_camp["get_session_completion"] == 0
+    assert long_camp["list_session_completions_from_day"] == 1
+    # The injury sync and the build each resolve the active plan once; neither
+    # reads the same row a second time.
+    assert long_camp["get_plan_for_athlete"] <= 2
 
 
 def test_structured_card_is_validated_once_per_today_build(monkeypatch):
@@ -312,23 +325,45 @@ def _subscribed_store(athletes: int) -> FakeStore:
 
 def test_push_sweep_builds_each_athletes_today_once(monkeypatch, push_configured):
     store = _subscribed_store(3)
+    # Never reach the push transport: record would-be sends instead.
+    sends = []
+    monkeypatch.setattr("pywebpush.webpush", lambda **kwargs: sends.append(kwargs))
+
     builds = []
-    original = today_readiness_boundary_core._today_service.build_today_command_view
+    original_build = today_readiness_boundary_core._today_service.build_today_command_view
 
     def counting_build(*args, **kwargs):
         builds.append(kwargs.get("athlete_id"))
-        return original(*args, **kwargs)
+        return original_build(*args, **kwargs)
 
     monkeypatch.setattr(
         today_readiness_boundary_core._today_service, "build_today_command_view", counting_build
     )
+    # Each dispatcher module holds its own reference to the boundary builder;
+    # count how many of them ask for a view, to prove the reuse is exercised.
+    view_requests = Counter()
+    for module in (
+        fight_camp_notifications,
+        session_timing_notifications,
+        streak_notifications,
+        intelligent_notifications,
+    ):
+        consumer = module.build_today_command_view
+
+        def requesting(*args, _consumer=consumer, **kwargs):
+            view_requests[kwargs.get("athlete_id")] += 1
+            return _consumer(*args, **kwargs)
+
+        monkeypatch.setattr(module, "build_today_command_view", requesting)
 
     # Inside the morning window, so every dispatcher evaluates each athlete.
     morning_push.run_morning_push_sweep(
         store, now_utc=datetime(2026, 6, 3, 7, 30, tzinfo=timezone.utc)
     )
 
-    assert sorted(builds) == ["athlete-0", "athlete-1", "athlete-2"]
+    athletes = ["athlete-0", "athlete-1", "athlete-2"]
+    assert all(view_requests[athlete] >= 2 for athlete in athletes)
+    assert sorted(builds) == athletes
 
 
 def test_push_sweep_stops_before_the_next_athlete_on_shutdown(monkeypatch, push_configured):
