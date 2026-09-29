@@ -29,6 +29,7 @@ from api.plan_mappers import (
     _map_weekly_schedule,
 )
 from api.rehab_labels import resolve_rehab_label_policy
+from api.services.exercise_media import attach_exercise_media
 from api.services.intake_injury_sync import sync_intake_injuries_for_plan
 from api.services.minor_plan_guard import apply_minor_plan_guard
 from api.services.plan_safety_copy import clarify_restricted_training_hold
@@ -144,14 +145,17 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
                 training_day=training_day,
             ),
         )
-        return apply_minor_plan_guard(
-            clarify_restricted_training_hold(detail),
-            # The viewer's own age band, not the plan owner's: these routes serve
-            # an athlete their own plan. An admin reviewing someone else's plan
-            # must see it unscrubbed — they are reviewing what was generated, and
-            # an admin has no date of birth on file, which would otherwise
-            # fail-safe to "minor" and quietly redact their review view.
-            is_minor=profile.role == "athlete" and profile.is_minor,
+        return attach_exercise_media(
+            apply_minor_plan_guard(
+                clarify_restricted_training_hold(detail),
+                # The viewer's own age band, not the plan owner's: these routes serve
+                # an athlete their own plan. An admin reviewing someone else's plan
+                # must see it unscrubbed — they are reviewing what was generated, and
+                # an admin has no date of birth on file, which would otherwise
+                # fail-safe to "minor" and quietly redact their review view.
+                is_minor=profile.role == "athlete" and profile.is_minor,
+            ),
+            store,
         )
 
     @router.get("/api/plans/latest/weekly-schedule", response_model=WeeklySchedule)
@@ -225,14 +229,17 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
                 training_day=training_day,
             ),
         )
-        return apply_minor_plan_guard(
-            clarify_restricted_training_hold(detail),
-            # The viewer's own age band, not the plan owner's: these routes serve
-            # an athlete their own plan. An admin reviewing someone else's plan
-            # must see it unscrubbed — they are reviewing what was generated, and
-            # an admin has no date of birth on file, which would otherwise
-            # fail-safe to "minor" and quietly redact their review view.
-            is_minor=profile.role == "athlete" and profile.is_minor,
+        return attach_exercise_media(
+            apply_minor_plan_guard(
+                clarify_restricted_training_hold(detail),
+                # The viewer's own age band, not the plan owner's: these routes serve
+                # an athlete their own plan. An admin reviewing someone else's plan
+                # must see it unscrubbed — they are reviewing what was generated, and
+                # an admin has no date of birth on file, which would otherwise
+                # fail-safe to "minor" and quietly redact their review view.
+                is_minor=profile.role == "athlete" and profile.is_minor,
+            ),
+            store,
         )
 
     @router.get("/api/plans/{plan_id}/completions", response_model=PlanCompletionsResponse)
@@ -357,14 +364,17 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
                 training_day=training_day,
             ),
         )
-        return apply_minor_plan_guard(
-            clarify_restricted_training_hold(detail),
-            # The viewer's own age band, not the plan owner's: these routes serve
-            # an athlete their own plan. An admin reviewing someone else's plan
-            # must see it unscrubbed — they are reviewing what was generated, and
-            # an admin has no date of birth on file, which would otherwise
-            # fail-safe to "minor" and quietly redact their review view.
-            is_minor=profile.role == "athlete" and profile.is_minor,
+        return attach_exercise_media(
+            apply_minor_plan_guard(
+                clarify_restricted_training_hold(detail),
+                # The viewer's own age band, not the plan owner's: these routes serve
+                # an athlete their own plan. An admin reviewing someone else's plan
+                # must see it unscrubbed — they are reviewing what was generated, and
+                # an admin has no date of birth on file, which would otherwise
+                # fail-safe to "minor" and quietly redact their review view.
+                is_minor=profile.role == "athlete" and profile.is_minor,
+            ),
+            store,
         )
 
     @router.delete("/api/plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -77,6 +77,8 @@ import { formatPlanLabel } from "@/lib/plan-labels";
 import { GlossaryTooltip } from "@/components/glossary-tooltip";
 import { glossaryEntry } from "@/lib/glossary";
 import { WhyTooltip } from "@/components/why-tooltip";
+import { ExerciseDemo, ExerciseMediaProvider, useExerciseMedia } from "@/components/exercise-demo";
+import { demoThumbnailUrl } from "@/lib/exercise-demo";
 import { SafetyNote } from "@/components/safety-note";
 import { PLAN_SAFETY_NOTE } from "@/lib/safety-copy";
 import {
@@ -88,6 +90,7 @@ import {
 } from "@/lib/block-display-guardrails";
 import type {
   DeterministicNutritionPhase,
+  ExerciseMedia,
   DeterministicRecoveryPhase,
   MindsetAnchor,
   PlanScheduleContext,
@@ -326,45 +329,23 @@ function blockTagLabel(block: StructuredBlock, policy: RehabLabelPolicy | null):
   return titleize(cleanText(block.block_type));
 }
 
-export function BlockCard({
-  block,
-  openWeekIntent,
-  sourceCountdown,
-}: {
-  block: StructuredBlock;
-  /** Development-block week intent of an open (renewable) plan. Adds the
-   * week-directed instruction (progress / deload) to the card; dated camps
-   * never pass it. */
-  openWeekIntent?: OpenBlockWeekIntent | null;
-  sourceCountdown?: string | null;
-}) {
-  const rehabLabelPolicy = useContext(RehabLabelContext);
+/**
+ * The athlete-facing prescription for one block, reconciled against the exact
+ * source plan text (ranges, rest, effort) and with stop criteria the central
+ * Safety Priority card owns stripped. Shared by the exercise row header and the
+ * full block card so both always show the same dose and the same stop rule.
+ */
+function useBlockPrescription(block: StructuredBlock, sourceCountdown?: string | null) {
   const sourceText = useContext(PlanSourceTextContext);
   const planSafetyTexts = useContext(PlanSafetyTextContext);
   const title = cleanText(block.display_name) || "Block";
   const sourceOverrides = getSourcePrescriptionRangeOverrides(sourceText, title, sourceCountdown);
-  const blockType = cleanText(block.block_type);
   const load = formatBlockLoad(block.load);
   const metrics = applySourceSetRange(selectBlockMetric(block), sourceOverrides.sets);
   const rest = sourceOverrides.rest || (shouldShowRest(block.rest) ? formatMeasured(block.rest) : null);
   const effort = sourceOverrides.effort || formatEffort(block);
-  // The effort card is glossed from the METHOD, not from the word "Effort":
-  // EffortMethod covers RPE, RIR, intent, velocity, heart_rate_zone, pace and
-  // max_effort_percent, so a fixed RPE definition would mis-explain "Max intent"
-  // as a 1-10 perceived-exertion score. An unrecognised or missing method falls
-  // through to no tooltip rather than to a guess.
-  const effortMethod = cleanText(block.effort?.method);
-  const { cues, regressions, substitutions } = getBlockExecutionDisplay(block);
-  const { progression, stopRules } = getBlockAdjustmentDisplay(block);
+  const { stopRules } = getBlockAdjustmentDisplay(block);
   const sourceStopRule = getSourceStopRuleOverride(sourceText, title, sourceCountdown);
-  const weekDirective = openBlockWeekDirective(openWeekIntent, block);
-  // A week directive owns progression/deload programming for open plans, while
-  // block stop criteria are safety instructions and must always remain visible.
-  // The deload week additionally hides the progression aside: a block with no
-  // deload rule of its own is simply left as written, never told to advance.
-  const showProgressionAside = Boolean(
-    progression && !weekDirective && openWeekIntent?.key !== "deload",
-  );
   // Drop stop-rule criteria that only restate injury-safety escalation the
   // Safety Priority card already owns, so the block keeps its own criterion
   // (technique/form/speed) instead of duplicating the centralised red flag.
@@ -383,6 +364,50 @@ export function BlockCard({
       .map((rule) => rule.trim().replace(/^stop(?:\s+rule)?\s*:\s*/i, "").trim())
       .filter(Boolean)
       .join("; ") || null;
+  return { title, load, metrics, rest, effort, compactStopRule };
+}
+
+export function BlockCard({
+  block,
+  openWeekIntent,
+  sourceCountdown,
+  embedded = false,
+  hideLeadCue = false,
+}: {
+  block: StructuredBlock;
+  /** Development-block week intent of an open (renewable) plan. Adds the
+   * week-directed instruction (progress / deload) to the card; dated camps
+   * never pass it. */
+  openWeekIntent?: OpenBlockWeekIntent | null;
+  sourceCountdown?: string | null;
+  /** Rendered inside an ExerciseRow, whose header already names the exercise. */
+  embedded?: boolean;
+  /** The demo pins the first cue under the video; skip it in the list. */
+  hideLeadCue?: boolean;
+}) {
+  const rehabLabelPolicy = useContext(RehabLabelContext);
+  const { title, load, metrics, rest, effort, compactStopRule } = useBlockPrescription(
+    block,
+    sourceCountdown,
+  );
+  const blockType = cleanText(block.block_type);
+  // The effort card is glossed from the METHOD, not from the word "Effort":
+  // EffortMethod covers RPE, RIR, intent, velocity, heart_rate_zone, pace and
+  // max_effort_percent, so a fixed RPE definition would mis-explain "Max intent"
+  // as a 1-10 perceived-exertion score. An unrecognised or missing method falls
+  // through to no tooltip rather than to a guess.
+  const effortMethod = cleanText(block.effort?.method);
+  const { cues: allCues, regressions, substitutions } = getBlockExecutionDisplay(block);
+  const cues = hideLeadCue ? allCues.slice(1) : allCues;
+  const { progression } = getBlockAdjustmentDisplay(block);
+  const weekDirective = openBlockWeekDirective(openWeekIntent, block);
+  // A week directive owns progression/deload programming for open plans, while
+  // block stop criteria are safety instructions and must always remain visible.
+  // The deload week additionally hides the progression aside: a block with no
+  // deload rule of its own is simply left as written, never told to advance.
+  const showProgressionAside = Boolean(
+    progression && !weekDirective && openWeekIntent?.key !== "deload",
+  );
   const adjustmentRules = [
     ...(showProgressionAside && progression
       ? [{ label: "Progress" as const, text: progression }]
@@ -395,9 +420,9 @@ export function BlockCard({
   const tagLabel = blockType ? blockTagLabel(block, rehabLabelPolicy) : null;
 
   return (
-    <div className="sp-block">
+    <div className={embedded ? "sp-block sp-block-embedded" : "sp-block"}>
       <div className="sp-block-head">
-        <span className="sp-block-title">{title}</span>
+        {embedded ? null : <span className="sp-block-title">{title}</span>}
         {tagLabel ? (
           <span className="sp-tag">
             {tagLabel}
@@ -485,6 +510,123 @@ export function BlockCard({
   );
 }
 
+/** Collapsed-row stat line: the headline metric plus effort, e.g. "3 × 8–12 · RPE 7". */
+function exerciseRowSummary(
+  block: StructuredBlock,
+  prescription: { metrics: { value: string }[]; load: string | null; effort: string | null },
+): string | null {
+  const headline =
+    prescription.metrics[0]?.value || prescription.load || formatMeasured(block.duration);
+  const parts = [headline, prescription.effort].filter((part): part is string => Boolean(part));
+  return parts.length > 0 ? Array.from(new Set(parts)).join(" · ") : null;
+}
+
+function sameCopy(a: string | null, b: string | null): boolean {
+  const norm = (value: string | null) => (value ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+  return Boolean(a && b) && norm(a) === norm(b);
+}
+
+/**
+ * One exercise in a session: a compact row (name, headline stat, demo thumbnail)
+ * that expands to the demo, what the exercise builds, why it is in today's
+ * session, and the full prescription. Rows in a session are single-open.
+ */
+export function ExerciseRow({
+  block,
+  open,
+  onToggle,
+  openWeekIntent,
+  sourceCountdown,
+}: {
+  block: StructuredBlock;
+  open: boolean;
+  onToggle: () => void;
+  openWeekIntent?: OpenBlockWeekIntent | null;
+  sourceCountdown?: string | null;
+}) {
+  const bodyId = useId();
+  const prescription = useBlockPrescription(block, sourceCountdown);
+  const { title, compactStopRule } = prescription;
+  const media = useExerciseMedia(block.display_name);
+  const summary = exerciseRowSummary(block, prescription);
+  const builds = athleteFacingRationale(block.purpose);
+  const whyTodayRaw = athleteFacingRationale(block.why_today);
+  const whyToday = sameCopy(builds, whyTodayRaw) ? null : whyTodayRaw;
+  const leadCue = getBlockExecutionDisplay(block).cues[0] ?? null;
+  // Matches the demo's first render (facade, not yet known to be watched), so
+  // the server markup and hydration never print the lead cue twice.
+  const [leadCuePinned, setLeadCuePinned] = useState(Boolean(media && leadCue));
+
+  return (
+    <div className="ex-row" data-open={open ? "true" : "false"}>
+      <button
+        type="button"
+        className="ex-row-head"
+        aria-expanded={open}
+        aria-controls={bodyId}
+        onClick={onToggle}
+      >
+        <span className={media ? "ex-row-thumb ex-row-thumb-video" : "ex-row-thumb"} aria-hidden="true">
+          {media ? (
+            // eslint-disable-next-line @next/next/no-img-element -- remote YouTube thumbnail, not a local asset
+            <img src={demoThumbnailUrl(media.video_id, "mq")} alt="" loading="lazy" />
+          ) : null}
+          {media ? <span className="ex-demo-play-glyph ex-demo-play-glyph-sm" /> : null}
+        </span>
+        <span className="ex-row-text">
+          <span className="ex-row-title">{title}</span>
+          {summary ? <span className="ex-row-summary">{summary}</span> : null}
+          {/* Stop criteria are safety instructions: never hidden behind the tap.
+              Collapsed, the row carries it; open, the full card below does. */}
+          {!open && compactStopRule ? (
+            <span className="ex-row-stop">
+              <span className="sp-stat-label">Stop rule</span>
+              {compactStopRule}
+            </span>
+          ) : null}
+        </span>
+        {media ? <span className="sr-only">Has demo video.</span> : null}
+        <span className="ex-row-chevron" aria-hidden="true" />
+      </button>
+      {open ? (
+        <div id={bodyId} className="ex-row-body">
+          {media ? (
+            <ExerciseDemo
+              media={media}
+              exerciseName={title}
+              leadCue={leadCue}
+              onLeadCuePinnedChange={setLeadCuePinned}
+            />
+          ) : null}
+          {builds || whyToday ? (
+            <div className="ex-row-why">
+              {builds ? (
+                <p className="ex-row-why-line">
+                  <span className="sp-stat-label">Builds</span>
+                  {builds}
+                </p>
+              ) : null}
+              {whyToday ? (
+                <p className="ex-row-why-line ex-row-why-today">
+                  <span className="sp-stat-label">Why today</span>
+                  {whyToday}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+          <BlockCard
+            block={block}
+            openWeekIntent={openWeekIntent}
+            sourceCountdown={sourceCountdown}
+            embedded
+            hideLeadCue={Boolean(media) && leadCuePinned}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function RehabSummary({ blocks }: { blocks: StructuredBlock[] }) {
   const rehabLabelPolicy = useContext(RehabLabelContext);
   if (blocks.length === 0) {
@@ -550,6 +692,9 @@ export function SessionCard({
   const rehabLabelPolicy = useContext(RehabLabelContext);
   const [showDetails, setShowDetails] = useState(Boolean(defaultOpenBlocks));
   const userToggledDetails = useRef(false);
+  // One exercise open at a time; the first leads so the session reads as
+  // "start here". Null once the athlete closes it.
+  const [openBlockIndex, setOpenBlockIndex] = useState<number | null>(0);
 
   useEffect(() => {
     if (!userToggledDetails.current) {
@@ -708,11 +853,13 @@ export function SessionCard({
           </button>
 
           {showDetails ? (
-            <div id={detailsId} className="sp-blocks">
+            <div id={detailsId} className="sp-blocks ex-rows">
               {blocks.map((block, index) => (
-                <BlockCard
+                <ExerciseRow
                   key={cleanText(block.block_id) || `block-${index}`}
                   block={block}
+                  open={openBlockIndex === index}
+                  onToggle={() => setOpenBlockIndex((current) => (current === index ? null : index))}
                   openWeekIntent={openWeekIntent}
                   sourceCountdown={sourceCountdown}
                 />
@@ -1989,6 +2136,7 @@ export function StructuredPlanRenderer({
   onLogSession,
   isAdmin = false,
   rehabLabelPolicy,
+  exerciseMedia,
 }: {
   plan: StructuredPlan;
   /** Renewable four-week plan without a scheduled fight date. */
@@ -2028,6 +2176,8 @@ export function StructuredPlanRenderer({
    * Rehab blocks whose target region is no longer injured render as "Prehab".
    * Omitted → every rehab block keeps reading "Rehab". */
   rehabLabelPolicy?: RehabLabelPolicy | null;
+  /** Curated demo videos keyed by block display_name (PlanOutputs.exercise_media). */
+  exerciseMedia?: Record<string, ExerciseMedia> | null;
 }) {
   const weeks = getWeeks(plan);
   const completionIndex = useMemo(
@@ -2199,6 +2349,7 @@ export function StructuredPlanRenderer({
 
   return (
     <RehabLabelProvider policy={rehabLabelPolicy}>
+    <ExerciseMediaProvider media={exerciseMedia}>
     <PlanSourceTextContext.Provider value={rawFallback}>
     <PlanSafetyTextContext.Provider value={safetyOwnershipTexts}>
     <div className="sp-root cm-root">
@@ -2369,6 +2520,7 @@ export function StructuredPlanRenderer({
     </div>
     </PlanSafetyTextContext.Provider>
     </PlanSourceTextContext.Provider>
+    </ExerciseMediaProvider>
     </RehabLabelProvider>
   );
 }

@@ -1539,6 +1539,22 @@ class PlanSummary(BaseModel):
     review_reason: str | None = None
 
 
+class ExerciseMedia(BaseModel):
+    """A curated demo video for one exercise (public.exercise_media).
+
+    Resolved at read time by api/services/exercise_media.py. It deliberately
+    lives beside the structured plan rather than on StructuredBlock: the block
+    model is also the Stage-2 model's output schema, and the model must never be
+    the source of a video ID.
+    """
+
+    provider: Literal["youtube"] = "youtube"
+    video_id: str
+    start_s: int = 0
+    end_s: int | None = None
+    source: Literal["curated", "coach"] = "curated"
+
+
 class PlanOutputs(BaseModel):
     plan_text: str
     pdf_url: str | None = None
@@ -1547,6 +1563,9 @@ class PlanOutputs(BaseModel):
     # markdown fallback. Populated once structured generation is available.
     structured_plan: StructuredTrainingPlan | None = None
     schema_version: str | None = None
+    # Demo video per block, keyed by the block's exact display_name. Only
+    # exercises with a verified video appear; everything else renders cues-only.
+    exercise_media: dict[str, ExerciseMedia] = Field(default_factory=dict)
 
 
 class PlanSafetyState(BaseModel):

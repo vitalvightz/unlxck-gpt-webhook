@@ -5117,6 +5117,64 @@ class SupabaseAppStore:
             )
         return payload
 
+    # -- Exercise demo videos (public.exercise_media) -------------------------
+    # Read by api/services/exercise_media.py on plan reads (cached in-process)
+    # and written only by tools/exercise_media.py and the worker's daily check.
+
+    _EXERCISE_MEDIA_SERVED_COLUMNS = "exercise_key,aliases,video_id,start_s,end_s,source"
+
+    def list_exercise_media(self) -> list[dict[str, Any]]:
+        """Every video currently cleared to serve (status = 'ok')."""
+        response = self._run_with_transient_retry(
+            operation="list_exercise_media",
+            fn=lambda: self.client.table("exercise_media")
+            .select(self._EXERCISE_MEDIA_SERVED_COLUMNS)
+            .eq("status", "ok")
+            .limit(5000)
+            .execute(),
+        )
+        return list(getattr(response, "data", None) or [])
+
+    def list_exercise_media_for_verification(self) -> list[dict[str, Any]]:
+        """Rows the daily availability check should re-test (everything but retired)."""
+        response = self._run_with_transient_retry(
+            operation="list_exercise_media_for_verification",
+            fn=lambda: self.client.table("exercise_media")
+            .select("exercise_key,video_id,status")
+            .in_("status", ["ok", "unverified"])
+            .limit(5000)
+            .execute(),
+        )
+        return list(getattr(response, "data", None) or [])
+
+    def update_exercise_media_status(
+        self, exercise_key: str, *, status: str, reason: str | None
+    ) -> None:
+        now_iso = datetime.now(timezone.utc).isoformat()
+        self._run_with_transient_retry(
+            operation=f"update_exercise_media_status key={exercise_key}",
+            fn=lambda: self.client.table("exercise_media")
+            .update(
+                {
+                    "status": status,
+                    "status_reason": (reason or None) and str(reason)[:200],
+                    "verified_at": now_iso,
+                    "updated_at": now_iso,
+                }
+            )
+            .eq("exercise_key", exercise_key)
+            .execute(),
+        )
+
+    def upsert_exercise_media(self, row: dict[str, Any]) -> None:
+        payload = {**row, "updated_at": datetime.now(timezone.utc).isoformat()}
+        self._run_with_transient_retry(
+            operation=f"upsert_exercise_media key={row.get('exercise_key')}",
+            fn=lambda: self.client.table("exercise_media")
+            .upsert(payload, on_conflict="exercise_key")
+            .execute(),
+        )
+
     def create_admin_review(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
         return self._insert_row(
             "admin_reviews",

@@ -2877,6 +2877,7 @@ export function PlanViewer({
                   currentTrainingDayIso={currentTrainingDayIso}
                   isAdmin={isViewerAdmin}
                   rehabLabelPolicy={rehabLabelPolicy}
+                  exerciseMedia={plan.outputs.exercise_media}
                 />
               ) : holdPlanForEnhancedCard ? (
                 <EnhancedCardLockInCard accessToken={accessToken} />

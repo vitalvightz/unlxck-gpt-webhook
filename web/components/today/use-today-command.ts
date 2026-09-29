@@ -9,6 +9,7 @@ import type {
   PlanDetail,
   PlanScheduleContext,
   RehabLabelPolicy,
+  ExerciseMedia,
   StructuredPlan,
   TodayCommandView,
 } from "@/lib/types";
@@ -50,6 +51,8 @@ export type TodayCommand = {
    * shared SessionCard, so without this every rehab block on this screen read
    * "Rehab" no matter which injuries had cleared. */
   rehabLabelPolicy: RehabLabelPolicy | null;
+  /** Curated demo videos for the active plan's blocks (PlanOutputs.exercise_media). */
+  exerciseMedia: Record<string, ExerciseMedia> | null;
   isLoading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -84,6 +87,7 @@ export function useTodayCommand(token: string | null): TodayCommand {
   const [structuredPlan, setStructuredPlan] = useState<StructuredPlan | null>(null);
   const [planSchedule, setPlanSchedule] = useState<TodayPlanSchedule>(EMPTY_PLAN_SCHEDULE);
   const [rehabLabelPolicy, setRehabLabelPolicy] = useState<RehabLabelPolicy | null>(null);
+  const [exerciseMedia, setExerciseMedia] = useState<Record<string, ExerciseMedia> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -102,6 +106,7 @@ export function useTodayCommand(token: string | null): TodayCommand {
       let nextStructuredPlan: StructuredPlan | null = null;
       let nextPlanSchedule = EMPTY_PLAN_SCHEDULE;
       let nextRehabLabelPolicy: RehabLabelPolicy | null = null;
+      let nextExerciseMedia: Record<string, ExerciseMedia> | null = null;
 
       if (activePlanId) {
         // Read-only and presentation-only: the plan supplies the blocks, the
@@ -118,6 +123,7 @@ export function useTodayCommand(token: string | null): TodayCommand {
             createdAt: detail?.created_at ?? null,
           };
           nextRehabLabelPolicy = detail?.rehab_label_policy ?? null;
+          nextExerciseMedia = detail?.outputs?.exercise_media ?? null;
         } catch {
           // Today still works from the command view alone.
         }
@@ -126,6 +132,7 @@ export function useTodayCommand(token: string | null): TodayCommand {
       setStructuredPlan(nextStructuredPlan);
       setPlanSchedule(nextPlanSchedule);
       setRehabLabelPolicy(nextRehabLabelPolicy);
+      setExerciseMedia(nextExerciseMedia);
       setState(nextState);
       setError(null);
       // Every successful Today write calls this refresh. Re-read the XP progress
@@ -142,5 +149,14 @@ export function useTodayCommand(token: string | null): TodayCommand {
     void refresh();
   }, [refresh]);
 
-  return { state, structuredPlan, planSchedule, rehabLabelPolicy, isLoading, error, refresh };
+  return {
+    state,
+    structuredPlan,
+    planSchedule,
+    rehabLabelPolicy,
+    exerciseMedia,
+    isLoading,
+    error,
+    refresh,
+  };
 }

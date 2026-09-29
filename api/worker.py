@@ -77,6 +77,49 @@ async def _run_morning_push_sweep_if_due(
         logger.exception("[worker] morning push sweep failed")
 
 
+def _exercise_media_sweep_interval_seconds() -> int:
+    return _int_env("UNLXCK_EXERCISE_MEDIA_SWEEP_INTERVAL_SECONDS", 86400, minimum=3600)
+
+
+async def _run_exercise_media_sweep_if_due(
+    *,
+    store: AppStore,
+    state: dict[str, float],
+    interval_seconds: int,
+) -> None:
+    """Daily availability check for exercise demo videos.
+
+    Third-party videos get deleted, made private or have embedding disabled. A
+    failed check flips the row to 'unavailable' so the plan stops serving it and
+    the athlete sees the cues-only row instead of a dead player. Runs in a worker
+    thread and never raises into the loop.
+    """
+
+    now = time.monotonic()
+    if now - state.get("last_sweep_at", 0.0) < interval_seconds:
+        return
+    if os.getenv("UNLXCK_EXERCISE_MEDIA_SWEEP_ENABLED", "1").strip() == "0":
+        return
+    running = _MEDIA_SWEEP_TASK.get("task")
+    if running is not None and not running.done():
+        return
+    state["last_sweep_at"] = now
+
+    async def _sweep() -> None:
+        try:
+            from .services.exercise_media import run_media_verification_sweep
+
+            await asyncio.to_thread(run_media_verification_sweep, store)
+        except Exception:  # noqa: BLE001 - media checks must never disturb generation
+            logger.exception("[worker] exercise media sweep failed")
+
+    # Detached: one HTTP check per stored video must not hold up job claiming.
+    _MEDIA_SWEEP_TASK["task"] = asyncio.create_task(_sweep())
+
+
+_MEDIA_SWEEP_TASK: dict[str, asyncio.Task[None] | None] = {"task": None}
+
+
 async def _run_generation_recovery_sweep_if_due(
     *,
     store: AppStore,
@@ -345,6 +388,8 @@ async def run_worker() -> None:
     recovery_sweep_state: dict[str, float] = {}
     morning_sweep_state: dict[str, float] = {}
     morning_sweep_interval = _morning_push_sweep_interval_seconds()
+    media_sweep_state: dict[str, float] = {}
+    media_sweep_interval = _exercise_media_sweep_interval_seconds()
 
     try:
         while not shutdown_event.is_set():
@@ -361,6 +406,11 @@ async def run_worker() -> None:
                 store=store,
                 state=morning_sweep_state,
                 interval_seconds=morning_sweep_interval,
+            )
+            await _run_exercise_media_sweep_if_due(
+                store=store,
+                state=media_sweep_state,
+                interval_seconds=media_sweep_interval,
             )
             # Wake early if shutdown is requested mid-interval; otherwise this
             # preserves the existing poll cadence between ticks.

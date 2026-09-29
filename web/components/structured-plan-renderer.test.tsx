@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import {
   buildDayTimeline,
+  ExerciseRow,
   SessionCard,
   StructuredPlanRenderer,
   weekStripCenterOffset,
@@ -605,10 +606,11 @@ test("does not duplicate a rehab insert as a summary once the blocks are expande
 
   const html = renderToStaticMarkup(<SessionCard session={session} defaultOpenBlocks />);
 
-  // Full rehab block (with its detail) shows exactly once; the summary eyebrow
-  // is gone.
-  assert.equal(html.includes("Neutral-Grip Isometric Holds"), true);
-  assert.equal(html.includes("Full rest between holds"), true);
+  // The rehab insert is its own exercise row (name + dose) exactly once; the
+  // summary eyebrow is gone. Its cues live behind the row, never duplicated.
+  assert.equal(countOccurrences(html, "Neutral-Grip Isometric Holds"), 1);
+  assert.equal(html.includes("2 × 12-15 s"), true);
+  assert.equal(countOccurrences(html, "Full rest between holds") <= 1, true);
   assert.equal(html.includes("Rehab / Mobility"), false);
 });
 
@@ -1482,11 +1484,19 @@ test("keeps engine rationale out of athlete-facing mindset and block copy", () =
 
   assert.equal(html.includes("SPP pocket planning for a brawler."), false);
   assert.equal(html.includes("D-17 onward"), false);
-  // Block purpose is retained as structured planning context, not rendered on
-  // the athlete execution card. Genuine mindset/execution cues remain visible.
-  assert.equal(html.includes("Pocket planning."), false);
+  // Block purpose renders on the open exercise row as the athlete-facing
+  // "Builds" line, with the engine's phase prefix and style tail stripped.
+  // Genuine mindset/execution cues remain visible.
+  assert.equal(html.includes("Pocket planning."), true);
   assert.equal(html.includes("Choose a clean exit"), true);
-  assert.equal(html.includes("Stay calm as you exit the exchange."), false);
+
+  // An engine timing rule is not a reason an athlete can act on: when it is the
+  // whole purpose, the open row prints no "Builds" line at all.
+  const timingHtml = renderToStaticMarkup(
+    <ExerciseRow block={session.blocks![1]!} open onToggle={() => {}} />,
+  );
+  assert.equal(timingHtml.includes("D-17"), false);
+  assert.equal(timingHtml.includes(">Builds</span>"), false);
 });
 
 test("marks the current day and keeps the camp overview title compact", () => {
