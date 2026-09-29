@@ -8,6 +8,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
+from shared.contracts import shared_message
+
 from .contracts.checkin_decision import (
     ActiveInjury as CheckinActiveInjury,
     Body as CheckinBody,
@@ -117,7 +119,9 @@ GENERIC_PROFILE_NOTES_MAX_CHARS = 1000
 # back so the warning survives progress-milestone eviction and is queryable.
 # Kept in lockstep with the web copy in web/lib/profile-refresh-warning.ts.
 PROFILE_REFRESH_FAILED_WHY_LOG_KEY = "profile_refresh_failed"
-PROFILE_REFRESH_FAILED_WARNING = "Profile refresh failed; plan generated from submitted intake only."
+# The web client detects this warning by text and by milestone code
+# (shared/api-messages.json).
+PROFILE_REFRESH_FAILED_WARNING_CODE, PROFILE_REFRESH_FAILED_WARNING = shared_message("profile_refresh_failed")
 
 _PROFILE_TEXT_LIMITS = {
     "full_name": ATHLETE_FULL_NAME_MAX_CHARS,

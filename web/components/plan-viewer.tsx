@@ -44,7 +44,7 @@ import { StructuredPlanRenderer } from "@/components/structured-plan-renderer";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { useGenerationController } from "@/lib/generation-controller";
 import { canUseAdminPlanControls, isAdminRole } from "@/lib/plan-admin-controls";
-import { STAGE2_HARD_BLOCKER_CODE_SET } from "@/lib/stage2-policy";
+import { STAGE2_HARD_BLOCKER_CODE_SET, STAGE2_STAGE1_FALLBACK_STATUS } from "@/lib/stage2-policy";
 import {
   buildStructuredPlanFromText,
   humanizeStatus,
@@ -484,10 +484,8 @@ const NON_PUBLISHABLE_STAGE2_STATUSES = new Set([
   "medical_hold",
   "restricted_rehab_only",
 ]);
-// Mirrors STAGE2_STAGE1_FALLBACK in api/stage2_automation.py: the AI finalizer
-// never returned a usable plan, so the deterministic Stage 1 plan was released.
-// Deliberately NOT in the set above — such a plan IS released to the athlete.
-const STAGE2_STAGE1_FALLBACK_STATUS = "stage2_failed_stage1_fallback";
+// STAGE2_STAGE1_FALLBACK_STATUS (shared/stage2-policy.json) is deliberately NOT
+// in the set above: such a plan IS released to the athlete.
 const TRIAGE_BLOCKED_STUB_MARKERS = [
   "## Injury Triage: Restricted Rehab Only",
   "Normal fight-camp planning is intentionally suspended",

@@ -11,10 +11,11 @@ from zoneinfo import ZoneInfo
 
 from api.contracts.command_view import CommandView
 from api.notification_models import NotificationPreferences
+from api.contracts.training_day import DAY_ROLLOVER_HOUR
 from api.store import AppStore
 from api.services.effective_structured_plan import resolve_effective_structured_plan
 
-TRAINING_DAY_ROLLOVER_HOUR = 3
+TRAINING_DAY_ROLLOVER_HOUR = DAY_ROLLOVER_HOUR
 DEFAULT_FALLBACK_TRAINING_TIME = "18:00"
 HIGH_CONFIDENCE_MAD_MINUTES = 30
 MEDIUM_CONFIDENCE_MAD_MINUTES = 90

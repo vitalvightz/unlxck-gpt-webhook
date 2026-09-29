@@ -4,6 +4,8 @@ import re
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+from shared.contracts import load_shared_contract, require_object, require_string, require_string_list
+
 from .config import CONDITIONING_PER_DAY, STRENGTH_PER_DAY
 from .weight_cut import WEIGHT_CUT_INPUTS_KNOWN
 
@@ -71,49 +73,30 @@ EQUIP_ALIASES = {
     "mini hurdle": "hurdles",
     "mini hurdles": "hurdles",
     "agility hurdles": "hurdles",
-    # --- Canonical combat pad/mitt capability -------------------------------
-    # Thai pads, focus mitts and partner mitts are separate names for the same
-    # athlete-facing capability: handheld striking pads held by a partner. The
-    # banks use all of these spellings, while intake only ever stored one, so
-    # eligibility (``required_equipment <= athlete_equipment``) used to fail for
-    # drills that happened to spell it differently. They all collapse to
-    # ``pads``. Deliberately NOT aliased: heavy/double-end bags, wall pads,
-    # kick shields, body protectors and rehab foam pads - none of those are
-    # handheld striking pads, and "pad" on its own is a squeeze pad in the
-    # strength bank, not a striking pad.
-    "thai_pads": "pads",
-    "thai pads": "pads",
-    "thai_pad": "pads",
-    "thai pad": "pads",
-    "thaipads": "pads",
-    "focus_mitts": "pads",
-    "focus mitts": "pads",
-    "focus_mitt": "pads",
-    "focus mitt": "pads",
-    "partner_mitts": "pads",
-    "partner mitts": "pads",
-    "partner_mitt": "pads",
-    "partner mitt": "pads",
-    "boxing_mitts": "pads",
-    "boxing mitts": "pads",
-    "boxing_mitt": "pads",
-    "boxing mitt": "pads",
-    "punch_mitts": "pads",
-    "punch mitts": "pads",
-    "punch_mitt": "pads",
-    "punch mitt": "pads",
-    "mitts": "pads",
-    "mitt": "pads",
-    "striking_pads": "pads",
-    "striking pads": "pads",
-    "pad_work": "pads",
-    "pad work": "pads",
-    "pads": "pads",
 }
+
+# --- Canonical combat pad/mitt capability -------------------------------
+# Thai pads, focus mitts and partner mitts are separate names for the same
+# athlete-facing capability: handheld striking pads held by a partner. The
+# banks use all of these spellings, while intake only ever stored one, so
+# eligibility (``required_equipment <= athlete_equipment``) used to fail for
+# drills that happened to spell it differently. They all collapse to
+# ``pads``. Deliberately NOT aliased: heavy/double-end bags, wall pads,
+# kick shields, body protectors and rehab foam pads - none of those are
+# handheld striking pads, and "pad" on its own is a squeeze pad in the
+# strength bank, not a striking pad.
+#
+# The spellings live in shared/equipment-aliases.json, which the intake form
+# (web/lib/intake-options.ts) reads too, so a profile saved with any of them
+# keeps its pads when the athlete re-saves it.
+_PAD_CONTRACT = require_object(load_shared_contract("equipment-aliases.json"), "pads", source="Equipment aliases")
 
 # Canonical token for handheld combat striking pads/mitts. Exposed so callers
 # (and tests) do not have to re-spell it.
-PADS = "pads"
+PADS = require_string(_PAD_CONTRACT, "canonical", source="Equipment aliases pads")
+EQUIP_ALIASES.update(
+    {alias: PADS for alias in (*require_string_list(_PAD_CONTRACT, "aliases", source="Equipment aliases pads"), PADS)}
+)
 
 
 def _split_items(value):

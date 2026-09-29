@@ -3,6 +3,7 @@
 // a load proxy derived from day types, and the compact readiness strip. Kept
 // framework-free and node:test-able, mirroring lib/structured-plan.ts. Every
 // function tolerates null/partial payloads and never throws.
+import trainingCalendar from "../../shared/training-calendar.json";
 import { formatPlanLabel } from "./plan-labels.ts";
 import {
   cleanText,
@@ -39,10 +40,11 @@ export function toISODate(date: Date): string {
 /**
  * The athlete-local training-day rollover hour. The training day does not
  * advance until 03:00 local time, so a 01:00 session still belongs to the
- * previous calendar day. This mirrors the backend `/api/today` training-day
- * concept so Today and Plan Detail resolve the same current day.
+ * previous calendar day. The backend `/api/today` rolls over at the same hour
+ * (both read shared/training-calendar.json), so Today and Plan Detail resolve
+ * the same current day.
  */
-export const TRAINING_DAY_ROLLOVER_HOUR = 3;
+export const TRAINING_DAY_ROLLOVER_HOUR: number = trainingCalendar.day_rollover_hour;
 
 /**
  * The athlete-local training-day `Date` for `now`, applying the 03:00 rollover.
@@ -526,18 +528,11 @@ export function buildCompletionIndex(
   return index;
 }
 
-// Mirrors fightcamp/session_sequencing.py SUPPORT_SESSION_TYPES /
-// SUPPORT_BLOCK_TYPES: prep, recovery and mindset work that surrounds the day's
-// main training rather than being it.
-const SUPPORT_SESSION_TYPES = new Set(["recovery", "rehab"]);
-const SUPPORT_BLOCK_TYPES = new Set([
-  "preparation",
-  "mobility_activation",
-  "cooldown_recovery",
-  "mindset",
-  "nutrition",
-  "rehab",
-]);
+// Prep, recovery and mindset work that surrounds the day's main training
+// rather than being it. fightcamp/session_sequencing.py reads the same types
+// from shared/training-calendar.json.
+const SUPPORT_SESSION_TYPES: ReadonlySet<string> = new Set(trainingCalendar.support_session_types);
+const SUPPORT_BLOCK_TYPES: ReadonlySet<string> = new Set(trainingCalendar.support_block_types);
 
 function isSupportSession(session: StructuredSession): boolean {
   const sessionType = (session.session_type ?? "").trim().toLowerCase();

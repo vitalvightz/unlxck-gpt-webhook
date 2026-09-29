@@ -51,6 +51,8 @@ from dataclasses import dataclass
 from enum import IntEnum
 from typing import Any, Callable, Iterable, Mapping, Sequence, TypeVar
 
+from shared.contracts import load_shared_contract, require_string_list
+
 from .calendar_context import role_d_day
 from .gap_fill_inserts import _INSERT_META
 from .role_labels import ROLE_LABELS
@@ -485,11 +487,15 @@ def _slot_from_blocks(blocks: Any) -> SequenceSlot | None:
 
 
 # Session types and block types that wrap or support a day's main work rather
-# than being it. Structural on purpose: the web client mirrors this rule
-# (web/lib/camp-map.ts primarySessionOf) and has no access to the registry.
-SUPPORT_SESSION_TYPES = frozenset({"recovery", "rehab"})
+# than being it. Structural on purpose: the web client applies the same rule
+# (web/lib/camp-map.ts primarySessionOf) and has no access to the registry, so
+# both read the types from shared/training-calendar.json.
+_CALENDAR = load_shared_contract("training-calendar.json")
+SUPPORT_SESSION_TYPES = frozenset(
+    require_string_list(_CALENDAR, "support_session_types", source="Training calendar")
+)
 SUPPORT_BLOCK_TYPES = frozenset(
-    {"preparation", "mobility_activation", "cooldown_recovery", "mindset", "nutrition", "rehab"}
+    require_string_list(_CALENDAR, "support_block_types", source="Training calendar")
 )
 
 

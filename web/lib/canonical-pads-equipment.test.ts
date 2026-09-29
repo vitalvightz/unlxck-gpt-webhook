@@ -68,3 +68,11 @@ test("legacy values still render a readable label in read-only views", () => {
   assert.equal(getOptionLabel(EQUIPMENT_ACCESS_OPTIONS, "focus_mitts"), "Pads / Mitts");
   assert.equal(getOptionLabel(EQUIPMENT_ACCESS_OPTIONS, "pads"), "Pads / Mitts");
 });
+
+test("every spelling the backend treats as pads canonicalizes to pads", () => {
+  // Stored profiles can carry any spelling fightcamp/training_context.py
+  // accepts; the form used to know only nine of them and dropped the rest.
+  for (const legacy of ["thaipads", "boxing_mitt", "punch_mitt", "mitt", "striking_pads", "pad_work"]) {
+    assert.deepEqual(canonicalizeEquipmentAccessValues([legacy]), ["pads"], legacy);
+  }
+});

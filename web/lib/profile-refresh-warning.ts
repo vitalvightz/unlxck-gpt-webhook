@@ -1,6 +1,8 @@
-export const PROFILE_REFRESH_FAILED_WARNING =
-  "Profile refresh failed; plan generated from submitted intake only.";
-export const PROFILE_REFRESH_FAILED_WARNING_CODE = "profile_refresh_failed_warning";
+import apiMessages from "../../shared/api-messages.json";
+
+// The backend's warning text and milestone code (shared/api-messages.json).
+export const PROFILE_REFRESH_FAILED_WARNING: string = apiMessages.profile_refresh_failed.message;
+export const PROFILE_REFRESH_FAILED_WARNING_CODE: string = apiMessages.profile_refresh_failed.code;
 
 export const PROFILE_REFRESH_FAILED_BANNER_TITLE =
   "Profile refresh failed during generation.";

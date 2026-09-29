@@ -1,3 +1,5 @@
+import focusPolicy from "../../shared/performance-focus-policy.json";
+
 type PerformanceFocusCapWindow = {
   maxDaysUntilFight: number;
   maxSelections: number;
@@ -21,47 +23,24 @@ export type PerformanceFocusValidation = {
   errorMessage: string | null;
 };
 
+// The open-plan cap, the fight-date windows and the over-cap message live in
+// shared/performance-focus-policy.json, which api/performance_focus.py reads
+// too: the server enforces the same cap this form blocks submit at.
 const OPEN_PLAN_FOCUS_CAP: PerformanceFocusCap = {
   daysUntilFight: Number.POSITIVE_INFINITY,
   weeksOut: Number.POSITIVE_INFINITY,
-  maxSelections: 5,
-  windowLabel: "Open plan",
-  reason: "Open plans use a focused cap to keep goals and weak areas clear without a fight-date countdown.",
+  maxSelections: focusPolicy.open_plan.max_selections,
+  windowLabel: focusPolicy.open_plan.window_label,
+  reason: focusPolicy.open_plan.reason,
 };
 
-// Keep in sync with api/performance_focus.py
-const PERFORMANCE_FOCUS_CAP_WINDOWS: PerformanceFocusCapWindow[] = [
-  {
-    maxDaysUntilFight: 7,
-    maxSelections: 2,
-    windowLabel: "Fight week",
-    reason: "Fight-week plans stay extremely selective so sharpness and readiness do not get buried under too many priorities.",
-  },
-  {
-    maxDaysUntilFight: 21,
-    maxSelections: 3,
-    windowLabel: "Ultra-short camp",
-    reason: "Ultra-short camps need a tight focus so the plan does not spread work across too many targets at once.",
-  },
-  {
-    maxDaysUntilFight: 42,
-    maxSelections: 4,
-    windowLabel: "Short camp",
-    reason: "Short camps can cover a few parallel priorities, but they still need selectivity to keep sessions coherent.",
-  },
-  {
-    maxDaysUntilFight: 70,
-    maxSelections: 5,
-    windowLabel: "Mid-length camp",
-    reason: "Mid-length camps have room for a broader focus without losing the main thread of the plan.",
-  },
-  {
-    maxDaysUntilFight: Number.POSITIVE_INFINITY,
-    maxSelections: 6,
-    windowLabel: "Long camp",
-    reason: "Longer camps have enough runway to support more development themes without diluting the plan.",
-  },
-];
+// The last window is open-ended (`max_days_until_fight: null`).
+const PERFORMANCE_FOCUS_CAP_WINDOWS: PerformanceFocusCapWindow[] = focusPolicy.windows.map((entry) => ({
+  maxDaysUntilFight: entry.max_days_until_fight ?? Number.POSITIVE_INFINITY,
+  maxSelections: entry.max_selections,
+  windowLabel: entry.window_label,
+  reason: entry.reason,
+}));
 
 function parseDateOnly(value: string | null | undefined): { year: number; month: number; day: number } | null {
   const match = (value ?? "").trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -147,8 +126,12 @@ export const FOCUS_CAP_DISABLED_REASON = "Free one focus slot to add this.";
 
 // Detailed copy for submit-blocking errors where the user needs the cap and the exact excess.
 function buildPerformanceFocusCapErrorMessage(maxSelections: number, excessSelections: number): string {
-  const selectionLabel = excessSelections === 1 ? "selection" : "selections";
-  return `This camp allows ${maxSelections} total focus picks. Remove ${excessSelections} goal or weak-area ${selectionLabel} before generating.`;
+  const values: Record<string, string> = {
+    max_selections: String(maxSelections),
+    excess_selections: String(excessSelections),
+    selection_label: excessSelections === 1 ? "selection" : "selections",
+  };
+  return focusPolicy.over_cap_message.replace(/\{(\w+)\}/g, (placeholder, key: string) => values[key] ?? placeholder);
 }
 
 export function validatePerformanceFocusSelections(

@@ -1,0 +1,300 @@
+{
+  "description": "Focus caps: get_performance_focus_cap / validate_performance_focus_selections (api/performance_focus.py) and getPerformanceFocusCap / validatePerformanceFocusSelections (web/lib/performance-focus-cap.ts).",
+  "cases": {
+    "caps": [
+      {
+        "fight_date": "2026-07-31",
+        "now": "2026-08-01T12:00:00+00:00",
+        "time_zone": "UTC",
+        "expected": null
+      },
+      {
+        "fight_date": "2026-08-01",
+        "now": "2026-08-01T12:00:00+00:00",
+        "time_zone": "UTC",
+        "expected": {
+          "open_plan": false,
+          "days_until_fight": 0,
+          "weeks_out": 1,
+          "max_selections": 2,
+          "window_label": "Fight week"
+        }
+      },
+      {
+        "fight_date": "2026-08-07",
+        "now": "2026-08-01T12:00:00+00:00",
+        "time_zone": "UTC",
+        "expected": {
+          "open_plan": false,
+          "days_until_fight": 6,
+          "weeks_out": 1,
+          "max_selections": 2,
+          "window_label": "Fight week"
+        }
+      },
+      {
+        "fight_date": "2026-08-08",
+        "now": "2026-08-01T12:00:00+00:00",
+        "time_zone": "UTC",
+        "expected": {
+          "open_plan": false,
+          "days_until_fight": 7,
+          "weeks_out": 1,
+          "max_selections": 2,
+          "window_label": "Fight week"
+        }
+      },
+      {
+        "fight_date": "2026-08-09",
+        "now": "2026-08-01T12:00:00+00:00",
+        "time_zone": "UTC",
+        "expected": {
+          "open_plan": false,
+          "days_until_fight": 8,
+          "weeks_out": 1,
+          "max_selections": 3,
+          "window_label": "Ultra-short camp"
+        }
+      },
+      {
+        "fight_date": "2026-08-14",
+        "now": "2026-08-01T12:00:00+00:00",
+        "time_zone": "UTC",
+        "expected": {
+          "open_plan": false,
+          "days_until_fight": 13,
+          "weeks_out": 1,
+          "max_selections": 3,
+          "window_label": "Ultra-short camp"
+        }
+      },
+      {
+        "fight_date": "2026-08-15",
+        "now": "2026-08-01T12:00:00+00:00",
+        "time_zone": "UTC",
+        "expected": {
+          "open_plan": false,
+          "days_until_fight": 14,
+          "weeks_out": 2,
+          "max_selections": 3,
+          "window_label": "Ultra-short camp"
+        }
+      },
+      {
+        "fight_date": "2026-08-22",
+        "now": "2026-08-01T12:00:00+00:00",
+        "time_zone": "UTC",
+        "expected": {
+          "open_plan": false,
+          "days_until_fight": 21,
+          "weeks_out": 3,
+          "max_selections": 3,
+          "window_label": "Ultra-short camp"
+        }
+      },
+      {
+        "fight_date": "2026-08-23",
+        "now": "2026-08-01T12:00:00+00:00",
+        "time_zone": "UTC",
+        "expected": {
+          "open_plan": false,
+          "days_until_fight": 22,
+          "weeks_out": 3,
+          "max_selections": 4,
+          "window_label": "Short camp"
+        }
+      },
+      {
+        "fight_date": "2026-09-12",
+        "now": "2026-08-01T12:00:00+00:00",
+        "time_zone": "UTC",
+        "expected": {
+          "open_plan": false,
+          "days_until_fight": 42,
+          "weeks_out": 6,
+          "max_selections": 4,
+          "window_label": "Short camp"
+        }
+      },
+      {
+        "fight_date": "2026-09-13",
+        "now": "2026-08-01T12:00:00+00:00",
+        "time_zone": "UTC",
+        "expected": {
+          "open_plan": false,
+          "days_until_fight": 43,
+          "weeks_out": 6,
+          "max_selections": 5,
+          "window_label": "Mid-length camp"
+        }
+      },
+      {
+        "fight_date": "2026-10-10",
+        "now": "2026-08-01T12:00:00+00:00",
+        "time_zone": "UTC",
+        "expected": {
+          "open_plan": false,
+          "days_until_fight": 70,
+          "weeks_out": 10,
+          "max_selections": 5,
+          "window_label": "Mid-length camp"
+        }
+      },
+      {
+        "fight_date": "2026-10-11",
+        "now": "2026-08-01T12:00:00+00:00",
+        "time_zone": "UTC",
+        "expected": {
+          "open_plan": false,
+          "days_until_fight": 71,
+          "weeks_out": 10,
+          "max_selections": 6,
+          "window_label": "Long camp"
+        }
+      },
+      {
+        "fight_date": "2027-09-05",
+        "now": "2026-08-01T12:00:00+00:00",
+        "time_zone": "UTC",
+        "expected": {
+          "open_plan": false,
+          "days_until_fight": 400,
+          "weeks_out": 57,
+          "max_selections": 6,
+          "window_label": "Long camp"
+        }
+      },
+      {
+        "fight_date": null,
+        "now": "2026-08-01T12:00:00+00:00",
+        "time_zone": "UTC",
+        "expected": {
+          "open_plan": true,
+          "days_until_fight": null,
+          "weeks_out": null,
+          "max_selections": 5,
+          "window_label": "Open plan"
+        }
+      },
+      {
+        "fight_date": "",
+        "now": "2026-08-01T12:00:00+00:00",
+        "time_zone": "UTC",
+        "expected": {
+          "open_plan": true,
+          "days_until_fight": null,
+          "weeks_out": null,
+          "max_selections": 5,
+          "window_label": "Open plan"
+        }
+      },
+      {
+        "fight_date": "2026-02-30",
+        "now": "2026-08-01T12:00:00+00:00",
+        "time_zone": "UTC",
+        "expected": {
+          "open_plan": true,
+          "days_until_fight": null,
+          "weeks_out": null,
+          "max_selections": 5,
+          "window_label": "Open plan"
+        }
+      },
+      {
+        "fight_date": "next friday",
+        "now": "2026-08-01T12:00:00+00:00",
+        "time_zone": "UTC",
+        "expected": {
+          "open_plan": true,
+          "days_until_fight": null,
+          "weeks_out": null,
+          "max_selections": 5,
+          "window_label": "Open plan"
+        }
+      },
+      {
+        "fight_date": "2026-08-08",
+        "now": "2026-08-01T23:30:00+00:00",
+        "time_zone": "Pacific/Auckland",
+        "expected": {
+          "open_plan": false,
+          "days_until_fight": 6,
+          "weeks_out": 1,
+          "max_selections": 2,
+          "window_label": "Fight week"
+        }
+      },
+      {
+        "fight_date": "2026-08-08",
+        "now": "2026-08-01T01:30:00+00:00",
+        "time_zone": "America/Los_Angeles",
+        "expected": {
+          "open_plan": false,
+          "days_until_fight": 8,
+          "weeks_out": 1,
+          "max_selections": 3,
+          "window_label": "Ultra-short camp"
+        }
+      },
+      {
+        "fight_date": "2026-08-22",
+        "now": "2026-08-01T23:30:00+00:00",
+        "time_zone": "Pacific/Auckland",
+        "expected": {
+          "open_plan": false,
+          "days_until_fight": 20,
+          "weeks_out": 2,
+          "max_selections": 3,
+          "window_label": "Ultra-short camp"
+        }
+      }
+    ],
+    "validations": [
+      {
+        "fight_date": "2026-08-05",
+        "now": "2026-08-01T12:00:00+00:00",
+        "time_zone": "UTC",
+        "key_goals": 2,
+        "weak_areas": 1,
+        "expected_excess": 1,
+        "expected_message": "This camp allows 2 total focus picks. Remove 1 goal or weak-area selection before generating."
+      },
+      {
+        "fight_date": "2026-08-05",
+        "now": "2026-08-01T12:00:00+00:00",
+        "time_zone": "UTC",
+        "key_goals": 3,
+        "weak_areas": 2,
+        "expected_excess": 3,
+        "expected_message": "This camp allows 2 total focus picks. Remove 3 goal or weak-area selections before generating."
+      },
+      {
+        "fight_date": "2026-10-30",
+        "now": "2026-08-01T12:00:00+00:00",
+        "time_zone": "UTC",
+        "key_goals": 5,
+        "weak_areas": 3,
+        "expected_excess": 2,
+        "expected_message": "This camp allows 6 total focus picks. Remove 2 goal or weak-area selections before generating."
+      },
+      {
+        "fight_date": null,
+        "now": "2026-08-01T12:00:00+00:00",
+        "time_zone": "UTC",
+        "key_goals": 4,
+        "weak_areas": 2,
+        "expected_excess": 1,
+        "expected_message": "This camp allows 5 total focus picks. Remove 1 goal or weak-area selection before generating."
+      },
+      {
+        "fight_date": "2026-08-05",
+        "now": "2026-08-01T12:00:00+00:00",
+        "time_zone": "UTC",
+        "key_goals": 1,
+        "weak_areas": 1,
+        "expected_excess": 0,
+        "expected_message": null
+      }
+    ]
+  }
+}

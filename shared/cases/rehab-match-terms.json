@@ -1,0 +1,65 @@
+{
+  "description": "normalize_match_term (api/rehab_labels.py) and normalizeRehabText (web/lib/rehab-label.ts).",
+  "cases": [
+    {
+      "input": "Hamstring",
+      "expected": "hamstring"
+    },
+    {
+      "input": "  Left HIP  (post-op) ",
+      "expected": "left hip"
+    },
+    {
+      "input": "ACL-reconstruction",
+      "expected": "acl reconstruction"
+    },
+    {
+      "input": "Ankle/Foot",
+      "expected": "ankle foot"
+    },
+    {
+      "input": "rotator_cuff",
+      "expected": "rotator cuff"
+    },
+    {
+      "input": "Shoulder—rotator cuff",
+      "expected": "shoulder rotator cuff"
+    },
+    {
+      "input": "Élbow",
+      "expected": "lbow"
+    },
+    {
+      "input": "knee (a (b) c) d",
+      "expected": "knee c d"
+    },
+    {
+      "input": "",
+      "expected": ""
+    },
+    {
+      "input": null,
+      "expected": ""
+    },
+    {
+      "input": "C5-C6 disc",
+      "expected": "c5 c6 disc"
+    },
+    {
+      "input": "hip flexor's",
+      "expected": "hip flexor s"
+    },
+    {
+      "input": "Lower back (L4/L5) + SI joint",
+      "expected": "lower back si joint"
+    },
+    {
+      "input": "  ",
+      "expected": ""
+    },
+    {
+      "input": "WRIST",
+      "expected": "wrist"
+    }
+  ]
+}

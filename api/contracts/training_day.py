@@ -26,7 +26,21 @@ try:  # zoneinfo is stdlib on Python 3.9+; degrade gracefully if unavailable.
 except ImportError:  # pragma: no cover - defensive fallback only
     ZoneInfo = None  # type: ignore[assignment]
 
-DAY_ROLLOVER_HOUR = 3
+from shared.contracts import load_shared_contract, require_positive_int
+
+_CALENDAR = load_shared_contract("training-calendar.json")
+
+
+def _rollover_hour() -> int:
+    hour = require_positive_int(_CALENDAR, "day_rollover_hour", source="Training calendar", allow_zero=True)
+    if hour > 23:
+        raise RuntimeError("Training calendar day_rollover_hour must be an hour of the day (0-23)")
+    return hour
+
+
+# shared/training-calendar.json; web/lib/camp-map.ts rolls the day over at the
+# same hour, so Today and Plan Detail resolve the same current day.
+DAY_ROLLOVER_HOUR = _rollover_hour()
 DEFAULT_TIMEZONE = "UTC"
 
 

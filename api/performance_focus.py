@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo
 
+from shared.contracts import load_shared_contract, require_positive_int, require_string
+
 
 @dataclass(frozen=True)
 class PerformanceFocusCap:
@@ -27,54 +29,56 @@ class PerformanceFocusValidation:
 
 @dataclass(frozen=True)
 class _PerformanceFocusCapWindow:
-    max_days_until_fight: int
+    max_days_until_fight: int | float
     max_selections: int
     window_label: str
     reason: str
 
 
-# Keep the cap below and the windows that follow in sync with
-# web/lib/performance-focus-cap.ts.
-_OPEN_PLAN_FOCUS_CAP = PerformanceFocusCap(
-    days_until_fight=math.inf,
-    weeks_out=math.inf,
-    max_selections=5,
-    window_label="Open plan",
-    reason="Open plans use a focused cap to keep goals and weak areas clear without a fight-date countdown.",
-)
+def _load_focus_policy() -> tuple[PerformanceFocusCap, tuple[_PerformanceFocusCapWindow, ...], str]:
+    source = "Performance focus policy"
+    policy = load_shared_contract("performance-focus-policy.json")
+    open_plan = policy.get("open_plan")
+    windows = policy.get("windows")
+    if not isinstance(open_plan, dict):
+        raise RuntimeError(f"{source} open_plan must be an object")
+    if not isinstance(windows, list) or not windows or not all(isinstance(entry, dict) for entry in windows):
+        raise RuntimeError(f"{source} windows must be a non-empty list of objects")
+    parsed: list[_PerformanceFocusCapWindow] = []
+    previous_max = -1
+    for position, entry in enumerate(windows):
+        last = position == len(windows) - 1
+        max_days = entry.get("max_days_until_fight")
+        if last:
+            # The last window is open-ended: every later fight date falls in it.
+            if max_days is not None:
+                raise RuntimeError(f"{source} last window must have max_days_until_fight null")
+            max_days = math.inf
+        elif isinstance(max_days, bool) or not isinstance(max_days, int) or max_days <= previous_max:
+            raise RuntimeError(f"{source} window bounds must be ascending integers")
+        previous_max = max_days
+        parsed.append(
+            _PerformanceFocusCapWindow(
+                max_days_until_fight=max_days,
+                max_selections=require_positive_int(entry, "max_selections", source=source),
+                window_label=require_string(entry, "window_label", source=source),
+                reason=require_string(entry, "reason", source=source),
+            )
+        )
+    cap = PerformanceFocusCap(
+        days_until_fight=math.inf,
+        weeks_out=math.inf,
+        max_selections=require_positive_int(open_plan, "max_selections", source=source),
+        window_label=require_string(open_plan, "window_label", source=source),
+        reason=require_string(open_plan, "reason", source=source),
+    )
+    return cap, tuple(parsed), require_string(policy, "over_cap_message", source=source)
 
-_PERFORMANCE_FOCUS_CAP_WINDOWS: tuple[_PerformanceFocusCapWindow, ...] = (
-    _PerformanceFocusCapWindow(
-        max_days_until_fight=7,
-        max_selections=2,
-        window_label="Fight week",
-        reason="Fight-week plans stay extremely selective so sharpness and readiness do not get buried under too many priorities.",
-    ),
-    _PerformanceFocusCapWindow(
-        max_days_until_fight=21,
-        max_selections=3,
-        window_label="Ultra-short camp",
-        reason="Ultra-short camps need a tight focus so the plan does not spread work across too many targets at once.",
-    ),
-    _PerformanceFocusCapWindow(
-        max_days_until_fight=42,
-        max_selections=4,
-        window_label="Short camp",
-        reason="Short camps can cover a few parallel priorities, but they still need selectivity to keep sessions coherent.",
-    ),
-    _PerformanceFocusCapWindow(
-        max_days_until_fight=70,
-        max_selections=5,
-        window_label="Mid-length camp",
-        reason="Mid-length camps have room for a broader focus without losing the main thread of the plan.",
-    ),
-    _PerformanceFocusCapWindow(
-        max_days_until_fight=10**9,
-        max_selections=6,
-        window_label="Long camp",
-        reason="Longer camps have enough runway to support more development themes without diluting the plan.",
-    ),
-)
+
+# The open-plan cap, the fight-date windows and the over-cap message live in
+# shared/performance-focus-policy.json, which web/lib/performance-focus-cap.ts
+# reads too: the client blocks submit at the same cap the server enforces.
+_OPEN_PLAN_FOCUS_CAP, _PERFORMANCE_FOCUS_CAP_WINDOWS, _OVER_CAP_MESSAGE = _load_focus_policy()
 
 
 def _parse_date_only(value: str | None) -> date | None:
@@ -100,10 +104,10 @@ def _get_today(*, now: datetime | None = None, time_zone: str | None = None) -> 
 
 
 def _build_focus_cap_error_message(*, max_selections: int, excess_selections: int) -> str:
-    selection_label = "selection" if excess_selections == 1 else "selections"
-    return (
-        f"This camp allows {max_selections} total focus picks. "
-        f"Remove {excess_selections} goal or weak-area {selection_label} before generating."
+    return _OVER_CAP_MESSAGE.format(
+        max_selections=max_selections,
+        excess_selections=excess_selections,
+        selection_label="selection" if excess_selections == 1 else "selections",
     )
 
 

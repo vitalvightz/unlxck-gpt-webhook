@@ -1,0 +1,10 @@
+{
+  "generation_already_in_flight": {
+    "code": "generation_already_in_flight",
+    "message": "A generation job is already queued or running for this account."
+  },
+  "profile_refresh_failed": {
+    "code": "profile_refresh_failed_warning",
+    "message": "Profile refresh failed; plan generated from submitted intake only."
+  }
+}
