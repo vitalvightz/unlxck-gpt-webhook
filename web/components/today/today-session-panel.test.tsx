@@ -109,6 +109,31 @@ test("Today uses its parent heading and starts video exercises as compact rows",
   assert.match(alternateHeadline, /class="sp-session-title">Lower-body strength/);
 });
 
+test("Today keeps the Technical Combat relabel when the heading repeats a light-combat title", () => {
+  const plan = {
+    weeks: [{
+      week_index: 1,
+      days: [{
+        date: "2026-09-29",
+        weekday: "Tue",
+        sessions: [{
+          session_id: "light-combat-1",
+          title: "Light technical combat",
+          session_type: "skill",
+          blocks: [],
+        }],
+      }],
+    }],
+  } as StructuredPlan;
+  const current = resolveCurrentDay(plan, new Date(2026, 8, 29));
+  const html = renderToStaticMarkup(
+    <TodaySessionBlocks current={current} headline="Light technical combat" />,
+  );
+
+  assert.match(html, /class="sp-session-title">Technical Combat/);
+  assert.match(html, /Pads, drills, movement or other lower-intensity combat work\./);
+});
+
 // Session timing is settled by today_service.build_today_command_view and
 // carried in session_scope. These two tests pin that the panel follows it in
 // both directions rather than re-deciding the day from calendar_date — the

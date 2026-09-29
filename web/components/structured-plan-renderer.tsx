@@ -742,7 +742,8 @@ export function SessionCard({
   defaultOpenBlocks?: boolean;
   /** Today keeps exercise details behind a tap so the session action stays in view. */
   initiallyOpenFirstBlock?: boolean;
-  /** The parent Today card already names this exact session. */
+  /** The parent Today card already names this exact session. Relabelled
+   * combat titles still render, since the parent shows the raw plan title. */
   hideTitle?: boolean;
   /** When false, day-level context like warnings/nutrition/mindset is rendered by
    * the parent day card instead, so the same information does not repeat inside
@@ -813,7 +814,7 @@ export function SessionCard({
               {date ? <span className="sp-day-date">{formatAppDate(date)}</span> : null}
             </div>
           ) : null}
-          {hideTitle && !isTechnicalSession ? null : <h3 className="sp-session-title">
+          {hideTitle && !isTechnicalSession && !isDeclaredLightCombat ? null : <h3 className="sp-session-title">
             {isDeclaredLightCombat
               ? DECLARED_LIGHT_COMBAT_TITLE
               : isTechnicalSession

@@ -224,6 +224,7 @@ test("a parsed drill card keeps Why, prescription, cues and its stop rule", () =
   // Quality Stop renders under the stop-rule label, never as "Progress".
   assert.match(expanded, /Stop rule/);
   assert.equal(markup.includes("Quality Stop"), false);
+  assert.equal(expanded.includes("Quality Stop"), false);
   assert.match(markup, /Skill/);
 });
 
