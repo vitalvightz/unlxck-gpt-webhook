@@ -297,14 +297,15 @@ type VisibilityDocument = Pick<
  * hidden does not count: it may predate the upgrade. ``poll`` handles its own
  * failures.
  *
- * Nothing here waits on a fetch for longer than ``fetchTimeoutMs``: a request
- * that never settles would otherwise hold every later tick and keep the window
- * open forever. After the deadline the poll moves on and the late response,
- * if one ever arrives, is simply applied as usual. The window closing stops
- * the poll straight away.
+ * Each fetch gets an abort signal, aborted after ``fetchTimeoutMs`` and when
+ * the poll stops: a request that never settles would otherwise hold every
+ * later tick and keep the window open forever. ``poll`` must settle once its
+ * signal aborts (a cancelled fetch rejects), and the next fetch only starts
+ * after that, so fetches never overlap and an abandoned request cannot apply a
+ * late result. The window closing stops the poll straight away.
  */
 export function startStructuredPlanUpgradePoll(params: {
-  poll: () => Promise<void>;
+  poll: (signal: AbortSignal) => Promise<void>;
   onWindowExpired: () => void;
   intervalMs: number;
   windowMs: number;
@@ -314,20 +315,24 @@ export function startStructuredPlanUpgradePoll(params: {
   const doc = params.doc ?? document;
   let stopped = false;
   let inFlight: Promise<void> | null = null;
+  let inFlightController: AbortController | null = null;
   let expireWhenVisible = false;
   const isVisible = () => doc.visibilityState === "visible";
   const startFetch = (): Promise<void> => {
-    let deadlineId: ReturnType<typeof setTimeout> | undefined;
-    const deadline = new Promise<void>((resolve) => {
-      deadlineId = setTimeout(resolve, params.fetchTimeoutMs);
-    });
-    const request = Promise.race([params.poll().catch(() => undefined), deadline]).finally(() => {
-      clearTimeout(deadlineId);
-      if (inFlight === request) {
-        inFlight = null;
-      }
-    });
+    const controller = new AbortController();
+    const deadlineId = setTimeout(() => controller.abort(), params.fetchTimeoutMs);
+    const request = params
+      .poll(controller.signal)
+      .catch(() => undefined)
+      .finally(() => {
+        clearTimeout(deadlineId);
+        if (inFlight === request) {
+          inFlight = null;
+          inFlightController = null;
+        }
+      });
     inFlight = request;
+    inFlightController = controller;
     return request;
   };
   const tick = async () => {
@@ -376,6 +381,7 @@ export function startStructuredPlanUpgradePoll(params: {
 
   function stop() {
     stopped = true;
+    inFlightController?.abort();
     doc.removeEventListener("visibilitychange", handleVisibilityChange);
     clearInterval(intervalId);
     clearTimeout(timeoutId);
@@ -2052,12 +2058,16 @@ export function PlanViewer({
 
     let cancelled = false;
 
-    const pollForStructuredPlan = async () => {
+    const pollForStructuredPlan = async (signal: AbortSignal) => {
       if (!accessToken) {
         return;
       }
       try {
-        const refreshedPlan = await getPlan(accessToken, plan.plan_id);
+        const refreshedPlan = await getPlan(accessToken, plan.plan_id, { signal });
+        // A response that raced its own abort (deadline or stop) is dropped.
+        if (signal.aborted) {
+          return;
+        }
         const refreshedStateKey = JSON.stringify(
           normalizeStructuredCardState(refreshedPlan.structured_card_state),
         );

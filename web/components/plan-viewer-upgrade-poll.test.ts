@@ -45,22 +45,39 @@ async function flush() {
   }
 }
 
-/** A poll whose fetches finish only when the test says so. */
+/**
+ * A poll whose fetches finish only when the test says so, and which, like a
+ * real fetch, rejects as soon as its signal aborts. ``open()`` counts fetches
+ * that have neither finished nor been aborted.
+ */
 function controlledPoll(events: string[]) {
   const finishers: Array<() => void> = [];
   let started = 0;
-  const poll = () => {
+  let open = 0;
+  const poll = (signal: AbortSignal) => {
     started += 1;
     const n = started;
+    open += 1;
     events.push(`start ${n}`);
-    return new Promise<void>((resolve) => {
+    return new Promise<void>((resolve, reject) => {
+      let settled = false;
       finishers[n] = () => {
+        if (settled) return;
+        settled = true;
+        open -= 1;
         events.push(`end ${n}`);
         resolve();
       };
+      signal.addEventListener("abort", () => {
+        if (settled) return;
+        settled = true;
+        open -= 1;
+        events.push(`abort ${n}`);
+        reject(new DOMException("Aborted", "AbortError"));
+      });
     });
   };
-  return { poll, finish: (n: number) => finishers[n]() };
+  return { poll, finish: (n: number) => finishers[n](), open: () => open };
 }
 
 test("upgrade poll fetches on each interval while the tab is visible", async (t) => {
@@ -408,13 +425,44 @@ test("a fetch that never settles cannot hold the window open after the return", 
   await flush();
   assert.deepEqual(events, ["start 1"]);
 
-  // Fetch 1 is abandoned at its deadline and a fresh check starts; that one
-  // hangs too, and its own deadline closes the window.
+  // Fetch 1 is cancelled at its deadline and a fresh check starts; that one
+  // hangs too, and its cancellation closes the window.
   await advance(t, fetchTimeout);
-  assert.deepEqual(events, ["start 1", "start 2"]);
+  assert.deepEqual(events, ["start 1", "abort 1", "start 2"]);
   await advance(t, fetchTimeout);
-  assert.deepEqual(events, ["start 1", "start 2", "expired"]);
+  assert.deepEqual(events, ["start 1", "abort 1", "start 2", "abort 2", "expired"]);
   stop();
+});
+
+test("a slow fetch is cancelled, never overlapped", async (t) => {
+  t.mock.timers.enable({ apis: ["setInterval", "setTimeout"] });
+  const { doc } = fakeDocument();
+  const events: string[] = [];
+  const { poll, open } = controlledPoll(events);
+  const stop = startStructuredPlanUpgradePoll({
+    poll,
+    onWindowExpired: () => {},
+    intervalMs: INTERVAL,
+    windowMs: 120_000,
+    fetchTimeoutMs: 5_000,
+    doc,
+  });
+
+  let maxOpen = 0;
+  for (let elapsed = 0; elapsed < 60_000; elapsed += 500) {
+    await advance(t, 500);
+    maxOpen = Math.max(maxOpen, open());
+  }
+
+  assert.equal(maxOpen, 1);
+  // Every fetch except possibly the current one was cancelled, not abandoned.
+  const starts = events.filter((event) => event.startsWith("start")).length;
+  const aborts = events.filter((event) => event.startsWith("abort")).length;
+  assert.ok(starts > 2);
+  assert.equal(starts - aborts, open());
+  stop();
+  await flush();
+  assert.equal(open(), 0); // stopping cancels the one still out
 });
 
 test("a fetch that never settles does not stall later ticks", async (t) => {
@@ -434,7 +482,8 @@ test("a fetch that never settles does not stall later ticks", async (t) => {
   await advance(t, INTERVAL * 2);
   assert.deepEqual(events, ["start 1"]); // no overlap before the deadline
   await advance(t, INTERVAL * 2);
-  assert.deepEqual(events, ["start 1", "start 2"]); // deadline passed, polling resumes
+  // Cancelled at its deadline, then polling resumes.
+  assert.deepEqual(events, ["start 1", "abort 1", "start 2"]);
   stop();
 });
 
