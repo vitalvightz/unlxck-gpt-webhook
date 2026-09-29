@@ -106,6 +106,9 @@ const TRIAGE_RESUME_FETCH_DELAY_MS = 800;
 const APPROVE_RECOVERY_FETCH_ATTEMPTS = 3;
 const APPROVE_RECOVERY_FETCH_DELAY_MS = 800;
 const STRUCTURED_PLAN_POLL_INTERVAL_MS = 2500;
+// Longest the upgrade poll waits on one plan fetch before moving on. The API
+// layer's own timeout can be minutes (retries) or disabled, so the poll bounds it.
+const STRUCTURED_PLAN_POLL_FETCH_TIMEOUT_MS = 15_000;
 // Background structuring can take up to ~2 minutes for a full camp. We never make
 // the athlete wait for it: plan_text is deterministically adapted into the full
 // structured renderer immediately. Polling only swaps in the richer saved payload
@@ -275,6 +278,126 @@ export function shouldPollForStructuredPlanUpgrade(params: {
     params.hasAccessToken &&
     params.isTriageBlocked !== true
   );
+}
+
+type VisibilityDocument = Pick<
+  Document,
+  "visibilityState" | "addEventListener" | "removeEventListener"
+>;
+
+/**
+ * Run the background upgrade poll until the returned stop function is called.
+ *
+ * Every tick fetches the whole plan, so a tick is skipped while the previous
+ * fetch is still out (slow responses must not stack up) and while the tab is
+ * hidden (nobody is there to see the swap). Returning to the tab checks at
+ * once. A window that ends while the tab is hidden stays open until a fetch
+ * that started after the return has finished, so an upgrade that landed while
+ * the athlete was away still shows. A fetch still out from before the tab was
+ * hidden does not count: it may predate the upgrade. ``poll`` handles its own
+ * failures.
+ *
+ * Each fetch gets an abort signal, aborted after ``fetchTimeoutMs`` and when
+ * the poll stops: a request that never settles would otherwise hold every
+ * later tick and keep the window open forever. ``poll`` must settle once its
+ * signal aborts (a cancelled fetch rejects), and the next fetch only starts
+ * after that, so fetches never overlap and an abandoned request cannot apply a
+ * late result. The window closing stops the poll straight away.
+ */
+export function startStructuredPlanUpgradePoll(params: {
+  poll: (signal: AbortSignal) => Promise<void>;
+  onWindowExpired: () => void;
+  intervalMs: number;
+  windowMs: number;
+  fetchTimeoutMs: number;
+  doc?: VisibilityDocument;
+}): () => void {
+  const doc = params.doc ?? document;
+  let stopped = false;
+  let inFlight: Promise<void> | null = null;
+  let inFlightController: AbortController | null = null;
+  let expireWhenVisible = false;
+  const isVisible = () => doc.visibilityState === "visible";
+  const startFetch = (): Promise<void> => {
+    const controller = new AbortController();
+    const deadlineId = setTimeout(() => controller.abort(), params.fetchTimeoutMs);
+    const request = params
+      .poll(controller.signal)
+      .catch(() => undefined)
+      .finally(() => {
+        clearTimeout(deadlineId);
+        if (inFlight === request) {
+          inFlight = null;
+          inFlightController = null;
+        }
+      });
+    inFlight = request;
+    inFlightController = controller;
+    return request;
+  };
+  const tick = async () => {
+    if (stopped || inFlight || !isVisible()) {
+      return;
+    }
+    await startFetch();
+  };
+  /** Resolves true once a fetch begun after the return has finished. */
+  const checkAfterReturn = async (): Promise<boolean> => {
+    const earlier = inFlight;
+    if (earlier) {
+      await earlier;
+    }
+    if (stopped || !isVisible()) {
+      return false;
+    }
+    // A fetch started since the earlier one settled began after the return.
+    await (inFlight ?? startFetch());
+    // Hidden again before it finished: the next return's check closes the window.
+    return !stopped && isVisible();
+  };
+  let returns = 0;
+  const handleVisibilityChange = () => {
+    if (!isVisible()) {
+      return;
+    }
+    const thisReturn = ++returns;
+    void checkAfterReturn().then((checked) => {
+      // A later return runs its own check; that one closes the window.
+      if (checked && thisReturn === returns && expireWhenVisible) {
+        expire();
+      }
+    });
+  };
+
+  doc.addEventListener("visibilitychange", handleVisibilityChange);
+  const intervalId = setInterval(() => void tick(), params.intervalMs);
+  const timeoutId = setTimeout(() => {
+    if (isVisible()) {
+      expire();
+    } else {
+      expireWhenVisible = true;
+    }
+  }, params.windowMs);
+
+  function stop() {
+    stopped = true;
+    inFlightController?.abort();
+    doc.removeEventListener("visibilitychange", handleVisibilityChange);
+    clearInterval(intervalId);
+    clearTimeout(timeoutId);
+  }
+
+  function expire() {
+    if (stopped) {
+      return;
+    }
+    // Stop first: no tick may start between the window closing and the
+    // component's own cleanup.
+    stop();
+    params.onWindowExpired();
+  }
+
+  return stop;
 }
 
 function getApprovalSuccessMessage(plan: Pick<PlanDetail, "outputs">): string {
@@ -1935,12 +2058,16 @@ export function PlanViewer({
 
     let cancelled = false;
 
-    const pollForStructuredPlan = async () => {
+    const pollForStructuredPlan = async (signal: AbortSignal) => {
       if (!accessToken) {
         return;
       }
       try {
-        const refreshedPlan = await getPlan(accessToken, plan.plan_id);
+        const refreshedPlan = await getPlan(accessToken, plan.plan_id, { signal });
+        // A response that raced its own abort (deadline or stop) is dropped.
+        if (signal.aborted) {
+          return;
+        }
         const refreshedStateKey = JSON.stringify(
           normalizeStructuredCardState(refreshedPlan.structured_card_state),
         );
@@ -1960,17 +2087,21 @@ export function PlanViewer({
       }
     };
 
-    const intervalId = window.setInterval(pollForStructuredPlan, STRUCTURED_PLAN_POLL_INTERVAL_MS);
-    const timeoutId = window.setTimeout(() => {
-      if (!cancelled) {
-        setPollExpiredPlans((prev) => ({ ...prev, [plan.plan_id]: true }));
-      }
-    }, STRUCTURED_PLAN_UPGRADE_POLL_WINDOW_MS);
+    const stopPolling = startStructuredPlanUpgradePoll({
+      poll: pollForStructuredPlan,
+      onWindowExpired: () => {
+        if (!cancelled) {
+          setPollExpiredPlans((prev) => ({ ...prev, [plan.plan_id]: true }));
+        }
+      },
+      intervalMs: STRUCTURED_PLAN_POLL_INTERVAL_MS,
+      windowMs: STRUCTURED_PLAN_UPGRADE_POLL_WINDOW_MS,
+      fetchTimeoutMs: STRUCTURED_PLAN_POLL_FETCH_TIMEOUT_MS,
+    });
 
     return () => {
       cancelled = true;
-      window.clearInterval(intervalId);
-      window.clearTimeout(timeoutId);
+      stopPolling();
     };
   }, [
     accessToken,

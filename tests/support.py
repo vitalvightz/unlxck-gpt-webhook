@@ -1543,6 +1543,19 @@ class FakeStore:
         )
         return [dict(row) for row in rows[:limit]]
 
+    def list_session_completions_from_day(
+        self, athlete_id: str, training_day: str, *, limit: int = 200
+    ) -> list[dict]:
+        rows = sorted(
+            (
+                row
+                for row in self.session_completions.get(athlete_id, [])
+                if str(row["training_day"]) >= training_day
+            ),
+            key=lambda row: row["training_day"],
+        )
+        return [dict(row) for row in rows[:limit]]
+
     def list_plan_session_completions(
         self, athlete_id: str, plan_id: str, *, limit: int = 500
     ) -> list[dict]:

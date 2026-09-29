@@ -100,16 +100,12 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
             if active_plan and str(active_plan.get("id") or "") == str(
                 plan_row.get("id") or ""
             ):
-                full_plan = plan_row
-                reader = getattr(store, "get_plan_for_athlete", None)
-                if callable(reader):
-                    loaded = reader(str(plan_row.get("id") or ""), owner_id)
-                    if loaded:
-                        full_plan = loaded
+                # resolve_active_plan read this plan with get_plan_for_athlete,
+                # so active_plan is already the full owner-scoped row.
                 sync_intake_injuries_for_plan(
                     store,
                     athlete_id=owner_id,
-                    plan_row=full_plan,
+                    plan_row=active_plan,
                 )
         except Exception:
             # Rehab policy reads have always been best-effort. A synchronization

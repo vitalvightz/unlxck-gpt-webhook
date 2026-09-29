@@ -389,21 +389,8 @@ def sync_active_plan_intake_injuries(
         readable, flags = _list_flags(store, athlete_id, statuses=_ACTIVE_STATUSES)
         return flags if readable else []
 
-    plan_id = str(plan_row.get("id") or "").strip()
-    reader = getattr(store, "get_plan_for_athlete", None)
-    if plan_id and callable(reader):
-        try:
-            full_plan = reader(plan_id, athlete_id)
-            if full_plan:
-                plan_row = full_plan
-        except Exception:
-            logger.exception(
-                "[intake_injury_sync] full plan read failed athlete_id=%s plan_id=%s",
-                athlete_id,
-                plan_id,
-            )
-            return []
-
+    # resolve_active_plan reads the pointed-to plan with get_plan_for_athlete,
+    # so plan_row is already the full owner-scoped row.
     return sync_intake_injuries_for_plan(
         store,
         athlete_id=athlete_id,

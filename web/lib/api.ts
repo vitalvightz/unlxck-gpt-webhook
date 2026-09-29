@@ -192,9 +192,13 @@ async function withTransientRetries<T>(
   {
     attempts = 3,
     delayMs = 1500,
+    signal,
   }: {
     attempts?: number;
     delayMs?: number;
+    // A caller abort surfaces as the retryable network error; it must end the
+    // request, not start another attempt.
+    signal?: AbortSignal | null;
   } = {},
 ): Promise<T> {
   let lastError: unknown;
@@ -204,10 +208,13 @@ async function withTransientRetries<T>(
       return await operation();
     } catch (error) {
       lastError = error;
-      if (!isRetryableApiFailure(error) || attempt === attempts) {
+      if (signal?.aborted || !isRetryableApiFailure(error) || attempt === attempts) {
         throw error;
       }
       await sleep(delayMs * attempt);
+      if (signal?.aborted) {
+        throw error;
+      }
     }
   }
 
@@ -301,7 +308,8 @@ async function executeRequest(path: string, init?: ApiRequestInit): Promise<Exec
     if (timeoutId) {
       globalThis.clearTimeout(timeoutId);
     }
-    init?.signal?.removeEventListener("abort", abortFromCaller);
+    // The caller's abort stays attached (once) after the headers arrive so it
+    // still cancels the body download; aborting after that is a no-op.
   }
 
   const durationMs = Date.now() - startedAt;
@@ -673,9 +681,15 @@ export function setActivePlan(
   );
 }
 
-export function getPlan(token: string, planId: string): Promise<PlanDetail> {
-  return withTransientRetries(() =>
-    readJson<PlanDetail>(`/api/plans/${encodeURIComponent(planId)}`, { token }),
+export function getPlan(
+  token: string,
+  planId: string,
+  options: { signal?: AbortSignal } = {},
+): Promise<PlanDetail> {
+  const { signal } = options;
+  return withTransientRetries(
+    () => readJson<PlanDetail>(`/api/plans/${encodeURIComponent(planId)}`, { token, signal }),
+    { signal },
   );
 }
 

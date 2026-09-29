@@ -55,26 +55,45 @@ async def _run_morning_push_sweep_if_due(
     store: AppStore,
     state: dict[str, float],
     interval_seconds: int,
+    shutdown_event: asyncio.Event | None = None,
 ) -> None:
     """Piggyback the morning check-in push sweep on the worker's tick loop.
 
     The sweep itself is idempotent (per-device local-day dedupe), so the cadence
     only bounds delivery latency after the local morning hour. It runs in a
     worker thread (sync store + HTTP calls) and never raises into the loop.
+    Like the media sweep it is detached: a sweep visits every subscribed
+    athlete, so awaiting it here stopped job claiming for its whole duration.
+    A tick that finds the previous sweep still running skips. Once shutdown is
+    requested the sweep stops before its next athlete.
     """
 
     now = time.monotonic()
     if now - state.get("last_sweep_at", 0.0) < interval_seconds:
         return
+    running = _MORNING_PUSH_SWEEP_TASK.get("task")
+    if running is not None and not running.done():
+        return
     state["last_sweep_at"] = now
-    try:
-        from .services.morning_push import morning_push_enabled, run_morning_push_sweep
 
-        if not morning_push_enabled():
-            return
-        await asyncio.to_thread(run_morning_push_sweep, store)
-    except Exception:  # noqa: BLE001 - the nudge sweep must never disturb generation
-        logger.exception("[worker] morning push sweep failed")
+    async def _sweep() -> None:
+        try:
+            from .services.morning_push import morning_push_enabled, run_morning_push_sweep
+
+            if not morning_push_enabled():
+                return
+            await asyncio.to_thread(
+                run_morning_push_sweep,
+                store,
+                should_stop=shutdown_event.is_set if shutdown_event is not None else None,
+            )
+        except Exception:  # noqa: BLE001 - the nudge sweep must never disturb generation
+            logger.exception("[worker] morning push sweep failed")
+
+    _MORNING_PUSH_SWEEP_TASK["task"] = asyncio.create_task(_sweep())
+
+
+_MORNING_PUSH_SWEEP_TASK: dict[str, asyncio.Task[None] | None] = {"task": None}
 
 
 def _exercise_media_sweep_interval_seconds() -> int:
@@ -416,6 +435,7 @@ async def run_worker() -> None:
                 store=store,
                 state=morning_sweep_state,
                 interval_seconds=morning_sweep_interval,
+                shutdown_event=shutdown_event,
             )
             await _run_exercise_media_sweep_if_due(
                 store=store,

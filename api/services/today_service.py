@@ -19,8 +19,10 @@ import json
 import logging
 import re
 import uuid
+from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import date, datetime, timezone
-from typing import Any, Callable, Mapping, NamedTuple, Sequence
+from typing import Any, Callable, Iterator, Mapping, NamedTuple, Sequence
 
 from fastapi import HTTPException, status
 from pydantic import ValidationError
@@ -1618,18 +1620,59 @@ def _select_structured_primary_session(sessions: list[Mapping[str, Any]]) -> Map
     return sessions[0]
 
 
+# One Today build asks several helpers about the same plan card, and resolving
+# the effective card re-validates all of it. Inside a build the plan row is only
+# read, so the resolved card and each day's projection are computed once. Keys
+# hold the row itself so an id() is never matched against a different row.
+_STRUCTURED_PROJECTION_MEMO: ContextVar[dict[tuple[Any, ...], tuple[Mapping[str, Any], Any]] | None] = (
+    ContextVar("today_structured_projection_memo", default=None)
+)
+
+
+@contextmanager
+def structured_projection_memo() -> Iterator[None]:
+    """Resolve each plan card once for the duration of one Today build."""
+    if _STRUCTURED_PROJECTION_MEMO.get() is not None:
+        yield
+        return
+    token = _STRUCTURED_PROJECTION_MEMO.set({})
+    try:
+        yield
+    finally:
+        _STRUCTURED_PROJECTION_MEMO.reset(token)
+
+
+def _memoized(key: tuple[Any, ...], plan_row: Mapping[str, Any], compute: Callable[[], Any]) -> Any:
+    memo = _STRUCTURED_PROJECTION_MEMO.get()
+    if memo is None:
+        return compute()
+    cached = memo.get(key)
+    if cached is not None and cached[0] is plan_row:
+        return cached[1]
+    value = compute()
+    memo[key] = (plan_row, value)
+    return value
+
+
 def _projected_structured_plan(
     plan_row: Mapping[str, Any], *, training_day: str | None = None
 ) -> tuple[list[Mapping[str, Any]], Mapping[str, Any]]:
-    structured_plan = resolve_effective_structured_plan(plan_row)
-    if structured_plan is None:
-        return [], {}
-    projected, context = project_open_structured_plan(
-        plan_row,
-        structured_plan,
-        current_training_day=training_day,
-    )
-    return _iter_mapping_items(projected.get("weeks")), context
+    def _project() -> tuple[list[Mapping[str, Any]], Mapping[str, Any]]:
+        structured_plan = _memoized(
+            ("effective", id(plan_row)),
+            plan_row,
+            lambda: resolve_effective_structured_plan(plan_row),
+        )
+        if structured_plan is None:
+            return [], {}
+        projected, context = project_open_structured_plan(
+            plan_row,
+            structured_plan,
+            current_training_day=training_day,
+        )
+        return _iter_mapping_items(projected.get("weeks")), context
+
+    return _memoized(("projection", id(plan_row), training_day), plan_row, _project)
 
 
 def _structured_plan_weeks(
@@ -1928,30 +1971,33 @@ def _structured_next_session_entry(
     training_date = _parse_structured_date(training_day)
     if training_date is None:
         return None
-    candidates: list[tuple[date, dict[str, Any]]] = []
+    future_days: list[tuple[date, str, Mapping[str, Any], Mapping[str, Any]]] = []
     for week in _structured_plan_weeks(plan_row, training_day=training_day):
         for day in _iter_mapping_items(week.get("days")):
             day_date = _clean_text(day.get("date"))[:10]
             parsed_day_date = _parse_structured_date(day_date)
             if parsed_day_date is None or parsed_day_date <= training_date:
                 continue
-            # A future day is one unit like today: it offers its primary session,
-            # and a day already logged ahead of time never becomes "next".
-            entries = [
-                entry
-                for entry in _structured_day_session_entries(day, week=week)
-                if has_scheduled_day_content(entry)
-            ]
-            if not entries or any(
-                _session_entry_is_complete(entry, is_complete=is_complete, calendar_date=day_date)
-                for entry in entries
-            ):
-                continue
-            candidates.append((parsed_day_date, entries[0]))
-    if not candidates:
-        return None
-    candidates.sort(key=lambda item: item[0])
-    return candidates[0][1]
+            future_days.append((parsed_day_date, day_date, day, week))
+    # Earliest day first (a stable sort keeps card order on a shared date), and
+    # stop at the first day that qualifies: every completion check is a store
+    # read, so checking the whole remaining camp cost one read per future session.
+    future_days.sort(key=lambda item: item[0])
+    for _parsed_day_date, day_date, day, week in future_days:
+        # A future day is one unit like today: it offers its primary session,
+        # and a day already logged ahead of time never becomes "next".
+        entries = [
+            entry
+            for entry in _structured_day_session_entries(day, week=week)
+            if has_scheduled_day_content(entry)
+        ]
+        if not entries or any(
+            _session_entry_is_complete(entry, is_complete=is_complete, calendar_date=day_date)
+            for entry in entries
+        ):
+            continue
+        return entries[0]
+    return None
 
 
 def _entry_calendar_date(entry: Any) -> date | None:
@@ -2536,6 +2582,68 @@ def _plan_with_resolved_phase(
     return plan
 
 
+# Rows on or after today are the current day's log plus anything logged ahead,
+# so this bound is not reached in practice. One extra row is requested so that
+# exactly this many rows is still known to be the whole range.
+_UPCOMING_COMPLETION_READ_LIMIT = 200
+
+
+class _UpcomingCompletions:
+    """Completion rows from ``from_day`` onward, read at most once per Today build.
+
+    Today asks whether a session is logged for each of today's sessions and for
+    every future day it passes while finding the next session. Completions are
+    unique per (athlete, session, training day), so one ranged read answers all
+    of those questions. A day before ``from_day`` or a store without the ranged
+    read falls back to the exact per-session read.
+
+    A read that hit the limit is cut somewhere inside its last training day.
+    Rows arrive in training-day order, so every earlier day is complete and is
+    still answered from the read; only the last day read and later days fall
+    back to exact reads. Rows out of order drop the whole read to exact reads.
+    """
+
+    def __init__(self, store: AppStore, *, athlete_id: str, from_day: str) -> None:
+        self._store = store
+        self._athlete_id = athlete_id
+        self._from_day = from_day
+        self._rows: dict[tuple[str, str], Mapping[str, Any]] | None = None
+        # Exclusive upper bound of the days the read covers; None = all of them.
+        self._covered_before: str | None = None
+        self._loaded = False
+
+    def _upcoming_rows(self) -> dict[tuple[str, str], Mapping[str, Any]] | None:
+        if self._loaded:
+            return self._rows
+        self._loaded = True
+        reader = getattr(self._store, "list_session_completions_from_day", None)
+        if not callable(reader):
+            return None
+        rows = reader(self._athlete_id, self._from_day, limit=_UPCOMING_COMPLETION_READ_LIMIT + 1)
+        if not isinstance(rows, list):
+            return None
+        rows = [row for row in rows if isinstance(row, Mapping)]
+        days = [str(row.get("training_day") or "")[:10] for row in rows]
+        if len(rows) > _UPCOMING_COMPLETION_READ_LIMIT:
+            if days != sorted(days):
+                return None
+            self._covered_before = days[-1]
+        self._rows = {
+            (str(row.get("session_id") or ""), day): row for row, day in zip(rows, days)
+        }
+        return self._rows
+
+    def get(self, session_id: str, training_day: str) -> dict[str, Any] | None:
+        if len(training_day) == 10 and training_day >= self._from_day:
+            rows = self._upcoming_rows()
+            if rows is not None and (
+                self._covered_before is None or training_day < self._covered_before
+            ):
+                row = rows.get((session_id, training_day))
+                return dict(row) if row is not None else None
+        return self._store.get_session_completion(self._athlete_id, session_id, training_day)
+
+
 def build_today_command_view(
     store: AppStore,
     *,
@@ -2548,7 +2656,25 @@ def build_today_command_view(
     Degrades gracefully: no active plan → empty view with the Intake CTA; a
     missing/unparseable structured plan → empty ``next_session`` (no crash).
     """
+    with structured_projection_memo():
+        return _build_today_command_view(
+            store,
+            athlete_id=athlete_id,
+            athlete_timezone=athlete_timezone,
+            now=now,
+        )
+
+
+def _build_today_command_view(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    athlete_timezone: str | None,
+    now: datetime | None,
+) -> CommandView:
     training_day = resolve_training_day(athlete_timezone, now=now)
+    # The resolver reads the pointed-to plan through get_plan_for_athlete, so
+    # this is already the full owner-scoped row; no second read is needed.
     plan_row = resolve_active_plan(
         store,
         athlete_id,
@@ -2559,11 +2685,6 @@ def build_today_command_view(
         return build_command_view(current_training_day=training_day, plan=None)
 
     plan_id = str(plan_row.get("id") or "")
-    plan_reader = getattr(store, "get_plan_for_athlete", None)
-    if plan_id and callable(plan_reader):
-        full_plan_row = plan_reader(plan_id, athlete_id)
-        if full_plan_row:
-            plan_row = full_plan_row
 
     # Fetch the check-in once and reuse it for both the recommendation and the
     # risk watch (avoids a redundant DB roundtrip).
@@ -2592,11 +2713,11 @@ def build_today_command_view(
             today_entry = next_entry = None
             week = None
 
+    completions = _UpcomingCompletions(store, athlete_id=athlete_id, from_day=training_day)
+
     def _session_is_complete(session_id: str, calendar_date: str) -> bool:
         return (
-            completion_status_of(
-                store.get_session_completion(athlete_id, session_id, calendar_date)
-            )
+            completion_status_of(completions.get(session_id, calendar_date))
             in TERMINAL_COMPLETION_STATUSES
         )
 
@@ -2667,7 +2788,7 @@ def build_today_command_view(
         else None
     )
     today_completion = (
-        store.get_session_completion(athlete_id, today_completion_id, training_day)
+        completions.get(today_completion_id, training_day)
         if today_completion_id
         else None
     )
