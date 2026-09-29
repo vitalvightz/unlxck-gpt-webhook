@@ -17661,7 +17661,10 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
 @media (max-width: 720px) {
   .mobile-tab-bar {
     position: fixed;
-    bottom: 0;
+    /* Normally 0. When iOS draws the fixed layer above the visible bottom
+       (the bar "floating" mid-scroll), MobileTabBar sets a negative offset
+       that puts it back on the visible edge. */
+    bottom: var(--visual-viewport-bottom-offset, 0px);
     left: 0;
     right: 0;
     z-index: 95;
@@ -17672,9 +17675,10 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
     background: linear-gradient(180deg, rgba(17, 19, 23, 0.96), rgba(10, 11, 14, 0.98));
     border-top: 1px solid rgba(255, 255, 255, 0.06);
     backdrop-filter: blur(14px);
-    transform: translateY(0);
+    /* No resting transform or will-change: keeping a fixed bar permanently on
+       its own compositor layer is what lets iOS leave it behind during
+       momentum scroll. The transform exists only while the drawer hides it. */
     transition: transform 380ms cubic-bezier(0.22, 0.8, 0.28, 1);
-    will-change: transform;
   }
 
   html[data-mobile-nav-open="true"] .mobile-tab-bar {
@@ -18280,11 +18284,12 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
   color: var(--text-primary);
 }
 
-/* Portalled onto <body> and positioned from the trigger's viewport rect (see
+/* Portalled onto <body> and positioned from the trigger's rect (see
    why-tooltip.tsx), so no ancestor `overflow: hidden` can clip it and no screen
-   edge can cut it off. `top`/`left` are set inline by the component. */
+   edge can cut it off. `top`/`left` are document coordinates set inline by the
+   component: absolute, not fixed, so iOS cannot draw it away from its trigger. */
 .why-tooltip-bubble {
-  position: fixed;
+  position: absolute;
   z-index: 120;
   min-width: min(220px, calc(100vw - 16px));
   max-width: min(320px, calc(100vw - 16px));

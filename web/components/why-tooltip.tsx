@@ -139,16 +139,24 @@ export function WhyTooltip({
     // Clamp last so a bubble taller than the space available still shows its top
     // edge rather than scrolling off the screen.
     const maxTop = Math.max(VIEWPORT_MARGIN, viewportHeight - height - VIEWPORT_MARGIN);
-    const top = Math.min(Math.max(rawTop, VIEWPORT_MARGIN), maxTop);
+    const viewportTop = Math.min(Math.max(rawTop, VIEWPORT_MARGIN), maxTop);
 
     const triggerCenter = triggerRect.left + triggerRect.width / 2;
     const maxLeft = Math.max(VIEWPORT_MARGIN, viewportWidth - width - VIEWPORT_MARGIN);
-    const left = Math.min(Math.max(triggerCenter - width / 2, VIEWPORT_MARGIN), maxLeft);
+    const viewportLeft = Math.min(Math.max(triggerCenter - width / 2, VIEWPORT_MARGIN), maxLeft);
 
     const arrowLeft = Math.min(
-      Math.max(triggerCenter - left, ARROW_INSET),
+      Math.max(triggerCenter - viewportLeft, ARROW_INSET),
       Math.max(ARROW_INSET, width - ARROW_INSET),
     );
+
+    // Placed in DOCUMENT coordinates (position: absolute on <body>), not fixed
+    // ones. iOS can draw the fixed layer offset from what is on screen (the
+    // same glitch that floats the bottom tab bar), which left the bubble far
+    // from its "i"; document coordinates move with the content the trigger
+    // sits in, so the two stay together.
+    const top = viewportTop + window.scrollY;
+    const left = viewportLeft + window.scrollX;
 
     setPosition((current) =>
       current &&

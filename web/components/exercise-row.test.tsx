@@ -1,9 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import type React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { ExerciseMediaProvider } from "./exercise-demo";
-import { ExerciseRow, SessionCard } from "./structured-plan-renderer";
+import { ExerciseRationaleProvider, ExerciseRow, SessionCard } from "./structured-plan-renderer";
 import type { ExerciseMedia, StructuredBlock, StructuredSession } from "@/lib/types";
 
 function countOccurrences(text: string, needle: string): number {
@@ -60,8 +61,13 @@ const coachDemo: ExerciseMedia = {
   channel_title: "UNLXCK Coaching",
 };
 
+/** Renders as the Today screen does, where "Builds" / "Why today" are shown. */
+function onToday(node: React.ReactNode): string {
+  return renderToStaticMarkup(<ExerciseRationaleProvider>{node}</ExerciseRationaleProvider>);
+}
+
 test("session renders every exercise as a row with only the first one open", () => {
-  const html = renderToStaticMarkup(<SessionCard session={session} defaultOpenBlocks />);
+  const html = onToday(<SessionCard session={session} defaultOpenBlocks />);
 
   assert.equal(countOccurrences(html, 'class="ex-row"'), 2);
   assert.equal(countOccurrences(html, 'aria-expanded="true"'), 2); // session toggle + first row
@@ -84,14 +90,14 @@ test("a collapsed row still shows its stop rule, and an open row shows it exactl
 });
 
 test("open row names what the exercise builds and why it is in today's session", () => {
-  const html = renderToStaticMarkup(<ExerciseRow block={rdl} open onToggle={() => {}} />);
+  const html = onToday(<ExerciseRow block={rdl} open onToggle={() => {}} />);
 
   assert.equal(html.includes(">Builds</span>Build posterior chain strength"), true);
   assert.equal(html.includes(">Why today</span>Maintain lower-body force"), true);
 });
 
 test("a why-today line that repeats the purpose is printed once", () => {
-  const html = renderToStaticMarkup(<ExerciseRow block={sled} open onToggle={() => {}} />);
+  const html = onToday(<ExerciseRow block={sled} open onToggle={() => {}} />);
 
   assert.equal(countOccurrences(html, "Build leg drive."), 1);
   assert.equal(html.includes(">Why today</span>"), false);
@@ -239,4 +245,33 @@ test("a demo thumbnail shows on the collapsed row only; rows without a demo have
   assert.equal(countOccurrences(collapsed, 'class="ex-row-thumb"'), 1);
   assert.equal(open.includes('class="ex-row-thumb"'), false);
   assert.equal(noDemo.includes("ex-row-thumb"), false);
+});
+
+test("the plan view leaves out Builds and Why today; only Today shows them", () => {
+  const plan = renderToStaticMarkup(<SessionCard session={session} defaultOpenBlocks />);
+
+  assert.equal(plan.includes(">Builds</span>"), false);
+  assert.equal(plan.includes(">Why today</span>"), false);
+  assert.equal(plan.includes("Build posterior chain strength"), false);
+  // The prescription itself is unchanged.
+  assert.equal(plan.includes('class="sp-block-stats"'), true);
+
+  const today = onToday(<SessionCard session={session} defaultOpenBlocks />);
+  assert.equal(today.includes(">Builds</span>Build posterior chain strength"), true);
+});
+
+test("a lower-case load reads sentence-case in the panel and the header", () => {
+  const hold: StructuredBlock = {
+    block_id: "hold",
+    block_type: "strength",
+    display_name: "Staggered Stance Hold",
+    load: { method: "bodyweight", value: 0, unit: "bodyweight", display: "bodyweight" },
+    rest: { value: 60, unit: "seconds" },
+    effort: { method: "RPE", value: 4 },
+  };
+  const html = renderToStaticMarkup(<ExerciseRow block={hold} open onToggle={() => {}} />);
+
+  assert.equal(html.includes("</span></span>Bodyweight</span>"), true);
+  assert.equal(summaryText(html, "Staggered Stance Hold"), "Bodyweight · RPE 4");
+  assert.equal(html.includes("bodyweight"), false);
 });

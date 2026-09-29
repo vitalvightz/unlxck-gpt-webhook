@@ -38,6 +38,28 @@ const TAB_ICONS: Record<string, ReactNode> = {
   ),
 };
 
+/**
+ * How far below the layout viewport's bottom edge the visible (visual)
+ * viewport ends, as a negative CSS length, or 0.
+ *
+ * A fixed element is drawn against the layout viewport. iOS can leave the
+ * visual viewport scrolled below it (after momentum scroll, the keyboard, or a
+ * toolbar change), which floats a `bottom: 0` bar above the screen's edge with
+ * content showing underneath. The offset moves it back onto the visible edge.
+ * It never lifts the bar (a keyboard shrinking the visual viewport must not
+ * push it up), and is ignored while pinch-zoomed.
+ */
+export function visualViewportBottomOffset(
+  layoutHeight: number,
+  viewport: { height: number; offsetTop: number; scale: number } | null | undefined,
+): number {
+  if (!viewport || Math.abs(viewport.scale - 1) > 0.01 || !(layoutHeight > 0)) {
+    return 0;
+  }
+  const gap = Math.round(layoutHeight - (viewport.offsetTop + viewport.height));
+  return gap < 0 ? gap : 0;
+}
+
 function isActive(pathname: string, href: string): boolean {
   if (href === "/") {
     return pathname === "/";
@@ -65,6 +87,37 @@ export function MobileTabBar() {
       delete documentElement.dataset.mobileTabBar;
     };
   }, [isHidden, generationActive]);
+
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (isHidden || !viewport) {
+      return;
+    }
+    const root = document.documentElement;
+    let frame = 0;
+    const sync = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const offset = visualViewportBottomOffset(window.innerHeight, viewport);
+        if (offset === 0) {
+          root.style.removeProperty("--visual-viewport-bottom-offset");
+        } else {
+          root.style.setProperty("--visual-viewport-bottom-offset", `${offset}px`);
+        }
+      });
+    };
+    sync();
+    viewport.addEventListener("resize", sync);
+    viewport.addEventListener("scroll", sync);
+    window.addEventListener("scroll", sync, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      viewport.removeEventListener("resize", sync);
+      viewport.removeEventListener("scroll", sync);
+      window.removeEventListener("scroll", sync);
+      root.style.removeProperty("--visual-viewport-bottom-offset");
+    };
+  }, [isHidden]);
 
   if (isHidden) {
     return null;

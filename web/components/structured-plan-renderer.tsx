@@ -307,6 +307,14 @@ export function MindsetAnchorCard({
 // component. Null (no provider) keeps the unchanged "Rehab" wording.
 const RehabLabelContext = createContext<RehabLabelPolicy | null>(null);
 const PlanSourceTextContext = createContext<string | null>(null);
+// "Builds" and "Why today" are for the day's session, not for browsing the whole
+// plan: only the Today screen turns them on for its exercise rows.
+const ExerciseRationaleContext = createContext(false);
+
+/** Shows each exercise's "Builds" / "Why today" lines inside it (Today only). */
+export function ExerciseRationaleProvider({ children }: { children: ReactNode }) {
+  return <ExerciseRationaleContext.Provider value>{children}</ExerciseRationaleContext.Provider>;
+}
 const PlanSafetyTextContext = createContext<string[]>([]);
 
 /** Relays the Rehab/Prehab policy to the block cards below it. Standalone
@@ -341,7 +349,10 @@ function useBlockPrescription(block: StructuredBlock, sourceCountdown?: string |
   const planSafetyTexts = useContext(PlanSafetyTextContext);
   const title = cleanText(block.display_name) || "Block";
   const sourceOverrides = getSourcePrescriptionRangeOverrides(sourceText, title, sourceCountdown);
-  const load = formatBlockLoad(block.load);
+  // Loads are authored lower-case ("bodyweight", "easy angle"); they sit as a
+  // value beside "RPE 4", so read them sentence-case like the other values.
+  const loadText = formatBlockLoad(block.load);
+  const load = loadText ? loadText.charAt(0).toUpperCase() + loadText.slice(1) : null;
   // Times read short ("2 min", "90 sec") so a row of stats fits a phone; the
   // value itself never changes (see compactTimeUnits).
   const metrics = applySourceSetRange(selectBlockMetric(block), sourceOverrides.sets).map((metric) => ({
@@ -564,8 +575,9 @@ export function ExerciseRow({
   const tagLabel = blockType ? blockTagLabel(block, rehabLabelPolicy) : null;
   const media = useExerciseMedia(block.display_name);
   const summary = exerciseRowSummary(block, prescription);
-  const builds = athleteFacingRationale(block.purpose);
-  const whyTodayRaw = athleteFacingRationale(block.why_today);
+  const showRationale = useContext(ExerciseRationaleContext);
+  const builds = showRationale ? athleteFacingRationale(block.purpose) : null;
+  const whyTodayRaw = showRationale ? athleteFacingRationale(block.why_today) : null;
   const whyToday = sameCopy(builds, whyTodayRaw) ? null : whyTodayRaw;
   const leadCue = getBlockExecutionDisplay(block).cues[0] ?? null;
   // Matches the demo's first render (facade, not yet known to be watched), so
