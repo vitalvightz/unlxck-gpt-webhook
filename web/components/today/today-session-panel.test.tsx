@@ -73,6 +73,42 @@ test("today shows no session blocks while the plan's block has not started", () 
   assert.equal(html.includes("Saturday strength"), false);
 });
 
+test("Today uses its parent heading and starts video exercises as compact rows", () => {
+  const plan = {
+    weeks: [{
+      week_index: 1,
+      days: [{
+        date: "2026-09-29",
+        weekday: "Tue",
+        sessions: [{
+          session_id: "strength-1",
+          title: "Lower-body strength",
+          session_type: "strength_power",
+          blocks: [{ block_id: "rdl-db", block_type: "strength", display_name: "Romanian Deadlift (DB)", sets: 3, reps: "8–12" }],
+        }],
+      }],
+    }],
+  } as StructuredPlan;
+  const current = resolveCurrentDay(plan, new Date(2026, 8, 29));
+  const exerciseMedia = {
+    "Romanian Deadlift (DB)": { provider: "youtube" as const, video_id: "hQgFixeXdZo", start_s: 27, end_s: 49, source: "curated" as const },
+  };
+  const html = renderToStaticMarkup(
+    <TodaySessionBlocks current={current} headline="Lower-body strength" exerciseMedia={exerciseMedia} />,
+  );
+
+  assert.doesNotMatch(html, /class="sp-session-title"/);
+  assert.match(html, /Romanian Deadlift \(DB\)/);
+  assert.match(html, /aria-expanded="false"/);
+  assert.match(html, /class="ex-row-thumb"/);
+  assert.doesNotMatch(html, /class="ex-demo"/);
+
+  const alternateHeadline = renderToStaticMarkup(
+    <TodaySessionBlocks current={current} headline="Hard sparring" exerciseMedia={exerciseMedia} />,
+  );
+  assert.match(alternateHeadline, /class="sp-session-title">Lower-body strength/);
+});
+
 // Session timing is settled by today_service.build_today_command_view and
 // carried in session_scope. These two tests pin that the panel follows it in
 // both directions rather than re-deciding the day from calendar_date — the
@@ -204,6 +240,8 @@ test("a session the backend scopes to today unlocks on that scope alone", () => 
   assert.match(html, />Start session</);
   assert.match(html, />Skip session</);
   assert.doesNotMatch(html, /Preview only|Check in on the day/);
+  assert.match(html, /class="today-session-summary"/);
+  assert.ok(html.indexOf(">Start session</") < html.indexOf('class="today-session-summary"'));
 });
 
 test("safe replacement renders without blocked terminal or completion controls", () => {

@@ -232,12 +232,15 @@ function SafeSessionCard({ view }: { view: SafeSessionView }) {
 export function TodaySessionBlocks({
   planId,
   current,
+  headline,
   openWeekIntent,
   rehabLabelPolicy,
   exerciseMedia,
 }: {
   planId?: string;
   current: CurrentDayResolution;
+  /** Heading already shown by the surrounding Today card. */
+  headline?: string;
   /** Development-block week intent of an open (renewable) plan: headlines where
    * today sits in the block and forwards the per-block directive to the cards. */
   openWeekIntent?: OpenBlockWeekIntent | null;
@@ -279,7 +282,7 @@ export function TodaySessionBlocks({
     <RehabLabelProvider policy={rehabLabelPolicy}>
     <ExerciseMediaProvider media={exerciseMedia}>
     <ExerciseRationaleProvider>
-      <div className="today-blocks">
+      <div className="today-blocks today-blocks-sessions">
         {weekIntentNote}
         <DaySessionContext day={displayDay} />
         {current.sessions.map((session, index) => (
@@ -296,6 +299,8 @@ export function TodaySessionBlocks({
             session={session}
             day={index === 0 ? displayDay : undefined}
             defaultOpenBlocks
+            initiallyOpenFirstBlock={false}
+            hideTitle={Boolean(headline && sameTitle(headline, session.title || displayDay.today_card?.headline || ""))}
             showDayContext={false}
             openWeekIntent={openWeekIntent}
           />
@@ -831,6 +836,7 @@ export function TodaySessionPanel({
           <TodaySessionBlocks
             planId={state.active_plan?.id}
             current={current}
+            headline={contactTarget ? contactHeadline : formatTrainingDay(state.today.training_day)}
             openWeekIntent={openWeekIntent}
             rehabLabelPolicy={rehabLabelPolicy}
             exerciseMedia={exerciseMedia}
@@ -894,12 +900,51 @@ export function TodaySessionPanel({
           ) : null}
         </div>
       </div>
+      {canCompleteSession && !safeSession && status === "not_started" ? (
+        <div className="today-session-actions today-action-tray">
+          {contactCta ? (
+            <button type="button" className="cta" onClick={startContact} disabled={isSubmitting}>
+              Start {contactHeadline.toLowerCase()}
+            </button>
+          ) : null}
+          {contactLeads && contactTimerAvailable && contactIsSession ? null : (
+            <button
+              type="button"
+              className={contactCta ? "secondary-button" : "cta"}
+              onClick={() => {
+                // Audio only unlocks inside the tap itself, before any await.
+                if (timerAvailable) timerAudio().unlock();
+                void saveCompletion("started").then((started) => {
+                  if (started && timerAvailable && !roundTimer.shown) {
+                    setActiveTimer({ source: "session", mode: "open" });
+                  }
+                });
+              }}
+              disabled={isSubmitting}
+            >
+              {alongsideTitle ? `Start ${alongsideTitle}` : "Start session"}
+            </button>
+          )}
+          {timerTools(
+            <button
+              type="button"
+              className="today-tool-link"
+              onClick={() => setIntent("skipped")}
+              disabled={isSubmitting}
+            >
+              Skip session
+            </button>,
+            { contactAsPrimary: contactLeads && contactTimerAvailable },
+          )}
+        </div>
+      ) : null}
       {safeSession ? (
         <SafeSessionCard view={safeSession} />
       ) : showStructuredBlocks ? (
         <TodaySessionBlocks
           planId={state.active_plan?.id}
           current={current}
+          headline={headline}
           openWeekIntent={openWeekIntent}
           rehabLabelPolicy={rehabLabelPolicy}
           exerciseMedia={exerciseMedia}
@@ -964,45 +1009,6 @@ export function TodaySessionPanel({
               Open injury check-in
             </a>
           ) : null}
-        </div>
-      ) : null}
-
-      {canCompleteSession && status === "not_started" ? (
-        <div className="today-session-actions today-action-tray">
-          {contactCta ? (
-            <button type="button" className="cta" onClick={startContact} disabled={isSubmitting}>
-              Start {contactHeadline.toLowerCase()}
-            </button>
-          ) : null}
-          {contactLeads && contactTimerAvailable && contactIsSession ? null : (
-            <button
-              type="button"
-              className={contactCta ? "secondary-button" : "cta"}
-              onClick={() => {
-                // Audio only unlocks inside the tap itself, before any await.
-                if (timerAvailable) timerAudio().unlock();
-                void saveCompletion("started").then((started) => {
-                  if (started && timerAvailable && !roundTimer.shown) {
-                    setActiveTimer({ source: "session", mode: "open" });
-                  }
-                });
-              }}
-              disabled={isSubmitting}
-            >
-              {alongsideTitle ? `Start ${alongsideTitle}` : "Start session"}
-            </button>
-          )}
-          {timerTools(
-            <button
-              type="button"
-              className="today-tool-link"
-              onClick={() => setIntent("skipped")}
-              disabled={isSubmitting}
-            >
-              Skip session
-            </button>,
-            { contactAsPrimary: contactLeads && contactTimerAvailable },
-          )}
         </div>
       ) : null}
 
