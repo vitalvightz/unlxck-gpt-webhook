@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 
+import { ExerciseMediaProvider } from "@/components/exercise-demo";
 import { SessionFeedbackPrompt } from "@/components/feedback/session-feedback-prompt";
 import {
   SessionCompletionForm,
@@ -59,6 +60,7 @@ import {
   type SafeSessionView,
 } from "@/lib/today";
 import type {
+  ExerciseMedia,
   RehabLabelPolicy,
   PendingRehabResponseSet,
   SparringPlannedIntensity,
@@ -231,6 +233,7 @@ export function TodaySessionBlocks({
   current,
   openWeekIntent,
   rehabLabelPolicy,
+  exerciseMedia,
 }: {
   planId?: string;
   current: CurrentDayResolution;
@@ -242,6 +245,8 @@ export function TodaySessionBlocks({
    * so it has to mount the provider itself; without it every rehab block on this
    * screen read "Rehab" no matter which injuries had cleared. */
   rehabLabelPolicy?: RehabLabelPolicy | null;
+  /** Curated demo videos keyed by block display_name; same reason as above. */
+  exerciseMedia?: Record<string, ExerciseMedia> | null;
 }) {
   if (!current.inRange || !current.day) {
     return null;
@@ -271,6 +276,7 @@ export function TodaySessionBlocks({
   }
   return (
     <RehabLabelProvider policy={rehabLabelPolicy}>
+    <ExerciseMediaProvider media={exerciseMedia}>
       <div className="today-blocks">
         {weekIntentNote}
         <DaySessionContext day={displayDay} />
@@ -293,6 +299,7 @@ export function TodaySessionBlocks({
           />
         ))}
       </div>
+    </ExerciseMediaProvider>
     </RehabLabelProvider>
   );
 }
@@ -306,6 +313,7 @@ export function TodaySessionPanel({
   structuredPlan,
   planSchedule,
   rehabLabelPolicy,
+  exerciseMedia,
   token,
   onRefresh,
 }: {
@@ -313,6 +321,8 @@ export function TodaySessionPanel({
   structuredPlan: StructuredPlan | null;
   /** Server-derived per-region Rehab/Prehab policy for the active plan. */
   rehabLabelPolicy?: RehabLabelPolicy | null;
+  /** Curated demo videos for the active plan's blocks. */
+  exerciseMedia?: Record<string, ExerciseMedia> | null;
   /** Server schedule projection + plan creation date, used to anchor the
    * current week of a weekday-only (open / renewable) plan. */
   planSchedule?: TodayPlanSchedule | null;
@@ -820,6 +830,7 @@ export function TodaySessionPanel({
             current={current}
             openWeekIntent={openWeekIntent}
             rehabLabelPolicy={rehabLabelPolicy}
+            exerciseMedia={exerciseMedia}
           />
         ) : (
           <p className="muted">No active plan card matched today. Use Open camp plan to find the next training target.</p>
@@ -888,6 +899,7 @@ export function TodaySessionPanel({
           current={current}
           openWeekIntent={openWeekIntent}
           rehabLabelPolicy={rehabLabelPolicy}
+          exerciseMedia={exerciseMedia}
         />
       ) : (
         <div className="today-session-summary">

@@ -336,6 +336,21 @@ export type PlanOutputs = {
   // is best-effort and the renderer must be defensive.
   structured_plan?: StructuredPlan | null;
   schema_version?: string | null;
+  /** Curated demo video per block, keyed by the block's exact display_name
+   * (api/services/exercise_media.py). Absent keys render cues-only. */
+  exercise_media?: Record<string, ExerciseMedia> | null;
+};
+
+export type ExerciseMedia = {
+  provider: "youtube";
+  video_id: string;
+  /** Loop segment: the rep that shows the movement, not the intro. */
+  start_s: number;
+  end_s?: number | null;
+  /** "coach" = filmed by the UNLXCK coaching team; "curated" = vetted third-party. */
+  source: "curated" | "coach";
+  /** YouTube channel that published the video, credited under the player. */
+  channel_title?: string | null;
 };
 
 export type MeasuredValue = {

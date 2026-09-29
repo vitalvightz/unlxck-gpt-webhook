@@ -45,29 +45,34 @@ Our Privacy Notice explains the personal data we collect, why we use it, recipie
 ## 10. Intellectual property
 UNLXCK and its software, branding, design and proprietary service content are protected by applicable intellectual-property rights. You retain rights in content you submit. You grant UNLXCK the limited rights necessary to host, process and use that content to operate the service in accordance with these Terms and the Privacy Notice.
 
-## 11. Availability and changes
+## 11. Exercise demonstration videos
+Some exercises include a demonstration video played from YouTube through the YouTube API Services. By using UNLXCK, you agree to be bound by the [YouTube Terms of Service](https://www.youtube.com/t/terms).
+
+Demonstration videos are provided by YouTube and the creators who publish them, not by UNLXCK, and a video may become unavailable at any time. A video shows how a movement looks; the prescription, cues and stop rules in your plan still apply.
+
+## 12. Availability and changes
 We may update, improve, remove or replace service features. We do not promise uninterrupted or error-free availability. Material changes affecting users will be communicated where required by law.
 
-## 12. Liability
+## 13. Liability
 Nothing in these Terms excludes or limits liability where doing so would be unlawful, including liability that cannot lawfully be excluded under UK consumer law.
 
 To the extent permitted by law, UNLXCK is not responsible for losses that were not reasonably foreseeable when these Terms were agreed or that result from misuse of the service, inaccurate information supplied by a user, or activities outside UNLXCK's reasonable control.
 
 Nothing in these Terms removes your statutory consumer rights.
 
-## 13. Paid services
+## 14. Paid services
 If UNLXCK introduces paid subscriptions or purchases, applicable price, payment, renewal, cancellation and refund information will be provided before purchase. Any additional paid-service terms will form part of the agreement where accepted.
 
-## 14. Ending your account
+## 15. Ending your account
 You may stop using UNLXCK and request account deletion through the route identified in the Privacy Notice. We may terminate an account for serious or repeated breach, unlawful use or where reasonably necessary to protect the service or its users. Personal data following closure is handled under the Privacy Notice and retention policy.
 
-## 15. Changes to these Terms
+## 16. Changes to these Terms
 We may update these Terms as the service or law changes. Where a change materially affects your rights or obligations, we will provide appropriate notice and, where required, obtain fresh agreement.
 
-## 16. Law and disputes
+## 17. Law and disputes
 These Terms are governed by the laws of England and Wales, subject to any mandatory consumer protections that apply where you live. Nothing in these Terms removes rights you have under applicable consumer law.
 
-## 17. Contact
+## 18. Contact
 Questions or complaints about these Terms can be sent to **support@unlxck.com**.
 
 **Version:** 0.1 pre-launch

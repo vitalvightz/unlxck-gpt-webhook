@@ -19511,6 +19511,380 @@ html[data-theme="light"] .loading-operational-item {
   left: 0;
   color: var(--brand-red);
 }
+
+/* -- Exercise rows ----------------------------------------------------------
+   Each block is a compact row (name, headline stat, demo thumbnail) that
+   expands, one at a time, to the demo, what it builds, why it is in today's
+   session and the full prescription. */
+.ex-rows {
+  gap: 8px;
+}
+.ex-row {
+  background: var(--bg-stat);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-stat);
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+.ex-row[data-open="true"] {
+  border-color: var(--border-default);
+}
+.ex-row-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 12px;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ex-row-head:focus-visible {
+  outline: 2px solid var(--brand-red);
+  outline-offset: -2px;
+  border-radius: var(--radius-stat);
+}
+.ex-row-thumb {
+  position: relative;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--bg-surface-alt);
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+/* No demo: a quiet three-line "prescription" glyph instead of an empty tile. */
+.ex-row-thumb:not(.ex-row-thumb-video)::before {
+  content: "";
+  width: 14px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--border-strong);
+  box-shadow: 0 -5px 0 var(--border-strong), 0 5px 0 var(--border-strong);
+}
+.ex-row-thumb-video {
+  background: #000;
+}
+.ex-row-thumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.7;
+}
+.ex-row-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.ex-row-title {
+  font-weight: 600;
+  font-size: 0.92rem;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+.ex-row-summary {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+}
+.ex-row-stop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 2px;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+.ex-row-stop .sp-stat-label {
+  color: var(--danger-ink);
+}
+.ex-row-chevron {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  margin-right: 4px;
+  border-right: 2px solid var(--text-muted);
+  border-bottom: 2px solid var(--text-muted);
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.15s ease;
+}
+.ex-row[data-open="true"] .ex-row-chevron {
+  transform: translateY(2px) rotate(-135deg);
+}
+.ex-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 12px 14px;
+}
+.ex-row-why {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ex-row-why-line {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--text-primary);
+}
+.ex-row-why-today {
+  color: var(--text-secondary);
+}
+.ex-row-why-today .sp-stat-label {
+  color: var(--brand-red);
+}
+.sp-block-embedded {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+}
+.sp-block-embedded .sp-block-head:empty {
+  display: none;
+}
+.sp-block-embedded .sp-block-stats {
+  margin-top: 0;
+}
+
+/* -- Exercise demo --------------------------------------------------------- */
+.ex-demo {
+  display: flex;
+  flex-direction: column;
+}
+.ex-demo-frame {
+  position: relative;
+  /* 16:9 via padding (a percentage of the parent's width), with YouTube's
+     200px minimum player height. Not aspect-ratio: combined with min-height it
+     gives the frame a 356px minimum width, and a grid or flex parent then
+     widens the page past a 320px phone. Here the width comes from the parent
+     only, and the frame is at least 200px tall. */
+  box-sizing: border-box;
+  height: 0;
+  padding-top: 56.25%;
+  min-height: 200px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+}
+.ex-demo-facade {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: #000;
+  cursor: pointer;
+}
+.ex-demo-facade:focus-visible {
+  outline: 2px solid var(--brand-red);
+  outline-offset: -2px;
+}
+.ex-demo-thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.72;
+}
+.ex-demo-player,
+.ex-demo-player iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.ex-demo-play-glyph {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--brand-red);
+}
+.ex-demo-play-glyph::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 54%;
+  transform: translate(-50%, -50%);
+  border-style: solid;
+  border-width: 9px 0 9px 15px;
+  border-color: transparent transparent transparent #fff;
+}
+.ex-demo-play-glyph-sm {
+  width: 22px;
+  height: 22px;
+}
+.ex-demo-play-glyph-sm::after {
+  border-width: 5px 0 5px 8px;
+}
+.ex-demo-caption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  /* The unwrapped caption text must not set the card's minimum width: the
+     line takes its width from the frame above and the meta text ellipsizes. */
+  contain: inline-size;
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+.ex-demo-badge {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill);
+  color: var(--text-primary);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.ex-demo-meta {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ex-demo-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.ex-demo-control {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  background: var(--bg-support);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.ex-demo-control:hover {
+  color: var(--text-primary);
+  border-color: var(--border-default);
+}
+.ex-demo-control[aria-pressed="true"] {
+  color: var(--text-primary);
+  border-color: var(--brand-red);
+  background: var(--brand-red-soft);
+}
+.ex-demo-control:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.ex-demo-external {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-decoration: none;
+}
+.ex-demo-external:hover {
+  color: var(--text-primary);
+}
+.ex-demo-external::after {
+  content: "\2197";
+  margin-left: 4px;
+}
+.ex-demo-lead-cue {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--brand-red);
+  background: var(--bg-support);
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+.ex-demo-replay-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-stat);
+  background: var(--bg-support);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ex-demo-replay-thumb {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 32px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #000;
+}
+.ex-demo-replay-thumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.7;
+}
+.ex-demo-replay-label {
+  flex: 1 1 auto;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+.ex-demo-replay-meta {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+.ex-demo-unavailable {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ex-row,
+  .ex-row-chevron {
+    transition: none;
+  }
+}
 .sp-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-default);

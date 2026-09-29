@@ -51,6 +51,12 @@ Mitigations already in place: `api/sentry_config.py` sets `send_default_pii=fals
 
 **Status is NOT VERIFIED and stays that way until all three are complete.** Removing replay reduced the risk; it did not verify the processor.
 
+## Independent controllers
+
+| Service | Role in UNLXCK | Data it receives | Position |
+|---|---|---|---|
+| **YouTube (Google)** | Exercise demonstration videos, via the YouTube API Services (IFrame player in privacy-enhanced mode, `api/services/exercise_media.py`, `web/components/exercise-demo.tsx`) | From the athlete's browser: IP address, device/browser information and, once the athlete taps play, player usage and any cookies or local storage YouTube sets. From the backend: video IDs only (the Data API availability and Made for Kids check). No account, training or health data. | **Independent controller**, not a processor: Google decides how player data is used under its own terms, so there is no DPA to execute. Disclosed in the Privacy Notice ("YouTube demonstration videos") with links to the Google Privacy Policy and the YouTube Terms of Service; the Terms of Use bind users to the YouTube Terms of Service as the YouTube API Services Terms require. Made-for-kids videos are never served. |
+
 ## Controller position
 UNLXCK determines why and how athlete data is processed for the service and treats itself as the controller for these core processing activities. External services acting on UNLXCK's instructions are assessed and contracted as processors where appropriate.
 
