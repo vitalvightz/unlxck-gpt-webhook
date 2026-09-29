@@ -288,9 +288,11 @@ type VisibilityDocument = Pick<
  * Every tick fetches the whole plan, so a tick is skipped while the previous
  * fetch is still out (slow responses must not stack up) and while the tab is
  * hidden (nobody is there to see the swap). Returning to the tab checks at
- * once. A window that ends while the tab is hidden stays open until that
- * check, so an upgrade that landed while the athlete was away still shows.
- * ``poll`` handles its own failures.
+ * once. A window that ends while the tab is hidden stays open until a fetch
+ * that started after the return has finished, so an upgrade that landed while
+ * the athlete was away still shows. A fetch still out from before the tab was
+ * hidden does not count: it may predate the upgrade. ``poll`` handles its own
+ * failures.
  */
 export function startStructuredPlanUpgradePoll(params: {
   poll: () => Promise<void>;
@@ -301,7 +303,7 @@ export function startStructuredPlanUpgradePoll(params: {
 }): () => void {
   const doc = params.doc ?? document;
   let stopped = false;
-  let fetchInFlight = false;
+  let inFlight: Promise<void> | null = null;
   let expireWhenVisible = false;
   const isVisible = () => doc.visibilityState === "visible";
   const expire = () => {
@@ -309,23 +311,43 @@ export function startStructuredPlanUpgradePoll(params: {
       params.onWindowExpired();
     }
   };
+  const startFetch = (): Promise<void> => {
+    const request = params.poll().catch(() => undefined).finally(() => {
+      if (inFlight === request) {
+        inFlight = null;
+      }
+    });
+    inFlight = request;
+    return request;
+  };
   const tick = async () => {
-    if (stopped || fetchInFlight || !isVisible()) {
+    if (stopped || inFlight || !isVisible()) {
       return;
     }
-    fetchInFlight = true;
-    try {
-      await params.poll();
-    } finally {
-      fetchInFlight = false;
-    }
+    await startFetch();
   };
+  /** Resolves true once a fetch begun after the return has finished. */
+  const checkAfterReturn = async (): Promise<boolean> => {
+    const earlier = inFlight;
+    if (earlier) {
+      await earlier;
+    }
+    if (stopped || !isVisible()) {
+      return false;
+    }
+    // A fetch started since the earlier one settled began after the return.
+    await (inFlight ?? startFetch());
+    return true;
+  };
+  let returns = 0;
   const handleVisibilityChange = () => {
     if (!isVisible()) {
       return;
     }
-    void tick().finally(() => {
-      if (expireWhenVisible) {
+    const thisReturn = ++returns;
+    void checkAfterReturn().then((checked) => {
+      // A later return runs its own check; that one closes the window.
+      if (checked && thisReturn === returns && expireWhenVisible) {
         expire();
       }
     });

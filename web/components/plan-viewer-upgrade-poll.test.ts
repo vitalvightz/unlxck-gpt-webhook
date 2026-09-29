@@ -26,9 +26,27 @@ const INTERVAL = 2_500;
 const WINDOW = 10_000;
 
 async function flush() {
-  for (let i = 0; i < 5; i += 1) {
+  for (let i = 0; i < 20; i += 1) {
     await Promise.resolve();
   }
+}
+
+/** A poll whose fetches finish only when the test says so. */
+function controlledPoll(events: string[]) {
+  const finishers: Array<() => void> = [];
+  let started = 0;
+  const poll = () => {
+    started += 1;
+    const n = started;
+    events.push(`start ${n}`);
+    return new Promise<void>((resolve) => {
+      finishers[n] = () => {
+        events.push(`end ${n}`);
+        resolve();
+      };
+    });
+  };
+  return { poll, finish: (n: number) => finishers[n]() };
 }
 
 test("upgrade poll fetches on each interval while the tab is visible", async (t) => {
@@ -155,6 +173,105 @@ test("a window that ends while hidden closes only after the return check", async
   setVisibility("visible");
   await flush();
   assert.deepEqual(events, ["poll", "expired"]);
+  stop();
+});
+
+test("a fetch still out from before the tab was hidden does not count as the return check", async (t) => {
+  t.mock.timers.enable({ apis: ["setInterval", "setTimeout"] });
+  const { doc, setVisibility } = fakeDocument();
+  const events: string[] = [];
+  const { poll, finish } = controlledPoll(events);
+  const stop = startStructuredPlanUpgradePoll({
+    poll,
+    onWindowExpired: () => {
+      events.push("expired");
+    },
+    intervalMs: INTERVAL,
+    windowMs: WINDOW,
+    doc,
+  });
+
+  t.mock.timers.tick(INTERVAL);
+  await flush();
+  setVisibility("hidden");
+  t.mock.timers.tick(WINDOW * 2);
+  setVisibility("visible");
+  await flush();
+  // The old fetch is still out: no overlapping fetch, and the window stays open.
+  assert.deepEqual(events, ["start 1"]);
+
+  finish(1);
+  await flush();
+  // The old fetch may predate the upgrade, so a fresh one runs before closing.
+  assert.deepEqual(events, ["start 1", "end 1", "start 2"]);
+
+  finish(2);
+  await flush();
+  assert.deepEqual(events, ["start 1", "end 1", "start 2", "end 2", "expired"]);
+  stop();
+});
+
+test("a return that is hidden again before its check keeps the window open", async (t) => {
+  t.mock.timers.enable({ apis: ["setInterval", "setTimeout"] });
+  const { doc, setVisibility } = fakeDocument();
+  const events: string[] = [];
+  const { poll, finish } = controlledPoll(events);
+  const stop = startStructuredPlanUpgradePoll({
+    poll,
+    onWindowExpired: () => {
+      events.push("expired");
+    },
+    intervalMs: INTERVAL,
+    windowMs: WINDOW,
+    doc,
+  });
+
+  t.mock.timers.tick(INTERVAL);
+  await flush();
+  setVisibility("hidden");
+  t.mock.timers.tick(WINDOW * 2);
+  setVisibility("visible");
+  setVisibility("hidden");
+  finish(1);
+  await flush();
+  assert.deepEqual(events, ["start 1", "end 1"]);
+
+  setVisibility("visible");
+  await flush();
+  finish(2);
+  await flush();
+  assert.deepEqual(events, ["start 1", "end 1", "start 2", "end 2", "expired"]);
+  stop();
+});
+
+test("with overlapping returns only the latest return's check closes the window", async (t) => {
+  t.mock.timers.enable({ apis: ["setInterval", "setTimeout"] });
+  const { doc, setVisibility } = fakeDocument();
+  const events: string[] = [];
+  const { poll, finish } = controlledPoll(events);
+  const stop = startStructuredPlanUpgradePoll({
+    poll,
+    onWindowExpired: () => {
+      events.push("expired");
+    },
+    intervalMs: INTERVAL,
+    windowMs: WINDOW,
+    doc,
+  });
+
+  setVisibility("hidden");
+  t.mock.timers.tick(WINDOW * 2);
+  setVisibility("visible");
+  await flush();
+  setVisibility("hidden");
+  setVisibility("visible");
+  finish(1);
+  await flush();
+  assert.deepEqual(events, ["start 1", "end 1", "start 2"]);
+
+  finish(2);
+  await flush();
+  assert.deepEqual(events, ["start 1", "end 1", "start 2", "end 2", "expired"]);
   stop();
 });
 
