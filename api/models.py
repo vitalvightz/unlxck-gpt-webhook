@@ -2138,6 +2138,10 @@ class SessionCompletionRecordResponse(BaseModel):
     updated_at: str = ""
 
 
+class SessionCompletionHistoryResponse(SessionCompletionRecordResponse):
+    session_title: str | None = None
+
+
 SparringIntensity = Literal["light", "medium", "hard"]
 SparringPlannedIntensity = Literal["hard", "light", "technical", "contact"]
 SparringHeadContact = Literal["none", "light", "heavy"]

@@ -20532,6 +20532,13 @@ html[data-app-surface="brand"] .app-safety-footer {
   color: var(--text-primary);
 }
 
+.history-row-title {
+  min-width: 0;
+  font-weight: 700;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
 .history-badges {
   display: inline-flex;
   gap: 6px;

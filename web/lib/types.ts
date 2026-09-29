@@ -1211,12 +1211,13 @@ export type RehabResponseResult = {
   recorded_injury_ids: string[];
 };
 
-/** One stored session-completion row (mirrors SessionCompletionRecordResponse). */
+/** One session-history row (the API adds a title from the owned plan when available). */
 export type TodaySessionCompletionRecord = {
   id: string;
   athlete_id: string;
   plan_id: string;
   session_id: string;
+  session_title?: string | null;
   training_day: string;
   status: TodayCompletionStatus;
   session_rpe?: number | null;

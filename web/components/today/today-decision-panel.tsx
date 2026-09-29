@@ -91,6 +91,7 @@ export function TodayDecisionPanel({
     Number(usedSources.length > 0 || Boolean(note));
   return (
     <div
+      id="today-decision"
       className="today-decision-banner"
       data-state={banner.displayState}
       data-tone={banner.tone}

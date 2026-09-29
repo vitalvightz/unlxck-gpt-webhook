@@ -285,6 +285,30 @@ class TestHistoryEndpoints:
         assert body[1]["status"] == "skipped"
         assert body[0]["session_rpe"] == 7
 
+    def test_session_history_names_the_exact_owned_plan_session(self):
+        client, store, _ = _build_client()
+        _seed_plan(store)
+        store.plans[PLAN_ID]["structured_plan"] = {
+            "weeks": [{"days": [{
+                "date": "2026-06-01",
+                "today_card": {"headline": "Training day"},
+                "sessions": [
+                    {"session_id": "s1", "title": "Strength base"},
+                    {"session_id": "s2", "title": "Boxing rounds"},
+                ],
+            }]}],
+        }
+        self._seed_completion(store, session_id="s2", training_day="2026-06-01")
+        self._seed_completion(store, session_id="missing", training_day="2026-06-02")
+        body = client.get("/api/today/session-completions", headers=ATHLETE).json()
+        assert body[0]["session_title"] is None
+        assert body[1]["session_title"] == "Boxing rounds"
+
+        # A completion pointing at another athlete's plan must not expose its title.
+        store.plans[PLAN_ID]["athlete_id"] = "someone-else"
+        body = client.get("/api/today/session-completions", headers=ATHLETE).json()
+        assert all(row["session_title"] is None for row in body)
+
     def test_session_completion_history_respects_limit(self):
         client, store, _ = _build_client()
         _seed_plan(store)

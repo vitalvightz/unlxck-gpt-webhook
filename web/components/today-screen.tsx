@@ -17,6 +17,7 @@ import { TodaySessionPanel } from "@/components/today/today-session-panel";
 import { useTodayCommand } from "@/components/today/use-today-command";
 import { humanizeIfRawEnum } from "@/lib/plan-labels";
 import { isOpenOngoingPlan } from "@/lib/plan-format";
+import { getTodayNextStep } from "@/lib/today-next-step";
 import {
   TODAY_EMPTY_TEXT,
   TODAY_EMPTY_TITLE,
@@ -196,6 +197,7 @@ export function TodayScreen() {
     return <NoActivePlanState />;
   }
   const resolvedDecision = resolveTodayDecision(state);
+  const nextStep = getTodayNextStep(state, resolvedDecision);
   const supplementaryRisks = getSupplementaryRiskWatch(
     state.risk_watch,
     resolvedDecision,
@@ -275,6 +277,15 @@ export function TodayScreen() {
           risks={commandRisks}
           hasActiveInjury={(state.open_injuries?.length ?? 0) > 0}
         />
+        {nextStep ? (
+          <div className={styles.nextStep} role="status">
+            <div>
+              <p className={styles.nextStepTitle}>{nextStep.title}</p>
+              <p className={styles.nextStepDetail}>{nextStep.detail}</p>
+            </div>
+            <Link href={nextStep.href}>{nextStep.action} <span aria-hidden="true">→</span></Link>
+          </div>
+        ) : null}
       </section>
 
       {resolvedDecision.useSafeReplacement ? (
