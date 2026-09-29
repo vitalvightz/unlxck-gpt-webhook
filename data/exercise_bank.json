@@ -176,6 +176,46 @@
     "meaningful_stress": true
   },
   {
+    "name": "Romanian Deadlift (DB)",
+    "category": "lower_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "hinge",
+    "type": "bilateral",
+    "tags": [
+      "posterior_chain",
+      "hamstring",
+      "mech_trunk_stability",
+      "mech_grip_support",
+      "mech_lower_hip_hinge"
+    ],
+    "equipment": "dumbbells",
+    "movement_cost": "moderate",
+    "impact_cost": "low",
+    "eccentric_cost": "high",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "high",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": false,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low"
+    ],
+    "stress_class": "anchor",
+    "cost_class": "high",
+    "support_only": false,
+    "meaningful_stress": true
+  },
+  {
     "name": "Front Squat",
     "category": "lower_body",
     "phases": [
