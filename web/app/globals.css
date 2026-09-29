@@ -19530,12 +19530,17 @@ html[data-theme="light"] .loading-operational-item {
   border-color: var(--border-default);
 }
 .ex-row-head {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
-  width: 100%;
-  min-height: 64px;
-  padding: 10px 12px;
+  min-height: 60px;
+  padding: 14px 14px 12px;
+  cursor: pointer;
+}
+.ex-row-toggle {
+  display: block;
+  padding: 0;
   background: none;
   border: 0;
   color: inherit;
@@ -19543,34 +19548,37 @@ html[data-theme="light"] .loading-operational-item {
   text-align: left;
   cursor: pointer;
 }
-.ex-row-head:focus-visible {
+/* The whole header is the toggle's hit area. */
+.ex-row-toggle::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-stat);
+}
+.ex-row-toggle:focus-visible {
+  outline: none;
+}
+.ex-row-toggle:focus-visible::after {
   outline: 2px solid var(--brand-red);
   outline-offset: -2px;
-  border-radius: var(--radius-stat);
+}
+/* Demo thumbnail, collapsed rows only, on the right so titles always align.
+   It and the chevron are decoration: taps pass through to the toggle. */
+.ex-row-thumb,
+.ex-row-chevron {
+  pointer-events: none;
 }
 .ex-row-thumb {
   position: relative;
   flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  background: var(--bg-surface-alt);
+  width: 56px;
+  height: 32px;
+  border-radius: 8px;
+  background: #000;
   overflow: hidden;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-}
-/* No demo: a quiet three-line "prescription" glyph instead of an empty tile. */
-.ex-row-thumb:not(.ex-row-thumb-video)::before {
-  content: "";
-  width: 14px;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--border-strong);
-  box-shadow: 0 -5px 0 var(--border-strong), 0 5px 0 var(--border-strong);
-}
-.ex-row-thumb-video {
-  background: #000;
 }
 .ex-row-thumb img {
   position: absolute;
@@ -19585,7 +19593,7 @@ html[data-theme="light"] .loading-operational-item {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 .ex-row-title {
   font-weight: 600;
@@ -19593,10 +19601,32 @@ html[data-theme="light"] .loading-operational-item {
   line-height: 1.3;
   color: var(--text-primary);
 }
-.ex-row-summary {
+/* "STRENGTH · 3 × 8-12 · RPE 7": the type leads the header's metadata line
+   instead of floating as a pill inside the card. */
+.ex-row-meta {
   color: var(--text-muted);
   font-family: var(--font-mono);
   font-size: 0.76rem;
+  line-height: 1.45;
+}
+.ex-row-type {
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.ex-row-summary-part > span {
+  white-space: nowrap;
+}
+.ex-row-type + .ex-row-summary::before {
+  content: "·";
+  margin: 0 6px;
+}
+/* Above the toggle's overlay, so the "i" opens its definition. */
+.ex-row-type .why-tooltip {
+  z-index: 1;
+  margin-inline-start: 4px;
+  vertical-align: 1px;
 }
 .ex-row-stop {
   display: flex;
@@ -19627,13 +19657,13 @@ html[data-theme="light"] .loading-operational-item {
 .ex-row-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 0 12px 14px;
+  gap: 14px;
+  padding: 0 14px 16px;
 }
 .ex-row-why {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 .ex-row-why-line {
   margin: 0;
@@ -19651,16 +19681,98 @@ html[data-theme="light"] .loading-operational-item {
   color: var(--brand-red);
 }
 .sp-block-embedded {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
   background: transparent;
   border: 0;
   border-radius: 0;
   padding: 0;
 }
-.sp-block-embedded .sp-block-head:empty {
-  display: none;
-}
+/* The prescription is one quiet panel. Its hairlines are the 1px gaps showing
+   the divider colour behind the cells, and cells grow to fill every row, so
+   there are never holes. The field count sets the rows: up to 3 fields share
+   one row, 4 read 2 + 2, 5-8 go three to a row (3 + 2, 3 + 3, 3 + 2 + 2,
+   3 + 3 + 2). A cell never shrinks below its content, so a phone too narrow
+   for a row drops a field to the next line instead of breaking a word. */
 .sp-block-embedded .sp-block-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px;
+  margin: 0;
+  background: var(--border-subtle);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.sp-block-embedded .sp-stat {
+  flex: 1 1 30%;
+  gap: 3px;
+  padding: 10px 10px 11px;
+  background: var(--bg-support);
+  font-size: 0.95rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: break-word;
+}
+.sp-block-embedded .sp-block-stats:is([data-count="1"], [data-count="2"], [data-count="3"]) > .sp-stat {
+  flex-basis: 0;
+}
+.sp-block-embedded .sp-block-stats[data-count="4"] > .sp-stat,
+.sp-block-embedded .sp-block-stats[data-count="7"] > .sp-stat:nth-child(n + 4) {
+  flex-basis: 40%;
+}
+.sp-block-embedded .sp-stat-head {
+  white-space: nowrap;
+}
+.sp-block-embedded .sp-stat .sp-stat-label {
+  font-size: 0.64rem;
+  color: var(--text-muted);
+}
+.sp-block-embedded .sp-cues {
   margin-top: 0;
+}
+.sp-block-embedded .sp-block-aside {
+  margin: 0;
+}
+/* Swaps, easier options, progression and the stop rule close the card as one
+   group, each label leading its own line of text. */
+.sp-block-embedded .sp-block-asides {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+.sp-block-embedded .sp-block-asides .sp-block-aside {
+  display: block;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+.sp-block-embedded .sp-block-asides .sp-stat-label {
+  margin-right: 8px;
+}
+.sp-block-embedded .sp-block-asides .why-tooltip {
+  margin: 0 8px 0 -4px;
+  vertical-align: 1px;
+}
+.sp-block-embedded .sp-block-aside[data-kind="stop"] {
+  color: var(--text-primary);
+}
+.sp-block-embedded .sp-block-aside[data-kind="stop"] .sp-stat-label {
+  color: var(--danger-ink);
+}
+/* Glossary marks inside an exercise row stay small and quiet. */
+.ex-row .info-tooltip .why-tooltip-trigger {
+  min-width: 14px;
+  height: 14px;
+  padding: 0 4px;
+  border-color: var(--border-subtle);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 9px;
+}
+.ex-row .sp-stat-head .why-tooltip {
+  margin-inline-start: 4px;
 }
 
 /* -- Exercise demo --------------------------------------------------------- */

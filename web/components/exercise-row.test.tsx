@@ -10,6 +10,17 @@ function countOccurrences(text: string, needle: string): number {
   return text.split(needle).length - 1;
 }
 
+/** The header metadata line of one row as plain text ("STRENGTH" excluded). */
+function summaryText(html: string, title: string): string {
+  const row = html.slice(html.indexOf(`>${title}</span>`));
+  const summary = row.slice(row.indexOf('class="ex-row-summary"'));
+  const end = summary.indexOf("</span></span></span>");
+  return summary
+    .slice(summary.indexOf(">") + 1, end)
+    .replace(/<[^>]+>/g, "")
+    .trim();
+}
+
 const rdl: StructuredBlock = {
   block_id: "rdl",
   block_type: "strength",
@@ -57,7 +68,7 @@ test("session renders every exercise as a row with only the first one open", () 
   assert.equal(html.includes("Romanian Deadlift (RDL)"), true);
   assert.equal(html.includes("Sled Push"), true);
   // Row header stat line uses the same reconciled prescription as the card.
-  assert.equal(html.includes("3 × 8-12 · RPE 7"), true);
+  assert.equal(summaryText(html, "Romanian Deadlift (RDL)"), "3 × 8-12 · RPE 7");
   // First row is open: its reasons show; the second row's cues stay behind the tap.
   assert.equal(html.includes("Build posterior chain strength with controlled eccentrics."), true);
   assert.equal(html.includes("Short powerful steps."), false);
@@ -142,4 +153,90 @@ test("media is matched on the exact display name only", () => {
   );
 
   assert.equal(html.includes("ex-demo"), false);
+});
+
+const rehabCurl: StructuredBlock = {
+  block_id: "curl",
+  block_type: "rehab",
+  display_name: "Suspension Curl (control drill)",
+  sets: 2,
+  reps: "8",
+  load: { method: "other", value: 0, unit: "other", display: "easy angle" },
+  rest: { value: 90, unit: "seconds" },
+  effort: { method: "RPE", value: 6 },
+  regression_options: ["Use a lighter band."],
+  stop_rules: ["Sharp pain during the pull"],
+};
+
+const bagRounds: StructuredBlock = {
+  block_id: "bag",
+  block_type: "conditioning",
+  display_name: "Heavy-bag technical rounds",
+  duration: { value: 2, unit: "minutes" },
+  rounds: 3,
+  work: { value: 120, unit: "seconds" },
+  rest: { value: 180, unit: "seconds" },
+  effort: { method: "RPE", value: 4 },
+  stop_rules: ["Heavy breathing"],
+};
+
+test("the exercise type leads the header line, with its glossary, and leaves the card body", () => {
+  const html = renderToStaticMarkup(<ExerciseRow block={rehabCurl} open onToggle={() => {}} />);
+
+  const meta = html.slice(html.indexOf('class="ex-row-meta"'), html.indexOf('class="ex-row-body"'));
+  assert.equal(meta.includes('class="ex-row-type">Rehab'), true);
+  // Rehab keeps its definition: the "i" sits beside the type in the header.
+  assert.equal(meta.includes('aria-label="What Rehab means"'), true);
+  // No pill left floating inside the open card.
+  assert.equal(html.includes('class="sp-tag"'), false);
+  assert.equal(html.includes('class="sp-block-head"'), false);
+});
+
+test("the header toggle is the only button around the title, never wrapping another control", () => {
+  const html = renderToStaticMarkup(<ExerciseRow block={rehabCurl} open onToggle={() => {}} />);
+
+  const toggle = html.slice(html.indexOf('class="ex-row-toggle"'));
+  const toggleBody = toggle.slice(0, toggle.indexOf("</button>"));
+  assert.equal(toggleBody.includes("<button"), false);
+  assert.equal(toggleBody.includes("Suspension Curl (control drill)"), true);
+  assert.equal(countOccurrences(html, 'aria-expanded="true"'), 1);
+});
+
+test("the prescription panel knows its field count and prints times short", () => {
+  const html = renderToStaticMarkup(<ExerciseRow block={bagRounds} open onToggle={() => {}} />);
+
+  assert.equal(html.includes('class="sp-block-stats" data-count="5"'), true);
+  assert.equal(html.includes(">Work</span></span>2 min</span>"), true);
+  assert.equal(html.includes(">Rest</span>3 min</span>"), true);
+  assert.equal(html.includes("seconds"), false);
+  // The header line agrees with the panel.
+  assert.equal(summaryText(html, "Heavy-bag technical rounds"), "2 min · RPE 4");
+});
+
+test("adjustments close the card as one group, with the stop rule marked", () => {
+  const html = renderToStaticMarkup(<ExerciseRow block={rehabCurl} open onToggle={() => {}} />);
+
+  const group = html.slice(html.indexOf('class="sp-block-asides"'));
+  assert.equal(group.includes(">Easier</span>Use a lighter band."), true);
+  assert.equal(group.includes('data-kind="stop"'), true);
+  assert.equal(countOccurrences(html, "Sharp pain during the pull"), 1);
+});
+
+test("a demo thumbnail shows on the collapsed row only; rows without a demo have no tile", () => {
+  const media = { "Romanian Deadlift (RDL)": coachDemo };
+  const collapsed = renderToStaticMarkup(
+    <ExerciseMediaProvider media={media}>
+      <ExerciseRow block={rdl} open={false} onToggle={() => {}} />
+    </ExerciseMediaProvider>,
+  );
+  const open = renderToStaticMarkup(
+    <ExerciseMediaProvider media={media}>
+      <ExerciseRow block={rdl} open onToggle={() => {}} />
+    </ExerciseMediaProvider>,
+  );
+  const noDemo = renderToStaticMarkup(<ExerciseRow block={sled} open={false} onToggle={() => {}} />);
+
+  assert.equal(countOccurrences(collapsed, 'class="ex-row-thumb"'), 1);
+  assert.equal(open.includes('class="ex-row-thumb"'), false);
+  assert.equal(noDemo.includes("ex-row-thumb"), false);
 });

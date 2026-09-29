@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   classifySessionlessDay,
+  compactTimeUnits,
   getCoachLedContactView,
   isConvertedTechnicalHeadline,
   cleanText,
@@ -1512,4 +1513,23 @@ test("weight-cut de-emphasis only applies to weight-cut symptom lines", () => {
   assert.equal(isDeEmphasisedWeightCutSafety(low, "Stop on sharp knee pain."), false);
   assert.equal(isDeEmphasisedWeightCutSafety(low, null), false);
   assert.equal(isDeEmphasisedWeightCutSafety(low, "   "), false);
+});
+
+test("compactTimeUnits shortens time words without changing the value", () => {
+  assert.equal(compactTimeUnits("120 seconds"), "2 min");
+  assert.equal(compactTimeUnits("180 seconds"), "3 min");
+  assert.equal(compactTimeUnits("90 seconds"), "90 sec");
+  assert.equal(compactTimeUnits("3 seconds"), "3 sec");
+  assert.equal(compactTimeUnits("2 minutes"), "2 min");
+  assert.equal(compactTimeUnits("1.5 minutes"), "1.5 min");
+  assert.equal(compactTimeUnits("1 minute"), "1 min");
+  // A range converts only when both ends are whole minutes.
+  assert.equal(compactTimeUnits("60-120 seconds"), "1-2 min");
+  assert.equal(compactTimeUnits("60-90 seconds"), "60-90 sec");
+  // Everything around the time is left as written.
+  assert.equal(compactTimeUnits("3 × 10 seconds"), "3 × 10 sec");
+  assert.equal(compactTimeUnits("45 seconds per side"), "45 sec per side");
+  assert.equal(compactTimeUnits("RPE 7"), "RPE 7");
+  assert.equal(compactTimeUnits("20 m"), "20 m");
+  assert.equal(compactTimeUnits("4 per side"), "4 per side");
 });

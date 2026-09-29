@@ -141,6 +141,30 @@ export function formatMeasured(measured: MeasuredValue | null | undefined): stri
   return unit ? `${measured.value} ${unit}` : `${measured.value}`;
 }
 
+const TIME_WORDS_RE =
+  /(\d+(?:\.\d+)?)(?:\s*([-–—])\s*(\d+(?:\.\d+)?))?\s*(seconds?|secs?|minutes?|mins?)\b/gi;
+
+/**
+ * Short time units for the exercise card: "120 seconds" -> "2 min",
+ * "90 seconds" -> "90 sec", "2 minutes" -> "2 min", "60-120 seconds" ->
+ * "1-2 min". Seconds become minutes only when every number is a whole minute,
+ * so the value never changes, only its wording. Everything else in the string
+ * ("× 3", "per side") is left as written.
+ */
+export function compactTimeUnits(text: string): string {
+  return text.replace(TIME_WORDS_RE, (_match, low: string, dash: string | undefined, high: string | undefined, unit: string) => {
+    const numbers = [low, high].filter((value): value is string => value !== undefined);
+    const range = (values: string[]) => values.join(dash ?? "");
+    if (/^m/i.test(unit)) {
+      return `${range(numbers)} min`;
+    }
+    const wholeMinutes = numbers.every((value) => Number(value) >= 60 && Number(value) % 60 === 0);
+    return wholeMinutes
+      ? `${range(numbers.map((value) => String(Number(value) / 60)))} min`
+      : `${range(numbers)} sec`;
+  });
+}
+
 /** A reps value that is really a duration string, e.g. "5-6 min", "30s", "2 min". */
 export function isTimeLikeReps(reps: unknown): boolean {
   if (typeof reps !== "string") {
