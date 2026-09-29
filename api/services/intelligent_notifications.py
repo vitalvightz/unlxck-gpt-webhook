@@ -20,6 +20,7 @@ from api.services.notification_foundation import (
 from api.services.push_notifications import dispatch_push_candidate
 from api.services.today_readiness_boundary import build_today_command_view
 from api.store import AppStore
+from api.contracts.completion import TERMINAL_COMPLETION_STATUSES
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,6 @@ SESSION_LOG_START_HOUR = 12
 SESSION_LOG_END_HOUR = 22
 SESSION_LOG_MIN_AGE = timedelta(minutes=90)
 HIGH_PAIN_FOLLOWUP_MAX_AGE = timedelta(hours=36)
-TERMINAL_COMPLETION_STATUSES = frozenset({"done", "modified", "skipped"})
 MORNING_NOTIFICATION_TYPES = frozenset(
     {"injury_recheck", "high_pain_followup", "readiness_checkin"}
 )

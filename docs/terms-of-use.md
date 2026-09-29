@@ -75,5 +75,5 @@ These Terms are governed by the laws of England and Wales, subject to any mandat
 ## 18. Contact
 Questions or complaints about these Terms can be sent to **support@unlxck.com**.
 
-**Version:** 0.1 pre-launch
+**Version:** 0.1-pre-launch
 **Effective date:** 19 August 2026

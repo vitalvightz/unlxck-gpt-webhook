@@ -12,13 +12,16 @@ from api.services.progress_notifications import (
     resolve_xp_level,
     send_coach_message_notification,
 )
-from support import FakeStore
+from support import FakeStore, xp_hardening_ready_payload
 
 
 class ProgressStore:
     def __init__(self) -> None:
         self.total = 230
         self.calls: list[tuple[str, str, str | None]] = []
+
+    def validate_xp_abuse_hardening(self):
+        return xp_hardening_ready_payload()
 
     def award_xp(self, athlete_id, *, action, idempotency_key, calendar_date=None):
         self.calls.append((action, idempotency_key, calendar_date))

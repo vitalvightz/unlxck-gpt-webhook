@@ -10,7 +10,7 @@ from api.services.xp_progress import (
     _safe_latest_intake,
     _safe_latest_plan,
 )
-from support import _build_client
+from support import FakeStore as SupportStore, _build_client
 
 
 ATHLETE = {"Authorization": "Bearer athlete-token"}
@@ -21,6 +21,8 @@ class ProgressStore:
     def __init__(self):
         self.xp_awards: dict[str, list[dict]] = {"athlete-1": []}
         self.completions: list[dict] = []
+
+    xp_award_exists = SupportStore.xp_award_exists
 
     def list_plan_session_completions(self, athlete_id, plan_id, *, limit=500):
         assert athlete_id == "athlete-1"

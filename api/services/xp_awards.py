@@ -6,7 +6,6 @@ import logging
 from collections.abc import Callable, Mapping, Sequence
 from datetime import datetime, timezone
 from threading import Lock
-from typing import Any
 
 from api.services.active_plan import resolve_active_plan
 from api.store import AppStore
@@ -39,30 +38,20 @@ def _hardening_payload_is_current(value: object) -> bool:
 def ensure_xp_abuse_hardening(store: AppStore) -> None:
     """Fail XP writes closed unless the complete database rollout is live.
 
-    In-memory/test stores have no Supabase client and are allowed through. The
-    live AppStore must expose the validation RPC added by the final hardening
-    migration. Successful validation is cached on that exact store instance only
-    after the version and final rollout flags exactly match the backend contract.
+    Every store answers the rollout check (``validate_xp_abuse_hardening``; the
+    live store calls the RPC added by the final hardening migration). Successful
+    validation is cached on that exact store instance only after the version and
+    final rollout flags exactly match the backend contract; a failure is never
+    cached, so the next award checks again.
     """
 
-    custom = getattr(store, "validate_xp_abuse_hardening", None)
-    if callable(custom):
-        if not _hardening_payload_is_current(custom()):
-            raise RuntimeError("XP abuse hardening validation failed")
-        return
-
-    client: Any | None = getattr(store, "client", None)
-    if client is None:
-        return
     if getattr(store, _XP_HARDENING_VALIDATED_ATTR, False) is True:
         return
 
     with _XP_HARDENING_LOCK:
         if getattr(store, _XP_HARDENING_VALIDATED_ATTR, False) is True:
             return
-        response = client.rpc("validate_xp_abuse_hardening").execute()
-        payload = getattr(response, "data", None)
-        if not _hardening_payload_is_current(payload):
+        if not _hardening_payload_is_current(store.validate_xp_abuse_hardening()):
             raise RuntimeError("XP abuse hardening validation failed")
         setattr(store, _XP_HARDENING_VALIDATED_ATTR, True)
 
@@ -369,32 +358,12 @@ def _feedback_reconcile_result(
     target_amount: int,
 ) -> dict | None:
     ensure_xp_abuse_hardening(store)
-    custom = getattr(store, "reconcile_feedback_xp", None)
-    if callable(custom):
-        result = custom(
-            athlete_id,
-            feedback_id=feedback_id,
-            target_amount=target_amount,
-        )
-        return result if isinstance(result, dict) else None
-
-    client: Any | None = getattr(store, "client", None)
-    if client is None:
-        logger.error("[xp] feedback reconciliation unavailable athlete_id=%s", athlete_id)
-        return None
-
-    response = client.rpc(
-        "reconcile_feedback_xp",
-        {
-            "p_athlete_id": athlete_id,
-            "p_feedback_id": feedback_id,
-            "p_target_amount": target_amount,
-        },
-    ).execute()
-    payload = getattr(response, "data", None)
-    if isinstance(payload, list):
-        payload = payload[0] if payload else None
-    return payload if isinstance(payload, dict) else None
+    result = store.reconcile_feedback_xp(
+        athlete_id,
+        feedback_id=feedback_id,
+        target_amount=target_amount,
+    )
+    return result if isinstance(result, dict) else None
 
 
 def award_feedback_xp(

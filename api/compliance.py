@@ -20,19 +20,54 @@ so it cannot evidence consent to a specific document.
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
+from pathlib import Path
 from typing import Any
+
+# The versions and age bands below live in shared/compliance-policy.json, the
+# one copy the web app (web/lib/compliance.ts) reads too. The web app sends back
+# the version it showed when an athlete accepts, so a bump that reached only one
+# side would re-ask (or wrongly block) every athlete.
+_POLICY_PATH = Path(__file__).resolve().parents[1] / "shared" / "compliance-policy.json"
+
+
+def _load_compliance_policy() -> dict[str, Any]:
+    try:
+        policy = json.loads(_POLICY_PATH.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise RuntimeError(
+            f"Compliance policy is missing at {_POLICY_PATH}. "
+            "Ensure shared/compliance-policy.json is packaged."
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"Compliance policy at {_POLICY_PATH} is not valid JSON") from exc
+    if not isinstance(policy, dict):
+        raise RuntimeError("Compliance policy must be a JSON object")
+    for key in ("terms_version", "health_consent_version", "privacy_notice_version"):
+        if not isinstance(policy.get(key), str) or not policy[key].strip():
+            raise RuntimeError(f"Compliance policy {key} must be a non-empty string")
+    for key in ("minimum_signup_age_years", "adult_age_years"):
+        value = policy.get(key)
+        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+            raise RuntimeError(f"Compliance policy {key} must be a positive integer")
+    if policy["minimum_signup_age_years"] >= policy["adult_age_years"]:
+        raise RuntimeError("Compliance policy minimum signup age must be below the adult age")
+    return policy
+
+
+_POLICY = _load_compliance_policy()
 
 # Version strings recorded alongside each acceptance. Bumping one means existing
 # acceptances no longer satisfy the gate and the athlete is re-asked — that is
 # the point of versioning, so only bump when the document materially changes.
 #
 # TERMS_VERSION tracks the "Version:" line of docs/terms-of-use.md.
-TERMS_VERSION = "0.1-pre-launch"
+TERMS_VERSION: str = _POLICY["terms_version"]
 # HEALTH_CONSENT_VERSION tracks the health-data consent wording shown alongside
 # the Privacy Notice (docs/privacy-notice.md, "Lawful bases").
-HEALTH_CONSENT_VERSION = "1.0"
+HEALTH_CONSENT_VERSION: str = _POLICY["health_consent_version"]
 
 # PRIVACY_NOTICE_VERSION tracks revisions to the Privacy Notice itself. It is
 # deliberately NOT the same constant as HEALTH_CONSENT_VERSION: the notice can be
@@ -41,13 +76,14 @@ HEALTH_CONSENT_VERSION = "1.0"
 # features offline for every athlete until they answered again. Unlike the other
 # two this version gates nothing — the notice is information, not agreement — so
 # it is recorded for display and audit only.
-PRIVACY_NOTICE_VERSION = "1.5"
+PRIVACY_NOTICE_VERSION: str = _POLICY["privacy_notice_version"]
 
 # Age bands. 13 is the floor for an account at all; 18 is the line above which
 # the adult flow applies. Both come from the Children & Age-Appropriate Use
-# Policy and the Terms ("intended for users aged 13 or over").
-MINIMUM_SIGNUP_AGE_YEARS = 13
-ADULT_AGE_YEARS = 18
+# Policy and the Terms ("intended for users aged 13 or over"). The database
+# enforces the same floor in its own signup trigger (supabase/migrations).
+MINIMUM_SIGNUP_AGE_YEARS: int = _POLICY["minimum_signup_age_years"]
+ADULT_AGE_YEARS: int = _POLICY["adult_age_years"]
 
 # Stable machine-readable codes. The web app switches on these to show the right
 # recovery action, so they are part of the API contract — do not rename them

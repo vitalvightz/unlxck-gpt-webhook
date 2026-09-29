@@ -185,27 +185,10 @@ class _SafeFormat(dict[str, str]):
 
 
 def _templates_for_intent(store: Any, intent: str, locale: str) -> list[NotificationTemplate]:
-    custom = getattr(store, "list_notification_templates", None)
-    if callable(custom):
-        rows = custom(intent, locale=locale) or []
-    else:
-        client = getattr(store, "client", None)
-        if client is None:
-            rows = []
-        else:
-            try:
-                response = (
-                    client.table("notification_templates")
-                    .select("*")
-                    .eq("intent", intent)
-                    .eq("locale", locale)
-                    .eq("active", True)
-                    .order("variant_id")
-                    .execute()
-                )
-                rows = getattr(response, "data", None) or []
-            except Exception:  # noqa: BLE001 - bundled approved copy is the safe fallback
-                rows = []
+    try:
+        rows = store.list_notification_templates(intent, locale=locale) or []
+    except Exception:  # noqa: BLE001 - bundled approved copy is the safe fallback
+        rows = []
     parsed: list[NotificationTemplate] = []
     for row in rows:
         if not isinstance(row, Mapping):

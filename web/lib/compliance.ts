@@ -8,10 +8,12 @@
 // control; the backend and a Postgres trigger both reject an under-13 signup.
 
 import type { MeResponse, ProfileRecord } from "@/lib/types";
+// The one copy of the versions and age bands, read by api/compliance.py too.
+import compliancePolicy from "../../shared/compliance-policy.json";
 
-/** Version strings mirroring api/compliance.py. Shown next to each consent. */
-export const TERMS_VERSION = "0.1-pre-launch";
-export const HEALTH_CONSENT_VERSION = "1.0";
+/** Version strings the server also enforces. Shown next to each consent. */
+export const TERMS_VERSION: string = compliancePolicy.terms_version;
+export const HEALTH_CONSENT_VERSION: string = compliancePolicy.health_consent_version;
 
 /**
  * The Privacy Notice's own revision, tracked separately from the health-data
@@ -29,10 +31,10 @@ export const HEALTH_CONSENT_VERSION = "1.0";
  * itself changing. Bump this when the notice is revised; bump
  * HEALTH_CONSENT_VERSION only when what the athlete is agreeing to changes.
  */
-export const PRIVACY_NOTICE_VERSION = "1.5";
+export const PRIVACY_NOTICE_VERSION: string = compliancePolicy.privacy_notice_version;
 
-export const MINIMUM_SIGNUP_AGE_YEARS = 13;
-export const ADULT_AGE_YEARS = 18;
+export const MINIMUM_SIGNUP_AGE_YEARS: number = compliancePolicy.minimum_signup_age_years;
+export const ADULT_AGE_YEARS: number = compliancePolicy.adult_age_years;
 
 export const UNDER_MINIMUM_AGE_MESSAGE = `UNLXCK accounts are for athletes aged ${MINIMUM_SIGNUP_AGE_YEARS} or over.`;
 export const DATE_OF_BIRTH_REQUIRED_MESSAGE = "Enter your date of birth to continue.";

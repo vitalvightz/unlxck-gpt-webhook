@@ -42,6 +42,19 @@ class Store:
             }
             return dict(self.athlete_streaks[athlete_id])
 
+    def get_athlete_streaks(self, athlete_id):
+        row = self.athlete_streaks.get(athlete_id)
+        return dict(row) if row is not None else None
+
+    def upsert_athlete_streaks(self, athlete_id, fields):
+        with self.lock:
+            self.athlete_streaks[athlete_id] = {
+                **self.athlete_streaks.get(athlete_id, {}),
+                **fields,
+                "athlete_id": athlete_id,
+            }
+            return dict(self.athlete_streaks[athlete_id])
+
     def list_user_plans(self, athlete_id):
         return [row for row in self.plans if row["athlete_id"] == athlete_id]
 

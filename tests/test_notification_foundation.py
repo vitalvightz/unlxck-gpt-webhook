@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
+from support import InMemoryNotificationLedger
 from api.notification_models import NotificationPreferences
 from api.services.notification_foundation import (
     NotificationCandidate,
@@ -17,8 +18,8 @@ from api.services.notification_foundation import (
 )
 
 
-class MemoryStore:
-    """No Supabase client: exercises the guarded in-memory dev/test adapter."""
+class MemoryStore(InMemoryNotificationLedger):
+    """The in-memory ledger from test support (mirrors the durable RPCs)."""
 
 
 def _candidate(

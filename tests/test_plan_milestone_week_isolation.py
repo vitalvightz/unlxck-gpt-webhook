@@ -1,3 +1,4 @@
+from support import xp_hardening_ready_payload
 from api.services.week_progress import award_completed_week
 
 
@@ -11,6 +12,9 @@ class Store:
                 "updated_at": "2026-08-03T12:00:00+00:00",
             }
         ]
+
+    def validate_xp_abuse_hardening(self):
+        return xp_hardening_ready_payload()
 
     def award_xp(self, athlete_id, *, action, idempotency_key, calendar_date=None):
         return {

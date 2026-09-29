@@ -15,7 +15,6 @@ import json
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Literal, Mapping
-from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 from api.notification_models import NotificationCategory, NotificationPreferences
@@ -173,46 +172,6 @@ def default_notification_preferences() -> NotificationPreferences:
     return NotificationPreferences()
 
 
-def _store_key(store: Any) -> str | int:
-    """Stable per-instance key for in-memory adapters and test stores.
-
-    Raw ``id(store)`` values can be recycled after garbage collection, leaking a
-    prior store's delivery/action state into a new one in the same process.
-    """
-
-    existing = getattr(store, "_notification_memory_key", None)
-    if existing:
-        return str(existing)
-    key = str(uuid4())
-    try:
-        setattr(store, "_notification_memory_key", key)
-        return key
-    except Exception:  # noqa: BLE001 - opaque store proxies may reject attributes
-        return id(store)
-
-
-# Fallback storage is used by the in-memory test/dev store, which intentionally
-# has no Supabase client. Production SupabaseAppStore always takes the durable
-# table/RPC path below.
-_MEMORY_PREFERENCES: dict[str | int, dict[str, dict[str, Any]]] = {}
-_MEMORY_DELIVERIES: dict[str | int, dict[tuple[str, str], dict[str, Any]]] = {}
-_MEMORY_EVALUATIONS: dict[str | int, dict[tuple[str, str], dict[str, Any]]] = {}
-_MEMORY_ACTION_STATES: dict[str | int, set[tuple[str, str, str]]] = {}
-
-
-def _client(store: Any) -> Any | None:
-    return getattr(store, "client", None)
-
-
-def _rows(response: Any) -> list[dict[str, Any]]:
-    payload = getattr(response, "data", None)
-    if isinstance(payload, dict):
-        return [payload]
-    if isinstance(payload, list):
-        return [row for row in payload if isinstance(row, dict)]
-    return []
-
-
 def _candidate_training_day(candidate: NotificationCandidate, now_utc: datetime) -> str:
     if candidate.training_day:
         return str(candidate.training_day)
@@ -361,66 +320,15 @@ def record_notification_evaluation(
         "evaluation_key": evaluation_key,
     }
 
-    custom = getattr(store, "record_notification_evaluation", None)
-    if callable(custom):
-        result = custom(dict(row))
-        return dict(result) if isinstance(result, Mapping) else row
-
-    client = _client(store)
-    if client is None:
-        bucket = _MEMORY_EVALUATIONS.setdefault(_store_key(store), {})
-        key = (profile_id, evaluation_key)
-        existing = bucket.get(key)
-        if existing is not None:
-            last_evaluated = _parse_datetime(existing.get("last_evaluated_at"))
-            if (
-                min_persist_interval is not None
-                and last_evaluated is not None
-                and reference - last_evaluated < min_persist_interval
-            ):
-                return dict(existing)
-            existing["evaluated_at"] = reference.isoformat()
-            existing["last_evaluated_at"] = reference.isoformat()
-            existing["evaluation_count"] = int(existing.get("evaluation_count") or 0) + 1
-            existing["eligible"] = bool(eligible)
-            existing["decision"] = decision
-            existing["rejection_reasons"] = list(reasons)
-            if resulting_delivery_id:
-                existing["resulting_delivery_id"] = resulting_delivery_id
-            return dict(existing)
-        row["id"] = str(uuid4())
-        bucket[key] = dict(row)
-        return row
-
+    min_interval_seconds = (
+        max(0, int(min_persist_interval.total_seconds()))
+        if min_persist_interval is not None
+        else 0
+    )
     try:
-        response = client.rpc(
-            "record_notification_evaluation",
-            {
-                "p_profile_id": profile_id,
-                "p_training_day": training_day,
-                "p_intent": intent,
-                "p_notification_type": row["notification_type"] or "",
-                "p_category": row["category"] or "",
-                "p_evaluated_at": reference.isoformat(),
-                "p_scheduled_for": row["scheduled_for"],
-                "p_timing_source": row["timing_source"] or "",
-                "p_timing_confidence": row["timing_confidence"] or "",
-                "p_eligible": bool(eligible),
-                "p_decision": decision,
-                "p_rejection_reasons": list(reasons),
-                "p_priority": row["priority"],
-                "p_dedupe_key": dedupe_key,
-                "p_variant_id": row["variant_id"] or "",
-                "p_source_event_metadata": metadata,
-                "p_resulting_delivery_id": resulting_delivery_id,
-                "p_evaluation_key": evaluation_key,
-                "p_min_interval_seconds": max(
-                    0, int(min_persist_interval.total_seconds())
-                ) if min_persist_interval is not None else 0,
-            },
-        ).execute()
-        rows = _rows(response)
-        return rows[0] if rows else row
+        result = store.record_notification_evaluation(
+            dict(row), min_interval_seconds=min_interval_seconds
+        )
     except Exception as exc:  # noqa: BLE001 - observability must not enable a send
         logger.warning(
             "[notification] evaluation write failed profile_id=%s intent=%s error_class=%s",
@@ -429,6 +337,7 @@ def record_notification_evaluation(
             type(exc).__name__,
         )
         raise NotificationStoreError("notification evaluation ledger unavailable") from exc
+    return dict(result) if isinstance(result, Mapping) else row
 
 
 def list_notification_evaluations(
@@ -438,29 +347,10 @@ def list_notification_evaluations(
     training_day: str,
     intent: str | None = None,
 ) -> list[dict[str, Any]]:
-    custom = getattr(store, "list_notification_evaluations", None)
-    if callable(custom):
-        return [dict(row) for row in custom(profile_id, training_day, intent=intent) or []]
-    client = _client(store)
-    if client is None:
-        rows = [
-            dict(row)
-            for (row_profile_id, _), row in _MEMORY_EVALUATIONS.get(_store_key(store), {}).items()
-            if row_profile_id == profile_id
-            and str(row.get("training_day") or "") == training_day
-            and (not intent or str(row.get("intent") or "") == intent)
-        ]
-        return sorted(rows, key=lambda row: str(row.get("last_evaluated_at") or ""), reverse=True)
-    query = (
-        client.table("notification_evaluations")
-        .select("*")
-        .eq("profile_id", profile_id)
-        .eq("training_day", training_day)
-    )
-    if intent:
-        query = query.eq("intent", intent)
-    response = query.order("last_evaluated_at", desc=True).limit(500).execute()
-    return _rows(response)
+    return [
+        dict(row)
+        for row in store.list_notification_evaluations(profile_id, training_day, intent=intent) or []
+    ]
 
 
 def has_notification_evaluation_decision(
@@ -482,28 +372,11 @@ def has_notification_evaluation_decision(
     decision = str(decision or "").strip()
     if not profile_id or not dedupe_key or not decision:
         return False
-    custom = getattr(store, "has_notification_evaluation_decision", None)
-    if callable(custom):
-        return bool(custom(profile_id, dedupe_key=dedupe_key, decision=decision))
-    client = _client(store)
-    if client is None:
-        return any(
-            row_profile_id == profile_id
-            and str(row.get("dedupe_key") or "") == dedupe_key
-            and str(row.get("decision") or "") == decision
-            for (row_profile_id, _), row in _MEMORY_EVALUATIONS.get(
-                _store_key(store), {}
-            ).items()
-        )
     try:
-        response = (
-            client.table("notification_evaluations")
-            .select("id")
-            .eq("profile_id", profile_id)
-            .eq("dedupe_key", dedupe_key)
-            .eq("decision", decision)
-            .limit(1)
-            .execute()
+        return bool(
+            store.has_notification_evaluation_decision(
+                profile_id, dedupe_key=dedupe_key, decision=decision
+            )
         )
     except Exception as exc:  # noqa: BLE001 - adapter normalizes backend clients
         logger.warning(
@@ -512,7 +385,6 @@ def has_notification_evaluation_decision(
             type(exc).__name__,
         )
         raise NotificationStoreError("notification evaluation ledger unavailable") from exc
-    return bool(_rows(response))
 
 
 def get_notification_preferences(store: Any, profile_id: str) -> NotificationPreferences:
@@ -520,26 +392,10 @@ def get_notification_preferences(store: Any, profile_id: str) -> NotificationPre
     if not profile_id:
         raise NotificationStoreError("profile_id is required")
 
-    custom = getattr(store, "get_notification_preferences", None)
-    if callable(custom):
-        row = custom(profile_id)
-        return NotificationPreferences.model_validate(row or {})
-
-    client = _client(store)
-    if client is None:
-        row = _MEMORY_PREFERENCES.get(_store_key(store), {}).get(profile_id)
-        return NotificationPreferences.model_validate(row or {})
-
     try:
-        response = (
-            client.table("notification_preferences")
-            .select("*")
-            .eq("profile_id", profile_id)
-            .limit(1)
-            .execute()
+        return NotificationPreferences.model_validate(
+            store.get_notification_preferences(profile_id) or {}
         )
-        rows = _rows(response)
-        return NotificationPreferences.model_validate(rows[0] if rows else {})
     except Exception as exc:  # noqa: BLE001 - adapter normalizes backend clients
         logger.warning(
             "[notification] preference read failed profile_id=%s error_class=%s",
@@ -567,28 +423,9 @@ def update_notification_preferences(
     merged.update(changes)
     validated = NotificationPreferences.model_validate(merged)
 
-    custom = getattr(store, "upsert_notification_preferences", None)
-    if callable(custom):
-        row = custom(profile_id, validated.model_dump())
-        return NotificationPreferences.model_validate(row or validated.model_dump())
-
-    client = _client(store)
-    if client is None:
-        bucket = _MEMORY_PREFERENCES.setdefault(_store_key(store), {})
-        bucket[profile_id] = validated.model_dump()
-        return validated
-
     try:
-        response = (
-            client.table("notification_preferences")
-            .upsert(
-                {"profile_id": profile_id, **validated.model_dump()},
-                on_conflict="profile_id",
-            )
-            .execute()
-        )
-        rows = _rows(response)
-        return NotificationPreferences.model_validate(rows[0] if rows else validated.model_dump())
+        row = store.upsert_notification_preferences(profile_id, validated.model_dump())
+        return NotificationPreferences.model_validate(row or validated.model_dump())
     except Exception as exc:  # noqa: BLE001
         logger.warning(
             "[notification] preference write failed profile_id=%s error_class=%s",
@@ -689,93 +526,6 @@ def _parse_datetime(value: Any) -> datetime | None:
     return parsed.astimezone(timezone.utc)
 
 
-def _memory_claim(
-    store: Any,
-    candidate: NotificationCandidate,
-    *,
-    now_utc: datetime,
-) -> NotificationClaimAttempt:
-    bucket = _MEMORY_DELIVERIES.setdefault(_store_key(store), {})
-    key = (candidate.profile_id, candidate.dedupe_key)
-    row = bucket.get(key)
-    now = now_utc.astimezone(timezone.utc)
-    training_day = _candidate_training_day(candidate, now)
-    action_key = str(candidate.action_key or "")
-    if action_key and (
-        candidate.profile_id,
-        action_key,
-        training_day,
-    ) in _MEMORY_ACTION_STATES.get(_store_key(store), set()):
-        return NotificationClaimAttempt(None, "user_action_already_done")
-    if row is not None:
-        status = str(row.get("status") or "")
-        attempts = int(row.get("attempt_count") or 0)
-        claimed_at = _parse_datetime(row.get("claimed_at"))
-        stale = claimed_at is None or now - claimed_at >= NOTIFICATION_STALE_CLAIM_AFTER
-        retryable = status == "failed" and attempts < NOTIFICATION_MAX_ATTEMPTS
-        if not retryable and not (status == "pending" and stale):
-            return NotificationClaimAttempt(None, "duplicate_dedupe_key")
-        row.update(
-            {
-                "status": "pending",
-                "claim_token": str(uuid4()),
-                "claimed_at": now.isoformat(),
-                "attempt_count": attempts + 1,
-                "expires_at": candidate.expires_at.isoformat(),
-            }
-        )
-    else:
-        active = [
-            existing
-            for existing in bucket.values()
-            if existing.get("profile_id") == candidate.profile_id
-            and existing.get("training_day") == training_day
-            and existing.get("notification_class") == candidate.notification_class
-            and existing.get("status") in {"pending", "sent", "partial"}
-        ]
-        if len(active) >= _candidate_daily_cap(candidate):
-            return NotificationClaimAttempt(None, "daily_cap")
-        spacing = _candidate_min_spacing(candidate)
-        if spacing:
-            active_times = [
-                parsed
-                for existing in active
-                if (parsed := _parse_datetime(existing.get("sent_at") or existing.get("claimed_at")))
-                is not None
-            ]
-            latest = max(
-                active_times,
-                default=None,
-            )
-            if latest is not None and now - latest < timedelta(minutes=spacing):
-                return NotificationClaimAttempt(None, "cooldown_active")
-        row = {
-            "id": str(uuid4()),
-            "profile_id": candidate.profile_id,
-            "notification_type": candidate.notification_type,
-            "intent": candidate.intent,
-            "dedupe_key": candidate.dedupe_key,
-            "training_day": training_day,
-            "notification_class": candidate.notification_class,
-            "variant_id": candidate.variant_id,
-            "action_key": candidate.action_key,
-            "status": "pending",
-            "claim_token": str(uuid4()),
-            "claimed_at": now.isoformat(),
-            "attempt_count": 1,
-            "expires_at": candidate.expires_at.isoformat(),
-        }
-        bucket[key] = row
-    return NotificationClaimAttempt(
-        NotificationDeliveryClaim(
-            delivery_id=str(row["id"]),
-            claim_token=str(row["claim_token"]),
-            attempt_count=int(row["attempt_count"]),
-        ),
-        "claimed",
-    )
-
-
 def _simulation_state(
     store: Any,
     candidates: list[NotificationCandidate],
@@ -784,93 +534,42 @@ def _simulation_state(
 ) -> tuple[list[dict[str, Any]], set[tuple[str, str, str]]]:
     """Read the claim ledger and action state without changing either."""
 
-    store_key = _store_key(store)
-    client = _client(store)
-    if client is None:
-        deliveries = [dict(row) for row in _MEMORY_DELIVERIES.get(store_key, {}).values()]
-        evaluations = [
-            dict(row)
-            for row in _MEMORY_EVALUATIONS.get(store_key, {}).values()
-            if row.get("profile_id") == candidates[0].profile_id
-            and row.get("decision") == "would_select"
-        ]
-        actions = set(_MEMORY_ACTION_STATES.get(store_key, set()))
-    else:
-        try:
-            profile_id = candidates[0].profile_id
-            dedupe_keys = sorted({candidate.dedupe_key for candidate in candidates})
-            training_days = sorted(
+    profile_id = candidates[0].profile_id
+    try:
+        state = store.get_notification_simulation_state(
+            profile_id,
+            dedupe_keys=sorted({candidate.dedupe_key for candidate in candidates}),
+            training_days=sorted(
                 {_candidate_training_day(candidate, now_utc) for candidate in candidates}
-            )
-            notification_classes = sorted({candidate.notification_class for candidate in candidates})
-            action_keys = sorted(
+            ),
+            notification_classes=sorted({candidate.notification_class for candidate in candidates}),
+            action_keys=sorted(
                 {candidate.action_key for candidate in candidates if candidate.action_key}
-            )
-            delivery_by_dedupe = _rows(
-                client.table("notification_deliveries")
-                .select("*")
-                .eq("profile_id", profile_id)
-                .in_("dedupe_key", dedupe_keys)
-                .execute()
-            )
-            active_deliveries = _rows(
-                client.table("notification_deliveries")
-                .select("*")
-                .eq("profile_id", profile_id)
-                .in_("training_day", training_days)
-                .in_("notification_class", notification_classes)
-                .in_("status", ["pending", "sent", "partial"])
-                .execute()
-            )
-            evaluations_by_dedupe = _rows(
-                client.table("notification_evaluations")
-                .select("*")
-                .eq("profile_id", profile_id)
-                .eq("decision", "would_select")
-                .in_("dedupe_key", dedupe_keys)
-                .execute()
-            )
-            active_evaluations = _rows(
-                client.table("notification_evaluations")
-                .select("*")
-                .eq("profile_id", profile_id)
-                .eq("decision", "would_select")
-                .in_("training_day", training_days)
-                .execute()
-            )
-            action_rows = []
-            if action_keys:
-                action_rows = _rows(
-                    client.table("notification_action_states")
-                    .select("profile_id,action_key,training_day")
-                    .eq("profile_id", profile_id)
-                    .in_("action_key", action_keys)
-                    .in_("training_day", training_days)
-                    .execute()
-                )
-            deliveries = list(
-                {
-                    str(row.get("id") or (row.get("profile_id"), row.get("dedupe_key"))): row
-                    for row in [*delivery_by_dedupe, *active_deliveries]
-                }.values()
-            )
-            evaluations = list(
-                {
-                    str(row.get("id") or row.get("evaluation_key")): row
-                    for row in [*evaluations_by_dedupe, *active_evaluations]
-                }.values()
-            )
-            actions = {
-                (str(row["profile_id"]), str(row["action_key"]), str(row["training_day"]))
-                for row in action_rows
-            }
-        except Exception as exc:  # noqa: BLE001 - adapter normalizes backend clients
-            logger.warning(
-                "[notification] simulation state read failed profile_id=%s error_class=%s",
-                candidates[0].profile_id,
-                type(exc).__name__,
-            )
-            raise NotificationStoreError("notification simulation state unavailable") from exc
+            ),
+        )
+        deliveries = list(
+            {
+                str(row.get("id") or (row.get("profile_id"), row.get("dedupe_key"))): dict(row)
+                for row in state["deliveries"]
+            }.values()
+        )
+        evaluations = list(
+            {
+                str(row.get("id") or row.get("evaluation_key")): dict(row)
+                for row in state["evaluations"]
+            }.values()
+        )
+        actions = {
+            (str(row["profile_id"]), str(row["action_key"]), str(row["training_day"]))
+            for row in state["action_rows"]
+        }
+    except Exception as exc:  # noqa: BLE001 - adapter normalizes backend clients
+        logger.warning(
+            "[notification] simulation state read failed profile_id=%s error_class=%s",
+            profile_id,
+            type(exc).__name__,
+        )
+        raise NotificationStoreError("notification simulation state unavailable") from exc
 
     # Prior observe selections form an isolated shadow claim ledger. A selection
     # says a claim would have happened; it does not predict successful delivery.
@@ -959,58 +658,35 @@ def attempt_notification_delivery_claim(
     *,
     now_utc: datetime,
 ) -> NotificationClaimAttempt:
-    custom = getattr(store, "claim_notification_delivery", None)
-    if callable(custom):
-        row = custom(candidate, now_utc=now_utc)
-        if not row:
-            return NotificationClaimAttempt(None, "duplicate_dedupe_key")
-        if isinstance(row, Mapping) and row.get("decision") and not row.get("id"):
-            return NotificationClaimAttempt(None, str(row.get("decision")))
-        return NotificationClaimAttempt(
-            NotificationDeliveryClaim(
-                delivery_id=str(row["id"]),
-                claim_token=str(row["claim_token"]),
-                attempt_count=int(row.get("attempt_count") or 1),
-            ),
-            "claimed",
-        )
-
-    client = _client(store)
-    if client is None:
-        return _memory_claim(store, candidate, now_utc=now_utc)
-
+    params = {
+        "profile_id": candidate.profile_id,
+        "notification_type": candidate.notification_type,
+        "intent": candidate.intent,
+        "category": candidate.category,
+        "priority": candidate.priority,
+        "title": candidate.title,
+        "body": candidate.body,
+        "url": candidate.url,
+        "tag": candidate.tag,
+        "dedupe_key": candidate.dedupe_key,
+        "expires_at": candidate.expires_at.isoformat(),
+        "training_day": _candidate_training_day(candidate, now_utc),
+        "scheduled_for": (
+            candidate.scheduled_for.isoformat() if candidate.scheduled_for else None
+        ),
+        "timing_source": candidate.timing_source or "",
+        "timing_confidence": candidate.timing_confidence or "",
+        "variant_id": candidate.variant_id or "",
+        "source_event_metadata": dict(candidate.source_event_metadata),
+        "action_key": candidate.action_key or "",
+        "notification_class": candidate.notification_class,
+        "respect_quiet_hours": candidate.respect_quiet_hours,
+        "merged_intents": list(candidate.merged_intents),
+        "daily_cap": _candidate_daily_cap(candidate),
+        "min_spacing_minutes": _candidate_min_spacing(candidate),
+    }
     try:
-        response = client.rpc(
-            "claim_notification_delivery_v2",
-            {
-                "p_profile_id": candidate.profile_id,
-                "p_notification_type": candidate.notification_type,
-                "p_intent": candidate.intent,
-                "p_category": candidate.category,
-                "p_priority": candidate.priority,
-                "p_title": candidate.title,
-                "p_body": candidate.body,
-                "p_url": candidate.url,
-                "p_tag": candidate.tag,
-                "p_dedupe_key": candidate.dedupe_key,
-                "p_expires_at": candidate.expires_at.isoformat(),
-                "p_training_day": _candidate_training_day(candidate, now_utc),
-                "p_scheduled_for": (
-                    candidate.scheduled_for.isoformat() if candidate.scheduled_for else None
-                ),
-                "p_timing_source": candidate.timing_source or "",
-                "p_timing_confidence": candidate.timing_confidence or "",
-                "p_variant_id": candidate.variant_id or "",
-                "p_source_event_metadata": dict(candidate.source_event_metadata),
-                "p_action_key": candidate.action_key or "",
-                "p_notification_class": candidate.notification_class,
-                "p_respect_quiet_hours": candidate.respect_quiet_hours,
-                "p_merged_intents": list(candidate.merged_intents),
-                "p_daily_cap": _candidate_daily_cap(candidate),
-                "p_min_spacing_minutes": _candidate_min_spacing(candidate),
-            },
-        ).execute()
-        payload = getattr(response, "data", None)
+        payload = store.claim_notification_delivery(params, now_utc=now_utc)
         if isinstance(payload, list):
             payload = payload[0] if payload else None
         if not isinstance(payload, Mapping):
@@ -1060,43 +736,14 @@ def finalize_notification_delivery(
     delivered_count: int,
     error_code: str | None = None,
 ) -> None:
-    custom = getattr(store, "finalize_notification_delivery", None)
-    if callable(custom):
-        custom(
-            claim,
-            status=status,
-            delivered_count=delivered_count,
-            error_code=error_code,
-        )
-        return
-
-    client = _client(store)
-    if client is None:
-        bucket = _MEMORY_DELIVERIES.get(_store_key(store), {})
-        for row in bucket.values():
-            if row.get("id") == claim.delivery_id and row.get("claim_token") == claim.claim_token:
-                row.update(
-                    {
-                        "status": status,
-                        "delivered_count": max(0, int(delivered_count)),
-                        "error_code": str(error_code or "")[:120] or None,
-                        "sent_at": datetime.now(timezone.utc).isoformat() if status in {"sent", "partial"} else None,
-                    }
-                )
-                return
-        return
-
     try:
-        client.rpc(
-            "finalize_notification_delivery",
-            {
-                "p_delivery_id": claim.delivery_id,
-                "p_claim_token": claim.claim_token,
-                "p_status": status,
-                "p_delivered_count": max(0, int(delivered_count)),
-                "p_error_code": str(error_code or "")[:120] or None,
-            },
-        ).execute()
+        store.finalize_notification_delivery(
+            claim.delivery_id,
+            claim.claim_token,
+            status=status,
+            delivered_count=max(0, int(delivered_count)),
+            error_code=str(error_code or "")[:120] or None,
+        )
     except Exception as exc:  # noqa: BLE001 - sending already happened; do not re-raise
         logger.warning(
             "[notification] delivery finalize failed delivery_id=%s error_class=%s",
@@ -1322,52 +969,16 @@ def invalidate_notification_action(
     reference = completed_at or datetime.now(timezone.utc)
     if reference.tzinfo is None:
         reference = reference.replace(tzinfo=timezone.utc)
-    custom = getattr(store, "invalidate_notification_action", None)
-    if callable(custom):
-        return int(
-            custom(
-                profile_id,
-                action_key=action_key,
-                training_day=training_day,
-                completed_at=reference,
-                source_metadata=dict(source_metadata or {}),
-            )
-            or 0
+    return int(
+        store.invalidate_notification_action(
+            profile_id,
+            action_key=action_key,
+            training_day=training_day,
+            completed_at=reference,
+            source_metadata=dict(source_metadata or {}),
         )
-    client = _client(store)
-    if client is None:
-        _MEMORY_ACTION_STATES.setdefault(_store_key(store), set()).add(
-            (profile_id, action_key, training_day)
-        )
-        cancelled = 0
-        for row in _MEMORY_DELIVERIES.get(_store_key(store), {}).values():
-            if (
-                row.get("profile_id") == profile_id
-                and row.get("action_key") == action_key
-                and row.get("training_day") == training_day
-                and row.get("status") in {"pending", "failed"}
-            ):
-                row.update(
-                    {
-                        "status": "cancelled",
-                        "cancelled_at": reference.isoformat(),
-                        "cancellation_reason": "user_action_already_done",
-                    }
-                )
-                cancelled += 1
-        return cancelled
-    response = client.rpc(
-        "invalidate_notification_action",
-        {
-            "p_profile_id": profile_id,
-            "p_action_key": action_key,
-            "p_training_day": training_day,
-            "p_completed_at": reference.isoformat(),
-            "p_source_metadata": dict(source_metadata or {}),
-        },
-    ).execute()
-    payload = getattr(response, "data", 0)
-    return int(payload or 0)
+        or 0
+    )
 
 
 def list_recent_notification_deliveries(
@@ -1378,40 +989,13 @@ def list_recent_notification_deliveries(
     training_day: str | None = None,
     limit: int = 20,
 ) -> list[dict[str, Any]]:
-    custom = getattr(store, "list_notification_deliveries", None)
-    if callable(custom):
-        return [
-            dict(row)
-            for row in custom(
-                profile_id,
-                intent=intent,
-                training_day=training_day,
-                limit=limit,
-            )
-            or []
-        ]
-    client = _client(store)
-    if client is None:
-        rows = [
-            dict(row)
-            for row in _MEMORY_DELIVERIES.get(_store_key(store), {}).values()
-            if row.get("profile_id") == profile_id
-            and (not intent or row.get("intent") == intent)
-            and (not training_day or row.get("training_day") == training_day)
-        ]
-        return sorted(
-            rows,
-            key=lambda row: str(row.get("sent_at") or row.get("claimed_at") or ""),
-            reverse=True,
-        )[:limit]
-    query = (
-        client.table("notification_deliveries")
-        .select("*")
-        .eq("profile_id", profile_id)
-    )
-    if intent:
-        query = query.eq("intent", intent)
-    if training_day:
-        query = query.eq("training_day", training_day)
-    response = query.order("claimed_at", desc=True).limit(limit).execute()
-    return _rows(response)
+    return [
+        dict(row)
+        for row in store.list_notification_deliveries(
+            profile_id,
+            intent=intent,
+            training_day=training_day,
+            limit=limit,
+        )
+        or []
+    ]

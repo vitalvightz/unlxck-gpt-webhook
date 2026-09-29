@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+from support import InMemoryNotificationLedger
 from api.contracts.command_view import CommandView
 from api.services import fight_camp_notifications
 from api.services.fight_camp_notifications import (
@@ -28,7 +29,7 @@ from api.services.notification_templates import (
 )
 
 
-class OrchestrationStore:
+class OrchestrationStore(InMemoryNotificationLedger):
     def __init__(self) -> None:
         self.completions: list[dict] = []
         self.current_completion: dict | None = None

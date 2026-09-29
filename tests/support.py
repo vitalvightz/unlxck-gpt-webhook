@@ -6,7 +6,7 @@ import os
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from uuid import uuid4
 
 from fastapi import HTTPException, status
@@ -44,6 +44,11 @@ from api.schema_requirements import GENERATION_JOB_STAGE2_COST_COLUMNS
 from api.store import _signup_date_of_birth, _generation_hard_max_runtime_seconds, _generation_startup_max_attempts, is_job_loaded_stalled_generation_job, is_stage1_planner_stalled_generation_job, is_startup_stale_generation_job
 from api.store import RehabExposureWindow
 from api.xp import XP_CALENDAR_SCOPED_ACTIONS, XP_REWARD_AMOUNTS, XpAction
+from api.services.xp_awards import XP_ABUSE_HARDENING_VERSION
+from api.services.notification_foundation import (
+    NOTIFICATION_MAX_ATTEMPTS,
+    NOTIFICATION_STALE_CLAIM_AFTER,
+)
 from datetime import timedelta
 
 os.environ.setdefault("APP_GENERATION_SCHEDULER", "fastapi")
@@ -99,6 +104,16 @@ def _filter_admin_rows(rows: list[dict], q: str | None, columns: tuple[str, ...]
     ]
 
 
+def xp_hardening_ready_payload() -> dict:
+    """The rollout payload a fully migrated database returns (see xp_awards)."""
+    return {
+        "ok": True,
+        "version": XP_ABUSE_HARDENING_VERSION,
+        "rollout_ready": True,
+        "open_plan_scope_ready": True,
+    }
+
+
 @dataclass
 class FakeAuthService:
     users_by_token: dict[str, AuthenticatedUser]
@@ -113,7 +128,314 @@ class FakeAuthService:
         return user
 
 
-class FakeStore:
+class InMemoryNotificationLedger:
+    """In-memory notification ledger for test stores (see api/store.py).
+
+    Mirrors the durable tables and RPCs production uses: preferences, the
+    coalescing evaluation ledger, the delivery claim ledger (dedupe, retry,
+    daily cap, spacing, completed-action suppression) and action states. This
+    lived inside api/services/notification_foundation.py as a fallback for
+    client-less stores; it is test infrastructure, so it lives here now, with
+    state kept per store instance.
+    """
+
+    def _notification_ledger(self) -> dict:
+        state = self.__dict__.get("_notification_ledger_state")
+        if state is None:
+            state = {"preferences": {}, "deliveries": {}, "evaluations": {}, "actions": set()}
+            self.__dict__["_notification_ledger_state"] = state
+        return state
+
+    def get_notification_preferences(self, profile_id: str) -> dict | None:
+        row = self._notification_ledger()["preferences"].get(profile_id)
+        return dict(row) if row is not None else None
+
+    def upsert_notification_preferences(self, profile_id: str, fields: dict) -> dict:
+        self._notification_ledger()["preferences"][profile_id] = dict(fields)
+        return dict(fields)
+
+    def record_notification_evaluation(self, row: dict, *, min_interval_seconds: int) -> dict:
+        bucket = self._notification_ledger()["evaluations"]
+        key = (row["profile_id"], row["evaluation_key"])
+        reference = _notification_datetime(row["evaluated_at"])
+        existing = bucket.get(key)
+        if existing is not None:
+            last_evaluated = _notification_datetime(existing.get("last_evaluated_at"))
+            if (
+                min_interval_seconds > 0
+                and last_evaluated is not None
+                and reference - last_evaluated < timedelta(seconds=min_interval_seconds)
+            ):
+                return dict(existing)
+            existing["evaluated_at"] = row["evaluated_at"]
+            existing["last_evaluated_at"] = row["evaluated_at"]
+            existing["evaluation_count"] = int(existing.get("evaluation_count") or 0) + 1
+            existing["eligible"] = row["eligible"]
+            existing["decision"] = row["decision"]
+            existing["rejection_reasons"] = list(row["rejection_reasons"])
+            if row.get("resulting_delivery_id"):
+                existing["resulting_delivery_id"] = row["resulting_delivery_id"]
+            return dict(existing)
+        stored = {**row, "id": str(uuid4())}
+        bucket[key] = stored
+        return dict(stored)
+
+    def list_notification_evaluations(
+        self, profile_id: str, training_day: str, *, intent: str | None = None
+    ) -> list[dict]:
+        rows = [
+            dict(row)
+            for (row_profile_id, _), row in self._notification_ledger()["evaluations"].items()
+            if row_profile_id == profile_id
+            and str(row.get("training_day") or "") == training_day
+            and (not intent or str(row.get("intent") or "") == intent)
+        ]
+        return sorted(rows, key=lambda row: str(row.get("last_evaluated_at") or ""), reverse=True)
+
+    def has_notification_evaluation_decision(
+        self, profile_id: str, *, dedupe_key: str, decision: str
+    ) -> bool:
+        return any(
+            row_profile_id == profile_id
+            and str(row.get("dedupe_key") or "") == dedupe_key
+            and str(row.get("decision") or "") == decision
+            for (row_profile_id, _), row in self._notification_ledger()["evaluations"].items()
+        )
+
+    def claim_notification_delivery(self, params: dict, *, now_utc: datetime) -> dict:
+        """The decisions of claim_notification_delivery_v2, step for step.
+
+        Source: supabase/migrations/20260812155956_redesign_fight_camp_notifications.sql.
+        ``now_utc`` stands in for the database clock.
+        """
+        ledger = self._notification_ledger()
+        bucket = ledger["deliveries"]
+        now = now_utc.astimezone(timezone.utc)
+        training_day = params["training_day"]
+        if _notification_datetime(params["expires_at"]) <= now:
+            return {"decision": "outside_due_window"}
+        action_key = params.get("action_key")
+        if action_key is not None and (
+            params["profile_id"],
+            action_key,
+            training_day,
+        ) in ledger["actions"]:
+            return {"decision": "user_action_already_done"}
+        key = (params["profile_id"], params["dedupe_key"])
+        row = bucket.get(key)
+        if row is not None:
+            attempts = int(row.get("attempt_count") or 0)
+            status = str(row.get("status") or "")
+            claimed_at = _notification_datetime(row.get("claimed_at"))
+            stale = claimed_at is not None and now - claimed_at >= NOTIFICATION_STALE_CLAIM_AFTER
+            if not (
+                attempts < NOTIFICATION_MAX_ATTEMPTS
+                and (status == "failed" or (status == "pending" and stale))
+            ):
+                return {"decision": "duplicate_dedupe_key"}
+            row.update(
+                {
+                    "notification_type": params["notification_type"],
+                    "intent": params["intent"],
+                    "variant_id": params.get("variant_id") or None,
+                    "status": "pending",
+                    "claim_token": str(uuid4()),
+                    "claimed_at": now.isoformat(),
+                    "attempt_count": attempts + 1,
+                    "expires_at": params["expires_at"],
+                    "delivered_count": 0,
+                    "error_code": None,
+                    "sent_at": None,
+                    "cancelled_at": None,
+                    "cancellation_reason": None,
+                }
+            )
+            return {"decision": "claimed", "delivery": dict(row)}
+        active = [
+            existing
+            for existing in bucket.values()
+            if existing.get("profile_id") == params["profile_id"]
+            and existing.get("training_day") == training_day
+            and existing.get("notification_class") == params["notification_class"]
+            and existing.get("status") in {"pending", "sent", "partial"}
+        ]
+        if len(active) >= max(1, int(params["daily_cap"])):
+            return {"decision": "daily_cap"}
+        spacing = int(params["min_spacing_minutes"])
+        if spacing > 0:
+            latest = max(
+                (
+                    parsed
+                    for existing in active
+                    if (
+                        parsed := _notification_datetime(
+                            existing.get("sent_at") or existing.get("claimed_at")
+                        )
+                    )
+                    is not None
+                ),
+                default=None,
+            )
+            if latest is not None and latest > now - timedelta(minutes=spacing):
+                return {"decision": "cooldown_active"}
+        row = {
+            "id": str(uuid4()),
+            "profile_id": params["profile_id"],
+            "notification_type": params["notification_type"],
+            "intent": params["intent"],
+            "dedupe_key": params["dedupe_key"],
+            "training_day": training_day,
+            "notification_class": params["notification_class"],
+            "variant_id": params.get("variant_id") or None,
+            "action_key": params.get("action_key") or None,
+            "status": "pending",
+            "claim_token": str(uuid4()),
+            "claimed_at": now.isoformat(),
+            "attempt_count": 1,
+            "expires_at": params["expires_at"],
+        }
+        bucket[key] = row
+        return {"decision": "claimed", "delivery": dict(row)}
+
+    def finalize_notification_delivery(
+        self,
+        delivery_id: str,
+        claim_token: str,
+        *,
+        status: str,
+        delivered_count: int,
+        error_code: str | None,
+    ) -> None:
+        for row in self._notification_ledger()["deliveries"].values():
+            if row.get("id") == delivery_id and row.get("claim_token") == claim_token:
+                row.update(
+                    {
+                        "status": status,
+                        "delivered_count": delivered_count,
+                        "error_code": error_code,
+                        "sent_at": (
+                            datetime.now(timezone.utc).isoformat()
+                            if status in {"sent", "partial"}
+                            else None
+                        ),
+                    }
+                )
+                return
+
+    def get_notification_simulation_state(
+        self,
+        profile_id: str,
+        *,
+        dedupe_keys: list,
+        training_days: list,
+        notification_classes: list,
+        action_keys: list,
+    ) -> dict:
+        """The same five reads SupabaseAppStore makes, with the same filters."""
+        ledger = self._notification_ledger()
+        deliveries = [
+            row for row in ledger["deliveries"].values() if row.get("profile_id") == profile_id
+        ]
+        evaluations = [
+            row
+            for row in ledger["evaluations"].values()
+            if row.get("profile_id") == profile_id and row.get("decision") == "would_select"
+        ]
+        return {
+            "deliveries": [
+                *(dict(row) for row in deliveries if row.get("dedupe_key") in dedupe_keys),
+                *(
+                    dict(row)
+                    for row in deliveries
+                    if row.get("training_day") in training_days
+                    and row.get("notification_class") in notification_classes
+                    and row.get("status") in {"pending", "sent", "partial"}
+                ),
+            ],
+            "evaluations": [
+                *(dict(row) for row in evaluations if row.get("dedupe_key") in dedupe_keys),
+                *(dict(row) for row in evaluations if row.get("training_day") in training_days),
+            ],
+            "action_rows": [
+                {"profile_id": owner, "action_key": action, "training_day": day}
+                for owner, action, day in ledger["actions"]
+                if action_keys
+                and owner == profile_id
+                and action in action_keys
+                and day in training_days
+            ],
+        }
+
+    def invalidate_notification_action(
+        self,
+        profile_id: str,
+        *,
+        action_key: str,
+        training_day: str,
+        completed_at: datetime,
+        source_metadata: dict,
+    ) -> int:
+        ledger = self._notification_ledger()
+        ledger["actions"].add((profile_id, action_key, training_day))
+        cancelled = 0
+        for row in ledger["deliveries"].values():
+            if (
+                row.get("profile_id") == profile_id
+                and row.get("action_key") == action_key
+                and row.get("training_day") == training_day
+                and row.get("status") in {"pending", "failed"}
+            ):
+                row.update(
+                    {
+                        "status": "cancelled",
+                        "cancelled_at": completed_at.isoformat(),
+                        "cancellation_reason": "user_action_already_done",
+                    }
+                )
+                cancelled += 1
+        return cancelled
+
+    def list_notification_deliveries(
+        self,
+        profile_id: str,
+        *,
+        intent: str | None = None,
+        training_day: str | None = None,
+        limit: int = 20,
+    ) -> list[dict]:
+        rows = [
+            dict(row)
+            for row in self._notification_ledger()["deliveries"].values()
+            if row.get("profile_id") == profile_id
+            and (not intent or row.get("intent") == intent)
+            and (not training_day or row.get("training_day") == training_day)
+        ]
+        return sorted(
+            rows,
+            key=lambda row: str(row.get("sent_at") or row.get("claimed_at") or ""),
+            reverse=True,
+        )[:limit]
+
+    def list_notification_templates(self, intent: str, *, locale: str) -> list[dict]:
+        return []
+
+
+def _notification_datetime(value) -> datetime | None:
+    if isinstance(value, datetime):
+        parsed = value
+    elif isinstance(value, str) and value.strip():
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    else:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+class FakeStore(InMemoryNotificationLedger):
     def __init__(self, admin_emails: set[str] | None = None):
         self.profiles: dict[str, dict] = {}
         self.intakes: dict[str, list[dict]] = {}
@@ -122,8 +444,12 @@ class FakeStore:
         self.generation_jobs: dict[str, dict] = {}
         self.today_checkins: dict[str, list[dict]] = {}
         self.session_completions: dict[str, list[dict]] = {}
+        self.session_logs: dict[str, list[dict]] = {}
+        self.athlete_streak_rows: dict[str, dict] = {}
+        self.daily_activity: dict[str, set[str]] = {}
         self.xp_accounts: dict[str, dict] = {}
         self.xp_awards: dict[str, list[dict]] = {}
+        self.plan_milestones: dict[str, list[dict]] = {}
         self.injury_flags: dict[str, list[dict]] = {}
         self.rehab_exposures: dict[str, dict] = {}
         self.adaptation_notes: dict[str, list[dict]] = {}
@@ -1570,6 +1896,49 @@ class FakeStore:
         )
         return [dict(row) for row in rows[:limit]]
 
+    def list_session_logs(self, athlete_id: str, *, limit: int = 500) -> list[dict]:
+        rows = sorted(
+            self.session_logs.get(athlete_id, []),
+            key=lambda row: str(row.get("session_date") or ""),
+            reverse=True,
+        )
+        return [dict(row) for row in rows[:limit]]
+
+    # --- Streaks: mirror api/store.py and the record_athlete_daily_activity RPC ---
+
+    def get_athlete_streaks(self, athlete_id: str) -> dict | None:
+        row = self.athlete_streak_rows.get(athlete_id)
+        return dict(row) if row is not None else None
+
+    def upsert_athlete_streaks(self, athlete_id: str, fields: dict) -> dict:
+        row = {**self.athlete_streak_rows.get(athlete_id, {}), **fields, "athlete_id": athlete_id}
+        self.athlete_streak_rows[athlete_id] = row
+        return dict(row)
+
+    def record_daily_activity(self, athlete_id: str, activity_date: str) -> dict:
+        # Like the RPC: record the day, then rebuild the login run ending on it.
+        days = self.daily_activity.setdefault(athlete_id, set())
+        days.add(activity_date)
+        cursor = date.fromisoformat(activity_date)
+        current = 0
+        while cursor.isoformat() in days:
+            current += 1
+            cursor -= timedelta(days=1)
+        prior = self.athlete_streak_rows.get(athlete_id, {})
+        return self.upsert_athlete_streaks(athlete_id, {
+            "login_current": current,
+            "login_best": max(int(prior.get("login_best") or 0), current),
+            "login_last_active_date": max(
+                activity_date, str(prior.get("login_last_active_date") or "")
+            ),
+        })
+
+    def list_daily_activity(self, athlete_id: str) -> list[dict]:
+        return [
+            {"athlete_id": athlete_id, "activity_date": day}
+            for day in sorted(self.daily_activity.get(athlete_id, set()), reverse=True)
+        ]
+
     def list_today_checkins(self, athlete_id: str, *, limit: int = 14) -> list[dict]:
         rows = sorted(
             self.today_checkins.get(athlete_id, []),
@@ -1577,6 +1946,77 @@ class FakeStore:
             reverse=True,
         )
         return [dict(row) for row in rows[:limit]]
+
+    # --- XP rollout, progress reads and plan milestones (see api/store.py) ---
+
+    def validate_xp_abuse_hardening(self) -> dict:
+        return xp_hardening_ready_payload()
+
+    def reconcile_feedback_xp(
+        self, athlete_id: str, *, feedback_id: str, target_amount: int
+    ) -> dict | None:
+        # Eligibility, the daily cap and the 1 -> 3 upgrade live in SQL and are
+        # not modelled here; this store awards no feedback XP (tests of those
+        # rules use a dedicated store).
+        return None
+
+    def get_xp_progress_state(self, athlete_id: str, *, limit: int) -> dict:
+        account = self.xp_accounts.get(athlete_id) or {}
+        awards = sorted(
+            (dict(row) for row in self.xp_awards.get(athlete_id, [])),
+            key=lambda row: (str(row.get("awarded_at") or ""), str(row.get("id") or "")),
+            reverse=True,
+        )
+        return {
+            "total_xp": account.get("total_xp"),
+            "last_daily_login_date": account.get("last_daily_login_date"),
+            "recent_awards": [
+                {
+                    key: row[key]
+                    for key in ("id", "action", "amount", "awarded_at", "calendar_date")
+                    if row.get(key) is not None
+                }
+                for row in awards[:limit]
+            ],
+        }
+
+    def xp_award_exists(
+        self,
+        athlete_id: str,
+        *,
+        action: str | None = None,
+        idempotency_key: str | None = None,
+        calendar_date: str | None = None,
+    ) -> bool:
+        return any(
+            (action is None or str(row.get("action") or "") == action)
+            and (idempotency_key is None or str(row.get("idempotency_key") or "") == idempotency_key)
+            and (calendar_date is None or str(row.get("calendar_date") or "") == calendar_date)
+            for row in self.xp_awards.get(athlete_id, [])
+        )
+
+    def list_plan_milestones(self, athlete_id: str, *, limit: int) -> list[dict]:
+        rows = sorted(
+            (dict(row) for row in self.plan_milestones.get(athlete_id, [])),
+            key=lambda row: str(row.get("completed_at") or ""),
+            reverse=True,
+        )
+        return rows[:limit]
+
+    # Milestone recording and week lifecycle are atomic SQL functions; like the
+    # feedback reconcile they are not modelled here and record nothing.
+    def record_plan_milestone(self, athlete_id: str, **_fields) -> dict | None:
+        return None
+
+    def begin_week_lifecycle_reconciliation(
+        self, athlete_id: str, *, plan_id: str, week_id: str
+    ) -> dict | None:
+        return None
+
+    def complete_week_lifecycle_reconciliation(
+        self, athlete_id: str, *, plan_id: str, week_id: str
+    ) -> dict | None:
+        return None
 
     def award_xp(
         self,

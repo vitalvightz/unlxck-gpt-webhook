@@ -16,9 +16,9 @@ from api.services.push_notifications import dispatch_push_candidates
 from api.services.streaks import _training_schedule, get_streak_state, qualifying_training_days
 from api.services.today_readiness_boundary import build_today_command_view
 from api.store import AppStore
+from api.contracts.completion import TERMINAL_COMPLETION_STATUSES as TERMINAL_SESSION_STATUSES
 
 MIN_STREAK_FOR_RISK_PUSH = 3
-TERMINAL_SESSION_STATUSES = frozenset({"done", "modified", "skipped"})
 KNOWN_TRAINING_RISK_DELAY = timedelta(minutes=90)
 KNOWN_TRAINING_RISK_WINDOW = timedelta(minutes=90)
 

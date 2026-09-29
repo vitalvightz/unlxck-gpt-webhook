@@ -567,6 +567,111 @@ class AppStore(Protocol):
         calendar_date: str | None = None,
     ) -> dict[str, Any]: ...
 
+    def validate_xp_abuse_hardening(self) -> Any: ...
+
+    def reconcile_feedback_xp(
+        self, athlete_id: str, *, feedback_id: str, target_amount: int
+    ) -> dict[str, Any] | None: ...
+
+    def get_xp_progress_state(self, athlete_id: str, *, limit: int) -> dict[str, Any]: ...
+
+    def xp_award_exists(
+        self,
+        athlete_id: str,
+        *,
+        action: str | None = None,
+        idempotency_key: str | None = None,
+        calendar_date: str | None = None,
+    ) -> bool: ...
+
+    # --- Plan milestones and week lifecycle (api/services/plan_milestones.py) ---
+
+    def list_plan_milestones(self, athlete_id: str, *, limit: int) -> list[dict[str, Any]]: ...
+
+    def record_plan_milestone(
+        self,
+        athlete_id: str,
+        *,
+        plan_id: str,
+        milestone_type: str,
+        milestone_key: str,
+        phase_label: str | None,
+        metadata: dict[str, Any],
+    ) -> dict[str, Any] | None: ...
+
+    def begin_week_lifecycle_reconciliation(
+        self, athlete_id: str, *, plan_id: str, week_id: str
+    ) -> dict[str, Any] | None: ...
+
+    def complete_week_lifecycle_reconciliation(
+        self, athlete_id: str, *, plan_id: str, week_id: str
+    ) -> dict[str, Any] | None: ...
+
+    # --- Notification ledger (api/services/notification_foundation.py) ---
+
+    def get_notification_preferences(self, profile_id: str) -> dict[str, Any] | None: ...
+
+    def upsert_notification_preferences(
+        self, profile_id: str, fields: dict[str, Any]
+    ) -> dict[str, Any] | None: ...
+
+    def record_notification_evaluation(
+        self, row: dict[str, Any], *, min_interval_seconds: int
+    ) -> dict[str, Any] | None: ...
+
+    def list_notification_evaluations(
+        self, profile_id: str, training_day: str, *, intent: str | None = None
+    ) -> list[dict[str, Any]]: ...
+
+    def has_notification_evaluation_decision(
+        self, profile_id: str, *, dedupe_key: str, decision: str
+    ) -> bool: ...
+
+    def claim_notification_delivery(
+        self, params: dict[str, Any], *, now_utc: datetime
+    ) -> Any: ...
+
+    def finalize_notification_delivery(
+        self,
+        delivery_id: str,
+        claim_token: str,
+        *,
+        status: str,
+        delivered_count: int,
+        error_code: str | None,
+    ) -> None: ...
+
+    def get_notification_simulation_state(
+        self,
+        profile_id: str,
+        *,
+        dedupe_keys: list[str],
+        training_days: list[str],
+        notification_classes: list[str],
+        action_keys: list[str],
+    ) -> dict[str, list[dict[str, Any]]]: ...
+
+    def invalidate_notification_action(
+        self,
+        profile_id: str,
+        *,
+        action_key: str,
+        training_day: str,
+        completed_at: datetime,
+        source_metadata: dict[str, Any],
+    ) -> int: ...
+
+    def list_notification_deliveries(
+        self,
+        profile_id: str,
+        *,
+        intent: str | None = None,
+        training_day: str | None = None,
+        limit: int = 20,
+    ) -> list[dict[str, Any]]: ...
+
+    def list_notification_templates(self, intent: str, *, locale: str) -> list[dict[str, Any]]: ...
+
     # --- Web push subscriptions (api/routes/push.py, push notification services) ---
 
     def upsert_push_subscription(self, profile_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
@@ -4838,6 +4943,360 @@ class SupabaseAppStore:
             .select("athlete_id,activity_date")
             .eq("athlete_id", athlete_id)
             .order("activity_date", desc=True)
+            .execute()
+        )
+        return getattr(response, "data", None) or []
+
+    # --- Account XP and plan milestones (moved verbatim from the XP services) ---
+
+    @staticmethod
+    def _mapping_rows(value: Any) -> list[dict[str, Any]]:
+        if not isinstance(value, list):
+            return []
+        return [dict(row) for row in value if isinstance(row, dict)]
+
+    @staticmethod
+    def _rpc_mapping(response: Any) -> dict[str, Any] | None:
+        payload = getattr(response, "data", None)
+        if isinstance(payload, list):
+            payload = payload[0] if payload else None
+        return dict(payload) if isinstance(payload, dict) else None
+
+    def validate_xp_abuse_hardening(self) -> Any:
+        """Raw payload of the rollout check; the XP service decides if it is current."""
+        return getattr(self.client.rpc("validate_xp_abuse_hardening").execute(), "data", None)
+
+    def reconcile_feedback_xp(
+        self, athlete_id: str, *, feedback_id: str, target_amount: int
+    ) -> dict[str, Any] | None:
+        response = self.client.rpc(
+            "reconcile_feedback_xp",
+            {
+                "p_athlete_id": athlete_id,
+                "p_feedback_id": feedback_id,
+                "p_target_amount": target_amount,
+            },
+        ).execute()
+        return self._rpc_mapping(response)
+
+    def get_xp_progress_state(self, athlete_id: str, *, limit: int) -> dict[str, Any]:
+        account_response = (
+            self.client.table("xp_accounts")
+            .select("total_xp,last_daily_login_date")
+            .eq("athlete_id", athlete_id)
+            .limit(1)
+            .execute()
+        )
+        account_rows = self._mapping_rows(getattr(account_response, "data", None))
+        account = account_rows[0] if account_rows else {}
+        awards_response = (
+            self.client.table("xp_awards")
+            .select("id,action,amount,awarded_at,calendar_date")
+            .eq("athlete_id", athlete_id)
+            .order("awarded_at", desc=True)
+            .order("id", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return {
+            "total_xp": account.get("total_xp"),
+            "last_daily_login_date": account.get("last_daily_login_date"),
+            "recent_awards": self._mapping_rows(getattr(awards_response, "data", None)),
+        }
+
+    def xp_award_exists(
+        self,
+        athlete_id: str,
+        *,
+        action: str | None = None,
+        idempotency_key: str | None = None,
+        calendar_date: str | None = None,
+    ) -> bool:
+        query = self.client.table("xp_awards").select("id").eq("athlete_id", athlete_id)
+        if action is not None:
+            query = query.eq("action", action)
+        if idempotency_key is not None:
+            query = query.eq("idempotency_key", idempotency_key)
+        if calendar_date is not None:
+            query = query.eq("calendar_date", calendar_date)
+        return bool(self._mapping_rows(getattr(query.limit(1).execute(), "data", None)))
+
+    def list_plan_milestones(self, athlete_id: str, *, limit: int) -> list[dict[str, Any]]:
+        response = (
+            self.client.table("plan_milestones")
+            .select("id,plan_id,milestone_type,milestone_key,phase_label,metadata,completed_at")
+            .eq("athlete_id", athlete_id)
+            .order("completed_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return self._mapping_rows(getattr(response, "data", None))
+
+    def record_plan_milestone(
+        self,
+        athlete_id: str,
+        *,
+        plan_id: str,
+        milestone_type: str,
+        milestone_key: str,
+        phase_label: str | None,
+        metadata: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        response = self.client.rpc(
+            "record_plan_milestone",
+            {
+                "p_athlete_id": athlete_id,
+                "p_plan_id": plan_id,
+                "p_milestone_type": milestone_type,
+                "p_milestone_key": milestone_key,
+                "p_phase_label": phase_label,
+                "p_metadata": dict(metadata),
+            },
+        ).execute()
+        return self._rpc_mapping(response)
+
+    def begin_week_lifecycle_reconciliation(
+        self, athlete_id: str, *, plan_id: str, week_id: str
+    ) -> dict[str, Any] | None:
+        response = self.client.rpc(
+            "begin_week_lifecycle_reconciliation",
+            {"p_athlete_id": athlete_id, "p_plan_id": plan_id, "p_week_id": week_id},
+        ).execute()
+        return self._rpc_mapping(response)
+
+    def complete_week_lifecycle_reconciliation(
+        self, athlete_id: str, *, plan_id: str, week_id: str
+    ) -> dict[str, Any] | None:
+        response = self.client.rpc(
+            "complete_week_lifecycle_reconciliation",
+            {"p_athlete_id": athlete_id, "p_plan_id": plan_id, "p_week_id": week_id},
+        ).execute()
+        return self._rpc_mapping(response)
+
+    # --- Notification ledger (moved verbatim from notification_foundation) ---
+
+    @staticmethod
+    def _notification_rows(response: Any) -> list[dict[str, Any]]:
+        payload = getattr(response, "data", None)
+        if isinstance(payload, dict):
+            return [payload]
+        if isinstance(payload, list):
+            return [row for row in payload if isinstance(row, dict)]
+        return []
+
+    def get_notification_preferences(self, profile_id: str) -> dict[str, Any] | None:
+        response = (
+            self.client.table("notification_preferences")
+            .select("*")
+            .eq("profile_id", profile_id)
+            .limit(1)
+            .execute()
+        )
+        rows = self._notification_rows(response)
+        return rows[0] if rows else None
+
+    def upsert_notification_preferences(
+        self, profile_id: str, fields: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        response = (
+            self.client.table("notification_preferences")
+            .upsert({"profile_id": profile_id, **fields}, on_conflict="profile_id")
+            .execute()
+        )
+        rows = self._notification_rows(response)
+        return rows[0] if rows else None
+
+    def record_notification_evaluation(
+        self, row: dict[str, Any], *, min_interval_seconds: int
+    ) -> dict[str, Any] | None:
+        response = self.client.rpc(
+            "record_notification_evaluation",
+            {
+                "p_profile_id": row["profile_id"],
+                "p_training_day": row["training_day"],
+                "p_intent": row["intent"],
+                "p_notification_type": row["notification_type"] or "",
+                "p_category": row["category"] or "",
+                "p_evaluated_at": row["evaluated_at"],
+                "p_scheduled_for": row["scheduled_for"],
+                "p_timing_source": row["timing_source"] or "",
+                "p_timing_confidence": row["timing_confidence"] or "",
+                "p_eligible": row["eligible"],
+                "p_decision": row["decision"],
+                "p_rejection_reasons": row["rejection_reasons"],
+                "p_priority": row["priority"],
+                "p_dedupe_key": row["dedupe_key"] or "",
+                "p_variant_id": row["variant_id"] or "",
+                "p_source_event_metadata": row["source_event_metadata"],
+                "p_resulting_delivery_id": row["resulting_delivery_id"],
+                "p_evaluation_key": row["evaluation_key"],
+                "p_min_interval_seconds": min_interval_seconds,
+            },
+        ).execute()
+        rows = self._notification_rows(response)
+        return rows[0] if rows else None
+
+    def list_notification_evaluations(
+        self, profile_id: str, training_day: str, *, intent: str | None = None
+    ) -> list[dict[str, Any]]:
+        query = (
+            self.client.table("notification_evaluations")
+            .select("*")
+            .eq("profile_id", profile_id)
+            .eq("training_day", training_day)
+        )
+        if intent:
+            query = query.eq("intent", intent)
+        response = query.order("last_evaluated_at", desc=True).limit(500).execute()
+        return self._notification_rows(response)
+
+    def has_notification_evaluation_decision(
+        self, profile_id: str, *, dedupe_key: str, decision: str
+    ) -> bool:
+        response = (
+            self.client.table("notification_evaluations")
+            .select("id")
+            .eq("profile_id", profile_id)
+            .eq("dedupe_key", dedupe_key)
+            .eq("decision", decision)
+            .limit(1)
+            .execute()
+        )
+        return bool(self._notification_rows(response))
+
+    def claim_notification_delivery(self, params: dict[str, Any], *, now_utc: datetime) -> Any:
+        """Claim through ``claim_notification_delivery_v2``; returns its raw payload.
+
+        ``now_utc`` is unused here: the database clock is authoritative.
+        """
+        response = self.client.rpc(
+            "claim_notification_delivery_v2",
+            {f"p_{key}": value for key, value in params.items()},
+        ).execute()
+        return getattr(response, "data", None)
+
+    def finalize_notification_delivery(
+        self,
+        delivery_id: str,
+        claim_token: str,
+        *,
+        status: str,
+        delivered_count: int,
+        error_code: str | None,
+    ) -> None:
+        self.client.rpc(
+            "finalize_notification_delivery",
+            {
+                "p_delivery_id": delivery_id,
+                "p_claim_token": claim_token,
+                "p_status": status,
+                "p_delivered_count": delivered_count,
+                "p_error_code": error_code,
+            },
+        ).execute()
+
+    def get_notification_simulation_state(
+        self,
+        profile_id: str,
+        *,
+        dedupe_keys: list[str],
+        training_days: list[str],
+        notification_classes: list[str],
+        action_keys: list[str],
+    ) -> dict[str, list[dict[str, Any]]]:
+        delivery_by_dedupe = self._notification_rows(
+            self.client.table("notification_deliveries")
+            .select("*")
+            .eq("profile_id", profile_id)
+            .in_("dedupe_key", dedupe_keys)
+            .execute()
+        )
+        active_deliveries = self._notification_rows(
+            self.client.table("notification_deliveries")
+            .select("*")
+            .eq("profile_id", profile_id)
+            .in_("training_day", training_days)
+            .in_("notification_class", notification_classes)
+            .in_("status", ["pending", "sent", "partial"])
+            .execute()
+        )
+        evaluations_by_dedupe = self._notification_rows(
+            self.client.table("notification_evaluations")
+            .select("*")
+            .eq("profile_id", profile_id)
+            .eq("decision", "would_select")
+            .in_("dedupe_key", dedupe_keys)
+            .execute()
+        )
+        active_evaluations = self._notification_rows(
+            self.client.table("notification_evaluations")
+            .select("*")
+            .eq("profile_id", profile_id)
+            .eq("decision", "would_select")
+            .in_("training_day", training_days)
+            .execute()
+        )
+        action_rows: list[dict[str, Any]] = []
+        if action_keys:
+            action_rows = self._notification_rows(
+                self.client.table("notification_action_states")
+                .select("profile_id,action_key,training_day")
+                .eq("profile_id", profile_id)
+                .in_("action_key", action_keys)
+                .in_("training_day", training_days)
+                .execute()
+            )
+        return {
+            "deliveries": [*delivery_by_dedupe, *active_deliveries],
+            "evaluations": [*evaluations_by_dedupe, *active_evaluations],
+            "action_rows": action_rows,
+        }
+
+    def invalidate_notification_action(
+        self,
+        profile_id: str,
+        *,
+        action_key: str,
+        training_day: str,
+        completed_at: datetime,
+        source_metadata: dict[str, Any],
+    ) -> int:
+        response = self.client.rpc(
+            "invalidate_notification_action",
+            {
+                "p_profile_id": profile_id,
+                "p_action_key": action_key,
+                "p_training_day": training_day,
+                "p_completed_at": completed_at.isoformat(),
+                "p_source_metadata": dict(source_metadata),
+            },
+        ).execute()
+        return int(getattr(response, "data", 0) or 0)
+
+    def list_notification_deliveries(
+        self,
+        profile_id: str,
+        *,
+        intent: str | None = None,
+        training_day: str | None = None,
+        limit: int = 20,
+    ) -> list[dict[str, Any]]:
+        query = self.client.table("notification_deliveries").select("*").eq("profile_id", profile_id)
+        if intent:
+            query = query.eq("intent", intent)
+        if training_day:
+            query = query.eq("training_day", training_day)
+        response = query.order("claimed_at", desc=True).limit(limit).execute()
+        return self._notification_rows(response)
+
+    def list_notification_templates(self, intent: str, *, locale: str) -> list[dict[str, Any]]:
+        response = (
+            self.client.table("notification_templates")
+            .select("*")
+            .eq("intent", intent)
+            .eq("locale", locale)
+            .eq("active", True)
+            .order("variant_id")
             .execute()
         )
         return getattr(response, "data", None) or []

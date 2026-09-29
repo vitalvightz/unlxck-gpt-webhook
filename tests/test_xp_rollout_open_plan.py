@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from support import xp_hardening_ready_payload
 import api.services.week_progress as week_progress
 
 
@@ -42,6 +43,9 @@ class _Store:
         limit: int = 500,
     ) -> list[dict[str, Any]]:
         return list(self.completions)
+
+    def validate_xp_abuse_hardening(self):
+        return xp_hardening_ready_payload()
 
     def award_xp(
         self,
