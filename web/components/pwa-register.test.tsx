@@ -44,55 +44,15 @@ function setMatchMedia(matches: boolean) {
 function renderInstallSurface(
   root: Root,
   environment?: string,
-  reloadPage?: () => void,
   variant?: "panel" | "inline",
 ) {
   root.render(
     <ToastProvider>
-      <PwaRegister environment={environment} reloadPage={reloadPage}>
+      <PwaRegister environment={environment}>
         <InstallUnlxck variant={variant} />
       </PwaRegister>
     </ToastProvider>,
   );
-}
-
-function mockServiceWorker() {
-  const originalDescriptor = Object.getOwnPropertyDescriptor(navigator, "serviceWorker");
-  const controllerChangeListeners = new Set<() => void>();
-  const postedMessages: unknown[] = [];
-  const waitingWorker = { postMessage: (message: unknown) => postedMessages.push(message) };
-  const registration = {
-    waiting: waitingWorker,
-    installing: null,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-  };
-  const serviceWorker = {
-    controller: {},
-    register: async () => registration,
-    addEventListener: (type: string, listener: () => void) => {
-      if (type === "controllerchange") controllerChangeListeners.add(listener);
-    },
-    removeEventListener: (type: string, listener: () => void) => {
-      if (type === "controllerchange") controllerChangeListeners.delete(listener);
-    },
-  };
-  Object.defineProperty(navigator, "serviceWorker", {
-    configurable: true,
-    value: serviceWorker,
-  });
-
-  return {
-    dispatchControllerChange: () => controllerChangeListeners.forEach((listener) => listener()),
-    postedMessages,
-    restore: () => {
-      if (originalDescriptor) {
-        Object.defineProperty(navigator, "serviceWorker", originalDescriptor);
-      } else {
-        Reflect.deleteProperty(navigator, "serviceWorker");
-      }
-    },
-  };
 }
 
 test("unsupported browsers do not see a misleading Settings install panel", async () => {
@@ -201,7 +161,7 @@ test("inline install variant on public pages opens the same iPhone guide", async
   });
   const { container, root } = mount();
   try {
-    await act(async () => renderInstallSurface(root, undefined, undefined, "inline"));
+    await act(async () => renderInstallSurface(root, undefined, "inline"));
     await settle();
     const strip = container.querySelector('[data-testid="install-unlxck-inline"]');
     assert.ok(strip);
@@ -277,82 +237,5 @@ test("a rejected native prompt hides the panel instead of inventing manual steps
     assert.equal(document.querySelector('[role="dialog"]'), null);
   } finally {
     cleanup(container, root);
-  }
-});
-
-test("waiting updates defer on critical routes and return with a Refresh action on safe routes", async () => {
-  setMatchMedia(false);
-  window.history.replaceState({}, "", "/generate");
-  const worker = mockServiceWorker();
-  const { container, root } = mount();
-  try {
-    await act(async () => renderInstallSurface(root, "production", () => {}));
-    await settle();
-    assert.doesNotMatch(container.textContent ?? "", /New version available/);
-    assert.deepEqual(worker.postedMessages, []);
-
-    window.history.pushState({}, "", "/dashboard");
-    await act(async () => window.dispatchEvent(new window.PopStateEvent("popstate")));
-    await settle();
-    assert.match(container.textContent ?? "", /New version available/);
-    assert.equal(container.querySelector<HTMLButtonElement>(".toast-action")?.textContent, "Refresh");
-  } finally {
-    cleanup(container, root);
-    worker.restore();
-  }
-});
-
-test("unsaved input hides an update action until navigation reaches a safe route", async () => {
-  setMatchMedia(false);
-  const worker = mockServiceWorker();
-  const { container, root } = mount();
-  try {
-    await act(async () => renderInstallSurface(root, "production", () => {}));
-    await settle();
-    assert.ok(container.querySelector(".toast-action"));
-
-    const input = document.createElement("input");
-    container.appendChild(input);
-    await act(async () => input.dispatchEvent(new window.Event("input", { bubbles: true })));
-    await settle();
-    assert.equal(container.querySelector(".toast-action"), null);
-
-    window.history.pushState({}, "", "/today");
-    await act(async () => window.dispatchEvent(new window.PopStateEvent("popstate")));
-    await settle();
-    assert.equal(container.querySelector<HTMLButtonElement>(".toast-action")?.textContent, "Refresh");
-  } finally {
-    cleanup(container, root);
-    worker.restore();
-  }
-});
-
-test("controller changes never reload automatically and explicit refresh reloads only once", async () => {
-  setMatchMedia(false);
-  const worker = mockServiceWorker();
-  let reloadCalls = 0;
-  const { container, root } = mount();
-  try {
-    await act(async () =>
-      renderInstallSurface(root, "production", () => {
-        reloadCalls += 1;
-      }),
-    );
-    await settle();
-
-    worker.dispatchControllerChange();
-    assert.equal(reloadCalls, 0);
-
-    const refresh = container.querySelector<HTMLButtonElement>(".toast-action");
-    assert.ok(refresh);
-    await act(async () => refresh.click());
-    assert.deepEqual(worker.postedMessages, [{ type: "SKIP_WAITING" }]);
-
-    worker.dispatchControllerChange();
-    worker.dispatchControllerChange();
-    assert.equal(reloadCalls, 1);
-  } finally {
-    cleanup(container, root);
-    worker.restore();
   }
 });

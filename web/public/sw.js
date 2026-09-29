@@ -43,12 +43,6 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-self.addEventListener("message", (event) => {
-  if (event.data?.type === "SKIP_WAITING") {
-    self.skipWaiting();
-  }
-});
-
 async function networkFirstNavigation(request) {
   try {
     return await fetch(request);
