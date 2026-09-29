@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 
 import {
+  compactTimeUnits,
   classifySessionlessDay,
   isZeroLoadSupportSession,
   normalizeForDedupe,
@@ -341,8 +342,14 @@ function useBlockPrescription(block: StructuredBlock, sourceCountdown?: string |
   const title = cleanText(block.display_name) || "Block";
   const sourceOverrides = getSourcePrescriptionRangeOverrides(sourceText, title, sourceCountdown);
   const load = formatBlockLoad(block.load);
-  const metrics = applySourceSetRange(selectBlockMetric(block), sourceOverrides.sets);
-  const rest = sourceOverrides.rest || (shouldShowRest(block.rest) ? formatMeasured(block.rest) : null);
+  // Times read short ("2 min", "90 sec") so a row of stats fits a phone; the
+  // value itself never changes (see compactTimeUnits).
+  const metrics = applySourceSetRange(selectBlockMetric(block), sourceOverrides.sets).map((metric) => ({
+    ...metric,
+    value: compactTimeUnits(metric.value),
+  }));
+  const restText = sourceOverrides.rest || (shouldShowRest(block.rest) ? formatMeasured(block.rest) : null);
+  const rest = restText ? compactTimeUnits(restText) : null;
   const effort = sourceOverrides.effort || formatEffort(block);
   const { stopRules } = getBlockAdjustmentDisplay(block);
   const sourceStopRule = getSourceStopRuleOverride(sourceText, title, sourceCountdown);
@@ -418,22 +425,32 @@ export function BlockCard({
   ];
 
   const tagLabel = blockType ? blockTagLabel(block, rehabLabelPolicy) : null;
+  const statCount = metrics.length + [load, rest, effort].filter(Boolean).length;
+  const asides = [
+    ...(substitutions.length > 0 ? [{ label: "Swaps", text: substitutions.join(", "), glossary: false }] : []),
+    ...(regressions.length > 0 ? [{ label: "Easier", text: regressions.join(", "), glossary: false }] : []),
+    // "Stop rule" is glossed; "Progress" reads plainly on its own.
+    ...adjustmentRules.map((rule) => ({ ...rule, glossary: true })),
+  ];
 
   return (
     <div className={embedded ? "sp-block sp-block-embedded" : "sp-block"}>
-      <div className="sp-block-head">
-        {embedded ? null : <span className="sp-block-title">{title}</span>}
-        {tagLabel ? (
-          <span className="sp-tag">
-            {tagLabel}
-            {/* Silent for ordinary types (Strength, Conditioning); only the
-                Rehab/Prehab/Mobility tags carry a definition. */}
-            <GlossaryTooltip term={tagLabel} />
-          </span>
-        ) : null}
-      </div>
-      {metrics.length > 0 || load || rest || effort ? (
-        <div className="sp-block-stats">
+      {/* Embedded, the exercise row's header already carries the name and type. */}
+      {embedded ? null : (
+        <div className="sp-block-head">
+          <span className="sp-block-title">{title}</span>
+          {tagLabel ? (
+            <span className="sp-tag">
+              {tagLabel}
+              {/* Silent for ordinary types (Strength, Conditioning); only the
+                  Rehab/Prehab/Mobility tags carry a definition. */}
+              <GlossaryTooltip term={tagLabel} />
+            </span>
+          ) : null}
+        </div>
+      )}
+      {statCount > 0 ? (
+        <div className="sp-block-stats" data-count={statCount}>
           {metrics.map((metric) => (
             <span key={metric.label} className="sp-stat">
               <span className="sp-stat-head">
@@ -486,26 +503,21 @@ export function BlockCard({
           ))}
         </ul>
       ) : null}
-      {substitutions.length > 0 ? (
-        <p className="sp-block-aside">
-          <span className="sp-stat-label">Swaps</span>
-          {substitutions.join(", ")}
-        </p>
+      {asides.length > 0 ? (
+        <div className="sp-block-asides">
+          {asides.map((aside) => (
+            <p
+              key={`${aside.label}:${aside.text}`}
+              className="sp-block-aside"
+              data-kind={aside.label === "Stop rule" ? "stop" : undefined}
+            >
+              <span className="sp-stat-label">{aside.label}</span>
+              {aside.glossary ? <GlossaryTooltip term={aside.label} /> : null}
+              {aside.text}
+            </p>
+          ))}
+        </div>
       ) : null}
-      {regressions.length > 0 ? (
-        <p className="sp-block-aside">
-          <span className="sp-stat-label">Easier</span>
-          {regressions.join(", ")}
-        </p>
-      ) : null}
-      {adjustmentRules.map((rule) => (
-        <p key={`${rule.label}:${rule.text}`} className="sp-block-aside">
-          <span className="sp-stat-label">{rule.label}</span>
-          {/* "Stop rule" is glossed; "Progress" reads plainly on its own. */}
-          <GlossaryTooltip term={rule.label} />
-          {rule.text}
-        </p>
-      ))}
     </div>
   );
 }
@@ -545,8 +557,11 @@ export function ExerciseRow({
   sourceCountdown?: string | null;
 }) {
   const bodyId = useId();
+  const rehabLabelPolicy = useContext(RehabLabelContext);
   const prescription = useBlockPrescription(block, sourceCountdown);
   const { title, compactStopRule } = prescription;
+  const blockType = cleanText(block.block_type);
+  const tagLabel = blockType ? blockTagLabel(block, rehabLabelPolicy) : null;
   const media = useExerciseMedia(block.display_name);
   const summary = exerciseRowSummary(block, prescription);
   const builds = athleteFacingRationale(block.purpose);
@@ -559,16 +574,58 @@ export function ExerciseRow({
 
   return (
     <div className="ex-row" data-open={open ? "true" : "false"}>
-      <button
-        type="button"
-        className="ex-row-head"
-        aria-expanded={open}
-        aria-controls={bodyId}
-        onClick={onToggle}
-      >
-        <span className={media ? "ex-row-thumb ex-row-thumb-video" : "ex-row-thumb"} aria-hidden="true">
-          {media ? (
-            // eslint-disable-next-line @next/next/no-img-element -- remote YouTube thumbnail, not a local asset
+      {/* The toggle covers the whole header through its ::after, so the row
+          stays one big tap target while the type's glossary "i" (a button of
+          its own) can sit in the header without nesting inside it. */}
+      <div className="ex-row-head">
+        <span className="ex-row-text">
+          <button
+            type="button"
+            className="ex-row-toggle"
+            aria-expanded={open}
+            aria-controls={bodyId}
+            onClick={onToggle}
+          >
+            <span className="ex-row-title">{title}</span>
+            {media ? <span className="sr-only"> Has demo video.</span> : null}
+          </button>
+          {tagLabel || summary ? (
+            <span className="ex-row-meta">
+              {tagLabel ? (
+                <span className="ex-row-type">
+                  {tagLabel}
+                  {/* Only Rehab/Prehab/Mobility carry a definition. */}
+                  <GlossaryTooltip term={tagLabel} />
+                </span>
+              ) : null}
+              {summary ? (
+                <span className="ex-row-summary">
+                  {/* Each part stays whole ("RPE 7", never "RPE / 7"); lines
+                      break only at the separators. */}
+                  {summary.split(" · ").map((part, index) => (
+                    <span key={`${index}:${part}`} className="ex-row-summary-part">
+                      {index > 0 ? " · " : null}
+                      <span>{part}</span>
+                    </span>
+                  ))}
+                </span>
+              ) : null}
+            </span>
+          ) : null}
+          {/* Stop criteria are safety instructions: never hidden behind the tap.
+              Collapsed, the row carries it; open, the full card below does. */}
+          {!open && compactStopRule ? (
+            <span className="ex-row-stop">
+              <span className="sp-stat-label">Stop rule</span>
+              {compactStopRule}
+            </span>
+          ) : null}
+        </span>
+        {/* Collapsed rows show which exercises have a demo; open, the demo
+            itself is right below. On the right so every title lines up. */}
+        {media && !open ? (
+          <span className="ex-row-thumb" aria-hidden="true">
+            {/* eslint-disable-next-line @next/next/no-img-element -- remote YouTube thumbnail, not a local asset */}
             <img
               src={demoThumbnailUrl(media.video_id, "mq")}
               alt=""
@@ -579,24 +636,11 @@ export function ExerciseRow({
                 event.currentTarget.style.display = "none";
               }}
             />
-          ) : null}
-          {media ? <span className="ex-demo-play-glyph ex-demo-play-glyph-sm" /> : null}
-        </span>
-        <span className="ex-row-text">
-          <span className="ex-row-title">{title}</span>
-          {summary ? <span className="ex-row-summary">{summary}</span> : null}
-          {/* Stop criteria are safety instructions: never hidden behind the tap.
-              Collapsed, the row carries it; open, the full card below does. */}
-          {!open && compactStopRule ? (
-            <span className="ex-row-stop">
-              <span className="sp-stat-label">Stop rule</span>
-              {compactStopRule}
-            </span>
-          ) : null}
-        </span>
-        {media ? <span className="sr-only">Has demo video.</span> : null}
+            <span className="ex-demo-play-glyph ex-demo-play-glyph-sm" />
+          </span>
+        ) : null}
         <span className="ex-row-chevron" aria-hidden="true" />
-      </button>
+      </div>
       {open ? (
         <div id={bodyId} className="ex-row-body">
           {media ? (
