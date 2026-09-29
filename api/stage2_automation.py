@@ -20,6 +20,7 @@ from fightcamp.stage2_policy import (
     admin_review_blocking_findings,
     apply_stage2_release_policy,
     athlete_release_with_flags_findings,
+    stage1_fallback_status,
 )
 from fightcamp.stage2_repair import (
     conditioning_render_repair_integrity_findings,
@@ -53,7 +54,8 @@ _STAGE2_PASS = "stage2_pass"
 _STAGE2_FAILED = "stage2_failed"
 # Legacy audit value retained for compatibility with historical rows/tests.
 # New generations must never publish Stage 1 after a technical Stage 2 failure.
-STAGE2_STAGE1_FALLBACK = "stage2_failed_stage1_fallback"
+# The plan viewer still recognises it on old plans (shared/stage2-policy.json).
+STAGE2_STAGE1_FALLBACK = stage1_fallback_status()
 # Legacy report key retained for compatibility with historical rows/tests.
 STAGE2_FALLBACK_REPORT_KEY = "stage2_fallback"
 

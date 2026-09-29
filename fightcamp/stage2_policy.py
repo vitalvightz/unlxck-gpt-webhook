@@ -64,6 +64,14 @@ def __getattr__(name: str) -> Any:
     raise AttributeError(f"module {__name__} has no attribute {name}")
 
 
+def stage1_fallback_status() -> str:
+    """The legacy stage2_status of a plan released as its Stage 1 draft."""
+    value = _load_stage2_policy().get("stage1_fallback_status")
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("stage2 policy stage1_fallback_status must be a non-empty string")
+    return value
+
+
 def is_hard_stage2_blocker(code: str) -> bool:
     """Historical diagnostic classification; it no longer vetoes release."""
     return str(code or "").strip() in _code_set("hard_stage2_blocker_codes")

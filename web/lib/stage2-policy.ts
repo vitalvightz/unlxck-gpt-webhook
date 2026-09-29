@@ -1,6 +1,7 @@
 import stage2Policy from "../../shared/stage2-policy.json" with { type: "json" };
 
 type Stage2Policy = {
+  stage1_fallback_status: string;
   hard_stage2_blocker_codes: string[];
   athlete_release_with_flags_codes: string[];
   admin_review_blocking_codes: string[];
@@ -9,6 +10,9 @@ type Stage2Policy = {
 
 const policy = stage2Policy as Stage2Policy;
 
+// Legacy stage2_status of a plan released as its Stage 1 draft (the AI finalizer
+// never returned a usable plan). Such a plan IS released to the athlete.
+export const STAGE2_STAGE1_FALLBACK_STATUS = policy.stage1_fallback_status;
 export const HARD_STAGE2_BLOCKER_CODES = policy.hard_stage2_blocker_codes;
 export const STAGE2_HARD_BLOCKER_CODE_SET = new Set(HARD_STAGE2_BLOCKER_CODES);
 export const ATHLETE_RELEASE_WITH_FLAGS_CODES = policy.athlete_release_with_flags_codes;

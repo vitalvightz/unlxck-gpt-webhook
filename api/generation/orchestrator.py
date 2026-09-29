@@ -32,6 +32,7 @@ from ..services.rehab_stage_snapshot import annotate_payload_with_rehab_stage
 from ..services.sparring_readiness_snapshot import annotate_payload_with_sparring_readiness
 from ..models import (
     PROFILE_REFRESH_FAILED_WARNING as _PROFILE_REFRESH_FAILED_WARNING,
+    PROFILE_REFRESH_FAILED_WARNING_CODE as _PROFILE_REFRESH_FAILED_WARNING_CODE,
     PROFILE_REFRESH_FAILED_WHY_LOG_KEY as _PROFILE_REFRESH_FAILED_WHY_LOG_KEY,
     ProfileUpdateRequest,
 )
@@ -497,7 +498,7 @@ async def run_generation_job(
                 failed=True,
             )
             _emit_milestone(
-                "profile_refresh_failed_warning",
+                _PROFILE_REFRESH_FAILED_WARNING_CODE,
                 "Job warning",
                 _PROFILE_REFRESH_FAILED_WARNING,
                 warning=True,

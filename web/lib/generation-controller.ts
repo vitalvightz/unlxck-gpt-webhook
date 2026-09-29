@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import apiMessages from "../../shared/api-messages.json";
+
 import { ApiError, getGenerationJob, isRetryableApiFailure, retryGenerationJob } from "@/lib/api";
 import {
   classifyGenerationFailure,
@@ -91,12 +93,12 @@ type GenerationControllerOptions = {
 
 // Stable machine-readable code the backend attaches to the 409 raised when
 // another tab/device beat us to the active-job slot. Branching on the code
-// keeps recovery working even if the human-readable copy is reworded.
-const GENERATION_ALREADY_IN_FLIGHT_CODE = "generation_already_in_flight";
+// keeps recovery working even if the human-readable copy is reworded. Both
+// come from shared/api-messages.json, which api/errors.py reads too.
+const GENERATION_ALREADY_IN_FLIGHT_CODE: string = apiMessages.generation_already_in_flight.code;
 // Legacy fallback: older backends (and any response that loses the code field)
 // only carry the detail string, surfaced verbatim through ApiError.message.
-const GENERATION_ALREADY_IN_FLIGHT_ERROR_SNIPPET =
-  "A generation job is already queued or running for this account.";
+const GENERATION_ALREADY_IN_FLIGHT_ERROR_SNIPPET: string = apiMessages.generation_already_in_flight.message;
 
 export function isGenerationAlreadyInFlightError(error: unknown): boolean {
   if (error instanceof ApiError && error.code === GENERATION_ALREADY_IN_FLIGHT_CODE) {

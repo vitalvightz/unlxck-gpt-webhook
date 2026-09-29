@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from api.contracts.command_view import CommandView, session_is_today
+from api.contracts.training_day import DAY_ROLLOVER_HOUR
 from api.notification_models import NotificationPreferences
 from api.services.notification_foundation import (
     NotificationCandidate,
@@ -25,7 +26,7 @@ SESSION_REMINDER_LEAD = timedelta(minutes=30)
 SESSION_REMINDER_GRACE = timedelta(minutes=15)
 STOP_WINDOW_START_HOUR = 7
 STOP_WINDOW_END_HOUR = 22
-TRAINING_DAY_ROLLOVER_HOUR = 3
+TRAINING_DAY_ROLLOVER_HOUR = DAY_ROLLOVER_HOUR
 
 
 @dataclass(frozen=True)

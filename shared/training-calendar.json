@@ -1,0 +1,12 @@
+{
+  "day_rollover_hour": 3,
+  "support_session_types": ["recovery", "rehab"],
+  "support_block_types": [
+    "preparation",
+    "mobility_activation",
+    "cooldown_recovery",
+    "mindset",
+    "nutrition",
+    "rehab"
+  ]
+}

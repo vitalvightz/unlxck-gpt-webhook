@@ -1,0 +1,241 @@
+{
+  "description": "The day's primary session: _select_structured_primary_session (api/services/today_service.py) and primarySessionOf (web/lib/camp-map.ts).",
+  "cases": [
+    {
+      "sessions": [
+        {
+          "title": "strength_power session",
+          "session_type": "strength_power",
+          "blocks": [
+            {
+              "block_type": "main_strength",
+              "display_name": "main_strength"
+            }
+          ]
+        }
+      ],
+      "expected_index": 0
+    },
+    {
+      "sessions": [
+        {
+          "title": "recovery session",
+          "session_type": "recovery",
+          "blocks": [
+            {
+              "block_type": "breathing",
+              "display_name": "breathing"
+            }
+          ]
+        },
+        {
+          "title": "strength_power session",
+          "session_type": "strength_power",
+          "blocks": [
+            {
+              "block_type": "main_strength",
+              "display_name": "main_strength"
+            }
+          ]
+        }
+      ],
+      "expected_index": 1
+    },
+    {
+      "sessions": [
+        {
+          "title": "untyped session",
+          "blocks": [
+            {
+              "block_type": "preparation",
+              "display_name": "preparation"
+            },
+            {
+              "block_type": "mobility_activation",
+              "display_name": "mobility_activation"
+            }
+          ]
+        },
+        {
+          "title": "conditioning session",
+          "session_type": "conditioning",
+          "blocks": [
+            {
+              "block_type": "intervals",
+              "display_name": "intervals"
+            }
+          ]
+        }
+      ],
+      "expected_index": 1
+    },
+    {
+      "sessions": [
+        {
+          "title": "rehab session",
+          "session_type": "rehab",
+          "blocks": [
+            {
+              "block_type": "rehab",
+              "display_name": "rehab"
+            }
+          ]
+        },
+        {
+          "title": "recovery session",
+          "session_type": "recovery",
+          "blocks": [
+            {
+              "block_type": "cooldown_recovery",
+              "display_name": "cooldown_recovery"
+            }
+          ]
+        }
+      ],
+      "expected_index": 0
+    },
+    {
+      "sessions": [
+        {
+          "title": "strength_power session",
+          "session_type": "strength_power",
+          "blocks": []
+        },
+        {
+          "title": "recovery session",
+          "session_type": "recovery",
+          "blocks": [
+            {
+              "block_type": "cooldown_recovery",
+              "display_name": "cooldown_recovery"
+            }
+          ]
+        }
+      ],
+      "expected_index": 1
+    },
+    {
+      "sessions": [
+        {
+          "title": "strength_power session",
+          "session_type": "strength_power",
+          "blocks": []
+        },
+        {
+          "title": "conditioning session",
+          "session_type": "conditioning",
+          "blocks": []
+        }
+      ],
+      "expected_index": 0
+    },
+    {
+      "sessions": [
+        {
+          "title": " Recovery  session",
+          "session_type": " Recovery ",
+          "blocks": [
+            {
+              "block_type": "main_strength",
+              "display_name": "main_strength"
+            }
+          ]
+        },
+        {
+          "title": "strength_power session",
+          "session_type": "strength_power",
+          "blocks": [
+            {
+              "block_type": "main_strength",
+              "display_name": "main_strength"
+            }
+          ]
+        }
+      ],
+      "expected_index": 1
+    },
+    {
+      "sessions": [
+        {
+          "title": "technical session",
+          "session_type": "technical",
+          "blocks": [
+            {
+              "block_type": "preparation",
+              "display_name": "preparation"
+            },
+            {
+              "block_type": "mindset",
+              "display_name": "mindset"
+            }
+          ]
+        },
+        {
+          "title": "technical session",
+          "session_type": "technical",
+          "blocks": [
+            {
+              "block_type": "preparation",
+              "display_name": "preparation"
+            },
+            {
+              "block_type": "drills",
+              "display_name": "drills"
+            }
+          ]
+        }
+      ],
+      "expected_index": 1
+    },
+    {
+      "sessions": [
+        {
+          "title": "strength_power session",
+          "session_type": "strength_power",
+          "blocks": [
+            {
+              "block_type": "PREPARATION",
+              "display_name": "PREPARATION"
+            }
+          ]
+        },
+        {
+          "title": "sparring session",
+          "session_type": "sparring",
+          "blocks": [
+            {
+              "block_type": "rounds",
+              "display_name": "rounds"
+            }
+          ]
+        }
+      ],
+      "expected_index": 1
+    },
+    {
+      "sessions": [
+        {
+          "title": "mindset session",
+          "session_type": "mindset",
+          "blocks": [
+            {
+              "block_type": "mindset",
+              "display_name": "mindset"
+            }
+          ]
+        },
+        {
+          "title": "nutrition session",
+          "session_type": "nutrition",
+          "blocks": [
+            {
+              "block_type": "nutrition",
+              "display_name": "nutrition"
+            }
+          ]
+        }
+      ],
+      "expected_index": 0
+    }
+  ]
+}

@@ -14,11 +14,13 @@ from __future__ import annotations
 
 from fastapi import HTTPException, status
 
+from shared.contracts import shared_message
+
 # Emitted whenever a new generation job is blocked because an existing job for
 # the same athlete is still queued or running (typically a second tab/device).
-GENERATION_ALREADY_IN_FLIGHT_CODE = "generation_already_in_flight"
-GENERATION_ALREADY_IN_FLIGHT_MESSAGE = (
-    "A generation job is already queued or running for this account."
+# The web client recovers on this code (shared/api-messages.json).
+GENERATION_ALREADY_IN_FLIGHT_CODE, GENERATION_ALREADY_IN_FLIGHT_MESSAGE = shared_message(
+    "generation_already_in_flight"
 )
 CLIENT_REQUEST_ID_PAYLOAD_MISMATCH_CODE = "client_request_id_payload_mismatch"
 CLIENT_REQUEST_ID_PAYLOAD_MISMATCH_MESSAGE = (

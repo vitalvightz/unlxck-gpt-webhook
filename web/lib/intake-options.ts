@@ -1,3 +1,5 @@
+import equipmentAliases from "../../shared/equipment-aliases.json";
+
 export type IntakeOption = {
   label: string;
   value: string;
@@ -201,21 +203,14 @@ const LEGACY_OPTION_LABELS: Record<string, string> = {
  * "Pads / Mitts" still carry these, and `retainKnownOptionValues` would
  * otherwise drop them as unknown the first time such a profile is re-saved.
  *
- * This mirrors the pad aliases in `fightcamp/training_context.py`; the backend
- * remains the authority for eligibility, this only keeps the form honest about
- * what the athlete already told us.
+ * The spellings come from shared/equipment-aliases.json, the list
+ * `fightcamp/training_context.py` normalizes to `pads`; the backend remains the
+ * authority for eligibility, this only keeps the form honest about what the
+ * athlete already told us.
  */
-export const LEGACY_EQUIPMENT_ALIASES: Record<string, string> = {
-  thai_pads: "pads",
-  thai_pad: "pads",
-  focus_mitts: "pads",
-  focus_mitt: "pads",
-  partner_mitts: "pads",
-  partner_mitt: "pads",
-  boxing_mitts: "pads",
-  punch_mitts: "pads",
-  mitts: "pads",
-};
+export const LEGACY_EQUIPMENT_ALIASES: Record<string, string> = Object.fromEntries(
+  equipmentAliases.pads.aliases.map((alias) => [alias, equipmentAliases.pads.canonical]),
+);
 
 /** Map legacy equipment values onto their canonical option value, deduped. */
 export function canonicalizeEquipmentAccessValues(values: string[] | undefined): string[] {

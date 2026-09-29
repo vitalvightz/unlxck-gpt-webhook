@@ -19,13 +19,19 @@ RUN useradd --create-home --uid 10001 appuser \
 
 COPY --chown=appuser:appuser . .
 
-# Fail the backend image build if a neutral shared contract (XP ladder,
-# compliance policy) is missing, malformed or no longer importable from the
-# deployed /app layout.
+# Fail the backend image build if a neutral shared contract (shared/*.json,
+# also read by the web app) is missing, malformed or no longer importable from
+# the deployed /app layout. Each consumer validates its contract at import.
 RUN test -f /app/shared/xp-levels.json \
     && test -f /app/shared/compliance-policy.json \
+    && test -f /app/shared/stage2-policy.json \
+    && test -f /app/shared/performance-focus-policy.json \
+    && test -f /app/shared/training-calendar.json \
+    && test -f /app/shared/api-messages.json \
+    && test -f /app/shared/equipment-aliases.json \
     && python -c "from api.xp_levels import XP_LEVELS; assert XP_LEVELS[-1] == (8, 'Champion', 10000)" \
-    && python -c "import api.compliance"
+    && python -c "import api.compliance, api.performance_focus, api.contracts.training_day, api.errors, api.models" \
+    && python -c "import fightcamp.session_sequencing, fightcamp.training_context; from fightcamp.stage2_policy import stage1_fallback_status; stage1_fallback_status()"
 
 USER appuser
 
