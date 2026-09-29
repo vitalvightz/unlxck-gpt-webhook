@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
@@ -299,6 +299,7 @@ function QuickBuildFormInner() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [showErrors, setShowErrors] = useState(false);
+  const equipmentDetailsRef = useRef<HTMLDetailsElement>(null);
   const [isPending, startTransition] = useTransition();
   const healthConsentGranted = hasHealthDataConsent(me);
 
@@ -800,6 +801,12 @@ function QuickBuildFormInner() {
     showErrors ? errors[key] : undefined;
   const submitErrorId = "quick-build-submit-feedback";
 
+  useEffect(() => {
+    if (showErrors && errors.equipment_access && equipmentDetailsRef.current) {
+      equipmentDetailsRef.current.open = true;
+    }
+  }, [showErrors, errors.equipment_access]);
+
   return (
     <form onSubmit={handleSubmit} className="onboarding-form quick-build-form">
       <section className="hero-panel">
@@ -1056,7 +1063,7 @@ function QuickBuildFormInner() {
           activeKey={activeEquipmentPreset}
           onSelect={handleEquipmentPresetSelect}
         />
-        <details className="quick-build-equipment-details" open={Boolean(visibleError("equipment_access"))}>
+        <details ref={equipmentDetailsRef} className="quick-build-equipment-details">
           <summary>Fine-tune equipment <span>{input.equipment_access.length} selected</span></summary>
           <EquipmentSelector
             selectedValues={input.equipment_access}
