@@ -392,12 +392,12 @@ test("coach contact alongside an app physical session is not double-counted", ()
   assert.deepEqual(dayCompletion(day), { done: 0, total: 1 });
 });
 
-test("the App completed row stays app-only while the week badge counts combat", () => {
+test("app completion excludes coach-owned sessions from the broader week count", () => {
   const week = getWeeks(productionPlan).find((entry) =>
     getDays(entry).some((day) => day.countdown_label === "D-4"),
   );
 
-  // Week badge / day tag: training sessions, coach-owned combat included.
+  // The default training-session count still includes coach-owned combat.
   assert.equal(weekCompletion(week).total, weekCompletion(week, undefined, {}).total);
   // "App completed": app work only, so the coach-led D-4 is not in it.
   assert.equal(

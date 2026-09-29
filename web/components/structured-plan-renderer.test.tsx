@@ -1887,6 +1887,7 @@ test("week overview separates app sessions, coach-led days, and app completion",
   assert.equal(html.includes("App sessions</span>2"), true);
   assert.equal(html.includes("Coach/gym days</span>3"), true);
   assert.equal(html.includes("App completed</span>1/2"), true);
+  assert.equal(html.includes("1/2 app"), true);
   assert.equal(html.includes("Load</span>"), false);
   assert.equal(html.includes("Training days</span>"), false);
   assert.equal(html.includes("Plan sessions</span>"), false);
