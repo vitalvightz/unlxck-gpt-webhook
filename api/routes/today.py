@@ -26,7 +26,6 @@ from api.models import (
     RehabResponseRequest,
     RehabResponseResult,
     SessionCompletionHistoryResponse,
-    SessionCompletionRecordResponse,
     SessionCompletionRequest,
     SessionCompletionResponse,
     SparringLogRecord,
