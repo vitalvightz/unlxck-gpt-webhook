@@ -19670,8 +19670,14 @@ html[data-theme="light"] .loading-operational-item {
 }
 .ex-demo-frame {
   position: relative;
-  aspect-ratio: 16 / 9;
-  /* YouTube's minimum player size: a 16:9 frame on a 320px phone is ~180px. */
+  /* 16:9 via padding (a percentage of the parent's width), with YouTube's
+     200px minimum player height. Not aspect-ratio: combined with min-height it
+     gives the frame a 356px minimum width, and a grid or flex parent then
+     widens the page past a 320px phone. Here the width comes from the parent
+     only, and the frame is at least 200px tall. */
+  box-sizing: border-box;
+  height: 0;
+  padding-top: 56.25%;
   min-height: 200px;
   border-radius: 12px;
   overflow: hidden;
@@ -19738,6 +19744,9 @@ html[data-theme="light"] .loading-operational-item {
   align-items: center;
   gap: 8px;
   min-width: 0;
+  /* The unwrapped caption text must not set the card's minimum width: the
+     line takes its width from the frame above and the meta text ellipsizes. */
+  contain: inline-size;
   margin-top: 6px;
   color: var(--text-muted);
   font-size: 0.72rem;
