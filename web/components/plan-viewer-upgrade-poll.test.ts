@@ -254,6 +254,40 @@ test("a return that is hidden again before its check keeps the window open", asy
   stop();
 });
 
+test("a tab hidden again while the return check is out keeps the window open", async (t) => {
+  t.mock.timers.enable({ apis: ["setInterval", "setTimeout"] });
+  const { doc, setVisibility } = fakeDocument();
+  const events: string[] = [];
+  const { poll, finish } = controlledPoll(events);
+  const stop = startStructuredPlanUpgradePoll({
+    poll,
+    onWindowExpired: () => {
+      events.push("expired");
+    },
+    intervalMs: INTERVAL,
+    windowMs: WINDOW,
+    fetchTimeoutMs: FETCH_TIMEOUT,
+    doc,
+  });
+
+  setVisibility("hidden");
+  t.mock.timers.tick(WINDOW * 2);
+  setVisibility("visible");
+  await flush();
+  setVisibility("hidden");
+  finish(1);
+  await flush();
+  // The check's fetch finished while hidden, so the window stays open.
+  assert.deepEqual(events, ["start 1", "end 1"]);
+
+  setVisibility("visible");
+  await flush();
+  finish(2);
+  await flush();
+  assert.deepEqual(events, ["start 1", "end 1", "start 2", "end 2", "expired"]);
+  stop();
+});
+
 test("with overlapping returns only the latest return's check closes the window", async (t) => {
   t.mock.timers.enable({ apis: ["setInterval", "setTimeout"] });
   const { doc, setVisibility } = fakeDocument();

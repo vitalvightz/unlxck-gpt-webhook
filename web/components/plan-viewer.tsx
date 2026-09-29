@@ -347,7 +347,8 @@ export function startStructuredPlanUpgradePoll(params: {
     }
     // A fetch started since the earlier one settled began after the return.
     await (inFlight ?? startFetch());
-    return true;
+    // Hidden again before it finished: the next return's check closes the window.
+    return !stopped && isVisible();
   };
   let returns = 0;
   const handleVisibilityChange = () => {
