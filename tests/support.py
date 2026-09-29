@@ -45,6 +45,10 @@ from api.store import _signup_date_of_birth, _generation_hard_max_runtime_second
 from api.store import RehabExposureWindow
 from api.xp import XP_CALENDAR_SCOPED_ACTIONS, XP_REWARD_AMOUNTS, XpAction
 from api.services.xp_awards import XP_ABUSE_HARDENING_VERSION
+from api.services.notification_foundation import (
+    NOTIFICATION_MAX_ATTEMPTS,
+    NOTIFICATION_STALE_CLAIM_AFTER,
+)
 from datetime import timedelta
 
 os.environ.setdefault("APP_GENERATION_SCHEDULER", "fastapi")
@@ -124,7 +128,273 @@ class FakeAuthService:
         return user
 
 
-class FakeStore:
+class InMemoryNotificationLedger:
+    """In-memory notification ledger for test stores (see api/store.py).
+
+    Mirrors the durable tables and RPCs production uses: preferences, the
+    coalescing evaluation ledger, the delivery claim ledger (dedupe, retry,
+    daily cap, spacing, completed-action suppression) and action states. This
+    lived inside api/services/notification_foundation.py as a fallback for
+    client-less stores; it is test infrastructure, so it lives here now, with
+    state kept per store instance.
+    """
+
+    def _notification_ledger(self) -> dict:
+        state = self.__dict__.get("_notification_ledger_state")
+        if state is None:
+            state = {"preferences": {}, "deliveries": {}, "evaluations": {}, "actions": set()}
+            self.__dict__["_notification_ledger_state"] = state
+        return state
+
+    def get_notification_preferences(self, profile_id: str) -> dict | None:
+        row = self._notification_ledger()["preferences"].get(profile_id)
+        return dict(row) if row is not None else None
+
+    def upsert_notification_preferences(self, profile_id: str, fields: dict) -> dict:
+        self._notification_ledger()["preferences"][profile_id] = dict(fields)
+        return dict(fields)
+
+    def record_notification_evaluation(self, row: dict, *, min_interval_seconds: int) -> dict:
+        bucket = self._notification_ledger()["evaluations"]
+        key = (row["profile_id"], row["evaluation_key"])
+        reference = _notification_datetime(row["evaluated_at"])
+        existing = bucket.get(key)
+        if existing is not None:
+            last_evaluated = _notification_datetime(existing.get("last_evaluated_at"))
+            if (
+                min_interval_seconds > 0
+                and last_evaluated is not None
+                and reference - last_evaluated < timedelta(seconds=min_interval_seconds)
+            ):
+                return dict(existing)
+            existing["evaluated_at"] = row["evaluated_at"]
+            existing["last_evaluated_at"] = row["evaluated_at"]
+            existing["evaluation_count"] = int(existing.get("evaluation_count") or 0) + 1
+            existing["eligible"] = row["eligible"]
+            existing["decision"] = row["decision"]
+            existing["rejection_reasons"] = list(row["rejection_reasons"])
+            if row.get("resulting_delivery_id"):
+                existing["resulting_delivery_id"] = row["resulting_delivery_id"]
+            return dict(existing)
+        stored = {**row, "id": str(uuid4())}
+        bucket[key] = stored
+        return dict(stored)
+
+    def list_notification_evaluations(
+        self, profile_id: str, training_day: str, *, intent: str | None = None
+    ) -> list[dict]:
+        rows = [
+            dict(row)
+            for (row_profile_id, _), row in self._notification_ledger()["evaluations"].items()
+            if row_profile_id == profile_id
+            and str(row.get("training_day") or "") == training_day
+            and (not intent or str(row.get("intent") or "") == intent)
+        ]
+        return sorted(rows, key=lambda row: str(row.get("last_evaluated_at") or ""), reverse=True)
+
+    def has_notification_evaluation_decision(
+        self, profile_id: str, *, dedupe_key: str, decision: str
+    ) -> bool:
+        return any(
+            row_profile_id == profile_id
+            and str(row.get("dedupe_key") or "") == dedupe_key
+            and str(row.get("decision") or "") == decision
+            for (row_profile_id, _), row in self._notification_ledger()["evaluations"].items()
+        )
+
+    def claim_notification_delivery(self, params: dict, *, now_utc: datetime) -> dict:
+        """Same decisions as claim_notification_delivery_v2, in its payload shape."""
+        ledger = self._notification_ledger()
+        bucket = ledger["deliveries"]
+        key = (params["profile_id"], params["dedupe_key"])
+        row = bucket.get(key)
+        now = now_utc.astimezone(timezone.utc)
+        training_day = params["training_day"]
+        action_key = str(params.get("action_key") or "")
+        if action_key and (params["profile_id"], action_key, training_day) in ledger["actions"]:
+            return {"decision": "user_action_already_done"}
+        if row is not None:
+            status = str(row.get("status") or "")
+            attempts = int(row.get("attempt_count") or 0)
+            claimed_at = _notification_datetime(row.get("claimed_at"))
+            stale = claimed_at is None or now - claimed_at >= NOTIFICATION_STALE_CLAIM_AFTER
+            retryable = status == "failed" and attempts < NOTIFICATION_MAX_ATTEMPTS
+            if not retryable and not (status == "pending" and stale):
+                return {"decision": "duplicate_dedupe_key"}
+            row.update(
+                {
+                    "status": "pending",
+                    "claim_token": str(uuid4()),
+                    "claimed_at": now.isoformat(),
+                    "attempt_count": attempts + 1,
+                    "expires_at": params["expires_at"],
+                }
+            )
+        else:
+            active = [
+                existing
+                for existing in bucket.values()
+                if existing.get("profile_id") == params["profile_id"]
+                and existing.get("training_day") == training_day
+                and existing.get("notification_class") == params["notification_class"]
+                and existing.get("status") in {"pending", "sent", "partial"}
+            ]
+            if len(active) >= int(params["daily_cap"]):
+                return {"decision": "daily_cap"}
+            spacing = int(params["min_spacing_minutes"])
+            if spacing:
+                latest = max(
+                    (
+                        parsed
+                        for existing in active
+                        if (
+                            parsed := _notification_datetime(
+                                existing.get("sent_at") or existing.get("claimed_at")
+                            )
+                        )
+                        is not None
+                    ),
+                    default=None,
+                )
+                if latest is not None and now - latest < timedelta(minutes=spacing):
+                    return {"decision": "cooldown_active"}
+            row = {
+                "id": str(uuid4()),
+                "profile_id": params["profile_id"],
+                "notification_type": params["notification_type"],
+                "intent": params["intent"],
+                "dedupe_key": params["dedupe_key"],
+                "training_day": training_day,
+                "notification_class": params["notification_class"],
+                "variant_id": params.get("variant_id") or None,
+                "action_key": params.get("action_key") or None,
+                "status": "pending",
+                "claim_token": str(uuid4()),
+                "claimed_at": now.isoformat(),
+                "attempt_count": 1,
+                "expires_at": params["expires_at"],
+            }
+            bucket[key] = row
+        return {"decision": "claimed", "delivery": dict(row)}
+
+    def finalize_notification_delivery(
+        self,
+        delivery_id: str,
+        claim_token: str,
+        *,
+        status: str,
+        delivered_count: int,
+        error_code: str | None,
+    ) -> None:
+        for row in self._notification_ledger()["deliveries"].values():
+            if row.get("id") == delivery_id and row.get("claim_token") == claim_token:
+                row.update(
+                    {
+                        "status": status,
+                        "delivered_count": delivered_count,
+                        "error_code": error_code,
+                        "sent_at": (
+                            datetime.now(timezone.utc).isoformat()
+                            if status in {"sent", "partial"}
+                            else None
+                        ),
+                    }
+                )
+                return
+
+    def get_notification_simulation_state(
+        self,
+        profile_id: str,
+        *,
+        dedupe_keys: list,
+        training_days: list,
+        notification_classes: list,
+        action_keys: list,
+    ) -> dict:
+        ledger = self._notification_ledger()
+        return {
+            "deliveries": [dict(row) for row in ledger["deliveries"].values()],
+            "evaluations": [
+                dict(row)
+                for row in ledger["evaluations"].values()
+                if row.get("profile_id") == profile_id and row.get("decision") == "would_select"
+            ],
+            "action_rows": [
+                {"profile_id": owner, "action_key": action, "training_day": day}
+                for owner, action, day in ledger["actions"]
+            ],
+        }
+
+    def invalidate_notification_action(
+        self,
+        profile_id: str,
+        *,
+        action_key: str,
+        training_day: str,
+        completed_at: datetime,
+        source_metadata: dict,
+    ) -> int:
+        ledger = self._notification_ledger()
+        ledger["actions"].add((profile_id, action_key, training_day))
+        cancelled = 0
+        for row in ledger["deliveries"].values():
+            if (
+                row.get("profile_id") == profile_id
+                and row.get("action_key") == action_key
+                and row.get("training_day") == training_day
+                and row.get("status") in {"pending", "failed"}
+            ):
+                row.update(
+                    {
+                        "status": "cancelled",
+                        "cancelled_at": completed_at.isoformat(),
+                        "cancellation_reason": "user_action_already_done",
+                    }
+                )
+                cancelled += 1
+        return cancelled
+
+    def list_notification_deliveries(
+        self,
+        profile_id: str,
+        *,
+        intent: str | None = None,
+        training_day: str | None = None,
+        limit: int = 20,
+    ) -> list[dict]:
+        rows = [
+            dict(row)
+            for row in self._notification_ledger()["deliveries"].values()
+            if row.get("profile_id") == profile_id
+            and (not intent or row.get("intent") == intent)
+            and (not training_day or row.get("training_day") == training_day)
+        ]
+        return sorted(
+            rows,
+            key=lambda row: str(row.get("sent_at") or row.get("claimed_at") or ""),
+            reverse=True,
+        )[:limit]
+
+    def list_notification_templates(self, intent: str, *, locale: str) -> list[dict]:
+        return []
+
+
+def _notification_datetime(value) -> datetime | None:
+    if isinstance(value, datetime):
+        parsed = value
+    elif isinstance(value, str) and value.strip():
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    else:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+class FakeStore(InMemoryNotificationLedger):
     def __init__(self, admin_emails: set[str] | None = None):
         self.profiles: dict[str, dict] = {}
         self.intakes: dict[str, list[dict]] = {}

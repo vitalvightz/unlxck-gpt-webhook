@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from support import InMemoryNotificationLedger
 from api.contracts.command_view import CommandView
 from api.services.fight_camp_notifications import build_fight_camp_candidates
 from api.services.notification_foundation import list_notification_evaluations
 
 
-class FightDayStore:
+class FightDayStore(InMemoryNotificationLedger):
     def list_session_completions(self, _profile_id: str, *, limit: int = 60) -> list[dict]:
         return []
 
