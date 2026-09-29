@@ -728,6 +728,8 @@ export function SessionCard({
   day,
   sourceCountdown,
   defaultOpenBlocks,
+  initiallyOpenFirstBlock = true,
+  hideTitle = false,
   showDayContext = true,
   showDayLabels = true,
   completionInfo,
@@ -738,6 +740,10 @@ export function SessionCard({
   /** Countdown used only to reconcile exact source prescription ranges. */
   sourceCountdown?: string | null;
   defaultOpenBlocks?: boolean;
+  /** Today keeps exercise details behind a tap so the session action stays in view. */
+  initiallyOpenFirstBlock?: boolean;
+  /** The parent Today card already names this exact session. */
+  hideTitle?: boolean;
   /** When false, day-level context like warnings/nutrition/mindset is rendered by
    * the parent day card instead, so the same information does not repeat inside
    * every session. */
@@ -757,9 +763,9 @@ export function SessionCard({
   const rehabLabelPolicy = useContext(RehabLabelContext);
   const [showDetails, setShowDetails] = useState(Boolean(defaultOpenBlocks));
   const userToggledDetails = useRef(false);
-  // One exercise open at a time; the first leads so the session reads as
-  // "start here". Null once the athlete closes it.
-  const [openBlockIndex, setOpenBlockIndex] = useState<number | null>(0);
+  // One exercise open at a time. Today and the current plan day can start with
+  // compact rows so a demo does not push the rest of the session below the fold.
+  const [openBlockIndex, setOpenBlockIndex] = useState<number | null>(initiallyOpenFirstBlock ? 0 : null);
 
   useEffect(() => {
     if (!userToggledDetails.current) {
@@ -807,14 +813,14 @@ export function SessionCard({
               {date ? <span className="sp-day-date">{formatAppDate(date)}</span> : null}
             </div>
           ) : null}
-          <h3 className="sp-session-title">
+          {hideTitle && !isTechnicalSession ? null : <h3 className="sp-session-title">
             {isDeclaredLightCombat
               ? DECLARED_LIGHT_COMBAT_TITLE
               : isTechnicalSession
                 ? TECHNICAL_COMBAT_TITLE
                 : title}
             {isTechnicalSession ? <TechnicalCombatWhyTooltip /> : null}
-          </h3>
+          </h3>}
           {/* The objective is the plan's "Why:" line, not a description of the
               work — the blocks below already carry that. Labelling it says so
               outright, so the reason for the session is impossible to miss.
@@ -1497,6 +1503,7 @@ export function CampDayCard({
                 day={index === 0 ? day : undefined}
                 sourceCountdown={day.countdown_label}
                 defaultOpenBlocks={isCurrent}
+                initiallyOpenFirstBlock={false}
                 showDayContext={false}
                 showDayLabels={false}
                 completionInfo={completionInfoFor(session)}

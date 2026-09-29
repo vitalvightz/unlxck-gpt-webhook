@@ -95,6 +95,35 @@ test("structured renderer uses one session card and hides detail blocks until ex
   assert.equal(html.includes(">Coach cue</span>"), true);
 });
 
+test("the current Plan day shows compact exercise rows before a demo is opened", () => {
+  const plan = {
+    weeks: [{
+      week_index: 1,
+      days: [{
+        date: "2026-09-29",
+        weekday: "Tue",
+        sessions: [{
+          session_id: "strength-1",
+          title: "Lower-body strength",
+          blocks: [{ block_id: "rdl-db", block_type: "strength", display_name: "Romanian Deadlift (DB)" }],
+        }],
+      }],
+    }],
+  } as StructuredPlan;
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={plan}
+      today={new Date(2026, 8, 29)}
+      exerciseMedia={{ "Romanian Deadlift (DB)": { provider: "youtube", video_id: "hQgFixeXdZo", start_s: 27, end_s: 49, source: "curated" } }}
+    />,
+  );
+
+  assert.match(html, /Romanian Deadlift \(DB\)/);
+  assert.match(html, /aria-expanded="false"/);
+  assert.match(html, /class="ex-row-thumb"/);
+  assert.doesNotMatch(html, /class="ex-demo"/);
+});
+
 test("open-plan weekday fallback labels today with the live date, not the stale date", () => {
   const plan = {
     schema_version: "text-adapter.v1",

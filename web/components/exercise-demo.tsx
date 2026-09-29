@@ -248,9 +248,12 @@ export function ExerciseDemo({
 
   if (mode === "error") {
     return (
-      <p className="ex-demo-unavailable" role="status">
-        Video unavailable. Cues below.
-      </p>
+      <div className="ex-demo-unavailable" role="status">
+        <span>Video unavailable here. Use the cues below.</span>
+        <a href={demoFullVideoUrl(media)} target="_blank" rel="noopener noreferrer">
+          Watch on YouTube
+        </a>
+      </div>
     );
   }
 

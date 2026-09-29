@@ -7657,6 +7657,32 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
   margin: 0 0 14px;
 }
 
+.today-blocks-sessions {
+  margin: 0;
+}
+
+/* Today already supplies the card surface and session heading. Keep the plan's
+   exercise controls, but remove the second box around them. */
+.today-blocks-sessions > .sp-session {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.today-blocks-sessions > .sp-session + .sp-session {
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.today-blocks-sessions .sp-session-head > :first-child:empty {
+  display: none;
+}
+
+.today-blocks-sessions .sp-session-head > .sp-session-meta {
+  justify-content: flex-start;
+}
+
 .today-open-week-note {
   display: flex;
   flex-wrap: wrap;
@@ -19992,9 +20018,18 @@ html[data-theme="light"] .loading-operational-item {
   font-size: 0.72rem;
 }
 .ex-demo-unavailable {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 12px;
   margin: 0;
   color: var(--text-muted);
   font-size: 0.8rem;
+}
+.ex-demo-unavailable a {
+  color: var(--text-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 @media (prefers-reduced-motion: reduce) {
   .ex-row,
