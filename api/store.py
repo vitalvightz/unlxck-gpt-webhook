@@ -531,6 +531,10 @@ class AppStore(Protocol):
         self, athlete_id: str, *, limit: int = 30
     ) -> list[dict[str, Any]]: ...
 
+    def list_session_completions_from_day(
+        self, athlete_id: str, training_day: str, *, limit: int = 200
+    ) -> list[dict[str, Any]]: ...
+
     def list_plan_session_completions(
         self, athlete_id: str, plan_id: str, *, limit: int = 500
     ) -> list[dict[str, Any]]: ...
@@ -4749,6 +4753,22 @@ class SupabaseAppStore:
             .select("*")
             .eq("athlete_id", athlete_id)
             .order("training_day", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return getattr(response, "data", None) or []
+
+    def list_session_completions_from_day(
+        self, athlete_id: str, training_day: str, *, limit: int = 200
+    ) -> list[dict[str, Any]]:
+        """Completions on or after ``training_day`` in one read (served by
+        ``session_completions_athlete_day_idx``), for Today's lookahead."""
+        response = (
+            self.client.table("session_completions")
+            .select("*")
+            .eq("athlete_id", athlete_id)
+            .gte("training_day", training_day)
+            .order("training_day")
             .limit(limit)
             .execute()
         )

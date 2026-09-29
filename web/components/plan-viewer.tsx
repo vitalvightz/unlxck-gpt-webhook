@@ -277,6 +277,78 @@ export function shouldPollForStructuredPlanUpgrade(params: {
   );
 }
 
+type VisibilityDocument = Pick<
+  Document,
+  "visibilityState" | "addEventListener" | "removeEventListener"
+>;
+
+/**
+ * Run the background upgrade poll until the returned stop function is called.
+ *
+ * Every tick fetches the whole plan, so a tick is skipped while the previous
+ * fetch is still out (slow responses must not stack up) and while the tab is
+ * hidden (nobody is there to see the swap). Returning to the tab checks at
+ * once. A window that ends while the tab is hidden stays open until that
+ * check, so an upgrade that landed while the athlete was away still shows.
+ * ``poll`` handles its own failures.
+ */
+export function startStructuredPlanUpgradePoll(params: {
+  poll: () => Promise<void>;
+  onWindowExpired: () => void;
+  intervalMs: number;
+  windowMs: number;
+  doc?: VisibilityDocument;
+}): () => void {
+  const doc = params.doc ?? document;
+  let stopped = false;
+  let fetchInFlight = false;
+  let expireWhenVisible = false;
+  const isVisible = () => doc.visibilityState === "visible";
+  const expire = () => {
+    if (!stopped) {
+      params.onWindowExpired();
+    }
+  };
+  const tick = async () => {
+    if (stopped || fetchInFlight || !isVisible()) {
+      return;
+    }
+    fetchInFlight = true;
+    try {
+      await params.poll();
+    } finally {
+      fetchInFlight = false;
+    }
+  };
+  const handleVisibilityChange = () => {
+    if (!isVisible()) {
+      return;
+    }
+    void tick().finally(() => {
+      if (expireWhenVisible) {
+        expire();
+      }
+    });
+  };
+
+  doc.addEventListener("visibilitychange", handleVisibilityChange);
+  const intervalId = setInterval(() => void tick(), params.intervalMs);
+  const timeoutId = setTimeout(() => {
+    if (isVisible()) {
+      expire();
+    } else {
+      expireWhenVisible = true;
+    }
+  }, params.windowMs);
+
+  return () => {
+    stopped = true;
+    doc.removeEventListener("visibilitychange", handleVisibilityChange);
+    clearInterval(intervalId);
+    clearTimeout(timeoutId);
+  };
+}
+
 function getApprovalSuccessMessage(plan: Pick<PlanDetail, "outputs">): string {
   return shouldRenderStructuredPlan(plan.outputs)
     ? "Plan approved and released to the athlete view."
@@ -1960,17 +2032,20 @@ export function PlanViewer({
       }
     };
 
-    const intervalId = window.setInterval(pollForStructuredPlan, STRUCTURED_PLAN_POLL_INTERVAL_MS);
-    const timeoutId = window.setTimeout(() => {
-      if (!cancelled) {
-        setPollExpiredPlans((prev) => ({ ...prev, [plan.plan_id]: true }));
-      }
-    }, STRUCTURED_PLAN_UPGRADE_POLL_WINDOW_MS);
+    const stopPolling = startStructuredPlanUpgradePoll({
+      poll: pollForStructuredPlan,
+      onWindowExpired: () => {
+        if (!cancelled) {
+          setPollExpiredPlans((prev) => ({ ...prev, [plan.plan_id]: true }));
+        }
+      },
+      intervalMs: STRUCTURED_PLAN_POLL_INTERVAL_MS,
+      windowMs: STRUCTURED_PLAN_UPGRADE_POLL_WINDOW_MS,
+    });
 
     return () => {
       cancelled = true;
-      window.clearInterval(intervalId);
-      window.clearTimeout(timeoutId);
+      stopPolling();
     };
   }, [
     accessToken,

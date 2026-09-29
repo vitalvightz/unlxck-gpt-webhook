@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import os
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Callable
 from zoneinfo import ZoneInfo
 
 from api.store import AppStore
@@ -26,6 +26,7 @@ from .push_notifications import push_notifications_configured
 from .session_timing_notifications import dispatch_session_timing_notification
 from .fight_camp_notifications import dispatch_fight_camp_notifications
 from .streak_notifications import dispatch_streak_at_risk_notifications
+from .today_readiness_boundary import reuse_today_command_views
 
 logger = logging.getLogger(__name__)
 
@@ -146,8 +147,13 @@ def run_morning_push_sweep(
     store: AppStore,
     *,
     now_utc: datetime | None = None,
+    should_stop: Callable[[], bool] | None = None,
 ) -> int:
-    """Resolve and send at most one coaching decision per profile. Never raises."""
+    """Resolve and send at most one coaching decision per profile. Never raises.
+
+    ``should_stop`` is checked before each profile so worker shutdown does not
+    wait for the rest of the sweep; the next sweep picks the profiles up.
+    """
 
     if not morning_push_enabled():
         return 0
@@ -161,68 +167,74 @@ def run_morning_push_sweep(
 
     sent = 0
     for subscription in canonical_subscriptions:
+        if should_stop is not None and should_stop():
+            logger.info("[morning_push] sweep stopped early for shutdown")
+            break
         profile_id = str(subscription.get("profile_id") or "").strip()
         timezone_name = str(subscription.get("timezone") or "").strip() or "UTC"
         local_now = _local_now(subscription, now)
-        try:
-            orchestration = dispatch_fight_camp_notifications(
-                store,
-                profile_id=profile_id,
-                timezone_name=timezone_name,
-                now_utc=now,
-            )
-            if orchestration.candidate_count > 0:
-                sent += orchestration.delivered_count
-                continue
-
-            streak_result = dispatch_streak_at_risk_notifications(
-                store,
-                profile_id=profile_id,
-                timezone_name=timezone_name,
-                now_utc=now,
-            )
-            if streak_result.candidate_count > 0:
-                sent += streak_result.delivered_count
-                continue
-
-            # Compatibility fallback for profiles whose current state cannot yet
-            # produce a new-orchestrator candidate (and for older test/dev stores).
-            # Always evaluate saved session timing. Its own window and the user's
-            # quiet-hour preferences decide whether an early/late reminder exists.
-            timed_result = dispatch_session_timing_notification(
-                store,
-                profile_id=profile_id,
-                timezone_name=timezone_name,
-                now_utc=now,
-            )
-            if timed_result is not None and timed_result.delivered_count > 0:
-                sent += timed_result.delivered_count
-                continue
-
-            if not _is_routine_coaching_action_window(local_now):
-                continue
-
-            result = dispatch_coaching_notification(
-                store,
-                profile_id=profile_id,
-                timezone_name=timezone_name,
-                now_utc=now,
-            )
-            if result is None or result.delivered_count <= 0:
-                continue
-            sent += result.delivered_count
-            if result.notification_type in MORNING_NOTIFICATION_TYPES:
-                _mark_profile_morning_sent(
+        # Every dispatcher below reads this athlete's Today view at the same
+        # instant; build it once for the profile instead of once per dispatcher.
+        with reuse_today_command_views():
+            try:
+                orchestration = dispatch_fight_camp_notifications(
                     store,
-                    subscription,
-                    local_day=local_now.date().isoformat(),
+                    profile_id=profile_id,
+                    timezone_name=timezone_name,
+                    now_utc=now,
                 )
-        except Exception:  # noqa: BLE001
-            logger.exception(
-                "[morning_push] coaching sweep failed profile_id=%s subscription_id=%s",
-                profile_id,
-                subscription.get("id"),
-            )
+                if orchestration.candidate_count > 0:
+                    sent += orchestration.delivered_count
+                    continue
+
+                streak_result = dispatch_streak_at_risk_notifications(
+                    store,
+                    profile_id=profile_id,
+                    timezone_name=timezone_name,
+                    now_utc=now,
+                )
+                if streak_result.candidate_count > 0:
+                    sent += streak_result.delivered_count
+                    continue
+
+                # Compatibility fallback for profiles whose current state cannot yet
+                # produce a new-orchestrator candidate (and for older test/dev stores).
+                # Always evaluate saved session timing. Its own window and the user's
+                # quiet-hour preferences decide whether an early/late reminder exists.
+                timed_result = dispatch_session_timing_notification(
+                    store,
+                    profile_id=profile_id,
+                    timezone_name=timezone_name,
+                    now_utc=now,
+                )
+                if timed_result is not None and timed_result.delivered_count > 0:
+                    sent += timed_result.delivered_count
+                    continue
+
+                if not _is_routine_coaching_action_window(local_now):
+                    continue
+
+                result = dispatch_coaching_notification(
+                    store,
+                    profile_id=profile_id,
+                    timezone_name=timezone_name,
+                    now_utc=now,
+                )
+                if result is None or result.delivered_count <= 0:
+                    continue
+                sent += result.delivered_count
+                if result.notification_type in MORNING_NOTIFICATION_TYPES:
+                    _mark_profile_morning_sent(
+                        store,
+                        subscription,
+                        local_day=local_now.date().isoformat(),
+                    )
+            except Exception:  # noqa: BLE001
+                logger.exception(
+                    "[morning_push] coaching sweep failed profile_id=%s subscription_id=%s",
+                    profile_id,
+                    subscription.get("id"),
+                )
     if sent:
         logger.info("[morning_push] coaching sweep sent=%s", sent)
     return sent
