@@ -52,15 +52,58 @@ def test_claim_sends_every_candidate_field_as_an_rpc_parameter():
 
     assert attempt.decision == "claimed"
     assert attempt.claim.delivery_id == "dl"
-    ((_, params),) = client.calls("claim_notification_delivery_v2")
-    (params,) = params
-    assert params["p_profile_id"] == "p1"
-    assert params["p_dedupe_key"] == "d1"
-    assert params["p_training_day"] == "2026-08-02"
-    assert params["p_expires_at"] == (NOW + timedelta(hours=4)).isoformat()
-    assert params["p_variant_id"] == "" and params["p_action_key"] == ""
-    assert params["p_daily_cap"] > 0 and params["p_min_spacing_minutes"] > 0
-    assert all(key.startswith("p_") for key in params)
+    ((_, (params,)),) = client.calls("claim_notification_delivery_v2")
+    assert params == {
+        "p_profile_id": "p1",
+        "p_notification_type": "checkin",
+        "p_intent": "morning_checkin",
+        "p_category": "checkin_reminders",
+        "p_priority": 10,
+        "p_title": "Check in",
+        "p_body": "Two minutes.",
+        "p_url": "/today",
+        "p_tag": "checkin",
+        "p_dedupe_key": "d1",
+        "p_expires_at": (NOW + timedelta(hours=4)).isoformat(),
+        "p_training_day": "2026-08-02",
+        "p_scheduled_for": None,
+        "p_timing_source": "",
+        "p_timing_confidence": "",
+        "p_variant_id": "",
+        "p_source_event_metadata": {},
+        "p_action_key": "",
+        "p_notification_class": "routine",
+        "p_respect_quiet_hours": True,
+        "p_merged_intents": [],
+        "p_daily_cap": 6,
+        "p_min_spacing_minutes": 45,
+    }
+
+
+def test_claim_sends_optional_candidate_fields_when_present():
+    client = RecordingClient(rpcs={"claim_notification_delivery_v2": {"decision": "daily_cap"}})
+
+    attempt = attempt_notification_delivery_claim(
+        _store(client),
+        _candidate(
+            scheduled_for=NOW,
+            timing_source="saved_session_time",
+            timing_confidence="high",
+            variant_id="v2",
+            action_key="checkin:2026-08-02",
+            source_event_metadata={"plan_id": "plan-1"},
+        ),
+        now_utc=NOW,
+    )
+
+    assert attempt.claim is None and attempt.decision == "daily_cap"
+    ((_, (params,)),) = client.calls("claim_notification_delivery_v2")
+    assert params["p_scheduled_for"] == NOW.isoformat()
+    assert params["p_timing_source"] == "saved_session_time"
+    assert params["p_timing_confidence"] == "high"
+    assert params["p_variant_id"] == "v2"
+    assert params["p_action_key"] == "checkin:2026-08-02"
+    assert params["p_source_event_metadata"] == {"plan_id": "plan-1"}
 
 
 def test_evaluation_rpc_blanks_optional_text_and_sends_the_interval():
@@ -79,11 +122,57 @@ def test_evaluation_rpc_blanks_optional_text_and_sends_the_interval():
 
     assert row == {"id": "ev"}
     ((_, (params,)),) = client.calls("record_notification_evaluation")
-    assert params["p_dedupe_key"] == ""
-    assert params["p_notification_type"] == ""
-    assert params["p_rejection_reasons"] == ["quiet_hours"]
-    assert params["p_min_interval_seconds"] == 1800
-    assert params["p_evaluated_at"] == NOW.isoformat()
+    evaluation_key = params.pop("p_evaluation_key")
+    assert len(evaluation_key) == 64  # sha256 of the decision's diagnostic identity
+    assert params == {
+        "p_profile_id": "p1",
+        "p_training_day": "2026-08-02",
+        "p_intent": "morning_checkin",
+        "p_notification_type": "",
+        "p_category": "",
+        "p_evaluated_at": NOW.isoformat(),
+        "p_scheduled_for": None,
+        "p_timing_source": "",
+        "p_timing_confidence": "",
+        "p_eligible": False,
+        "p_decision": "suppressed",
+        "p_rejection_reasons": ["quiet_hours"],
+        "p_priority": None,
+        "p_dedupe_key": "",
+        "p_variant_id": "",
+        "p_source_event_metadata": {},
+        "p_resulting_delivery_id": None,
+        "p_min_interval_seconds": 1800,
+    }
+
+
+def test_evaluation_rpc_carries_the_candidate_and_its_snapshot():
+    client = RecordingClient(rpcs={"record_notification_evaluation": [{"id": "ev"}]})
+    candidate = _candidate(variant_id="v1", scheduled_for=NOW, timing_source="default")
+
+    record_notification_evaluation(
+        _store(client),
+        profile_id="p1",
+        training_day="2026-08-02",
+        intent="morning_checkin",
+        now_utc=NOW,
+        decision="selected",
+        eligible=True,
+        candidate=candidate,
+        resulting_delivery_id="dl",
+    )
+
+    ((_, (params,)),) = client.calls("record_notification_evaluation")
+    assert params["p_notification_type"] == "checkin"
+    assert params["p_category"] == "checkin_reminders"
+    assert params["p_dedupe_key"] == "d1"
+    assert params["p_variant_id"] == "v1"
+    assert params["p_priority"] == 10
+    assert params["p_scheduled_for"] == NOW.isoformat()
+    assert params["p_eligible"] is True
+    assert params["p_resulting_delivery_id"] == "dl"
+    assert params["p_min_interval_seconds"] == 0
+    assert params["p_source_event_metadata"]["_candidate_snapshot"]["daily_cap"] == 6
 
 
 def test_simulation_reads_skip_action_states_without_action_keys():

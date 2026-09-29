@@ -6,6 +6,8 @@ process at import rather than letting a default version slip through.
 """
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -65,3 +67,56 @@ def test_a_broken_policy_file_fails_loudly(tmp_path, monkeypatch, contents, mess
 
     with pytest.raises(RuntimeError, match=message):
         compliance._load_compliance_policy()
+
+
+def test_the_terms_document_carries_the_accepted_version():
+    # Athletes accept (and the server records) TERMS_VERSION, which the in-app
+    # Terms page displays. The canonical document must carry the same marker.
+    terms = (Path(__file__).resolve().parents[1] / "docs" / "terms-of-use.md").read_text(
+        encoding="utf-8"
+    )
+    markers = [line for line in terms.splitlines() if line.startswith("**Version:**")]
+
+    assert markers == [f"**Version:** {compliance.TERMS_VERSION}"]
+
+
+def _import_compliance_with_policy(tmp_path, policy_text):
+    """Import api.compliance in a fresh interpreter next to the given policy file."""
+    repo = Path(__file__).resolve().parents[1]
+    package = tmp_path / "api"
+    package.mkdir()
+    for name in ("__init__.py", "compliance.py"):
+        (package / name).write_text((repo / "api" / name).read_text(encoding="utf-8"), encoding="utf-8")
+    (tmp_path / "shared").mkdir()
+    if policy_text is not None:
+        (tmp_path / "shared" / "compliance-policy.json").write_text(policy_text, encoding="utf-8")
+    return subprocess.run(
+        [sys.executable, "-c", "import api.compliance as c; print(c.TERMS_VERSION)"],
+        cwd=tmp_path,
+        env={"PYTHONPATH": str(tmp_path), "PATH": "/usr/bin:/bin"},
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+
+
+def test_import_succeeds_with_the_real_policy(tmp_path):
+    result = _import_compliance_with_policy(tmp_path, POLICY_PATH.read_text(encoding="utf-8"))
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == compliance.TERMS_VERSION
+
+
+@pytest.mark.parametrize(
+    ("contents", "message"),
+    [
+        (None, "missing"),
+        ("{not json", "not valid JSON"),
+        ('{"terms_version": "t"}', "health_consent_version"),
+    ],
+)
+def test_import_itself_fails_on_a_broken_policy(tmp_path, contents, message):
+    result = _import_compliance_with_policy(tmp_path, contents)
+
+    assert result.returncode != 0
+    assert "RuntimeError" in result.stderr and message in result.stderr

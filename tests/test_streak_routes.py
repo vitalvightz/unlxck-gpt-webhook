@@ -10,6 +10,7 @@ implements, so the real code runs here.
 
 import logging
 
+from api.services.today_service import resolve_training_day
 from tests.support import _build_client
 
 ATHLETE = {"Authorization": "Bearer athlete-token"}
@@ -40,9 +41,31 @@ def test_app_activity_records_one_day_and_returns_the_login_streak():
     assert len(store.daily_activity["athlete-1"]) == 1
 
 
-def test_session_completion_reconciles_streaks_without_failing(caplog):
+def test_completing_todays_scheduled_session_advances_both_streaks(caplog):
     client, store, _ = _build_client()
+    today = resolve_training_day(None)  # the fake athlete's (empty) timezone
     _seed_plan(store)
+    store.plans[PLAN_ID]["structured_plan"] = {
+        "weeks": [
+            {
+                "phase_label": "GPP",
+                "days": [
+                    {
+                        "date": today,
+                        "day_type": "hard",
+                        "sessions": [
+                            {
+                                "session_id": "session-1",
+                                "session_type": "strength",
+                                "title": "Lower body strength",
+                                "blocks": [{"name": "Back squat", "sets": 3, "reps": "5"}],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
 
     with caplog.at_level(logging.ERROR):
         response = client.post(
@@ -54,5 +77,21 @@ def test_session_completion_reconciles_streaks_without_failing(caplog):
     assert response.status_code == 201
     assert not [record for record in caplog.records if "[streak]" in record.getMessage()]
     streak_row = store.get_athlete_streaks("athlete-1")
-    assert streak_row is not None
-    assert {"training_current", "adherence_current"} <= set(streak_row)
+    assert streak_row["training_current"] == 1
+    assert streak_row["adherence_current"] == 1
+
+
+def test_an_unscheduled_completion_leaves_both_streaks_at_zero():
+    client, store, _ = _build_client()
+    _seed_plan(store)
+
+    response = client.post(
+        "/api/today/session-completion",
+        headers=ATHLETE,
+        json={"plan_id": PLAN_ID, "session_id": "session-1", "status": "done"},
+    )
+
+    assert response.status_code == 201
+    streak_row = store.get_athlete_streaks("athlete-1")
+    assert streak_row["training_current"] == 0
+    assert streak_row["adherence_current"] == 0

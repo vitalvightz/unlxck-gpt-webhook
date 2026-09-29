@@ -109,6 +109,8 @@ def test_plan_milestones_are_read_newest_first():
 
     assert _store(client).list_plan_milestones("athlete-1", limit=50) == [row]
     assert client.calls("plan_milestones")[-2:] == [("order", ("completed_at",)), ("limit", (50,))]
+    orders = [kwargs for t, name, _, kwargs in client.log if t == "plan_milestones" and name == "order"]
+    assert orders == [{"desc": True}]
 
 
 def test_milestone_and_week_lifecycle_rpcs_send_their_parameters():
@@ -149,6 +151,9 @@ def test_milestone_and_week_lifecycle_rpcs_send_their_parameters():
         )
     ]
     assert client.calls("begin_week_lifecycle_reconciliation") == [
+        ("rpc", ({"p_athlete_id": "athlete-1", "p_plan_id": "plan-1", "p_week_id": "w1"},))
+    ]
+    assert client.calls("complete_week_lifecycle_reconciliation") == [
         ("rpc", ({"p_athlete_id": "athlete-1", "p_plan_id": "plan-1", "p_week_id": "w1"},))
     ]
 

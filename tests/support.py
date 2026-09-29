@@ -203,78 +203,98 @@ class InMemoryNotificationLedger:
         )
 
     def claim_notification_delivery(self, params: dict, *, now_utc: datetime) -> dict:
-        """Same decisions as claim_notification_delivery_v2, in its payload shape."""
+        """The decisions of claim_notification_delivery_v2, step for step.
+
+        Source: supabase/migrations/20260812155956_redesign_fight_camp_notifications.sql.
+        ``now_utc`` stands in for the database clock.
+        """
         ledger = self._notification_ledger()
         bucket = ledger["deliveries"]
-        key = (params["profile_id"], params["dedupe_key"])
-        row = bucket.get(key)
         now = now_utc.astimezone(timezone.utc)
         training_day = params["training_day"]
-        action_key = str(params.get("action_key") or "")
-        if action_key and (params["profile_id"], action_key, training_day) in ledger["actions"]:
+        if _notification_datetime(params["expires_at"]) <= now:
+            return {"decision": "outside_due_window"}
+        action_key = params.get("action_key")
+        if action_key is not None and (
+            params["profile_id"],
+            action_key,
+            training_day,
+        ) in ledger["actions"]:
             return {"decision": "user_action_already_done"}
+        key = (params["profile_id"], params["dedupe_key"])
+        row = bucket.get(key)
         if row is not None:
-            status = str(row.get("status") or "")
             attempts = int(row.get("attempt_count") or 0)
+            status = str(row.get("status") or "")
             claimed_at = _notification_datetime(row.get("claimed_at"))
-            stale = claimed_at is None or now - claimed_at >= NOTIFICATION_STALE_CLAIM_AFTER
-            retryable = status == "failed" and attempts < NOTIFICATION_MAX_ATTEMPTS
-            if not retryable and not (status == "pending" and stale):
+            stale = claimed_at is not None and now - claimed_at >= NOTIFICATION_STALE_CLAIM_AFTER
+            if not (
+                attempts < NOTIFICATION_MAX_ATTEMPTS
+                and (status == "failed" or (status == "pending" and stale))
+            ):
                 return {"decision": "duplicate_dedupe_key"}
             row.update(
                 {
+                    "notification_type": params["notification_type"],
+                    "intent": params["intent"],
+                    "variant_id": params.get("variant_id") or None,
                     "status": "pending",
                     "claim_token": str(uuid4()),
                     "claimed_at": now.isoformat(),
                     "attempt_count": attempts + 1,
                     "expires_at": params["expires_at"],
+                    "delivered_count": 0,
+                    "error_code": None,
+                    "sent_at": None,
+                    "cancelled_at": None,
+                    "cancellation_reason": None,
                 }
             )
-        else:
-            active = [
-                existing
-                for existing in bucket.values()
-                if existing.get("profile_id") == params["profile_id"]
-                and existing.get("training_day") == training_day
-                and existing.get("notification_class") == params["notification_class"]
-                and existing.get("status") in {"pending", "sent", "partial"}
-            ]
-            if len(active) >= int(params["daily_cap"]):
-                return {"decision": "daily_cap"}
-            spacing = int(params["min_spacing_minutes"])
-            if spacing:
-                latest = max(
-                    (
-                        parsed
-                        for existing in active
-                        if (
-                            parsed := _notification_datetime(
-                                existing.get("sent_at") or existing.get("claimed_at")
-                            )
+            return {"decision": "claimed", "delivery": dict(row)}
+        active = [
+            existing
+            for existing in bucket.values()
+            if existing.get("profile_id") == params["profile_id"]
+            and existing.get("training_day") == training_day
+            and existing.get("notification_class") == params["notification_class"]
+            and existing.get("status") in {"pending", "sent", "partial"}
+        ]
+        if len(active) >= max(1, int(params["daily_cap"])):
+            return {"decision": "daily_cap"}
+        spacing = int(params["min_spacing_minutes"])
+        if spacing > 0:
+            latest = max(
+                (
+                    parsed
+                    for existing in active
+                    if (
+                        parsed := _notification_datetime(
+                            existing.get("sent_at") or existing.get("claimed_at")
                         )
-                        is not None
-                    ),
-                    default=None,
-                )
-                if latest is not None and now - latest < timedelta(minutes=spacing):
-                    return {"decision": "cooldown_active"}
-            row = {
-                "id": str(uuid4()),
-                "profile_id": params["profile_id"],
-                "notification_type": params["notification_type"],
-                "intent": params["intent"],
-                "dedupe_key": params["dedupe_key"],
-                "training_day": training_day,
-                "notification_class": params["notification_class"],
-                "variant_id": params.get("variant_id") or None,
-                "action_key": params.get("action_key") or None,
-                "status": "pending",
-                "claim_token": str(uuid4()),
-                "claimed_at": now.isoformat(),
-                "attempt_count": 1,
-                "expires_at": params["expires_at"],
-            }
-            bucket[key] = row
+                    )
+                    is not None
+                ),
+                default=None,
+            )
+            if latest is not None and latest > now - timedelta(minutes=spacing):
+                return {"decision": "cooldown_active"}
+        row = {
+            "id": str(uuid4()),
+            "profile_id": params["profile_id"],
+            "notification_type": params["notification_type"],
+            "intent": params["intent"],
+            "dedupe_key": params["dedupe_key"],
+            "training_day": training_day,
+            "notification_class": params["notification_class"],
+            "variant_id": params.get("variant_id") or None,
+            "action_key": params.get("action_key") or None,
+            "status": "pending",
+            "claim_token": str(uuid4()),
+            "claimed_at": now.isoformat(),
+            "attempt_count": 1,
+            "expires_at": params["expires_at"],
+        }
+        bucket[key] = row
         return {"decision": "claimed", "delivery": dict(row)}
 
     def finalize_notification_delivery(
@@ -311,17 +331,38 @@ class InMemoryNotificationLedger:
         notification_classes: list,
         action_keys: list,
     ) -> dict:
+        """The same five reads SupabaseAppStore makes, with the same filters."""
         ledger = self._notification_ledger()
+        deliveries = [
+            row for row in ledger["deliveries"].values() if row.get("profile_id") == profile_id
+        ]
+        evaluations = [
+            row
+            for row in ledger["evaluations"].values()
+            if row.get("profile_id") == profile_id and row.get("decision") == "would_select"
+        ]
         return {
-            "deliveries": [dict(row) for row in ledger["deliveries"].values()],
+            "deliveries": [
+                *(dict(row) for row in deliveries if row.get("dedupe_key") in dedupe_keys),
+                *(
+                    dict(row)
+                    for row in deliveries
+                    if row.get("training_day") in training_days
+                    and row.get("notification_class") in notification_classes
+                    and row.get("status") in {"pending", "sent", "partial"}
+                ),
+            ],
             "evaluations": [
-                dict(row)
-                for row in ledger["evaluations"].values()
-                if row.get("profile_id") == profile_id and row.get("decision") == "would_select"
+                *(dict(row) for row in evaluations if row.get("dedupe_key") in dedupe_keys),
+                *(dict(row) for row in evaluations if row.get("training_day") in training_days),
             ],
             "action_rows": [
                 {"profile_id": owner, "action_key": action, "training_day": day}
                 for owner, action, day in ledger["actions"]
+                if action_keys
+                and owner == profile_id
+                and action in action_keys
+                and day in training_days
             ],
         }
 
