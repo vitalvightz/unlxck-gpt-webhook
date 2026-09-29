@@ -6,17 +6,20 @@
 -- regenerating any plan. Video IDs are curated here and never produced by the
 -- model.
 --
--- Only rows with status = 'ok' are served. tools/exercise_media.py validates a
--- video through YouTube oEmbed before import, and the worker re-checks every
--- row daily: a deleted, private or embed-disabled video flips to 'unavailable'
--- and the athlete sees the cues-only row instead of a broken player.
+-- Only rows with status = 'ok' and made_for_kids = false are served.
+-- tools/exercise_media.py checks a video through the YouTube Data API before
+-- import, and the worker re-checks every row daily (unavailable ones too): a
+-- deleted, private, embed-disabled or made-for-kids video flips to
+-- 'unavailable' and the athlete sees the cues-only row instead of a broken
+-- player; a video that recovers flips back to 'ok'.
 --
 -- Backend-only: the service role reads and writes. No anon/authenticated grant.
 create table if not exists public.exercise_media (
   exercise_key text primary key
     check (char_length(exercise_key) between 1 and 120 and exercise_key ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
-  -- Extra normalized slugs that should resolve to this row (plan names drift:
-  -- "Romanian Deadlift (RDL)" and "RDL" both land on romanian-deadlift).
+  -- Extra slugs that should resolve to this row. The slug keeps every word of
+  -- the name ("Box Jump (Max Height)" is box-jump-max-height), so only list
+  -- names that are genuinely the same movement: "RDL" on romanian-deadlift.
   aliases text[] not null default '{}',
   provider text not null default 'youtube' check (provider in ('youtube')),
   video_id text not null check (video_id ~ '^[A-Za-z0-9_-]{11}$'),
@@ -27,6 +30,12 @@ create table if not exists public.exercise_media (
   -- badge); 'curated' = a vetted third-party demo.
   source text not null default 'curated' check (source in ('curated', 'coach')),
   status text not null default 'unverified' check (status in ('unverified', 'ok', 'unavailable')),
+  -- YouTube's status.madeForKids from the last check. Null until checked; only
+  -- false is served (YouTube developer policies require the check).
+  made_for_kids boolean,
+  -- Snippet from the last check: title for curators, channel for attribution.
+  title text check (title is null or char_length(title) <= 200),
+  channel_title text check (channel_title is null or char_length(channel_title) <= 200),
   status_reason text check (status_reason is null or char_length(status_reason) <= 200),
   verified_at timestamptz,
   notes text not null default '' check (char_length(notes) <= 500),

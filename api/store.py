@@ -5121,47 +5121,62 @@ class SupabaseAppStore:
     # Read by api/services/exercise_media.py on plan reads (cached in-process)
     # and written only by tools/exercise_media.py and the worker's daily check.
 
-    _EXERCISE_MEDIA_SERVED_COLUMNS = "exercise_key,aliases,video_id,start_s,end_s,source"
+    _EXERCISE_MEDIA_SERVED_COLUMNS = (
+        "exercise_key,aliases,video_id,start_s,end_s,source,channel_title,made_for_kids"
+    )
 
     def list_exercise_media(self) -> list[dict[str, Any]]:
-        """Every video currently cleared to serve (status = 'ok')."""
+        """Every video cleared to serve: checked ok and checked not made for kids."""
         response = self._run_with_transient_retry(
             operation="list_exercise_media",
             fn=lambda: self.client.table("exercise_media")
             .select(self._EXERCISE_MEDIA_SERVED_COLUMNS)
             .eq("status", "ok")
+            .eq("made_for_kids", False)
             .limit(5000)
             .execute(),
         )
         return list(getattr(response, "data", None) or [])
 
     def list_exercise_media_for_verification(self) -> list[dict[str, Any]]:
-        """Rows the daily availability check should re-test (everything but retired)."""
+        """Every row, unavailable ones included, so a video that recovers is served again."""
         response = self._run_with_transient_retry(
             operation="list_exercise_media_for_verification",
             fn=lambda: self.client.table("exercise_media")
             .select("exercise_key,video_id,status")
-            .in_("status", ["ok", "unverified"])
             .limit(5000)
             .execute(),
         )
         return list(getattr(response, "data", None) or [])
 
     def update_exercise_media_status(
-        self, exercise_key: str, *, status: str, reason: str | None
+        self,
+        exercise_key: str,
+        *,
+        status: str,
+        reason: str | None,
+        made_for_kids: bool | None = None,
+        title: str | None = None,
+        channel_title: str | None = None,
     ) -> None:
         now_iso = datetime.now(timezone.utc).isoformat()
+        payload: dict[str, Any] = {
+            "status": status,
+            "status_reason": (reason or None) and str(reason)[:200],
+            "verified_at": now_iso,
+            "updated_at": now_iso,
+        }
+        # A deleted or private video reports no metadata; keep what was last seen.
+        if made_for_kids is not None:
+            payload["made_for_kids"] = made_for_kids
+        if title:
+            payload["title"] = title[:200]
+        if channel_title:
+            payload["channel_title"] = channel_title[:200]
         self._run_with_transient_retry(
             operation=f"update_exercise_media_status key={exercise_key}",
             fn=lambda: self.client.table("exercise_media")
-            .update(
-                {
-                    "status": status,
-                    "status_reason": (reason or None) and str(reason)[:200],
-                    "verified_at": now_iso,
-                    "updated_at": now_iso,
-                }
-            )
+            .update(payload)
             .eq("exercise_key", exercise_key)
             .execute(),
         )

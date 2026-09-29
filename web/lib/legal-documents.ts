@@ -28,6 +28,19 @@ export type LegalSection = {
   heading: string;
   paragraphs?: string[];
   bullets?: string[];
+  /** External documents the section refers to, rendered as links under it. */
+  links?: LegalLink[];
+};
+
+export type LegalLink = { label: string; href: string };
+
+export const YOUTUBE_TERMS_LINK: LegalLink = {
+  label: "YouTube Terms of Service",
+  href: "https://www.youtube.com/t/terms",
+};
+export const GOOGLE_PRIVACY_POLICY_LINK: LegalLink = {
+  label: "Google Privacy Policy",
+  href: "https://policies.google.com/privacy",
 };
 
 export type LegalDocument = {
@@ -117,6 +130,14 @@ export const TERMS_OF_USE: LegalDocument = {
       ],
     },
     {
+      heading: "Exercise demonstration videos",
+      paragraphs: [
+        "Some exercises include a demonstration video played from YouTube through the YouTube API Services. By using UNLXCK, you agree to be bound by the YouTube Terms of Service.",
+        "Demonstration videos are provided by YouTube and the creators who publish them, not by UNLXCK, and a video may become unavailable at any time. A video shows how a movement looks; the prescription, cues and stop rules in your plan still apply.",
+      ],
+      links: [YOUTUBE_TERMS_LINK],
+    },
+    {
       heading: "Availability and changes",
       paragraphs: [
         "We may update, improve, remove or replace service features. We do not promise uninterrupted or error-free availability. Material changes affecting users will be communicated where required by law.",
@@ -165,7 +186,7 @@ export const PRIVACY_NOTICE: LegalDocument = {
   slug: "privacy-notice",
   title: "Privacy Notice",
   version: PRIVACY_NOTICE_VERSION,
-  lastUpdated: "23 August 2026",
+  lastUpdated: "29 September 2026",
   status: "Not ready for publication: the trading address is still to be inserted.",
   intro:
     "UNLXCK uses personal data to create, adapt and deliver personalised training guidance. This notice explains what we use, why, who receives it and your rights.",
@@ -242,6 +263,15 @@ export const PRIVACY_NOTICE: LegalDocument = {
       paragraphs: [
         "Some service providers may process limited data outside the UK. Where this creates a restricted transfer, we use approved safeguards, such as the UK Addendum to the Standard Contractual Clauses, and keep a record of the safeguard that applies. You can ask us for a copy of the safeguard we rely on using the privacy contact above.",
       ],
+    },
+    {
+      heading: "YouTube demonstration videos",
+      paragraphs: [
+        "Some exercises include a demonstration video from YouTube, which UNLXCK shows using the YouTube API Services. An exercise with a video shows a preview image loaded from YouTube’s servers. The YouTube player itself loads only when you tap play, in YouTube’s privacy-enhanced mode.",
+        "When a preview image or the player loads, Google, which operates YouTube, receives your IP address and technical information about your device and browser. Once you play a video, YouTube may store or read information on your device, such as cookies or local storage, and collect information about how you use the player. Google handles that information as a separate controller under its own policies, not as a service provider acting for UNLXCK. The Google Privacy Policy and the YouTube Terms of Service explain how.",
+        "UNLXCK does not send Google your name, email, training, health or other account information, and does not receive personal information about you from YouTube. UNLXCK remembers on your device which videos you have already watched, so they can be shown smaller next time; that record stays on your device. If you do not want YouTube to receive information from the player, do not tap play. Every exercise, including its cues and stop rules, works without the video.",
+      ],
+      links: [GOOGLE_PRIVACY_POLICY_LINK, YOUTUBE_TERMS_LINK],
     },
     {
       heading: "How long we keep data",

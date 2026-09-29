@@ -46,6 +46,7 @@ const coachDemo: ExerciseMedia = {
   start_s: 42,
   end_s: 70,
   source: "coach",
+  channel_title: "UNLXCK Coaching",
 };
 
 test("session renders every exercise as a row with only the first one open", () => {
@@ -104,8 +105,17 @@ test("with media the open row leads with a tap-to-play demo and pins the key cue
   assert.equal(html.includes("<iframe"), false);
   assert.equal(html.includes('aria-label="Play Romanian Deadlift (RDL) demo"'), true);
   assert.equal(html.includes("https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg"), true);
-  assert.equal(html.includes("Coach demo"), true);
-  assert.equal(html.includes("Demo · 0:42–1:10"), true);
+  assert.equal(html.includes("Demo · 0:42–1:10 · UNLXCK Coaching"), true);
+  // Nothing is layered over the frame: the badge and labels sit under it, and
+  // the full video on YouTube is linked before anything plays.
+  const frame = html.slice(html.indexOf('class="ex-demo-frame"'), html.indexOf('class="ex-demo-caption"'));
+  assert.ok(frame.length > 0);
+  assert.equal(frame.includes("Coach demo"), false);
+  assert.equal(frame.includes("Demo ·"), false);
+  const caption = html.slice(html.indexOf('class="ex-demo-caption"'));
+  assert.equal(caption.includes(">Coach demo</span>"), true);
+  assert.equal(caption.includes('href="https://www.youtube.com/watch?v=dQw4w9WgXcQ&amp;t=42s"'), true);
+  assert.equal(caption.includes(">Watch on YouTube</a>"), true);
   // Key cue sits under the video and is not repeated in the cue list.
   assert.equal(html.includes(">Key cue</span>"), true);
   assert.equal(countOccurrences(html, "Hinge at the hips and keep the bar close to legs."), 1);

@@ -82,6 +82,11 @@ export function ExerciseDemo({
   const [slow, setSlow] = useState(false);
   const [muted, setMuted] = useState(true);
   const [thumbFailed, setThumbFailed] = useState(false);
+  // iPhone Safari cannot fullscreen an iframe, so the control only shows
+  // where the browser supports it.
+  const [canFullscreen] = useState(
+    () => typeof document !== "undefined" && document.fullscreenEnabled === true,
+  );
   const mountRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<YouTubePlayer | null>(null);
   const loopTimerRef = useRef<number | null>(null);
@@ -90,6 +95,7 @@ export function ExerciseDemo({
   const end = media.end_s != null && media.end_s > start ? Math.floor(media.end_s) : null;
   const segment = demoSegmentLabel(media);
   const isCoach = media.source === "coach";
+  const channel = media.channel_title?.trim() || null;
   const playerActive = mode === "loading" || mode === "playing" || mode === "paused";
   const compact = watched && mode === "facade";
   const pinLeadCue = Boolean(leadCue) && !compact && mode !== "error";
@@ -120,8 +126,9 @@ export function ExerciseDemo({
             mute: 1,
             playsinline: 1,
             controls: 0,
-            disablekb: 1,
-            fs: 0,
+            // Keyboard shortcuts and fullscreen stay enabled; only the control
+            // bar is swapped for the row's own controls below the frame.
+            fs: 1,
             rel: 0,
             iv_load_policy: 3,
             start,
@@ -210,6 +217,13 @@ export function ExerciseDemo({
     setSlow(next);
   };
 
+  const enterFullscreen = () => {
+    const frame = mountRef.current?.querySelector("iframe");
+    frame?.requestFullscreen?.().catch(() => {
+      // Refused (no user activation, or the browser blocks it): stay inline.
+    });
+  };
+
   const toggleSound = () => {
     const player = playerRef.current;
     if (!player) return;
@@ -272,8 +286,18 @@ export function ExerciseDemo({
             <span className="ex-demo-play-glyph" aria-hidden="true" />
           </button>
         )}
+      </div>
+
+      {/* Nothing is drawn over the frame: labels and attribution sit under
+          it, and the full video is one tap away before and during playback. */}
+      <div className="ex-demo-caption">
         {isCoach ? <span className="ex-demo-badge">Coach demo</span> : null}
-        {segment && mode === "facade" ? <span className="ex-demo-segment">Demo · {segment}</span> : null}
+        <span className="ex-demo-meta">
+          {["Demo", segment, channel].filter(Boolean).join(" · ")}
+        </span>
+        <a className="ex-demo-external" href={demoFullVideoUrl(media)} target="_blank" rel="noopener noreferrer">
+          Watch on YouTube
+        </a>
       </div>
 
       {playerActive ? (
@@ -302,9 +326,11 @@ export function ExerciseDemo({
           >
             {muted ? "Sound off" : "Sound on"}
           </button>
-          <a className="ex-demo-control ex-demo-external" href={demoFullVideoUrl(media)} target="_blank" rel="noopener noreferrer">
-            Full video
-          </a>
+          {canFullscreen ? (
+            <button type="button" className="ex-demo-control" onClick={enterFullscreen} disabled={mode === "loading"}>
+              Full screen
+            </button>
+          ) : null}
         </div>
       ) : null}
 

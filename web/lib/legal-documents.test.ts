@@ -5,11 +5,13 @@ import path from "node:path";
 
 import { PRIVACY_NOTICE_VERSION, TERMS_VERSION } from "@/lib/compliance";
 import {
+  GOOGLE_PRIVACY_POLICY_LINK,
   LEGAL_DOCUMENTS,
   PRIVACY_HREF,
   PRIVACY_NOTICE,
   TERMS_HREF,
   TERMS_OF_USE,
+  YOUTUBE_TERMS_LINK,
   buildDataRequestMailto,
   getPrivacyContactEmail,
   type LegalDocument,
@@ -312,7 +314,7 @@ test("each document carries its own version, and the Terms track acceptance", ()
 
 test("the Terms carry an effective date and the notice a revision date", () => {
   assert.equal(TERMS_OF_USE.effectiveDate, "19 August 2026");
-  assert.equal(PRIVACY_NOTICE.lastUpdated, "23 August 2026");
+  assert.equal(PRIVACY_NOTICE.lastUpdated, "29 September 2026");
   assert.equal(TERMS_OF_USE.lastUpdated, undefined);
 });
 
@@ -329,6 +331,33 @@ test("both documents keep the promises the product enforces", () => {
   assert.ok(privacy.includes("Article 9(2)(a)"), "the health-data lawful basis should be stated");
   assert.ok(/withdraw/i.test(privacy), "withdrawal should be explained");
   assert.ok(/Settings/.test(privacy), "the in-app route should be pointed to");
+});
+
+test("YouTube demo videos are disclosed as the YouTube API Services require", () => {
+  // The YouTube API Services Terms require the Terms of Use to bind users to the
+  // YouTube Terms of Service, and the privacy notice to say the app uses YouTube
+  // API Services, link the Google Privacy Policy and describe device storage.
+  const terms = TERMS_OF_USE.sections.find((entry) => entry.heading === "Exercise demonstration videos");
+  assert.ok(terms, "the Terms should cover demonstration videos");
+  assert.match(allText(TERMS_OF_USE), /agree to be bound by the YouTube Terms of Service/);
+  assert.deepEqual(terms.links, [YOUTUBE_TERMS_LINK]);
+
+  const notice = PRIVACY_NOTICE.sections.find((entry) => entry.heading === "YouTube demonstration videos");
+  assert.ok(notice, "the notice should cover YouTube demonstration videos");
+  const text = (notice.paragraphs ?? []).join(" ");
+  assert.match(text, /YouTube API Services/);
+  assert.match(text, /IP address/);
+  assert.match(text, /cookies or local storage/);
+  assert.match(text, /only when you tap play/);
+  assert.match(text, /separate controller/);
+  assert.deepEqual(notice.links, [GOOGLE_PRIVACY_POLICY_LINK, YOUTUBE_TERMS_LINK]);
+  assert.equal(GOOGLE_PRIVACY_POLICY_LINK.href, "https://policies.google.com/privacy");
+  assert.equal(YOUTUBE_TERMS_LINK.href, "https://www.youtube.com/t/terms");
+
+  // YouTube is an independent controller, not a processor acting for UNLXCK,
+  // so it stays out of the Service providers list.
+  const providers = PRIVACY_NOTICE.sections.find((entry) => entry.heading === "Service providers");
+  assert.ok(!(providers?.bullets ?? []).some((bullet) => bullet.includes("YouTube")));
 });
 
 // --- direct comparison, once the canonical docs are in this repo --------------

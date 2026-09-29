@@ -15,6 +15,7 @@ yields no media, and the block renders cues-only.
 from __future__ import annotations
 
 import logging
+import os
 import re
 import threading
 import time
@@ -32,30 +33,31 @@ logger = logging.getLogger(__name__)
 INDEX_TTL_SECONDS = 300.0
 # After a failed load, retry sooner than the full TTL but not on every request.
 INDEX_FAILURE_TTL_SECONDS = 60.0
-OEMBED_URL = "https://www.youtube.com/oembed"
-OEMBED_TIMEOUT_SECONDS = 8.0
+YOUTUBE_VIDEOS_URL = "https://www.googleapis.com/youtube/v3/videos"
+YOUTUBE_API_KEY_ENV = "YOUTUBE_DATA_API_KEY"
+YOUTUBE_API_TIMEOUT_SECONDS = 8.0
+# videos.list accepts up to 50 IDs per call (1 quota unit per call).
+_VIDEOS_PER_REQUEST = 50
 
 _VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
-_PARENTHETICAL_RE = re.compile(r"\([^)]*\)")
-# Trailing qualifiers the planner appends to a bank name
-# ("Step-Back Pivot Reset - technical", "Sled Push – light").
-_TRAILING_QUALIFIER_RE = re.compile(r"\s+[-–—]\s+[a-z][a-z ]{0,30}$")
 _NON_ALNUM_RE = re.compile(r"[^a-z0-9]+")
 
 
 def normalize_exercise_key(name: str | None) -> str:
-    """Slug an exercise name so plan wording drift still lands on one row.
+    """Slug an exercise name without dropping any word of it.
 
-    "Romanian Deadlift (RDL)" -> "romanian-deadlift"
-    "Step-Back Pivot Reset - technical" -> "step-back-pivot-reset"
+    Only case, punctuation, accents and "&" are folded, so spelling drift still
+    lands on one row ("Hollow-Body Hold" and "Hollow Body Hold"). Qualifiers are
+    kept: "Box Jump (Max Height)" and "Box Jump (Stick Landing)" are different
+    exercises and must never share a video. Two names that really are the same
+    movement are joined by an explicit alias on the media row, not by the slug.
+
+    "Romanian Deadlift (RDL)" -> "romanian-deadlift-rdl"
+    "Clean & Press" -> "clean-and-press"
     """
     if not name:
         return ""
-    # Strip qualifiers before the ASCII fold, which would drop an en/em dash.
-    text = str(name).lower().strip()
-    text = _PARENTHETICAL_RE.sub(" ", text)
-    text = _TRAILING_QUALIFIER_RE.sub("", text.strip())
-    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+    text = unicodedata.normalize("NFKD", str(name).lower()).encode("ascii", "ignore").decode("ascii")
     text = text.replace("&", " and ")
     return _NON_ALNUM_RE.sub("-", text).strip("-")
 
@@ -100,6 +102,11 @@ def _media_from_row(row: Mapping[str, Any]) -> ExerciseMedia | None:
     video_id = str(row.get("video_id") or "")
     if not _VIDEO_ID_RE.match(video_id):
         return None
+    # YouTube's developer policies require checking each video's Made for Kids
+    # status. Only a video positively checked as not made for kids is served;
+    # the store query filters on this too, this is the backstop.
+    if row.get("made_for_kids") is not False:
+        return None
     try:
         start_s = max(0, int(row.get("start_s") or 0))
         end_raw = row.get("end_s")
@@ -109,7 +116,14 @@ def _media_from_row(row: Mapping[str, Any]) -> ExerciseMedia | None:
     if end_s is not None and end_s <= start_s:
         end_s = None
     source = "coach" if row.get("source") == "coach" else "curated"
-    return ExerciseMedia(video_id=video_id, start_s=start_s, end_s=end_s, source=source)
+    channel_title = str(row.get("channel_title") or "").strip()[:200] or None
+    return ExerciseMedia(
+        video_id=video_id,
+        start_s=start_s,
+        end_s=end_s,
+        source=source,
+        channel_title=channel_title,
+    )
 
 
 def build_media_index(rows: Iterable[Mapping[str, Any]]) -> dict[str, ExerciseMedia]:
@@ -217,64 +231,165 @@ class VideoCheck:
     status: str  # "ok" | "unavailable" | "unknown"
     reason: str | None = None
     title: str | None = None
+    channel_title: str | None = None
+    made_for_kids: bool | None = None
 
 
-def check_youtube_video(video_id: str, *, client: httpx.Client | None = None) -> VideoCheck:
-    """Ask YouTube oEmbed whether the video can be embedded.
+def youtube_api_key() -> str | None:
+    return (os.getenv(YOUTUBE_API_KEY_ENV) or "").strip() or None
 
-    oEmbed answers 401 when the owner disabled embedding and 404/400 when the
-    video is gone or private. Transport errors and 5xx are "unknown": a flaky
-    network must never retire a good video.
+
+def _classify_video(item: Mapping[str, Any]) -> VideoCheck:
+    snippet = item.get("snippet") or {}
+    status = item.get("status") or {}
+    made_for_kids = status.get("madeForKids")
+    found = {
+        "title": str(snippet.get("title") or "").strip()[:200] or None,
+        "channel_title": str(snippet.get("channelTitle") or "").strip()[:200] or None,
+        "made_for_kids": made_for_kids if isinstance(made_for_kids, bool) else None,
+    }
+    upload_status = status.get("uploadStatus")
+    if upload_status is not None and upload_status != "processed":
+        return VideoCheck(status="unavailable", reason=f"upload {upload_status}", **found)
+    if status.get("privacyStatus") == "private":
+        return VideoCheck(status="unavailable", reason="private", **found)
+    if status.get("embeddable") is False:
+        return VideoCheck(status="unavailable", reason="embedding disabled", **found)
+    if made_for_kids is True:
+        # Not served: a made-for-kids video brings YouTube's child-directed
+        # rules into the app, and no exercise demo needs one.
+        return VideoCheck(status="unavailable", reason="made for kids", **found)
+    if made_for_kids is not False or status.get("embeddable") is not True:
+        return VideoCheck(status="unknown", reason="status not reported", **found)
+    return VideoCheck(status="ok", **found)
+
+
+def check_youtube_videos(
+    video_ids: Iterable[str],
+    *,
+    api_key: str,
+    client: httpx.Client | None = None,
+) -> dict[str, VideoCheck]:
+    """Check each video through the YouTube Data API (videos.list).
+
+    One call covers up to 50 videos and reports what serving needs: whether
+    the video still exists and is public or unlisted, whether embedding is
+    allowed, and its Made for Kids status. A video missing from the response
+    is deleted or private. Transport errors and non-200 answers (quota, bad
+    key) are "unknown": a flaky network must never retire a good video.
     """
-    if not _VIDEO_ID_RE.match(video_id or ""):
-        return VideoCheck(status="unavailable", reason="invalid video id")
-    params = {"url": f"https://www.youtube.com/watch?v={video_id}", "format": "json"}
+    results: dict[str, VideoCheck] = {}
+    pending: list[str] = []
+    for video_id in dict.fromkeys(video_ids):
+        if _VIDEO_ID_RE.match(video_id or ""):
+            pending.append(video_id)
+        else:
+            results[video_id] = VideoCheck(status="unavailable", reason="invalid video id")
+    if not pending:
+        return results
+
     owns_client = client is None
-    http = client or httpx.Client(timeout=OEMBED_TIMEOUT_SECONDS, follow_redirects=True)
+    http = client or httpx.Client(timeout=YOUTUBE_API_TIMEOUT_SECONDS)
     try:
-        response = http.get(OEMBED_URL, params=params)
-    except httpx.HTTPError as exc:
-        return VideoCheck(status="unknown", reason=f"transport: {type(exc).__name__}")
+        for offset in range(0, len(pending), _VIDEOS_PER_REQUEST):
+            batch = pending[offset : offset + _VIDEOS_PER_REQUEST]
+            results.update(_check_batch(http, batch, api_key))
     finally:
         if owns_client:
             http.close()
-    if response.status_code == 200:
-        try:
-            title = str(response.json().get("title") or "") or None
-        except ValueError:
-            title = None
-        return VideoCheck(status="ok", title=title)
-    if response.status_code == 401:
-        return VideoCheck(status="unavailable", reason="embedding disabled")
-    if response.status_code in {400, 403, 404}:
-        return VideoCheck(status="unavailable", reason=f"oembed {response.status_code}")
-    return VideoCheck(status="unknown", reason=f"oembed {response.status_code}")
+    return results
 
 
-def run_media_verification_sweep(store: Any, *, client: httpx.Client | None = None) -> dict[str, int]:
-    """Re-check every stored video and record the result. Never raises per row."""
+def _check_batch(http: httpx.Client, batch: list[str], api_key: str) -> dict[str, VideoCheck]:
+    def unknown(reason: str) -> dict[str, VideoCheck]:
+        return {video_id: VideoCheck(status="unknown", reason=reason) for video_id in batch}
+
+    try:
+        # The key goes in a header, not the query string, so request logging
+        # never records it.
+        response = http.get(
+            YOUTUBE_VIDEOS_URL,
+            params={
+                "part": "snippet,status",
+                "id": ",".join(batch),
+                "fields": "items(id,snippet(title,channelTitle),status(uploadStatus,privacyStatus,embeddable,madeForKids))",
+            },
+            headers={"X-Goog-Api-Key": api_key},
+        )
+    except httpx.HTTPError as exc:
+        return unknown(f"transport: {type(exc).__name__}")
+    if response.status_code != 200:
+        return unknown(f"data api {response.status_code}")
+    try:
+        items = response.json().get("items") or []
+    except ValueError:
+        return unknown("data api: invalid json")
+    by_id = {str(item.get("id")): item for item in items if isinstance(item, dict)}
+    return {
+        video_id: _classify_video(by_id[video_id])
+        if video_id in by_id
+        else VideoCheck(status="unavailable", reason="not found or private")
+        for video_id in batch
+    }
+
+
+def check_youtube_video(
+    video_id: str,
+    *,
+    api_key: str,
+    client: httpx.Client | None = None,
+) -> VideoCheck:
+    return check_youtube_videos([video_id], api_key=api_key, client=client)[video_id]
+
+
+def run_media_verification_sweep(
+    store: Any,
+    *,
+    api_key: str | None = None,
+    client: httpx.Client | None = None,
+) -> dict[str, int]:
+    """Re-check every stored video and record the result. Never raises per row.
+
+    Unavailable rows are re-checked too, so a video that was only briefly
+    private or restricted is served again once YouTube reports it as fine.
+    """
+    counts = {"ok": 0, "unavailable": 0, "unknown": 0}
+    key = api_key or youtube_api_key()
+    if not key:
+        logger.warning("exercise media verification skipped: %s is not set", YOUTUBE_API_KEY_ENV)
+        return counts
     lister = getattr(store, "list_exercise_media_for_verification", None)
     updater = getattr(store, "update_exercise_media_status", None)
-    counts = {"ok": 0, "unavailable": 0, "unknown": 0}
     if not callable(lister) or not callable(updater):
         return counts
-    owns_client = client is None
-    http = client or httpx.Client(timeout=OEMBED_TIMEOUT_SECONDS, follow_redirects=True)
-    try:
-        for row in lister():
-            key = str(row.get("exercise_key") or "")
-            result = check_youtube_video(str(row.get("video_id") or ""), client=http)
-            counts[result.status] = counts.get(result.status, 0) + 1
-            if result.status == "unknown":
-                continue
-            try:
-                updater(key, status=result.status, reason=result.reason)
-            except Exception:  # noqa: BLE001
-                logger.warning("exercise media status update failed key=%s", key, exc_info=True)
-    finally:
-        if owns_client:
-            http.close()
-    if counts["unavailable"]:
+    rows = list(lister())
+    results = check_youtube_videos(
+        (str(row.get("video_id") or "") for row in rows),
+        api_key=key,
+        client=client,
+    )
+    served_changed = False
+    for row in rows:
+        exercise_key = str(row.get("exercise_key") or "")
+        result = results.get(str(row.get("video_id") or "")) or VideoCheck(status="unknown")
+        counts[result.status] = counts.get(result.status, 0) + 1
+        if result.status == "unknown":
+            continue
+        try:
+            updater(
+                exercise_key,
+                status=result.status,
+                reason=result.reason,
+                made_for_kids=result.made_for_kids,
+                title=result.title,
+                channel_title=result.channel_title,
+            )
+        except Exception:  # noqa: BLE001
+            logger.warning("exercise media status update failed key=%s", exercise_key, exc_info=True)
+            continue
+        if result.status != row.get("status"):
+            served_changed = True
+    if served_changed:
         reset_media_index_cache()
     logger.info("exercise media verification sweep: %s", counts)
     return counts

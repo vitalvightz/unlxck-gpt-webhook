@@ -19671,6 +19671,8 @@ html[data-theme="light"] .loading-operational-item {
 .ex-demo-frame {
   position: relative;
   aspect-ratio: 16 / 9;
+  /* YouTube's minimum player size: a 16:9 frame on a 320px phone is ~180px. */
+  min-height: 200px;
   border-radius: 12px;
   overflow: hidden;
   background: #000;
@@ -19731,28 +19733,32 @@ html[data-theme="light"] .loading-operational-item {
 .ex-demo-play-glyph-sm::after {
   border-width: 5px 0 5px 8px;
 }
-.ex-demo-badge,
-.ex-demo-segment {
-  position: absolute;
-  left: 8px;
-  padding: 3px 8px;
-  border-radius: var(--radius-pill);
-  background: rgba(0, 0, 0, 0.62);
-  color: #fff;
-  pointer-events: none;
+.ex-demo-caption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
 }
 .ex-demo-badge {
-  top: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  font-size: 0.66rem;
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill);
+  color: var(--text-primary);
+  font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-.ex-demo-segment {
-  bottom: 8px;
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
+.ex-demo-meta {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .ex-demo-controls {
   display: flex;
@@ -19789,7 +19795,16 @@ html[data-theme="light"] .loading-operational-item {
   cursor: default;
 }
 .ex-demo-external {
-  margin-left: auto;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-decoration: none;
+}
+.ex-demo-external:hover {
+  color: var(--text-primary);
 }
 .ex-demo-external::after {
   content: "\2197";

@@ -349,6 +349,8 @@ export type ExerciseMedia = {
   end_s?: number | null;
   /** "coach" = filmed by the UNLXCK coaching team; "curated" = vetted third-party. */
   source: "curated" | "coach";
+  /** YouTube channel that published the video, credited under the player. */
+  channel_title?: string | null;
 };
 
 export type MeasuredValue = {

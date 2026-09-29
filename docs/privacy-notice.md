@@ -1,6 +1,6 @@
 # UNLXCK Privacy Notice
 
-_Last updated: 23 August 2026_
+_Last updated: 29 September 2026_
 
 UNLXCK uses personal data to create, adapt and deliver personalised training guidance. This notice explains what we use, why, who receives it and your rights.
 
@@ -64,6 +64,13 @@ We use trusted service providers to run UNLXCK. We share only the information ea
 
 ## International transfers
 Some service providers may process limited data outside the UK. Where this creates a restricted transfer, we use approved safeguards, such as the UK Addendum to the Standard Contractual Clauses, and keep a record of the safeguard that applies. You can ask us for a copy of the safeguard we rely on using the privacy contact above.
+
+## YouTube demonstration videos
+Some exercises include a demonstration video from YouTube, which UNLXCK shows using the YouTube API Services. An exercise with a video shows a preview image loaded from YouTube's servers. The YouTube player itself loads only when you tap play, in YouTube's privacy-enhanced mode.
+
+When a preview image or the player loads, Google, which operates YouTube, receives your IP address and technical information about your device and browser. Once you play a video, YouTube may store or read information on your device, such as cookies or local storage, and collect information about how you use the player. Google handles that information as a separate controller under its own policies, not as a service provider acting for UNLXCK. The [Google Privacy Policy](https://policies.google.com/privacy) and the [YouTube Terms of Service](https://www.youtube.com/t/terms) explain how.
+
+UNLXCK does not send Google your name, email, training, health or other account information, and does not receive personal information about you from YouTube. UNLXCK remembers on your device which videos you have already watched, so they can be shown smaller next time; that record stays on your device. If you do not want YouTube to receive information from the player, do not tap play. Every exercise, including its cues and stop rules, works without the video.
 
 ## How long we keep data
 We keep identifiable data only for as long as we need it, then delete it or irreversibly anonymise it.

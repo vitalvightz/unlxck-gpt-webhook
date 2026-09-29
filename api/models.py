@@ -1553,6 +1553,8 @@ class ExerciseMedia(BaseModel):
     start_s: int = 0
     end_s: int | None = None
     source: Literal["curated", "coach"] = "curated"
+    # Shown with the player so a third-party demo credits its creator.
+    channel_title: str | None = None
 
 
 class PlanOutputs(BaseModel):

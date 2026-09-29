@@ -45,6 +45,17 @@ export default async function LegalDocumentPage({
           {(section.paragraphs ?? []).map((paragraph) => (
             <p key={paragraph}>{paragraph}</p>
           ))}
+          {section.links?.length ? (
+            <ul className="summary-list">
+              {section.links.map((link) => (
+                <li key={link.href}>
+                  <a href={link.href} target="_blank" rel="noopener noreferrer" className="auth-text-link">
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </section>
       ))}
 

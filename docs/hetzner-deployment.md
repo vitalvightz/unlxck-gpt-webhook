@@ -37,6 +37,9 @@ UNLXCK_MORNING_PUSH_ENABLED=1
 UNLXCK_MORNING_PUSH_LOCAL_HOUR=7
 UNLXCK_MORNING_PUSH_CUTOFF_LOCAL_HOUR=11
 UNLXCK_MORNING_PUSH_SWEEP_INTERVAL_SECONDS=600
+
+# Exercise demo videos: daily YouTube availability / Made for Kids check.
+YOUTUBE_DATA_API_KEY=
 ```
 
 Retain the generation timeout, rate-limit, feedback, and Stage 2 variables from `.env.example` that are used in production.

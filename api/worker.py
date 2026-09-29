@@ -89,10 +89,12 @@ async def _run_exercise_media_sweep_if_due(
 ) -> None:
     """Daily availability check for exercise demo videos.
 
-    Third-party videos get deleted, made private or have embedding disabled. A
-    failed check flips the row to 'unavailable' so the plan stops serving it and
-    the athlete sees the cues-only row instead of a dead player. Runs in a worker
-    thread and never raises into the loop.
+    Third-party videos get deleted, made private, have embedding disabled or
+    are re-marked as made for kids. A failed check flips the row to
+    'unavailable' so the plan stops serving it and the athlete sees the
+    cues-only row instead of a dead player; a later passing check restores it.
+    Needs YOUTUBE_DATA_API_KEY. Runs in a worker thread and never raises into
+    the loop.
     """
 
     now = time.monotonic()

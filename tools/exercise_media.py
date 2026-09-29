@@ -1,26 +1,34 @@
 """Curate exercise demo videos (public.exercise_media).
 
-Requires service-role credentials (the same ones the backend uses):
+Requires service-role credentials (the same ones the backend uses) and a
+YouTube Data API v3 key for the video checks (import and verify):
 
     SUPABASE_URL=...
     SUPABASE_SERVICE_ROLE_KEY=...
+    YOUTUBE_DATA_API_KEY=...
 
 Workflow:
     # 1. Export the most-prescribed exercises that have no video yet.
     python tools/exercise_media.py candidates --limit 100 --out media.csv
 
     # 2. Fill youtube_url (+ start_s / end_s for the loop segment) in the CSV.
+    #    Rows with the same `family` are variants of one base name ("Box Jump",
+    #    "Box Jump (Max Height)"). Each keeps its own key; give a variant the
+    #    same video only by listing it in `aliases` when it is genuinely the
+    #    same movement.
 
-    # 3. Validate every URL through YouTube oEmbed and upsert. Dry-run first.
+    # 3. Check every video through the YouTube Data API (exists, embeddable,
+    #    not made for kids) and upsert. Dry-run first.
     python tools/exercise_media.py import media.csv --dry-run
     python tools/exercise_media.py import media.csv
 
     # Re-check every stored video now (the worker also does this daily).
     python tools/exercise_media.py verify
 
-CSV columns: exercise_key, example_name, block_type, occurrences, youtube_url,
-start_s, end_s, source, aliases, notes. Rows without youtube_url are skipped.
-aliases is a "|"-separated list of other names that should share the video.
+CSV columns: exercise_key, family, example_name, block_type, occurrences,
+youtube_url, start_s, end_s, source, aliases, notes. Rows without youtube_url
+are skipped. aliases is a "|"-separated list of other names that should share
+the video. family is a curation hint only and is never used for matching.
 
 Exit codes: 0 success / 1 some rows rejected / 2 usage or operational error.
 """
@@ -29,6 +37,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import re
 import sys
 from collections import Counter
 from datetime import datetime, timezone
@@ -42,15 +51,18 @@ if str(_REPO_ROOT) not in sys.path:
 import httpx  # noqa: E402
 
 from api.services.exercise_media import (  # noqa: E402
-    OEMBED_TIMEOUT_SECONDS,
-    check_youtube_video,
+    YOUTUBE_API_KEY_ENV,
+    YOUTUBE_API_TIMEOUT_SECONDS,
+    check_youtube_videos,
     normalize_exercise_key,
     parse_youtube_video_id,
     run_media_verification_sweep,
+    youtube_api_key,
 )
 
 CSV_COLUMNS = (
     "exercise_key",
+    "family",
     "example_name",
     "block_type",
     "occurrences",
@@ -64,6 +76,38 @@ CSV_COLUMNS = (
 
 # Blocks with nothing to demonstrate on camera.
 _NO_DEMO_BLOCK_TYPES = {"mindset", "cooldown_recovery"}
+# Matches the exercise_key check constraint.
+_MAX_KEY_LENGTH = 120
+
+_PARENTHETICAL_RE = re.compile(r"\([^)]*\)")
+# Trailing qualifiers the planner appends to a bank name
+# ("Step-Back Pivot Reset - technical", "Sled Push – light").
+_TRAILING_QUALIFIER_RE = re.compile(r"\s+[-–—]\s+[a-z][a-z ]{0,30}$")
+
+
+def family_key(name: str | None) -> str:
+    """Base name with qualifiers stripped, to group variants for a curator.
+
+    "Box Jump (Max Height)" and "Box Jump (Stick Landing)" share the family
+    box-jump. This is a sorting hint in the candidates CSV only: videos match
+    on normalize_exercise_key, which keeps the qualifiers.
+    """
+    text = str(name or "").lower()
+    text = _PARENTHETICAL_RE.sub(" ", text)
+    text = _TRAILING_QUALIFIER_RE.sub("", text.strip())
+    return normalize_exercise_key(text)
+
+
+def _require_api_key() -> str:
+    key = youtube_api_key()
+    if not key:
+        print(
+            f"error: {YOUTUBE_API_KEY_ENV} is not set. Videos are checked through the "
+            "YouTube Data API (embeddable, Made for Kids) before they can be served.",
+            file=sys.stderr,
+        )
+        raise SystemExit(2)
+    return key
 
 
 def _build_store():
@@ -113,6 +157,7 @@ def rank_candidates(
         rows.append(
             {
                 "exercise_key": key,
+                "family": family_key(name),
                 "example_name": name,
                 "block_type": block_type,
                 "occurrences": occurrences,
@@ -135,6 +180,8 @@ def parse_import_row(row: dict[str, str]) -> tuple[dict[str, Any] | None, str | 
     key = normalize_exercise_key(row.get("exercise_key") or row.get("example_name"))
     if not key:
         return None, "missing exercise_key"
+    if len(key) > _MAX_KEY_LENGTH:
+        return None, f"exercise_key longer than {_MAX_KEY_LENGTH} characters"
     video_id = parse_youtube_video_id(url)
     if not video_id:
         return None, f"not a YouTube video URL: {url}"
@@ -205,43 +252,57 @@ def _cmd_candidates(args: argparse.Namespace) -> int:
 def _cmd_import(args: argparse.Namespace) -> int:
     with open(args.csv, newline="", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
+    api_key = _require_api_key()
     store = None if args.dry_run else _build_store()
     rejected = 0
     written = 0
-    with httpx.Client(timeout=OEMBED_TIMEOUT_SECONDS, follow_redirects=True) as http:
-        for line_no, row in enumerate(rows, start=2):
-            payload, error = parse_import_row(row)
-            if error:
-                rejected += 1
-                print(f"line {line_no}: rejected - {error}")
-                continue
-            if payload is None:
-                continue
-            check = check_youtube_video(payload["video_id"], client=http)
-            if check.status != "ok":
-                rejected += 1
-                print(f"line {line_no}: {payload['exercise_key']} rejected - {check.reason}")
-                continue
-            label = f"{payload['exercise_key']} -> {payload['video_id']} ({check.title or 'untitled'})"
-            if store is None:
-                print(f"line {line_no}: ok (dry run) {label}")
-                continue
-            store.upsert_exercise_media(
-                {
-                    **payload,
-                    "status": "ok",
-                    "status_reason": None,
-                    "verified_at": datetime.now(timezone.utc).isoformat(),
-                }
-            )
-            written += 1
-            print(f"line {line_no}: saved {label}")
+    parsed: list[tuple[int, dict[str, Any]]] = []
+    for line_no, row in enumerate(rows, start=2):
+        payload, error = parse_import_row(row)
+        if error:
+            rejected += 1
+            print(f"line {line_no}: rejected - {error}")
+        elif payload is not None:
+            parsed.append((line_no, payload))
+
+    with httpx.Client(timeout=YOUTUBE_API_TIMEOUT_SECONDS) as http:
+        checks = check_youtube_videos(
+            (payload["video_id"] for _, payload in parsed),
+            api_key=api_key,
+            client=http,
+        )
+    for line_no, payload in parsed:
+        check = checks[payload["video_id"]]
+        if check.status != "ok":
+            rejected += 1
+            print(f"line {line_no}: {payload['exercise_key']} rejected - {check.reason}")
+            continue
+        label = (
+            f"{payload['exercise_key']} -> {payload['video_id']} "
+            f"({check.title or 'untitled'} / {check.channel_title or 'unknown channel'})"
+        )
+        if store is None:
+            print(f"line {line_no}: ok (dry run) {label}")
+            continue
+        store.upsert_exercise_media(
+            {
+                **payload,
+                "status": "ok",
+                "status_reason": None,
+                "made_for_kids": check.made_for_kids,
+                "title": check.title,
+                "channel_title": check.channel_title,
+                "verified_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
+        written += 1
+        print(f"line {line_no}: saved {label}")
     print(f"done: {written} saved, {rejected} rejected")
     return 1 if rejected else 0
 
 
 def _cmd_verify(_: argparse.Namespace) -> int:
-    counts = run_media_verification_sweep(_build_store())
+    counts = run_media_verification_sweep(_build_store(), api_key=_require_api_key())
     print(f"ok={counts.get('ok', 0)} unavailable={counts.get('unavailable', 0)} unknown={counts.get('unknown', 0)}")
     return 0
 
