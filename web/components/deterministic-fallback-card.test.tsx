@@ -7,7 +7,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { StructuredPlanRenderer } from "./structured-plan-renderer";
+import { SessionCard, StructuredPlanRenderer } from "./structured-plan-renderer";
 import { dayCompletion } from "@/lib/camp-map";
 import { getPhysicalSessions, isZeroLoadSupportSession } from "@/lib/structured-plan";
 import type { StructuredDay, StructuredPlan, StructuredSession } from "@/lib/types";
@@ -207,13 +207,22 @@ test("a parsed drill card keeps Why, prescription, cues and its stop rule", () =
   assert.match(markup, /Read the opponent&#x27;s exit lane/);
   // No "WHY Why:" duplication of the source label.
   assert.equal(/Why<\/span>\s*Why:/.test(markup), false);
-  assert.match(markup, /2 sets x 4 clean reactions each direction/);
-  assert.match(markup, /Rest: 75 sec between sets/);
-  assert.match(markup, /Cue Method:/);
-  assert.match(markup, /Side \/ Stance:/);
-  // Quality Stop renders under the stop-rule label, never as "Progress".
+  // The current Plan day starts with compact exercise rows. The safety rule
+  // remains visible, while the full prescription waits for the row tap.
+  assert.match(markup, /aria-expanded="false"/);
+  assert.doesNotMatch(markup, /2 sets x 4 clean reactions each direction/);
   assert.match(markup, /Stop rule/);
   assert.match(markup, /braking control, or stance reset loses quality/);
+
+  const expanded = renderToStaticMarkup(
+    <SessionCard session={pressureStepCut} defaultOpenBlocks />,
+  );
+  assert.match(expanded, /2 sets x 4 clean reactions each direction/);
+  assert.match(expanded, /Rest: 75 sec between sets/);
+  assert.match(expanded, /Cue Method:/);
+  assert.match(expanded, /Side \/ Stance:/);
+  // Quality Stop renders under the stop-rule label, never as "Progress".
+  assert.match(expanded, /Stop rule/);
   assert.equal(markup.includes("Quality Stop"), false);
   assert.match(markup, /Skill/);
 });
