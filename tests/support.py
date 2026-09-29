@@ -6,7 +6,7 @@ import os
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from uuid import uuid4
 
 from fastapi import HTTPException, status
@@ -122,6 +122,9 @@ class FakeStore:
         self.generation_jobs: dict[str, dict] = {}
         self.today_checkins: dict[str, list[dict]] = {}
         self.session_completions: dict[str, list[dict]] = {}
+        self.session_logs: dict[str, list[dict]] = {}
+        self.athlete_streak_rows: dict[str, dict] = {}
+        self.daily_activity: dict[str, set[str]] = {}
         self.xp_accounts: dict[str, dict] = {}
         self.xp_awards: dict[str, list[dict]] = {}
         self.injury_flags: dict[str, list[dict]] = {}
@@ -1569,6 +1572,49 @@ class FakeStore:
             reverse=True,
         )
         return [dict(row) for row in rows[:limit]]
+
+    def list_session_logs(self, athlete_id: str, *, limit: int = 500) -> list[dict]:
+        rows = sorted(
+            self.session_logs.get(athlete_id, []),
+            key=lambda row: str(row.get("session_date") or ""),
+            reverse=True,
+        )
+        return [dict(row) for row in rows[:limit]]
+
+    # --- Streaks: mirror api/store.py and the record_athlete_daily_activity RPC ---
+
+    def get_athlete_streaks(self, athlete_id: str) -> dict | None:
+        row = self.athlete_streak_rows.get(athlete_id)
+        return dict(row) if row is not None else None
+
+    def upsert_athlete_streaks(self, athlete_id: str, fields: dict) -> dict:
+        row = {**self.athlete_streak_rows.get(athlete_id, {}), **fields, "athlete_id": athlete_id}
+        self.athlete_streak_rows[athlete_id] = row
+        return dict(row)
+
+    def record_daily_activity(self, athlete_id: str, activity_date: str) -> dict:
+        # Like the RPC: record the day, then rebuild the login run ending on it.
+        days = self.daily_activity.setdefault(athlete_id, set())
+        days.add(activity_date)
+        cursor = date.fromisoformat(activity_date)
+        current = 0
+        while cursor.isoformat() in days:
+            current += 1
+            cursor -= timedelta(days=1)
+        prior = self.athlete_streak_rows.get(athlete_id, {})
+        return self.upsert_athlete_streaks(athlete_id, {
+            "login_current": current,
+            "login_best": max(int(prior.get("login_best") or 0), current),
+            "login_last_active_date": max(
+                activity_date, str(prior.get("login_last_active_date") or "")
+            ),
+        })
+
+    def list_daily_activity(self, athlete_id: str) -> list[dict]:
+        return [
+            {"athlete_id": athlete_id, "activity_date": day}
+            for day in sorted(self.daily_activity.get(athlete_id, set()), reverse=True)
+        ]
 
     def list_today_checkins(self, athlete_id: str, *, limit: int = 14) -> list[dict]:
         rows = sorted(

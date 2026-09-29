@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from typing import Any
 
 from api.services.active_plan import resolve_active_plan
@@ -19,87 +19,11 @@ def _rows(value: object) -> list[dict[str, Any]]:
 
 
 def _read_state(store: AppStore, athlete_id: str) -> dict[str, Any]:
-    custom = getattr(store, "get_athlete_streaks", None)
-    if callable(custom):
-        return dict(custom(athlete_id) or {})
-    states = getattr(store, "athlete_streaks", None)
-    if isinstance(states, Mapping):
-        return dict(states.get(athlete_id) or {})
-    response = (
-        store.client.table("athlete_streaks").select("*")
-        .eq("athlete_id", athlete_id).limit(1).execute()
-    )
-    rows = _rows(getattr(response, "data", None))
-    return rows[0] if rows else {}
+    return dict(store.get_athlete_streaks(athlete_id) or {})
 
 
 def _write_state(store: AppStore, athlete_id: str, fields: Mapping[str, Any]) -> dict[str, Any]:
-    custom = getattr(store, "upsert_athlete_streaks", None)
-    if callable(custom):
-        return dict(custom(athlete_id, dict(fields)))
-    states = getattr(store, "athlete_streaks", None)
-    if isinstance(states, dict):
-        states[athlete_id] = {"athlete_id": athlete_id, **states.get(athlete_id, {}), **fields}
-        return dict(states[athlete_id])
-    response = (
-        store.client.table("athlete_streaks")
-        .upsert({"athlete_id": athlete_id, **fields}, on_conflict="athlete_id")
-        .execute()
-    )
-    rows = _rows(getattr(response, "data", None))
-    if not rows:
-        raise RuntimeError("streak state write returned no row")
-    return rows[0]
-
-
-def _activity_dates(store: AppStore, athlete_id: str) -> set[date]:
-    custom = getattr(store, "list_daily_activity", None)
-    if callable(custom):
-        rows = _rows(custom(athlete_id))
-    else:
-        activity = getattr(store, "athlete_daily_activity", None)
-        if isinstance(activity, (set, list, tuple)):
-            rows = [
-                {"athlete_id": item[0], "activity_date": item[1]}
-                for item in activity if isinstance(item, tuple) and len(item) == 2
-            ]
-        else:
-            response = (
-                store.client.table("athlete_daily_activity").select("activity_date")
-                .eq("athlete_id", athlete_id).execute()
-            )
-            rows = _rows(getattr(response, "data", None))
-    result: set[date] = set()
-    for row in rows:
-        if str(row.get("athlete_id") or athlete_id) != athlete_id:
-            continue
-        try:
-            result.add(date.fromisoformat(str(row.get("activity_date"))))
-        except ValueError:
-            continue
-    return result
-
-
-def _insert_activity(
-    store: AppStore, athlete_id: str, activity_day: date
-) -> Mapping[str, Any] | None:
-    custom = getattr(store, "record_daily_activity", None)
-    if callable(custom):
-        result = custom(athlete_id, activity_day.isoformat())
-        return result if isinstance(result, Mapping) else None
-    activity = getattr(store, "athlete_daily_activity", None)
-    if isinstance(activity, set):
-        activity.add((athlete_id, activity_day.isoformat()))
-        return None
-    (
-        store.client.table("athlete_daily_activity")
-        .upsert(
-            {"athlete_id": athlete_id, "activity_date": activity_day.isoformat()},
-            on_conflict="athlete_id,activity_date",
-            ignore_duplicates=True,
-        ).execute()
-    )
-    return None
+    return dict(store.upsert_athlete_streaks(athlete_id, dict(fields)))
 
 
 def _public_state(row: Mapping[str, Any]) -> dict[str, Any]:
@@ -124,31 +48,16 @@ def _public_state(row: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def reconcile_login_streak(store: AppStore, *, athlete_id: str, activity_day: date) -> dict[str, Any]:
-    dates = _activity_dates(store, athlete_id)
-    current = 0
-    cursor = activity_day
-    while cursor in dates:
-        current += 1
-        cursor -= timedelta(days=1)
-    prior = _read_state(store, athlete_id)
-    best = max(int(prior.get("login_best") or 0), current)
-    return _write_state(store, athlete_id, {
-        "login_current": current,
-        "login_best": best,
-        "login_last_active_date": max(dates).isoformat() if dates else None,
-    })
-
-
 def record_daily_activity(
     store: AppStore, *, athlete_id: str, athlete_timezone: str | None, now: datetime | None = None
 ) -> dict[str, Any]:
-    """Record at most one activity row for the server-resolved effective day."""
+    """Record at most one activity row for the server-resolved effective day.
+
+    The store records the day and rebuilds the login streak in one atomic step
+    (the ``record_athlete_daily_activity`` RPC) and returns the streak row.
+    """
     activity_day = date.fromisoformat(resolve_training_day(athlete_timezone, now=now))
-    atomic_state = _insert_activity(store, athlete_id, activity_day)
-    if atomic_state is not None:
-        return _public_state(atomic_state)
-    return _public_state(reconcile_login_streak(store, athlete_id=athlete_id, activity_day=activity_day))
+    return _public_state(store.record_daily_activity(athlete_id, activity_day.isoformat()))
 
 
 def _scheduled_days(plan: Mapping[str, Any], training_day: str) -> list[tuple[date, set[str]]]:
@@ -196,15 +105,11 @@ def _training_schedule(plan: Mapping[str, Any], training_day: str) -> dict[date,
 
 
 def _all_completions(store: AppStore, athlete_id: str) -> list[dict[str, Any]]:
-    custom = getattr(store, "list_session_completions", None)
-    if callable(custom):
-        return _rows(custom(athlete_id, limit=500))
-    return _rows(getattr(store, "completions", None))
+    return _rows(store.list_session_completions(athlete_id, limit=500))
 
 
 def _session_logs(store: AppStore, athlete_id: str) -> list[dict[str, Any]]:
-    custom = getattr(store, "list_session_logs", None)
-    return _rows(custom(athlete_id, limit=500)) if callable(custom) else []
+    return _rows(store.list_session_logs(athlete_id, limit=500))
 
 
 def qualifying_training_days(
@@ -349,4 +254,4 @@ def get_streak_state(
     return _public_state(_read_state(store, athlete_id))
 
 
-__all__ = ["get_streak_state", "qualifying_training_days", "record_daily_activity", "reconcile_adherence_streak", "reconcile_login_streak", "reconcile_training_streak"]
+__all__ = ["get_streak_state", "qualifying_training_days", "record_daily_activity", "reconcile_adherence_streak", "reconcile_training_streak"]
