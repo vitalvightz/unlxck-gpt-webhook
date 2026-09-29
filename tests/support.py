@@ -44,6 +44,7 @@ from api.schema_requirements import GENERATION_JOB_STAGE2_COST_COLUMNS
 from api.store import _signup_date_of_birth, _generation_hard_max_runtime_seconds, _generation_startup_max_attempts, is_job_loaded_stalled_generation_job, is_stage1_planner_stalled_generation_job, is_startup_stale_generation_job
 from api.store import RehabExposureWindow
 from api.xp import XP_CALENDAR_SCOPED_ACTIONS, XP_REWARD_AMOUNTS, XpAction
+from api.services.xp_awards import XP_ABUSE_HARDENING_VERSION
 from datetime import timedelta
 
 os.environ.setdefault("APP_GENERATION_SCHEDULER", "fastapi")
@@ -99,6 +100,16 @@ def _filter_admin_rows(rows: list[dict], q: str | None, columns: tuple[str, ...]
     ]
 
 
+def xp_hardening_ready_payload() -> dict:
+    """The rollout payload a fully migrated database returns (see xp_awards)."""
+    return {
+        "ok": True,
+        "version": XP_ABUSE_HARDENING_VERSION,
+        "rollout_ready": True,
+        "open_plan_scope_ready": True,
+    }
+
+
 @dataclass
 class FakeAuthService:
     users_by_token: dict[str, AuthenticatedUser]
@@ -127,6 +138,7 @@ class FakeStore:
         self.daily_activity: dict[str, set[str]] = {}
         self.xp_accounts: dict[str, dict] = {}
         self.xp_awards: dict[str, list[dict]] = {}
+        self.plan_milestones: dict[str, list[dict]] = {}
         self.injury_flags: dict[str, list[dict]] = {}
         self.rehab_exposures: dict[str, dict] = {}
         self.adaptation_notes: dict[str, list[dict]] = {}
@@ -1623,6 +1635,77 @@ class FakeStore:
             reverse=True,
         )
         return [dict(row) for row in rows[:limit]]
+
+    # --- XP rollout, progress reads and plan milestones (see api/store.py) ---
+
+    def validate_xp_abuse_hardening(self) -> dict:
+        return xp_hardening_ready_payload()
+
+    def reconcile_feedback_xp(
+        self, athlete_id: str, *, feedback_id: str, target_amount: int
+    ) -> dict | None:
+        # Eligibility, the daily cap and the 1 -> 3 upgrade live in SQL and are
+        # not modelled here; this store awards no feedback XP (tests of those
+        # rules use a dedicated store).
+        return None
+
+    def get_xp_progress_state(self, athlete_id: str, *, limit: int) -> dict:
+        account = self.xp_accounts.get(athlete_id) or {}
+        awards = sorted(
+            (dict(row) for row in self.xp_awards.get(athlete_id, [])),
+            key=lambda row: (str(row.get("awarded_at") or ""), str(row.get("id") or "")),
+            reverse=True,
+        )
+        return {
+            "total_xp": account.get("total_xp"),
+            "last_daily_login_date": account.get("last_daily_login_date"),
+            "recent_awards": [
+                {
+                    key: row[key]
+                    for key in ("id", "action", "amount", "awarded_at", "calendar_date")
+                    if row.get(key) is not None
+                }
+                for row in awards[:limit]
+            ],
+        }
+
+    def xp_award_exists(
+        self,
+        athlete_id: str,
+        *,
+        action: str | None = None,
+        idempotency_key: str | None = None,
+        calendar_date: str | None = None,
+    ) -> bool:
+        return any(
+            (action is None or str(row.get("action") or "") == action)
+            and (idempotency_key is None or str(row.get("idempotency_key") or "") == idempotency_key)
+            and (calendar_date is None or str(row.get("calendar_date") or "") == calendar_date)
+            for row in self.xp_awards.get(athlete_id, [])
+        )
+
+    def list_plan_milestones(self, athlete_id: str, *, limit: int) -> list[dict]:
+        rows = sorted(
+            (dict(row) for row in self.plan_milestones.get(athlete_id, [])),
+            key=lambda row: str(row.get("completed_at") or ""),
+            reverse=True,
+        )
+        return rows[:limit]
+
+    # Milestone recording and week lifecycle are atomic SQL functions; like the
+    # feedback reconcile they are not modelled here and record nothing.
+    def record_plan_milestone(self, athlete_id: str, **_fields) -> dict | None:
+        return None
+
+    def begin_week_lifecycle_reconciliation(
+        self, athlete_id: str, *, plan_id: str, week_id: str
+    ) -> dict | None:
+        return None
+
+    def complete_week_lifecycle_reconciliation(
+        self, athlete_id: str, *, plan_id: str, week_id: str
+    ) -> dict | None:
+        return None
 
     def award_xp(
         self,

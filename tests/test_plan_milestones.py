@@ -1,3 +1,4 @@
+from support import xp_hardening_ready_payload
 from api.services.plan_milestones import record_plan_milestones_after_completed_week
 from api.services.week_progress import award_completed_week
 
@@ -93,6 +94,9 @@ class FakeStore:
 
     def list_plan_session_completions(self, athlete_id, plan_id, *, limit=500):
         return list(self.completions)
+
+    def validate_xp_abuse_hardening(self):
+        return xp_hardening_ready_payload()
 
     def award_xp(self, athlete_id, *, action, idempotency_key, calendar_date=None):
         return {

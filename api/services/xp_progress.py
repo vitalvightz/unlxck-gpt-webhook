@@ -43,131 +43,19 @@ def _rows(value: object) -> list[dict[str, Any]]:
     return [dict(row) for row in value if isinstance(row, Mapping)]
 
 
-def _response_data(response: object) -> object:
-    return getattr(response, "data", None)
-
-
-def _client(store: AppStore) -> object | None:
-    return getattr(store, "client", None)
-
-
 def _read_xp_state(store: AppStore, athlete_id: str) -> dict[str, Any]:
-    custom = getattr(store, "get_xp_progress_state", None)
-    if callable(custom):
-        result = custom(athlete_id, limit=RECENT_AWARDS_LIMIT)
-        if isinstance(result, Mapping):
-            return {
-                "total_xp": max(0, int(result.get("total_xp") or 0)),
-                "last_daily_login_date": result.get("last_daily_login_date"),
-                "recent_awards": _rows(result.get("recent_awards")),
-            }
-
-    # Test/in-memory stores already keep the durable account and ledger shapes.
-    accounts = getattr(store, "xp_accounts", None)
-    awards_by_athlete = getattr(store, "xp_awards", None)
-    if isinstance(accounts, Mapping) and isinstance(awards_by_athlete, Mapping):
-        account = accounts.get(athlete_id)
-        account_map = account if isinstance(account, Mapping) else {}
-        awards = _rows(awards_by_athlete.get(athlete_id))
-        awards.sort(
-            key=lambda row: (
-                str(row.get("awarded_at") or ""),
-                str(row.get("id") or ""),
-            ),
-            reverse=True,
-        )
-        return {
-            "total_xp": max(0, int(account_map.get("total_xp") or 0)),
-            "last_daily_login_date": account_map.get("last_daily_login_date"),
-            "recent_awards": [
-                {
-                    key: row[key]
-                    for key in (
-                        "id",
-                        "action",
-                        "amount",
-                        "awarded_at",
-                        "calendar_date",
-                    )
-                    if row.get(key) is not None
-                }
-                for row in awards[:RECENT_AWARDS_LIMIT]
-            ],
-        }
-
-    client = _client(store)
-    if client is None:
-        raise RuntimeError("XP progress store is unavailable")
-
-    account_response = (
-        client.table("xp_accounts")
-        .select("total_xp,last_daily_login_date")
-        .eq("athlete_id", athlete_id)
-        .limit(1)
-        .execute()
-    )
-    account_rows = _rows(_response_data(account_response))
-    account = account_rows[0] if account_rows else {}
-
-    awards_response = (
-        client.table("xp_awards")
-        .select("id,action,amount,awarded_at,calendar_date")
-        .eq("athlete_id", athlete_id)
-        .order("awarded_at", desc=True)
-        .order("id", desc=True)
-        .limit(RECENT_AWARDS_LIMIT)
-        .execute()
-    )
+    state = store.get_xp_progress_state(athlete_id, limit=RECENT_AWARDS_LIMIT)
+    if not isinstance(state, Mapping):
+        raise RuntimeError("XP progress store returned no state")
     return {
-        "total_xp": max(0, int(account.get("total_xp") or 0)),
-        "last_daily_login_date": account.get("last_daily_login_date"),
-        "recent_awards": _rows(_response_data(awards_response)),
+        "total_xp": max(0, int(state.get("total_xp") or 0)),
+        "last_daily_login_date": state.get("last_daily_login_date"),
+        "recent_awards": _rows(state.get("recent_awards")),
     }
 
 
 def _list_milestones(store: AppStore, athlete_id: str) -> list[dict[str, Any]]:
-    custom = getattr(store, "list_plan_milestones", None)
-    if callable(custom):
-        return _rows(custom(athlete_id, limit=MILESTONES_LIMIT))
-
-    in_memory = getattr(store, "plan_milestones", None)
-    if isinstance(in_memory, Mapping):
-        values = in_memory.get(athlete_id)
-        milestones = _rows(values)
-    elif isinstance(in_memory, Sequence) and not isinstance(
-        in_memory,
-        (str, bytes, bytearray),
-    ):
-        milestones = [
-            dict(row)
-            for row in in_memory
-            if isinstance(row, Mapping)
-            and str(row.get("athlete_id") or "") == athlete_id
-        ]
-    else:
-        milestones = []
-
-    if milestones:
-        milestones.sort(
-            key=lambda row: str(row.get("completed_at") or ""),
-            reverse=True,
-        )
-        return milestones[:MILESTONES_LIMIT]
-
-    client = _client(store)
-    if client is None:
-        return []
-    response = (
-        client.table("plan_milestones")
-        .select(
-            "id,plan_id,milestone_type,milestone_key,phase_label,metadata,completed_at"
-        )
-        .eq("athlete_id", athlete_id)
-        .order("completed_at", desc=True)
-        .limit(MILESTONES_LIMIT)
-        .execute()
-    )
-    return _rows(_response_data(response))
+    return _rows(store.list_plan_milestones(athlete_id, limit=MILESTONES_LIMIT))
 
 
 def _award_exists(
@@ -178,35 +66,14 @@ def _award_exists(
     idempotency_key: str | None = None,
     calendar_date: str | None = None,
 ) -> bool:
-    awards_by_athlete = getattr(store, "xp_awards", None)
-    if isinstance(awards_by_athlete, Mapping):
-        for row in _rows(awards_by_athlete.get(athlete_id)):
-            if action is not None and str(row.get("action") or "") != action:
-                continue
-            if (
-                idempotency_key is not None
-                and str(row.get("idempotency_key") or "") != idempotency_key
-            ):
-                continue
-            if (
-                calendar_date is not None
-                and str(row.get("calendar_date") or "") != calendar_date
-            ):
-                continue
-            return True
-        return False
-
-    client = _client(store)
-    if client is None:
-        return False
-    query = client.table("xp_awards").select("id").eq("athlete_id", athlete_id)
-    if action is not None:
-        query = query.eq("action", action)
-    if idempotency_key is not None:
-        query = query.eq("idempotency_key", idempotency_key)
-    if calendar_date is not None:
-        query = query.eq("calendar_date", calendar_date)
-    return bool(_rows(_response_data(query.limit(1).execute())))
+    return bool(
+        store.xp_award_exists(
+            athlete_id,
+            action=action,
+            idempotency_key=idempotency_key,
+            calendar_date=calendar_date,
+        )
+    )
 
 
 def _optional_record_read(row: object, *, source: str, athlete_id: str) -> _RecordRead:

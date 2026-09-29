@@ -117,31 +117,8 @@ def _all_weeks_complete(
     )
 
 
-def _rpc_payload(response: object) -> dict[str, Any] | None:
-    payload = getattr(response, "data", None)
-    if isinstance(payload, list):
-        payload = payload[0] if payload else None
-    return dict(payload) if isinstance(payload, Mapping) else None
-
-
-def _call_store_or_rpc(
-    store: AppStore,
-    *,
-    method_name: str,
-    rpc_name: str,
-    method_args: tuple[Any, ...],
-    method_kwargs: Mapping[str, Any],
-    rpc_params: Mapping[str, Any],
-) -> dict[str, Any] | None:
-    method = getattr(store, method_name, None)
-    if callable(method):
-        result = method(*method_args, **dict(method_kwargs))
-        return dict(result) if isinstance(result, Mapping) else None
-
-    client = getattr(store, "client", None)
-    if client is None:
-        return None
-    return _rpc_payload(client.rpc(rpc_name, dict(rpc_params)).execute())
+def _mapping_or_none(result: object) -> dict[str, Any] | None:
+    return dict(result) if isinstance(result, Mapping) else None
 
 
 def _record_milestone(
@@ -154,26 +131,15 @@ def _record_milestone(
     phase_label: str | None,
     metadata: Mapping[str, Any],
 ) -> dict[str, Any] | None:
-    return _call_store_or_rpc(
-        store,
-        method_name="record_plan_milestone",
-        rpc_name="record_plan_milestone",
-        method_args=(athlete_id,),
-        method_kwargs={
-            "plan_id": plan_id,
-            "milestone_type": milestone_type,
-            "milestone_key": milestone_key,
-            "phase_label": phase_label,
-            "metadata": dict(metadata),
-        },
-        rpc_params={
-            "p_athlete_id": athlete_id,
-            "p_plan_id": plan_id,
-            "p_milestone_type": milestone_type,
-            "p_milestone_key": milestone_key,
-            "p_phase_label": phase_label,
-            "p_metadata": dict(metadata),
-        },
+    return _mapping_or_none(
+        store.record_plan_milestone(
+            athlete_id,
+            plan_id=plan_id,
+            milestone_type=milestone_type,
+            milestone_key=milestone_key,
+            phase_label=phase_label,
+            metadata=dict(metadata),
+        )
     )
 
 
@@ -184,17 +150,8 @@ def _begin_week_reconciliation(
     plan_id: str,
     week_id: str,
 ) -> dict[str, Any] | None:
-    return _call_store_or_rpc(
-        store,
-        method_name="begin_week_lifecycle_reconciliation",
-        rpc_name="begin_week_lifecycle_reconciliation",
-        method_args=(athlete_id,),
-        method_kwargs={"plan_id": plan_id, "week_id": week_id},
-        rpc_params={
-            "p_athlete_id": athlete_id,
-            "p_plan_id": plan_id,
-            "p_week_id": week_id,
-        },
+    return _mapping_or_none(
+        store.begin_week_lifecycle_reconciliation(athlete_id, plan_id=plan_id, week_id=week_id)
     )
 
 
@@ -205,17 +162,8 @@ def _complete_week_reconciliation(
     plan_id: str,
     week_id: str,
 ) -> dict[str, Any] | None:
-    return _call_store_or_rpc(
-        store,
-        method_name="complete_week_lifecycle_reconciliation",
-        rpc_name="complete_week_lifecycle_reconciliation",
-        method_args=(athlete_id,),
-        method_kwargs={"plan_id": plan_id, "week_id": week_id},
-        rpc_params={
-            "p_athlete_id": athlete_id,
-            "p_plan_id": plan_id,
-            "p_week_id": week_id,
-        },
+    return _mapping_or_none(
+        store.complete_week_lifecycle_reconciliation(athlete_id, plan_id=plan_id, week_id=week_id)
     )
 
 

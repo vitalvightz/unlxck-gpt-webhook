@@ -567,6 +567,46 @@ class AppStore(Protocol):
         calendar_date: str | None = None,
     ) -> dict[str, Any]: ...
 
+    def validate_xp_abuse_hardening(self) -> Any: ...
+
+    def reconcile_feedback_xp(
+        self, athlete_id: str, *, feedback_id: str, target_amount: int
+    ) -> dict[str, Any] | None: ...
+
+    def get_xp_progress_state(self, athlete_id: str, *, limit: int) -> dict[str, Any]: ...
+
+    def xp_award_exists(
+        self,
+        athlete_id: str,
+        *,
+        action: str | None = None,
+        idempotency_key: str | None = None,
+        calendar_date: str | None = None,
+    ) -> bool: ...
+
+    # --- Plan milestones and week lifecycle (api/services/plan_milestones.py) ---
+
+    def list_plan_milestones(self, athlete_id: str, *, limit: int) -> list[dict[str, Any]]: ...
+
+    def record_plan_milestone(
+        self,
+        athlete_id: str,
+        *,
+        plan_id: str,
+        milestone_type: str,
+        milestone_key: str,
+        phase_label: str | None,
+        metadata: dict[str, Any],
+    ) -> dict[str, Any] | None: ...
+
+    def begin_week_lifecycle_reconciliation(
+        self, athlete_id: str, *, plan_id: str, week_id: str
+    ) -> dict[str, Any] | None: ...
+
+    def complete_week_lifecycle_reconciliation(
+        self, athlete_id: str, *, plan_id: str, week_id: str
+    ) -> dict[str, Any] | None: ...
+
     # --- Web push subscriptions (api/routes/push.py, push notification services) ---
 
     def upsert_push_subscription(self, profile_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
@@ -4841,6 +4881,132 @@ class SupabaseAppStore:
             .execute()
         )
         return getattr(response, "data", None) or []
+
+    # --- Account XP and plan milestones (moved verbatim from the XP services) ---
+
+    @staticmethod
+    def _mapping_rows(value: Any) -> list[dict[str, Any]]:
+        if not isinstance(value, list):
+            return []
+        return [dict(row) for row in value if isinstance(row, dict)]
+
+    @staticmethod
+    def _rpc_mapping(response: Any) -> dict[str, Any] | None:
+        payload = getattr(response, "data", None)
+        if isinstance(payload, list):
+            payload = payload[0] if payload else None
+        return dict(payload) if isinstance(payload, dict) else None
+
+    def validate_xp_abuse_hardening(self) -> Any:
+        """Raw payload of the rollout check; the XP service decides if it is current."""
+        return getattr(self.client.rpc("validate_xp_abuse_hardening").execute(), "data", None)
+
+    def reconcile_feedback_xp(
+        self, athlete_id: str, *, feedback_id: str, target_amount: int
+    ) -> dict[str, Any] | None:
+        response = self.client.rpc(
+            "reconcile_feedback_xp",
+            {
+                "p_athlete_id": athlete_id,
+                "p_feedback_id": feedback_id,
+                "p_target_amount": target_amount,
+            },
+        ).execute()
+        return self._rpc_mapping(response)
+
+    def get_xp_progress_state(self, athlete_id: str, *, limit: int) -> dict[str, Any]:
+        account_response = (
+            self.client.table("xp_accounts")
+            .select("total_xp,last_daily_login_date")
+            .eq("athlete_id", athlete_id)
+            .limit(1)
+            .execute()
+        )
+        account_rows = self._mapping_rows(getattr(account_response, "data", None))
+        account = account_rows[0] if account_rows else {}
+        awards_response = (
+            self.client.table("xp_awards")
+            .select("id,action,amount,awarded_at,calendar_date")
+            .eq("athlete_id", athlete_id)
+            .order("awarded_at", desc=True)
+            .order("id", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return {
+            "total_xp": account.get("total_xp"),
+            "last_daily_login_date": account.get("last_daily_login_date"),
+            "recent_awards": self._mapping_rows(getattr(awards_response, "data", None)),
+        }
+
+    def xp_award_exists(
+        self,
+        athlete_id: str,
+        *,
+        action: str | None = None,
+        idempotency_key: str | None = None,
+        calendar_date: str | None = None,
+    ) -> bool:
+        query = self.client.table("xp_awards").select("id").eq("athlete_id", athlete_id)
+        if action is not None:
+            query = query.eq("action", action)
+        if idempotency_key is not None:
+            query = query.eq("idempotency_key", idempotency_key)
+        if calendar_date is not None:
+            query = query.eq("calendar_date", calendar_date)
+        return bool(self._mapping_rows(getattr(query.limit(1).execute(), "data", None)))
+
+    def list_plan_milestones(self, athlete_id: str, *, limit: int) -> list[dict[str, Any]]:
+        response = (
+            self.client.table("plan_milestones")
+            .select("id,plan_id,milestone_type,milestone_key,phase_label,metadata,completed_at")
+            .eq("athlete_id", athlete_id)
+            .order("completed_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return self._mapping_rows(getattr(response, "data", None))
+
+    def record_plan_milestone(
+        self,
+        athlete_id: str,
+        *,
+        plan_id: str,
+        milestone_type: str,
+        milestone_key: str,
+        phase_label: str | None,
+        metadata: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        response = self.client.rpc(
+            "record_plan_milestone",
+            {
+                "p_athlete_id": athlete_id,
+                "p_plan_id": plan_id,
+                "p_milestone_type": milestone_type,
+                "p_milestone_key": milestone_key,
+                "p_phase_label": phase_label,
+                "p_metadata": dict(metadata),
+            },
+        ).execute()
+        return self._rpc_mapping(response)
+
+    def begin_week_lifecycle_reconciliation(
+        self, athlete_id: str, *, plan_id: str, week_id: str
+    ) -> dict[str, Any] | None:
+        response = self.client.rpc(
+            "begin_week_lifecycle_reconciliation",
+            {"p_athlete_id": athlete_id, "p_plan_id": plan_id, "p_week_id": week_id},
+        ).execute()
+        return self._rpc_mapping(response)
+
+    def complete_week_lifecycle_reconciliation(
+        self, athlete_id: str, *, plan_id: str, week_id: str
+    ) -> dict[str, Any] | None:
+        response = self.client.rpc(
+            "complete_week_lifecycle_reconciliation",
+            {"p_athlete_id": athlete_id, "p_plan_id": plan_id, "p_week_id": week_id},
+        ).execute()
+        return self._rpc_mapping(response)
 
     def list_today_checkins(
         self, athlete_id: str, *, limit: int = 14

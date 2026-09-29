@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 from api.services.progress_notifications import award_session_progress
+from api.store import SupabaseAppStore
 from api.services.xp_awards import (
     XP_ABUSE_HARDENING_VERSION,
     award_checkin_xp,
@@ -64,6 +65,10 @@ class Store:
         )
         self.awards = []
         self.feedback_calls = []
+
+    def validate_xp_abuse_hardening(self):
+        # The production method, run against this store's fake client.
+        return SupabaseAppStore.validate_xp_abuse_hardening(self)
 
     def award_xp(self, athlete_id, *, action, idempotency_key, calendar_date=None):
         self.awards.append((athlete_id, action, idempotency_key, calendar_date))

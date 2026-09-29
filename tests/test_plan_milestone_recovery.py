@@ -1,3 +1,4 @@
+from support import xp_hardening_ready_payload
 from api.services.plan_milestones import (
     reconcile_plan_milestones_after_completed_week,
 )
@@ -51,6 +52,9 @@ class RecoveryStore:
 
     def list_plan_session_completions(self, athlete_id, plan_id, *, limit=500):
         return list(self.completions)
+
+    def validate_xp_abuse_hardening(self):
+        return xp_hardening_ready_payload()
 
     def award_xp(self, athlete_id, *, action, idempotency_key, calendar_date=None):
         amount = {"full_training_week_completed": 100}[action]

@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+from support import xp_hardening_ready_payload
 from api.services.xp_awards import (
     award_checkin_xp,
     award_feedback_xp,
@@ -15,6 +16,9 @@ class FakeStore:
     def __init__(self):
         self.calls = []
         self.feedback_awards = {}
+
+    def validate_xp_abuse_hardening(self):
+        return xp_hardening_ready_payload()
 
     def award_xp(self, athlete_id, *, action, idempotency_key, calendar_date=None):
         self.calls.append((athlete_id, action, idempotency_key, calendar_date))
@@ -169,6 +173,9 @@ def test_repeated_activation_reconciliation_repairs_without_duplicate_awards():
 
 def test_activation_xp_failures_never_break_state_reconciliation():
     class FailingStore:
+        def validate_xp_abuse_hardening(self):
+            return xp_hardening_ready_payload()
+
         def award_xp(self, athlete_id, *, action, idempotency_key, calendar_date=None):
             raise RuntimeError("xp unavailable")
 
