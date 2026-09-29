@@ -158,12 +158,8 @@ def load_media_index(store: Any, *, now: float | None = None) -> Mapping[str, Ex
         snapshot = _index
         if snapshot is not None and snapshot.fresh(current):
             return snapshot.by_key
-        reader = getattr(store, "list_exercise_media", None)
-        if not callable(reader):
-            _index = _MediaIndex(by_key={}, loaded_at=current, ttl=INDEX_TTL_SECONDS)
-            return _index.by_key
         try:
-            by_key = build_media_index(reader())
+            by_key = build_media_index(store.list_exercise_media())
             _index = _MediaIndex(by_key=by_key, loaded_at=current, ttl=INDEX_TTL_SECONDS)
         except Exception:  # noqa: BLE001 - media is decoration; the plan must still load
             logger.warning("exercise media index load failed", exc_info=True)
@@ -366,11 +362,7 @@ def run_media_verification_sweep(
     if not key:
         logger.warning("exercise media verification skipped: %s is not set", YOUTUBE_API_KEY_ENV)
         return counts
-    lister = getattr(store, "list_exercise_media_for_verification", None)
-    updater = getattr(store, "update_exercise_media_status", None)
-    if not callable(lister) or not callable(updater):
-        return counts
-    rows = list(lister())
+    rows = list(store.list_exercise_media_for_verification())
     owns_client = client is None
     http = client or httpx.Client(timeout=YOUTUBE_API_TIMEOUT_SECONDS)
     try:
@@ -385,7 +377,7 @@ def run_media_verification_sweep(
                 client=http,
             )
             for row in batch:
-                _record_check(row, results, updater, counts)
+                _record_check(row, results, store.update_exercise_media_status, counts)
     finally:
         if owns_client:
             http.close()

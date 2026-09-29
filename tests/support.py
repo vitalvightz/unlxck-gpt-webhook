@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import math
 import os
+import re
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -126,6 +127,39 @@ class FakeAuthService:
                 detail="authentication required",
             )
         return user
+
+
+class FullRowStatusReads:
+    """Compact status reads for in-memory test stores.
+
+    SupabaseAppStore reads generation-job and plan status through compact RPCs
+    and narrow selects (api/store_performance.py) that fall back to its full-row
+    methods. In-memory stores have no compact projection, so these return the
+    full rows, and the queue poll never backs off.
+    """
+
+    def get_generation_job_status(self, job_id: str) -> dict | None:
+        return self.get_generation_job(job_id)
+
+    def get_visible_active_generation_job_status(self, athlete_id: str) -> dict | None:
+        return self.get_visible_active_generation_job_for_athlete(athlete_id)
+
+    def get_latest_generation_job_status(self, athlete_id: str) -> dict | None:
+        return self.get_latest_generation_job_for_athlete(athlete_id)
+
+    def get_plan_status(self, plan_id: str) -> dict | None:
+        return self.get_plan(plan_id)
+
+    def get_latest_plan_status(self, athlete_id: str) -> dict | None:
+        return self.get_latest_plan(athlete_id)
+
+    def poll_claimable_generation_jobs(
+        self, *, limit: int = 20, stale_after_seconds: int | None = None
+    ) -> list[dict]:
+        return self.list_claimable_generation_jobs(limit=limit, stale_after_seconds=stale_after_seconds)
+
+    def list_generation_job_recovery_candidates(self, *, limit: int) -> list[dict]:
+        return list(self.list_admin_active_generation_jobs(limit=limit))
 
 
 class InMemoryNotificationLedger:
@@ -435,7 +469,20 @@ def _notification_datetime(value) -> datetime | None:
     return parsed.astimezone(timezone.utc)
 
 
-class FakeStore(InMemoryNotificationLedger):
+_INJURY_STATUS_RANK = {"resolved": 0, "monitoring": 1, "open": 2}
+
+
+def _normalized_injury_area(value) -> str:
+    # replace(replace(replace(lower(btrim(coalesce(body_area, ''))), '-', '_'), '/', '_'), ' ', '_')
+    return str(value or "").strip(" ").lower().replace("-", "_").replace("/", "_").replace(" ", "_")
+
+
+def _normalized_injury_description(value) -> str:
+    # regexp_replace(lower(btrim(coalesce(description, ''))), '\s+', ' ', 'g')
+    return re.sub(r"\s+", " ", str(value or "").strip(" ").lower())
+
+
+class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
     def __init__(self, admin_emails: set[str] | None = None):
         self.profiles: dict[str, dict] = {}
         self.intakes: dict[str, list[dict]] = {}
@@ -451,6 +498,7 @@ class FakeStore(InMemoryNotificationLedger):
         self.xp_awards: dict[str, list[dict]] = {}
         self.plan_milestones: dict[str, list[dict]] = {}
         self.injury_flags: dict[str, list[dict]] = {}
+        self.exercise_media: dict[str, dict] = {}
         self.rehab_exposures: dict[str, dict] = {}
         self.adaptation_notes: dict[str, list[dict]] = {}
         self.admin_reviews: list[dict] = []
@@ -472,6 +520,7 @@ class FakeStore(InMemoryNotificationLedger):
         self._plan_generation_limit_events: dict[str, list[datetime]] = {}
         self._generation_job_daily_limit_lock = threading.RLock()
         self._xp_lock = threading.RLock()
+        self._intake_injury_lock = threading.RLock()
 
     def validate_runtime_schema(self) -> None:
         return None
@@ -1767,6 +1816,42 @@ class FakeStore(InMemoryNotificationLedger):
             "latest_plan_created_at": plans[-1]["created_at"] if plans else None,
         }
 
+    def count_admin_profiles(self) -> int:
+        return sum(1 for profile in self.profiles.values() if profile.get("role") == "admin")
+
+    def list_exercise_media(self) -> list[dict]:
+        columns = ("exercise_key", "aliases", "video_id", "start_s", "end_s", "source", "channel_title", "made_for_kids")
+        return [
+            {column: row.get(column) for column in columns}
+            for _key, row in sorted(self.exercise_media.items())
+            if row.get("status") == "ok" and row.get("made_for_kids") is False
+        ]
+
+    def list_exercise_media_for_verification(self) -> list[dict]:
+        columns = ("exercise_key", "aliases", "video_id", "status")
+        return [{column: row.get(column) for column in columns} for _key, row in sorted(self.exercise_media.items())]
+
+    def update_exercise_media_status(
+        self,
+        exercise_key: str,
+        *,
+        status: str,
+        reason: str | None,
+        made_for_kids: bool | None = None,
+        title: str | None = None,
+        channel_title: str | None = None,
+    ) -> None:
+        row = self.exercise_media.get(exercise_key)
+        if row is None:
+            return
+        row.update(status=status, status_reason=(reason or None) and str(reason)[:200], verified_at=_now())
+        if made_for_kids is not None:
+            row["made_for_kids"] = made_for_kids
+        if title:
+            row["title"] = title[:200]
+        if channel_title:
+            row["channel_title"] = channel_title[:200]
+
     def clear_onboarding_draft(self, athlete_id: str) -> None:
         self.profiles[athlete_id]["onboarding_draft"] = None
 
@@ -2187,6 +2272,90 @@ class FakeStore(InMemoryNotificationLedger):
             (dict(row) for row in self.injury_flags.get(athlete_id, []) if row["id"] == flag_id),
             None,
         )
+
+    def adopt_or_create_intake_injury_flag(self, params: dict) -> dict | None:
+        """In-memory adopt_or_create_intake_injury_flag_with_wound_fields.
+
+        Follows the RPC (supabase/migrations/20260804090000_add_intake_injury_source_key.sql
+        and 20260804093000_preserve_intake_wound_fields.sql) step by step, with
+        one lock standing in for its advisory lock.
+        """
+        athlete_id = params["athlete_id"]
+        plan_id = params["plan_id"]
+        source_key = params["source_key"]
+        if not str(source_key or "").strip():
+            raise ValueError("missing_intake_injury_source_key")
+        if not plan_id:
+            raise ValueError("missing_intake_injury_plan_id")
+
+        def legacy_duplicate(row: dict) -> bool:
+            return (
+                str(row.get("plan_id") or "") == plan_id
+                and row.get("source") == "intake"
+                and row.get("source_key") is None
+                and _normalized_injury_area(row.get("body_area"))
+                == _normalized_injury_area(params["body_area"])
+                and _normalized_injury_description(row.get("description"))
+                == _normalized_injury_description(params["description"])
+            )
+
+        def resolve_duplicates(rows: list[dict], *, keep_id: str | None) -> None:
+            now_iso = _now()
+            for row in rows:
+                if row["id"] != keep_id:
+                    self.update_injury_flag(
+                        row["id"],
+                        {
+                            "source_key": f"{source_key}:legacy-duplicate:{row['id']}",
+                            "status": "resolved",
+                            "resolved_at": row.get("resolved_at") or now_iso,
+                        },
+                    )
+
+        with self._intake_injury_lock:
+            rows = self.injury_flags.get(athlete_id, [])
+            flag = next((row for row in rows if row.get("source_key") == source_key), None)
+            legacy = [row for row in rows if legacy_duplicate(row)]
+            if flag is not None:
+                resolve_duplicates(legacy, keep_id=None)
+            elif legacy:
+                # order by status rank, resolved_at desc nulls last, created_at, id
+                ranked = sorted(legacy, key=lambda row: (str(row.get("created_at") or ""), str(row["id"])))
+                ranked.sort(
+                    key=lambda row: _notification_datetime(row.get("resolved_at")) or datetime.min.replace(tzinfo=timezone.utc),
+                    reverse=True,
+                )
+                ranked.sort(key=lambda row: _INJURY_STATUS_RANK.get(str(row.get("status") or "").strip().lower(), 3))
+                flag = ranked[0]
+                resolve_duplicates(legacy, keep_id=flag["id"])
+                self.update_injury_flag(flag["id"], {"source_key": source_key})
+            else:
+                flag = self.create_injury_flag(
+                    athlete_id,
+                    {
+                        "plan_id": plan_id,
+                        "source": "intake",
+                        "source_key": source_key,
+                        "body_area": params["body_area"] or "",
+                        "description": params["description"] or "",
+                        "severity": str(params["severity"] or "").strip().lower() or "moderate",
+                        "status": str(params["status"] or "").strip().lower() or "open",
+                        "resolved_at": params["resolved_at"],
+                    },
+                )
+
+            # The wound wrapper fills in only what the row lacks.
+            wound = {
+                key: params[key]
+                for key in ("skin_integrity", "bleeding_status", "coverable", "drainage")
+                if flag.get(key) is None and params[key] is not None
+            }
+            signs = params["infection_signs"]
+            if not flag.get("infection_signs") and isinstance(signs, list) and signs:
+                wound["infection_signs"] = signs
+            if wound:
+                self.update_injury_flag(flag["id"], wound)
+            return self.get_injury_flag_for_athlete(flag["id"], athlete_id)
 
     def create_rehab_exposure(self, athlete_id: str, payload: dict) -> dict:
         exposure_id = payload["exposure_id"]

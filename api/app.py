@@ -397,11 +397,8 @@ def _log_admin_count_on_startup(store: AppStore) -> None:
     Surfacing the database count makes accidental lockout or lingering roles
     visible in the boot logs. Best-effort: never block startup on this.
     """
-    counter = getattr(store, "count_admin_profiles", None)
-    if not callable(counter):
-        return
     try:
-        admin_count = counter()
+        admin_count = store.count_admin_profiles()
     except Exception as exc:  # pragma: no cover - diagnostics must not block boot
         logger.warning("[admin] startup_admin_count_failed error_type=%s", type(exc).__name__)
         return

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any
+from typing import Any, Callable
 
 from fightcamp.sparring_readiness import recent_rows
 from api.contracts.readiness_message import classify_injury_surface
@@ -54,22 +54,28 @@ def annotate_payload_with_sparring_readiness(
     as_of = training_day or resolve_training_day(athlete_timezone)
     context: dict[str, Any] = {"as_of": as_of, "checkins": [], "sessions": [], "active_injuries": [], "unavailable": []}
 
-    def read(method: str, **kwargs: Any) -> list[dict]:
+    def read(method: str, fetch: Callable[[], Any]) -> list[dict]:
         try:
-            reader = getattr(store, method)
-            return [row for row in reader(athlete_id, **kwargs) if row.get("athlete_id") == athlete_id]
+            return [row for row in fetch() if row.get("athlete_id") == athlete_id]
         except Exception:
             logger.warning("[generation] sparring context unavailable: %s", method, exc_info=True)
             context["unavailable"].append(method)
             return []
 
-    context["checkins"] = recent_rows(read("list_today_checkins", limit=100), as_of)
-    context["active_injuries"] = read("list_injury_flags", statuses=["open", "monitoring"], limit=500)
+    context["checkins"] = recent_rows(
+        read("list_today_checkins", lambda: store.list_today_checkins(athlete_id, limit=100)), as_of
+    )
+    context["active_injuries"] = read(
+        "list_injury_flags",
+        lambda: store.list_injury_flags(athlete_id, statuses=["open", "monitoring"], limit=500),
+    )
     context["active_injuries"] = [
         {**row, "surface_class": classify_injury_surface(row)}
         for row in context["active_injuries"]
     ]
-    completions = recent_rows(read("list_session_completions", limit=200), as_of)
+    completions = recent_rows(
+        read("list_session_completions", lambda: store.list_session_completions(athlete_id, limit=200)), as_of
+    )
     plans = {}
     for row in completions:
         if row.get("status") not in {"done", "modified"}:

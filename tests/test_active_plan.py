@@ -54,6 +54,19 @@ class Store:
     def get_session_completion(self, athlete_id, session_id, training_day):
         return None
 
+    # No history: the Today build reads these and finds nothing.
+    def list_today_checkins_for_day(self, athlete_id, training_day):
+        return []
+
+    def list_session_completions(self, athlete_id, *, limit=30):
+        return []
+
+    def list_injury_flags(self, athlete_id, *, statuses=("open", "monitoring"), limit=20):
+        return []
+
+    def get_latest_intake(self, athlete_id):
+        return None
+
 
 def plan(id, status="ready", created_at="2026-01-01T00:00:00Z", athlete_id="ath"):
     return {"id": id, "status": status, "created_at": created_at, "athlete_id": athlete_id}

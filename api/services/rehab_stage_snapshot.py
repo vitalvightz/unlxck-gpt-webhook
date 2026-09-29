@@ -74,11 +74,10 @@ def _flag_exposures(
     store: Any, *, athlete_id: str, injury_id: str, episode_id: str
 ) -> list[dict[str, Any]]:
     """This episode's bounded rehab-exposure evidence, or ``[]`` on any failure."""
-    reader = getattr(store, "list_rehab_exposures", None)
-    if not callable(reader) or not injury_id or not episode_id:
+    if not injury_id or not episode_id:
         return []
     try:
-        window = reader(
+        window = store.list_rehab_exposures(
             athlete_id,
             injury_id=injury_id,
             injury_episode_id=episode_id,
@@ -96,13 +95,10 @@ def _flag_exposures(
 
 
 def _open_flags(store: Any, athlete_id: str) -> list[dict[str, Any]]:
-    lister = getattr(store, "list_injury_flags", None)
-    if not callable(lister):
-        return []
     try:
         return [
             dict(flag)
-            for flag in (lister(athlete_id, statuses=_ACTIVE_STATUSES, limit=500) or [])
+            for flag in (store.list_injury_flags(athlete_id, statuses=_ACTIVE_STATUSES, limit=500) or [])
             if isinstance(flag, Mapping)
         ]
     except Exception:

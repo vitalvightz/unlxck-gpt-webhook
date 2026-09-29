@@ -1,9 +1,12 @@
 """Low-overhead generation-job reads for beta-scale API and worker traffic.
 
 The canonical store keeps full generation rows available for generation and
-recovery workflows. Routine UI polling and idle worker queue checks do not need
-large ``stage1_result``/``final_result`` blobs, so this module uses compact SQL
-RPCs with safe fallbacks to the existing store methods during rolling deploys.
+recovery workflows. Routine UI polling, heartbeats and idle worker queue checks
+do not need large ``stage1_result``/``final_result`` blobs, so
+``SupabaseAppStore`` reads them through compact SQL RPCs and narrow selects,
+defined here as a mixin. Each read falls back to the store's full-row method if
+the compact read fails (an old database during a rolling deploy, or a transient
+error).
 """
 from __future__ import annotations
 
@@ -33,21 +36,6 @@ def _positive_float_env(name: str, default: float, *, minimum: float = 1.0) -> f
     return max(minimum, parsed)
 
 
-def _execute(store: Any, *, operation: str, call: Callable[[], Any]) -> Any:
-    runner: Callable[..., Any] | None = getattr(store, "_run_with_transient_retry", None)
-    if callable(runner):
-        return runner(operation=operation, fn=call)
-    return call()
-
-
-def _rpc_execute(store: Any, *, operation: str, rpc_name: str, params: dict[str, Any]) -> Any:
-    return _execute(
-        store,
-        operation=operation,
-        call=lambda: store.client.rpc(rpc_name, params).execute(),
-    )
-
-
 def _response_data(response: Any) -> Any:
     return getattr(response, "data", None)
 
@@ -62,87 +50,192 @@ def _single_mapping(data: Any) -> dict[str, Any] | None:
     return None
 
 
-def _has_rpc_client(store: Any) -> bool:
-    client = getattr(store, "client", None)
-    return client is not None and callable(getattr(client, "rpc", None))
+def _idle_poll_bounds() -> tuple[float, float]:
+    initial = _positive_float_env(
+        "UNLXCK_GENERATION_WORKER_IDLE_POLL_INITIAL_SECONDS",
+        6.0,
+    )
+    maximum = _positive_float_env(
+        "UNLXCK_GENERATION_WORKER_IDLE_POLL_MAX_SECONDS",
+        15.0,
+    )
+    return initial, max(initial, maximum)
 
 
-def _has_table_client(store: Any) -> bool:
-    client = getattr(store, "client", None)
-    return client is not None and callable(getattr(client, "table", None))
+class CompactGenerationReads:
+    """Compact generation-job and plan-status reads for ``SupabaseAppStore``.
 
+    Relies on the store's ``client``, ``_run_with_transient_retry`` and the
+    full-row methods each read falls back to.
+    """
 
-def _fallback_read(store: Any, method_name: str, *args: Any, **kwargs: Any) -> Any:
-    method = getattr(store, method_name)
-    return method(*args, **kwargs)
+    client: Any
+    _run_with_transient_retry: Callable[..., Any]
 
-
-def _compact_status_read(
-    store: Any,
-    *,
-    operation: str,
-    rpc_name: str,
-    params: dict[str, Any],
-    fallback_method: str,
-    fallback_args: tuple[Any, ...],
-) -> dict[str, Any] | None:
-    if not _has_rpc_client(store):
-        return _fallback_read(store, fallback_method, *fallback_args)
-    try:
-        response = _rpc_execute(
-            store,
-            operation=operation,
-            rpc_name=rpc_name,
-            params=params,
+    def _compact_rpc(self, rpc_name: str, params: dict[str, Any]) -> Any:
+        response = self._run_with_transient_retry(
+            operation=rpc_name,
+            fn=lambda: self.client.rpc(rpc_name, params).execute(),
         )
-        return _single_mapping(_response_data(response))
-    except Exception as exc:  # Rolling-deploy fallback: old DB or transient RPC failure.
-        logger.warning(
-            "[store-performance] compact status RPC failed operation=%s error_type=%s; falling back",
-            operation,
-            type(exc).__name__,
+        return _response_data(response)
+
+    def _compact_status(
+        self,
+        rpc_name: str,
+        params: dict[str, Any],
+        fallback: Callable[[], dict[str, Any] | None],
+    ) -> dict[str, Any] | None:
+        try:
+            return _single_mapping(self._compact_rpc(rpc_name, params))
+        except Exception as exc:  # Rolling-deploy fallback: old DB or transient RPC failure.
+            logger.warning(
+                "[store-performance] compact status RPC failed operation=%s error_type=%s; falling back",
+                rpc_name,
+                type(exc).__name__,
+            )
+            return fallback()
+
+    def get_generation_job_status(self, job_id: str) -> dict[str, Any] | None:
+        """Return the athlete-facing status shape without planner result blobs."""
+        return self._compact_status(
+            "get_generation_job_status_v2",
+            {"p_job_id": job_id},
+            lambda: self.get_generation_job(job_id),  # type: ignore[attr-defined]
         )
-        return _fallback_read(store, fallback_method, *fallback_args)
 
+    def get_visible_active_generation_job_status(self, athlete_id: str) -> dict[str, Any] | None:
+        return self._compact_status(
+            "get_visible_active_generation_job_status_v2",
+            {"p_athlete_id": athlete_id},
+            lambda: self.get_visible_active_generation_job_for_athlete(athlete_id),  # type: ignore[attr-defined]
+        )
 
-def get_generation_job_status(store: Any, job_id: str) -> dict[str, Any] | None:
-    """Return the athlete-facing status shape without planner result blobs."""
-    return _compact_status_read(
-        store,
-        operation="get_generation_job_status_v2",
-        rpc_name="get_generation_job_status_v2",
-        params={"p_job_id": job_id},
-        fallback_method="get_generation_job",
-        fallback_args=(job_id,),
-    )
+    def get_latest_generation_job_status(self, athlete_id: str) -> dict[str, Any] | None:
+        return self._compact_status(
+            "get_latest_generation_job_status_v2",
+            {"p_athlete_id": athlete_id},
+            lambda: self.get_latest_generation_job_for_athlete(athlete_id),  # type: ignore[attr-defined]
+        )
 
+    def get_plan_status(self, plan_id: str) -> dict[str, Any] | None:
+        """Return a plan's ``id,status,stage2_status,intake_id`` without its content."""
+        try:
+            response = self._run_with_transient_retry(
+                operation=f"get_plan_status_metadata plan_id={plan_id}",
+                fn=lambda: self.client.table("plans")
+                .select(_PLAN_STATUS_SELECT)
+                .eq("id", plan_id)
+                .limit(1)
+                .execute(),
+            )
+            return _single_mapping(_response_data(response))
+        except Exception as exc:
+            logger.warning(
+                "[store-performance] compact plan lookup failed plan_id=%s error_type=%s; falling back",
+                plan_id,
+                type(exc).__name__,
+            )
+            return self.get_plan(plan_id)  # type: ignore[attr-defined]
 
-def get_visible_active_generation_job_status(
-    store: Any,
-    athlete_id: str,
-) -> dict[str, Any] | None:
-    return _compact_status_read(
-        store,
-        operation="get_visible_active_generation_job_status_v2",
-        rpc_name="get_visible_active_generation_job_status_v2",
-        params={"p_athlete_id": athlete_id},
-        fallback_method="get_visible_active_generation_job_for_athlete",
-        fallback_args=(athlete_id,),
-    )
+    def get_latest_plan_status(self, athlete_id: str) -> dict[str, Any] | None:
+        """Return the newest plan's ``id,status,stage2_status,intake_id`` for an athlete."""
+        try:
+            response = self._run_with_transient_retry(
+                operation=f"get_latest_plan_status_metadata athlete_id={athlete_id}",
+                fn=lambda: self.client.table("plans")
+                .select(_PLAN_STATUS_SELECT)
+                .eq("athlete_id", athlete_id)
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute(),
+            )
+            return _single_mapping(_response_data(response))
+        except Exception as exc:
+            logger.warning(
+                "[store-performance] compact latest-plan lookup failed athlete_id=%s error_type=%s; falling back",
+                athlete_id,
+                type(exc).__name__,
+            )
+            return self.get_latest_plan(athlete_id)  # type: ignore[attr-defined]
 
+    def _reset_idle_poll(self) -> None:
+        self._claimable_idle_delay_seconds = 0.0
+        self._claimable_next_poll_at = 0.0
 
-def get_latest_generation_job_status(
-    store: Any,
-    athlete_id: str,
-) -> dict[str, Any] | None:
-    return _compact_status_read(
-        store,
-        operation="get_latest_generation_job_status_v2",
-        rpc_name="get_latest_generation_job_status_v2",
-        params={"p_athlete_id": athlete_id},
-        fallback_method="get_latest_generation_job_for_athlete",
-        fallback_args=(athlete_id,),
-    )
+    def _schedule_idle_poll(self, *, now: float) -> float:
+        initial, maximum = _idle_poll_bounds()
+        previous = float(getattr(self, "_claimable_idle_delay_seconds", 0.0) or 0.0)
+        delay = initial if previous <= 0 else min(maximum, max(initial, previous * 2))
+        self._claimable_idle_delay_seconds = delay
+        self._claimable_next_poll_at = now + delay
+        if delay != previous:
+            logger.info("[worker] queue idle; next database poll in %.1fs", delay)
+        return delay
+
+    def poll_claimable_generation_jobs(
+        self,
+        *,
+        limit: int = 20,
+        stale_after_seconds: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Run one compact queue scan and back off while the queue is empty.
+
+        The worker loop may still wake every few seconds for shutdown handling and
+        other duties. During an idle queue this method skips database traffic until
+        the adaptive deadline, rising from 6 seconds to a maximum of 15 seconds by
+        default. Any returned job resets the backoff immediately.
+        """
+        now = time.monotonic()
+        next_poll_at = float(getattr(self, "_claimable_next_poll_at", 0.0) or 0.0)
+        if now < next_poll_at:
+            return []
+
+        stale_seconds = max(1, int(stale_after_seconds or 90))
+        stale_before = (datetime.now(timezone.utc) - timedelta(seconds=stale_seconds)).isoformat()
+        include_legacy_blank = os.getenv("UNLXCK_CLAIM_LEGACY_BLANK_STATUS_JOBS", "").strip() == "1"
+
+        try:
+            data = self._compact_rpc(
+                "list_claimable_generation_jobs_v2",
+                {
+                    "p_limit": max(1, min(int(limit), 100)),
+                    "p_stale_before": stale_before,
+                    "p_include_legacy_blank": include_legacy_blank,
+                },
+            )
+            rows = [item for item in (data or []) if isinstance(item, dict)] if isinstance(data, list) else []
+        except Exception as exc:  # Keep a rolling deploy functional if the RPC is not present yet.
+            logger.warning(
+                "[store-performance] compact queue RPC failed error_type=%s; falling back",
+                type(exc).__name__,
+            )
+            self._reset_idle_poll()
+            return self.list_claimable_generation_jobs(  # type: ignore[attr-defined]
+                limit=limit, stale_after_seconds=stale_after_seconds
+            )
+
+        if rows:
+            self._reset_idle_poll()
+            return rows
+
+        self._schedule_idle_poll(now=now)
+        return []
+
+    def list_generation_job_recovery_candidates(self, *, limit: int) -> list[dict[str, Any]]:
+        """Summaries of active jobs for the worker's stale-job recovery sweep."""
+        try:
+            data = self._compact_rpc(
+                "list_active_generation_jobs_for_recovery_v1",
+                {"p_limit": max(1, min(int(limit), 100))},
+            )
+            if isinstance(data, list):
+                return [item for item in data if isinstance(item, dict)]
+        except Exception as exc:  # noqa: BLE001 - fallback is deliberate during rolling deploys
+            logger.warning(
+                "[worker] compact recovery scan failed error_type=%s; falling back",
+                type(exc).__name__,
+            )
+        return list(self.list_admin_active_generation_jobs(limit=limit))  # type: ignore[attr-defined]
 
 
 class _CompactStatusStore:
@@ -150,7 +243,7 @@ class _CompactStatusStore:
 
     ``_job_response`` validates linked plans and reads their release status. It
     does not need plan text, structured plans or Stage 2 payloads. This proxy
-    preserves the mapper's existing interface while selecting four small fields
+    preserves the mapper's existing interface while reading only plan status
     and caching duplicate lookups within one response.
     """
 
@@ -166,143 +259,19 @@ class _CompactStatusStore:
         normalized = str(plan_id or "").strip()
         if not normalized:
             return None
-        if normalized in self._plan_cache:
-            return self._plan_cache[normalized]
-        try:
-            response = _execute(
-                self._store,
-                operation=f"get_plan_status_metadata plan_id={normalized}",
-                call=lambda: self._store.client.table("plans")
-                .select(_PLAN_STATUS_SELECT)
-                .eq("id", normalized)
-                .limit(1)
-                .execute(),
-            )
-            row = _single_mapping(_response_data(response))
-        except Exception as exc:
-            logger.warning(
-                "[store-performance] compact plan lookup failed plan_id=%s error_type=%s; falling back",
-                normalized,
-                type(exc).__name__,
-            )
-            row = self._store.get_plan(normalized)
-        self._plan_cache[normalized] = row
-        return row
+        if normalized not in self._plan_cache:
+            self._plan_cache[normalized] = self._store.get_plan_status(normalized)
+        return self._plan_cache[normalized]
 
     def get_latest_plan(self, athlete_id: str) -> dict[str, Any] | None:
         normalized = str(athlete_id or "").strip()
         if not normalized:
             return None
-        if normalized in self._latest_plan_cache:
-            return self._latest_plan_cache[normalized]
-        try:
-            response = _execute(
-                self._store,
-                operation=f"get_latest_plan_status_metadata athlete_id={normalized}",
-                call=lambda: self._store.client.table("plans")
-                .select(_PLAN_STATUS_SELECT)
-                .eq("athlete_id", normalized)
-                .order("created_at", desc=True)
-                .limit(1)
-                .execute(),
-            )
-            row = _single_mapping(_response_data(response))
-        except Exception as exc:
-            logger.warning(
-                "[store-performance] compact latest-plan lookup failed athlete_id=%s error_type=%s; falling back",
-                normalized,
-                type(exc).__name__,
-            )
-            row = self._store.get_latest_plan(normalized)
-        self._latest_plan_cache[normalized] = row
-        return row
+        if normalized not in self._latest_plan_cache:
+            self._latest_plan_cache[normalized] = self._store.get_latest_plan_status(normalized)
+        return self._latest_plan_cache[normalized]
 
 
 def compact_status_store(store: Any) -> Any:
-    """Wrap production stores; leave lightweight test stores unchanged."""
-    if not _has_table_client(store):
-        return store
+    """Wrap a store so job responses read plan status instead of whole plans."""
     return _CompactStatusStore(store)
-
-
-def _idle_poll_bounds() -> tuple[float, float]:
-    initial = _positive_float_env(
-        "UNLXCK_GENERATION_WORKER_IDLE_POLL_INITIAL_SECONDS",
-        6.0,
-    )
-    maximum = _positive_float_env(
-        "UNLXCK_GENERATION_WORKER_IDLE_POLL_MAX_SECONDS",
-        15.0,
-    )
-    return initial, max(initial, maximum)
-
-
-def _reset_idle_poll(store: Any) -> None:
-    setattr(store, "_claimable_idle_delay_seconds", 0.0)
-    setattr(store, "_claimable_next_poll_at", 0.0)
-
-
-def _schedule_idle_poll(store: Any, *, now: float) -> float:
-    initial, maximum = _idle_poll_bounds()
-    previous = float(getattr(store, "_claimable_idle_delay_seconds", 0.0) or 0.0)
-    delay = initial if previous <= 0 else min(maximum, max(initial, previous * 2))
-    setattr(store, "_claimable_idle_delay_seconds", delay)
-    setattr(store, "_claimable_next_poll_at", now + delay)
-    if delay != previous:
-        logger.info("[worker] queue idle; next database poll in %.1fs", delay)
-    return delay
-
-
-def list_claimable_generation_jobs(
-    store: Any,
-    *,
-    limit: int = 20,
-    stale_after_seconds: int | None = None,
-) -> list[dict[str, Any]]:
-    """Run one compact queue scan and back off while the queue is empty.
-
-    The worker loop may still wake every few seconds for shutdown handling and
-    other duties. During an idle queue this function skips database traffic until
-    the adaptive deadline, rising from 6 seconds to a maximum of 15 seconds by
-    default. Any returned job resets the backoff immediately.
-    """
-    fallback = getattr(store, "list_claimable_generation_jobs")
-    if not _has_rpc_client(store):
-        return fallback(limit=limit, stale_after_seconds=stale_after_seconds)
-
-    now = time.monotonic()
-    next_poll_at = float(getattr(store, "_claimable_next_poll_at", 0.0) or 0.0)
-    if now < next_poll_at:
-        return []
-
-    stale_seconds = max(1, int(stale_after_seconds or 90))
-    stale_before = (datetime.now(timezone.utc) - timedelta(seconds=stale_seconds)).isoformat()
-    include_legacy_blank = os.getenv("UNLXCK_CLAIM_LEGACY_BLANK_STATUS_JOBS", "").strip() == "1"
-
-    try:
-        response = _rpc_execute(
-            store,
-            operation="list_claimable_generation_jobs_v2",
-            rpc_name="list_claimable_generation_jobs_v2",
-            params={
-                "p_limit": max(1, min(int(limit), 100)),
-                "p_stale_before": stale_before,
-                "p_include_legacy_blank": include_legacy_blank,
-            },
-        )
-        data = _response_data(response)
-        rows = [item for item in (data or []) if isinstance(item, dict)] if isinstance(data, list) else []
-    except Exception as exc:  # Keep a rolling deploy functional if the RPC is not present yet.
-        logger.warning(
-            "[store-performance] compact queue RPC failed error_type=%s; falling back",
-            type(exc).__name__,
-        )
-        _reset_idle_poll(store)
-        return fallback(limit=limit, stale_after_seconds=stale_after_seconds)
-
-    if rows:
-        _reset_idle_poll(store)
-        return rows
-
-    _schedule_idle_poll(store, now=now)
-    return []

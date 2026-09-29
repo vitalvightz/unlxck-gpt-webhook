@@ -81,45 +81,6 @@ def classify_worker_recovery_category(
     return "mid_pipeline_stale"
 
 
-def _list_recovery_candidate_summaries(
-    store: AppStore,
-    *,
-    limit: int,
-) -> list[dict[str, Any]]:
-    """Use the compact worker RPC when available, with a rolling-deploy fallback."""
-
-    client = getattr(store, "client", None)
-    rpc = getattr(client, "rpc", None)
-    if callable(rpc):
-        try:
-            call = lambda: client.rpc(  # noqa: E731 - passed into retry wrapper
-                "list_active_generation_jobs_for_recovery_v1",
-                {"p_limit": max(1, min(int(limit), 100))},
-            ).execute()
-            runner = getattr(store, "_run_with_transient_retry", None)
-            response = (
-                runner(
-                    operation="list_active_generation_jobs_for_recovery_v1",
-                    fn=call,
-                )
-                if callable(runner)
-                else call()
-            )
-            data = getattr(response, "data", None)
-            if isinstance(data, list):
-                return [item for item in data if isinstance(item, dict)]
-        except Exception as exc:  # noqa: BLE001 - fallback is deliberate during rolling deploys
-            logger.warning(
-                "[worker] compact recovery scan failed error_type=%s; falling back",
-                type(exc).__name__,
-            )
-
-    fallback = getattr(store, "list_admin_active_generation_jobs", None)
-    if not callable(fallback):
-        return []
-    return list(fallback(limit=limit))
-
-
 def _persisted_plan_id(job: dict[str, Any]) -> str | None:
     direct = str(job.get("plan_id") or "").strip()
     if direct:
@@ -256,8 +217,7 @@ async def recover_stale_generation_jobs(
 
     try:
         summaries = await asyncio.to_thread(
-            _list_recovery_candidate_summaries,
-            store,
+            store.list_generation_job_recovery_candidates,
             limit=limit,
         )
     except Exception:  # noqa: BLE001 - recovery is fail-soft for the worker loop

@@ -15,7 +15,6 @@ from .generation_runtime import default_planner, run_generation_job, utc_now_iso
 from .generation_config import generation_job_stale_after_seconds
 from .stage2_automation import build_default_stage2_automator
 from .store import AppStore, SupabaseAppStore, is_pre_start_stale_generation_job
-from .store_performance import list_claimable_generation_jobs
 from .worker_recovery import recover_stale_generation_jobs
 
 logger = logging.getLogger(__name__)
@@ -319,8 +318,7 @@ async def _tick(
 
     try:
         candidates = await asyncio.to_thread(
-            list_claimable_generation_jobs,
-            store,
+            store.poll_claimable_generation_jobs,
             limit=remaining_capacity,
             stale_after_seconds=stale_after_seconds,
         )

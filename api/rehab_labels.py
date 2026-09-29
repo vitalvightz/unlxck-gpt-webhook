@@ -174,11 +174,8 @@ def resolve_rehab_label_policy(store: AppStore, *, athlete_id: str) -> RehabLabe
     stamps them ``resolved``, so the flags reflect the real current state for
     both origins. Surface (skin) flags are skipped — see the module docstring.
     """
-    lister = getattr(store, "list_injury_flags", None)
-    if not callable(lister):
-        return RehabLabelPolicy()
     try:
-        flags = lister(athlete_id, statuses=_ACTIVE_STATUSES, limit=500) or []
+        flags = store.list_injury_flags(athlete_id, statuses=_ACTIVE_STATUSES, limit=500) or []
     except Exception:  # pragma: no cover - best-effort; never break the plan read
         LOGGER.warning("rehab_label: injury flag read failed", exc_info=True)
         return RehabLabelPolicy()
