@@ -1484,11 +1484,17 @@ test("keeps engine rationale out of athlete-facing mindset and block copy", () =
 
   assert.equal(html.includes("SPP pocket planning for a brawler."), false);
   assert.equal(html.includes("D-17 onward"), false);
+  // Genuine mindset/execution cues remain visible.
+  assert.equal(html.includes("Choose a clean exit"), true);
+
   // Block purpose renders on the open exercise row as the athlete-facing
   // "Builds" line, with the engine's phase prefix and style tail stripped.
-  // Genuine mindset/execution cues remain visible.
-  assert.equal(html.includes("Pocket planning."), true);
-  assert.equal(html.includes("Choose a clean exit"), true);
+  // Checked on the row itself: the mindset anchor also sanitizes to "Pocket
+  // planning.", so the session markup alone would pass without the purpose.
+  const purposeHtml = renderToStaticMarkup(
+    <ExerciseRow block={session.blocks![0]!} open onToggle={() => {}} />,
+  );
+  assert.equal(purposeHtml.includes(">Builds</span>Pocket planning."), true);
 
   // An engine timing rule is not a reason an athlete can act on: when it is the
   // whole purpose, the open row prints no "Builds" line at all.

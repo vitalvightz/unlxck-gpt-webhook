@@ -353,12 +353,7 @@ def test_verification_sweep_rechecks_unavailable_rows_and_skips_unknown():
         def update_exercise_media_status(self, key, **fields):
             updates[key] = fields
 
-        def list_exercise_media(self):
-            return [_row("good")]
-
-    store = Store()
-    media.load_media_index(store, now=0.0)
-    counts = media.run_media_verification_sweep(store, api_key=API_KEY, client=_data_api(items))
+    counts = media.run_media_verification_sweep(Store(), api_key=API_KEY, client=_data_api(items))
 
     assert {key: fields["status"] for key, fields in updates.items()} == {
         "good": "ok",
@@ -369,8 +364,104 @@ def test_verification_sweep_rechecks_unavailable_rows_and_skips_unknown():
     assert updates["kids"]["made_for_kids"] is True
     assert updates["recovered"]["channel_title"] == "Strength Channel"
     assert counts == {"ok": 2, "unavailable": 2, "unknown": 1}
-    # A status changed, so the served index is rebuilt on the next read.
-    assert media._index is None
+
+
+def test_verification_sweep_stops_between_batches_when_asked():
+    rows = [{"exercise_key": f"k{i}", "video_id": f"{i:011d}", "status": "ok"} for i in range(120)]
+    requests: list[httpx.Request] = []
+    updates: list[str] = []
+    checks = {"n": 0}
+
+    class Store:
+        def list_exercise_media_for_verification(self):
+            return rows
+
+        def update_exercise_media_status(self, key, **fields):
+            updates.append(key)
+
+    def should_stop():
+        checks["n"] += 1
+        return checks["n"] > 1  # shutdown requested after the first batch
+
+    counts = media.run_media_verification_sweep(
+        Store(),
+        api_key=API_KEY,
+        client=_data_api({r["video_id"]: _video(r["video_id"]) for r in rows}, requests=requests),
+        should_stop=should_stop,
+    )
+
+    assert len(requests) == 1
+    assert len(updates) == 50
+    assert counts["ok"] == 50
+
+
+def test_worker_runs_the_first_media_sweep_on_start(monkeypatch):
+    import asyncio
+
+    from api import worker
+
+    calls: list[object] = []
+    monkeypatch.setattr(media, "run_media_verification_sweep", lambda store, **kw: calls.append(kw))
+    monkeypatch.setattr(worker, "_MEDIA_SWEEP_TASK", {"task": None})
+    # An interval longer than any host's uptime stands in for a freshly
+    # booted host, whose monotonic clock is still below the interval.
+    interval = 10**12
+
+    async def run():
+        state: dict[str, float] = {}
+        event = asyncio.Event()
+        await worker._run_exercise_media_sweep_if_due(
+            store=object(), state=state, interval_seconds=interval, shutdown_event=event
+        )
+        await worker._MEDIA_SWEEP_TASK["task"]
+        # Not due again until the interval has passed.
+        await worker._run_exercise_media_sweep_if_due(
+            store=object(), state=state, interval_seconds=interval, shutdown_event=event
+        )
+        return event
+
+    event = asyncio.run(run())
+    assert len(calls) == 1
+    assert calls[0]["should_stop"] == event.is_set
+
+
+def test_store_pages_through_every_media_row():
+    from api.store import SupabaseAppStore
+
+    table_rows = [{"exercise_key": f"k{i:04d}", "status": "ok"} for i in range(2500)]
+    ranges: list[tuple[int, int]] = []
+
+    class Query:
+        def __init__(self):
+            self.window = (0, 0)
+
+        def select(self, _columns):
+            return self
+
+        def eq(self, *_args):
+            return self
+
+        def order(self, column):
+            assert column == "exercise_key"
+            return self
+
+        def range(self, start, end):
+            ranges.append((start, end))
+            self.window = (start, end)
+            return self
+
+        def execute(self):
+            start, end = self.window
+            return SimpleNamespace(data=table_rows[start : end + 1])
+
+    store = SupabaseAppStore.__new__(SupabaseAppStore)
+    store.client = SimpleNamespace(table=lambda _name: Query())
+    store._run_with_transient_retry = lambda *, operation, fn: fn()
+
+    rows = store.list_exercise_media_for_verification()
+
+    assert len(rows) == 2500
+    assert ranges == [(0, 999), (1000, 1999), (2000, 2999)]
 
 
 def test_verification_sweep_needs_an_api_key(monkeypatch):
@@ -459,6 +550,58 @@ def test_import_refuses_to_run_without_an_api_key(tmp_path, monkeypatch):
     with pytest.raises(SystemExit) as exc:
         media_tool.main(["import", str(path), "--dry-run"])
     assert exc.value.code == 2
+
+
+def test_import_rejects_a_csv_without_the_required_columns(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv(media.YOUTUBE_API_KEY_ENV, API_KEY)
+    path = tmp_path / "media.csv"
+    path.write_text("exercise_key,youtube_link\npallof-press,dQw4w9WgXcQ\n", encoding="utf-8")
+
+    assert media_tool.main(["import", str(path), "--dry-run"]) == 2
+    assert "needs a youtube_url column" in capsys.readouterr().err
+
+
+def test_operational_failures_exit_2_not_1(tmp_path, capsys):
+    assert media_tool.main(["import", str(tmp_path / "missing.csv"), "--dry-run"]) == 2
+    assert "FileNotFoundError" in capsys.readouterr().err
+
+
+def test_import_rejects_names_another_row_already_owns(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv(media.YOUTUBE_API_KEY_ENV, API_KEY)
+    ok = media.VideoCheck(status="ok", made_for_kids=False)
+    monkeypatch.setattr(media_tool, "check_youtube_videos", lambda ids, **_: {i: ok for i in ids})
+    upserts: list[dict] = []
+
+    class Store:
+        def list_exercise_media_for_verification(self):
+            return [{"exercise_key": "romanian-deadlift-rdl", "aliases": ["rdl"], "status": "ok"}]
+
+        def upsert_exercise_media(self, row):
+            upserts.append(row)
+
+    monkeypatch.setattr(media_tool, "_build_store", lambda: Store())
+    path = _write_import_csv(
+        tmp_path,
+        [
+            # Takes an alias another stored row owns.
+            {"exercise_key": "barbell-rdl", "youtube_url": "AAAAAAAAAAA", "aliases": "RDL"},
+            # Its key is another stored row's alias.
+            {"exercise_key": "rdl", "youtube_url": "BBBBBBBBBBB"},
+            # Re-import of the stored row under its own key: allowed.
+            {"exercise_key": "romanian-deadlift-rdl", "youtube_url": "CCCCCCCCCCC", "aliases": "RDL"},
+            # Two new rows in the same CSV claiming one alias: the second loses.
+            {"exercise_key": "sled-push", "youtube_url": "DDDDDDDDDDD", "aliases": "Sled Push - light"},
+            {"exercise_key": "sled-push-heavy", "youtube_url": "EEEEEEEEEEE", "aliases": "Sled Push - light"},
+        ],
+    )
+
+    assert media_tool.main(["import", str(path)]) == 1
+
+    out = capsys.readouterr().out
+    assert "line 2: rejected - rdl already belongs to romanian-deadlift-rdl" in out
+    assert "line 3: rejected - rdl already belongs to romanian-deadlift-rdl" in out
+    assert "line 6: rejected - sled-push-light already belongs to sled-push" in out
+    assert [row["exercise_key"] for row in upserts] == ["romanian-deadlift-rdl", "sled-push"]
 
 
 def test_import_rejects_made_for_kids_videos(tmp_path, monkeypatch, capsys):

@@ -377,7 +377,9 @@ test("in-app copy matches the canonical docs when they are present", () => {
   }
 
   for (const [document, file] of present) {
-    const markdown = readFileSync(file, "utf8");
+    // Markdown links read as their label, which is how the in-app copy words
+    // them (the URLs are rendered as separate links there).
+    const markdown = readFileSync(file, "utf8").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
     // The canonical Terms number their sections ("## 2. Eligibility"); the
     // in-app rendering does not, because the numbering carries no meaning once
     // the sections are cards on a page. Compare on the text alone.
@@ -394,6 +396,19 @@ test("in-app copy matches the canonical docs when they are present", () => {
       assert.ok(
         rendered.includes(heading),
         `${document.slug}: canonical section "${heading}" is missing from the in-app copy`,
+      );
+    }
+
+    // The YouTube disclosures are what the YouTube API Services Terms require,
+    // so both copies must say exactly the same thing.
+    const youtubeHeading =
+      document.slug === "privacy-notice" ? "YouTube demonstration videos" : "Exercise demonstration videos";
+    const youtube = document.sections.find((entry) => entry.heading === youtubeHeading);
+    assert.ok(youtube, `in-app ${document.slug} should contain ${youtubeHeading}`);
+    for (const paragraph of youtube.paragraphs ?? []) {
+      assert.ok(
+        markdown.includes(paragraph.replace(/’/g, "'")) || markdown.includes(paragraph),
+        `canonical ${document.slug} is out of sync with the in-app ${youtubeHeading} copy`,
       );
     }
 

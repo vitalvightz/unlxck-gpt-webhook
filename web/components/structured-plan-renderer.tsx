@@ -569,7 +569,16 @@ export function ExerciseRow({
         <span className={media ? "ex-row-thumb ex-row-thumb-video" : "ex-row-thumb"} aria-hidden="true">
           {media ? (
             // eslint-disable-next-line @next/next/no-img-element -- remote YouTube thumbnail, not a local asset
-            <img src={demoThumbnailUrl(media.video_id, "mq")} alt="" loading="lazy" />
+            <img
+              src={demoThumbnailUrl(media.video_id, "mq")}
+              alt=""
+              loading="lazy"
+              onError={(event) => {
+                // No thumbnail (restricted or removed video): keep the dark tile
+                // and play glyph rather than a broken-image icon.
+                event.currentTarget.style.display = "none";
+              }}
+            />
           ) : null}
           {media ? <span className="ex-demo-play-glyph ex-demo-play-glyph-sm" /> : null}
         </span>

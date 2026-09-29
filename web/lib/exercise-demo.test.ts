@@ -6,6 +6,7 @@ import {
   demoSegmentLabel,
   demoThumbnailUrl,
   hasWatchedDemo,
+  loadYouTubeIframeApi,
   markDemoWatched,
 } from "./exercise-demo";
 import type { ExerciseMedia } from "./types";
@@ -67,5 +68,45 @@ test("watched memory is per video and survives unavailable storage", () => {
     assert.doesNotThrow(() => markDemoWatched("dQw4w9WgXcQ"));
   } finally {
     globals.window = previous;
+  }
+});
+
+test("a failed player load is retried on the next tap and restores the global hook", async () => {
+  type FakeScript = { src?: string; async?: boolean; onerror?: () => void; remove: () => void };
+  const scripts: FakeScript[] = [];
+  const originalHook = () => {};
+  const globals = globalThis as unknown as { window?: unknown; document?: unknown };
+  const previousWindow = globals.window;
+  const previousDocument = globals.document;
+  const fakeWindow: Record<string, unknown> = {
+    onYouTubeIframeAPIReady: originalHook,
+    setTimeout: () => 1,
+    clearTimeout: () => {},
+  };
+  globals.window = fakeWindow;
+  globals.document = {
+    createElement: () => {
+      const script: FakeScript = { remove: () => {} };
+      scripts.push(script);
+      return script;
+    },
+    head: { appendChild: () => {} },
+  };
+  try {
+    // The API script loads but YT never appears: reject, and do not cache it.
+    const first = loadYouTubeIframeApi();
+    (fakeWindow.onYouTubeIframeAPIReady as () => void)();
+    await assert.rejects(first, /failed to load/);
+    assert.equal(fakeWindow.onYouTubeIframeAPIReady, originalHook);
+
+    // The next tap starts a fresh load instead of reusing the rejection.
+    const second = loadYouTubeIframeApi();
+    assert.equal(scripts.length, 2);
+    scripts[1]!.onerror?.();
+    await assert.rejects(second, /failed to load/);
+    assert.equal(fakeWindow.onYouTubeIframeAPIReady, originalHook);
+  } finally {
+    globals.window = previousWindow;
+    globals.document = previousDocument;
   }
 });

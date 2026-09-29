@@ -21,7 +21,7 @@ import threading
 import time
 import unicodedata
 from dataclasses import dataclass
-from typing import Any, Iterable, Mapping
+from typing import Any, Callable, Iterable, Mapping
 from urllib.parse import parse_qs, urlparse
 
 import httpx
@@ -347,11 +347,19 @@ def run_media_verification_sweep(
     *,
     api_key: str | None = None,
     client: httpx.Client | None = None,
+    should_stop: Callable[[], bool] | None = None,
 ) -> dict[str, int]:
     """Re-check every stored video and record the result. Never raises per row.
 
     Unavailable rows are re-checked too, so a video that was only briefly
     private or restricted is served again once YouTube reports it as fine.
+
+    Rows go in batches of 50 (one API call each) and ``should_stop`` is asked
+    between batches, so a worker shutting down waits for at most one batch.
+
+    The API process picks up the new statuses when its index cache expires
+    (INDEX_TTL_SECONDS); this usually runs in the worker, whose cache is not
+    the one serving plans.
     """
     counts = {"ok": 0, "unavailable": 0, "unknown": 0}
     key = api_key or youtube_api_key()
@@ -363,33 +371,47 @@ def run_media_verification_sweep(
     if not callable(lister) or not callable(updater):
         return counts
     rows = list(lister())
-    results = check_youtube_videos(
-        (str(row.get("video_id") or "") for row in rows),
-        api_key=key,
-        client=client,
-    )
-    served_changed = False
-    for row in rows:
-        exercise_key = str(row.get("exercise_key") or "")
-        result = results.get(str(row.get("video_id") or "")) or VideoCheck(status="unknown")
-        counts[result.status] = counts.get(result.status, 0) + 1
-        if result.status == "unknown":
-            continue
-        try:
-            updater(
-                exercise_key,
-                status=result.status,
-                reason=result.reason,
-                made_for_kids=result.made_for_kids,
-                title=result.title,
-                channel_title=result.channel_title,
+    owns_client = client is None
+    http = client or httpx.Client(timeout=YOUTUBE_API_TIMEOUT_SECONDS)
+    try:
+        for offset in range(0, len(rows), _VIDEOS_PER_REQUEST):
+            if should_stop is not None and should_stop():
+                logger.info("exercise media verification stopped early at row %s of %s", offset, len(rows))
+                break
+            batch = rows[offset : offset + _VIDEOS_PER_REQUEST]
+            results = check_youtube_videos(
+                (str(row.get("video_id") or "") for row in batch),
+                api_key=key,
+                client=http,
             )
-        except Exception:  # noqa: BLE001
-            logger.warning("exercise media status update failed key=%s", exercise_key, exc_info=True)
-            continue
-        if result.status != row.get("status"):
-            served_changed = True
-    if served_changed:
-        reset_media_index_cache()
+            for row in batch:
+                _record_check(row, results, updater, counts)
+    finally:
+        if owns_client:
+            http.close()
     logger.info("exercise media verification sweep: %s", counts)
     return counts
+
+
+def _record_check(
+    row: Mapping[str, Any],
+    results: Mapping[str, VideoCheck],
+    updater: Callable[..., Any],
+    counts: dict[str, int],
+) -> None:
+    exercise_key = str(row.get("exercise_key") or "")
+    result = results.get(str(row.get("video_id") or "")) or VideoCheck(status="unknown")
+    counts[result.status] = counts.get(result.status, 0) + 1
+    if result.status == "unknown":
+        return
+    try:
+        updater(
+            exercise_key,
+            status=result.status,
+            reason=result.reason,
+            made_for_kids=result.made_for_kids,
+            title=result.title,
+            channel_title=result.channel_title,
+        )
+    except Exception:  # noqa: BLE001
+        logger.warning("exercise media status update failed key=%s", exercise_key, exc_info=True)

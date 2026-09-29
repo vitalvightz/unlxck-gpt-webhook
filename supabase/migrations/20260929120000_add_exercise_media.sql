@@ -30,12 +30,6 @@ create table if not exists public.exercise_media (
   -- badge); 'curated' = a vetted third-party demo.
   source text not null default 'curated' check (source in ('curated', 'coach')),
   status text not null default 'unverified' check (status in ('unverified', 'ok', 'unavailable')),
-  -- YouTube's status.madeForKids from the last check. Null until checked; only
-  -- false is served (YouTube developer policies require the check).
-  made_for_kids boolean,
-  -- Snippet from the last check: title for curators, channel for attribution.
-  title text check (title is null or char_length(title) <= 200),
-  channel_title text check (channel_title is null or char_length(channel_title) <= 200),
   status_reason text check (status_reason is null or char_length(status_reason) <= 200),
   verified_at timestamptz,
   notes text not null default '' check (char_length(notes) <= 500),
@@ -43,8 +37,15 @@ create table if not exists public.exercise_media (
   updated_at timestamptz not null default now()
 );
 
-create index if not exists exercise_media_aliases_idx
-  on public.exercise_media using gin (aliases);
+-- Added separately so the migration stays re-runnable on a database that
+-- applied the first revision of this file (which had no such columns).
+alter table public.exercise_media
+  -- YouTube's status.madeForKids from the last check. Null until checked; only
+  -- false is served (YouTube developer policies require the check).
+  add column if not exists made_for_kids boolean,
+  -- Snippet from the last check: title for curators, channel for attribution.
+  add column if not exists title text check (title is null or char_length(title) <= 200),
+  add column if not exists channel_title text check (channel_title is null or char_length(channel_title) <= 200);
 
 alter table public.exercise_media enable row level security;
 

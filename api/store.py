@@ -5124,30 +5124,53 @@ class SupabaseAppStore:
     _EXERCISE_MEDIA_SERVED_COLUMNS = (
         "exercise_key,aliases,video_id,start_s,end_s,source,channel_title,made_for_kids"
     )
+    # PostgREST caps a single read (1000 rows by default), so reads page until
+    # a short page comes back.
+    _EXERCISE_MEDIA_PAGE_SIZE = 1000
+
+    def _exercise_media_page(self, *, columns: str, served_only: bool, offset: int) -> Any:
+        query = self.client.table("exercise_media").select(columns)
+        if served_only:
+            query = query.eq("status", "ok").eq("made_for_kids", False)
+        # Stable order: pages don't overlap, and when two rows claim the same
+        # alias the same row wins on every load.
+        return (
+            query.order("exercise_key")
+            .range(offset, offset + self._EXERCISE_MEDIA_PAGE_SIZE - 1)
+            .execute()
+        )
+
+    def _list_exercise_media_rows(self, *, columns: str, served_only: bool, operation: str) -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
+        offset = 0
+        while True:
+            response = self._run_with_transient_retry(
+                operation=f"{operation} offset={offset}",
+                fn=lambda offset=offset: self._exercise_media_page(
+                    columns=columns, served_only=served_only, offset=offset
+                ),
+            )
+            batch = [row for row in (getattr(response, "data", None) or []) if isinstance(row, dict)]
+            rows.extend(batch)
+            if len(batch) < self._EXERCISE_MEDIA_PAGE_SIZE:
+                return rows
+            offset += self._EXERCISE_MEDIA_PAGE_SIZE
 
     def list_exercise_media(self) -> list[dict[str, Any]]:
         """Every video cleared to serve: checked ok and checked not made for kids."""
-        response = self._run_with_transient_retry(
+        return self._list_exercise_media_rows(
+            columns=self._EXERCISE_MEDIA_SERVED_COLUMNS,
+            served_only=True,
             operation="list_exercise_media",
-            fn=lambda: self.client.table("exercise_media")
-            .select(self._EXERCISE_MEDIA_SERVED_COLUMNS)
-            .eq("status", "ok")
-            .eq("made_for_kids", False)
-            .limit(5000)
-            .execute(),
         )
-        return list(getattr(response, "data", None) or [])
 
     def list_exercise_media_for_verification(self) -> list[dict[str, Any]]:
         """Every row, unavailable ones included, so a video that recovers is served again."""
-        response = self._run_with_transient_retry(
+        return self._list_exercise_media_rows(
+            columns="exercise_key,aliases,video_id,status",
+            served_only=False,
             operation="list_exercise_media_for_verification",
-            fn=lambda: self.client.table("exercise_media")
-            .select("exercise_key,video_id,status")
-            .limit(5000)
-            .execute(),
         )
-        return list(getattr(response, "data", None) or [])
 
     def update_exercise_media_status(
         self,

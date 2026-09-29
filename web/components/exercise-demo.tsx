@@ -90,6 +90,8 @@ export function ExerciseDemo({
   const mountRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<YouTubePlayer | null>(null);
   const loopTimerRef = useRef<number | null>(null);
+  // PLAYING fires again on every loop restart; record the watch once.
+  const watchRecordedRef = useRef(false);
 
   const start = Math.max(0, Math.floor(media.start_s || 0));
   const end = media.end_s != null && media.end_s > start ? Math.floor(media.end_s) : null;
@@ -143,7 +145,10 @@ export function ExerciseDemo({
               if (cancelled) return;
               if (event.data === YT.PlayerState.PLAYING) {
                 setMode("playing");
-                markDemoWatched(media.video_id);
+                if (!watchRecordedRef.current) {
+                  watchRecordedRef.current = true;
+                  markDemoWatched(media.video_id);
+                }
               } else if (event.data === YT.PlayerState.PAUSED) {
                 setMode("paused");
               } else if (event.data === YT.PlayerState.ENDED) {
@@ -154,7 +159,16 @@ export function ExerciseDemo({
               }
             },
             onError: () => {
-              if (!cancelled) setMode("error");
+              if (cancelled) return;
+              // The error state drops the frame, so release the player now
+              // rather than when the row collapses.
+              try {
+                playerRef.current?.destroy();
+              } catch {
+                // Already torn down.
+              }
+              playerRef.current = null;
+              setMode("error");
             },
           },
         });

@@ -432,6 +432,7 @@ function TextStructuredPlanRenderer({
   scheduleContext,
   isAdmin = false,
   rehabLabelPolicy,
+  exerciseMedia,
 }: {
   text: string;
   fightDate?: string | null;
@@ -441,6 +442,7 @@ function TextStructuredPlanRenderer({
   scheduleContext?: PlanDetail["schedule_context"];
   isAdmin?: boolean;
   rehabLabelPolicy?: PlanDetail["rehab_label_policy"] | null;
+  exerciseMedia?: PlanDetail["outputs"]["exercise_media"];
 }) {
   const adaptedPlan = useMemo(
     () => buildStructuredPlanFromText(text, fightDate),
@@ -463,6 +465,7 @@ function TextStructuredPlanRenderer({
       scheduleContext={rendererScheduleContext}
       isAdmin={isAdmin}
       rehabLabelPolicy={rehabLabelPolicy}
+      exerciseMedia={exerciseMedia}
     />
   );
 }
@@ -2911,6 +2914,7 @@ export function PlanViewer({
                     scheduleContext={plan.schedule_context}
                     isAdmin={isViewerAdmin}
                     rehabLabelPolicy={rehabLabelPolicy}
+                    exerciseMedia={plan.outputs.exercise_media}
                   />
                 </>
               )}

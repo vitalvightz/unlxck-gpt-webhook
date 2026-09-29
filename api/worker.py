@@ -86,6 +86,7 @@ async def _run_exercise_media_sweep_if_due(
     store: AppStore,
     state: dict[str, float],
     interval_seconds: int,
+    shutdown_event: asyncio.Event | None = None,
 ) -> None:
     """Daily availability check for exercise demo videos.
 
@@ -94,11 +95,14 @@ async def _run_exercise_media_sweep_if_due(
     'unavailable' so the plan stops serving it and the athlete sees the
     cues-only row instead of a dead player; a later passing check restores it.
     Needs YOUTUBE_DATA_API_KEY. Runs in a worker thread and never raises into
-    the loop.
+    the loop. The first check runs as soon as the worker starts. Once shutdown
+    is requested the thread stops before its next batch of 50 videos, so exit
+    waits for at most one batch.
     """
 
     now = time.monotonic()
-    if now - state.get("last_sweep_at", 0.0) < interval_seconds:
+    last_sweep_at = state.get("last_sweep_at")
+    if last_sweep_at is not None and now - last_sweep_at < interval_seconds:
         return
     if os.getenv("UNLXCK_EXERCISE_MEDIA_SWEEP_ENABLED", "1").strip() == "0":
         return
@@ -111,7 +115,11 @@ async def _run_exercise_media_sweep_if_due(
         try:
             from .services.exercise_media import run_media_verification_sweep
 
-            await asyncio.to_thread(run_media_verification_sweep, store)
+            await asyncio.to_thread(
+                run_media_verification_sweep,
+                store,
+                should_stop=shutdown_event.is_set if shutdown_event is not None else None,
+            )
         except Exception:  # noqa: BLE001 - media checks must never disturb generation
             logger.exception("[worker] exercise media sweep failed")
 
@@ -413,6 +421,7 @@ async def run_worker() -> None:
                 store=store,
                 state=media_sweep_state,
                 interval_seconds=media_sweep_interval,
+                shutdown_event=shutdown_event,
             )
             # Wake early if shutdown is requested mid-interval; otherwise this
             # preserves the existing poll cadence between ticks.

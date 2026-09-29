@@ -142,26 +142,30 @@ export function loadYouTubeIframeApi(): Promise<YouTubeNamespace> {
   if (iframeApiPromise) return iframeApiPromise;
 
   iframeApiPromise = new Promise<YouTubeNamespace>((resolve, reject) => {
-    const timer = window.setTimeout(() => {
-      iframeApiPromise = null;
-      reject(new Error("YouTube player timed out"));
-    }, IFRAME_API_TIMEOUT_MS);
     const previous = win.onYouTubeIframeAPIReady;
+    const script = document.createElement("script");
+    // Every failure clears the cached promise and hands the global hook back,
+    // so the next tap retries from scratch instead of reusing a rejection.
+    const fail = (message: string) => {
+      window.clearTimeout(timer);
+      iframeApiPromise = null;
+      win.onYouTubeIframeAPIReady = previous;
+      script.remove();
+      reject(new Error(message));
+    };
+    const timer = window.setTimeout(() => fail("YouTube player timed out"), IFRAME_API_TIMEOUT_MS);
     win.onYouTubeIframeAPIReady = () => {
       previous?.();
-      window.clearTimeout(timer);
-      if (win.YT?.Player) resolve(win.YT);
-      else reject(new Error("YouTube player failed to load"));
+      if (win.YT?.Player) {
+        window.clearTimeout(timer);
+        resolve(win.YT);
+      } else {
+        fail("YouTube player failed to load");
+      }
     };
-    const script = document.createElement("script");
     script.src = IFRAME_API_SRC;
     script.async = true;
-    script.onerror = () => {
-      window.clearTimeout(timer);
-      iframeApiPromise = null;
-      script.remove();
-      reject(new Error("YouTube player failed to load"));
-    };
+    script.onerror = () => fail("YouTube player failed to load");
     document.head.appendChild(script);
   });
   return iframeApiPromise;

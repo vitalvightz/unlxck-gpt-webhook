@@ -231,9 +231,12 @@ def _cmd_candidates(args: argparse.Namespace) -> int:
         .limit(args.plans)
         .execute()
     )
-    media_response = store.client.table("exercise_media").select("exercise_key,aliases").execute()
+    # Only served rows count as covered: an exercise whose video was retired
+    # or never verified comes back as a candidate for re-curation.
     existing: set[str] = set()
-    for row in media_response.data or []:
+    for row in store.list_exercise_media_for_verification():
+        if row.get("status") != "ok":
+            continue
         existing.add(str(row.get("exercise_key") or ""))
         existing.update(str(alias) for alias in row.get("aliases") or [])
     rows = rank_candidates(
@@ -249,20 +252,63 @@ def _cmd_candidates(args: argparse.Namespace) -> int:
     return 0
 
 
+def alias_conflict(
+    payload: dict[str, Any],
+    owners: dict[str, str],
+) -> str | None:
+    """Why this row's key or aliases would take a name another row owns, if so.
+
+    ``owners`` maps every claimed name (key or alias) to the key of the row
+    that claims it. The media index lets a primary key beat another row's
+    alias and keeps the first of two equal aliases, so either kind of overlap
+    would silently send an exercise to the wrong video.
+    """
+    key = payload["exercise_key"]
+    for name in [key, *payload["aliases"]]:
+        owner = owners.get(name)
+        if owner is not None and owner != key:
+            return f"{name} already belongs to {owner}"
+    return None
+
+
+def _claim_names(owners: dict[str, str], key: str, aliases: Iterable[str]) -> None:
+    for name in [key, *aliases]:
+        owners.setdefault(str(name), key)
+
+
 def _cmd_import(args: argparse.Namespace) -> int:
     with open(args.csv, newline="", encoding="utf-8") as handle:
-        rows = list(csv.DictReader(handle))
+        reader = csv.DictReader(handle)
+        rows = list(reader)
+        headers = set(reader.fieldnames or [])
+    if "youtube_url" not in headers or not headers & {"exercise_key", "example_name"}:
+        print(
+            "error: the CSV needs a youtube_url column and an exercise_key or example_name "
+            f"column (found: {', '.join(sorted(headers)) or 'none'})",
+            file=sys.stderr,
+        )
+        return 2
     api_key = _require_api_key()
     store = None if args.dry_run else _build_store()
+    # Names already taken by stored rows (a dry run has no store, so it only
+    # catches overlaps within the CSV). A row re-imported under its own key
+    # replaces its old aliases, so its own names are not held against it.
+    owners: dict[str, str] = {}
+    stored = store.list_exercise_media_for_verification() if store is not None else []
+    for row in stored:
+        _claim_names(owners, str(row.get("exercise_key") or ""), row.get("aliases") or [])
     rejected = 0
     written = 0
     parsed: list[tuple[int, dict[str, Any]]] = []
     for line_no, row in enumerate(rows, start=2):
         payload, error = parse_import_row(row)
+        if payload is not None and not error:
+            error = alias_conflict(payload, owners)
         if error:
             rejected += 1
             print(f"line {line_no}: rejected - {error}")
         elif payload is not None:
+            _claim_names(owners, payload["exercise_key"], payload["aliases"])
             parsed.append((line_no, payload))
 
     with httpx.Client(timeout=YOUTUBE_API_TIMEOUT_SECONDS) as http:
@@ -326,7 +372,11 @@ def main(argv: list[str] | None = None) -> int:
     verify.set_defaults(func=_cmd_verify)
 
     args = parser.parse_args(argv)
-    return int(args.func(args))
+    try:
+        return int(args.func(args))
+    except Exception as exc:  # noqa: BLE001 - operational failure: exit 2, not 1 (rejected rows)
+        print(f"error: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":
