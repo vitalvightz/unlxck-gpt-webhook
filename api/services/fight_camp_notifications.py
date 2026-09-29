@@ -32,10 +32,10 @@ from api.services.fight_countdown_eligibility import (
 from api.services.push_notifications import dispatch_push_candidates
 from api.services.today_readiness_boundary import build_today_command_view
 from api.store import AppStore
+from api.contracts.completion import TERMINAL_COMPLETION_STATUSES as TERMINAL_SESSION_STATUSES
 
 logger = logging.getLogger(__name__)
 
-TERMINAL_SESSION_STATUSES = frozenset({"done", "modified", "skipped"})
 ALL_ORCHESTRATED_INTENTS = (
     "morning_readiness",
     "missed_checkin",

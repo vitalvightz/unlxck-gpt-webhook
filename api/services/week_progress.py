@@ -12,11 +12,11 @@ from api.services.effective_structured_plan import resolve_effective_structured_
 from api.services.progress_notifications import dispatch_progress_award_notification  # noqa: F401
 from api.services.xp_awards import ensure_xp_abuse_hardening
 from api.store import AppStore
+from api.contracts.completion import TERMINAL_COMPLETION_STATUSES as RESOLVED_STATUSES
 
 logger = logging.getLogger(__name__)
 
 COMPLETED_STATUSES = frozenset({"done", "modified"})
-RESOLVED_STATUSES = frozenset({"done", "modified", "skipped"})
 _TIMESTAMP_FIELDS = ("updated_at", "completed_at", "created_at")
 
 
