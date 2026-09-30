@@ -57,7 +57,7 @@ type Zone = {
 // resolves — bicep, forearm, groin, ribs, hand, foot, traps, tricep, Achilles
 // are all known locations.
 const FRONT_ZONES: Record<string, Zone> = {
-  head: { label: "Head / Neck", cx: 90, cy: 28, r: 16, layer: "both", kind: "muscle", rx: 13, ry: 15 },
+  head: { label: "Head / Neck", cx: 90, cy: 21, r: 17, layer: "both", kind: "muscle", rx: 13, ry: 16 },
   l_shoulder: { label: "Left shoulder", cx: 124, cy: 68, r: 13, layer: "both", rx: 11, ry: 9, rot: 20 },
   r_shoulder: { label: "Right shoulder", cx: 56, cy: 68, r: 13, layer: "both", rx: 11, ry: 9, rot: -20 },
   chest: { label: "Chest", cx: 90, cy: 88, r: 14, layer: "muscle", rx: 20, ry: 11 },
@@ -92,7 +92,7 @@ const FRONT_ZONES: Record<string, Zone> = {
 // every "Left" zone takes the lower cx and every "Right" zone the higher cx —
 // the opposite of FRONT_ZONES — while the anatomical labels stay the same.
 const BACK_ZONES: Record<string, Zone> = {
-  head: { label: "Head / Neck", cx: 90, cy: 28, r: 16, layer: "both", kind: "muscle", rx: 13, ry: 15 },
+  head: { label: "Head / Neck", cx: 90, cy: 21, r: 17, layer: "both", kind: "muscle", rx: 13, ry: 16 },
   traps: { label: "Traps", cx: 90, cy: 58, r: 9, layer: "muscle", rx: 13, ry: 6.5 },
   l_shoulder: { label: "Left shoulder", cx: 56, cy: 68, r: 13, layer: "both", rx: 11, ry: 9, rot: -20 },
   r_shoulder: { label: "Right shoulder", cx: 124, cy: 68, r: 13, layer: "both", rx: 11, ry: 9, rot: 20 },
@@ -188,6 +188,7 @@ function findSelectionForZone(
 function zonePath(key: string, zone: Zone): string {
   const { cx: x, cy: y } = zone;
   const w = zone.rx ?? 7; const h = zone.ry ?? 7;
+  if (key === "head") return "M77 21a13 16 0 1 0 26 0a13 16 0 1 0-26 0";
   if (key === "chest") return "M63 76Q75 73 88 78L88 94Q75 97 66 88Z M92 78Q105 73 117 76L114 88Q105 97 92 94Z";
   if (key === "core") return "M77 105Q90 108 103 105L99 135Q90 145 81 135Z";
   if (key === "upper_back") return "M65 72Q77 68 88 78L87 102Q73 101 65 87Z M92 78Q103 68 115 72L115 87Q107 101 93 102Z";
@@ -200,6 +201,10 @@ interface BodyMapProps {
   selections: BodyMapSelection[];
   onZoneSelect: (zone: string, label: string) => void;
   onSideChange: (side: BodyMapSide) => void;
+}
+
+export function isMuscleBodyMapZone(zone: string): boolean {
+  return FRONT_ZONES[zone]?.layer === "muscle" || BACK_ZONES[zone]?.layer === "muscle";
 }
 
 export function BodyMap({ side, selections, onZoneSelect, onSideChange }: BodyMapProps) {
@@ -267,10 +272,12 @@ export function BodyMap({ side, selections, onZoneSelect, onSideChange }: BodyMa
                   }}>
                   <ellipse cx={zone.cx} cy={zone.cy} rx={Math.max(rx, zone.r)} ry={Math.max(ry, zone.r)} className="body-map-zone-hit" />
                   {joint ? <circle cx={zone.cx} cy={zone.cy} r={JOINT_POINT_RADIUS}
-                    className={`body-map-zone body-map-zone-joint ${used ? "body-map-zone-used" : ""}`} /> : key !== "head" || used ? <path
+                    className={`body-map-zone body-map-zone-joint ${used ? "body-map-zone-used" : ""}`} /> : <path
                     className={`body-map-zone ${used ? "body-map-zone-used" : ""}`}
                     transform={zone.rot ? `rotate(${zone.rot} ${zone.cx} ${zone.cy})` : undefined}
-                    d={zonePath(key, zone)} /> : null}
+                    d={zonePath(key, zone)} />}
+                  {key === "head" && !used ? <circle cx={90} cy={21} r={JOINT_POINT_RADIUS}
+                    className="body-map-zone body-map-zone-joint" aria-hidden="true" /> : null}
                   {used ? <circle cx={zone.cx} cy={zone.cy} r={2.3} className="body-map-zone-dot" /> : null}
                 </g>
               );

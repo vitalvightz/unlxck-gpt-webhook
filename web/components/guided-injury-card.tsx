@@ -8,6 +8,7 @@ import {
 } from "@/lib/intake-options";
 
 import { INJURY_IMPACT_OPTIONS, readInjuryImpact, writeInjuryImpact } from "@/lib/injury-impact";
+import { isMuscleBodyMapZone } from "./body-map";
 
 // ── Injury-type option groups ────────────────────────────────────────
 
@@ -72,7 +73,6 @@ const INJURY_FAMILIES: InjuryFamilyOption[] = [
   { family: "structural", label: "Bone or dislocation", helper: "Fracture, dislocation, ligament. Used as fallback if description is unclear." },
   { family: "head_nerve_breathing", label: "Head, nerve or breathing issue", helper: "Concussion, nerve, breathing. Used as fallback if description is unclear." },
   { family: "surface", label: "Skin injury", helper: "Cuts, blisters, bruises. Used as fallback if description is unclear." },
-  { family: "not_sure", label: "Not sure", helper: "I do not know yet. Used as fallback if description is unclear." },
 ];
 
 const FAMILY_TO_HEADING: Record<Exclude<InjuryFamily, "not_sure">, string> = {
@@ -967,7 +967,9 @@ export function GuidedInjuryCard({
   const showWarning = hasGuidedInjuryReviewRisk(injury);
   const hasFollowUp = injury.injury_type !== "";
   const derivedFamily = getFamilyForInjury(injury);
-  const activeFamily = derivedFamily || draftFamily;
+  const activeFamily = derivedFamily === "not_sure" ? draftFamily : derivedFamily || draftFamily;
+  const isHeadSelected = injury.zone === "head" || (!injury.zone && /\b(head|neck)\b/i.test(injury.area));
+  const showJointLocationHint = activeFamily === "structural" && isMuscleBodyMapZone(injury.zone);
   const basicsComplete = Boolean(injury.area.trim() && injury.severity && injury.trend);
   const typeComplete = Boolean(injury.injury_type && (injury.injury_type !== "surface_injury" || injury.surface_type));
   const safetyComplete = isSafetyComplete(injury, activeFamily);
@@ -1119,7 +1121,7 @@ export function GuidedInjuryCard({
               to a single summary once a type is chosen. */}
           <div className="gi-field">
             <label className="gi-label">Injury type</label>
-
+            {showJointLocationHint ? <p className="field-hint" role="status">Tap Change beside the area, then use Joints &amp; bones on the map.</p> : null}
 
             {typeComplete && !isEditingType ? (
               <div className="gi-selection-summary">
@@ -1145,7 +1147,7 @@ export function GuidedInjuryCard({
               </>
             ) : !activeFamily ? (
               <div className="gi-family-grid" role="radiogroup" aria-label="Injury family">
-                {INJURY_FAMILIES.map((family) => (
+                {INJURY_FAMILIES.filter((family) => family.family !== "head_nerve_breathing" || isHeadSelected).map((family) => (
                   <button
                     key={family.family}
                     type="button"

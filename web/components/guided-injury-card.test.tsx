@@ -6,6 +6,37 @@ import { createRoot } from "react-dom/client";
 import { GuidedInjuryCard } from "./guided-injury-card";
 import { EMPTY_GUIDED_INJURY, buildGuidedInjuryFields, type GuidedInjuryState } from "@/lib/guided-injury";
 
+test("more injury types depend on location and guide muscle selections to joints", async () => {
+  const host = document.createElement("div"); document.body.appendChild(host);
+  const root = createRoot(host);
+  function Editor({ zone, area }: { zone: string; area: string }) {
+    const [injury, setInjury] = useState({ ...EMPTY_GUIDED_INJURY, zone, area });
+    return <GuidedInjuryCard injury={injury} index={0} isActive onToggleActive={() => {}} onRemove={() => {}}
+      onChangeArea={() => {}} onUpdate={(key, value) => setInjury((current) => ({ ...current, [key]: value }))} />;
+  }
+  const press = async (label: string) => {
+    const button = Array.from(host.querySelectorAll("button")).find((entry) => entry.textContent?.trim() === label);
+    assert.ok(button, label); await act(async () => button.click());
+  };
+  try {
+    for (const [zone, area] of [["l_quad", "Left quad"], ["l_knee", "Left knee"], ["head", "Head / Neck"]]) {
+      await act(async () => root.render(<Editor key={zone} zone={zone} area={area} />));
+      await press("More injury types");
+      const categories = Array.from(host.querySelectorAll('[role="radio"]')).map((entry) => entry.textContent);
+      assert.ok(categories.every((text) => !text?.includes("Not sure")));
+      assert.equal(categories.some((text) => text?.includes("Head, nerve or breathing issue")), zone === "head");
+      const bone = Array.from(host.querySelectorAll<HTMLButtonElement>('[role="radio"]')).find((entry) => entry.textContent?.startsWith("Bone or dislocation"));
+      assert.ok(bone); await act(async () => bone.click());
+      assert.equal(Boolean(host.querySelector('[role="status"]')), zone === "l_quad");
+      if (zone === "l_quad") assert.equal(host.querySelector('[role="status"]')?.textContent,
+        "Tap Change beside the area, then use Joints & bones on the map.");
+      await press("Dislocation");
+      assert.match(host.textContent ?? "", /Did it go back into place\?/);
+      assert.equal(host.querySelector<HTMLButtonElement>(".gi-save-injury")?.disabled, true);
+    }
+  } finally { await act(async () => root.unmount()); host.remove(); }
+});
+
 test("onboarding records tap choices without typing and collapses a complete injury", async () => {
   const host = document.createElement("div");
   document.body.appendChild(host);
