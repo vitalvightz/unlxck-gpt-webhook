@@ -5,34 +5,68 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { BodyMap } from "./body-map";
 
-test("one body view exposes muscles and joints through nearby-area refinement", async () => {
+test("thigh taps select the precise side even with an existing knee injury", async () => {
   const host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   const chosen: string[] = [];
   const render = (side: "front" | "back") => root.render(
-    <BodyMap side={side} selections={[{ zone: "l_knee", label: "Left knee", severity: "low" }]}
+    <BodyMap side={side} selections={[{ zone: "r_knee", label: "Right knee", severity: "low" }]}
       onZoneSelect={(zone) => chosen.push(zone)} onSideChange={render} />,
   );
   try {
     await act(async () => render("front"));
     assert.equal(host.querySelectorAll("svg").length, 1);
-    assert.doesNotMatch(host.textContent ?? "", /Muscles|Joints & bones|severity/);
-    const leg = host.querySelector('[aria-label="Left thigh / knee"]');
-    assert.ok(leg);
-    await act(async () => leg.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
-    const knee = Array.from(host.querySelectorAll("button")).find((b) => b.textContent === "Left knee");
-    assert.ok(knee);
-    assert.equal(knee.getAttribute("aria-pressed"), "true");
-    await act(async () => knee.click());
-    await act(async () => knee.click());
-    assert.deepEqual(chosen, ["l_knee", "l_knee"]);
+    const quad = host.querySelector('[aria-label="Left quad"]');
+    assert.ok(quad);
+    await act(async () => quad.dispatchEvent(new window.MouseEvent("click", { bubbles: true })));
+    await act(async () => quad.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
+    assert.deepEqual(chosen, ["l_quad", "l_quad"]);
+    assert.equal(host.querySelector('[aria-label="Right knee"]')?.getAttribute("aria-pressed"), "true");
     const back = Array.from(host.querySelectorAll("button")).find((b) => b.textContent === "Back");
     assert.ok(back);
     await act(async () => back.click());
     assert.equal(host.querySelector("svg")?.getAttribute("aria-label"), "back body map for injury selection");
+    const hamstring = host.querySelector('[aria-label="Left hamstring"]');
+    assert.ok(hamstring);
+    await act(async () => hamstring.dispatchEvent(new window.MouseEvent("click", { bubbles: true })));
+    assert.deepEqual(chosen, ["l_quad", "l_quad", "l_ham"]);
     assert.equal(host.querySelector(".body-map-refine"), null);
-    assert.ok(host.querySelector('[aria-label="Left lower leg / foot"]'));
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
+
+test("anatomy switch exposes joint markers and leaves saved muscles visible", async () => {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  const chosen: string[] = [];
+  const button = (label: string) => {
+    const found = Array.from(host.querySelectorAll("button")).find((entry) => entry.textContent === label);
+    assert.ok(found, label);
+    return found;
+  };
+  try {
+    await act(async () => root.render(<BodyMap side="front" selections={[{ zone: "l_quad", label: "Left quad" }]}
+      onZoneSelect={(key) => chosen.push(key)} onSideChange={() => {}} />));
+    assert.equal(button("Muscles").getAttribute("aria-pressed"), "true");
+    assert.equal(host.querySelector('[aria-label="Left knee"]'), null);
+    await act(async () => button("Joints & bones").click());
+    assert.equal(button("Joints & bones").getAttribute("aria-pressed"), "true");
+    assert.equal(host.querySelector('[aria-label="Left quad"]')?.getAttribute("aria-pressed"), "true");
+    assert.equal(host.querySelector('[aria-label="Right quad"]'), null);
+    assert.ok(host.querySelector('[aria-label="Ribs"]'));
+    assert.ok(host.querySelector('[aria-label="Left hand"]'));
+    const knee = host.querySelector('[aria-label="Left knee"]');
+    assert.ok(knee);
+    assert.ok(knee.querySelector(".body-map-zone-joint"));
+    await act(async () => knee.dispatchEvent(new window.KeyboardEvent("keydown", { key: " ", bubbles: true })));
+    assert.deepEqual(chosen, ["l_knee"]);
+    await act(async () => button("Muscles").click());
+    assert.equal(host.querySelector('[aria-label="Left knee"]'), null);
+    assert.deepEqual(chosen, ["l_knee"]);
   } finally {
     await act(async () => root.unmount());
     host.remove();

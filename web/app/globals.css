@@ -13251,13 +13251,88 @@ html[data-theme="light"] .injury-card-state {
   padding: 8px 14px;
 }
 
+.injury-body-map-layout .injury-body-map-col {
+  width: 100%;
+  margin-inline: auto;
+}
+
+.body-map-anatomy-switch {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: min(100%, 320px);
+  margin: 0 auto 18px;
+  padding: 4px;
+  border: 1px solid color-mix(in srgb, var(--text-secondary) 18%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--text-secondary) 5%, var(--bg-app));
+}
+
+.body-map-anatomy-switch::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 4px auto 4px 4px;
+  width: calc((100% - 8px) / 2);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text-secondary) 15%, var(--bg-app));
+  box-shadow: inset 0 -2px var(--brand-red);
+  transition: transform 160ms ease;
+}
+
+.body-map-anatomy-switch[data-layer="joint"]::before {
+  transform: translateX(100%);
+}
+
+.body-map-anatomy-switch button {
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.body-map-anatomy-switch button[aria-pressed="true"] {
+  color: var(--text-primary);
+}
+
+.body-map-anatomy-switch button:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 2px;
+}
+
+.body-map-tap-first .body-map-zone.body-map-zone-joint {
+  fill: var(--bg-app);
+  stroke: color-mix(in srgb, var(--text-secondary) 75%, transparent);
+  stroke-width: 1.2;
+}
+
+.body-map-tap-first .body-map-zone-group:hover .body-map-zone-joint,
+.body-map-tap-first .body-map-region-active .body-map-zone-joint,
+.body-map-tap-first .body-map-zone-group .body-map-zone-joint.body-map-zone-used {
+  fill: color-mix(in srgb, var(--brand-red) 55%, var(--bg-app));
+  stroke: var(--brand-red);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .body-map-anatomy-switch::before { transition: none; }
+}
+
 .body-map-tap-first .body-map-svg-stack {
   display: block;
-  max-width: 240px;
+  width: min(100%, 240px);
+  margin-inline: auto;
 }
 
 .body-map-tap-first .body-map-svg-wrap {
+  width: 100%;
   max-width: none;
+  margin-inline: auto;
 }
 
 .body-map-laterality {
