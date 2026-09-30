@@ -13437,6 +13437,86 @@ html[data-theme="light"] .injury-card-state {
   flex: none;
 }
 
+.onboarding-validation-panel.onboarding-validation-compact {
+  display: block;
+  padding: 0 14px;
+  background: var(--bg-app);
+}
+
+.onboarding-validation-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  list-style: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.onboarding-validation-summary::-webkit-details-marker { display: none; }
+.onboarding-validation-summary > span:first-child { flex: 1; }
+.onboarding-validation-summary:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 2px; }
+.onboarding-validation-compact[open] .overview-disclosure-chevron { transform: rotate(225deg); }
+.onboarding-validation-detail { display: grid; gap: 10px; padding: 4px 0 16px; }
+
+.injury-body-map-layout.injury-body-map-layout-picking { grid-template-columns: minmax(0, 1fr); }
+.injury-body-map-layout-picking .injury-card-stack { margin-top: 0; }
+.injury-location-choice { text-align: center; }
+.injury-location-choice .injury-manual-entry { min-height: 44px; }
+
+.injury-card-streamlined .injury-card-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 12px;
+}
+.injury-card-streamlined .injury-card-copy { display: contents; }
+.injury-card-streamlined .injury-card-summary,
+.injury-card-streamlined .injury-card-pills { grid-column: 1 / -1; }
+.injury-card-streamlined .injury-card-controls { grid-column: 2; grid-row: 1; gap: 2px; }
+.injury-card-streamlined .injury-card-controls button { min-height: 44px; }
+.injury-card-streamlined .injury-card-form { gap: 16px; }
+.injury-card-streamlined .gi-safety-panel:empty { display: none; }
+.injury-card-streamlined .injury-severity-chips {
+  gap: 0;
+  border: 1px solid color-mix(in srgb, var(--text-secondary) 20%, transparent);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.injury-card-streamlined .injury-severity-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  text-align: left;
+}
+.injury-card-streamlined .injury-severity-chip + .injury-severity-chip {
+  border-top: 1px solid color-mix(in srgb, var(--text-secondary) 12%, transparent);
+}
+.injury-card-streamlined .injury-severity-chip::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+}
+.injury-card-streamlined .injury-severity-chip[aria-pressed="true"] {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--brand-red) 9%, transparent);
+}
+.injury-card-streamlined .injury-severity-chip[aria-pressed="true"]::before {
+  border-color: var(--brand-red);
+  background: var(--brand-red);
+  box-shadow: inset 0 0 0 2px var(--bg-app);
+}
+.injury-card-streamlined .injury-trend-chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.injury-card-streamlined .injury-trend-chip { min-width: 0; padding: 8px 4px; white-space: normal; font-size: 0.78rem; }
+
 .injury-impact-grid { grid-template-columns: minmax(0, 1fr); }
 .injury-trend-chips { flex-wrap: wrap; }
 .injury-card-form .injury-severity-chips { display: grid; grid-template-columns: 1fr; }
