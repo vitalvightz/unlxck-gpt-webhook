@@ -16,9 +16,13 @@ from fightcamp.stage2_role_map import (
 
 
 def _gas_tank_athlete(**overrides):
+    # Gas-tank support is a single next-day upgrade: it is anchored on the day
+    # after plan creation, so the default creation day (Wednesday) makes
+    # Thursday the one eligible day in these fixtures.
     base = {
         "key_goals": ["conditioning"],
         "weaknesses": ["gas_tank"],
+        "plan_creation_weekday": "wednesday",
     }
     base.update(overrides)
     return base
@@ -321,13 +325,11 @@ def test_unused_upgrade_high_cut_caps_gpp_spp_to_one_total():
     upgraded = _upgrade_unused_days_to_low_load_support(week, [], athlete)
     converted = [r for r in upgraded if r["role_key"] == "converted_low_aerobic_gas_tank_day"]
     assert len(converted) == 1
-    # Skipped day should be annotated and remain unused.
+    assert converted[0]["scheduled_day_hint"] == "thursday"
+    # Only the day after plan creation is ever upgraded; Saturday stays unused
+    # (it is not searched as a fallback), so the cap is never even consulted for it.
     remaining = week["intentionally_unused_days"]
-    assert len(remaining) == 1
-    assert remaining[0].get("low_aerobic_cap_skipped") is True
-    assert "Low-aerobic support cap reached" in (
-        remaining[0].get("low_aerobic_cap_reason") or ""
-    )
+    assert [entry["day"] for entry in remaining] == ["saturday"]
 
 
 def test_unused_upgrade_taper_moderate_cut_caps_at_one():
@@ -342,10 +344,11 @@ def test_unused_upgrade_taper_moderate_cut_caps_at_one():
             {"day": "thursday", "role": "off_day"},
         ],
     }
-    athlete = _gas_tank_athlete(cut_severity_bucket="moderate")
+    athlete = _gas_tank_athlete(cut_severity_bucket="moderate", plan_creation_weekday="monday")
     upgraded = _upgrade_unused_days_to_low_load_support(week, [], athlete)
     converted = [r for r in upgraded if r["role_key"] == "converted_low_aerobic_gas_tank_day"]
     assert len(converted) == 1
+    assert converted[0]["scheduled_day_hint"] == "tuesday"
 
 
 def test_unused_upgrade_high_fatigue_high_cut_blocks_all_conversions():
