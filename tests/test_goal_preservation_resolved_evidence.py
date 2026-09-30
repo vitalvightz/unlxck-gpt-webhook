@@ -7,9 +7,9 @@ from fightcamp.goal_preservation import (
 )
 from fightcamp.prescription_resolver import (
     _role_kind,
-    apply_effective_strength_prescriptions,
     resolve_strength_slot_prescription,
 )
+from selector_assignments import apply_with_selected_membership
 
 
 def _calendar_day(d_day: int, weekday: str = "monday") -> dict:
@@ -233,7 +233,7 @@ def test_goal_evidence_counts_loaded_hybrid_as_strength_and_power():
     }
     pools = {"SPP": {"strength_slots": [slot]}}
 
-    apply_effective_strength_prescriptions(
+    apply_with_selected_membership(
         weekly_role_map=role_map,
         candidate_pools=pools,
         athlete_model={"fatigue": "low"},
@@ -364,13 +364,16 @@ def test_production_shape_satisfies_speed_build_and_strength_maintenance_contrac
         },
     }
     athlete = {
-        "days_until_fight": 26,
+        # 27 days gives speed two full development windows (D-20..14, D-27..21).
+        # Requirement windows absorb a remainder rather than rounding up, so
+        # strength maintenance (D-27..8) is a single window.
+        "days_until_fight": 27,
         "key_goals": ["speed", "strength"],
         "primary_goal": "speed",
         "fatigue": "low",
         "weight_cut_pct": 0.0,
     }
-    apply_effective_strength_prescriptions(
+    apply_with_selected_membership(
         weekly_role_map=role_map,
         candidate_pools=pools,
         athlete_model=athlete,
@@ -391,5 +394,5 @@ def test_production_shape_satisfies_speed_build_and_strength_maintenance_contrac
     assert {row["d_day"] for row in goals["speed"]["evidence"]} == {16, 23}
     assert goals["strength"]["state"] == "maintain"
     assert goals["strength"]["satisfied"] is True
-    assert {row["d_day"] for row in goals["strength"]["evidence"]} == {13, 23}
+    assert {row["d_day"] for row in goals["strength"]["evidence"]} == {23}
     assert validate_goal_preservation(brief) == []

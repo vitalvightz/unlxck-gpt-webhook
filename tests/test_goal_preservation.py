@@ -11,7 +11,7 @@ from fightcamp.goal_preservation import (
     reconcile_goal_preservation, validate_goal_preservation,
 )
 from fightcamp.late_camp_role_morph import apply_late_camp_role_morph
-from fightcamp.prescription_resolver import apply_effective_strength_prescriptions
+from selector_assignments import apply_with_selected_membership
 from fightcamp.stage2_finalizer_packet import build_stage2_finalizer_packet
 from fightcamp.stage2_payload import (
     _build_strength_slots, _compress_short_camp_priorities, build_planning_brief,
@@ -51,7 +51,7 @@ def _brief(days=20, roles=None, slots=None):
 
 def _resolve(brief):
     apply_late_camp_role_morph(brief["weekly_role_map"])
-    apply_effective_strength_prescriptions(weekly_role_map=brief["weekly_role_map"],
+    apply_with_selected_membership(weekly_role_map=brief["weekly_role_map"],
         candidate_pools=brief["candidate_pools"], athlete_model=brief["athlete_snapshot"])
     return reconcile_goal_preservation(brief)
 
@@ -119,7 +119,7 @@ def test_strength_role_name_and_old_intent_do_not_make_nonstrength_work_qualify(
 def test_effective_no_loading_overrides_loaded_candidate_and_cap_name():
     brief = _brief(roles=[_role(13)])
     apply_late_camp_role_morph(brief["weekly_role_map"])
-    apply_effective_strength_prescriptions(weekly_role_map=brief["weekly_role_map"], candidate_pools=brief["candidate_pools"])
+    apply_with_selected_membership(weekly_role_map=brief["weekly_role_map"], candidate_pools=brief["candidate_pools"])
     role = brief["weekly_role_map"]["weeks"][0]["session_roles"][0]
     role["effective_strength_envelope"]["loaded_allowed"] = False
     reconcile_goal_preservation(brief)
@@ -285,8 +285,12 @@ def test_loaded_exercise_at_rehab_intensity_is_not_strength_maintenance():
 
 
 def test_selected_power_class_overrides_stale_slot_strength_class():
-    slot = _slot()
+    # The selected exercise's own class wins over the slot-level class. An
+    # unloaded power drill is used: a loaded lift classed as power is a hybrid
+    # and deliberately counts as strength too.
+    slot = _slot("Medicine Ball Rotational Slam")
     slot["selected"]["quality_class"] = "anchor_power"
+    slot["selected"]["movement_patterns"] = ["speed"]
     brief = _resolve(_brief(slots=[slot]))
     assert not _goal(brief, "strength")["evidence"]
 
