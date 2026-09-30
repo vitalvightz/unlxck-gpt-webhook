@@ -1,3 +1,4 @@
+import { athleteFacingSessionTitle } from "./plan-labels";
 import type { ResolvedTodayDecision } from "./today-authoritative";
 import type { TodayCommandView } from "./types";
 
@@ -33,8 +34,10 @@ export function getTodayNextStep(
   }
 
   if (state.today.session_scope === "next" && state.today.next_session.session_id) {
-    const nextTitle = state.today.next_session.title?.trim() ||
-      state.today.next_session.label?.trim() || "Your next session";
+    const nextTitle = athleteFacingSessionTitle(
+      state.today.next_session.title?.trim() ||
+        state.today.next_session.label?.trim() || "Your next session",
+    );
     return {
       title,
       detail: `${nextTitle} is planned next. Check in on that training day before starting.`,

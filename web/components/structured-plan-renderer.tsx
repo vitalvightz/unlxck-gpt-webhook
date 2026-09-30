@@ -74,7 +74,11 @@ import {
 import { useTrainingDay } from "@/lib/use-training-day";
 import { describeRelativeDay, formatAppDate, formatAppDateRange } from "@/lib/date-format";
 import { resolveFiniteWeekNumber } from "@/lib/plan-format";
-import { formatPlanLabel } from "@/lib/plan-labels";
+import {
+  DECLARED_LIGHT_COMBAT_TITLE,
+  formatPlanLabel,
+  isDeclaredLightCombatTitle,
+} from "@/lib/plan-labels";
 import { GlossaryTooltip } from "@/components/glossary-tooltip";
 import { glossaryEntry } from "@/lib/glossary";
 import { WhyTooltip } from "@/components/why-tooltip";
@@ -115,13 +119,8 @@ export type SessionCompletionInfo = {
 
 const titleize = formatPlanLabel;
 
-const DECLARED_LIGHT_COMBAT_TITLE = "Technical Combat";
 const DECLARED_LIGHT_COMBAT_DESCRIPTION =
   "Pads, drills, movement or other lower-intensity combat work.";
-
-function isDeclaredLightCombatTitle(title: string): boolean {
-  return /\blight\s+(?:technical\s+)?combat\b/i.test(title);
-}
 
 function PriorityMicrodoseCard({ day }: { day: StructuredDay }) {
   const dose = getPriorityMicrodose(day);
@@ -742,8 +741,7 @@ export function SessionCard({
   defaultOpenBlocks?: boolean;
   /** Today keeps exercise details behind a tap so the session action stays in view. */
   initiallyOpenFirstBlock?: boolean;
-  /** The parent Today card already names this exact session. Relabelled
-   * combat titles still render, since the parent shows the raw plan title. */
+  /** The parent Today card already names this exact session. */
   hideTitle?: boolean;
   /** When false, day-level context like warnings/nutrition/mindset is rendered by
    * the parent day card instead, so the same information does not repeat inside
@@ -814,7 +812,7 @@ export function SessionCard({
               {date ? <span className="sp-day-date">{formatAppDate(date)}</span> : null}
             </div>
           ) : null}
-          {hideTitle && !isTechnicalSession && !isDeclaredLightCombat ? null : <h3 className="sp-session-title">
+          {hideTitle && !isTechnicalSession ? null : <h3 className="sp-session-title">
             {isDeclaredLightCombat
               ? DECLARED_LIGHT_COMBAT_TITLE
               : isTechnicalSession
@@ -844,7 +842,7 @@ export function SessionCard({
         </div>
         <div className="sp-session-meta">
           {isDeclaredLightCombat ? (
-            <span className="sp-tag sp-accent">Light combat</span>
+            <span className="sp-tag sp-accent">Technical</span>
           ) : isTechnicalSession ? (
             <span className="sp-tag sp-accent">{TECHNICAL_COMBAT_TAG}</span>
           ) : sessionType ? (

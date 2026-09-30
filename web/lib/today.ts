@@ -13,6 +13,7 @@ import type {
   TodayRecommendationState,
   TodaySession,
 } from "@/lib/types";
+import { athleteFacingSessionTitle } from "@/lib/plan-labels";
 
 type TodaySafetyFlags = {
   sharp_pain: boolean;
@@ -563,12 +564,12 @@ export function buildTodayCheckinPayload(params: {
 }
 
 export function getSessionTitle(session: TodaySession): string {
-  return (
+  return athleteFacingSessionTitle(
     session.title?.trim() ||
-    session.label?.trim() ||
-    formatSessionValue(session.status) ||
-    formatSessionValue(session.effective_load) ||
-    "Today's session"
+      session.label?.trim() ||
+      formatSessionValue(session.status) ||
+      formatSessionValue(session.effective_load) ||
+      "Today's session",
   );
 }
 

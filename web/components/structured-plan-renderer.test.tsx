@@ -1222,7 +1222,8 @@ test("renders declared light-combat context alongside app sessions in the same d
   assert.equal(html.includes("Light technical combat"), false);
   assert.equal(html.includes("Technical Combat"), true);
   assert.equal(html.includes("Pads, drills, movement or other lower-intensity combat work."), true);
-  assert.equal(html.includes(">Light combat<"), true);
+  assert.equal(html.includes(">Technical<"), true);
+  assert.doesNotMatch(html, /light (?:technical )?(?:combat|sparring)/i);
   assert.equal(html.includes("Lower strength"), true);
   assert.equal(html.includes("sp-day-card-light_combat"), false);
   assert.ok(html.indexOf("Technical Combat") < html.indexOf("Lower strength"));
@@ -1261,7 +1262,8 @@ test("renders declared light-combat contact above app work without hard-sparring
   assert.equal(html.match(/Technical Combat/g)?.length, 1);
   assert.equal(html.includes("Pads, drills, movement or other lower-intensity combat work."), true);
   assert.equal(html.includes("your declared hard-sparring/contact work today"), false);
-  assert.equal(html.includes(">Light combat<"), true);
+  assert.equal(html.includes(">Technical<"), true);
+  assert.doesNotMatch(html, /light (?:technical )?(?:combat|sparring)/i);
   assert.ok(html.indexOf("Technical Combat") < html.indexOf("Explosive sharpness primer"));
 });
 
@@ -1306,7 +1308,8 @@ test("normalizes standalone declared light-combat day and session titles", () =>
   assert.equal(html.includes("Light Combat / Technical"), false);
   assert.equal(html.match(/Technical Combat/g)?.length, 2);
   assert.equal(html.match(/Pads, drills, movement or other lower-intensity combat work\./g)?.length, 2);
-  assert.equal(html.match(/>Light combat</g)?.length, 2);
+  assert.equal(html.match(/>Technical</g)?.length, 2);
+  assert.doesNotMatch(html, /light (?:technical )?(?:combat|sparring)/i);
   assert.equal(html.includes("Keep technical rhythm and timing without adding fatigue."), false);
 });
 

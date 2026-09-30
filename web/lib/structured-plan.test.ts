@@ -517,7 +517,7 @@ test("classifies coach-led / sparring / technical days from the headline", () =>
   assert.equal(classifySessionlessDay(make("Coach-led boxing session")).kind, "coach_led");
   const lightCombat = classifySessionlessDay(make("Light technical combat"));
   assert.equal(lightCombat.kind, "light_combat");
-  assert.equal(lightCombat.tag, "Light combat");
+  assert.equal(lightCombat.tag, "Technical");
   assert.equal(lightCombat.coachLed, false);
   assert.equal(classifySessionlessDay(make("Hard sparring")).kind, "sparring");
   assert.equal(classifySessionlessDay(make("Coach-led sparring")).kind, "sparring");
