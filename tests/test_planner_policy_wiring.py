@@ -190,11 +190,6 @@ def test_importing_the_package_runs_nothing():
     assert result.stdout.strip() == "[]"
 
 
-# camp_week_fillers copies test seams into its implementation module at call
-# time: an adapter over a module split, not a policy hook.
-_CROSS_MODULE_ASSIGNMENT_EXCEPTIONS = {"fightcamp/camp_week_fillers.py"}
-
-
 def test_no_planner_module_replaces_another_modules_attributes():
     found = []
     for path in sorted((REPO_ROOT / "fightcamp").rglob("*.py")):
@@ -233,7 +228,6 @@ def test_no_planner_module_replaces_another_modules_attributes():
                 and node.args
                 and isinstance(node.args[0], ast.Name)
                 and node.args[0].id in module_aliases
-                and relative not in _CROSS_MODULE_ASSIGNMENT_EXCEPTIONS
             ):
                 found.append(f"{relative}:{node.lineno}: setattr({node.args[0].id}, ...)")
 
