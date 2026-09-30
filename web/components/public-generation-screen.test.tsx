@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import "./test-css-modules";
 import { PublicGenerationScreen } from "./public-generation-screen";
 
 test("public build omits diagnostics and shows leave reassurance", () => {
