@@ -20,7 +20,7 @@ from typing import Any, Mapping
 from api.contracts.training_day import resolve_training_day_str
 from api.store import AppStore
 
-from .active_plan import resolve_active_plan
+from .active_plan import ActivePlanResolution, resolve_active_plan
 from .today_service import (
     _guided_injury_has_content,
     _guided_intake_injury_candidate,
@@ -239,24 +239,32 @@ def sync_active_plan_intake_injuries(
     athlete_id: str,
     athlete_timezone: str | None,
     now: datetime | None = None,
+    active_plan: ActivePlanResolution | None = None,
 ) -> list[dict[str, Any]]:
-    """Synchronize the server-resolved active plan before Today is assembled."""
-    training_day = resolve_training_day_str(
-        now or datetime.now(timezone.utc),
-        athlete_timezone=athlete_timezone,
-    )
-    try:
-        plan_row = resolve_active_plan(
-            store,
-            athlete_id,
-            current_training_day=training_day,
-        ).plan
-    except Exception:
-        logger.exception(
-            "[intake_injury_sync] active plan resolution failed athlete_id=%s",
-            athlete_id,
+    """Synchronize the server-resolved active plan before Today is assembled.
+
+    ``active_plan`` is the caller's resolution for the same training day; the
+    Today build passes the one it will use itself, so the plan is read once.
+    """
+    if active_plan is not None:
+        plan_row = active_plan.plan
+    else:
+        training_day = resolve_training_day_str(
+            now or datetime.now(timezone.utc),
+            athlete_timezone=athlete_timezone,
         )
-        return []
+        try:
+            plan_row = resolve_active_plan(
+                store,
+                athlete_id,
+                current_training_day=training_day,
+            ).plan
+        except Exception:
+            logger.exception(
+                "[intake_injury_sync] active plan resolution failed athlete_id=%s",
+                athlete_id,
+            )
+            return []
     if not plan_row:
         readable, flags = _list_flags(store, athlete_id, statuses=_ACTIVE_STATUSES)
         return flags if readable else []

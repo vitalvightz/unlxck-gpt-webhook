@@ -62,7 +62,7 @@ from api.contracts.readiness_message import (
 )
 from api.contracts.training_day import resolve_training_day_str
 from api.store import AppStore
-from api.services.active_plan import resolve_active_plan
+from api.services.active_plan import ActivePlanResolution, resolve_active_plan
 from api.services.effective_structured_plan import resolve_effective_structured_plan
 from api.services.plan_schedule import (
     has_scheduled_day_content,
@@ -2621,11 +2621,15 @@ def build_today_command_view(
     athlete_id: str,
     athlete_timezone: str | None,
     now: datetime | None = None,
+    active_plan: ActivePlanResolution | None = None,
 ) -> CommandView:
     """Assemble the normalized command view from persisted state.
 
     Degrades gracefully: no active plan → empty view with the Intake CTA; a
     missing/unparseable structured plan → empty ``next_session`` (no crash).
+
+    ``active_plan`` is a resolution the caller already made for the same
+    training day (the Today boundary shares its own with the intake sync).
     """
     with structured_projection_memo():
         return _build_today_command_view(
@@ -2633,6 +2637,7 @@ def build_today_command_view(
             athlete_id=athlete_id,
             athlete_timezone=athlete_timezone,
             now=now,
+            active_plan=active_plan,
         )
 
 
@@ -2642,15 +2647,18 @@ def _build_today_command_view(
     athlete_id: str,
     athlete_timezone: str | None,
     now: datetime | None,
+    active_plan: ActivePlanResolution | None = None,
 ) -> CommandView:
     training_day = resolve_training_day(athlete_timezone, now=now)
-    # The resolver reads the pointed-to plan through get_plan_for_athlete, so
-    # this is already the full owner-scoped row; no second read is needed.
-    plan_row = resolve_active_plan(
-        store,
-        athlete_id,
-        current_training_day=training_day,
-    ).plan
+    if active_plan is None:
+        # The resolver reads the pointed-to plan through get_plan_for_athlete, so
+        # this is already the full owner-scoped row; no second read is needed.
+        active_plan = resolve_active_plan(
+            store,
+            athlete_id,
+            current_training_day=training_day,
+        )
+    plan_row = active_plan.plan
 
     if not plan_row:
         return build_command_view(current_training_day=training_day, plan=None)

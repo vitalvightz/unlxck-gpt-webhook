@@ -145,9 +145,44 @@ def test_today_reads_completions_once_however_long_the_camp():
     assert long_camp == short_camp
     assert long_camp["get_session_completion"] == 0
     assert long_camp["list_session_completions_from_day"] == 1
-    # The injury sync and the build each resolve the active plan once; neither
-    # reads the same row a second time.
-    assert long_camp["get_plan_for_athlete"] <= 2
+    # The injury sync and the build share one active-plan resolution.
+    assert long_camp["get_active_plan_id"] == 1
+    assert long_camp["get_plan_for_athlete"] == 1
+
+
+def test_an_athlete_without_a_plan_reads_the_pointer_once():
+    store = CountingStore()
+
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW)
+
+    assert view.active_plan == {}
+    assert store.reads["get_active_plan_id"] == 1
+
+
+def test_the_view_resolves_an_unusable_plan_again():
+    # Its schedule probe checks the unusable row, which the shared resolution
+    # does not carry.
+    store = _store_with_camp()
+    store.plans[PLAN]["status"] = "archived"
+
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW)
+
+    assert view.active_plan == {}
+    assert store.reads["get_active_plan_id"] == 2
+
+
+def test_the_shared_plan_is_the_one_the_schedule_probe_checks(monkeypatch):
+    probed = []
+    real_probe = today_readiness_boundary_core._probe_schedule
+    monkeypatch.setattr(
+        today_readiness_boundary_core,
+        "_probe_schedule",
+        lambda plan_row, training_day, health: probed.append(plan_row) or real_probe(plan_row, training_day, health),
+    )
+
+    build_today_command_view(_store_with_camp(), athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW)
+
+    assert [row["id"] for row in probed] == [PLAN]
 
 
 def test_structured_card_is_validated_once_per_today_build(monkeypatch):

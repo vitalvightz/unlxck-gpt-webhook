@@ -9,10 +9,12 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from contextvars import ContextVar
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Iterator
 
+from api.contracts.training_day import resolve_training_day_str
 from api.store import AppStore
+from .active_plan import ActivePlanResolution, resolve_active_plan
 from .intake_injury_sync import sync_active_plan_intake_injuries
 from .today_readiness_boundary_core import (
     ReadinessContextHealth,
@@ -58,6 +60,30 @@ def reuse_today_command_views() -> Iterator[None]:
         _REUSABLE_VIEWS.reset(token)
 
 
+# The view resolves these again itself: a failed read is retried rather than
+# shown as "no plan", and the view's schedule probe checks an unusable plan's row.
+_VIEW_RESOLVES_AGAIN = frozenset({"read_failure", "unusable"})
+
+
+def _resolve_active_plan_once(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    athlete_timezone: str | None,
+    now: datetime,
+) -> ActivePlanResolution | None:
+    """The active plan, resolved once for the intake sync and the Today view.
+
+    None when resolution raised; each step then resolves and handles the error
+    on its own, as before.
+    """
+    training_day = resolve_training_day_str(now, athlete_timezone=athlete_timezone)
+    try:
+        return resolve_active_plan(store, athlete_id, current_training_day=training_day)
+    except Exception:
+        return None
+
+
 def build_today_command_view(
     store: AppStore,
     *,
@@ -72,17 +98,27 @@ def build_today_command_view(
         cached = views.get(key)
         if cached is not None and cached[0] is store:
             return cached[1].model_copy(deep=True)
+    # One instant for the whole build, so the sync and the view agree on the
+    # training day the shared plan resolution was made for.
+    now = now or datetime.now(timezone.utc)
+    active_plan = _resolve_active_plan_once(
+        store, athlete_id=athlete_id, athlete_timezone=athlete_timezone, now=now
+    )
     sync_active_plan_intake_injuries(
         store,
         athlete_id=athlete_id,
         athlete_timezone=athlete_timezone,
         now=now,
+        active_plan=active_plan,
     )
     view = _build_core(
         _NoLegacyBootstrapStore(store),
         athlete_id=athlete_id,
         athlete_timezone=athlete_timezone,
         now=now,
+        active_plan=(
+            None if active_plan is None or active_plan.source in _VIEW_RESOLVES_AGAIN else active_plan
+        ),
     )
     if views is not None:
         views[key] = (store, view.model_copy(deep=True))
