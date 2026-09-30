@@ -16,6 +16,11 @@ def test_style_taper_bodyweight_drill_is_eligible_with_empty_athlete_equipment(m
             "system": "alactic",
             "tags": ["pressure_fighter", "sharpness"],
             "equipment": ["bodyweight"],
+            # Governance metadata a style taper candidate must carry to be eligible.
+            "support_only": True,
+            "meaningful_stress": False,
+            "lactate_load": "low",
+            "late_windows": ["d13_to_d8", "d7", "d6_to_d5", "d4_to_d2", "d1"],
             "load": "Fast and crisp",
             "rest": "60 sec",
             "timing": "6 x 8 sec",
@@ -29,6 +34,10 @@ def test_style_taper_bodyweight_drill_is_eligible_with_empty_athlete_equipment(m
             "system": "alactic",
             "tags": ["pressure_fighter", "sharpness"],
             "equipment": ["medicine_ball"],
+            "support_only": True,
+            "meaningful_stress": False,
+            "lactate_load": "low",
+            "late_windows": ["d13_to_d8", "d7", "d6_to_d5", "d4_to_d2", "d1"],
             "load": "Explosive",
             "rest": "75 sec",
             "timing": "5 x 10 sec",
@@ -118,4 +127,7 @@ def test_striking_bag_names_normalize_to_one_equipment_gate_token():
 
 
 def test_banana_bag_remains_a_distinct_equipment_token():
-    assert normalize_equipment_list(["banana bag", "banana_bag"]) == ["banana_bag", "banana_bag"]
+    # Both spellings are one capability (normalization dedupes), and it is not
+    # folded into the heavy-bag token.
+    assert normalize_equipment_list(["banana bag", "banana_bag"]) == ["banana_bag"]
+    assert "heavy_bag" not in normalize_equipment_list(["banana bag"])

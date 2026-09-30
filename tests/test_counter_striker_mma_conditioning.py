@@ -97,7 +97,9 @@ def _flags(phase, equipment, **overrides):
 def test_existing_selector_can_reach_rebuilt_mma_drills_and_respects_equipment():
     equipment = ["partner", "thai_pads", "focus_mitts", "wall"]
     representative_by_phase = {
-        "GPP": "Strike-Shot Transition Flow",
+        # Strike-Shot Transition Flow is governed support-only, so it cannot win a
+        # primary aerobic slot; the GPP representative is a primary-authority drill.
+        "GPP": "Cage Counter Movement Flow",
         "SPP": "Strike-or-Shot Counter Intervals",
     }
     for phase, expected_name in representative_by_phase.items():

@@ -4,7 +4,7 @@ from collections import Counter
 from pathlib import Path
 
 from fightcamp import conditioning
-from fightcamp.training_context import known_equipment
+from fightcamp.training_context import known_equipment, normalize_equipment_list
 
 
 BANK_PATH = Path(__file__).resolve().parents[1] / "data" / "style_conditioning_bank.json"
@@ -110,7 +110,9 @@ def test_phase_equipment_and_mechanical_metadata_follow_conventions():
     entries = _slice()
     valid_equipment = set(known_equipment)
     for item in entries:
-        assert set(item["equipment"]) <= valid_equipment
+        # Bank items keep authored spellings (thai_pads, focus_mitts); the runtime
+        # vocabulary is canonical, so compare the normalized capability.
+        assert set(normalize_equipment_list(item["equipment"])) <= valid_equipment
         assert {tag for tag in item["tags"] if tag.startswith("mech_")} == set(item["mechanical_risk_tags"])
     for phase in ("GPP", "SPP"):
         reached = [item for item in entries if phase in item["phases"]]
