@@ -7440,11 +7440,11 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
   overflow-wrap: anywhere;
 }
 
-.today-decision-banner[data-guidance-only="true"] {
+.today-decision-banner[data-current-guidance="true"] {
   padding-bottom: 14px;
 }
 
-.today-decision-banner[data-guidance-only="true"] .today-decision-heading {
+.today-decision-banner[data-current-guidance="true"] .today-decision-heading {
   justify-content: space-between;
 }
 
@@ -7456,17 +7456,28 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
   letter-spacing: 0.09em;
 }
 
-.today-decision-banner[data-guidance-only="true"] .today-decision-detail {
+.today-decision-banner[data-current-guidance="true"] .today-decision-action {
+  margin-top: 12px;
+  font-size: clamp(16px, 1.5vw, 18px);
+}
+
+.today-decision-banner[data-current-guidance="true"] .today-decision-detail {
   margin-top: 12px;
   color: var(--text-primary);
   font-size: 15px;
 }
 
-.today-decision-banner[data-guidance-only="true"] .today-decision-disclosure {
+.today-decision-banner[data-current-guidance="true"] .today-decision-action + .today-decision-detail {
+  margin-top: 6px;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.72));
+  font-size: 14px;
+}
+
+.today-decision-banner[data-current-guidance="true"] .today-decision-disclosure {
   margin-top: 10px;
 }
 
-.today-decision-banner[data-guidance-only="true"] .today-decision-disclosure summary {
+.today-decision-banner[data-current-guidance="true"] .today-decision-disclosure summary {
   display: flex;
   align-items: center;
   min-height: 44px;

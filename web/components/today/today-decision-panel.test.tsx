@@ -37,6 +37,42 @@ test("the action reads before the reason", () => {
   assert.ok(html.indexOf(BANNER.action!) < html.indexOf(BANNER.detail));
 });
 
+test("a live session uses the same current-day card styling as post-session guidance", () => {
+  const live = render({ banner: BANNER, tier: "modify", triggers: ["Poor sleep"] });
+  const afterSession = render({
+    banner: { ...BANNER, action: undefined },
+    tier: "modify",
+    triggers: ["Poor sleep"],
+  });
+
+  for (const html of [live, afterSession]) {
+    assert.match(html, /data-current-guidance="true"/);
+    assert.match(html, /TODAY'S GUIDANCE/);
+    assert.match(html, /Why this decision/);
+    assert.match(html, /Poor sleep/);
+  }
+  assert.match(live, /Cut 1 round/);
+});
+
+test("green guidance keeps the same compact shell when a session is live", () => {
+  const html = render({
+    banner: {
+      ...BANNER,
+      displayState: "go",
+      chip: "GO",
+      tone: "green",
+      action: "Start session and keep the work clean.",
+    },
+    tier: "green",
+    sources: ["today's check-in"],
+  });
+
+  assert.match(html, /data-current-guidance="true"/);
+  assert.match(html, /TODAY'S GUIDANCE/);
+  assert.match(html, /Start session and keep the work clean/);
+  assert.ok(!/<details[^>]*\sopen/.test(html));
+});
+
 test("evidence is in an open native disclosure with separate trigger and context", () => {
   const html = render({
     banner: BANNER,
@@ -157,7 +193,6 @@ test("today's guidance retains injury evidence while a future session is preview
   const html = render({
     banner: { ...STOP_BANNER, action: undefined },
     tier: "stop",
-    guidanceOnly: true,
     triggers: ["Active severe injury: Knee"],
     safetyChecks: [{
       code: "surface_injury",
@@ -179,7 +214,6 @@ test("today's guidance retains injury evidence while a future session is preview
 test("a clear check-in keeps its explanation reachable without a future-session command", () => {
   const html = render({
     banner: { ...BANNER, displayState: "go", chip: "GO", tone: "green", action: undefined },
-    guidanceOnly: true,
     triggers: ["Good sleep"],
     sources: ["today's check-in"],
   });
