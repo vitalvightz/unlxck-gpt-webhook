@@ -9,9 +9,9 @@ function isSupersededReadinessMessage(value?: string): boolean {
 }
 
 /**
- * Compact train/modify/pull-back banner shown above today's blocks once the
- * athlete has checked in. Returns null before check-in. It frames the original
- * blocks — it never mutates the saved plan.
+ * Current-day guidance above the session card. The same shell is used while a
+ * session is live and after it is logged, when the card below previews the next
+ * session. It never mutates the saved plan.
  *
  * The card answers the four questions an athlete actually has, in the order they
  * ask them:
@@ -44,7 +44,6 @@ export function TodayDecisionPanel({
   sources,
   confidenceNote,
   compactPreview = false,
-  guidanceOnly = false,
 }: {
   banner: TodayDecisionBanner | null;
   tier?: TodayDecisionTier;
@@ -58,8 +57,6 @@ export function TodayDecisionPanel({
   confidenceNote?: string;
   /** The next-session card below already names the exercise and explains its lock. */
   compactPreview?: boolean;
-  /** The decision applies to today while the visible workout is on another day. */
-  guidanceOnly?: boolean;
 }) {
   if (!banner) {
     return null;
@@ -70,6 +67,7 @@ export function TodayDecisionPanel({
   const isPreview = banner.displayState === "preview" ||
     (tier === "preview" && !isSafetyNotice);
   const isCompactPreview = banner.displayState === "preview" && compactPreview;
+  const isCurrentGuidance = !isPreview;
   // Current-day readiness evidence cannot clear or restrict a future session.
   // Preview cards explain only which planned session their copy is framing.
   const triggerLabels = clean(isPreview || isSafetyNotice ? undefined : triggers);
@@ -105,12 +103,12 @@ export function TodayDecisionPanel({
       data-state={banner.displayState}
       data-tone={banner.tone}
       data-compact={isCompactPreview || undefined}
-      data-guidance-only={guidanceOnly || undefined}
+      data-current-guidance={isCurrentGuidance || undefined}
       role="status"
     >
       <div className="today-decision-command">
         <div className="today-decision-heading">
-          {guidanceOnly ? <span className="today-decision-scope">TODAY&apos;S GUIDANCE</span> : null}
+          {isCurrentGuidance ? <span className="today-decision-scope">TODAY&apos;S GUIDANCE</span> : null}
           <span className="today-decision-icon" aria-hidden="true">
             {banner.chip}
           </span>
@@ -122,7 +120,7 @@ export function TodayDecisionPanel({
         ) : null}
       </div>
       {hasEvidence ? (
-        <details className="today-decision-disclosure" open={!isPreview && (!guidanceOnly || banner.displayState !== "go")}>
+        <details className="today-decision-disclosure" open={isCurrentGuidance && banner.displayState !== "go"}>
           <summary>{isSafetyNotice ? "Why this message?" : "Why this decision?"}</summary>
         <dl className="today-decision-evidence" data-evidence-count={evidenceCount}>
           {triggerLabels.length ? (

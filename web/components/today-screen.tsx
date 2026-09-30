@@ -276,7 +276,6 @@ export function TodayScreen() {
         <TodayDecisionPanel
           banner={resolvedDecision.currentGuidanceBanner ?? resolvedDecision.banner}
           compactPreview={resolvedDecision.hasSession && !resolvedDecision.currentGuidanceBanner}
-          guidanceOnly={Boolean(resolvedDecision.currentGuidanceBanner)}
           tier={resolvedDecision.currentGuidanceBanner ? resolvedDecision.authoritativeTier : resolvedDecision.displayTier}
           triggers={state.today.recommendation_trigger_labels}
           safetyChecks={state.today.recommendation_safety_checks}
