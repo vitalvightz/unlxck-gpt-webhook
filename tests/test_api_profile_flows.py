@@ -4,8 +4,9 @@ from datetime import date, datetime, timedelta, timezone
 import pytest
 
 from api.auth import AuthenticatedUser
+from api.compliance import age_years
 from api.models import ProfileUpdateRequest
-from support import _build_client, _build_request, finalized_result
+from support import DEFAULT_ADULT_DATE_OF_BIRTH, _build_client, _build_request, finalized_result
 
 
 @pytest.mark.parametrize("raw_status", ["pending", None, "missing"])
@@ -100,7 +101,9 @@ def test_admin_athlete_profile_includes_latest_intake_details():
     assert payload["professional_status"] == "amateur"
     assert payload["record"] == "5-1"
     assert payload["athlete_locale"] == "en-GB"
-    assert payload["latest_intake"]["athlete"]["age"] == 29
+    # The API derives age from the stored date of birth, not from the submitted
+    # value, so the expectation must track the clock rather than a literal.
+    assert payload["latest_intake"]["athlete"]["age"] == age_years(DEFAULT_ADULT_DATE_OF_BIRTH)
     assert payload["latest_intake"]["equipment_access"] == ["heavy_bag", "weights"]
     assert payload["latest_intake"]["training_preference"] == "Short, intense pads and bag rounds."
 
