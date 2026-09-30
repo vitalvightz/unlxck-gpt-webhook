@@ -47,7 +47,7 @@ import {
 import type { TodayPlanSchedule } from "@/components/today/use-today-command";
 import { openBlockWeekIntent, type OpenBlockWeekIntent } from "@/lib/open-block";
 import { isOpenOngoingPlan } from "@/lib/plan-format";
-import { humanizeIfRawEnum } from "@/lib/plan-labels";
+import { athleteFacingSessionTitle, humanizeIfRawEnum } from "@/lib/plan-labels";
 import { shouldPromptSessionFeedback } from "@/lib/session-feedback";
 import { useTrainingDay } from "@/lib/use-training-day";
 import {
@@ -115,7 +115,8 @@ const CONTACT_LOCK_COPY = {
 
 const PLANNED_SPARRING_INTENSITY: Record<ContactTimerTarget["kind"], SparringPlannedIntensity> = {
   sparring: "hard",
-  light_combat: "light",
+  // A declared Light Combat day is only known to be technical work.
+  light_combat: "technical",
   technical: "technical",
   coach_led: "contact",
 };
@@ -154,10 +155,10 @@ function textValue(value: string | null | undefined): string {
 function getStructuredTodaySessionTitle(current: CurrentDayResolution): string {
   const session = current.sessions[0];
   const card = current.day?.today_card;
-  return (
+  return athleteFacingSessionTitle(
     textValue(session?.title) ||
-    textValue(card?.headline) ||
-    humanizeIfRawEnum(textValue(session?.session_type))
+      textValue(card?.headline) ||
+      humanizeIfRawEnum(textValue(session?.session_type)),
   );
 }
 
@@ -300,7 +301,7 @@ export function TodaySessionBlocks({
             day={index === 0 ? displayDay : undefined}
             defaultOpenBlocks
             initiallyOpenFirstBlock={false}
-            hideTitle={Boolean(headline && sameTitle(headline, session.title || displayDay.today_card?.headline || ""))}
+            hideTitle={Boolean(headline && sameTitle(headline, athleteFacingSessionTitle(session.title || displayDay.today_card?.headline || "")))}
             showDayContext={false}
             openWeekIntent={openWeekIntent}
           />
@@ -962,7 +963,7 @@ export function TodaySessionPanel({
           {session.coach_led_contact ? (
             <div>
               <p className="today-detail-label">Coach contact</p>
-              <p>{session.coach_led_contact}</p>
+              <p>{athleteFacingSessionTitle(session.coach_led_contact)}</p>
             </div>
           ) : null}
           {duration ? (

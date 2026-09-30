@@ -68,8 +68,11 @@ test("contact rounds offer presets and ask for setup unless the plan states the 
   assert.equal(unstated.presets, true);
   assert.equal(unstated.needsSetup, true);
 
-  const stated = contactRoundsItem({ kind: "light_combat", headline: "Light sparring 4 x 2 min" });
-  assert.equal(stated.title, "Light sparring");
+  // A declared Light Combat day is only known to be technical work, so the
+  // timer never names it "light" anything, even when the plan's line does.
+  const stated = contactRoundsItem({ kind: "light_combat", headline: "Light combat 4 x 2 min" });
+  assert.equal(stated.title, "Technical Combat");
+  assert.equal(stated.detail, null);
   assert.equal(stated.rounds, 4);
   assert.equal(stated.workSec, 120);
   assert.equal(stated.needsSetup, false);

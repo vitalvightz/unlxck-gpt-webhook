@@ -109,7 +109,7 @@ test("Today uses its parent heading and starts video exercises as compact rows",
   assert.match(alternateHeadline, /class="sp-session-title">Lower-body strength/);
 });
 
-test("Today keeps the Technical Combat relabel when the heading repeats a light-combat title", () => {
+test("a light-combat session under Today's Technical Combat heading drops its repeated title", () => {
   const plan = {
     weeks: [{
       week_index: 1,
@@ -127,10 +127,11 @@ test("Today keeps the Technical Combat relabel when the heading repeats a light-
   } as StructuredPlan;
   const current = resolveCurrentDay(plan, new Date(2026, 8, 29));
   const html = renderToStaticMarkup(
-    <TodaySessionBlocks current={current} headline="Light technical combat" />,
+    <TodaySessionBlocks current={current} headline="Technical Combat" />,
   );
 
-  assert.match(html, /class="sp-session-title">Technical Combat/);
+  assert.doesNotMatch(html, /class="sp-session-title"/);
+  assert.doesNotMatch(html, /light (?:technical )?(?:combat|sparring)/i);
   assert.match(html, /Pads, drills, movement or other lower-intensity combat work\./);
 });
 
@@ -385,6 +386,47 @@ test("a sparring-only day is one session: the lead button starts and logs it", (
   assert.match(html, />Start hard sparring</);
   assert.doesNotMatch(html, /Also today|>Start session<|>Start Hard sparring</);
   assert.match(html, />Skip session</);
+});
+
+// A declared Light Combat day only tells the app the slot is technical work; it
+// never knows how light the gym runs it, so Today never calls it "light".
+const LIGHT_WORDING = /light (?:technical )?(?:combat|sparring)/i;
+
+test("a declared Light Combat day reads as Technical Combat, with the app work alongside", () => {
+  const state = contactDayState("green");
+  state.today.next_session = { ...state.today.next_session, coach_led_contact: "Light Combat / Technical" };
+  const html = renderPanel(state);
+  assert.match(html, /<h2 id="today-session-heading">Technical Combat<\/h2>/);
+  assert.match(html, /Also today<\/span> Mobility flush/);
+  assert.match(html, />Start technical combat</);
+  assert.doesNotMatch(html, LIGHT_WORDING);
+});
+
+test("a Light Combat-only day is one Technical Combat session", () => {
+  const state = contactDayState("green");
+  state.today.next_session = {
+    ...state.today.next_session,
+    session_id: "2026-09-25",
+    title: "Light Combat / Technical",
+    coach_led_contact: "Light Combat / Technical",
+  };
+  const html = renderPanel(state);
+  assert.match(html, /<h2 id="today-session-heading">Technical Combat<\/h2>/);
+  assert.match(html, />Start technical combat</);
+  assert.doesNotMatch(html, /Also today|>Start session</);
+  assert.doesNotMatch(html, LIGHT_WORDING);
+});
+
+test("an app session titled as light combat is headlined Technical Combat", () => {
+  const state = contactDayState("green");
+  state.today.next_session = {
+    ...state.today.next_session,
+    title: "Light technical combat",
+    coach_led_contact: undefined,
+  };
+  const html = renderPanel(state);
+  assert.match(html, /<h2 id="today-session-heading">Technical Combat<\/h2>/);
+  assert.doesNotMatch(html, LIGHT_WORDING);
 });
 
 test("an idless day falls back to honest copy instead of a dead end", () => {

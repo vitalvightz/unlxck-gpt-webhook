@@ -50,6 +50,7 @@ import {
   humanizeStatus,
   titleizeToken,
 } from "@/lib/plan-text-adapter";
+import { athleteFacingSessionTitle } from "@/lib/plan-labels";
 import { shouldRenderStructuredPlan } from "@/lib/structured-plan";
 import { selectInjuryRiskAdvisory } from "@/lib/sparring-advisory";
 import { explainRiskBand } from "@/lib/sparring-reason-codes";
@@ -2544,9 +2545,9 @@ export function PlanViewer({
     : null;
   const nextSessionTitle =
     (nextSessionContact ? contactTitle(nextSessionContact) : "") ||
-    nextSessionAction?.title?.trim() ||
-    nextSessionAction?.label?.trim() ||
-    "Open the next session";
+    athleteFacingSessionTitle(
+      nextSessionAction?.title?.trim() || nextSessionAction?.label?.trim() || "Open the next session",
+    );
   const nextSessionRelation = nextSessionAction?.session_relation === "next" ? "Next session" : "Today";
   // The app's authoritative "today" — same source the plan renderer uses for its
   // current-day marker — so the countdown is deterministic across server render,

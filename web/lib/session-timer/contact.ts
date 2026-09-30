@@ -1,3 +1,4 @@
+import { athleteFacingSessionTitle, DECLARED_LIGHT_COMBAT_TITLE } from "../plan-labels";
 import { classifySessionlessDay, cleanText, getCoachLedContactView } from "../structured-plan";
 import type { StructuredDay } from "../types";
 import type { IntervalItem } from "./plan";
@@ -19,7 +20,7 @@ const CONTACT_KINDS = new Set<string>(["sparring", "light_combat", "technical", 
 
 const CONTACT_TITLES: Record<ContactKind, string> = {
   sparring: "Hard sparring",
-  light_combat: "Light sparring",
+  light_combat: DECLARED_LIGHT_COMBAT_TITLE,
   technical: "Technical rounds",
   coach_led: "Contact rounds",
 };
@@ -140,7 +141,10 @@ export function contactRoundsItem(
     kind: "interval",
     id: `contact-${target.kind}`,
     title,
-    detail: target.headline.toLowerCase() === title.toLowerCase() ? null : target.headline,
+    detail:
+      athleteFacingSessionTitle(target.headline).toLowerCase() === title.toLowerCase()
+        ? null
+        : target.headline,
     blockType: "sparring",
     rounds: parsed.rounds ?? 5,
     workSec: parsed.workSec ?? saved?.workSec ?? 180,

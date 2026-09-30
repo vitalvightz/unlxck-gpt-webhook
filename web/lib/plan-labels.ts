@@ -97,3 +97,19 @@ export function humanizeIfRawEnum(value: unknown): string {
   }
   return isRawEnumLabel(value) ? formatPlanLabel(value) : value;
 }
+
+/**
+ * A declared Light Combat day only tells the planner the slot is coach-owned
+ * technical work. The app never knows how light the gym runs it, so no
+ * athlete-facing title calls it "light" anything: it reads as Technical Combat.
+ */
+export const DECLARED_LIGHT_COMBAT_TITLE = "Technical Combat";
+
+export function isDeclaredLightCombatTitle(title: string): boolean {
+  return /\blight\s+(?:technical\s+)?combat\b/i.test(title);
+}
+
+/** A session or day title as the athlete sees it. */
+export function athleteFacingSessionTitle(title: string): string {
+  return isDeclaredLightCombatTitle(title) ? DECLARED_LIGHT_COMBAT_TITLE : title;
+}

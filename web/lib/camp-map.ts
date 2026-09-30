@@ -4,7 +4,7 @@
 // framework-free and node:test-able, mirroring lib/structured-plan.ts. Every
 // function tolerates null/partial payloads and never throws.
 import trainingCalendar from "../../shared/training-calendar.json";
-import { formatPlanLabel } from "./plan-labels.ts";
+import { athleteFacingSessionTitle, formatPlanLabel } from "./plan-labels.ts";
 import {
   cleanText,
   classifySessionlessDay,
@@ -1127,10 +1127,14 @@ export function getReadinessStrip(
   const snapshot = plan?.readiness_snapshot;
   const card = currentDay?.today_card;
 
-  let focus = cleanText(snapshot?.focus) || cleanText(card?.headline);
+  const headline = cleanText(card?.headline);
+  let focus = cleanText(snapshot?.focus) || (headline ? athleteFacingSessionTitle(headline) : null);
   if (!focus) {
     const firstSession = getSessions(currentDay)[0];
-    focus = formatSessionObjective(firstSession?.objective) || cleanText(firstSession?.title);
+    const firstTitle = cleanText(firstSession?.title);
+    focus =
+      formatSessionObjective(firstSession?.objective) ||
+      (firstTitle ? athleteFacingSessionTitle(firstTitle) : null);
   }
 
   // Injury watch is a SHORT cue — the watch areas only, never the full

@@ -1759,7 +1759,7 @@ export type SessionlessDayView = {
 
 const SESSIONLESS_DAY_TAGS: Record<SessionlessDayKind, string | null> = {
   coach_led: "Contact",
-  light_combat: "Light combat",
+  light_combat: "Technical",
   sparring: "Sparring",
   technical: "Technical",
   scheduled: null,
