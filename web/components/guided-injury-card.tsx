@@ -35,7 +35,7 @@ const INJURY_TYPE_GROUPS: InjuryTypeGroup[] = [
       { label: "Strain / pulled muscle", value: "strain" },
       { label: "Swelling", value: "swelling" },
       { label: "Instability / giving way", value: "instability" },
-      { label: "Not sure", value: "unspecified" },
+      { label: "Other", value: "unspecified" },
     ],
   },
   {

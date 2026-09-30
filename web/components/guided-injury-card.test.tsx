@@ -34,6 +34,9 @@ test("more injury types depend on location and guide muscle selections to joints
       assert.match(host.textContent ?? "", /Did it go back into place\?/);
       assert.equal(host.querySelector<HTMLButtonElement>(".gi-save-injury")?.disabled, true);
     }
+    await act(async () => root.render(<Editor key="other" zone="l_quad" area="Left quad" />));
+    await press("Other");
+    assert.equal(host.querySelector(".gi-selection-title")?.textContent, "Other");
   } finally { await act(async () => root.unmount()); host.remove(); }
 });
 
