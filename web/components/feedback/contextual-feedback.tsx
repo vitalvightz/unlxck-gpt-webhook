@@ -152,7 +152,7 @@ export function ContextualFeedback({
 
   return (
     <section
-      className={className ? `feedback-card ${className}` : "feedback-card"}
+      className={`feedback-card feedback-inline${className ? ` ${className}` : ""}`}
       aria-label={isPlan ? "Plan feedback" : "Daily recommendation feedback"}
     >
       {record && !editing ? (
@@ -171,39 +171,41 @@ export function ContextualFeedback({
         </div>
       ) : (
         <>
-          <p className="feedback-question">
-            {isPlan ? "Is this plan useful?" : "Did this recommendation fit how you feel today?"}
-          </p>
-          <div className="feedback-actions" role="group" aria-label="Choose a response">
-            <button
-              type="button"
-              className={choice === "yes" ? "feedback-choice is-selected" : "feedback-choice"}
-              onClick={() => choose("yes")}
-              disabled={submitting}
-              aria-pressed={choice === "yes"}
-            >
-              <ThumbIcon direction="up" /> Yes
-            </button>
-            <button
-              type="button"
-              className={choice === "no" ? "feedback-choice is-selected" : "feedback-choice"}
-              onClick={() => choose("no")}
-              disabled={submitting}
-              aria-pressed={choice === "no"}
-            >
-              <ThumbIcon direction="down" /> {isPlan ? "Needs improvement" : "No"}
-            </button>
-            {!isPlan ? (
+          <div className="feedback-prompt-row">
+            <p className="feedback-question">
+              {isPlan ? "Is this plan useful?" : "Did this recommendation fit how you feel today?"}
+            </p>
+            <div className="feedback-actions" role="group" aria-label="Choose a response">
               <button
                 type="button"
-                className={choice === "unsafe" ? "feedback-choice feedback-unsafe is-selected" : "feedback-choice feedback-unsafe"}
-                onClick={() => choose("unsafe")}
+                className={choice === "yes" ? "feedback-choice is-selected" : "feedback-choice"}
+                onClick={() => choose("yes")}
                 disabled={submitting}
-                aria-pressed={choice === "unsafe"}
+                aria-pressed={choice === "yes"}
               >
-                Something feels off? Tell us
+                <ThumbIcon direction="up" /> Yes
               </button>
-            ) : null}
+              <button
+                type="button"
+                className={choice === "no" ? "feedback-choice is-selected" : "feedback-choice"}
+                onClick={() => choose("no")}
+                disabled={submitting}
+                aria-pressed={choice === "no"}
+              >
+                <ThumbIcon direction="down" /> {isPlan ? "Needs improvement" : "No"}
+              </button>
+              {!isPlan ? (
+                <button
+                  type="button"
+                  className={choice === "unsafe" ? "feedback-choice feedback-unsafe is-selected" : "feedback-choice feedback-unsafe"}
+                  onClick={() => choose("unsafe")}
+                  disabled={submitting}
+                  aria-pressed={choice === "unsafe"}
+                >
+                  Something feels off? Tell us
+                </button>
+              ) : null}
+            </div>
           </div>
 
           {choice === "no" ? (
