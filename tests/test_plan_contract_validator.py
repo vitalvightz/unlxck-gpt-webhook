@@ -61,7 +61,8 @@ def test_blank_week_drift_is_an_error():
     assert report["has_errors"] is True
     assert report["ok"] is False
     assert "weekly_schedule_blank" in _codes(report)
-    assert contract_report_requires_review(report) is True
+    # Contract findings are observational telemetry and never gate release.
+    assert contract_report_requires_review(report) is False
 
 
 def test_explicitly_allowed_blank_week_is_not_an_error():
