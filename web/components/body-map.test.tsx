@@ -5,6 +5,27 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { BodyMap } from "./body-map";
 
+test("head has a visible selectable target in both views and anatomy layers", async () => {
+  const host = document.createElement("div"); document.body.appendChild(host);
+  const root = createRoot(host); const chosen: string[] = [];
+  const render = (side: "front" | "back") => root.render(<BodyMap side={side} selections={[]}
+    onSideChange={render} onZoneSelect={(zone) => chosen.push(zone)} />);
+  try {
+    for (const side of ["front", "back"] as const) {
+      await act(async () => render(side));
+      for (const layer of ["Muscles", "Joints & bones"]) {
+        const toggle = Array.from(host.querySelectorAll("button")).find((button) => button.textContent === layer);
+        assert.ok(toggle); await act(async () => toggle.click());
+        const head = host.querySelector('[aria-label="Head / Neck"]'); assert.ok(head);
+        assert.ok(head.querySelector('path.body-map-zone'));
+        assert.ok(head.querySelector('.body-map-zone-joint'));
+        await act(async () => head.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
+      }
+    }
+    assert.deepEqual(chosen, ["head", "head", "head", "head"]);
+  } finally { await act(async () => root.unmount()); host.remove(); }
+});
+
 test("thigh taps select the precise side even with an existing knee injury", async () => {
   const host = document.createElement("div");
   document.body.appendChild(host);
