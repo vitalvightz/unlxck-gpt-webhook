@@ -13461,6 +13461,8 @@ html[data-theme="light"] .injury-card-state {
 .onboarding-validation-detail { display: grid; gap: 10px; padding: 4px 0 16px; }
 
 .injury-body-map-layout.injury-body-map-layout-picking { grid-template-columns: minmax(0, 1fr); }
+/* In a single column, a sticky map would cover the location action in the next row. */
+.injury-body-map-layout-picking .injury-body-map-col { position: static; }
 .injury-body-map-layout-picking .injury-card-stack { margin-top: 0; }
 .injury-location-choice { text-align: center; }
 .injury-location-choice .injury-manual-entry { min-height: 44px; }
