@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type KeyboardEvent } from "react";
+import { useId, useState } from "react";
 
 export type BodyMapSide = "front" | "back";
 export type BodyMapLayer = "muscle" | "joint";
@@ -137,8 +137,8 @@ const JOINT_POINT_RADIUS = 4.5;
 const SILHOUETTE_HALF = [
   "M90 34 L84 35",
   "C83.6 40 83 44 79 47",
-  "C68 51 57 55 52.5 62",
-  "C46.5 68 43.5 76 42.5 84",
+  "C67 49 55 54 50.5 63",
+  "C44 69 42 77 41.5 85",
   "C41.5 95 39.5 106 37.5 117",
   "C35.5 124 33.5 131 31.5 138",
   "C29.5 146 27.5 152 25.5 159",
@@ -150,8 +150,8 @@ const SILHOUETTE_HALF = [
   "C42 131 44 124 46 117",
   "C48 108 50 98 52.5 90",
   "C53.5 86 55 83 57 81",
-  "C58 92 59 102 60 112",
-  "C61 121 61.5 128 62.5 136",
+  "C58 92 60 103 63 112",
+  "C66 122 68 130 65 139",
   "C63.5 144 61.5 150 60.5 157",
   "C59.5 166 60.5 174 62.5 182",
   "C64.5 193 65.5 204 66.5 214",
@@ -169,17 +169,6 @@ const SILHOUETTE_HALF = [
   "C89.5 178 90 174 90 171",
 ].join(" ");
 
-const SEVERITY_LABELS: Record<BodyMapSeverity, string> = {
-  low: "low severity",
-  moderate: "moderate severity",
-  high: "high severity",
-};
-
-const LAYER_OPTIONS: Array<{ value: BodyMapLayer; label: string }> = [
-  { value: "muscle", label: "Muscles" },
-  { value: "joint", label: "Joints & bones" },
-];
-
 function findSelectionForZone(
   selections: BodyMapSelection[],
   zoneKey: string,
@@ -196,162 +185,35 @@ function findSelectionForZone(
   return selections.find((entry) => !entry.zone && entry.label.trim().toLowerCase() === target);
 }
 
-function severityClass(severity: BodyMapSeverity | "" | undefined): string {
-  if (!severity) {
-    return "";
-  }
-  return `body-map-zone-severity-${severity}`;
+// Nearby areas refine a broad tap without asking the athlete to classify anatomy.
+function regionFor(key: string): string {
+  return key.replace(/_(bicep|tricep|elbow)$/, "_upper_arm")
+    .replace(/_(forearm|wrist|hand)$/, "_lower_arm")
+    .replace(/_(quad|ham|knee)$/, "_upper_leg")
+    .replace(/_(shin|calf|achilles|ankle|foot)$/, "_lower_leg")
+    .replace(/^(chest|ribs|core)$/, "torso")
+    .replace(/^(traps|upper_back|lower_back)$/, "back");
 }
 
-function buildZoneAriaLabel(
-  zoneLabel: string,
-  selection: BodyMapSelection | undefined,
-): string {
-  if (!selection) {
-    return `${zoneLabel}, not marked. Press Enter to add as an injury.`;
-  }
-  const severity = selection.severity ? SEVERITY_LABELS[selection.severity] : null;
-  if (severity) {
-    return `${zoneLabel}, marked at ${severity}. Press Enter to change severity.`;
-  }
-  return `${zoneLabel}, marked. Press Enter to set severity.`;
+function regionLabel(key: string, fallback: string): string {
+  const side = key.startsWith("l_") ? "Left" : "Right";
+  if (key.endsWith("upper_arm")) return `${side} upper arm`;
+  if (key.endsWith("lower_arm")) return `${side} forearm / hand`;
+  if (key.endsWith("upper_leg")) return `${side} thigh / knee`;
+  if (key.endsWith("lower_leg")) return `${side} lower leg / foot`;
+  if (key === "torso") return "Torso";
+  if (key === "back") return "Back";
+  return fallback;
 }
 
-function BodySvg({
-  side,
-  layer,
-  selections,
-  onZoneSelect,
-  hoverKey,
-  setHoverKey,
-}: {
-  side: BodyMapSide;
-  layer: BodyMapLayer;
-  selections: BodyMapSelection[];
-  onZoneSelect: (zone: string, label: string) => void;
-  hoverKey: string | null;
-  setHoverKey: (key: string | null) => void;
-}) {
-  const zones = side === "front" ? FRONT_ZONES : BACK_ZONES;
-  const sideLabel = side === "front" ? "Front" : "Back";
-  const gradientId = `body-map-silhouette-gradient-${side}`;
-  const halfId = `body-map-silhouette-half-${side}`;
-
-  return (
-    <div className={`body-map-svg-wrap body-map-svg-wrap-${side}`} data-side={side}>
-      <p className="body-map-side-label" aria-hidden="true">
-        {sideLabel}
-      </p>
-      <svg
-        viewBox="0 0 180 316"
-        role="group"
-        aria-label={`${sideLabel} body map for injury selection`}
-      >
-        <defs>
-          <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="currentColor" stopOpacity="0.16" />
-            <stop offset="55%" stopColor="currentColor" stopOpacity="0.09" />
-            <stop offset="100%" stopColor="currentColor" stopOpacity="0.04" />
-          </linearGradient>
-        </defs>
-        <g className="body-map-silhouette" style={{ fill: `url(#${gradientId})` }}>
-          <ellipse cx={90} cy={21} rx={13} ry={16} />
-          <path id={halfId} d={SILHOUETTE_HALF} />
-          {/* Mirror of the half outline across x=90 keeps the figure symmetric. */}
-          <use href={`#${halfId}`} transform="scale(-1 1) translate(-180 0)" />
-        </g>
-        {Object.entries(zones).map(([key, zone]) => {
-          const selection = findSelectionForZone(selections, key, zone.label);
-          const isUsed = Boolean(selection);
-          // Zones outside the active layer stay hidden unless already marked,
-          // so switching layers can never hide a selection.
-          if (!isUsed && zone.layer !== "both" && zone.layer !== layer) {
-            return null;
-          }
-          // Muscles render as soft anatomical ellipses; joints as small
-          // precise points. "both" zones follow the active layer's style
-          // (delt vs shoulder joint) unless the zone forces a kind.
-          const styleKind: BodyMapLayer =
-            zone.kind ?? (zone.layer === "both" ? layer : zone.layer);
-          const isHover = hoverKey === key;
-          const ariaLabel = buildZoneAriaLabel(zone.label, selection);
-          const zoneClass = [
-            "body-map-zone",
-            styleKind === "muscle" ? "body-map-zone-muscle" : "body-map-zone-joint",
-            isUsed ? "body-map-zone-used" : "",
-            isHover ? "body-map-zone-hover" : "",
-          ]
-            .filter(Boolean)
-            .join(" ");
-
-          const handleKey = (event: KeyboardEvent<SVGGElement>) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault();
-              onZoneSelect(key, zone.label);
-            }
-          };
-
-          return (
-            <g
-              key={key}
-              role="button"
-              tabIndex={0}
-              aria-label={ariaLabel}
-              aria-pressed={isUsed}
-              className={[
-                "body-map-zone-group",
-                isUsed ? "body-map-zone-group-used" : "",
-                severityClass(selection?.severity),
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              onMouseEnter={() => setHoverKey(key)}
-              onMouseLeave={() => setHoverKey(null)}
-              onFocus={() => setHoverKey(key)}
-              onBlur={() => setHoverKey(null)}
-              onClick={() => onZoneSelect(key, zone.label)}
-              onKeyDown={handleKey}
-            >
-              {styleKind === "muscle" ? (
-                <>
-                  <ellipse
-                    cx={zone.cx}
-                    cy={zone.cy}
-                    rx={zone.rx ?? zone.r}
-                    ry={zone.ry ?? zone.r}
-                    transform={
-                      zone.rot ? `rotate(${zone.rot} ${zone.cx} ${zone.cy})` : undefined
-                    }
-                    className={zoneClass}
-                  />
-                  {isUsed ? (
-                    <circle cx={zone.cx} cy={zone.cy} r={3} className="body-map-zone-dot" />
-                  ) : null}
-                </>
-              ) : (
-                <>
-                  {/* Invisible hit circle keeps the tap target full-size while
-                      the visible joint point stays small and precise. */}
-                  <circle
-                    cx={zone.cx}
-                    cy={zone.cy}
-                    r={Math.max(zone.r, 10)}
-                    className="body-map-zone-hit"
-                  />
-                  <circle
-                    cx={zone.cx}
-                    cy={zone.cy}
-                    r={JOINT_POINT_RADIUS}
-                    className={zoneClass}
-                  />
-                </>
-              )}
-            </g>
-          );
-        })}
-      </svg>
-    </div>
-  );
+function zonePath(key: string, zone: Zone): string {
+  const { cx: x, cy: y } = zone;
+  const w = zone.rx ?? 7; const h = zone.ry ?? 7;
+  if (key === "chest") return "M63 76Q75 73 88 78L88 94Q75 97 66 88Z M92 78Q105 73 117 76L114 88Q105 97 92 94Z";
+  if (key === "core") return "M77 105Q90 108 103 105L99 135Q90 145 81 135Z";
+  if (key === "upper_back") return "M65 72Q77 68 88 78L87 102Q73 101 65 87Z M92 78Q103 68 115 72L115 87Q107 101 93 102Z";
+  if (key.endsWith("shoulder")) return `M${x-w} ${y-h*.4}Q${x-w*.5} ${y-h*1.3} ${x+w*.5} ${y-h}Q${x+w*1.2} ${y-h*.2} ${x+w} ${y+h*.5}L${x-w*.1} ${y+h}Z`;
+  return `M${x-w*.65} ${y-h}Q${x+w*.5} ${y-h*1.1} ${x+w} ${y-h*.4}L${x+w*.55} ${y+h*.75}Q${x} ${y+h*1.2} ${x-w*.55} ${y+h*.65}L${x-w} ${y-h*.4}Z`;
 }
 
 interface BodyMapProps {
@@ -361,109 +223,88 @@ interface BodyMapProps {
   onSideChange: (side: BodyMapSide) => void;
 }
 
-export function BodyMap({
-  side,
-  selections,
-  onZoneSelect,
-  onSideChange,
-}: BodyMapProps) {
-  const [hoverKey, setHoverKey] = useState<string | null>(null);
-  const [layer, setLayer] = useState<BodyMapLayer>("muscle");
-  const hoverLabel = hoverKey
-    ? FRONT_ZONES[hoverKey]?.label ?? BACK_ZONES[hoverKey]?.label ?? ""
-    : "";
-  const hasAnyMarked = selections.some((entry) => entry.label.trim());
-
+export function BodyMap({ side, selections, onZoneSelect, onSideChange }: BodyMapProps) {
+  const id = useId().replace(/:/g, "");
+  const [region, setRegion] = useState<string | null>(null);
+  const zones = side === "front" ? FRONT_ZONES : BACK_ZONES;
+  const groups = Object.entries(zones).reduce<Record<string, Array<[string, Zone]>>>((all, entry) => {
+    const group = regionFor(entry[0]);
+    (all[group] ??= []).push(entry);
+    return all;
+  }, {});
+  const candidates = region ? groups[region] : undefined;
+  function choose(key: string, zone: Zone) {
+    onZoneSelect(key, zone.label);
+  }
   return (
-    <div className="body-map-panel" data-active-side={side}>
-      <p className="body-map-title">Add injury area</p>
-      <div
-        className="body-map-toggle body-map-layer-toggle"
-        role="tablist"
-        aria-label="Body map layer"
-      >
-        {LAYER_OPTIONS.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            role="tab"
-            aria-selected={layer === option.value}
-            className={`body-map-toggle-btn ${layer === option.value ? "body-map-toggle-btn-active" : ""}`}
-            onClick={() => setLayer(option.value)}
-          >
-            {option.label}
-          </button>
-        ))}
+    <div className="body-map-panel body-map-tap-first" data-active-side={side}>
+      <div className="body-map-toolbar">
+        <p className="body-map-title">Tap the affected area</p>
+        <div className="body-map-toggle body-map-side-toggle" role="group" aria-label="Body view">
+          {(["front", "back"] as const).map((view) => (
+            <button key={view} type="button" aria-pressed={side === view}
+              className={`body-map-toggle-btn ${side === view ? "body-map-toggle-btn-active" : ""}`}
+              onClick={() => { setRegion(null); onSideChange(view); }}>
+              {view === "front" ? "Front" : "Back"}
+            </button>
+          ))}
+        </div>
       </div>
       <div className="body-map-svg-stack">
-        <BodySvg
-          side="front"
-          layer={layer}
-          selections={selections}
-          onZoneSelect={onZoneSelect}
-          hoverKey={hoverKey}
-          setHoverKey={setHoverKey}
-        />
-        <BodySvg
-          side="back"
-          layer={layer}
-          selections={selections}
-          onZoneSelect={onZoneSelect}
-          hoverKey={hoverKey}
-          setHoverKey={setHoverKey}
-        />
+        <div className="body-map-svg-wrap">
+          <div className="body-map-laterality" aria-hidden="true">
+            <span>{side === "front" ? "R" : "L"}</span><span>{side === "front" ? "L" : "R"}</span>
+          </div>
+          <svg viewBox="0 0 180 316" role="group" aria-label={`${side} body map for injury selection`}>
+            <defs><path id={`body-half-${id}`} d={SILHOUETTE_HALF} /></defs>
+            <g className="body-map-silhouette">
+              <ellipse cx={90} cy={21} rx={13} ry={16} />
+              <use href={`#body-half-${id}`} />
+              <use href={`#body-half-${id}`} transform="scale(-1 1) translate(-180 0)" />
+            </g>
+            <g className="body-map-contours" aria-hidden="true">
+              <path d={side === "front" ? "M90 53V140 M64 100Q77 105 88 100 M92 100Q103 105 116 100 M79 117H101 M81 128H99 M69 145Q90 154 111 145 M72 177Q70 195 74 208 M108 177Q110 195 106 208 M73 235Q72 251 75 266 M107 235Q108 251 105 266" : "M90 48V145 M64 76Q77 69 86 89 M116 76Q103 69 94 89 M64 154Q77 166 90 158Q103 166 116 154"} />
+            </g>
+            {Object.entries(groups).map(([group, entries]) => {
+              const label = regionLabel(group, entries[0][1].label);
+              const marked = entries.some(([key, zone]) => findSelectionForZone(selections, key, zone.label));
+              return (
+                <g key={group} role="button" tabIndex={0} aria-label={label} aria-pressed={marked}
+                  className={`body-map-zone-group ${group === region ? "body-map-region-active" : ""}`}
+                  onClick={() => { setRegion(group); if (entries.length === 1) choose(...entries[0]); }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault(); setRegion(group); if (entries.length === 1) choose(...entries[0]);
+                    }
+                  }}>
+                  {entries.map(([key, zone]) => {
+                    const used = Boolean(findSelectionForZone(selections, key, zone.label));
+                    const rx = zone.rx ?? 7; const ry = zone.ry ?? 7;
+                    const visible = used || (zone.layer !== "joint" && key !== "head");
+                    return <g key={key}>
+                      <ellipse cx={zone.cx} cy={zone.cy} rx={Math.max(rx, 10)} ry={Math.max(ry, 11)} className="body-map-zone-hit" />
+                      {visible ? <path className={`body-map-zone ${used ? "body-map-zone-used" : ""}`}
+                        transform={zone.rot ? `rotate(${zone.rot} ${zone.cx} ${zone.cy})` : undefined}
+                        d={zonePath(key, zone)} /> : null}
+                      {used ? <circle cx={zone.cx} cy={zone.cy} r={2.3} className="body-map-zone-dot" /> : null}
+                    </g>;
+                  })}
+                </g>
+              );
+            })}
+          </svg>
+        </div>
       </div>
-      <div
-        className="body-map-toggle body-map-side-toggle"
-        role="tablist"
-        aria-label="Body map side"
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={side === "front"}
-          className={`body-map-toggle-btn ${side === "front" ? "body-map-toggle-btn-active" : ""}`}
-          onClick={() => onSideChange("front")}
-        >
-          Front
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={side === "back"}
-          className={`body-map-toggle-btn ${side === "back" ? "body-map-toggle-btn-active" : ""}`}
-          onClick={() => onSideChange("back")}
-        >
-          Back
-        </button>
-      </div>
-      <p className="body-map-hint" aria-live="polite">
-        {hoverLabel ? (
-          <span className="body-map-hint-zone">{hoverLabel}</span>
-        ) : hasAnyMarked ? (
-          "Tap another zone, or tap the marked zone again to raise severity."
-        ) : layer === "muscle" ? (
-          "Tap where it hurts — switch to Joints & bones for knees, hands or ribs."
-        ) : (
-          "Tap where it hurts — switch to Muscles for quads, hamstrings or calves."
-        )}
-      </p>
-      {hasAnyMarked ? (
-        <ul className="body-map-legend" aria-label="Severity colour key">
-          <li className="body-map-legend-item">
-            <span className="body-map-legend-swatch body-map-legend-swatch-low" aria-hidden="true" />
-            <span>Low</span>
-          </li>
-          <li className="body-map-legend-item">
-            <span className="body-map-legend-swatch body-map-legend-swatch-moderate" aria-hidden="true" />
-            <span>Moderate</span>
-          </li>
-          <li className="body-map-legend-item">
-            <span className="body-map-legend-swatch body-map-legend-swatch-high" aria-hidden="true" />
-            <span>High</span>
-          </li>
-        </ul>
+      {candidates && candidates.length > 1 ? (
+        <div className="body-map-refine" role="group" aria-label="Choose the exact area">
+          <p>Which part?</p>
+          <div>{candidates.map(([key, zone]) => (
+            <button key={key} type="button" aria-pressed={Boolean(findSelectionForZone(selections, key, zone.label))}
+              onClick={() => choose(key, zone)}>{zone.label}</button>
+          ))}</div>
+        </div>
       ) : null}
+      <p className="body-map-hint">Left and right refer to your body.</p>
     </div>
   );
 }

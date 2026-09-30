@@ -21,7 +21,6 @@ import {
   getOptionLabels,
   isValidRecordFormat,
   KEY_GOAL_OPTIONS,
-  cycleGuidedInjurySeverity,
   normalizeGuidedInjurySeverity,
   PROFESSIONAL_STATUS_OPTIONS,
   retainKnownOptionValues,
@@ -1391,6 +1390,7 @@ export function PlanIntakeForm() {
 
   function handleNoRestrictionsChange(checked: boolean) {
     if (!checked) {
+      setIsInjuryMapOpen(true);
       setShowClearInjuriesConfirm(false);
       const nextGuidedInjuries = guidedInjuries.length ? guidedInjuries : [{ ...EMPTY_GUIDED_INJURY }];
       syncGuidedInjuryFields(nextGuidedInjuries, false);
@@ -1406,6 +1406,7 @@ export function PlanIntakeForm() {
   }
 
   function handleAddGuidedInjury() {
+    setIsInjuryMapOpen(true);
     const nextGuidedInjuries = [...guidedInjuries, { ...EMPTY_GUIDED_INJURY }];
     syncGuidedInjuryFields(nextGuidedInjuries, false);
     setActiveGuidedInjuryIndex(nextGuidedInjuries.length - 1);
@@ -1417,7 +1418,20 @@ export function PlanIntakeForm() {
     setActiveGuidedInjuryIndex(null);
   }
 
+  const [changingInjuryAreaIndex, setChangingInjuryAreaIndex] = useState<number | null>(null);
+  const injuryMapRef = useRef<HTMLDivElement>(null);
+  const [isInjuryMapOpen, setIsInjuryMapOpen] = useState(true);
+
   function handleBodyMapZoneSelect(zoneKey: string, label: string) {
+    setIsInjuryMapOpen(false);
+    if (changingInjuryAreaIndex !== null && guidedInjuries[changingInjuryAreaIndex]) {
+      const next = [...guidedInjuries];
+      next[changingInjuryAreaIndex] = { ...next[changingInjuryAreaIndex], area: label, zone: zoneKey };
+      syncGuidedInjuryFields(next, false);
+      setActiveGuidedInjuryIndex(changingInjuryAreaIndex);
+      setChangingInjuryAreaIndex(null);
+      return;
+    }
     // Match by the stable zone key first; fall back to a legacy injury whose
     // typed area still equals the zone label and has no zone key yet.
     const existingIndex = guidedInjuries.findIndex(
@@ -1434,11 +1448,10 @@ export function PlanIntakeForm() {
       const nextGuidedInjuries = [...guidedInjuries];
       nextGuidedInjuries[existingIndex] = coerceGuidedInjuryEditState({
         ...existing,
-        severity: cycleGuidedInjurySeverity(existing.severity),
         zone: existing.zone || zoneKey,
       });
       syncGuidedInjuryFields(nextGuidedInjuries, false);
-      // Surface the affected card so its severity chips track the change.
+      // Reopen the affected injury.
       setActiveGuidedInjuryIndex(existingIndex);
       return;
     }
@@ -3047,8 +3060,9 @@ export function PlanIntakeForm() {
                         </div>
                       </div>
                     ) : null}
-                    <div className="injury-body-map-layout">
-                      <div className="injury-body-map-col">
+                    <div className={`injury-body-map-layout ${isInjuryMapOpen ? "" : "injury-body-map-layout-selected"}`}>
+                      {isInjuryMapOpen ? (
+                      <div className="injury-body-map-col" ref={injuryMapRef}>
                         <BodyMap
                           side={bodyMapSide}
                           selections={guidedInjuries
@@ -3062,6 +3076,7 @@ export function PlanIntakeForm() {
                           onSideChange={setBodyMapSide}
                         />
                       </div>
+                      ) : null}
                       <div className="injury-cards-col">
                         <div className="injury-card-stack">
                           {guidedInjuries.map((injury, index) => {
@@ -3088,7 +3103,15 @@ export function PlanIntakeForm() {
                                     }
                                   }}
                                   onUpdate={(key, value) => updateGuidedInjury(index, key, value)}
-                                  onRemove={() => handleRequestRemoveGuidedInjury(index)}
+                                  onChangeArea={() => {
+                                    setChangingInjuryAreaIndex(index);
+                                    setIsInjuryMapOpen(true);
+                                    requestAnimationFrame(() => {
+                                      injuryMapRef.current?.scrollIntoView({ behavior: "auto", block: "center" });
+                                      injuryMapRef.current?.querySelector<SVGElement>('[role="button"]')?.focus({ preventScroll: true });
+                                    });
+                                  }}
+                                  onRemove={() => { setChangingInjuryAreaIndex(null); handleRequestRemoveGuidedInjury(index); }}
                                 />
                                 {isInvalidCard && error ? (
                                   <p id={`${cardId}-error`} className="error-text" role="alert">{error}</p>

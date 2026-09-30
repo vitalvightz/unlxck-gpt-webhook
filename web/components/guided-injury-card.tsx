@@ -4,9 +4,10 @@ import { useMemo, useState } from "react";
 import { GUIDED_INJURY_AREA_MAX, GUIDED_INJURY_NOTES_MAX } from "@/lib/input-limits";
 import { hasGuidedInjuryReviewRisk, type GuidedInjuryState } from "@/lib/guided-injury";
 import {
-  GUIDED_INJURY_SEVERITY_OPTIONS,
   type IntakeOption,
 } from "@/lib/intake-options";
+
+import { INJURY_IMPACT_OPTIONS, readInjuryImpact, writeInjuryImpact } from "@/lib/injury-impact";
 
 // ── Injury-type option groups ────────────────────────────────────────
 
@@ -390,7 +391,7 @@ export function buildCompactSummary(injury: GuidedInjuryState): string {
   if (injury.area) parts.push(injury.area);
   const typeLabel = getInjuryTypeLabel(injury);
   if (typeLabel) parts.push(typeLabel);
-  if (injury.severity) parts.push(injury.severity.charAt(0).toUpperCase() + injury.severity.slice(1));
+  if (injury.severity) parts.push(readInjuryImpact(injury.notes)?.label ?? injury.severity.charAt(0).toUpperCase() + injury.severity.slice(1));
   if (injury.trend) parts.push(injury.trend.charAt(0).toUpperCase() + injury.trend.slice(1));
   if (injury.timeframe) {
     const tf = TIMEFRAME_OPTIONS.find((o) => o.value === injury.timeframe);
@@ -918,6 +919,7 @@ interface GuidedInjuryCardProps {
   onToggleActive: () => void;
   onUpdate: <K extends keyof GuidedInjuryState>(key: K, value: GuidedInjuryState[K]) => void;
   onRemove: () => void;
+  onChangeArea?: () => void;
 }
 
 export function GuidedInjuryCard({
@@ -927,10 +929,14 @@ export function GuidedInjuryCard({
   onToggleActive,
   onUpdate,
   onRemove,
+  onChangeArea,
 }: GuidedInjuryCardProps) {
   const notesFreeText = getNotesFreeText(injury.notes);
   const hasExtraDetail = Boolean(notesFreeText.trim());
   const [notesOpen, setNotesOpen] = useState(hasExtraDetail);
+  const [manualArea, setManualArea] = useState(false);
+  const [advancedType, setAdvancedType] = useState(false);
+  const impact = readInjuryImpact(injury.notes);
   const [staleNote, setStaleNote] = useState(false);
   const [draftFamily, setDraftFamily] = useState<InjuryFamily | "">("");
   // One progressive "Injury type" picker (family → subtype) replaces the old
@@ -945,7 +951,7 @@ export function GuidedInjuryCard({
     setIsEditingType(!(injury.injury_type && (injury.injury_type !== "surface_injury" || injury.surface_type)));
   }
   const injuryLabel = truncateForHeader(injury.area) || `Injury ${index + 1}`;
-  const compactSummary = truncateForHeader(buildCompactSummary(injury), 80);
+  const compactSummary = [getInjuryTypeLabel(injury), impact?.label, injury.trend].filter(Boolean).join(" · ") || truncateForHeader(buildCompactSummary(injury), 80);
   const showWarning = hasGuidedInjuryReviewRisk(injury);
   const hasFollowUp = injury.injury_type !== "";
   const derivedFamily = getFamilyForInjury(injury);
@@ -953,7 +959,6 @@ export function GuidedInjuryCard({
   const basicsComplete = Boolean(injury.area.trim() && injury.severity && injury.trend);
   const typeComplete = Boolean(injury.injury_type && (injury.injury_type !== "surface_injury" || injury.surface_type));
   const safetyComplete = isSafetyComplete(injury, activeFamily);
-  const safetyActive = Boolean(basicsComplete && typeComplete && !safetyComplete);
   const reviewReady = Boolean(basicsComplete && typeComplete && safetyComplete);
   const selectedFamilyOption = activeFamily ? INJURY_FAMILIES.find((f) => f.family === activeFamily) : null;
   const selectedSubtypeLabels = getInjurySubtypeLabels(injury);
@@ -964,22 +969,11 @@ export function GuidedInjuryCard({
     return [
       summaryArea,
       getInjuryTypeLabel(injury),
-      injury.severity ? injury.severity.charAt(0).toUpperCase() + injury.severity.slice(1) : "",
+      injury.severity ? readInjuryImpact(injury.notes)?.label ?? injury.severity.charAt(0).toUpperCase() + injury.severity.slice(1) : "",
       injury.trend ? injury.trend.charAt(0).toUpperCase() + injury.trend.slice(1) : "",
     ].filter(Boolean).join(" · ");
   }, [index, injury, showWarning]);
-  const stepStatus = [
-    { key: "basics", label: "Basics", done: basicsComplete, active: !basicsComplete },
-    { key: "type", label: "Type", done: typeComplete, active: basicsComplete && !typeComplete },
-    { key: "safety", label: "Safety", done: safetyComplete, active: safetyActive },
-    { key: "review", label: "Review", done: reviewReady, active: reviewReady },
-  ];
   const collapsedStatus = showWarning ? "Review risk" : !injury.injury_type ? "Needs type" : "Complete";
-  const stepLabel = !activeFamily
-    ? "Step 1 of 3 · Choose injury family"
-    : !hasFollowUp
-      ? "Step 2 of 3 · Choose injury type"
-      : "Step 3 of 3 · Safety details";
 
   function flagStaleExtraDetail() {
     if (!getNotesFreeText(injury.notes).trim()) {
@@ -1089,8 +1083,8 @@ export function GuidedInjuryCard({
         </div>
         <div className="injury-card-badges">
           {injury.severity ? (
-            <span className={`injury-severity-badge injury-severity-badge-${injury.severity}`}>
-              {injury.severity.charAt(0).toUpperCase() + injury.severity.slice(1)}
+            <span className={`injury-severity-badge ${impact ? "injury-impact-badge" : `injury-severity-badge-${injury.severity}`}`}>
+              {impact?.label ?? injury.severity.charAt(0).toUpperCase() + injury.severity.slice(1)}
             </span>
           ) : null}
           {injury.trend ? (
@@ -1117,32 +1111,24 @@ export function GuidedInjuryCard({
 
       {isActive ? (
         <div className="injury-card-form">
-          {/* Step 1 — Describe it */}
-          <div className="gi-field">
-            <label htmlFor={`gi-area-${index}`} className="gi-label">What happened or what feels wrong?</label>
-            <textarea
-              id={`gi-area-${index}`}
-              value={injury.area}
-              onChange={(e) => onUpdate("area", e.target.value)}
-              maxLength={GUIDED_INJURY_AREA_MAX}
-              placeholder="e.g. hyperextended right knee, rolled ankle, tight hamstring"
-              className="gi-area-input"
-              rows={3}
-            />
-            <p className="gi-selection-helper">This is used to identify the injury. Include the body part and what happened.</p>
-          </div>
-
-          <div className="gi-step-header">
-            <p className="gi-step-track">{stepLabel}</p>
-            <div className="gi-stepper" aria-label="Injury intake progress">
-              {stepStatus.map((step) => (
-                <div key={step.key} className={`gi-stepper-item ${step.active ? "gi-stepper-item-active" : ""} ${step.done ? "gi-stepper-item-done" : ""}`.trim()}>
-                  <span className="gi-stepper-dot" aria-hidden="true">{step.done ? "✓" : "•"}</span>
-                  <span>{step.label}</span>
-                </div>
-              ))}
+          {injury.area.trim() ? (
+            <div className="gi-selection-summary">
+              <p className="gi-selection-title">✓ {injury.area}</p>
+              <button type="button" className="gi-change-btn" onClick={() => { if (onChangeArea) onChangeArea(); else setManualArea(true); }}>Change</button>
             </div>
-          </div>
+          ) : <p className="gi-selection-helper">Tap an area on the body map.</p>}
+          <button type="button" className="gi-notes-toggle injury-manual-entry" aria-expanded={manualArea}
+            onClick={() => setManualArea((current) => !current)}>
+            {manualArea ? "Hide manual entry" : "Can’t find the area? Enter it manually"}
+          </button>
+          {manualArea ? (
+            <div className="gi-field">
+              <label htmlFor={`gi-area-${index}`} className="gi-label">Affected area</label>
+              <input id={`gi-area-${index}`} value={injury.area} maxLength={GUIDED_INJURY_AREA_MAX}
+                onChange={(e) => { onUpdate("area", e.target.value); onUpdate("zone", ""); }}
+                placeholder="e.g. left shoulder" />
+            </div>
+          ) : null}
 
           {staleNote && hasExtraDetail ? (
             <div className="gi-stale-note gi-stale-note-flash" role="alert">
@@ -1168,7 +1154,7 @@ export function GuidedInjuryCard({
               to a single summary once a type is chosen. */}
           <div className="gi-field">
             <label className="gi-label">Injury type</label>
-            <p className="gi-selection-helper">Pick the closest match so we can flag safety risks. Used as a fallback if the description is unclear.</p>
+
 
             {typeComplete && !isEditingType ? (
               <div className="gi-selection-summary">
@@ -1179,6 +1165,19 @@ export function GuidedInjuryCard({
                 </p>
                 <button type="button" className="gi-change-btn" onClick={() => setIsEditingType(true)} aria-expanded={isEditingType}>Change</button>
               </div>
+            ) : !advancedType ? (
+              <>
+                <div className="gi-quick-types" role="group" aria-label="Injury type">
+                  {[
+                    { label: "Soreness", value: "pain" },
+                    { label: "Tightness", value: "tightness" },
+                    { label: "Bruise", value: "surface_injury", surface_type: "bruise" },
+                    { label: "Other", value: "unspecified" },
+                  ].map((opt) => <button key={opt.label} type="button" className="gi-chip"
+                    onClick={() => { handleTypeSelect(opt); setIsEditingType(false); }}>{opt.label}</button>)}
+                </div>
+                <button type="button" className="gi-notes-toggle" onClick={() => setAdvancedType(true)}>More injury types</button>
+              </>
             ) : !activeFamily ? (
               <div className="gi-family-grid" role="radiogroup" aria-label="Injury family">
                 {INJURY_FAMILIES.map((family) => (
@@ -1240,18 +1239,18 @@ export function GuidedInjuryCard({
             )}
           </div>
 
-          {/* Default visible: Severity + Trend */}
-          <div className="form-grid">
+          {/* Functional impact uses compatible API bands; safety questions remain separate. */}
+          <div className="form-grid injury-impact-grid">
             <div className="gi-field">
-              <label className="gi-label">Current severity</label>
+              <label className="gi-label">How much is it affecting you?</label>
               <div className="injury-severity-chips">
-                {GUIDED_INJURY_SEVERITY_OPTIONS.map((opt) => (
+                {INJURY_IMPACT_OPTIONS.map((opt) => (
                   <button
                     key={opt.value}
                     type="button"
-                    className={`injury-severity-chip ${injury.severity === opt.value ? `injury-severity-chip-${opt.value}` : ""}`.trim()}
-                    aria-pressed={injury.severity === opt.value}
-                    onClick={() => onUpdate("severity", injury.severity === opt.value ? "" : opt.value)}
+                    className={`injury-severity-chip ${impact?.value === opt.value ? `injury-severity-chip-${opt.guidedSeverity}` : ""}`.trim()}
+                    aria-pressed={impact?.value === opt.value}
+                    onClick={() => { onUpdate("severity", opt.guidedSeverity); onUpdate("notes", writeInjuryImpact(injury.notes, opt.value)); }}
                   >
                     {opt.label}
                   </button>
@@ -1295,7 +1294,7 @@ export function GuidedInjuryCard({
             </div>
           ) : null}
 
-          {/* Collapsed notes */}
+          {/* Optional text stays hidden until requested. */}
           {notesOpen ? (
             <div className="gi-field">
               <label htmlFor={`gi-notes-${index}`} className="gi-label">Extra detail</label>
@@ -1314,12 +1313,13 @@ export function GuidedInjuryCard({
           ) : (
             <button
               type="button"
-              className="gi-notes-toggle"
+              className="gi-notes-toggle injury-optional-note"
               onClick={() => setNotesOpen(true)}
             >
               + Add extra detail
             </button>
           )}
+          <button type="button" className="primary-button gi-save-injury" disabled={!reviewReady} onClick={onToggleActive}>Save injury</button>
         </div>
       ) : null}
     </section>

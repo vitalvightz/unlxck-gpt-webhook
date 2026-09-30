@@ -249,7 +249,7 @@ test("archivePlan surfaces a 404 ApiError without retrying", async () => {
 
 test("admin read helpers are wrapped in withTransientRetries (source regression)", () => {
   const apiPath = resolve(dirname(fileURLToPath(import.meta.url)), "api.ts");
-  const source = readFileSync(apiPath, "utf8");
+  const source = readFileSync(apiPath, "utf8").replace(/\r\n/g, "\n");
   for (const name of ADMIN_READ_HELPERS) {
     const exportPattern = new RegExp(
       `export function ${name}[\\s\\S]*?\\n\\}\\n`,
