@@ -7,6 +7,12 @@ import {
   resolveInjuryTypeLabel,
 } from "./injury-display.ts";
 
+test("functional impact metadata never appears in athlete-facing labels", () => {
+  assert.equal(formatInjuryDetail("tightness [training_impact:limiting]"), "tightness");
+  assert.equal(normalizeInjuryLabel("Left shoulder tightness [training_impact:cant_train]"), "Left shoulder tightness");
+  assert.equal(resolveInjuryTypeLabel("[training_impact:not_limiting]"), "");
+});
+
 test("normalizes a literal bruise sentence into a short label", () => {
   assert.equal(normalizeInjuryLabel("Left shoulder is bruised"), "Left shoulder bruise");
 });

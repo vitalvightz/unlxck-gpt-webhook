@@ -910,9 +910,11 @@ test("successful injury submission refreshes, resets, and collapses the form", a
   });
   try {
     await click(button(container, "+ Add injury"));
+    await click(button(container, "Can’t find the area? Enter it manually"));
     const area = container.querySelector<HTMLInputElement>("#today-injury-area");
     assert.ok(area);
     await setInput(area, "Left ankle");
+    await click(button(container, "Limiting me"));
     await click(button(container, "Soreness"));
 
     const form = container.querySelector<HTMLFormElement>("form.today-injury-add");
@@ -929,7 +931,7 @@ test("successful injury submission refreshes, resets, and collapses the form", a
       injuries: [
         {
           body_area: "Left ankle",
-          description: "soreness",
+          description: "soreness [training_impact:limiting]",
           severity: "moderate",
           status: "ongoing",
         },
@@ -939,8 +941,8 @@ test("successful injury submission refreshes, resets, and collapses the form", a
     assert.equal(button(container, "+ Add injury").getAttribute("aria-expanded"), "false");
 
     await click(button(container, "+ Add injury"));
-    assert.equal(container.querySelector<HTMLInputElement>("#today-injury-area")?.value, "");
-    assert.equal(button(container, "Moderate").getAttribute("aria-pressed"), "true");
+    assert.equal(container.querySelector<HTMLInputElement>("#today-injury-area"), null);
+    assert.equal(button(container, "Limiting me").getAttribute("aria-pressed"), "false");
     assert.equal(button(container, "Soreness").getAttribute("aria-pressed"), "false");
   } finally {
     globalThis.fetch = originalFetch;
@@ -989,9 +991,12 @@ test("adding a skin injury asks the five surface questions immediately", async (
     });
 
     await click(button(container, "+ Add injury"));
+    await click(button(container, "Can’t find the area? Enter it manually"));
     const area = container.querySelector<HTMLInputElement>("#today-injury-area");
     assert.ok(area);
     await setInput(area, "left hand");
+    await click(button(container, "Limiting me"));
+    await click(button(container, "+ Add note (optional)"));
     const detail = container.querySelector<HTMLInputElement>("#today-injury-detail");
     assert.ok(detail);
     await setInput(detail, "blister");
@@ -1077,9 +1082,11 @@ test("adding a non-surface injury does not open the skin follow-up", async () =>
     });
 
     await click(button(container, "+ Add injury"));
+    await click(button(container, "Can’t find the area? Enter it manually"));
     const area = container.querySelector<HTMLInputElement>("#today-injury-area");
     assert.ok(area);
     await setInput(area, "left shoulder");
+    await click(button(container, "Limiting me"));
     await click(button(container, "Soreness"));
 
     const form = container.querySelector<HTMLFormElement>("form.today-injury-add");
@@ -1139,9 +1146,11 @@ test("adding a medical-review skin injury skips the questions for its banner", a
     });
 
     await click(button(container, "+ Add injury"));
+    await click(button(container, "Can’t find the area? Enter it manually"));
     const area = container.querySelector<HTMLInputElement>("#today-injury-area");
     assert.ok(area);
     await setInput(area, "right eye");
+    await click(button(container, "Limiting me"));
     await click(button(container, "Other"));
 
     const form = container.querySelector<HTMLFormElement>("form.today-injury-add");
@@ -1177,9 +1186,11 @@ test("failed injury submission leaves the populated form open", async () => {
   });
   try {
     await click(button(container, "+ Add injury"));
+    await click(button(container, "Can’t find the area? Enter it manually"));
     const area = container.querySelector<HTMLInputElement>("#today-injury-area");
     assert.ok(area);
     await setInput(area, "Right knee");
+    await click(button(container, "Limiting me"));
     await click(button(container, "Tightness"));
     const form = container.querySelector<HTMLFormElement>("form.today-injury-add");
     assert.ok(form);
@@ -1246,11 +1257,13 @@ test("submitting without a type says so instead of refusing silently", async () 
   const { container, root } = mountMain();
   try {
     await click(button(container, "+ Add injury"));
+    await click(button(container, "Can’t find the area? Enter it manually"));
     const area = container.querySelector<HTMLInputElement>("#today-injury-area");
     assert.ok(area);
     await setInput(area, "Left ankle");
+    await click(button(container, "Limiting me"));
 
-    const submit = button(container, "Add injury");
+    const submit = button(container, "Save injury");
     assert.equal(submit.disabled, false, "an incomplete form must still accept the tap");
 
     const form = container.querySelector<HTMLFormElement>("form.today-injury-add");
@@ -1303,12 +1316,59 @@ test("submitting without an area names the area, not the type", async () => {
     const alert = container.querySelector('[role="alert"]');
     assert.match(alert?.textContent ?? "", /Say where it is/);
 
+    await click(button(container, "Can’t find the area? Enter it manually"));
     const area = container.querySelector<HTMLInputElement>("#today-injury-area");
     assert.ok(area);
     await setInput(area, "Left ankle");
+    await click(button(container, "Limiting me"));
     assert.equal(container.querySelector('[role="alert"]'), null);
   } finally {
     globalThis.fetch = originalFetch;
     unmountMain(container, root);
   }
+});
+
+test("tap-first selection never opens text fields or changes impact on repeated taps", async () => {
+  const { container, root } = mountMain();
+  const { calls, restore } = stubCheckin();
+  try {
+    await click(button(container, "+ Add injury"));
+    assert.equal(container.querySelector("#today-injury-area"), null);
+    assert.equal(container.querySelector("#today-injury-detail"), null);
+    const selectShoulder = async () => {
+      const shoulder = container.querySelector('[aria-label="Left shoulder"]');
+      assert.ok(shoulder);
+      await act(async () => shoulder.dispatchEvent(new window.MouseEvent("click", { bubbles: true })));
+    };
+    await selectShoulder();
+    await click(button(container, "Tightness"));
+    const form = container.querySelector("form")!;
+    await act(async () => form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true })));
+    assert.equal(calls.length, 0, "impact must be an explicit choice");
+    assert.match(container.querySelector('[role="alert"]')?.textContent ?? "", /affecting your training/);
+    await click(button(container, "Not limiting me"));
+    await click(button(container, "Change"));
+    await selectShoulder();
+    assert.equal(button(container, "Not limiting me").getAttribute("aria-pressed"), "true");
+    await act(async () => form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true })));
+    assert.deepEqual(calls[0], { injuries: [{ body_area: "Left shoulder", description: "tightness [training_impact:not_limiting]", severity: "mild", status: "ongoing" }] });
+    assert.equal((form as HTMLFormElement).hidden, true);
+  } finally { restore(); unmountMain(container, root); }
+});
+
+test("editing a saved injury updates its flag and retains the functional answer and note", async () => {
+  const injury = { ...SHOULDER, description: "tightness. worse when punching [training_impact:limiting]" };
+  const { container, root } = mountMain([injury]);
+  const { calls, restore } = stubCheckin({ openInjuries: [injury] });
+  try {
+    assert.doesNotMatch(container.textContent ?? "", /training_impact/);
+    await click(button(container, "Edit"));
+    assert.equal(button(container, "Limiting me").getAttribute("aria-pressed"), "true");
+    assert.equal(button(container, "Tightness").getAttribute("aria-pressed"), "true");
+    assert.equal(container.querySelector("#today-injury-detail"), null);
+    await click(button(container, "Can’t train normally"));
+    const form = container.querySelector("form")!;
+    await act(async () => form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true })));
+    assert.deepEqual(calls[0], { injuries: [{ flag_id: injury.id, body_area: "left shoulder", description: "tightness. worse when punching [training_impact:cant_train]", severity: "severe", status: "ongoing" }] });
+  } finally { restore(); unmountMain(container, root); }
 });

@@ -13219,6 +13219,193 @@ html[data-theme="light"] .injury-card-state {
   align-content: start;
 }
 
+.body-map-panel.body-map-tap-first {
+  padding: 16px 0;
+  border: 0;
+  background: transparent;
+}
+
+.body-map-tap-first .body-map-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.body-map-tap-first .body-map-title {
+  margin: 0;
+  text-align: left;
+  color: var(--text-primary);
+  letter-spacing: 0.06em;
+}
+
+.body-map-tap-first .body-map-side-toggle {
+  display: inline-flex;
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.body-map-tap-first .body-map-toggle-btn {
+  min-height: 44px;
+  padding: 8px 14px;
+}
+
+.body-map-tap-first .body-map-svg-stack {
+  display: block;
+  max-width: 240px;
+}
+
+.body-map-tap-first .body-map-svg-wrap {
+  max-width: none;
+}
+
+.body-map-laterality {
+  position: absolute;
+  top: 18%;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono), monospace;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  pointer-events: none;
+}
+
+.body-map-tap-first .body-map-silhouette {
+  fill: color-mix(in srgb, var(--text-secondary) 24%, var(--bg-app));
+}
+
+.body-map-tap-first .body-map-silhouette use,
+.body-map-tap-first .body-map-silhouette ellipse {
+  stroke: color-mix(in srgb, var(--text-secondary) 65%, transparent);
+  stroke-width: 1;
+}
+
+.body-map-contours {
+  fill: none;
+  stroke: color-mix(in srgb, var(--text-secondary) 25%, transparent);
+  stroke-width: 0.7;
+  pointer-events: none;
+}
+
+.body-map-tap-first .body-map-zone {
+  fill: color-mix(in srgb, var(--text-secondary) 9%, transparent);
+  stroke: color-mix(in srgb, var(--text-secondary) 20%, transparent);
+  stroke-width: 0.6;
+  pointer-events: none;
+}
+
+.body-map-tap-first .body-map-zone-group:hover .body-map-zone,
+.body-map-tap-first .body-map-region-active .body-map-zone {
+  fill: color-mix(in srgb, var(--brand-red) 18%, transparent);
+  stroke: color-mix(in srgb, var(--brand-red) 55%, transparent);
+}
+
+.body-map-tap-first .body-map-zone-group .body-map-zone-used {
+  fill: color-mix(in srgb, var(--brand-red) 55%, transparent);
+  stroke: var(--brand-red);
+  stroke-width: 1.3;
+}
+
+.body-map-refine {
+  margin-top: 12px;
+  text-align: left;
+}
+
+.body-map-refine p {
+  margin: 0 0 8px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.body-map-refine > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.body-map-refine button,
+.gi-quick-types button {
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  font: inherit;
+  cursor: pointer;
+}
+
+.body-map-refine button[aria-pressed="true"] {
+  border-color: var(--brand-red);
+  background: color-mix(in srgb, var(--brand-red) 15%, transparent);
+}
+
+.gi-quick-types {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.injury-severity-chips:has(.injury-severity-chip) {
+  flex-wrap: wrap;
+}
+
+.injury-impact-input .today-segment-row {
+  flex-direction: column;
+}
+
+.injury-impact-input .today-segment {
+  width: 100%;
+  flex: none;
+}
+
+.injury-impact-grid { grid-template-columns: minmax(0, 1fr); }
+.injury-trend-chips { flex-wrap: wrap; }
+.injury-card-form .injury-severity-chips { display: grid; grid-template-columns: 1fr; }
+.injury-card-form .injury-severity-chip[aria-pressed="true"] { color: var(--text-primary); background: var(--brand-red-soft); border-color: var(--brand-red); }
+.injury-impact-badge { color: var(--text-secondary); background: var(--bg-surface); }
+.injury-body-map-layout.injury-body-map-layout-selected { grid-template-columns: minmax(0, 1fr); }
+.injury-body-map-col .body-map-toolbar { flex-direction: column; align-items: center; }
+.injury-manual-entry.gi-notes-toggle, .injury-optional-note.gi-notes-toggle { border: 0; background: none; padding: 8px 0; min-height: 44px; text-decoration: underline; }
+
+.gi-save-injury {
+  background: var(--brand-red);
+  color: var(--text-primary);
+  border: 1px solid var(--brand-red);
+  border-radius: var(--radius-btn);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  min-height: 48px;
+}
+
+.gi-save-injury:disabled { background: var(--bg-surface); border-color: var(--border-default); color: var(--text-muted); cursor: default; }
+
+.today-injury-selection {
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+}
+
+.today-injury-selection strong {
+  text-align: left;
+}
+
+.today-injury-selection button {
+  min-height: 44px;
+  color: var(--text-secondary);
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.today-injury-selection-clear::before {
+  content: none;
+}
+
 .body-map-panel {
   padding: 24px 20px 20px;
   border-radius: var(--radius-support);

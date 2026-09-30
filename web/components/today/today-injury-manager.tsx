@@ -8,11 +8,11 @@ import {
   type BodyMapSeverity,
   type BodyMapSide,
 } from "@/components/body-map";
-import { CustomSelect } from "@/components/custom-select";
 import { SegmentGroup } from "@/components/today/segment-group";
 import { useToast } from "@/components/toast-provider";
 import { submitTodayInjuryCheckin } from "@/lib/api";
 import { normalizeInjuryLabel, resolveInjuryTypeLabel } from "@/lib/injury-display";
+import { INJURY_IMPACT_OPTIONS, readInjuryImpact, writeInjuryImpact, type InjuryImpact } from "@/lib/injury-impact";
 import { TODAY_INJURY_MAX_WORDS } from "@/lib/input-limits";
 import {
   NO_TODAY_INJURY_TYPE,
@@ -215,32 +215,11 @@ function surfaceDeclaration(
   };
 }
 
-const INJURY_SEVERITY_OPTIONS: Array<{ value: InjuryFlagSeverity; label: string }> = [
-  { value: "mild", label: "Mild" },
-  { value: "moderate", label: "Moderate" },
-  { value: "severe", label: "Severe" },
-];
-
 const BODY_MAP_SEVERITY_BY_FLAG: Record<InjuryFlagSeverity, BodyMapSeverity> = {
   mild: "low",
   moderate: "moderate",
   severe: "high",
 };
-
-const BODY_MAP_VISIBILITY_OPTIONS = [
-  { value: "shown", label: "Show" },
-  { value: "hidden", label: "Hide" },
-];
-
-function cycleInjuryFlagSeverity(severity: InjuryFlagSeverity): InjuryFlagSeverity {
-  if (severity === "mild") {
-    return "moderate";
-  }
-  if (severity === "moderate") {
-    return "severe";
-  }
-  return "mild";
-}
 
 function getInjuryLabel(injury: InjuryFlagRecord): string {
   // Prefer the server-computed label (built from the shared injury synonym
@@ -334,8 +313,12 @@ export function TodayInjuryManager({
   const isSurfaceInitial = surfaceFollowUpMode === "initial";
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [editingFlagId, setEditingFlagId] = useState<string | null>(null);
   const [newArea, setNewArea] = useState("");
-  const [newSeverity, setNewSeverity] = useState<InjuryFlagSeverity>("moderate");
+  const [newImpact, setNewImpact] = useState<InjuryImpact | "">("");
+  const newSeverity = INJURY_IMPACT_OPTIONS.find((option) => option.value === newImpact)?.flagSeverity ?? "moderate";
+  const [manualArea, setManualArea] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
   const [newType, setNewType] = useState<TodayInjuryTypeSelection>(NO_TODAY_INJURY_TYPE);
   const [newDetail, setNewDetail] = useState("");
   // Whether the last edit hit the word/character cap, so the hint can explain the
@@ -343,18 +326,19 @@ export function TodayInjuryManager({
   const [areaLimited, setAreaLimited] = useState(false);
   const [detailLimited, setDetailLimited] = useState(false);
   const [newZone, setNewZone] = useState("");
-  const [bodyMapVisibility, setBodyMapVisibility] = useState<"shown" | "hidden">("hidden");
+  const [bodyMapVisible, setBodyMapVisible] = useState(true);
   const [bodyMapSide, setBodyMapSide] = useState<BodyMapSide>("front");
   // Which required answer stopped the last submit attempt. Both the area and
   // the type are required and neither has a default, so a form that only
   // disabled its own submit button left the athlete tapping a dead control
   // with nothing on screen naming what was missing.
-  const [addMissing, setAddMissing] = useState<"area" | "type" | null>(null);
+  const [addMissing, setAddMissing] = useState<"area" | "type" | "impact" | null>(null);
   const areaInputRef = useRef<HTMLInputElement>(null);
   const typeGroupRef = useRef<HTMLDivElement>(null);
   const addFormId = useId();
   const addErrorId = useId();
-  const bodyMapVisibilityId = useId();
+  const impactGroupRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
   const newInjurySelections: BodyMapSelection[] = newArea.trim()
     ? [
         {
@@ -391,8 +375,8 @@ export function TodayInjuryManager({
       const updated = response.open_injuries.find((injury) => injury.id === flagId);
       const severityRaised =
         previous && updated
-          ? INJURY_SEVERITY_OPTIONS.findIndex((option) => option.value === updated.severity) >
-            INJURY_SEVERITY_OPTIONS.findIndex((option) => option.value === previous.severity)
+          ? ["mild", "moderate", "severe"].indexOf(updated.severity) >
+            ["mild", "moderate", "severe"].indexOf(previous.severity)
           : false;
       if (status !== "resolved" && updated?.surface_class === "surface_medical_review") {
         showToast(
@@ -509,7 +493,7 @@ export function TodayInjuryManager({
     // the submit silently.
     if (!area) {
       setAddMissing("area");
-      areaInputRef.current?.focus();
+      mapRef.current?.querySelector<SVGElement>('[role="button"]')?.focus();
       return;
     }
     if (!newType) {
@@ -517,18 +501,26 @@ export function TodayInjuryManager({
       typeGroupRef.current?.querySelector("button")?.focus();
       return;
     }
+    if (!newImpact) {
+      setAddMissing("impact");
+      impactGroupRef.current?.querySelector("button")?.focus();
+      return;
+    }
     setAddMissing(null);
     setIsAdding(true);
     try {
-      const description = composeTodayInjuryDescription({ injuryType: newType, detail: newDetail });
+      const description = writeInjuryImpact(composeTodayInjuryDescription({ injuryType: newType, detail: newDetail }), newImpact);
       // Whatever open injury the reconcile returns that was not here before this
       // add is the flag it just created — that is how we find it to route on.
       const previousIds = new Set(openInjuries.map((injury) => injury.id));
       const response = await submit([
-        { body_area: area, description, severity: newSeverity, status: "ongoing" },
+        { ...(editingFlagId ? { flag_id: editingFlagId } : {}), body_area: area, description, severity: newSeverity, status: "ongoing" },
       ]);
       setNewArea("");
-      setNewSeverity("moderate");
+      setNewImpact("");
+      setManualArea(false);
+      setNotesOpen(false);
+      setBodyMapVisible(true);
       setNewType(NO_TODAY_INJURY_TYPE);
       setNewDetail("");
       setAreaLimited(false);
@@ -536,7 +528,8 @@ export function TodayInjuryManager({
       setNewZone("");
       setAddMissing(null);
       setIsAddFormOpen(false);
-      showToast("Injury added.", { tone: "success" });
+      showToast(editingFlagId ? "Injury updated." : "Injury added.", { tone: "success" });
+      setEditingFlagId(null);
       // A skin injury is routed by what the skin is doing, so ask the five
       // surface questions immediately instead of waiting for a later easing /
       // worse report. A wound that already lands in medical review skips the
@@ -565,16 +558,18 @@ export function TodayInjuryManager({
       setNewArea(limited);
       setAreaLimited(limited !== label);
     }
-    setNewSeverity((current) => (sameZone ? cycleInjuryFlagSeverity(current) : "mild"));
+    setManualArea(false);
+    setBodyMapVisible(false);
   }
 
-  // Explicit way out of a selection: the map gesture is fully committed to
-  // select / raise-severity, so clearing lives here as a visible control rather
-  // than a hidden extra tap or long-press.
+  // Start a fresh location draft; Change preserves the entered answers.
   function clearBodyMapSelection() {
     setNewArea("");
     setNewZone("");
-    setNewSeverity("moderate");
+    setNewImpact("");
+    setManualArea(false);
+    setNotesOpen(false);
+    setBodyMapVisible(true);
     setNewType(NO_TODAY_INJURY_TYPE);
     setNewDetail("");
     setAreaLimited(false);
@@ -610,7 +605,19 @@ export function TodayInjuryManager({
                     <strong>{getInjuryLabel(injury)}</strong>
                     {injuryType ? <small>{injuryType}</small> : null}
                   </span>
-                  <span className="badge status-badge-neutral">{injury.severity}</span>
+                  <span className="badge status-badge-neutral">{readInjuryImpact(injury.description ?? "")?.label ?? injury.severity}</span>
+                  <button type="button" className="gi-change-btn" disabled={isAdding || pendingFlagId !== null}
+                    onClick={() => {
+                      setEditingFlagId(injury.id); setNewArea(injury.body_area);
+                      const impact = readInjuryImpact(injury.description ?? "");
+                      setNewImpact(impact?.value ?? "");
+                      const description = writeInjuryImpact(injury.description ?? "", "");
+                      const type = TODAY_INJURY_TYPE_OPTIONS.find((option) => option.value !== "other" && new RegExp(`\\b${option.value}\\b`, "i").test(description));
+                      setNewType(type?.value ?? "other");
+                      setNewDetail(type ? description.replace(new RegExp(`^${type.value}\\.?\\s*`, "i"), "") : description);
+                      setNewZone(""); setBodyMapVisible(false); setManualArea(false); setNotesOpen(false); setAddMissing(null);
+                      setIsAddFormOpen(true);
+                    }}>Edit</button>
                   {injury.status === "monitoring" ? <span className="badge">Monitoring</span> : null}
                 </div>
                 {surfaceGuidance ? (
@@ -625,7 +632,7 @@ export function TodayInjuryManager({
                 ) : null}
                 <p className="today-field-label today-injury-status-label">How is it today?</p>
                 <p className="today-field-hint today-injury-status-hint">
-                  Only tap if it changed — we keep tracking it otherwise.
+                  Only tap if it changed. We keep tracking it otherwise.
                 </p>
                 <div
                   className="today-segment-row today-injury-status-row"
@@ -669,7 +676,7 @@ export function TodayInjuryManager({
                 </div>
                 {confirmingClearId === injury.id || surfaceFollowUpId === injury.id ? (
                   <p id={`${injury.id}-pending-hint`} className="today-injury-pending-hint">
-                    Not saved yet — confirm below.
+                    Not saved yet. Confirm below.
                   </p>
                 ) : null}
                 {surfaceFollowUpId === injury.id ? (
@@ -721,7 +728,7 @@ export function TodayInjuryManager({
                       <p className="today-field-hint" aria-live="polite">
                         {surfaceAnswers.infection_signs.length
                           ? `${surfaceAnswers.infection_signs.length} selected`
-                          : "Tap any that apply — none is fine"}
+                          : "Tap any that apply. None is fine."}
                       </p>
                       {/* One per row: these labels are the longest in the panel
                           and will not share a line on a phone without being
@@ -831,7 +838,10 @@ export function TodayInjuryManager({
         aria-controls={addFormId}
         aria-expanded={isAddFormOpen}
         data-expanded={isAddFormOpen ? "true" : "false"}
-        onClick={() => setIsAddFormOpen((current) => !current)}
+        onClick={() => {
+        if (editingFlagId) { clearBodyMapSelection(); setEditingFlagId(null); setIsAddFormOpen(true); }
+        else setIsAddFormOpen((current) => !current);
+      }}
       >
         <span>
           {isAddFormOpen ? "" : "+ "}
@@ -846,46 +856,27 @@ export function TodayInjuryManager({
         hidden={!isAddFormOpen}
         onSubmit={addInjury}
       >
-        <div className="today-injury-add-toolbar">
-          <p className="today-injury-add-title">Add injury</p>
-          <div className="field today-injury-map-control">
-            <label htmlFor={bodyMapVisibilityId}>Body map</label>
-            <CustomSelect
-              id={bodyMapVisibilityId}
-              value={bodyMapVisibility}
-              options={BODY_MAP_VISIBILITY_OPTIONS}
-              placeholder="Body map"
-              onChange={(value) => setBodyMapVisibility(value === "hidden" ? "hidden" : "shown")}
-            />
+        {editingFlagId ? <p className="today-injury-add-title">Edit injury</p> : null}
+        {bodyMapVisible ? (
+          <div ref={mapRef}>
+            <BodyMap side={bodyMapSide} selections={newInjurySelections}
+              onZoneSelect={selectBodyMapZone} onSideChange={setBodyMapSide} />
           </div>
-        </div>
-        {bodyMapVisibility === "shown" ? (
-          <BodyMap
-            side={bodyMapSide}
-            selections={newInjurySelections}
-            onZoneSelect={selectBodyMapZone}
-            onSideChange={setBodyMapSide}
-          />
         ) : null}
         {newArea.trim() ? (
           <div className="today-injury-selection" aria-live="polite">
-            <span>Selected</span>
-            <strong>{newArea.trim()}</strong>
-            <button
-              type="button"
-              className="today-injury-selection-clear"
-              onClick={clearBodyMapSelection}
-              disabled={isAdding}
-              aria-label={`Clear selected area, ${newArea.trim()}`}
-            >
-              Clear
-            </button>
-            <small>Tap the same zone to raise severity, or Clear to start over.</small>
+            <span aria-hidden="true">✓</span><strong>{newArea.trim()}</strong>
+            <button type="button" onClick={() => setBodyMapVisible(true)} disabled={isAdding}>Change</button>
+            <button type="button" className="today-injury-selection-clear" onClick={clearBodyMapSelection} disabled={isAdding}>Clear</button>
           </div>
         ) : null}
-        <div className="field">
+        <button type="button" className="gi-notes-toggle injury-manual-entry" aria-expanded={manualArea}
+          onClick={() => setManualArea((current) => !current)}>
+          {manualArea ? "Use the body map" : "Can’t find the area? Enter it manually"}
+        </button>
+        {manualArea ? <div className="field">
           <label htmlFor="today-injury-area">
-            Where is it?
+            Affected area
             <span className="today-field-required">Required</span>
           </label>
           <input
@@ -901,6 +892,7 @@ export function TodayInjuryManager({
               const value = limitInjuryEntryText(raw);
               setAreaLimited(value !== raw);
               setNewArea(value);
+              setNewZone("");
               if (value.trim()) {
                 setAddMissing((current) => (current === "area" ? null : current));
               } else {
@@ -914,10 +906,10 @@ export function TodayInjuryManager({
             aria-live="polite"
           >
             {areaLimited
-              ? `${TODAY_INJURY_MAX_WORDS}-word limit — extra removed`
+              ? `${TODAY_INJURY_MAX_WORDS}-word limit. Extra removed`
               : `Up to ${TODAY_INJURY_MAX_WORDS} words`}
           </small>
-        </div>
+        </div> : null}
         <div ref={typeGroupRef}>
           <SegmentGroup
             label="Type"
@@ -932,8 +924,18 @@ export function TodayInjuryManager({
             invalid={addMissing === "type"}
           />
         </div>
+        <div ref={impactGroupRef} className="injury-impact-input">
+          <SegmentGroup label="How much is it affecting you?" value={newImpact}
+            options={INJURY_IMPACT_OPTIONS.map(({ value, label }) => ({ value, label }))}
+            required invalid={addMissing === "impact"}
+            onChange={(value) => { setNewImpact(value as InjuryImpact); setAddMissing((current) => current === "impact" ? null : current); }} />
+        </div>
+        <button type="button" className="gi-notes-toggle injury-optional-note" aria-expanded={notesOpen} onClick={() => setNotesOpen((current) => !current)}>
+          {notesOpen ? "Hide optional note" : "+ Add note (optional)"}
+        </button>
+        {notesOpen ? (
         <div className="field today-injury-detail">
-          <label htmlFor="today-injury-detail">Anything else? — optional</label>
+          <label htmlFor="today-injury-detail">Note (optional)</label>
           <input
             id="today-injury-detail"
             value={newDetail}
@@ -951,20 +953,16 @@ export function TodayInjuryManager({
             aria-live="polite"
           >
             {detailLimited
-              ? `${TODAY_INJURY_MAX_WORDS}-word limit — extra removed`
+              ? `${TODAY_INJURY_MAX_WORDS}-word limit. Extra removed`
               : `Up to ${TODAY_INJURY_MAX_WORDS} words`}
           </small>
         </div>
-        <SegmentGroup
-          label="Severity"
-          value={newSeverity}
-          options={INJURY_SEVERITY_OPTIONS}
-          onChange={setNewSeverity}
-        />
+        ) : null}
         {addMissing ? (
           <p id={addErrorId} className="today-inline-error" role="alert">
             {addMissing === "area"
-              ? "Say where it is first — tap a spot on the body map, or type the area."
+              ? "Say where it is first. Tap an area or enter it manually."
+              : addMissing === "impact" ? "Choose how much it is affecting your training."
               : "Pick a type first. If none of these fit, tap “Other”."}
           </p>
         ) : null}
@@ -973,7 +971,7 @@ export function TodayInjuryManager({
             feedback was a button that would not respond. Let the tap land, then
             name what is missing. */}
         <button type="submit" className="secondary-button" disabled={isAdding}>
-          {isAdding ? "Adding..." : "Add injury"}
+          {isAdding ? "Saving..." : editingFlagId ? "Save update" : "Save injury"}
         </button>
       </form>
     </section>
