@@ -285,7 +285,7 @@ export function TodaySessionBlocks({
     <ExerciseRationaleProvider>
       <div className="today-blocks today-blocks-sessions">
         {weekIntentNote}
-        <DaySessionContext day={displayDay} />
+        <DaySessionContext day={displayDay} headline={headline} />
         {current.sessions.map((session, index) => (
           <StructuredSessionCard
             key={sessionIdentity({
@@ -894,7 +894,7 @@ export function TodaySessionPanel({
         <div>
           <p className="kicker">{relationCopy.kicker}</p>
           <h2 id="today-session-heading">{headline}</h2>
-          {alongsideTitle ? (
+          {alongsideTitle && !showStructuredBlocks ? (
             <p className="today-session-alongside">
               <span className="today-detail-label">{alongsideLabel}</span> {alongsideTitle}
             </p>
@@ -997,7 +997,7 @@ export function TodaySessionPanel({
         </div>
       ) : null}
 
-      {!canCompleteSession && !safeSession ? (
+      {!canCompleteSession && !safeSession && !isSessionPreview ? (
         <div className="today-terminal-block">
           <p
             className="today-terminal-status"

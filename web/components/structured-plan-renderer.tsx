@@ -1073,11 +1073,13 @@ function CoachLedDayContext({
   tag,
   kind,
   converted,
+  headline,
 }: {
   title: string;
   tag: string | null;
   kind: SessionlessDayKind;
   converted: boolean;
+  headline?: string;
 }) {
   const isLightCombat = kind === "light_combat";
   // Only a converted hard-sparring day reads as "Technical Combat"; a technical
@@ -1090,6 +1092,9 @@ function CoachLedDayContext({
       ? (title === "Technical-only combat" ? TECHNICAL_COMBAT_TITLE : title)
       : title;
   const displayTag = isTechnical ? TECHNICAL_COMBAT_TAG : tag;
+  const repeatsHeadline = Boolean(
+    headline && displayTitle.trim().toLocaleLowerCase() === headline.trim().toLocaleLowerCase(),
+  );
   const description = isLightCombat || isDeclaredTechnical
     ? DECLARED_LIGHT_COMBAT_DESCRIPTION
     : HARD_SPARRING_CONTACT_NOTE;
@@ -1098,10 +1103,14 @@ function CoachLedDayContext({
     <div className="cm-light-technical cm-coach-led-contact">
       <div className="cm-light-technical-head">
         {displayTag ? <span className="sp-tag sp-accent">{displayTag}</span> : null}
-        <p className="sp-today-headline">
-          {displayTitle}
-          {isTechnical ? <TechnicalCombatWhyTooltip /> : null}
-        </p>
+        {repeatsHeadline ? (
+          isTechnical ? <TechnicalCombatWhyTooltip /> : null
+        ) : (
+          <p className="sp-today-headline">
+            {displayTitle}
+            {isTechnical ? <TechnicalCombatWhyTooltip /> : null}
+          </p>
+        )}
       </div>
       {isTechnical ? (
         <TechnicalCombatRationale title={displayTitle} />
@@ -1112,7 +1121,7 @@ function CoachLedDayContext({
   );
 }
 
-export function DaySessionContext({ day }: { day: StructuredDay }) {
+export function DaySessionContext({ day, headline }: { day: StructuredDay; headline?: string }) {
   const card = day.today_card;
   const warning = cleanText(card?.primary_warning);
   const nutrition = cleanText(card?.nutrition_summary);
@@ -1159,6 +1168,7 @@ export function DaySessionContext({ day }: { day: StructuredDay }) {
           tag={coachLedContact.tag}
           kind={coachLedContact.kind}
           converted={coachLedContact.converted}
+          headline={headline}
         />
       ) : null}
       {priorityMicrodose ? <PriorityMicrodoseCard day={day} /> : null}
