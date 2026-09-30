@@ -34,10 +34,10 @@ def test_recovery_between_bursts_bumps_recovery_tags_only():
     derived_tags = conditioning.derive_clarification_tags(
         [{"tag": "conditioning", "detail": "Recovery between bursts"}]
     )
-    assert set(derived_tags) == {"anaerobic_alactic", "aerobic", "recovery", "cns_freshness"}
+    assert set(derived_tags) == {"aerobic", "recovery", "cns_freshness"}
 
     bonus_a, hits_a = conditioning._conditioning_clarification_bonus(
-        ["anaerobic_alactic", "recovery"],
+        ["aerobic", "recovery"],
         derived_tags,
     )
     bonus_b, hits_b = conditioning._conditioning_clarification_bonus(
@@ -46,7 +46,7 @@ def test_recovery_between_bursts_bumps_recovery_tags_only():
     )
 
     assert bonus_a > 0
-    assert set(hits_a) == {"anaerobic_alactic", "recovery"}
+    assert set(hits_a) == {"aerobic", "recovery"}
     assert bonus_b == 0.0
     assert hits_b == []
 

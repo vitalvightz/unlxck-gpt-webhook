@@ -1,6 +1,8 @@
 from fightcamp.priority_clarification_tags import derive_clarification_tags
 
 
+# Scoring tags that no active bank entry carries were removed from the maps, so the
+# expected lists below contain only tags that can actually contribute a match.
 def test_empty_missing_malformed_returns_empty():
     assert derive_clarification_tags(None) == []
     assert derive_clarification_tags([]) == []
@@ -19,7 +21,6 @@ def test_conditioning_late_round_fatigue_maps_correctly():
 
 def test_conditioning_recovery_between_bursts_maps_correctly():
     assert derive_clarification_tags([{"tag": "conditioning", "detail": "Recovery between bursts"}]) == [
-        "anaerobic_alactic",
         "aerobic",
         "recovery",
         "cns_freshness",
@@ -32,7 +33,6 @@ def test_power_drops_when_tired_maps_correctly():
         "rate_of_force",
         "work_capacity",
         "conditioning",
-        "anaerobic_alactic",
     ]
 
 
@@ -41,7 +41,6 @@ def test_strength_posterior_chain_maps_correctly():
         "posterior_chain",
         "hip_dominant",
         "hamstring",
-        "deadlift",
     ]
 
 
@@ -50,7 +49,6 @@ def test_strength_lower_body_maps_correctly():
         "posterior_chain",
         "quad_dominant",
         "hip_dominant",
-        "deadlift",
         "compound",
     ]
 
@@ -59,7 +57,6 @@ def test_mobility_stiffness_under_fatigue_maps_correctly():
     assert derive_clarification_tags([{"tag": "mobility", "detail": "Movement stiffness under fatigue"}]) == [
         "mobility",
         "movement_quality",
-        "range",
         "cns_freshness",
     ]
 
@@ -69,7 +66,6 @@ def test_speed_reaction_maps_correctly():
         "reactive",
         "visual_processing",
         "coordination",
-        "decision_speed",
     ]
 
 
@@ -84,7 +80,6 @@ def test_multiple_details_dedupe_and_preserve_order():
 
 def test_generic_fallback_uses_entry_tag():
     assert derive_clarification_tags([{"tag": "strength", "detail": "I want to improve it overall"}]) == [
-        "strength",
         "compound",
         "posterior_chain",
         "core",

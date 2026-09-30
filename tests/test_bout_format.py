@@ -289,8 +289,10 @@ def test_muay_thai_energy_profile_is_consumed_without_changing_drill_family(monk
     assert demand["sport_energy_weights"] == weights["muay_thai"]
 
 
-# TEST 8 - a representative 3 x 3 conditioning plan is byte-identical to the
-# one this branch inherited. The foundation changes no programme output.
+# TEST 8 - a representative 3 x 3 conditioning plan is pinned byte-for-byte so a
+# bout-format change cannot silently alter programme output. The baseline is
+# regenerated deliberately when bank governance changes selection (last: the
+# Stage-2 bank governance reconciliation); it is not a cross-branch invariant.
 BASELINE = json.loads(
     (Path(__file__).parent / "data" / "conditioning_3x3_baseline.json").read_text()
 )

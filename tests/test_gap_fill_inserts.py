@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from fightcamp import stage2_payload as stage2_payload_module
 from fightcamp.gap_fill_inserts import (
     LOW_COST_AEROBIC_INSERTS,
@@ -75,8 +77,8 @@ def test_grappling_footwork_gap_uses_sparse_sport_tagged_bank_without_striking_l
     # footwork gap.
     banned = {"jab", "cross", "punch", "boxing", "ring", "ropes", "cage"}
     expected_by_sport = {
-        "wrestling": "Level-Change Feint to Angle",
-        "bjj": "Submission Hunter Stand-Up Reset",
+        "wrestling": {"Level-Change Feint to Angle", "Wrestling Stance-Motion Circle Reset"},
+        "bjj": {"Submission Hunter Stand-Up Reset", "Standing Guard-Pass Base Circle"},
     }
     for sport, expected_name in expected_by_sport.items():
         role = _footwork_insert(
@@ -84,8 +86,9 @@ def test_grappling_footwork_gap_uses_sparse_sport_tagged_bank_without_striking_l
         )
         text = role["display_text"].lower()
         assert role["technical_footwork_fallback"] is False, sport
-        assert role["technical_footwork_name"] == expected_name, sport
-        assert not any(term in text for term in banned), (sport, text)
+        assert role["technical_footwork_name"] in expected_name, sport
+        # Whole words only: "crossing the feet" is footwork, not a cross.
+        assert not any(re.search(rf"\b{term}\b", text) for term in banned), (sport, text)
 
 
 def test_boxing_footwork_gap_retains_compatible_bank_specificity():

@@ -421,7 +421,7 @@ def test_generate_plan_returns_stage2_payload():
     assert isinstance(planning_brief["weekly_role_map"].get("weeks"), list)
 
     handoff_text = result.get("stage2_handoff_text", "")
-    assert "You are Stage 2 (planner/finalizer)." in handoff_text
+    assert "You are Stage 2 (finalizer)." in handoff_text
     assert "FINALIZER PACKET" in handoff_text
     assert "AUTHORITY ORDER" in handoff_text
     assert "ATHLETE PROFILE" in handoff_text
@@ -799,7 +799,9 @@ def test_build_planning_brief_elevates_stage2_payload_into_coaching_brief():
     assert brief["phase_strategy"]["SPP"]["must_keep"] == ["rehab", "glycolytic", "alactic"]
     assert brief["phase_strategy"]["SPP"]["slot_counts"]["conditioning"] == 2
     assert brief["week_by_week_progression"]["weeks"][0]["phase"] == "SPP"
-    assert brief["week_by_week_progression"]["weeks"][0]["stage_key"] == "d21_to_d14"
+    # D-21 is planned by the normal camp planner (no late-fight bridge window);
+    # a one-week SPP camp is the single "specific density / peak" stage.
+    assert brief["week_by_week_progression"]["weeks"][0]["stage_key"] == "specific_density_to_peak"
 
 
 def test_short_notice_false_for_past_date():
