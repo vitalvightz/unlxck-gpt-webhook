@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 import pytest
 
 import api.app as app_module
+import api.generation_job_helpers as job_helpers
 from api.generation import persistence
 from api.app import create_app
 from api.auth import AuthenticatedUser
@@ -1741,7 +1742,7 @@ def test_scheduler_keeps_queued_job_until_worker_claims_and_processes():
             stage2=stage2,
             active_tasks=active_tasks,
             enable_in_process_generation=True,
-            stale_job_checker=app_module._is_stale_job,
+            stale_job_checker=job_helpers._is_stale_job,
             stale_after_seconds=90,
         )
     )
@@ -1824,7 +1825,7 @@ def test_scheduler_returns_failed_row_for_stale_running_job():
             stage2=FakeStage2Automator(result=finalized_result()),
             active_tasks=set(),
             enable_in_process_generation=False,
-            stale_job_checker=app_module._is_stale_job,
+            stale_job_checker=job_helpers._is_stale_job,
             stale_after_seconds=90,
         )
     )
@@ -1861,7 +1862,7 @@ def test_app_schedule_wrapper_recovers_stale_running_job_in_worker_only_mode():
             stage2=None,
             active_tasks=set(),
             enable_in_process_generation=False,
-            stale_job_checker=app_module._is_stale_job,
+            stale_job_checker=job_helpers._is_stale_job,
             stale_after_seconds=90,
         )
     )
@@ -3465,8 +3466,8 @@ def test_run_generation_job_warns_when_profile_refresh_fails_but_generation_cont
     assert len(warning_milestones) == 1
     assert warning_milestones[0]["detail"] == warning
     assert warning_milestones[0]["meta"] == {"warning": True}
-    response = app_module._job_response(refreshed_job, store=store, viewer_role="admin")
-    diagnostic = app_module._admin_generation_job_diagnostic(refreshed_job, stale_after_seconds=90)
+    response = job_helpers._job_response(refreshed_job, store=store, viewer_role="admin")
+    diagnostic = job_helpers._admin_generation_job_diagnostic(refreshed_job, stale_after_seconds=90)
     assert response.warnings == [warning]
     assert diagnostic.warnings == [warning]
 
@@ -3483,9 +3484,9 @@ def test_run_generation_job_warns_when_profile_refresh_fails_but_generation_cont
     # Eviction resilience: even if every progress milestone is dropped (the list is
     # FIFO-capped), the durable marker keeps the warning on the job response.
     evicted_job = {**refreshed_job, "progress_milestones": []}
-    assert app_module._job_response(evicted_job, store=store, viewer_role="admin").warnings == [warning]
+    assert job_helpers._job_response(evicted_job, store=store, viewer_role="admin").warnings == [warning]
     assert (
-        app_module._admin_generation_job_diagnostic(evicted_job, stale_after_seconds=90).warnings
+        job_helpers._admin_generation_job_diagnostic(evicted_job, stale_after_seconds=90).warnings
         == [warning]
     )
 
@@ -3517,7 +3518,7 @@ def test_run_generation_job_clean_run_has_no_profile_refresh_flag():
     plan = store.get_plan(refreshed_job["plan_id"])
     assert "profile_refresh_failed" not in plan.get("why_log", {})
     assert _map_plan_detail(plan, include_admin=False).profile_refresh_failed is False
-    assert app_module._job_response(refreshed_job, store=store).warnings == []
+    assert job_helpers._job_response(refreshed_job, store=store).warnings == []
 
 
 def test_admin_triage_resume_with_override_updates_blocked_plan_in_place():
