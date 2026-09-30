@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GUIDED_INJURY_AREA_MAX, GUIDED_INJURY_NOTES_MAX } from "@/lib/input-limits";
 import { hasGuidedInjuryReviewRisk, type GuidedInjuryState } from "@/lib/guided-injury";
 import {
@@ -920,6 +920,8 @@ interface GuidedInjuryCardProps {
   onUpdate: <K extends keyof GuidedInjuryState>(key: K, value: GuidedInjuryState[K]) => void;
   onRemove: () => void;
   onChangeArea?: () => void;
+  locationOnly?: boolean;
+  onManualEntry?: () => void;
 }
 
 export function GuidedInjuryCard({
@@ -930,11 +932,21 @@ export function GuidedInjuryCard({
   onUpdate,
   onRemove,
   onChangeArea,
+  locationOnly = false,
+  onManualEntry,
 }: GuidedInjuryCardProps) {
   const notesFreeText = getNotesFreeText(injury.notes);
   const hasExtraDetail = Boolean(notesFreeText.trim());
   const [notesOpen, setNotesOpen] = useState(hasExtraDetail);
   const [manualArea, setManualArea] = useState(false);
+  const areaInputRef = useRef<HTMLInputElement>(null);
+  const manualFocusRequested = useRef(false);
+  useEffect(() => {
+    if (manualFocusRequested.current && areaInputRef.current) {
+      areaInputRef.current.focus();
+      manualFocusRequested.current = false;
+    }
+  }, [manualArea]);
   const [advancedType, setAdvancedType] = useState(false);
   const impact = readInjuryImpact(injury.notes);
   const [staleNote, setStaleNote] = useState(false);
@@ -950,8 +962,8 @@ export function GuidedInjuryCard({
     setPrevInjury(injury);
     setIsEditingType(!(injury.injury_type && (injury.injury_type !== "surface_injury" || injury.surface_type)));
   }
-  const injuryLabel = truncateForHeader(injury.area) || `Injury ${index + 1}`;
-  const compactSummary = [getInjuryTypeLabel(injury), impact?.label, injury.trend].filter(Boolean).join(" · ") || truncateForHeader(buildCompactSummary(injury), 80);
+  const injuryLabel = truncateForHeader(injury.area) || "Affected area";
+  const compactSummary = truncateForHeader(buildCompactSummary({ ...injury, area: "" }), 120);
   const showWarning = hasGuidedInjuryReviewRisk(injury);
   const hasFollowUp = injury.injury_type !== "";
   const derivedFamily = getFamilyForInjury(injury);
@@ -962,18 +974,12 @@ export function GuidedInjuryCard({
   const reviewReady = Boolean(basicsComplete && typeComplete && safetyComplete);
   const selectedFamilyOption = activeFamily ? INJURY_FAMILIES.find((f) => f.family === activeFamily) : null;
   const selectedSubtypeLabels = getInjurySubtypeLabels(injury);
-  const liveSummary = useMemo(() => {
-    const summaryArea = injury.area.trim() || `Injury ${index + 1}`;
-    if (!injury.injury_type) return `${summaryArea} · Needs type`;
-    if (showWarning) return `${summaryArea} · ${getInjuryTypeLabel(injury)} · Review risk`;
-    return [
-      summaryArea,
-      getInjuryTypeLabel(injury),
-      injury.severity ? readInjuryImpact(injury.notes)?.label ?? injury.severity.charAt(0).toUpperCase() + injury.severity.slice(1) : "",
-      injury.trend ? injury.trend.charAt(0).toUpperCase() + injury.trend.slice(1) : "",
-    ].filter(Boolean).join(" · ");
-  }, [index, injury, showWarning]);
-  const collapsedStatus = showWarning ? "Review risk" : !injury.injury_type ? "Needs type" : "Complete";
+
+  function openManualEntry() {
+    manualFocusRequested.current = !areaInputRef.current;
+    areaInputRef.current?.focus();
+    setManualArea(true);
+  }
 
   function flagStaleExtraDetail() {
     if (!getNotesFreeText(injury.notes).trim()) {
@@ -1044,92 +1050,51 @@ export function GuidedInjuryCard({
     setIsEditingType(true);
   }
 
+  if (locationOnly) {
+    return (
+      <div className="injury-location-choice">
+        <button type="button" className="gi-notes-toggle injury-manual-entry"
+          onClick={() => { openManualEntry(); onManualEntry?.(); }}>
+          Can’t find the area? Enter it manually
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <section className={`injury-card ${isActive ? "injury-card-active" : ""}`.trim()}>
-      <div
-        className="injury-card-header injury-card-header-interactive"
-        onClick={onToggleActive}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            onToggleActive();
-          }
-        }}
-        role="button"
-        tabIndex={0}
-        aria-expanded={isActive}
-      >
-        <div className="injury-card-num">{String(index + 1).padStart(2, "0")}</div>
+    <section className={`injury-card injury-card-streamlined ${isActive ? "injury-card-active" : ""}`.trim()}>
+      <div className="injury-card-header">
         <div className="injury-card-copy">
           <h3 className="injury-card-title">{injuryLabel}</h3>
-          {!isActive ? (
-            <p className="injury-card-summary">{compactSummary || liveSummary}</p>
-          ) : (
-            <p className="injury-card-live-summary">{liveSummary}</p>
-          )}
-          {!isActive ? (
-            <div className="injury-card-pills">
-              <span className="injury-card-status-pill">{collapsedStatus}</span>
-              {hasExtraDetail ? (
-                <span className="injury-card-note-pill" title={notesFreeText}>
-                  <svg width="11" height="11" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                    <path d="M2.5 2.5h9M2.5 5.5h9M2.5 8.5h6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-                  </svg>
-                  Note
-                </span>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-        <div className="injury-card-badges">
-          {injury.severity ? (
-            <span className={`injury-severity-badge ${impact ? "injury-impact-badge" : `injury-severity-badge-${injury.severity}`}`}>
-              {impact?.label ?? injury.severity.charAt(0).toUpperCase() + injury.severity.slice(1)}
-            </span>
-          ) : null}
-          {injury.trend ? (
-            <span className={`injury-trend-badge injury-trend-badge-${injury.trend}`}>
-              {TREND_ARROWS[injury.trend] ?? ""}{" "}
-              {injury.trend.charAt(0).toUpperCase() + injury.trend.slice(1)}
-            </span>
-          ) : null}
+          {!isActive && compactSummary ? <p className="injury-card-summary">{compactSummary}</p> : null}
+          {showWarning || hasExtraDetail ? <div className="injury-card-pills">
+            {showWarning ? <span className="injury-card-status-pill" role="status">Review risk</span> : null}
+            {!isActive && hasExtraDetail ? <span className="injury-card-note-pill">Note</span> : null}
+          </div> : null}
         </div>
         <div className="injury-card-controls">
-          {!isActive ? <button type="button" className="injury-card-edit-btn" onClick={(e) => { e.stopPropagation(); onToggleActive(); }}>Edit</button> : null}
-          <button
-            type="button"
-            className="injury-card-remove-btn"
-            onClick={(e) => { e.stopPropagation(); onRemove(); }}
-            aria-label={`Remove injury ${index + 1}`}
-          >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-            <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
+          {isActive ? <button type="button" className="gi-change-btn" aria-label={`Change affected area for injury ${index + 1}`}
+            onClick={() => { if (onChangeArea) { setManualArea(false); onChangeArea(); } else openManualEntry(); }}>Change</button>
+            : <button type="button" className="injury-card-edit-btn" aria-label={`Edit injury ${index + 1}`} onClick={onToggleActive}>Edit</button>}
+          <button type="button" className="injury-card-remove-btn" onClick={onRemove} aria-label={`Remove injury ${index + 1}`}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
           </button>
         </div>
       </div>
 
       {isActive ? (
         <div className="injury-card-form">
-          {injury.area.trim() ? (
-            <div className="gi-selection-summary">
-              <p className="gi-selection-title">✓ {injury.area}</p>
-              <button type="button" className="gi-change-btn" onClick={() => { if (onChangeArea) onChangeArea(); else setManualArea(true); }}>Change</button>
-            </div>
-          ) : <p className="gi-selection-helper">Tap an area on the body map.</p>}
-          <button type="button" className="gi-notes-toggle injury-manual-entry" aria-expanded={manualArea}
-            onClick={() => setManualArea((current) => !current)}>
-            {manualArea ? "Hide manual entry" : "Can’t find the area? Enter it manually"}
-          </button>
-          {manualArea ? (
+          {manualArea || !injury.area.trim() ? (
             <div className="gi-field">
               <label htmlFor={`gi-area-${index}`} className="gi-label">Affected area</label>
-              <input id={`gi-area-${index}`} value={injury.area} maxLength={GUIDED_INJURY_AREA_MAX}
+              <input ref={areaInputRef} id={`gi-area-${index}`} value={injury.area} maxLength={GUIDED_INJURY_AREA_MAX}
                 onChange={(e) => { onUpdate("area", e.target.value); onUpdate("zone", ""); }}
                 placeholder="e.g. left shoulder" />
             </div>
           ) : null}
-
+          {injury.area.trim() ? <>
           {staleNote && hasExtraDetail ? (
             <div className="gi-stale-note gi-stale-note-flash" role="alert">
               <div>
@@ -1163,7 +1128,7 @@ export function GuidedInjuryCard({
                     ? `${selectedFamilyOption ? `${selectedFamilyOption.label} · ` : ""}${selectedSubtypeLabels.join(", ")}`
                     : getInjuryTypeLabel(injury)}
                 </p>
-                <button type="button" className="gi-change-btn" onClick={() => setIsEditingType(true)} aria-expanded={isEditingType}>Change</button>
+                <button type="button" className="gi-change-btn" onClick={() => setIsEditingType(true)} aria-label="Change injury type" aria-expanded={isEditingType}>Change</button>
               </div>
             ) : !advancedType ? (
               <>
@@ -1320,6 +1285,7 @@ export function GuidedInjuryCard({
             </button>
           )}
           <button type="button" className="primary-button gi-save-injury" disabled={!reviewReady} onClick={onToggleActive}>Save injury</button>
+          </> : null}
         </div>
       ) : null}
     </section>

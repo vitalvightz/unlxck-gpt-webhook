@@ -42,6 +42,7 @@ import {
   hydrateGuidedInjuryStates,
   type GuidedInjuryState,
 } from "@/lib/guided-injury";
+import { StepValidationPanel, type StepValidationCheck } from "@/components/onboarding-step-validation";
 import { GuidedInjuryCard } from "@/components/guided-injury-card";
 import { OnboardingTrustNote } from "@/components/onboarding-trust-note";
 import { SafetyNote } from "@/components/safety-note";
@@ -265,13 +266,6 @@ type DraftMetadata = {
   guided_injury?: Partial<GuidedInjuryState> | null;
   guided_injuries?: Array<Partial<GuidedInjuryState> | null> | null;
   no_scheduled_fight?: boolean | null;
-};
-
-type StepValidationStatus = "done" | "pending" | "warning";
-
-type StepValidationCheck = {
-  label: string;
-  status: StepValidationStatus;
 };
 
 function numberOrNull(value: string): number | null {
@@ -779,48 +773,6 @@ function ReviewDetailList({ items }: { items: Array<{ label: string; value: stri
   );
 }
 
-function StepValidationPanel({
-  stepLabel,
-  title,
-  description,
-  checks,
-}: {
-  stepLabel: string;
-  title: string;
-  description: string;
-  checks: StepValidationCheck[];
-}) {
-  const unresolvedChecks = checks.filter((check) => check.status !== "done");
-
-  return (
-    <div
-      className={`support-panel onboarding-validation-panel ${unresolvedChecks.length ? "onboarding-validation-panel-attention" : "onboarding-validation-panel-ready"}`.trim()}
-      role="status"
-      aria-live="polite"
-    >
-      <div className="onboarding-validation-header">
-        <div className="onboarding-validation-copy">
-          <p className="kicker">{stepLabel} check</p>
-          <h2 className="form-section-title">{title}</h2>
-          <p className="muted">{description}</p>
-        </div>
-        <span
-          className={`onboarding-validation-badge ${unresolvedChecks.length ? "" : "onboarding-validation-badge-ready"}`.trim()}
-        >
-          {unresolvedChecks.length ? `${unresolvedChecks.length} left` : "Ready"}
-        </span>
-      </div>
-      <ul className="summary-list onboarding-validation-list">
-        {checks.map((check) => (
-          <li key={`${check.status}-${check.label}`} className="onboarding-validation-item" data-status={check.status}>
-            {check.label}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
 function getReviewStepBlockingIssue(
   nextForm: PlanRequest,
   options: {
@@ -907,6 +859,7 @@ export function PlanIntakeForm() {
   const [form, setForm] = useState<PlanRequest>(emptyPlanRequest());
   const [guidedInjuries, setGuidedInjuries] = useState<GuidedInjuryState[]>([]);
   const [activeGuidedInjuryIndex, setActiveGuidedInjuryIndex] = useState<number | null>(null);
+  const [isInjuryMapOpen, setIsInjuryMapOpen] = useState(true);
   const [noRestrictions, setNoRestrictions] = useState(true);
   const [showClearInjuriesConfirm, setShowClearInjuriesConfirm] = useState(false);
   const [bodyMapSide, setBodyMapSide] = useState<BodyMapSide>("front");
@@ -988,6 +941,7 @@ export function PlanIntakeForm() {
     });
     setGuidedInjuries(nextGuidedInjuries);
     setActiveGuidedInjuryIndex(nextGuidedInjuries.length ? 0 : null);
+    setIsInjuryMapOpen(!nextGuidedInjuries[0]?.area.trim());
     setNoRestrictions(!hasStoredRestrictions);
     setNoScheduledFight(Boolean(draft?.no_scheduled_fight ?? nextForm.no_scheduled_fight));
     const savedStep = Number(draft?.current_step ?? 0);
@@ -1386,6 +1340,8 @@ export function PlanIntakeForm() {
 
   function handleEditGuidedInjury(index: number) {
     setActiveGuidedInjuryIndex(index);
+    setIsInjuryMapOpen(false);
+    setChangingInjuryAreaIndex(null);
   }
 
   function handleNoRestrictionsChange(checked: boolean) {
@@ -1420,7 +1376,6 @@ export function PlanIntakeForm() {
 
   const [changingInjuryAreaIndex, setChangingInjuryAreaIndex] = useState<number | null>(null);
   const injuryMapRef = useRef<HTMLDivElement>(null);
-  const [isInjuryMapOpen, setIsInjuryMapOpen] = useState(true);
 
   function handleBodyMapZoneSelect(zoneKey: string, label: string) {
     setIsInjuryMapOpen(false);
@@ -1440,10 +1395,8 @@ export function PlanIntakeForm() {
         (!injury.zone && injury.area.trim().toLowerCase() === label.toLowerCase()),
     );
     if (existingIndex >= 0) {
-      // The zone is already marked — cycle its severity (low → moderate → high)
-      // so the legend is usable straight from the map, never removing it or
-      // creating a duplicate. Backfill the zone key on legacy matches so the
-      // zone stays lit even after the athlete rewrites the free-text area.
+      // Reopen the selected injury without changing its functional impact.
+      // Backfill the stable zone key for legacy matches.
       const existing = guidedInjuries[existingIndex];
       const nextGuidedInjuries = [...guidedInjuries];
       nextGuidedInjuries[existingIndex] = coerceGuidedInjuryEditState({
@@ -3060,7 +3013,7 @@ export function PlanIntakeForm() {
                         </div>
                       </div>
                     ) : null}
-                    <div className={`injury-body-map-layout ${isInjuryMapOpen ? "" : "injury-body-map-layout-selected"}`}>
+                    <div className={`injury-body-map-layout ${isInjuryMapOpen ? "injury-body-map-layout-picking" : "injury-body-map-layout-selected"}`}>
                       {isInjuryMapOpen ? (
                       <div className="injury-body-map-col" ref={injuryMapRef}>
                         <BodyMap
@@ -3080,6 +3033,7 @@ export function PlanIntakeForm() {
                       <div className="injury-cards-col">
                         <div className="injury-card-stack">
                           {guidedInjuries.map((injury, index) => {
+                            if (activeGuidedInjuryIndex !== index && !hasGuidedInjuryContent(injury)) return null;
                             const cardId = `guidedInjuryCard-${index}`;
                             const isInvalidCard = invalidFieldId === cardId;
                             return (
@@ -3095,6 +3049,12 @@ export function PlanIntakeForm() {
                                   injury={injury}
                                   index={index}
                                   isActive={activeGuidedInjuryIndex === index}
+                                  locationOnly={isInjuryMapOpen && (activeGuidedInjuryIndex === index || !injury.area.trim())}
+                                  onManualEntry={() => {
+                                    setActiveGuidedInjuryIndex(index);
+                                    setIsInjuryMapOpen(false);
+                                    setChangingInjuryAreaIndex(null);
+                                  }}
                                   onToggleActive={() => {
                                     if (activeGuidedInjuryIndex === index) {
                                       setActiveGuidedInjuryIndex(null);
@@ -3121,11 +3081,11 @@ export function PlanIntakeForm() {
                           })}
                         </div>
 
-                        <div className="injury-card-add-row">
+                        {!isInjuryMapOpen && activeGuidedInjuryIndex === null ? <div className="injury-card-add-row">
                           <button type="button" className="injury-card-add-btn" onClick={handleAddGuidedInjury}>
                             <span aria-hidden="true">+</span> Add another injury
                           </button>
-                        </div>
+                        </div> : null}
                       </div>
                     </div>
                     <button type="button" className="gi-notes-toggle gi-no-restrictions-btn" onClick={() => handleNoRestrictionsChange(true)}>
