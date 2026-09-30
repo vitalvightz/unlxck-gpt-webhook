@@ -44,6 +44,7 @@ export function TodayDecisionPanel({
   sources,
   confidenceNote,
   compactPreview = false,
+  guidanceOnly = false,
 }: {
   banner: TodayDecisionBanner | null;
   tier?: TodayDecisionTier;
@@ -57,6 +58,8 @@ export function TodayDecisionPanel({
   confidenceNote?: string;
   /** The next-session card below already names the exercise and explains its lock. */
   compactPreview?: boolean;
+  /** The decision applies to today while the visible workout is on another day. */
+  guidanceOnly?: boolean;
 }) {
   if (!banner) {
     return null;
@@ -102,10 +105,12 @@ export function TodayDecisionPanel({
       data-state={banner.displayState}
       data-tone={banner.tone}
       data-compact={isCompactPreview || undefined}
+      data-guidance-only={guidanceOnly || undefined}
       role="status"
     >
       <div className="today-decision-command">
         <div className="today-decision-heading">
+          {guidanceOnly ? <span className="today-decision-scope">TODAY&apos;S GUIDANCE</span> : null}
           <span className="today-decision-icon" aria-hidden="true">
             {banner.chip}
           </span>
@@ -117,7 +122,7 @@ export function TodayDecisionPanel({
         ) : null}
       </div>
       {hasEvidence ? (
-        <details className="today-decision-disclosure" open={!isPreview}>
+        <details className="today-decision-disclosure" open={!isPreview && (!guidanceOnly || banner.displayState !== "go")}>
           <summary>{isSafetyNotice ? "Why this message?" : "Why this decision?"}</summary>
         <dl className="today-decision-evidence" data-evidence-count={evidenceCount}>
           {triggerLabels.length ? (

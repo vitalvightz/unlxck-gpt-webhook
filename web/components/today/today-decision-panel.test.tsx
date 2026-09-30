@@ -153,6 +153,44 @@ test("preview above a named session keeps its instruction without repeating the 
   assert.match(html, /data-compact="true"/);
 });
 
+test("today's guidance retains injury evidence while a future session is previewed", () => {
+  const html = render({
+    banner: { ...STOP_BANNER, action: undefined },
+    tier: "stop",
+    guidanceOnly: true,
+    triggers: ["Active severe injury: Knee"],
+    safetyChecks: [{
+      code: "surface_injury",
+      label: "Skin injury",
+      result: "medical_review",
+      result_label: "Medical review needed",
+    }],
+    sources: ["your tracked injuries"],
+  });
+
+  assert.match(html, /TODAY'S GUIDANCE/);
+  assert.match(html, /Active severe injury: Knee/);
+  assert.match(html, /Skin injury — Medical review needed/);
+  assert.match(html, /your tracked injuries/);
+  assert.match(html, /<details[^>]*\sopen/);
+  assert.doesNotMatch(html, /Do not start today's planned session/);
+});
+
+test("a clear check-in keeps its explanation reachable without a future-session command", () => {
+  const html = render({
+    banner: { ...BANNER, displayState: "go", chip: "GO", tone: "green", action: undefined },
+    guidanceOnly: true,
+    triggers: ["Good sleep"],
+    sources: ["today's check-in"],
+  });
+
+  assert.match(html, /TODAY'S GUIDANCE/);
+  assert.match(html, /Why this decision/);
+  assert.match(html, /Good sleep/);
+  assert.doesNotMatch(html, /Cut 1 round/);
+  assert.ok(!/<details[^>]*\sopen/.test(html));
+});
+
 test("the status chip is the only decision-state label", () => {
   const html = render({ banner: STOP_BANNER, tier: "stop" });
 

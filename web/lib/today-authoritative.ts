@@ -104,6 +104,8 @@ export type ResolvedTodayDecision = {
   authoritativeTier: AuthoritativeTodayTier;
   displayTier: TodayDecisionTier;
   banner: TodayDecisionBanner | null;
+  /** Current-day guidance shown separately when the session below is a preview. */
+  currentGuidanceBanner: TodayDecisionBanner | null;
   tone: TodayDecisionTone;
   hasSession: boolean;
   sessionIsToday: boolean;
@@ -435,6 +437,19 @@ function getPrimarySafetyNoticeBanner(
   };
 }
 
+function scopeToCurrentGuidance(banner: TodayDecisionBanner | null): TodayDecisionBanner | null {
+  if (!banner) {
+    return null;
+  }
+  // The current decision may carry useful injury care or load instructions.
+  // Remove green workout commands and references to a session absent today.
+  const action = banner.displayState === "go" ||
+    (banner.action && /\bsession\b|\bplanned work\b/i.test(banner.action))
+    ? undefined
+    : banner.action;
+  return { ...banner, action };
+}
+
 /**
  * Resolve Today once for both presentation and session safety.
  *
@@ -486,6 +501,19 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
         injuryPresentation,
         state.today.next_session,
       );
+  // A future workout must stay a neutral preview. The current-day decision can
+  // still explain the athlete's check-in or injury hold in its own scoped panel.
+  const currentGuidanceBanner = isPreview && !safetyNoticeLeads &&
+    authoritativeTier !== "not_checked_in"
+    ? scopeToCurrentGuidance(resolvePresentationBanner(
+        recommendationState,
+        authoritativeTier,
+        state.today.recommendation_reason,
+        authoritativeTier === "stop"
+          ? getLegacyInjuryOverrideBanner(state, "today's training")
+          : null,
+      ))
+    : null;
   const primaryMessageKind: ResolvedTodayDecision["primaryMessageKind"] = banner
     ? banner.displayState === "safety_notice"
       ? "safety_notice"
@@ -512,6 +540,7 @@ export function resolveTodayDecision(state: TodayCommandView): ResolvedTodayDeci
     authoritativeTier,
     displayTier,
     banner,
+    currentGuidanceBanner,
     tone,
     hasSession,
     sessionIsToday,

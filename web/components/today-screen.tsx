@@ -211,7 +211,7 @@ export function TodayScreen() {
     resolvedDecision,
   );
   const visibleTriggerLabels =
-    resolvedDecision.displayTier === "preview"
+    resolvedDecision.displayTier === "preview" && !resolvedDecision.currentGuidanceBanner
       ? []
       : state.today.recommendation_trigger_labels;
   const commandRisks = getDistinctTodayRiskWatch(
@@ -274,13 +274,16 @@ export function TodayScreen() {
           sessionHref={resolvedDecision.displayTier === "preview" ? undefined : "#today-session"}
         />
         <TodayDecisionPanel
-          banner={resolvedDecision.banner}
-          compactPreview={resolvedDecision.hasSession}
-          tier={resolvedDecision.displayTier}
+          banner={resolvedDecision.currentGuidanceBanner ?? resolvedDecision.banner}
+          compactPreview={resolvedDecision.hasSession && !resolvedDecision.currentGuidanceBanner}
+          guidanceOnly={Boolean(resolvedDecision.currentGuidanceBanner)}
+          tier={resolvedDecision.currentGuidanceBanner ? resolvedDecision.authoritativeTier : resolvedDecision.displayTier}
           triggers={state.today.recommendation_trigger_labels}
           safetyChecks={state.today.recommendation_safety_checks}
           context={state.today.recommendation_context_labels}
-          sources={state.today.recommendation_sources}
+          sources={resolvedDecision.currentGuidanceBanner
+            ? state.today.recommendation_sources?.filter((source) => source !== "today's planned session")
+            : state.today.recommendation_sources}
           confidenceNote={state.today.recommendation_confidence_note}
         />
         <TodayRiskWatch
