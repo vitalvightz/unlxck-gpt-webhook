@@ -247,6 +247,71 @@ test("future pull-back remains a neutral pending preview", () => {
   assert.equal(resolved.severeInjuryBlocksCurrentSession, false);
   assert.equal(resolved.banner?.chip, "PREVIEW");
   assert.equal(resolved.tone, "neutral");
+  assert.equal(resolved.currentGuidanceBanner?.chip, "PULL BACK");
+});
+
+test("a future workout keeps its lock while today's check-in explanation is available", () => {
+  const resolved = resolveTodayDecision({
+    ...BASE_STATE,
+    today: {
+      ...BASE_STATE.today,
+      recommendation_reason: "Your sleep and pain checks are clear today.",
+      recommendation_trigger_labels: ["Good sleep"],
+      next_session: { ...BASE_STATE.today.next_session, session_relation: "next" },
+      session_scope: "next",
+    },
+  });
+
+  assert.equal(resolved.banner?.chip, "PREVIEW");
+  assert.equal(resolved.currentGuidanceBanner?.chip, "GO");
+  assert.equal(resolved.currentGuidanceBanner?.detail, "Your sleep and pain checks are clear today.");
+  assert.equal(resolved.currentGuidanceBanner?.action, undefined);
+  assert.equal(resolved.canCompleteSession, false);
+});
+
+test("current injury care instructions remain visible beside a future session", () => {
+  const resolved = resolveTodayDecision({
+    ...BASE_STATE,
+    today: {
+      ...BASE_STATE.today,
+      recommendation_state: "pull_back",
+      decision_tier: "pull_back",
+      recommendation_reason: [
+        "Get this checked.",
+        "Your left eyebrow cut needs checking before you train through it.",
+        "Keep it clean and covered, and keep direct contact off that area.",
+        "Seek medical advice if it worsens.",
+      ].join("\n"),
+      next_session: { ...BASE_STATE.today.next_session, session_relation: "next" },
+      session_scope: "next",
+    },
+  });
+
+  assert.equal(resolved.banner?.chip, "PREVIEW");
+  assert.equal(resolved.currentGuidanceBanner?.chip, "PULL BACK");
+  assert.match(resolved.currentGuidanceBanner?.action ?? "", /Keep it clean and covered/);
+  assert.match(resolved.currentGuidanceBanner?.safety ?? "", /Seek medical advice/);
+});
+
+test("a future workout does not hide the backend severe-injury hold or revive green copy", () => {
+  const resolved = resolveTodayDecision({
+    ...BASE_STATE,
+    today: {
+      ...BASE_STATE.today,
+      recommendation_reason: "Everything feels good. Train normally.",
+      decision_tier: "stop",
+      next_session: { ...BASE_STATE.today.next_session, session_relation: "next" },
+      session_scope: "next",
+    },
+    open_injuries: [ACTIVE_SEVERE_INJURY],
+  });
+
+  assert.equal(resolved.banner?.chip, "PREVIEW");
+  assert.equal(resolved.currentGuidanceBanner?.chip, "STOP");
+  assert.match(resolved.currentGuidanceBanner?.detail ?? "", /Active severe injury: Knee/);
+  assert.match(resolved.currentGuidanceBanner?.detail ?? "", /today's training/);
+  assert.doesNotMatch(resolved.currentGuidanceBanner?.detail ?? "", /Everything feels good/);
+  assert.equal(resolved.blocksCurrentSession, false);
 });
 
 // resolveTodayDecision is presentation and safety-tier logic; it is not a
@@ -460,6 +525,7 @@ test("current skin care outranks a future rehab preview without blocking that se
   assert.equal(resolved.canCompleteSession, false);
   assert.equal(resolved.sessionOutcome, "preview");
   assert.equal(resolved.tone, "amber");
+  assert.equal(resolved.currentGuidanceBanner, null);
 });
 
 test("current restrictive decisions still outrank a local skin-care notice", () => {
