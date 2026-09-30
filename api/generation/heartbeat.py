@@ -11,26 +11,9 @@ from typing import Any, Callable
 from ..generation_config import generation_job_stale_after_seconds
 from ..store import AppStore, is_pre_start_stale_generation_job
 from .time_utils import utc_now_iso
+from api.datetimes import parse_utc_datetime as parse_datetime
 
 logger = logging.getLogger(__name__)
-
-
-def parse_datetime(value: Any) -> datetime | None:
-    if not value:
-        return None
-    if isinstance(value, datetime):
-        if value.tzinfo is None:
-            return value.replace(tzinfo=timezone.utc)
-        return value.astimezone(timezone.utc)
-    if isinstance(value, str):
-        try:
-            dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
-            if dt.tzinfo is None:
-                return dt.replace(tzinfo=timezone.utc)
-            return dt.astimezone(timezone.utc)
-        except ValueError:
-            return None
-    return None
 
 
 def is_stale_job(job: dict[str, Any], *, stale_after_seconds: int | None = None) -> bool:

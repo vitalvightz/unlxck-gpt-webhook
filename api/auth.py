@@ -14,6 +14,7 @@ from fastapi import HTTPException, status
 from supabase import Client, ClientOptions, create_client
 
 from .environment import is_production_environment
+from .settings import env_int
 
 logger = logging.getLogger(__name__)
 
@@ -72,17 +73,8 @@ class SupabaseAuthService:
         self.client = client
         self._token_cache: dict[str, tuple[AuthenticatedUser, float]] = {}
         self._cache_lock = RLock()
-        try:
-            self._cache_ttl_seconds = int(os.getenv("AUTH_TOKEN_CACHE_TTL") or "60")
-        except ValueError:
-            logger.warning("[auth] invalid AUTH_TOKEN_CACHE_TTL; falling back to 60")
-            self._cache_ttl_seconds = 60
-
-        try:
-            self._max_cache_size = int(os.getenv("AUTH_TOKEN_CACHE_MAX_SIZE") or "1000")
-        except ValueError:
-            logger.warning("[auth] invalid AUTH_TOKEN_CACHE_MAX_SIZE; falling back to 1000")
-            self._max_cache_size = 1000
+        self._cache_ttl_seconds = env_int("AUTH_TOKEN_CACHE_TTL", 60)
+        self._max_cache_size = env_int("AUTH_TOKEN_CACHE_MAX_SIZE", 1000)
 
     @classmethod
     def from_env(cls) -> "SupabaseAuthService":

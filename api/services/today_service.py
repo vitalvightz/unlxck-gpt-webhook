@@ -88,6 +88,7 @@ from api.services.readiness_failsafe import (
     apply_context_failsafe,
     build_readiness_signal,
 )
+from api.datetimes import parse_calendar_date as _parse_structured_date
 
 logger = logging.getLogger(__name__)
 
@@ -1535,13 +1536,6 @@ def _iter_mapping_items(value: Any) -> list[Mapping[str, Any]]:
 
 def _clean_text(value: Any) -> str:
     return str(value or "").strip()
-
-
-def _parse_structured_date(value: Any) -> date | None:
-    try:
-        return date.fromisoformat(_clean_text(value)[:10])
-    except ValueError:
-        return None
 
 
 def _structured_effective_load(day_type: Any) -> str:

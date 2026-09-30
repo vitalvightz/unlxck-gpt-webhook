@@ -18,6 +18,7 @@ from typing import Any, Iterable, Literal, Mapping
 from zoneinfo import ZoneInfo
 
 from api.notification_models import NotificationCategory, NotificationPreferences
+from api.datetimes import parse_utc_datetime as _parse_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -509,21 +510,6 @@ def select_notification_candidate(
             candidate.dedupe_key,
         ),
     )
-
-
-def _parse_datetime(value: Any) -> datetime | None:
-    if isinstance(value, datetime):
-        parsed = value
-    elif isinstance(value, str) and value.strip():
-        try:
-            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        except ValueError:
-            return None
-    else:
-        return None
-    if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
 
 
 def _simulation_state(

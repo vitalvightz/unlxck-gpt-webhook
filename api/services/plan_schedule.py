@@ -19,6 +19,7 @@ from api.models import WeeklyDayEntry, WeeklySchedule
 from api.plan_mappers import _map_weekly_schedule, _visible_plans_for_athlete
 from api.store import AppStore
 from api.services.open_plan_timeline import open_plan_anchor_date, open_plan_spec
+from api.datetimes import parse_calendar_date as parse_iso_date
 
 _WEEKDAY_NAMES = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
@@ -50,13 +51,6 @@ _STRUCTURED_WORK_HEADLINE_RE = re.compile(
     r"tactical\s+(?:watch|review)|film\s+(?:review|study))\b",
     re.I,
 )
-
-
-def parse_iso_date(value: Any) -> date | None:
-    try:
-        return date.fromisoformat(str(value or "").strip()[:10])
-    except (ValueError, AttributeError):
-        return None
 
 
 def latest_visible_plan_row(store: AppStore, athlete_id: str) -> dict[str, Any] | None:
