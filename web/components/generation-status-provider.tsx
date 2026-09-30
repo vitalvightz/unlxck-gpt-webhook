@@ -681,7 +681,10 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
     const interval = setInterval(() => {
       // Retained job first: local pending state is not the source of truth for
       // "is a build still in flight", it is only one way to discover one.
-      if (shouldPollGenerationStatus(trackedJobRef.current?.jobId, Boolean(getPendingGeneration()))) {
+      if (
+        shouldPollGenerationStatus(trackedJobRef.current?.jobId, Boolean(getPendingGeneration())) ||
+        latestJob?.requires_admin_resume === true
+      ) {
         void checkStatus();
       }
     }, GLOBAL_STATUS_POLL_MS);
@@ -720,7 +723,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
       window.removeEventListener("storage", handleStorageChange);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [checkStatus, token]);
+  }, [checkStatus, token, latestJob?.requires_admin_resume]);
 
   useEffect(() => {
     adminHoldRef.current = shouldPollAdminHoldStatus(latestJob);
