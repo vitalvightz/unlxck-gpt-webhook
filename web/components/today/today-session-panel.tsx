@@ -581,11 +581,9 @@ export function TodaySessionPanel({
     ? "Blocked by an active severe injury."
     : decisionBlocksCurrentSession
       ? "Follow the recommendation above. Do not start this session from Today."
-      : isSessionPreview
-        ? "Preview only. Completion opens on the matched training day."
-        : resolvedDecision.authoritativeTier === "not_checked_in"
-          ? "Submit today's check-in to unlock session actions."
-          : "This entry has nothing to log. Follow it as written.";
+      : resolvedDecision.authoritativeTier === "not_checked_in"
+        ? "Submit today's check-in to unlock session actions."
+        : "This entry has nothing to log. Follow it as written.";
 
   async function saveCompletion(
     nextStatus: TodayCompletionStatus,
