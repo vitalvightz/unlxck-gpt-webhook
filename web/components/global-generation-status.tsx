@@ -197,25 +197,7 @@ export function getGenerationStatusTarget(
   isAdminViewer = true,
 ): `/generate` | `/admin/athletes/${string}` | `/plans/${string}` | `/plans/${string}?review_required=1` | null {
   if (phase === "queued" || phase === "running" || phase === "finalizing") {
-    if (source === "admin_latest_intake" && athleteId) {
-      return isAdminViewer ? `/admin/athletes/${athleteId}` : "/generate";
-    }
-
-    if (source === "admin_triage_resume") {
-      if (planId) {
-        return `/plans/${planId}`;
-      }
-
-      if (isAdminViewer && athleteId) {
-        return `/admin/athletes/${athleteId}`;
-      }
-
-      // An athlete whose held build was just resumed has nowhere useful to go:
-      // /generate remounts the intake/build screen, which reads as the build
-      // starting over. The ribbon stays a status notice until the plan exists.
-      return null;
-    }
-
+    // The loading screen recovers the active job, including admin-approved builds.
     return "/generate";
   }
 

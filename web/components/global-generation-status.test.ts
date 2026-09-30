@@ -123,13 +123,15 @@ test("running quick_build and self_serve stay on generate", () => {
   assert.equal(getGenerationStatusTarget("running", null, null, "quick_build", "ath_1"), "/generate");
 });
 
-test("running admin_latest_intake routes to admin athlete profile", () => {
-  assert.equal(getGenerationStatusTarget("running", null, null, "admin_latest_intake", "ath_123"), "/admin/athletes/ath_123");
+test("running admin_latest_intake opens the generation loading screen", () => {
+  assert.equal(getGenerationStatusTarget("running", null, null, "admin_latest_intake", "ath_123"), "/generate");
 });
 
-test("running admin_triage_resume routes to plan when linked, else athlete profile", () => {
-  assert.equal(getGenerationStatusTarget("running", "plan_999", null, "admin_triage_resume", "ath_123"), "/plans/plan_999");
-  assert.equal(getGenerationStatusTarget("running", null, null, "admin_triage_resume", "ath_123"), "/admin/athletes/ath_123");
+test("approved admin_triage_resume opens the generation loading screen with or without a plan", () => {
+  for (const phase of ["queued", "running", "finalizing"]) {
+    assert.equal(getGenerationStatusTarget(phase, "plan_999", null, "admin_triage_resume", "ath_123"), "/generate");
+    assert.equal(getGenerationStatusTarget(phase, null, null, "admin_triage_resume", "ath_123"), "/generate");
+  }
 });
 
 test("completed admin generation routes to job-linked plan", () => {
@@ -224,25 +226,16 @@ test("an athlete is never offered the admin review link for a held plan", () => 
   assert.equal(resolveAdminHoldRibbonCopy(true, false).ctaLabel, "Awaiting admin");
 });
 
-test("an athlete's resumed build does not link into the build screen", () => {
-  // /generate remounts the intake/build flow, which reads as the plan
-  // starting over; the athlete's ribbon stays a status notice instead.
-  assert.equal(
-    getGenerationStatusTarget("running", null, null, "admin_triage_resume", "athlete_1", false),
-    null,
-  );
-  // An admin resuming from the athlete profile still gets their own target.
-  assert.equal(
-    getGenerationStatusTarget("running", null, null, "admin_triage_resume", "athlete_1", true),
-    "/admin/athletes/athlete_1",
-  );
-  // Once the plan exists, both roles open the plan itself.
-  assert.equal(
-    getGenerationStatusTarget("running", "plan_1", null, "admin_triage_resume", "athlete_1", false),
-    "/plans/plan_1",
-  );
+test("resumed builds open the existing loading screen for both roles", () => {
+  for (const isAdmin of [false, true]) {
+    for (const planId of [null, "plan_1"]) {
+      assert.equal(
+        getGenerationStatusTarget("running", planId, null, "admin_triage_resume", "athlete_1", isAdmin),
+        "/generate",
+      );
+    }
+  }
 });
-
 test("a resumed build reports the approval instead of a generic generating message", () => {
   assert.equal(
     resolveAthleteResumeStatusMessage("running", "admin_triage_resume", "Generating plan..."),
