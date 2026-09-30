@@ -41,6 +41,29 @@ jobs:
         with:
           fetch-depth: 0
 
+      # The live database must already carry every table, column, function
+      # and index this commit needs (api/schema_requirements.py). If a
+      # migration has not been applied to production, stop here instead of
+      # shipping code that fails at runtime. Never skipped: missing
+      # credentials fail the deploy.
+      - name: Setup Python for schema gate
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.15"
+
+      - name: Install schema gate dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          pip install "$(grep -E '^supabase==' requirements.txt)"
+
+      - name: Require production schema to match this commit
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_SCHEMA_GATE_REQUIRED: "true"
+        run: python tools/run_supabase_runtime_schema_gate.py
+
       - name: Configure SSH
         env:
           SSH_PRIVATE_KEY: ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}

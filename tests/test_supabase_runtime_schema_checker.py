@@ -36,8 +36,12 @@ def _all_required_index_names() -> list[str]:
     return [req.accepted_names[0] for req in INDEX_REQUIREMENTS]
 
 
-def _bare_function_names() -> list[str]:
-    return [qualified.split(".", 1)[-1] for qualified in REQUIRED_FUNCTIONS]
+def _bare_function_names(schema: str = "public") -> list[str]:
+    return [
+        qualified.split(".", 1)[-1]
+        for qualified in REQUIRED_FUNCTIONS
+        if qualified.split(".", 1)[0] == schema
+    ]
 
 
 def _valid_payload() -> dict:
@@ -45,6 +49,7 @@ def _valid_payload() -> dict:
         "tables": list(REQUIRED_TABLES),
         "columns": {table: list(cols) for table, cols in REQUIRED_COLUMNS.items()},
         "functions": _bare_function_names(),
+        "private_functions": _bare_function_names("private"),
         "indexes": _all_required_index_names(),
         "constraints": [],
         "rls": {table: True for table in RLS_REQUIRED_TABLES},
@@ -107,14 +112,32 @@ def test_profiles_active_plan_id_is_required_runtime_column():
 
 
 def test_find_missing_functions_none_when_all_present():
-    assert find_missing_functions(_bare_function_names()) == []
+    assert find_missing_functions(_bare_function_names(), _bare_function_names("private")) == []
 
 
 def test_find_missing_functions_reports_schema_qualified_name():
     present = [n for n in _bare_function_names() if n != "check_plan_generation_short_window_limit"]
-    assert find_missing_functions(present) == [
+    assert find_missing_functions(present, _bare_function_names("private")) == [
         "public.check_plan_generation_short_window_limit"
     ]
+
+
+def test_private_helpers_are_required_in_the_private_schema():
+    # Moved to `private` by harden_internal_functions_and_search_paths; a
+    # same-named function in `public` does not satisfy the requirement.
+    for name in ("is_admin", "prevent_self_role_escalation", "prevent_username_policy_bypass"):
+        assert f"private.{name}" in REQUIRED_FUNCTIONS
+        assert f"public.{name}" not in REQUIRED_FUNCTIONS
+    everything_public = _bare_function_names() + _bare_function_names("private")
+    assert find_missing_functions(everything_public) == [
+        q for q in REQUIRED_FUNCTIONS if q.startswith("private.")
+    ]
+
+
+def test_introspection_reads_private_functions():
+    snapshot = SchemaIntrospection.from_payload({"private_functions": ["is_admin"]})
+    assert snapshot.private_functions == {"is_admin"}
+    assert SchemaIntrospection.from_payload({}).private_functions == frozenset()
 
 
 # --- index / constraint checks --------------------------------------------

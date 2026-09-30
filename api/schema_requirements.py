@@ -484,13 +484,15 @@ REQUIRED_FUNCTIONS: tuple[str, ...] = (
     "public.claim_generation_job",
     "public.complete_generation_job",
     "public.fail_generation_job",
-    "public.prevent_self_role_escalation",
-    "public.prevent_username_policy_bypass",
+    # Internal trigger/policy helpers moved to the private schema by
+    # 20260726162809_harden_internal_functions_and_search_paths.sql.
+    "private.prevent_self_role_escalation",
+    "private.prevent_username_policy_bypass",
     # Atomic role change + audit write (api/store.py::set_profile_role); a
     # missing function would silently break the only sanctioned role-change
     # path, so the deploy gate must catch it.
     "public.set_profile_role_with_audit",
-    "public.is_admin",
+    "private.is_admin",
     # Invoked during AppStore.validate_runtime_schema() at backend startup
     # (api/store.py); a missing lock RPC must fail this check too.
     "public.validate_generation_job_active_lock",
@@ -648,7 +650,8 @@ class SchemaIntrospectionError(ValueError):
 class SchemaIntrospection:
     """A normalized, network-free snapshot of the live database catalog.
 
-    All names are bare object names within the ``public`` schema. No row data is
+    All names are bare object names within the ``public`` schema, except
+    ``private_functions`` (bare names within ``private``). No row data is
     ever captured here — only catalog metadata (table/column/function/index
     names and per-table RLS flags).
     """
@@ -658,6 +661,7 @@ class SchemaIntrospection:
     functions: frozenset[str]
     index_constraint_names: frozenset[str]
     rls_by_table: Mapping[str, bool]
+    private_functions: frozenset[str] = frozenset()
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, object]) -> "SchemaIntrospection":
@@ -697,6 +701,7 @@ class SchemaIntrospection:
             functions=_str_set("functions"),
             index_constraint_names=index_constraint_names,
             rls_by_table=rls_by_table,
+            private_functions=_str_set("private_functions"),
         )
 
 
@@ -761,12 +766,18 @@ def find_missing_columns(columns_by_table: Mapping[str, Iterable[str]]) -> list[
     return missing
 
 
-def find_missing_functions(present_functions: Iterable[str]) -> list[str]:
-    present = set(present_functions)
+def find_missing_functions(
+    present_functions: Iterable[str],
+    private_functions: Iterable[str] = (),
+) -> list[str]:
+    present_by_schema = {
+        "public": set(present_functions),
+        "private": set(private_functions),
+    }
     missing: list[str] = []
     for qualified in REQUIRED_FUNCTIONS:
-        bare = qualified.split(".", 1)[-1]
-        if bare not in present:
+        schema, bare = qualified.split(".", 1)
+        if bare not in present_by_schema.get(schema, set()):
             missing.append(qualified)
     return missing
 
@@ -789,7 +800,9 @@ def evaluate_schema(introspection: SchemaIntrospection) -> SchemaCheckResult:
     return SchemaCheckResult(
         missing_tables=find_missing_tables(introspection.tables),
         missing_columns=find_missing_columns(introspection.columns_by_table),
-        missing_functions=find_missing_functions(introspection.functions),
+        missing_functions=find_missing_functions(
+            introspection.functions, introspection.private_functions
+        ),
         missing_indexes=find_missing_index_constraints(introspection.index_constraint_names),
         rls_issues=find_rls_issues(introspection.rls_by_table),
     )
