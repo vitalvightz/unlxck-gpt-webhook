@@ -3,6 +3,13 @@
 Frozen **semantic** planner projections used by
 `tests/test_calendar_integrity_characterization.py` (Stage 3A).
 
+> **Refrozen after Stage 3B and later planner work.** These were first captured
+> from the pre-Stage-3B planner. The planner has since changed on purpose (the
+> calendar-integrity governor, the Fight Visualisation protocol, weight-cut
+> handling, tail composition), so the files were regenerated from the current
+> planner with the clock pinned (see `tests/planner_clock.py`). They now freeze
+> today's behaviour; the "pre-governor" remarks below describe their origin.
+
 Each JSON file is the expected `_semantic_projection(...)` of one representative
 scenario, captured from the **pre-Stage-3B** deterministic planner (Main /
 PR #2396's base). The test asserts the live projection equals the baseline, so
