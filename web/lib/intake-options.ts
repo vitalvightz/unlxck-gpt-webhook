@@ -9,7 +9,7 @@ export type IntakeOption = {
 export const GUIDED_INJURY_SEVERITY_VALUES = ["low", "moderate", "high"] as const;
 export type GuidedInjurySeverity = (typeof GUIDED_INJURY_SEVERITY_VALUES)[number];
 
-export const GUIDED_INJURY_SEVERITY_OPTIONS: IntakeOption[] = [
+export const GUIDED_INJURY_SEVERITY_OPTIONS: Array<IntakeOption & { value: GuidedInjurySeverity }> = [
   { label: "Low", value: "low" },
   { label: "Moderate", value: "moderate" },
   { label: "High", value: "high" },

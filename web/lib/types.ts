@@ -55,7 +55,8 @@ export type GuidedInjuryInput = {
   // the map. Lets the map stay lit even after the athlete edits the free-text
   // area, and prevents duplicate cards when the same zone is tapped again.
   zone?: string;
-  severity?: string;
+  // The API accepts only these values (checked in lib/api-contract.ts).
+  severity?: "" | "low" | "moderate" | "high";
   trend?: string;
   avoid?: string;
   notes?: string;
