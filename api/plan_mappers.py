@@ -19,6 +19,7 @@ from .compliance import evaluate_profile_compliance
 from .contracts.training_day import current_training_day
 
 from .models import (
+    AdminIntakeInjuries,
     PROFILE_REFRESH_FAILED_WHY_LOG_KEY,
     AdminAthleteRecord,
     AdminPlanOutputs,
@@ -576,6 +577,7 @@ def _map_plan_detail(
     plan_source: str | None = None,
     current_training_day: date | str | None = None,
     rehab_label_policy: RehabLabelPolicy | None = None,
+    intake_injuries: AdminIntakeInjuries | None = None,
 ) -> PlanDetail:
     summary = _map_plan_summary(row, current_training_day=current_training_day)
     planning_brief = _decode_structured_text(row.get("planning_brief"))
@@ -704,6 +706,7 @@ def _map_plan_detail(
             AdminPlanOutputs(
                 coach_notes=str(row.get("coach_notes") or ""),
                 why_log=row.get("why_log") or {},
+                intake_injuries=intake_injuries,
                 planning_brief=planning_brief,
                 stage2_payload=raw_stage2_payload,
                 parsing_metadata=parsing_metadata if isinstance(parsing_metadata, dict) else {},

@@ -375,6 +375,23 @@ class TestInjuryCheckin:
         categories = [risk["category"] for risk in command["risk_watch"]]
         assert "reminder" in categories
 
+    def test_today_injury_rows_carry_the_loading_group_in_load_region(self):
+        client, store, _ = _build_client()
+        _seed_plan(store)
+        opened = client.post(
+            "/api/today/injury-checkin",
+            headers=ATHLETE,
+            json={"injuries": [{"body_area": "left ankle", "status": "ongoing"}]},
+        ).json()
+        # A stored flag keeps the specific location rehab exposures match on.
+        assert opened["open_injuries"][0]["body_region"] == "ankle"
+
+        [injury] = client.get("/api/today", headers=ATHLETE).json()["open_injuries"]
+        assert injury["canonical_location"] == "ankle"
+        assert injury["load_region"] == "lower_limb"
+        # Legacy alias for web builds that predate load_region.
+        assert injury["body_region"] == "lower_limb"
+
     def test_injury_checkin_resolve_clears_open_injuries(self):
         client, store, _ = _build_client()
         _seed_plan(store)

@@ -1,5 +1,6 @@
 import type {
   InjuryFlagRecord,
+  InjuryLoadRegion,
   TodayActiveInjury,
   TodayActivePlan,
   TodayCheckinBody,
@@ -882,10 +883,13 @@ export type SafeSessionView = {
 // system. This module consumes structured fields only; it never carries a second
 // body-part synonym list or re-parses athlete-entered injury text.
 
-type InjuryRegion = Exclude<
-  NonNullable<InjuryFlagRecord["body_region"]>,
-  "unknown"
->;
+type InjuryRegion = Exclude<InjuryLoadRegion, "unknown">;
+
+/** The broad group Today computed for an injury. API builds before
+ * `load_region` sent it in `body_region`; drop that fallback once they are gone. */
+function loadRegionOf(injury: InjuryFlagRecord): string | null | undefined {
+  return injury.load_region === undefined ? injury.body_region : injury.load_region;
+}
 
 function isActiveInjury(injury: InjuryFlagRecord): boolean {
   return injury.status === "open" || injury.status === "monitoring";
@@ -906,7 +910,7 @@ function hasLoadIntolerantInjuryInRegion(
   return (openInjuries ?? []).some(
     (injury) =>
       isActiveInjury(injury) &&
-      injury.body_region === region &&
+      loadRegionOf(injury) === region &&
       injuryIsLoadIntolerant(injury),
   );
 }
@@ -914,11 +918,10 @@ function hasLoadIntolerantInjuryInRegion(
 function hasUnclassifiedActiveInjury(
   openInjuries: readonly InjuryFlagRecord[] | null | undefined,
 ): boolean {
-  return (openInjuries ?? []).some(
-    (injury) =>
-      isActiveInjury(injury) &&
-      (!injury.body_region || injury.body_region === "unknown"),
-  );
+  return (openInjuries ?? []).some((injury) => {
+    const region = loadRegionOf(injury);
+    return isActiveInjury(injury) && (!region || region === "unknown");
+  });
 }
 
 /** Whether an active lower-limb injury cannot take gait or pedal load. */
@@ -934,7 +937,7 @@ function hasNeuroDownregulationInjury(
   return (openInjuries ?? []).some(
     (injury) =>
       isActiveInjury(injury) &&
-      injury.body_region === "head_neck" &&
+      loadRegionOf(injury) === "head_neck" &&
       injuryIsLoadIntolerant(injury),
   );
 }

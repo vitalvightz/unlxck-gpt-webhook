@@ -62,7 +62,7 @@ from api.contracts.readiness_message import (
 )
 from api.contracts.training_day import resolve_training_day_str
 from api.store import AppStore
-from api.services.active_plan import resolve_active_plan
+from api.services.active_plan import ActivePlanResolution, resolve_active_plan
 from api.services.effective_structured_plan import resolve_effective_structured_plan
 from api.services.plan_schedule import (
     has_scheduled_day_content,
@@ -630,16 +630,21 @@ def _with_safe_session_context(
     The browser must never maintain a second injury synonym parser. Every body
     phrase is resolved by the existing backend injury system, then its canonical
     location is grouped for safe-session loading decisions.
+
+    The broad group goes in ``load_region``. ``body_region`` stays the stored
+    location (``ankle``, not ``lower_limb``): rehab exposure events are matched
+    against it later in the same build.
     """
     rows: list[dict[str, Any]] = []
     for injury in injuries or []:
         row = dict(injury)
         try:
-            row.update(
-                injury_body_region_context(
-                    row.get("body_area"), row.get("description")
-                )
+            context = injury_body_region_context(
+                row.get("body_area"), row.get("description")
             )
+            row["canonical_location"] = context["canonical_location"]
+            row["region_group"] = context["region_group"]
+            row["load_region"] = context["body_region"]
             row["consequence"] = injury_consequence_tier(
                 row.get("body_area"),
                 row.get("description"),
@@ -649,7 +654,7 @@ def _with_safe_session_context(
             logger.exception("[today] safe_session_injury_classification_failed")
             row["canonical_location"] = None
             row["region_group"] = "unknown"
-            row["body_region"] = "unknown"
+            row["load_region"] = "unknown"
             # Fail closed: the client treats an unknown structural consequence as
             # rest-only, so a classifier failure can never re-enable loaded work.
             row["consequence"] = "structural"
@@ -2610,11 +2615,15 @@ def build_today_command_view(
     athlete_id: str,
     athlete_timezone: str | None,
     now: datetime | None = None,
+    active_plan: ActivePlanResolution | None = None,
 ) -> CommandView:
     """Assemble the normalized command view from persisted state.
 
     Degrades gracefully: no active plan → empty view with the Intake CTA; a
     missing/unparseable structured plan → empty ``next_session`` (no crash).
+
+    ``active_plan`` is a resolution the caller already made for the same
+    training day (the Today boundary shares its own with the intake sync).
     """
     with structured_projection_memo():
         return _build_today_command_view(
@@ -2622,6 +2631,7 @@ def build_today_command_view(
             athlete_id=athlete_id,
             athlete_timezone=athlete_timezone,
             now=now,
+            active_plan=active_plan,
         )
 
 
@@ -2631,15 +2641,18 @@ def _build_today_command_view(
     athlete_id: str,
     athlete_timezone: str | None,
     now: datetime | None,
+    active_plan: ActivePlanResolution | None = None,
 ) -> CommandView:
     training_day = resolve_training_day(athlete_timezone, now=now)
-    # The resolver reads the pointed-to plan through get_plan_for_athlete, so
-    # this is already the full owner-scoped row; no second read is needed.
-    plan_row = resolve_active_plan(
-        store,
-        athlete_id,
-        current_training_day=training_day,
-    ).plan
+    if active_plan is None:
+        # The resolver reads the pointed-to plan through get_plan_for_athlete, so
+        # this is already the full owner-scoped row; no second read is needed.
+        active_plan = resolve_active_plan(
+            store,
+            athlete_id,
+            current_training_day=training_day,
+        )
+    plan_row = active_plan.plan
 
     if not plan_row:
         return build_command_view(current_training_day=training_day, plan=None)
@@ -2780,6 +2793,11 @@ def _build_today_command_view(
     # ("Left wrist tightness") instead of raw stored words.
     for injury in open_injuries:
         injury["label"] = build_injury_label(injury.get("body_area"), injury.get("description"))
+        # Web builds from before ``load_region`` read the loading group from
+        # ``body_region``, and an installed PWA can keep an old build for weeks.
+        # Remove this alias once those builds are gone; the web reads
+        # ``load_region`` and ``canonical_location``.
+        injury["body_region"] = injury.get("load_region")
 
     # A severe active injury is the highest-priority constraint for the day: it
     # supersedes the daily readiness recommendation with a hard pull-back so the

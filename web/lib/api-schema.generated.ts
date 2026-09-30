@@ -101,6 +101,12 @@ export type AdminGenerationJobDiagnostic = {
   request_payload_summary: GenerationRequestPayloadSummary;
 };
 
+/** The injuries an athlete reported at intake, as stored (admin view only). */
+export type AdminIntakeInjuries = {
+  injuries: string;
+  guided_injuries: Record<string, unknown>[];
+};
+
 export type AdminLatestIntakeUpdateRequest = {
   fight_date?: string | null;
   no_scheduled_fight?: boolean | null;
@@ -129,6 +135,7 @@ export type AdminPlanOutputs = {
   structured_plan_status: string;
   structured_plan_errors: string[];
   structured_schema_version: string | null;
+  intake_injuries: AdminIntakeInjuries | null;
 };
 
 export type AdminPlanSummary = {
@@ -471,6 +478,7 @@ export type GenerationJobResponse = {
   stage2_status: string | null;
   requires_admin_resume: boolean;
   ready_to_open: boolean;
+  source: string | null;
 };
 
 export type GenerationRequestPayloadSummary = {

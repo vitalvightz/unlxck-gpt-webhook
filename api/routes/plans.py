@@ -36,6 +36,7 @@ from api.services.plan_safety_copy import clarify_restricted_training_hold
 from api.store import AppStore, is_effective_admin_profile
 from api.services.active_plan import resolve_active_plan, set_active_plan
 from api.services.streaks import reconcile_adherence_streak, reconcile_training_streak
+from api.services.plan_intake_injuries import admin_intake_injuries
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +133,7 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
         detail = _map_plan_detail(
             plan_row,
             include_admin=is_admin,
+            intake_injuries=admin_intake_injuries(store, plan_row) if is_admin else None,
             plan_source=_lookup_plan_source(store, str(plan_row.get("id") or "")),
             current_training_day=training_day,
             rehab_label_policy=_rehab_policy_for_plan(
@@ -216,6 +218,7 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
         detail = _map_plan_detail(
             plan_row,
             include_admin=is_admin,
+            intake_injuries=admin_intake_injuries(store, plan_row) if is_admin else None,
             plan_source=_lookup_plan_source(store, str(plan_row.get("id") or "")),
             current_training_day=training_day,
             rehab_label_policy=_rehab_policy_for_plan(
@@ -351,6 +354,7 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
         detail = _map_plan_detail(
             updated,
             include_admin=is_admin,
+            intake_injuries=admin_intake_injuries(store, updated) if is_admin else None,
             plan_source=_lookup_plan_source(store, plan_id),
             current_training_day=training_day,
             rehab_label_policy=_rehab_policy_for_plan(

@@ -41,6 +41,7 @@ from api.contracts.readiness_message import (
     safety_checks,
     trigger_labels,
 )
+from api.services.active_plan import ActivePlanResolution
 from api.services import today_service as _today_service
 from api.services.plan_schedule import (
     parse_iso_date,
@@ -472,11 +473,18 @@ def build_today_command_view(
     athlete_id: str,
     athlete_timezone: str | None,
     now: datetime | None = None,
+    active_plan: ActivePlanResolution | None = None,
 ) -> CommandView:
-    """Build Today while preserving UNKNOWN safety context as a conservative state."""
+    """Build Today while preserving UNKNOWN safety context as a conservative state.
+
+    ``active_plan`` is a resolution the caller already read for the same
+    training day; its row is the one the schedule probe checks.
+    """
 
     health = ReadinessContextHealth()
     tracked = _ReadinessTrackingStore(store, health)
+    if active_plan is not None and active_plan.plan:
+        tracked.last_plan = active_plan.plan
     # One scope for the build and the schedule probe, so the probe re-reads the
     # plan card the build already resolved instead of validating it again.
     with _today_service.structured_projection_memo():
@@ -485,6 +493,7 @@ def build_today_command_view(
             athlete_id=athlete_id,
             athlete_timezone=athlete_timezone,
             now=now,
+            active_plan=active_plan,
         )
         # Re-check the history that can qualify a stored readiness decision. This
         # safety probe must not depend on unrelated risk-card code happening to read

@@ -25,6 +25,22 @@ export type GuidedInjurySummary = {
   sensitive_area?: string;
 };
 
+const GUIDED_INJURY_SUMMARY_FIELDS = ["area", "injury_type", "surface_type", "severity", "trend", "impact_related", "notes", "avoid", "timeframe", "cleared", "open_wound", "bleeding_status", "infection_signs", "sensitive_area"] as const;
+
+/** The text fields of a stored guided injury (the API returns it untyped). */
+export function readGuidedInjurySummary(injury: Record<string, unknown>): GuidedInjurySummary {
+  const summary: Record<string, string | string[]> = {};
+  for (const field of GUIDED_INJURY_SUMMARY_FIELDS) {
+    const value = injury[field];
+    if (typeof value === "string") {
+      summary[field] = value;
+    } else if (Array.isArray(value) && value.every((item) => typeof item === "string")) {
+      summary[field] = value;
+    }
+  }
+  return summary as GuidedInjurySummary;
+}
+
 export type CapturedInjuryDetail = {
   headline: string;
   meta: string[];

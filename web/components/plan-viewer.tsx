@@ -67,6 +67,7 @@ import { describeRelativeDay, formatAppDate } from "@/lib/date-format";
 import { contactTimerTarget, contactTitle } from "@/lib/session-timer/contact";
 import {
   buildBlockedInjuryContextSummary,
+  readGuidedInjurySummary,
   buildBlockedWhy,
   type BlockedInjuryContextSummary,
 } from "@/lib/triage-block-reasons";
@@ -1785,10 +1786,8 @@ export function PlanViewer({
   const blockedInjuryContext = injuryTriage
     ? buildBlockedInjuryContextSummary({
         triage: injuryTriage,
-        injuriesText: plan.latest_intake?.injuries,
-        guidedInjuries: [plan.latest_intake?.guided_injury, ...(plan.latest_intake?.guided_injuries ?? [])].filter(
-          (injury): injury is { area?: string; notes?: string } => Boolean(injury),
-        ),
+        injuriesText: plan.admin_outputs?.intake_injuries?.injuries,
+        guidedInjuries: (plan.admin_outputs?.intake_injuries?.guided_injuries ?? []).map(readGuidedInjurySummary),
       })
     : null;
   // Per-region Rehab/Prehab policy, decided server-side from the athlete's live

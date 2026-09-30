@@ -352,6 +352,7 @@ def _job_response(
         job_id=str(job["id"]),
         athlete_id=str(job["athlete_id"]),
         client_request_id=str(job.get("client_request_id") or ""),
+        source=str(job.get("source") or "") or None,
         status=normalized_status,
         created_at=str(job["created_at"]),
         updated_at=str(updated_at),

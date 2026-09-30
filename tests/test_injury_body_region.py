@@ -83,7 +83,8 @@ def test_today_payload_enrichment_uses_backend_region_and_consequence() -> None:
     )
     assert row["canonical_location"] == "calf"
     assert row["region_group"] == "lower_leg_foot"
-    assert row["body_region"] == "lower_limb"
+    assert row["load_region"] == "lower_limb"
+    assert "body_region" not in row  # the stored location is not overwritten
     assert row["consequence"] == "structural"
 
 
@@ -107,7 +108,7 @@ def test_avulsion_is_a_structural_consequence() -> None:
             }
         ]
     )
-    assert row["body_region"] == "lower_limb"
+    assert row["load_region"] == "lower_limb"
     assert row["consequence"] == "structural"
 
 
@@ -139,5 +140,5 @@ def test_safe_session_enrichment_failure_fails_closed(monkeypatch: pytest.Monkey
     [row] = _with_safe_session_context(
         [{"body_area": "ankle", "description": "ankle fracture", "severity": "moderate"}]
     )
-    assert row["body_region"] == "unknown"
+    assert row["load_region"] == "unknown"
     assert row["consequence"] == "structural"
