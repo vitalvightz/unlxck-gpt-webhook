@@ -165,7 +165,7 @@ export function GlobalFeedback({ token }: Readonly<{ token: string }>) {
           {submitting ? "Sending…" : "Send feedback"}
         </button>
       </div>
-      {message ? <p className="success-banner" role="status">{message}</p> : null}
+      {message ? <p className="feedback-confirmation" role="status">{message}</p> : null}
       {error ? <p className="error-banner" role="alert">{error}</p> : null}
     </form>
   );

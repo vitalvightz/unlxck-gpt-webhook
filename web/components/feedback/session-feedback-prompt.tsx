@@ -147,8 +147,8 @@ export function SessionFeedbackPrompt({
 
   if (isSent) {
     return (
-      <section className="feedback-card session-feedback-card" aria-label="Session feedback">
-        <p className="feedback-question" role="status">
+      <section className="feedback-card session-feedback-card feedback-inline" aria-label="Session feedback">
+        <p className="feedback-confirmation" role="status">
           Feedback sent. Thank you.
         </p>
       </section>
@@ -157,15 +157,17 @@ export function SessionFeedbackPrompt({
 
   if (!isOpen) {
     return (
-      <section className="feedback-card session-feedback-card" aria-label="Session feedback">
-        <p className="feedback-question">{SESSION_FEEDBACK_PROMPT}</p>
-        <div className="feedback-actions">
-          <button type="button" className="secondary-button" onClick={() => setIsOpen(true)}>
-            Give feedback
-          </button>
-          <button type="button" className="ghost-button" onClick={onDismiss}>
-            Not now
-          </button>
+      <section className="feedback-card session-feedback-card feedback-inline" aria-label="Session feedback">
+        <div className="feedback-prompt-row">
+          <p className="feedback-question">{SESSION_FEEDBACK_PROMPT}</p>
+          <div className="feedback-actions">
+            <button type="button" className="secondary-button" onClick={() => setIsOpen(true)}>
+              Give feedback
+            </button>
+            <button type="button" className="ghost-button" onClick={onDismiss}>
+              Not now
+            </button>
+          </div>
         </div>
       </section>
     );

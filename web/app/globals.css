@@ -21498,6 +21498,85 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
   }
 }
 
+/* Lightweight prompts and confirmations sit in the flow as a thin divider row.
+   Keep 44px touch targets; only the optional form adds vertical space. */
+.feedback-card.feedback-inline {
+  align-self: start;
+  min-width: 0;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+  border-top: 1px solid var(--border-default);
+  border-radius: 0;
+  background: transparent;
+}
+
+.feedback-prompt-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0 16px;
+}
+
+.feedback-inline .feedback-question {
+  padding-block: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.feedback-inline .feedback-actions {
+  gap: 4px 10px;
+}
+
+.feedback-inline .feedback-actions > .secondary-button,
+.feedback-inline .feedback-actions > .ghost-button {
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px 10px;
+  font-size: 0.82rem;
+}
+
+.feedback-inline .feedback-choice {
+  flex: 0 1 auto;
+  width: auto;
+  min-height: 44px;
+  padding: 6px 8px;
+  font-size: 0.82rem;
+}
+
+.feedback-inline .feedback-unsafe {
+  flex-basis: auto;
+  border-color: transparent;
+  background: transparent;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.feedback-inline .feedback-sent-row {
+  min-height: 44px;
+  gap: 0 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.feedback-confirmation {
+  margin: 0;
+  padding-block: 8px;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.feedback-inline .feedback-comment {
+  padding-bottom: 10px;
+}
+
 /* Injury-specific post-rehab response. Shares the feedback card shell with the
    session review above, but is a different question: that one asks about the
    session, this asks how one injury behaved. Each injury gets its own labelled

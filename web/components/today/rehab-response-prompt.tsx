@@ -149,8 +149,8 @@ export function RehabResponsePrompt({
 
   if (isSent) {
     return (
-      <section className="feedback-card rehab-response-card" aria-label="Injury response">
-        <p className="feedback-question" role="status">
+      <section className="feedback-card rehab-response-card feedback-inline" aria-label="Injury response">
+        <p className="feedback-confirmation" role="status">
           Logged against your injury. Thank you.
         </p>
       </section>
