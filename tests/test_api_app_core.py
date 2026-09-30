@@ -10,6 +10,7 @@ from postgrest.exceptions import APIError as PostgrestAPIError
 from fastapi.testclient import TestClient
 
 import api.app as app_module
+import api.generation_job_helpers as job_helpers
 import api.auth as auth_module
 import api.store as store_module
 from api.app import create_app
@@ -205,7 +206,7 @@ def test_request_middleware_returns_json_request_id_for_unhandled_exceptions():
 
 def test_job_response_surfaces_warning_milestones():
     warning = "Profile refresh failed; plan generated from submitted intake only."
-    response = app_module._job_response(
+    response = job_helpers._job_response(
         {
             "id": "job_warning",
             "athlete_id": "athlete-1",
@@ -229,7 +230,7 @@ def test_job_response_surfaces_warning_milestones():
 
 def test_admin_generation_job_diagnostic_surfaces_warning_milestones():
     warning = "Profile refresh failed; plan generated from submitted intake only."
-    diagnostic = app_module._admin_generation_job_diagnostic(
+    diagnostic = job_helpers._admin_generation_job_diagnostic(
         {
             "id": "job_warning",
             "athlete_id": "athlete-1",
@@ -254,7 +255,7 @@ def test_admin_generation_job_diagnostic_surfaces_warning_milestones():
 
 def test_job_response_falls_back_to_created_at_when_updated_at_is_missing():
     created_at = _now()
-    response = app_module._job_response(
+    response = job_helpers._job_response(
         {
             "id": "job_legacy123",
             "athlete_id": "athlete-1",
@@ -285,7 +286,7 @@ def test_job_response_recovers_plan_id_from_terminal_milestone_meta_when_plan_ex
         request=_build_request(),
         result=finalized_result(),
     )
-    response = app_module._job_response(
+    response = job_helpers._job_response(
         {
             "id": "job_terminal_meta",
             "athlete_id": "athlete-1",
@@ -310,7 +311,7 @@ def test_job_response_recovers_plan_id_from_terminal_milestone_meta_when_plan_ex
 
 def test_job_response_ignores_terminal_milestone_plan_id_when_plan_is_missing():
     store = FakeStore()
-    response = app_module._job_response(
+    response = job_helpers._job_response(
         {
             "id": "job_terminal_meta_missing_plan",
             "athlete_id": "athlete-1",
@@ -345,7 +346,7 @@ def test_job_response_recovers_plan_id_from_latest_visible_plan_when_terminal_pl
         request=_build_request(),
         result=finalized_result(),
     )
-    response = app_module._job_response(
+    response = job_helpers._job_response(
         {
             "id": "job_terminal_lookup",
             "athlete_id": "athlete-1",
@@ -370,7 +371,7 @@ def test_is_stale_job_does_not_flag_new_running_job_without_heartbeat():
     started_at = _now()
 
     assert (
-        app_module._is_stale_job(
+        job_helpers._is_stale_job(
             {
                 "status": "running",
                 "started_at": started_at,
@@ -384,7 +385,7 @@ def test_is_stale_job_does_not_flag_new_running_job_without_heartbeat():
 
 def test_is_stale_job_uses_started_at_when_heartbeat_is_missing_for_old_running_job():
     assert (
-        app_module._is_stale_job(
+        job_helpers._is_stale_job(
             {
                 "status": "running",
                 "started_at": "2026-01-01T00:00:00+00:00",
@@ -399,24 +400,24 @@ def test_is_stale_job_uses_started_at_when_heartbeat_is_missing_for_old_running_
 def test_generation_job_stale_after_seconds_defaults_when_env_invalid(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS", raising=False)
     monkeypatch.setenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", "invalid")
-    assert app_module._generation_job_stale_after_seconds() == 300
+    assert job_helpers._generation_job_stale_after_seconds() == 300
 
 
 def test_generation_job_stale_after_seconds_defaults_when_unset(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", raising=False)
     monkeypatch.delenv("UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS", raising=False)
-    assert app_module._generation_job_stale_after_seconds() == 300
+    assert job_helpers._generation_job_stale_after_seconds() == 300
 
 
 def test_generation_job_stale_after_seconds_falls_back_to_worker_env(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", raising=False)
     monkeypatch.setenv("UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS", "420")
-    assert app_module._generation_job_stale_after_seconds() == 420
+    assert job_helpers._generation_job_stale_after_seconds() == 420
 
 
 def test_generation_job_stale_after_seconds_enforces_minimum(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", "30")
-    assert app_module._generation_job_stale_after_seconds() == 60
+    assert job_helpers._generation_job_stale_after_seconds() == 60
 
 
 def test_plan_generate_daily_limit_defaults_when_unset(monkeypatch: pytest.MonkeyPatch):
@@ -887,10 +888,21 @@ def test_non_production_cors_allows_localhost(monkeypatch: pytest.MonkeyPatch):
     )
 
 
+def test_auth_success_is_not_logged_at_info_on_every_request(caplog):
+    client, _, _ = _build_client()
+
+    with caplog.at_level("INFO", logger="api.dependencies"):
+        response = client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
+
+    assert response.status_code == 200
+    messages = [record.getMessage() for record in caplog.records]
+    assert not any("token_resolved" in message or "profile_resolved" in message for message in messages)
+
+
 def test_auth_success_log_uses_safe_identifiers(caplog):
     client, _, _ = _build_client()
 
-    with caplog.at_level("INFO", logger="api.app"):
+    with caplog.at_level("DEBUG", logger="api.dependencies"):
         response = client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
 
     assert response.status_code == 200

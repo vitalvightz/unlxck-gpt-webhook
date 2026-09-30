@@ -733,7 +733,7 @@ def test_structured_card_rebuild_requires_admin_and_is_idempotent_while_building
         background_calls.append(kwargs)
 
     monkeypatch.setattr(
-        "api.app.run_structured_plan_post_processing_service",
+        "api.routes.admin.run_structured_plan_post_processing_service",
         _capture_background,
     )
 
@@ -808,7 +808,7 @@ def test_structured_card_rebuild_queues_when_claimed_live_card_no_longer_decodes
         background_calls.append(kwargs)
 
     monkeypatch.setattr(
-        "api.app.run_structured_plan_post_processing_service",
+        "api.routes.admin.run_structured_plan_post_processing_service",
         _capture_background,
     )
 
