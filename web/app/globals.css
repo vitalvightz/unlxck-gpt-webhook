@@ -7419,6 +7419,25 @@ html[data-theme="light"] .today-readiness-strip [data-tone="risk"] dd::before {
   animation: today-banner-in 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* A future session already carries its title and lock state below. Keep the
+   preview instruction visible without spending a second card on those facts. */
+.today-decision-banner[data-compact="true"] {
+  margin-bottom: 12px;
+  padding: 13px 16px;
+}
+
+.today-decision-banner[data-compact="true"] .today-decision-command {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.today-decision-banner[data-compact="true"] .today-decision-action {
+  margin: 1px 0 0;
+  font-size: 15px;
+}
+
 @keyframes today-banner-in {
   from {
     opacity: 0;

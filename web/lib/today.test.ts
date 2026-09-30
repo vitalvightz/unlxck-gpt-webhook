@@ -562,7 +562,7 @@ test("Today session card uses short preview wording and Next session label", () 
   assert.equal(source.includes('kicker: "Next session"'), true);
   assert.equal(source.includes('kicker: "Next scheduled session"'), false);
   assert.equal(
-    source.includes("Preview only. Completion opens on the matched training day."),
+    source.includes("Check in on the day to unlock this session."),
     true,
   );
   assert.equal(source.includes("resolvedDecision.blocksCurrentSession"), true);

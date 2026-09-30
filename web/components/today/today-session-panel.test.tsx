@@ -135,6 +135,28 @@ test("a light-combat session under Today's Technical Combat heading drops its re
   assert.match(html, /Pads, drills, movement or other lower-intensity combat work\./);
 });
 
+test("Today blocks omit a coach title supplied by their parent but keep its context", () => {
+  const plan = {
+    weeks: [{
+      week_index: 1,
+      days: [{
+        date: "2026-09-29",
+        weekday: "Tue",
+        today_card: { coach_led_contact: "Light Combat / Technical" },
+        sessions: [{ session_id: "throw-1", title: "Med-Ball Rotational Throw", blocks: [] }],
+      }],
+    }],
+  } as StructuredPlan;
+  const current = resolveCurrentDay(plan, new Date(2026, 8, 29));
+  const html = renderToStaticMarkup(
+    <TodaySessionBlocks current={current} headline="Technical Combat" />,
+  );
+
+  assert.equal((html.match(/Technical Combat/g) ?? []).length, 0);
+  assert.equal(html.match(/Med-Ball Rotational Throw/g)?.length, 1);
+  assert.match(html, /Pads, drills, movement or other lower-intensity combat work\./);
+});
+
 // Session timing is settled by today_service.build_today_command_view and
 // carried in session_scope. These two tests pin that the panel follows it in
 // both directions rather than re-deciding the day from calendar_date — the
@@ -180,7 +202,7 @@ test("a session the backend scopes to next stays a locked preview", () => {
 
   assert.match(html, /Next session/);
   assert.match(html, /Sat 08 Aug 2026/);
-  assert.match(html, /Preview only/);
+  assert.match(html, /Check in on the day to unlock this session/);
   assert.doesNotMatch(html, />Start session<|>Skip session<|>Mark skipped</);
 });
 
@@ -499,7 +521,9 @@ test("a next sparring day read from the plan card is headlined by the sparring",
     </AuthProvider>,
   );
   assert.match(html, /<h2 id="today-session-heading">Hard sparring<\/h2>/);
-  assert.match(html, /Also that day<\/span> Breathing Reset/);
+  assert.doesNotMatch(html, /Also that day/);
+  assert.equal(html.match(/Hard sparring/g)?.length, 1);
+  assert.equal(html.match(/Breathing Reset/g)?.length, 1);
 });
 
 test("a pull-back day never headlines the sparring it blocks", () => {

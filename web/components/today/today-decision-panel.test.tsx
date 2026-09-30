@@ -135,6 +135,24 @@ test("preview evidence names only the next session and drops today's readiness c
   assert.ok(!html.includes("Less to go on today"));
 });
 
+test("preview above a named session keeps its instruction without repeating the session title", () => {
+  const html = render({
+    banner: {
+      ...BANNER,
+      displayState: "preview",
+      chip: "PREVIEW",
+      detail: "Mobility Reset is next on your plan.",
+      action: "Review the mobility and recovery work before it opens.",
+      tone: "neutral",
+    },
+    compactPreview: true,
+  });
+
+  assert.match(html, /Review the mobility and recovery work before it opens/);
+  assert.doesNotMatch(html, /Mobility Reset is next on your plan|next planned session/);
+  assert.match(html, /data-compact="true"/);
+});
+
 test("the status chip is the only decision-state label", () => {
   const html = render({ banner: STOP_BANNER, tier: "stop" });
 

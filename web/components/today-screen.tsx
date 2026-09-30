@@ -275,6 +275,7 @@ export function TodayScreen() {
         />
         <TodayDecisionPanel
           banner={resolvedDecision.banner}
+          compactPreview={resolvedDecision.hasSession}
           tier={resolvedDecision.displayTier}
           triggers={state.today.recommendation_trigger_labels}
           safetyChecks={state.today.recommendation_safety_checks}

@@ -43,6 +43,7 @@ export function TodayDecisionPanel({
   context,
   sources,
   confidenceNote,
+  compactPreview = false,
 }: {
   banner: TodayDecisionBanner | null;
   tier?: TodayDecisionTier;
@@ -54,6 +55,8 @@ export function TodayDecisionPanel({
   context?: string[];
   sources?: string[];
   confidenceNote?: string;
+  /** The next-session card below already names the exercise and explains its lock. */
+  compactPreview?: boolean;
 }) {
   if (!banner) {
     return null;
@@ -63,6 +66,7 @@ export function TodayDecisionPanel({
   // `tier` still describes session behavior; `displayState` owns this message.
   const isPreview = banner.displayState === "preview" ||
     (tier === "preview" && !isSafetyNotice);
+  const isCompactPreview = banner.displayState === "preview" && compactPreview;
   // Current-day readiness evidence cannot clear or restrict a future session.
   // Preview cards explain only which planned session their copy is framing.
   const triggerLabels = clean(isPreview || isSafetyNotice ? undefined : triggers);
@@ -71,8 +75,10 @@ export function TodayDecisionPanel({
     (check) => check.label?.trim() && check.result_label?.trim(),
   ).filter((check) => !isSafetyNotice || check.code === "surface_injury");
   const usedSources = clean(
-    isPreview
-      ? ["next planned session"]
+    isCompactPreview
+      ? []
+      : isPreview
+        ? ["next planned session"]
       : isSafetyNotice
         ? ["your tracked injuries"]
         : sources,
@@ -95,6 +101,7 @@ export function TodayDecisionPanel({
       className="today-decision-banner"
       data-state={banner.displayState}
       data-tone={banner.tone}
+      data-compact={isCompactPreview || undefined}
       role="status"
     >
       <div className="today-decision-command">
@@ -104,7 +111,7 @@ export function TodayDecisionPanel({
           </span>
         </div>
         {banner.action ? <p className="today-decision-action">{banner.action}</p> : null}
-        <p className="today-decision-detail">{banner.detail}</p>
+        {!isCompactPreview ? <p className="today-decision-detail">{banner.detail}</p> : null}
         {banner.safety && !isSupersededReadinessMessage(banner.safety) ? (
           <p className="today-decision-safety">{banner.safety}</p>
         ) : null}
