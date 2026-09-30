@@ -6,6 +6,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from .planner_authority_integrity import governed_release_policy
+
 _DEFAULT_POLICY_PATH = Path(__file__).resolve().parents[1] / "shared" / "stage2-policy.json"
 _POLICY_PATH = Path(os.getenv("STAGE2_POLICY_PATH", str(_DEFAULT_POLICY_PATH)))
 _REPAIR_PROMPT_EXCLUDED_CODES = frozenset(
@@ -269,3 +271,8 @@ def prompt_safe_validator_report(validator_report: dict) -> dict:
         ),
         "restricted_hits": restricted_hits,
     }
+
+
+# Planner-authority gate (fightcamp.planner_authority_integrity), applied where
+# the policy is defined so every importer, stage2_pipeline included, gets it.
+apply_stage2_release_policy = governed_release_policy(apply_stage2_release_policy)

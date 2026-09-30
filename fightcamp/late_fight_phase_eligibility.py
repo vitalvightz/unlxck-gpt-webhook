@@ -92,21 +92,17 @@ def phase_scoped_candidate_pools(
     return {canonical: pool} if isinstance(pool, dict) else {}
 
 
-def install() -> None:
-    """Make late-tail exercise selection obey Stage 1 phase eligibility.
+# ``fightcamp.stage2_payload`` applies these wrappers where it defines the
+# functions, so every importer gets the governed version.
 
-    The build wrapper also exposes the same athlete model through a shared
-    ContextVar while deterministic planning is executing. Normal strength
-    composition consumes that context to apply fatigue/cut/injury pressure
-    without duplicating athlete-state derivation or changing Stage 2 authority.
+
+def governed_build_planning_brief(original_build):
+    """Expose the athlete model through a shared ContextVar while the brief builds.
+
+    Normal strength composition consumes that context to apply fatigue/cut/injury
+    pressure without duplicating athlete-state derivation or changing Stage 2
+    authority.
     """
-    from . import stage2_payload as payload
-
-    if getattr(payload, "_LATE_FIGHT_PHASE_ELIGIBILITY_INSTALLED", False):
-        return
-
-    original_build = payload.build_planning_brief
-    original_allocate = payload._build_late_fight_allowed_exercises_by_day
 
     @wraps(original_build)
     def build_planning_brief(*, athlete_model: dict, **kwargs):
@@ -117,6 +113,16 @@ def install() -> None:
             return original_build(athlete_model=athlete_model, **kwargs)
         finally:
             planner_athlete_model_context.reset(token)
+
+    return build_planning_brief
+
+
+def governed_late_fight_allowed_exercises_by_day(original_allocate, *, payload):
+    """Make late-tail exercise selection obey Stage 1 phase eligibility.
+
+    ``payload`` is ``fightcamp.stage2_payload``, read at call time for its
+    ``StyleTaperLateTailUsage``.
+    """
 
     @wraps(original_allocate)
     def _build_late_fight_allowed_exercises_by_day(
@@ -183,6 +189,4 @@ def install() -> None:
 
         return allowed_by_day, assignments_by_day
 
-    payload.build_planning_brief = build_planning_brief
-    payload._build_late_fight_allowed_exercises_by_day = _build_late_fight_allowed_exercises_by_day
-    payload._LATE_FIGHT_PHASE_ELIGIBILITY_INSTALLED = True
+    return _build_late_fight_allowed_exercises_by_day

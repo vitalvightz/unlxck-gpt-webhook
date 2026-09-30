@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from copy import deepcopy
 from typing import Any
 
@@ -70,6 +71,10 @@ from .session_composition import (
     compose_normal_strength_assignments,
 )
 from .normal_calendar_placement import fill_missing_session_days
+from .late_fight_phase_eligibility import (
+    governed_build_planning_brief,
+    governed_late_fight_allowed_exercises_by_day,
+)
 from .late_selector_windows import (
     _normalise_late_window_tokens,
     classify_late_selector_window,
@@ -3409,3 +3414,12 @@ def build_stage2_handoff_text(
         )
 
     return "\n\n---\n\n".join(section for section in sections if section.strip())
+
+
+# Late-fight phase eligibility (fightcamp.late_fight_phase_eligibility), applied
+# where these functions are defined so every importer gets the governed version.
+build_planning_brief = governed_build_planning_brief(build_planning_brief)
+_build_late_fight_allowed_exercises_by_day = governed_late_fight_allowed_exercises_by_day(
+    _build_late_fight_allowed_exercises_by_day,
+    payload=sys.modules[__name__],
+)

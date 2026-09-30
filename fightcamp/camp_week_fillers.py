@@ -40,20 +40,6 @@ _week_for_d_day = _impl._week_for_d_day
 _week_is_compressed = _impl._week_is_compressed
 
 
-def _sync_impl_dependencies() -> None:
-    """Keep common monkeypatch/test seams working after the implementation split."""
-    for name in (
-        "select_gap_fill_insert",
-        "select_tactical_watch",
-        "select_coordination_support",
-        "has_coordination_target",
-        "_new_usage_ledger",
-        "_record_insert_usage",
-    ):
-        if name in globals():
-            setattr(_impl, name, globals()[name])
-
-
 def _ensure_tactical_watch(
     week: dict[str, Any],
     athlete_model: dict[str, Any],
@@ -463,7 +449,6 @@ def apply_camp_week_fillers(
     if not isinstance(weekly_role_map, dict):
         return weekly_role_map
 
-    _sync_impl_dependencies()
     athlete_model = athlete_model or {}
     fight_dated = _has_future_fight(athlete_model)
     _splice_late_fight_tail(weekly_role_map, athlete_model)

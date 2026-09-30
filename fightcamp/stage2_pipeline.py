@@ -9,6 +9,10 @@ from .stage2_policy import (
     is_hard_stage2_blocker,
     prompt_safe_validator_report,
 )
+from .planner_authority_integrity import (
+    governed_build_stage2_retry,
+    governed_validator_report_builder,
+)
 from .render_authority import authoritative_render_for_role
 from .stage2_repair import build_stage2_repair_prompt
 from .stage2_validator import (
@@ -1035,3 +1039,12 @@ def build_stage2_retry(
         "requires_planner_regeneration": requires_planner_regeneration,
         "repair_prompt": repair_prompt,
     }
+
+
+# Planner-authority gate (fightcamp.planner_authority_integrity), applied where
+# these functions are defined so every importer gets the governed version.
+# apply_stage2_release_policy arrives governed from stage2_policy.
+_validator_report_with_required_countdown_sessions = governed_validator_report_builder(
+    _validator_report_with_required_countdown_sessions
+)
+build_stage2_retry = governed_build_stage2_retry(build_stage2_retry)

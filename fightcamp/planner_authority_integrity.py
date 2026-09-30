@@ -508,17 +508,14 @@ def _authority_findings_from_report(
     return findings
 
 
-def install() -> None:
-    """Add an independent planner-authority gate before athlete release."""
-    from . import stage2_pipeline as pipeline
-    from . import stage2_policy as policy
+# An independent planner-authority gate before athlete release.
+# ``fightcamp.stage2_pipeline`` and ``fightcamp.stage2_policy`` apply these
+# wrappers where they define the functions, so every importer gets the governed
+# version.
 
-    if getattr(pipeline, "_PLANNER_AUTHORITY_INTEGRITY_INSTALLED", False):
-        return
 
-    original_report_builder = pipeline._validator_report_with_required_countdown_sessions
-    original_release_policy = policy.apply_stage2_release_policy
-    original_build_retry = pipeline.build_stage2_retry
+def governed_validator_report_builder(original_report_builder):
+    """Validator reports carry planner-authority findings as errors."""
 
     @wraps(original_report_builder)
     def authority_report_builder(*, planning_brief: dict, final_plan_text: str):
@@ -560,6 +557,12 @@ def install() -> None:
             "planner_authority_integrity_findings": findings,
             "planner_authority_integrity_finding_count": len(findings),
         }
+
+    return authority_report_builder
+
+
+def governed_release_policy(original_release_policy):
+    """Authority blockers hold release; missing exposures are flagged for admin review."""
 
     @wraps(original_release_policy)
     def authority_release_policy(validator_report: dict):
@@ -607,6 +610,12 @@ def install() -> None:
             "is_publishable": False,
         }
 
+    return authority_release_policy
+
+
+def governed_build_stage2_retry(original_build_retry):
+    """A retry cannot repair an authority violation: it requires planner regeneration."""
+
     @wraps(original_build_retry)
     def authority_build_stage2_retry(*args, **kwargs):
         result = original_build_retry(*args, **kwargs)
@@ -633,10 +642,4 @@ def install() -> None:
             ],
         }
 
-    pipeline._validator_report_with_required_countdown_sessions = authority_report_builder
-    policy.apply_stage2_release_policy = authority_release_policy
-    # stage2_pipeline imported the policy function by value, so replace that
-    # module-local reference as well. Later API imports resolve the patched attr.
-    pipeline.apply_stage2_release_policy = authority_release_policy
-    pipeline.build_stage2_retry = authority_build_stage2_retry
-    pipeline._PLANNER_AUTHORITY_INTEGRITY_INSTALLED = True
+    return authority_build_stage2_retry

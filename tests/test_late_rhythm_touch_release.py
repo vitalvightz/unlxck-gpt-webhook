@@ -245,10 +245,8 @@ def test_a_populated_role_produces_no_findings():
 
 
 def _release(findings: list[dict]) -> dict:
-    import fightcamp.planner_authority_integrity as pai
     from fightcamp.stage2_policy import apply_stage2_release_policy
 
-    pai.install()
     return apply_stage2_release_policy(
         {"errors": findings, "blocking_warnings": [], "warnings": [], "review_flags": []}
     )
