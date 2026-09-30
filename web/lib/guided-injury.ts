@@ -213,7 +213,7 @@ function parseDescriptorText(raw: string): Pick<GuidedInjuryState, "severity" | 
   return result;
 }
 
-function parseAreaSegment(segment: string): { area: string; severity: string; trend: string } | null {
+function parseAreaSegment(segment: string): { area: string; severity: GuidedInjuryState["severity"]; trend: string } | null {
   const trimmed = stripGuidedPunctuation(segment);
   if (!trimmed || /^(avoid|notes?)\b/i.test(trimmed)) {
     return null;

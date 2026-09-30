@@ -2252,9 +2252,9 @@ class RehabResponsePromptResponse(BaseModel):
     side: str
     drill_ids: list[str] = Field(default_factory=list)
     during_question: str
-    during_options: list[str] = Field(default_factory=list)
+    during_options: list[RehabDuringResponse] = Field(default_factory=list)
     limit_question: str
-    limit_options: list[str] = Field(default_factory=list)
+    limit_options: list[RehabLimitResponse] = Field(default_factory=list)
 
 
 class SessionCompletionResponse(BaseModel):
