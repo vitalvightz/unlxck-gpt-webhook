@@ -617,6 +617,44 @@ def test_today_shadow_log_does_not_change_live_stage_output(monkeypatch, caplog)
     assert payload["engine_version"] == LOAD_ELIGIBILITY_ENGINE_VERSION
 
 
+def test_today_shadow_matches_exposures_after_safe_session_classification(monkeypatch, caplog):
+    # Today classifies each injury for the safe-session rules before stamping
+    # its rehab stage. The broad loading group it adds must not replace the
+    # stored location, or every exposure reads as a region mismatch.
+    injury = _injury()
+    store = FakeStore()
+    store.injury_flags[ATHLETE] = [dict(injury)]
+    store.create_rehab_exposure(ATHLETE, _event(1)["event_json"])
+    decision = _stage()
+    monkeypatch.setattr(
+        today_service_module,
+        "resolve_rehab_stages",
+        lambda *_args, **_kwargs: {INJURY: decision},
+    )
+    monkeypatch.setattr(
+        today_service_module,
+        "resolve_load_eligibility",
+        lambda **kwargs: resolve_load_eligibility(
+            **kwargs,
+            criteria_registry={"sprain": SYNTHETIC_QUANTIFIED_CRITERIA},
+        ),
+    )
+
+    with caplog.at_level("INFO"):
+        stamped = today_service_module._with_rehab_stage(
+            today_service_module._with_safe_session_context([injury]),
+            store=store,
+            athlete_id=ATHLETE,
+        )
+
+    assert stamped[0]["body_region"] == "ankle"
+    assert stamped[0]["load_region"] == "lower_limb"
+    record = next(record for record in caplog.records if "load_eligibility_shadow {" in record.message)
+    payload = json.loads(record.message.split("load_eligibility_shadow ", 1)[1])
+    assert payload["ignored_reason_counts"] == {}
+    assert payload["result"] == "eligible"
+
+
 def test_shadow_evidence_cannot_change_today_enrichment_output(monkeypatch):
     decision = _stage()
     monkeypatch.setattr(

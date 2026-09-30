@@ -29,11 +29,6 @@ type Declared<WebType, Served, Unsent extends PropertyKey = never> = [
 // fields, so they are checked without the field. Each is a real gap to close
 // on the API side, not a formality.
 //
-// - InjuryFlagRecord.body_region: the Today view sends a broad loading region
-//   ("lower_limb", ...), which the web's safe-session rules compare against; a
-//   stored flag (injury check-in, daily routes) sends the classifier's specific
-//   location ("ankle", "lower back"). One field, two vocabularies, declared as
-//   a plain string.
 // - MeResponse.latest_intake, AdminAthleteRecord.latest_intake and
 //   AdminAthleteRecord.onboarding_draft: stored intake
 //   JSON the API returns unvalidated as an object; the web reads it as a
@@ -41,13 +36,10 @@ type Declared<WebType, Served, Unsent extends PropertyKey = never> = [
 // - NutritionSandCPreferences.goal_weakness_collision_details: the API declares
 //   a list of string maps; the web reads each as { tag, label, detail }.
 //
-// Fields the web reads that the API does not send at all:
-// - PlanDetail.latest_intake: absent from the plan detail response, so the
-//   triage-blocked plan view never receives the intake injuries it summarizes.
-// - GenerationJobResponse.source: absent from the athlete job response, so the
-//   generation status provider's source is always null.
-// - InjuryFlagRecord label / canonical_location / region_group / consequence:
-//   added to Today's injury rows, which are not InjuryFlagRecord in the API.
+// Fields the web reads that the API's schema does not declare:
+// - InjuryFlagRecord label / canonical_location / region_group / load_region /
+//   consequence: added to Today's injury rows, which the API sends untyped
+//   (CommandView.open_injuries), not as InjuryFlagRecord.
 
 export type ReadActiveInjuryRegion = Reads<Api.ActiveInjuryRegion, Web.ActiveInjuryRegion>;
 export type ReadAdminAthleteRecord = Reads<
@@ -74,7 +66,7 @@ export type ReadGenerationRequestPayloadSummary = Reads<Api.GenerationRequestPay
 export type ReadGuidedInjuryInput = Reads<Api.GuidedInjuryInput, Web.GuidedInjuryInput>;
 export type SendGuidedInjuryInput = Sends<Web.GuidedInjuryInput, Api.GuidedInjuryInputRequest>;
 export type SendInjuryFlagCreateRequest = Sends<Web.InjuryFlagCreateRequest, Api.InjuryFlagCreateRequest>;
-export type ReadInjuryFlagRecord = Reads<Omit<Api.InjuryFlagRecord, "body_region">, Omit<Web.InjuryFlagRecord, "body_region">>;
+export type ReadInjuryFlagRecord = Reads<Api.InjuryFlagRecord, Web.InjuryFlagRecord>;
 export type ReadLoadPrescription = Reads<Api.LoadPrescription, Web.LoadPrescription>;
 export type SendManualStage2SubmissionRequest = Sends<Web.ManualStage2SubmissionRequest, Api.ManualStage2SubmissionRequest>;
 export type ReadMeResponse = Reads<Omit<Api.MeResponse, "latest_intake">, Omit<Web.MeResponse, "latest_intake">>;
@@ -126,10 +118,7 @@ export type ReadStructuredCardState = Reads<Api.StructuredCardState, Web.Structu
 export type SendTodayCheckinRequest = Sends<Web.TodayCheckinRequest, Api.TodayCheckinRequest>;
 export type ReadTodayCheckinResponse = Reads<Api.TodayCheckinResponse, Web.TodayCheckinResponse>;
 export type SendTodayInjuryCheckinRequest = Sends<Web.TodayInjuryCheckinRequest, Api.TodayInjuryCheckinRequest>;
-export type ReadTodayInjuryCheckinResponse = Reads<
-    { open_injuries: Omit<Api.InjuryFlagRecord, "body_region">[] },
-    { open_injuries: Omit<Web.InjuryFlagRecord, "body_region">[] }
-  >;
+export type ReadTodayInjuryCheckinResponse = Reads<Api.TodayInjuryCheckinResponse, Web.TodayInjuryCheckinResponse>;
 export type SendTodayInjuryDeclaration = Sends<Web.TodayInjuryDeclaration, Api.TodayInjuryDeclaration>;
 export type SendUsernameChangeRequest = Sends<Web.UsernameChangeRequest, Api.UsernameChangeRequest>;
 export type ReadUsernameRateLimitInfo = Reads<Api.UsernameRateLimitInfo, Web.UsernameRateLimitInfo>;
@@ -147,10 +136,10 @@ export type DeclaredAdminReviewRecord = Expect<Declared<Web.AdminReviewRecord, A
 export type DeclaredEffortPrescription = Expect<Declared<Web.EffortPrescription, Api.EffortPrescription>>;
 export type DeclaredExerciseMedia = Expect<Declared<Web.ExerciseMedia, Api.ExerciseMedia>>;
 export type DeclaredFeedbackRecord = Expect<Declared<Web.FeedbackRecord, Api.FeedbackRecord>>;
-export type DeclaredGenerationJobResponse = Expect<Declared<Web.GenerationJobResponse, Api.GenerationJobResponse, "source">>;
+export type DeclaredGenerationJobResponse = Expect<Declared<Web.GenerationJobResponse, Api.GenerationJobResponse>>;
 export type DeclaredGenerationRequestPayloadSummary = Expect<Declared<Web.GenerationRequestPayloadSummary, Api.GenerationRequestPayloadSummary>>;
 export type DeclaredGuidedInjuryInput = Expect<Declared<Web.GuidedInjuryInput, Api.GuidedInjuryInput>>;
-export type DeclaredInjuryFlagRecord = Expect<Declared<Web.InjuryFlagRecord, Api.InjuryFlagRecord, "label" | "canonical_location" | "region_group" | "consequence">>;
+export type DeclaredInjuryFlagRecord = Expect<Declared<Web.InjuryFlagRecord, Api.InjuryFlagRecord, "label" | "canonical_location" | "region_group" | "load_region" | "consequence">>;
 export type DeclaredLoadPrescription = Expect<Declared<Web.LoadPrescription, Api.LoadPrescription>>;
 export type DeclaredMeResponse = Expect<Declared<Web.MeResponse, Api.MeResponse>>;
 export type DeclaredMeasuredValue = Expect<Declared<Web.MeasuredValue, Api.MeasuredValue>>;
@@ -167,7 +156,7 @@ export type DeclaredNutritionWorkspaceState = Expect<Declared<Web.NutritionWorks
 export type DeclaredPendingRehabResponsesResponse = Expect<Declared<Web.PendingRehabResponsesResponse, Api.PendingRehabResponsesResponse>>;
 export type DeclaredPlanAdvisory = Expect<Declared<Web.PlanAdvisory, Api.PlanAdvisory>>;
 export type DeclaredPlanCompletionsResponse = Expect<Declared<Web.PlanCompletionsResponse, Api.PlanCompletionsResponse>>;
-export type DeclaredPlanDetail = Expect<Declared<Web.PlanDetail, Api.PlanDetail, "latest_intake">>;
+export type DeclaredPlanDetail = Expect<Declared<Web.PlanDetail, Api.PlanDetail>>;
 export type DeclaredPlanOutputs = Expect<Declared<Web.PlanOutputs, Api.PlanOutputs>>;
 export type DeclaredPlanScheduleContext = Expect<Declared<Web.PlanScheduleContext, Api.PlanScheduleContext>>;
 export type DeclaredPlanSummary = Expect<Declared<Web.PlanSummary, Api.PlanSummary>>;

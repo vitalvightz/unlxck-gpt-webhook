@@ -664,6 +664,11 @@ export type AdminPlanOutputs = {
   stage2_validator_report: Record<string, unknown>;
   stage2_status: string;
   stage2_attempt_count: number;
+  /** The athlete's intake injuries, sent for plans injury triage held. */
+  intake_injuries?: {
+    injuries: string;
+    guided_injuries: Array<Record<string, unknown>>;
+  } | null;
 };
 
 export type StructuredCardLifecycleState =
@@ -692,7 +697,6 @@ export type PlanScheduleContext = {
 export type PlanDetail = PlanSummary & {
   outputs: PlanOutputs;
   advisories: PlanAdvisory[];
-  latest_intake?: PlanRequest | null;
   admin_outputs?: AdminPlanOutputs | null;
   structured_card_state: StructuredCardState;
   plan_source?: string | null;
@@ -905,6 +909,8 @@ export type TodayPrimarySafetyNotice = {
   tone: "amber" | "red";
 };
 
+export type InjuryLoadRegion = "lower_limb" | "upper_limb" | "trunk_spine" | "head_neck" | "unknown";
+
 export type InjuryFlagRecord = {
   id: string;
   athlete_id: string;
@@ -927,7 +933,12 @@ export type InjuryFlagRecord = {
     | "head_face"
     | "unknown"
     | null;
-  body_region?: "lower_limb" | "upper_limb" | "trunk_spine" | "head_neck" | "unknown" | null;
+  /** The stored location ("ankle", "lower back"), which rehab exposures match
+   * on. Today's rows still send the broad loading group here for web builds
+   * that predate `load_region`; read `load_region` for that. */
+  body_region?: string | null;
+  /** Today only: the broad group the safe-session rules compare against. */
+  load_region?: InjuryLoadRegion | null;
   consequence?: "neuro" | "structural" | "load_sensitive" | null;
   severity: InjuryFlagSeverity;
   /** Who owns `severity`. `surface_system` means it is a floor the backend

@@ -1658,6 +1658,13 @@ class WeeklySchedule(BaseModel):
     days: list[WeeklyDayEntry]
 
 
+class AdminIntakeInjuries(BaseModel):
+    """The injuries an athlete reported at intake, as stored (admin view only)."""
+
+    injuries: str = ""
+    guided_injuries: list[dict[str, Any]] = Field(default_factory=list)
+
+
 class AdminPlanOutputs(BaseModel):
     coach_notes: str = ""
     why_log: dict[str, Any] = Field(default_factory=dict)
@@ -1678,6 +1685,8 @@ class AdminPlanOutputs(BaseModel):
     structured_plan_status: str = "not_attempted"
     structured_plan_errors: list[str] = Field(default_factory=list)
     structured_schema_version: str | None = None
+    # Filled for plans injury triage held (api/services/plan_intake_injuries.py).
+    intake_injuries: AdminIntakeInjuries | None = None
 
 
 class ActiveInjuryRegion(BaseModel):
@@ -1754,6 +1763,9 @@ class GenerationJobResponse(BaseModel):
     stage2_status: str | None = None
     requires_admin_resume: bool = False
     ready_to_open: bool = False
+    # How the job was started (self_serve, quick_build, admin_triage_resume, ...).
+    # The athlete's status bar says when an admin resumed a held build.
+    source: str | None = None
 
 
 class GenerationRequestPayloadSummary(BaseModel):

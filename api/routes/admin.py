@@ -84,6 +84,7 @@ from ..generation_job_helpers import (
     _triage_job_has_resume_approval as _triage_job_has_resume_approval,
     _triage_plan_has_resume_approval as _triage_plan_has_resume_approval,
 )
+from ..services.plan_intake_injuries import admin_intake_injuries
 
 if TYPE_CHECKING:
     pass
@@ -400,6 +401,7 @@ def build_admin_router() -> APIRouter:
         return _map_plan_detail(
             updated,
             include_admin=True,
+            intake_injuries=admin_intake_injuries(store, updated),
             plan_source=_lookup_plan_source(store, plan_id),
         )
 
@@ -426,6 +428,7 @@ def build_admin_router() -> APIRouter:
         return _map_plan_detail(
             updated,
             include_admin=True,
+            intake_injuries=admin_intake_injuries(store, updated),
             plan_source=_lookup_plan_source(store, plan_id),
         )
 

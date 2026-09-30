@@ -26,6 +26,7 @@ from ..structured_plan_generation import (
     should_attempt_structured_plan,
 )
 from ..store import AppStore
+from api.services.plan_intake_injuries import admin_intake_injuries
 
 if TYPE_CHECKING:
     from ..stage2_automation import Stage2Automator
@@ -537,10 +538,12 @@ async def submit_manual_stage2(
     except Exception:  # noqa: BLE001 - push must never break admin approval
         logger.exception("plan publication notification failed for plan_id=%s", plan_id)
     plan_source = await asyncio.to_thread(_lookup_plan_source, store, plan_id)
+    intake_injuries = await asyncio.to_thread(admin_intake_injuries, store, updated)
     return _map_plan_detail(
         updated,
         include_admin=True,
         plan_source=plan_source,
+        intake_injuries=intake_injuries,
     )
 
 
@@ -591,10 +594,12 @@ async def approve_review_required_plan(
     except Exception:  # noqa: BLE001 - push must never break admin approval
         logger.exception("plan publication notification failed for plan_id=%s", plan_id)
     plan_source = await asyncio.to_thread(_lookup_plan_source, store, plan_id)
+    intake_injuries = await asyncio.to_thread(admin_intake_injuries, store, updated)
     return _map_plan_detail(
         updated,
         include_admin=True,
         plan_source=plan_source,
+        intake_injuries=intake_injuries,
     )
 
 
