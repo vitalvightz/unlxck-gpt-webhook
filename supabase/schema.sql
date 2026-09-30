@@ -1056,6 +1056,12 @@ as $$
       join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public'
     ),
+    'private_functions', (
+      select coalesce(jsonb_agg(distinct p.proname order by p.proname), '[]'::jsonb)
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'private'
+    ),
     'indexes', (
       select coalesce(jsonb_agg(indexname order by indexname), '[]'::jsonb)
       from pg_indexes

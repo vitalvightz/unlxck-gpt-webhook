@@ -7,9 +7,8 @@ name: Backend Checks
 # remains a fast, self-contained signal.
 #
 # The LIVE Supabase runtime schema check below may skip on PRs and non-Main/main
-# branches without credentials, but it is mandatory on protected Main/main
-# deploys. Configure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY for protected
-# Main/main before treating this workflow as a deploy gate.
+# branches without credentials, but it is mandatory on every push to Main/main
+# (protected or not). deploy-hetzner.yml runs the same gate before deploying.
 
 on:
   push:
@@ -48,8 +47,8 @@ jobs:
 
       # The service-role key is scoped to THIS step's env so the install/test
       # steps above never see it. The gate only permits missing credentials on
-      # PRs or non-protected-Main/main branch runs; protected Main/main deploys must run
-      # the live check and pass.
+      # PRs or non-Main/main branch runs; Main/main pushes must run the live
+      # check and pass.
       - name: Live Supabase runtime schema check (staging)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}

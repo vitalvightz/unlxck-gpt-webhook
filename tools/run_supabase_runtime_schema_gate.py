@@ -16,27 +16,32 @@ if str(_REPO_ROOT) not in sys.path:
 from tools.check_supabase_runtime_schema import main as run_runtime_schema_check  # noqa: E402
 
 MANDATORY_MISSING_ENV_MESSAGE = (
-    "Supabase runtime schema check is mandatory for protected Main/main deploys. "
+    "Supabase runtime schema check is mandatory for Main/main deploys. "
     "Configure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY for this workflow."
 )
 SKIP_MISSING_ENV_MESSAGE = (
     "Skipping live schema check; Supabase credentials are not configured for this "
-    "non-protected-Main/main run."
+    "non-Main/main run."
 )
+# Set by workflows (e.g. the deploy) that must never skip the live check.
+REQUIRED_ENV_FLAG = "SUPABASE_SCHEMA_GATE_REQUIRED"
 
 
 def _is_truthy(value: str | None) -> bool:
     return (value or "").strip().lower() == "true"
 
 
-def is_protected_main_deploy(env: Mapping[str, str]) -> bool:
-    """Return whether this GitHub Actions run is a protected main-branch deploy."""
+def is_main_deploy(env: Mapping[str, str]) -> bool:
+    """Return whether this run must pass the live check before deploying.
+
+    Any push to Main/main deploys (deploy-hetzner.yml), whether or not the
+    branch is protected, so branch protection is not required here: gating on
+    it let the check skip silently while migrations were missing in production.
+    """
+    if _is_truthy(env.get(REQUIRED_ENV_FLAG)):
+        return True
     ref_name = str(env.get("GITHUB_REF_NAME") or "").strip()
-    return (
-        env.get("GITHUB_EVENT_NAME") == "push"
-        and ref_name in {"Main", "main"}
-        and _is_truthy(env.get("GITHUB_REF_PROTECTED"))
-    )
+    return env.get("GITHUB_EVENT_NAME") == "push" and ref_name in {"Main", "main"}
 
 
 def missing_supabase_credentials(env: Mapping[str, str]) -> list[str]:
@@ -52,10 +57,10 @@ def run_gate(
     env: Mapping[str, str] = os.environ,
     schema_check=run_runtime_schema_check,
 ) -> int:
-    """Run the schema check, allowing credential skips only off protected main."""
+    """Run the schema check, allowing credential skips only off Main/main."""
     missing = missing_supabase_credentials(env)
     if missing:
-        if is_protected_main_deploy(env):
+        if is_main_deploy(env):
             print(f"::error::{MANDATORY_MISSING_ENV_MESSAGE}")
             print("Missing required environment variable(s): " + ", ".join(missing))
             return 2
