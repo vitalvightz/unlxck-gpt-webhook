@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import sys
 from time import perf_counter
 from pathlib import Path
 import re
@@ -48,6 +49,13 @@ from .config import (
     DATA_DIR,
     INJURY_GUARD_SHORTLIST,
     trim_to_injury_guard_shortlist,
+)
+from .late_fight_dosage_policy import (
+    governed_generate_conditioning_block,
+    governed_load_bank,
+    governed_render_conditioning_block,
+    # D13-D1 caps come from the Style Taper governance, not a local table.
+    late_fight_dosage_caps as _late_fight_dosage_caps,
 )
 from .late_selector_windows import (
     D1,
@@ -2632,72 +2640,6 @@ def _late_support_fallback(window: str | None) -> dict:
         "support_only": True,
         "meaningful_stress": False,
     }
-
-def _late_fight_dosage_caps(days_until_fight: int) -> str:
-    """Return countdown-aware dosage caps for late-fight TAPER days."""
-    override_note = "These caps override any drill default structure."
-    _d10_to_d7_caps = (
-        "late-fight caps: no conditioning development; neural speed bursts "
-        "3-4 max (5-6 sec @ RPE 6-7, rest 90-120 sec); med-ball work optional only, never required; "
-        "technical touch 1-2 short rounds max (<=2 min @ RPE 5-6); "
-        "no generic conditioning rounds; cap 6-8 min active. "
-        f"{override_note}"
-    )
-    final_week_caps = {
-        10: f"D-10 {_d10_to_d7_caps}",
-        9: f"D-9 {_d10_to_d7_caps}",
-        8: f"D-8 {_d10_to_d7_caps}",
-        7: f"D-7 {_d10_to_d7_caps}",
-        6: (
-            "D-6 late-fight caps: no conditioning development; optional alactic sharpness only "
-            "2-3 bursts max (5-6 sec @ RPE 6-7, rest 120 sec); no kettlebell swings, no loaded power cleans; "
-            "technical touch 1-2 short rounds max (<=2 min @ RPE 5-6); "
-            "no generic conditioning rounds; cap 5-7 min active. "
-            f"{override_note}"
-        ),
-        5: (
-            "D-5 late-fight caps: alactic bursts 2-3 max (5-6 sec @ RPE 6-7, rest 120 sec); "
-            "technical touch 1-2 short rounds max (<=2 min @ RPE 5-6); "
-            "no generic 6-10 round structures; cap 5-7 min active. "
-            f"{override_note}"
-        ),
-        4: (
-            "D-4 late-fight caps: alactic bursts 2-3 max (4-6 sec @ RPE 5-6, rest 120 sec); "
-            "technical touch 1-2 short rounds max (<=2 min @ RPE 5-6); "
-            "cap 4-6 min active. "
-            f"{override_note}"
-        ),
-        3: (
-            "D-3 late-fight caps: alactic bursts 0-3 conditional only "
-            "(4-6 sec @ RPE 5-6, rest 120 sec), rendered as light shadow bursts; "
-            "med-ball work optional only, never required; "
-            "technical touch 1-2 short rounds max (<=2 min @ RPE 5); "
-            "cap 4-6 min active. "
-            f"{override_note}"
-        ),
-        2: (
-            "D-2 late-fight caps: alactic bursts 0-2 optional only "
-            "(4-6 sec @ RPE 5-6, rest 120 sec); "
-            "technical walk-through 1-2 short rounds max (<=90 sec @ RPE 4-5); "
-            "cap 3-5 min active. "
-            f"{override_note}"
-        ),
-        1: (
-            "D-1 late-fight caps: no conditioning work; optional rhythm touch only "
-            "1-2 very short rhythm touches max (3-4 sec @ RPE 3-5, full rest); "
-            "light shadowboxing 2 x 60-90 sec max plus breathing/visualization; "
-            "technical walk-through only; cap 2-4 min active. "
-            f"{override_note}"
-        ),
-    }
-    if days_until_fight in final_week_caps:
-        return final_week_caps[days_until_fight]
-    if days_until_fight == 0:
-        return (
-            "Fight day: no conditioning prescription. Follow coach warm-up and fight protocol only. "
-            "No additional S&C. Optional breathing and shoulder mobility only."
-        )
-    return "Late-fight caps: no conditioning development; keep only low-volume rhythm, sharpness, or recovery work."
 
 def render_conditioning_block(
     grouped_drills: dict[str, list[dict]],
@@ -5356,4 +5298,13 @@ def generate_conditioning_block(flags):
     }
 
     return output_lines, selected_drill_names, why_log, grouped_drills, missing_systems, candidate_reservoir
-# Map for tactical styles
+
+
+# Late-fight Style Taper governance (fightcamp.late_fight_dosage_policy), applied
+# where these functions are defined so every importer gets the governed version.
+_load_bank = governed_load_bank(_load_bank)
+render_conditioning_block = governed_render_conditioning_block(render_conditioning_block)
+generate_conditioning_block = governed_generate_conditioning_block(
+    generate_conditioning_block,
+    conditioning_module=sys.modules[__name__],
+)

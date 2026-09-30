@@ -112,9 +112,10 @@ design and the *later* one wins.
 as written always returns `release_decision` of `publish` or `publish_with_flags`
 and always sets `is_athlete_releasable` / `is_publishable` true, so ordinary
 validator findings never block release. The one exception is invisible in its
-source: `planner_authority_integrity.install()` wraps this function at import time
-and adds `release_decision: "hold"` when planner-authority blockers are present.
-See section 3.2.
+function body: `stage2_policy` wraps it with
+`planner_authority_integrity.governed_release_policy`, which adds
+`release_decision: "hold"` when planner-authority blockers are present. See
+section 3.2.
 
 **Layer 2 — four deterministic owners do hold.** Each says the deterministic plan
 itself is unusable, not that the wording is poor. Each applies its hold *after*
@@ -160,36 +161,40 @@ Do not "fix" a hold by weakening its owner; and do not assume a hold keeps a pla
 off the athlete's screen. If a defect must actually block release, that is a change
 to the override, argued under section 12.
 
-### 3.2 The import-time patch layer
+### 3.2 Policy wrappers
 
-Reading a canonical owner's source does **not** always tell you what runs. Importing
-`fightcamp` executes three installers in `fightcamp/__init__.py`, each of which
-replaces module attributes on other modules at import time:
+Reading a canonical owner's function body does **not** always tell you what runs.
+Three policy modules wrap functions that other modules own. Each owning module
+applies the wrapper itself, at the end of the module, so the name it exports is
+the governed function:
 
-| Installer | Replaces |
-| --- | --- |
-| `late_fight_dosage_policy.install()` | `conditioning.render_conditioning_block`, `conditioning._load_bank`, `conditioning.generate_conditioning_block` — installs canonical D-13..D-1 taper dosage and Style Taper governance |
-| `late_fight_phase_eligibility.install()` | `stage2_payload.build_planning_brief` (sets the `planner_athlete_model_context` ContextVar for the duration of planning), `stage2_payload._build_late_fight_allowed_exercises_by_day` (applies Stage 1 phase eligibility to late-tail selection) |
-| `planner_authority_integrity.install()` | `stage2_pipeline._validator_report_with_required_countdown_sessions`, `stage2_policy.apply_stage2_release_policy`, `stage2_pipeline.build_stage2_retry` |
+| Owner (bottom of module) | Wrapped with | Effect |
+| --- | --- | --- |
+| `conditioning.render_conditioning_block`, `conditioning._load_bank`, `conditioning.generate_conditioning_block` | `late_fight_dosage_policy.governed_*` | canonical D-13..D-1 taper dosage and Style Taper governance |
+| `stage2_payload.build_planning_brief`, `stage2_payload._build_late_fight_allowed_exercises_by_day` | `late_fight_phase_eligibility.governed_*` | sets the `planner_athlete_model_context` ContextVar for the duration of planning; applies Stage 1 phase eligibility to late-tail selection |
+| `stage2_pipeline._validator_report_with_required_countdown_sessions`, `stage2_policy.apply_stage2_release_policy`, `stage2_pipeline.build_stage2_retry` | `planner_authority_integrity.governed_*` | the planner-authority gate |
 
-Each installer is idempotent (guarded by an `_..._INSTALLED` flag on the target
-module) and always runs in production.
+Because the name is governed from the moment it exists, every importer gets the
+governed version whatever the import order, and `import fightcamp` runs nothing.
+`conditioning._late_fight_dosage_caps` is the dosage policy's
+`late_fight_dosage_caps`.
 
 The consequence that matters most: **`apply_stage2_release_policy` can return
-`release_decision: "hold"` in production, even though its own source cannot.** The
+`release_decision: "hold"`, even though its function body cannot.** The
 `planner_authority_integrity` wrapper adds that hold when planner-authority
-blockers are present. Section 3.1's "layer 1 never holds" is true of the unpatched
-function and of every ordinary validator finding; it is the patch that makes the
-authority hold possible. `stage2_pipeline` calls the policy through a module-global
-lookup, and the installer rebinds `pipeline.apply_stage2_release_policy` as well as
-the policy module's own attribute, so the patched version is what both use.
+blockers are present. Section 3.1's "layer 1 never holds" is true of the function
+body and of every ordinary validator finding; it is the wrapper that makes the
+authority hold possible. `stage2_pipeline` imports the policy after `stage2_policy`
+has wrapped it, so both use the governed version.
 
-This layer predates the freeze and is not new work. But it is the reason a reader
-can trace a decision to the "canonical owner", read that owner, and still be wrong.
-Treat these three modules as part of the owners they patch, and check
-`fightcamp/__init__.py` before concluding that a function's source is its
-behaviour. Extending the pattern to new modules is prohibited under section 12 —
-it is the `*_patch.py` / `*_integration.py` smell wearing a different filename.
+Treat these three policy modules as part of the owners they wrap, and read the
+bottom of an owner's module before concluding that a function's body is its
+behaviour. `tests/test_planner_policy_wiring.py` lists every wrapped function and
+fails when one is ungoverned in any import order, when a wrapper in use is not
+listed, or when a planner module assigns attributes on another module. A new
+policy wraps at the owner's definition site and is added to that list; replacing
+another module's attributes is prohibited under section 12 — it is the
+`*_patch.py` / `*_integration.py` smell wearing a different filename.
 
 ## 4. Current normal-camp execution order
 

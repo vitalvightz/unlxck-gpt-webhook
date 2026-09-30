@@ -377,16 +377,12 @@ def _repair_taper_phase_winner_for_current_window(
     return output, selected_names, rebuilt_why, grouped, missing, reservoir
 
 
-def install() -> None:
-    """Install canonical D13-D1 taper dosage and Style Taper runtime governance."""
-    from . import conditioning as conditioning_module
+# ``fightcamp.conditioning`` applies these wrappers where it defines the
+# functions, so every importer gets the governed version.
 
-    if getattr(conditioning_module, "_STYLE_TAPER_DOSAGE_POLICY_INSTALLED", False):
-        return
 
-    original_render = conditioning_module.render_conditioning_block
-    original_load_bank = conditioning_module._load_bank
-    original_generate = conditioning_module.generate_conditioning_block
+def governed_render_conditioning_block(original_render):
+    """D13-D1 TAPER renders carry the canonical Style Taper dosage caps."""
 
     @wraps(original_render)
     def render_conditioning_block(
@@ -433,6 +429,12 @@ def install() -> None:
             )
         return rendered
 
+    return render_conditioning_block
+
+
+def governed_load_bank(original_load_bank):
+    """The Style Taper bank is validated on every load and filtered to the athlete."""
+
     @wraps(original_load_bank)
     def _load_bank(path, *, source: str, enforce_conditioning_systems: bool = False):
         bank = original_load_bank(
@@ -454,6 +456,17 @@ def install() -> None:
             return bank
         return _filter_style_taper_bank_for_context(bank, sport=sport, styles=styles)
 
+    return _load_bank
+
+
+def governed_generate_conditioning_block(original_generate, *, conditioning_module):
+    """Generation runs with the athlete's Style Taper context, and a TAPER phase
+    winner that is illegal for the current late window is replaced.
+
+    ``conditioning_module`` is read at call time (its ``STYLE_TAG_MAP`` and
+    ``render_conditioning_block``), as the repair re-renders the block.
+    """
+
     @wraps(original_generate)
     def generate_conditioning_block(flags):
         sport, styles = _style_taper_context_from_flags(
@@ -471,9 +484,4 @@ def install() -> None:
         finally:
             _STYLE_TAPER_CONTEXT.reset(token)
 
-    conditioning_module._late_fight_dosage_caps = late_fight_dosage_caps
-    conditioning_module._filter_style_taper_bank_for_context = _filter_style_taper_bank_for_context
-    conditioning_module._load_bank = _load_bank
-    conditioning_module.generate_conditioning_block = generate_conditioning_block
-    conditioning_module.render_conditioning_block = render_conditioning_block
-    conditioning_module._STYLE_TAPER_DOSAGE_POLICY_INSTALLED = True
+    return generate_conditioning_block

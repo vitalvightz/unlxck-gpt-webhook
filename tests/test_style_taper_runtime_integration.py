@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from fightcamp import conditioning
+from fightcamp.late_fight_dosage_policy import _filter_style_taper_bank_for_context
 from fightcamp.style_taper_governance import (
     D7,
     D6_TO_D5,
@@ -99,7 +100,7 @@ def test_style_taper_runtime_loader_rejects_specialized_governance_violation(tmp
 
 def test_style_taper_fallback_never_crosses_sport_boundary():
     bank = _load_bank()
-    filtered = conditioning._filter_style_taper_bank_for_context(
+    filtered = _filter_style_taper_bank_for_context(
         bank,
         sport="boxing",
         styles={"submission_hunter"},
@@ -222,7 +223,7 @@ def test_real_taper_competition_selects_window_legal_same_sport_content(
 
 
 def test_pressure_style_dead_end_keeps_compatible_same_sport_alactic_candidate():
-    filtered = conditioning._filter_style_taper_bank_for_context(
+    filtered = _filter_style_taper_bank_for_context(
         _load_bank(), sport="kickboxing", styles={"pressure_fighter"}
     )
     names = {item["name"] for item in filtered}
