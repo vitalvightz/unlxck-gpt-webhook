@@ -28,7 +28,12 @@ from .compliance import (
     meets_minimum_age,
     parse_date_of_birth,
 )
-from .errors import client_request_id_payload_mismatch_error, generation_already_in_flight_error
+from .errors import (
+    client_request_id_payload_mismatch_error,
+    generation_already_in_flight_error,
+    generation_daily_limit_error,
+    generation_job_not_found_error,
+)
 from .environment import is_production_environment
 from .error_sanitizer import sanitize_error_text
 from .generation_config import generation_job_stale_after_seconds, generation_worker_id
@@ -2373,10 +2378,7 @@ class SupabaseAppStore(CompactGenerationReads):
                 detail="invalid daily generation limit response",
             )
         if payload.get("limit_exceeded") is True:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=limit_reached_detail,
-            )
+            raise generation_daily_limit_error(limit_reached_detail)
         job = payload.get("job")
         if not isinstance(job, dict):
             raise HTTPException(
@@ -3421,10 +3423,7 @@ class SupabaseAppStore(CompactGenerationReads):
                 detail=GENERATION_JOB_UNAVAILABLE_DETAIL,
             ) from exc
         if self._is_generation_job_terminal_missing_error(exc):
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="generation job not found",
-            ) from exc
+            raise generation_job_not_found_error() from exc
         if self._is_generation_job_terminal_conflict_error(exc):
             raise _status_transition_error(_sanitize_error_text(exc)) from exc
         if self._is_generation_job_schema_error(exc):
@@ -3571,10 +3570,7 @@ class SupabaseAppStore(CompactGenerationReads):
                     raise _status_transition_error(f"unknown generation job status: {next_status!r}")
                 existing = self._read_generation_job_status_guard(job_id)
                 if not existing:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail="generation job not found",
-                    )
+                    raise generation_job_not_found_error()
                 try:
                     payload["status"] = require_generation_job_transition(existing.get("status") or "queued", next_status)
                 except ValueError as exc:
@@ -3587,10 +3583,7 @@ class SupabaseAppStore(CompactGenerationReads):
                 return {}
             updated = self.get_generation_job(job_id)
             if not updated:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="generation job not found",
-                )
+                raise generation_job_not_found_error()
             return updated
         except HTTPException:
             raise

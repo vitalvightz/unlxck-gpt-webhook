@@ -15,6 +15,7 @@ import pytest
 import shared.contracts as contracts
 from api import performance_focus
 from api.contracts.training_day import DAY_ROLLOVER_HOUR
+from api import errors
 from api.errors import GENERATION_ALREADY_IN_FLIGHT_CODE, GENERATION_ALREADY_IN_FLIGHT_MESSAGE
 from api.models import PROFILE_REFRESH_FAILED_WARNING, PROFILE_REFRESH_FAILED_WARNING_CODE
 from api.services import notification_timing, session_timing_notifications
@@ -82,6 +83,22 @@ def test_api_messages_come_from_the_shared_contract():
     )
 
 
+@pytest.mark.parametrize(
+    ("key", "constant"),
+    [
+        ("generation_daily_limit_reached", "GENERATION_DAILY_LIMIT_REACHED_CODE"),
+        ("generation_rate_limited", "GENERATION_RATE_LIMITED_CODE"),
+        ("generation_job_not_found", "GENERATION_JOB_NOT_FOUND_CODE"),
+        ("generation_job_not_retryable", "GENERATION_JOB_NOT_RETRYABLE_CODE"),
+        ("generation_job_has_saved_plan", "GENERATION_JOB_HAS_SAVED_PLAN_CODE"),
+        ("generation_job_not_cancellable", "GENERATION_JOB_NOT_CANCELLABLE_CODE"),
+    ],
+)
+def test_generation_error_codes_come_from_the_shared_contract(key, constant):
+    # web/lib/generation-failure.ts sorts request failures by these codes.
+    assert getattr(errors, constant) == _contract("api-messages.json")[key]["code"]
+
+
 def test_stage1_fallback_status_comes_from_the_stage2_policy():
     assert STAGE2_STAGE1_FALLBACK == _contract("stage2-policy.json")["stage1_fallback_status"]
 
@@ -103,6 +120,7 @@ def test_every_shared_pad_spelling_normalizes_to_pads():
         ("web/lib/camp-map.ts", "training-calendar.json"),
         ("web/lib/generation-controller.ts", "api-messages.json"),
         ("web/lib/profile-refresh-warning.ts", "api-messages.json"),
+        ("web/lib/generation-failure.ts", "api-messages.json"),
         ("web/lib/stage2-policy.ts", "stage2-policy.json"),
         ("web/lib/intake-options.ts", "equipment-aliases.json"),
     ],
@@ -124,6 +142,8 @@ def test_web_reads_the_same_contract(web_file, contract):
         ("web/lib/intake-options.ts", 'thai_pads: "pads"'),
         ("api/performance_focus.py", '"Fight week"'),
         ("api/errors.py", 'GENERATION_ALREADY_IN_FLIGHT_CODE = "generation_already_in_flight"'),
+        ("api/errors.py", 'code="generation_'),
+        ("web/lib/generation-failure.ts", '"generation_job_not_found"'),
         ("api/models.py", "plan generated from submitted intake only"),
         ("api/stage2_automation.py", '"stage2_failed_stage1_fallback"'),
         ("api/contracts/training_day.py", "DAY_ROLLOVER_HOUR = 3"),

@@ -7,6 +7,7 @@ from typing import Any, Callable
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from api.errors import generation_job_not_found_error
 from api.generation_job_helpers import _job_response, resolve_viewer_role
 from api.models import GenerationJobResponse, ProfileRecord
 from api.store import AppStore, is_effective_admin_profile
@@ -24,7 +25,7 @@ def _validate_generation_job_id(job_id: str) -> None:
     except (ValueError, TypeError, AttributeError):
         if _FAKE_STORE_JOB_ID_PATTERN.fullmatch(str(job_id or "")):
             return
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
+        raise generation_job_not_found_error()
 
 
 def build_generation_jobs_router(
@@ -80,7 +81,7 @@ def build_generation_jobs_router(
         _validate_generation_job_id(job_id)
         job = await asyncio.to_thread(store.get_generation_job_status, job_id)
         if not job:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
+            raise generation_job_not_found_error()
         is_admin = is_effective_admin_profile(profile, store)
         if not is_admin and str(job["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")

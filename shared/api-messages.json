@@ -6,5 +6,23 @@
   "profile_refresh_failed": {
     "code": "profile_refresh_failed_warning",
     "message": "Profile refresh failed; plan generated from submitted intake only."
+  },
+  "generation_daily_limit_reached": {
+    "code": "generation_daily_limit_reached"
+  },
+  "generation_rate_limited": {
+    "code": "generation_rate_limited"
+  },
+  "generation_job_not_found": {
+    "code": "generation_job_not_found"
+  },
+  "generation_job_not_retryable": {
+    "code": "generation_job_not_retryable"
+  },
+  "generation_job_has_saved_plan": {
+    "code": "generation_job_has_saved_plan"
+  },
+  "generation_job_not_cancellable": {
+    "code": "generation_job_not_cancellable"
   }
 }

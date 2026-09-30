@@ -1053,6 +1053,7 @@ def test_generation_job_endpoint_rejects_malformed_job_id_before_store_lookup():
 
     assert response.status_code == 404
     assert response.json()["detail"] == "generation job not found"
+    assert response.json()["code"] == "generation_job_not_found"
     store.get_generation_job.assert_not_called()
 
 

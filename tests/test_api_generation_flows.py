@@ -2000,6 +2000,7 @@ def test_retry_does_not_requeue_worker_start_job_loaded_when_heartbeat_is_fresh(
 
     assert retried.status_code == 409
     assert retried.json()["detail"] == "only failed generation jobs can be retried"
+    assert retried.json()["code"] == "generation_job_not_retryable"
 
 
 def test_retry_failed_job_with_saved_plan_is_blocked_for_self_serve():
@@ -2020,6 +2021,7 @@ def test_retry_failed_job_with_saved_plan_is_blocked_for_self_serve():
 
     assert retried.status_code == 409
     assert retried.json()["detail"] == "generation job already produced a saved plan"
+    assert retried.json()["code"] == "generation_job_has_saved_plan"
 
 
 def test_retry_failed_job_with_saved_plan_is_allowed_for_admin_triage_resume():
@@ -2104,6 +2106,7 @@ def test_cancel_terminal_job_is_rejected():
     )
 
     assert response.status_code == 409
+    assert response.json()["code"] == "generation_job_not_cancellable"
     assert store.get_generation_job(completed["id"])["status"] == "completed"
 
 
@@ -4830,6 +4833,7 @@ def test_generate_plan_rate_limits_repeat_requests(monkeypatch: pytest.MonkeyPat
     assert first.status_code == 202
     assert second.status_code == status.HTTP_429_TOO_MANY_REQUESTS
     assert 1 <= second.json()["detail"]["retry_after_seconds"] <= 60
+    assert second.json()["code"] == "generation_rate_limited"
 
 
 def test_generate_plan_idempotent_retry_does_not_consume_short_window_quota(monkeypatch: pytest.MonkeyPatch):
@@ -4914,6 +4918,7 @@ def test_generate_plan_daily_limit_blocks_request_at_limit(monkeypatch: pytest.M
     assert first.status_code == 202
     assert second.status_code == status.HTTP_429_TOO_MANY_REQUESTS
     assert str(second.json()["detail"]).startswith("Daily generation limit reached.")
+    assert second.json()["code"] == "generation_daily_limit_reached"
 
 
 def test_fake_store_daily_limit_create_is_atomic_for_concurrent_requests():

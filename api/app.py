@@ -23,7 +23,11 @@ from .environment import (
     is_production_environment,
     should_default_to_production,
 )
-from .errors import generation_already_in_flight_error
+from .errors import (
+    generation_already_in_flight_error,
+    generation_job_not_cancellable_error,
+    generation_job_not_found_error,
+)
 from .request_body_guard import RequestBodySizeLimitMiddleware, normalize_request_path
 from .models import (
     ApproveAndResumeGenerationRequest,
@@ -1151,17 +1155,16 @@ def create_app(
             uuid.UUID(job_id)
         except (ValueError, TypeError, AttributeError):
             if not str(job_id or "").startswith("job_"):
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
+                raise generation_job_not_found_error()
 
         job = store.get_generation_job(job_id)
         if not job:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
+            raise generation_job_not_found_error()
 
         job_status = str(job.get("status") or "").strip().lower()
         if job_status not in {"queued", "running"}:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Only queued or running generation jobs can be cancelled.",
+            raise generation_job_not_cancellable_error(
+                "Only queued or running generation jobs can be cancelled."
             )
 
         now_iso = utc_now_iso()
