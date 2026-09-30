@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import os
 from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Mapping
@@ -21,6 +20,8 @@ from api.services.push_notifications import dispatch_push_candidate
 from api.services.today_readiness_boundary import build_today_command_view
 from api.store import AppStore
 from api.contracts.completion import TERMINAL_COMPLETION_STATUSES
+from api.datetimes import parse_utc_datetime as _parse_datetime
+from api.settings import env_int
 
 logger = logging.getLogger(__name__)
 
@@ -41,39 +42,18 @@ class CoachingDispatchResult:
     delivered_count: int
 
 
-def _env_hour(name: str, default: int) -> int:
-    raw = os.getenv(name, str(default)).strip()
-    try:
-        return min(23, max(0, int(raw)))
-    except ValueError:
-        logger.warning("[notification] invalid hour env %s=%r; using %s", name, raw, default)
-        return default
-
-
 def _morning_start_hour() -> int:
-    return _env_hour("UNLXCK_MORNING_PUSH_LOCAL_HOUR", DEFAULT_MORNING_START_HOUR)
+    return env_int("UNLXCK_MORNING_PUSH_LOCAL_HOUR", DEFAULT_MORNING_START_HOUR, minimum=0, maximum=23)
 
 
 def _morning_end_hour() -> int:
-    return _env_hour("UNLXCK_MORNING_PUSH_CUTOFF_LOCAL_HOUR", DEFAULT_MORNING_END_HOUR)
+    return env_int("UNLXCK_MORNING_PUSH_CUTOFF_LOCAL_HOUR", DEFAULT_MORNING_END_HOUR, minimum=0, maximum=23)
 
 
 def _aware_utc(value: datetime) -> datetime:
     if value.tzinfo is None:
         return value.replace(tzinfo=timezone.utc)
     return value.astimezone(timezone.utc)
-
-
-def _parse_datetime(value: Any) -> datetime | None:
-    if isinstance(value, datetime):
-        return _aware_utc(value)
-    if not isinstance(value, str) or not value.strip():
-        return None
-    try:
-        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    return _aware_utc(parsed)
 
 
 def _local_now(now_utc: datetime, timezone_name: str) -> datetime:

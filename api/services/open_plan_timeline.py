@@ -22,6 +22,7 @@ from datetime import date, timedelta
 from typing import Any, Mapping
 
 from fightcamp.weekly_schedule_view import normalize_weekday
+from api.datetimes import parse_calendar_date as _parse_date
 
 
 WEEKDAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
@@ -44,13 +45,6 @@ def _mapping(value: Any) -> dict[str, Any]:
             return {}
         return dict(decoded) if isinstance(decoded, Mapping) else {}
     return {}
-
-
-def _parse_date(value: Any) -> date | None:
-    try:
-        return date.fromisoformat(str(value or "").strip()[:10])
-    except (ValueError, AttributeError):
-        return None
 
 
 def _ordered_weekdays(values: Any) -> list[str]:

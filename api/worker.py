@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import signal
 import time
 from contextlib import suppress
@@ -16,17 +15,9 @@ from .generation_config import generation_job_stale_after_seconds
 from .stage2_automation import build_default_stage2_automator
 from .store import AppStore, SupabaseAppStore, is_pre_start_stale_generation_job
 from .worker_recovery import recover_stale_generation_jobs
+from .settings import env_flag, env_float, env_int
 
 logger = logging.getLogger(__name__)
-
-
-def _int_env(name: str, default: int, *, minimum: int = 1) -> int:
-    raw_value = os.getenv(name, str(default)).strip()
-    try:
-        return max(minimum, int(raw_value))
-    except ValueError:
-        logger.warning("[worker] invalid integer env %s=%r; using %s", name, raw_value, default)
-        return default
 
 
 def _worker_stale_after_seconds() -> int:
@@ -34,19 +25,19 @@ def _worker_stale_after_seconds() -> int:
 
 
 def _worker_max_concurrent_jobs() -> int:
-    return _int_env("UNLXCK_GENERATION_WORKER_MAX_CONCURRENT_JOBS", 1, minimum=1)
+    return env_int("UNLXCK_GENERATION_WORKER_MAX_CONCURRENT_JOBS", 1, minimum=1)
 
 
 def _worker_shutdown_grace_seconds() -> int:
-    return _int_env("UNLXCK_GENERATION_WORKER_SHUTDOWN_GRACE_SECONDS", 25, minimum=1)
+    return env_int("UNLXCK_GENERATION_WORKER_SHUTDOWN_GRACE_SECONDS", 25, minimum=1)
 
 
 def _worker_recovery_sweep_interval_seconds() -> int:
-    return _int_env("UNLXCK_GENERATION_WORKER_RECOVERY_SWEEP_SECONDS", 15, minimum=5)
+    return env_int("UNLXCK_GENERATION_WORKER_RECOVERY_SWEEP_SECONDS", 15, minimum=5)
 
 
 def _morning_push_sweep_interval_seconds() -> int:
-    return _int_env("UNLXCK_MORNING_PUSH_SWEEP_INTERVAL_SECONDS", 600, minimum=60)
+    return env_int("UNLXCK_MORNING_PUSH_SWEEP_INTERVAL_SECONDS", 600, minimum=60)
 
 
 async def _run_morning_push_sweep_if_due(
@@ -96,7 +87,7 @@ _MORNING_PUSH_SWEEP_TASK: dict[str, asyncio.Task[None] | None] = {"task": None}
 
 
 def _exercise_media_sweep_interval_seconds() -> int:
-    return _int_env("UNLXCK_EXERCISE_MEDIA_SWEEP_INTERVAL_SECONDS", 86400, minimum=3600)
+    return env_int("UNLXCK_EXERCISE_MEDIA_SWEEP_INTERVAL_SECONDS", 86400, minimum=3600)
 
 
 async def _run_exercise_media_sweep_if_due(
@@ -122,7 +113,7 @@ async def _run_exercise_media_sweep_if_due(
     last_sweep_at = state.get("last_sweep_at")
     if last_sweep_at is not None and now - last_sweep_at < interval_seconds:
         return
-    if os.getenv("UNLXCK_EXERCISE_MEDIA_SWEEP_ENABLED", "1").strip() == "0":
+    if not env_flag("UNLXCK_EXERCISE_MEDIA_SWEEP_ENABLED", True):
         return
     running = _MEDIA_SWEEP_TASK.get("task")
     if running is not None and not running.done():
@@ -385,10 +376,7 @@ async def run_worker() -> None:
     store.validate_runtime_schema()
     mode = "supabase"
 
-    interval_seconds = max(
-        1.0,
-        float(os.getenv("UNLXCK_GENERATION_WORKER_INTERVAL_SECONDS", "3")),
-    )
+    interval_seconds = env_float("UNLXCK_GENERATION_WORKER_INTERVAL_SECONDS", 3.0, minimum=1.0, positive=True)
     stale_after_seconds = _worker_stale_after_seconds()
     max_concurrent_jobs = _worker_max_concurrent_jobs()
     shutdown_grace_seconds = _worker_shutdown_grace_seconds()
@@ -409,7 +397,7 @@ async def run_worker() -> None:
         shutdown_grace_seconds,
         recovery_interval_seconds,
     )
-    if os.getenv("UNLXCK_ENABLE_IN_PROCESS_GENERATION", "0").strip() == "0":
+    if not env_flag("UNLXCK_ENABLE_IN_PROCESS_GENERATION"):
         logger.info("[worker] generation:worker_only_mode enabled")
 
     recovery_sweep_state: dict[str, float] = {}

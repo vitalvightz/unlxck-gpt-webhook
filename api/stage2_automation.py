@@ -44,6 +44,7 @@ from .structured_plan_faithfulness import repair_locked_tactical_watch_source_te
 from .structured_plan_calendar_spine import reconcile_calendar_spine
 from .structured_plan_models import build_strict_structured_plan_schema
 from .structured_plan_sparring_reconcile import reconcile_coach_led_sparring_days
+from .settings import env_int
 
 # The central policy owns release. Ready/flagged plans are athlete-displayable;
 # review_required retains the rendered text for admins without releasing it.
@@ -102,19 +103,8 @@ class Stage2Automator(Protocol):
     ) -> dict[str, Any]: ...
 
 
-def _env_int(name: str, default: int, *, minimum: int) -> int:
-    raw_value = os.getenv(name, "").strip()
-    if not raw_value:
-        return default
-    try:
-        return max(minimum, int(raw_value))
-    except ValueError:
-        logger.warning("[stage2] invalid integer env %s=%r; using %s", name, raw_value, default)
-        return default
-
-
 def _stage2_char_limit(attempt_label: str) -> int:
-    return _env_int(
+    return env_int(
         "UNLXCK_STAGE2_MAX_FIRST_PASS_CHARS",
         _DEFAULT_FIRST_PASS_CHAR_LIMIT,
         minimum=1,
@@ -122,7 +112,7 @@ def _stage2_char_limit(attempt_label: str) -> int:
 
 
 def _stage2_openai_max_retries() -> int:
-    return _env_int(
+    return env_int(
         "UNLXCK_STAGE2_OPENAI_MAX_RETRIES",
         _DEFAULT_OPENAI_MAX_RETRIES,
         minimum=0,
@@ -138,7 +128,7 @@ def _stage2_max_output_tokens() -> int:
     # retained for review; Stage 1 is never substituted. Default
     # is 0 = no cap (provider default), while the Stage 2 timeout still bounds
     # runtime. Set a positive value only when cost/latency needs a hard ceiling.
-    return _env_int(
+    return env_int(
         "UNLXCK_STAGE2_MAX_OUTPUT_TOKENS",
         _DEFAULT_MAX_OUTPUT_TOKENS,
         minimum=0,

@@ -18,12 +18,13 @@ UI code must not guess with “latest visible plan” logic.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 import json
 import logging
 from typing import Any, Literal, Mapping, Protocol
 
 from fastapi import HTTPException, status
+from api.datetimes import parse_calendar_date as _parse_date
 
 logger = logging.getLogger(__name__)
 
@@ -107,18 +108,6 @@ def _decode_mapping(value: Any) -> Mapping[str, Any]:
             return {}
         return decoded if isinstance(decoded, Mapping) else {}
     return {}
-
-
-def _parse_date(value: Any) -> date | None:
-    if isinstance(value, date) and not isinstance(value, datetime):
-        return value
-    text = str(value or "").strip()
-    if not text:
-        return None
-    try:
-        return date.fromisoformat(text[:10])
-    except ValueError:
-        return None
 
 
 def get_plan_activation_state(

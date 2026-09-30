@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta
 from statistics import median
 from typing import Any, Iterable, Mapping
 from zoneinfo import ZoneInfo
@@ -14,6 +14,7 @@ from api.notification_models import NotificationPreferences
 from api.contracts.training_day import DAY_ROLLOVER_HOUR
 from api.store import AppStore
 from api.services.effective_structured_plan import resolve_effective_structured_plan
+from api.datetimes import parse_utc_datetime as _parse_datetime
 
 TRAINING_DAY_ROLLOVER_HOUR = DAY_ROLLOVER_HOUR
 DEFAULT_FALLBACK_TRAINING_TIME = "18:00"
@@ -40,21 +41,6 @@ def _timezone(name: str) -> ZoneInfo:
         return ZoneInfo(name or "UTC")
     except Exception:  # noqa: BLE001 - device timezone is untrusted metadata
         return ZoneInfo("UTC")
-
-
-def _parse_datetime(value: Any) -> datetime | None:
-    if isinstance(value, datetime):
-        parsed = value
-    elif isinstance(value, str) and value.strip():
-        try:
-            parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
-        except ValueError:
-            return None
-    else:
-        return None
-    if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
 
 
 def _parse_clock(value: Any) -> time | None:

@@ -11,29 +11,14 @@ error).
 from __future__ import annotations
 
 import logging
-import os
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
+from .settings import env_flag, env_float
 
 logger = logging.getLogger(__name__)
 
 _PLAN_STATUS_SELECT = "id,status,stage2_status,intake_id"
-
-
-def _positive_float_env(name: str, default: float, *, minimum: float = 1.0) -> float:
-    raw = os.getenv(name)
-    if raw is None or not raw.strip():
-        return max(minimum, default)
-    try:
-        parsed = float(raw.strip())
-    except ValueError:
-        logger.warning("[store-performance] invalid %s=%r; using %s", name, raw, default)
-        return max(minimum, default)
-    if parsed <= 0:
-        logger.warning("[store-performance] non-positive %s=%r; using %s", name, raw, default)
-        return max(minimum, default)
-    return max(minimum, parsed)
 
 
 def _response_data(response: Any) -> Any:
@@ -51,14 +36,8 @@ def _single_mapping(data: Any) -> dict[str, Any] | None:
 
 
 def _idle_poll_bounds() -> tuple[float, float]:
-    initial = _positive_float_env(
-        "UNLXCK_GENERATION_WORKER_IDLE_POLL_INITIAL_SECONDS",
-        6.0,
-    )
-    maximum = _positive_float_env(
-        "UNLXCK_GENERATION_WORKER_IDLE_POLL_MAX_SECONDS",
-        15.0,
-    )
+    initial = env_float("UNLXCK_GENERATION_WORKER_IDLE_POLL_INITIAL_SECONDS", 6.0, minimum=1.0, positive=True)
+    maximum = env_float("UNLXCK_GENERATION_WORKER_IDLE_POLL_MAX_SECONDS", 15.0, minimum=1.0, positive=True)
     return initial, max(initial, maximum)
 
 
@@ -192,7 +171,7 @@ class CompactGenerationReads:
 
         stale_seconds = max(1, int(stale_after_seconds or 90))
         stale_before = (datetime.now(timezone.utc) - timedelta(seconds=stale_seconds)).isoformat()
-        include_legacy_blank = os.getenv("UNLXCK_CLAIM_LEGACY_BLANK_STATUS_JOBS", "").strip() == "1"
+        include_legacy_blank = env_flag("UNLXCK_CLAIM_LEGACY_BLANK_STATUS_JOBS")
 
         try:
             data = self._compact_rpc(

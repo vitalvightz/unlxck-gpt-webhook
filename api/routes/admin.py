@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import uuid
 from typing import TYPE_CHECKING, Any
 
@@ -84,6 +83,7 @@ from ..generation_job_helpers import (
     _triage_job_has_resume_approval as _triage_job_has_resume_approval,
     _triage_plan_has_resume_approval as _triage_plan_has_resume_approval,
 )
+from ..settings import env_flag
 
 if TYPE_CHECKING:
     pass
@@ -92,7 +92,7 @@ logger = logging.getLogger(__name__)
 
 
 def _admin_structured_prewarm_enabled() -> bool:
-    return os.getenv("APP_ADMIN_STRUCTURED_PREWARM_ENABLED", "0").strip() == "1"
+    return env_flag("APP_ADMIN_STRUCTURED_PREWARM_ENABLED")
 
 
 def _admin_rejected_result(plan_row: dict[str, Any]) -> dict[str, Any]:

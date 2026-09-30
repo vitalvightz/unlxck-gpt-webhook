@@ -27,6 +27,7 @@ from .session_timing_notifications import dispatch_session_timing_notification
 from .fight_camp_notifications import dispatch_fight_camp_notifications
 from .streak_notifications import dispatch_streak_at_risk_notifications
 from .today_readiness_boundary import reuse_today_command_views
+from api.settings import env_int
 
 logger = logging.getLogger(__name__)
 
@@ -35,22 +36,13 @@ MORNING_SWEEP_BATCH_SIZE = 500
 DEFAULT_MORNING_PUSH_CUTOFF_LOCAL_HOUR = 11
 
 
-def _int_env(name: str, default: int, *, minimum: int = 0, maximum: int = 23) -> int:
-    raw = os.getenv(name, str(default)).strip()
-    try:
-        return min(maximum, max(minimum, int(raw)))
-    except ValueError:
-        logger.warning("[morning_push] invalid integer env %s=%r; using %s", name, raw, default)
-        return default
-
-
 def morning_push_local_hour() -> int:
-    return _int_env("UNLXCK_MORNING_PUSH_LOCAL_HOUR", DEFAULT_MORNING_PUSH_LOCAL_HOUR)
+    return env_int("UNLXCK_MORNING_PUSH_LOCAL_HOUR", DEFAULT_MORNING_PUSH_LOCAL_HOUR, minimum=0, maximum=23)
 
 
 def morning_push_cutoff_local_hour() -> int:
-    return _int_env(
-        "UNLXCK_MORNING_PUSH_CUTOFF_LOCAL_HOUR", DEFAULT_MORNING_PUSH_CUTOFF_LOCAL_HOUR
+    return env_int(
+        "UNLXCK_MORNING_PUSH_CUTOFF_LOCAL_HOUR", DEFAULT_MORNING_PUSH_CUTOFF_LOCAL_HOUR, minimum=0, maximum=23
     )
 
 
