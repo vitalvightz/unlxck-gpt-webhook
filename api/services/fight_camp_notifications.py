@@ -33,6 +33,7 @@ from api.services.push_notifications import dispatch_push_candidates
 from api.services.today_readiness_boundary import build_today_command_view
 from api.store import AppStore
 from api.contracts.completion import TERMINAL_COMPLETION_STATUSES as TERMINAL_SESSION_STATUSES
+from api.datetimes import parse_utc_datetime as _parse_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -84,17 +85,6 @@ def _timezone(name: str) -> ZoneInfo:
         return ZoneInfo(name or "UTC")
     except Exception:  # noqa: BLE001
         return ZoneInfo("UTC")
-
-
-def _parse_datetime(value: Any) -> datetime | None:
-    if isinstance(value, datetime):
-        return _aware_utc(value)
-    if not isinstance(value, str) or not value.strip():
-        return None
-    try:
-        return _aware_utc(datetime.fromisoformat(value.strip().replace("Z", "+00:00")))
-    except ValueError:
-        return None
 
 
 def _session_id(view: CommandView) -> str:

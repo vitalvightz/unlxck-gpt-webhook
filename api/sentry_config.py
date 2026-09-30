@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from typing import Any
 
 import sentry_sdk
+from .settings import env_flag
 
 _SENSITIVE_KEYS = frozenset(
     {
@@ -41,10 +42,6 @@ _SENSITIVE_KEYS = frozenset(
 )
 
 _REDACTED = "[Filtered]"
-
-
-def _env_flag(name: str, default: str) -> bool:
-    return os.getenv(name, default).strip().lower() == "true"
 
 
 def _parse_traces_sample_rate() -> float:
@@ -94,7 +91,7 @@ def init_sentry() -> None:
         dsn=os.getenv("SENTRY_DSN"),
         environment=os.getenv("SENTRY_ENVIRONMENT", "production"),
         traces_sample_rate=_parse_traces_sample_rate(),
-        send_default_pii=_env_flag("SENTRY_SEND_DEFAULT_PII", "false"),
-        enable_logs=_env_flag("SENTRY_ENABLE_LOGS", "true"),
+        send_default_pii=env_flag("SENTRY_SEND_DEFAULT_PII", False),
+        enable_logs=env_flag("SENTRY_ENABLE_LOGS", True),
         before_send=scrub_sentry_event,
     )

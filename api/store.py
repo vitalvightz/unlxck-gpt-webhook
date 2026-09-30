@@ -70,6 +70,8 @@ from .state_machine import (
 from .store_performance import CompactGenerationReads
 from .store_protocols import AppStore, RehabExposureWindow
 from .xp import XpAction
+from api.datetimes import parse_utc_datetime as _parse_datetime_utc
+from .settings import env_flag, env_float
 
 logger = logging.getLogger(__name__)
 
@@ -241,7 +243,7 @@ _is_production_environment = is_production_environment
 
 
 def _claim_legacy_blank_status_jobs_enabled() -> bool:
-    return os.getenv("UNLXCK_CLAIM_LEGACY_BLANK_STATUS_JOBS", "").strip() == "1"
+    return env_flag("UNLXCK_CLAIM_LEGACY_BLANK_STATUS_JOBS")
 
 
 def is_effective_admin_profile(profile: Any, store: "AppStore") -> bool:
@@ -321,15 +323,6 @@ def _parse_datetime(value: Any) -> datetime | None:
         except ValueError:
             return None
     return None
-
-
-def _parse_datetime_utc(value: Any) -> datetime | None:
-    parsed = _parse_datetime(value)
-    if parsed is None:
-        return None
-    if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
 
 
 def _status_transition_error(detail: str) -> HTTPException:
@@ -580,20 +573,6 @@ def _generation_hard_max_runtime_seconds() -> int:
     return max(300, parsed)
 
 
-def _positive_float_env(name: str, default: float) -> float:
-    raw_value = os.getenv(name)
-    if raw_value is None or not raw_value.strip():
-        return default
-    try:
-        parsed = float(raw_value.strip())
-    except ValueError:
-        return default
-    import math
-    if not math.isfinite(parsed) or parsed <= 0:
-        return default
-    return parsed
-
-
 DEFAULT_PROFILE_CACHE_TTL_SECONDS = 10.0
 
 
@@ -733,8 +712,8 @@ class SupabaseAppStore(CompactGenerationReads):
         # causing false ReadTimeout outages on Supabase reads (e.g.
         # ensure_profile and generation_jobs polling) during transient
         # latency spikes. Overridable via env for ops tuning.
-        read_timeout = _positive_float_env("SUPABASE_HTTP_TIMEOUT_SECONDS", 20.0)
-        connect_timeout = _positive_float_env("SUPABASE_HTTP_CONNECT_TIMEOUT_SECONDS", 10.0)
+        read_timeout = env_float("SUPABASE_HTTP_TIMEOUT_SECONDS", 20.0, positive=True)
+        connect_timeout = env_float("SUPABASE_HTTP_CONNECT_TIMEOUT_SECONDS", 10.0, positive=True)
         http_client = httpx.Client(
             http2=False,
             timeout=httpx.Timeout(
@@ -967,7 +946,7 @@ class SupabaseAppStore(CompactGenerationReads):
         return any(column in text for column in _PLAN_RUNTIME_REQUIRED_COLUMNS_SET)
 
     def _legacy_plan_schema_fallback_enabled(self) -> bool:
-        flag_set = os.getenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "").strip() == "1"
+        flag_set = env_flag("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK")
         if not flag_set:
             return False
         if _is_production_environment():

@@ -74,6 +74,7 @@ from .routes import (
     build_today_router,
     build_xp_router,
 )
+from .settings import env_csv, env_flag, env_float, env_int
 
 if TYPE_CHECKING:
     from .stage2_automation import Stage2Automator
@@ -99,24 +100,11 @@ def _fastapi_documentation_options() -> dict[str, str | None]:
 
 
 def _admin_max_concurrent_requests() -> int:
-    raw_value = os.getenv("APP_ADMIN_MAX_CONCURRENT_REQUESTS", "2").strip()
-    try:
-        return max(1, int(raw_value))
-    except ValueError:
-        logger.warning(
-            "[admin] invalid APP_ADMIN_MAX_CONCURRENT_REQUESTS=%r; falling back to 2",
-            raw_value,
-        )
-        return 2
+    return env_int("APP_ADMIN_MAX_CONCURRENT_REQUESTS", 2, minimum=1)
 
 
 def _rss_warn_mb() -> float:
-    raw_value = os.getenv("APP_RSS_WARN_MB", "450").strip()
-    try:
-        return max(1.0, float(raw_value))
-    except ValueError:
-        logger.warning("[memory] invalid APP_RSS_WARN_MB=%r; falling back to 450", raw_value)
-        return 450.0
+    return env_float("APP_RSS_WARN_MB", 450.0, minimum=1.0)
 
 
 def _rss_mb() -> float | None:
@@ -128,10 +116,6 @@ def _rss_mb() -> float | None:
     except Exception:
         return None
     return None
-
-
-def is_in_process_generation_enabled() -> bool:
-    return os.getenv("UNLXCK_ENABLE_IN_PROCESS_GENERATION", "0").strip() == "1"
 
 
 def _validate_session_type_consistency(workspace: NutritionWorkspaceUpdateRequest) -> None:
@@ -221,45 +205,26 @@ def _update_profile_with_nutrition_fallback(
         return _map_profile_row(store.update_profile(athlete_id, fallback_update))
 
 
+def is_in_process_generation_enabled() -> bool:
+    # Same flag and rule as api.generation.scheduler; defined here so the web
+    # process does not import the generation runtime to read it.
+    return env_flag("UNLXCK_ENABLE_IN_PROCESS_GENERATION")
+
+
 def _plan_generate_rate_limit_requests() -> int:
-    raw_value = os.getenv("APP_PLAN_GENERATE_RATE_LIMIT", "5").strip()
-    try:
-        return max(0, int(raw_value))
-    except ValueError:
-        logger.warning("[rate-limit] invalid APP_PLAN_GENERATE_RATE_LIMIT=%r; falling back to 5", raw_value)
-        return 5
+    return env_int("APP_PLAN_GENERATE_RATE_LIMIT", 5, minimum=0)
 
 
 def _plan_generate_rate_limit_window_seconds() -> float:
-    raw_value = os.getenv("APP_PLAN_GENERATE_RATE_LIMIT_WINDOW_SECONDS", "60").strip()
-    try:
-        return max(1.0, float(raw_value))
-    except ValueError:
-        logger.warning(
-            "[rate-limit] invalid APP_PLAN_GENERATE_RATE_LIMIT_WINDOW_SECONDS=%r; falling back to 60",
-            raw_value,
-        )
-        return 60.0
+    return env_float("APP_PLAN_GENERATE_RATE_LIMIT_WINDOW_SECONDS", 60.0, minimum=1.0)
 
 
 def _plan_generate_daily_limit_per_user() -> int:
-    raw_value = os.getenv("APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER", "5").strip()
-    try:
-        return max(0, int(raw_value))
-    except ValueError:
-        logger.warning(
-            "[rate-limit] invalid APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER=%r; falling back to 5",
-            raw_value,
-        )
-        return 5
+    return env_int("APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER", 5, minimum=0)
 
 
 def _daily_generation_cap_exempt_emails() -> frozenset[str]:
-    return frozenset(
-        email.strip().lower()
-        for email in os.getenv("APP_DAILY_GENERATION_CAP_EXEMPT_EMAILS", "").split(",")
-        if email.strip()
-    )
+    return frozenset(env_csv("APP_DAILY_GENERATION_CAP_EXEMPT_EMAILS", lower=True))
 
 
 # Always exempt from the daily generation cap, on top of the env-configured list.
@@ -641,7 +606,7 @@ def create_app(
     def health(request: Request) -> dict[str, str | bool]:
         return _health_payload(mode_label=str(request.app.state.mode_label))
 
-    if os.getenv("ENABLE_SENTRY_DEBUG_ROUTE", "false").strip().lower() == "true":
+    if env_flag("ENABLE_SENTRY_DEBUG_ROUTE"):
         @app.get("/sentry-debug", include_in_schema=False)
         def sentry_debug() -> None:
             raise Exception("Sentry backend test error")

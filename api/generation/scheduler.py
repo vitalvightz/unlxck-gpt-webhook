@@ -21,6 +21,7 @@ from .heartbeat import recover_stale_running_job
 from .orchestrator import run_generation_job
 from .time_utils import utc_now_iso
 from .types import Planner
+from ..settings import env_flag
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ def _use_fastapi_background_tasks() -> bool:
 
 
 def is_in_process_generation_enabled() -> bool:
-    return os.getenv("UNLXCK_ENABLE_IN_PROCESS_GENERATION", "0").strip() == "1"
+    return env_flag("UNLXCK_ENABLE_IN_PROCESS_GENERATION")
 
 
 def generation_max_concurrent_jobs() -> int:
