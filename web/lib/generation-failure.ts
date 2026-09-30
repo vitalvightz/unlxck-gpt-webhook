@@ -1,3 +1,5 @@
+import apiMessages from "../../shared/api-messages.json";
+
 import { ApiError } from "@/lib/api";
 
 // One vocabulary for "the generation went wrong", shared by the full-screen
@@ -35,6 +37,22 @@ export type GenerationFailureCopy = {
 // here so the classifier and the thrower cannot drift apart.
 export const STALLED_GENERATION_ERROR = "Build stalled — retry";
 
+// Request errors carry a stable code (shared/api-messages.json, raised from
+// api/errors.py), so rewording a backend message cannot change how the failure
+// is presented.
+const FAILURE_KIND_BY_CODE: ReadonlyMap<string, GenerationFailureKind> = new Map([
+  [apiMessages.generation_already_in_flight.code, "limit_reached"],
+  [apiMessages.generation_daily_limit_reached.code, "limit_reached"],
+  [apiMessages.generation_rate_limited.code, "limit_reached"],
+  [apiMessages.generation_job_not_found.code, "unavailable"],
+  [apiMessages.generation_job_not_retryable.code, "unavailable"],
+  [apiMessages.generation_job_has_saved_plan.code, "unavailable"],
+  [apiMessages.generation_job_not_cancellable.code, "unavailable"],
+]);
+
+// A failed job reports only its stored error text, with no code. The Stage 1
+// planner rejects an intake it cannot plan (fightcamp/input_parsing.py) with
+// these messages; the last entry is this app's own rewording of one of them.
 const INTAKE_ERROR_SNIPPETS = [
   "invalid Weekly Training Frequency",
   "cannot exceed selected Training Availability days",
@@ -43,6 +61,7 @@ const INTAKE_ERROR_SNIPPETS = [
   "technical_style",
 ];
 
+// Legacy fallback for responses without a code (an older backend mid-deploy).
 const LIMIT_ERROR_SNIPPETS = [
   "daily plan generation limit",
   "daily generation limit",
@@ -50,6 +69,7 @@ const LIMIT_ERROR_SNIPPETS = [
   "already queued or running for this account",
 ];
 
+// Legacy fallback for responses without a code (an older backend mid-deploy).
 const UNAVAILABLE_ERROR_SNIPPETS = [
   "already produced a saved plan",
   "only failed generation jobs can be retried",
@@ -70,6 +90,10 @@ export function classifyGenerationFailure(
 
   if (message.includes(STALLED_GENERATION_ERROR)) {
     return "stalled";
+  }
+  const codedKind = error instanceof ApiError && error.code ? FAILURE_KIND_BY_CODE.get(error.code) : undefined;
+  if (codedKind) {
+    return codedKind;
   }
   if (includesAny(message, LIMIT_ERROR_SNIPPETS)) {
     return "limit_reached";

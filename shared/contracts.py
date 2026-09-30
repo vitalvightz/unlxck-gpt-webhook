@@ -54,6 +54,13 @@ def shared_message(key: str) -> tuple[str, str]:
     )
 
 
+def shared_code(key: str) -> str:
+    """The ``code`` of one entry of shared/api-messages.json (entries without a message)."""
+    source = "API messages"
+    entry = require_object(load_shared_contract("api-messages.json"), key, source=source)
+    return require_string(entry, "code", source=f"{source} {key}")
+
+
 def require_string(contract: dict[str, Any], key: str, *, source: str) -> str:
     value = contract.get(key)
     if not isinstance(value, str) or not value.strip():

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from fastapi import BackgroundTasks, HTTPException, status
 
+from ..errors import generation_job_not_found_error
 from ..generation_job_helpers import (
     _can_approve_and_resume_triage,
     _generation_job_stale_after_seconds,
@@ -324,9 +325,7 @@ async def approve_and_resume_job_triage(
     """
     source_job = await asyncio.to_thread(store.get_generation_job, job_id)
     if not source_job:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found"
-        )
+        raise generation_job_not_found_error()
 
     triage_status = _job_final_result_triage_status(source_job)
     if not triage_status:

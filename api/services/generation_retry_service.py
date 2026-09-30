@@ -17,7 +17,13 @@ from api.generation_job_helpers import (
     daily_generation_cap_window,
 )
 from api.compliance_guards import require_health_feature_access
-from api.errors import generation_already_in_flight_error
+from api.errors import (
+    generation_already_in_flight_error,
+    generation_job_has_saved_plan_error,
+    generation_job_not_cancellable_error,
+    generation_job_not_found_error,
+    generation_job_not_retryable_error,
+)
 from api.models import GenerationJobResponse, ProfileRecord
 from api.plan_mappers import _ALLOWED_PLAN_SOURCES
 from api.store import AppStore, is_effective_admin_profile, is_startup_stale_generation_job
@@ -46,18 +52,15 @@ async def cancel_generation_job(
     """
     job = await asyncio.to_thread(store.get_generation_job, job_id)
     if not job:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
+        raise generation_job_not_found_error()
 
     is_admin = is_effective_admin_profile(profile, store)
     if not is_admin and str(job.get("athlete_id")) != profile.athlete_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
+        raise generation_job_not_found_error()
 
     current_status = str(job.get("status") or "")
     if current_status not in {"queued", "running"}:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="only queued or running generation jobs can be cancelled",
-        )
+        raise generation_job_not_cancellable_error()
 
     now_iso = datetime.now(timezone.utc).isoformat()
     cancelled_by = "admin" if is_admin else "athlete"
@@ -109,21 +112,18 @@ async def retry_generation_job(
     require_health_feature_access(profile)
     original = await asyncio.to_thread(store.get_generation_job, job_id)
     if not original:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
+        raise generation_job_not_found_error()
     is_admin = is_effective_admin_profile(profile, store)
     viewer_role = "admin" if is_admin else "athlete"
     if not is_admin and str(original["athlete_id"]) != profile.athlete_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
+        raise generation_job_not_found_error()
     stale_after_seconds = _generation_job_stale_after_seconds()
     is_startup_stale = is_startup_stale_generation_job(
         original,
         stale_after_seconds=stale_after_seconds,
     )
     if str(original.get("status") or "") != "failed" and not is_startup_stale:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="only failed generation jobs can be retried",
-        )
+        raise generation_job_not_retryable_error()
     request_payload = original.get("request_payload")
     if not isinstance(request_payload, dict):
         raise HTTPException(
@@ -135,10 +135,7 @@ async def retry_generation_job(
     source = str(original.get("source") or "").strip() or "self_serve"
     existing_plan_id = str(original.get("plan_id") or "").strip()
     if existing_plan_id and source != "admin_triage_resume":
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="generation job already produced a saved plan",
-        )
+        raise generation_job_has_saved_plan_error()
 
     daily_limit = plan_generate_daily_limit_per_user()
     enforce_daily_limit = (

@@ -25,7 +25,11 @@ from api.compliance import (
     meets_minimum_age,
     parse_date_of_birth,
 )
-from api.errors import client_request_id_payload_mismatch_error
+from api.errors import (
+    client_request_id_payload_mismatch_error,
+    generation_daily_limit_error,
+    generation_job_not_found_error,
+)
 from api.generation.payloads import _stable_payload_hash
 from api.models import (
     PlanRequest,
@@ -1056,10 +1060,7 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
                     sources=counted_sources,
                 )
                 if jobs_today >= daily_limit:
-                    raise HTTPException(
-                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                        detail=limit_reached_detail,
-                    )
+                    raise generation_daily_limit_error(limit_reached_detail)
             return self.create_or_get_generation_job(
                 athlete_id=athlete_id,
                 client_request_id=client_request_id,
@@ -1466,7 +1467,7 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         # tests would exercise a contract production does not have.
         job = self.generation_jobs.get(job_id)
         if not job:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
+            raise generation_job_not_found_error()
         payload = dict(changes)
         if "status" in payload:
             next_status = str(payload.get("status") or "").strip().lower()
@@ -1493,7 +1494,7 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
     ) -> dict:
         job = self.generation_jobs.get(job_id)
         if not job:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
+            raise generation_job_not_found_error()
         current_status = str(job.get("status") or "")
         if current_status != expected_status:
             raise HTTPException(

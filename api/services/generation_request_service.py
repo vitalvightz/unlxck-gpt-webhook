@@ -23,7 +23,11 @@ from api.generation_job_helpers import (
     daily_generation_cap_window,
     resolve_viewer_role,
 )
-from api.errors import client_request_id_payload_mismatch_error, generation_already_in_flight_error
+from api.errors import (
+    client_request_id_payload_mismatch_error,
+    generation_already_in_flight_error,
+    generation_rate_limited_error,
+)
 from api.environment import is_production_environment
 from api.models import GenerationJobResponse, PlanRequest, ProfileRecord
 from api.performance_focus import validate_performance_focus_selections
@@ -226,13 +230,7 @@ async def generate_plan_for_current_user(
             window_seconds=plan_generate_rate_limit_window_seconds(),
         )
         if not allowed:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail={
-                    "message": "Too many plan generation requests. Try again shortly.",
-                    "retry_after_seconds": retry_after,
-                },
-            )
+            raise generation_rate_limited_error(retry_after_seconds=retry_after)
 
     daily_limit = plan_generate_daily_limit_per_user()
     enforce_daily_limit = (

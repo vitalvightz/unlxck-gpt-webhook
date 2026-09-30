@@ -63,6 +63,32 @@ test("an in-flight conflict is a limit, not an intake problem", () => {
   );
 });
 
+test("coded request errors are classified by code, whatever their wording", () => {
+  // Reworded messages: none of these match a legacy snippet, and the in-flight
+  // 409 would otherwise fall through to the status rule and read "unavailable".
+  const cases: Array<[string, number, string]> = [
+    ["generation_already_in_flight", 409, "limit_reached"],
+    ["generation_daily_limit_reached", 429, "limit_reached"],
+    ["generation_rate_limited", 429, "limit_reached"],
+    ["generation_job_not_found", 404, "unavailable"],
+    ["generation_job_not_retryable", 409, "unavailable"],
+    ["generation_job_has_saved_plan", 409, "unavailable"],
+    ["generation_job_not_cancellable", 409, "unavailable"],
+  ];
+  for (const [code, status, kind] of cases) {
+    const error = new ApiError("Something new the backend now says.", status, code);
+    assert.equal(classifyGenerationFailure(error, { hasFailedJobId: true }), kind, code);
+  }
+});
+
+test("an unknown code falls back to the message and status rules", () => {
+  assert.equal(
+    classifyGenerationFailure(new ApiError("generation job not found", 404, "some_future_code")),
+    "unavailable",
+  );
+  assert.equal(classifyGenerationFailure(new ApiError("Bad payload", 422, "some_future_code")), "invalid_intake");
+});
+
 test("every failure kind offers a way out of the screen", () => {
   const kinds = [
     "job_failed",
