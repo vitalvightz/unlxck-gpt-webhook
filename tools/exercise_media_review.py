@@ -108,6 +108,9 @@ class VideoReview:
     end_s: int | None
     structure_matches: bool = False
     added_elements: tuple[str, ...] = ()
+    # False when the model omitted added_elements or sent a non-list (possible
+    # on the no-schema retry): absence is not proof that nothing was added.
+    added_elements_reported: bool = False
 
     @property
     def score(self) -> tuple[int, int, float]:
@@ -284,6 +287,7 @@ def parse_review(url: str, text: str) -> VideoReview:
             # Only an explicit true confirms structure; missing fails safe.
             structure_matches=data.get("structure_matches") is True,
             added_elements=added,
+            added_elements_reported=isinstance(raw_added, list),
         )
     )
 
@@ -296,8 +300,22 @@ def enforce_structure(review: VideoReview) -> VideoReview:
     reports added elements or does not confirm the structure, the verdict is
     capped at 'partial' whatever the confidence.
     """
-    if review.verdict != "match" or (review.structure_matches and not review.added_elements):
+    if review.verdict != "match":
         return review
+    reasons: list[str] = []
+    if review.added_elements:
+        reasons.append("adds: " + ", ".join(review.added_elements))
+    elif not review.added_elements_reported:
+        reasons.append("added elements not reported")
+    if not review.structure_matches:
+        reasons.append("drill structure not confirmed")
+    if not reasons:
+        return review
+    review.verdict = "partial"
+    # form_vs_cue was already bounded when parsed; keep all of it after the
+    # reason so neither the reason nor the model's comparison is cut.
+    review.form_vs_cue = f"[downgraded from match: {'; '.join(reasons)}] {review.form_vs_cue}".strip()
+    return review
     reason = (
         "adds: " + ", ".join(review.added_elements)
         if review.added_elements

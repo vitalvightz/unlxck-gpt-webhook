@@ -457,3 +457,28 @@ def test_added_elements_are_saved_for_the_human_check():
     updated = review.apply_outcome(_row(), review.RowOutcome(best=best, tried=[URL_A]), model="m")
     assert updated["ai_verdict"] == "partial"
     assert updated["ai_added_elements"] == "agility ladder"
+
+
+@pytest.mark.parametrize("added", ["missing", None, "agility ladder", {"x": 1}])
+def test_unreported_added_elements_cap_match(added):
+    answer = _answer()
+    if added == "missing":
+        answer.pop("added_elements")
+    else:
+        answer["added_elements"] = added
+    result = review.parse_review(URL_A, json.dumps(answer))
+    assert result.verdict == "partial"
+    assert "added elements not reported" in result.form_vs_cue
+
+
+def test_downgrade_note_keeps_every_reason_and_the_full_comparison():
+    long_comparison = "x" * 400
+    answer = _answer(
+        structure_matches=False,
+        added_elements=["agility ladder " * 4, "partner feeding pads " * 4],
+        form_vs_cue=long_comparison,
+    )
+    result = review.parse_review(URL_A, json.dumps(answer))
+    assert "adds: agility ladder" in result.form_vs_cue
+    assert "drill structure not confirmed" in result.form_vs_cue
+    assert result.form_vs_cue.endswith(long_comparison)
