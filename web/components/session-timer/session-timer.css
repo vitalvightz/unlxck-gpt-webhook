@@ -1082,7 +1082,7 @@ html.has-timer-mini .app-content {
 }
 
 @media (max-width: 720px) {
-  html.has-timer-mini[data-mobile-tab-bar] .app-content {
+  html.has-timer-mini .app-content {
     padding-bottom: calc(108px + var(--mobile-tab-bar-clearance, 0px));
   }
 }

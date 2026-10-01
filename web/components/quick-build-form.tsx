@@ -693,6 +693,8 @@ function QuickBuildFormInner() {
 
   function handleTrainingPresetSelect(key: string) {
     if (!key) {
+      // Same as equipment: with no preset active, the empty row must not wipe custom picks.
+      if (!activeTrainingPreset) return;
       clearTrainingPreset();
       return;
     }
@@ -714,6 +716,8 @@ function QuickBuildFormInner() {
 
   function handleFocusPresetSelect(key: string) {
     if (!key) {
+      // Same as equipment: with no preset active, the empty row must not wipe custom picks.
+      if (!activeFocusPreset) return;
       clearFocusPreset();
       return;
     }

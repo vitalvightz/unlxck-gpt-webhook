@@ -2046,7 +2046,9 @@ export function PlanIntakeForm() {
         ? `Goals and weak areas share this ${performanceFocusCapValue}-pick cap for ${performanceFocusWindowLabel}. ${performanceFocusReason} Cap reached. Unselect one to change your focus.`
         : `Goals and weak areas share this ${performanceFocusCapValue}-pick cap for ${performanceFocusWindowLabel}. ${performanceFocusReason} You can add ${remainingPerformanceFocusSelections} more.`;
   const performanceFocusCapHint = performanceFocusCapValue === null
-    ? "Set the fight date to lock in your focus cap."
+    ? noScheduledFight
+      ? "No fight date yet — the cap opens once a fight is scheduled."
+      : "Set the fight date to lock in your focus cap."
     : performanceFocusCapExceeded
       ? `${selectedPerformanceFocusCount - performanceFocusCapValue} over cap — unselect to fit.`
       : performanceFocusCapReached
