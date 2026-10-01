@@ -363,6 +363,16 @@ def _cmd_verify(_: argparse.Namespace) -> int:
     return 0
 
 
+def _positive_int(value: str) -> int:
+    try:
+        number = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"{value!r} is not a whole number") from exc
+    if number < 1:
+        raise argparse.ArgumentTypeError("must be at least 1")
+    return number
+
+
 def _cmd_review(args: argparse.Namespace) -> int:
     from tools.exercise_media_review import ReviewInputError, build_reviewer, run_review
 
@@ -412,7 +422,12 @@ def main(argv: list[str] | None = None) -> int:
     review.add_argument("--out", help="output CSV (default: update the input in place)")
     review.add_argument("--limit", type=int, help="review at most N rows this run")
     review.add_argument("--redo", action="store_true", help="re-review rows that already have a verdict")
-    review.add_argument("--max-candidates", type=int, default=4, help="videos tried per row (suggested + candidate_urls)")
+    review.add_argument(
+        "--max-candidates",
+        type=_positive_int,
+        default=4,
+        help="videos tried per row (suggested + candidate_urls)",
+    )
     review.add_argument("--delay", type=float, default=4.0, help="seconds between Gemini calls")
     review.add_argument("--model", help="Gemini model (default: $GEMINI_MODEL or gemini-3.5-flash)")
     review.set_defaults(func=_cmd_review)

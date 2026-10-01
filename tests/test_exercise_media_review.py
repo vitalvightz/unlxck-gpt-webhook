@@ -322,7 +322,6 @@ def test_cli_exit_code_reflects_failures(tmp_path, monkeypatch, answers, expecte
     src = tmp_path / "media.csv"
     _write_csv(src, [_row()])
     monkeypatch.setattr(review, "build_reviewer", lambda model=None: _reviewer(answers))
-    monkeypatch.setattr(review.time, "sleep", lambda _: None)
     assert tool.main(["review", str(src), "--delay", "0"]) == expected_exit
 
 
@@ -334,3 +333,60 @@ def test_cli_missing_columns_exits_with_usage_error(tmp_path, monkeypatch, capsy
     monkeypatch.setattr(review, "build_reviewer", lambda model=None: _reviewer({}))
     assert tool.main(["review", str(src)]) == 2
     assert "suggested_url" in capsys.readouterr().err
+
+
+# -- second review round ---------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("landscape", "landscape"),
+        ("horizontal", "landscape"),
+        ("widescreen 16:9", "landscape"),
+        ("landscape (not a Short)", "landscape"),
+        ("vertical", "vertical"),
+        ("Portrait", "vertical"),
+        ("tall", "vertical"),
+        ("YouTube Short", "vertical"),
+        ("shorts", "vertical"),
+        ("square", "vertical"),
+        ("9:16", "vertical"),
+        ("4:5", "vertical"),
+        ("1:1", "vertical"),
+        ("shortened clip", "landscape"),  # whole terms only
+        (None, "landscape"),
+    ],
+)
+def test_orientation_variants(value, expected):
+    assert review.normalize_orientation(value) == expected
+
+
+def test_minimal_csv_keeps_prefilled_loop(tmp_path):
+    src = tmp_path / "min.csv"
+    _write_csv(src, [{"exercise_key": "trap-bar-deadlift", "suggested_url": URL_A}])
+    review.run_review(
+        str(src), str(src), reviewer=_reviewer({URL_A: _answer()}), delay_s=0, sleep=lambda _: None, log=lambda _: None
+    )
+    row = _read_csv(src)[0]
+    assert (row["start_s"], row["end_s"]) == ("42", "54")
+
+
+def test_non_positive_max_candidates_is_rejected(tmp_path):
+    from tools import exercise_media as tool
+
+    src = tmp_path / "media.csv"
+    _write_csv(src, [_row()])
+    with pytest.raises(review.ReviewInputError):
+        review.run_review(str(src), str(src), reviewer=_reviewer({}), max_candidates=0, log=lambda _: None)
+    with pytest.raises(SystemExit) as exc:
+        tool.main(["review", str(src), "--max-candidates", "0"])
+    assert exc.value.code == 2  # argparse usage error
+
+
+def test_missing_api_key_is_an_operational_error(monkeypatch, capsys):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    with pytest.raises(SystemExit) as exc:
+        review.build_reviewer()
+    assert exc.value.code == 2
+    assert "GEMINI_API_KEY" in capsys.readouterr().err
