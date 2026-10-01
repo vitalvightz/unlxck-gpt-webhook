@@ -316,14 +316,6 @@ def enforce_structure(review: VideoReview) -> VideoReview:
     # reason so neither the reason nor the model's comparison is cut.
     review.form_vs_cue = f"[downgraded from match: {'; '.join(reasons)}] {review.form_vs_cue}".strip()
     return review
-    reason = (
-        "adds: " + ", ".join(review.added_elements)
-        if review.added_elements
-        else "drill structure not confirmed"
-    )
-    review.verdict = "partial"
-    review.form_vs_cue = f"[downgraded from match: {reason}] {review.form_vs_cue}".strip()[:400]
-    return review
 
 
 class GeminiVideoReviewer:

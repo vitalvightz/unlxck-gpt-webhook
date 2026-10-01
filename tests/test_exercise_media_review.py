@@ -445,7 +445,8 @@ def test_downgraded_candidate_does_not_stop_the_search():
 
 
 def test_stop_needs_confidence_of_at_least_0_9():
-    answers = {URL_A: _answer(confidence=0.85), URL_B: _answer(confidence=0.9), URL_C: _answer(confidence=0.99)}
+    # 0.89 must not stop and 0.9 must, which pins the threshold to exactly 0.9.
+    answers = {URL_A: _answer(confidence=0.89), URL_B: _answer(confidence=0.9), URL_C: _answer(confidence=0.99)}
     outcome = review.review_row(
         _reviewer(answers), _row(candidate_urls=f"{URL_B}|{URL_C}"), max_candidates=4, delay_s=0, sleep=lambda _: None
     )
