@@ -2,6 +2,9 @@
 
 import pytest
 
+from datetime import datetime
+
+from planner_clock import pin_planner_clock
 from fightcamp.stage2_payload import (
     _build_late_fight_plan_spec,
     _build_late_fight_weekly_role_map,
@@ -58,6 +61,17 @@ _MINIMAL_ATHLETE = {
     "camp_length_weeks": 6,
     "short_notice": False,
 }
+
+
+# ``_build_stage2`` supplies no fight date, so the payload derives the plan-creation
+# weekday (and with it every countdown day's weekday and availability) from the
+# clock. Pin it, or the expected sequences below change every day of the week.
+_PINNED_NOW = datetime(2026, 9, 30, 12, 0)  # Wednesday
+
+
+@pytest.fixture(autouse=True)
+def _pin_planner_clock(monkeypatch):
+    pin_planner_clock(monkeypatch, _PINNED_NOW)
 
 
 def _without_protocol(entries):
