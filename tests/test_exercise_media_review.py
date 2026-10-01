@@ -42,6 +42,8 @@ def _reviewer(answers_by_url: dict[str, object], calls: list | None = None) -> r
         if calls is not None:
             calls.append(payload)
         answer = answers_by_url[url]
+        if isinstance(answer, list):
+            answer = answer.pop(0)
         if isinstance(answer, httpx.Response):
             return answer
         return httpx.Response(200, json=_steps_body(answer))
@@ -147,6 +149,170 @@ def test_quota_error_is_distinct():
     reviewer = _reviewer({URL_A: httpx.Response(429, json={})})
     with pytest.raises(review.GeminiQuotaExceeded):
         reviewer.review(URL_A, _row())
+
+
+def _quota_response(quota_id, *, retry_delay=None, message="Quota exceeded"):
+    details = [{
+        "@type": "type.googleapis.com/google.rpc.QuotaFailure",
+        "violations": [{"quotaId": quota_id, "quotaMetric": "generativelanguage.googleapis.com/generate_content"}],
+    }]
+    if retry_delay is not None:
+        details.append({"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": retry_delay})
+    return httpx.Response(429, json={"error": {
+        "code": 429, "status": "RESOURCE_EXHAUSTED", "message": message, "details": details,
+    }})
+
+
+@pytest.mark.parametrize(("quota_id", "error_type", "label"), [
+    ("GenerateRequestsPerMinutePerProject", "rate_limit_rpm", "rate limit reached (RPM)"),
+    ("GenerateContentInputTokensPerMinute", "rate_limit_tpm", "rate limit reached (TPM)"),
+    ("GenerateContentInputTokensPerModelPerMinute", "rate_limit_tpm", "rate limit reached (TPM)"),
+    ("GenerateRequestsPerDayPerProject", "daily_quota", "daily quota reached"),
+    ("YouTubeVideoProcessingSeconds", "video_processing_limit", "video processing limit reached"),
+    ("YouTubeVideoSecondsPerMinute", "rate_limit_video", "video processing rate limit reached"),
+    ("UnspecifiedLimit", "quota_limit", "Gemini quota limit reached"),
+])
+def test_429_classifies_quota_details(quota_id, error_type, label):
+    with pytest.raises(review.GeminiQuotaExceeded) as raised:
+        _reviewer({URL_A: _quota_response(quota_id)}).review(URL_A, _row())
+    error = raised.value
+    assert error.error_type == error_type
+    assert label in str(error)
+    assert error.retry_after is None
+    assert error.raw_message == "Quota exceeded"
+
+
+@pytest.mark.parametrize("response", [
+    httpx.Response(429, json={}),
+    httpx.Response(429, text="upstream refused request"),
+    httpx.Response(429, json={"error": {"message": "unexplained", "details": "malformed"}}),
+    httpx.Response(429, json=["unexpected"]),
+])
+def test_unknown_429_does_not_claim_daily_quota(response):
+    with pytest.raises(review.GeminiQuotaExceeded) as raised:
+        _reviewer({URL_A: response}).review(URL_A, _row())
+    assert raised.value.error_type == "unknown_429"
+    assert str(raised.value) == "unknown 429 error"
+    assert not raised.value.retryable
+
+
+@pytest.mark.parametrize(("response", "error_type", "retry_after"), [
+    (httpx.Response(429, text="Requests per minute exceeded"), "rate_limit_rpm", None),
+    (httpx.Response(429, json={"error": {"message": "RPM and TPM exceeded"}}), "rate_limit_rpm_tpm", None),
+    (_quota_response("Unspecified", message="Daily request quota exceeded. Please retry in 2s."), "daily_quota", 2),
+    (_quota_response("Unspecified", message="Quota exceeded. Please retry in 7.5s."), "rate_limit", 7.5),
+    (httpx.Response(429, json={"error": {"status": "RESOURCE_EXHAUSTED", "details": [
+        {"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": {}},
+    ]}}, headers={"Retry-After": "invalid"}), "quota_limit", None),
+])
+def test_429_message_evidence_and_malformed_retry_hints(response, error_type, retry_after):
+    with pytest.raises(review.GeminiQuotaExceeded) as raised:
+        _reviewer({URL_A: response}).review(URL_A, _row())
+    assert raised.value.error_type == error_type
+    assert raised.value.retry_after == retry_after
+
+
+def test_429_raw_message_is_redacted_safe_and_truncated():
+    response = _quota_response("GenerateRequestsPerMinute", message="secret=test-key\n\x1b[31m " + "x" * 600)
+    with pytest.raises(review.GeminiQuotaExceeded) as raised:
+        _reviewer({URL_A: response}).review(URL_A, _row())
+    fields = json.loads(raised.value.log_fields())
+    assert fields["error_type"] == "rate_limit_rpm"
+    assert fields["retry_after"] is None
+    assert "test-key" not in fields["gemini_message"]
+    assert "[REDACTED]" in fields["gemini_message"]
+    assert "\n" not in fields["gemini_message"] and "\x1b" not in fields["gemini_message"]
+    assert len(fields["gemini_message"]) == 500
+
+
+def test_rpm_retries_same_candidate_with_backoff_without_spending_candidates():
+    calls, waits, logs = [], [], []
+    response = _quota_response("GenerateRequestsPerMinute", retry_delay="7s")
+    response.headers["Retry-After"] = "8"
+    outcome = review.review_row(
+        _reviewer({URL_A: [response, _quota_response("GenerateRequestsPerMinute"), _answer()]}, calls),
+        _row(candidate_urls=URL_B), max_candidates=1, delay_s=0, sleep=waits.append, log=logs.append,
+    )
+    assert len(calls) == 3 and calls[0] == calls[1] == calls[2]
+    assert waits == [8, 10]
+    assert outcome.tried == [URL_A] and outcome.errors == []
+    assert outcome.best.verdict == "match"
+    assert '"error_type": "rate_limit_rpm"' in logs[0]
+    assert '"retry_after": 8.0' in logs[0]
+
+
+def test_schema_fallback_429_is_classified_and_retried():
+    payloads, waits = [], []
+
+    def handler(request):
+        payloads.append(json.loads(request.content))
+        if len(payloads) == 1:
+            return httpx.Response(400, json={"error": "unknown field"})
+        if len(payloads) == 2:
+            return _quota_response("GenerateContentInputTokensPerMinute", retry_delay={"seconds": "6", "nanos": 500000000})
+        return httpx.Response(200, json=_steps_body(_answer()))
+
+    reviewer = review.GeminiVideoReviewer("k", client=httpx.Client(transport=httpx.MockTransport(handler)))
+    outcome = review.review_row(reviewer, _row(), max_candidates=1, delay_s=0, sleep=waits.append, log=lambda _: None)
+    assert waits == [6.5] and outcome.best.verdict == "match"
+    assert "response_format" not in payloads[1]
+
+
+@pytest.mark.parametrize("response", [
+    _quota_response("GenerateRequestsPerDay", retry_delay="1s"),
+    httpx.Response(429, json={}),
+    _quota_response("YouTubeVideoProcessingSeconds"),
+    _quota_response("GenerateRequestsPerMinute", retry_delay="120s"),
+])
+def test_non_temporary_or_long_429_stops_without_retry_or_candidate_fallback(response):
+    calls, waits = [], []
+    with pytest.raises(review.GeminiQuotaExceeded):
+        review.review_row(
+            _reviewer({URL_A: response}, calls), _row(candidate_urls=URL_B),
+            max_candidates=4, delay_s=0, sleep=waits.append, log=lambda _: None,
+        )
+    assert len(calls) == 1 and waits == []
+
+
+@pytest.mark.parametrize("separate_out", [False, True])
+@pytest.mark.parametrize(("response", "attempts", "error_type"), [
+    (_quota_response("GenerateRequestsPerDay", retry_delay="1s"), 1, "daily_quota"),
+    (_quota_response("GenerateRequestsPerMinute"), 4, "rate_limit_rpm"),
+    (httpx.Response(429, json={}), 1, "unknown_429"),
+])
+def test_classified_429_saves_csv_and_same_command_resumes(tmp_path, separate_out, response, attempts, error_type):
+    src = tmp_path / "media.csv"
+    out = tmp_path / "reviewed.csv" if separate_out else src
+    original = [
+        _row(exercise_key="a", suggested_url=URL_A, candidate_urls="", notes="keep this", youtube_url=URL_C, start_s="10", end_s="20"),
+        _row(exercise_key="b", suggested_url=URL_B, candidate_urls=URL_C, notes="pending"),
+    ]
+    _write_csv(src, original)
+    calls, waits, logs = [], [], []
+    counts = review.run_review(
+        str(src), str(out), reviewer=_reviewer({URL_A: _answer(), URL_B: response}, calls),
+        delay_s=0, sleep=waits.append, log=logs.append,
+    )
+    assert counts == {"reviewed": 1, "skipped": 0, "errors": 0, "quota_stopped": 1}
+    assert len(calls) == 1 + attempts
+    assert [wait for wait in waits if wait] == ([5, 10, 20] if attempts == 4 else [])
+    saved = _read_csv(out)
+    assert saved[0]["ai_verdict"] == "match" and saved[1]["ai_verdict"] == ""
+    assert (saved[0]["youtube_url"], saved[0]["start_s"], saved[0]["end_s"]) == (URL_C, "10", "20")
+    assert [row["notes"] for row in saved] == ["keep this", "pending"]
+    assert f'"error_type": "{error_type}"' in logs[-1]
+    assert "Progress saved" in logs[-1]
+    if separate_out:
+        assert _read_csv(src) == original
+    resumed_calls = []
+    counts = review.run_review(
+        str(src), str(out), reviewer=_reviewer({URL_B: _answer()}, resumed_calls),
+        delay_s=0, sleep=lambda _: None, log=lambda _: None,
+    )
+    assert counts == {"reviewed": 1, "skipped": 1, "errors": 0}
+    assert len(resumed_calls) == 1
+    assert [row["ai_verdict"] for row in _read_csv(out)] == ["match", "match"]
+    assert _read_csv(out)[0] == saved[0]
 
 
 # -- candidates + row outcome --------------------------------------------------
