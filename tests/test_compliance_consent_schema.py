@@ -146,3 +146,34 @@ def test_private_trial_acknowledgement_is_left_alone():
     )
     assert "private_trial_ack_at" not in statements
     assert "private_trial_ack_at timestamptz" in SCHEMA
+
+
+def test_sql_keywords_are_never_schema_qualified():
+    # CURRENT_DATE and friends are SQL keywords, not functions. Written as
+    # `pg_catalog.current_date` Postgres reads a column of a table called
+    # pg_catalog and fails with 42P01, which surfaced to athletes as
+    # "Database error saving new user" on every signup that sent a date of
+    # birth. The original age-guard migration is already applied and is
+    # superseded by the fix migration, so it is the only file allowed to keep it.
+    import re
+
+    keyword = re.compile(
+        r"pg_catalog\.(current_date|current_time|current_timestamp|localtime"
+        r"|localtimestamp|current_user|session_user|current_role)\b",
+        re.IGNORECASE,
+    )
+    superseded = "20260817120000_add_compliance_age_and_consent.sql"
+    fix = (
+        ROOT
+        / "supabase"
+        / "migrations"
+        / "20261001160023_fix_auth_signup_minimum_age_current_date.sql"
+    ).read_text(encoding="utf-8")
+    assert "create or replace function private.enforce_auth_signup_minimum_age()" in fix
+
+    offenders = [
+        path.name
+        for path in [ROOT / "supabase" / "schema.sql", *(ROOT / "supabase" / "migrations").glob("*.sql")]
+        if path.name != superseded and keyword.search(path.read_text(encoding="utf-8"))
+    ]
+    assert offenders == []
