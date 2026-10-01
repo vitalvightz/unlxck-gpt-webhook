@@ -1064,8 +1064,10 @@ select:focus-visible {
   to { opacity: 1; }
 }
 
+/* Reduced motion drops the fade but keeps the delay: a zero-length animation
+   with fill "both" holds opacity 0 through the delay, then snaps to 1. */
 @media (prefers-reduced-motion: reduce) {
-  .auth-captcha-hint { animation: none; }
+  .auth-captcha-hint { animation-duration: 0s; }
 }
 
 /* Align optional consent metadata with the statement rather than the checkbox,
