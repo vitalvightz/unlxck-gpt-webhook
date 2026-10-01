@@ -18,6 +18,8 @@ def _answer(**overrides):
         "verdict": "match",
         "confidence": 0.9,
         "what_is_shown": "Trap bar deadlift from the side.",
+        "structure_matches": True,
+        "added_elements": [],
         "form_vs_cue": "consistent with cue",
         "orientation": "landscape",
         "segment_start": "00:42",
@@ -153,7 +155,7 @@ def test_quota_error_is_distinct():
 def test_best_candidate_wins_and_confident_match_stops_early():
     answers = {
         URL_A: _answer(verdict="partial", confidence=0.9),
-        URL_B: _answer(verdict="match", confidence=0.85),
+        URL_B: _answer(verdict="match", confidence=0.92),
         URL_C: _answer(verdict="match", confidence=0.99),
     }
     outcome = review.review_row(
@@ -390,3 +392,68 @@ def test_missing_api_key_is_an_operational_error(monkeypatch, capsys):
         review.build_reviewer()
     assert exc.value.code == 2
     assert "GEMINI_API_KEY" in capsys.readouterr().err
+
+
+# -- stricter match definition -----------------------------------------------------
+
+
+def test_prompt_defines_match_by_structure_and_intent():
+    prompt = review.build_prompt(_row(example_name="Tempo Shadowboxing"))
+    assert "drill structure and training intent match" in prompt
+    assert "agility-ladder punching is not a match for free tempo shadowboxing" in prompt
+    assert "compare the whole drill" in prompt
+
+
+def test_added_elements_cap_a_confident_match_at_partial():
+    # The real failure: agility-ladder jab-cross called a 0.90 match for Tempo Shadowboxing.
+    result = review.parse_review(
+        URL_A,
+        json.dumps(_answer(confidence=0.9, added_elements=["agility ladder", "fixed jab-cross pattern"])),
+    )
+    assert result.verdict == "partial"
+    assert result.form_vs_cue.startswith("[downgraded from match: adds: agility ladder, fixed jab-cross pattern]")
+
+
+@pytest.mark.parametrize("structure", [False, None, "yes"])
+def test_unconfirmed_structure_caps_match(structure):
+    answer = _answer()
+    if structure is None:
+        answer.pop("structure_matches")
+    else:
+        answer["structure_matches"] = structure
+    result = review.parse_review(URL_A, json.dumps(answer))
+    assert result.verdict == "partial"
+    assert "drill structure not confirmed" in result.form_vs_cue
+
+
+def test_clean_match_is_kept():
+    result = review.parse_review(URL_A, json.dumps(_answer()))
+    assert result.verdict == "match"
+    assert result.form_vs_cue == "consistent with cue"
+
+
+def test_downgraded_candidate_does_not_stop_the_search():
+    answers = {
+        URL_A: _answer(confidence=0.95, added_elements=["agility ladder"]),
+        URL_B: _answer(confidence=0.92),
+    }
+    outcome = review.review_row(
+        _reviewer(answers), _row(candidate_urls=URL_B), max_candidates=4, delay_s=0, sleep=lambda _: None
+    )
+    assert outcome.tried == [URL_A, URL_B]
+    assert outcome.best.url == URL_B and outcome.best.verdict == "match"
+
+
+def test_stop_needs_confidence_of_at_least_0_9():
+    answers = {URL_A: _answer(confidence=0.85), URL_B: _answer(confidence=0.9), URL_C: _answer(confidence=0.99)}
+    outcome = review.review_row(
+        _reviewer(answers), _row(candidate_urls=f"{URL_B}|{URL_C}"), max_candidates=4, delay_s=0, sleep=lambda _: None
+    )
+    assert outcome.tried == [URL_A, URL_B]
+
+
+def test_added_elements_are_saved_for_the_human_check():
+    best = review.parse_review(URL_A, json.dumps(_answer(added_elements=["agility ladder"])))
+    updated = review.apply_outcome(_row(), review.RowOutcome(best=best, tried=[URL_A]), model="m")
+    assert updated["ai_verdict"] == "partial"
+    assert updated["ai_added_elements"] == "agility ladder"
