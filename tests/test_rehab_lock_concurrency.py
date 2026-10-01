@@ -1,0 +1,144 @@
+"""Real PostgreSQL connections: RPCs wait before taking an injury row lock.
+
+REHAB_TEST_DATABASE_URL must point at a disposable localhost PostgreSQL cluster
+with CREATE DATABASE/ROLE privileges. Each run creates and drops its own database.
+CI supplies this through its PostgreSQL service; ordinary unit runs skip it.
+"""
+from concurrent.futures import ThreadPoolExecutor
+import os
+from pathlib import Path
+import re
+import time
+from uuid import uuid4
+
+import pytest
+
+
+ROOT = Path(__file__).resolve().parents[1]
+MIGRATION = ROOT / "supabase/migrations/20260930173118_injury_episode_prescription_history.sql"
+ATHLETE = "00000000-0000-4000-8000-000000000001"
+INJURY = "00000000-0000-4000-8000-000000000002"
+EPISODE = "00000000-0000-4000-8000-000000000003"
+
+
+@pytest.fixture(scope="module")
+def postgres_database():
+    dsn = os.environ.get("REHAB_TEST_DATABASE_URL")
+    if not dsn:
+        pytest.skip("set REHAB_TEST_DATABASE_URL to run the real PostgreSQL lock tests")
+    # Missing drivers must fail in CI when a database was explicitly configured.
+    import psycopg
+    from psycopg import sql
+    from psycopg.conninfo import conninfo_to_dict, make_conninfo
+
+    config = conninfo_to_dict(dsn)
+    assert config.get("host") in {"localhost", "127.0.0.1", "::1"}, "test cluster must be local"
+    name = "unlxck_rehab_lock_test_" + uuid4().hex
+    with psycopg.connect(dsn, autocommit=True) as admin:
+        for role in ("anon", "authenticated", "service_role"):
+            if not admin.execute("select 1 from pg_roles where rolname=%s", (role,)).fetchone():
+                admin.execute(sql.SQL("create role {} {}").format(
+                    sql.Identifier(role), sql.SQL("bypassrls" if role == "service_role" else "")))
+        admin.execute(sql.SQL("create database {}").format(sql.Identifier(name)))
+    test_dsn = make_conninfo(dsn, dbname=name)
+    try:
+        schema = (ROOT / "supabase/schema.sql").read_text(encoding="utf-8")
+
+        def table(table_name):
+            return re.search(rf"create table if not exists public\.{table_name} \([\s\S]*?\n\);", schema)[0]
+
+        validator = re.search(
+            r"create or replace function public\.injury_flags_infection_signs_valid[\s\S]*?\$\$;", schema)[0]
+        with psycopg.connect(test_dsn, autocommit=True) as setup:
+            setup.execute(f"""
+                create schema auth;
+                grant usage on schema auth, public to authenticated, service_role;
+                create function auth.uid() returns uuid language sql stable as $$
+                  select nullif(current_setting('request.jwt.claim.sub', true),'')::uuid $$;
+                create table public.profiles(id uuid primary key);
+                create table public.plans(id uuid primary key);
+                {validator} {table('injury_flags')}
+                alter table injury_flags add column episode_id uuid not null default gen_random_uuid(),
+                  add column body_region text, add column side text not null default 'unknown';
+                create unique index injury_flags_episode_owner_idx on injury_flags(id,athlete_id,episode_id);
+                {table('today_checkins')} {table('session_completions')} {table('rehab_exposures')}
+            """)
+            # Execute the actual migration, including its injury-update trigger.
+            setup.execute(MIGRATION.read_text(encoding="utf-8"))
+            setup.execute("insert into profiles values (%s)", (ATHLETE,))
+            setup.execute("""insert into injury_flags(id,athlete_id,description,body_region,side,episode_id)
+                values(%s,%s,'ankle sprain','ankle','left',%s)""", (INJURY, ATHLETE, EPISODE))
+        yield test_dsn
+    finally:
+        with psycopg.connect(dsn, autocommit=True) as admin:
+            admin.execute(sql.SQL("drop database {} with (force)").format(sql.Identifier(name)))
+
+
+def event_for(rpc, episode):
+    if rpc == "record_injury_episode_event":
+        return {"id": str(uuid4()), "injury_id": INJURY, "injury_episode_id": episode,
+                "event_type": "clinician_clearance_report",
+                "payload": {"source": "athlete_reported", "externally_verified": False, "scopes": ["rehab"]}}
+    return {"exposure_id": str(uuid4()), "injury_id": INJURY, "injury_episode_id": episode,
+            "drill_id": "ankle_sprain_heel_lowering", "body_region": "ankle", "side": "left",
+            "demand": {"target_regions": ["ankle"], "load": "low", "impact": "none", "velocity": "low"},
+            "dose_completed": {"completion_state": "performed_amount_unknown"},
+            "response": {"during_response": "same", "next_day_response": "not_yet_known"},
+            "occurred_at": "2026-09-30T12:00:00Z",
+            "provenance": {"source": "athlete_logged_rehab", "recorded_at": "2026-09-30T12:30:00Z"}}
+
+
+@pytest.mark.parametrize("rpc", ["record_injury_episode_event", "record_rehab_exposure"])
+@pytest.mark.parametrize("reopen", [False, True], ids=["same-episode", "reopened-episode"])
+def test_rpc_and_injury_update_serialize_without_deadlock(postgres_database, rpc, reopen):
+    import psycopg
+    from psycopg import sql
+    from psycopg.types.json import Jsonb
+
+    # Only these two backend connections participate in the race. The writer
+    # observes pg_locks itself; no observer connection or timing guess is needed.
+    with psycopg.connect(postgres_database) as writer, psycopg.connect(postgres_database) as recorder:
+        for connection in (writer, recorder):
+            connection.execute("set statement_timeout = '8s'")
+            connection.execute("set deadlock_timeout = '200ms'")
+            connection.commit()
+        episode = str(writer.execute("select episode_id from injury_flags where id=%s", (INJURY,)).fetchone()[0])
+        writer.execute("select pg_advisory_xact_lock(hashtextextended('injury:' || %s, 0))", (ATHLETE,))
+        event = event_for(rpc, episode)
+
+        def record():
+            try:
+                recorder.execute(sql.SQL("select public.{}(%s,%s)").format(sql.Identifier(rpc)),
+                                 (ATHLETE, Jsonb(event)))
+                recorder.commit()
+                return None
+            except psycopg.Error as error:
+                recorder.rollback()
+                return error.sqlstate
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            pending = executor.submit(record)
+            try:
+                deadline = time.monotonic() + 5
+                while not writer.execute("""select 1 from pg_locks
+                        where pid=%s and locktype='advisory' and not granted""",
+                        (recorder.info.backend_pid,)).fetchone():
+                    assert not pending.done(), "RPC finished before waiting for the athlete lock"
+                    assert time.monotonic() < deadline, "RPC did not reach its advisory lock"
+                    time.sleep(0.01)
+                # Under the old order the RPC already owns FOR SHARE, so this
+                # actual UPDATE and the waiting RPC form a deadlock cycle.
+                if reopen:
+                    writer.execute("update injury_flags set episode_id=%s, updated_at=now() where id=%s",
+                                   (str(uuid4()), INJURY))
+                else:
+                    writer.execute("update injury_flags set description='updated ankle sprain', updated_at=now() where id=%s",
+                                   (INJURY,))
+                writer.commit()
+                result = pending.result(timeout=10)
+                # Reading after the advisory wait must see a reopened episode
+                # and reject the stale report instead of accepting old evidence.
+                assert result == ("23514" if reopen else None)
+            finally:
+                writer.rollback()  # release the blocker even if an assertion fails
+

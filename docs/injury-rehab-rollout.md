@@ -42,6 +42,16 @@ node tools/test_rehab_migration.mjs <temporary-directory>
 
 This executes the real pending SQL against PostgreSQL and exercises start retries, duplicate allocations across plans, immutable snapshots, cadence, skipped work, owner-only reads, optional clearance, delayed response idempotency, episode reopening and attributed unknown-side guidance. PGlite uses one connection; these checks do not claim to simulate multi-connection contention. No frontend dependency was added.
 
+Real lock contention is tested separately in `tests/test_rehab_lock_concurrency.py` using two PostgreSQL connections and the actual migration. Both recording RPCs take the athlete advisory lock before `FOR SHARE`. The test waits for the RPC's ungranted advisory lock in `pg_locks`, then updates/reopens the injury in the other transaction. Both RPCs complete without deadlock; reopened episodes reject stale evidence. Restoring the old lock order reproduces deadlocks and fails all four cases.
+
+Backend Checks runs these tests against its disposable PostgreSQL 17.11 service. To repeat locally, install `requirements-dev.txt`, start a disposable localhost PostgreSQL cluster and run:
+
+```text
+REHAB_TEST_DATABASE_URL=postgresql://postgres:<test-password>@127.0.0.1:5432/postgres python -m pytest tests/test_rehab_lock_concurrency.py -q
+```
+
+The configured role needs CREATE DATABASE/ROLE privileges. The fixture creates and drops only its uniquely named test database; it rejects remote hosts. Without the explicit test URL, normal unit runs skip these four integration cases. The CI job supplies the URL and treats missing drivers or setup failures as failures.
+
 ## Verification
 
 Quick repeat from the repository root:

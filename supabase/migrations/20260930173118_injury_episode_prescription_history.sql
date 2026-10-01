@@ -168,10 +168,11 @@ declare
   v_type text := p_event->>'event_type';
   v_payload jsonb := p_event->'payload';
 begin
+  -- Always take the athlete lock before any injury row lock.
+  perform pg_advisory_xact_lock(hashtextextended('injury:' || p_athlete_id::text, 0));
   select * into v_injury from public.injury_flags
     where id = (p_event->>'injury_id')::uuid and athlete_id = p_athlete_id for share;
   if not found then raise exception 'injury not found' using errcode = '23503'; end if;
-  perform pg_advisory_xact_lock(hashtextextended('injury:' || p_athlete_id::text, 0));
   if v_injury.episode_id <> (p_event->>'injury_episode_id')::uuid then
     raise exception 'injury_episode_changed' using errcode = '23514';
   end if;
@@ -276,10 +277,11 @@ begin
     raise exception 'invalid rehab exposure object' using errcode = '22023';
   end if;
 
+  -- Always take the athlete lock before any injury row lock.
+  perform pg_advisory_xact_lock(hashtextextended('injury:' || p_athlete_id::text, 0));
   select * into v_injury from public.injury_flags
    where id = (p_event->>'injury_id')::uuid and athlete_id = p_athlete_id for share;
   if not found then raise exception 'injury not found' using errcode = '23503'; end if;
-  perform pg_advisory_xact_lock(hashtextextended('injury:' || p_athlete_id::text, 0));
   -- Unknown side is retained only for baseline region-wide guidance accepted
   -- in an exact frozen episode. Unattributed legacy exercise stays ineligible.
   v_region_guidance := v_injury.side = 'unknown' and v_side = 'unknown' and exists (

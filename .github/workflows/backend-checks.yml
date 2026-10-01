@@ -19,6 +19,35 @@ on:
       - "**"
 
 jobs:
+  rehab-lock-concurrency:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:17.11
+        env:
+          POSTGRES_PASSWORD: rehab_test_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.15"
+      - name: Install PostgreSQL test dependencies
+        run: pip install pytest==8.3.5 'psycopg[binary]==3.3.6'
+      - name: Exercise real two-connection RPC and injury update races
+        env:
+          REHAB_TEST_DATABASE_URL: postgresql://postgres:rehab_test_only@127.0.0.1:5432/postgres
+        run: pytest tests/test_rehab_lock_concurrency.py -q
+
   pytest:
     runs-on: ubuntu-latest
     permissions:
