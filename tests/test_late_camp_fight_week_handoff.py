@@ -40,6 +40,8 @@ import re
 
 import pytest
 
+from planner_clock import pin_planner_clock
+from fightcamp.calendar_context import role_d_day
 from fightcamp import input_parsing
 from fightcamp.input_parsing import PlanInput
 from fightcamp.plan_pipeline_blocks import generate_plan_blocks
@@ -134,7 +136,7 @@ def _run(days: int, monkeypatch, **over) -> tuple[dict, dict, str]:
     fixed_now = _dt.datetime.combine(
         FIGHT_FRIDAY - _dt.timedelta(days=days), _dt.time(12, 0)
     )
-    monkeypatch.setattr(input_parsing, "_utc_now", lambda: fixed_now)
+    pin_planner_clock(monkeypatch, fixed_now)
     plan_input = PlanInput.from_payload({"data": {"fields": _fixture_fields(**over)}})
     assert plan_input.days_until_fight == days, (
         f"expected D-{days}, pinned clock gave D-{plan_input.days_until_fight}"
@@ -171,25 +173,17 @@ def _mode_for_day(segments: list[tuple[str, str, int, int]], d_day: int) -> str 
 
 
 def _placed_roles(brief: dict):
-    """Yield (d_day, role) for every scheduled session role in the plan."""
+    """Yield (d_day, role) for every scheduled session role in the plan.
+
+    The role's final countdown label is authoritative: a planner week can span
+    eight calendar days and hold the same weekday twice, so resolving by weekday
+    first would put the earlier Friday on D-0.
+    """
     for week in brief.get("weekly_role_map", {}).get("weeks", []) or []:
-        cal = {}
-        for day in week.get("calendar_days", []) or []:
-            wd = str(day.get("weekday") or "").strip().lower()
-            if isinstance(day.get("d_day"), int) and wd:
-                cal[wd] = day["d_day"]
         for role in week.get("session_roles", []) or []:
             if not isinstance(role, dict):
                 continue
-            wd = str(role.get("scheduled_day_hint") or "").strip().lower()
-            d_day = cal.get(wd)
-            if d_day is None:
-                for key in ("scheduled_countdown_label", "countdown_label"):
-                    label = str(role.get(key) or "").strip().upper()
-                    if label.startswith("D-") and label[2:].isdigit():
-                        d_day = int(label[2:])
-                        break
-            yield d_day, role
+            yield role_d_day(week, role), role
 
 
 def _app_owned_roles_at(brief: dict, d_days: set[int]):
@@ -352,8 +346,13 @@ class TestD24GeneratedFightWeek:
             for d_day, role in _placed_roles(brief)
             if d_day == 0
         }
-        assert d0_roles, "D-0 had no scheduled entry at all"
-        assert d0_roles <= {"fight_day_protocol"}, f"D-0 carried non-protocol roles: {d0_roles}"
+        # The fight-day protocol is carried by the D-0 payload mode (asserted above),
+        # not by a session role, so the role map may be empty on D-0. Anything that
+        # is there must be protocol: the fight-day protocol itself or the zero-load
+        # Fight Visualisation countdown protocol that coexists with it.
+        assert d0_roles <= {"fight_day_protocol", "fight_visualization"}, (
+            f"D-0 carried non-protocol roles: {d0_roles}"
+        )
 
         protocol_contract = _handoff_mode_instructions("fight_day_protocol_payload")
         assert "FIGHT DAY PROTOCOL" in protocol_contract
