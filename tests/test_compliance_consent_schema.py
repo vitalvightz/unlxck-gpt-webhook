@@ -167,7 +167,7 @@ def test_sql_keywords_are_never_schema_qualified():
         ROOT
         / "supabase"
         / "migrations"
-        / "20261001160000_fix_auth_signup_minimum_age_current_date.sql"
+        / "20261001160023_fix_auth_signup_minimum_age_current_date.sql"
     ).read_text(encoding="utf-8")
     assert "create or replace function private.enforce_auth_signup_minimum_age()" in fix
 
