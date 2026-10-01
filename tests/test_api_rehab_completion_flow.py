@@ -28,6 +28,13 @@ ANKLE_DRILL = "ankle_sprain_single_leg_balance_on_foam_pad"
 KNEE_DRILL = "knee_pain_terminal_knee_extensions_tkes"
 
 
+@pytest.fixture(autouse=True)
+def legacy_capture_path(monkeypatch):
+    """These fixtures pin pre-policy capture; live pilot journeys are separate."""
+    monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
+    monkeypatch.setattr("api.services.today_service.load_clinical_policies", lambda: ())
+
+
 def _structured_plan(training_day: str, *, blocks: list[dict]) -> dict:
     return {
         "weeks": [

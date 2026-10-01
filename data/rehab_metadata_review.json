@@ -65,6 +65,93 @@
     "review_version": 1
   },
   {
+    "drill_id": "ankle_sprain_gentle_movement",
+    "source_hash": "d27b48de53100db30c9d3f273304e5dfa999026a53e34edc40554332b7c38e21",
+    "location": "ankle",
+    "injury_type": "sprain",
+    "name": "Gentle seated ankle movement",
+    "notes": "Once the ankle is less painful, sit with the foot supported and gently move it up and down or trace the alphabet. Start with a small comfortable amount and build gradually. Keep within a comfortable range; do not force movement.",
+    "movement_archetype": "unknown",
+    "proposed": {
+      "rehab_stage": null,
+      "function": "mobility",
+      "equipment": null,
+      "impact": null,
+      "load": null,
+      "velocity": null,
+      "target_regions": [
+        "ankle"
+      ],
+      "laterality_applicability": null,
+      "target_tissues": null,
+      "contraction_type": null,
+      "sport_specificity": null,
+      "contact_level": null,
+      "evidence_notes": null
+    },
+    "flags": [],
+    "review_state": "needs_review",
+    "review_version": 1
+  },
+  {
+    "drill_id": "ankle_sprain_supported_balance",
+    "source_hash": "0a394c6c756bba9d8a3a009dd314269285881fb6dc7ee1a80cab153616394cc1",
+    "location": "ankle",
+    "injury_type": "sprain",
+    "name": "Supported ankle balance",
+    "notes": "When standing and weight bearing are comfortable, practise balancing on the affected leg on firm ground, close to a stable counter for support. Start with a short comfortable attempt and build gradually. Keep support available; do not use a cushion or close your eyes.",
+    "movement_archetype": "balance_control",
+    "proposed": {
+      "rehab_stage": null,
+      "function": "control",
+      "equipment": null,
+      "impact": "none",
+      "load": null,
+      "velocity": "low",
+      "target_regions": [
+        "ankle"
+      ],
+      "laterality_applicability": null,
+      "target_tissues": null,
+      "contraction_type": null,
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": null
+    },
+    "flags": [],
+    "review_state": "needs_review",
+    "review_version": 1
+  },
+  {
+    "drill_id": "ankle_sprain_heel_lowering",
+    "source_hash": "3d73cd2bb1f99b60eef79a6407866f45f0f36a2a0de828c2ea530955867bcdbd",
+    "location": "ankle",
+    "injury_type": "sprain",
+    "name": "Supported heel lowering",
+    "notes": "When weight bearing and gentle calf movement are comfortable, use a stable support and practise controlled heel lowering as shown in the linked ankle rehabilitation guidance. Work at your own pace, up to 2 sets on alternate days. The source gives no repetition target; stop before symptoms worsen.",
+    "movement_archetype": "balance_control",
+    "proposed": {
+      "rehab_stage": null,
+      "function": "tendon_loading",
+      "equipment": null,
+      "impact": "none",
+      "load": null,
+      "velocity": "low",
+      "target_regions": [
+        "ankle"
+      ],
+      "laterality_applicability": null,
+      "target_tissues": null,
+      "contraction_type": null,
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": null
+    },
+    "flags": [],
+    "review_state": "needs_review",
+    "review_version": 1
+  },
+  {
     "drill_id": "toe_hyperextension_towel_scrunches_toe_curls",
     "source_hash": "e553058557c233bd8c3f87c279dcffcebd2bcc3f9c130323fde6950aaa891710",
     "location": "toe",
@@ -10232,6 +10319,64 @@
       "laterality_applicability": null,
       "target_tissues": null,
       "contraction_type": "eccentric",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": null
+    },
+    "flags": [],
+    "review_state": "needs_review",
+    "review_version": 1
+  },
+  {
+    "drill_id": "chest_strain_recovery_support",
+    "source_hash": "856223e5038955693aa9ae904ed3044df6635c8294fbf6eccb31f56aae84c93f",
+    "location": "chest",
+    "injury_type": "strain",
+    "name": "Chest strain recovery support",
+    "notes": "Protect the strained area and avoid movements that aggravate it. During the first 2 to 3 days, rest from exercise that loads it. Use comfortable everyday movement; do not force a stretch or add resisted chest work.",
+    "movement_archetype": "mobility_rom",
+    "proposed": {
+      "rehab_stage": null,
+      "function": "recovery_downregulation",
+      "equipment": null,
+      "impact": "none",
+      "load": null,
+      "velocity": "low",
+      "target_regions": [
+        "chest"
+      ],
+      "laterality_applicability": null,
+      "target_tissues": null,
+      "contraction_type": null,
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": null
+    },
+    "flags": [],
+    "review_state": "needs_review",
+    "review_version": 1
+  },
+  {
+    "drill_id": "chest_strain_comfortable_movement",
+    "source_hash": "73d83ba63a1476e4c44804a4abcf4eddf9e2c30a7b4a6ec5f97584905b6891a0",
+    "location": "chest",
+    "injury_type": "strain",
+    "name": "Comfortable chest-region movement",
+    "notes": "When pain no longer stops movement, gently move your shoulder and arm through a comfortable range. Go at your own pace and stop before pain prevents movement. Avoid forced chest stretches, resisted chest flies and surgical-repair routines.",
+    "movement_archetype": "mobility_rom",
+    "proposed": {
+      "rehab_stage": null,
+      "function": "mobility",
+      "equipment": null,
+      "impact": "none",
+      "load": null,
+      "velocity": "low",
+      "target_regions": [
+        "chest"
+      ],
+      "laterality_applicability": null,
+      "target_tissues": null,
+      "contraction_type": null,
       "sport_specificity": "general_rehab",
       "contact_level": "none",
       "evidence_notes": null

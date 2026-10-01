@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
+import { window as domWindow } from "../test-dom";
+import { act } from "react";
+import { createRoot } from "react-dom/client";
 
 import { ToastProvider } from "@/components/toast-provider";
 import { AuthProvider } from "@/components/auth-provider";
@@ -531,4 +534,61 @@ test("a pull-back day never headlines the sparring it blocks", () => {
   assert.doesNotMatch(html, /<h2 id="today-session-heading">Hard sparring<\/h2>/);
   assert.doesNotMatch(html, />Start hard sparring</);
   assert.match(html, /<h2 id="today-session-heading">Mobility flush<\/h2>/);
+});
+
+function reviewedSessionState(held: boolean): TodayCommandView {
+  return {
+    active_plan: { id: "plan-1", name: "Camp", phase: "SPP" },
+    today: {
+      training_day: "2026-08-01", recommendation_state: "pull_back", decision_tier: "pull_back", warnings: [],
+      next_session: { session_id: "rehab-2026-08-01", title: "Today's rehab", session_relation: "today", effective_load: "technical" },
+      session_scope: "today", session_label: "Today's session", completion_status: held ? "started" : "not_started",
+    },
+    live_prescription: {
+      revision: "a".repeat(64), safety_hold: held, frozen: held, changes: [{ action: "held" }],
+      session: { session_id: "rehab-2026-08-01", title: "Today's rehab", session_type: "rehab",
+        blocks: [{ block_id: "reviewed-1", block_type: "rehab", display_name: "Reviewed test rehab" }] },
+    },
+    risk_watch: [], open_injuries: [], week_summary: {}, quick_actions: [],
+  };
+}
+
+test("reviewed rehab remains available under reduced readiness and uses server blocks", () => {
+  const state = reviewedSessionState(false);
+  const html = renderToStaticMarkup(<AuthProvider><ToastProvider><TodaySessionPanel state={state} structuredPlan={null} token="token" onRefresh={async () => {}} /></ToastProvider></AuthProvider>);
+  assert.match(html, /Reviewed test rehab/);
+  assert.match(html, />Start session</);
+  assert.doesNotMatch(html, /Do not start this session/);
+});
+
+test("a new safety hold offers stopped logging without resuming frozen work", () => {
+  const state = reviewedSessionState(true);
+  const html = renderToStaticMarkup(<AuthProvider><ToastProvider><TodaySessionPanel state={state} structuredPlan={null} token="token" onRefresh={async () => {}} /></ToastProvider></AuthProvider>);
+  assert.match(html, /Reviewed test rehab/);
+  assert.match(html, />Log stopped session</);
+  assert.match(html, />Mark skipped</);
+  assert.doesNotMatch(html, />Start session<|>Done<|>Resume session</);
+});
+
+test("rehab completion stays blocked until performed work is selected", async () => {
+  const container = document.createElement("div"); document.body.appendChild(container);
+  const root = createRoot(container);
+  const state = reviewedSessionState(false);
+  state.today.completion_status = "started";
+  const original = globalThis.fetch;
+  globalThis.fetch = (async () => new Response('{"response_sets":[],"history_truncated":false}', { status: 200 })) as typeof fetch;
+  async function click(label: string) {
+    const button = Array.from(container.querySelectorAll("button")).find(b => b.textContent?.trim() === label);
+    assert.ok(button, label);
+    await act(async () => { button.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
+  }
+  try {
+    await act(async () => { root.render(<AuthProvider><ToastProvider><TodaySessionPanel state={state} structuredPlan={null} token="token" onRefresh={async () => {}} /></ToastProvider></AuthProvider>); });
+    await click("Done");
+    const save = container.querySelector<HTMLButtonElement>('button[type="submit"]');
+    assert.ok(save);
+    assert.equal(save.disabled, true);
+    await click("Changed it");
+    assert.equal(container.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled, false);
+  } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
 });

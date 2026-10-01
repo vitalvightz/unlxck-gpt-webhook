@@ -90,13 +90,14 @@ def test_the_selector_actually_runs_during_plan_generation(monkeypatch):
     stage = resolve_rehab_stage(flag).stage
     seen: list[str] = []
 
-    real_select = rehab_protocols.select_rehab_candidate
+    from api.contracts import injury_policy
+    real_select = injury_policy.select_rehab_candidate
 
     def spy(**kwargs):
         seen.append(kwargs["rehab_stage"])
         return real_select(**kwargs)
 
-    monkeypatch.setattr(rehab_protocols, "select_rehab_candidate", spy)
+    monkeypatch.setattr(injury_policy, "select_rehab_candidate", spy)
 
     generate_rehab_protocols(
         injury_string="left ankle sprain",
@@ -159,9 +160,8 @@ def test_selection_narrows_the_block_to_the_chosen_drill():
     # One drill is chosen rather than the whole matching group being rendered.
     assert len(chosen) == 1
     assert len(chosen) <= len(legacy)
-    # The card keeps its alternates either way — selection narrows what is
-    # prescribed, it does not strip the athlete's swap options.
-    assert chosen[0]["alternates"]
+    # The active pilot cannot expand into unvalidated legacy swaps.
+    assert not chosen[0]["alternates"]
 
 
 def test_pr5_does_not_move_the_stage_ceiling():

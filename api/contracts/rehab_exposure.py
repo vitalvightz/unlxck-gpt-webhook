@@ -23,7 +23,7 @@ from datetime import datetime
 from typing import Literal, Mapping
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator, model_serializer
 
 from fightcamp.rehab_schema import canonical_rehab_locations
 from fightcamp.injury_body_region import injury_body_region_context
@@ -148,6 +148,17 @@ class ExposureProvenance(BaseModel):
     model_config = ConfigDict(extra="forbid")
     source: Literal["athlete_logged_rehab", "clinician_logged_rehab", "coach_logged_rehab"]
     recorded_at: datetime
+    prescription_revision: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    bank_hash: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    policy_review_hash: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    policy_id: str | None = None
+    policy_version: int | None = Field(default=None, ge=1)
+    rehab_stage: Literal["calm", "restore", "load", "dynamic", "return"] | None = None
+
+    @model_serializer(mode="wrap")
+    def preserve_legacy_shape(self, handler):
+        data = handler(self)
+        return {key: value for key, value in data.items() if key in {"source", "recorded_at"} or value is not None}
 
 
 class RehabExposureEvent(BaseModel):
@@ -201,7 +212,11 @@ class RehabExposureEvent(BaseModel):
             return False
         if injury.get("body_region") != self.body_region:
             return False
-        injury_side = injury.get("side")
+        injury_side = str(injury.get("side") or "unknown").strip().lower() or "unknown"
+        if (self.provenance.policy_id in {"chest_strain", "ankle_sprain"}
+                and self.provenance.prescription_revision and self.provenance.rehab_stage in {"calm", "restore"}
+                and self.side == "unknown" and injury_side in (None, "unknown")):
+            return True
         if injury_side in (None, "unknown") or self.side == "unknown":
             return False
         return self.side == "bilateral" or injury_side == "bilateral" or self.side == injury_side

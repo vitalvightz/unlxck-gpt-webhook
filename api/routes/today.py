@@ -52,6 +52,7 @@ from api.services.today_command_cache import remember_today_command
 from api.services.today_service import resolve_training_day
 from api.services.effective_structured_plan import resolve_effective_structured_plan
 from api.services.open_plan_timeline import project_open_structured_plan
+from api.services.injury_episode_service import InjuryEpisodeObservation, record_episode_observation
 from api.services.week_progress import try_award_completed_week_for_completion
 from api.services.streaks import reconcile_adherence_streak, reconcile_training_streak
 from api.services.xp_awards import (
@@ -135,6 +136,16 @@ def _session_history_title(
 
 def build_today_router(*, require_profile, get_store) -> APIRouter:
     router = APIRouter(tags=["today"])
+
+    @router.post("/api/today/injury-episode-observation")
+    def injury_episode_observation(
+        request_body: InjuryEpisodeObservation,
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> dict[str, Any]:
+        require_health_feature_access(profile)
+        return record_episode_observation(store, athlete_id=profile.athlete_id, observation=request_body,
+                                         training_day=resolve_training_day(profile.athlete_timezone), athlete_timezone=profile.athlete_timezone)
 
     @router.post(
         "/api/today/checkin",

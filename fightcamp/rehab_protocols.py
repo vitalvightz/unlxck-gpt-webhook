@@ -943,6 +943,29 @@ def _legacy_rehab_drills_for_episode(
     return result
 
 
+def _reviewed_episode_option(episode: dict, location: str | None, phase: str):
+    """Use the same reviewed decision as Today; pending policies keep legacy behavior."""
+    from .rehab_clinical import load_clinical_policies
+    policies = load_clinical_policies()
+    if not any((p.activation == "live" or p.status == "retired") and p.region == location and p.injury_type == episode.get("injury_type") for p in policies):
+        return None
+    from api.contracts.injury_policy import resolve_injury_policy
+    decision = resolve_injury_policy(
+        {**episode, "id": episode.get("injury_id"), "canonical_location": location, "body_region": location},
+        policies=policies, bank=get_rehab_bank(), phase=phase,
+        equipment=episode.get("available_equipment") or (), exposures=episode.get("rehab_exposures") or (),
+    )
+    prescription = decision.get("prescription")
+    if not prescription:
+        return {"decision": decision, "line": None, "drill": None}
+    dose = prescription["dose"]
+    amount = f"{dose['reps']} reps" if "reps" in dose else f"{dose['duration_seconds']:g} seconds" if "duration_seconds" in dose else "Self-paced movement within comfort"
+    if dose.get("sets") is not None:
+        amount = f"{dose['sets']} x {amount}"
+    notes = f"{amount}. {prescription['instructions']} Stop: {'; '.join(prescription['stop_when'])}"
+    return {"decision": decision, "line": (prescription["drill"]["name"], notes), "drill": prescription["drill"]}
+
+
 def _select_rehab_drills_per_episode(
     *,
     episodes: list[dict],
@@ -951,6 +974,7 @@ def _select_rehab_drills_per_episode(
     current_phase: str,
     day_type: str | None,
     drill_limit: int,
+    outcomes: list[dict] | None = None,
 ) -> list[tuple[str, str]]:
     """Programme every injury episode at this location independently, then consolidate.
 
@@ -966,8 +990,13 @@ def _select_rehab_drills_per_episode(
     first); the volume ceiling still caps the block.
     """
     per_episode: list[list[tuple[str, str]]] = []
+    episode_summaries: list[str | None] = []
     for episode in sorted(episodes, key=_episode_sort_key):
-        if episode.get("stage_resolved"):
+        reviewed = _reviewed_episode_option(episode, loc, current_phase)
+        episode_summaries.append(reviewed["decision"].get("summary") if reviewed is not None and not reviewed["line"] else None)
+        if reviewed is not None:
+            per_episode.append([reviewed["line"]] if reviewed["line"] else [])
+        elif episode.get("stage_resolved"):
             line = _stage_aware_drill_for_episode(
                 episode,
                 loc=loc,
@@ -988,8 +1017,18 @@ def _select_rehab_drills_per_episode(
 
     chosen: list[tuple[str, str]] = []
     seen_names: set[str] = set()
+    allocated_episodes: set[int] = set()
+
+    def finish():
+        if outcomes is not None:
+            for index, (episode, drills) in enumerate(zip(sorted(episodes, key=_episode_sort_key), per_episode)):
+                allocated = index in allocated_episodes
+                outcomes.append({"injury_type": episode.get("injury_type"), "side": episode.get("side"),
+                                 "outcome": "available" if allocated else "deferred" if drills else "unsupported_prescription",
+                                 "summary": episode_summaries[index]})
+        return chosen
     for position in range(max((len(lines) for lines in per_episode), default=0)):
-        for lines in per_episode:
+        for index, lines in enumerate(per_episode):
             if position >= len(lines):
                 continue
             name, notes = lines[position]
@@ -997,10 +1036,11 @@ def _select_rehab_drills_per_episode(
             if key in seen_names:
                 continue
             seen_names.add(key)
+            allocated_episodes.add(index)
             chosen.append((name, notes))
             if len(chosen) >= drill_limit:
-                return chosen
-    return chosen
+                return finish()
+    return finish()
 
 
 def generate_rehab_protocols(
@@ -1126,6 +1166,15 @@ def generate_rehab_protocols(
         # path, so an unresolved injury is never dropped just because a
         # co-located one has a stage.
         episodes = list((merged or {}).get("rehab_episodes") or [])
+        if not episodes and not structured_entries:
+            from .rehab_clinical import load_clinical_policies
+            if any((p.activation == "live" or p.status == "retired") and p.region == loc
+                   and p.injury_type == itype for p in load_clinical_policies()):
+                # Text-only callers still get the conservative pilot baseline.
+                # No phase-derived stage or synthetic episode identity is added.
+                episodes = [context for entry in _normalize_injury_entries(injury_string)
+                            if entry.get("canonical_location") == loc and entry.get("injury_type") == itype
+                            if (context := _episode_context(entry)) is not None]
         severity = _normalize_rehab_severity((merged or {}).get("severity"))
 
         def _render_high_severity_note() -> None:
@@ -1135,6 +1184,7 @@ def generate_rehab_protocols(
             )
 
         if episodes:
+            episode_outcomes: list[dict] = []
             selected = _select_rehab_drills_per_episode(
                 episodes=episodes,
                 loc=loc,
@@ -1142,10 +1192,29 @@ def generate_rehab_protocols(
                 current_phase=current_phase,
                 day_type=day_type,
                 drill_limit=drill_limit,
+                outcomes=episode_outcomes,
             )
+            if selected:
+                for outcome in episode_outcomes:
+                    if outcome["outcome"] == "deferred":
+                        label = " ".join(str(part) for part in (outcome.get("side"), loc, outcome.get("injury_type")) if part)
+                        lines.append(f"- {label.title()}: Rehab deferred because this session's rehab allocation is full. Keep to your current restrictions.")
+                    if outcome["outcome"] == "unsupported_prescription":
+                        label = " ".join(str(part) for part in (outcome.get("side"), loc, outcome.get("injury_type")) if part)
+                        guidance = outcome.get("summary") or "No suitable rehab drill is available for this injury today. Keep to your current restrictions and get individual guidance."
+                        lines.append(f"- {label.title()}: {guidance}")
             if not selected:
                 if severity == "high":
                     _render_high_severity_note()
+                else:
+                    loc_title = _render_location_heading(loc, merged)
+                    if any(outcome.get("summary") for outcome in episode_outcomes):
+                        for outcome in episode_outcomes:
+                            label = " ".join(str(part) for part in (outcome.get("side"), loc, outcome.get("injury_type")) if part)
+                            guidance = outcome.get("summary") or "No suitable rehab drill is available for this injury today. Keep to your current restrictions and get individual guidance."
+                            lines.append(f"- {label.title()}: {guidance}")
+                    else:
+                        lines.append(f"- {loc_title}: No suitable rehab drill is available for this injury today. Keep to your current restrictions and get individual guidance.")
                 continue
         else:
             # Defensive fallback: a location with no resolvable MSK episode (e.g.
@@ -1153,6 +1222,8 @@ def generate_rehab_protocols(
             # group-level rendering for the group's type.
             matches = _rehab_bank_matches(itype, loc_candidates, current_phase)
             if not matches:
+                loc_title = _render_location_heading(loc, merged)
+                lines.append(f"- {loc_title}: No suitable rehab drill is available for this injury today. Keep to your current restrictions and get individual guidance.")
                 continue
             filtered_drills = _filter_drills_by_severity(
                 _all_phase_drills(matches, current_phase), severity
@@ -1324,6 +1395,11 @@ def _episode_context(entry: dict) -> dict | None:
         "episode_id": str(entry.get("episode_id") or entry.get("injury_episode_id") or "") or None,
         "athlete_id": entry.get("athlete_id"),
         "rehab_care_pathway": entry.get("rehab_care_pathway"),
+        "rehab_medical_gate": entry.get("rehab_medical_gate"),
+        "clinician_clearance": entry.get("clinician_clearance"),
+        "latest_reported_status": entry.get("latest_reported_status"),
+        "latest_reported_at": entry.get("latest_reported_at"),
+        "status": entry.get("status"),
         # The injury's OWN type governs its candidate pool — never the group's
         # highest-risk type, which could belong to a different injury.
         "injury_type": injury_type or None,
@@ -1684,6 +1760,24 @@ def build_coach_review_entries(
     return list(region_entries.values())
 
 
+def reviewed_rehab_drill_id_for_line(line: str, injury_type: str, location: str) -> str | None:
+    """Identity only: never create an alternate without episode evidence."""
+    from .rehab_clinical import load_clinical_policies, validate_clinical_bank
+    locations = normalize_rehab_location(location)
+    policy = next((p for p in load_clinical_policies() if (p.activation == "live" or p.status == "retired") and p.region in locations and p.injury_type == injury_type), None)
+    if policy is None:
+        return None
+    if policy.status == "retired":
+        return ""
+    bank = get_rehab_bank()
+    if validate_clinical_bank((policy,), bank):
+        return ""
+    ids = {p.drill_id for p in policy.prescriptions}
+    matches = [d["id"] for group in bank for d in group.get("drills", [])
+               if d.get("id") in ids and line.casefold().startswith(str(d.get("name") or "").casefold())]
+    return matches[0] if len(matches) == 1 else ""
+
+
 def rehab_drill_options_for_phase(
     itype: str,
     loc: str | None,
@@ -1722,6 +1816,20 @@ def rehab_drill_options_for_phase(
             )
         return options[:limit]
     phase = phase.upper()
+    from .rehab_clinical import load_clinical_policies
+    locations = normalize_rehab_location(loc)
+    active_policies = [p for p in load_clinical_policies() if (p.activation == "live" or p.status == "retired") and p.region in locations]
+    if active_policies and (injury is None or any(p.injury_type == itype for p in active_policies)):
+        if injury is None:
+            # The text-only Stage 2 adapter has no per-episode evidence. It may
+            # retain the selected reviewed work, but cannot expand its alternates.
+            return []
+        episode = _episode_context({**injury, "injury_type": itype, "rehab_stage": rehab_stage})
+        reviewed = _reviewed_episode_option(episode or {}, loc, phase)
+        if not reviewed or not reviewed["line"]:
+            return []
+        name, notes = reviewed["line"]
+        return [{"line": f"{name} – {notes}", "drill": reviewed["drill"], "location": loc, "type": itype}]
     collection_limit = 10_000 if rehab_stage and injury else limit
     options = []
     seen_lines: set[str] = set()

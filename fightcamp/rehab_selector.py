@@ -359,9 +359,11 @@ def filter_rehab_candidates(
     candidates: Sequence[Mapping[str, object]],
     available_equipment: Iterable[str] | None = None,
     exposures: Iterable[Mapping[str, object]] = (),
+    activated_stages: Iterable[str] | None = None,
 ) -> tuple[list[Mapping[str, object]], list[RejectedCandidate]]:
     """Apply non-tradeable compatibility rules before any ranking."""
     stage = _clean(rehab_stage)
+    live_stages = _LIVE_STAGES if activated_stages is None else frozenset(activated_stages)
     regions = _injury_regions(injury)
     family = _clean(injury.get("injury_type") or injury.get("rehab_type"))
     side = _canonical_side(injury.get("side") or injury.get("laterality"))
@@ -384,7 +386,7 @@ def filter_rehab_candidates(
             reasons.append("REJECT_INVALID_DRILL_ID")
         if candidate_pathway not in _MSK_PATHWAYS:
             reasons.append("REJECT_SURFACE_PATHWAY")
-        if stage not in _LIVE_STAGES:
+        if stage not in live_stages:
             reasons.append("REJECT_STAGE_NOT_LIVE")
         stage_reason = _stage_rejection(candidate_stage, stage)
         if stage_reason:
@@ -652,6 +654,7 @@ def select_rehab_candidate(
     candidates: Sequence[Mapping[str, object]],
     available_equipment: Iterable[str] | None = None,
     exposures: Iterable[Mapping[str, object]] = (),
+    activated_stages: Iterable[str] | None = None,
     session_context: Mapping[str, object] | str | None = None,
 ) -> RehabSelectionResult:
     exposure_rows = tuple(exposures)
@@ -661,6 +664,7 @@ def select_rehab_candidate(
         candidates=candidates,
         available_equipment=available_equipment,
         exposures=exposure_rows,
+        activated_stages=activated_stages,
     )
     _, historical_negative, safe_exposures = _exposure_state(exposure_rows, injury)
     ranked = rank_rehab_candidates(

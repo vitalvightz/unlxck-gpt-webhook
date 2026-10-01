@@ -396,6 +396,7 @@ def test_result_contract_is_auditable_and_identity_is_per_injury():
 
 
 def test_authoritative_bank_option_path_returns_ranked_live_stage_drill(monkeypatch):
+    monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
     bank = [
         {
             "location": "ankle",
@@ -424,6 +425,7 @@ def test_authoritative_bank_option_path_returns_ranked_live_stage_drill(monkeypa
 def test_legacy_option_shape_is_unchanged_when_live_stage_context_is_absent(
     monkeypatch,
 ):
+    monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
     bank = [
         {
             "location": "ankle",
@@ -492,6 +494,9 @@ def test_real_bank_severity_gate_uses_the_contract_vocabulary():
             injury=injury(body_region="ankle", injury_type="sprain", severity=raw),
             rehab_stage="restore",
         )
+        if raw == "severe":
+            assert not options, "Severe pilot injuries keep the existing medical symptom gate."
+            continue
         assert options, f"severity {raw!r} selected nothing from the real bank"
 
 
@@ -514,3 +519,10 @@ def test_real_bank_selection_is_deterministic_across_candidate_order():
 def test_live_stage_ceiling_is_unchanged_by_this_selector():
     """PR5 selects drills. It does not move the ladder's ceiling."""
     assert MAX_RESOLVABLE_STAGE == STAGE_RESTORE
+
+
+def test_one_shot_activated_stages_apply_to_every_candidate():
+    from fightcamp.rehab_selector import filter_rehab_candidates
+    eligible, rejected = filter_rehab_candidates(injury=injury(), rehab_stage="restore",
+        candidates=[drill("first"), drill("second")], activated_stages=iter(["calm", "restore"]))
+    assert [d["id"] for d in eligible] == ["first", "second"] and not rejected

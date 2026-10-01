@@ -914,6 +914,12 @@ export type InjuryLoadRegion = "lower_limb" | "upper_limb" | "trunk_spine" | "he
 export type InjuryFlagRecord = {
   id: string;
   athlete_id: string;
+  episode_id?: string | null;
+  rehab_decision?: { outcome: string; summary: string; reason_codes: string[];
+    prescription?: { sources?: string[] } | null;
+    schedule?: { state: "due" | "recovery_day" | "already_completed" | "held" | "deferred" | "unsupported";
+      reason: string; next_due_day?: string | null } | null } | null;
+  clinician_clearance?: { episode_id: string; scopes: string[]; source: "athlete_reported"; externally_verified: false } | null;
   plan_id?: string | null;
   source: string;
   body_area: string;
@@ -1042,6 +1048,18 @@ export type TodaySession = {
 };
 
 export type TodayCommandView = {
+  live_prescription?: {
+    revision: string;
+    session: StructuredSession;
+    safety_hold: boolean;
+    safety_hold_reason?: string;
+    frozen: boolean;
+    changes: Array<{ action: string; reason?: string; injury_id?: string }>;
+  } | null;
+  delayed_rehab_prompts?: Array<{
+    exposure_id: string; injury_id: string; injury_episode_id: string; region: string;
+    question: string; options: Array<"better" | "same" | "worse" | "not_sure">;
+  }>;
   active_plan: TodayActivePlan;
   today: {
     training_day: string;
@@ -1158,6 +1176,8 @@ export type TodaySessionCompletionRequest = {
   plan_id: string;
   session_id: string;
   status: TodayCompletionStatus;
+  prescription_revision?: string;
+  rehab_performance?: "done_as_shown" | "changed" | "stopped";
   /** Omitted for the Today flow (server resolves the athlete-local day). A
    * retro-log passes the explicit past day; the server enforces the 7-day
    * back-fill window. */

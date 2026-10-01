@@ -103,9 +103,12 @@ def _prescribed_dose_from_block(block: Mapping[str, Any]) -> dict[str, Any]:
     This is the *prescription*, carried so the record shows what was asked
     alongside what was done. It is never read as what the athlete completed;
     :func:`~api.contracts.rehab_completion.completed_dose_from_session` owns
-    that, and deliberately refuses to echo a prescribed dose back as a completed
-    one.
+    that; an explicit confirmation of the frozen prescription is required to
+    quantify what was completed.
     """
+    if isinstance(block.get("dose"), Mapping):
+        return {name: value for name, value in block["dose"].items()
+                if name in {"sets", "reps", "duration_seconds"} and isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0}
     dose: dict[str, Any] = {}
     sets = block.get("sets")
     if isinstance(sets, int) and not isinstance(sets, bool) and sets >= 0:
@@ -185,11 +188,12 @@ def session_rehab_items(
     *,
     training_day: str,
     session_id: str,
+    prescription: Mapping[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """The session's rehab work, resolved back to canonical bank drills.
 
     A block contributes an item only when it is a rehab block *and* carries a
-    ``rehab_drill_id`` the bank recognises. An unstamped or unrecognised block
+    ``rehab_drill_id`` with canonical metadata from the bank or saved snapshot. An unstamped or unrecognised block
     produces nothing at all — not a nameless item that the gate would then have
     to refuse. Non-rehab blocks are never considered: a hard session is not
     rehab evidence however it felt.
@@ -203,15 +207,26 @@ def session_rehab_items(
     items: list[dict[str, Any]] = []
     seen_occurrences: set[str] = set()
     legacy_counts: dict[str, int] = {}
-    for block in _session_blocks(plan_row, training_day=training_day, session_id=session_id):
+    if prescription is not None:
+        if prescription.get("plan_id") != plan_row.get("id") or prescription.get("training_day") != training_day or prescription.get("session", {}).get("session_id") != session_id:
+            return []
+        blocks = _mappings(prescription.get("session", {}).get("blocks"))
+    else:
+        blocks = _session_blocks(plan_row, training_day=training_day, session_id=session_id)
+    for block in blocks:
         if _clean(block.get("block_type")) != "rehab":
             continue
         drill_id = _clean(block.get("rehab_drill_id"))
         if not drill_id:
             continue
-        drill = rehab_drill_by_id(drill_id)
+        drill = block.get("drill_snapshot") if prescription is not None else None
+        if drill is None:
+            # Older accepted blocks have an ID but no frozen drill metadata.
+            drill = rehab_drill_by_id(drill_id)
         if not isinstance(drill, Mapping):
             continue
+        if _clean(drill.get("id")) != drill_id:
+            raise HTTPException(409, "rehab_snapshot_identity_mismatch")
         block_id = _clean(block.get("block_id"))
         if block_id:
             occurrence_key = f"block:{block_id}"
@@ -224,6 +239,10 @@ def session_rehab_items(
         seen_occurrences.add(occurrence_key)
         item = dict(drill)
         item["rehab_occurrence_key"] = occurrence_key
+        if prescription is not None:
+            item["prescribed_injury_id"] = block.get("injury_id")
+            item["prescribed_injury_episode_id"] = block.get("injury_episode_id")
+            item["prescription_policy_id"] = block.get("policy_id")
         prescribed = _prescribed_dose_from_block(block)
         if prescribed:
             item["prescribed_dose"] = prescribed
@@ -256,7 +275,8 @@ def resolve_completed_session_rehab(
         return RehabCompletionResolution(), []
     if _clean((completion or {}).get("status")).lower() not in COMPLETED_STATUSES:
         return RehabCompletionResolution(), []
-    items = session_rehab_items(plan_row, training_day=training_day, session_id=session_id)
+    items = session_rehab_items(plan_row, training_day=training_day, session_id=session_id,
+                               prescription=(completion or {}).get("prescription_snapshot"))
     if not items:
         return RehabCompletionResolution(), []
     injuries = _open_injuries(store, athlete_id)

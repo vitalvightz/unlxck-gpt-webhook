@@ -2071,8 +2071,10 @@ def _build_rehab_slots(rehab_block: str, phase: str) -> list[dict]:
             continue
         role = f"rehab_{slugify(location)}_{slugify(injury_type)}"
         selected_lines = [line for line in group.get("drills", []) if line]
+        from .rehab_protocols import reviewed_rehab_drill_id_for_line
         if phase.upper() == "TAPER":
-            selected_lines = [line for line in selected_lines if "nordic" not in line.lower()]
+            selected_lines = [line for line in selected_lines if "nordic" not in line.lower()
+                              or reviewed_rehab_drill_id_for_line(line, injury_type.lower(), location.lower().replace(" ", "_"))]
             if not selected_lines:
                 continue
         selected_set = set(selected_lines)
@@ -2089,6 +2091,10 @@ def _build_rehab_slots(rehab_block: str, phase: str) -> list[dict]:
             record["line"]: str((record.get("drill") or {}).get("id") or "")
             for record in rehab_option_records
         }
+        for line in selected_lines:
+            reviewed_id = reviewed_rehab_drill_id_for_line(line, injury_type.lower(), location.lower().replace(" ", "_"))
+            if reviewed_id is not None:
+                drill_ids_by_line[line] = reviewed_id
         # "Why today" framing: the selected drill carries phase + issue context.
         # Stage 2 is expected to enrich this with day-type reasoning.
         phase_context = f"{phase} phase" if phase else "current phase"

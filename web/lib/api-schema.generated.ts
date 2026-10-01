@@ -178,6 +178,13 @@ export type ApproveAndResumeGenerationRequest = {
   reason: string;
 };
 
+export type AthleteClearanceReport = {
+  episode_id: string;
+  scopes: string[];
+  source: "athlete_reported";
+  externally_verified: false;
+};
+
 /** Athlete profile snapshot used to generate the plan (Section C). */
 export type AthleteContext = {
   athlete_id: string | null;
@@ -242,6 +249,8 @@ export type CommandView = {
   today: CommandViewToday;
   risk_watch: RiskWatchItem[];
   open_injuries: Record<string, unknown>[];
+  live_prescription: Record<string, unknown> | null;
+  delayed_rehab_prompts: Record<string, unknown>[];
   week_summary: Record<string, unknown>;
   quick_actions: QuickAction[];
 };
@@ -418,11 +427,23 @@ export type ExposureDoseRequest = {
 export type ExposureProvenance = {
   source: "athlete_logged_rehab" | "clinician_logged_rehab" | "coach_logged_rehab";
   recorded_at: string;
+  prescription_revision: string | null;
+  bank_hash: string | null;
+  policy_review_hash: string | null;
+  policy_id: string | null;
+  policy_version: number | null;
+  rehab_stage: "calm" | "restore" | "load" | "dynamic" | "return" | null;
 };
 
 export type ExposureProvenanceRequest = {
   source: "athlete_logged_rehab" | "clinician_logged_rehab" | "coach_logged_rehab";
   recorded_at: string;
+  prescription_revision?: string | null;
+  bank_hash?: string | null;
+  policy_review_hash?: string | null;
+  policy_id?: string | null;
+  policy_version?: number | null;
+  rehab_stage?: "calm" | "restore" | "load" | "dynamic" | "return" | null;
 };
 
 export type ExposureResponse = {
@@ -536,6 +557,16 @@ export type HTTPValidationError = {
   detail: ValidationError[];
 };
 
+export type InjuryEpisodeObservation = {
+  injury_id: string;
+  injury_episode_id: string;
+  event_type: "clinician_clearance_report" | "delayed_rehab_response";
+  scopes?: ("rehab" | "training" | "contact")[];
+  exposure_id?: string | null;
+  response?: "better" | "same" | "worse" | "not_sure" | null;
+  report_id?: string;
+};
+
 export type InjuryFlagCreateRequest = {
   body_area?: string;
   description: string;
@@ -567,6 +598,8 @@ export type InjuryFlagRecord = {
   rehab_stage: "calm" | "restore" | "load" | "dynamic" | "return" | null;
   rehab_stage_reasons: string[];
   rehab_care_pathway: "musculoskeletal" | "wound_care" | null;
+  rehab_decision: InjuryRehabDecisionRecord | null;
+  clinician_clearance: AthleteClearanceReport | null;
   resolved_at: string | null;
   created_at: string;
   updated_at: string;
@@ -574,6 +607,14 @@ export type InjuryFlagRecord = {
 
 export type InjuryFlagUpdateRequest = {
   status: "open" | "monitoring" | "resolved";
+};
+
+export type InjuryRehabDecisionRecord = {
+  outcome: string;
+  summary: string;
+  reason_codes: string[];
+  prescription: RehabPrescriptionSummary | null;
+  schedule: RehabScheduleRecord | null;
 };
 
 export type LandingResponse = {
@@ -1267,6 +1308,10 @@ export type RehabLabelPolicy = {
   active_regions: ActiveInjuryRegion[];
 };
 
+export type RehabPrescriptionSummary = {
+  sources: string[];
+};
+
 /** What the athlete said about one injury after one rehab session. */
 export type RehabResponseAnswer = {
   injury_id: string;
@@ -1315,6 +1360,12 @@ export type RehabResponseRequest = {
 export type RehabResponseResult = {
   recorded_exposure_ids: string[];
   recorded_injury_ids: string[];
+};
+
+export type RehabScheduleRecord = {
+  state: "due" | "recovery_day" | "already_completed" | "held" | "deferred" | "unsupported";
+  reason: string;
+  next_due_day: string | null;
 };
 
 export type RiskWatchItem = {
@@ -1391,6 +1442,8 @@ export type SessionCompletionHistoryResponse = {
   completed_at: string | null;
   created_at: string;
   updated_at: string;
+  prescription_snapshot: Record<string, unknown> | null;
+  rehab_performance: "done_as_shown" | "changed" | "stopped" | null;
   session_title: string | null;
 };
 
@@ -1409,12 +1462,16 @@ export type SessionCompletionRecordResponse = {
   completed_at: string | null;
   created_at: string;
   updated_at: string;
+  prescription_snapshot: Record<string, unknown> | null;
+  rehab_performance: "done_as_shown" | "changed" | "stopped" | null;
 };
 
 export type SessionCompletionRequest = {
   plan_id: string;
   session_id: string;
   status: "not_started" | "started" | "done" | "modified" | "skipped";
+  prescription_revision?: string | null;
+  rehab_performance?: "done_as_shown" | "changed" | "stopped" | null;
   training_day?: string | null;
   session_rpe?: number | null;
   pain_after?: number | null;

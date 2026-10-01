@@ -60,6 +60,8 @@ REQUIRED_TABLES: tuple[str, ...] = (
     # A missing migration must fail the gate: the endpoint writes this table
     # and, for rocked reports, its admin review in one RPC.
     "sparring_logs",
+    "rehab_exposures",
+    "injury_episode_events",
     # Durable XP aggregate + immutable award ledger. Award writes are atomic
     # through public.award_athlete_xp and never browser-controlled.
     "xp_accounts",
@@ -251,6 +253,7 @@ REQUIRED_INJURY_FLAGS_COLUMNS: tuple[str, ...] = (
     "source",
     "body_area",
     "description",
+    "episode_id", "body_region", "side",
     "severity",
     "severity_source",
     "manual_severity",
@@ -331,6 +334,7 @@ REQUIRED_SESSION_COMPLETIONS_COLUMNS: tuple[str, ...] = (
     "started_at",
     "completed_at",
     "rehab_response_contexts",
+    "prescription_snapshot", "rehab_performance",
     "created_at",
     "updated_at",
 )
@@ -447,6 +451,10 @@ REQUIRED_NOTIFICATION_EVALUATIONS_COLUMNS: tuple[str, ...] = (
 
 # Map of table -> required columns, used by the checker.
 REQUIRED_COLUMNS: Mapping[str, tuple[str, ...]] = {
+    "injury_episode_events": ("id", "athlete_id", "injury_id", "injury_episode_id", "event_type", "payload", "created_at"),
+    "rehab_exposures": ("id", "athlete_id", "injury_id", "injury_episode_id", "drill_id", "body_region", "side",
+                        "demand", "prescribed_dose", "completed_dose", "response", "event_json", "response_group_id",
+                        "evidence_source", "occurred_at", "recorded_at", "created_at"),
     "plans": REQUIRED_PLANS_COLUMNS,
     "generation_jobs": REQUIRED_GENERATION_JOBS_COLUMNS,
     "profiles": REQUIRED_PROFILES_COLUMNS,
@@ -503,6 +511,12 @@ REQUIRED_FUNCTIONS: tuple[str, ...] = (
     "public.invalidate_notification_action",
     # Atomic sparring log + rocked/dropped admin review (api/store.py::record_sparring_log).
     "public.record_sparring_log",
+    "public.record_rehab_exposure",
+    "public.record_injury_episode_event",
+    "public.pending_delayed_rehab",
+    "public.preserve_started_prescription",
+    "public.capture_injury_episode_change",
+    "public.lock_injury_prescription_context",
 )
 
 # ---------------------------------------------------------------------------
@@ -529,6 +543,7 @@ class IndexRequirement:
 
 
 INDEX_REQUIREMENTS: tuple[IndexRequirement, ...] = (
+    IndexRequirement(label="one delayed response per exposure", accepted_names=("injury_episode_events_delayed_once_idx",)),
     IndexRequirement(
         label="generation_jobs active job uniqueness/lock",
         accepted_names=("generation_jobs_one_active_job_per_athlete",),
@@ -611,6 +626,7 @@ INDEX_REQUIREMENTS: tuple[IndexRequirement, ...] = (
 # ---------------------------------------------------------------------------
 
 RLS_REQUIRED_TABLES: tuple[str, ...] = (
+    "rehab_exposures", "injury_episode_events",
     "profiles",
     "plans",
     INTAKES_TABLE,
