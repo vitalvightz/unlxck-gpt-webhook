@@ -46,6 +46,7 @@ AI_COLUMNS = (
     "ai_confidence",
     "ai_shows",
     "ai_form_vs_cue",
+    "ai_added_elements",
     "ai_orientation",
     "ai_start_s",
     "ai_end_s",
@@ -56,12 +57,18 @@ AI_COLUMNS = (
 
 VERDICT_RANK = {"match": 2, "partial": 1, "no_match": 0}
 
+# Stop trying candidates once one is at least this sure. Confidence alone is
+# not trusted for "match": see enforce_structure().
+STOP_CONFIDENCE = 0.9
+
 RESPONSE_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
         "verdict": {"type": "string", "enum": ["match", "partial", "no_match"]},
         "confidence": {"type": "number"},
         "what_is_shown": {"type": "string"},
+        "structure_matches": {"type": "boolean"},
+        "added_elements": {"type": "array", "items": {"type": "string"}},
         "form_vs_cue": {"type": "string"},
         "orientation": {"type": "string", "enum": ["landscape", "vertical"]},
         "segment_start": {"type": "string"},
@@ -71,6 +78,8 @@ RESPONSE_SCHEMA: dict[str, Any] = {
         "verdict",
         "confidence",
         "what_is_shown",
+        "structure_matches",
+        "added_elements",
         "form_vs_cue",
         "orientation",
         "segment_start",
@@ -97,6 +106,11 @@ class VideoReview:
     orientation: str
     start_s: int | None
     end_s: int | None
+    structure_matches: bool = False
+    added_elements: tuple[str, ...] = ()
+    # False when the model omitted added_elements or sent a non-list (possible
+    # on the no-schema retry): absence is not proof that nothing was added.
+    added_elements_reported: bool = False
 
     @property
     def score(self) -> tuple[int, int, float]:
@@ -132,14 +146,25 @@ def build_prompt(row: dict[str, str]) -> str:
     lines += [
         "",
         "Watch the video and answer:",
-        "1. verdict: 'match' if the video demonstrates this exact exercise; 'partial' if it shows a",
-        "   close variant or only part of the drill; 'no_match' otherwise. If unsure, say 'partial'.",
-        "2. confidence: 0 to 1.",
-        "3. what_is_shown: one short sentence describing the movement actually demonstrated.",
-        "4. form_vs_cue: list any visible differences between the demonstrated form and our cue,",
-        "   or 'consistent with cue'. Only describe what you can see.",
-        "5. orientation: 'vertical' if the video is portrait (e.g. a YouTube Short), else 'landscape'.",
-        f"6. segment_start / segment_end (MM:SS): the best {MIN_SEGMENT_S}-{MAX_SEGMENT_S} second",
+        "1. verdict: 'match' only if the demonstrated drill structure and training intent match the",
+        "   requested exercise, not merely contain similar movements. If the video adds equipment,",
+        "   constraints, partner behaviour, footwork patterns or drill structure that materially",
+        "   change the exercise, say 'partial' unless those elements are part of the requested",
+        "   exercise. Example: agility-ladder punching is not a match for free tempo shadowboxing.",
+        "   'partial' also covers close variants or only part of the drill; 'no_match' otherwise.",
+        "   If unsure, say 'partial'.",
+        "2. confidence: 0 to 1, for the verdict as defined above.",
+        "3. what_is_shown: one short sentence describing the drill actually demonstrated, including",
+        "   any equipment, partner and structure.",
+        "4. structure_matches: true only if the drill's structure and training intent are the same",
+        "   as the requested exercise and our cue.",
+        "5. added_elements: equipment, constraints, partner behaviour, footwork patterns or drill",
+        "   structure in the video that are NOT part of the requested exercise. Empty list if none.",
+        "6. form_vs_cue: compare the whole drill with the requested exercise and our cue (structure,",
+        "   equipment, intent, pace and technique), listing every difference, or 'consistent with",
+        "   cue'. Only describe what you can see.",
+        "7. orientation: 'vertical' if the video is portrait (e.g. a YouTube Short), else 'landscape'.",
+        f"8. segment_start / segment_end (MM:SS): the best {MIN_SEGMENT_S}-{MAX_SEGMENT_S} second",
         "   section to loop as a silent demo. It must show at least two clean, complete reps of the",
         "   movement, ideally 6-15 seconds, filmed so the whole body is visible. Avoid intros,",
         "   talking to camera, text overlays, slow-motion replays and form mistakes being shown.",
@@ -243,16 +268,54 @@ def parse_review(url: str, text: str) -> VideoReview:
         confidence = 0.0
     orientation = normalize_orientation(data.get("orientation"))
     start_s, end_s = clean_segment(data.get("segment_start"), data.get("segment_end"))
-    return VideoReview(
-        url=url,
-        verdict=verdict,
-        confidence=confidence,
-        shows=str(data.get("what_is_shown") or "").strip()[:300],
-        form_vs_cue=str(data.get("form_vs_cue") or "").strip()[:400],
-        orientation=orientation,
-        start_s=start_s,
-        end_s=end_s,
+    raw_added = data.get("added_elements")
+    added = tuple(
+        str(item).strip()[:80]
+        for item in (raw_added if isinstance(raw_added, list) else [])
+        if str(item).strip()
     )
+    return enforce_structure(
+        VideoReview(
+            url=url,
+            verdict=verdict,
+            confidence=confidence,
+            shows=str(data.get("what_is_shown") or "").strip()[:300],
+            form_vs_cue=str(data.get("form_vs_cue") or "").strip()[:400],
+            orientation=orientation,
+            start_s=start_s,
+            end_s=end_s,
+            # Only an explicit true confirms structure; missing fails safe.
+            structure_matches=data.get("structure_matches") is True,
+            added_elements=added,
+            added_elements_reported=isinstance(raw_added, list),
+        )
+    )
+
+
+def enforce_structure(review: VideoReview) -> VideoReview:
+    """A 'match' must also confirm the drill structure and add nothing.
+
+    The model's own verdict and confidence are not enough: it called
+    agility-ladder punching a 0.90 match for free tempo shadowboxing. If it
+    reports added elements or does not confirm the structure, the verdict is
+    capped at 'partial' whatever the confidence.
+    """
+    if review.verdict != "match":
+        return review
+    reasons: list[str] = []
+    if review.added_elements:
+        reasons.append("adds: " + ", ".join(review.added_elements))
+    elif not review.added_elements_reported:
+        reasons.append("added elements not reported")
+    if not review.structure_matches:
+        reasons.append("drill structure not confirmed")
+    if not reasons:
+        return review
+    review.verdict = "partial"
+    # form_vs_cue was already bounded when parsed; keep all of it after the
+    # reason so neither the reason nor the model's comparison is cut.
+    review.form_vs_cue = f"[downgraded from match: {'; '.join(reasons)}] {review.form_vs_cue}".strip()
+    return review
 
 
 class GeminiVideoReviewer:
@@ -348,8 +411,13 @@ def review_row(
             continue
         if outcome.best is None or result.score > outcome.best.score:
             outcome.best = result
-        # A confident landscape match needs no further candidates.
-        if result.verdict == "match" and result.confidence >= 0.8 and result.orientation == "landscape":
+        # A confident landscape match needs no further candidates. "match" has
+        # already been checked against structure and added elements.
+        if (
+            result.verdict == "match"
+            and result.confidence >= STOP_CONFIDENCE
+            and result.orientation == "landscape"
+        ):
             break
     return outcome
 
@@ -365,7 +433,14 @@ def apply_outcome(row: dict[str, str], outcome: RowOutcome, *, model: str) -> di
     if best is None:
         updated["ai_verdict"] = "error"
         updated["ai_shows"] = "; ".join(outcome.errors)[:400]
-        for key in ("ai_confidence", "ai_form_vs_cue", "ai_orientation", "ai_start_s", "ai_end_s"):
+        for key in (
+            "ai_confidence",
+            "ai_form_vs_cue",
+            "ai_added_elements",
+            "ai_orientation",
+            "ai_start_s",
+            "ai_end_s",
+        ):
             updated[key] = ""
         return updated
     updated.update(
@@ -374,6 +449,7 @@ def apply_outcome(row: dict[str, str], outcome: RowOutcome, *, model: str) -> di
             "ai_confidence": f"{best.confidence:.2f}",
             "ai_shows": best.shows,
             "ai_form_vs_cue": best.form_vs_cue,
+            "ai_added_elements": "|".join(best.added_elements),
             "ai_orientation": best.orientation,
             "ai_start_s": "" if best.start_s is None else str(best.start_s),
             "ai_end_s": "" if best.end_s is None else str(best.end_s),
