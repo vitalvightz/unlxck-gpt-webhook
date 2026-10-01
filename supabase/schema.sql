@@ -2530,6 +2530,8 @@ begin
 end;
 $$;
 drop trigger if exists capture_injury_episode_change on public.injury_flags;
+revoke execute on function public.capture_injury_episode_change()
+  from public, anon, authenticated;
 create trigger capture_injury_episode_change after insert or update on public.injury_flags
   for each row execute function public.capture_injury_episode_change();
 -- UPDATE OF fires for an explicit report even when its status is unchanged.
