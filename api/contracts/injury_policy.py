@@ -192,6 +192,28 @@ def reconcile_session_prescription(
     def string_set(value):
         return set(value) if isinstance(value, list) and all(isinstance(item, str) for item in value) else None
 
+    replaced = set()
+
+    def prescribed_block(decision):
+        prescription = decision["prescription"]
+        identity = f"rehab:{decision['injury_id']}:{decision['injury_episode_id']}"
+        return {
+            "block_id": identity, "block_type": "rehab", "title": prescription["drill"]["name"],
+            "display_name": prescription["drill"]["name"], "coaching_cues": [prescription["instructions"]],
+            **({"duration": {"value": prescription["dose"]["duration_seconds"], "unit": "seconds"}} if "duration_seconds" in prescription["dose"] else {}),
+            "rehab_drill_id": prescription["drill_id"], "injury_id": decision["injury_id"],
+            "injury_episode_id": decision["injury_episode_id"], "target_regions": [decision["region"]],
+            "dose": prescription["dose"], "instructions": prescription["instructions"],
+            **prescription["dose"],
+            "stop_rules": prescription["stop_when"], "drill_snapshot": prescription["drill"],
+            "policy_id": prescription["policy_id"], "policy_version": prescription["policy_version"],
+            "bank_hash": prescription["bank_hash"],
+            "policy_review_hash": prescription["policy_review_hash"],
+            "minimum_gap_days": prescription["minimum_gap_days"],
+            "is_loading": prescription["is_loading"],
+            "source_references": prescription["sources"],
+        }
+
     for block in entry.get("blocks", []):
         if block.get("block_type") == "rehab":
             replacement = next((d for d in prescribed if
@@ -199,6 +221,8 @@ def reconcile_session_prescription(
                 and block.get("injury_id") == d.get("injury_id")
                 and block.get("injury_episode_id") == d.get("injury_episode_id")), None)
             if replacement:
+                blocks.append(prescribed_block(replacement))
+                replaced.add((replacement["injury_id"], replacement["injury_episode_id"]))
                 changes.append({"block_id": block.get("block_id"), "action": "replaced", "reason": "current_episode_prescription"})
                 continue
             # Legacy/other-episode work must stay visible or be explicitly held.
@@ -242,28 +266,12 @@ def reconcile_session_prescription(
     # explicit deferred decisions rather than extra, unbudgeted work.
     budget = 1 if "sparring" in str(entry.get("session_type") or "").lower() else 2
     budget = max(0, budget - sum(block.get("block_type") == "rehab" and not block.get("_policy_held") for block in blocks))
-    for index, decision in enumerate(sorted(prescribed, key=lambda d: d["injury_id"])):
+    for index, decision in enumerate(sorted((d for d in prescribed if (d["injury_id"], d["injury_episode_id"]) not in replaced),
+                                             key=lambda d: d["injury_id"])):
         if index >= budget:
             changes.append({"injury_id": decision["injury_id"], "action": "deferred", "reason": "rehab_slot_budget"})
             continue
-        prescription = decision["prescription"]
-        identity = f"rehab:{decision['injury_id']}:{decision['injury_episode_id']}"
-        blocks.append({
-            "block_id": identity, "block_type": "rehab", "title": prescription["drill"]["name"],
-            "display_name": prescription["drill"]["name"], "coaching_cues": [prescription["instructions"]],
-            **({"duration": {"value": prescription["dose"]["duration_seconds"], "unit": "seconds"}} if "duration_seconds" in prescription["dose"] else {}),
-            "rehab_drill_id": prescription["drill_id"], "injury_id": decision["injury_id"],
-            "injury_episode_id": decision["injury_episode_id"], "target_regions": [decision["region"]],
-            "dose": prescription["dose"], "instructions": prescription["instructions"],
-            **prescription["dose"],
-            "stop_rules": prescription["stop_when"], "drill_snapshot": prescription["drill"],
-            "policy_id": prescription["policy_id"], "policy_version": prescription["policy_version"],
-            "bank_hash": prescription["bank_hash"],
-            "policy_review_hash": prescription["policy_review_hash"],
-            "minimum_gap_days": prescription["minimum_gap_days"],
-            "is_loading": prescription["is_loading"],
-            "source_references": prescription["sources"],
-        })
+        blocks.append(prescribed_block(decision))
     entry["blocks"] = blocks
     rehab_only = False
     if hold and not any(d.get("outcome") == "medical_review" for d in decisions):

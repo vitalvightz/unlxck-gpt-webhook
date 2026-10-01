@@ -1423,7 +1423,7 @@ def upsert_session_completion(
                 raise HTTPException(409, "Your session prescription changed. Refresh Today before starting.")
             if not frozen and not stopped_started_session:
                 frozen = live
-    performance = payload.get("rehab_performance")
+    performance = payload.get("rehab_performance") or existing.get("rehab_performance")
     if performance == "done_as_shown" and (not frozen or status_value != "done"):
         raise HTTPException(422, "Confirm rehab as shown only for a completed, saved prescription.")
     if (status_value == "done" and frozen and any(b.get("block_type") == "rehab" for b in frozen.get("session", {}).get("blocks", []))

@@ -482,6 +482,26 @@ def test_resolved_pilot_episode_cannot_be_programmed_again(reviewed, monkeypatch
     assert result["line"] is None and result["decision"]["outcome"] == "no_rehab_indicated"
 
 
+@pytest.mark.parametrize("session_type", ["strength", "sparring"])
+def test_replacing_assigned_rehab_keeps_its_slot_before_new_work(reviewed, session_type):
+    current = decide(reviewed)
+    snapshot = reconcile_session_prescription(None, decisions=[current], plan_id=PLAN, training_day=DAY)
+    session = snapshot["session"]
+    session["session_type"] = session_type
+    if session_type == "strength":
+        session["blocks"].append(dict(block_id="legacy", block_type="rehab", mechanical_load_regions=["shoulder"],
+                                      tags=[], contact_level="none"))
+    additional = deepcopy(current)
+    additional["injury_id"] = "00000000-0000-4000-8000-000000000000"  # sorts before current
+    additional["injury_episode_id"] = str(uuid4())
+    result = reconcile_session_prescription(session, decisions=[additional, current], plan_id=PLAN, training_day=DAY)
+    blocks = result["session"]["blocks"]
+    assert len(blocks) == result["allocation_limit"]
+    assert sum(b.get("injury_id") == current["injury_id"] for b in blocks) == 1
+    assert not any(b.get("injury_id") == additional["injury_id"] for b in blocks)
+    assert any(c.get("injury_id") == additional["injury_id"] and c["action"] == "deferred" for c in result["changes"])
+
+
 def test_shared_drill_names_do_not_allocate_another_episode(monkeypatch):
     from fightcamp import rehab_protocols
     monkeypatch.setattr(rehab_protocols, "_reviewed_episode_option", lambda *args: {"line": ("Shared routine", "Self-paced"), "decision": {}})
@@ -555,6 +575,12 @@ def test_rehab_done_requires_an_explicit_performance_choice(reviewed, monkeypatc
         today_service.upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW, payload={**payload, "status": "done"})
     assert failure.value.status_code == 422
     assert store.get_session_completion(ATHLETE, f"rehab-{DAY}", DAY)["status"] == "started"
+    done = today_service.upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW,
+        payload={**payload, "status": "done", "rehab_performance": "done_as_shown"})
+    retry = today_service.upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW,
+        payload={**payload, "status": "done"})
+    assert retry["rehab_performance"] == "done_as_shown"
+    assert retry["completed_at"] == done["completed_at"]
 
 
 def test_skip_survives_raw_noncritical_rehab_read_failure(reviewed, monkeypatch):

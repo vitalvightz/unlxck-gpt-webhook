@@ -134,10 +134,11 @@ await test("region-wide baseline feedback keeps unknown side only for frozen wor
   snap.session.blocks = [{block_type:"rehab",policy_id:"chest_strain",injury_id:chest,injury_episode_id:chestEpisode,
     rehab_drill_id:"chest_strain_recovery_support",minimum_gap_days:1,drill_snapshot:{rehab_stage:"calm",laterality_applicability:"not_applicable"}}];
   await start(snap,"done");
-  const report = {...exposure,exposure_id:"00000000-0000-4000-8000-000000000032",injury_id:chest,injury_episode_id:chestEpisode,
+  const report = {...exposure,exposure_id:"00000000-0000-4000-8000-000000000032",response_group_id:"00000000-0000-4000-8000-000000000033",injury_id:chest,injury_episode_id:chestEpisode,
     drill_id:"chest_strain_recovery_support",body_region:"chest",side:"unknown",demand:{target_regions:["chest"],load:"minimal",impact:"none",velocity:"low"},
     provenance:{...exposure.provenance,prescription_revision:snap.revision,policy_id:"chest_strain",rehab_stage:"calm"}};
   await db.query("select record_rehab_exposure($1,$2::jsonb)",[athlete,JSON.stringify(report)]);
+  assert.notEqual(report.response_group_id, exposure.response_group_id);
   await rejects(() => db.query("select record_rehab_exposure($1,$2::jsonb)",[athlete,JSON.stringify({...report,drill_id:"unattributed_legacy"})]),"exposure does not match");
 });
 await test("a full rehab allocation does not prohibit training with no rehab", async () => {
