@@ -26,7 +26,7 @@ import logging
 
 import pytest
 
-from fightcamp import input_parsing
+from planner_clock import pin_planner_clock
 from fightcamp.input_parsing import PlanInput
 from fightcamp.late_camp_role_morph import late_fight_strength_dose_cap
 from fightcamp.plan_pipeline_blocks import generate_plan_blocks
@@ -104,7 +104,7 @@ def _run(days: int, monkeypatch, **over) -> dict:
     fixed_now = _dt.datetime.combine(
         FIGHT_FRIDAY - _dt.timedelta(days=days), _dt.time(12, 0)
     )
-    monkeypatch.setattr(input_parsing, "_utc_now", lambda: fixed_now)
+    pin_planner_clock(monkeypatch, fixed_now)
     plan_input = PlanInput.from_payload({"data": {"fields": _fixture_fields(**over)}})
     assert plan_input.days_until_fight == days, (
         f"expected D-{days}, pinned clock gave D-{plan_input.days_until_fight}"
@@ -412,7 +412,16 @@ class TestProductionCalendarCollision:
         low = _run(20, monkeypatch)
         high = _run(20, monkeypatch, fatigue="high")
         assert _hard_exposure_count(high) <= _hard_exposure_count(low)
-        assert not _meaningful_conditioning_exposures(high), (
+        # Scope: the late-camp window the normal planner owns (D-14 and out). From
+        # D-13 inward the late-fight allocator owns the tail; its fight-week
+        # freshness primer is a low-dose sharpness touch with its own fatigue
+        # gating (covered in test_stage2_payload_modes).
+        late_camp_exposures = [
+            exposure
+            for exposure in _meaningful_conditioning_exposures(high)
+            if exposure["d_day"] is None or exposure["d_day"] >= 14
+        ]
+        assert not late_camp_exposures, (
             "high fatigue must drop the hard conditioning exposure in late camp"
         )
 

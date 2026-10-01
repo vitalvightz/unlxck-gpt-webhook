@@ -50,19 +50,33 @@ def _directive(load_class: LoadClass, position: int, events) -> PlacementDirecti
     ).directive
 
 
-# Geometry: hard contact at 0 and 4 (candidate between at 2); hard at 0
-# (candidate immediately after at 1); hard at 5 (candidate immediately before at 4).
-_BETWEEN = (2, [CalendarEvent(0, HARD, SCOPE), CalendarEvent(4, HARD, SCOPE)])
+# Geometry. Hard-contact spacing is gap-aware: only a gap of one or two
+# intervening days is "tight", so the between cases are measured by the gap.
+#   between  : hard at 0 and 2, candidate at 1  (one intervening day)
+#   between2 : hard at 0 and 3, candidate at 1  (two intervening days)
+#   between3 : hard at 0 and 4, candidate at 2  (three days: an ordinary interior day)
+#   after    : hard at 0, candidate immediately after at 1
+#   before   : hard at 5, candidate immediately before at 4
+_BETWEEN = (1, [CalendarEvent(0, HARD, SCOPE), CalendarEvent(2, HARD, SCOPE)])
+_BETWEEN2 = (1, [CalendarEvent(0, HARD, SCOPE), CalendarEvent(3, HARD, SCOPE)])
+_BETWEEN3 = (2, [CalendarEvent(0, HARD, SCOPE), CalendarEvent(4, HARD, SCOPE)])
 _AFTER = (1, [CalendarEvent(0, HARD, SCOPE)])
 _BEFORE = (4, [CalendarEvent(5, HARD, SCOPE)])
-_CONTEXTS = {"between": _BETWEEN, "after": _AFTER, "before": _BEFORE}
+_CONTEXTS = {
+    "between": _BETWEEN,
+    "between2": _BETWEEN2,
+    "between3": _BETWEEN3,
+    "after": _AFTER,
+    "before": _BEFORE,
+}
 
 A, DP, F = PlacementDirective.ALLOW, PlacementDirective.DEPRIORITIZE, PlacementDirective.FORBID
 
 # ---------------------------------------------------------------------------
 # Part E — canonical legality matrix freeze.
 # This documents the policy that exists today. It must never be edited to make a
-# planner change pass: a diff here means collision doctrine moved.
+# planner change pass: a diff here means collision doctrine moved. (It moved once,
+# deliberately, when hard-contact spacing became gap-aware.)
 # ---------------------------------------------------------------------------
 _MATRIX = [
     ("between", LoadClass.OFF, A),
@@ -74,9 +88,16 @@ _MATRIX = [
     ("between", LoadClass.REDUCED_CONTACT, DP),
     ("between", LoadClass.MEANINGFUL_STRENGTH, F),
     ("between", LoadClass.MEANINGFUL_CONDITIONING, F),
-    ("between", LoadClass.NEURAL_MICRODOSE, F),
-    ("after", LoadClass.MEANINGFUL_STRENGTH, F),
-    ("after", LoadClass.MEANINGFUL_CONDITIONING, F),
+    ("between", LoadClass.NEURAL_MICRODOSE, DP),
+    # A two-day gap lets managed strength survive as a fallback; conditioning
+    # still may not.
+    ("between2", LoadClass.MEANINGFUL_STRENGTH, DP),
+    ("between2", LoadClass.MEANINGFUL_CONDITIONING, F),
+    # Three intervening days is not a tight gap: the interior is ordinary.
+    ("between3", LoadClass.MEANINGFUL_STRENGTH, A),
+    ("between3", LoadClass.MEANINGFUL_CONDITIONING, A),
+    ("after", LoadClass.MEANINGFUL_STRENGTH, DP),
+    ("after", LoadClass.MEANINGFUL_CONDITIONING, DP),
     ("after", LoadClass.NEURAL_MICRODOSE, DP),
     ("after", LoadClass.REDUCED_CONTACT, DP),
     ("after", LoadClass.TECHNICAL_CONTACT, A),
@@ -209,7 +230,9 @@ def test_late_fight_scorer_preserves_reduced_and_technical_as_not_hard():
         "role_key": "strength_touch_day", "category": "strength", "countdown_offset": 18,
         "stress_class": "meaningful_stress", "cost_class": "medium",
     }
-    assert lf._late_fight_legality_cost([touch], [(19, "hard")]) == (1, 0)
+    # Meaningful strength the day after hard contact is a managed fallback
+    # (deprioritised), not a hard prohibition.
+    assert lf._late_fight_legality_cost([touch], [(19, "hard")]) == (0, 1)
     assert lf._late_fight_legality_cost([touch], [(19, "reduced")]) == (0, 0)
     assert lf._late_fight_legality_cost([touch], [(19, "technical")]) == (0, 0)
 

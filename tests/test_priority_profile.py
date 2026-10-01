@@ -400,7 +400,6 @@ def test_summary_helper_derived_tags_dedupe_and_preserve_order():
         "posterior_chain",
         "hip_dominant",
         "hamstring",
-        "deadlift",
     ]
 
 

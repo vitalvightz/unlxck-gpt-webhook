@@ -2,6 +2,9 @@
 
 import pytest
 
+from datetime import datetime
+
+from planner_clock import pin_planner_clock
 from fightcamp.stage2_payload import (
     _build_late_fight_plan_spec,
     _build_late_fight_weekly_role_map,
@@ -58,6 +61,26 @@ _MINIMAL_ATHLETE = {
     "camp_length_weeks": 6,
     "short_notice": False,
 }
+
+
+# ``_build_stage2`` supplies no fight date, so the payload derives the plan-creation
+# weekday (and with it every countdown day's weekday and availability) from the
+# clock. Pin it, or the expected sequences below change every day of the week.
+_PINNED_NOW = datetime(2026, 9, 30, 12, 0)  # Wednesday
+
+
+@pytest.fixture(autouse=True)
+def _pin_planner_clock(monkeypatch):
+    pin_planner_clock(monkeypatch, _PINNED_NOW)
+
+
+def _without_protocol(entries):
+    """Drop the mandatory Fight Visualisation countdown protocol (D-7/5/3/1/0).
+
+    It is a countdown intervention that owns its D-day unconditionally, not an
+    allocator-selected session, so the allocation assertions exclude it.
+    """
+    return [entry for entry in entries if entry.get("role_key") != "fight_visualization"]
 
 
 def _athlete(days_until_fight, **overrides):
@@ -550,16 +573,14 @@ class TestPlanningBriefBranching:
         ]
         app_sequence = [
             entry
-            for entry in brief["late_fight_session_sequence"]
+            for entry in _without_protocol(brief["late_fight_session_sequence"])
             if _is_app_owned_visible_role(entry.get("role_key"))
         ]
-        # D-3 carries the freshness day + its mandatory Tactical Watch; D-1 gets a
-        # low-cost tactical cue card (a distinct cross-day tactical touch — the
-        # mandatory watch and gap-fill are only de-duplicated within the same day).
+        # D-3 carries its mandatory Tactical Watch and the alactic sharpness touch
+        # lands on D-2; the Fight Visualisation protocol is excluded above.
         assert [entry["role_key"] for entry in app_sequence] == [
-            "fight_week_freshness_day",
             "tactical_watch",
-            "tactical_cue_card",
+            "alactic_sharpness_day",
         ]
         assert any(entry["role_key"] == "hard_sparring_day" for entry in brief["late_fight_session_sequence"])
 
@@ -576,7 +597,7 @@ class TestPlanningBriefBranching:
         assert brief["weekly_role_map"]["weeks"] == []
         app_sequence = [
             entry
-            for entry in brief["late_fight_session_sequence"]
+            for entry in _without_protocol(brief["late_fight_session_sequence"])
             if _is_app_owned_visible_role(entry.get("role_key"))
         ]
         assert [entry["role_key"] for entry in app_sequence] == ["tactical_watch"]
@@ -627,16 +648,19 @@ class TestPlanningBriefBranching:
             for entry in spec["visible_session_sequence"]
             if _is_app_owned_visible_role(entry.get("role_key"))
         ]
-        assert [entry.get("role_key") for entry in app_visible_sequence] == [
+        # The D-7 support day now carries a neural primer; the fight week's
+        # alactic sharpness touch moves to D-4 ahead of the freshness day.
+        assert [entry.get("role_key") for entry in _without_protocol(app_visible_sequence)] == [
             "strength_touch_day",
+            "neural_primer_day",
             "alactic_sharpness_day",
             "fight_week_freshness_day",
         ]
         assert any(entry.get("role_key") == "hard_sparring_day" for entry in spec["visible_session_sequence"])
         # The session_sequence must cover every downstream stage where the
         # athlete actually has activity. D-7 (friday) is an available support
-        # day, so fight week's required alactic sharpness touch legitimately
-        # lands there. D-6/D-5 (sat/sun) are NOT available for this tue/thu
+        # day, so the fight week's neural primer legitimately lands there.
+        # D-6/D-5 (sat/sun) are NOT available for this tue/thu
         # spar declaration, so that window legitimately stays empty — see the
         # matching ``test_d5_continuation_does_not_invent_filler_for_an_empty_window``
         # contract that explicitly forbids inventing fillers. Availability is
@@ -683,18 +707,16 @@ class TestStage2PayloadBranching:
     def test_d3_payload_exposes_continued_session_sequence(self):
         payload = _build_stage2(3)
         assert payload["payload_mode"] == "late_fight_session_payload"
-        # A D-3 window runs one crisp alactic sharpness touch and a freshness
-        # reset across D-3/D-2, with the mandatory Tactical Watch co-located on
-        # the D-3 session as a zero-load card. The alactic touch already carries
-        # the CNS-priming role, so D-1 (day before the fight) is intentionally
-        # left as pre-fight rest — availability is permission, not obligation,
-        # and no session is invented merely to occupy it.
-        assert [entry["role_key"] for entry in payload["late_fight_session_sequence"]] == [
-            "alactic_sharpness_day",
-            "tactical_watch",
+        # A D-3 window runs the freshness reset on D-3, with the mandatory Tactical
+        # Watch co-located on it as a zero-load card, and closes with the D-1
+        # final neural primer. (The Fight Visualisation protocol is excluded.)
+        sequence = _without_protocol(payload["late_fight_session_sequence"])
+        assert [entry["role_key"] for entry in sequence] == [
             "fight_week_freshness_day",
+            "tactical_watch",
+            "neural_primer_day",
         ]
-        assert _composite_stage_keys(payload["late_fight_session_sequence"]) == ["d4_to_d2", "d4_to_d2"]
+        assert _composite_stage_keys(sequence) == ["d4_to_d2", "d1"]
 
     def test_d2_payload_exposes_primer_only_sequence(self):
         payload = _build_stage2(2)
@@ -702,7 +724,10 @@ class TestStage2PayloadBranching:
         assert payload["payload_mode"] == "late_fight_session_payload"
         # Primer is the only physical touch; the mandatory Tactical Watch rides
         # along as a zero-load card.
-        assert [entry["role_key"] for entry in payload["late_fight_session_sequence"]] == [
+        assert [
+            entry["role_key"]
+            for entry in _without_protocol(payload["late_fight_session_sequence"])
+        ] == [
             "neural_primer_day",
             "tactical_watch",
         ]
@@ -726,7 +751,9 @@ class TestStage2PayloadBranching:
     def test_plan_spec_exposes_allocator_metadata_and_source_of_truth_fields(self):
         spec = _build_late_fight_plan_spec(5, _athlete(5))
 
-        assert spec["allocator"]["legal_countdown_labels"] == ["D-4", "D-3", "D-2", "D-1"]
+        # D-1 is owned by the pre-fight-day primer/protocol stage, not by the
+        # allocator's legal session labels.
+        assert spec["allocator"]["legal_countdown_labels"] == ["D-4", "D-3", "D-2"]
         # ``selected_active_roles`` tracks allocator-selected app-owned roles
         # and matches ``visible_session_sequence``. Coach-owned hard_sparring
         # context entries land in ``session_sequence`` (for tracking) but are
@@ -789,7 +816,10 @@ class TestStage2PayloadBranching:
         assert {entry["effective_load"] for entry in first_week["hard_sparring_plan"]} == {"technical"}
         assert all(entry["status"] == "convert_to_technical_suggested" for entry in first_week["hard_sparring_plan"])
 
-    def test_bridge_weekly_role_map_uses_planner_cap_one_for_d21_to_d18(self):
+    def test_d21_to_d18_weekly_role_map_keeps_declared_hard_sparring_under_dynamic_cutoff(self):
+        # There is no bridge cap of one any more: hard contact is governed by the
+        # dynamic cutoff (D-14 normal / D-17 elevated risk), so every declared hard
+        # day still ahead of the cutoff stays hard as planned.
         role_map = _build_late_fight_weekly_role_map(
             20,
             _athlete(20, plan_creation_weekday="monday", hard_sparring_days=["tuesday", "thursday"]),
@@ -798,8 +828,9 @@ class TestStage2PayloadBranching:
         bridge_week = role_map["weeks"][0]
         hard_plan = bridge_week["hard_sparring_plan"]
         assert hard_plan
-        assert len(bridge_week["effective_hard_sparring_days"]) <= 1
-        assert [entry["effective_load"] for entry in hard_plan].count("hard") <= 1
+        assert bridge_week["effective_hard_sparring_days"] == ["tuesday", "thursday"]
+        assert [entry["effective_load"] for entry in hard_plan] == ["hard", "hard"]
+        assert all(entry["status"] == "hard_as_planned" for entry in hard_plan)
 
     def test_d5_plan_spec_adds_structured_hard_sparring_context(self):
         spec = _build_late_fight_plan_spec(

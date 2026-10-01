@@ -93,9 +93,10 @@ def test_build_calendar_days_marks_fight_day_when_d0_in_range():
 
 # ── Hard sparring per-day countdown rules ─────────────────────────────────────
 
-def test_d17_hard_sparring_ban_converts_to_technical():
-    # 4-week camp, week 2 covers D-20..D-14. Friday fight → Monday is D-18
-    # (last allowed declared band) while Wednesday and Friday are banned.
+def test_d14_cutoff_converts_hard_sparring_for_a_normal_risk_athlete():
+    # 4-week camp, week 2 covers D-20..D-14. Friday fight -> Monday D-18 and
+    # Wednesday D-16 are ahead of the D-14 cutoff and stay hard; Friday is D-14,
+    # the first converted day.
     week = _week_with_calendar(
         end_d=14, span=7, fight_weekday="friday",
         hard_days=["Monday", "Wednesday", "Friday"],
@@ -104,6 +105,28 @@ def test_d17_hard_sparring_ban_converts_to_technical():
         week=week,
         athlete_snapshot=_athlete(20, hard_days=["Monday", "Wednesday", "Friday"]),
     )
+    by_day = {entry["day"]: entry for entry in plan}
+
+    assert by_day["Monday"]["d_day"] == 18
+    assert by_day["Wednesday"]["d_day"] == 16
+    assert by_day["Friday"]["d_day"] == 14
+    for day in ("Monday", "Wednesday"):
+        assert by_day[day]["effective_load"] == "hard"
+    assert by_day["Friday"]["status"] == "convert_to_technical_suggested"
+    assert by_day["Friday"]["effective_load"] == "technical"
+    assert "d14_hard_sparring_ban" in by_day["Friday"]["reason_codes"]
+
+
+def test_d17_cutoff_converts_hard_sparring_for_an_elevated_risk_athlete():
+    # Elevated risk (here: high fatigue) brings the cutoff forward to D-17, so
+    # Wednesday (D-16) and Friday (D-14) convert while Monday (D-18) stays hard.
+    week = _week_with_calendar(
+        end_d=14, span=7, fight_weekday="friday",
+        hard_days=["Monday", "Wednesday", "Friday"],
+    )
+    athlete = _athlete(20, hard_days=["Monday", "Wednesday", "Friday"])
+    athlete["readiness_flags"] = ["high_fatigue"]
+    plan = compute_hard_sparring_plan(week=week, athlete_snapshot=athlete)
     by_day = {entry["day"]: entry for entry in plan}
 
     for day in ("Wednesday", "Friday"):
@@ -320,7 +343,10 @@ def test_recovery_day_can_become_low_aerobic_gas_tank_when_gas_tank_is_limiter()
         "hard_sparring_days": ["monday", "wednesday", "friday"],
         "key_goals": ["conditioning_endurance"],
         "weaknesses": ["gas_tank"],
-        "fatigue": "moderate",
+        # Low fatigue: moderate fatigue on top of three hard sparring days now
+        # blocks the gas-tank conversion (readiness gating), so the limiter case
+        # is exercised for an athlete who is actually fresh enough to take it.
+        "fatigue": "low",
         "weight_cut_pct": 3.0,
         "weight_cut_risk": True,
         "readiness_flags": [],
@@ -388,7 +414,7 @@ def test_ban_applies_when_fight_weekday_cannot_be_resolved():
     assert [entry["effective_load"] for entry in plan] == ["technical", "technical"]
     for entry in plan:
         assert entry["status"] == "convert_to_technical_suggested"
-        assert "d17_hard_sparring_ban" in entry["reason_codes"]
+        assert "d14_hard_sparring_ban" in entry["reason_codes"]
         # Flagged so the guess is visible rather than passing as calendar truth.
         assert "unresolved_countdown_day" in entry["reason_codes"]
 
@@ -426,8 +452,19 @@ def test_resolvable_week_keeps_precise_per_day_verdicts():
     assert by_day["Saturday"]["d_day"] == 20
     assert by_day["Saturday"]["effective_load"] == "hard"
     assert by_day["Tuesday"]["d_day"] == 17
-    assert by_day["Tuesday"]["effective_load"] == "technical"
+    # D-17 is ahead of the normal D-14 cutoff, so it stays hard...
+    assert by_day["Tuesday"]["effective_load"] == "hard"
     assert all("unresolved_countdown_day" not in e["reason_codes"] for e in plan)
+
+    # ...and converts for an elevated-risk athlete, whose cutoff is D-17.
+    elevated = _athlete(20, hard_days=["Tuesday", "Saturday"])
+    elevated["readiness_flags"] = ["high_fatigue"]
+    elevated_by_day = {
+        entry["day"]: entry
+        for entry in compute_hard_sparring_plan(week=week, athlete_snapshot=elevated)
+    }
+    assert elevated_by_day["Saturday"]["effective_load"] == "hard"
+    assert elevated_by_day["Tuesday"]["effective_load"] == "technical"
 
 
 def test_declared_day_outside_a_short_span_converts_inside_the_ban():

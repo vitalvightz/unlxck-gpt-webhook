@@ -16,8 +16,12 @@ STYLE_TAPER_BY_NAME = {entry["name"]: entry for entry in STYLE_TAPER_CONDITIONIN
 
 
 def test_box_gated_taper_drills_use_canonical_intake_token():
-    for name in ("Box Squat Low Height - Grappler", "Low Box Step-Up - Clinch Fighter"):
-        assert normalize_equipment_list(STYLE_TAPER_BY_NAME[name]["equipment"]) == ["box"]
+    # The grappler/clinch box drills were retired when the taper bank was rebased,
+    # so the contract is stated over whatever box-gated taper drills exist.
+    for entry in STYLE_TAPER_CONDITIONING:
+        raw = [str(token).lower().replace("boxing", "") for token in entry.get("equipment") or []]
+        if any("box" in token for token in raw):
+            assert normalize_equipment_list(entry["equipment"]) == ["box"], entry["name"]
 
 
 def test_directional_and_upper_body_plyometrics_follow_bank_metadata():

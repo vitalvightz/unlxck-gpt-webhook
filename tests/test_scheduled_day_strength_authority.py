@@ -8,8 +8,8 @@ from fightcamp.calendar_context import role_d_day
 from fightcamp.late_camp_role_morph import apply_late_camp_role_morph
 from fightcamp.prescription_resolver import (
     MissingLateCampEffectiveStrengthAuthorityError,
-    apply_effective_strength_prescriptions,
 )
+from selector_assignments import apply_with_selected_membership, assign_selected_membership
 from fightcamp.stage2_finalizer_packet import build_stage2_finalizer_packet
 from fightcamp.stage2_pipeline import build_stage2_retry
 from fightcamp.stage2_validator import validate_stage2_output
@@ -71,11 +71,13 @@ def _production_like_relocation_geometry() -> tuple[dict, dict]:
                 ("thursday", 16),
             )
         ],
+        # No weekend training. Hard contact on D-22 and D-18 leaves the three days
+        # between them as an ordinary interior gap under gap-aware spacing, so an
+        # available Saturday/Sunday would be a clean home for the relocated role.
+        # With them closed, D-16 is the only slot that is legal for strength.
         "declared_training_days": [
             "Thursday",
             "Friday",
-            "Saturday",
-            "Sunday",
             "Monday",
             "Tuesday",
             "Wednesday",
@@ -110,7 +112,7 @@ def _resolve_production_like_relocation_geometry(
 ) -> tuple[dict, dict, dict]:
     weekly_role_map, candidate_pools = _production_like_relocation_geometry()
     apply_late_camp_role_morph(weekly_role_map)
-    apply_effective_strength_prescriptions(
+    apply_with_selected_membership(
         weekly_role_map=weekly_role_map,
         candidate_pools=candidate_pools,
         athlete_model={
@@ -157,7 +159,7 @@ def _resolve_single(
         "GPP": {"strength_slots": [_strength_slot(name, **(slot_kwargs or {}))]}
     }
     apply_late_camp_role_morph(weekly_role_map)
-    apply_effective_strength_prescriptions(
+    apply_with_selected_membership(
         weekly_role_map=weekly_role_map,
         candidate_pools=candidate_pools,
         athlete_model={"fatigue": "low", "weight_cut_pct": 0.0, "injuries": []},
@@ -299,7 +301,7 @@ def test_relocation_outside_window_clears_stale_d16_authority():
     weekly_role_map = _single_day_map(d_day=16)
     candidate_pools = {"GPP": {"strength_slots": [_strength_slot()]}}
     apply_late_camp_role_morph(weekly_role_map)
-    apply_effective_strength_prescriptions(
+    apply_with_selected_membership(
         weekly_role_map=weekly_role_map,
         candidate_pools=candidate_pools,
     )
@@ -327,6 +329,8 @@ def test_relocation_outside_window_clears_stale_d16_authority():
 def test_missing_d16_loaded_strength_authority_blocks_finalizer_packet():
     weekly_role_map = _single_day_map(d_day=16)
     candidate_pools = {"GPP": {"strength_slots": [_strength_slot()]}}
+    # The selector has chosen the squat; the resolver simply was never run.
+    assign_selected_membership(weekly_role_map, candidate_pools)
 
     with pytest.raises(MissingLateCampEffectiveStrengthAuthorityError) as exc_info:
         build_stage2_finalizer_packet(
@@ -437,7 +441,7 @@ def test_unloaded_power_and_support_slots_do_not_trigger_loaded_strength_invaria
         }
     }
     apply_late_camp_role_morph(weekly_role_map)
-    apply_effective_strength_prescriptions(
+    apply_with_selected_membership(
         weekly_role_map=weekly_role_map,
         candidate_pools=candidate_pools,
     )

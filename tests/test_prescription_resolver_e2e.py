@@ -12,7 +12,7 @@ from __future__ import annotations
 import pytest
 
 from fightcamp.late_camp_role_morph import apply_late_camp_role_morph
-from fightcamp.prescription_resolver import apply_effective_strength_prescriptions
+from selector_assignments import apply_with_selected_membership
 from fightcamp.stage2_finalizer_packet import build_stage2_finalizer_packet
 from fightcamp.stage2_pipeline import build_stage2_retry
 from fightcamp.stage2_validator import validate_stage2_output
@@ -85,7 +85,7 @@ def _resolve(d_day: int, slots: list[dict], *, weekday="tuesday", phase="SPP", a
     }
     candidate_pools = {phase: {"strength_slots": slots}}
     apply_late_camp_role_morph(weekly_role_map)
-    apply_effective_strength_prescriptions(
+    apply_with_selected_membership(
         weekly_role_map=weekly_role_map,
         candidate_pools=candidate_pools,
         athlete_model=athlete_model or {"fatigue": "low", "weight_cut_pct": 0.0},
@@ -109,9 +109,15 @@ def test_case_a_d18_anchor_remains_uncapped():
     # The morph never touches D-18+, so no dose cap and no resolver overlay: the
     # exercise-bank dose stays authoritative and meaningful.
     assert "strength_dose_cap" not in role
-    assert "effective_strength_prescriptions" not in role
-    assert "effective_strength_envelope" not in role
     assert role.get("late_camp_strength_morph") is not True
+    # Closed membership carries the selected bank dose forward unchanged: no
+    # countdown overlay, and no numeric ceiling envelope (only the allow-list).
+    (anchor,) = role["effective_strength_prescriptions"]
+    assert anchor["dose_authority"] == "exercise_bank"
+    assert anchor["effective_prescription"] == anchor["base_prescription"]
+    envelope = role["effective_strength_envelope"]
+    assert envelope["allowed_exercise_names"] == ["Trap Bar Deadlift"]
+    assert "loaded_allowed" not in envelope and "max_sets" not in envelope
 
 
 # --------------------------------------------------------------------------- #
@@ -145,7 +151,7 @@ def test_case_b_d17_effective_reaches_stage2_packet_and_base_not_authoritative()
         ]
     }
     apply_late_camp_role_morph(role_map)
-    apply_effective_strength_prescriptions(
+    apply_with_selected_membership(
         weekly_role_map=role_map,
         candidate_pools={"SPP": {"strength_slots": [_anchor_slot()]}},
         athlete_model={"fatigue": "low"},
@@ -401,7 +407,7 @@ def test_case_k_production_regression_d17_strength_is_meaningful_but_reduced():
     athlete_model = _k_athlete_model()
 
     apply_late_camp_role_morph(weekly_role_map)
-    apply_effective_strength_prescriptions(
+    apply_with_selected_membership(
         weekly_role_map=weekly_role_map,
         candidate_pools=candidate_pools,
         athlete_model=athlete_model,
@@ -423,7 +429,13 @@ def test_case_k_production_regression_d17_strength_is_meaningful_but_reduced():
     # Meaningful but reduced: NOT the untouched 4 x 3 bank dose ...
     assert anchor["base_prescription"] == "4 x 3 @ RPE 7"
     assert anchor["effective_prescription"] == "3 x 3 @ RPE 6-7 max"
-    assert anchor["dose_authority"] == "scheduled_countdown_overlay"
+    # Authority is Stage 1 bookkeeping: present on the rich role, not sent to the
+    # finalizer, which only needs the authorised dose.
+    assert "dose_authority" not in anchor
+    rich_role = weekly_role_map["weeks"][0]["session_roles"][0]
+    assert rich_role["effective_strength_prescriptions"][0]["dose_authority"] == (
+        "scheduled_countdown_overlay"
+    )
     # ... and NOT a band-primer-only fake strength session — real load remains.
     assert anchor["effective_loaded"] is True
     assert strength_role["effective_strength_envelope"]["loaded_allowed"] is True
@@ -510,7 +522,7 @@ def test_two_strength_sessions_resolve_only_their_owned_slots():
             {"role_key": "secondary_strength_day", "category": "strength", "scheduled_day_hint": "thursday"},
         ]}]}
     apply_late_camp_role_morph(role_map)
-    apply_effective_strength_prescriptions(weekly_role_map=role_map,
+    apply_with_selected_membership(weekly_role_map=role_map,
         candidate_pools={"SPP": {"strength_slots": slots}})
     roles = role_map["weeks"][0]["session_roles"]
     assert [x["name"] for x in roles[0]["effective_strength_prescriptions"]] == ["Back Squat"]
@@ -557,7 +569,7 @@ def _d16_back_squat_brief() -> dict:
     }])
 
 
-def test_production_d16_wrapped_barbell_back_squat_rep_overage_blocks_and_requests_repair():
+def test_production_d16_wrapped_barbell_back_squat_rep_overage_is_flagged_not_retried():
     text = "D-16 (Thursday) - Strength\n\nBarbell Back Squat:\n3 sets x 5 reps\nRPE ~7\n"
     brief = _d16_back_squat_brief()
     report = validate_stage2_output(planning_brief=brief, final_plan_text=text)
@@ -570,8 +582,11 @@ def test_production_d16_wrapped_barbell_back_squat_rep_overage_blocks_and_reques
         stage1_result={"planning_brief": brief}, final_plan_text=text, validator_report=report
     )
     assert report["is_valid"] is False
-    assert retry["needs_retry"] is True
-    assert "reduce_strength_dose_to_effective_prescription" in retry["repair_prompt"]
+    # Validator findings are observational: a dose overage stays on the report
+    # for admin review but no longer triggers an automatic model retry (only a
+    # held release, missing closed conditioning or a goal failure does).
+    assert retry["needs_retry"] is False
+    assert retry["repair_prompt"] is None
 
 
 def test_production_d16_equivalent_at_ceiling_passes():

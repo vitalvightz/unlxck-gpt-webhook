@@ -793,7 +793,10 @@ def test_build_rehab_injury_string_uses_entry_level_guided_types_without_leakage
 def test_generate_rehab_support_bundle_counts_guided_only_parsed_injury_as_injury(monkeypatch):
     from types import SimpleNamespace
 
-    from fightcamp.plan_pipeline_blocks import _generate_rehab_support_bundle
+    from fightcamp.plan_pipeline_blocks import (
+        _build_rehab_injury_string,
+        _generate_rehab_support_bundle,
+    )
 
     monkeypatch.setattr(
         "fightcamp.plan_pipeline_blocks.generate_rehab_protocols",
@@ -837,7 +840,10 @@ def test_generate_rehab_support_bundle_counts_guided_only_parsed_injury_as_injur
         sanitize_labels=(),
     )
 
-    _, _, support_notes, has_injuries, *_ = _generate_rehab_support_bundle(context)
+    # The pipeline builds the rehab injury string once and hands it to the bundle.
+    _, _, support_notes, has_injuries, *_ = _generate_rehab_support_bundle(
+        context, _build_rehab_injury_string(context)
+    )
 
     assert has_injuries is True
     assert support_notes.startswith("support for")

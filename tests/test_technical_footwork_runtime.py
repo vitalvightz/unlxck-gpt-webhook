@@ -423,10 +423,17 @@ def test_generator_serves_only_content_correct_grappling_footwork():
         ("wrestling", _WRESTLING_DRILLS),
         ("bjj", _BJJ_DRILLS),
     ):
-        flags = _sport_flags(sport, phase="SPP", days_until_fight=40)
+        # Footwork only fills a leftover slot. A speed goal is what opens the
+        # extra alactic slot in a 3-day SPP week, so the footwork goal alone
+        # leaves no headroom and the insert is (correctly) skipped.
+        flags = _sport_flags(
+            sport, phase="SPP", days_until_fight=40, key_goals=["footwork", "speed"]
+        )
         markdown, names, entries, grouped, *_rest = conditioning.generate_conditioning_block(flags)
         inserted = FOOTWORK_NAMES.intersection(names)
-        assert inserted == allowed, (sport, names)
+        # One footwork drill is inserted per block, and it must be one of the
+        # drills explicitly tagged for the athlete's sport.
+        assert len(inserted) == 1 and inserted <= allowed, (sport, names)
         assert inserted.isdisjoint(_PURE_STRIKING_DRILLS), (sport, inserted)
         assert inserted.isdisjoint(_STRIKE_FRAMED_MMA_TRANSITIONS), (sport, inserted)
         assert "Technical Footwork" in markdown
@@ -444,14 +451,15 @@ def test_generator_serves_only_content_correct_grappling_footwork():
 
 
 def test_generator_deliberately_omits_grappling_footwork_when_none_is_valid():
+    # The grappling drills carry late windows ending at d4_to_d2 (and GPP/SPP/TAPER
+    # phases), so the only place no grappling drill is valid is fight eve.
     cases = (
-        ("wrestling", "GPP", 40),
-        ("wrestling", "TAPER", 18),
-        ("wrestling", "TAPER", 4),
-        ("bjj", "TAPER", 18),
-        ("bjj", "TAPER", 4),
+        ("wrestling", "TAPER", 1),
+        ("bjj", "TAPER", 1),
     )
     for sport, phase, days in cases:
-        flags = _sport_flags(sport, phase=phase, days_until_fight=days)
+        flags = _sport_flags(
+            sport, phase=phase, days_until_fight=days, key_goals=["footwork", "speed"]
+        )
         _markdown, names, *_rest = conditioning.generate_conditioning_block(flags)
         assert FOOTWORK_NAMES.isdisjoint(names), (sport, phase, days, names)

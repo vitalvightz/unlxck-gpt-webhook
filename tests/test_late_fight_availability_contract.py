@@ -84,6 +84,10 @@ def test_gap_fill_does_not_manufacture_unavailable_weekend_sessions():
     for role in sequence:
         if role.get("category") != "support_insert":
             continue
+        # The Fight Visualisation countdown protocol is zero-load and owns its
+        # D-day unconditionally, so it is not subject to day availability.
+        if role.get("role_key") == "fight_visualization":
+            continue
         offset = int(role["countdown_offset"])
         assert countdown_map[f"D-{offset}"] in available
 

@@ -385,11 +385,21 @@ def test_proposed_enum_values_conform_to_schema():
 # --------------------------------------------------------------------------- #
 
 
-def test_coverage_report_is_honest_about_the_unmigrated_bank():
-    report = build_report(load_bank(BANK_PATH), json.loads(LEDGER_PATH.read_text(encoding="utf-8")))
+def test_coverage_report_is_honest_about_the_partially_migrated_bank():
+    bank = load_bank(BANK_PATH)
+    report = build_report(bank, json.loads(LEDGER_PATH.read_text(encoding="utf-8")))
     assert report["totals"]["msk_drills"] == len(build_ledger(load_bank(BANK_PATH)))
-    assert report["fully_known_mechanical_demand"] == 0  # nothing migrated yet
-    assert report["field_levels"]["load"].get("known", 0) == 0
+    # The report must count exactly what the bank carries: a few drills have been
+    # migrated, everything else is null, and nothing is claimed beyond that.
+    migrated_load = sum(
+        1
+        for entry in bank
+        for drill in entry.get("drills", [])
+        if "rehab_stage" in drill and drill.get("load") is not None
+    )
+    assert report["field_levels"]["load"].get("known", 0) == migrated_load
+    assert report["field_levels"]["load"].get("null", 0) == report["totals"]["msk_drills"] - migrated_load
+    assert report["fully_known_mechanical_demand"] <= migrated_load
     assert report["stale_reviews"] == 0
     assert report["review_states"] == {REVIEW_STATE_NEEDS_REVIEW: report["totals"]["msk_drills"]}
 

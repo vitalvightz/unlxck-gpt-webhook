@@ -111,16 +111,8 @@ def test_incomplete_stage2_plan_is_released_flagged_not_replaced_by_stage1(monke
             },
         },
     )
-    monkeypatch.setattr(
-        stage2_module,
-        "apply_stage2_release_policy",
-        lambda report: {
-            **report,
-            "release_decision": "publish",
-            "is_athlete_releasable": True,
-            "is_publishable": True,
-        },
-    )
+    # The real release policy decides: a truncated-but-usable response is a
+    # quality finding, so the plan releases flagged rather than clean.
     monkeypatch.setattr(stage2_module, "athlete_release_with_flags_findings", lambda _report: [])
     monkeypatch.setattr(stage2_module, "admin_review_blocking_findings", lambda _report: [])
     monkeypatch.setattr(stage2_module, "_structured_plan_enabled", lambda: False)
@@ -134,7 +126,10 @@ def test_incomplete_stage2_plan_is_released_flagged_not_replaced_by_stage1(monke
     assert result["status"] == "publishable_with_flags"
     assert result["plan_text"].startswith("# Partial Stage 2 plan")
     assert result["plan_text"] != "# ugly Stage 1 draft"
+    # Truncation is recorded on the report (as an error, not a warning) so admins
+    # can see it, without replacing the plan or holding the release.
     assert any(
-        warning.get("code") == "stage2_incomplete_response"
-        for warning in result["stage2_validator_report"]["warnings"]
+        error.get("code") == "stage2_output_truncated"
+        for error in result["stage2_validator_report"]["errors"]
     )
+    assert result["stage2_validator_report"]["release_decision"] == "publish_with_flags"

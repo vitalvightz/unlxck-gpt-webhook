@@ -3,7 +3,7 @@ from collections import Counter
 from pathlib import Path
 
 from fightcamp import conditioning
-from fightcamp.training_context import known_equipment
+from fightcamp.training_context import known_equipment, normalize_equipment_list
 
 
 BANK_PATH = Path(__file__).resolve().parents[1] / "data" / "style_conditioning_bank.json"
@@ -101,7 +101,9 @@ def test_legacy_and_archetype_drift_are_absent():
 def test_equipment_and_mechanical_tags_follow_runtime_conventions():
     valid = set(known_equipment)
     for item in _slice().values():
-        assert set(item["equipment"]) <= valid
+        # Bank items keep authored spellings (thai_pads, focus_mitts); the runtime
+        # vocabulary is canonical, so compare the normalized capability.
+        assert set(normalize_equipment_list(item["equipment"])) <= valid
         mechanical = [tag for tag in item["tags"] if tag.startswith("mech_")]
         assert len(mechanical) == len(set(mechanical))
         assert mechanical == item["mechanical_risk_tags"]

@@ -214,9 +214,11 @@ def test_d2_alactic_reservoir_survives_losing_the_single_stance_cue(mma_brief):
 
 def test_direct_countdown_preflight_uses_final_visible_sequence(mma_brief):
     brief = deepcopy(mma_brief)
+    # The preflight only judges canonically late-tail-owned physical roles.
     brief["late_fight_session_sequence"] = [{
         "scheduled_countdown_label": "D-2", "role_key": "alactic_sharpness_day",
-        "category": "conditioning", "selected_exercise_assignments": [],
+        "category": "conditioning", "late_fight_tail_owned": True,
+        "selected_exercise_assignments": [],
     }]
     findings = late_physical_planner_preflight(brief)
     assert [item["code"] for item in findings] == ["late_physical_role_missing_assignment"]

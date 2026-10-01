@@ -303,7 +303,9 @@ def test_legacy_review_required_publishable_row_uses_final_plan_text_for_athlete
     assert body["outputs"]["plan_text"] == "# Legacy final plan"
 
 
-def test_legacy_review_required_blocking_row_remains_hidden_from_athlete():
+def test_legacy_review_required_hold_row_remains_hidden_from_athlete():
+    # A stored review_required row stays held when the release policy still holds
+    # it: an unresolved workload/dose error, not merely an admin-review finding.
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
     store.ensure_profile(athlete)
@@ -315,7 +317,10 @@ def test_legacy_review_required_blocking_row_remains_hidden_from_athlete():
             status="review_required",
             plan_text="",
             final_plan_text="# Held legacy final plan",
-            stage2_validator_report={"errors": [], "warnings": [{"code": "missing_required_element", "blocking": True}]},
+            stage2_validator_report={
+                "errors": [{"code": "conditioning_role_workload_underfilled"}],
+                "warnings": [],
+            },
         ),
     )
     response = client.get(f"/api/plans/{plan['id']}", headers={"Authorization": "Bearer athlete-token"})
@@ -323,6 +328,30 @@ def test_legacy_review_required_blocking_row_remains_hidden_from_athlete():
     body = response.json()
     assert body["status"] == "held_for_review"
     assert body["outputs"]["plan_text"] == ""
+
+
+def test_legacy_review_required_admin_blocking_row_releases_with_flags():
+    # Findings are observational now: an admin-review-blocking warning no longer
+    # holds a stored review_required row back from the athlete.
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(
+            status="review_required",
+            plan_text="",
+            final_plan_text="# Legacy final plan",
+            stage2_validator_report={"errors": [], "warnings": [{"code": "missing_required_element", "blocking": True}]},
+        ),
+    )
+    response = client.get(f"/api/plans/{plan['id']}", headers={"Authorization": "Bearer athlete-token"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "publishable_with_flags"
+    assert body["outputs"]["plan_text"] == "# Legacy final plan"
 
 
 def test_legacy_review_required_without_validator_report_stays_held_and_hidden():
@@ -360,9 +389,8 @@ def test_plan_summary_explains_held_for_review_reason():
             plan_text="",
             final_plan_text="# Held final plan",
             stage2_validator_report={
-                "errors": [],
-                "warnings": [{"code": "missing_required_element", "severity": "blocker"}],
-                "blocking_warnings": [{"code": "missing_required_element", "severity": "blocker"}],
+                "errors": [{"code": "conditioning_role_workload_underfilled"}],
+                "warnings": [],
             },
         ),
     )
@@ -374,7 +402,7 @@ def test_plan_summary_explains_held_for_review_reason():
     assert listed_plan["status"] == "held_for_review"
     assert listed_plan["review_reason"] == (
         "Admin review is required before release because Stage 2 validation "
-        "found blocking issues: required plan elements are missing."
+        "found errors: conditioning role workload underfilled."
     )
 
 

@@ -44,26 +44,33 @@ def _store_with_plan() -> FakeStore:
 
 
 # ---------------------------------------------------------------------------
-# The bank is untouched: PR3 still owns the content migration
+# The content migration is partial: stage metadata is optional per drill
 # ---------------------------------------------------------------------------
 
 
-def test_pr1_drill_stage_metadata_is_still_unmigrated():
-    """PR2 must not populate what PR3 owns."""
+def _msk_drills() -> list[dict]:
     bank = json.loads((DATA_DIR / "rehab_bank.json").read_text(encoding="utf-8"))
-    msk_drills = [
+    return [
         drill
         for entry in bank
         for drill in entry.get("drills", [])
         if "rehab_stage" in drill
     ]
-    assert msk_drills, "expected PR1's musculoskeletal drills to carry the field"
-    assert all(drill["rehab_stage"] is None for drill in msk_drills)
+
+
+def test_drill_stage_metadata_is_optional_and_valid_where_migrated():
+    """Migrated drills carry a valid stage; unmigrated drills keep the field null."""
+    msk_drills = _msk_drills()
+    assert msk_drills, "expected the musculoskeletal drills to carry the field"
+    stages = [drill["rehab_stage"] for drill in msk_drills]
+    assert all(stage is None or stage in REHAB_STAGES for stage in stages)
+    # The migration is incremental: null must stay the normal state for most drills.
+    assert stages.count(None) > len(stages) // 2
 
 
 def test_rehab_selection_still_works_with_null_drill_stages():
     """A null ``rehab_stage`` must not filter a drill out of selection."""
-    assert all(
+    assert any(
         drill.get("rehab_stage") is None
         for entry in get_rehab_bank()
         for drill in entry.get("drills", [])

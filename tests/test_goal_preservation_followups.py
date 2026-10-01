@@ -4,7 +4,7 @@ import pytest
 
 from fightcamp.goal_preservation import reconcile_goal_preservation, validate_goal_preservation
 from fightcamp.late_camp_role_morph import apply_late_camp_role_morph
-from fightcamp.prescription_resolver import apply_effective_strength_prescriptions
+from selector_assignments import apply_with_selected_membership
 
 
 def _slot(name="Deadlift", quality="anchor_loaded"):
@@ -92,7 +92,7 @@ def test_two_hard_spar_days_alone_cannot_justify_strength_deferral():
     }]
 
     apply_late_camp_role_morph(brief["weekly_role_map"])
-    apply_effective_strength_prescriptions(
+    apply_with_selected_membership(
         weekly_role_map=brief["weekly_role_map"],
         candidate_pools=brief["candidate_pools"],
         athlete_model=brief["athlete_snapshot"],
@@ -128,7 +128,7 @@ def test_direct_late_countdown_readiness_reduction_can_justify_strength_deferral
         }]
     }
     apply_late_camp_role_morph(direct_role_map)
-    apply_effective_strength_prescriptions(
+    apply_with_selected_membership(
         weekly_role_map=direct_role_map,
         candidate_pools=brief["candidate_pools"],
         athlete_model=brief["athlete_snapshot"],

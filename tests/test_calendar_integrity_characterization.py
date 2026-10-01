@@ -53,7 +53,7 @@ from pathlib import Path
 
 import pytest
 
-from fightcamp import input_parsing
+from planner_clock import pin_planner_clock
 from fightcamp.input_parsing import PlanInput
 from fightcamp.plan_pipeline_blocks import generate_plan_blocks
 from fightcamp.plan_pipeline_rendering import build_stage2_outputs
@@ -111,14 +111,16 @@ def _fields(**overrides) -> list[dict]:
 def _run(days: int, monkeypatch: pytest.MonkeyPatch, **overrides) -> dict:
     """Run the real deterministic planner for a fixed ``days``-out fight.
 
-    ``_utc_now`` is patched (function-scoped monkeypatch, auto-restored) so the
-    countdown is fully deterministic; no process-global state is mutated.
+    Both clocks the planner reads are patched (function-scoped monkeypatch,
+    auto-restored) so the countdown *and* the plan-creation weekday are fully
+    deterministic; no process-global state is mutated. Patching only
+    ``input_parsing._utc_now`` leaves the weekday on the real clock.
     """
     fixed_now = dt.datetime.combine(
         FIGHT_DATE - dt.timedelta(days=days),
         dt.time(12, 0),
     )
-    monkeypatch.setattr(input_parsing, "_utc_now", lambda: fixed_now)
+    pin_planner_clock(monkeypatch, fixed_now)
     plan_input = PlanInput.from_payload({"data": {"fields": _fields(**overrides)}})
     assert plan_input.days_until_fight == days
     context = build_runtime_context(
@@ -399,9 +401,17 @@ def test_invariant_d16_has_no_effective_hard_contact(briefs):
 
 def test_invariant_no_normal_role_on_unavailable_saturday(briefs):
     """Saturday is unavailable: no normal app role may be scheduled there."""
-    for brief in briefs.values():
+    for name, brief in briefs.items():
         for _week, role in _all_roles(brief):
-            assert str(role.get("scheduled_day_hint") or "").strip().lower() != "saturday"
+            # The Fight Visualisation countdown protocol is zero-load and owns its
+            # D-day unconditionally, so it is not subject to day availability.
+            if role.get("role_key") == "fight_visualization":
+                continue
+            assert str(role.get("scheduled_day_hint") or "").strip().lower() != "saturday", (
+                name,
+                role.get("role_key"),
+                role.get("scheduled_countdown_label") or role.get("countdown_display_label"),
+            )
 
 
 def test_invariant_d14_d13_planner_boundary(briefs):

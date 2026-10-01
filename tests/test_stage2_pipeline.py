@@ -6,6 +6,8 @@ from fightcamp.stage2_pipeline import (
     review_stage2_output,
     structural_integrity_findings,
 )
+from fightcamp.stage2_policy import prompt_safe_validator_report
+from fightcamp.stage2_repair import build_stage2_repair_prompt
 from fightcamp.stage2_validator import validate_stage2_output
 
 
@@ -483,10 +485,25 @@ def test_review_stage2_output_holds_admin_blocking_structure_gaps():
         """,
     )
 
-    assert review["status"] == "WARN"
-    assert review["needs_retry"] is True
-    blocking_codes = {warning["code"] for warning in review["validator_report"]["blocking_warnings"]}
-    assert blocking_codes == {"missing_required_element"}
+    # Validator findings are observational: a missing phase-critical element is an
+    # admin-review flag on a plan that still releases, not a blocking warning.
+    report = review["validator_report"]
+    assert review["status"] == "PASS"
+    assert review["needs_retry"] is False
+    assert report["blocking_warnings"] == []
+    assert {flag["code"] for flag in report["admin_review_blocking_flags"]} == {
+        "missing_required_element"
+    }
+    assert report["release_decision"] == "publish_with_flags"
+
+    # The retry builder surfaces the same admin-review gap as a WARN without
+    # asking the model to retry.
+    retry = build_stage2_retry(
+        stage1_result=_stage1_result_fixture(),
+        final_plan_text="SPP\n- Landmine Press - 4x5\n- Hard Shuttle - 6x20s / 60s\n",
+    )
+    assert retry["status"] == "WARN"
+    assert retry["needs_retry"] is False
 
 
 def test_review_stage2_output_returns_pass_with_non_blocking_review_flags():
@@ -580,10 +597,22 @@ def _blocking_codes(review: dict) -> set[str]:
     }
 
 
-def _assert_non_publishable_retry(review: dict, code: str) -> None:
+def _manual_repair_prompt(text: str, retry: dict) -> str:
+    """The repair prompt explicit tooling builds; retry no longer triggers it alone."""
+    return build_stage2_repair_prompt(
+        planning_brief=_stage1_result_fixture()["planning_brief"],
+        failed_plan_text=text,
+        validator_report=prompt_safe_validator_report(retry["validator_report"]),
+    )
+
+
+def _assert_blocking_flag_released_with_flags(review: dict, code: str) -> None:
+    # A hard-blocking finding still raises the review status and is recorded as a
+    # blocking warning, but findings are observational: the plan releases flagged.
     assert review["status"] in {"WARN", "FAIL"}
     assert review["needs_retry"] is True
-    assert review["validator_report"]["is_publishable"] is False
+    assert review["validator_report"]["is_publishable"] is True
+    assert review["validator_report"]["release_decision"] == "publish_with_flags"
     assert code in _blocking_codes(review)
 
 
@@ -615,7 +644,7 @@ def test_review_stage2_output_treats_countdown_banded_lockout_as_blocking():
         """,
     )
 
-    _assert_non_publishable_retry(review, "late_fight_countdown_blocked_drill")
+    _assert_blocking_flag_released_with_flags(review, "late_fight_countdown_blocked_drill")
 
 
 def test_review_stage2_output_still_blocks_d13_band_resisted_drill_via_dedicated_check():
@@ -639,7 +668,7 @@ def test_review_stage2_output_still_blocks_d13_band_resisted_drill_via_dedicated
     blocking = _blocking_codes(review)
     assert "late_fight_unapproved_exercise_rendered" not in blocking
     assert "late_fight_countdown_blocked_drill" in blocking
-    assert review["validator_report"]["is_publishable"] is False
+    assert review["validator_report"]["is_publishable"] is True
 
 
 def test_review_stage2_output_still_blocks_d3_sandbag_shouldering_via_forbidden_window():
@@ -675,7 +704,7 @@ def test_review_stage2_output_retries_when_d1_renders_med_ball_punch_throw():
         """,
     )
 
-    _assert_non_publishable_retry(review, "late_fight_countdown_blocked_drill")
+    _assert_blocking_flag_released_with_flags(review, "late_fight_countdown_blocked_drill")
     assert "late_fight_window_forbidden_exercise" in _blocking_codes(review)
 
 
@@ -706,7 +735,7 @@ def test_review_stage2_output_retries_when_d1_renders_countdown_blocked_drill():
         """,
     )
 
-    _assert_non_publishable_retry(review, "late_fight_countdown_blocked_drill")
+    _assert_blocking_flag_released_with_flags(review, "late_fight_countdown_blocked_drill")
 
 
 def test_review_stage2_output_passes_valid_d3_allowed_exercise():
@@ -744,21 +773,23 @@ def test_review_stage2_output_passes_valid_d1_primer_reset():
 
 
 def test_build_stage2_retry_returns_repair_prompt_when_needed():
-    retry = build_stage2_retry(
-        stage1_result=_stage1_result_fixture(),
-        final_plan_text="""
+    text = """
         SPP
         - Push Press - 4x3
         - Hard Shuttle - 6x20s / 60s
-        """,
-    )
+        """
+    retry = build_stage2_retry(stage1_result=_stage1_result_fixture(), final_plan_text=text)
 
+    # A restriction violation fails review but is observational: the plan is not
+    # automatically retried (only a held release, missing closed conditioning or
+    # a goal failure is). The explicit repair prompt is still built on request.
     assert retry["status"] == "FAIL"
-    assert retry["needs_retry"] is True
-    assert retry["repair_prompt"] is not None
-    assert "REVISION PRIORITIES" in retry["repair_prompt"]
-    assert "PLANNING BRIEF" in retry["repair_prompt"]
-    assert "explicit converted low-load support role" in retry["repair_prompt"]
+    assert retry["needs_retry"] is False
+    assert retry["repair_prompt"] is None
+    prompt = _manual_repair_prompt(text, retry)
+    assert "REVISION PRIORITIES" in prompt
+    assert "PLANNING BRIEF" in prompt
+    assert "explicit converted low-load support role" in prompt
 
 
 def test_build_stage2_retry_skips_prompt_when_plan_passes():
@@ -848,12 +879,13 @@ def test_build_stage2_retry_prompt_includes_publish_blocking_warnings_for_hard_b
     )
 
     assert retry["status"] == "FAIL"
-    assert retry["needs_retry"] is True
-    assert retry["repair_prompt"] is not None
-    assert "restriction_violation" in retry["repair_prompt"]
-    assert "generic_filler_phrase" not in retry["repair_prompt"]
-    assert "missing_required_element" in retry["repair_prompt"]
-    assert "sport_language_leak" not in retry["repair_prompt"]
+    assert retry["needs_retry"] is False
+    assert retry["repair_prompt"] is None
+    prompt = _manual_repair_prompt("SPP\n- Push Press - 4x3", retry)
+    assert "restriction_violation" in prompt
+    assert "generic_filler_phrase" not in prompt
+    assert "missing_required_element" in prompt
+    assert "sport_language_leak" not in prompt
 
 
 def test_build_stage2_retry_prompts_for_publish_blocking_review_flag():
@@ -890,13 +922,14 @@ def test_build_stage2_retry_prompts_for_publish_blocking_review_flag():
     )
 
     assert retry["status"] == "WARN"
-    assert retry["needs_retry"] is True
-    assert retry["repair_prompt"] is not None
-    assert "restore_phase_critical_element" in retry["repair_prompt"]
-    assert "Air Bike Sprint" in retry["repair_prompt"]
+    assert retry["needs_retry"] is False
+    assert retry["repair_prompt"] is None
+    prompt = _manual_repair_prompt("SPP\n- Landmine Press - 4x5", retry)
+    assert "restore_phase_critical_element" in prompt
+    assert "Air Bike Sprint" in prompt
 
 
-def test_review_stage2_output_holds_weekly_session_overage_for_admin_review():
+def test_review_stage2_output_flags_weekly_session_overage_for_admin_review():
     planning_brief = {
         "athlete_model": {"sport": "boxing"},
         "restrictions": [],
@@ -944,9 +977,11 @@ def test_review_stage2_output_holds_weekly_session_overage_for_admin_review():
         """,
     )
 
-    assert review["status"] == "WARN"
-    assert review["needs_retry"] is True
-    blocking_codes = [warning["code"] for warning in review["validator_report"]["blocking_warnings"]]
-    assert "weekly_session_overage" in blocking_codes
-    review_flag_codes = [warning["code"] for warning in review["validator_report"]["review_flags"]]
-    assert "weekly_session_overage" in review_flag_codes
+    # Observational policy: the overage is an admin-review flag on a plan that
+    # still releases, recorded on the review flags, not a blocking warning.
+    report = review["validator_report"]
+    assert review["status"] == "PASS"
+    assert review["needs_retry"] is False
+    assert "weekly_session_overage" in [flag["code"] for flag in report["admin_review_blocking_flags"]]
+    assert "weekly_session_overage" in [warning["code"] for warning in report["review_flags"]]
+    assert report["release_decision"] == "publish_with_flags"

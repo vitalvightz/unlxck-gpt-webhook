@@ -207,7 +207,8 @@ def test_request_middleware_returns_json_request_id_for_unhandled_exceptions():
 def test_job_response_surfaces_warning_milestones():
     warning = "Profile refresh failed; plan generated from submitted intake only."
     response = job_helpers._job_response(
-        {
+        viewer_role="admin",
+        job={
             "id": "job_warning",
             "athlete_id": "athlete-1",
             "client_request_id": "client-1",

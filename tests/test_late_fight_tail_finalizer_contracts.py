@@ -67,7 +67,7 @@ def test_long_camp_tail_carries_actual_d1_contract_into_finalizer_packet():
     assert any(
         "late_fight_tail_handoff.active" in rule
         and "render_contract" in rule
-        and "d-14" in rule
+        and "d-14" in rule.lower()
         for rule in packet["hard_rules"]
     )
 

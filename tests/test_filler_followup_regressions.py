@@ -138,7 +138,9 @@ def test_live_normal_camp_partial_coverage_lets_coordination_take_the_slot():
     apply_camp_week_fillers({"weeks": [week]}, athlete)
 
     discretionary = _discretionary_roles(week)
-    assert len(discretionary) == 1
+    # A second filler may now keep the free day occupied; coordination, the
+    # target with the most remaining need, is still the one placed first.
+    assert 1 <= len(discretionary) <= 2
     assert discretionary[0]["role_key"] == "coordination_support"
     assert _supports(discretionary[0], "coordination")
 

@@ -254,7 +254,11 @@ def test_style_taper_bank_order_breaks_equal_ties_not_alphabetical(monkeypatch):
         )
     )
     selected = [drill["name"] for drills in result[3].values() for drill in drills]
-    assert selected == ["Single-Kick Recoil Primer"]
+    # Bank order breaks the equal-relevance tie: the earlier-ranked recoil primer
+    # wins, not the alphabetically-first "Pocket Burst-Reset". Other (non-taper)
+    # fillers may sit beside it, so only the taper winner is asserted.
+    taper_winners = [name for name in selected if name in {"Single-Kick Recoil Primer", "Pocket Burst-Reset"}]
+    assert taper_winners == ["Single-Kick Recoil Primer"]
 
 
 # --- Bank 2.1: primer-family rotation inside equal-relevance ties -------------
