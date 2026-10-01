@@ -2087,7 +2087,8 @@ function WeekStrip({
                 title="App sessions completed. Coach/gym days are tracked separately."
               >
                 {completion.done}/{completion.total} app
-                <span className="sr-only"> sessions completed</span>
+                {/* title= never reaches touch or screen readers; say it here too. */}
+                <span className="sr-only"> sessions completed. Coach/gym days are tracked separately.</span>
               </span>
             ) : null}
             {current ? <span className="sr-only">Current week</span> : null}

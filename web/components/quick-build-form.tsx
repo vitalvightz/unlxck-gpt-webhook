@@ -693,6 +693,9 @@ function QuickBuildFormInner() {
 
   function handleTrainingPresetSelect(key: string) {
     if (!key) {
+      // Same rule as equipment: the empty row only clears an active preset,
+      // never the athlete's own custom days.
+      if (!activeTrainingPreset) return;
       clearTrainingPreset();
       return;
     }
@@ -714,6 +717,9 @@ function QuickBuildFormInner() {
 
   function handleFocusPresetSelect(key: string) {
     if (!key) {
+      // Only clear when the picker is actually showing a preset; a custom (or
+      // now-disabled) selection stays put.
+      if (!activeFocusPreset || !focusPresetOptions.some((option) => option.value === activeFocusPreset)) return;
       clearFocusPreset();
       return;
     }
