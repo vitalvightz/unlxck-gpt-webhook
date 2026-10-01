@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import re
-from typing import Iterable
+from dataclasses import dataclass, field
+from typing import Callable, Iterable
 
 import httpx
 
@@ -15,6 +16,12 @@ MAX_SEARCH_QUERIES = 3
 
 class CandidateSearchError(RuntimeError):
     pass
+
+
+@dataclass
+class SearchProgress:
+    queries_used: int = 0
+    pending: list[str] = field(default_factory=list)
 
 
 def search_queries(row: dict[str, str]) -> list[str]:
@@ -41,7 +48,10 @@ class YouTubeCandidateSearch:
     def close(self) -> None:
         self._client.close()
 
-    def search(self, row: dict[str, str], exclude: set[str]) -> Iterable[str]:
+    def search(
+        self, row: dict[str, str], exclude: set[str], progress: SearchProgress | None = None,
+        checkpoint: Callable[[], None] | None = None,
+    ) -> Iterable[str]:
         """Fetch five ranked videos at a time, lazily, with at most three queries.
 
         Stopping the review loop stops discovery too. No pagination or Gemini
@@ -50,7 +60,23 @@ class YouTubeCandidateSearch:
         if self._failure:
             raise CandidateSearchError(self._failure)
         seen = {parse_youtube_video_id(url) or url for url in exclude}
-        for query in search_queries(row):
+        progress = progress or SearchProgress()
+        queries = search_queries(row)
+        while True:
+            while progress.pending:
+                url = progress.pending[0]
+                video_id = parse_youtube_video_id(url)
+                if video_id and video_id not in seen:
+                    yield url
+                    seen.add(video_id)
+                # Leave an in-flight URL pending until Gemini completes it.
+                progress.pending.pop(0)
+            if progress.queries_used >= len(queries):
+                break
+            query = queries[progress.queries_used]
+            progress.queries_used += 1
+            if checkpoint:
+                checkpoint()
             try:
                 response = self._client.get(
                     YOUTUBE_SEARCH_URL,
@@ -74,5 +100,8 @@ class YouTubeCandidateSearch:
                 video_id = (item.get("id") or {}).get("videoId") if isinstance(item, dict) and isinstance(item.get("id"), dict) else None
                 if not isinstance(video_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id) or video_id in seen:
                     continue
-                seen.add(video_id)
-                yield f"https://www.youtube.com/watch?v={video_id}"
+                url = f"https://www.youtube.com/watch?v={video_id}"
+                if url not in progress.pending:
+                    progress.pending.append(url)
+            if checkpoint:
+                checkpoint()

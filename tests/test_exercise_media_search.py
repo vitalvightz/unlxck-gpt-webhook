@@ -194,15 +194,102 @@ def test_quota_interruption_resumes_mid_row_without_rewatching_or_resetting_cap(
 def test_redo_weak_revisits_partial_but_skips_strong_and_resumes_output(tmp_path):
     src, out = tmp_path / "media.csv", tmp_path / "reviewed.csv"
     _write_csv(src, [
-        _row(exercise_key="strong", suggested_url=URL_A, ai_verdict="match", ai_confidence="0.9", ai_orientation="landscape"),
-        _row(exercise_key="weak", suggested_url=URL_B, ai_verdict="partial", ai_confidence="0.9", ai_orientation="landscape"),
+        _row(exercise_key="strong", suggested_url=URL_A, ai_verdict="match", ai_confidence="0.9", ai_orientation="landscape", ai_start_s="42", ai_end_s="54"),
+        _row(exercise_key="weak", suggested_url=URL_B, ai_verdict="partial", ai_confidence="0.9", ai_orientation="landscape", ai_start_s="42", ai_end_s="54"),
     ])
     calls = []
-    counts = review.run_review(str(src), str(out), reviewer=_reviewer({URL_B: _answer()}, calls),
+    counts = review.run_review(str(src), str(out), reviewer=_reviewer({URL_C: _answer()}, calls),
+                             search=_searcher([["BBBBBBBBBBB", "CCCCCCCCCCC"]]).search,
                              redo_weak=True, delay_s=0, log=lambda _: None)
     assert counts == {"reviewed": 1, "skipped": 1, "errors": 0} and len(calls) == 1
     counts = review.run_review(str(src), str(out), reviewer=_reviewer({}), redo_weak=True, log=lambda _: None)
     assert counts == {"reviewed": 0, "skipped": 2, "errors": 0}
+
+
+@pytest.mark.parametrize(("start", "end"), [(None, None), ("00:00", "00:00"), ("00:10", "00:11"), ("00:10", "00:50")])
+def test_no_usable_loop_keeps_searching_and_prefers_valid_match(start, end):
+    outcome = review.review_row(
+        _reviewer({URL_A: _answer(confidence=0.99, segment_start=start, segment_end=end), URL_B: _answer(confidence=0.90)}),
+        _row(), max_candidates=4, delay_s=0, sleep=lambda _: None,
+        search=_searcher([["BBBBBBBBBBB"]]).search,
+    )
+    assert outcome.tried == [URL_A, URL_B]
+    assert outcome.best.url == URL_B
+    assert review.apply_outcome(_row(), outcome, model="test")["needs_manual_video"] == "false"
+
+
+def test_no_loop_match_is_flagged_manual_when_no_better_video_exists():
+    outcome = review.review_row(_reviewer({URL_A: _answer(segment_start="00:00", segment_end="00:00")}),
+                               _row(), max_candidates=1, delay_s=0)
+    updated = review.apply_outcome(_row(), outcome, model="test")
+    assert updated["ai_verdict"] == "match" and updated["needs_manual_video"] == "true"
+
+
+@pytest.mark.parametrize("separate_out", [False, True])
+def test_redo_weak_seeds_legacy_no_loop_history_and_watches_only_new_ids(tmp_path, separate_out):
+    src = tmp_path / "media.csv"
+    out = tmp_path / "reviewed.csv" if separate_out else src
+    _write_csv(src, [_row(
+        suggested_url=URL_A, candidate_urls="https://youtu.be/AAAAAAAAAAA?t=30",
+        ai_verdict="match", ai_confidence="0.99", ai_orientation="landscape", ai_start_s="", ai_end_s="",
+        start_s="10", end_s="20", notes="keep manual values",
+    )])
+    calls = []
+    review.run_review(str(src), str(out), reviewer=_reviewer({URL_B: _answer(verdict="partial")}, calls),
+                      search=_searcher([["AAAAAAAAAAA", "BBBBBBBBBBB"], [], []]).search,
+                      max_candidates=1, redo_weak=True, delay_s=0, log=lambda _: None)
+    saved = _read_csv(out)[0]
+    assert len(calls) == 1 and saved["ai_reviewed_video_ids"] == "AAAAAAAAAAA|BBBBBBBBBBB"
+    assert saved["needs_manual_video"] == "true"
+    assert saved["suggested_url"] == URL_A  # the previous closer match is kept
+    calls = []
+    review.run_review(str(src), str(out), reviewer=_reviewer({URL_C: _answer()}, calls),
+                      search=_searcher([["AAAAAAAAAAA", "BBBBBBBBBBB", "CCCCCCCCCCC"]]).search,
+                      max_candidates=1, redo_weak=True, delay_s=0, log=lambda _: None)
+    row = _read_csv(out)[0]
+    assert len(calls) == 1 and row["suggested_url"] == URL_C
+    assert row["ai_reviewed_video_ids"] == "AAAAAAAAAAA|BBBBBBBBBBB|CCCCCCCCCCC"
+    assert row["needs_manual_video"] == "false"
+    assert (row["start_s"], row["end_s"], row["notes"]) == ("10", "20", "keep manual values")
+
+
+def test_supplied_history_is_excluded_before_the_candidate_cap():
+    row = _row(suggested_url=URL_A, candidate_urls=f"{URL_B}|{URL_C}", ai_reviewed_video_ids="AAAAAAAAAAA|BBBBBBBBBBB")
+    outcome = review.review_row(_reviewer({URL_C: _answer()}), row, max_candidates=1, delay_s=0)
+    assert outcome.tried == [URL_C]
+
+
+def test_no_new_candidates_preserves_prior_best_and_watched_history(tmp_path):
+    src = tmp_path / "media.csv"
+    row = _row(ai_verdict="partial", ai_confidence="0.9", ai_orientation="landscape", ai_start_s="42", ai_end_s="54",
+               ai_reviewed_video_ids="AAAAAAAAAAA|BBBBBBBBBBB")
+    _write_csv(src, [row])
+    review.run_review(str(src), str(src), reviewer=_reviewer({}), search=_searcher([["AAAAAAAAAAA"], ["BBBBBBBBBBB"], []]).search,
+                      redo_weak=True, delay_s=0, log=lambda _: None)
+    saved = _read_csv(src)[0]
+    assert saved["ai_verdict"] == "partial" and saved["suggested_url"] == URL_A
+    assert saved["ai_reviewed_video_ids"] == row["ai_reviewed_video_ids"]
+    assert saved["ai_candidates_tried"] == "0" and saved["needs_manual_video"] == "true"
+
+
+def test_query_budget_and_fetched_candidate_survive_repeated_quota_stops(tmp_path):
+    src = tmp_path / "media.csv"
+    _write_csv(src, [_row(suggested_url="")])
+    searches = []
+    stopped = review.run_review(
+        str(src), str(src), reviewer=_reviewer({URL_B: httpx.Response(429, json={})}),
+        search=_searcher([[], [], ["BBBBBBBBBBB"]], searches).search, delay_s=0, log=lambda _: None,
+    )
+    assert stopped["quota_stopped"] == 1 and len(searches) == 3
+    progress = json.loads(_read_csv(src)[0]["ai_review_progress"])
+    assert progress["search_progress"] == {"queries_used": 3, "pending": [URL_B]}
+    assert progress["reviewed_video_ids"] == []  # 429 did not watch this video
+    for response in (httpx.Response(429, json={}), _answer(verdict="partial")):
+        review.run_review(str(src), str(src), reviewer=_reviewer({URL_B: response}),
+                          search=_searcher([], searches).search, delay_s=0, log=lambda _: None)
+    row = _read_csv(src)[0]
+    assert len(searches) == 3 and row["ai_reviewed_video_ids"] == "BBBBBBBBBBB"
+    assert row["ai_review_progress"] == "" and row["needs_manual_video"] == "true"
 
 
 def test_cli_discovers_by_default_with_key_and_can_disable(tmp_path, monkeypatch):

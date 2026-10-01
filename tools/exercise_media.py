@@ -37,6 +37,8 @@ Workflow:
     # Revisit weak/partial rows while keeping strong reviewed matches:
     python tools/exercise_media.py review media.csv --redo-weak --max-candidates 5
     # --no-search uses supplied URLs only. Unresolved rows get needs_manual_video=true.
+    # A strong result also needs a usable loop. --redo-weak skips video IDs
+    # recorded in ai_reviewed_video_ids and judges only new candidates.
 
     # Re-check every stored video now (the worker also does this daily).
     python tools/exercise_media.py verify
@@ -437,7 +439,7 @@ def main(argv: list[str] | None = None) -> int:
     review.add_argument("--out", help="output CSV (default: update the input in place)")
     review.add_argument("--limit", type=int, help="review at most N rows this run")
     review.add_argument("--redo", action="store_true", help="re-review rows that already have a verdict")
-    review.add_argument("--redo-weak", action="store_true", help="re-review partial, no-match, weak or vertical results; skip strong matches")
+    review.add_argument("--redo-weak", action="store_true", help="improve partial, weak, vertical or loopless results with new videos; skip watched IDs")
     review.add_argument("--no-search", action="store_true", help="use supplied URLs only, without YouTube discovery")
     review.add_argument(
         "--max-candidates",
