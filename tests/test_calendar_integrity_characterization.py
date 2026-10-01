@@ -53,7 +53,6 @@ from pathlib import Path
 
 import pytest
 
-from fightcamp import input_parsing  # noqa: F401
 from planner_clock import pin_planner_clock
 from fightcamp.input_parsing import PlanInput
 from fightcamp.plan_pipeline_blocks import generate_plan_blocks

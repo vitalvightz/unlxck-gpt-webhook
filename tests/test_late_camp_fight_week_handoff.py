@@ -42,7 +42,6 @@ import pytest
 
 from planner_clock import pin_planner_clock
 from fightcamp.calendar_context import role_d_day
-from fightcamp import input_parsing
 from fightcamp.input_parsing import PlanInput
 from fightcamp.plan_pipeline_blocks import generate_plan_blocks
 from fightcamp.plan_pipeline_rendering import build_stage2_outputs
