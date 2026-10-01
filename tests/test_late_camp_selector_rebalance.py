@@ -252,7 +252,9 @@ def test_strength_late_window_blocks_known_offenders_and_logs_reason_codes(monke
         "style_jump": 10.5,
     }
 
-    monkeypatch.setattr(strength, "get_exercise_bank", lambda: exercise_bank)
+    # Style-specific strength exercises live in the unified exercise bank now (the
+    # separate style strength bank was retired), so they join the one pool.
+    monkeypatch.setattr(strength, "get_exercise_bank", lambda: [*exercise_bank, *style_bank])
     monkeypatch.setattr(strength, "allocate_sessions", lambda *_args, **_kwargs: {"strength": 1})
     monkeypatch.setattr(strength, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"strength": 3})
     monkeypatch.setattr(
@@ -550,10 +552,14 @@ def test_protected_style_insert_still_requires_late_safe_and_equipment_validity(
         "base_anchor": 9.0,
         "base_support": 8.5,
         "style_safe": 8.0,
-        "style_invalid": 10.0,
+        # score_exercise is mocked, so mirror what the real scorer does for an item
+        # the athlete's equipment cannot support: equipment_score_adjust returns -999.
+        "style_invalid": -999.0,
     }
 
-    monkeypatch.setattr(strength, "get_exercise_bank", lambda: exercise_bank)
+    # Style-specific strength exercises live in the unified exercise bank now (the
+    # separate style strength bank was retired), so they join the one pool.
+    monkeypatch.setattr(strength, "get_exercise_bank", lambda: [*exercise_bank, *style_bank])
     monkeypatch.setattr(strength, "allocate_sessions", lambda *_args, **_kwargs: {"strength": 1})
     monkeypatch.setattr(strength, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"strength": 2})
     monkeypatch.setattr(
@@ -1056,6 +1062,9 @@ def test_audit_snapshot_matches_golden():
 
 
 def test_audit_diff_matches_golden_and_keeps_control_window_stable():
+    # before.json was re-baselined to the current selector after bank governance
+    # legitimately changed the winners it originally captured, so the committed
+    # diff is empty today; it exists to flag any future drift in either snapshot.
     _reset_selector_bank_caches()
     before = json.loads((SNAPSHOT_DIR / "before.json").read_text(encoding="utf-8"))
     after = json.loads((SNAPSHOT_DIR / "after.json").read_text(encoding="utf-8"))

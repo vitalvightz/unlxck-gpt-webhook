@@ -310,8 +310,10 @@ def test_real_bank_doses_render_consistently_with_the_countdown_caps(days_until_
 
 
 def test_d13_renderer_uses_style_taper_caps_instead_of_generic_rpe_eight_to_nine():
+    # An empty block renders nothing, so use a real D-13-legal taper drill.
+    item = _bank_by_name()["Pocket Burst-Reset"]
     rendered = conditioning.render_conditioning_block(
-        {},
+        {item["system"]: [item]},
         phase="TAPER",
         phase_color="",
         diagnostic_context={"days_until_fight": 13, "speed_dose_allowed": True},

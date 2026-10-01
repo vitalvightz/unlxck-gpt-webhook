@@ -153,14 +153,18 @@ def test_d6_countdown_rules_block_kettlebell_and_power_clean():
 # --- 4. D-10 neural speed volume is capped lower ------------------------------
 
 def test_d10_conditioning_caps_limit_bursts():
+    # Caps come from the Style Taper governance: bursts are held to RPE <= 6 and
+    # no generic conditioning rounds are allowed. (Med-ball being optional is a
+    # rendering rule, asserted below.)
     caps = conditioning._late_fight_dosage_caps(10)
-    assert "3-4 max (5-6 sec @ RPE 6-7" in caps
-    assert "optional only, never required" in caps
+    assert "3-4 crisp alactic bursts max (5-6 sec @ RPE ≤6" in caps
+    assert "no generic conditioning rounds" in caps
 
 
 def test_d10_rendering_rules_cap_neural_speed():
     rules = _late_fight_rendering_rules(10)
     assert any("3-4 x 5-6 sec" in rule and "RPE 6-7" in rule for rule in rules["rules"])
+    assert any("Med-ball work is optional-only" in rule for rule in rules["rules"])
 
 
 # --- 5. D-3 med-ball is never required ----------------------------------------
