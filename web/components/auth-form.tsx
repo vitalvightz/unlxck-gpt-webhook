@@ -35,6 +35,9 @@ import { buildAuthRedirectUrl } from "@/lib/site-url";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import type { UserRole } from "@/lib/types";
 
+/** How long Turnstile gets to pass on its own before the hint explains the disabled button. */
+const CAPTCHA_HINT_DELAY_MS = 2500;
+
 const SIGNUP_ROLE_LABELS: Partial<Record<UserRole, string>> = {
   athlete: "Athlete",
 };
@@ -74,6 +77,15 @@ export function AuthForm({
   const requiresCaptcha = isTurnstileConfigured();
   const isSignupPasswordBlocked = mode === "signup" && !passwordStrength.isAcceptable;
   const isCaptchaBlocked = requiresCaptcha && !captchaToken;
+  // Turnstile usually passes on its own within a few seconds; only explain the
+  // disabled button once it has clearly stalled, so an auto-pass never flashes
+  // the hint. Once due it stays due, so a later expiry explains itself at once.
+  const [captchaHintDue, setCaptchaHintDue] = useState(false);
+  useEffect(() => {
+    if (!isCaptchaBlocked || captchaHintDue) return;
+    const timer = window.setTimeout(() => setCaptchaHintDue(true), CAPTCHA_HINT_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [isCaptchaBlocked, captchaHintDue]);
   // Client-side courtesy checks only. The backend and a Postgres trigger both
   // reject an under-13 signup, and the server stamps every consent record, so
   // disabling the button here is about giving a clear message — not about being
@@ -466,7 +478,7 @@ export function AuthForm({
             onUnavailable={handleCaptchaUnavailable}
             resetKey={captchaResetKey}
           />
-          {isCaptchaBlocked ? (
+          {isCaptchaBlocked && captchaHintDue ? (
             <p id="captchaHint" className="muted auth-captcha-hint" role="status">
               {t("captchaHint")}
             </p>
@@ -476,7 +488,7 @@ export function AuthForm({
             <button
               type="submit"
               className="cta"
-              aria-describedby={isCaptchaBlocked ? "captchaHint" : undefined}
+              aria-describedby={isCaptchaBlocked && captchaHintDue ? "captchaHint" : undefined}
               disabled={
                 isPending || isSignupPasswordBlocked || isSignupConsentBlocked || isCaptchaBlocked
               }

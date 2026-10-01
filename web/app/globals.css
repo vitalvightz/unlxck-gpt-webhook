@@ -1050,13 +1050,14 @@ select:focus-visible {
   line-height: 1.45;
 }
 
-/* Explains the disabled submit while Turnstile has no token. Fades in late so a
-   challenge that passes on its own (the usual case) never flashes the hint. */
+/* Explains the disabled submit while Turnstile has no token. The delay lives in
+   auth-form (the hint mounts only once the challenge has stalled); this is just
+   the fade. */
 .auth-captcha-hint {
   margin: 0;
   font-size: var(--type-body-sm);
   line-height: 1.45;
-  animation: auth-captcha-hint-in 200ms ease-out 1200ms both;
+  animation: auth-captcha-hint-in 200ms ease-out both;
 }
 
 @keyframes auth-captcha-hint-in {
@@ -1064,10 +1065,8 @@ select:focus-visible {
   to { opacity: 1; }
 }
 
-/* Reduced motion drops the fade but keeps the delay: a zero-length animation
-   with fill "both" holds opacity 0 through the delay, then snaps to 1. */
 @media (prefers-reduced-motion: reduce) {
-  .auth-captcha-hint { animation-duration: 0s; }
+  .auth-captcha-hint { animation: none; }
 }
 
 /* Align optional consent metadata with the statement rather than the checkbox,
