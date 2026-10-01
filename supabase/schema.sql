@@ -2643,7 +2643,8 @@ grant select on public.injury_episode_events to authenticated, service_role;
 create or replace function public.capture_injury_episode_change()
 returns trigger language plpgsql security definer set search_path = public, pg_temp as $$
 begin
-  if tg_op = 'UPDATE' and new.status is not distinct from old.status
+  if coalesce(tg_argv[0], '') <> 'explicit_report' and tg_op = 'UPDATE'
+     and new.status is not distinct from old.status
      and new.latest_reported_status is not distinct from old.latest_reported_status
      and new.severity is not distinct from old.severity and new.episode_id = old.episode_id then
     return new;
@@ -2651,13 +2652,19 @@ begin
   insert into public.injury_episode_events (id, athlete_id, injury_id, injury_episode_id, event_type, payload)
     values (gen_random_uuid(), new.athlete_id, new.id, new.episode_id, 'injury_checkin',
       jsonb_build_object('status', new.status, 'latest_reported_status', new.latest_reported_status,
-                         'severity', new.severity, 'source', new.source));
+                         'severity', new.severity, 'source', new.source,
+                         'explicit_report', coalesce(tg_argv[0], '') = 'explicit_report'));
   return new;
 end;
 $$;
 drop trigger if exists capture_injury_episode_change on public.injury_flags;
-create trigger capture_injury_episode_change after insert or update on public.injury_flags
+create trigger capture_injury_episode_change after update on public.injury_flags
   for each row execute function public.capture_injury_episode_change();
+-- UPDATE OF fires for an explicit report even when its status is unchanged.
+-- Other edits retain audit history without refreshing recovery evidence.
+drop trigger if exists capture_injury_episode_report on public.injury_flags;
+create trigger capture_injury_episode_report after insert or update of latest_reported_status on public.injury_flags
+  for each row execute function public.capture_injury_episode_change('explicit_report');
 
 create or replace function public.record_injury_episode_event(p_athlete_id uuid, p_event jsonb)
 returns public.injury_episode_events language plpgsql security definer

@@ -59,7 +59,17 @@ def episode_observations(store, athlete_id: str, injury: dict) -> list[dict]:
 def apply_episode_observations(injury: dict, observations: list[dict]) -> dict:
     row = dict(injury)
     observations = [e for e in observations if e.get("injury_id") == str(row.get("id"))
-                    and e.get("injury_episode_id") == str(row.get("episode_id"))]
+                    and e.get("injury_episode_id") == str(row.get("episode_id"))
+                    and str(e.get("athlete_id")) == str(row.get("athlete_id"))]
+    from api.contracts.rehab_progression import _instant
+    # Audit events can inherit an old status after a severity edit. Only a
+    # database-marked explicit report may supply the recovery timestamp.
+    reports = [e for e in observations if e.get("event_type") == "injury_checkin"
+               and e.get("payload", {}).get("explicit_report") is True
+               and e.get("payload", {}).get("latest_reported_status") == row.get("latest_reported_status")]
+    reported_at = max((_instant(e.get("created_at")) for e in reports
+                       if _instant(e.get("created_at")) is not None), default=None)
+    row["latest_reported_at"] = reported_at.isoformat() if reported_at else None
     setbacks = [e.get("created_at") for e in observations
                 if (e.get("event_type") == "injury_checkin" and e.get("payload", {}).get("latest_reported_status") == "worse")
                 or (e.get("event_type") == "delayed_rehab_response" and e.get("payload", {}).get("response") == "worse")]

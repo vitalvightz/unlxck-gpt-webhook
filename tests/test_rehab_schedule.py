@@ -6,6 +6,7 @@ import pytest
 from api.contracts.injury_policy import resolve_injury_policy, reconcile_session_prescription
 from api.contracts.rehab_schedule import schedule_rehab
 from api.contracts.rehab_completion import completed_dose_from_session
+from api.services.injury_episode_service import apply_episode_observations
 from fightcamp.rehab_clinical import load_clinical_policies
 from fightcamp.rehab_protocols import get_rehab_bank
 
@@ -72,7 +73,73 @@ def test_unknown_response_holds_loading_until_explicit_injury_improvement():
         injury_id="i", injury_episode_id="e", occurred_at="2026-09-30T00:00:00Z", response={}))
     assert schedule_rehab(row, decision, training_day="2026-10-02", exposures=[event])["state"] == "held"
     row.update(latest_reported_status="improving", updated_at="2026-10-01T12:00:00Z")
+    assert schedule_rehab(row, decision, training_day="2026-10-02", exposures=[event])["state"] == "held"
+    row["latest_reported_at"] = "2026-10-01T12:00:00Z"
     assert schedule_rehab(row, decision, training_day="2026-10-02", exposures=[event])["state"] == "due"
+
+
+@pytest.mark.parametrize("stamp", [None, "invalid", "2026-09-29T12:00:00Z", "2026-09-30T12:00:00Z"])
+def test_unrelated_edits_and_non_later_reports_cannot_release_a_setback(stamp):
+    row, _ = setup()
+    row["updated_at"] = "2026-10-02T12:00:00Z"
+    report = dict(athlete_id="a", injury_id="i", injury_episode_id="e", event_type="injury_checkin",
+                  created_at=stamp, payload=dict(latest_reported_status="improving", explicit_report=True))
+    audit = {**report, "created_at": row["updated_at"], "payload": {**report["payload"], "explicit_report": False}}
+    event = dict(athlete_id="a", created_at="2026-09-30T12:00:00Z", event_json=dict(
+        injury_id="i", injury_episode_id="e", occurred_at="2026-09-30T00:00:00Z", response={"next_day_response": "worse"}))
+    row = apply_episode_observations(row, [report, audit])
+    decision = resolve_injury_policy(row, policies=load_clinical_policies(), bank=get_rehab_bank(), exposures=[event])
+    assert decision["stage"] == "calm"
+    assert not decision["prescription"]["is_loading"]
+    # A new explicit report can restore only baseline work; the old event stays fixed.
+    report["created_at"] = "2026-10-01T12:00:00Z"
+    row = apply_episode_observations(row, [report, audit])
+    decision = resolve_injury_policy(row, policies=load_clinical_policies(), bank=get_rehab_bank(), exposures=[event])
+    assert decision["stage"] == "restore" and decision["prescription"]["is_loading"]
+    assert schedule_rehab(row, decision, training_day="2026-10-02", exposures=[event])["state"] == "due"
+    assert event["event_json"]["response"]["next_day_response"] == "worse"
+
+
+@pytest.mark.parametrize("changes", [{"athlete_id": "other"}, {"injury_id": "other"}, {"injury_episode_id": "old"},
+                                    {"payload": {"latest_reported_status": "improving"}},
+                                    {"event_type": "clinician_clearance_report", "payload": {"scopes": ["rehab"]}}])
+def test_other_or_unproven_reports_cannot_refresh_improvement(changes):
+    row, _ = setup()
+    report = dict(athlete_id="a", injury_id="i", injury_episode_id="e", event_type="injury_checkin",
+                  created_at="2026-10-01T12:00:00Z", payload=dict(latest_reported_status="improving", explicit_report=True))
+    assert apply_episode_observations(row, [{**report, **changes}])["latest_reported_at"] is None
+
+
+@pytest.mark.parametrize("fields", [
+    {"load": {"method": "percentage", "value": 85, "unit": "percent", "ref": "1RM"}},
+    {"load": {"method": "rpe", "value": 8, "unit": "RPE"}},
+    {"load": {"method": "rir", "value": 2, "unit": "reps"}},
+    {"effort": {"method": "RPE", "value": 9}},
+    {"effort": {"method": "RIR", "value": 1}},
+    {"intensity": "high"},
+    {"effective_load": "low", "load": {"method": "percentage", "value": 90, "unit": "percent", "ref": "1RM"}},
+])
+def test_structured_high_demand_defers_same_region_loading(fields):
+    row, decision = setup()
+    block = dict(block_type="strength", mechanical_load_regions=["ankle"], **fields)
+    training = {"blocks": [block]}
+    assert schedule_rehab(row, decision, training_day="2026-10-01", training_session=training)["state"] == "deferred"
+    block["mechanical_load_regions"] = ["shoulder"]
+    assert schedule_rehab(row, decision, training_day="2026-10-01", training_session=training)["state"] == "due"
+
+
+@pytest.mark.parametrize("load", [
+    {"method": "percentage", "value": 60, "unit": "percent", "ref": "1RM"},
+    {"method": "absolute", "value": 40, "unit": "kg"},
+    {"method": "rpe", "value": 4, "unit": "RPE"},
+    {"method": "other", "value": 0, "unit": "unknown"},
+])
+def test_structured_load_does_not_hide_hard_session_or_crash_when_unknown(load):
+    row, decision = setup()
+    training = {"blocks": [dict(block_type="strength", mechanical_load_regions=["ankle"], load=load)]}
+    assert schedule_rehab(row, decision, training_day="2026-10-01", training_session=training)["state"] == "due"
+    training["effective_load"] = "hard"
+    assert schedule_rehab(row, decision, training_day="2026-10-01", training_session=training)["state"] == "deferred"
 
 
 def test_accepted_prescription_keeps_its_previous_gap_after_policy_change():

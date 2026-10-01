@@ -303,7 +303,7 @@ def test_clearance_is_quick_self_reported_episode_specific_and_owned(reviewed):
     assert not saved["payload"]["externally_verified"]
     assert record_episode_observation(store, athlete_id=ATHLETE, observation=observation, training_day=DAY)["id"] == saved["id"]
     assert apply_episode_observations(injury, [saved])["clinician_clearance"]["scopes"] == ["rehab"]
-    setback = {"injury_id": injury["id"], "injury_episode_id": injury["episode_id"], "event_type": "injury_checkin",
+    setback = {"athlete_id": ATHLETE, "injury_id": injury["id"], "injury_episode_id": injury["episode_id"], "event_type": "injury_checkin",
                "created_at": "2026-10-01T00:00:00Z", "payload": {"latest_reported_status": "worse"}}
     before = {**saved, "created_at": "2026-09-30T12:00:00Z"}
     assert "clinician_clearance" not in apply_episode_observations(injury, [before, setback])
@@ -378,14 +378,15 @@ def test_active_chest_pilot_rest_day_start_completion_and_feedback_through_api()
 
 
 @pytest.mark.parametrize("sibling_region", ["shoulder", "ankle"])
-def test_live_rehab_checks_the_whole_training_day_and_owns_one_snapshot(reviewed, monkeypatch, sibling_region):
+@pytest.mark.parametrize("load", ["high", {"method": "percentage", "value": 85, "unit": "percent", "ref": "1RM"}])
+def test_live_rehab_checks_the_whole_training_day_and_owns_one_snapshot(reviewed, monkeypatch, sibling_region, load):
     policy, bank, injury = reviewed
     store = FakeStore()
     store.injury_flags[ATHLETE] = [injury]
     def session(identity, region):
         return {"session_id": identity, "title": identity, "session_type": "strength", "blocks": [
             {"block_id": identity, "block_type": "strength", "display_name": identity,
-             "mechanical_load_regions": [region], "contact_level": "none", "load": "high"}]}
+             "mechanical_load_regions": [region], "contact_level": "none", "load": load}]}
     store.plans[PLAN] = {"id": PLAN, "athlete_id": ATHLETE, "status": "ready", "created_at": "2026-09-01T00:00:00Z",
         "structured_plan": {"weeks": [{"phase_label": "GPP", "days": [{"date": DAY, "day_type": "strength",
             "sessions": [session("primary", "shoulder"), session("sibling", sibling_region)]}]}]}}

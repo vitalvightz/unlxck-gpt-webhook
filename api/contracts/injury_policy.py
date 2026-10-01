@@ -87,7 +87,7 @@ def resolve_injury_policy(
     # An explicit later injury-specific improvement resolves a prior setback
     # for baseline selection only. Preserve the original observations in storage.
     selection_exposures = exposures
-    setback, improvement = episode_setback_at(injury, exposures), _instant(injury.get("updated_at"))
+    setback, improvement = episode_setback_at(injury, exposures), _instant(injury.get("latest_reported_at"))
     if injury.get("latest_reported_status") == "improving" and setback and improvement and improvement > setback:
         selection_exposures = [e for e in exposures if (_instant(e.get("response_recorded_at") or e.get("created_at")
                               or (e.get("event_json") or e).get("occurred_at")) or improvement) >= improvement]

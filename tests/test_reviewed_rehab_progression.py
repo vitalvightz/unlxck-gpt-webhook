@@ -38,6 +38,8 @@ def test_setback_requires_a_later_explicit_injury_improvement():
     row.update(latest_reported_status="same", updated_at="2026-10-01T12:00:00Z")
     assert resolve(row, rows=rows)["stage"] == "calm"
     row["latest_reported_status"] = "improving"
+    assert resolve(row, rows=rows)["stage"] == "calm"
+    row["latest_reported_at"] = "2026-10-01T12:00:00Z"
     assert resolve(row, rows=rows)["stage"] == "restore"
     # A delayed setback is timestamped when reported, not when work occurred.
     rows[0]["response_recorded_at"] = "2026-10-02T12:00:00Z"

@@ -141,3 +141,56 @@ def test_rpc_and_injury_update_serialize_without_deadlock(postgres_database, rpc
                 assert result == ("23514" if reopen else None)
             finally:
                 writer.rollback()  # release the blocker even if an assertion fails
+
+
+def test_only_explicit_reports_refresh_recovery_evidence(postgres_database):
+    import psycopg
+    from psycopg.rows import dict_row
+    from psycopg.types.json import Jsonb
+
+    from api.contracts.injury_policy import resolve_injury_policy
+    from api.contracts.rehab_schedule import schedule_rehab
+    from api.services.injury_episode_service import apply_episode_observations
+    from fightcamp.rehab_clinical import load_clinical_policies
+    from fightcamp.rehab_protocols import get_rehab_bank
+
+    identity, episode = str(uuid4()), str(uuid4())
+    with psycopg.connect(postgres_database, autocommit=True, row_factory=dict_row) as connection:
+        connection.execute("""insert into injury_flags(id,athlete_id,description,body_region,side,episode_id,
+            status,severity,latest_reported_status) values(%s,%s,'ankle sprain','ankle','left',%s,
+            'monitoring','mild','improving')""", (identity, ATHLETE, episode))
+        event = event_for("record_rehab_exposure", episode)
+        event["injury_id"] = identity
+        event["response"]["next_day_response"] = "worse"
+        connection.execute("select record_rehab_exposure(%s,%s)", (ATHLETE, Jsonb(event)))
+
+        def decision():
+            row = connection.execute("select * from injury_flags where id=%s", (identity,)).fetchone()
+            row.update(id=str(row["id"]), athlete_id=str(row["athlete_id"]), episode_id=str(row["episode_id"]),
+                       canonical_location="ankle", injury_type="sprain", rehab_stage="restore")
+            observations = connection.execute("select * from injury_episode_events where injury_id=%s", (identity,)).fetchall()
+            for observation in observations:
+                for key in ("athlete_id", "injury_id", "injury_episode_id"):
+                    observation[key] = str(observation[key])
+            exposures = connection.execute("select * from rehab_exposures where injury_id=%s", (identity,)).fetchall()
+            for exposure in exposures:
+                exposure["athlete_id"] = str(exposure["athlete_id"])
+            row = apply_episode_observations(row, observations)
+            result = resolve_injury_policy(row, policies=load_clinical_policies(), bank=get_rehab_bank(), exposures=exposures)
+            return row, result, exposures
+
+        original_report = decision()[0]["latest_reported_at"]
+        assert decision()[1]["stage"] == "calm"
+        # A severity change emits audit history with the inherited improving
+        # status; a description change also updates the generic row timestamp.
+        connection.execute("update injury_flags set severity='moderate', updated_at=now() where id=%s", (identity,))
+        connection.execute("update injury_flags set description='edited ankle sprain', updated_at=now() where id=%s", (identity,))
+        row, result, _ = decision()
+        assert row["latest_reported_at"] == original_report
+        assert result["stage"] == "calm" and not result["prescription"]["is_loading"]
+        # An explicit repeat must be recorded even though the value is unchanged.
+        connection.execute("update injury_flags set latest_reported_status='improving', updated_at=now() where id=%s", (identity,))
+        row, result, exposures = decision()
+        assert row["latest_reported_at"] > original_report
+        assert result["stage"] == "restore" and result["prescription"]["is_loading"]
+        assert schedule_rehab(row, result, training_day="2026-10-08", exposures=exposures)["state"] == "due"

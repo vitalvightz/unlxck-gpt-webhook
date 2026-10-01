@@ -40,7 +40,7 @@ def resolve_reviewed_progression(injury: Mapping[str, Any], *, base_stage: str,
     stage = base_stage if base_stage in {"calm", "restore"} else "calm"
     reasons = ["baseline_only_v1"]
     setback = episode_setback_at(injury, exposures)
-    reported_at = _instant(injury.get("updated_at"))
+    reported_at = _instant(injury.get("latest_reported_at"))
     improving_after = injury.get("latest_reported_status") == "improving" and reported_at and setback and reported_at > setback
     if injury.get("latest_reported_status") == "worse" or (setback and not improving_after):
         stage, reasons = "calm", ["episode_setback_loading_held"]

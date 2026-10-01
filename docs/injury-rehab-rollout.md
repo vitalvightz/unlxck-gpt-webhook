@@ -16,7 +16,9 @@ Chest/pec strains and ankle sprains have active, populated policies. There is no
 
 Started work reserves the current day's allocation. Done, changed and symptom-stopped work spaces subsequent performance; skipped work earns no credit. Missed work never accumulates. A previously accepted longer gap survives policy and plan changes. Frozen prescriptions remain unchanged; current safety checks can hold them.
 
-Worsening and symptom stopping hold loading work. A later explicit injury-specific improvement can restore baseline work. Missing or uncertain responses never advance recovery. Automatic LOAD/DYNAMIC/RETURN transitions are disabled. Camp phase, including TAPER, cannot advance healing or remove otherwise eligible chest guidance. Truncated older history prevents unsupported progression without permanently removing baseline guidance.
+Worsening and symptom stopping hold loading work. A later explicit injury-specific improvement can restore baseline work. Its timestamp comes from a database-marked report event for the same athlete, injury and episode, never the generic injury `updated_at`. Repeated reports are captured even when the status value is unchanged; unrelated severity/description edits preserve the hold. Legacy events without explicit-report provenance cannot release it. Missing or uncertain responses never advance recovery. Automatic LOAD/DYNAMIC/RETURN transitions are disabled. Camp phase, including TAPER, cannot advance healing or remove otherwise eligible chest guidance. Truncated older history prevents unsupported progression without permanently removing baseline guidance.
+
+Training-demand checks reuse the planner's canonical intensity rules for structured percentage/RPE prescriptions and intensity tags, with RIR converted to RPE. Known hard same-region session demand remains authoritative when a block has low or unknown load; absolute kilograms alone do not imply a relative demand level.
 
 Today exposes `due`, `recovery_day`, `already_completed`, `held`, `deferred` or `unsupported`, with a short reason and a next due day when known. Existing completion, during-rehab and next-day response controls are reused. “My clinician cleared me” records optional athlete-reported information; it changes neither routine eligibility nor scheduling.
 
@@ -50,7 +52,7 @@ Backend Checks runs these tests against its disposable PostgreSQL 17.11 service.
 REHAB_TEST_DATABASE_URL=postgresql://postgres:<test-password>@127.0.0.1:5432/postgres python -m pytest tests/test_rehab_lock_concurrency.py -q
 ```
 
-The configured role needs CREATE DATABASE/ROLE privileges. The fixture creates and drops only its uniquely named test database; it rejects remote hosts. Without the explicit test URL, normal unit runs skip these four integration cases. The CI job supplies the URL and treats missing drivers or setup failures as failures.
+The configured role needs CREATE DATABASE/ROLE privileges. The fixture creates and drops only its uniquely named test database; it rejects remote hosts. Without the explicit test URL, normal unit runs skip these five integration cases. Four exercise lock contention; the fifth executes the actual report/audit triggers and proves that unrelated edits retain a loading hold while a repeated explicit improving report restores baseline rehab. The CI job supplies the URL and treats missing drivers or setup failures as failures.
 
 ## Verification
 
