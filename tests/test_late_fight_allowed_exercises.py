@@ -20,6 +20,9 @@ def _brief_with_scheduled_allowed_exercises() -> dict:
             "readiness_flags": [],
             "training_days": ["monday", "wednesday", "friday"],
             "hard_sparring_days": [],
+            # Stage 1's phase allocation decides which phase's pool owns each
+            # scheduled day; without it no pool is exposed and nothing is allowed.
+            "phase_weeks": {"GPP": 0, "SPP": 0, "TAPER": 1, "days": {"GPP": 0, "SPP": 0, "TAPER": 13}},
         },
         restrictions=[],
         phase_briefs={
@@ -76,7 +79,7 @@ def _brief_with_scheduled_allowed_exercises() -> dict:
                         "slot_id": "taper_reactive_shuffle",
                         "role": "alactic",
                         "selected": {
-                            "name": "Reactive Shuffle Repeats",
+                            "name": "Double-End Bag Precision Rhythm",
                             "movement_patterns": ["alactic", "sharpness", "footwork"],
                         },
                     }
@@ -110,13 +113,13 @@ def test_allowed_exercises_by_day_uses_scheduled_roles_not_plan_wide_pool():
     # that an exercise is only renderable on the day it was actually approved
     # for, not that any given exercise must always land on a fixed day.
     assert allowed["D-13"] == ["Staggered-Stance Medicine-Ball Punch Throw"]
-    assert allowed["D-4"] == ["Reactive Shuffle Repeats"]
+    assert allowed["D-4"] == ["Double-End Bag Precision Rhythm"]
     assert allowed["D-2"] == ["Mobility Reset Flow"]
     assert allowed["D-6"] == []
     # D-1 is equipment-free: the equipment-requiring isometric hold is dropped
     # rather than assigned, leaving D-1 to breathing/mobility/shadowboxing.
     assert allowed["D-1"] == []
-    assert "Reactive Shuffle Repeats" not in allowed["D-1"]
+    assert "Double-End Bag Precision Rhythm" not in allowed["D-1"]
     assert "Staggered-Stance Medicine-Ball Punch Throw" not in allowed["D-2"]
     assert "Band-Resisted Sprint Start" not in allowed["D-13"]
 
@@ -143,7 +146,7 @@ def test_d7_or_d6_neural_sharpness_drill_is_blocked_on_d1_when_not_assigned():
         planning_brief=brief,
         final_plan_text="""
         D-1 - Final cue
-        - Reactive Shuffle Repeats - 3 x 6 sec
+        - Double-End Bag Precision Rhythm - 3 x 6 sec
         """,
     )
 
@@ -331,7 +334,7 @@ def test_annotation_and_instruction_lines_are_not_exercise_selections(line):
 @pytest.mark.parametrize(
     "line",
     [
-        "Reactive Shuffle Repeats - 3 x 6 sec",
+        "Double-End Bag Precision Rhythm - 3 x 6 sec",
         "Short pallof-style anti-rotation hold: 2 x 8–10 sec each side (light), RPE 2–3.",
         "Mystery Power Drill - 2 x 3",
     ],
@@ -348,7 +351,7 @@ def test_annotation_lines_do_not_raise_unapproved_exercise_blocker():
         planning_brief=brief,
         final_plan_text="""
         D-4 (Wednesday) — Fight-speed primer
-        - Reactive Shuffle Repeats - 3 x 6 sec
+        - Double-End Bag Precision Rhythm - 3 x 6 sec
         - Why today: prepare ankles before the punch speed touch.
         - Regression/stop: if unclear after 8 min, pick the simplest cue and stop.
         - Duration: 5-8 min.
@@ -391,7 +394,7 @@ def test_valid_late_fight_output_using_each_days_allowed_exercises_passes():
         - Staggered-Stance Medicine-Ball Punch Throw - 2 x 3
 
         D-4 (Wednesday) — Fight-speed primer
-        - Reactive Shuffle Repeats - 3 x 6 sec
+        - Double-End Bag Precision Rhythm - 3 x 6 sec
 
         D-2 (Friday) — Freshness reset
         - Mobility Reset Flow - 6 min
