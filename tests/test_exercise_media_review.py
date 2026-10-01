@@ -340,8 +340,23 @@ def test_cli_missing_columns_exits_with_usage_error(tmp_path, monkeypatch, capsy
 
 @pytest.mark.parametrize(
     ("value", "expected"),
-    [("landscape", "landscape"), ("vertical", "vertical"), ("Portrait", "vertical"), ("YouTube Short", "vertical"),
-     ("square", "vertical"), ("9:16", "vertical"), ("horizontal", "landscape"), (None, "landscape")],
+    [
+        ("landscape", "landscape"),
+        ("horizontal", "landscape"),
+        ("widescreen 16:9", "landscape"),
+        ("landscape (not a Short)", "landscape"),
+        ("vertical", "vertical"),
+        ("Portrait", "vertical"),
+        ("tall", "vertical"),
+        ("YouTube Short", "vertical"),
+        ("shorts", "vertical"),
+        ("square", "vertical"),
+        ("9:16", "vertical"),
+        ("4:5", "vertical"),
+        ("1:1", "vertical"),
+        ("shortened clip", "landscape"),  # whole terms only
+        (None, "landscape"),
+    ],
 )
 def test_orientation_variants(value, expected):
     assert review.normalize_orientation(value) == expected

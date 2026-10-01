@@ -211,16 +211,20 @@ def extract_text(body: Any) -> str:
     return texts[-1]
 
 
-_VERTICAL_WORDS = ("vertical", "portrait", "tall", "short", "9:16", "4:5", "square", "1:1")
+_LANDSCAPE_TERMS = re.compile(r"\b(landscape|horizontal|widescreen|16:9)\b")
+_VERTICAL_TERMS = re.compile(r"\b(vertical|portrait|tall|shorts?|square|9:16|4:5|1:1)\b")
 
 
 def normalize_orientation(value: Any) -> str:
     """Anything that will not fill a 16:9 frame counts as vertical.
 
     The schema constrains this to landscape/vertical, but on the no-schema
-    fallback the model may say "portrait", "Short" or "square"."""
+    fallback the model may answer in prose. Whole terms only, and an explicit
+    landscape answer wins: "landscape (not a Short)" is landscape."""
     text = str(value or "").strip().lower()
-    return "vertical" if any(word in text for word in _VERTICAL_WORDS) else "landscape"
+    if _LANDSCAPE_TERMS.search(text):
+        return "landscape"
+    return "vertical" if _VERTICAL_TERMS.search(text) else "landscape"
 
 
 def parse_review(url: str, text: str) -> VideoReview:
