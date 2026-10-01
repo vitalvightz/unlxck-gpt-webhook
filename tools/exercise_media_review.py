@@ -21,12 +21,14 @@ from __future__ import annotations
 
 import csv
 import json
+import math
 import os
 import re
 import sys
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
@@ -36,6 +38,9 @@ INTERACTIONS_URL = "https://generativelanguage.googleapis.com/v1beta/interaction
 API_REVISION = "2026-05-20"
 DEFAULT_MODEL = "gemini-3.5-flash"
 REQUEST_TIMEOUT_SECONDS = 300.0
+RATE_LIMIT_RETRIES = 3
+RATE_LIMIT_BACKOFF_SECONDS = 5.0
+MAX_RATE_LIMIT_WAIT_SECONDS = 60.0
 
 # Loop segment bounds: long enough for two clean reps, short enough to loop.
 MIN_SEGMENT_S = 3
@@ -93,7 +98,122 @@ class GeminiError(RuntimeError):
 
 
 class GeminiQuotaExceeded(GeminiError):
-    """429 / RESOURCE_EXHAUSTED: stop the run and resume later."""
+    """A classified 429; only clearly temporary limits may be retried."""
+
+    def __init__(
+        self, message: str, *, error_type: str = "unknown_429",
+        retry_after: float | None = None, raw_message: str = "",
+    ) -> None:
+        super().__init__(message)
+        self.error_type = error_type
+        self.retry_after = retry_after
+        self.raw_message = raw_message
+
+    @property
+    def retryable(self) -> bool:
+        return self.error_type.startswith("rate_limit") or (
+            self.error_type == "video_processing_limit" and self.retry_after is not None
+        )
+
+    def log_fields(self) -> str:
+        return json.dumps({
+            "error_type": self.error_type,
+            "retry_after": self.retry_after,
+            "gemini_message": self.raw_message,
+        })
+
+
+def _retry_seconds(value: Any) -> float | None:
+    try:
+        if isinstance(value, dict):  # google.protobuf.Duration
+            if not value.keys() & {"seconds", "nanos"}:
+                return None
+            seconds = float(value.get("seconds", 0)) + float(value.get("nanos", 0)) / 1e9
+        else:
+            seconds = float(str(value).removesuffix("s"))
+    except (TypeError, ValueError, OverflowError):
+        return None
+    return seconds if math.isfinite(seconds) and seconds >= 0 else None
+
+
+def _quota_error(response: httpx.Response, api_key: str) -> GeminiQuotaExceeded:
+    try:
+        body = response.json()
+    except ValueError:
+        body = None
+    error = body.get("error", body) if isinstance(body, dict) else None
+    message = error.get("message") if isinstance(error, dict) else error
+    if body is None or isinstance(body, str):
+        message = body if isinstance(body, str) else response.text
+    raw_message = message if isinstance(message, str) else response.text
+    evidence = [message] if isinstance(message, str) else []
+    details = error.get("details", []) if isinstance(error, dict) else []
+    retry_hints: list[float] = []
+    retry_message = re.search(r"retry\s+(?:in|after)\s+(\d+(?:\.\d+)?)\s*s", raw_message, re.IGNORECASE)
+    if retry_message:
+        seconds = _retry_seconds(retry_message.group(1))
+        if seconds is not None:
+            retry_hints.append(seconds)
+    for detail in details if isinstance(details, list) else []:
+        if not isinstance(detail, dict):
+            continue
+        if str(detail.get("@type", "")).endswith("QuotaFailure"):
+            violations = detail.get("violations", [])
+            for violation in violations if isinstance(violations, list) else []:
+                if isinstance(violation, dict):
+                    evidence.extend(str(violation.get(key, "")) for key in (
+                        "quotaMetric", "quotaId", "description",
+                    ))
+        elif str(detail.get("@type", "")).endswith("RetryInfo"):
+            seconds = _retry_seconds(detail.get("retryDelay"))
+            if seconds is not None:
+                retry_hints.append(seconds)
+        elif str(detail.get("@type", "")).endswith("ErrorInfo"):
+            evidence.append(str(detail.get("reason", "")))
+            metadata = detail.get("metadata")
+            if isinstance(metadata, dict):
+                evidence.extend(str(value) for value in metadata.values())
+    header = response.headers.get("Retry-After")
+    if header is not None:
+        seconds = _retry_seconds(header)
+        if seconds is None:
+            try:
+                seconds = max(0.0, (parsedate_to_datetime(header) - datetime.now(timezone.utc)).total_seconds())
+            except (ValueError, TypeError, OverflowError):
+                pass
+        if seconds is not None:
+            retry_hints.append(seconds)
+    text = " ".join(evidence).lower()
+    compact = re.sub(r"[^a-z0-9]", "", text)
+    per_minute = "perminute" in compact or bool(re.search(r"\b(rpm|tpm)\b", text))
+    video_limit = "video" in compact or "youtube" in compact
+    # Daily evidence takes precedence even when Gemini also supplies RetryInfo.
+    if "perday" in compact or re.search(r"\b(daily|rpd|tpd)\b", text):
+        error_type, label = "daily_quota", "daily quota reached"
+    elif video_limit:
+        error_type, label = "video_processing_limit", "Gemini video processing limit reached"
+        if per_minute:
+            error_type, label = "rate_limit_video", "Gemini video processing rate limit reached, retry later"
+    elif per_minute:
+        rpm = "request" in compact or bool(re.search(r"\brpm\b", text))
+        tpm = "token" in compact or bool(re.search(r"\btpm\b", text))
+        category = "RPM/TPM" if rpm and tpm else "RPM" if rpm else "TPM" if tpm else "per-minute"
+        error_type, label = "rate_limit_" + category.lower().replace("/", "_"), f"rate limit reached ({category}), retry later"
+    elif retry_hints or "rate limit" in text or "ratelimit" in compact:
+        error_type, label = "rate_limit", "rate limit reached, retry later"
+    elif "quota" in text or (isinstance(error, dict) and error.get("status") == "RESOURCE_EXHAUSTED"):
+        error_type, label = "quota_limit", "Gemini quota limit reached"
+    else:
+        error_type, label = "unknown_429", "unknown 429 error"
+    # Never log credentials or terminal control characters from an API body.
+    if api_key:
+        raw_message = raw_message.replace(api_key, "[REDACTED]")
+    raw_message = re.sub(r"AIza[\w-]+|(?i:(?:key|api_key|x-goog-api-key)[\"']?\s*[=:]\s*[\"']?)[^\s&\"']+", "[REDACTED]", raw_message)
+    raw_message = " ".join(re.sub(r"[\x00-\x1f\x7f-\x9f]", " ", raw_message).split())[:500]
+    return GeminiQuotaExceeded(
+        label, error_type=error_type,
+        retry_after=max(retry_hints) if retry_hints else None, raw_message=raw_message,
+    )
 
 
 @dataclass
@@ -368,7 +488,7 @@ class GeminiVideoReviewer:
             payload.pop("response_format", None)
             response = self._post(payload)
         if response.status_code == 429:
-            raise GeminiQuotaExceeded("quota exhausted (429)")
+            raise _quota_error(response, self.api_key)
         if response.status_code >= 400:
             detail = response.text[:200].replace("\n", " ")
             raise GeminiError(f"HTTP {response.status_code}: {detail}")
@@ -396,6 +516,7 @@ def review_row(
     max_candidates: int,
     delay_s: float,
     sleep: Callable[[float], None] = time.sleep,
+    log: Callable[[str], None] = print,
 ) -> RowOutcome:
     outcome = RowOutcome(best=None)
     for index, url in enumerate(candidate_urls(row, max_candidates)):
@@ -403,7 +524,18 @@ def review_row(
             sleep(delay_s)
         outcome.tried.append(url)
         try:
-            result = reviewer.review(url, row)
+            # Retry this URL within its one candidate attempt. An unresolved
+            # limit propagates to run_review rather than rejecting the video.
+            for retry in range(RATE_LIMIT_RETRIES + 1):
+                try:
+                    result = reviewer.review(url, row)
+                    break
+                except GeminiQuotaExceeded as exc:
+                    wait_s = max(RATE_LIMIT_BACKOFF_SECONDS * 2 ** retry, exc.retry_after or 0)
+                    if not exc.retryable or retry == RATE_LIMIT_RETRIES or wait_s > MAX_RATE_LIMIT_WAIT_SECONDS:
+                        raise
+                    log(f"{url}: {exc}; retry {retry + 1}/{RATE_LIMIT_RETRIES} in {wait_s:g}s. {exc.log_fields()}")
+                    sleep(wait_s)
         except GeminiQuotaExceeded:
             raise
         except GeminiError as exc:
@@ -561,10 +693,10 @@ def run_review(
             sleep(delay_s)
         key = row.get("exercise_key") or f"row {index + 2}"
         try:
-            outcome = review_row(reviewer, row, max_candidates=max_candidates, delay_s=delay_s, sleep=sleep)
-        except GeminiQuotaExceeded:
+            outcome = review_row(reviewer, row, max_candidates=max_candidates, delay_s=delay_s, sleep=sleep, log=log)
+        except GeminiQuotaExceeded as exc:
             _write_rows(out, fieldnames, rows)
-            log(f"{key}: quota reached. Progress saved to {out}; run the same command again later to resume.")
+            log(f"{key}: {exc}. Progress saved to {out}; run the same command again later to resume. {exc.log_fields()}")
             counts["quota_stopped"] = 1
             return counts
         calls += 1
