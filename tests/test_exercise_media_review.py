@@ -13,6 +13,11 @@ URL_B = "https://www.youtube.com/watch?v=BBBBBBBBBBB"
 URL_C = "https://www.youtube.com/watch?v=CCCCCCCCCCC"
 
 
+@pytest.fixture(autouse=True)
+def _disable_live_youtube_discovery(monkeypatch):
+    monkeypatch.delenv("YOUTUBE_DATA_API_KEY", raising=False)
+
+
 def _answer(**overrides):
     data = {
         "verdict": "match",

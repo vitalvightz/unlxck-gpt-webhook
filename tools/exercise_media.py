@@ -24,13 +24,21 @@ Workflow:
 
     # Optional, between 1 and 3: let Gemini watch each suggested video, confirm
     # it shows the exercise and pre-fill start_s / end_s. Needs GEMINI_API_KEY.
-    # Input needs a suggested_url column (plus optional candidate_urls,
-    # '|'-separated, and plan_cue); the candidates export does not include
-    # them. Saves after every row; re-running the same command, with or
+    # With YOUTUBE_DATA_API_KEY, candidates can be discovered automatically.
+    # Otherwise input needs suggested_url (plus optional candidate_urls,
+    # '|'-separated, and plan_cue). Saves after every video and row; re-running
+    # the same command, with or
     # without --out, resumes. Exits 1 if any row failed or the quota stopped
     # the run early. A person still approves each row by copying the URL into
     # youtube_url.
     python tools/exercise_media.py review media.csv --out media.reviewed.csv
+
+    # With YOUTUBE_DATA_API_KEY, weak results trigger bounded YouTube searches.
+    # Revisit weak/partial rows while keeping strong reviewed matches:
+    python tools/exercise_media.py review media.csv --redo-weak --max-candidates 5
+    # --no-search uses supplied URLs only. Unresolved rows get needs_manual_video=true.
+    # A strong result also needs a usable loop. --redo-weak skips video IDs
+    # recorded in ai_reviewed_video_ids and judges only new candidates.
 
     # Re-check every stored video now (the worker also does this daily).
     python tools/exercise_media.py verify
@@ -375,9 +383,14 @@ def _positive_int(value: str) -> int:
 
 def _cmd_review(args: argparse.Namespace) -> int:
     from tools.exercise_media_review import ReviewInputError, build_reviewer, run_review
+    from tools.exercise_media_search import YouTubeCandidateSearch
 
     out = args.out or args.csv
     reviewer = build_reviewer(args.model)
+    search_key = None if args.no_search else youtube_api_key()
+    searcher = YouTubeCandidateSearch(search_key) if search_key else None
+    if not args.no_search and searcher is None:
+        print(f"YouTube discovery disabled: set {YOUTUBE_API_KEY_ENV} to search for better candidates.")
     try:
         counts = run_review(
             args.csv,
@@ -385,14 +398,18 @@ def _cmd_review(args: argparse.Namespace) -> int:
             reviewer=reviewer,
             limit=args.limit,
             redo=args.redo,
+            redo_weak=args.redo_weak,
             max_candidates=args.max_candidates,
             delay_s=args.delay,
+            search=searcher.search if searcher else None,
         )
     except ReviewInputError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     finally:
         reviewer.close()
+        if searcher is not None:
+            searcher.close()
     print(
         f"done: {counts['reviewed']} reviewed, {counts['errors']} errors, "
         f"{counts['skipped']} already reviewed -> {out}"
@@ -422,11 +439,14 @@ def main(argv: list[str] | None = None) -> int:
     review.add_argument("--out", help="output CSV (default: update the input in place)")
     review.add_argument("--limit", type=int, help="review at most N rows this run")
     review.add_argument("--redo", action="store_true", help="re-review rows that already have a verdict")
+    review.add_argument("--redo-weak", action="store_true", help="improve partial, weak, vertical or loopless results with new videos; skip watched IDs")
+    review.add_argument("--no-search", action="store_true", help="use supplied URLs only, without YouTube discovery")
     review.add_argument(
         "--max-candidates",
         type=_positive_int,
+        choices=range(1, 6),
         default=4,
-        help="videos tried per row (suggested + candidate_urls)",
+        help="maximum Gemini-reviewed videos per exercise, including discovered candidates (default: 4, cap: 5)",
     )
     review.add_argument("--delay", type=float, default=4.0, help="seconds between Gemini calls")
     review.add_argument("--model", help="Gemini model (default: $GEMINI_MODEL or gemini-3.5-flash)")

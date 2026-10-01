@@ -26,13 +26,16 @@ import os
 import re
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
 import httpx
+
+from api.services.exercise_media import parse_youtube_video_id
+from tools.exercise_media_search import CandidateSearchError, SearchProgress
 
 INTERACTIONS_URL = "https://generativelanguage.googleapis.com/v1beta/interactions"
 API_REVISION = "2026-05-20"
@@ -41,6 +44,7 @@ REQUEST_TIMEOUT_SECONDS = 300.0
 RATE_LIMIT_RETRIES = 3
 RATE_LIMIT_BACKOFF_SECONDS = 5.0
 MAX_RATE_LIMIT_WAIT_SECONDS = 60.0
+MAX_CANDIDATES = 5
 
 # Loop segment bounds: long enough for two clean reps, short enough to loop.
 MIN_SEGMENT_S = 3
@@ -58,6 +62,9 @@ AI_COLUMNS = (
     "ai_candidates_tried",
     "ai_model",
     "ai_reviewed_at",
+    "needs_manual_video",
+    "ai_review_progress",
+    "ai_reviewed_video_ids",
 )
 
 VERDICT_RANK = {"match": 2, "partial": 1, "no_match": 0}
@@ -233,10 +240,11 @@ class VideoReview:
     added_elements_reported: bool = False
 
     @property
-    def score(self) -> tuple[int, int, float]:
+    def score(self) -> tuple[int, int, int, float]:
         # Prefer the closer match, then landscape (a vertical Short letterboxes
         # in the 16:9 player), then confidence.
         return (
+            int(is_strong_match(self)),
             VERDICT_RANK.get(self.verdict, 0),
             1 if self.orientation == "landscape" else 0,
             self.confidence,
@@ -248,6 +256,8 @@ class RowOutcome:
     best: VideoReview | None
     tried: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+    reviewed_video_ids: list[str] = field(default_factory=list)
+    search_progress: SearchProgress = field(default_factory=SearchProgress)
 
 
 def build_prompt(row: dict[str, str]) -> str:
@@ -499,14 +509,94 @@ class GeminiVideoReviewer:
         return parse_review(url, extract_text(body))
 
 
-def candidate_urls(row: dict[str, str], max_candidates: int) -> list[str]:
+def candidate_urls(row: dict[str, str], max_candidates: int, *, exclude: set[str] | None = None) -> list[str]:
     """Suggested URL first, then any extra candidates, de-duplicated."""
     urls: list[str] = []
+    seen = set(exclude or ())
     for value in [row.get("suggested_url") or "", *(row.get("candidate_urls") or "").split("|")]:
         value = value.strip()
-        if value and value not in urls:
+        identity = parse_youtube_video_id(value) or value
+        if value and identity not in seen:
             urls.append(value)
+            seen.add(identity)
     return urls[:max_candidates]
+
+
+def is_strong_match(result: VideoReview | None) -> bool:
+    return bool(
+        result and result.verdict == "match" and result.confidence >= STOP_CONFIDENCE
+        and result.orientation == "landscape" and clean_segment(result.start_s, result.end_s)[0] is not None
+    )
+
+
+def _row_is_strong(row: dict[str, str]) -> bool:
+    try:
+        confidence = float(row.get("ai_confidence") or 0)
+    except ValueError:
+        return False
+    return (
+        row.get("ai_verdict") == "match" and confidence >= STOP_CONFIDENCE
+        and row.get("ai_orientation") == "landscape"
+        and clean_segment(row.get("ai_start_s"), row.get("ai_end_s"))[0] is not None
+    )
+
+
+def _reviewed_ids(row: dict[str, str]) -> list[str]:
+    ids = [video_id for value in (row.get("ai_reviewed_video_ids") or "").split("|") if (video_id := parse_youtube_video_id(value))]
+    # Old CSVs retained only the selected review; its URL is known to be watched.
+    if row.get("ai_verdict") in VERDICT_RANK:
+        video_id = parse_youtube_video_id(row.get("suggested_url"))
+        if video_id:
+            ids.append(video_id)
+    return list(dict.fromkeys(ids))
+
+
+def _previous_best(row: dict[str, str]) -> VideoReview | None:
+    if row.get("ai_verdict") not in VERDICT_RANK or not row.get("suggested_url"):
+        return None
+    try:
+        confidence = float(row.get("ai_confidence") or 0)
+    except ValueError:
+        return None
+    start_s, end_s = clean_segment(row.get("ai_start_s"), row.get("ai_end_s"))
+    return VideoReview(
+        url=row["suggested_url"], verdict=row["ai_verdict"], confidence=confidence,
+        shows=row.get("ai_shows") or "", form_vs_cue=row.get("ai_form_vs_cue") or "",
+        orientation=row.get("ai_orientation") or "landscape", start_s=start_s, end_s=end_s,
+        structure_matches=row["ai_verdict"] == "match", added_elements_reported=True,
+        added_elements=tuple(filter(None, (row.get("ai_added_elements") or "").split("|"))),
+    )
+
+
+def _resume_outcome(row: dict[str, str]) -> RowOutcome:
+    raw = row.get("ai_review_progress")
+    if not raw:
+        return RowOutcome(best=_previous_best(row), reviewed_video_ids=_reviewed_ids(row))
+    try:
+        data = json.loads(raw)
+        if not isinstance(data, dict) or not all(
+            isinstance(data.get(key), list) and all(isinstance(item, str) for item in data[key])
+            for key in ("tried", "errors")
+        ):
+            raise ValueError("invalid progress shape")
+        best = data.get("best")
+        if best is not None:
+            best = VideoReview(**best)
+            if best.verdict not in VERDICT_RANK or not isinstance(best.confidence, (int, float)):
+                raise ValueError("invalid saved review")
+        reviewed = data.get("reviewed_video_ids")
+        if reviewed is None:  # Read checkpoints written before watched-ID history.
+            reviewed = [video_id for url in data["tried"] if (video_id := parse_youtube_video_id(url))
+                        and not any(error.startswith(f"{url}:") for error in data["errors"])]
+        if not isinstance(reviewed, list) or not all(isinstance(item, str) and parse_youtube_video_id(item) for item in reviewed):
+            raise ValueError("invalid watched video IDs")
+        progress = SearchProgress(**data.get("search_progress", {}))
+        if not isinstance(progress.queries_used, int) or progress.queries_used < 0 or not isinstance(progress.pending, list) or not all(isinstance(url, str) for url in progress.pending):
+            raise ValueError("invalid search progress")
+        return RowOutcome(best=best, tried=data["tried"], errors=data["errors"],
+                          reviewed_video_ids=list(dict.fromkeys([*_reviewed_ids(row), *reviewed])), search_progress=progress)
+    except (ValueError, TypeError) as exc:
+        raise ReviewInputError("invalid ai_review_progress; restore the CSV or clear that field to restart this row") from exc
 
 
 def review_row(
@@ -517,12 +607,35 @@ def review_row(
     delay_s: float,
     sleep: Callable[[float], None] = time.sleep,
     log: Callable[[str], None] = print,
+    search: Callable[..., Iterable[str]] | None = None,
+    checkpoint: Callable[[RowOutcome], None] | None = None,
 ) -> RowOutcome:
-    outcome = RowOutcome(best=None)
-    for index, url in enumerate(candidate_urls(row, max_candidates)):
-        if index:
+    if not 1 <= max_candidates <= MAX_CANDIDATES:
+        raise ReviewInputError(f"max_candidates must be between 1 and {MAX_CANDIDATES}")
+    outcome = _resume_outcome(row)
+    if is_strong_match(outcome.best) or len(outcome.tried) >= max_candidates:
+        return outcome
+
+    def candidates() -> Iterable[str]:
+        excluded = set(outcome.reviewed_video_ids) | {parse_youtube_video_id(url) or url for url in outcome.tried}
+        yield from candidate_urls(row, max_candidates, exclude=excluded)
+        if search is not None:
+            excluded.update(outcome.reviewed_video_ids)
+            excluded.update(parse_youtube_video_id(url) or url for url in outcome.tried)
+            try:
+                yield from search(row, excluded, outcome.search_progress, lambda: checkpoint(outcome) if checkpoint else None)
+            except CandidateSearchError as exc:
+                outcome.errors.append(str(exc))
+                log(str(exc))
+
+    seen = set(outcome.reviewed_video_ids) | {parse_youtube_video_id(url) or url for url in outcome.tried}
+    for url in candidates():
+        identity = parse_youtube_video_id(url) or url
+        if identity in seen:
+            continue
+        seen.add(identity)
+        if outcome.tried:
             sleep(delay_s)
-        outcome.tried.append(url)
         try:
             # Retry this URL within its one candidate attempt. An unresolved
             # limit propagates to run_review rather than rejecting the video.
@@ -539,17 +652,24 @@ def review_row(
         except GeminiQuotaExceeded:
             raise
         except GeminiError as exc:
+            outcome.tried.append(url)
             outcome.errors.append(f"{url}: {exc}")
+            if checkpoint:
+                checkpoint(outcome)
+            if len(outcome.tried) >= max_candidates:
+                break
             continue
+        outcome.tried.append(url)
+        video_id = parse_youtube_video_id(url)
+        if video_id and video_id not in outcome.reviewed_video_ids:
+            outcome.reviewed_video_ids.append(video_id)
         if outcome.best is None or result.score > outcome.best.score:
             outcome.best = result
-        # A confident landscape match needs no further candidates. "match" has
+        if checkpoint:
+            checkpoint(outcome)
+        # A confident landscape match with a usable loop needs no more candidates. "match" has
         # already been checked against structure and added elements.
-        if (
-            result.verdict == "match"
-            and result.confidence >= STOP_CONFIDENCE
-            and result.orientation == "landscape"
-        ):
+        if is_strong_match(result) or len(outcome.tried) >= max_candidates:
             break
     return outcome
 
@@ -562,6 +682,11 @@ def apply_outcome(row: dict[str, str], outcome: RowOutcome, *, model: str) -> di
     updated["ai_model"] = model
     updated["ai_reviewed_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
     best = outcome.best
+    updated["ai_reviewed_video_ids"] = "|".join(dict.fromkeys([*_reviewed_ids(row), *outcome.reviewed_video_ids]))
+    updated["ai_review_progress"] = ""
+    updated["needs_manual_video"] = "false" if is_strong_match(best) else "true"
+    if outcome.errors and best is not None:
+        updated["review_note"] = "; ".join(outcome.errors)[:400] + ". " + (row.get("review_note") or "")
     if best is None:
         updated["ai_verdict"] = "error"
         updated["ai_shows"] = "; ".join(outcome.errors)[:400]
@@ -592,7 +717,7 @@ def apply_outcome(row: dict[str, str], outcome: RowOutcome, *, model: str) -> di
         updated["suggested_url"] = best.url
         updated["suggested_title"] = ""
         prefix = f"AI preferred candidate over {original}. " if original else "AI picked from candidates. "
-        updated["review_note"] = prefix + (row.get("review_note") or "")
+        updated["review_note"] = prefix + (updated.get("review_note") or "")
     if best.verdict != "no_match" and best.start_s is not None:
         if not (row.get("start_s") or "").strip() and not (row.get("end_s") or "").strip():
             updated["start_s"] = str(best.start_s)
@@ -627,13 +752,15 @@ def _read_csv(path: str | Path) -> tuple[list[str], list[dict[str, str]]]:
         return list(reader.fieldnames or []), list(reader)
 
 
-def _merge_previous_run(rows: list[dict[str, str]], previous: list[dict[str, str]]) -> int:
+def _merge_previous_run(rows: list[dict[str, str]], previous: list[dict[str, str]], *, redo_weak: bool = False) -> int:
     """Carry verdicts from an earlier run's --out file into the input rows."""
-    by_key = {r.get("exercise_key"): r for r in previous if (r.get("ai_verdict") or "").strip()}
+    by_key = {r.get("exercise_key"): r for r in previous if (r.get("ai_verdict") or r.get("ai_review_progress") or "").strip()}
     merged = 0
     for row in rows:
         prior = by_key.get(row.get("exercise_key"))
-        if prior is None or (row.get("ai_verdict") or "").strip():
+        if prior is None or row.get("ai_review_progress"):
+            continue
+        if row.get("ai_verdict") and not prior.get("ai_review_progress") and not (redo_weak and not _row_is_strong(row)):
             continue
         for column in _RESUME_COLUMNS:
             if column in prior:
@@ -649,25 +776,30 @@ def run_review(
     reviewer: GeminiVideoReviewer,
     limit: int | None = None,
     redo: bool = False,
+    redo_weak: bool = False,
     max_candidates: int = 4,
     delay_s: float = 4.0,
     sleep: Callable[[float], None] = time.sleep,
     log: Callable[[str], None] = print,
+    search: Callable[..., Iterable[str]] | None = None,
 ) -> dict[str, int]:
-    """Review rows and save after every one, so a quota stop loses nothing.
+    """Save each completed video and row, so interruptions retain the budget.
 
     Rows that already have an ai_verdict (other than 'error') are skipped
-    unless redo=True, so the same command resumes the next day.
+    unless redo=True or redo_weak selects them. Unfinished rows resume their
+    saved candidates; Gemini quota failures never consume a candidate attempt.
     """
-    if max_candidates < 1:
-        raise ReviewInputError("max_candidates must be at least 1")
+    if not 1 <= max_candidates <= MAX_CANDIDATES:
+        raise ReviewInputError(f"max_candidates must be between 1 and {MAX_CANDIDATES}")
     fieldnames, rows = _read_csv(in_path)
-    missing = [column for column in REQUIRED_INPUT_COLUMNS if column not in fieldnames]
+    required = ("exercise_key",) if search is not None else REQUIRED_INPUT_COLUMNS
+    missing = [column for column in required if column not in fieldnames]
     if missing:
         raise ReviewInputError(
-            f"{in_path} has no {', '.join(missing)} column. review checks videos someone has "
-            "already suggested: add suggested_url (and optionally candidate_urls, '|'-separated, "
-            "and plan_cue) to the CSV that candidates exports, then run review."
+            f"{in_path} has no {', '.join(missing)} column. review needs exercise_key and "
+            "either YouTube discovery or a suggested_url column (with optional candidate_urls, "
+            "'|'-separated, and plan_cue). Set YOUTUBE_DATA_API_KEY for discovery or add "
+            "suggested_url to the CSV, then run review."
         )
     for column in (*_WRITTEN_INPUT_COLUMNS, *AI_COLUMNS):
         if column not in fieldnames:
@@ -675,16 +807,16 @@ def run_review(
     out = Path(out_path)
     if out.exists() and out.resolve() != Path(in_path).resolve():
         _, previous = _read_csv(out)
-        merged = _merge_previous_run(rows, previous)
+        merged = _merge_previous_run(rows, previous, redo_weak=redo_weak)
         if merged:
             log(f"resuming: {merged} rows already reviewed in {out}")
     counts = {"reviewed": 0, "skipped": 0, "errors": 0}
     calls = 0
     for index, row in enumerate(rows):
-        if not candidate_urls(row, max_candidates):
+        if not candidate_urls(row, max_candidates) and (search is None or not (row.get("example_name") or row.get("exercise_key") or "").strip()):
             continue
         done = (row.get("ai_verdict") or "").strip()
-        if done and done != "error" and not redo:
+        if done and done != "error" and not row.get("ai_review_progress") and not redo and not (redo_weak and not _row_is_strong(row)):
             counts["skipped"] += 1
             continue
         if limit is not None and counts["reviewed"] + counts["errors"] >= limit:
@@ -692,8 +824,20 @@ def run_review(
         if calls:
             sleep(delay_s)
         key = row.get("exercise_key") or f"row {index + 2}"
+
+        def checkpoint(outcome: RowOutcome) -> None:
+            # Keep curator input intact while saving every completed video.
+            # An interrupted row resumes its best result and cumulative budget.
+            rows[index]["ai_review_progress"] = json.dumps(asdict(outcome))
+            rows[index]["ai_reviewed_video_ids"] = "|".join(dict.fromkeys([*_reviewed_ids(row), *outcome.reviewed_video_ids]))
+            _write_rows(out, fieldnames, rows)
+
+        review_input = row
+        if redo:
+            # --redo explicitly forces re-watching; --redo-weak keeps history.
+            review_input = {**row, "ai_review_progress": "", "ai_reviewed_video_ids": "", "ai_verdict": ""}
         try:
-            outcome = review_row(reviewer, row, max_candidates=max_candidates, delay_s=delay_s, sleep=sleep, log=log)
+            outcome = review_row(reviewer, review_input, max_candidates=max_candidates, delay_s=delay_s, sleep=sleep, log=log, search=search, checkpoint=checkpoint)
         except GeminiQuotaExceeded as exc:
             _write_rows(out, fieldnames, rows)
             log(f"{key}: {exc}. Progress saved to {out}; run the same command again later to resume. {exc.log_fields()}")
@@ -706,7 +850,8 @@ def run_review(
         segment = (
             f" loop {rows[index]['ai_start_s']}-{rows[index]['ai_end_s']}s" if rows[index]["ai_start_s"] else ""
         )
-        log(f"{key}: {verdict} ({rows[index].get('ai_confidence') or '-'}){segment}")
+        manual = " needs_manual_video" if rows[index]["needs_manual_video"] == "true" else ""
+        log(f"{key}: {verdict} ({rows[index].get('ai_confidence') or '-'}){segment}{manual}")
         _write_rows(out, fieldnames, rows)
     _write_rows(out, fieldnames, rows)
     return counts
