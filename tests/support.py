@@ -2398,8 +2398,14 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
 
     def record_injury_episode_event(self, athlete_id: str, event: dict) -> dict:
         injury = self.get_injury_flag_for_athlete(event["injury_id"], athlete_id)
-        if not injury or injury.get("episode_id") != event["injury_episode_id"]:
+        if not injury or (event["event_type"] != "delayed_rehab_response" and injury.get("episode_id") != event["injury_episode_id"]):
             raise HTTPException(409, "injury_episode_changed")
+        if event["event_type"] == "delayed_rehab_response":
+            exposure = self.rehab_exposures.get(event["payload"]["exposure_id"], {})
+            raw = exposure.get("event_json") or {}
+            if (exposure.get("athlete_id") != athlete_id or raw.get("injury_id") != event["injury_id"]
+                    or raw.get("injury_episode_id") != event["injury_episode_id"]):
+                raise HTTPException(409, "invalid delayed response")
         if event["id"] in self.injury_episode_events:
             previous = self.injury_episode_events[event["id"]]
             if any(previous.get(key) != event.get(key) for key in ("payload", "event_type", "injury_id", "injury_episode_id")):
@@ -2421,8 +2427,7 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
             event = row.get("event_json") or {}
             injury = self.get_injury_flag_for_athlete(str(event.get("injury_id")), athlete_id)
             if (row.get("athlete_id") == athlete_id and row["id"] not in answered and injury
-                    and injury.get("episode_id") == event.get("injury_episode_id")
-                    and str(event.get("occurred_at"))[:10] < training_day):
+                    and str(event.get("occurred_at"))[:10] < (datetime.fromisoformat(training_day) + timedelta(days=1)).date().isoformat()):
                 pending.append({**row, **event, "id": row["id"]})
         return pending
 

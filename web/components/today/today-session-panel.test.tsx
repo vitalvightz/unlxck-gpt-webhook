@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
+import { window as domWindow } from "../test-dom";
+import { act } from "react";
+import { createRoot } from "react-dom/client";
 
 import { ToastProvider } from "@/components/toast-provider";
 import { AuthProvider } from "@/components/auth-provider";
@@ -564,5 +567,28 @@ test("a new safety hold offers stopped logging without resuming frozen work", ()
   assert.match(html, /Reviewed test rehab/);
   assert.match(html, />Log stopped session</);
   assert.match(html, />Mark skipped</);
-  assert.doesNotMatch(html, />Start session<|>Mark done<|>Resume session</);
+  assert.doesNotMatch(html, />Start session<|>Done<|>Resume session</);
+});
+
+test("rehab completion stays blocked until performed work is selected", async () => {
+  const container = document.createElement("div"); document.body.appendChild(container);
+  const root = createRoot(container);
+  const state = reviewedSessionState(false);
+  state.today.completion_status = "started";
+  const original = globalThis.fetch;
+  globalThis.fetch = (async () => new Response('{"response_sets":[],"history_truncated":false}', { status: 200 })) as typeof fetch;
+  async function click(label: string) {
+    const button = Array.from(container.querySelectorAll("button")).find(b => b.textContent?.trim() === label);
+    assert.ok(button, label);
+    await act(async () => { button.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
+  }
+  try {
+    await act(async () => { root.render(<AuthProvider><ToastProvider><TodaySessionPanel state={state} structuredPlan={null} token="token" onRefresh={async () => {}} /></ToastProvider></AuthProvider>); });
+    await click("Done");
+    const save = container.querySelector<HTMLButtonElement>('button[type="submit"]');
+    assert.ok(save);
+    assert.equal(save.disabled, true);
+    await click("Changed it");
+    assert.equal(container.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled, false);
+  } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
 });

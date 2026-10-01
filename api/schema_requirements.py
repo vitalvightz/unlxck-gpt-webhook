@@ -452,7 +452,9 @@ REQUIRED_NOTIFICATION_EVALUATIONS_COLUMNS: tuple[str, ...] = (
 # Map of table -> required columns, used by the checker.
 REQUIRED_COLUMNS: Mapping[str, tuple[str, ...]] = {
     "injury_episode_events": ("id", "athlete_id", "injury_id", "injury_episode_id", "event_type", "payload", "created_at"),
-    "rehab_exposures": ("id", "athlete_id", "injury_id", "injury_episode_id", "drill_id", "body_region", "side", "event_json", "response_group_id", "response", "occurred_at"),
+    "rehab_exposures": ("id", "athlete_id", "injury_id", "injury_episode_id", "drill_id", "body_region", "side",
+                        "demand", "prescribed_dose", "completed_dose", "response", "event_json", "response_group_id",
+                        "evidence_source", "occurred_at", "recorded_at", "created_at"),
     "plans": REQUIRED_PLANS_COLUMNS,
     "generation_jobs": REQUIRED_GENERATION_JOBS_COLUMNS,
     "profiles": REQUIRED_PROFILES_COLUMNS,

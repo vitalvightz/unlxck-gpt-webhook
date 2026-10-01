@@ -12,7 +12,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .config import DATA_DIR
-from .rehab_schema import REHAB_STAGES, canonical_rehab_locations
+from .rehab_schema import REHAB_STAGES, canonical_rehab_locations, canonical_rehab_types
 
 
 def content_hash(value: object) -> str:
@@ -56,6 +56,8 @@ class ClinicalPrescription(BaseModel):
 
     @model_validator(mode="after")
     def bounded_camp_dose(self):
+        if not self.instructions.strip() or any(not rule.strip() for rule in self.stop_when):
+            raise ValueError("instructions and stop rules must not be blank")
         if any(phase not in {"GPP", "SPP", "TAPER"} for phase in self.camp_doses):
             raise ValueError("unknown camp phase")
         for dose in [*self.camp_doses.values(), *self.readiness_doses.values()]:
@@ -106,6 +108,8 @@ class ClinicalPolicy(BaseModel):
 
     @model_validator(mode="after")
     def validate_active_policy(self):
+        if self.region not in canonical_rehab_locations() or self.injury_type not in canonical_rehab_types():
+            raise ValueError("unknown policy region or injury type")
         if self.status == "active" and not (self.evidence_sources and self.prescriptions):
             raise ValueError("active policy needs sources and routines")
         if self.activation == "live" and self.status != "active":
@@ -150,6 +154,8 @@ def validate_clinical_bank(policies: tuple[ClinicalPolicy, ...], bank: list[dict
             indexed.setdefault(str(drill.get("id") or ""), []).append((group, drill))
     errors: list[str] = []
     for policy in policies:
+        if policy.status == "retired":
+            continue
         for prescription in policy.prescriptions:
             matches = indexed.get(prescription.drill_id, [])
             if len(matches) != 1:

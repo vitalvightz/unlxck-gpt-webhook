@@ -52,7 +52,7 @@ def schedule_rehab(injury, decision, *, training_day, completions=(), exposures=
                 continue
             day = date.fromisoformat(str(completion["training_day"]))
             if day == today:
-                return result("already_completed", "Today's rehab allocation is reserved by your started session." if completion.get("status") == "started" else "You have already logged rehab for this injury today.", (today + timedelta(days=max(1, block.get("minimum_gap_days", 1)))).isoformat())
+                return result("already_completed", "Today's rehab allocation is reserved by your started session." if completion.get("status") == "started" else "You have already logged rehab for this injury today.", (today + timedelta(days=max(prescription["minimum_gap_days"], block.get("minimum_gap_days", 1)))).isoformat())
             if completion.get("status") in {"done", "modified"} and block.get("rehab_drill_id") == prescription["drill_id"]:
                 performed.append((day, max(prescription["minimum_gap_days"], block.get("minimum_gap_days", 1))))
     # Legacy recorded rehab also spaces work; ordinary training has no such event.

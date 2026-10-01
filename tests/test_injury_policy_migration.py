@@ -2,7 +2,7 @@ from pathlib import Path
 
 from api.schema_requirements import REQUIRED_COLUMNS, REQUIRED_FUNCTIONS, REQUIRED_TABLES, RLS_REQUIRED_TABLES
 
-SQL = Path("supabase/migrations/20260930173118_injury_episode_prescription_history.sql").read_text().lower()
+SQL = (Path(__file__).resolve().parents[1] / "supabase/migrations/20260930173118_injury_episode_prescription_history.sql").read_text(encoding="utf-8").lower()
 
 
 def test_server_owned_episode_events_have_owner_reads_and_no_client_mutations():

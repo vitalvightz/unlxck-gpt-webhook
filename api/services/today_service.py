@@ -1320,9 +1320,10 @@ def upsert_session_completion(
         )
     training_day = requested_day or today
     existing = store.get_session_completion(athlete_id, session_id, training_day) or {}
-    stopped_started_session = bool(existing.get("prescription_snapshot") and existing.get("started_at")
-                                   and existing.get("status") == "started" and status_value == "modified"
-                                   and payload.get("rehab_performance") == "stopped")
+    stop_requested = bool(existing.get("plan_id") == plan_id and existing.get("started_at")
+                          and existing.get("status") == "started" and status_value == "modified"
+                          and payload.get("rehab_performance") == "stopped"
+                          and str(payload.get("modification_reason") or "").strip())
 
     # The same pre-start boundary that frames Today is enforced on the write.
     # A stale client or forged request cannot log a future open-plan session
@@ -1347,10 +1348,10 @@ def upsert_session_completion(
     if not is_retro_log and status_value != "not_started":
         try:
             command = build_today_command_view(store, athlete_id=athlete_id, athlete_timezone=athlete_timezone, now=now)
-        except HTTPException as exc:
+        except Exception:  # noqa: BLE001 - skip earns no training or rehab credit
             # Skipping earns no rehab credit and must remain available when
             # current injury evidence cannot be read. Training still fails closed.
-            if status_value != "skipped" or exc.status_code != 503:
+            if status_value != "skipped":
                 raise
     live = command.live_prescription if command and str(command.active_plan.get("id")) == plan_id else None
     if command and str(command.active_plan.get("id")) != plan_id and status_value in _TRAINING_COMPLETION_STATUSES:
@@ -1359,6 +1360,13 @@ def upsert_session_completion(
     standalone = live is not None and live["session"].get("session_id") == session_id
     saved_occurrence = existing.get("prescription_snapshot") or {}
     saved_standalone = saved_occurrence.get("plan_id") == plan_id and saved_occurrence.get("session", {}).get("session_id") == session_id
+    severe = None
+    if not is_retro_log and status_value in _TRAINING_COMPLETION_STATUSES and not _completion_session_is_support(plan_row, training_day, session_id):
+        severe = _active_severe_injury(_open_injury_flags(store, athlete_id))
+    # The exception records stopping already-started work under a server-owned
+    # hold. A client enum alone cannot bypass training or freshness gates.
+    stopped_started_session = bool(stop_requested and (severe is not None or
+        (standalone and live.get("safety_hold"))))
     if status_value != "not_started" and _structured_today(plan_row, training_day).is_rest_day and not (standalone or saved_standalone):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -1378,7 +1386,6 @@ def upsert_session_completion(
         and not _completion_session_is_support(plan_row, training_day, session_id)
         and not stopped_started_session
     ):
-        severe = _active_severe_injury(_open_injury_flags(store, athlete_id))
         if severe is not None:
             label = severe.get("label") or build_injury_label(
                 severe.get("body_area"), severe.get("description")
@@ -1412,13 +1419,16 @@ def upsert_session_completion(
                 raise HTTPException(409, "Refresh Today to use the current session.")
             if live.get("safety_hold") and not stopped_started_session:
                 raise HTTPException(409, "This session is on hold for the current injury guidance.")
-            if not frozen and payload.get("prescription_revision") != live.get("revision"):
+            if not frozen and not stopped_started_session and payload.get("prescription_revision") != live.get("revision"):
                 raise HTTPException(409, "Your session prescription changed. Refresh Today before starting.")
-            if not frozen:
+            if not frozen and not stopped_started_session:
                 frozen = live
     performance = payload.get("rehab_performance")
     if performance == "done_as_shown" and (not frozen or status_value != "done"):
         raise HTTPException(422, "Confirm rehab as shown only for a completed, saved prescription.")
+    if (status_value == "done" and frozen and any(b.get("block_type") == "rehab" for b in frozen.get("session", {}).get("blocks", []))
+            and performance not in {"done_as_shown", "changed", "stopped"}):
+        raise HTTPException(422, "Choose how much rehab you performed before completing this session.")
 
     # Stamp timestamps from the transition. started/done/modified carry
     # started_at; done/modified carry completed_at. Both are preserved once set
@@ -1466,6 +1476,8 @@ def upsert_session_completion(
     if frozen:
         fields["prescription_snapshot"] = frozen
         fields["rehab_performance"] = performance or existing.get("rehab_performance")
+    elif stopped_started_session:
+        fields["rehab_performance"] = "stopped"
     row = store.upsert_session_completion(athlete_id, fields)
     # A training day is one unit for the athlete: one start, one RPE, one log.
     # When the card schedules several sessions that day (a conditioning block
@@ -1473,7 +1485,7 @@ def upsert_session_completion(
     # Today, week progress and the full-week checks all read the day as logged.
     # Only the submitted row drives XP, streak and rehab follow-up in the route.
     day_session_ids = _day_session_ids(plan_row, training_day)
-    if session_id in day_session_ids:
+    if session_id in day_session_ids and not stopped_started_session:
         for sibling_id in day_session_ids:
             if sibling_id == session_id:
                 continue
@@ -2772,7 +2784,7 @@ def _build_today_command_view(
                                     store=store, athlete_id=athlete_id)
         injuries = _with_injury_policy(injuries, store=store, athlete_id=athlete_id, training_day=training_day)
         view = build_command_view(current_training_day=training_day, plan=None, open_injuries=injuries)
-        view.delayed_rehab_prompts = delayed_rehab_prompts(store, athlete_id, training_day)
+        view.delayed_rehab_prompts = delayed_rehab_prompts(store, athlete_id, training_day, athlete_timezone)
         return view
 
     plan_id = str(plan_row.get("id") or "")
@@ -3097,7 +3109,7 @@ def _build_today_command_view(
             live["readiness_context"] = {"id": today_checkin["id"], "updated_at": today_checkin.get("updated_at")} if today_checkin else None
             live["revision"] = content_hash({k: v for k, v in live.items() if k != "revision"})
     view.live_prescription = live
-    view.delayed_rehab_prompts = delayed_rehab_prompts(store, athlete_id, training_day)
+    view.delayed_rehab_prompts = delayed_rehab_prompts(store, athlete_id, training_day, athlete_timezone)
     return view
 
 

@@ -71,7 +71,7 @@ def test_shipped_policies_are_sourced_active_and_self_paced():
         ClinicalPolicy.model_validate({**policies[0].model_dump(), "content_hash": "a" * 64})
 
 
-@pytest.mark.parametrize("side", ["left", "unknown"])
+@pytest.mark.parametrize("side", ["left", "unknown", ""])
 def test_chest_guidance_retains_episode_feedback_without_inventing_laterality(side):
     from fightcamp.rehab_protocols import get_rehab_bank
     row = dict(id=str(uuid4()), episode_id=str(uuid4()), athlete_id=ATHLETE, body_area="Chest", description="Chest strain",
@@ -81,7 +81,7 @@ def test_chest_guidance_retains_episode_feedback_without_inventing_laterality(si
     completion = dict(status="done", prescription_snapshot=snapshot, rehab_performance="done_as_shown")
     items = session_rehab_items({"id": PLAN}, training_day=DAY, session_id=f"rehab-{DAY}", prescription=snapshot)
     candidates = resolve_rehab_completion(items, [row], completion=completion).eligible
-    assert len(candidates) == 1 and candidates[0].side == side
+    assert len(candidates) == 1 and candidates[0].side == (side or "unknown")
     event = build_rehab_exposure_event(candidates[0], athlete_id=ATHLETE, plan_id=PLAN, session_id=f"rehab-{DAY}",
         training_day=DAY, completion=completion, during="same", limit="no")
     assert event.is_attributable_to(row)
@@ -254,6 +254,10 @@ def test_policy_activation_preserves_a_preexisting_started_session(reviewed, mon
     assert view.live_prescription["safety_hold"]
     assert view.live_prescription["session"]["session_id"] == "old-strength"
     assert view.live_prescription["session"]["blocks"] == session["blocks"]
+    stopped = today_service.upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW,
+        payload={"plan_id": PLAN, "session_id": "old-strength", "status": "modified", "rehab_performance": "stopped",
+                 "modification_reason": "Stopped under the server injury hold."})
+    assert stopped["rehab_performance"] == "stopped" and not stopped.get("prescription_snapshot")
 
 
 def test_live_policy_fails_closed_when_injury_history_cannot_be_read(reviewed, monkeypatch):
@@ -413,3 +417,151 @@ def test_live_rehab_checks_the_whole_training_day_and_owns_one_snapshot(reviewed
         payload={**payload, "status": "done", "rehab_performance": "done_as_shown"}, now=NOW)
     assert all(row["status"] == "done" for row in store.session_completions[ATHLETE])
     assert sum(bool(row.get("prescription_snapshot")) for row in store.session_completions[ATHLETE]) == 1
+
+
+@pytest.mark.parametrize("field,value", [("region", "ankel"), ("injury_type", "sprian")])
+def test_policy_rejects_noncanonical_identity(reviewed, field, value):
+    raw = reviewed[0].model_dump()
+    raw[field] = value
+    with pytest.raises(ValidationError, match="unknown policy region or injury type"):
+        ClinicalPolicy.model_validate(raw)
+
+
+@pytest.mark.parametrize("field,value", [("instructions", "  "), ("stop_when", ["Valid rule", "  "])])
+def test_prescription_rejects_blank_safety_guidance(reviewed, field, value):
+    from fightcamp.rehab_clinical import ClinicalPrescription
+    raw = reviewed[0].prescriptions[0].model_dump()
+    raw[field] = value
+    with pytest.raises(ValidationError, match="must not be blank"):
+        ClinicalPrescription.model_validate(raw)
+
+
+def test_snapshot_identity_mismatch_is_rejected_and_legacy_id_falls_back(reviewed):
+    decision = decide(reviewed)
+    snapshot = reconcile_session_prescription(None, decisions=[decision], plan_id=PLAN, training_day=DAY)
+    snapshot["session"]["blocks"][0]["drill_snapshot"]["id"] = "wrong_drill"
+    with pytest.raises(HTTPException, match="rehab_snapshot_identity_mismatch"):
+        session_rehab_items({"id": PLAN}, training_day=DAY, session_id=f"rehab-{DAY}", prescription=snapshot)
+    from fightcamp.rehab_protocols import get_rehab_bank
+    drill = next(d for g in get_rehab_bank() for d in g["drills"] if d["id"] == "ankle_sprain_heel_lowering")
+    block = snapshot["session"]["blocks"][0]
+    block.pop("drill_snapshot")
+    block["rehab_drill_id"] = drill["id"]
+    items = session_rehab_items({"id": PLAN}, training_day=DAY, session_id=f"rehab-{DAY}", prescription=snapshot)
+    assert items[0]["id"] == drill["id"] and items[0]["prescribed_dose"] == {"sets": 2, "reps": 4}
+
+
+@pytest.mark.parametrize("targets", [[], ["ankle"], ["shoulder"]])
+def test_legacy_rehab_is_retained_or_explicitly_held(reviewed, targets):
+    block = dict(block_id="legacy", block_type="rehab", target_regions=targets, rehab_drill_id="legacy_drill")
+    snapshot = reconcile_session_prescription({"session_id": "s", "blocks": [block]}, decisions=[decide(reviewed)], plan_id=PLAN, training_day=DAY)
+    assert any(b["block_id"] == "legacy" for b in snapshot["session"]["blocks"]) or any(
+        c.get("block_id") == "legacy" and c["action"] == "held" for c in snapshot["changes"])
+
+
+def test_exact_pilot_identity_replaces_only_due_work(reviewed):
+    decision = decide(reviewed)
+    snapshot = reconcile_session_prescription(None, decisions=[decision], plan_id=PLAN, training_day=DAY)
+    block = snapshot["session"]["blocks"][0]
+    repeated = reconcile_session_prescription(snapshot["session"], decisions=[decision], plan_id=PLAN, training_day=DAY)
+    assert len(repeated["session"]["blocks"]) == 1
+    assert repeated["changes"][0]["action"] == "replaced"
+    decision["schedule"] = {"state": "recovery_day"}
+    held = reconcile_session_prescription(snapshot["session"], decisions=[decision], plan_id=PLAN, training_day=DAY)
+    assert held["safety_hold"] and held["session"]["blocks"][0]["_policy_held"]
+    assert held["changes"][0]["block_id"] == block["block_id"]
+
+
+def test_resolved_pilot_episode_cannot_be_programmed_again(reviewed, monkeypatch):
+    from fightcamp import rehab_clinical, rehab_protocols
+    policy, bank, row = reviewed
+    monkeypatch.setattr(rehab_clinical, "load_clinical_policies", lambda: (policy,))
+    monkeypatch.setattr(rehab_protocols, "get_rehab_bank", lambda: bank)
+    episode = rehab_protocols._episode_context({**row, "status": "resolved"})
+    result = rehab_protocols._reviewed_episode_option(episode, "ankle", "GPP")
+    assert result["line"] is None and result["decision"]["outcome"] == "no_rehab_indicated"
+
+
+def test_shared_drill_names_do_not_allocate_another_episode(monkeypatch):
+    from fightcamp import rehab_protocols
+    monkeypatch.setattr(rehab_protocols, "_reviewed_episode_option", lambda *args: {"line": ("Shared routine", "Self-paced"), "decision": {}})
+    episodes = [dict(injury_id="left", side="left", injury_type="sprain"), dict(injury_id="right", side="right", injury_type="sprain")]
+    outcomes = []
+    selected = rehab_protocols._select_rehab_drills_per_episode(episodes=episodes, loc="ankle", loc_candidates=["ankle"],
+        current_phase="GPP", day_type="strength", drill_limit=1, outcomes=outcomes)
+    assert len(selected) == 1 and [o["outcome"] for o in outcomes] == ["available", "deferred"]
+
+
+@pytest.mark.parametrize("timezone,occurred,day,allowed", [
+    ("Pacific/Honolulu", "2026-10-01T05:00:00Z", "2026-10-01", True),
+    ("Pacific/Auckland", "2026-09-30T18:00:00Z", "2026-10-01", False),
+])
+def test_delayed_feedback_uses_athlete_training_day_and_survives_reopening(reviewed, timezone, occurred, day, allowed):
+    store = FakeStore()
+    row = reviewed[2]
+    old_episode = row["episode_id"]
+    store.injury_flags[ATHLETE] = [{**row, "episode_id": str(uuid4())}]
+    exposure = str(uuid4())
+    store.rehab_exposures[exposure] = dict(id=exposure, athlete_id=ATHLETE, created_at=occurred,
+        event_json=dict(injury_id=row["id"], injury_episode_id=old_episode, body_region="ankle", occurred_at=occurred,
+                        response={"next_day_response": "not_yet_known"}))
+    prompts = delayed_rehab_prompts(store, ATHLETE, day, timezone)
+    assert bool(prompts) == allowed
+    observation = InjuryEpisodeObservation(injury_id=row["id"], injury_episode_id=old_episode,
+        event_type="delayed_rehab_response", exposure_id=exposure, response="same")
+    if allowed:
+        saved = record_episode_observation(store, athlete_id=ATHLETE, observation=observation, training_day=day, athlete_timezone=timezone)
+        assert saved["injury_episode_id"] == old_episode
+        assert apply_episode_observations(store.injury_flags[ATHLETE][0], [saved])["latest_reported_at"] is None
+    else:
+        with pytest.raises(HTTPException) as failure:
+            record_episode_observation(store, athlete_id=ATHLETE, observation=observation, training_day=day, athlete_timezone=timezone)
+        assert failure.value.status_code == 409
+
+
+@pytest.mark.parametrize("started,reason", [(False, "Stopped"), (True, "")])
+def test_client_stopped_value_cannot_bypass_a_server_hold(reviewed, monkeypatch, started, reason):
+    policy, bank, injury = reviewed
+    store = FakeStore()
+    store.injury_flags[ATHLETE] = [{**injury, "severity": "severe"}]
+    session = dict(session_id="s", session_type="strength", blocks=[dict(block_id="b", block_type="strength")])
+    store.plans[PLAN] = dict(id=PLAN, athlete_id=ATHLETE, status="ready", created_at="2026-09-01T00:00:00Z",
+        structured_plan={"weeks": [{"phase_label": "GPP", "days": [{"date": DAY, "day_type": "high", "sessions": [session]}]}]})
+    store.set_active_plan_id(ATHLETE, PLAN)
+    if started:
+        store.upsert_session_completion(ATHLETE, dict(plan_id=PLAN, session_id="s", training_day=DAY, status="started", started_at=NOW.isoformat()))
+    monkeypatch.setattr(today_service, "load_clinical_policies", lambda: (policy,))
+    monkeypatch.setattr(today_service, "get_rehab_bank", lambda: bank)
+    with pytest.raises(HTTPException) as failure:
+        today_service.upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW,
+            payload=dict(plan_id=PLAN, session_id="s", status="modified", rehab_performance="stopped", modification_reason=reason))
+    assert failure.value.status_code == 409
+
+
+def test_rehab_done_requires_an_explicit_performance_choice(reviewed, monkeypatch):
+    policy, bank, injury = reviewed
+    store = FakeStore()
+    store.injury_flags[ATHLETE] = [injury]
+    store.plans[PLAN] = dict(id=PLAN, athlete_id=ATHLETE, status="ready", created_at="2026-09-01T00:00:00Z",
+        structured_plan={"weeks": [{"phase_label": "GPP", "days": [{"date": DAY, "day_type": "rest", "sessions": []}]}]})
+    store.set_active_plan_id(ATHLETE, PLAN)
+    store.upsert_today_checkin(ATHLETE, dict(plan_id=PLAN, training_day=DAY, recommendation_state="train_as_planned", pain="none"))
+    monkeypatch.setattr(today_service, "load_clinical_policies", lambda: (policy,))
+    monkeypatch.setattr(today_service, "get_rehab_bank", lambda: bank)
+    view = today_service.build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW)
+    payload = dict(plan_id=PLAN, session_id=f"rehab-{DAY}", status="started", prescription_revision=view.live_prescription["revision"])
+    today_service.upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW, payload=payload)
+    with pytest.raises(HTTPException) as failure:
+        today_service.upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW, payload={**payload, "status": "done"})
+    assert failure.value.status_code == 422
+    assert store.get_session_completion(ATHLETE, f"rehab-{DAY}", DAY)["status"] == "started"
+
+
+def test_skip_survives_raw_noncritical_rehab_read_failure(reviewed, monkeypatch):
+    store = FakeStore()
+    store.plans[PLAN] = dict(id=PLAN, athlete_id=ATHLETE, status="ready", created_at="2026-09-01T00:00:00Z",
+        structured_plan={"weeks": [{"days": [{"date": DAY, "day_type": "strength", "sessions": [dict(session_id="s", blocks=[])]}]}]})
+    monkeypatch.setattr(today_service, "build_today_command_view", lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("rehab read unavailable")))
+    row = today_service.upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW,
+        payload=dict(plan_id=PLAN, session_id="s", status="skipped", modification_reason="Resting today"))
+    assert row["status"] == "skipped" and not row.get("prescription_snapshot")

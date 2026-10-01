@@ -19,9 +19,9 @@ export function InjuryCareStatus({ injury, token, onRefresh }: {
       if (pendingReport.current?.key !== key) pendingReport.current = { key, id: crypto.randomUUID() };
       await submitInjuryEpisodeObservation(token, { injury_id: injury.id, injury_episode_id: injury.episode_id,
         event_type: "clinician_clearance_report", scopes, report_id: pendingReport.current.id });
+      await onRefresh();
       pendingReport.current = null;
       setChoosing(false);
-      await onRefresh();
     } catch (e) { setError(e instanceof Error ? e.message : "Could not save your report."); }
     finally { setBusy(false); }
   }

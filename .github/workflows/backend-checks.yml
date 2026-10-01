@@ -1,10 +1,7 @@
 name: Backend Checks
 
-# Runs the Supabase runtime schema checker's tests: the checker unit tests
-# (fake catalog data, no credentials) plus the static schema.sql test. The full
-# backend test suite is already exercised by python-quality.yml, so this
-# workflow stays scoped to the deploy-gate checker this PR introduces and
-# remains a fast, self-contained signal.
+# Runs the runtime schema checker and real PostgreSQL rehab concurrency/report
+# tests. The full backend suite remains in python-quality.yml.
 #
 # The LIVE Supabase runtime schema check below may skip on PRs and non-Main/main
 # branches without credentials, but it is mandatory on every push to Main/main
@@ -41,8 +38,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11.15"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
       - name: Install PostgreSQL test dependencies
-        run: pip install pytest==8.3.5 'psycopg[binary]==3.3.6'
+        run: pip install -r requirements-dev.txt
       - name: Exercise real two-connection RPC and injury update races
         env:
           REHAB_TEST_DATABASE_URL: postgresql://postgres:rehab_test_only@127.0.0.1:5432/postgres

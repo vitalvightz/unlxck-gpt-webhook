@@ -46,6 +46,7 @@ export function SessionCompletionForm({
   onSubmit,
   showStatusPicker = false,
   initialNotes = "",
+  submissionBlockedReason,
 }: {
   intent: CompletionIntent;
   isSubmitting: boolean;
@@ -54,6 +55,7 @@ export function SessionCompletionForm({
   showStatusPicker?: boolean;
   /** Pre-filled, editable notes (e.g. what the session timer recorded). */
   initialNotes?: string;
+  submissionBlockedReason?: string;
 }) {
   const { me } = useAppSession();
   const canCollectPain = hasHealthDataConsent(me);
@@ -77,6 +79,10 @@ export function SessionCompletionForm({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    if (submissionBlockedReason) {
+      setError(submissionBlockedReason);
+      return;
+    }
     if (!activeIntent) {
       setError("Choose how the session went first.");
       return;
@@ -159,7 +165,7 @@ export function SessionCompletionForm({
       </label>
       {error ? <p className="today-inline-error" role="alert">{error}</p> : null}
       <div className="today-action-row">
-        <button type="submit" className="cta" disabled={isSubmitting}>
+        <button type="submit" className="cta" disabled={isSubmitting || Boolean(submissionBlockedReason)}>
           {isSubmitting
             ? "Saving..."
             : activeIntent

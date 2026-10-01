@@ -1,12 +1,21 @@
 """Episode-scoped athlete observations; no diagnosis or fabricated clearance."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Literal
 from uuid import UUID, NAMESPACE_URL, uuid4, uuid5
 
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field
+from api.contracts.training_day import resolve_training_day_str
+
+
+def exposure_training_day(event: dict, athlete_timezone: str | None = None) -> str:
+    recorded = (event.get("provenance") or {}).get("training_day")
+    if recorded:
+        return str(recorded)
+    occurred = datetime.fromisoformat(str(event.get("occurred_at") or "").replace("Z", "+00:00"))
+    return resolve_training_day_str(occurred, athlete_timezone=athlete_timezone)
 
 
 class InjuryEpisodeObservation(BaseModel):
@@ -21,11 +30,11 @@ class InjuryEpisodeObservation(BaseModel):
 
 
 def record_episode_observation(store, *, athlete_id: str, observation: InjuryEpisodeObservation,
-                               training_day: str) -> dict:
+                               training_day: str, athlete_timezone: str | None = None) -> dict:
     injury = store.get_injury_flag_for_athlete(str(observation.injury_id), athlete_id)
     if not injury:
         raise HTTPException(404, "injury not found")
-    if str(injury.get("episode_id")) != str(observation.injury_episode_id):
+    if observation.event_type != "delayed_rehab_response" and str(injury.get("episode_id")) != str(observation.injury_episode_id):
         raise HTTPException(409, "This injury episode changed. Refresh Today.")
     if observation.event_type == "clinician_clearance_report":
         if not observation.scopes or observation.exposure_id or observation.response:
@@ -39,8 +48,7 @@ def record_episode_observation(store, *, athlete_id: str, observation: InjuryEpi
         event = (rows[0].get("event_json") or {}) if rows else {}
         if event.get("injury_id") != str(observation.injury_id) or event.get("injury_episode_id") != str(observation.injury_episode_id):
             raise HTTPException(404, "rehab exposure not found")
-        occurred = datetime.fromisoformat(str(event.get("occurred_at") or "").replace("Z", "+00:00"))
-        if occurred.astimezone(timezone.utc).date().isoformat() >= training_day:
+        if exposure_training_day(event, athlete_timezone) >= training_day:
             raise HTTPException(409, "The next-day response opens on a later training day.")
         payload = {"exposure_id": str(observation.exposure_id), "response": observation.response}
         key = f"delayed:{athlete_id}:{observation.exposure_id}"
@@ -105,10 +113,11 @@ def exposure_rows_with_observations(rows, observations):
     return result
 
 
-def delayed_rehab_prompts(store, athlete_id: str, training_day: str) -> list[dict]:
+def delayed_rehab_prompts(store, athlete_id: str, training_day: str, athlete_timezone: str | None = None) -> list[dict]:
     reader = getattr(store, "list_pending_delayed_rehab", None)
     if not callable(reader):
         return []
     return [{"exposure_id": row["id"], "injury_id": row["injury_id"], "injury_episode_id": row["injury_episode_id"],
              "region": row["body_region"], "question": "How did this injury feel the day after rehab?",
-             "options": ["better", "same", "worse", "not_sure"]} for row in reader(athlete_id, training_day)]
+             "options": ["better", "same", "worse", "not_sure"]} for row in reader(athlete_id, training_day)
+            if exposure_training_day(row.get("event_json") or row, athlete_timezone) < training_day]

@@ -194,10 +194,18 @@ def reconcile_session_prescription(
 
     for block in entry.get("blocks", []):
         if block.get("block_type") == "rehab":
-            # Keep non-pilot rehab unchanged; replace only the exact live-policy
-            # region. An unattributed legacy rehab block cannot claim pilot safety.
-            targets = set(block.get("target_regions") or [])
-            if not targets or targets & {d.get("region") for d in live}:
+            replacement = next((d for d in prescribed if
+                block.get("policy_id") == d.get("policy_id")
+                and block.get("injury_id") == d.get("injury_id")
+                and block.get("injury_episode_id") == d.get("injury_episode_id")), None)
+            if replacement:
+                changes.append({"block_id": block.get("block_id"), "action": "replaced", "reason": "current_episode_prescription"})
+                continue
+            # Legacy/other-episode work must stay visible or be explicitly held.
+            if any(block.get("policy_id") == d.get("policy_id") and block.get("injury_id") == d.get("injury_id") for d in live):
+                blocks.append({**deepcopy(block), "_policy_held": True})
+                changes.append({"block_id": block.get("block_id"), "action": "held", "reason": "episode_rehab_not_due"})
+                hold = True
                 continue
         demands = string_set(block.get("mechanical_load_regions"))
         tags = string_set(block.get("tags"))
@@ -259,7 +267,8 @@ def reconcile_session_prescription(
     entry["blocks"] = blocks
     rehab_only = False
     if hold and not any(d.get("outcome") == "medical_review" for d in decisions):
-        reviewed_blocks = [block for block in blocks if block.get("block_type") == "rehab" and block.get("policy_id")]
+        reviewed_blocks = [block for block in blocks if block.get("block_type") == "rehab" and block.get("policy_id")
+                           and not block.get("_policy_held")]
         if reviewed_blocks:
             # Hold the original training while offering separately reviewed
             # rehab. It has its own completion identity, so a rehab completion

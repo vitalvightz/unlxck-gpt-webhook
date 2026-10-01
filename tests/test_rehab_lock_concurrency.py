@@ -34,11 +34,13 @@ def postgres_database():
     config = conninfo_to_dict(dsn)
     assert config.get("host") in {"localhost", "127.0.0.1", "::1"}, "test cluster must be local"
     name = "unlxck_rehab_lock_test_" + uuid4().hex
+    created_roles = []
     with psycopg.connect(dsn, autocommit=True) as admin:
         for role in ("anon", "authenticated", "service_role"):
             if not admin.execute("select 1 from pg_roles where rolname=%s", (role,)).fetchone():
                 admin.execute(sql.SQL("create role {} {}").format(
                     sql.Identifier(role), sql.SQL("bypassrls" if role == "service_role" else "")))
+                created_roles.append(role)
         admin.execute(sql.SQL("create database {}").format(sql.Identifier(name)))
     test_dsn = make_conninfo(dsn, dbname=name)
     try:
@@ -64,6 +66,7 @@ def postgres_database():
                 {table('today_checkins')} {table('session_completions')} {table('rehab_exposures')}
             """)
             # Execute the actual migration, including its injury-update trigger.
+            setup.execute((ROOT / "supabase/migrations/20260820170000_add_rehab_response_group_identity.sql").read_text(encoding="utf-8"))
             setup.execute(MIGRATION.read_text(encoding="utf-8"))
             setup.execute("insert into profiles values (%s)", (ATHLETE,))
             setup.execute("""insert into injury_flags(id,athlete_id,description,body_region,side,episode_id)
@@ -72,6 +75,8 @@ def postgres_database():
     finally:
         with psycopg.connect(dsn, autocommit=True) as admin:
             admin.execute(sql.SQL("drop database {} with (force)").format(sql.Identifier(name)))
+            for role in reversed(created_roles):
+                admin.execute(sql.SQL("drop role {}").format(sql.Identifier(role)))
 
 
 def event_for(rpc, episode):
@@ -79,7 +84,7 @@ def event_for(rpc, episode):
         return {"id": str(uuid4()), "injury_id": INJURY, "injury_episode_id": episode,
                 "event_type": "clinician_clearance_report",
                 "payload": {"source": "athlete_reported", "externally_verified": False, "scopes": ["rehab"]}}
-    return {"exposure_id": str(uuid4()), "injury_id": INJURY, "injury_episode_id": episode,
+    return {"exposure_id": str(uuid4()), "response_group_id": str(uuid4()), "injury_id": INJURY, "injury_episode_id": episode,
             "drill_id": "ankle_sprain_heel_lowering", "body_region": "ankle", "side": "left",
             "demand": {"target_regions": ["ankle"], "load": "low", "impact": "none", "velocity": "low"},
             "dose_completed": {"completion_state": "performed_amount_unknown"},
@@ -114,7 +119,7 @@ def test_rpc_and_injury_update_serialize_without_deadlock(postgres_database, rpc
                 return None
             except psycopg.Error as error:
                 recorder.rollback()
-                return error.sqlstate
+                return error.sqlstate or "client_error"
 
         with ThreadPoolExecutor(max_workers=1) as executor:
             pending = executor.submit(record)
@@ -194,3 +199,28 @@ def test_only_explicit_reports_refresh_recovery_evidence(postgres_database):
         assert row["latest_reported_at"] > original_report
         assert result["stage"] == "restore" and result["prescription"]["is_loading"]
         assert schedule_rehab(row, result, training_day="2026-10-08", exposures=exposures)["state"] == "due"
+
+
+def test_historical_delayed_feedback_remains_owned_and_episode_scoped(postgres_database):
+    import psycopg
+    from psycopg.types.json import Jsonb
+
+    identity, old_episode, new_episode = str(uuid4()), str(uuid4()), str(uuid4())
+    with psycopg.connect(postgres_database, autocommit=True) as connection:
+        connection.execute("""insert into injury_flags(id,athlete_id,description,body_region,side,episode_id)
+            values(%s,%s,'ankle sprain','ankle','left',%s)""", (identity, ATHLETE, old_episode))
+        exposure = event_for("record_rehab_exposure", old_episode)
+        exposure["injury_id"] = identity
+        connection.execute("select record_rehab_exposure(%s,%s)", (ATHLETE, Jsonb(exposure)))
+        connection.execute("update injury_flags set episode_id=%s where id=%s", (new_episode, identity))
+        pending = connection.execute("select id from pending_delayed_rehab(%s,'2026-10-08') where injury_id=%s", (ATHLETE, identity)).fetchall()
+        assert [str(r[0]) for r in pending] == [exposure["exposure_id"]]
+        report = dict(id=str(uuid4()), injury_id=identity, injury_episode_id=old_episode,
+                      event_type="delayed_rehab_response", payload=dict(exposure_id=exposure["exposure_id"], response="worse"))
+        connection.execute("select record_injury_episode_event(%s,%s)", (ATHLETE, Jsonb(report)))
+        saved = connection.execute("select injury_episode_id from injury_episode_events where id=%s", (report["id"],)).fetchone()
+        assert str(saved[0]) == old_episode
+        assert not connection.execute("select id from pending_delayed_rehab(%s,'2026-10-08') where injury_id=%s", (ATHLETE, identity)).fetchall()
+        with pytest.raises(psycopg.Error) as failure:
+            connection.execute("select record_injury_episode_event(%s,%s)", (ATHLETE, Jsonb({**report, "id": str(uuid4()), "injury_episode_id": new_episode})))
+        assert failure.value.sqlstate == "23514"

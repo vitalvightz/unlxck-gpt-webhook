@@ -180,7 +180,7 @@ begin
   select * into v_injury from public.injury_flags
     where id = (p_event->>'injury_id')::uuid and athlete_id = p_athlete_id for share;
   if not found then raise exception 'injury not found' using errcode = '23503'; end if;
-  if v_injury.episode_id <> (p_event->>'injury_episode_id')::uuid then
+  if v_type <> 'delayed_rehab_response' and v_injury.episode_id <> (p_event->>'injury_episode_id')::uuid then
     raise exception 'injury_episode_changed' using errcode = '23514';
   end if;
   if v_type = 'clinician_clearance_report' then
@@ -196,18 +196,18 @@ begin
     if coalesce(v_payload->>'response','') not in ('better','same','worse','not_sure')
        or not exists (select 1 from public.rehab_exposures e
             where e.id = (v_payload->>'exposure_id')::uuid and e.athlete_id = p_athlete_id
-              and e.injury_id = v_injury.id and e.injury_episode_id = v_injury.episode_id) then
+              and e.injury_id = v_injury.id and e.injury_episode_id = (p_event->>'injury_episode_id')::uuid) then
       raise exception 'invalid delayed response' using errcode = '23514';
     end if;
   else raise exception 'unknown episode event' using errcode = '22023';
   end if;
   insert into public.injury_episode_events (id, athlete_id, injury_id, injury_episode_id, event_type, payload)
-    values ((p_event->>'id')::uuid, p_athlete_id, v_injury.id, v_injury.episode_id, v_type, v_payload)
+    values ((p_event->>'id')::uuid, p_athlete_id, v_injury.id, (p_event->>'injury_episode_id')::uuid, v_type, v_payload)
     on conflict (id) do nothing returning * into v_result;
   if not found then
     select * into v_result from public.injury_episode_events where id = (p_event->>'id')::uuid and athlete_id = p_athlete_id;
     if not found or v_result.payload <> v_payload or v_result.event_type <> v_type
-       or v_result.injury_id <> v_injury.id or v_result.injury_episode_id <> v_injury.episode_id then
+       or v_result.injury_id <> v_injury.id or v_result.injury_episode_id <> (p_event->>'injury_episode_id')::uuid then
       raise exception 'episode_event_conflict' using errcode = '23514';
     end if;
   end if;
@@ -223,8 +223,8 @@ create or replace function public.pending_delayed_rehab(p_athlete_id uuid, p_tra
 returns setof public.rehab_exposures language sql security definer
 set search_path = public, pg_temp as $$
   select e.* from public.rehab_exposures e
-    join public.injury_flags i on i.id = e.injury_id and i.athlete_id = e.athlete_id and i.episode_id = e.injury_episode_id
-    where e.athlete_id = p_athlete_id and e.occurred_at::date < p_training_day
+    join public.injury_flags i on i.id = e.injury_id and i.athlete_id = e.athlete_id
+    where e.athlete_id = p_athlete_id and e.occurred_at::date < p_training_day + 1
       and coalesce(e.response->>'next_day_response','not_yet_known') = 'not_yet_known'
       and not exists (select 1 from public.injury_episode_events o
          where o.athlete_id = e.athlete_id and o.event_type = 'delayed_rehab_response' and o.payload->>'exposure_id' = e.id::text)

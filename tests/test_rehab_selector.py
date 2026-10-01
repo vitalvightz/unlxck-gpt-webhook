@@ -519,3 +519,10 @@ def test_real_bank_selection_is_deterministic_across_candidate_order():
 def test_live_stage_ceiling_is_unchanged_by_this_selector():
     """PR5 selects drills. It does not move the ladder's ceiling."""
     assert MAX_RESOLVABLE_STAGE == STAGE_RESTORE
+
+
+def test_one_shot_activated_stages_apply_to_every_candidate():
+    from fightcamp.rehab_selector import filter_rehab_candidates
+    eligible, rejected = filter_rehab_candidates(injury=injury(), rehab_stage="restore",
+        candidates=[drill("first"), drill("second")], activated_stages=iter(["calm", "restore"]))
+    assert [d["id"] for d in eligible] == ["first", "second"] and not rejected

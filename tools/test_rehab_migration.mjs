@@ -24,6 +24,7 @@ await db.exec(`create role anon; create role authenticated; create role service_
   create unique index injury_flags_episode_owner_idx on public.injury_flags(id,athlete_id,episode_id);
   ${table("today_checkins")} ${table("session_completions")} ${table("rehab_exposures")}`);
 const migration = readFileSync("supabase/migrations/20260930173118_injury_episode_prescription_history.sql", "utf8");
+await db.exec(readFileSync("supabase/migrations/20260820170000_add_rehab_response_group_identity.sql", "utf8"));
 await db.exec(migration);
 const athlete = "00000000-0000-4000-8000-000000000001";
 const other = "00000000-0000-4000-8000-000000000002";
@@ -101,7 +102,7 @@ await test("optional clearance never gates an otherwise eligible start", async (
   await db.query("select public.record_injury_episode_event($1,$2::jsonb)",[athlete,JSON.stringify(report)]);
   await start(stale);
 });
-const exposure = {exposure_id:"00000000-0000-4000-8000-000000000021",injury_id:injury,injury_episode_id:episode,
+const exposure = {exposure_id:"00000000-0000-4000-8000-000000000021",response_group_id:"00000000-0000-4000-8000-000000000023",injury_id:injury,injury_episode_id:episode,
   drill_id:"ankle_sprain_heel_lowering",body_region:"ankle",side:"left",demand:{target_regions:["ankle"],load:"low",impact:"none",velocity:"low"},
   dose_completed:{completion_state:"performed_amount_unknown"},response:{during_response:"same",next_day_response:"not_yet_known"},
   occurred_at:"2026-09-30T12:00:00Z",provenance:{source:"athlete_logged_rehab",recorded_at:"2026-09-30T12:30:00Z"}};

@@ -145,7 +145,7 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
     ) -> dict[str, Any]:
         require_health_feature_access(profile)
         return record_episode_observation(store, athlete_id=profile.athlete_id, observation=request_body,
-                                         training_day=resolve_training_day(profile.athlete_timezone))
+                                         training_day=resolve_training_day(profile.athlete_timezone), athlete_timezone=profile.athlete_timezone)
 
     @router.post(
         "/api/today/checkin",

@@ -326,3 +326,12 @@ def test_sparring_log_schema_is_required_by_the_deploy_gate():
         "sparring_logs_athlete_day_idx" in requirement.accepted_names
         for requirement in INDEX_REQUIREMENTS
     )
+
+
+def test_rehab_deploy_gate_requires_all_persistence_and_history_columns():
+    required = {"demand", "prescribed_dose", "completed_dose", "evidence_source", "recorded_at", "created_at"}
+    assert required <= set(REQUIRED_COLUMNS["rehab_exposures"])
+    for missing in required:
+        columns = {table: list(cols) for table, cols in REQUIRED_COLUMNS.items()}
+        columns["rehab_exposures"].remove(missing)
+        assert f"rehab_exposures.{missing}" in find_missing_columns(columns)

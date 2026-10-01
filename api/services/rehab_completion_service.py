@@ -219,9 +219,14 @@ def session_rehab_items(
         drill_id = _clean(block.get("rehab_drill_id"))
         if not drill_id:
             continue
-        drill = block.get("drill_snapshot") if prescription is not None else rehab_drill_by_id(drill_id)
+        drill = block.get("drill_snapshot") if prescription is not None else None
+        if drill is None:
+            # Older accepted blocks have an ID but no frozen drill metadata.
+            drill = rehab_drill_by_id(drill_id)
         if not isinstance(drill, Mapping):
             continue
+        if _clean(drill.get("id")) != drill_id:
+            raise HTTPException(409, "rehab_snapshot_identity_mismatch")
         block_id = _clean(block.get("block_id"))
         if block_id:
             occurrence_key = f"block:{block_id}"

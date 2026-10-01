@@ -422,6 +422,7 @@ export function TodaySessionPanel({
     allowDatedWeekdayMatch: openOngoing,
   });
   const livePrescription = state.live_prescription;
+  const rehabChoiceRequired = intent === "done" && Boolean(livePrescription?.session.blocks?.some(block => block.block_type === "rehab"));
   const current: CurrentDayResolution = livePrescription ? {
     ...storedCurrent, inRange: true,
     day: { ...(storedCurrent.day ?? {}), date: state.today.training_day, sessions: [livePrescription.session] },
@@ -605,6 +606,10 @@ export function TodaySessionPanel({
     } = {},
   ): Promise<boolean> {
     if (!state.active_plan.id || !session.session_id || isSubmitting) {
+      return false;
+    }
+    if (nextStatus === "done" && rehabChoiceRequired && !rehabPerformance) {
+      showToast("Choose how much rehab you performed before saving.", { tone: "error" });
       return false;
     }
     setIsSubmitting(true);
@@ -1111,6 +1116,7 @@ export function TodaySessionPanel({
           intent={intent}
           initialNotes={timerNotes}
           isSubmitting={isSubmitting}
+          submissionBlockedReason={rehabChoiceRequired && !rehabPerformance ? "Choose how much rehab you performed before saving." : undefined}
           onCancel={() => setIntent(null)}
           onSubmit={async (nextStatus, details) => {
             await saveCompletion(nextStatus, {

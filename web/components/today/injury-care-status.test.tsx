@@ -71,3 +71,26 @@ test("next-day uncertainty is saved separately from the during response", async 
     assert.match(container.textContent ?? "", /response saved/);
   } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
 });
+
+test("clearance retry keeps the report identity when refresh fails after saving", async () => {
+  const container = document.createElement("div"); document.body.appendChild(container);
+  const root = createRoot(container);
+  const original = globalThis.fetch;
+  const calls: Array<Record<string, unknown>> = [];
+  let refreshes = 0;
+  globalThis.fetch = (async (_input, init) => {
+    calls.push(JSON.parse(String(init?.body)));
+    return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
+  }) as typeof fetch;
+  try {
+    await act(async () => { root.render(<InjuryCareStatus injury={injury} token="token" onRefresh={async () => {
+      if (++refreshes === 1) throw new Error("Refresh failed");
+    }} />); });
+    await click(container, "My clinician cleared me");
+    await click(container, "Rehab");
+    assert.match(container.textContent ?? "", /Refresh failed/);
+    await click(container, "Rehab");
+    assert.equal(calls.length, 2);
+    assert.equal(calls[0].report_id, calls[1].report_id);
+  } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
+});

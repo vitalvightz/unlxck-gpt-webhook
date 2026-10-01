@@ -212,7 +212,7 @@ class RehabExposureEvent(BaseModel):
             return False
         if injury.get("body_region") != self.body_region:
             return False
-        injury_side = injury.get("side")
+        injury_side = str(injury.get("side") or "unknown").strip().lower() or "unknown"
         if (self.provenance.policy_id in {"chest_strain", "ankle_sprain"}
                 and self.provenance.prescription_revision and self.provenance.rehab_stage in {"calm", "restore"}
                 and self.side == "unknown" and injury_side in (None, "unknown")):

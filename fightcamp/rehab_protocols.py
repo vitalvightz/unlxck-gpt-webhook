@@ -1015,16 +1015,17 @@ def _select_rehab_drills_per_episode(
 
     chosen: list[tuple[str, str]] = []
     seen_names: set[str] = set()
+    allocated_episodes: set[int] = set()
 
     def finish():
         if outcomes is not None:
-            for episode, drills in zip(sorted(episodes, key=_episode_sort_key), per_episode):
-                allocated = any(str(name).strip().lower() in seen_names for name, _ in drills)
+            for index, (episode, drills) in enumerate(zip(sorted(episodes, key=_episode_sort_key), per_episode)):
+                allocated = index in allocated_episodes
                 outcomes.append({"injury_type": episode.get("injury_type"), "side": episode.get("side"),
                                  "outcome": "available" if allocated else "deferred" if drills else "unsupported_prescription"})
         return chosen
     for position in range(max((len(lines) for lines in per_episode), default=0)):
-        for lines in per_episode:
+        for index, lines in enumerate(per_episode):
             if position >= len(lines):
                 continue
             name, notes = lines[position]
@@ -1032,6 +1033,7 @@ def _select_rehab_drills_per_episode(
             if key in seen_names:
                 continue
             seen_names.add(key)
+            allocated_episodes.add(index)
             chosen.append((name, notes))
             if len(chosen) >= drill_limit:
                 return finish()
@@ -1386,6 +1388,8 @@ def _episode_context(entry: dict) -> dict | None:
         "rehab_medical_gate": entry.get("rehab_medical_gate"),
         "clinician_clearance": entry.get("clinician_clearance"),
         "latest_reported_status": entry.get("latest_reported_status"),
+        "latest_reported_at": entry.get("latest_reported_at"),
+        "status": entry.get("status"),
         # The injury's OWN type governs its candidate pool — never the group's
         # highest-risk type, which could belong to a different injury.
         "injury_type": injury_type or None,
