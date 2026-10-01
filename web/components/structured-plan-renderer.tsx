@@ -1875,7 +1875,14 @@ function RecoveryPhaseCard({
           {item.lists.map((group) => (
             <li key={group.label}>
               <span className="sp-kv-label">{group.label}</span>
-              <span>{group.items.join("; ")}</span>
+              {/* One line per item: entries carry their own semicolons
+                  ("comfort-based; avoid if…"), so a "; " join read as text
+                  cut off mid-sentence. */}
+              <ul className="sp-kv-items">
+                {group.items.map((entry, entryIndex) => (
+                  <li key={`${entryIndex}-${entry}`}>{entry}</li>
+                ))}
+              </ul>
             </li>
           ))}
         </ul>
@@ -2075,7 +2082,10 @@ function WeekStrip({
               </span>
             ) : null}
             {completion.total > 0 ? (
-              <span className="cm-week-pill-completion">
+              <span
+                className="cm-week-pill-completion"
+                title="App sessions completed. Coach/gym days are tracked separately."
+              >
                 {completion.done}/{completion.total} app
                 <span className="sr-only"> sessions completed</span>
               </span>
@@ -2199,6 +2209,13 @@ function WeekOverview({
             </span>
           ))}
         </div>
+      ) : null}
+      {completion.total > 0 && sessionSummary.coachLedSessions > 0 ? (
+        // Training days = app sessions + coach/gym days, so "0/2" beside a
+        // 4-day week needs saying out loud rather than inferring from labels.
+        <p className="muted cm-week-count-note">
+          App completed counts the sessions you run in the app. Coach/gym days are tracked separately.
+        </p>
       ) : null}
     </section>
   );

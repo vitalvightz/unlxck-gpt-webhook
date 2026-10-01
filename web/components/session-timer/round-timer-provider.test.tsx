@@ -119,9 +119,12 @@ test("the timer page opens straight into the round timer, which minimises to its
   const mini = document.querySelector<HTMLButtonElement>(".st-mini");
   assert.ok(mini);
   assert.equal(flag(), "shown");
+  // The floating bar reserves room under the page so it can't cover controls.
+  assert.equal(document.documentElement.classList.contains("has-timer-mini"), true);
 
   await act(async () => mini.click());
   assert.ok(document.querySelector(".st-root"));
+  assert.equal(document.documentElement.classList.contains("has-timer-mini"), false);
 
   // Closing it leaves the page, which can start it again.
   const close = [...document.querySelectorAll<HTMLButtonElement>(".st-link")].find(

@@ -930,6 +930,18 @@ function useDraggableMini(onTap: () => void) {
   };
 }
 
+/** Counted so two timers (round timer + a session timer) never clear each
+ * other's reservation. Returns the release function. */
+let miniSpaceHolders = 0;
+function reserveMiniSpace(): () => void {
+  miniSpaceHolders += 1;
+  document.documentElement.classList.add("has-timer-mini");
+  return () => {
+    miniSpaceHolders = Math.max(0, miniSpaceHolders - 1);
+    if (miniSpaceHolders === 0) document.documentElement.classList.remove("has-timer-mini");
+  };
+}
+
 /** Portal to <body> so a transformed ancestor card can never trap the
  * fixed-position overlay; server rendering (tests) renders in place. */
 function ToBody({ children }: { children: ReactNode }) {
@@ -999,6 +1011,14 @@ export function SessionTimer({
       window.removeEventListener("keydown", onKey);
     };
   }, [visible, onMinimize]);
+
+  // While the mini bar floats, reserve room under the page so it never sits on
+  // top of the last thing the athlete needs to tap (see .has-timer-mini).
+  const showsMini = !visible && state.phase !== "done";
+  useEffect(() => {
+    if (!showsMini) return;
+    return reserveMiniSpace();
+  }, [showsMini]);
 
   const finish = () =>
     onFinish({ complete: metPlan(state), notes: summarizeRun(state), sparring: sparringSummary(state) });

@@ -1050,6 +1050,24 @@ select:focus-visible {
   line-height: 1.45;
 }
 
+/* Explains the disabled submit while Turnstile has no token. Fades in late so a
+   challenge that passes on its own (the usual case) never flashes the hint. */
+.auth-captcha-hint {
+  margin: 0;
+  font-size: var(--type-body-sm);
+  line-height: 1.45;
+  animation: auth-captcha-hint-in 200ms ease-out 1200ms both;
+}
+
+@keyframes auth-captcha-hint-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-captcha-hint { animation: none; }
+}
+
 /* Align optional consent metadata with the statement rather than the checkbox,
    so it reads as one compact secondary row. */
 .auth-consent-meta {
@@ -19867,6 +19885,20 @@ html[data-theme="light"] .loading-operational-item {
   font-size: 0.86rem;
   color: var(--text-secondary);
 }
+/* Multi-item recovery rows (Core, Phase focus, Fatigue…): a compact bullet list
+   inside the kv row, overriding the column-flex the row's own <li> gets. */
+.sp-kv-list .sp-kv-items {
+  list-style: disc;
+  margin: 2px 0 0;
+  padding-left: 1.1em;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sp-kv-list .sp-kv-items li {
+  display: list-item;
+  line-height: 1.45;
+}
 .sp-coaching-label,
 .sp-kv-label,
 .sp-stat-label {
@@ -21051,6 +21083,12 @@ html[data-theme="light"] .loading-operational-item {
   grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
   gap: 8px;
   margin-top: 4px;
+}
+
+.cm-week-count-note {
+  margin: 8px 0 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
 }
 
 .cm-week-overview-stats .sp-stat {

@@ -466,11 +466,17 @@ export function AuthForm({
             onUnavailable={handleCaptchaUnavailable}
             resetKey={captchaResetKey}
           />
+          {isCaptchaBlocked ? (
+            <p id="captchaHint" className="muted auth-captcha-hint" role="status">
+              {t("captchaHint")}
+            </p>
+          ) : null}
 
           <div className="form-actions auth-form-actions">
             <button
               type="submit"
               className="cta"
+              aria-describedby={isCaptchaBlocked ? "captchaHint" : undefined}
               disabled={
                 isPending || isSignupPasswordBlocked || isSignupConsentBlocked || isCaptchaBlocked
               }

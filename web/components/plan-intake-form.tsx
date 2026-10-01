@@ -2029,13 +2029,17 @@ export function PlanIntakeForm() {
   const selectedGoals = formatJoinedLabels(selectedGoalLabels, "No goals selected");
   const selectedWeakAreas = formatJoinedLabels(selectedWeakAreaLabels, "No weak areas selected");
   const performanceFocusCapTitle = performanceFocusCapValue === null
-    ? "Set a fight date to calculate your focus cap"
+    ? noScheduledFight
+      ? "No focus cap without a scheduled fight"
+      : "Set a fight date to calculate your focus cap"
     : `${selectedPerformanceFocusCount} of ${performanceFocusCapValue} focus picks used`;
   const performanceFocusCapBadge = performanceFocusCapValue === null
     ? "—/—"
     : `${selectedPerformanceFocusCount}/${performanceFocusCapValue}`;
   const performanceFocusCapDetail = performanceFocusCapValue === null
-    ? "Goals and weak areas share a cap once the fight date is set so the plan can match the camp window."
+    ? noScheduledFight
+      ? "Goals and weak areas share a cap once you add a fight date, so the plan can match the camp window."
+      : "Goals and weak areas share a cap once the fight date is set so the plan can match the camp window."
     : performanceFocusCapExceeded
       ? `Goals and weak areas share this ${performanceFocusCapValue}-pick cap for ${performanceFocusWindowLabel}. ${performanceFocusReason} You are ${selectedPerformanceFocusCount - performanceFocusCapValue} over the current cap, so unselect to get back within it.`
       : performanceFocusCapReached
@@ -2322,10 +2326,15 @@ export function PlanIntakeForm() {
           description: "Keep goals and weak areas inside the camp-specific focus cap.",
           checks: [
             {
+              // "No scheduled fight" is a valid answer from step 2, so it must
+              // satisfy this check too; otherwise step 5 reports "1 check left"
+              // with nothing on this step the athlete can fix.
               label: form.fight_date
                 ? `Fight date is set, so the focus cap for ${performanceFocusWindowLabel} is active.`
-                : "Set the fight date to activate the focus cap guidance.",
-              status: form.fight_date ? "done" : "pending",
+                : noScheduledFight
+                  ? "No scheduled fight, so there's no focus cap. Pick what matters most."
+                  : "Set the fight date in Fight Context to activate the focus cap guidance.",
+              status: form.fight_date || noScheduledFight ? "done" : "pending",
             },
             {
               label: performanceFocusCapExceeded
@@ -2576,7 +2585,7 @@ export function PlanIntakeForm() {
                 </div>
                 <ul className="summary-list">
                   <li>Name: {formatValue(form.athlete.full_name)}</li>
-                  <li>Technical Style: {technicalStyleLabel}</li>
+                  <li>Combat sport: {technicalStyleLabel}</li>
                   <li>Tactical Style: {tacticalStyleLabel}</li>
                   <li>Stance: {stanceLabel}</li>
                   <li>Professional Status: {statusLabel}</li>
