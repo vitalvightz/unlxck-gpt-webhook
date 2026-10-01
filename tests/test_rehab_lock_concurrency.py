@@ -141,4 +141,3 @@ def test_rpc_and_injury_update_serialize_without_deadlock(postgres_database, rpc
                 assert result == ("23514" if reopen else None)
             finally:
                 writer.rollback()  # release the blocker even if an assertion fails
-
