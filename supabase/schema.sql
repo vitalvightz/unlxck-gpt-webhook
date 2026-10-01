@@ -2643,6 +2643,7 @@ declare
   v_completed jsonb := p_event->'dose_completed';
   v_response jsonb := coalesce(p_event->'response', '{}'::jsonb);
   v_side text := p_event->>'side';
+  v_injury_side text;
   v_region text := p_event->>'body_region';
   v_completion_state text := v_completed->>'completion_state';
   v_key text;
@@ -2663,7 +2664,8 @@ begin
   if not found then raise exception 'injury not found' using errcode = '23503'; end if;
   -- Unknown side is retained only for baseline region-wide guidance accepted
   -- in an exact frozen episode. Unattributed legacy exercise stays ineligible.
-  v_region_guidance := v_injury.side = 'unknown' and v_side = 'unknown' and exists (
+  v_injury_side := coalesce(nullif(lower(btrim(v_injury.side)), ''), 'unknown');
+  v_region_guidance := v_injury_side = 'unknown' and v_side = 'unknown' and exists (
     select 1 from public.session_completions s,
       lateral jsonb_array_elements(s.prescription_snapshot->'session'->'blocks') b
       where s.athlete_id = p_athlete_id and s.status in ('done','modified')
@@ -2676,8 +2678,8 @@ begin
   if coalesce(v_side, '') not in ('left','right','bilateral','unknown')
      or v_injury.episode_id <> (p_event->>'injury_episode_id')::uuid
      or v_injury.body_region is null or v_injury.body_region <> v_region
-     or ((v_injury.side = 'unknown' or v_side = 'unknown') and not v_region_guidance)
-     or not (v_injury.side = v_side or v_injury.side = 'bilateral' or v_side = 'bilateral') then
+     or ((v_injury_side = 'unknown' or v_side = 'unknown') and not v_region_guidance)
+     or not (v_injury_side = v_side or v_injury_side = 'bilateral' or v_side = 'bilateral') then
     raise exception 'exposure does not match injury episode, region and side' using errcode = '23514';
   end if;
 

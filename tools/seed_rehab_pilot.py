@@ -6,6 +6,7 @@ import sys
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from fightcamp.rehab_clinical import ClinicalPolicy, content_hash, policy_review_hash  # noqa: E402
+from fightcamp.rehab_schema import PAIN_CEILING_UNRESTRICTED  # noqa: E402
 
 NHS = "https://www.nhs.uk/conditions/sprains-and-strains/"
 ANKLE = "https://services.eastcheshire.nhs.uk/physiotherapy-service/self-help/ankle-and-foot-pain-physiotherapy-self-help"
@@ -39,7 +40,7 @@ def main():
                     "Seek help for severe or worsening pain, swelling or inability to use the area."]
             drill = dict(id=identity, name=name, notes=instructions, rehab_stage=stage, function=function,
                          equipment=[], dose={}, impact="none", load="minimal" if stage == "calm" else "low",
-                         velocity="low", pain_ceiling=None, allowed_severities=["low", "moderate"],
+                         velocity="low", pain_ceiling=PAIN_CEILING_UNRESTRICTED, allowed_severities=["low", "moderate"],
                          progress_when=[], regress_when=["Symptoms worsen: return to comfortable movement and recovery support."],
                          stop_when=stop, target_regions=[area],
                          laterality_applicability="side_specific" if area == "ankle" and stage == "restore" else "not_applicable",
@@ -51,7 +52,7 @@ def main():
             prescriptions.append(dict(drill_id=identity, bank_hash=content_hash(drill), stage=stage,
                                       instructions=instructions, dose=None, allowed_severities=["low", "moderate"],
                                       stop_when=stop, frequency="daily", minimum_gap_days=gap, priority=priority, sources=sources))
-        draft = ClinicalPolicy.model_validate(dict(policy_id=region + "_" + kind, version=2, region=region,
+        draft = ClinicalPolicy.model_validate(dict(policy_id=region + "_" + kind, version=3, region=region,
             injury_type=kind, evidence_sources=list(dict.fromkeys(s for p in prescriptions for s in p["sources"])),
             prescriptions=prescriptions, blocked_regions=[region], contact_limit="none"))
         policies.append({**draft.model_dump(), "status": "active", "activation": "live", "content_hash": policy_review_hash(draft)})

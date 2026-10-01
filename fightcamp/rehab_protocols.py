@@ -990,8 +990,10 @@ def _select_rehab_drills_per_episode(
     first); the volume ceiling still caps the block.
     """
     per_episode: list[list[tuple[str, str]]] = []
+    episode_summaries: list[str | None] = []
     for episode in sorted(episodes, key=_episode_sort_key):
         reviewed = _reviewed_episode_option(episode, loc, current_phase)
+        episode_summaries.append(reviewed["decision"].get("summary") if reviewed is not None and not reviewed["line"] else None)
         if reviewed is not None:
             per_episode.append([reviewed["line"]] if reviewed["line"] else [])
         elif episode.get("stage_resolved"):
@@ -1022,7 +1024,8 @@ def _select_rehab_drills_per_episode(
             for index, (episode, drills) in enumerate(zip(sorted(episodes, key=_episode_sort_key), per_episode)):
                 allocated = index in allocated_episodes
                 outcomes.append({"injury_type": episode.get("injury_type"), "side": episode.get("side"),
-                                 "outcome": "available" if allocated else "deferred" if drills else "unsupported_prescription"})
+                                 "outcome": "available" if allocated else "deferred" if drills else "unsupported_prescription",
+                                 "summary": episode_summaries[index]})
         return chosen
     for position in range(max((len(lines) for lines in per_episode), default=0)):
         for index, lines in enumerate(per_episode):
@@ -1198,13 +1201,20 @@ def generate_rehab_protocols(
                         lines.append(f"- {label.title()}: Rehab deferred because this session's rehab allocation is full. Keep to your current restrictions.")
                     if outcome["outcome"] == "unsupported_prescription":
                         label = " ".join(str(part) for part in (outcome.get("side"), loc, outcome.get("injury_type")) if part)
-                        lines.append(f"- {label.title()}: No suitable rehab drill is available for this injury today. Keep to your current restrictions and get individual guidance.")
+                        guidance = outcome.get("summary") or "No suitable rehab drill is available for this injury today. Keep to your current restrictions and get individual guidance."
+                        lines.append(f"- {label.title()}: {guidance}")
             if not selected:
                 if severity == "high":
                     _render_high_severity_note()
                 else:
                     loc_title = _render_location_heading(loc, merged)
-                    lines.append(f"- {loc_title}: No suitable rehab drill is available for this injury today. Keep to your current restrictions and get individual guidance.")
+                    if any(outcome.get("summary") for outcome in episode_outcomes):
+                        for outcome in episode_outcomes:
+                            label = " ".join(str(part) for part in (outcome.get("side"), loc, outcome.get("injury_type")) if part)
+                            guidance = outcome.get("summary") or "No suitable rehab drill is available for this injury today. Keep to your current restrictions and get individual guidance."
+                            lines.append(f"- {label.title()}: {guidance}")
+                    else:
+                        lines.append(f"- {loc_title}: No suitable rehab drill is available for this injury today. Keep to your current restrictions and get individual guidance.")
                 continue
         else:
             # Defensive fallback: a location with no resolvable MSK episode (e.g.

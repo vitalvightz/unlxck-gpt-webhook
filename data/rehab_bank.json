@@ -67,7 +67,7 @@
         "impact": "none",
         "load": "minimal",
         "velocity": "low",
-        "pain_ceiling": null,
+        "pain_ceiling": "unrestricted",
         "allowed_severities": [
           "low",
           "moderate"
@@ -103,7 +103,7 @@
         "impact": "none",
         "load": "low",
         "velocity": "low",
-        "pain_ceiling": null,
+        "pain_ceiling": "unrestricted",
         "allowed_severities": [
           "low",
           "moderate"
@@ -139,7 +139,7 @@
         "impact": "none",
         "load": "low",
         "velocity": "low",
-        "pain_ceiling": null,
+        "pain_ceiling": "unrestricted",
         "allowed_severities": [
           "low",
           "moderate"
@@ -10441,7 +10441,7 @@
         "impact": "none",
         "load": "minimal",
         "velocity": "low",
-        "pain_ceiling": null,
+        "pain_ceiling": "unrestricted",
         "allowed_severities": [
           "low",
           "moderate"
@@ -10477,7 +10477,7 @@
         "impact": "none",
         "load": "low",
         "velocity": "low",
-        "pain_ceiling": null,
+        "pain_ceiling": "unrestricted",
         "allowed_severities": [
           "low",
           "moderate"

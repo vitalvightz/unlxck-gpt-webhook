@@ -139,6 +139,10 @@ await test("region-wide baseline feedback keeps unknown side only for frozen wor
     provenance:{...exposure.provenance,prescription_revision:snap.revision,policy_id:"chest_strain",rehab_stage:"calm"}};
   await db.query("select record_rehab_exposure($1,$2::jsonb)",[athlete,JSON.stringify(report)]);
   assert.notEqual(report.response_group_id, exposure.response_group_id);
+  for (const side of ["", "  ", "unknown"]) {
+    await db.query("update injury_flags set side=$1 where id=$2", [side, chest]);
+    await db.query("select record_rehab_exposure($1,$2::jsonb)", [athlete, JSON.stringify(report)]);
+  }
   await rejects(() => db.query("select record_rehab_exposure($1,$2::jsonb)",[athlete,JSON.stringify({...report,drill_id:"unattributed_legacy"})]),"exposure does not match");
 });
 await test("a full rehab allocation does not prohibit training with no rehab", async () => {

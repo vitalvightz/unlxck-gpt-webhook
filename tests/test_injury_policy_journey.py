@@ -67,11 +67,20 @@ def test_shipped_policies_are_sourced_active_and_self_paced():
     assert {p.region for p in policies} == {"chest", "ankle"}
     assert all(p.activation == "live" and p.status == "active" for p in policies)
     assert all(p.dose is None and p.sources for policy in policies for p in policy.prescriptions)
+    from fightcamp.rehab_protocols import get_rehab_bank
+    from fightcamp.rehab_schema import CONTRACT_FIELDS, PAIN_CEILING_UNRESTRICTED
+    bank = {d["id"]: d for group in get_rehab_bank() for d in group["drills"]}
+    for policy in policies:
+        assert policy.version == 3
+        for prescription in policy.prescriptions:
+            drill = bank[prescription.drill_id]
+            assert drill["pain_ceiling"] == PAIN_CEILING_UNRESTRICTED
+            assert all(drill.get(field) is not None for field in CONTRACT_FIELDS)
     with pytest.raises(ValidationError):
         ClinicalPolicy.model_validate({**policies[0].model_dump(), "content_hash": "a" * 64})
 
 
-@pytest.mark.parametrize("side", ["left", "unknown", ""])
+@pytest.mark.parametrize("side", ["left", "unknown", "", "  ", None])
 def test_chest_guidance_retains_episode_feedback_without_inventing_laterality(side):
     from fightcamp.rehab_protocols import get_rehab_bank
     row = dict(id=str(uuid4()), episode_id=str(uuid4()), athlete_id=ATHLETE, body_area="Chest", description="Chest strain",
@@ -81,7 +90,7 @@ def test_chest_guidance_retains_episode_feedback_without_inventing_laterality(si
     completion = dict(status="done", prescription_snapshot=snapshot, rehab_performance="done_as_shown")
     items = session_rehab_items({"id": PLAN}, training_day=DAY, session_id=f"rehab-{DAY}", prescription=snapshot)
     candidates = resolve_rehab_completion(items, [row], completion=completion).eligible
-    assert len(candidates) == 1 and candidates[0].side == (side or "unknown")
+    assert len(candidates) == 1 and candidates[0].side == (str(side or "").strip() or "unknown")
     event = build_rehab_exposure_event(candidates[0], athlete_id=ATHLETE, plan_id=PLAN, session_id=f"rehab-{DAY}",
         training_day=DAY, completion=completion, during="same", limit="no")
     assert event.is_attributable_to(row)
@@ -127,12 +136,18 @@ def test_stale_review_and_missing_provenance_fail_closed(reviewed):
         ClinicalPolicy.model_validate(changed)
 
 
-def test_retired_policy_holds_work_instead_of_resuming_legacy_prescriptions(reviewed):
+def test_retired_policy_holds_work_instead_of_resuming_legacy_prescriptions(reviewed, monkeypatch):
     policy, bank, injury = reviewed
     retired = ClinicalPolicy.model_validate({**policy.model_dump(), "status": "retired", "activation": "shadow"})
     decision = resolve_injury_policy(injury, policies=(retired,), bank=bank)
     assert decision["outcome"] == "medical_review" and decision["prescription"] is None
     assert reconcile_session_prescription({"session_id": "s", "blocks": []}, decisions=[decision], plan_id=PLAN, training_day=DAY)["safety_hold"]
+    from fightcamp import rehab_clinical, rehab_protocols
+    monkeypatch.setattr(rehab_clinical, "load_clinical_policies", lambda: (retired,))
+    monkeypatch.setattr(rehab_protocols, "get_rehab_bank", lambda: bank)
+    text, _ = rehab_protocols.generate_rehab_protocols(injury_string="", exercise_data=[], current_phase="GPP", parsed_entries=[injury])
+    assert decision["summary"] in text
+    assert "No suitable rehab drill" not in text and "Test control drill" not in text
 
 
 def test_urgent_missing_and_shadow_outcomes_are_explicit(reviewed):

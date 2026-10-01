@@ -3,7 +3,7 @@
   "policies": [
     {
       "policy_id": "chest_strain",
-      "version": 2,
+      "version": 3,
       "region": "chest",
       "injury_type": "strain",
       "status": "active",
@@ -11,11 +11,11 @@
       "evidence_sources": [
         "https://www.nhs.uk/conditions/sprains-and-strains/"
       ],
-      "content_hash": "1d95ff426eadc087be3a6fafdf4e23924c2623d68b0aa2734d8a785612740e03",
+      "content_hash": "bcb04950b08fa56d411e0117010d9dcc47c6057bc8fc84c2304fb746e20ba8d9",
       "prescriptions": [
         {
           "drill_id": "chest_strain_recovery_support",
-          "bank_hash": "b3afeffc368218db3eb932fd902136fb2d4e2190fd548e66a1d5ac1b51044e23",
+          "bank_hash": "732d72eea53f2191531e19edf71b3e8893982803f508bce6afd1462d85441338",
           "stage": "calm",
           "instructions": "Protect the strained area and avoid movements that aggravate it. During the first 2 to 3 days, rest from exercise that loads it. Use comfortable everyday movement; do not force a stretch or add resisted chest work.",
           "dose": null,
@@ -38,7 +38,7 @@
         },
         {
           "drill_id": "chest_strain_comfortable_movement",
-          "bank_hash": "03a6adf4662ec9d05e827c6ed1fe575e17ccb446f1973adc42abf3bb45fa6e4c",
+          "bank_hash": "86969b567e9daf022d873d0c9df06983493f3d017edf0c0e86e0b6bd07cae150",
           "stage": "restore",
           "instructions": "When pain no longer stops movement, gently move your shoulder and arm through a comfortable range. Go at your own pace and stop before pain prevents movement. Avoid forced chest stretches, resisted chest flies and surgical-repair routines.",
           "dose": null,
@@ -73,7 +73,7 @@
     },
     {
       "policy_id": "ankle_sprain",
-      "version": 2,
+      "version": 3,
       "region": "ankle",
       "injury_type": "sprain",
       "status": "active",
@@ -83,11 +83,11 @@
         "https://www.whittington.nhs.uk/mini-apps/leaflet/Default.asp?id=53&print=1",
         "https://services.eastcheshire.nhs.uk/physiotherapy-service/self-help/ankle-and-foot-pain-physiotherapy-self-help"
       ],
-      "content_hash": "6e446bc91e20de295cad3e31e81d796c5ba59792707eed667966fb3bde4a1ef0",
+      "content_hash": "ae9a7431741198a66fa56426e21e467d47b0a3639aebdf13846b633590a193dd",
       "prescriptions": [
         {
           "drill_id": "ankle_sprain_gentle_movement",
-          "bank_hash": "1e56a44f50cb1e15d27d0c098ed2bd17445069df23d053a8f4c7741052445213",
+          "bank_hash": "9ad8cc97eb7320cecee9148ad339c1d5580b0923417f6a048ecaf68929e4c440",
           "stage": "calm",
           "instructions": "Once the ankle is less painful, sit with the foot supported and gently move it up and down or trace the alphabet. Start with a small comfortable amount and build gradually. Keep within a comfortable range; do not force movement.",
           "dose": null,
@@ -111,7 +111,7 @@
         },
         {
           "drill_id": "ankle_sprain_supported_balance",
-          "bank_hash": "a3fbe3e75432f02d80983fb2a323d30a9ad726883df189a5690a05b9b999508e",
+          "bank_hash": "f00f718eb8220c4f7ff0539627368fe22f7218b81b8ee82d3fad9d567276eae3",
           "stage": "restore",
           "instructions": "When standing and weight bearing are comfortable, practise balancing on the affected leg on firm ground, close to a stable counter for support. Start with a short comfortable attempt and build gradually. Keep support available; do not use a cushion or close your eyes.",
           "dose": null,
@@ -134,7 +134,7 @@
         },
         {
           "drill_id": "ankle_sprain_heel_lowering",
-          "bank_hash": "9a477f3d8854e332a7e8fd0ea005778ff7db511c61d4d2617d5bcc11d7bf4587",
+          "bank_hash": "c932d4b2b5a7bbfe4fbc77249ed2056cea2416add6982a3a5c84bc38cb5445ea",
           "stage": "restore",
           "instructions": "When weight bearing and gentle calf movement are comfortable, use a stable support and practise controlled heel lowering as shown in the linked ankle rehabilitation guidance. Work at your own pace, up to 2 sets on alternate days. The source gives no repetition target; stop before symptoms worsen.",
           "dose": null,
