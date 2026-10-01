@@ -174,17 +174,23 @@ def test_low_aerobic_between_two_hard_contacts_allowed():
 # 5. Low-physical between hard contacts deprioritized and loses to ALLOW       #
 # --------------------------------------------------------------------------- #
 def test_low_physical_between_hard_contacts_deprioritized_and_loses_to_allow():
-    view = sequence_legality([], resolved_contacts=[(20, "hard"), (14, "hard")])
-    assert _directive(view, "footwork_walkthrough", 17) is PlacementDirective.DEPRIORITIZE
+    # Hard-contact spacing is gap-aware: only a gap of one or two intervening days
+    # is tight. Contacts at D-20 and D-18 leave a single day (D-19) between them.
+    view = sequence_legality([], resolved_contacts=[(20, "hard"), (18, "hard")])
+    assert _directive(view, "footwork_walkthrough", 19) is PlacementDirective.DEPRIORITIZE
 
     # Given both a DEPRIORITIZE low-physical and an ALLOW aerobic option, the
     # filler-layer filter keeps only the ALLOW option.
-    legal = _legal_support_keys(view, {"footwork_walkthrough", "aerobic_shadow_flow"}, 17)
+    legal = _legal_support_keys(view, {"footwork_walkthrough", "aerobic_shadow_flow"}, 19)
     assert legal == {"aerobic_shadow_flow"}
 
     # When only low-physical options remain, DEPRIORITIZE survives (never FORBID).
-    only_physical = _legal_support_keys(view, {"footwork_walkthrough", "movement_quality"}, 17)
+    only_physical = _legal_support_keys(view, {"footwork_walkthrough", "movement_quality"}, 19)
     assert only_physical == {"footwork_walkthrough", "movement_quality"}
+
+    # A wide gap (D-20..D-14, five clear days) is an ordinary interior day.
+    wide = sequence_legality([], resolved_contacts=[(20, "hard"), (14, "hard")])
+    assert _directive(wide, "footwork_walkthrough", 17) is PlacementDirective.ALLOW
 
 
 # --------------------------------------------------------------------------- #
@@ -385,8 +391,12 @@ def test_upstream_filler_not_cleaned_by_final_governor():
 
     integrity = weekly["calendar_integrity"]
     assert integrity["unresolved_forbidden"] == 0
-    assert integrity["relocated_roles"] == 0
     assert integrity["suppressed_roles"] == 0
+    # Meaningful strength the day before hard contact is a deprioritised slot, so
+    # the governor moves it to the clean Thursday. That is the only relocation:
+    # it never touches an upstream filler.
+    assert [action["role_key"] for action in integrity["actions"]] == ["primary_strength_day"]
+    assert integrity["relocated_roles"] == 1
     # No upstream filler was relocated or dropped by the governor.
     fillers_after = [(f["role_key"], f["scheduled_day_hint"]) for f in _fillers(week)]
     assert fillers_after == fillers_before

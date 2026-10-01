@@ -301,7 +301,10 @@ def test_normal_camp_coordination_wins_when_it_is_the_highest_remaining_priority
     apply_camp_week_fillers({"weeks": [week]}, athlete)
 
     discretionary = _discretionary_roles(week)
-    assert len(discretionary) == 1
+    # The week now also keeps its free day occupied (physical frequency is
+    # preserved), so there can be a second filler. What matters here is that the
+    # highest remaining priority, coordination, is placed first.
+    assert 1 <= len(discretionary) <= 2
     assert discretionary[0]["role_key"] == "coordination_support"
     assert _supports(discretionary[0], "coordination")
 
