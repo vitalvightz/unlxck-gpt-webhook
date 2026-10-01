@@ -157,13 +157,13 @@ def test_first_pass_projection_carries_every_deterministic_week_one_role():
     manifest = _closed_membership_render_manifest(packet, planning_brief=planning_brief)
     by_role = {entry["role_key"]: entry for entry in manifest}
 
-    # All five Stage 1 roles reach the first pass — not just the one with
-    # selected_exercise_assignments.
+    # Every model-facing Stage 1 role reaches the first pass — not just the one
+    # with selected_exercise_assignments. The Tactical Watch is server-owned: its
+    # card is inserted after conversion, so it is deliberately not in the handoff.
     assert set(by_role) == {
         "recovery_reset",
         "strength_touch_day",
         "hard_sparring_day",
-        "tactical_watch",
         "breathing_reset",
     }
 
@@ -181,22 +181,22 @@ def test_first_pass_projection_carries_every_deterministic_week_one_role():
     assert by_role["recovery_reset"]["phase"] == "SPP"
     assert by_role["recovery_reset"]["week_index"] == 1
 
-    # 4. Tactical Watch stays locked on its selected drill, with its exact body
-    # recovered from Stage 1 even though the packet compacts it away.
-    watch_entry = by_role["tactical_watch"]
-    assert watch_entry["authority"] == "deterministic_display_text"
-    assert any(watch.name in line for line in watch_entry["exact_body_lines"])
-    packet_watch = next(
-        role
+    # 4. Tactical Watch is a server-owned governed card: it is omitted from the
+    # model handoff (the server inserts its exact card afterwards) while Stage 1
+    # still holds it, with the selected drill, in its own role map.
+    assert "tactical_watch" not in by_role
+    packet_roles = {
+        role.get("role_key")
         for role in packet["selected_plan"]["weekly_role_map"]["weeks"][0]["session_roles"]
+    }
+    assert "tactical_watch" not in packet_roles
+    stage1_watch = next(
+        role
+        for role in planning_brief["weekly_role_map"]["weeks"][0]["session_roles"]
         if role.get("role_key") == "tactical_watch"
     )
-    assert packet_watch["governance"]["selected_drill_locked"] is True
-    assert "display_text" not in packet_watch
-
-    # 6. The watch stays zero-load: it must not read as physical training.
-    assert watch_entry["zero_physical_load"] is True
-    assert watch_entry["selected_count"] == 0
+    assert stage1_watch["governance"]["selected_drill_locked"] is True
+    assert watch.name in stage1_watch["display_text"]
 
     # 5. Combat wording comes from resolved canonical truth, not from the raw
     # declaration: D-11 sits inside the hard-contact cutoff, so the declared hard
@@ -374,9 +374,14 @@ def test_empty_closed_membership_sentinel_does_not_hide_decided_content(kind):
         },
     }
 
-    entry = _closed_membership_render_manifest(
+    manifest = _closed_membership_render_manifest(
         _finalizer_packet(planning_brief), planning_brief=planning_brief
-    )[0]
+    )
+    if kind == "tactical_watch":
+        # Server-owned governed card: never part of the model's first pass.
+        assert manifest == []
+        return
+    entry = manifest[0]
 
     assert entry["authority"] != "closed_selected_assignments"
     assert entry["exact_body_lines"], entry

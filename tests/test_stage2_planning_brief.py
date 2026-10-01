@@ -138,7 +138,6 @@ def test_build_planning_brief_includes_full_collision_details_in_priority_focus(
         "rate_of_force",
         "work_capacity",
         "conditioning",
-        "anaerobic_alactic",
         "glycolytic",
         "mental_toughness",
     ]
@@ -1668,18 +1667,21 @@ def test_short_camp_weekly_role_map_only_keeps_roles_that_map_to_compressed_prio
         "d1",
         "d0",
     ]
-    roles_from_seq = [entry["role_key"] for entry in brief["late_fight_session_sequence"]]
-    # A D-5 camp places its two active sessions at D-3 and D-1, leaving D-4 —
-    # the athlete's first day — open. The mandatory tactical watch is not forced
-    # onto that empty D-4 opening merely because a slot exists; it follows its
-    # real requirement and co-locates with the D-3 physical session. D-4's
-    # opening receives a zero-cost tactical_cue_card instead, so the day still
-    # reads as an intentional plan without pretending an empty slot demands a
-    # full watch (availability is permission, not obligation).
+    # The mandatory Fight Visualisation countdown protocol is not an allocated role.
+    roles_from_seq = [
+        entry["role_key"]
+        for entry in brief["late_fight_session_sequence"]
+        if entry["role_key"] != "fight_visualization"
+    ]
+    # A D-5 camp places its two active sessions at D-3 and D-1. The mandatory
+    # tactical watch is zero-load and lands on the athlete's first day (D-5), where
+    # the Fight Visualisation protocol also sits; D-4 receives a zero-cost
+    # tactical_cue_card so that day still reads as an intentional plan
+    # (availability is permission, not obligation).
     assert roles_from_seq == [
+        "tactical_watch",
         "tactical_cue_card",
         "fight_week_freshness_day",
-        "tactical_watch",
         "neural_primer_day",
     ]
     support_entries = [
@@ -1795,7 +1797,11 @@ def test_fight_week_override_2_to_3_days_limits_to_micro_taper_roles():
         "d1",
         "d0",
     ]
-    assert [entry["role_key"] for entry in brief["late_fight_session_sequence"]] == [
+    assert [
+        entry["role_key"]
+        for entry in brief["late_fight_session_sequence"]
+        if entry["role_key"] != "fight_visualization"
+    ] == [
         "fight_week_freshness_day",
         "tactical_watch",
         "neural_primer_day",
