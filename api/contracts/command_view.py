@@ -335,6 +335,8 @@ class CommandView(BaseModel):
     # Open/monitoring injury_flags, normalized for the Today injury check-in to
     # prefill against (never the raw plan). Empty when nothing is being tracked.
     open_injuries: list[dict[str, Any]] = Field(default_factory=list)
+    live_prescription: dict[str, Any] | None = None
+    delayed_rehab_prompts: list[dict[str, Any]] = Field(default_factory=list)
     week_summary: dict[str, Any] = Field(default_factory=dict)
     quick_actions: list[QuickAction] = Field(default_factory=list)
 

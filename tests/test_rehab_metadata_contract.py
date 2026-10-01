@@ -27,6 +27,12 @@ from fightcamp.rehab_schema import MSK_DRILL_FIELDS, is_surface_injury_type
 PHASES = ("GPP", "SPP", "TAPER")
 
 
+@pytest.fixture(autouse=True)
+def legacy_policy_scope(monkeypatch):
+    """These tests cover pre-pilot metadata behavior, not active policy integrity."""
+    monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
+
+
 @pytest.fixture
 def restorable_bank():
     """Yield the live bank, restoring the original records afterwards."""
@@ -258,10 +264,18 @@ def test_classify_drill_function_still_defaults_to_control():
 
 def test_stored_function_metadata_matches_the_keyword_match_where_migrated():
     """Migration derived `function` from the classifier; it invented nothing."""
+    # The autouse legacy scope disables activation, so read the actual policy data.
+    import json
+    from fightcamp.config import DATA_DIR
+    pilot_ids = {p["drill_id"] for policy in json.loads((DATA_DIR / "rehab_clinical_policies.json").read_text(encoding="utf-8"))["policies"]
+                  for p in policy["prescriptions"]}
     for entry in get_rehab_bank():
         if is_surface_injury_type(entry.get("type")):
             continue
         for drill in entry.get("drills", []):
+            if drill.get("id") in pilot_ids:
+                # Pilot function metadata is documented explicitly, not inferred from names.
+                continue
             declared = drill.get("function")
             if declared is None:
                 assert match_drill_function(drill["name"], drill.get("notes", "")) is None

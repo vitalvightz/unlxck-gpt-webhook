@@ -97,7 +97,8 @@ def _injury(**overrides) -> dict:
 
 
 def test_rehab_options_carry_the_canonical_bank_drill_id():
-    options = rehab_drill_options_for_phase("sprain", "ankle", "GPP", limit=4)
+    options = rehab_drill_options_for_phase("sprain", "ankle", "GPP", limit=4,
+        injury={**_injury(), "injury_type": "sprain", "severity": "mild"}, rehab_stage="calm")
     assert options
     for option in options:
         assert option["drill"]["id"]

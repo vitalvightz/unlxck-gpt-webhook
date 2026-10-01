@@ -504,6 +504,7 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         self.injury_flags: dict[str, list[dict]] = {}
         self.exercise_media: dict[str, dict] = {}
         self.rehab_exposures: dict[str, dict] = {}
+        self.injury_episode_events: dict[str, dict] = {}
         self.adaptation_notes: dict[str, list[dict]] = {}
         self.admin_reviews: list[dict] = []
         self.sparring_logs: list[dict] = []
@@ -1899,7 +1900,12 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         bucket = self.session_completions.setdefault(athlete_id, [])
         for row in bucket:
             if row["session_id"] == fields["session_id"] and row["training_day"] == fields["training_day"]:
+                frozen = row.get("prescription_snapshot")
+                if frozen and fields.get("prescription_snapshot") not in (None, frozen):
+                    raise HTTPException(409, "prescription_revision_conflict")
                 row.update(fields)
+                if frozen:
+                    row["prescription_snapshot"] = frozen
                 row["updated_at"] = _now()
                 return dict(row)
         row = {
@@ -1967,6 +1973,17 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
             key=lambda row: row["training_day"],
         )
         return [dict(row) for row in rows[:limit]]
+    def list_rehab_schedule_completions(self, athlete_id: str, *, from_day: str) -> list[dict]:
+        return [dict(r) for r in self.session_completions.get(athlete_id, []) if r["training_day"] >= from_day]
+
+    def get_rehab_schedule_revision(self, athlete_id: str) -> dict:
+        revision = {}
+        for key, source in (("exposure_id", self.rehab_exposures), ("event_id", self.injury_episode_events)):
+            rows = [r for r in source.values() if r.get("athlete_id") == athlete_id
+                    and (key != "event_id" or r.get("event_type") in {"injury_checkin", "delayed_rehab_response"})]
+            latest = max(rows, key=lambda r: (r.get("created_at", ""), r["id"]), default=None)
+            revision[key] = latest["id"] if latest else None
+        return revision
 
     def list_plan_session_completions(
         self, athlete_id: str, plan_id: str, *, limit: int = 500
@@ -2365,7 +2382,7 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
             if existing["athlete_id"] != athlete_id or existing["event_json"] != payload:
                 raise HTTPException(status_code=409, detail="exposure id already used")
             return dict(existing)
-        row = {"id": exposure_id, "athlete_id": athlete_id, "event_json": payload}
+        row = {"id": exposure_id, "athlete_id": athlete_id, "event_json": payload, "created_at": _now()}
         self.rehab_exposures[exposure_id] = row
         return dict(row)
 
@@ -2378,6 +2395,36 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
             if (row := self.rehab_exposures.get(exposure_id)) is not None
             and row.get("athlete_id") == athlete_id
         ]
+
+    def record_injury_episode_event(self, athlete_id: str, event: dict) -> dict:
+        injury = self.get_injury_flag_for_athlete(event["injury_id"], athlete_id)
+        if not injury or injury.get("episode_id") != event["injury_episode_id"]:
+            raise HTTPException(409, "injury_episode_changed")
+        if event["id"] in self.injury_episode_events:
+            previous = self.injury_episode_events[event["id"]]
+            if any(previous.get(key) != event.get(key) for key in ("payload", "event_type", "injury_id", "injury_episode_id")):
+                raise HTTPException(409, "episode_event_conflict")
+            return copy.deepcopy(previous)
+        row = {**copy.deepcopy(event), "athlete_id": athlete_id, "created_at": _now()}
+        self.injury_episode_events[event["id"]] = row
+        return copy.deepcopy(row)
+
+    def list_injury_episode_events(self, athlete_id: str, *, injury_id: str, injury_episode_id: str) -> list[dict]:
+        return [copy.deepcopy(row) for row in self.injury_episode_events.values()
+                if row["athlete_id"] == athlete_id and row["injury_id"] == injury_id and row["injury_episode_id"] == injury_episode_id]
+
+    def list_pending_delayed_rehab(self, athlete_id: str, training_day: str) -> list[dict]:
+        answered = {row["payload"].get("exposure_id") for row in self.injury_episode_events.values()
+                    if row["athlete_id"] == athlete_id and row["event_type"] == "delayed_rehab_response"}
+        pending = []
+        for row in self.rehab_exposures.values():
+            event = row.get("event_json") or {}
+            injury = self.get_injury_flag_for_athlete(str(event.get("injury_id")), athlete_id)
+            if (row.get("athlete_id") == athlete_id and row["id"] not in answered and injury
+                    and injury.get("episode_id") == event.get("injury_episode_id")
+                    and str(event.get("occurred_at"))[:10] < training_day):
+                pending.append({**row, **event, "id": row["id"]})
+        return pending
 
     def list_rehab_exposures(
         self,

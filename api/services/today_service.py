@@ -21,7 +21,7 @@ import re
 import uuid
 from contextlib import contextmanager
 from contextvars import ContextVar
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, timedelta
 from typing import Any, Callable, Iterator, Mapping, NamedTuple, Sequence
 
 from fastapi import HTTPException, status
@@ -30,6 +30,10 @@ from pydantic import ValidationError
 from fightcamp.injury_body_region import injury_body_region_context
 from fightcamp.session_sequencing import is_support_session as _is_day_support_session
 from fightcamp.weekly_schedule_view import normalize_weekday
+from fightcamp.rehab_clinical import load_clinical_policies
+from fightcamp.rehab_protocols import get_rehab_bank
+from api.contracts.injury_policy import resolve_injury_policy, reconcile_session_prescription
+from api.services.injury_episode_service import apply_episode_observations, episode_observations, delayed_rehab_prompts, exposure_rows_with_observations
 
 from api.contracts.command_view import CommandView, RiskWatchItem, build_command_view, make_risk
 from api.contracts.completion import (
@@ -521,7 +525,7 @@ def _log_load_eligibility_shadow(
             athlete_id=athlete_id,
             injury=injury,
             stage_decision=stage_decision,
-            exposure_rows=exposure_window.rows,
+            exposure_rows=exposure_rows_with_observations(exposure_window.rows, episode_observations(store, athlete_id, dict(injury))),
             history_truncated=exposure_window.history_truncated,
         )
     except Exception:
@@ -613,12 +617,74 @@ def _with_rehab_stage(
         row["rehab_stage"] = decision.stage
         row["rehab_stage_reasons"] = list(decision.reasons)
         row["rehab_care_pathway"] = decision.care_pathway
+        row["rehab_medical_gate"] = decision.medical_gate
         _log_load_eligibility_shadow(
             store=store,
             athlete_id=athlete_id,
             injury=row,
             stage_decision=decision,
         )
+    return rows
+
+
+def _with_injury_policy(injuries, *, store, athlete_id, phase="", current_checkin=None, equipment=(), readiness_decision=None,
+                        training_day=None, training_session=None):
+    if not injuries:
+        return []
+    policies, bank = load_clinical_policies(), get_rehab_bank()
+    from api.contracts.rehab_schedule import schedule_rehab
+    completions = store.list_rehab_schedule_completions(athlete_id, from_day=(parse_iso_date(training_day) - timedelta(days=14)).isoformat()) if training_day else []
+    rows = []
+    for injury in injuries:
+        observations = episode_observations(store, athlete_id, injury)
+        row = apply_episode_observations(injury, observations)
+        exposures = []
+        history_truncated = False
+        reader = getattr(store, "list_rehab_exposures", None)
+        if callable(reader) and injury.get("episode_id"):
+            window = reader(athlete_id, injury_id=str(injury["id"]), injury_episode_id=str(injury["episode_id"]))
+            exposures = list(window.rows)
+            history_truncated = window.history_truncated
+        exposures = exposure_rows_with_observations(exposures, observations)
+        row["rehab_decision"] = resolve_injury_policy(row, policies=policies, bank=bank, phase=phase,
+                                                     exposures=exposures, current_checkin=current_checkin, equipment=equipment,
+                                                     history_truncated=history_truncated, readiness_decision=readiness_decision)
+        if training_day:
+            row["rehab_decision"]["schedule"] = schedule_rehab(row, row["rehab_decision"], training_day=training_day,
+                completions=completions, exposures=exposures, readiness_decision=readiness_decision, training_session=training_session)
+            # A recovering/held loading routine may have a due conservative
+            # alternative. Nothing is added to the one-routine daily allocation.
+            excluded, first = [], row["rehab_decision"]
+            while row["rehab_decision"].get("prescription") and row["rehab_decision"]["schedule"]["state"] in {"recovery_day", "held", "deferred"}:
+                excluded.append(row["rehab_decision"]["prescription"]["drill_id"])
+                alternative = resolve_injury_policy(row, policies=policies, bank=bank, phase=phase, exposures=exposures,
+                    current_checkin=current_checkin, equipment=equipment, history_truncated=history_truncated,
+                    readiness_decision=readiness_decision, excluded_drill_ids=excluded)
+                if not alternative.get("prescription"):
+                    row["rehab_decision"] = first
+                    break
+                alternative["schedule"] = schedule_rehab(row, alternative, training_day=training_day, completions=completions,
+                    exposures=exposures, readiness_decision=readiness_decision, training_session=training_session)
+                row["rehab_decision"] = alternative
+                if alternative["schedule"]["state"] == "due":
+                    alternative["schedule"]["reason"] = first["schedule"]["reason"] + " A lighter baseline routine is due."
+        if row["rehab_decision"].get("activation") == "live":
+            row["rehab_stage"] = row["rehab_decision"]["stage"]
+        rows.append(row)
+    if training_day:
+        limit = 1 if "sparring" in str((training_session or {}).get("session_type") or "").lower() else 2
+        used = sum(b.get("block_type") == "rehab" for c in completions
+                   if c.get("training_day") == training_day and c.get("status") in {"started", "done", "modified"}
+                   for b in (c.get("prescription_snapshot") or {}).get("session", {}).get("blocks", []))
+        slots = max(0, limit - used)
+        for row in sorted(rows, key=lambda r: str(r.get("id"))):
+            decision = row["rehab_decision"]
+            if decision["schedule"]["state"] == "due" and decision.get("activation") == "live":
+                if slots:
+                    slots -= 1
+                else:
+                    decision["schedule"] = {"state": "deferred", "reason": "Today's rehab allocation is full.",
+                        "next_due_day": (parse_iso_date(training_day) + timedelta(days=1)).isoformat()}
     return rows
 
 
@@ -1253,6 +1319,10 @@ def upsert_session_completion(
             session_id=session_id,
         )
     training_day = requested_day or today
+    existing = store.get_session_completion(athlete_id, session_id, training_day) or {}
+    stopped_started_session = bool(existing.get("prescription_snapshot") and existing.get("started_at")
+                                   and existing.get("status") == "started" and status_value == "modified"
+                                   and payload.get("rehab_performance") == "stopped")
 
     # The same pre-start boundary that frames Today is enforced on the write.
     # A stale client or forged request cannot log a future open-plan session
@@ -1273,7 +1343,23 @@ def upsert_session_completion(
     # session that never existed, and that record then drives "Resume" on a rest
     # day. ``not_started`` stays allowed so an already-written record can be
     # cleared.
-    if status_value != "not_started" and _structured_today(plan_row, training_day).is_rest_day:
+    command = None
+    if not is_retro_log and status_value != "not_started":
+        try:
+            command = build_today_command_view(store, athlete_id=athlete_id, athlete_timezone=athlete_timezone, now=now)
+        except HTTPException as exc:
+            # Skipping earns no rehab credit and must remain available when
+            # current injury evidence cannot be read. Training still fails closed.
+            if status_value != "skipped" or exc.status_code != 503:
+                raise
+    live = command.live_prescription if command and str(command.active_plan.get("id")) == plan_id else None
+    if command and str(command.active_plan.get("id")) != plan_id and status_value in _TRAINING_COMPLETION_STATUSES:
+        if any(injury.get("rehab_decision", {}).get("activation") in {"live", "retired"} for injury in command.open_injuries):
+            raise HTTPException(409, "Activate this plan to apply your current injury guidance before training.")
+    standalone = live is not None and live["session"].get("session_id") == session_id
+    saved_occurrence = existing.get("prescription_snapshot") or {}
+    saved_standalone = saved_occurrence.get("plan_id") == plan_id and saved_occurrence.get("session", {}).get("session_id") == session_id
+    if status_value != "not_started" and _structured_today(plan_row, training_day).is_rest_day and not (standalone or saved_standalone):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="That day is a rest day in your plan — there is no session to log.",
@@ -1290,6 +1376,7 @@ def upsert_session_completion(
         not is_retro_log
         and status_value in _TRAINING_COMPLETION_STATUSES
         and not _completion_session_is_support(plan_row, training_day, session_id)
+        and not stopped_started_session
     ):
         severe = _active_severe_injury(_open_injury_flags(store, athlete_id))
         if severe is not None:
@@ -1304,7 +1391,6 @@ def upsert_session_completion(
                 ),
             )
 
-    existing = store.get_session_completion(athlete_id, session_id, training_day) or {}
     existing_plan_id = str(existing.get("plan_id") or "")
     if existing_plan_id and existing_plan_id != plan_id:
         # A completion row is one immutable plan/session/day occurrence. Letting
@@ -1316,6 +1402,23 @@ def upsert_session_completion(
             status_code=status.HTTP_409_CONFLICT,
             detail="session_completion_plan_mismatch",
         )
+
+    frozen = existing.get("prescription_snapshot")
+    if not is_retro_log and status_value in _TRAINING_COMPLETION_STATUSES and str(existing.get("status")) not in {"done", "modified"}:
+        if command and not live and any(injury.get("rehab_decision", {}).get("activation") in {"live", "retired"} for injury in command.open_injuries):
+            raise HTTPException(409, "Refresh Today before training: no current session matches this request.")
+        if live:
+            if not standalone:
+                raise HTTPException(409, "Refresh Today to use the current session.")
+            if live.get("safety_hold") and not stopped_started_session:
+                raise HTTPException(409, "This session is on hold for the current injury guidance.")
+            if not frozen and payload.get("prescription_revision") != live.get("revision"):
+                raise HTTPException(409, "Your session prescription changed. Refresh Today before starting.")
+            if not frozen:
+                frozen = live
+    performance = payload.get("rehab_performance")
+    if performance == "done_as_shown" and (not frozen or status_value != "done"):
+        raise HTTPException(422, "Confirm rehab as shown only for a completed, saved prescription.")
 
     # Stamp timestamps from the transition. started/done/modified carry
     # started_at; done/modified carry completed_at. Both are preserved once set
@@ -1360,6 +1463,9 @@ def upsert_session_completion(
         "started_at": started_at,
         "completed_at": completed_at,
     }
+    if frozen:
+        fields["prescription_snapshot"] = frozen
+        fields["rehab_performance"] = performance or existing.get("rehab_performance")
     row = store.upsert_session_completion(athlete_id, fields)
     # A training day is one unit for the athlete: one start, one RPE, one log.
     # When the card schedules several sessions that day (a conditioning block
@@ -1381,7 +1487,8 @@ def upsert_session_completion(
             store.upsert_session_completion(
                 athlete_id,
                 {
-                    **fields,
+                    **{key: value for key, value in fields.items()
+                       if key not in {"prescription_snapshot", "rehab_performance"}},
                     "session_id": sibling_id,
                     "started_at": sibling_started_at,
                     "completed_at": sibling_completed_at,
@@ -1483,6 +1590,7 @@ def submit_today_injury_checkin(
     # Only a load-relevant injury reported worse escalates the day. A worsening
     # skin injury is routed by the surface evaluator instead (see
     # ``_load_relevant_worse_injury``).
+    open_after = _with_injury_policy(_with_safe_session_context(open_after), store=store, athlete_id=athlete_id)
     injury_reported_worse = _load_relevant_worse_injury(open_after)
     refreshed_recommendation = None
     if active_plan_row:
@@ -2150,10 +2258,15 @@ def _open_injury_flags(store: AppStore, athlete_id: str) -> list[dict[str, Any]]
     Resilient to a read failure — Overview must never crash because the injury
     list could not be loaded.
     """
+    lister = getattr(store, "list_injury_flags", None)
+    if not callable(lister):
+        return []
     try:
-        flags = store.list_injury_flags(athlete_id, statuses=("open", "monitoring"))
+        flags = lister(athlete_id, statuses=("open", "monitoring"), limit=500)
         return [dict(flag) for flag in (flags or [])]
     except Exception:
+        if any(policy.activation == "live" for policy in load_clinical_policies()):
+            raise HTTPException(503, "Current injury guidance could not be loaded. Refresh before training.")
         return []
 
 
@@ -2655,7 +2768,12 @@ def _build_today_command_view(
     plan_row = active_plan.plan
 
     if not plan_row:
-        return build_command_view(current_training_day=training_day, plan=None)
+        injuries = _with_rehab_stage(_with_safe_session_context(_with_surface_class(_open_injury_flags(store, athlete_id))),
+                                    store=store, athlete_id=athlete_id)
+        injuries = _with_injury_policy(injuries, store=store, athlete_id=athlete_id, training_day=training_day)
+        view = build_command_view(current_training_day=training_day, plan=None, open_injuries=injuries)
+        view.delayed_rehab_prompts = delayed_rehab_prompts(store, athlete_id, training_day)
+        return view
 
     plan_id = str(plan_row.get("id") or "")
 
@@ -2723,7 +2841,27 @@ def _build_today_command_view(
         today_candidates[0] if today_candidates and today_logged_entry is None else None
     )
     has_today_session = has_scheduled_day_content(today_session_entry)
-    target_entry = today_session_entry if has_today_session else next_entry
+    today_session_id = _session_id_for_entry(today_session_entry) if has_today_session else None
+    today_completion = (
+        completions.get(today_session_id, training_day)
+        if today_session_id
+        else completions.get(f"rehab-{training_day}", training_day)
+    )
+    if today_completion and today_completion.get("plan_id") != plan_id:
+        today_completion = None
+    if not (today_completion or {}).get("prescription_snapshot"):
+        rehab_completion = completions.get(f"rehab-{training_day}", training_day)
+        if ((rehab_completion or {}).get("prescription_snapshot") or {}).get("plan_id") == plan_id:
+            today_completion = rehab_completion
+            today_session_entry = today_completion["prescription_snapshot"]["session"]
+            has_today_session = True
+            today_session_id = _session_id_for_entry(today_session_entry)
+    if not has_today_session and ((today_completion or {}).get("prescription_snapshot") or {}).get("plan_id") == plan_id:
+        today_session_entry = today_completion["prescription_snapshot"]["session"]
+        has_today_session = True
+        today_session_id = _session_id_for_entry(today_session_entry)
+    today_is_complete = completion_status_of(today_completion) in TERMINAL_COMPLETION_STATUSES
+    target_entry = today_session_entry if has_today_session and not today_is_complete else next_entry
     if target_entry is None and week is not None:
         # No training left in the current week — look ahead so the "Next session"
         # card surfaces the upcoming session instead of "No session found".
@@ -2763,7 +2901,7 @@ def _build_today_command_view(
     today_completion = (
         completions.get(today_completion_id, training_day)
         if today_completion_id
-        else None
+        else today_completion
     )
 
     structured_phase = _structured_phase_for_day(plan_row, training_day)
@@ -2864,7 +3002,68 @@ def _build_today_command_view(
     if severe_injury is not None and current_decision != "pull_back" and not today_is_support_filler:
         recommendation = _severe_injury_recommendation(severe_injury, training_day)
 
-    return build_command_view(
+    intake, _intake_ok = _checked_intake_payload_for_readiness(store, plan_row)
+    equipment = intake.get("equipment") or ()
+    if not isinstance(equipment, (list, tuple)):
+        equipment = ()
+    # Today logs the entire training day. Reconcile every scheduled block,
+    # preserving the primary completion identity and checking sibling demands.
+    training_session = _entry_mapping_for_readiness(today_session_entry) if today_session_entry else None
+    if training_session and len(today_candidates) > 1:
+        training_session["blocks"] = [
+            dict(block) for entry in today_candidates
+            for block in _entry_mapping_for_readiness(entry).get("blocks", [])
+        ]
+        if any("sparring" in str(_entry_mapping_for_readiness(entry).get("session_type") or "").lower()
+               for entry in today_candidates):
+            training_session["session_type"] = "sparring"
+    open_injuries = _with_injury_policy(open_injuries, store=store, athlete_id=athlete_id,
+                                       phase=str(resolved_plan.get("phase") or ""), current_checkin=today_checkin, equipment=equipment,
+                                       readiness_decision=(recommendation or {}).get("decision") or "not_checked_in", training_day=training_day,
+                                       training_session=training_session)
+    decisions = [injury["rehab_decision"] for injury in open_injuries]
+    frozen = (today_completion or {}).get("prescription_snapshot")
+    live = reconcile_session_prescription(
+        training_session if not today_is_complete else None,
+        decisions=decisions, plan_id=plan_id, training_day=training_day, frozen=frozen if not today_is_complete else None,
+    )
+    if live and not frozen and (today_completion or {}).get("status") == "started":
+        # Activation must not rewrite work that started before snapshots existed.
+        live["session"] = _entry_mapping_for_readiness(today_session_entry)
+        live["safety_hold"] = True
+        live["safety_hold_reason"] = "This session started before the current injury guidance. Stop and review your next session."
+    if live:
+        for change in live.get("changes", []):
+            if change.get("action") == "deferred":
+                for injury in open_injuries:
+                    if injury["id"] == change.get("injury_id"):
+                        injury["rehab_decision"]["summary"] = "Your rehab is matched, but this session's rehab allocation is full. Keep to your current restrictions."
+                        injury["rehab_decision"]["scheduled_today"] = False
+                        injury["rehab_decision"]["schedule"] = {"state": "deferred", "reason": "Today's rehab allocation is full.", "next_due_day": (parse_iso_date(training_day) + timedelta(days=1)).isoformat()}
+        if not frozen:
+            from fightcamp.rehab_clinical import content_hash
+            from fightcamp.rehab_protocols import rehab_drill_by_id
+            from copy import deepcopy
+            live["injury_context"] = [{"id": row["id"], "episode_id": row.get("episode_id"), "updated_at": row.get("updated_at")} for row in open_injuries]
+            live["evidence_context"] = store.get_rehab_schedule_revision(athlete_id)
+            for block in live["session"].get("blocks", []):
+                if block.get("block_type") == "rehab" and not block.get("drill_snapshot"):
+                    drill = rehab_drill_by_id(str(block.get("rehab_drill_id") or ""))
+                    if drill:
+                        block["drill_snapshot"] = deepcopy(drill)
+            live["revision"] = content_hash({k: v for k, v in live.items() if k != "revision"})
+        today_session_entry = live["session"]
+        target_entry = today_session_entry
+        session_id = _session_id_for_entry(target_entry)
+        session_relation = "today"
+        if not today_completion or today_completion.get("session_id") != session_id:
+            today_completion = completions.get(session_id, training_day)
+        if completion_status_of(today_completion) in TERMINAL_COMPLETION_STATUSES:
+            live = None
+            target_entry, session_relation = next_entry, "next" if next_entry else None
+            session_id = _session_id_for_entry(target_entry)
+
+    view = build_command_view(
         current_training_day=training_day,
         plan=resolved_plan,
         recommendation=recommendation,
@@ -2889,6 +3088,17 @@ def _build_today_command_view(
         ),
         open_injuries=open_injuries,
     )
+    if live:
+        if not live["safety_hold"] and view.today.decision_tier in {"stop", "not_checked_in"}:
+            live["safety_hold"] = True
+            live["safety_hold_reason"] = "Complete today's check-in before starting." if view.today.decision_tier == "not_checked_in" else "Follow today's stop guidance before training."
+        if not frozen:
+            from fightcamp.rehab_clinical import content_hash
+            live["readiness_context"] = {"id": today_checkin["id"], "updated_at": today_checkin.get("updated_at")} if today_checkin else None
+            live["revision"] = content_hash({k: v for k, v in live.items() if k != "revision"})
+    view.live_prescription = live
+    view.delayed_rehab_prompts = delayed_rehab_prompts(store, athlete_id, training_day)
+    return view
 
 
 def resolve_today_landing(

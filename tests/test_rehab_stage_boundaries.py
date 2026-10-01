@@ -68,8 +68,9 @@ def test_drill_stage_metadata_is_optional_and_valid_where_migrated():
     assert stages.count(None) > len(stages) // 2
 
 
-def test_rehab_selection_still_works_with_null_drill_stages():
+def test_rehab_selection_still_works_with_null_drill_stages(monkeypatch):
     """A null ``rehab_stage`` must not filter a drill out of selection."""
+    monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
     assert any(
         drill.get("rehab_stage") is None
         for entry in get_rehab_bank()
@@ -151,7 +152,8 @@ def test_phase_progression_is_still_a_selection_key():
 
 
 @pytest.mark.parametrize("phase", PHASES)
-def test_phase_specific_rehab_notes_still_render(phase):
+def test_phase_specific_rehab_notes_still_render(phase, monkeypatch):
+    monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
     text, _seen = generate_rehab_protocols(
         injury_string="ankle sprain",
         exercise_data=[],
@@ -161,7 +163,8 @@ def test_phase_specific_rehab_notes_still_render(phase):
     assert "Why today:" in text
 
 
-def test_sparring_day_volume_ceiling_is_unchanged():
+def test_sparring_day_volume_ceiling_is_unchanged(monkeypatch):
+    monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
     text, _seen = generate_rehab_protocols(
         injury_string="ankle sprain",
         exercise_data=[],

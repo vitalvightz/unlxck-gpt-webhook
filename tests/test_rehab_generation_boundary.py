@@ -300,6 +300,7 @@ def test_two_same_location_episodes_select_without_cross_contamination(monkeypat
             ],
         },
     ]
+    monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
     monkeypatch.setattr(rehab_protocols, "get_rehab_bank", lambda: bank)
 
     sprain = _ankle_entry(
@@ -367,6 +368,7 @@ def test_mixed_staged_and_unresolved_keeps_both(monkeypatch):
     keeps its legacy behaviour. Neither is dropped, and the unresolved injury is
     never coerced into the staged injury's RESTORE stage.
     """
+    monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
     monkeypatch.setattr(rehab_protocols, "get_rehab_bank", _mixed_bank)
     sprain = _ankle_entry("inj-sprain", "ep-sprain", "sprain", STAGE_RESTORE)
     tendon = _ankle_entry("inj-tendon", "ep-tendon", "tendinopathy", None)
@@ -390,6 +392,7 @@ def test_reverse_mixed_unresolved_and_calm_keeps_both(monkeypatch):
     sprain falls back to legacy independently and is not forced into CALM.
     Parsed order must not change this.
     """
+    monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
     monkeypatch.setattr(rehab_protocols, "get_rehab_bank", _mixed_bank)
     sprain = _ankle_entry("inj-sprain", "ep-sprain", "sprain", None)
     tendon = _ankle_entry("inj-tendon", "ep-tendon", "tendinopathy", STAGE_CALM)
@@ -413,6 +416,7 @@ def test_many_unresolved_and_one_staged_none_starved(monkeypatch):
     least one drill from each within the volume ceiling — no injury disappears
     merely because another has a stage.
     """
+    monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
     monkeypatch.setattr(rehab_protocols, "get_rehab_bank", _mixed_bank)
     monkeypatch.setattr(rehab_protocols, "_DEFAULT_DRILL_LIMIT", 3)
     sprain = _ankle_entry("inj-sprain", "ep-sprain", "sprain", STAGE_RESTORE)
@@ -434,6 +438,7 @@ def test_many_unresolved_and_one_staged_none_starved(monkeypatch):
 
 def test_fully_unresolved_still_renders_legacy(monkeypatch):
     """No injury has a resolved stage: the legacy rehab still renders."""
+    monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
     monkeypatch.setattr(rehab_protocols, "get_rehab_bank", _mixed_bank)
     tendon = _ankle_entry("inj-tendon", "ep-tendon", "tendinopathy", None)
 

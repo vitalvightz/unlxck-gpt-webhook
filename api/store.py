@@ -4153,6 +4153,25 @@ class SupabaseAppStore(CompactGenerationReads):
         )
         return getattr(response, "data", None) or []
 
+    def record_injury_episode_event(self, athlete_id: str, event: dict[str, Any]) -> dict[str, Any]:
+        try:
+            response = self.client.rpc("record_injury_episode_event", {"p_athlete_id": athlete_id, "p_event": event}).execute()
+            data = getattr(response, "data", None)
+            return data[0] if isinstance(data, list) and data else data
+        except _STORE_CLIENT_ERRORS as exc:
+            if any(code in str(exc) for code in ("23514", "23505")):
+                raise HTTPException(status_code=409, detail="The injury response changed. Refresh Today.") from exc
+            self._raise_operation_http_error(operation="record_injury_episode_event", detail="failed to record injury response", exc=exc)
+
+    def list_injury_episode_events(self, athlete_id: str, *, injury_id: str, injury_episode_id: str) -> list[dict[str, Any]]:
+        response = (self.client.table("injury_episode_events").select("*").eq("athlete_id", athlete_id)
+                    .eq("injury_id", injury_id).eq("injury_episode_id", injury_episode_id).order("created_at", desc=True).execute())
+        return getattr(response, "data", None) or []
+
+    def list_pending_delayed_rehab(self, athlete_id: str, training_day: str) -> list[dict[str, Any]]:
+        response = self.client.rpc("pending_delayed_rehab", {"p_athlete_id": athlete_id, "p_training_day": training_day}).execute()
+        return getattr(response, "data", None) or []
+
     def get_admin_athlete(self, athlete_id: str) -> dict[str, Any] | None:
         return self._select_first(
             self.client.table("admin_athlete_rollups").select("*").eq("id", athlete_id)
@@ -4291,6 +4310,8 @@ class SupabaseAppStore(CompactGenerationReads):
         except HTTPException:
             raise
         except _STORE_CLIENT_ERRORS as exc:
+            if any(code in str(exc) for code in ("prescription_revision_conflict", "rehab_daily_allocation_conflict", "rehab_exposure_cannot_be_reset")):
+                raise HTTPException(status_code=409, detail="Your session prescription changed. Refresh Today before starting.") from exc
             self._raise_operation_http_error(
                 operation=f"upsert_session_completion athlete_id={athlete_id}",
                 detail="failed to persist session completion",
@@ -4382,6 +4403,33 @@ class SupabaseAppStore(CompactGenerationReads):
             .execute()
         )
         return getattr(response, "data", None) or []
+
+    def list_rehab_schedule_completions(self, athlete_id: str, *, from_day: str) -> list[dict[str, Any]]:
+        """All recent accepted snapshots across plans, paged to avoid truncation."""
+        rows, offset = [], 0
+        while True:
+            response = (self.client.table("session_completions")
+                .select("id,athlete_id,plan_id,session_id,training_day,status,prescription_snapshot")
+                .eq("athlete_id", athlete_id).gte("training_day", from_day)
+                .order("training_day", desc=True).order("id")
+                .range(offset, offset + 499).execute())
+            page = getattr(response, "data", None) or []
+            rows.extend(page)
+            if len(page) < 500:
+                return rows
+            offset += 500
+
+    def get_rehab_schedule_revision(self, athlete_id: str) -> dict[str, Any]:
+        revision = {}
+        for key, table in (("exposure_id", "rehab_exposures"), ("event_id", "injury_episode_events")):
+            response = (self.client.table(table).select("id").eq("athlete_id", athlete_id)
+                        .order("created_at", desc=True).order("id", desc=True))
+            if table == "injury_episode_events":
+                response = response.in_("event_type", ["injury_checkin", "delayed_rehab_response"])
+            response = response.limit(1).execute()
+            rows = getattr(response, "data", None) or []
+            revision[key] = rows[0]["id"] if rows else None
+        return revision
 
     def list_session_logs(self, athlete_id: str, *, limit: int = 500) -> list[dict[str, Any]]:
         """Legacy/manual training history; this table has no current write API."""
@@ -4956,7 +5004,7 @@ class SupabaseAppStore(CompactGenerationReads):
         bounded_limit = max(1, min(limit, 500))
         response = (
             self.client.table("rehab_exposures")
-            .select("id,athlete_id,event_json,occurred_at")
+            .select("id,athlete_id,event_json,occurred_at,created_at")
             .eq("athlete_id", athlete_id)
             .eq("injury_id", injury_id)
             .eq("injury_episode_id", injury_episode_id)

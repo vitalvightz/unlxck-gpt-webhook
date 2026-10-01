@@ -1953,6 +1953,34 @@ class InjuryFlagUpdateRequest(BaseModel):
     status: InjuryFlagStatus
 
 
+class RehabScheduleRecord(BaseModel):
+    state: Literal["due", "recovery_day", "already_completed", "held", "deferred", "unsupported"]
+    reason: str
+    next_due_day: str | None = None
+
+
+class RehabPrescriptionSummary(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    sources: list[str] = Field(default_factory=list)
+
+
+class InjuryRehabDecisionRecord(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    outcome: str
+    summary: str
+    reason_codes: list[str] = Field(default_factory=list)
+    prescription: RehabPrescriptionSummary | None = None
+    schedule: RehabScheduleRecord | None = None
+
+
+class AthleteClearanceReport(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    episode_id: str
+    scopes: list[str]
+    source: Literal["athlete_reported"]
+    externally_verified: Literal[False] = False
+
+
 class InjuryFlagRecord(BaseModel):
     id: str
     athlete_id: str
@@ -1996,6 +2024,8 @@ class InjuryFlagRecord(BaseModel):
     # Machine-readable evidence codes behind the stage, never athlete-facing copy.
     rehab_stage_reasons: list[str] = Field(default_factory=list)
     rehab_care_pathway: RehabCarePathway | None = None
+    rehab_decision: InjuryRehabDecisionRecord | None = None
+    clinician_clearance: AthleteClearanceReport | None = None
     resolved_at: str | None = None
     created_at: str = ""
     updated_at: str = ""
@@ -2128,6 +2158,8 @@ class SessionCompletionRequest(BaseModel):
     plan_id: str = Field(min_length=1)
     session_id: str = Field(min_length=1)
     status: CompletionStatus
+    prescription_revision: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    rehab_performance: Literal["done_as_shown", "changed", "stopped"] | None = None
     # Omitted for the normal Today flow (the server resolves the athlete-local
     # training day). A retro-log passes an explicit past day; the service
     # enforces the back-fill window and terminal-status rule.
@@ -2173,6 +2205,8 @@ class SessionCompletionRecordResponse(BaseModel):
     completed_at: str | None = None
     created_at: str = ""
     updated_at: str = ""
+    prescription_snapshot: dict[str, Any] | None = None
+    rehab_performance: Literal["done_as_shown", "changed", "stopped"] | None = None
 
 
 class SessionCompletionHistoryResponse(SessionCompletionRecordResponse):

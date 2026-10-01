@@ -40,3 +40,11 @@ jobs:
 
       - name: Check rehab bank migration is up to date
         run: python tools/migrate_rehab_bank_schema.py --check
+
+      - name: Validate rehab review coverage
+        run: python tools/validate_rehab_metadata_review.py
+
+      - name: Validate clinical rehab policies
+        run: |
+          python -m pip install 'pydantic>=2,<3'
+          python tools/validate_rehab_clinical.py

@@ -55,6 +55,114 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "ankle_sprain_gentle_movement",
+        "name": "Gentle seated ankle movement",
+        "notes": "Once the ankle is less painful, sit with the foot supported and gently move it up and down or trace the alphabet. Start with a small comfortable amount and build gradually. Keep within a comfortable range; do not force movement.",
+        "rehab_stage": "calm",
+        "function": "mobility",
+        "equipment": [],
+        "dose": {},
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": [
+          "low",
+          "moderate"
+        ],
+        "progress_when": [],
+        "regress_when": [
+          "Symptoms worsen: return to comfortable movement and recovery support."
+        ],
+        "stop_when": [
+          "Stop if pain prevents comfortable movement or symptoms worsen.",
+          "Seek help for severe or worsening pain, swelling or inability to use the area."
+        ],
+        "target_regions": [
+          "ankle"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "ankle region soft tissues"
+        ],
+        "contraction_type": "mixed",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.whittington.nhs.uk/mini-apps/leaflet/Default.asp?id=53&print=1. Self-paced; no starting numerical dose is prescribed."
+      },
+      {
+        "id": "ankle_sprain_supported_balance",
+        "name": "Supported ankle balance",
+        "notes": "When standing and weight bearing are comfortable, practise balancing on the affected leg on firm ground, close to a stable counter for support. Start with a short comfortable attempt and build gradually. Keep support available; do not use a cushion or close your eyes.",
+        "rehab_stage": "restore",
+        "function": "control",
+        "equipment": [],
+        "dose": {},
+        "impact": "none",
+        "load": "low",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": [
+          "low",
+          "moderate"
+        ],
+        "progress_when": [],
+        "regress_when": [
+          "Symptoms worsen: return to comfortable movement and recovery support."
+        ],
+        "stop_when": [
+          "Stop if pain prevents comfortable movement or symptoms worsen.",
+          "Seek help for severe or worsening pain, swelling or inability to use the area."
+        ],
+        "target_regions": [
+          "ankle"
+        ],
+        "laterality_applicability": "side_specific",
+        "target_tissues": [
+          "ankle region soft tissues"
+        ],
+        "contraction_type": "mixed",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.whittington.nhs.uk/mini-apps/leaflet/Default.asp?id=53&print=1. Self-paced; no starting numerical dose is prescribed."
+      },
+      {
+        "id": "ankle_sprain_heel_lowering",
+        "name": "Supported heel lowering",
+        "notes": "When weight bearing and gentle calf movement are comfortable, use a stable support and practise controlled heel lowering as shown in the linked ankle rehabilitation guidance. Work at your own pace, up to 2 sets on alternate days. The source gives no repetition target; stop before symptoms worsen.",
+        "rehab_stage": "restore",
+        "function": "tendon_loading",
+        "equipment": [],
+        "dose": {},
+        "impact": "none",
+        "load": "low",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": [
+          "low",
+          "moderate"
+        ],
+        "progress_when": [],
+        "regress_when": [
+          "Symptoms worsen: return to comfortable movement and recovery support."
+        ],
+        "stop_when": [
+          "Stop if pain prevents comfortable movement or symptoms worsen.",
+          "Seek help for severe or worsening pain, swelling or inability to use the area."
+        ],
+        "target_regions": [
+          "ankle"
+        ],
+        "laterality_applicability": "side_specific",
+        "target_tissues": [
+          "ankle region soft tissues"
+        ],
+        "contraction_type": "mixed",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://services.eastcheshire.nhs.uk/physiotherapy-service/self-help/ankle-and-foot-pain-physiotherapy-self-help. Self-paced; no starting numerical dose is prescribed."
       }
     ]
   },
@@ -10321,6 +10429,78 @@
         "sport_specificity": "unknown",
         "contact_level": "unknown",
         "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+      },
+      {
+        "id": "chest_strain_recovery_support",
+        "name": "Chest strain recovery support",
+        "notes": "Protect the strained area and avoid movements that aggravate it. During the first 2 to 3 days, rest from exercise that loads it. Use comfortable everyday movement; do not force a stretch or add resisted chest work.",
+        "rehab_stage": "calm",
+        "function": "recovery_downregulation",
+        "equipment": [],
+        "dose": {},
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": [
+          "low",
+          "moderate"
+        ],
+        "progress_when": [],
+        "regress_when": [
+          "Symptoms worsen: return to comfortable movement and recovery support."
+        ],
+        "stop_when": [
+          "Stop if pain prevents comfortable movement or symptoms worsen.",
+          "Seek help for severe or worsening pain, swelling or inability to use the area."
+        ],
+        "target_regions": [
+          "chest"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "chest region soft tissues"
+        ],
+        "contraction_type": "unknown",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/. Self-paced; no starting numerical dose is prescribed."
+      },
+      {
+        "id": "chest_strain_comfortable_movement",
+        "name": "Comfortable chest-region movement",
+        "notes": "When pain no longer stops movement, gently move your shoulder and arm through a comfortable range. Go at your own pace and stop before pain prevents movement. Avoid forced chest stretches, resisted chest flies and surgical-repair routines.",
+        "rehab_stage": "restore",
+        "function": "mobility",
+        "equipment": [],
+        "dose": {},
+        "impact": "none",
+        "load": "low",
+        "velocity": "low",
+        "pain_ceiling": null,
+        "allowed_severities": [
+          "low",
+          "moderate"
+        ],
+        "progress_when": [],
+        "regress_when": [
+          "Symptoms worsen: return to comfortable movement and recovery support."
+        ],
+        "stop_when": [
+          "Stop if pain prevents comfortable movement or symptoms worsen.",
+          "Seek help for severe or worsening pain, swelling or inability to use the area."
+        ],
+        "target_regions": [
+          "chest"
+        ],
+        "laterality_applicability": "not_applicable",
+        "target_tissues": [
+          "chest region soft tissues"
+        ],
+        "contraction_type": "mixed",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/. Self-paced; no starting numerical dose is prescribed."
       }
     ]
   },

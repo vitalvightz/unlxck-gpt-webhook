@@ -8,6 +8,7 @@ import {
   type BodyMapSeverity,
   type BodyMapSide,
 } from "@/components/body-map";
+import { InjuryCareStatus } from "@/components/today/injury-care-status";
 import { SegmentGroup } from "@/components/today/segment-group";
 import { useToast } from "@/components/toast-provider";
 import { submitTodayInjuryCheckin } from "@/lib/api";
@@ -38,7 +39,7 @@ import type {
 // where it is (the backend keeps it "ongoing"), so a per-day "nothing changed"
 // tap was pure ceremony — and a bright, pre-selectable "Same" button read to
 // athletes as a required daily confirmation. The check-in now only asks for a
-// CHANGE: easing, worse, or cleared. Silence means "same".
+// CHANGE: easing, worse, or cleared. Silence supplies no recovery evidence.
 const INJURY_STATUS_ACTIONS: Array<{ value: TodayInjuryCheckinStatus; label: string }> = [
   { value: "improving", label: "Easing" },
   { value: "worse", label: "Worse" },
@@ -631,6 +632,7 @@ export function TodayInjuryManager({
                   </div>
                 ) : null}
                 <p className="today-field-label today-injury-status-label">How is it today?</p>
+                {injury.rehab_decision || injury.episode_id ? <InjuryCareStatus injury={injury} token={token} onRefresh={onRefresh} /> : null}
                 <p className="today-field-hint today-injury-status-hint">
                   Only tap if it changed. We keep tracking it otherwise.
                 </p>

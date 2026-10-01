@@ -1229,6 +1229,16 @@ export function submitTodayInjuryCheckin(
   });
 }
 
+export function submitInjuryEpisodeObservation(token: string, payload: {
+  injury_id: string; injury_episode_id: string;
+  event_type: "clinician_clearance_report" | "delayed_rehab_response";
+  report_id?: string;
+  scopes?: Array<"rehab" | "training" | "contact">;
+  exposure_id?: string; response?: "better" | "same" | "worse" | "not_sure";
+}): Promise<unknown> {
+  return readJson("/api/today/injury-episode-observation", { method: "POST", token, body: JSON.stringify(payload) });
+}
+
 export function getPlanFeedback(token: string, planId: string): Promise<FeedbackRecord | null> {
   return readJson<FeedbackRecord | null>(`/api/plans/${encodeURIComponent(planId)}/feedback`, { token });
 }

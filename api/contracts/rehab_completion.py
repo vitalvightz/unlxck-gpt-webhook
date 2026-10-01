@@ -247,6 +247,15 @@ def _resolve_side(injury: Mapping[str, Any], drill: Mapping[str, Any]) -> str | 
     ``bilateral_only`` cannot evidence one side of a side-specific injury.
     """
     injury_side = _lower(injury.get("side"))
+    # A frozen, episode-addressed pilot routine may be region-wide guidance.
+    # Preserve unknown laterality instead of losing the injury's response or
+    # manufacturing a side. This cannot qualify advanced recovery stages.
+    if (drill.get("prescription_policy_id") in {"chest_strain", "ankle_sprain"}
+            and drill.get("prescribed_injury_id") == str(injury.get("id"))
+            and drill.get("prescribed_injury_episode_id") == str(injury.get("episode_id"))
+            and drill.get("laterality_applicability") == "not_applicable"
+            and drill.get("rehab_stage") in {"calm", "restore"}):
+        return injury_side if injury_side in {"left", "right", "bilateral"} else "unknown"
     if injury_side not in {"left", "right", "bilateral"}:
         return None
 
@@ -287,16 +296,19 @@ def completed_dose_from_session(
 ) -> ExposureDose:
     """The clearest defensible statement of what was actually done.
 
-    The session model records completion, not per-drill dose editing. Both
-    "done" and "modified" therefore record that the exposure happened while
-    leaving the amount unquantified. Modified stays distinct as an altered or
-    partial exposure, without inventing how much changed.
-
-    A prescribed ``3x10`` is deliberately never echoed back as a completed
-    ``3x10``. Marking a session done is not the athlete confirming every rep,
-    and the dose the tissue actually saw is not something this layer knows.
+    Only the explicit "done as shown" answer on a frozen server prescription
+    confirms its dose. Ordinary completion leaves the performed amount unknown.
     """
     status = _lower((completion or {}).get("status"))
+    performance = (completion or {}).get("rehab_performance")
+    if status == "done" and performance == "done_as_shown" and (completion or {}).get("prescription_snapshot"):
+        dose = _prescribed_dose(prescribed)
+        if dose is not None:
+            return ExposureDose(**dose.model_dump(exclude_none=True, exclude={"completion_state"}), completion_state="quantified")
+    if performance == "stopped":
+        return ExposureDose(completion_state="partial_amount_unknown", stopped_early=True)
+    if performance == "changed":
+        return ExposureDose(completion_state="partial_amount_unknown")
     if status == "modified":
         return ExposureDose(completion_state="partial_amount_unknown")
     stopped_early = (completion or {}).get("stopped_early")
@@ -364,6 +376,10 @@ def resolve_rehab_exposure_candidate(
 
     regions = _drill_regions(drill)
     matches = _matching_injuries(regions, injuries)
+    if drill.get("prescribed_injury_id"):
+        matches = [injury for injury in matches
+                   if str(injury.get("id")) == drill["prescribed_injury_id"]
+                   and str(injury.get("episode_id")) == drill.get("prescribed_injury_episode_id")]
     candidate_ids = tuple(_clean(injury.get("id")) for injury in matches if _clean(injury.get("id")))
 
     if not matches:
@@ -667,19 +683,24 @@ def build_rehab_exposure_event(
     if not candidate.eligible:
         raise ValueError(f"candidate is not eligible: {list(candidate.reasons)}")
 
-    dose = completed_dose_from_session(completion)
+    dose = completed_dose_from_session(completion, prescribed=candidate.prescribed_dose.model_dump(exclude_none=True) if candidate.prescribed_dose else None)
     stopped_early = completed_dose_stopped_early(limit)
     if stopped_early is not None:
-        dose = dose.model_copy(
-            update={
-                "completion_state": (
-                    "partial_amount_unknown" if stopped_early else dose.completion_state
-                ),
-                "stopped_early": stopped_early,
-            }
-        )
+        if stopped_early:
+            dose = ExposureDose(completion_state="partial_amount_unknown", stopped_early=True)
+        else:
+            dose = dose.model_copy(update={"stopped_early": False})
 
     instant = _training_day_instant(training_day)
+    snapshot = (completion or {}).get("prescription_snapshot") or {}
+    block = next((b for b in snapshot.get("session", {}).get("blocks", [])
+                  if f"block:{b.get('block_id')}" == candidate.rehab_occurrence_key), {})
+    provenance = {"source": source, "recorded_at": instant}
+    if block.get("policy_id"):
+        provenance.update(prescription_revision=snapshot.get("revision"), policy_id=block["policy_id"],
+                          policy_version=block.get("policy_version"), bank_hash=block.get("bank_hash"),
+                          policy_review_hash=block.get("policy_review_hash"),
+                          rehab_stage=block.get("drill_snapshot", {}).get("rehab_stage"))
     return RehabExposureEvent(
         exposure_id=build_exposure_id(
             athlete_id=athlete_id,
@@ -707,7 +728,7 @@ def build_rehab_exposure_event(
         dose_completed=dose,
         response=ExposureResponse(**exposure_response_from_answers(during, limit)),
         occurred_at=instant,
-        provenance=ExposureProvenance(source=source, recorded_at=instant),  # type: ignore[arg-type]
+        provenance=ExposureProvenance(**provenance),
     )
 
 

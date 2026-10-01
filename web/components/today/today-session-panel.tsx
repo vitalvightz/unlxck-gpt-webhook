@@ -26,6 +26,7 @@ import { SessionTimer, type SessionTimerSummary } from "@/components/session-tim
 import { clearSavedRun, hasSavedRun } from "@/components/session-timer/use-session-timer";
 import { RehabResponsePrompt } from "@/components/today/rehab-response-prompt";
 import { SparringLogPrompt, type SparringDraft } from "@/components/today/sparring-log-prompt";
+import { DelayedRehabResponse } from "@/components/today/injury-care-status";
 import { useToast } from "@/components/toast-provider";
 import { listPendingRehabResponses, submitTodaySessionCompletion } from "@/lib/api";
 import { timerAudio } from "@/lib/session-timer/audio";
@@ -341,6 +342,7 @@ export function TodaySessionPanel({
   const { showToast } = useToast();
   const [intent, setIntent] = useState<CompletionIntent>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [rehabPerformance, setRehabPerformance] = useState<"done_as_shown" | "changed" | "stopped" | undefined>();
   // The session the athlete just logged as trained, captured at write time.
   // The refresh that follows can advance `next_session` to tomorrow's card, so
   // reading the id live would attach the review to the wrong session.
@@ -415,10 +417,16 @@ export function TodaySessionPanel({
   const openOngoing = Boolean(
     state.active_plan && isOpenOngoingPlan(state.active_plan.fight_date),
   );
-  const current = resolveCurrentDay(structuredPlan, focusDate, {
+  const storedCurrent = resolveCurrentDay(structuredPlan, focusDate, {
     openWeekNumber,
     allowDatedWeekdayMatch: openOngoing,
   });
+  const livePrescription = state.live_prescription;
+  const current: CurrentDayResolution = livePrescription ? {
+    ...storedCurrent, inRange: true,
+    day: { ...(storedCurrent.day ?? {}), date: state.today.training_day, sessions: [livePrescription.session] },
+    sessions: [livePrescription.session],
+  } : storedCurrent;
   // Where the resolved day sits in the renewable development block (baseline /
   // progress / peak / deload). The resolved week position wins over the bare
   // anchor-derived number so the note always matches the blocks shown below.
@@ -428,20 +436,20 @@ export function TodaySessionPanel({
     : null;
   const showStructuredBlocks = current.inRange && Boolean(current.day);
   const hasResolvedDaySessions = current.inRange && current.sessions.length > 0;
-  const isSessionPreview = resolvedDecision.displayTier === "preview";
+  const isSessionPreview = resolvedDecision.displayTier === "preview" || (hasSession && !resolvedDecision.sessionIsToday);
   const relationCopy = getSessionRelationCopy(
     session,
     status,
     resolvedDecision.sessionIsToday,
   );
-  const decisionBlocksCurrentSession = resolvedDecision.blocksCurrentSession;
+  const decisionBlocksCurrentSession = resolvedDecision.blocksCurrentSession || Boolean(livePrescription?.safety_hold);
   const severeInjuryBlocksCurrentSession =
     resolvedDecision.severeInjuryBlocksCurrentSession;
   // STOP + the scheduled session is today: show the recovery/mobility safe
   // session in place of the real blocks so Today never displays hard combat as
   // available under a stop. Future sessions stay visible but read as pending.
   const safeSession =
-    resolvedDecision.useSafeReplacement
+    resolvedDecision.useSafeReplacement && !livePrescription
       ? getSafeSessionView(getSessionTitle(session), state.open_injuries)
       : null;
   const nextIsHardCombat = isHardCombatSession(session);
@@ -456,7 +464,9 @@ export function TodaySessionPanel({
   // work, so reading rest-ness off the array disabled real sessions. The server
   // resolves the plan card — and rejects completion writes on a rest day — so
   // scope "today" is the single answer both sides use.
-  const canCompleteSession = resolvedDecision.canCompleteSession;
+  const reviewedRehabAllowed = livePrescription?.session.session_type === "rehab" && !livePrescription.safety_hold
+    && resolvedDecision.sessionIsToday && resolvedDecision.authoritativeTier !== "stop" && resolvedDecision.authoritativeTier !== "not_checked_in";
+  const canCompleteSession = (resolvedDecision.canCompleteSession || reviewedRehabAllowed) && !livePrescription?.safety_hold;
   // A training day is one session to the athlete: one start, one RPE, one log,
   // written by the backend to every session the card schedules that day. So the
   // timer runs every timeable block of the day. No timeable blocks means no
@@ -607,6 +617,8 @@ export function TodaySessionPanel({
         pain_after: details.painAfter ?? null,
         modification_reason: details.modificationReason ?? "",
         notes: details.notes ?? "",
+        prescription_revision: livePrescription?.revision,
+        rehab_performance: nextStatus === "done" ? rehabPerformance : nextStatus === "modified" && livePrescription ? (livePrescription.safety_hold ? "stopped" : "changed") : undefined,
       });
       setIntent(null);
       if (nextStatus !== "started") {
@@ -614,6 +626,7 @@ export function TodaySessionPanel({
         setActiveTimer((timer) => (timer?.source === "session" ? null : timer));
         setTimerNotes("");
       }
+      setRehabPerformance(undefined);
       // Non-empty only when the server established that this session contained
       // rehab attributable to a known injury, so a normal session never shows
       // this block.
@@ -649,6 +662,8 @@ export function TodaySessionPanel({
       return true;
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Session update failed.", { tone: "error" });
+      // A rejected stale revision needs fresh content before another start.
+      await onRefresh();
       return false;
     } finally {
       setIsSubmitting(false);
@@ -846,6 +861,7 @@ export function TodaySessionPanel({
         {contactOnlyTray}
         {sparringPrompt}
         {renderTimer(formatTrainingDay(state.today.training_day))}
+        {(state.delayed_rehab_prompts ?? []).map(prompt => <DelayedRehabResponse key={prompt.exposure_id} prompt={prompt} token={token} onRefresh={onRefresh} />)}
       </section>
     );
   }
@@ -1072,7 +1088,24 @@ export function TodaySessionPanel({
 
       {sparringPrompt}
 
-      {canCompleteSession ? (
+      {livePrescription?.safety_hold ? <p role="alert">{livePrescription.safety_hold_reason || "This session is on hold. Follow the current injury guidance before training."}</p> : null}
+      {livePrescription?.session.session_type === "rehab" && livePrescription.changes.some(change => change.action === "held") ? <p>Training is on hold. Your reviewed rehab is shown below.</p> : null}
+      {livePrescription?.safety_hold && resolvedDecision.sessionIsToday ? <div className="today-session-actions">
+        {livePrescription.frozen && status === "started" ? <button type="button" className="secondary-button" disabled={isSubmitting} onClick={() => setIntent("modified")}>Log stopped session</button> : null}
+        <button type="button" className="ghost-button" disabled={isSubmitting} onClick={() => setIntent("skipped")}>Mark skipped</button>
+      </div> : null}
+      {canCompleteSession && intent === "done" && livePrescription?.session.blocks?.some(block => block.block_type === "rehab") ? (
+        <div role="group" aria-label="How much rehab did you do?" className="today-injury-guidance">
+          <p>How much rehab did you do?</p>
+          <div className="today-segment-row">
+            {([ ["done_as_shown", "Done as shown"], ["changed", "Changed it"], ["stopped", "Stopped early"] ] as const).map(([value, label]) => (
+              <button key={value} type="button" aria-pressed={rehabPerformance === value} onClick={() => setRehabPerformance(value)}>{label}</button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {(state.delayed_rehab_prompts ?? []).map(prompt => <DelayedRehabResponse key={prompt.exposure_id} prompt={prompt} token={token} onRefresh={onRefresh} />)}
+      {canCompleteSession || (livePrescription?.safety_hold && (intent === "skipped" || (intent === "modified" && status === "started"))) ? (
         <SessionCompletionForm
           key={`${intent ?? "closed"}:${timerNotes}`}
           intent={intent}

@@ -396,6 +396,7 @@ def test_result_contract_is_auditable_and_identity_is_per_injury():
 
 
 def test_authoritative_bank_option_path_returns_ranked_live_stage_drill(monkeypatch):
+    monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
     bank = [
         {
             "location": "ankle",
@@ -424,6 +425,7 @@ def test_authoritative_bank_option_path_returns_ranked_live_stage_drill(monkeypa
 def test_legacy_option_shape_is_unchanged_when_live_stage_context_is_absent(
     monkeypatch,
 ):
+    monkeypatch.setattr("fightcamp.rehab_clinical.load_clinical_policies", lambda: ())
     bank = [
         {
             "location": "ankle",
@@ -492,6 +494,9 @@ def test_real_bank_severity_gate_uses_the_contract_vocabulary():
             injury=injury(body_region="ankle", injury_type="sprain", severity=raw),
             rehab_stage="restore",
         )
+        if raw == "severe":
+            assert not options, "Severe pilot injuries keep the existing medical symptom gate."
+            continue
         assert options, f"severity {raw!r} selected nothing from the real bank"
 
 
