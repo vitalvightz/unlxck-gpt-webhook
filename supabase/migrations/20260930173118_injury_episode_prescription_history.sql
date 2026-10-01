@@ -150,20 +150,27 @@ begin
     return new;
   end if;
   insert into public.injury_episode_events (id, athlete_id, injury_id, injury_episode_id, event_type, payload)
-    values (gen_random_uuid(), new.athlete_id, new.id, new.episode_id, 'injury_checkin',
+    -- Both row triggers describe one statement, so merge their report marker
+    -- before commit rather than recording the same check-in twice.
+    values (md5('injury-checkin:' || txid_current()::text || ':' || statement_timestamp()::text
+                || ':' || new.id::text || ':' || new.episode_id::text)::uuid,
+      new.athlete_id, new.id, new.episode_id, 'injury_checkin',
       jsonb_build_object('status', new.status, 'latest_reported_status', new.latest_reported_status,
                          'severity', new.severity, 'source', new.source,
-                         'explicit_report', coalesce(tg_argv[0], '') = 'explicit_report'));
+                         'explicit_report', coalesce(tg_argv[0], '') = 'explicit_report'))
+    on conflict (id) do update set payload = excluded.payload || jsonb_build_object(
+      'explicit_report', coalesce((injury_episode_events.payload->>'explicit_report')::boolean, false)
+                         or (excluded.payload->>'explicit_report')::boolean);
   return new;
 end;
 $$;
 drop trigger if exists capture_injury_episode_change on public.injury_flags;
-create trigger capture_injury_episode_change after update on public.injury_flags
+create trigger capture_injury_episode_change after insert or update on public.injury_flags
   for each row execute function public.capture_injury_episode_change();
 -- UPDATE OF fires for an explicit report even when its status is unchanged.
 -- Other edits retain audit history without refreshing recovery evidence.
 drop trigger if exists capture_injury_episode_report on public.injury_flags;
-create trigger capture_injury_episode_report after insert or update of latest_reported_status on public.injury_flags
+create trigger capture_injury_episode_report after update of latest_reported_status on public.injury_flags
   for each row execute function public.capture_injury_episode_change('explicit_report');
 
 create or replace function public.record_injury_episode_event(p_athlete_id uuid, p_event jsonb)

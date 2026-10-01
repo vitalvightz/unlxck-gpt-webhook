@@ -185,6 +185,9 @@ def test_only_explicit_reports_refresh_recovery_evidence(postgres_database):
             return row, result, exposures
 
         original_report = decision()[0]["latest_reported_at"]
+        assert original_report is None  # insert is baseline history, not a report
+        initial = connection.execute("select payload from injury_episode_events where injury_id=%s", (identity,)).fetchall()
+        assert len(initial) == 1 and initial[0]["payload"]["explicit_report"] is False
         assert decision()[1]["stage"] == "calm"
         # A severity change emits audit history with the inherited improving
         # status; a description change also updates the generic row timestamp.
@@ -196,9 +199,37 @@ def test_only_explicit_reports_refresh_recovery_evidence(postgres_database):
         # An explicit repeat must be recorded even though the value is unchanged.
         connection.execute("update injury_flags set latest_reported_status='improving', updated_at=now() where id=%s", (identity,))
         row, result, exposures = decision()
-        assert row["latest_reported_at"] > original_report
+        assert row["latest_reported_at"] is not None
         assert result["stage"] == "restore" and result["prescription"]["is_loading"]
         assert schedule_rehab(row, result, training_day="2026-10-08", exposures=exposures)["state"] == "due"
+
+
+def test_status_reports_record_one_event_per_statement(postgres_database):
+    import psycopg
+    from psycopg.rows import dict_row
+
+    identity = str(uuid4())
+    with psycopg.connect(postgres_database, autocommit=True, row_factory=dict_row) as connection:
+        connection.execute("""insert into injury_flags(id,athlete_id,description,body_region,side,
+            latest_reported_status) values(%s,%s,'ankle sprain','ankle','left','improving')""", (identity, ATHLETE))
+
+        def events():
+            return connection.execute("select payload from injury_episode_events where injury_id=%s", (identity,)).fetchall()
+
+        assert len(events()) == 1 and not events()[0]["payload"]["explicit_report"]
+        for expected_count, statement in enumerate([
+            "update injury_flags set latest_reported_status='worse' where id=%s",
+            "update injury_flags set latest_reported_status='improving', severity='moderate' where id=%s",
+            "update injury_flags set latest_reported_status='improving' where id=%s",
+            "update injury_flags set latest_reported_status='improving', severity='mild' where id=%s",
+        ], start=2):
+            connection.execute(statement, (identity,))
+            rows = events()
+            assert len(rows) == expected_count
+            assert sum(r["payload"]["explicit_report"] for r in rows) == expected_count - 1
+        connection.execute("update injury_flags set severity='moderate' where id=%s", (identity,))
+        assert len(events()) == 6
+        assert sum(r["payload"]["explicit_report"] for r in events()) == 4
 
 
 def test_historical_delayed_feedback_remains_owned_and_episode_scoped(postgres_database):

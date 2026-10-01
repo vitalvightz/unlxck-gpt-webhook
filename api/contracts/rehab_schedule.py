@@ -5,7 +5,7 @@ from collections.abc import Mapping
 
 def _training_demand(block, session):
     """Normalize plan prescriptions with the planner's existing intensity rules."""
-    from api.structured_plan_generation import _block_intensity
+    from api.structured_plan_generation import _block_intensity, _coerce_float, _NUMBER_RANGE_RE
 
     levels = [_block_intensity(dict(block))]
     for value in (block.get("effective_load"), block.get("load"), block.get("effort"),
@@ -21,10 +21,15 @@ def _training_demand(block, session):
                 effort = dict(value)
                 effort["method"] = "RPE"
                 if method == "rir":
-                    try:
-                        effort["value"] = 10 - float(value.get("value"))
-                    except (TypeError, ValueError):
+                    rir = _coerce_float(value.get("value"))
+                    if rir is None:
                         continue
+                    if isinstance(value.get("value"), str):
+                        bounds = _NUMBER_RANGE_RE.search(value["value"])
+                        if bounds and bounds.group(2):
+                            # Fewer reps in reserve is the harder end of a range.
+                            rir = min(float(bounds.group(1)), float(bounds.group(2)))
+                    effort["value"] = 10 - rir
                 levels.append(_block_intensity({"effort": effort}))
             else:
                 levels.append(_block_intensity({"load": dict(value)}))

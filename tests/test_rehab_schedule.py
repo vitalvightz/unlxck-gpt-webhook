@@ -114,6 +114,10 @@ def test_other_or_unproven_reports_cannot_refresh_improvement(changes):
     {"load": {"method": "percentage", "value": 85, "unit": "percent", "ref": "1RM"}},
     {"load": {"method": "rpe", "value": 8, "unit": "RPE"}},
     {"load": {"method": "rir", "value": 2, "unit": "reps"}},
+    {"load": {"method": "rir", "value": "2 RIR", "unit": "reps"}},
+    {"load": {"method": "rir", "value": "2-3 RIR", "unit": "reps"}},
+    {"effort": {"method": "RIR", "value": "1 RIR"}},
+    {"effective_load": {"method": "rir", "value": "0 RIR"}},
     {"effort": {"method": "RPE", "value": 9}},
     {"effort": {"method": "RIR", "value": 1}},
     {"intensity": "high"},
@@ -132,6 +136,8 @@ def test_structured_high_demand_defers_same_region_loading(fields):
     {"method": "percentage", "value": 60, "unit": "percent", "ref": "1RM"},
     {"method": "absolute", "value": 40, "unit": "kg"},
     {"method": "rpe", "value": 4, "unit": "RPE"},
+    {"method": "rir", "value": "5 RIR", "unit": "reps"},
+    {"method": "rir", "value": "unspecified", "unit": "reps"},
     {"method": "other", "value": 0, "unit": "unknown"},
 ])
 def test_structured_load_does_not_hide_hard_session_or_crash_when_unknown(load):

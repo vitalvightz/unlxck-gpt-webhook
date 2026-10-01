@@ -29,6 +29,8 @@ This pass fixes the PostgreSQL CI dependency setup and addresses 18 of the 20 P2
 
 ## Verification and limits
 
+The next review identified three further P2s. General audit and explicit-report triggers now share an injury/episode/transaction/statement event identity and merge the explicit marker within that statement, so status changes (including combined severity edits) create one event. Separate updates still create separate events, including unchanged-status reports. Inserts create baseline audit history with `explicit_report=false`; only an UPDATE targeting the report column can create explicit recovery evidence. Text RIR uses the planner's existing numeric parser and the harder, lower end of a range before conversion to RPE. Native PostgreSQL and scheduling regressions cover these cases.
+
 Focused backend, Today, selector, exposure and schema regressions cover these paths. Native PostgreSQL tests execute the real migration, including two-connection lock races, explicit report timestamps and owned historical feedback after episode reopening. The PGlite harness also applies the existing response-group migration before its 12 acceptance checks.
 
 Frontend tests exercise the performed-work choice and refresh-failure retry. Production build, typecheck, targeted lint, Python imports/Ruff and rehab bank/policy/metadata validators are checked. The full suite is intentionally not rerun at the user's request. Earlier rollout-document suite counts describe prior validation, not this cleanup pass.
