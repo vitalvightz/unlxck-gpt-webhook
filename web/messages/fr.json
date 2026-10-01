@@ -139,6 +139,7 @@
     "login": "Connexion",
     "sendingLink": "Envoi du lien...",
     "emailLink": "Lien de connexion par e-mail",
+    "captchaHint": "Validez la vérification de sécurité ci-dessus pour continuer.",
     "accountHelp": "Aide au compte",
     "alreadyAccount": "Vous avez déjà un compte ?",
     "joinBeta": "Nouveau à UNLXCK ? Rejoignez la bêta",

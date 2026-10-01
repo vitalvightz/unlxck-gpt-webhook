@@ -702,6 +702,9 @@ function QuickBuildFormInner() {
 
   function handleEquipmentPresetSelect(key: string) {
     if (!key) {
+      // With no preset active the empty row is the "Custom · N selected" label:
+      // picking it keeps the athlete's own selection rather than wiping it.
+      if (!activeEquipmentPreset) return;
       clearEquipmentPreset();
       return;
     }
@@ -1058,7 +1061,13 @@ function QuickBuildFormInner() {
         <PresetSelect
           id="qb-equipment-preset"
           label="Recommended equipment (optional)"
-          placeholder="Optional equipment preset"
+          placeholder={
+            // Equipment carried in from the intake rarely matches a preset exactly;
+            // say it's there instead of showing an empty picker.
+            !activeEquipmentPreset && input.equipment_access.length > 0
+              ? `Custom · ${input.equipment_access.length} selected`
+              : "Optional equipment preset"
+          }
           options={equipmentPresetOptions}
           activeKey={activeEquipmentPreset}
           onSelect={handleEquipmentPresetSelect}

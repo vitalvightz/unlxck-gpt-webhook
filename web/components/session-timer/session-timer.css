@@ -1075,6 +1075,18 @@
   }
 }
 
+/* While the mini bar floats, give the page room underneath it (bar height +
+   its offset + a little air) so the last controls on a page stay tappable. */
+html.has-timer-mini .app-content {
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+}
+
+@media (max-width: 720px) {
+  html.has-timer-mini[data-mobile-tab-bar] .app-content {
+    padding-bottom: calc(108px + var(--mobile-tab-bar-clearance, 0px));
+  }
+}
+
 /* Light appearance: a bright stage, the same phase colours deepened so the
    pill, ring and glow still read against white in a lit gym. */
 html[data-theme="light"] .st-root {

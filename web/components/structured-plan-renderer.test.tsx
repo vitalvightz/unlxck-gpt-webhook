@@ -6,6 +6,7 @@ import {
   buildDayTimeline,
   ExerciseRationaleProvider,
   ExerciseRow,
+  RecoveryCard,
   SessionCard,
   StructuredPlanRenderer,
   weekStripCenterOffset,
@@ -1942,6 +1943,7 @@ test("week overview separates app sessions, coach-led days, and app completion",
   assert.equal(html.includes("Coach/gym days</span>3"), true);
   assert.equal(html.includes("App completed</span>1/2"), true);
   assert.equal(html.includes("1/2 app"), true);
+  assert.equal(html.includes("Coach/gym days are tracked separately."), true);
   assert.equal(html.includes("Load</span>"), false);
   assert.equal(html.includes("Training days</span>"), false);
   assert.equal(html.includes("Plan sessions</span>"), false);
@@ -1980,6 +1982,8 @@ test("week overview hides source counters that are not present", () => {
   assert.equal(appOnlyHtml.includes("App sessions</span>1"), true);
   assert.equal(appOnlyHtml.includes("App completed</span>0/1"), true);
   assert.equal(appOnlyHtml.includes("Coach/gym days</span>"), false);
+  // The app-vs-coach note only earns its place when both counts are showing.
+  assert.equal(appOnlyHtml.includes("cm-week-count-note"), false);
 
   const coachOnlyHtml = renderDays([
     {
@@ -2786,4 +2790,33 @@ test("the effort stat reads in plain words, never as a raw enum token", () => {
   assert.equal(html.includes("max_speed"), false);
   assert.equal(html.includes("intent max"), false);
   assert.deepEqual(glossaryTerms(html), ["Intent"]);
+});
+
+test("recovery items render one per line instead of a semicolon run-on", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    deterministic_support: {
+      recovery: {
+        by_phase: {
+          GPP: {
+            sleep_hours_target: [8, 9],
+            core_strategies: [
+              "Daily breathwork (5-10 min post-session)",
+              "Optional contrast shower (comfort-based; avoid if it disrupts sleep)",
+              "8-9 h sleep/night + 90-min blue-light cutoff",
+            ],
+          },
+        },
+      },
+    },
+    weeks: [{ week_id: "wk-1", week_index: 1, phase_label: "GPP", days: [] }],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<RecoveryCard plan={plan} />);
+
+  // The entry's own semicolon stays inside its line; nothing is glued on after it.
+  assert.equal(html.includes("<li>Optional contrast shower (comfort-based; avoid if it disrupts sleep)</li>"), true);
+  assert.equal(html.includes("disrupts sleep); "), false);
+  assert.equal(countOccurrences(html, '<ul class="sp-kv-items">'), 1);
 });
