@@ -384,6 +384,36 @@ def _write_rows(path: Path, fieldnames: list[str], rows: Iterable[dict[str, str]
     os.replace(tmp, path)
 
 
+REQUIRED_INPUT_COLUMNS = ("exercise_key", "suggested_url")
+# Columns review itself rewrites; carried over when resuming from --out.
+_RESUME_COLUMNS = (*AI_COLUMNS, "start_s", "end_s", "suggested_url", "suggested_title", "review_note")
+
+
+class ReviewInputError(ValueError):
+    pass
+
+
+def _read_csv(path: str | Path) -> tuple[list[str], list[dict[str, str]]]:
+    with open(path, newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        return list(reader.fieldnames or []), list(reader)
+
+
+def _merge_previous_run(rows: list[dict[str, str]], previous: list[dict[str, str]]) -> int:
+    """Carry verdicts from an earlier run's --out file into the input rows."""
+    by_key = {r.get("exercise_key"): r for r in previous if (r.get("ai_verdict") or "").strip()}
+    merged = 0
+    for row in rows:
+        prior = by_key.get(row.get("exercise_key"))
+        if prior is None or (row.get("ai_verdict") or "").strip():
+            continue
+        for column in _RESUME_COLUMNS:
+            if column in prior:
+                row[column] = prior[column]
+        merged += 1
+    return merged
+
+
 def run_review(
     in_path: str,
     out_path: str,
@@ -401,14 +431,23 @@ def run_review(
     Rows that already have an ai_verdict (other than 'error') are skipped
     unless redo=True, so the same command resumes the next day.
     """
-    with open(in_path, newline="", encoding="utf-8") as handle:
-        reader = csv.DictReader(handle)
-        fieldnames = list(reader.fieldnames or [])
-        rows = list(reader)
+    fieldnames, rows = _read_csv(in_path)
+    missing = [column for column in REQUIRED_INPUT_COLUMNS if column not in fieldnames]
+    if missing:
+        raise ReviewInputError(
+            f"{in_path} has no {', '.join(missing)} column. review checks videos someone has "
+            "already suggested: add suggested_url (and optionally candidate_urls, '|'-separated, "
+            "and plan_cue) to the CSV that candidates exports, then run review."
+        )
     for column in AI_COLUMNS:
         if column not in fieldnames:
             fieldnames.append(column)
     out = Path(out_path)
+    if out.exists() and out.resolve() != Path(in_path).resolve():
+        _, previous = _read_csv(out)
+        merged = _merge_previous_run(rows, previous)
+        if merged:
+            log(f"resuming: {merged} rows already reviewed in {out}")
     counts = {"reviewed": 0, "skipped": 0, "errors": 0}
     calls = 0
     for index, row in enumerate(rows):

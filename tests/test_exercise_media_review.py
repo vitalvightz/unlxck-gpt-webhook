@@ -262,3 +262,75 @@ def test_reviewed_csv_still_imports_only_approved_rows(tmp_path):
     payload, error = parse_import_row({**reviewed, "youtube_url": reviewed["suggested_url"]})
     assert error is None
     assert (payload["start_s"], payload["end_s"]) == (42, 54)
+
+
+# -- review findings -------------------------------------------------------------
+
+
+def test_resume_with_separate_out_file_skips_saved_verdicts(tmp_path):
+    src = tmp_path / "media.csv"
+    out = tmp_path / "media.reviewed.csv"
+    _write_csv(src, [_row(exercise_key="a", suggested_url=URL_A), _row(exercise_key="b", suggested_url=URL_B)])
+    review.run_review(
+        str(src),
+        str(out),
+        reviewer=_reviewer({URL_A: _answer(), URL_B: httpx.Response(429, json={})}),
+        delay_s=0,
+        sleep=lambda _: None,
+        log=lambda _: None,
+    )
+
+    calls: list = []
+    logs: list[str] = []
+    counts = review.run_review(
+        str(src),  # the same command again: input is still the original file
+        str(out),
+        reviewer=_reviewer({URL_B: _answer(verdict="partial")}, calls),
+        delay_s=0,
+        sleep=lambda _: None,
+        log=logs.append,
+    )
+    assert len(calls) == 1  # only "b" was sent
+    assert counts["skipped"] == 1
+    assert any("resuming: 1 rows" in line for line in logs)
+    reviewed = _read_csv(out)
+    assert [r["ai_verdict"] for r in reviewed] == ["match", "partial"]
+    assert reviewed[0]["start_s"] == "42"  # carried over, not lost
+    assert _read_csv(src)[0].get("ai_verdict") is None  # input untouched
+
+
+def test_candidates_export_without_suggestions_is_rejected_clearly(tmp_path):
+    from tools.exercise_media import CSV_COLUMNS
+
+    src = tmp_path / "candidates.csv"
+    _write_csv(src, [{column: "" for column in CSV_COLUMNS} | {"exercise_key": "sled-push"}])
+    with pytest.raises(review.ReviewInputError, match="suggested_url"):
+        review.run_review(str(src), str(src), reviewer=_reviewer({}), log=lambda _: None)
+
+
+@pytest.mark.parametrize(
+    ("answers", "expected_exit"),
+    [
+        ({URL_A: _answer()}, 0),
+        ({URL_A: httpx.Response(500, json={})}, 1),  # every candidate failed
+        ({URL_A: httpx.Response(429, json={})}, 1),  # quota left the row unreviewed
+    ],
+)
+def test_cli_exit_code_reflects_failures(tmp_path, monkeypatch, answers, expected_exit):
+    from tools import exercise_media as tool
+
+    src = tmp_path / "media.csv"
+    _write_csv(src, [_row()])
+    monkeypatch.setattr(review, "build_reviewer", lambda model=None: _reviewer(answers))
+    monkeypatch.setattr(review.time, "sleep", lambda _: None)
+    assert tool.main(["review", str(src), "--delay", "0"]) == expected_exit
+
+
+def test_cli_missing_columns_exits_with_usage_error(tmp_path, monkeypatch, capsys):
+    from tools import exercise_media as tool
+
+    src = tmp_path / "media.csv"
+    _write_csv(src, [{"exercise_key": "sled-push", "youtube_url": ""}])
+    monkeypatch.setattr(review, "build_reviewer", lambda model=None: _reviewer({}))
+    assert tool.main(["review", str(src)]) == 2
+    assert "suggested_url" in capsys.readouterr().err

@@ -23,9 +23,13 @@ Workflow:
     python tools/exercise_media.py import media.csv
 
     # Optional, between 1 and 3: let Gemini watch each suggested video, confirm
-    # it shows the exercise and pre-fill start_s / end_s. Resumable; saves
-    # after every row. Needs GEMINI_API_KEY. A person still approves each row
-    # by copying the URL into youtube_url.
+    # it shows the exercise and pre-fill start_s / end_s. Needs GEMINI_API_KEY.
+    # Input needs a suggested_url column (plus optional candidate_urls,
+    # '|'-separated, and plan_cue); the candidates export does not include
+    # them. Saves after every row; re-running the same command, with or
+    # without --out, resumes. Exits 1 if any row failed or the quota stopped
+    # the run early. A person still approves each row by copying the URL into
+    # youtube_url.
     python tools/exercise_media.py review media.csv --out media.reviewed.csv
 
     # Re-check every stored video now (the worker also does this daily).
@@ -36,7 +40,7 @@ youtube_url, start_s, end_s, source, aliases, notes. Rows without youtube_url
 are skipped. aliases is a "|"-separated list of other names that should share
 the video. family is a curation hint only and is never used for matching.
 
-Exit codes: 0 success / 1 some rows rejected / 2 usage or operational error.
+Exit codes: 0 success / 1 some rows rejected, failed review or left unreviewed / 2 usage or operational error.
 """
 
 from __future__ import annotations
@@ -360,7 +364,7 @@ def _cmd_verify(_: argparse.Namespace) -> int:
 
 
 def _cmd_review(args: argparse.Namespace) -> int:
-    from tools.exercise_media_review import build_reviewer, run_review
+    from tools.exercise_media_review import ReviewInputError, build_reviewer, run_review
 
     out = args.out or args.csv
     reviewer = build_reviewer(args.model)
@@ -374,13 +378,18 @@ def _cmd_review(args: argparse.Namespace) -> int:
             max_candidates=args.max_candidates,
             delay_s=args.delay,
         )
+    except ReviewInputError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     finally:
         reviewer.close()
     print(
         f"done: {counts['reviewed']} reviewed, {counts['errors']} errors, "
         f"{counts['skipped']} already reviewed -> {out}"
     )
-    return 0
+    # Non-zero when any row failed or a quota stop left rows unreviewed, so a
+    # script never treats a partial run as complete.
+    return 1 if counts["errors"] or counts.get("quota_stopped") else 0
 
 
 def main(argv: list[str] | None = None) -> int:
