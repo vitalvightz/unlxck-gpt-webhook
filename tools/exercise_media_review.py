@@ -23,6 +23,7 @@ import csv
 import json
 import os
 import re
+import sys
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -210,6 +211,18 @@ def extract_text(body: Any) -> str:
     return texts[-1]
 
 
+_VERTICAL_WORDS = ("vertical", "portrait", "tall", "short", "9:16", "4:5", "square", "1:1")
+
+
+def normalize_orientation(value: Any) -> str:
+    """Anything that will not fill a 16:9 frame counts as vertical.
+
+    The schema constrains this to landscape/vertical, but on the no-schema
+    fallback the model may say "portrait", "Short" or "square"."""
+    text = str(value or "").strip().lower()
+    return "vertical" if any(word in text for word in _VERTICAL_WORDS) else "landscape"
+
+
 def parse_review(url: str, text: str) -> VideoReview:
     try:
         data = json.loads(_strip_fences(text))
@@ -224,7 +237,7 @@ def parse_review(url: str, text: str) -> VideoReview:
         confidence = max(0.0, min(1.0, float(data.get("confidence") or 0)))
     except (TypeError, ValueError):
         confidence = 0.0
-    orientation = "vertical" if str(data.get("orientation") or "").lower() == "vertical" else "landscape"
+    orientation = normalize_orientation(data.get("orientation"))
     start_s, end_s = clean_segment(data.get("segment_start"), data.get("segment_end"))
     return VideoReview(
         url=url,
@@ -385,6 +398,9 @@ def _write_rows(path: Path, fieldnames: list[str], rows: Iterable[dict[str, str]
 
 
 REQUIRED_INPUT_COLUMNS = ("exercise_key", "suggested_url")
+# Input columns apply_outcome may write; added if the CSV lacks them so the
+# values are not dropped on save.
+_WRITTEN_INPUT_COLUMNS = ("start_s", "end_s", "suggested_url", "suggested_title", "review_note")
 # Columns review itself rewrites; carried over when resuming from --out.
 _RESUME_COLUMNS = (*AI_COLUMNS, "start_s", "end_s", "suggested_url", "suggested_title", "review_note")
 
@@ -431,6 +447,8 @@ def run_review(
     Rows that already have an ai_verdict (other than 'error') are skipped
     unless redo=True, so the same command resumes the next day.
     """
+    if max_candidates < 1:
+        raise ReviewInputError("max_candidates must be at least 1")
     fieldnames, rows = _read_csv(in_path)
     missing = [column for column in REQUIRED_INPUT_COLUMNS if column not in fieldnames]
     if missing:
@@ -439,7 +457,7 @@ def run_review(
             "already suggested: add suggested_url (and optionally candidate_urls, '|'-separated, "
             "and plan_cue) to the CSV that candidates exports, then run review."
         )
-    for column in AI_COLUMNS:
+    for column in (*_WRITTEN_INPUT_COLUMNS, *AI_COLUMNS):
         if column not in fieldnames:
             fieldnames.append(column)
     out = Path(out_path)
@@ -485,5 +503,7 @@ def run_review(
 def build_reviewer(model: str | None = None) -> GeminiVideoReviewer:
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
     if not api_key:
-        raise SystemExit("error: set GEMINI_API_KEY (https://aistudio.google.com/apikey)")
+        # Operational error: exit 2, like the tool's other missing-key paths.
+        print("error: set GEMINI_API_KEY (https://aistudio.google.com/apikey)", file=sys.stderr)
+        raise SystemExit(2)
     return GeminiVideoReviewer(api_key, model=model or os.getenv("GEMINI_MODEL") or DEFAULT_MODEL)
