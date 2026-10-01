@@ -68,6 +68,7 @@ def postgres_database():
             # Execute the actual migration, including its injury-update trigger.
             setup.execute((ROOT / "supabase/migrations/20260820170000_add_rehab_response_group_identity.sql").read_text(encoding="utf-8"))
             setup.execute(MIGRATION.read_text(encoding="utf-8"))
+            setup.execute((ROOT / "supabase/migrations/20261001122553_restrict_injury_episode_trigger_execution.sql").read_text(encoding="utf-8"))
             setup.execute("insert into profiles values (%s)", (ATHLETE,))
             setup.execute("""insert into injury_flags(id,athlete_id,description,body_region,side,episode_id)
                 values(%s,%s,'ankle sprain','ankle','left',%s)""", (INJURY, ATHLETE, EPISODE))
@@ -77,6 +78,23 @@ def postgres_database():
             admin.execute(sql.SQL("drop database {} with (force)").format(sql.Identifier(name)))
             for role in reversed(created_roles):
                 admin.execute(sql.SQL("drop role {}").format(sql.Identifier(role)))
+
+
+def test_internal_episode_trigger_still_records_backend_updates(postgres_database):
+    import psycopg
+
+    identity = str(uuid4())
+    with psycopg.connect(postgres_database) as connection:
+        connection.execute("""insert into injury_flags(id,athlete_id,description,body_region,side)
+            values(%s,%s,'ankle sprain','ankle','left')""", (identity, ATHLETE))
+        connection.execute("grant select,update on injury_flags to service_role")
+        connection.execute("set local role service_role")
+        for role in ("anon", "authenticated"):
+            assert connection.execute("select has_function_privilege(%s,'public.capture_injury_episode_change()','EXECUTE')", (role,)).fetchone()[0] is False
+        connection.execute("update injury_flags set latest_reported_status='improving' where id=%s", (identity,))
+        rows = connection.execute("select payload from injury_episode_events where injury_id=%s", (identity,)).fetchall()
+        assert len(rows) == 2
+        assert sum(r[0]["explicit_report"] for r in rows) == 1
 
 
 def event_for(rpc, episode):
