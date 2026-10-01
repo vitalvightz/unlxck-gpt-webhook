@@ -459,7 +459,11 @@ def test_d30_spliced_tail_matches_direct_late_fight_assignment_authority():
         spec={"visible_session_sequence": spliced_roles, **spec_context}, candidate_pools=pools)
     _, direct_by_day = _build_late_fight_allowed_exercises_by_day(
         spec={"visible_session_sequence": direct_roles, **spec_context}, candidate_pools=pools)
-    assert spliced_by_day == direct_by_day
+    # Protocol-only days (D-0) are listed with no assignments on the direct path
+    # only; compare the days that actually carry assignments.
+    assert {day: items for day, items in spliced_by_day.items() if items} == {
+        day: items for day, items in direct_by_day.items() if items
+    }
 
     attach_late_fight_assignments(spliced_roles, spliced_by_day)
     apply_late_camp_role_morph(role_map)
