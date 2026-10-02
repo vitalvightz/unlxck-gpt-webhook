@@ -32900,27 +32900,37 @@
         "id": "hamstring_unspecified_standing_bent_knee_stretch_active_rom",
         "name": "Standing Bent-Knee Stretch (Active ROM)",
         "notes": "GPP: Dynamic mobility → SPP: Add rotation component",
-        "rehab_stage": null,
+        "rehab_stage": "calm",
         "function": "mobility",
-        "equipment": null,
-        "dose": null,
-        "impact": null,
-        "load": null,
-        "velocity": null,
-        "pain_ceiling": null,
-        "allowed_severities": null,
-        "progress_when": null,
-        "regress_when": null,
-        "stop_when": null,
+        "equipment": [],
+        "dose": {},
+        "impact": "none",
+        "load": "minimal",
+        "velocity": "low",
+        "pain_ceiling": "unrestricted",
+        "allowed_severities": [
+          "low",
+          "moderate"
+        ],
+        "progress_when": [],
+        "regress_when": [
+          "Symptoms worsen: return to comfortable movement and recovery support."
+        ],
+        "stop_when": [
+          "Stop if pain prevents comfortable movement or symptoms worsen.",
+          "Seek help for severe or worsening pain, a pop at the time of injury, heavy bruising or difficulty walking."
+        ],
         "target_regions": [
           "hamstring"
         ],
-        "laterality_applicability": "unknown",
-        "target_tissues": null,
-        "contraction_type": "unknown",
-        "sport_specificity": "unknown",
-        "contact_level": "unknown",
-        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+        "laterality_applicability": "side_specific",
+        "target_tissues": [
+          "hamstring muscle group"
+        ],
+        "contraction_type": "mixed",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Reviewed for hamstring strain CALM only. Sources: https://www.nhs.uk/conditions/hamstring-injury/, https://www.jospt.org/doi/10.2519/jospt.2022.0301. Base movement only; the progression in the legacy notes is not reviewed. Self-paced; no numerical dose."
       },
       {
         "id": "hamstring_unspecified_seated_band_resisted_knee_flexion",
@@ -33339,27 +33349,37 @@
         "id": "hamstring_unspecified_standing_hamstring_isometric_against_wall",
         "name": "Standing Hamstring Isometric (Against Wall)",
         "notes": "GPP: Functional angle holds → SPP: Add contralateral movements",
-        "rehab_stage": null,
+        "rehab_stage": "restore",
         "function": "isometric_analgesia",
-        "equipment": null,
-        "dose": null,
-        "impact": null,
-        "load": null,
-        "velocity": null,
-        "pain_ceiling": null,
-        "allowed_severities": null,
-        "progress_when": null,
-        "regress_when": null,
-        "stop_when": null,
+        "equipment": [],
+        "dose": {},
+        "impact": "none",
+        "load": "low",
+        "velocity": "low",
+        "pain_ceiling": "unrestricted",
+        "allowed_severities": [
+          "low",
+          "moderate"
+        ],
+        "progress_when": [],
+        "regress_when": [
+          "Symptoms worsen: return to comfortable movement and recovery support."
+        ],
+        "stop_when": [
+          "Stop if pain prevents comfortable movement or symptoms worsen.",
+          "Seek help for severe or worsening pain, a pop at the time of injury, heavy bruising or difficulty walking."
+        ],
         "target_regions": [
           "hamstring"
         ],
-        "laterality_applicability": "unknown",
-        "target_tissues": null,
-        "contraction_type": "unknown",
-        "sport_specificity": "unknown",
-        "contact_level": "unknown",
-        "evidence_notes": "Target region inherited from the canonical rehab-bank group; other classifications remain unreviewed."
+        "laterality_applicability": "side_specific",
+        "target_tissues": [
+          "hamstring muscle group"
+        ],
+        "contraction_type": "isometric",
+        "sport_specificity": "general_rehab",
+        "contact_level": "none",
+        "evidence_notes": "Reviewed for hamstring strain RESTORE only. Sources: https://pubmed.ncbi.nlm.nih.gov/20118524/, https://pmc.ncbi.nlm.nih.gov/articles/PMC6189266/, https://www.jospt.org/doi/10.2519/jospt.2022.0301. Base movement only; the progression in the legacy notes is not reviewed. Self-paced; no numerical dose."
       }
     ]
   },

@@ -64,14 +64,14 @@ def decide(reviewed, **kwargs):
 
 def test_shipped_policies_are_sourced_active_and_self_paced():
     policies = load_clinical_policies()
-    assert {p.region for p in policies} == {"chest", "ankle"}
+    assert {p.region for p in policies} == {"chest", "ankle", "hamstring"}
     assert all(p.activation == "live" and p.status == "active" for p in policies)
     assert all(p.dose is None and p.sources for policy in policies for p in policy.prescriptions)
     from fightcamp.rehab_protocols import get_rehab_bank
     from fightcamp.rehab_schema import CONTRACT_FIELDS, PAIN_CEILING_UNRESTRICTED
     bank = {d["id"]: d for group in get_rehab_bank() for d in group["drills"]}
     for policy in policies:
-        assert policy.version == {"chest_strain": 3, "ankle_sprain": 4}[policy.policy_id]
+        assert policy.version == {"chest_strain": 3, "ankle_sprain": 4, "hamstring_strain": 1}[policy.policy_id]
         for prescription in policy.prescriptions:
             drill = bank[prescription.drill_id]
             assert drill["pain_ceiling"] == PAIN_CEILING_UNRESTRICTED

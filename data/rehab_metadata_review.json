@@ -32504,24 +32504,28 @@
     "notes": "GPP: Dynamic mobility → SPP: Add rotation component",
     "movement_archetype": "mobility_rom",
     "proposed": {
-      "rehab_stage": null,
+      "rehab_stage": "calm",
       "function": "mobility",
-      "equipment": null,
+      "equipment": [],
       "impact": "none",
-      "load": null,
+      "load": "minimal",
       "velocity": "low",
       "target_regions": [
         "hamstring"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "hamstring muscle group"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Reviewed for hamstring strain CALM only. Sources: https://www.nhs.uk/conditions/hamstring-injury/, https://www.jospt.org/doi/10.2519/jospt.2022.0301. Base movement only; the progression in the legacy notes is not reviewed. Self-paced; no numerical dose."
     },
-    "flags": [],
-    "review_state": "needs_review",
+    "flags": [
+      "VARIABLE_DEMAND_PROGRESSION"
+    ],
+    "review_state": "reviewed",
     "review_version": 1
   },
   {
@@ -32943,24 +32947,28 @@
     "notes": "GPP: Functional angle holds → SPP: Add contralateral movements",
     "movement_archetype": "isometric",
     "proposed": {
-      "rehab_stage": null,
+      "rehab_stage": "restore",
       "function": "isometric_analgesia",
-      "equipment": null,
+      "equipment": [],
       "impact": "none",
-      "load": null,
+      "load": "low",
       "velocity": "low",
       "target_regions": [
         "hamstring"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "hamstring muscle group"
+      ],
       "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Reviewed for hamstring strain RESTORE only. Sources: https://pubmed.ncbi.nlm.nih.gov/20118524/, https://pmc.ncbi.nlm.nih.gov/articles/PMC6189266/, https://www.jospt.org/doi/10.2519/jospt.2022.0301. Base movement only; the progression in the legacy notes is not reviewed. Self-paced; no numerical dose."
     },
-    "flags": [],
-    "review_state": "needs_review",
+    "flags": [
+      "VARIABLE_DEMAND_PROGRESSION"
+    ],
+    "review_state": "reviewed",
     "review_version": 1
   },
   {
