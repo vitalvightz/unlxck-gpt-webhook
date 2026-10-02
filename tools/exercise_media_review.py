@@ -777,6 +777,15 @@ def _merge_previous_run(rows: list[dict[str, str]], previous: list[dict[str, str
 
 
 def _redo_weak_pass_number(row: dict[str, str]) -> int:
+    # Before DataForSEO timeout exhaustion became a batch-level stop, one
+    # provider timeout could stamp many rows as completed "error" results.
+    # Treat those legacy rows as unattempted so the same redo-weak pass repairs
+    # them instead of permanently skipping them.
+    if (
+        (row.get("ai_verdict") or "").strip() == "error"
+        and (row.get("ai_shows") or "").strip() == "DataForSEO search: ReadTimeout"
+    ):
+        return 0
     try:
         value = int((row.get("ai_redo_weak_pass") or "0").strip() or "0")
     except ValueError:
