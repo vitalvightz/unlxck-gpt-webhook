@@ -1,0 +1,172 @@
+name: Install Outreach Worker on Hetzner
+
+on:
+  push:
+    branches:
+      - ops/install-outreach-worker
+    paths:
+      - ".github/workflows/install-outreach-worker-ops.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
+      HETZNER_USER: ${{ secrets.HETZNER_USER }}
+      REMOTE_ARCHIVE: /tmp/unlxck-outreach-${{ github.run_id }}.tgz
+      RELEASE_ID: ${{ github.run_id }}
+
+    steps:
+      - name: Check out outreach worker
+        uses: actions/checkout@v4
+        with:
+          repository: vitalvightz/ig-outreach
+          ref: main
+          path: outreach-src
+
+      - name: Package outreach worker
+        run: |
+          set -euo pipefail
+          tar             --exclude='.git'             -czf "$RUNNER_TEMP/unlxck-outreach.tgz"             -C outreach-src .
+
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.HETZNER_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/unlxck_deploy
+          chmod 600 ~/.ssh/unlxck_deploy
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Upload worker bundle
+        run: |
+          set -euo pipefail
+          SSH="ssh -i $HOME/.ssh/unlxck_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15"
+          $SSH "$HETZNER_USER@$HETZNER_HOST" "cat > '$REMOTE_ARCHIVE'" < "$RUNNER_TEMP/unlxck-outreach.tgz"
+
+      - name: Install two-minute worker
+        run: |
+          set -euo pipefail
+          SSH="ssh -i $HOME/.ssh/unlxck_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15"
+          $SSH "$HETZNER_USER@$HETZNER_HOST" \
+            "ARCHIVE='$REMOTE_ARCHIVE' RELEASE_ID='$RELEASE_ID' bash -s" <<'REMOTE'
+              set -Eeuo pipefail
+
+              BASE="/opt/unlxck/outreach-worker"
+              RELEASES="$BASE/releases"
+              RELEASE="$RELEASES/$RELEASE_ID"
+              CURRENT="$BASE/current"
+              MAIN_ENV="/opt/unlxck/.env.production"
+              DATA_SOURCE_ID="08d8b476-129a-42b0-b980-102b08ce4bd8"
+
+              for cmd in python3 flock crontab tar; do
+                command -v "$cmd" >/dev/null 2>&1 || {
+                  echo "ERROR: required command '$cmd' is missing on the server." >&2
+                  exit 1
+                }
+              done
+
+              [ -f "$MAIN_ENV" ] || {
+                echo "ERROR: $MAIN_ENV is missing." >&2
+                exit 1
+              }
+
+              grep -q '^OPENAI_API_KEY=' "$MAIN_ENV" || {
+                echo "ERROR: OPENAI_API_KEY is missing from $MAIN_ENV." >&2
+                exit 1
+              }
+
+              grep -q '^NOTION_API_KEY=' "$MAIN_ENV" || {
+                echo "ERROR: NOTION_API_KEY is missing from $MAIN_ENV." >&2
+                exit 1
+              }
+
+              mkdir -p "$RELEASE"
+              tar -xzf "$ARCHIVE" -C "$RELEASE"
+
+              python3 -m venv "$RELEASE/.venv"
+              "$RELEASE/.venv/bin/pip" install --quiet --upgrade pip
+              "$RELEASE/.venv/bin/pip" install --quiet -r "$RELEASE/requirements.txt"
+
+              (
+                set -a
+                . "$MAIN_ENV"
+                set +a
+                cd "$RELEASE"
+                export NOTION_DATA_SOURCE_ID="$DATA_SOURCE_ID"
+                export MAX_CANDIDATES_PER_RUN="1"
+                export DRY_RUN="true"
+                "$RELEASE/.venv/bin/python" -m unittest discover -s tests -v
+                "$RELEASE/.venv/bin/python" pipeline.py
+              )
+
+              ln -sfn "$RELEASE" "$CURRENT"
+
+              cat > "$BASE/run.sh" <<'RUNNER'
+              #!/usr/bin/env bash
+              set -Eeuo pipefail
+
+              exec 9>/tmp/unlxck-outreach.lock
+              if ! flock -n 9; then
+                exit 0
+              fi
+
+              set -a
+              . /opt/unlxck/.env.production
+              set +a
+
+              export NOTION_DATA_SOURCE_ID="08d8b476-129a-42b0-b980-102b08ce4bd8"
+              export MAX_CANDIDATES_PER_RUN="100"
+              export DRY_RUN="false"
+
+              cd /opt/unlxck/outreach-worker/current
+              exec .venv/bin/python pipeline.py
+              RUNNER
+              chmod 700 "$BASE/run.sh"
+
+              tmp_cron="$(mktemp)"
+              {
+                crontab -l 2>/dev/null | awk '
+                  BEGIN {skip=0}
+                  /^# BEGIN UNLXCK OUTREACH WORKER$/ {skip=1; next}
+                  /^# END UNLXCK OUTREACH WORKER$/ {skip=0; next}
+                  skip==0 {print}
+                '
+                echo "# BEGIN UNLXCK OUTREACH WORKER"
+                echo "*/2 * * * 1-5 $BASE/run.sh >> $BASE/outreach.log 2>&1"
+                echo "# END UNLXCK OUTREACH WORKER"
+              } > "$tmp_cron"
+              crontab "$tmp_cron"
+              rm -f "$tmp_cron"
+
+              touch "$BASE/outreach.log"
+              chmod 600 "$BASE/outreach.log"
+
+              echo "Installed outreach worker release $RELEASE_ID."
+              echo "Cron:"
+              crontab -l | sed -n '/BEGIN UNLXCK OUTREACH WORKER/,/END UNLXCK OUTREACH WORKER/p'
+
+              echo "Running one live queue pass now..."
+              "$BASE/run.sh"
+
+              find "$RELEASES" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' \
+                | sort -nr \
+                | awk 'NR>3 {print $2}' \
+                | xargs -r rm -rf
+          REMOTE
+
+      - name: Remove uploaded bundle
+        if: always()
+        run: |
+          set -uo pipefail
+          SSH="ssh -i $HOME/.ssh/unlxck_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15"
+          $SSH "$HETZNER_USER@$HETZNER_HOST" "rm -f '$REMOTE_ARCHIVE'" || true
