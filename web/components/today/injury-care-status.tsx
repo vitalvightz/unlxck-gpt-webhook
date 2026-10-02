@@ -4,6 +4,18 @@ import { useRef, useState } from "react";
 import { submitInjuryEpisodeObservation } from "@/lib/api";
 import type { InjuryFlagRecord, TodayCommandView } from "@/lib/types";
 
+export function EffectiveClinicianClearanceStatus({ clearance }: {
+  clearance: TodayCommandView["effective_clinician_clearance"];
+}) {
+  if (!clearance) return null;
+  const label = { rehab_only: "Rehab only", train_no_contact: "Train, no contact", train_contact: "Train + contact" }[clearance.level];
+  return <div className="today-injury-guidance" role="note" aria-label="Effective clinician clearance">
+    <p><strong>Effective clinician clearance: {label}</strong></p>
+    <p>Limited by: {clearance.limited_by.map(injury => injury.label).join(", ")}</p>
+    {clearance.requires_update ? <p>Scope unclear — update the reported clearance. Rehab only until clarified.</p> : null}
+  </div>;
+}
+
 export function InjuryCareStatus({ injury, token, onRefresh }: {
   injury: InjuryFlagRecord; token: string; onRefresh: () => Promise<void>;
 }) {
@@ -46,7 +58,7 @@ export function InjuryCareStatus({ injury, token, onRefresh }: {
         {index ? " · " : ""}<a href={source} target="_blank" rel="noopener noreferrer">Routine guidance{index ? ` ${index + 1}` : ""}</a>
       </span>)}
     </p> : null}
-    {clearance ? <p className="muted">Clinician clearance: {scopeLabel}</p> : null}
+    {clearance ? <p className="muted">Reported clearance for this injury: {scopeLabel}</p> : null}
     {injury.episode_id && !surface ? <>
       <button type="button" className="ghost-button" onClick={() => setChoosing(!choosing)} disabled={busy}>{clearance ? "Update clinician clearance" : "Report clinician clearance"}</button>
       {choosing ? <div role="group" aria-label="What were you cleared for?">

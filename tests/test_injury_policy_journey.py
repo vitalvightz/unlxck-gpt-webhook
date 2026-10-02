@@ -88,10 +88,10 @@ def test_chest_guidance_retains_episode_feedback_without_inventing_laterality(si
     decision = resolve_injury_policy(row, policies=load_clinical_policies(), bank=get_rehab_bank(), phase="TAPER")
     snapshot = reconcile_session_prescription(None, decisions=[decision], plan_id=PLAN, training_day=DAY)
     completion = dict(status="done", prescription_snapshot=snapshot, rehab_performance="done_as_shown")
-    items = session_rehab_items({"id": PLAN}, training_day=DAY, session_id=f"rehab-{DAY}", prescription=snapshot)
+    items = session_rehab_items({"id": PLAN}, training_day=DAY, session_id=snapshot["session"]["session_id"], prescription=snapshot)
     candidates = resolve_rehab_completion(items, [row], completion=completion).eligible
     assert len(candidates) == 1 and candidates[0].side == (str(side or "").strip() or "unknown")
-    event = build_rehab_exposure_event(candidates[0], athlete_id=ATHLETE, plan_id=PLAN, session_id=f"rehab-{DAY}",
+    event = build_rehab_exposure_event(candidates[0], athlete_id=ATHLETE, plan_id=PLAN, session_id=snapshot["session"]["session_id"],
         training_day=DAY, completion=completion, during="same", limit="no")
     assert event.is_attributable_to(row)
     assert event.dose_completed.completion_state == "performed_amount_unknown"
@@ -166,7 +166,7 @@ def test_urgent_missing_and_shadow_outcomes_are_explicit(reviewed):
 def test_new_injury_gets_rehab_on_rest_day_and_unknown_training_is_held(reviewed):
     decision = decide(reviewed)
     snapshot = reconcile_session_prescription(None, decisions=[decision], plan_id=PLAN, training_day=DAY)
-    assert snapshot["session"]["session_id"] == f"rehab-{DAY}"
+    assert snapshot["session"]["session_id"].startswith(f"rehab-{DAY}-")
     assert snapshot["session"]["blocks"][0]["injury_episode_id"] == decision["injury_episode_id"]
     unknown = {"session_id": "s-1", "blocks": [{"block_id": "b-1", "block_type": "strength"}]}
     original = deepcopy(unknown)
@@ -212,7 +212,7 @@ def test_snapshot_dose_and_attribution_survive_plan_and_bank_changes(reviewed):
     snapshot = reconcile_session_prescription(None, decisions=[decision], plan_id=PLAN, training_day=DAY)
     plan = {"id": PLAN, "structured_plan": {"weeks": []}}
     reviewed[1][0]["drills"][0]["name"] = "Changed current bank"
-    items = session_rehab_items(plan, training_day=DAY, session_id=f"rehab-{DAY}", prescription=snapshot)
+    items = session_rehab_items(plan, training_day=DAY, session_id=snapshot["session"]["session_id"], prescription=snapshot)
     assert items[0]["name"] == "Test control drill"
     completion = {"status": "done", "prescription_snapshot": snapshot, "rehab_performance": "done_as_shown"}
     resolution = resolve_rehab_completion(items, [reviewed[2], {**reviewed[2], "id": str(uuid4()), "episode_id": str(uuid4())}], completion=completion)
@@ -236,7 +236,7 @@ def test_today_start_rejects_stale_revision_and_freezes_server_content(reviewed,
     view = today_service.build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW)
     assert view.live_prescription and view.today.session_scope == "today"
     assert view.live_prescription["readiness_context"]["id"] == store.get_today_checkin(ATHLETE, PLAN, DAY)["id"]
-    payload = {"plan_id": PLAN, "session_id": f"rehab-{DAY}", "status": "started", "prescription_revision": "a" * 64}
+    payload = {"plan_id": PLAN, "session_id": view.live_prescription["session"]["session_id"], "status": "started", "prescription_revision": "a" * 64}
     with pytest.raises(HTTPException) as failure:
         today_service.upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="UTC", payload=payload, now=NOW)
     assert failure.value.status_code == 409
@@ -456,13 +456,13 @@ def test_snapshot_identity_mismatch_is_rejected_and_legacy_id_falls_back(reviewe
     snapshot = reconcile_session_prescription(None, decisions=[decision], plan_id=PLAN, training_day=DAY)
     snapshot["session"]["blocks"][0]["drill_snapshot"]["id"] = "wrong_drill"
     with pytest.raises(HTTPException, match="rehab_snapshot_identity_mismatch"):
-        session_rehab_items({"id": PLAN}, training_day=DAY, session_id=f"rehab-{DAY}", prescription=snapshot)
+        session_rehab_items({"id": PLAN}, training_day=DAY, session_id=snapshot["session"]["session_id"], prescription=snapshot)
     from fightcamp.rehab_protocols import get_rehab_bank
     drill = next(d for g in get_rehab_bank() for d in g["drills"] if d["id"] == "ankle_sprain_heel_lowering")
     block = snapshot["session"]["blocks"][0]
     block.pop("drill_snapshot")
     block["rehab_drill_id"] = drill["id"]
-    items = session_rehab_items({"id": PLAN}, training_day=DAY, session_id=f"rehab-{DAY}", prescription=snapshot)
+    items = session_rehab_items({"id": PLAN}, training_day=DAY, session_id=snapshot["session"]["session_id"], prescription=snapshot)
     assert items[0]["id"] == drill["id"] and items[0]["prescribed_dose"] == {"sets": 2, "reps": 4}
 
 
@@ -584,12 +584,12 @@ def test_rehab_done_requires_an_explicit_performance_choice(reviewed, monkeypatc
     monkeypatch.setattr(today_service, "load_clinical_policies", lambda: (policy,))
     monkeypatch.setattr(today_service, "get_rehab_bank", lambda: bank)
     view = today_service.build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW)
-    payload = dict(plan_id=PLAN, session_id=f"rehab-{DAY}", status="started", prescription_revision=view.live_prescription["revision"])
+    payload = dict(plan_id=PLAN, session_id=view.live_prescription["session"]["session_id"], status="started", prescription_revision=view.live_prescription["revision"])
     today_service.upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW, payload=payload)
     with pytest.raises(HTTPException) as failure:
         today_service.upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW, payload={**payload, "status": "done"})
     assert failure.value.status_code == 422
-    assert store.get_session_completion(ATHLETE, f"rehab-{DAY}", DAY)["status"] == "started"
+    assert store.get_session_completion(ATHLETE, payload["session_id"], DAY)["status"] == "started"
     done = today_service.upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW,
         payload={**payload, "status": "done", "rehab_performance": "done_as_shown"})
     retry = today_service.upsert_session_completion(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW,

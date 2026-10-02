@@ -144,13 +144,13 @@ def test_completion_produces_valid_distinct_exposures_and_one_response_group(per
     completion = dict(status="done" if performance == "done_as_shown" else "modified",
                       rehab_performance=performance, prescription_snapshot=accepted)
     items = session_rehab_items({"id": PLAN}, training_day=DAY,
-                               session_id=f"rehab-{DAY}", prescription=accepted)
+                               session_id=accepted["session"]["session_id"], prescription=accepted)
     resolution = resolve_rehab_completion(items, [injury], completion=completion)
     assert len(resolution.eligible) == 2
     prompts = build_rehab_response_prompts(resolution, [injury])
     assert len(prompts) == 1 and prompts[0].drill_ids == tuple(IDS)
     events = [build_rehab_exposure_event(
-        candidate, athlete_id=ATHLETE, plan_id=PLAN, session_id=f"rehab-{DAY}",
+        candidate, athlete_id=ATHLETE, plan_id=PLAN, session_id=accepted["session"]["session_id"],
         training_day=DAY, completion=completion, during="same", limit="no",
     ) for candidate in resolution.eligible]
     assert len({e.exposure_id for e in events}) == 2
@@ -201,7 +201,7 @@ def test_server_records_bundle_exposures_idempotently_from_one_injury_answer():
     completion = dict(plan_id=PLAN, status="done", rehab_performance="done_as_shown",
                       prescription_snapshot=accepted)
     kwargs = dict(athlete_id=ATHLETE, plan_row={"id": PLAN}, training_day=DAY,
-                  session_id=f"rehab-{DAY}", completion=completion,
+                  session_id=accepted["session"]["session_id"], completion=completion,
                   answers={injury["id"]: dict(injury_episode_id=injury["episode_id"],
                                              during_response="same", limit_response="no")})
     recorded = record_rehab_exposures(store, **kwargs)
@@ -217,7 +217,7 @@ def test_today_daily_reservations_count_a_started_bundle_once(monkeypatch):
     other = {**injury, "id": str(uuid4()), "episode_id": str(uuid4()), "body_area": "Right ankle", "side": "right"}
     store = FakeStore()
     store.injury_flags[ATHLETE] = [injury, other]
-    store.upsert_session_completion(ATHLETE, dict(plan_id=PLAN, session_id=f"rehab-{DAY}",
+    store.upsert_session_completion(ATHLETE, dict(plan_id=PLAN, session_id=snapshot([decision])["session"]["session_id"],
         training_day=DAY, status="started", prescription_snapshot=snapshot([decision])))
     monkeypatch.setattr(today_service, "load_clinical_policies", lambda: (policy,))
     rows = today_service._with_injury_policy(

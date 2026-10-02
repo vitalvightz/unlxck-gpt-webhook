@@ -111,6 +111,7 @@ type TimerSource = "session" | "contact";
 
 const CONTACT_LOCK_COPY = {
   not_checked_in: "Sparring rounds unlock after check-in",
+  clinician_clearance: "Sparring rounds locked by clinician clearance",
   blocked: "Sparring rounds locked today",
 };
 
@@ -467,7 +468,6 @@ export function TodaySessionPanel({
   // scope "today" is the single answer both sides use.
   const reviewedRehabAllowed = livePrescription?.session.session_type === "rehab" && !livePrescription.safety_hold
     && resolvedDecision.sessionIsToday && resolvedDecision.authoritativeTier !== "stop" && resolvedDecision.authoritativeTier !== "not_checked_in";
-  const canCompleteSession = (resolvedDecision.canCompleteSession || reviewedRehabAllowed) && !livePrescription?.safety_hold;
   // A training day is one session to the athlete: one start, one RPE, one log,
   // written by the backend to every session the card schedules that day. So the
   // timer runs every timeable block of the day. No timeable blocks means no
@@ -481,8 +481,6 @@ export function TodaySessionPanel({
         countdown: timerCountdown,
       })
     : [];
-  const timerAvailable =
-    canCompleteSession && !safeSession && Boolean(session.session_id) && timerItems.length > 0;
   const timerKeys: Record<TimerSource, string> = {
     session: `${SESSION_RUN_KEY_PREFIX}${activePlanId}:${session.session_id ?? ""}:${state.today.training_day}`,
     contact: `${CONTACT_RUN_KEY_PREFIX}${activePlanId}:${state.today.training_day}`,
@@ -509,7 +507,10 @@ export function TodaySessionPanel({
       : null);
   // Hard contact follows the same readiness authority as a session: only a
   // go / follow-the-limits day, never under pull back, stop or a severe injury.
+  const clearanceAllowsContact = !state.effective_clinician_clearance ||
+    (state.effective_clinician_clearance.level === "train_contact" && !state.effective_clinician_clearance.requires_update);
   const contactCleared =
+    clearanceAllowsContact &&
     (resolvedDecision.authoritativeTier === "green" ||
       resolvedDecision.authoritativeTier === "modify") &&
     !severeInjuryBlocksCurrentSession &&
@@ -523,6 +524,7 @@ export function TodaySessionPanel({
   // decision blocks (pull back, stop): it is not happening, so it cannot be
   // the day's headline.
   const contactLeads =
+    clearanceAllowsContact &&
     Boolean(contactTarget) &&
     resolvedDecision.sessionIsToday &&
     !safeSession &&
@@ -541,15 +543,24 @@ export function TodaySessionPanel({
           : null);
   // Is the session being logged the contact itself? A sparring-only day has no
   // session objects, so the server logs it against the day's headline entry.
+  // Identity must survive a restrictive clearance: hiding the contact CTA
+  // must not turn the same contact work into a generic completable session.
   const contactIsSession =
-    contactLeads &&
+    Boolean(contactTarget) && resolvedDecision.sessionIsToday && !livePrescription?.rehab_only &&
     ((current.inRange && Boolean(current.day) && current.sessions.length === 0) ||
       sameTitle(getSessionTitle(session), contactTarget?.headline ?? "") ||
       sameTitle(getSessionTitle(session), contactHeadline));
+  const contactClearanceBlocked = contactIsSession && !clearanceAllowsContact;
+  const canCompleteSession = (resolvedDecision.canCompleteSession || reviewedRehabAllowed)
+    && !livePrescription?.safety_hold && !contactClearanceBlocked;
+  const timerAvailable =
+    canCompleteSession && !safeSession && Boolean(session.session_id) && timerItems.length > 0;
   const contactLockCopy =
-    resolvedDecision.authoritativeTier === "not_checked_in"
-      ? CONTACT_LOCK_COPY.not_checked_in
-      : CONTACT_LOCK_COPY.blocked;
+    !clearanceAllowsContact
+      ? CONTACT_LOCK_COPY.clinician_clearance
+      : resolvedDecision.authoritativeTier === "not_checked_in"
+        ? CONTACT_LOCK_COPY.not_checked_in
+        : CONTACT_LOCK_COPY.blocked;
   const freeTimerAvailable =
     resolvedDecision.authoritativeTier !== "stop" && !severeInjuryBlocksCurrentSession;
   // A run left in progress (app closed mid-session) comes back as the mini bar.
@@ -595,9 +606,11 @@ export function TodaySessionPanel({
     ? "Blocked by an active severe injury."
     : decisionBlocksCurrentSession
       ? "Follow the recommendation above. Do not start this session from Today."
-      : resolvedDecision.authoritativeTier === "not_checked_in"
-        ? "Submit today's check-in to unlock session actions."
-        : "This entry has nothing to log. Follow it as written.";
+      : contactClearanceBlocked
+        ? "This contact session is locked by your effective clinician clearance."
+        : resolvedDecision.authoritativeTier === "not_checked_in"
+          ? "Submit today's check-in to unlock session actions."
+          : "This entry has nothing to log. Follow it as written.";
 
   async function saveCompletion(
     nextStatus: TodayCompletionStatus,
@@ -1023,7 +1036,7 @@ export function TodaySessionPanel({
         <div className="today-terminal-block">
           <p
             className="today-terminal-status"
-            data-tone={decisionBlocksCurrentSession ? "blocked" : "neutral"}
+            data-tone={decisionBlocksCurrentSession || contactClearanceBlocked ? "blocked" : "neutral"}
           >
             {terminalStatusCopy}
           </p>

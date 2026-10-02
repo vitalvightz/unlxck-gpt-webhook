@@ -221,7 +221,7 @@ def test_rehab_only_keeps_independently_eligible_reviewed_rehab(context):
     current = view(context)
     live = current.live_prescription
     assert live["rehab_only"] and not live["safety_hold"]
-    assert live["session"]["session_type"] == "rehab" and live["session"]["session_id"] == f"rehab-{DAY}"
+    assert live["session"]["session_type"] == "rehab" and live["session"]["session_id"].startswith(f"rehab-{DAY}-")
     assert all(b["block_type"] == "rehab" for b in live["session"]["blocks"])
     execute(context, live)
     assert not view(context).live_prescription["safety_hold"]

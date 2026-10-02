@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { window as domWindow } from "../test-dom";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { InjuryCareStatus, DelayedRehabResponse } from "./injury-care-status";
+import { InjuryCareStatus, DelayedRehabResponse, EffectiveClinicianClearanceStatus } from "./injury-care-status";
 import type { InjuryFlagRecord } from "@/lib/types";
 
 const injury: InjuryFlagRecord = {
@@ -132,7 +132,7 @@ for (const [scopes, label] of [
     const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, clinician_clearance: {
       episode_id: injury.episode_id!, scopes: [...scopes], source: "athlete_reported", externally_verified: false,
     } }} token="token" onRefresh={async () => {}} />);
-    assert.ok(html.includes(`Clinician clearance: ${label}`));
+    assert.ok(html.includes(`Reported clearance for this injury: ${label}`));
     assert.ok(html.includes("Update clinician clearance"));
     assert.ok(!html.includes("Report clinician clearance"));
   });
@@ -156,18 +156,18 @@ test("updating clearance displays the refreshed scope, and worsening removes cur
   }) as typeof fetch;
   try {
     await act(async () => { render(); });
-    assert.match(container.textContent ?? "", /Clinician clearance: Train, no contact/);
+    assert.match(container.textContent ?? "", /Reported clearance for this injury: Train, no contact/);
     await click(container, "Update clinician clearance");
     await click(container, "Train + contact");
     assert.deepEqual(calls[0].scopes, ["rehab", "training", "contact"]);
     assert.equal(calls[0].event_type, "clinician_clearance_report");
     assert.ok(!("status" in calls[0]));
     assert.equal(current.status, "open");
-    assert.match(container.textContent ?? "", /Clinician clearance: Train \+ contact/);
-    assert.doesNotMatch(container.textContent ?? "", /Clinician clearance: Train, no contact/);
+    assert.match(container.textContent ?? "", /Reported clearance for this injury: Train \+ contact/);
+    assert.doesNotMatch(container.textContent ?? "", /Reported clearance for this injury: Train, no contact/);
     current = { ...current, clinician_clearance: null, latest_reported_status: "worse" };
     await act(async () => { render(); });
-    assert.doesNotMatch(container.textContent ?? "", /Clinician clearance:|Update clinician clearance/);
+    assert.doesNotMatch(container.textContent ?? "", /Reported clearance for this injury:|Update clinician clearance/);
     assert.match(container.textContent ?? "", /Report clinician clearance/);
   } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
 });
@@ -175,7 +175,7 @@ test("updating clearance displays the refreshed scope, and worsening removes cur
 test("no current clearance uses the report action without claiming a current scope", () => {
   const html = renderToStaticMarkup(<InjuryCareStatus injury={injury} token="token" onRefresh={async () => {}} />);
   assert.ok(html.includes("Report clinician clearance"));
-  assert.ok(!html.includes("Clinician clearance:"));
+  assert.ok(!html.includes("Reported clearance for this injury:"));
 });
 
 
@@ -184,7 +184,31 @@ for (const scopes of [["contact"], ["training"], ["rehab", "contact"], [], ["reh
     const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, clinician_clearance: {
       episode_id: injury.episode_id!, scopes: [...scopes], source: "athlete_reported", externally_verified: false,
     } }} token="token" onRefresh={async () => {}} />);
-    assert.match(html, /Clinician clearance: Scope unclear/);
-    assert.doesNotMatch(html, /Clinician clearance: Train/);
+    assert.match(html, /Reported clearance for this injury: Scope unclear/);
+    assert.doesNotMatch(html, /Reported clearance for this injury: Train/);
   });
 }
+
+test("effective clearance remains authoritative above a permissive individual report", () => {
+  const html = renderToStaticMarkup(<>
+    <EffectiveClinicianClearanceStatus clearance={{ level: "rehab_only", scopes: ["rehab"], requires_update: false,
+      limited_by: [{ injury_id: injury.id, injury_episode_id: injury.episode_id!, label: "Chest strain" }] }} />
+    <InjuryCareStatus injury={{ ...injury, id: "ankle", clinician_clearance: {
+      episode_id: injury.episode_id!, scopes: ["rehab", "training", "contact"], source: "athlete_reported", externally_verified: false,
+    } }} token="token" onRefresh={async () => {}} />
+  </>);
+  assert.match(html, /<strong>Effective clinician clearance: Rehab only<\/strong>/);
+  assert.match(html, /Limited by: Chest strain/);
+  assert.match(html, /Reported clearance for this injury: Train \+ contact/);
+  assert.doesNotMatch(html, /Effective clinician clearance: Train/);
+});
+
+test("unclear effective scope explains its conservative ceiling", () => {
+  const html = renderToStaticMarkup(<EffectiveClinicianClearanceStatus clearance={{
+    level: "rehab_only", scopes: ["rehab"], requires_update: true,
+    limited_by: [{ injury_id: injury.id, injury_episode_id: injury.episode_id!, label: "Chest strain" }],
+  }} />);
+  assert.match(html, /Effective clinician clearance: Rehab only/);
+  assert.match(html, /Rehab only until clarified/);
+  assert.equal(renderToStaticMarkup(<EffectiveClinicianClearanceStatus clearance={null} />), "");
+});

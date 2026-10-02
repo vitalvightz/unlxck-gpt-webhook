@@ -250,6 +250,7 @@ export type CommandView = {
   risk_watch: RiskWatchItem[];
   open_injuries: Record<string, unknown>[];
   live_prescription: Record<string, unknown> | null;
+  effective_clinician_clearance: Record<string, unknown> | null;
   delayed_rehab_prompts: Record<string, unknown>[];
   week_summary: Record<string, unknown>;
   quick_actions: QuickAction[];
