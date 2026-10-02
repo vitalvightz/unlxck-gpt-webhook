@@ -23,7 +23,6 @@ import {
 } from "@/lib/api";
 import { requestXpRefresh } from "@/lib/xp-events";
 import {
-  ACTIVE_PLAN_OVERLAP_MESSAGE,
   type ActivePlanOverlapAction,
   canSetActivePlan,
   isCompletedFightCamp,
@@ -31,6 +30,7 @@ import {
   isArchivedPlan,
 } from "@/lib/plan-active";
 import { clearCompletedGenerationForDeletedPlan } from "@/lib/completed-generation";
+import { PlanSwitchDialog } from "@/components/plan-switch-dialog";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
 import { useToast } from "@/components/toast-provider";
 import {
@@ -2360,11 +2360,6 @@ export function PlanViewer({
     }
   }
 
-  function handleStartAfterCurrentPlan() {
-    setShowActiveConflict(false);
-    router.push("/onboarding");
-  }
-
   async function handleArchivePlan() {
     if (!accessToken) {
       setArchiveError("Admin session missing. Please sign in again.");
@@ -2779,47 +2774,13 @@ export function PlanViewer({
         {planActionMessage ? <div className="success-banner">{planActionMessage}</div> : null}
         {planActionError ? <div className="error-banner">{planActionError}</div> : null}
         {showActiveConflict ? (
-          <div className="support-panel support-panel-alert">
-            <div className="form-section-header">
-              <p className="kicker">Active plan conflict</p>
-              <h3>Choose how to activate this plan</h3>
-            </div>
-            <p className="muted">{ACTIVE_PLAN_OVERLAP_MESSAGE}</p>
-            <div className="plan-summary-actions active-conflict-actions">
-              <button
-                type="button"
-                className="secondary-button active-conflict-button active-conflict-button-primary"
-                onClick={() => void handleSetActive("replace")}
-                disabled={setActivePending}
-              >
-                Replace current plan
-              </button>
-              <button
-                type="button"
-                className="secondary-button active-conflict-button"
-                onClick={() => void handleSetActive("pause")}
-                disabled={setActivePending}
-              >
-                Pause current plan
-              </button>
-              <button
-                type="button"
-                className="ghost-button active-conflict-button active-conflict-button-wide"
-                onClick={handleStartAfterCurrentPlan}
-                disabled={setActivePending}
-              >
-                Start after current plan ends
-              </button>
-              <button
-                type="button"
-                className="ghost-button active-conflict-button active-conflict-button-cancel"
-                onClick={() => setShowActiveConflict(false)}
-                disabled={setActivePending}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
+          <PlanSwitchDialog
+            plan={plan}
+            isPending={setActivePending}
+            errorMessage={setActiveError}
+            onConfirm={handleSetActive}
+            onCancel={() => setShowActiveConflict(false)}
+          />
         ) : null}
         {setActiveError ? <div className="error-banner">{setActiveError}</div> : null}
       </section>

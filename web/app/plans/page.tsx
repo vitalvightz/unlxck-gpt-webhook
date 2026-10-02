@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { PlanSwitchDialog } from "@/components/plan-switch-dialog";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { PlanHistoryRowSkeleton, PlansFeaturedSkeleton } from "@/components/skeleton";
@@ -28,7 +29,6 @@ import {
   getPlanStyleSummary,
 } from "@/lib/plan-format";
 import {
-  ACTIVE_PLAN_OVERLAP_MESSAGE,
   type ActivePlanOverlapAction,
   canSetActivePlan,
   isCompletedFightCamp,
@@ -492,82 +492,6 @@ function PlanCard({
       </article>
       {deleteConfirmationModal}
     </>
-  );
-}
-
-function PlanActivationConflictDialog({
-  plan,
-  isPending,
-  onConfirm,
-  onStartAfter,
-  onCancel,
-}: {
-  plan: PlanSummary;
-  isPending: boolean;
-  onConfirm: (action: ActivePlanOverlapAction) => Promise<void>;
-  onStartAfter: () => void;
-  onCancel: () => void;
-}) {
-  if (typeof document === "undefined") {
-    return null;
-  }
-
-  return createPortal(
-    <div className="plan-dialog-backdrop" role="presentation" onClick={onCancel}>
-      <div
-        className="plan-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={`activate-conflict-title-${plan.plan_id}`}
-        aria-describedby={`activate-conflict-body-${plan.plan_id}`}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="plan-dialog-header">
-          <p className="kicker">Active plan conflict</p>
-          <h2 id={`activate-conflict-title-${plan.plan_id}`} className="plan-dialog-title">
-            {getPlanDisplayName(plan)}
-          </h2>
-        </div>
-        <p id={`activate-conflict-body-${plan.plan_id}`} className="muted">
-          {ACTIVE_PLAN_OVERLAP_MESSAGE}
-        </p>
-        <div className="plan-dialog-actions active-conflict-actions">
-          <button
-            type="button"
-            className="secondary-button active-conflict-button active-conflict-button-primary"
-            onClick={() => void onConfirm("replace")}
-            disabled={isPending}
-          >
-            Replace current plan
-          </button>
-          <button
-            type="button"
-            className="secondary-button active-conflict-button"
-            onClick={() => void onConfirm("pause")}
-            disabled={isPending}
-          >
-            Pause current plan
-          </button>
-          <button
-            type="button"
-            className="ghost-button active-conflict-button active-conflict-button-wide"
-            onClick={onStartAfter}
-            disabled={isPending}
-          >
-            Start after current plan ends
-          </button>
-          <button
-            type="button"
-            className="ghost-button active-conflict-button active-conflict-button-cancel"
-            onClick={onCancel}
-            disabled={isPending}
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body,
   );
 }
 
@@ -1110,12 +1034,6 @@ export default function PlansPage() {
     await activatePlan(overlapConflictPlan, action);
   }
 
-  function handleStartAfterCurrentPlan() {
-    setOverlapConflictPlan(null);
-    showToast("Choose a new start date before generating the next version.", { tone: "success" });
-    router.push("/onboarding");
-  }
-
   const isPlanListLoading = isLoading;
   const isProfileLoading = !isMeHydrated;
 
@@ -1259,11 +1177,10 @@ export default function PlansPage() {
         </div>
 
         {overlapConflictPlan ? (
-          <PlanActivationConflictDialog
+          <PlanSwitchDialog
             plan={overlapConflictPlan}
             isPending={isSettingActivePlanId === overlapConflictPlan.plan_id}
             onConfirm={handleOverlapConfirm}
-            onStartAfter={handleStartAfterCurrentPlan}
             onCancel={() => setOverlapConflictPlan(null)}
           />
         ) : null}
