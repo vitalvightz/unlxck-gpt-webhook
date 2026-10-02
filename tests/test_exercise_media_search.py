@@ -105,7 +105,6 @@ def test_attempt_cap_flags_manual_and_prevents_more_search_requests():
 
 
 @pytest.mark.parametrize("response", [
-    httpx.Response(403, json={"error": "quota; secret-key"}),
     httpx.Response(200, text="invalid json"),
     httpx.Response(200, json={"items": "malformed"}),
     httpx.ReadTimeout("secret-key transport failure"),
@@ -321,3 +320,55 @@ def test_more_than_five_candidates_is_rejected(tmp_path):
     assert raised.value.code == 2
     with pytest.raises(review.ReviewInputError):
         review.run_review(str(src), str(src), reviewer=_reviewer({}), max_candidates=6)
+
+
+
+def test_youtube_search_quota_stops_batch_without_marking_rows_error(tmp_path):
+    src = tmp_path / "media.csv"
+    _write_csv(
+        src,
+        [
+            _row(exercise_key="first", suggested_url=""),
+            _row(exercise_key="second", suggested_url=""),
+        ],
+    )
+    response = httpx.Response(
+        403,
+        json={
+            "error": {
+                "code": 403,
+                "message": "The request cannot be completed because you have exceeded your quota.",
+                "errors": [{"reason": "quotaExceeded"}],
+            }
+        },
+    )
+    searches = []
+    counts = review.run_review(
+        str(src),
+        str(src),
+        reviewer=_reviewer({}),
+        search=_searcher([response], searches).search,
+        delay_s=0,
+        log=lambda _: None,
+    )
+
+    assert counts["quota_stopped"] == 1
+    assert counts["youtube_quota_stopped"] == 1
+    assert len(searches) == 1
+    rows = _read_csv(src)
+    assert rows[0].get("ai_verdict", "") == ""
+    assert rows[1].get("ai_verdict", "") == ""
+    progress = json.loads(rows[0]["ai_review_progress"])
+    assert progress["search_progress"]["queries_used"] == 0
+
+
+def test_youtube_search_quota_failure_is_sticky_and_classified():
+    response = httpx.Response(
+        429,
+        json={"error": {"message": "rate limit", "errors": [{"reason": "rateLimitExceeded"}]}},
+    )
+    searcher = _searcher([response])
+    with pytest.raises(discovery.CandidateSearchQuotaExceeded):
+        list(searcher.search(_row(), set()))
+    with pytest.raises(discovery.CandidateSearchQuotaExceeded):
+        list(searcher.search(_row(), set()))
