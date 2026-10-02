@@ -3029,7 +3029,8 @@ def _build_today_command_view(
             app_entry.pop("coach_led_contact", None)
             blocks = app_entry.get("blocks") or []
             safe_demands = bool(blocks) and all(_is_non_physical_mapping(block) or (
-                isinstance(block.get("mechanical_load_regions"), list)
+                all(isinstance(region, str) and region.strip() for region in injured_regions)
+                and isinstance(block.get("mechanical_load_regions"), list)
                 and not set(block["mechanical_load_regions"]) & injured_regions
                 and block.get("contact_level") == "none") for block in blocks)
             if is_support_session(app_entry) and safe_demands and not _session_has_contact(app_entry):

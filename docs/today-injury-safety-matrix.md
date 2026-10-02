@@ -21,6 +21,7 @@ injury report; it is not a new progression signal.
 | Rehab only | Hold ordinary camp; allow only independently eligible reviewed rehab or explicitly safe support | Existing rehab-only and camp/rehab coexistence tests |
 | Zero-load tactical watch + restrictive clearance | Combat-topic wording and a day-level coach contact header cannot turn cognitive work into contact. Start/resume/log only the safe support; held sparring remains outstanding, including after a clearance update | Support start/resume/completion, reversed source order, shadow policy and later clearance regressions; desktop/mobile browser QA |
 | Mobility or support with physical demands | Explicitly known non-contact support outside injured regions may remain. Actual injured-region loading, contact metadata, medical restrictions and current red flags still win | Safe/unsafe mobility, misleading mindset label and zero-load red-flag regressions |
+| Uncertain support identity or injury location | High-risk session titles veto support; bare mindset labels cannot hide loaded movement names. All active injury regions must be known before projecting physical support; genuinely cognitive blocks keep their separate exemption | High-risk parent, all executable name fields, live reconciliation and unknown-region cognitive/physical regressions |
 | Train, no contact | Fresh mixed work keeps safe non-contact blocks; remove/substitute contact children. Contact-owned headings remain held | Existing mixed-session and contact-owned tests |
 | No report / stale episode / resolved injury | Existing conservative policy remains. Old or resolved reports grant no permission | Existing clearance episode/setback and baseline tests |
 | Malformed scopes | Conservative rehab-only ceiling; never relax baseline restrictions | Existing malformed-scope API/projection tests |
@@ -58,6 +59,12 @@ injury report; it is not a new progression signal.
    pull-back projection hold. Only a reviewed rehab-only prescription gets that
    exception. Standalone reviewed rehab receives the existing rehab-only flag;
    the UI tier regression also checks tier authority independently of safety_hold.
+7. Cubic's follow-up found the cognitive shortcut could precede the high-risk
+   session veto or erase a loaded movement name under a generic mindset label.
+   The existing veto now runs first; the generic mindset shortcut rejects loaded
+   name tokens. Existing curated tactical/mental categories retain their meaning.
+   Physical support projection also requires every active injury region to be
+   known; missing canonical locations are not evidence of safe physical loading.
 
 ## Authority and duplication
 
@@ -72,9 +79,10 @@ does not create a second decision tier. No new client safety model was added.
 
 ## Validation
 
-- Relevant backend suite: 793 passed (clearance, multi-injury, readiness, Today/API,
+- Relevant backend suite: 803 passed (clearance, multi-injury, readiness, Today/API,
   read amplification, bundles, schedules, injury journeys and surface safety).
-- The 47 cases in the new audit test file are included in that backend count.
+- The 57 cases in the new audit test file are included in that backend count,
+  including ten follow-up cases for Cubic's support classification findings.
 - Focused frontend suite: 109 passed, including five frozen-contact tier cases
   and four zero-load watch start/resume cases.
 - Desktop/mobile browser QA uses real backend fixture projections and the actual
