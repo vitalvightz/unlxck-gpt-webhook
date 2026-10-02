@@ -4409,7 +4409,7 @@ class SupabaseAppStore(CompactGenerationReads):
         rows, offset = [], 0
         while True:
             response = (self.client.table("session_completions")
-                .select("id,athlete_id,plan_id,session_id,training_day,status,prescription_snapshot")
+                .select("id,athlete_id,plan_id,session_id,training_day,status,prescription_snapshot,created_at,updated_at")
                 .eq("athlete_id", athlete_id).gte("training_day", from_day)
                 .order("training_day", desc=True).order("id")
                 .range(offset, offset + 499).execute())

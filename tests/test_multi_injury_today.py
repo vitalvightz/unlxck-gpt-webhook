@@ -194,14 +194,16 @@ def test_stale_and_resolved_injury_reports_cannot_lower_current_ceiling(context)
 
 @pytest.mark.parametrize("scopes,rehab_only", [(["rehab"], True), (["rehab", "training"], False),
                                                (["rehab", "training", "contact"], False)])
-def test_clearance_preserves_safe_camp_and_due_rehab_coexistence(context, scopes, rehab_only):
+def test_clearance_preserves_safe_camp_and_due_rehab_coexistence(context, scopes, rehab_only, monkeypatch):
     store, athlete, plan, chest, _ = context
+    monkeypatch.setattr("tests.support._now", lambda: "2026-10-02T07:00:00Z")
     for event in store.injury_episode_events.values():
         if event["injury_id"] == chest["id"]:
             event["created_at"] = "2026-10-02T08:00:00Z"
-    record_episode_observation(store, athlete_id=athlete, training_day=DAY,
+    report = record_episode_observation(store, athlete_id=athlete, training_day=DAY,
         observation=InjuryEpisodeObservation(injury_id=chest["id"], injury_episode_id=chest["episode_id"],
             event_type="clinician_clearance_report", scopes=scopes))
+    store.injury_episode_events[report["id"]]["created_at"] = "2026-10-02T09:00:00Z"
     camp = dict(session_id="camp", session_type="strength", title="Strength", blocks=[
         dict(block_id="safe", block_type="strength", mechanical_load_regions=["shoulder"], contact_level="none", load="low")])
     store.plans[plan]["structured_plan"]["weeks"][0]["days"][0].update(day_type="strength", sessions=[camp])
@@ -263,9 +265,10 @@ def test_standalone_rehab_cannot_claim_outstanding_camp_ownership(context, legac
         for event in store.injury_episode_events.values():
             if event["injury_id"] == chest["id"]:
                 event["created_at"] = "2026-10-02T08:00:00Z"
-        record_episode_observation(store, athlete_id=athlete, training_day=DAY,
+        report = record_episode_observation(store, athlete_id=athlete, training_day=DAY,
             observation=InjuryEpisodeObservation(injury_id=chest["id"], injury_episode_id=chest["episode_id"],
                 event_type="clinician_clearance_report", scopes=["rehab", "training"]))
+        store.injury_episode_events[report["id"]]["created_at"] = "2026-10-02T09:00:00Z"
     prior = accept_ankle(context, status="started" if scenario == "started_rehab" else "done", legacy=legacy)
     if scenario == "no_due_rehab":
         decision = resolve_injury_policy({**chest, "rehab_stage": "restore"},
@@ -295,3 +298,16 @@ def test_standalone_rehab_cannot_claim_outstanding_camp_ownership(context, legac
         assert {b["injury_id"] for b in rehab} == (set() if scenario == "no_due_rehab" else {chest["id"]})
         execute(context, live)
         assert view(context).live_prescription["frozen"]
+
+
+def test_no_active_plan_still_reports_effective_current_clearance(context):
+    expected = view(context).effective_clinician_clearance
+    history = deepcopy(context[0].injury_episode_events)
+    context[0].plans.clear()
+    current = view(context)
+    assert current.active_plan.get("id") is None
+    assert current.effective_clinician_clearance == expected
+    assert current.effective_clinician_clearance["level"] == "rehab_only"
+    assert current.effective_clinician_clearance["limited_by"][0]["injury_id"] == context[3]["id"]
+    assert len(current.open_injuries) == 2 and all(i.get("rehab_decision") for i in current.open_injuries)
+    assert context[0].injury_episode_events == history

@@ -9,6 +9,8 @@ read shape.
 
 from collections import Counter
 from datetime import date, datetime, timedelta, timezone
+from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -25,6 +27,7 @@ from api.services.today_readiness_boundary import (
     reuse_today_command_views,
 )
 from support import FakeStore
+from api.store import SupabaseAppStore
 
 ATHLETE = "athlete-1"
 PLAN = "11111111-1111-1111-1111-111111111111"
@@ -231,6 +234,46 @@ def test_today_completion_comes_from_the_single_read():
 
     assert view.today.completion_status == "modified"
     assert store.reads["get_session_completion"] == 0
+
+
+@pytest.mark.parametrize("fallback", [False, True])
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("started", [False, True])
+def test_rehab_occurrence_uses_reader_timestamps_and_stable_priority(monkeypatch, fallback, reverse, started):
+    day = "2026-10-02"
+    status = "started" if started else "done"
+    rows = [dict(id=identity, athlete_id=ATHLETE, plan_id=PLAN, session_id=identity, training_day=day,
+                 status=state, created_at=created, updated_at=updated,
+                 prescription_snapshot={"session": {"session_type": "rehab"}})
+            for identity, state, created, updated in [
+                ("z-old", status, day + "T07:00:00Z", day + "T08:00:00Z"),
+                ("b-fresh", status, day + "T07:00:00Z", day + "T10:00:00Z"),
+                ("c-fresh", status, day + "T10:00:00Z", None),
+                ("a-terminal", "done", day + "T07:00:00Z", day + "T12:00:00Z"),
+            ]]
+    if reverse:
+        rows.reverse()
+    # Honour the real store's SELECT projection; otherwise fake full rows hide
+    # missing timestamp columns in the paged fallback reader.
+    selected = ["*"]
+    query = MagicMock()
+    def select(columns):
+        selected[0] = columns
+        return query
+    query.select.side_effect = select
+    for method in ("eq", "gte", "order", "limit", "range"):
+        getattr(query, method).return_value = query
+    query.execute.side_effect = lambda: SimpleNamespace(data=[
+        dict(row) if selected[0] == "*" else {key: value for key, value in row.items() if key in selected[0].split(",")}
+        for row in rows])
+    client = MagicMock()
+    client.table.return_value = query
+    store = SupabaseAppStore(client=client, admin_emails=set())
+    monkeypatch.setattr(today_service, "_UPCOMING_COMPLETION_READ_LIMIT", 1 if fallback else 200)
+    completion = today_service._UpcomingCompletions(store, athlete_id=ATHLETE, from_day=day).rehab_completion(PLAN, day)
+    assert completion["session_id"] == ("c-fresh" if started else "a-terminal")
+    if fallback:
+        assert {"created_at", "updated_at"} <= set(selected[0].split(","))
 
 
 def _record_exact_read_days(store: FakeStore) -> list[str]:

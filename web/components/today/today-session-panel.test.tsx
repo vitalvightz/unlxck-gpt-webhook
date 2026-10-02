@@ -677,3 +677,75 @@ for (const level of ["rehab_only", "train_no_contact"] as const) {
     assert.match(html, /Sparring rounds locked today/);
   });
 }
+
+for (const level of ["rehab_only", "train_no_contact", "train_contact"] as const) {
+  for (const status of ["not_started", "started"] as const) {
+    test(`sparring-only ${status} actions obey ${level} without losing contact identity`, () => {
+      const state = contactDayState("green");
+      state.today.next_session = { ...state.today.next_session, session_id: "contact-only",
+        title: "Hard sparring", coach_led_contact: "Hard sparring" };
+      state.today.completion_status = status;
+      state.effective_clinician_clearance = { level,
+        scopes: level === "rehab_only" ? ["rehab"] : level === "train_no_contact" ? ["rehab", "training"] : ["rehab", "training", "contact"],
+        requires_update: false, limited_by: [{ injury_id: "chest", injury_episode_id: "episode", label: "Chest strain" }] };
+      const html = renderPanel(state);
+      if (level === "train_contact") {
+        assert.match(html, status === "not_started" ? />Start hard sparring</ : />Resume session</);
+        if (status === "started") assert.match(html, /data-value="done"[\s\S]*data-value="modified"/);
+        assert.doesNotMatch(html, /Sparring rounds locked today/);
+      } else {
+        assert.match(html, /Sparring rounds locked today/);
+        assert.doesNotMatch(html, />Start session<|>Start hard sparring<|>Resume session<|data-value="done"|data-value="modified"|<form/);
+      }
+    });
+  }
+}
+
+for (const status of ["not_started", "started"] as const) {
+  test(`mixed camp ${status} keeps reviewed non-contact actions under train_no_contact`, () => {
+    const state = contactDayState("green");
+    state.today.completion_status = status;
+    state.effective_clinician_clearance = { level: "train_no_contact", scopes: ["rehab", "training"], requires_update: false,
+      limited_by: [{ injury_id: "chest", injury_episode_id: "episode", label: "Chest strain" }] };
+    state.live_prescription = { revision: "a".repeat(64), frozen: status === "started", safety_hold: false, changes: [],
+      session: { session_id: state.today.next_session.session_id!, session_type: "strength", title: "Mobility flush",
+        blocks: [{ block_id: "safe", block_type: "strength", display_name: "Reviewed non-contact work" }] } };
+    const html = renderPanel(state);
+    assert.match(html, /Reviewed non-contact work/);
+    assert.match(html, /Sparring rounds locked today/);
+    assert.match(html, status === "not_started" ? />Start session</ : />Resume session</);
+    if (status === "started") assert.match(html, /data-value="done"[\s\S]*data-value="modified"/);
+    assert.doesNotMatch(html, />Start hard sparring</);
+  });
+}
+
+for (const intent of ["done", "modified"] as const) {
+  test(`lowering contact clearance closes an already open generic ${intent} form`, async () => {
+    const container = document.createElement("div"); document.body.appendChild(container);
+    const root = createRoot(container);
+    const state = contactDayState("green");
+    state.today.next_session = { ...state.today.next_session, session_id: "contact-only", title: "Hard sparring", coach_led_contact: "Hard sparring" };
+    state.today.completion_status = "started";
+    state.effective_clinician_clearance = { level: "train_contact", scopes: ["rehab", "training", "contact"], requires_update: false, limited_by: [] };
+    const original = globalThis.fetch;
+    const writes: unknown[] = [];
+    globalThis.fetch = (async (_input, init) => {
+      if (init?.method === "POST") writes.push(init.body);
+      return new Response('{"response_sets":[],"history_truncated":false}', { status: 200 });
+    }) as typeof fetch;
+    const render = () => root.render(<AuthProvider><ToastProvider><TodaySessionPanel state={state} structuredPlan={null} token="token" onRefresh={async () => {}} /></ToastProvider></AuthProvider>);
+    try {
+      await act(async () => { render(); });
+      const choice = container.querySelector<HTMLButtonElement>(`button[data-value="${intent}"]`);
+      assert.ok(choice);
+      await act(async () => { choice.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
+      assert.ok(container.querySelector("form"));
+      state.effective_clinician_clearance = { ...state.effective_clinician_clearance!, level: "train_no_contact", scopes: ["rehab", "training"] };
+      await act(async () => { render(); });
+      assert.equal(container.querySelector("form"), null);
+      assert.equal(container.querySelector('button[data-value="done"],button[data-value="modified"]'), null);
+      assert.match(container.textContent ?? "", /Sparring rounds locked today/);
+      assert.equal(writes.length, 0);
+    } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
+  });
+}

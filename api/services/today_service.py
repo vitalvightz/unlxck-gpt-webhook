@@ -2806,6 +2806,7 @@ def _build_today_command_view(
                                     store=store, athlete_id=athlete_id)
         injuries = _with_injury_policy(injuries, store=store, athlete_id=athlete_id, training_day=training_day)
         view = build_command_view(current_training_day=training_day, plan=None, open_injuries=injuries)
+        view.effective_clinician_clearance = effective_clinician_clearance(injuries)
         view.delayed_rehab_prompts = delayed_rehab_prompts(store, athlete_id, training_day, athlete_timezone)
         return view
 
