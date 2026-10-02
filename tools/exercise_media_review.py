@@ -853,10 +853,10 @@ def run_review(
             _write_rows(out, fieldnames, rows)
             log(
                 f"{key}: {exc}. Progress saved to {out}; "
-                "run the same command again after YouTube search quota resets."
+                "run the same command again when candidate search is available."
             )
             counts["quota_stopped"] = 1
-            counts["youtube_quota_stopped"] = 1
+            counts["search_quota_stopped"] = 1
             return counts
         calls += 1
         rows[index] = apply_outcome(row, outcome, model=reviewer.model)
