@@ -29,10 +29,17 @@ jobs:
           ref: main
           path: outreach-src
 
+      - name: Vendor Python dependencies
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Package outreach worker
         run: |
           set -euo pipefail
-          tar             --exclude='.git'             -czf "$RUNNER_TEMP/unlxck-outreach.tgz"             -C outreach-src .
+          python -m pip install --quiet --upgrade pip
+          python -m pip install --quiet -r outreach-src/requirements.txt -t outreach-src/vendor
+          tar --exclude='.git' -czf "$RUNNER_TEMP/unlxck-outreach.tgz" -C outreach-src .
 
       - name: Configure SSH
         env:
@@ -90,23 +97,21 @@ jobs:
                 exit 1
               }
 
+              rm -rf "$RELEASE"
               mkdir -p "$RELEASE"
               tar -xzf "$ARCHIVE" -C "$RELEASE"
-
-              python3 -m venv "$RELEASE/.venv"
-              "$RELEASE/.venv/bin/pip" install --quiet --upgrade pip
-              "$RELEASE/.venv/bin/pip" install --quiet -r "$RELEASE/requirements.txt"
 
               (
                 set -a
                 . "$MAIN_ENV"
                 set +a
                 cd "$RELEASE"
+                export PYTHONPATH="$RELEASE/vendor"
                 export NOTION_DATA_SOURCE_ID="$DATA_SOURCE_ID"
                 export MAX_CANDIDATES_PER_RUN="1"
                 export DRY_RUN="true"
-                "$RELEASE/.venv/bin/python" -m unittest discover -s tests -v
-                "$RELEASE/.venv/bin/python" pipeline.py
+                python3 -m unittest discover -s tests -v
+                python3 pipeline.py
               )
 
               ln -sfn "$RELEASE" "$CURRENT"
@@ -129,7 +134,8 @@ jobs:
               export DRY_RUN="false"
 
               cd /opt/unlxck/outreach-worker/current
-              exec .venv/bin/python pipeline.py
+              export PYTHONPATH="$PWD/vendor"
+              exec python3 pipeline.py
               RUNNER
               chmod 700 "$BASE/run.sh"
 
