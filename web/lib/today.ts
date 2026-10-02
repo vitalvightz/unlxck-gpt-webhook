@@ -885,12 +885,6 @@ export type SafeSessionView = {
 
 type InjuryRegion = Exclude<InjuryLoadRegion, "unknown">;
 
-/** The broad group Today computed for an injury. API builds before
- * `load_region` sent it in `body_region`; drop that fallback once they are gone. */
-function loadRegionOf(injury: InjuryFlagRecord): string | null | undefined {
-  return injury.load_region === undefined ? injury.body_region : injury.load_region;
-}
-
 function isActiveInjury(injury: InjuryFlagRecord): boolean {
   return injury.status === "open" || injury.status === "monitoring";
 }
@@ -910,7 +904,7 @@ function hasLoadIntolerantInjuryInRegion(
   return (openInjuries ?? []).some(
     (injury) =>
       isActiveInjury(injury) &&
-      loadRegionOf(injury) === region &&
+      injury.load_region === region &&
       injuryIsLoadIntolerant(injury),
   );
 }
@@ -919,7 +913,7 @@ function hasUnclassifiedActiveInjury(
   openInjuries: readonly InjuryFlagRecord[] | null | undefined,
 ): boolean {
   return (openInjuries ?? []).some((injury) => {
-    const region = loadRegionOf(injury);
+    const region = injury.load_region;
     return isActiveInjury(injury) && (!region || region === "unknown");
   });
 }
@@ -937,7 +931,7 @@ function hasNeuroDownregulationInjury(
   return (openInjuries ?? []).some(
     (injury) =>
       isActiveInjury(injury) &&
-      loadRegionOf(injury) === "head_neck" &&
+      injury.load_region === "head_neck" &&
       injuryIsLoadIntolerant(injury),
   );
 }

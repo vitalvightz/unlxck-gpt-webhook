@@ -940,8 +940,7 @@ export type InjuryFlagRecord = {
     | "unknown"
     | null;
   /** The stored location ("ankle", "lower back"), which rehab exposures match
-   * on. Today's rows still send the broad loading group here for web builds
-   * that predate `load_region`; read `load_region` for that. */
+   * on. The broad loading group is `load_region`. */
   body_region?: string | null;
   /** Today only: the broad group the safe-session rules compare against. */
   load_region?: InjuryLoadRegion | null;
