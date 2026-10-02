@@ -435,6 +435,11 @@ def build_candidate_search(
             )
         return YouTubeCandidateSearch(youtube_api_key)
 
+    if bool(login) != bool(password):
+        raise CandidateSearchError(
+            f"DataForSEO auto-discovery is partially configured: "
+            f"{DATAFORSEO_LOGIN_ENV} and {DATAFORSEO_PASSWORD_ENV} must both be set"
+        )
     if login and password:
         return dataforseo_searcher()
     if youtube_api_key:
