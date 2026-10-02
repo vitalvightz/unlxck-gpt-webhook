@@ -235,6 +235,44 @@ def test_quota_interruption_resumes_mid_row_without_rewatching_or_resetting_cap(
     assert (row["start_s"], row["end_s"], row["notes"]) == ("10", "20", "keep curator input")
 
 
+def test_redo_weak_retries_legacy_dataforseo_timeout_rows_in_same_pass(tmp_path):
+    src = tmp_path / "media.csv"
+    _write_csv(src, [
+        _row(
+            exercise_key="legacy-timeout",
+            suggested_url="",
+            ai_verdict="error",
+            ai_shows="DataForSEO search: ReadTimeout",
+            ai_redo_weak_pass="1",
+        ),
+        _row(
+            exercise_key="completed-weak",
+            suggested_url=URL_A,
+            ai_verdict="partial",
+            ai_confidence="0.9",
+            ai_orientation="landscape",
+            ai_start_s="42",
+            ai_end_s="54",
+            ai_redo_weak_pass="1",
+        ),
+    ])
+
+    calls = []
+    counts = review.run_review(
+        str(src), str(src),
+        reviewer=_reviewer({URL_B: _answer()}, calls),
+        search=_searcher([["BBBBBBBBBBB"]]).search,
+        redo_weak=True, max_candidates=1, delay_s=0, log=lambda _: None,
+    )
+
+    assert counts["reviewed"] == 1
+    assert counts["skipped"] == 1
+    assert calls == [URL_B]
+    rows = _read_csv(src)
+    assert rows[0]["ai_verdict"] == "match"
+    assert rows[0]["ai_redo_weak_pass"] == "1"
+
+
 def test_redo_weak_resumes_forward_after_interruption(tmp_path):
     src = tmp_path / "media.csv"
     _write_csv(src, [
