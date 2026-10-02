@@ -13,6 +13,8 @@ from api.services.exercise_media import YOUTUBE_API_TIMEOUT_SECONDS, parse_youtu
 
 YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
 DATAFORSEO_SEARCH_URL = "https://api.dataforseo.com/v3/serp/youtube/organic/live/advanced"
+DATAFORSEO_TIMEOUT_SECONDS = 30.0
+DATAFORSEO_TIMEOUT_RETRIES = 2
 MAX_SEARCH_QUERIES = 3
 
 SEARCH_PROVIDER_ENV = "EXERCISE_MEDIA_SEARCH_PROVIDER"
@@ -114,7 +116,7 @@ class YouTubeCandidateSearch:
 
     def __init__(self, api_key: str, *, client: httpx.Client | None = None) -> None:
         self.api_key = api_key
-        self._client = client or httpx.Client(timeout=YOUTUBE_API_TIMEOUT_SECONDS)
+        self._client = client or httpx.Client(timeout=DATAFORSEO_TIMEOUT_SECONDS)
         self._failure: tuple[type[CandidateSearchError], str] | None = None
 
     def close(self) -> None:
@@ -305,18 +307,28 @@ class DataForSEOCandidateSearch:
                 checkpoint()
 
             try:
-                response = self._client.post(
-                    DATAFORSEO_SEARCH_URL,
-                    auth=(self.login, self.password),
-                    json=[
-                        {
-                            "keyword": query,
-                            "location_code": self.location_code,
-                            "language_code": self.language_code,
-                            "device": "desktop",
-                        }
-                    ],
-                )
+                response: httpx.Response | None = None
+                for attempt in range(DATAFORSEO_TIMEOUT_RETRIES + 1):
+                    try:
+                        response = self._client.post(
+                            DATAFORSEO_SEARCH_URL,
+                            auth=(self.login, self.password),
+                            json=[
+                                {
+                                    "keyword": query,
+                                    "location_code": self.location_code,
+                                    "language_code": self.language_code,
+                                    "device": "desktop",
+                                }
+                            ],
+                        )
+                        break
+                    except httpx.TimeoutException:
+                        if attempt >= DATAFORSEO_TIMEOUT_RETRIES:
+                            raise
+
+                if response is None:
+                    raise CandidateSearchError("DataForSEO search returned no response")
                 if response.status_code == 429:
                     raise CandidateSearchQuotaExceeded(
                         "DataForSEO search rate limit reached (HTTP 429)"
