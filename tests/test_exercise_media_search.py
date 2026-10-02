@@ -604,6 +604,19 @@ def test_auto_provider_uses_dataforseo_without_youtube_fallback(monkeypatch):
         searcher.close()
 
 
+@pytest.mark.parametrize(
+    ("login", "password"),
+    [("login", ""), ("", "password")],
+)
+def test_auto_provider_rejects_partial_dataforseo_configuration(monkeypatch, login, password):
+    monkeypatch.setenv("DATAFORSEO_LOGIN", login)
+    monkeypatch.setenv("DATAFORSEO_PASSWORD", password)
+    monkeypatch.delenv("EXERCISE_MEDIA_SEARCH_PROVIDER", raising=False)
+
+    with pytest.raises(discovery.CandidateSearchError, match="partially configured"):
+        discovery.build_candidate_search(youtube_api_key="youtube-test-key")
+
+
 def test_auto_provider_uses_youtube_only_when_dataforseo_missing(monkeypatch):
     monkeypatch.delenv("DATAFORSEO_LOGIN", raising=False)
     monkeypatch.delenv("DATAFORSEO_PASSWORD", raising=False)
