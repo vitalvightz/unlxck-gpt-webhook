@@ -116,27 +116,27 @@ jobs:
 
               ln -sfn "$RELEASE" "$CURRENT"
 
-              cat > "$BASE/run.sh" <<'RUNNER'
-              #!/usr/bin/env bash
-              set -Eeuo pipefail
-
-              exec 9>/tmp/unlxck-outreach.lock
-              if ! flock -n 9; then
-                exit 0
-              fi
-
-              set -a
-              . /opt/unlxck/.env.production
-              set +a
-
-              export NOTION_DATA_SOURCE_ID="08d8b476-129a-42b0-b980-102b08ce4bd8"
-              export MAX_CANDIDATES_PER_RUN="100"
-              export DRY_RUN="false"
-
-              cd /opt/unlxck/outreach-worker/current
-              export PYTHONPATH="$PWD/vendor"
-              exec python3 pipeline.py
-              RUNNER
+              {
+                echo '#!/usr/bin/env bash'
+                echo 'set -Eeuo pipefail'
+                echo
+                echo 'exec 9>/tmp/unlxck-outreach.lock'
+                echo 'if ! flock -n 9; then'
+                echo '  exit 0'
+                echo 'fi'
+                echo
+                echo 'set -a'
+                echo '. /opt/unlxck/.env.production'
+                echo 'set +a'
+                echo
+                echo 'export NOTION_DATA_SOURCE_ID="08d8b476-129a-42b0-b980-102b08ce4bd8"'
+                echo 'export MAX_CANDIDATES_PER_RUN="100"'
+                echo 'export DRY_RUN="false"'
+                echo
+                echo 'cd /opt/unlxck/outreach-worker/current'
+                echo 'export PYTHONPATH="$PWD/vendor"'
+                echo 'exec python3 pipeline.py'
+              } > "$BASE/run.sh"
               chmod 700 "$BASE/run.sh"
 
               tmp_cron="$(mktemp)"
