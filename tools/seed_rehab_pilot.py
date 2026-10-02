@@ -58,13 +58,7 @@ def main():
             stage_bundles={"restore": ["ankle_sprain_supported_balance", "ankle_sprain_heel_lowering"]} if region == "ankle" else {}))
         policies.append({**draft.model_dump(), "status": "active", "activation": "live", "content_hash": policy_review_hash(draft)})
     path.write_text(json.dumps(bank, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    policy_path = ROOT / "data/rehab_clinical_policies.json"
-    # Later reviewed policies (for example hamstring strain) are owned by their
-    # own seed tools; keep them unchanged after the pilot pair.
-    pilot_ids = {p["policy_id"] for p in policies}
-    existing = json.loads(policy_path.read_text(encoding="utf-8"))["policies"] if policy_path.exists() else []
-    policies += [p for p in existing if p["policy_id"] not in pilot_ids]
-    policy_path.write_text(
+    (ROOT / "data/rehab_clinical_policies.json").write_text(
         json.dumps(dict(schema_version=2, policies=policies), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 

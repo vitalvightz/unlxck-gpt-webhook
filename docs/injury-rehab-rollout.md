@@ -1,6 +1,6 @@
 # Simple injury rehab scheduling
 
-Chest/pec strains, ankle sprains and hamstring strains have active, populated policies. The hamstring strain policy reviews two existing bank drills; see [rehab-policy-hamstring-strain.md](rehab-policy-hamstring-strain.md). There is no mandatory clinician approval, upload, admin queue or additional daily questionnaire. Rehab owns its cadence and appears in Today, inside suitable training or as a separate session on rest days and when training is held.
+Chest/pec strains and ankle sprains have active, populated policies. There is no mandatory clinician approval, upload, admin queue or additional daily questionnaire. Rehab owns its cadence and appears in Today, inside suitable training or as a separate session on rest days and when training is held.
 
 ## Pilot content and validation
 
