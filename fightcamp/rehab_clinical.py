@@ -172,8 +172,12 @@ def load_pathway_catalog(path: Path | None = None) -> PathwayCatalog:
 def load_clinical_policies(path: Path | None = None) -> tuple[ClinicalPolicy, ...]:
     raw = json.loads((path or PATHWAYS_PATH).read_text(encoding="utf-8"))
     if isinstance(raw, dict) and raw.get("schema_version") == 2 and "policies" in raw:
-        # Read-only compatibility for the pre-pathway policy file format.
+        # Read-only compatibility for the pre-pathway policy file format. It is
+        # not an activation route: only family + profile composition may carry
+        # transitions or a live stage above RESTORE.
         policies = tuple(ClinicalPolicy.model_validate(item) for item in raw["policies"])
+        if any(p.transitions or set(p.live_stages) - {"calm", "restore"} for p in policies):
+            raise ValueError("legacy policy files cannot declare transitions or higher live stages")
     elif isinstance(raw, dict) and raw.get("schema_version") == 1 and "families" in raw:
         catalog = PathwayCatalog.model_validate(raw)
         policies = tuple(compose_policy(catalog, profile) for profile in catalog.profiles)
