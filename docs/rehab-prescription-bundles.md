@@ -12,7 +12,9 @@ prescription to equal one drill.
 `schedule_rehab` gates that episode's prescription using accepted work,
 cadence, readiness, response history and the day's training demand.
 `reconcile_session_prescription` projects due prescriptions onto Today and
-enforces the existing allocation ceiling. Today renders the projected ordinary
+enforces the existing allocation ceiling. Today also counts accepted blocks in
+its daily reservation tally; both boundaries now use the same allocation helper.
+Today renders the projected ordinary
 blocks and freezes the accepted session. Completion resolves each bank drill
 occurrence from that snapshot and records distinct exposures sharing one
 injury response group.

@@ -160,6 +160,16 @@ def resolve_injury_policy(
     return result
 
 
+def rehab_allocation_count(blocks: Sequence[Mapping[str, Any]], *, include_held: bool = False) -> int:
+    """Count reviewed bundles once; preserve legacy per-block accounting."""
+    return len({
+        ("bundle", block["rehab_allocation_id"])
+        if block.get("rehab_allocation_id") else ("legacy", index)
+        for index, block in enumerate(blocks)
+        if block.get("block_type") == "rehab" and (include_held or not block.get("_policy_held"))
+    })
+
+
 def reconcile_session_prescription(
     session: Mapping[str, Any] | None, *, decisions: Sequence[Mapping[str, Any]],
     plan_id: str, training_day: str, frozen: Mapping[str, Any] | None = None,
@@ -297,14 +307,7 @@ def reconcile_session_prescription(
     # Match the existing camp allocation ceiling. More affected episodes are
     # explicit deferred decisions rather than extra, unbudgeted work.
     budget = 1 if "sparring" in str(entry.get("session_type") or "").lower() else 2
-    allocations = {
-        ("bundle", block["rehab_allocation_id"])
-        if block.get("rehab_allocation_id")
-        else ("legacy", index)
-        for index, block in enumerate(blocks)
-        if block.get("block_type") == "rehab" and not block.get("_policy_held")
-    }
-    budget = max(0, budget - len(allocations))
+    budget = max(0, budget - rehab_allocation_count(blocks))
     for index, decision in enumerate(sorted((d for d in prescribed if (d["injury_id"], d["injury_episode_id"]) not in replaced),
                                              key=lambda d: d["injury_id"])):
         if index >= budget:

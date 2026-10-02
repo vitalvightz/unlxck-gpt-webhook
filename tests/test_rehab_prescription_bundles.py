@@ -5,12 +5,13 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from api.contracts.injury_policy import reconcile_session_prescription, resolve_injury_policy
+from api.contracts.injury_policy import rehab_allocation_count, reconcile_session_prescription, resolve_injury_policy
 from api.contracts.rehab_completion import (
     build_rehab_exposure_event, build_rehab_response_prompts, resolve_rehab_completion,
 )
 from api.contracts.rehab_schedule import schedule_rehab
-from api.services.rehab_completion_service import session_rehab_items
+from api.services.rehab_completion_service import record_rehab_exposures, session_rehab_items
+from tests.support import FakeStore
 from fightcamp.rehab_clinical import ClinicalPolicy, load_clinical_policies, policy_review_hash
 from fightcamp.rehab_protocols import get_rehab_bank
 
@@ -64,6 +65,7 @@ def test_bundle_expands_all_reviewed_drills_once_and_preserves_order():
     assert [b["rehab_drill_id"] for b in blocks] == IDS
     assert len({b["block_id"] for b in blocks}) == 2
     assert len({b["rehab_allocation_id"] for b in blocks}) == 1
+    assert rehab_allocation_count(blocks) == 1
     assert all(b["minimum_gap_days"] == 2 for b in blocks)
     repeated = snapshot([decision], first["session"])
     assert repeated["session"]["blocks"] == blocks
@@ -182,3 +184,37 @@ def test_bundle_change_requires_a_new_policy_content_hash():
     policy, _, _ = fixture()
     with pytest.raises(ValidationError, match="content hash"):
         ClinicalPolicy.model_validate({**policy.model_dump(), "stage_bundles": {"restore": list(reversed(IDS))}})
+
+
+def test_server_records_bundle_exposures_idempotently_from_one_injury_answer():
+    _, injury, decision = fixture()
+    store = FakeStore()
+    store.injury_flags[ATHLETE] = [injury]
+    accepted = snapshot([decision])
+    completion = dict(plan_id=PLAN, status="done", rehab_performance="done_as_shown",
+                      prescription_snapshot=accepted)
+    kwargs = dict(athlete_id=ATHLETE, plan_row={"id": PLAN}, training_day=DAY,
+                  session_id=f"rehab-{DAY}", completion=completion,
+                  answers={injury["id"]: dict(injury_episode_id=injury["episode_id"],
+                                             during_response="same", limit_response="no")})
+    recorded = record_rehab_exposures(store, **kwargs)
+    retried = record_rehab_exposures(store, **kwargs)
+    assert len(store.rehab_exposures) == 2
+    assert [event.exposure_id for event in recorded] == [event.exposure_id for event in retried]
+    assert len({event.response_group_id for event in recorded}) == 1
+
+
+def test_today_daily_reservations_count_a_started_bundle_once(monkeypatch):
+    from api.services import today_service
+    policy, injury, decision = fixture()
+    other = {**injury, "id": str(uuid4()), "episode_id": str(uuid4()), "body_area": "Right ankle", "side": "right"}
+    store = FakeStore()
+    store.injury_flags[ATHLETE] = [injury, other]
+    store.upsert_session_completion(ATHLETE, dict(plan_id=PLAN, session_id=f"rehab-{DAY}",
+        training_day=DAY, status="started", prescription_snapshot=snapshot([decision])))
+    monkeypatch.setattr(today_service, "load_clinical_policies", lambda: (policy,))
+    rows = today_service._with_injury_policy(
+        [injury, other], store=store, athlete_id=ATHLETE, training_day=DAY,
+        readiness_decision="train_as_planned", training_session={"session_type": "strength"})
+    states = {row["id"]: row["rehab_decision"]["schedule"]["state"] for row in rows}
+    assert states == {injury["id"]: "already_completed", other["id"]: "due"}

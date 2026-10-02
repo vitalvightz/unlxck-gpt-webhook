@@ -32,7 +32,7 @@ from fightcamp.session_sequencing import is_support_session as _is_day_support_s
 from fightcamp.weekly_schedule_view import normalize_weekday
 from fightcamp.rehab_clinical import load_clinical_policies
 from fightcamp.rehab_protocols import get_rehab_bank
-from api.contracts.injury_policy import resolve_injury_policy, reconcile_session_prescription
+from api.contracts.injury_policy import resolve_injury_policy, reconcile_session_prescription, rehab_allocation_count
 from api.services.injury_episode_service import apply_episode_observations, episode_observations, delayed_rehab_prompts, exposure_rows_with_observations
 
 from api.contracts.command_view import CommandView, RiskWatchItem, build_command_view, make_risk
@@ -673,9 +673,10 @@ def _with_injury_policy(injuries, *, store, athlete_id, phase="", current_checki
         rows.append(row)
     if training_day:
         limit = 1 if "sparring" in str((training_session or {}).get("session_type") or "").lower() else 2
-        used = sum(b.get("block_type") == "rehab" for c in completions
-                   if c.get("training_day") == training_day and c.get("status") in {"started", "done", "modified"}
-                   for b in (c.get("prescription_snapshot") or {}).get("session", {}).get("blocks", []))
+        used = sum(rehab_allocation_count(
+            (c.get("prescription_snapshot") or {}).get("session", {}).get("blocks", []), include_held=True)
+            for c in completions
+            if c.get("training_day") == training_day and c.get("status") in {"started", "done", "modified"})
         slots = max(0, limit - used)
         for row in sorted(rows, key=lambda r: str(r.get("id"))):
             decision = row["rehab_decision"]
