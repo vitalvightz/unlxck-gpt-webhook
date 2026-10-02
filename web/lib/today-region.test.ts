@@ -45,11 +45,11 @@ test("the loading group comes from load_region, not the stored location", () => 
   assert.equal(view.allowed.includes("Light bike or walk"), false);
 });
 
-test("an API that predates load_region still gates by the group in body_region", () => {
+test("an injury without a loading group fails closed whatever its stored location", () => {
   const view = getSafeSessionView("Technical sparring", [
-    injury({ body_region: "lower_limb", consequence: "structural", label: "Ankle fracture" }),
+    injury({ body_region: "ankle", consequence: "structural", label: "Ankle fracture" }),
   ]);
-  assert.equal(view.allowed.includes("Light bike or walk"), false);
+  assert.deepEqual(view.allowed, ["Breathing reset", "Clinician-approved rehab"]);
 });
 
 test("structured lower- and upper-limb injuries remove every cardio option", () => {

@@ -2943,11 +2943,6 @@ def _build_today_command_view(
     # ("Left wrist tightness") instead of raw stored words.
     for injury in open_injuries:
         injury["label"] = build_injury_label(injury.get("body_area"), injury.get("description"))
-        # Web builds from before ``load_region`` read the loading group from
-        # ``body_region``, and an installed PWA can keep an old build for weeks.
-        # Remove this alias once those builds are gone; the web reads
-        # ``load_region`` and ``canonical_location``.
-        injury["body_region"] = injury.get("load_region")
 
     # A severe active injury is the highest-priority constraint for the day: it
     # supersedes the daily readiness recommendation with a hard pull-back so the

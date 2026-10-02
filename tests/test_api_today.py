@@ -389,8 +389,7 @@ class TestInjuryCheckin:
         [injury] = client.get("/api/today", headers=ATHLETE).json()["open_injuries"]
         assert injury["canonical_location"] == "ankle"
         assert injury["load_region"] == "lower_limb"
-        # Legacy alias for web builds that predate load_region.
-        assert injury["body_region"] == "lower_limb"
+        assert injury["body_region"] == "ankle"
 
     def test_injury_checkin_resolve_clears_open_injuries(self):
         client, store, _ = _build_client()
