@@ -150,6 +150,31 @@ def test_review_retries_without_schema_on_400():
     assert len(calls) == 2 and "response_format" not in calls[1]
 
 
+@pytest.mark.parametrize(
+    ("response", "message"),
+    [
+        (httpx.Response(401, json={"error": {"message": "bad key"}}), "authentication failed"),
+        (httpx.Response(402, json={"error": {"message": "credits depleted"}}), "billing/credits unavailable"),
+        (httpx.Response(403, json={"error": {"message": "forbidden"}}), "permission denied"),
+        (httpx.Response(503, json={"error": {"message": "unavailable"}}), "service unavailable"),
+    ],
+)
+def test_operational_gemini_http_failures_are_batch_stop_errors(response, message):
+    with pytest.raises(review.GeminiProviderUnavailable, match=message):
+        _reviewer({URL_A: response}).review(URL_A, _row())
+
+
+def test_gemini_transport_failure_is_batch_stop_error():
+    def handler(request):
+        raise httpx.ReadTimeout("timeout", request=request)
+
+    reviewer = review.GeminiVideoReviewer(
+        "k", client=httpx.Client(transport=httpx.MockTransport(handler))
+    )
+    with pytest.raises(review.GeminiProviderUnavailable, match="transport unavailable"):
+        reviewer.review(URL_A, _row())
+
+
 def test_quota_error_is_distinct():
     reviewer = _reviewer({URL_A: httpx.Response(429, json={})})
     with pytest.raises(review.GeminiQuotaExceeded):
@@ -321,6 +346,86 @@ def test_classified_429_saves_csv_and_same_command_resumes(tmp_path, separate_ou
 
 
 # -- candidates + row outcome --------------------------------------------------
+
+
+def test_gemini_402_stops_batch_without_consuming_candidates_or_marking_error(tmp_path):
+    src = tmp_path / "media.csv"
+    original = [
+        _row(exercise_key="a", suggested_url=URL_A, candidate_urls=URL_B),
+        _row(exercise_key="b", suggested_url=URL_C),
+    ]
+    _write_csv(src, original)
+
+    calls = []
+    counts = review.run_review(
+        str(src),
+        str(src),
+        reviewer=_reviewer(
+            {
+                URL_A: httpx.Response(
+                    402,
+                    json={"error": {"message": "Your prepayment credits are depleted."}},
+                )
+            },
+            calls,
+        ),
+        delay_s=0,
+        sleep=lambda _: None,
+        log=lambda _: None,
+    )
+
+    assert counts == {"reviewed": 0, "skipped": 0, "errors": 0, "gemini_stopped": 1}
+    assert len(calls) == 1
+    saved = _read_csv(src)
+    assert saved[0].get("ai_verdict", "") == ""
+    assert saved[1].get("ai_verdict", "") == ""
+
+
+def test_redo_weak_retries_legacy_gemini_402_rows_in_same_pass(tmp_path):
+    src = tmp_path / "media.csv"
+    _write_csv(src, [
+        _row(
+            exercise_key="legacy-billing",
+            suggested_url="",
+            ai_verdict="error",
+            ai_shows=(
+                "https://www.youtube.com/watch?v=AAAAAAAAAAA: HTTP 402: "
+                "Your prepayment credits are depleted."
+            ),
+            ai_candidates_tried="5",
+            ai_redo_weak_pass="1",
+        ),
+        _row(
+            exercise_key="completed-weak",
+            suggested_url=URL_B,
+            ai_verdict="partial",
+            ai_confidence="0.9",
+            ai_orientation="landscape",
+            ai_start_s="42",
+            ai_end_s="54",
+            ai_redo_weak_pass="1",
+        ),
+    ])
+
+    calls = []
+    counts = review.run_review(
+        str(src),
+        str(src),
+        reviewer=_reviewer({URL_C: _answer()}, calls),
+        search=lambda row, exclude, progress=None, checkpoint=None: iter([URL_C]),
+        redo_weak=True,
+        max_candidates=1,
+        delay_s=0,
+        sleep=lambda _: None,
+        log=lambda _: None,
+    )
+
+    assert counts["reviewed"] == 1
+    assert counts["skipped"] == 1
+    assert len(calls) == 1
+    rows = _read_csv(src)
+    assert rows[0]["ai_verdict"] == "match"
+    assert rows[0]["ai_redo_weak_pass"] == "1"
 
 
 def test_best_candidate_wins_and_confident_match_stops_early():
