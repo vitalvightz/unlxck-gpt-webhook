@@ -30,6 +30,7 @@ def medical_report(context, text, *, severity="mild", field="description"):
     "worsening headache", "dizziness", "numbness", "vision changes", "neck pain",
     "retinal detachment", "orbital fracture", "cervical spine injury",
     "spinal fracture", "open fracture", "tingling", "severe tibial plateau fracture", "neck nerve pinch",
+    "shortness of breath", "chest pain", "pain breathing", "neurological symptoms",
 ])
 @pytest.mark.parametrize("impact", ["limiting", "not_limiting"])
 def test_current_medical_reports_stop_today_despite_full_clearance(context, text, impact):
@@ -101,6 +102,9 @@ def test_new_medical_hold_preserves_frozen_acceptance_and_allows_honest_stop(con
 @pytest.mark.parametrize("text", [
     "no dizziness", "not dizzy", "denies numbness", "no neck pain",
     "without vision changes", "no worsening headache", "no retinal detachment",
+    "without neurological symptoms", "no chest pain", "no shortness of breath",
+    "not neck pain", "without worsening headache", "not light headed", "not light-headed",
+    "without light headedness", "no headaches are getting worse",
 ])
 def test_negated_medical_reports_do_not_create_holds(text):
     assert not active_medical_hold_reasons([dict(status="open", body_area="Other", description=text, severity="mild")])
@@ -120,6 +124,7 @@ def test_resolved_medical_report_does_not_block_safe_tactical_work(context):
 @pytest.mark.parametrize("text,severity", [
     ("retinal detachment", "mild"), ("cervical spine injury", "mild"),
     ("spinal fracture", "mild"), ("tingling", "mild"), ("tibial plateau fracture", "severe"),
+    ("shortness of breath", "mild"), ("chest pain", "mild"), ("pain breathing", "mild"),
 ])
 def test_existing_serious_triage_flags_reach_execution_and_contact(text, severity):
     assert current_injury_medical_hold("Other", text, severity)
@@ -145,3 +150,27 @@ def test_real_injury_checkin_refreshes_hold_and_resolution_releases_it(context):
     today_service.submit_today_injury_checkin(context[0], athlete_id=context[1], athlete_timezone="UTC", now=NOW,
         payload={"injuries": [{"flag_id": context[3]["id"], "status": "resolved"}]})
     assert view(context).today.decision_tier == "green"
+
+
+@pytest.mark.parametrize("fields", [
+    {"triage_category": "retinal_detachment_or_eye_trauma"}, {"injury_type": "acute_nerve_issue"},
+    {"flags": ["numbness"]}, {"flags": ["urgent_fracture"]}, {"consequence": "neuro"},
+    {"injury_type": "tibial_plateau_fracture", "severity": "severe"},
+    {"label": "headaches are getting worse"}, {"label": "orbital fracture"},
+    {"body_area": "neck", "description": "pain"}, {"body_area": "dizziness"},
+])
+@pytest.mark.parametrize("status", ["open", "monitoring", None, "resolved"])
+def test_stored_or_split_medical_evidence_has_the_same_gate_in_today_and_sparring(fields, status):
+    injury = {"severity": "mild", **fields}
+    if status is not None:
+        injury["status"] = status
+    expected = status != "resolved"
+    assert bool(active_medical_hold_reasons([injury])) == expected
+    flags = sparring_readiness_flags({"as_of": DAY, "active_injuries": [injury]})
+    assert ("medical_contact_restriction" in flags) == expected
+
+
+@pytest.mark.parametrize("text", ["headaches getting worse", "headaches are getting worse", "headaches worsening"])
+def test_plural_worsening_headache_variants_stop_today(context, text):
+    medical_report(context, text)
+    assert view(context).today.decision_tier == "stop"

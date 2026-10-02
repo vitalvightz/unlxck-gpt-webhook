@@ -99,7 +99,7 @@ def annotate_payload_with_sparring_readiness(
     fields = {
         "checkins": ("training_day", "updated_at", "created_at", "sleep", "body", "pain", "active_injury", "previous_session", "neurological_symptoms"),
         "sessions": ("plan_id", "session_id", "training_day", "status", "session_rpe", "contact_load"),
-        "active_injuries": ("surface_class", "body_area", "description", "severity", "status", "triage_category", "injury_type", "flags", "blocked_training_tags"),
+        "active_injuries": ("surface_class", "body_area", "label", "description", "severity", "status", "triage_category", "injury_type", "consequence", "flags", "blocked_training_tags"),
     }
     for key, allowed in fields.items():
         context[key] = [{field: row[field] for field in allowed if field in row} for row in context[key]]
