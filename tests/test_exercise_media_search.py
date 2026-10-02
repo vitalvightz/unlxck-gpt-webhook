@@ -33,6 +33,51 @@ def _searcher(responses, calls=None):
     return _SEARCH_CLASS("youtube-test-key", client=httpx.Client(transport=httpx.MockTransport(handler)))
 
 
+
+
+def _dataforseo_searcher(responses, calls=None):
+    def handler(request):
+        assert request.url.path == "/v3/serp/youtube/organic/live/advanced"
+        assert request.method == "POST"
+        assert request.headers["Authorization"].startswith("Basic ")
+        payload = json.loads(request.content)
+        assert isinstance(payload, list) and len(payload) == 1
+        assert payload[0]["device"] == "desktop"
+        assert payload[0]["location_code"] == 2840
+        assert payload[0]["language_code"] == "en"
+        if calls is not None:
+            calls.append(payload[0]["keyword"])
+        response = responses.pop(0)
+        if isinstance(response, Exception):
+            raise response
+        if isinstance(response, httpx.Response):
+            return response
+        items = []
+        for item in response:
+            if isinstance(item, dict):
+                items.append(item)
+            else:
+                items.append({"type": "youtube_video", "video_id": item})
+        return httpx.Response(
+            200,
+            json={
+                "status_code": 20000,
+                "tasks": [
+                    {
+                        "status_code": 20000,
+                        "result": [{"items": items}],
+                    }
+                ],
+            },
+        )
+
+    return discovery.DataForSEOCandidateSearch(
+        "login",
+        "password",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+
 def test_queries_use_exercise_metadata_without_private_cues():
     row = _row(example_name="Tempo Shadowboxing", sport="boxing", aliases="controlled-shadowboxing", plan_cue="private athlete injury", notes="private")
     queries = discovery.search_queries(row)
@@ -372,3 +417,85 @@ def test_youtube_search_quota_failure_is_sticky_and_classified():
         list(searcher.search(_row(), set()))
     with pytest.raises(discovery.CandidateSearchQuotaExceeded):
         list(searcher.search(_row(), set()))
+
+
+
+def test_dataforseo_discovers_youtube_videos_and_skips_shorts_and_live():
+    calls = []
+    searcher = _dataforseo_searcher(
+        [[
+            {"type": "youtube_video", "video_id": "AAAAAAAAAAA", "is_shorts": True},
+            {"type": "youtube_video", "video_id": "BBBBBBBBBBB", "is_live": True},
+            {"type": "youtube_channel", "video_id": "CCCCCCCCCCC"},
+            {"type": "youtube_video", "video_id": "CCCCCCCCCCC", "is_shorts": False},
+        ]],
+        calls,
+    )
+    urls = []
+    for url in searcher.search(_row(), set()):
+        urls.append(url)
+        if urls:
+            break
+    assert urls == [URL_C]
+    assert calls == ["Trap Bar Deadlift exercise demonstration"]
+
+
+def test_dataforseo_failure_falls_back_to_youtube_on_same_query():
+    primary_calls, fallback_calls = [], []
+    primary = _dataforseo_searcher(
+        [httpx.Response(500, json={"error": "provider down"})],
+        primary_calls,
+    )
+    fallback = _searcher([["BBBBBBBBBBB"]], fallback_calls)
+    searcher = discovery.FallbackCandidateSearch(primary, fallback)
+    progress = discovery.SearchProgress()
+
+    urls = []
+    for url in searcher.search(_row(), set(), progress):
+        urls.append(url)
+        if urls:
+            break
+
+    assert urls == [URL_B]
+    assert primary_calls == ["Trap Bar Deadlift exercise demonstration"]
+    assert fallback_calls == ["Trap Bar Deadlift exercise demonstration"]
+    assert progress.queries_used == 1
+
+
+def test_auto_provider_prefers_dataforseo_and_keeps_youtube_fallback(monkeypatch):
+    monkeypatch.setenv("DATAFORSEO_LOGIN", "login")
+    monkeypatch.setenv("DATAFORSEO_PASSWORD", "password")
+    monkeypatch.delenv("EXERCISE_MEDIA_SEARCH_PROVIDER", raising=False)
+
+    searcher = discovery.build_candidate_search(youtube_api_key="youtube-test-key")
+    try:
+        assert isinstance(searcher, discovery.FallbackCandidateSearch)
+        assert isinstance(searcher.primary, discovery.DataForSEOCandidateSearch)
+        assert isinstance(searcher.fallback, discovery.YouTubeCandidateSearch)
+        assert searcher.label == "DataForSEO YouTube SERP -> YouTube Data API fallback"
+    finally:
+        searcher.close()
+
+
+def test_explicit_dataforseo_requires_credentials(monkeypatch):
+    monkeypatch.delenv("DATAFORSEO_LOGIN", raising=False)
+    monkeypatch.delenv("DATAFORSEO_PASSWORD", raising=False)
+    with pytest.raises(discovery.CandidateSearchError, match="DATAFORSEO_LOGIN"):
+        discovery.build_candidate_search(provider="dataforseo", youtube_api_key=None)
+
+
+def test_dataforseo_rate_limit_falls_back_before_stopping_batch():
+    primary = _dataforseo_searcher(
+        [
+            httpx.Response(
+                200,
+                json={
+                    "status_code": 20000,
+                    "tasks": [{"status_code": 40202, "status_message": "rate limit"}],
+                },
+            )
+        ]
+    )
+    fallback = _searcher([["BBBBBBBBBBB"]])
+    searcher = discovery.FallbackCandidateSearch(primary, fallback)
+    assert next(iter(searcher.search(_row(), set()))) == URL_B
