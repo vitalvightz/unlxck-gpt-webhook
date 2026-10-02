@@ -141,7 +141,7 @@ jobs:
 
               tmp_cron="$(mktemp)"
               {
-                crontab -l 2>/dev/null | awk '
+                (crontab -l 2>/dev/null || true) | awk '
                   BEGIN {skip=0}
                   /^# BEGIN UNLXCK OUTREACH WORKER$/ {skip=1; next}
                   /^# END UNLXCK OUTREACH WORKER$/ {skip=0; next}
