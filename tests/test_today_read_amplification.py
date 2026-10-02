@@ -419,3 +419,46 @@ def test_push_sweep_stops_before_the_next_athlete_on_shutdown(monkeypatch, push_
     )
 
     assert len(evaluated) == 1
+
+
+def _store_with_intake_injury() -> CountingStore:
+    store = _store_with_camp()
+    store.intakes.setdefault(ATHLETE, []).append(
+        {"id": "intake-1", "athlete_id": ATHLETE, "intake": {"injuries": "left ankle sprain"},
+         "created_at": "2026-05-30T00:00:00+00:00"}
+    )
+    store.plans[PLAN]["intake_id"] = "intake-1"
+    build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW)
+    store.reads.clear()
+    return store
+
+
+def test_the_sync_and_the_view_share_the_intake_and_open_flag_reads():
+    store = _store_with_intake_injury()
+
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW)
+
+    assert [injury["body_area"] for injury in view.open_injuries]
+    assert store.reads["get_intake"] == 1
+    # Sync: open, open+resolved, open after its upsert. View: open+resolved
+    # after that upsert (the sync's was read before it). The view's open-flag
+    # read is the sync's last one.
+    assert store.reads["list_injury_flags"] == 4
+
+
+def test_a_failed_shared_read_is_not_kept_so_the_view_reads_again():
+    store = _store_with_intake_injury()
+    calls = {"n": 0}
+    real = FakeStore.list_injury_flags
+
+    def flaky(self, athlete_id, **kwargs):
+        calls["n"] += 1
+        if calls["n"] == 3:  # the sync's last open-flag read
+            raise RuntimeError("flag read down")
+        return real(self, athlete_id, **kwargs)
+
+    store.list_injury_flags = flaky.__get__(store)
+    view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC", now=NOW)
+
+    assert calls["n"] == 5  # the view read the open flags itself
+    assert [injury["body_area"] for injury in view.open_injuries]
