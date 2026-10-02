@@ -491,6 +491,7 @@ def _cmd_review(args: argparse.Namespace) -> int:
             searcher = build_candidate_search(
                 provider=args.search_provider,
                 youtube_api_key=youtube_api_key(),
+                on_fallback=lambda message: print(message, file=sys.stderr),
             )
         except CandidateSearchError as exc:
             print(f"error: {exc}", file=sys.stderr)
