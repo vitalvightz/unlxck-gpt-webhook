@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
@@ -18,6 +18,7 @@ import {
   checkinChips,
   countRecentBy,
   daysAgoLabel,
+  HARD_SPARRING_DAYS_PER_WEEK,
   type HistoryChip,
   injuryReportedTone,
   injurySeverityTone,
@@ -32,13 +33,13 @@ import {
   sparringPlanDifference,
   sparringRowMeta,
   sparringWeekNote,
+  trainingDaysAgo,
 } from "@/lib/history";
 import { formatInjuryDetail, normalizeInjuryLabel } from "@/lib/injury-display";
 import type { TodayDecisionTone } from "@/lib/today";
 import type {
   InjuryFlagRecord,
   SparringLogHistoryResponse,
-  SparringWindowSummary,
   TodayCheckinHistoryRecord,
   TodaySessionCompletionRecord,
 } from "@/lib/types";
@@ -83,7 +84,10 @@ function SummaryGroup({ label, stats }: { label: string; stats: SummaryStat[] })
   return (
     <div className="history-summary-group">
       <p className="history-summary-label">{label}</p>
-      <dl className="history-summary-stats">
+      <dl
+        className="history-summary-stats"
+        style={{ "--stat-count": stats.length } as CSSProperties}
+      >
         {stats.map((stat) => (
           <div key={stat.label}>
             <dt>{stat.label}</dt>
@@ -95,6 +99,22 @@ function SummaryGroup({ label, stats }: { label: string; stats: SummaryStat[] })
       </dl>
     </div>
   );
+}
+
+/** The row's date, with "Today" / "Yesterday" / "N days ago" for the last week. */
+function RowDate({ day, today }: { day: string; today: string | null }) {
+  const ago = today ? trainingDaysAgo(day, today) : null;
+  const when = ago !== null && ago < 7 ? daysAgoLabel(day, today ?? "") : null;
+  return (
+    <span>
+      {formatAppDate(day)}
+      {when ? <span className="history-row-when"> · {when}</span> : null}
+    </span>
+  );
+}
+
+function plural(count: number, word: string): string {
+  return `${count} ${word}${count === 1 ? "" : "s"}`;
 }
 
 function Chips({ chips }: { chips: HistoryChip[] }) {
@@ -144,13 +164,13 @@ function SessionRows({ rows, today }: { rows: TodaySessionCompletionRecord[]; to
       ) : null}
       <ul className="history-list">
         {rows.map((row) => (
-          <li key={row.id} className="history-row">
+          <li key={row.id} className="history-row" data-tone={sessionStatusTone(row.status)}>
             <div className="history-row-head">
               <span className="history-row-title">{row.session_title?.trim() || "Session"}</span>
               <StatusBadge tone={sessionStatusTone(row.status)} label={sessionStatusLabel(row.status)} />
             </div>
             <div className="history-row-meta">
-              <span>{formatAppDate(row.training_day)}</span>
+              <RowDate day={row.training_day} today={today} />
               {row.session_rpe != null ? (
                 <span>
                   RPE {row.session_rpe}/10
@@ -183,22 +203,33 @@ function SparringRows({ history }: { history: SparringLogHistoryResponse }) {
       />
     );
   }
-  const windowStats = (summary: SparringWindowSummary): SummaryStat[] => [
-    { label: "Sessions", value: summary.sessions },
-    { label: "Rounds", value: summary.rounds },
-    { label: "Hard rounds", value: summary.hard_rounds },
-    { label: "Hard days", value: summary.hard_days },
-    { label: "Heavy head contact", value: summary.heavy_head_contact_sessions },
-    { label: "Rocked / dropped", value: summary.rocked_count, tone: "red" },
-  ];
-  const weekNote = sparringWeekNote(history.last_7_days);
+  const week = history.last_7_days;
+  const month = history.last_28_days;
+  const weekNote = sparringWeekNote(week);
   const lastHard = history.last_hard_day ? daysAgoLabel(history.last_hard_day, today) : null;
   const lastRocked = history.last_rocked_day ? daysAgoLabel(history.last_rocked_day, today) : null;
   return (
     <div className="history-tab-body">
       <section className="history-summary" aria-label="Sparring totals">
-        <SummaryGroup label="Last 7 days" stats={windowStats(history.last_7_days)} />
-        <SummaryGroup label="Last 28 days" stats={windowStats(history.last_28_days)} />
+        <SummaryGroup
+          label="Last 7 days"
+          stats={[
+            { label: "Rounds", value: week.rounds },
+            {
+              label: "Hard days",
+              value: week.hard_days,
+              tone: week.hard_days > HARD_SPARRING_DAYS_PER_WEEK ? "amber" : undefined,
+            },
+            { label: "Heavy head contact", value: week.heavy_head_contact_sessions, tone: "amber" },
+          ]}
+        />
+        <p className="history-summary-line">
+          Last 28 days: {plural(month.sessions, "session")} · {plural(month.rounds, "round")} ·{" "}
+          {plural(month.hard_days, "hard day")}
+          {month.rocked_count > 0 ? (
+            <span data-tone="red"> · rocked / dropped {plural(month.rocked_count, "time")}</span>
+          ) : null}
+        </p>
         <div className="history-row-meta">
           {history.last_hard_day ? (
             <span>
@@ -224,28 +255,38 @@ function SparringRows({ history }: { history: SparringLogHistoryResponse }) {
         {logs.map((row) => {
           const difference = sparringPlanDifference(row.planned_intensity, row.intensity);
           return (
-            <li key={row.id} className="history-row">
+            <li
+              key={row.id}
+              className="history-row"
+              data-tone={row.rocked ? "red" : sparringIntensityTone(row.intensity)}
+            >
               <div className="history-row-head">
-                <span className="history-row-date">{formatAppDate(row.training_day)}</span>
-                <span className="history-badges">
-                  <StatusBadge
-                    tone={sparringIntensityTone(row.intensity)}
-                    label={sparringIntensityLabel(row.intensity)}
-                  />
-                  {row.head_contact === "heavy" ? (
-                    <StatusBadge tone="amber" label="Heavy head contact" />
-                  ) : null}
-                  {row.rocked ? <StatusBadge tone="red" label="Rocked / dropped" /> : null}
+                <span className="history-row-date">
+                  <RowDate day={row.training_day} today={today} />
                 </span>
+                <StatusBadge
+                  tone={sparringIntensityTone(row.intensity)}
+                  label={sparringIntensityLabel(row.intensity)}
+                />
               </div>
               <div className="history-row-meta">
                 {sparringRowMeta(row).map((item) => (
                   <span key={item}>{item}</span>
                 ))}
-                {difference ? (
-                  <span data-tone={difference.harder ? "amber" : undefined}>{difference.label}</span>
-                ) : null}
               </div>
+              {row.rocked || row.head_contact === "heavy" || difference ? (
+                <Chips
+                  chips={[
+                    ...(row.rocked ? [{ label: "Rocked / dropped", tone: "red" as const }] : []),
+                    ...(row.head_contact === "heavy"
+                      ? [{ label: "Heavy head contact", tone: "amber" as const }]
+                      : []),
+                    ...(difference
+                      ? [{ label: difference.label, tone: difference.harder ? ("amber" as const) : ("neutral" as const) }]
+                      : []),
+                  ]}
+                />
+              ) : null}
               {row.notes ? <p className="muted history-row-note">Notes: {row.notes}</p> : null}
             </li>
           );
@@ -291,9 +332,11 @@ function CheckinRows({ rows, today }: { rows: TodayCheckinHistoryRecord[]; today
       ) : null}
       <ul className="history-list">
         {rows.map((row) => (
-          <li key={row.id} className="history-row">
+          <li key={row.id} className="history-row" data-tone={recommendationTone(row.recommendation_state)}>
             <div className="history-row-head">
-              <span className="history-row-date">{formatAppDate(row.training_day)}</span>
+              <span className="history-row-date">
+                <RowDate day={row.training_day} today={today} />
+              </span>
               <StatusBadge
                 tone={recommendationTone(row.recommendation_state)}
                 label={recommendationLabel(row.recommendation_state)}
@@ -317,14 +360,19 @@ function InjuryRow({ row }: { row: InjuryFlagRecord }) {
   // part of it.
   const note = formatInjuryDetail(row.description, { bodyArea: row.body_area });
   return (
-    <li className="history-row">
+    <li className="history-row" data-tone={injuryStatusTone(row.status)}>
       <div className="history-row-head">
-        <span className="history-row-date">{title}</span>
-        <span className="history-badges">
-          <StatusBadge tone={injurySeverityTone(row.severity)} label={row.severity} />
-          <StatusBadge tone={injuryStatusTone(row.status)} label={injuryStatusLabel(row.status)} />
-        </span>
+        <span className="history-row-title">{title}</span>
+        <StatusBadge tone={injuryStatusTone(row.status)} label={injuryStatusLabel(row.status)} />
       </div>
+      <Chips
+        chips={[
+          {
+            label: `${row.severity.charAt(0).toUpperCase()}${row.severity.slice(1)}`,
+            tone: injurySeverityTone(row.severity),
+          },
+        ]}
+      />
       <div className="history-row-meta">
         <span>Reported {formatAppDate(row.created_at)}</span>
         {row.resolved_at ? <span>Resolved {formatAppDate(row.resolved_at)}</span> : null}

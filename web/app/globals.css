@@ -21453,20 +21453,34 @@ html[data-app-surface="brand"] .app-safety-footer {
   gap: 20px;
 }
 
+/* One segmented bar: all four tabs stay on one line, even on a phone. */
 .history-tabs {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.history-tab {
-  padding: 8px 16px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--border-subtle);
   background: var(--bg-surface-alt);
+}
+
+.history-tab {
+  min-width: 0;
+  padding: 9px 2px;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--text-secondary);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   cursor: pointer;
+}
+
+.history-tab:hover {
+  color: var(--text-primary);
 }
 
 .history-tab-active {
@@ -21489,15 +21503,39 @@ html[data-app-surface="brand"] .app-safety-footer {
   background: var(--bg-surface-alt);
   padding: 14px 16px;
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
+/* A coloured left edge carries the row's status, so a list scans by colour. */
+.history-row[data-tone="green"] {
+  box-shadow: inset 3px 0 0 var(--success-ink);
+}
+
+.history-row[data-tone="amber"] {
+  box-shadow: inset 3px 0 0 var(--progress-gold);
+}
+
+.history-row[data-tone="red"] {
+  box-shadow: inset 3px 0 0 var(--danger-ink);
+}
+
+/* Title left, one status badge pinned top-right: the badge never wraps under. */
 .history-row-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  flex-wrap: wrap;
+}
+
+.history-row-head > .badge {
+  flex-shrink: 0;
+}
+
+.history-row-when {
+  font-size: 0.85em;
+  font-weight: 400;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .history-row-date {
@@ -22157,24 +22195,32 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
 .history-summary-stats {
   margin: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* One column per stat (set inline), so two tiles fill the card too. */
+  grid-template-columns: repeat(var(--stat-count, 3), minmax(0, 1fr));
   gap: 8px 12px;
 }
 
+/* Number first, label under it, each in its own tile. */
 .history-summary-stats div {
-  display: grid;
-  grid-template-rows: 1fr auto;
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
   gap: 2px;
+  padding: 10px 12px;
+  border-radius: var(--radius-support);
+  background: var(--bg-surface);
 }
 
 .history-summary-stats dt {
   font-size: 0.75rem;
+  line-height: 1.25;
   color: var(--text-secondary);
 }
 
 .history-summary-stats dd {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1.5rem;
+  line-height: 1.1;
   font-weight: 700;
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
@@ -22193,6 +22239,17 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
 
 .history-summary-stats dd[data-tone="red"],
 .history-tab-body .history-row-meta [data-tone="red"] {
+  color: var(--danger-ink);
+  font-weight: 600;
+}
+
+.history-summary-line {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.history-summary-line [data-tone="red"] {
   color: var(--danger-ink);
   font-weight: 600;
 }
