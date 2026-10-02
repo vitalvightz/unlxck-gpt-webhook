@@ -35,7 +35,8 @@ def fixture(bundle=True):
     injury = dict(id=str(uuid4()), episode_id=str(uuid4()), athlete_id=ATHLETE,
                   canonical_location="ankle", body_region="ankle", body_area="Left ankle",
                   side="left", injury_type="sprain", severity="mild", status="monitoring",
-                  latest_reported_status="improving", rehab_stage="restore")
+                  latest_reported_status="improving", rehab_stage="restore",
+                  created_at="2026-09-30T00:00:00Z", updated_at="2026-09-30T00:00:00Z")
     decision = resolve_injury_policy(injury, policies=(policy,), bank=get_rehab_bank())
     return policy, injury, decision
 
@@ -83,7 +84,7 @@ def test_bundle_uses_one_allocation_and_keeps_sparring_ceiling(session_type, all
     result = snapshot([decision, second], first["session"])
     assert result["allocation_limit"] == allocated
     assert sum(b["block_type"] == "rehab" for b in result["session"]["blocks"]) == allocated * len(IDS)
-    assert sum(b["injury_id"] == decision["injury_id"] for b in result["session"]["blocks"]) == 2
+    assert sum(b.get("injury_id") == decision["injury_id"] for b in result["session"]["blocks"]) == 2
     assert any(c.get("injury_id") == second["injury_id"] and c["action"] == "deferred"
                for c in result["changes"]) == (allocated == 1)
 
