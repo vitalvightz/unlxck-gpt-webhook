@@ -398,7 +398,7 @@ def test_youtube_search_quota_stops_batch_without_marking_rows_error(tmp_path):
     )
 
     assert counts["quota_stopped"] == 1
-    assert counts["youtube_quota_stopped"] == 1
+    assert counts["search_quota_stopped"] == 1
     assert len(searches) == 1
     rows = _read_csv(src)
     assert rows[0].get("ai_verdict", "") == ""
