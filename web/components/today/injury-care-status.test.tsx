@@ -43,7 +43,8 @@ for (const [label, scopes] of [
       assert.match(container.textContent ?? "", /Next due: 2026-10-02/);
       assert.equal(container.querySelector("a")?.getAttribute("href"), "https://www.nhs.uk/conditions/sprains-and-strains/");
       await click(container, "Report clinician clearance");
-      assert.match(container.textContent ?? "", /does not override safety guidance or advance rehab/);
+      assert.match(container.textContent ?? "", /sets your training and contact permissions/);
+      assert.match(container.textContent ?? "", /Red flags and safety holds still apply; it does not advance rehab/);
       assert.equal(container.querySelectorAll(".today-segment-row > .today-segment").length, 3);
       await click(container, label);
       assert.match(String(calls[0].report_id), /^[a-f0-9-]{36}$/);
@@ -211,4 +212,14 @@ test("unclear effective scope explains its conservative ceiling", () => {
   assert.match(html, /Effective clinician clearance: Rehab only/);
   assert.match(html, /Rehab only until clarified/);
   assert.equal(renderToStaticMarkup(<EffectiveClinicianClearanceStatus clearance={null} />), "");
+});
+
+test("full clinician clearance names its report without implying an injury limitation", () => {
+  const html = renderToStaticMarkup(<EffectiveClinicianClearanceStatus clearance={{
+    level: "train_contact", scopes: ["rehab", "training", "contact"], requires_update: false,
+    limited_by: [{ injury_id: injury.id, injury_episode_id: injury.episode_id!, label: "Chest strain" }],
+  }} />);
+  assert.match(html, /Effective clinician clearance: Train \+ contact/);
+  assert.match(html, /Based on: Chest strain/);
+  assert.doesNotMatch(html, /Limited by:/);
 });

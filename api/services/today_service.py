@@ -629,7 +629,7 @@ def _with_rehab_stage(
 
 
 def _with_injury_policy(injuries, *, store, athlete_id, phase="", current_checkin=None, equipment=(), readiness_decision=None,
-                        training_day=None, training_session=None):
+                        training_day=None, training_session=None, observations_by_injury=None):
     if not injuries:
         return []
     policies, bank = load_clinical_policies(), get_rehab_bank()
@@ -637,7 +637,8 @@ def _with_injury_policy(injuries, *, store, athlete_id, phase="", current_checki
     completions = store.list_rehab_schedule_completions(athlete_id, from_day=(parse_iso_date(training_day) - timedelta(days=14)).isoformat()) if training_day else []
     rows = []
     for injury in injuries:
-        observations = episode_observations(store, athlete_id, injury)
+        observations = (observations_by_injury[str(injury["id"])] if observations_by_injury is not None
+                        else episode_observations(store, athlete_id, injury))
         row = apply_episode_observations(injury, observations)
         exposures = []
         history_truncated = False
@@ -811,6 +812,12 @@ def _readiness_context_and_status(
         resolved_injuries, injuries_ok = _checked_open_injury_flags(store, athlete_id)
         if not injuries_ok:
             builder.add(INJURY_CONTEXT_UNAVAILABLE)
+        try:
+            resolved_injuries = [apply_episode_observations(row, episode_observations(store, athlete_id, row))
+                                 for row in resolved_injuries]
+        except Exception:
+            logger.exception("[today] injury_clearance_context_unavailable")
+            builder.add(INJURY_CONTEXT_UNAVAILABLE)
 
     # Attach the coarse consequence tier so the readiness engine can scale the
     # decision by injury TYPE (head/neck, structural, rib, tendon, joint), not
@@ -929,7 +936,8 @@ def _refresh_today_recommendation_after_injury_change(
         plan_row=plan_row,
         training_day=training_day,
         phase=str(today_checkin.get("phase") or plan_row.get("phase") or ""),
-        open_injuries=open_injuries,
+        open_injuries=[apply_episode_observations(row, episode_observations(store, athlete_id, row))
+                       for row in open_injuries],
     )
     refreshed = dict(
         store.upsert_today_checkin(
@@ -1405,6 +1413,8 @@ def upsert_session_completion(
                     "Clear it before training this session."
                 ),
             )
+        if command and command.today.decision_tier == "stop":
+            raise HTTPException(409, "Training is stopped by today's current safety guidance.")
 
     existing_plan_id = str(existing.get("plan_id") or "")
     if existing_plan_id and existing_plan_id != plan_id:
@@ -2972,6 +2982,20 @@ def _build_today_command_view(
     for injury in open_injuries:
         injury["label"] = build_injury_label(injury.get("body_area"), injury.get("description"))
 
+    observations_by_injury = {str(row["id"]): episode_observations(store, athlete_id, row) for row in open_injuries}
+    open_injuries = [apply_episode_observations(row, observations_by_injury[str(row["id"])]) for row in open_injuries]
+    if today_checkin and any(event.get("event_type") == "clinician_clearance_report"
+                             for events in observations_by_injury.values() for event in events):
+        # Clearance can remove a generic injury floor. Re-evaluate the original
+        # check-in inputs, retaining fatigue, red flags and context fail-safes.
+        # History is unchanged; this is the current execution recommendation.
+        decision, _ = _readiness_decision_with_failsafe(
+            store, checkin=_stored_readiness_checkin_from(today_checkin), athlete_id=athlete_id,
+            plan_row=plan_row, training_day=training_day,
+            phase=str(today_checkin.get("phase") or resolved_plan.get("phase") or ""), open_injuries=open_injuries)
+        recommendation = {"decision": decision.decision, "reason": decision.message,
+                          "triggers": list(decision.triggers), "training_day": training_day}
+
     # A severe active injury is the highest-priority constraint for the day: it
     # supersedes the daily readiness recommendation with a hard pull-back so the
     # live command view is authoritative (the stored daily check-in stays in
@@ -3061,7 +3085,7 @@ def _build_today_command_view(
     open_injuries = _with_injury_policy(open_injuries, store=store, athlete_id=athlete_id,
                                        phase=str(resolved_plan.get("phase") or ""), current_checkin=today_checkin, equipment=equipment,
                                        readiness_decision=(recommendation or {}).get("decision") or "not_checked_in", training_day=training_day,
-                                       training_session=training_session)
+                                       training_session=training_session, observations_by_injury=observations_by_injury)
     decisions = [injury["rehab_decision"] for injury in open_injuries]
     frozen = None if today_is_complete else (today_completion or {}).get("prescription_snapshot")
     live = reconcile_session_prescription(

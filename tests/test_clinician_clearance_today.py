@@ -286,3 +286,170 @@ def test_no_contact_does_not_remove_stricter_block_restrictions(context):
     result = reconcile_session_prescription(entry, decisions=decisions, plan_id=context[2], training_day=DAY, injuries=[injury])
     assert result["safety_hold"]
     assert all(b["_policy_held"] for b in result["session"]["blocks"])
+
+
+def live_injury(context, region, severity="moderate"):
+    store, athlete, _, injury = context
+    fields = dict(body_area="Right ankle" if region == "ankle" else "Chest",
+                  description=region + (" sprain" if region == "ankle" else " strain"),
+                  body_region=region, side="right" if region == "ankle" else "unknown",
+                  severity=severity, status="monitoring", latest_reported_status="improving",
+                  created_at="2026-09-27T00:00:00Z", updated_at="2026-09-29T09:00:00Z")
+    store.update_injury_flag(injury["id"], fields)
+    return store.get_injury_flag_for_athlete(injury["id"], athlete)
+
+
+def live_camp(region, contact=True):
+    return session("technical", "Low-kick technical session", [
+        dict(block_id="skill", block_type="technical", display_name="Low-kick counter",
+             mechanical_load_regions=[region], contact_level="none"),
+        *([dict(block_id="contact", block_type="sparring", display_name="Hard sparring",
+                mechanical_load_regions=[region], contact_level="full")] if contact else []),
+        dict(block_id="mindset", block_type="mindset", display_name="Low-kick counter decision",
+             mechanical_load_regions=[], contact_level="none"),
+    ])
+
+
+@pytest.mark.parametrize("region", ["ankle", "chest"])
+@pytest.mark.parametrize("scopes", [REHAB, TRAIN, CONTACT])
+@pytest.mark.parametrize("completed_rehab", [False, True])
+@pytest.mark.parametrize("severity", ["mild", "moderate"])
+def test_live_clearance_relaxes_only_cleared_baseline_with_or_without_due_rehab(context, region, scopes, completed_rehab, severity):
+    injury = live_injury(context, region, severity)
+    if completed_rehab:
+        current = resolve_injury_policy({**injury, "rehab_stage": "restore"}, policies=load_clinical_policies(), bank=get_rehab_bank())
+        saved = reconcile_session_prescription(None, decisions=[current], plan_id=context[2], training_day=DAY)
+        context[0].upsert_session_completion(context[1], dict(plan_id=context[2], session_id=saved["session"]["session_id"],
+            training_day=DAY, status="done", prescription_snapshot=saved, rehab_performance="done_as_shown"))
+    set_sessions(context, [live_camp(region)])
+    report(context, scopes)
+    before = deepcopy(context[0].plans[context[2]])
+    current = view(context)
+    live = current.live_prescription
+    assert current.open_injuries[0]["rehab_decision"]["stage"] in {"calm", "restore"}
+    assert current.open_injuries[0]["rehab_decision"]["restrictions"]["contact_limit"] == "none"
+    assert context[0].plans[context[2]] == before
+    if scopes == REHAB:
+        due = current.open_injuries[0]["rehab_decision"]["schedule"]["state"] == "due"
+        assert live["rehab_only"] if due else live["safety_hold"]
+        return
+    assert not live["safety_hold"] and not live["rehab_only"]
+    blocks = live["session"]["blocks"]
+    assert any(b.get("block_id") == "skill" for b in blocks)
+    assert any(b.get("block_id") == "mindset" for b in blocks)
+    assert any(b.get("block_id") == "contact" for b in blocks) == (scopes == CONTACT)
+    due = current.open_injuries[0]["rehab_decision"]["schedule"]["state"] == "due"
+    assert any(b.get("block_type") == "rehab" for b in blocks) == due
+    if region == "ankle" and not completed_rehab:
+        assert current.open_injuries[0]["rehab_decision"]["schedule"]["state"] == "deferred"
+    assert not any(b.get("_policy_held") for b in blocks)
+    execute(context, live)
+    frozen = view(context).live_prescription
+    assert frozen["frozen"] and frozen["session"] == live["session"] and not frozen["safety_hold"]
+    execute(context, frozen, "done", rehab_performance="done_as_shown" if due else None)
+
+
+@pytest.mark.parametrize("region", ["ankle", "chest"])
+def test_live_full_clearance_allows_contact_owned_day_without_app_blocks(context, region):
+    live_injury(context, region)
+    set_sessions(context, [session("sparring", "Hard sparring", [])])
+    report(context, CONTACT)
+    live = view(context).live_prescription
+    assert not live["safety_hold"] and not live["rehab_only"]
+    assert live["session"]["session_id"] == "session-1"
+    execute(context, live)
+
+
+@pytest.mark.parametrize("flag", ["sharp_pain", "instability", "swelling", "neurological_symptoms", "illness_symptoms",
+                                 "cannot_warm_into_movement", "worse_next_day_pain"])
+@pytest.mark.parametrize("completion_status", ["started", "done", "modified"])
+def test_live_full_clearance_never_overrides_a_current_red_flag(context, flag, completion_status):
+    live_injury(context, "ankle")
+    set_sessions(context, [live_camp("ankle")])
+    report(context, CONTACT)
+    row = context[0].get_today_checkin(context[1], context[2], DAY)
+    context[0].upsert_today_checkin(context[1], {**row, flag: True})
+    current = view(context)
+    assert current.today.decision_tier == "stop"
+    assert current.live_prescription is None or current.live_prescription["safety_hold"]
+    with pytest.raises(HTTPException) as blocked:
+        today_service.upsert_session_completion(context[0], athlete_id=context[1], athlete_timezone="UTC", now=NOW,
+            payload=dict(plan_id=context[2], session_id="session-1", status=completion_status, modification_reason="Stopped"))
+    assert blocked.value.status_code == 409
+
+
+@pytest.mark.parametrize("change", [dict(severity="severe"), dict(latest_reported_status="worse"),
+                                    dict(body_area="Neck", description="Concussion", body_region="neck")])
+def test_live_full_clearance_cannot_relax_hard_injury_gates(context, change):
+    injury = live_injury(context, "ankle")
+    set_sessions(context, [live_camp("ankle")])
+    report(context, CONTACT)
+    context[0].update_injury_flag(injury["id"], {**change, "updated_at": "2026-09-30T10:00:00Z"})
+    current = view(context)
+    assert current.today.decision_tier in {"stop", "pull_back"}
+    assert current.live_prescription is None or current.live_prescription["safety_hold"] or current.live_prescription["rehab_only"]
+    with pytest.raises(HTTPException):
+        today_service.upsert_session_completion(context[0], athlete_id=context[1], athlete_timezone="UTC", now=NOW,
+            payload=dict(plan_id=context[2], session_id="session-1", status="started"))
+
+
+@pytest.mark.parametrize("scopes", [None, ["rehab", "contact"], CONTACT])
+def test_clearance_cannot_relax_another_uncleared_or_malformed_episode(context, scopes):
+    live_injury(context, "ankle")
+    set_sessions(context, [live_camp("ankle")])
+    report(context, CONTACT)
+    other = context[0].create_injury_flag(context[1], dict(body_area="Chest", description="Chest strain",
+        body_region="chest", severity="moderate", status="open"))
+    if scopes is not None:
+        event = report(context, CONTACT, injury=other)
+        context[0].injury_episode_events[event["id"]]["payload"]["scopes"] = scopes
+    current = view(context)
+    if scopes == CONTACT:
+        assert not current.live_prescription["safety_hold"] and not current.live_prescription["rehab_only"]
+    else:
+        assert current.live_prescription["safety_hold"] or current.live_prescription["rehab_only"]
+
+
+def test_clearance_removes_obsolete_generic_floor_but_preserves_original_checkin(context):
+    live_injury(context, "ankle")
+    set_sessions(context, [session("sparring", "Hard sparring", [
+        dict(block_id="contact", block_type="sparring", mechanical_load_regions=["ankle"], contact_level="full")])])
+    row = context[0].get_today_checkin(context[1], context[2], DAY)
+    context[0].upsert_today_checkin(context[1], {**row, "recommendation_state": "pull_back",
+        "recommendation_reason": "Old generic ankle restriction", "recommendation_triggers": ["active_injury_restriction"]})
+    before = deepcopy(context[0].get_today_checkin(context[1], context[2], DAY))
+    report(context, CONTACT)
+    current = view(context)
+    assert current.today.decision_tier == "green"
+    assert not current.live_prescription["safety_hold"]
+    assert context[0].get_today_checkin(context[1], context[2], DAY) == before
+
+
+def test_clearance_does_not_remove_current_readiness_pullback(context):
+    live_injury(context, "ankle")
+    set_sessions(context, [live_camp("ankle")])
+    report(context, CONTACT)
+    row = context[0].get_today_checkin(context[1], context[2], DAY)
+    context[0].upsert_today_checkin(context[1], {**row, "pain": "high"})
+    current = view(context)
+    assert current.today.decision_tier in {"stop", "pull_back"}
+    assert current.live_prescription["safety_hold"] or current.live_prescription["rehab_only"]
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_two_live_clearances_keep_the_effective_no_contact_ceiling(context, reverse):
+    live_injury(context, "ankle")
+    set_sessions(context, [live_camp("ankle")])
+    report(context, CONTACT)
+    chest = context[0].create_injury_flag(context[1], dict(body_area="Chest", description="Chest strain",
+        body_region="chest", severity="moderate", status="open"))
+    report(context, TRAIN, injury=chest)
+    if reverse:
+        context[0].injury_flags[context[1]].reverse()
+    current = view(context)
+    assert current.effective_clinician_clearance["level"] == "train_no_contact"
+    live = current.live_prescription
+    assert not live["safety_hold"] and not live["rehab_only"]
+    assert all(b.get("contact_level") != "full" for b in live["session"]["blocks"])
+    assert any(b.get("block_id") == "skill" for b in live["session"]["blocks"])
+    execute(context, live)
