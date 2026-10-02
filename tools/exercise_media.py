@@ -527,8 +527,8 @@ def _cmd_review(args: argparse.Namespace) -> int:
         f"done: {counts['reviewed']} reviewed, {counts['errors']} errors, "
         f"{counts['skipped']} already reviewed -> {out}"
     )
-    # Non-zero when any row failed or a quota stop left rows unreviewed, so a
-    # script never treats a partial run as complete.
+    # Non-zero when any row failed or a provider/quota stop left rows
+    # unreviewed, so a script never treats a partial run as complete.
     return 1 if counts["errors"] or counts.get("quota_stopped") or counts.get("search_stopped") else 0
 
 
@@ -565,7 +565,7 @@ def main(argv: list[str] | None = None) -> int:
         choices=("auto", "dataforseo", "youtube"),
         help=(
             "candidate discovery backend (default: $EXERCISE_MEDIA_SEARCH_PROVIDER or auto; "
-            "auto prefers DataForSEO and falls back to YouTube)"
+            "auto uses DataForSEO when configured, otherwise YouTube)"
         ),
     )
     review.add_argument(
