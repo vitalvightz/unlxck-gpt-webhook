@@ -1,0 +1,36 @@
+name: Rehab bundle focused validation
+on:
+  push:
+    branches: ["codex/rehab-bundle-validation"]
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 9819a87fa12167e09ae6966b0a90dbd1e616897c
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.15"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+      - name: Install test dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Focused rehab and Today regressions
+        run: pytest -q tests/test_rehab_prescription_bundles.py tests/test_injury_policy_journey.py tests/test_rehab_schedule.py tests/test_api_rehab_completion_flow.py tests/test_rehab_completion_capture.py tests/test_rehab_exposure_contract.py tests/test_today_service.py tests/test_injury_policy_migration.py
+      - name: Compare six other failures on the proposed change
+        continue-on-error: true
+        run: pytest -q tests/test_active_plan.py::test_today_command_view_and_active_resolver_use_same_plan tests/test_contracts_command_view.py::TestShape::test_view_serializes_to_documented_shape tests/test_coverage_aware_fillers.py::test_live_wrapper_counts_meaningful_coverage_from_other_scheduled_week tests/test_open_plan_recurring_resolution.py::test_open_plan_before_start_surfaces_monday_as_next_not_future_saturday_as_today tests/test_open_plan_recurring_resolution.py::test_today_and_plan_detail_use_the_same_projected_open_plan_sessions tests/test_week_progress_route_resilience.py::test_week_plan_lookup_failure_does_not_break_saved_completion
+      - uses: actions/checkout@v4
+        with:
+          ref: 271f0e9c0c921a7885d302a46e1ccc44e2f3a50c
+          path: baseline
+      - name: Compare the same six tests on the original commit
+        continue-on-error: true
+        working-directory: baseline
+        run: pytest -q tests/test_active_plan.py::test_today_command_view_and_active_resolver_use_same_plan tests/test_contracts_command_view.py::TestShape::test_view_serializes_to_documented_shape tests/test_coverage_aware_fillers.py::test_live_wrapper_counts_meaningful_coverage_from_other_scheduled_week tests/test_open_plan_recurring_resolution.py::test_open_plan_before_start_surfaces_monday_as_next_not_future_saturday_as_today tests/test_open_plan_recurring_resolution.py::test_today_and_plan_detail_use_the_same_projected_open_plan_sessions tests/test_week_progress_route_resilience.py::test_week_plan_lookup_failure_does_not_break_saved_completion
