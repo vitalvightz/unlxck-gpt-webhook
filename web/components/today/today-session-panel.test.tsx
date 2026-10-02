@@ -570,25 +570,59 @@ test("a new safety hold offers stopped logging without resuming frozen work", ()
   assert.doesNotMatch(html, />Start session<|>Done<|>Resume session</);
 });
 
-test("rehab completion stays blocked until performed work is selected", async () => {
-  const container = document.createElement("div"); document.body.appendChild(container);
-  const root = createRoot(container);
-  const state = reviewedSessionState(false);
-  state.today.completion_status = "started";
-  const original = globalThis.fetch;
-  globalThis.fetch = (async () => new Response('{"response_sets":[],"history_truncated":false}', { status: 200 })) as typeof fetch;
-  async function click(label: string) {
-    const button = Array.from(container.querySelectorAll("button")).find(b => b.textContent?.trim() === label);
-    assert.ok(button, label);
-    await act(async () => { button.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
-  }
-  try {
-    await act(async () => { root.render(<AuthProvider><ToastProvider><TodaySessionPanel state={state} structuredPlan={null} token="token" onRefresh={async () => {}} /></ToastProvider></AuthProvider>); });
-    await click("Done");
-    const save = container.querySelector<HTMLButtonElement>('button[type="submit"]');
-    assert.ok(save);
-    assert.equal(save.disabled, true);
-    await click("Changed it");
-    assert.equal(container.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled, false);
-  } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
-});
+for (const [value, label] of [
+  ["done_as_shown", "Done as shown"], ["changed", "Changed it"], ["stopped", "Stopped early"],
+] as const) {
+  test(`rehab completion selects and submits ${value}`, async () => {
+    const container = document.createElement("div"); document.body.appendChild(container);
+    const root = createRoot(container);
+    const state = reviewedSessionState(false);
+    state.today.completion_status = "started";
+    const original = globalThis.fetch;
+    const calls: Array<Record<string, unknown>> = [];
+    let refreshes = 0;
+    globalThis.fetch = (async (_input, init) => {
+      if (init?.method === "POST") {
+        calls.push(JSON.parse(String(init.body)));
+        return new Response(JSON.stringify({ completion: { id: "completion-1" }, rehab_response_prompts: [] }), { status: 200 });
+      }
+      return new Response('{"response_sets":[],"history_truncated":false}', { status: 200 });
+    }) as typeof fetch;
+    async function click(label: string) {
+      const button = Array.from(container.querySelectorAll("button")).find(b => b.textContent?.trim() === label);
+      assert.ok(button, label);
+      await act(async () => { button.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
+    }
+    try {
+      await act(async () => { root.render(<AuthProvider><ToastProvider><TodaySessionPanel state={state} structuredPlan={null} token="token" onRefresh={async () => { refreshes++; }} /></ToastProvider></AuthProvider>); });
+      await click("Done");
+      const form = container.querySelector("form");
+      const save = container.querySelector<HTMLButtonElement>('button[type="submit"]');
+      assert.ok(form);
+      assert.ok(save);
+      assert.equal(save.disabled, true);
+      assert.equal(save.className, "cta");
+      // Fill the existing required review field before choosing rehab performance.
+      const effort = container.querySelector<HTMLInputElement>('input[aria-label="Session effort"]');
+      assert.ok(effort);
+      await act(async () => { effort.dispatchEvent(new domWindow.MouseEvent("click", { bubbles: true })); });
+      await act(async () => { form.dispatchEvent(new domWindow.Event("submit", { bubbles: true, cancelable: true })); });
+      assert.equal(calls.length, 0);
+      await click(label);
+      assert.equal(save.disabled, false);
+      const group = container.querySelector('[aria-label="How much rehab did you do?"]');
+      assert.ok(group);
+      for (const button of group.querySelectorAll("button")) {
+        assert.ok(button.classList.contains("today-segment"));
+        assert.equal(button.classList.contains("today-segment-active"), button.textContent === label);
+        assert.equal(button.getAttribute("aria-pressed"), String(button.textContent === label));
+      }
+      await act(async () => { form.dispatchEvent(new domWindow.Event("submit", { bubbles: true, cancelable: true })); });
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].rehab_performance, value);
+      assert.equal(calls[0].status, "done");
+      assert.equal(calls[0].session_rpe, 5);
+      assert.equal(refreshes, 1);
+    } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
+  });
+}

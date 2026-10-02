@@ -31,7 +31,7 @@ export function InjuryCareStatus({ injury, token, onRefresh }: {
     held: "Rehab held", deferred: "Rehab deferred", unsupported: "Guidance unavailable" };
   return <div className="today-injury-guidance" role="note">
     {injury.rehab_decision ? <p>{injury.rehab_decision.summary}</p> : null}
-    {schedule ? <p><strong>{labels[schedule.state]}</strong> · {schedule.reason}
+    {schedule ? <p><strong>{labels[schedule.state]}</strong>{schedule.state === "unsupported" && schedule.reason === injury.rehab_decision?.summary ? null : <> · {schedule.reason}</>}
       {schedule.next_due_day && schedule.state !== "due" ? <> Next due: {schedule.next_due_day}.</> : null}</p> : null}
     {injury.rehab_decision?.prescription?.sources?.length ? <p className="muted">
       {injury.rehab_decision.prescription.sources.map((source, index) => <span key={source}>
@@ -44,9 +44,9 @@ export function InjuryCareStatus({ injury, token, onRefresh }: {
       {choosing ? <div role="group" aria-label="What were you cleared for?">
         <p>What were you cleared for? Optional information; it does not unlock rehab or change its schedule.</p>
         <div className="today-segment-row">
-          <button type="button" disabled={busy} onClick={() => report(["rehab"])}>Rehab</button>
-          <button type="button" disabled={busy} onClick={() => report(["rehab", "training"])}>Training without contact</button>
-          <button type="button" disabled={busy} onClick={() => report(["rehab", "training", "contact"])}>Training and contact</button>
+          <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab"])}>Rehab</button>
+          <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab", "training"])}>Training without contact</button>
+          <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab", "training", "contact"])}>Training and contact</button>
         </div>
       </div> : null}
     </> : null}
@@ -76,7 +76,7 @@ export function DelayedRehabResponse({ prompt, token, onRefresh }: {
   return <div className="today-injury-guidance" role="group" aria-label={`Next-day response for ${prompt.region}`}>
     <p>{prompt.question} <strong>{prompt.region}</strong></p>
     <div className="today-segment-row">
-      {prompt.options.map(option => <button key={option} type="button" disabled={busy} onClick={() => answer(option)}>
+      {prompt.options.map(option => <button key={option} type="button" className="today-segment" disabled={busy} onClick={() => answer(option)}>
         {({ better: "Better", same: "Same", worse: "Worse", not_sure: "Not sure" })[option]}
       </button>)}
     </div>

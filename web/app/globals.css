@@ -919,15 +919,23 @@ select:focus-visible {
   box-shadow: 0 8px 20px rgba(181, 18, 43, 0.26);
 }
 
-.cta:hover {
+.cta:hover:not(:disabled) {
   background: linear-gradient(180deg, #d31d38, var(--brand-red-hover));
   transform: translateY(-1px);
   box-shadow: 0 10px 24px rgba(181, 18, 43, 0.32);
 }
 
-.cta:active {
+.cta:active:not(:disabled) {
   transform: translateY(1px);
   box-shadow: 0 4px 10px rgba(181, 18, 43, 0.22);
+}
+
+.cta:disabled,
+html[data-theme="light"] .cta:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 .ghost-button,
@@ -10286,8 +10294,8 @@ html[data-theme="light"] .today-segment-multi.today-segment-active::before {
     transition: none;
   }
 
-  .cta:hover,
-  .cta:active,
+  .cta:hover:not(:disabled),
+  .cta:active:not(:disabled),
   .checkbox-card:hover,
   .step-pill-button:hover,
   .weekly-sparring-tile:hover,
@@ -15682,12 +15690,12 @@ html[data-theme="light"] .cta:visited {
   box-shadow: 0 6px 16px rgba(189, 16, 32, 0.22);
 }
 
-html[data-theme="light"] .cta:hover {
+html[data-theme="light"] .cta:hover:not(:disabled) {
   background: var(--brand-red-hover);
   box-shadow: 0 8px 20px rgba(189, 16, 32, 0.28);
 }
 
-html[data-theme="light"] .cta:active {
+html[data-theme="light"] .cta:active:not(:disabled) {
   background: #a50f1e;
   box-shadow: 0 3px 8px rgba(189, 16, 32, 0.2);
 }
