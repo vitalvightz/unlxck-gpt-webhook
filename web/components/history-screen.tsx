@@ -140,7 +140,7 @@ function SessionRows({ rows, today }: { rows: TodaySessionCompletionRecord[]; to
         eyebrow="Session history"
         title="No sessions logged yet."
         description="Every session you mark done, modified, or skipped on Today is recorded here with its RPE and reason."
-        example="Thu 02 Jul 2026 — Done · RPE 7/10"
+        example="Thu 02 Jul 2026: Done · RPE 7/10"
         primaryAction={{ label: "Open Today", href: "/today" }}
       />
     );
@@ -197,8 +197,8 @@ function SparringRows({ history }: { history: SparringLogHistoryResponse }) {
       <EmptyState
         eyebrow="Sparring history"
         title="No sparring logged yet."
-        description="When a sparring round timer on Today finishes, log how it went in a few taps. Every entry — rounds, intensity, head contact — is kept here with your weekly totals."
-        example="Thu 02 Jul 2026 — 5 × 3 min · Hard · Light head contact"
+        description="When a sparring round timer on Today finishes, log how it went in a few taps. Every entry (rounds, intensity, head contact) is kept here with your weekly totals."
+        example="Thu 02 Jul 2026: 5 × 3 min · Hard · Light head contact"
         primaryAction={{ label: "Open Today", href: "/today" }}
       />
     );
@@ -303,7 +303,7 @@ function CheckinRows({ rows, today }: { rows: TodayCheckinHistoryRecord[]; today
         eyebrow="Check-in history"
         title="No check-ins yet."
         description="Your daily readiness check-ins and the training recommendation each one produced appear here."
-        example="Thu 02 Jul 2026 — Train as planned · Sleep good · Body normal · Pain none"
+        example="Thu 02 Jul 2026: Train as planned · Sleep good · Body normal · Pain none"
         primaryAction={{ label: "Check in on Today", href: "/today" }}
       />
     );
@@ -393,8 +393,8 @@ function InjuryRows({ rows }: { rows: InjuryFlagRecord[] }) {
       <EmptyState
         eyebrow="Injury history"
         title="No injuries reported."
-        description="Injuries you report during check-ins stay here — including resolved ones — so your full injury record is auditable."
-        example="Left knee — Moderate · Open since Mon 15 Jun 2026"
+        description="Injuries you report during check-ins stay here, including resolved ones, so you have your full injury record."
+        example="Left knee: Moderate · Open since Mon 15 Jun 2026"
         primaryAction={{ label: "Report on Today", href: "/today" }}
       />
     );
@@ -530,7 +530,7 @@ export function HistoryScreen() {
         <p className="kicker">Training record</p>
         <h1 className="form-section-title">History</h1>
         <p className="muted">
-          Every logged session, sparring round, daily check-in, and injury report — including
+          Every logged session, sparring round, daily check-in, and injury report, including
           resolved injuries.
         </p>
       </header>

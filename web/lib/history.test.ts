@@ -132,11 +132,11 @@ test("sparring rounds read as rounds × length", () => {
 
 test("sparring plan difference flags only a real mismatch", () => {
   assert.deepEqual(sparringPlanDifference("light", "hard"), {
-    label: "Planned light — went hard",
+    label: "Planned light, went hard",
     harder: true,
   });
   assert.deepEqual(sparringPlanDifference("hard", "light"), {
-    label: "Planned hard — went light",
+    label: "Planned hard, went light",
     harder: false,
   });
   assert.equal(sparringPlanDifference("technical", "light"), null);

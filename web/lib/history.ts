@@ -215,7 +215,7 @@ const PLANNED_LEVEL: Partial<Record<SparringPlannedIntensity, number>> = {
 const ACTUAL_LEVEL: Record<SparringIntensity, number> = { light: 0, medium: 1, hard: 2 };
 
 /**
- * "Planned light — went hard" when the reported intensity differs from what
+ * "Planned light, went hard" when the reported intensity differs from what
  * the plan called for, else null. A plain "contact" plan has no set intensity,
  * so it never differs. ``harder`` marks the overreach a coach wants to see.
  */
@@ -228,7 +228,7 @@ export function sparringPlanDifference(
     return null;
   }
   return {
-    label: `Planned ${planned} — went ${actual}`,
+    label: `Planned ${planned}, went ${actual}`,
     harder: ACTUAL_LEVEL[actual] > plannedLevel,
   };
 }
