@@ -91,12 +91,7 @@ Ankle sprain policy version 4 now activates one RESTORE combination:
 - LOAD, DYNAMIC and RETURN remain disabled. There is no reviewed live coverage
   supporting three- or four-drill later-stage blocks.
 
-- Hamstring strain policy version 1 has no bundle: CALM is one bent-knee
-  movement routine and RESTORE is one standing wall isometric. The candidate
-  companion bridge is `bilateral_only`, and its completion cannot be attributed
-  to a one-sided episode. See [rehab-policy-hamstring-strain.md](rehab-policy-hamstring-strain.md).
-
-The scheduler is unchanged; the bank changes only the two reviewed hamstring drills' metadata. The pilot seed script reproduces this
+The bank and scheduler are unchanged. The pilot seed script reproduces this
 policy content and hash. No additional database migration is required beyond
 the bundle-allocation support already shipped with the engine. Clinician
 clearance remains an execution ceiling and cannot advance a rehab stage.
