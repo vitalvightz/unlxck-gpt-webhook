@@ -1413,8 +1413,18 @@ def upsert_session_completion(
                     "Clear it before training this session."
                 ),
             )
-        if command and command.today.decision_tier == "stop":
+
+    if not is_retro_log and status_value in _TRAINING_COMPLETION_STATUSES and not stopped_started_session and command:
+        # A support exemption only covers injury-driven load restrictions. It
+        # cannot override a current red-flag STOP. Apply current readiness even
+        # when an unsupported injury has no live prescription to carry a hold.
+        if command.today.decision_tier == "stop":
             raise HTTPException(409, "Training is stopped by today's current safety guidance.")
+        if command.today.decision_tier == "not_checked_in" and command.effective_clinician_clearance:
+            raise HTTPException(409, "Complete today's check-in before starting.")
+        if command.today.decision_tier == "pull_back" and not (
+                standalone and live["session"].get("session_type") == "rehab" and not live.get("safety_hold")):
+            raise HTTPException(409, "This session is on hold for today's reduced-training guidance.")
 
     existing_plan_id = str(existing.get("plan_id") or "")
     if existing_plan_id and existing_plan_id != plan_id:
@@ -3158,9 +3168,13 @@ def _build_today_command_view(
         open_injuries=open_injuries,
     )
     if live:
-        if not live["safety_hold"] and view.today.decision_tier in {"stop", "not_checked_in"}:
+        readiness_holds_session = view.today.decision_tier in {"stop", "not_checked_in"} or (
+            view.today.decision_tier == "pull_back" and live["session"].get("session_type") != "rehab")
+        if not live["safety_hold"] and readiness_holds_session:
             live["safety_hold"] = True
-            live["safety_hold_reason"] = "Complete today's check-in before starting." if view.today.decision_tier == "not_checked_in" else "Follow today's stop guidance before training."
+            live["safety_hold_reason"] = ("Complete today's check-in before starting." if view.today.decision_tier == "not_checked_in"
+                else "Follow today's reduced-training guidance before training." if view.today.decision_tier == "pull_back"
+                else "Follow today's stop guidance before training.")
         if not frozen:
             from fightcamp.rehab_clinical import content_hash
             live["readiness_context"] = {"id": today_checkin["id"], "updated_at": today_checkin.get("updated_at")} if today_checkin else None

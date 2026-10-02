@@ -382,6 +382,28 @@ function renderPanel(state: TodayCommandView): string {
   );
 }
 
+for (const tier of ["green", "modify", "pull_back", "stop", "not_checked_in"] as const) {
+  test(`frozen contact renders the backend ${tier} gate despite full clinician clearance`, () => {
+    const state = contactDayState(tier);
+    state.today.completion_status = "started";
+    state.today.next_session = { ...state.today.next_session, title: "Hard sparring", coach_led_contact: "Hard sparring" };
+    state.effective_clinician_clearance = { level: "train_contact", scopes: ["rehab", "training", "contact"],
+      requires_update: false, limited_by: [] };
+    state.live_prescription = { revision: "a".repeat(64), frozen: true,
+      safety_hold: tier === "pull_back" || tier === "stop" || tier === "not_checked_in", changes: [],
+      session: { session_id: state.today.next_session.session_id!, title: "Hard sparring", session_type: "sparring",
+        blocks: [{ block_id: "contact", block_type: "sparring", display_name: "Accepted sparring" }] } };
+    const html = renderPanel(state);
+    if (tier === "green" || tier === "modify") {
+      assert.match(html, />Resume session<|Sparring rounds<\/button>/);
+      assert.match(html, /data-value="done"/);
+    } else {
+      assert.doesNotMatch(html, />Resume session<|>Start session<|>Start hard sparring<|data-value="done"|Sparring rounds<\/button>/);
+    }
+    assert.doesNotMatch(html, /locked by clinician clearance/);
+  });
+}
+
 test("a declared sparring day leads with the sparring, with the app work alongside", () => {
   const html = renderPanel(contactDayState("green"));
   // The athlete's gym day owns the headline; the app session is named under it.

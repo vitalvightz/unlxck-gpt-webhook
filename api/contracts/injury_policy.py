@@ -276,6 +276,9 @@ def reconcile_session_prescription(
     if block_contact_ceiling:
         allowed_contact = 0
     hold = bool(clearance_hold and not block_contact_ceiling) or any(d.get("outcome") == "medical_review" for d in decisions)
+    # A current pull-back holds camp independently of tissue demand. Eligible
+    # non-loading rehab can then use the existing standalone replacement path.
+    hold = hold or (entry.get("session_type") != "rehab" and any(d.get("loading_hold") for d in decisions))
     contact_owned = _session_has_contact({**entry, "blocks": []})
     # The planner also uses a sparring type to budget app-owned support work.
     # An explicit contact headline/coach portion remains contact even when its
