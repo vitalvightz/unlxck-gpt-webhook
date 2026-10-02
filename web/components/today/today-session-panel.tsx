@@ -509,7 +509,10 @@ export function TodaySessionPanel({
       : null);
   // Hard contact follows the same readiness authority as a session: only a
   // go / follow-the-limits day, never under pull back, stop or a severe injury.
+  const clearanceAllowsContact = !state.effective_clinician_clearance ||
+    (state.effective_clinician_clearance.level === "train_contact" && !state.effective_clinician_clearance.requires_update);
   const contactCleared =
+    clearanceAllowsContact &&
     (resolvedDecision.authoritativeTier === "green" ||
       resolvedDecision.authoritativeTier === "modify") &&
     !severeInjuryBlocksCurrentSession &&
@@ -523,6 +526,7 @@ export function TodaySessionPanel({
   // decision blocks (pull back, stop): it is not happening, so it cannot be
   // the day's headline.
   const contactLeads =
+    clearanceAllowsContact &&
     Boolean(contactTarget) &&
     resolvedDecision.sessionIsToday &&
     !safeSession &&

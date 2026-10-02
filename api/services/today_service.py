@@ -33,6 +33,7 @@ from fightcamp.weekly_schedule_view import normalize_weekday
 from fightcamp.rehab_clinical import load_clinical_policies
 from fightcamp.rehab_protocols import get_rehab_bank
 from api.contracts.injury_policy import resolve_injury_policy, reconcile_session_prescription, rehab_allocation_count
+from api.contracts.clinician_clearance import effective_clinician_clearance
 from api.services.injury_episode_service import apply_episode_observations, episode_observations, delayed_rehab_prompts, exposure_rows_with_observations
 
 from api.contracts.command_view import CommandView, RiskWatchItem, build_command_view, make_risk
@@ -673,6 +674,11 @@ def _with_injury_policy(injuries, *, store, athlete_id, phase="", current_checki
         rows.append(row)
     if training_day:
         limit = 1 if "sparring" in str((training_session or {}).get("session_type") or "").lower() else 2
+        # A completed standalone rehab occurrence must not relax the ceiling
+        # already accepted for a sparring day when the plan card falls forward.
+        limit = min([limit] + [c["prescription_snapshot"]["allocation_limit"] for c in completions
+                    if c.get("training_day") == training_day and c.get("status") in {"started", "done", "modified"}
+                    and (c.get("prescription_snapshot") or {}).get("allocation_limit") in (1, 2)])
         used = sum(rehab_allocation_count(
             (c.get("prescription_snapshot") or {}).get("session", {}).get("blocks", []), include_held=True)
             for c in completions
@@ -2735,6 +2741,20 @@ class _UpcomingCompletions:
                 return dict(row) if row is not None else None
         return self._store.get_session_completion(self._athlete_id, session_id, training_day)
 
+    def rehab_completion(self, plan_id: str, training_day: str) -> dict[str, Any] | None:
+        rows = self._upcoming_rows()
+        if rows is None or (self._covered_before is not None and training_day >= self._covered_before):
+            candidates = self._store.list_rehab_schedule_completions(self._athlete_id, from_day=training_day)
+        else:
+            candidates = rows.values()
+        accepted = [row for row in candidates if row.get("training_day") == training_day
+                    and row.get("plan_id") == plan_id and row.get("status") in {"started", *TERMINAL_COMPLETION_STATUSES}
+                    and (row.get("prescription_snapshot") or {}).get("session", {}).get("session_type") == "rehab"]
+        # Resume accepted work first; terminal records still describe the logged
+        # day, but cannot claim a newly offered allocation with a different id.
+        return dict(max(accepted, key=lambda row: (row.get("status") == "started",
+            str(row.get("updated_at") or row.get("created_at") or ""), str(row.get("session_id"))))) if accepted else None
+
 
 def build_today_command_view(
     store: AppStore,
@@ -2856,15 +2876,16 @@ def _build_today_command_view(
     )
     has_today_session = has_scheduled_day_content(today_session_entry)
     today_session_id = _session_id_for_entry(today_session_entry) if has_today_session else None
+    rehab_occurrence = completions.rehab_completion(plan_id, training_day)
     today_completion = (
         completions.get(today_session_id, training_day)
         if today_session_id
-        else completions.get(f"rehab-{training_day}", training_day)
+        else rehab_occurrence or completions.get(f"rehab-{training_day}", training_day)
     )
     if today_completion and today_completion.get("plan_id") != plan_id:
         today_completion = None
     if not (today_completion or {}).get("prescription_snapshot"):
-        rehab_completion = completions.get(f"rehab-{training_day}", training_day)
+        rehab_completion = rehab_occurrence or completions.get(f"rehab-{training_day}", training_day)
         if ((rehab_completion or {}).get("prescription_snapshot") or {}).get("plan_id") == plan_id:
             today_completion = rehab_completion
             today_session_entry = today_completion["prescription_snapshot"]["session"]
@@ -2906,7 +2927,8 @@ def _build_today_command_view(
     # fall-forward to tomorrow still reports today's session as done. With work
     # still outstanding today it reports that session, so a day whose first of
     # two sessions is logged does not read as finished.
-    today_completion_entry = today_logged_entry or today_session_entry
+    accepted_rehab = ((today_completion or {}).get("prescription_snapshot") or {}).get("session", {}).get("session_type") == "rehab"
+    today_completion_entry = today_session_entry if accepted_rehab else today_logged_entry or today_session_entry
     today_completion_id = (
         _session_id_for_entry(today_completion_entry)
         if has_scheduled_day_content(today_completion_entry)
@@ -3037,10 +3059,10 @@ def _build_today_command_view(
                                        readiness_decision=(recommendation or {}).get("decision") or "not_checked_in", training_day=training_day,
                                        training_session=training_session)
     decisions = [injury["rehab_decision"] for injury in open_injuries]
-    frozen = (today_completion or {}).get("prescription_snapshot")
+    frozen = None if today_is_complete else (today_completion or {}).get("prescription_snapshot")
     live = reconcile_session_prescription(
         training_session if not today_is_complete else None,
-        decisions=decisions, plan_id=plan_id, training_day=training_day, frozen=frozen if not today_is_complete else None,
+        decisions=decisions, plan_id=plan_id, training_day=training_day, frozen=frozen,
         injuries=open_injuries,
     )
     if live and not frozen and (today_completion or {}).get("status") == "started":
@@ -3060,6 +3082,9 @@ def _build_today_command_view(
             from fightcamp.rehab_clinical import content_hash
             from fightcamp.rehab_protocols import rehab_drill_by_id
             from copy import deepcopy
+            previous_limits = [(row.get("prescription_snapshot") or {}).get("allocation_limit")
+                               for row in (today_completion, rehab_occurrence) if row]
+            live["allocation_limit"] = min([live["allocation_limit"]] + [limit for limit in previous_limits if limit in (1, 2)])
             live["injury_context"] = [{"id": row["id"], "episode_id": row.get("episode_id"), "updated_at": row.get("updated_at")} for row in open_injuries]
             live["evidence_context"] = store.get_rehab_schedule_revision(athlete_id)
             for block in live["session"].get("blocks", []):
@@ -3113,6 +3138,7 @@ def _build_today_command_view(
             live["readiness_context"] = {"id": today_checkin["id"], "updated_at": today_checkin.get("updated_at")} if today_checkin else None
             live["revision"] = content_hash({k: v for k, v in live.items() if k != "revision"})
     view.live_prescription = live
+    view.effective_clinician_clearance = effective_clinician_clearance(open_injuries)
     view.delayed_rehab_prompts = delayed_rehab_prompts(store, athlete_id, training_day, athlete_timezone)
     return view
 

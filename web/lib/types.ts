@@ -1047,6 +1047,12 @@ export type TodaySession = {
 };
 
 export type TodayCommandView = {
+  effective_clinician_clearance?: {
+    level: "rehab_only" | "train_no_contact" | "train_contact";
+    scopes: string[];
+    requires_update: boolean;
+    limited_by: Array<{ injury_id: string; injury_episode_id: string; label: string }>;
+  } | null;
   live_prescription?: {
     revision: string;
     session: StructuredSession;

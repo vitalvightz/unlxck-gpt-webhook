@@ -8,6 +8,7 @@ from uuid import UUID, NAMESPACE_URL, uuid4, uuid5
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from api.contracts.training_day import resolve_training_day_str
+from api.contracts.clinician_clearance import canonical_clearance_scopes
 
 
 def exposure_training_day(event: dict, athlete_timezone: str | None = None) -> str:
@@ -37,7 +38,7 @@ def record_episode_observation(store, *, athlete_id: str, observation: InjuryEpi
     if observation.event_type != "delayed_rehab_response" and str(injury.get("episode_id")) != str(observation.injury_episode_id):
         raise HTTPException(409, "This injury episode changed. Refresh Today.")
     if observation.event_type == "clinician_clearance_report":
-        if not observation.scopes or observation.exposure_id or observation.response:
+        if canonical_clearance_scopes(observation.scopes) is None or observation.exposure_id or observation.response:
             raise HTTPException(422, "Select what your clinician cleared you for.")
         payload = {"scopes": sorted(set(observation.scopes)), "source": "athlete_reported", "externally_verified": False}
         key = f"clearance:{athlete_id}:{observation.injury_id}:{observation.injury_episode_id}:{observation.report_id}"
@@ -91,7 +92,10 @@ def apply_episode_observations(injury: dict, observations: list[dict]) -> dict:
                   and (last_setback is None or timestamp(e["created_at"]) > last_setback)]
     if clearances:
         latest = max(clearances, key=lambda e: (timestamp(e["created_at"]), str(e.get("id") or "")))
-        scopes = sorted(set(latest["payload"]["scopes"]))
+        scopes = latest.get("payload", {}).get("scopes")
+        # Preserve malformed list reports for subordinate display, but never
+        # normalize a noncanonical report into a more permissive valid one.
+        scopes = list(scopes) if isinstance(scopes, list) and all(isinstance(s, str) for s in scopes) else []
         row["clinician_clearance"] = {"episode_id": row["episode_id"], "scopes": scopes,
                                       "source": "athlete_reported", "externally_verified": False,
                                       "scope_reported_at": {scope: latest["created_at"] for scope in scopes}}

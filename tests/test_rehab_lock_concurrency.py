@@ -456,3 +456,57 @@ def test_prescription_function_composes_with_recorded_clearance_history(postgres
             connection.execute(history_marker)
             assert definition() == expected  # No later migration undoes bundle counting.
         connection.rollback()
+
+
+def test_independent_standalone_owners_use_existing_postgres_allocation_guard(postgres_database):
+    import psycopg
+    from psycopg.types.json import Jsonb
+    from api.contracts.injury_policy import reconcile_session_prescription, resolve_injury_policy
+    from fightcamp.rehab_clinical import load_clinical_policies
+    from fightcamp.rehab_protocols import get_rehab_bank
+
+    athlete, plan = str(uuid4()), str(uuid4())
+    with psycopg.connect(postgres_database) as connection:
+        connection.execute("insert into profiles values (%s)", (athlete,))
+        connection.execute("insert into plans values (%s)", (plan,))
+        for region in ("ankle", "chest", "chest"):
+            connection.execute("""insert into injury_flags(athlete_id,body_area,description,body_region,side)
+                values(%s,%s,%s,%s,'unknown')""", (athlete, region, region + (" sprain" if region == "ankle" else " strain"), region))
+        injuries = connection.execute("select id,episode_id,updated_at,body_region,description from injury_flags where athlete_id=%s order by body_region,id", (athlete,)).fetchall()
+        readiness = connection.execute("""insert into today_checkins(athlete_id,plan_id,training_day,sleep,body,pain,phase,recommendation_state)
+            values(%s,%s,'2026-10-02','good','normal','none','GPP','train_as_planned') returning id,updated_at""", (athlete, plan)).fetchone()
+
+        def prescription(row):
+            decision = resolve_injury_policy(dict(id=str(row[0]), episode_id=str(row[1]), status="monitoring",
+                body_region=row[3], body_area=row[3], description=row[4], severity="mild", rehab_stage="restore"),
+                policies=load_clinical_policies(), bank=get_rehab_bank())
+            saved = reconcile_session_prescription(None, decisions=[decision], plan_id=plan, training_day="2026-10-02")
+            assert saved and not saved["safety_hold"]
+            saved.update(readiness_context=dict(id=str(readiness[0]), updated_at=readiness[1].isoformat()),
+                injury_context=[dict(id=str(i[0]), episode_id=str(i[1]), updated_at=i[2].isoformat()) for i in injuries],
+                evidence_context=dict(event_id=None, exposure_id=None))
+            return saved
+
+        def accept(saved):
+            connection.execute("""insert into session_completions(athlete_id,plan_id,session_id,training_day,status,prescription_snapshot)
+                values(%s,%s,%s,'2026-10-02','done',%s)""", (athlete, plan, saved["session"]["session_id"], Jsonb(saved)))
+
+        ankle, chest, remaining = [prescription(row) for row in injuries]
+        # A legacy terminal ankle bundle owns just one allocation; the chest
+        # occurrence has independent ownership using the current identity model.
+        ankle["session"]["session_id"] = "rehab-2026-10-02"
+        accept(ankle)
+        accept(chest)
+        connection.execute("""update session_completions set status='done'
+            where athlete_id=%s and session_id=%s""", (athlete, chest["session"]["session_id"]))
+        assert connection.execute("select prescription_snapshot from session_completions where athlete_id=%s and session_id=%s",
+            (athlete, ankle["session"]["session_id"])).fetchone()[0] == ankle
+        with pytest.raises(psycopg.Error) as failure, connection.transaction():
+            accept(remaining)
+        assert failure.value.sqlstate == "23514" and "rehab_daily_allocation_conflict" in str(failure.value)
+        # Free a slot: a different session id still cannot reuse ankle ownership.
+        connection.execute("delete from session_completions where athlete_id=%s and session_id=%s", (athlete, chest["session"]["session_id"]))
+        duplicate = prescription(injuries[0])
+        with pytest.raises(psycopg.Error) as failure, connection.transaction():
+            accept(duplicate)
+        assert failure.value.sqlstate == "23514" and "rehab_daily_allocation_conflict" in str(failure.value)

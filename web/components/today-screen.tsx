@@ -315,6 +315,7 @@ export function TodayScreen() {
       {token ? (
         <TodayInjuryManager
           openInjuries={state.open_injuries ?? []}
+          effectiveClearance={state.effective_clinician_clearance}
           token={token}
           onRefresh={refresh}
         />

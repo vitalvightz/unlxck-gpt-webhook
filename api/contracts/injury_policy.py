@@ -12,6 +12,7 @@ from fightcamp.rehab_selector import select_rehab_candidate, filter_rehab_candid
 
 from .rehab_stage import resolve_rehab_stage
 from .rehab_progression import resolve_reviewed_progression, episode_setback_at, _instant
+from .clinician_clearance import effective_clinician_clearance
 
 
 def resolve_injury_policy(
@@ -171,10 +172,8 @@ def rehab_allocation_count(blocks: Sequence[Mapping[str, Any]], *, include_held:
 
 
 def _current_clearance_scopes(injuries: Sequence[Mapping[str, Any]]) -> list[list[str]]:
-    return [clearance.get("scopes") or [] for injury in injuries
-            if injury.get("status") in {"open", "monitoring"}
-            and (clearance := injury.get("clinician_clearance"))
-            and str(clearance.get("episode_id")) == str(injury.get("episode_id"))]
+    effective = effective_clinician_clearance(injuries)
+    return [effective["scopes"]] if effective else []
 
 
 def _clinician_clearance_hold(
@@ -382,6 +381,12 @@ def reconcile_session_prescription(
             entry.pop("coach_led_contact", None)
             entry["contact_level"] = "none"
             hold, rehab_only = False, True
+    if session is None or rehab_only:
+        # Only the allocations actually offered own this completion occurrence.
+        # Exclude drill/stage/content changes: accepted snapshots remain frozen.
+        owners = sorted({(str(b["injury_id"]), str(b["injury_episode_id"]))
+                         for b in entry["blocks"] if b.get("injury_id") and b.get("injury_episode_id")})
+        entry["session_id"] = f"rehab-{training_day}-{content_hash({'plan_id': plan_id, 'owners': owners})[:24]}"
     snapshot = {"plan_id": plan_id, "training_day": training_day, "session": entry, "changes": changes,
                 "safety_hold": hold, "frozen": False, "engine_version": "2",
                 "rehab_only": rehab_only,

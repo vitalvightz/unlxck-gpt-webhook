@@ -8,7 +8,7 @@ import {
   type BodyMapSeverity,
   type BodyMapSide,
 } from "@/components/body-map";
-import { InjuryCareStatus } from "@/components/today/injury-care-status";
+import { EffectiveClinicianClearanceStatus, InjuryCareStatus } from "@/components/today/injury-care-status";
 import { SegmentGroup } from "@/components/today/segment-group";
 import { useToast } from "@/components/toast-provider";
 import { submitTodayInjuryCheckin } from "@/lib/api";
@@ -33,6 +33,7 @@ import type {
   SurfaceInjuryClass,
   TodayInjuryCheckinStatus,
   TodayInjuryDeclaration,
+  TodayCommandView,
 } from "@/lib/types";
 
 // "Same" is deliberately NOT an option. An injury left untouched stays exactly
@@ -284,10 +285,12 @@ function getSurfaceGuidance(injury: InjuryFlagRecord): SurfaceGuidance | null {
  */
 export function TodayInjuryManager({
   openInjuries,
+  effectiveClearance,
   token,
   onRefresh,
 }: {
   openInjuries: InjuryFlagRecord[];
+  effectiveClearance?: TodayCommandView["effective_clinician_clearance"];
   token: string;
   onRefresh: () => Promise<void>;
 }) {
@@ -586,6 +589,7 @@ export function TodayInjuryManager({
           <h2 id="today-injury-heading">Track today&apos;s injuries</h2>
         </div>
       </div>
+      <EffectiveClinicianClearanceStatus clearance={effectiveClearance} />
       {openInjuries.length ? (
         <ul className="today-injury-list">
           {openInjuries.map((injury) => {

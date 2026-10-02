@@ -666,3 +666,14 @@ test("contact actions respect live holds and reviewed rehab replacements", () =>
     if (rehabOnly) assert.match(html, />Start session</);
   }
 });
+
+for (const level of ["rehab_only", "train_no_contact"] as const) {
+  test(`${level} effective clearance locks contact even when the original plan permits it`, () => {
+    const state = contactDayState("green");
+    state.effective_clinician_clearance = { level, scopes: level === "rehab_only" ? ["rehab"] : ["rehab", "training"],
+      requires_update: false, limited_by: [{ injury_id: "chest", injury_episode_id: "chest-episode", label: "Chest strain" }] };
+    const html = renderPanel(state);
+    assert.doesNotMatch(html, />Start hard sparring<|<h2 id="today-session-heading">Hard sparring<|Sparring rounds<\/button>/);
+    assert.match(html, /Sparring rounds locked today/);
+  });
+}
