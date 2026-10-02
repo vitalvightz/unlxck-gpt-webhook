@@ -69,6 +69,7 @@ AI_COLUMNS = (
     "needs_manual_video",
     "ai_review_progress",
     "ai_reviewed_video_ids",
+    "ai_redo_weak_pass",
 )
 
 VERDICT_RANK = {"match": 2, "partial": 1, "no_match": 0}
@@ -775,6 +776,37 @@ def _merge_previous_run(rows: list[dict[str, str]], previous: list[dict[str, str
     return merged
 
 
+def _redo_weak_pass_number(row: dict[str, str]) -> int:
+    try:
+        value = int((row.get("ai_redo_weak_pass") or "0").strip() or "0")
+    except ValueError:
+        return 0
+    return max(0, value)
+
+
+def _select_redo_weak_pass(rows: list[dict[str, str]]) -> tuple[int, bool]:
+    """Return (pass_number, resumed).
+
+    A completed weak-row attempt is stamped in the CSV. If an invocation is
+    interrupted, rows still missing that stamp resume the same pass. Once every
+    currently-weak row has the latest stamp, a later --redo-weak invocation
+    intentionally starts a fresh pass.
+    """
+    latest = max((_redo_weak_pass_number(row) for row in rows), default=0)
+    weak_rows = [
+        row for row in rows
+        if (row.get("ai_verdict") or "").strip() and not _row_is_strong(row)
+    ]
+    if not weak_rows:
+        return max(1, latest), False
+    if latest and any(
+        _redo_weak_pass_number(row) != latest or (row.get("ai_review_progress") or "").strip()
+        for row in weak_rows
+    ):
+        return latest, True
+    return latest + 1 if latest else 1, False
+
+
 def run_review(
     in_path: str,
     out_path: str,
@@ -792,8 +824,11 @@ def run_review(
     """Save each completed video and row, so interruptions retain the budget.
 
     Rows that already have an ai_verdict (other than 'error') are skipped
-    unless redo=True or redo_weak selects them. Unfinished rows resume their
-    saved candidates; Gemini quota failures never consume a candidate attempt.
+    unless redo=True or redo_weak selects them. --redo-weak stamps each
+    completed weak-row attempt so an interrupted cleanup pass resumes forward
+    instead of starting again at the first partial/error row. Unfinished rows
+    resume their saved candidates; Gemini quota failures never consume a
+    candidate attempt.
     """
     if not 1 <= max_candidates <= MAX_CANDIDATES:
         raise ReviewInputError(f"max_candidates must be between 1 and {MAX_CANDIDATES}")
@@ -817,14 +852,28 @@ def run_review(
         if merged:
             log(f"resuming: {merged} rows already reviewed in {out}")
     counts = {"reviewed": 0, "skipped": 0, "errors": 0}
+    redo_weak_pass = 0
+    if redo_weak and not redo:
+        redo_weak_pass, resumed_pass = _select_redo_weak_pass(rows)
+        action = "resuming" if resumed_pass else "starting"
+        log(f"redo-weak pass {redo_weak_pass}: {action}")
     calls = 0
     for index, row in enumerate(rows):
         if not candidate_urls(row, max_candidates) and (search is None or not (row.get("example_name") or row.get("exercise_key") or "").strip()):
             continue
         done = (row.get("ai_verdict") or "").strip()
-        if done and done != "error" and not row.get("ai_review_progress") and not redo and not (redo_weak and not _row_is_strong(row)):
-            counts["skipped"] += 1
-            continue
+        in_progress = bool((row.get("ai_review_progress") or "").strip())
+        if done and not redo:
+            if redo_weak:
+                if _row_is_strong(row) or (
+                    not in_progress
+                    and _redo_weak_pass_number(row) == redo_weak_pass
+                ):
+                    counts["skipped"] += 1
+                    continue
+            elif done != "error" and not in_progress:
+                counts["skipped"] += 1
+                continue
         if limit is not None and counts["reviewed"] + counts["errors"] >= limit:
             break
         if calls:
@@ -860,6 +909,8 @@ def run_review(
             return counts
         calls += 1
         rows[index] = apply_outcome(row, outcome, model=reviewer.model)
+        if redo_weak and not redo and done:
+            rows[index]["ai_redo_weak_pass"] = str(redo_weak_pass)
         verdict = rows[index]["ai_verdict"]
         counts["errors" if verdict == "error" else "reviewed"] += 1
         segment = (
