@@ -435,12 +435,19 @@ def is_support_session(session: Mapping[str, Any] | None) -> bool:
     Prefers the authoritative structured signals the plan attaches to a support
     insert (``category``/``stress_class``/``governance.meaningful_stress``/
     ``support_insert_category``) and falls back to the distinctive athlete-facing
-    labels that always survive to the Today card. Safety-first: obvious high-risk
-    wording (sparring, heavy squat, ...) always vetoes the classification, even a
-    structured "support" flag — the injury hold must win when the copy says hard work.
+    labels that always survive to the Today card. Structured cognitive block types
+    may discuss combat without performing it. Actual load/contact metadata and
+    high-risk physical work still veto a generic structured "support" flag.
     """
     if not isinstance(session, Mapping) or not session:
         return False
+
+    blocks = session.get("blocks") or []
+    if (blocks and all(isinstance(block, Mapping) and _is_non_physical_mapping(block) for block in blocks)
+            and not session.get("coach_led_contact")
+            and not _session_has_contact({**session, "blocks": []})
+            and not session.get("mechanical_load_regions")):
+        return True
 
     # Safety-first: build the session text up front and let obvious high-risk
     # wording VETO a support classification before any structured signal is
@@ -2549,6 +2556,11 @@ _NON_PHYSICAL_INSERT_CATEGORIES = {"tactical", "mental"}
 def _is_non_physical_mapping(mapping: Mapping[str, Any]) -> bool:
     """True for a tactical/mental entry whose name must never drive a physical-load
     keyword match — a "Jab Cue Card" review is video/notes work, not a thrown jab."""
+    if (mapping.get("mechanical_load_regions") or mapping.get("mechanical_risk_tags")
+            or _mapping_structured_exposure(mapping, "contact_exposure") is True):
+        return False
+    if _clean(mapping.get("block_type")).lower() == "mindset":
+        return True
     for key in ("support_insert_category", "insert_category", "category"):
         if _clean(mapping.get(key)).lower() in _NON_PHYSICAL_INSERT_CATEGORIES:
             return True
