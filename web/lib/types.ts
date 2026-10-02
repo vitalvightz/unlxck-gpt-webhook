@@ -1172,6 +1172,27 @@ export type SparringLogResponse = {
   safety_notice: string | null;
 };
 
+/** Sparring totals over the athlete-local days ending today (inclusive). */
+export type SparringWindowSummary = {
+  days: number;
+  sessions: number;
+  rounds: number;
+  hard_rounds: number;
+  hard_days: number;
+  heavy_head_contact_sessions: number;
+  rocked_count: number;
+};
+
+/** The athlete's own sparring log (newest first) with recent exposure. */
+export type SparringLogHistoryResponse = {
+  logs: SparringLogRecord[];
+  current_training_day: string;
+  last_7_days: SparringWindowSummary;
+  last_28_days: SparringWindowSummary;
+  last_hard_day: string | null;
+  last_rocked_day: string | null;
+};
+
 export type TodaySessionCompletionRequest = {
   plan_id: string;
   session_id: string;

@@ -546,6 +546,14 @@ class InjuryStore(Protocol):
         self, athlete_id: str, fields: dict[str, Any], *, review_reason: str | None
     ) -> dict[str, Any]: ...
 
+    def list_sparring_logs(
+        self, athlete_id: str, *, limit: int = 60, from_day: str | None = None
+    ) -> list[dict[str, Any]]: ...
+
+    def latest_sparring_log_day(
+        self, athlete_id: str, *, hard: bool = False, rocked: bool = False
+    ) -> str | None: ...
+
 
 class FeedbackStore(Protocol):
     """Secure beta feedback (api/routes/feedback.py)."""

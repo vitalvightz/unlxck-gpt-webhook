@@ -5150,6 +5150,35 @@ class SupabaseAppStore(CompactGenerationReads):
             )
         return payload
 
+    def list_sparring_logs(
+        self, athlete_id: str, *, limit: int = 60, from_day: str | None = None
+    ) -> list[dict[str, Any]]:
+        """The athlete's sparring logs, newest training day first (served by
+        ``sparring_logs_athlete_day_idx``), optionally only on/after ``from_day``."""
+        query = self.client.table("sparring_logs").select("*").eq("athlete_id", athlete_id)
+        if from_day:
+            query = query.gte("training_day", from_day)
+        response = (
+            query.order("training_day", desc=True)
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return getattr(response, "data", None) or []
+
+    def latest_sparring_log_day(
+        self, athlete_id: str, *, hard: bool = False, rocked: bool = False
+    ) -> str | None:
+        """The most recent training day with a hard (or rocked) entry, if any."""
+        query = self.client.table("sparring_logs").select("training_day").eq("athlete_id", athlete_id)
+        if hard:
+            query = query.eq("intensity", "hard")
+        if rocked:
+            query = query.eq("rocked", True)
+        response = query.order("training_day", desc=True).limit(1).execute()
+        rows = getattr(response, "data", None) or []
+        return str(rows[0]["training_day"])[:10] if rows else None
+
     # -- Exercise demo videos (public.exercise_media) -------------------------
     # Read by api/services/exercise_media.py on plan reads (cached in-process)
     # and written only by tools/exercise_media.py and the worker's daily check.
