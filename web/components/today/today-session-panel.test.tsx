@@ -463,14 +463,34 @@ test("an idless day falls back to honest copy instead of a dead end", () => {
 });
 
 test("sparring rounds stay locked until check-in, and are never offered under a stop", () => {
-  const unchecked = renderPanel(contactDayState("not_checked_in"));
+  const state = contactDayState("not_checked_in");
+  state.effective_clinician_clearance = { level: "train_contact", scopes: ["rehab", "training", "contact"],
+    requires_update: false, limited_by: [] };
+  const unchecked = renderPanel(state);
   assert.doesNotMatch(unchecked, /Sparring rounds<\/button>/);
   assert.match(unchecked, /Sparring rounds unlock after check-in/);
+  assert.doesNotMatch(unchecked, /locked by clinician clearance/);
 
   const stopped = renderPanel(contactDayState("stop"));
   assert.doesNotMatch(stopped, /Sparring rounds<\/button>/);
   assert.doesNotMatch(stopped, /Round timer<\/button>/);
 });
+
+for (const level of ["rehab_only", "train_no_contact"] as const) {
+  for (const tier of ["not_checked_in", "green"] as const) {
+    for (const contactOnly of [false, true]) {
+      test(`${level} contact lock copy outranks ${tier} for ${contactOnly ? "contact-owned" : "mixed camp"} sessions`, () => {
+        const state = contactDayState(tier);
+        if (contactOnly) state.today.next_session = { ...state.today.next_session, title: "Hard sparring", coach_led_contact: "Hard sparring" };
+        state.effective_clinician_clearance = { level, scopes: level === "rehab_only" ? ["rehab"] : ["rehab", "training"],
+          requires_update: false, limited_by: [{ injury_id: "chest", injury_episode_id: "episode", label: "Chest strain" }] };
+        const html = renderPanel(state);
+        assert.match(html, /Sparring rounds locked by clinician clearance/);
+        assert.doesNotMatch(html, /Sparring rounds unlock after check-in|>Start hard sparring<|Sparring rounds<\/button>/);
+      });
+    }
+  }
+}
 
 function nextContactDayState(): TodayCommandView {
   const state = contactDayState("green");
@@ -674,7 +694,7 @@ for (const level of ["rehab_only", "train_no_contact"] as const) {
       requires_update: false, limited_by: [{ injury_id: "chest", injury_episode_id: "chest-episode", label: "Chest strain" }] };
     const html = renderPanel(state);
     assert.doesNotMatch(html, />Start hard sparring<|<h2 id="today-session-heading">Hard sparring<|Sparring rounds<\/button>/);
-    assert.match(html, /Sparring rounds locked today/);
+    assert.match(html, /Sparring rounds locked by clinician clearance/);
   });
 }
 
@@ -692,9 +712,9 @@ for (const level of ["rehab_only", "train_no_contact", "train_contact"] as const
       if (level === "train_contact") {
         assert.match(html, status === "not_started" ? />Start hard sparring</ : />Resume session</);
         if (status === "started") assert.match(html, /data-value="done"[\s\S]*data-value="modified"/);
-        assert.doesNotMatch(html, /Sparring rounds locked today/);
+        assert.doesNotMatch(html, /Sparring rounds locked by clinician clearance/);
       } else {
-        assert.match(html, /Sparring rounds locked today/);
+        assert.match(html, /Sparring rounds locked by clinician clearance/);
         assert.doesNotMatch(html, />Start session<|>Start hard sparring<|>Resume session<|data-value="done"|data-value="modified"|<form/);
       }
     });
@@ -712,7 +732,7 @@ for (const status of ["not_started", "started"] as const) {
         blocks: [{ block_id: "safe", block_type: "strength", display_name: "Reviewed non-contact work" }] } };
     const html = renderPanel(state);
     assert.match(html, /Reviewed non-contact work/);
-    assert.match(html, /Sparring rounds locked today/);
+    assert.match(html, /Sparring rounds locked by clinician clearance/);
     assert.match(html, status === "not_started" ? />Start session</ : />Resume session</);
     if (status === "started") assert.match(html, /data-value="done"[\s\S]*data-value="modified"/);
     assert.doesNotMatch(html, />Start hard sparring</);
@@ -744,7 +764,7 @@ for (const intent of ["done", "modified"] as const) {
       await act(async () => { render(); });
       assert.equal(container.querySelector("form"), null);
       assert.equal(container.querySelector('button[data-value="done"],button[data-value="modified"]'), null);
-      assert.match(container.textContent ?? "", /Sparring rounds locked today/);
+      assert.match(container.textContent ?? "", /Sparring rounds locked by clinician clearance/);
       assert.equal(writes.length, 0);
     } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
   });

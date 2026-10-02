@@ -111,6 +111,7 @@ type TimerSource = "session" | "contact";
 
 const CONTACT_LOCK_COPY = {
   not_checked_in: "Sparring rounds unlock after check-in",
+  clinician_clearance: "Sparring rounds locked by clinician clearance",
   blocked: "Sparring rounds locked today",
 };
 
@@ -555,9 +556,11 @@ export function TodaySessionPanel({
   const timerAvailable =
     canCompleteSession && !safeSession && Boolean(session.session_id) && timerItems.length > 0;
   const contactLockCopy =
-    resolvedDecision.authoritativeTier === "not_checked_in"
-      ? CONTACT_LOCK_COPY.not_checked_in
-      : CONTACT_LOCK_COPY.blocked;
+    !clearanceAllowsContact
+      ? CONTACT_LOCK_COPY.clinician_clearance
+      : resolvedDecision.authoritativeTier === "not_checked_in"
+        ? CONTACT_LOCK_COPY.not_checked_in
+        : CONTACT_LOCK_COPY.blocked;
   const freeTimerAvailable =
     resolvedDecision.authoritativeTier !== "stop" && !severeInjuryBlocksCurrentSession;
   // A run left in progress (app closed mid-session) comes back as the mini bar.
