@@ -35,7 +35,11 @@ from typing import Any, Callable, Iterable
 import httpx
 
 from api.services.exercise_media import parse_youtube_video_id
-from tools.exercise_media_search import CandidateSearchError, SearchProgress
+from tools.exercise_media_search import (
+    CandidateSearchError,
+    CandidateSearchQuotaExceeded,
+    SearchProgress,
+)
 
 INTERACTIONS_URL = "https://generativelanguage.googleapis.com/v1beta/interactions"
 API_REVISION = "2026-05-20"
@@ -624,6 +628,8 @@ def review_row(
             excluded.update(parse_youtube_video_id(url) or url for url in outcome.tried)
             try:
                 yield from search(row, excluded, outcome.search_progress, lambda: checkpoint(outcome) if checkpoint else None)
+            except CandidateSearchQuotaExceeded:
+                raise
             except CandidateSearchError as exc:
                 outcome.errors.append(str(exc))
                 log(str(exc))
@@ -842,6 +848,15 @@ def run_review(
             _write_rows(out, fieldnames, rows)
             log(f"{key}: {exc}. Progress saved to {out}; run the same command again later to resume. {exc.log_fields()}")
             counts["quota_stopped"] = 1
+            return counts
+        except CandidateSearchQuotaExceeded as exc:
+            _write_rows(out, fieldnames, rows)
+            log(
+                f"{key}: {exc}. Progress saved to {out}; "
+                "run the same command again when candidate search is available."
+            )
+            counts["quota_stopped"] = 1
+            counts["search_quota_stopped"] = 1
             return counts
         calls += 1
         rows[index] = apply_outcome(row, outcome, model=reviewer.model)
