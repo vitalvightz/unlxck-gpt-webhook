@@ -154,19 +154,18 @@ def test_attempt_cap_flags_manual_and_prevents_more_search_requests():
     httpx.Response(200, json={"items": "malformed"}),
     httpx.ReadTimeout("secret-key transport failure"),
 ])
-def test_search_failures_keep_best_result_and_disable_repeated_requests(response):
-    searches, logs = [], []
+def test_youtube_provider_failures_propagate_and_rewind_query(response):
+    searches = []
     searcher = _searcher([response], searches)
-    outcome = review.review_row(
-        _reviewer({URL_A: _answer(verdict="partial")}), _row(), max_candidates=4,
-        delay_s=0, search=searcher.search, log=logs.append,
-    )
-    updated = review.apply_outcome(_row(), outcome, model="test")
-    assert updated["ai_verdict"] == "partial" and updated["needs_manual_video"] == "true"
-    assert "YouTube search" in updated["review_note"]
-    assert "secret-key" not in " ".join(logs)
+    progress = discovery.SearchProgress()
+
+    with pytest.raises(discovery.CandidateSearchError) as raised:
+        list(searcher.search(_row(), set(), progress))
+
+    assert "secret-key" not in str(raised.value)
+    assert progress.queries_used == 0
     with pytest.raises(discovery.CandidateSearchError):
-        list(searcher.search(_row(), set()))
+        list(searcher.search(_row(), set(), progress))
     assert len(searches) == 1
 
 
@@ -514,74 +513,82 @@ def test_dataforseo_discovers_youtube_videos_and_skips_shorts_and_live():
     assert calls == ["Trap Bar Deadlift exercise demonstration"]
 
 
-def test_dataforseo_retries_timeout_before_fallback():
-    primary_calls, fallback_calls = [], []
-    primary = _dataforseo_searcher(
+def test_search_clients_use_provider_specific_timeouts():
+    youtube = discovery.YouTubeCandidateSearch("youtube-test-key")
+    dataforseo = discovery.DataForSEOCandidateSearch("login", "password")
+    try:
+        assert youtube._client.timeout.read == discovery.YOUTUBE_API_TIMEOUT_SECONDS
+        assert dataforseo._client.timeout.read == discovery.DATAFORSEO_TIMEOUT_SECONDS
+    finally:
+        youtube.close()
+        dataforseo.close()
+
+
+def test_dataforseo_retries_transport_failures_before_success():
+    calls = []
+    searcher = _dataforseo_searcher(
         [
             httpx.ReadTimeout("timeout 1"),
             httpx.ReadTimeout("timeout 2"),
             ["BBBBBBBBBBB"],
         ],
-        primary_calls,
+        calls,
     )
-    fallback = _searcher([["CCCCCCCCCCC"]], fallback_calls)
-    searcher = discovery.FallbackCandidateSearch(primary, fallback)
 
     assert next(iter(searcher.search(_row(), set()))) == URL_B
-    assert len(primary_calls) == discovery.DATAFORSEO_TIMEOUT_RETRIES + 1
-    assert fallback_calls == []
+    assert len(calls) == discovery.DATAFORSEO_TIMEOUT_RETRIES + 1
 
 
-def test_dataforseo_falls_back_after_timeout_retries_exhausted():
-    primary_calls, fallback_calls = [], []
-    primary = _dataforseo_searcher(
+def test_dataforseo_retries_transient_http_failures_before_success():
+    calls = []
+    searcher = _dataforseo_searcher(
         [
-            httpx.ReadTimeout("timeout 1"),
-            httpx.ReadTimeout("timeout 2"),
-            httpx.ReadTimeout("timeout 3"),
+            httpx.Response(500, json={"error": "temporary"}),
+            httpx.Response(503, json={"error": "temporary"}),
+            ["BBBBBBBBBBB"],
         ],
-        primary_calls,
+        calls,
     )
-    fallback = _searcher([["BBBBBBBBBBB"]], fallback_calls)
-    searcher = discovery.FallbackCandidateSearch(primary, fallback)
 
     assert next(iter(searcher.search(_row(), set()))) == URL_B
-    assert len(primary_calls) == discovery.DATAFORSEO_TIMEOUT_RETRIES + 1
-    assert fallback_calls == ["Trap Bar Deadlift exercise demonstration"]
+    assert len(calls) == discovery.DATAFORSEO_TIMEOUT_RETRIES + 1
 
 
-def test_dataforseo_timeout_exhaustion_is_classified_as_search_stop():
+def test_dataforseo_transport_exhaustion_is_provider_error_and_rewinds_query():
+    calls = []
     searcher = _dataforseo_searcher(
         [
             httpx.ReadTimeout("timeout 1"),
             httpx.ReadTimeout("timeout 2"),
             httpx.ReadTimeout("timeout 3"),
-        ]
+        ],
+        calls,
     )
-    with pytest.raises(discovery.CandidateSearchQuotaExceeded, match="timeout attempts"):
-        list(searcher.search(_row(), set()))
-
-
-def test_dataforseo_failure_falls_back_to_youtube_on_same_query():
-    primary_calls, fallback_calls = [], []
-    primary = _dataforseo_searcher(
-        [httpx.Response(500, json={"error": "provider down"})],
-        primary_calls,
-    )
-    fallback = _searcher([["BBBBBBBBBBB"]], fallback_calls)
-    searcher = discovery.FallbackCandidateSearch(primary, fallback)
     progress = discovery.SearchProgress()
 
-    urls = []
-    for url in searcher.search(_row(), set(), progress):
-        urls.append(url)
-        if urls:
-            break
+    with pytest.raises(discovery.CandidateSearchError, match="unavailable after 3 attempts"):
+        list(searcher.search(_row(), set(), progress))
 
-    assert urls == [URL_B]
-    assert primary_calls == ["Trap Bar Deadlift exercise demonstration"]
-    assert fallback_calls == ["Trap Bar Deadlift exercise demonstration"]
-    assert progress.queries_used == 1
+    assert len(calls) == discovery.DATAFORSEO_TIMEOUT_RETRIES + 1
+    assert progress.queries_used == 0
+    with pytest.raises(discovery.CandidateSearchError):
+        list(searcher.search(_row(), set(), progress))
+    assert len(calls) == discovery.DATAFORSEO_TIMEOUT_RETRIES + 1
+
+
+def test_dataforseo_http_failure_is_provider_error_and_rewinds_query():
+    calls = []
+    searcher = _dataforseo_searcher(
+        [httpx.Response(400, json={"error": "bad request"})],
+        calls,
+    )
+    progress = discovery.SearchProgress()
+
+    with pytest.raises(discovery.CandidateSearchError, match="HTTP 400"):
+        list(searcher.search(_row(), set(), progress))
+
+    assert calls == ["Trap Bar Deadlift exercise demonstration"]
+    assert progress.queries_used == 0
 
 
 def test_auto_provider_uses_dataforseo_without_youtube_fallback(monkeypatch):
@@ -616,8 +623,8 @@ def test_explicit_dataforseo_requires_credentials(monkeypatch):
         discovery.build_candidate_search(provider="dataforseo", youtube_api_key=None)
 
 
-def test_dataforseo_rate_limit_falls_back_before_stopping_batch():
-    primary = _dataforseo_searcher(
+def test_dataforseo_rate_limit_is_classified_as_quota_stop():
+    searcher = _dataforseo_searcher(
         [
             httpx.Response(
                 200,
@@ -628,9 +635,8 @@ def test_dataforseo_rate_limit_falls_back_before_stopping_batch():
             )
         ]
     )
-    fallback = _searcher([["BBBBBBBBBBB"]])
-    searcher = discovery.FallbackCandidateSearch(primary, fallback)
-    assert next(iter(searcher.search(_row(), set()))) == URL_B
+    with pytest.raises(discovery.CandidateSearchQuotaExceeded):
+        list(searcher.search(_row(), set()))
 
 
 @pytest.mark.parametrize("status_code", [40203, 40210])
@@ -670,16 +676,76 @@ def test_dataforseo_account_limits_stop_batch_without_marking_rows_error(tmp_pat
     assert progress["search_progress"]["queries_used"] == 0
 
 
-def test_fallback_reports_primary_failure_once():
-    logs = []
-    primary = _dataforseo_searcher([httpx.Response(500, json={"error": "provider down"})])
-    fallback = _searcher([["BBBBBBBBBBB"], ["CCCCCCCCCCC"]])
-    searcher = discovery.FallbackCandidateSearch(primary, fallback, on_fallback=logs.append)
+def test_dataforseo_provider_failure_stops_batch_without_marking_rows_error(tmp_path):
+    src = tmp_path / "media.csv"
+    _write_csv(
+        src,
+        [
+            _row(exercise_key="first", suggested_url=""),
+            _row(exercise_key="second", suggested_url=""),
+        ],
+    )
+    searches = []
+    searcher = _dataforseo_searcher(
+        [httpx.Response(400, json={"error": "bad request"})],
+        searches,
+    )
 
-    assert next(iter(searcher.search(_row(), set()))) == URL_B
-    assert next(iter(searcher.search(_row(), set()))) == URL_C
-    assert len(logs) == 1
-    assert "DataForSEO YouTube SERP unavailable" in logs[0]
+    counts = review.run_review(
+        str(src),
+        str(src),
+        reviewer=_reviewer({}),
+        search=searcher.search,
+        delay_s=0,
+        log=lambda _: None,
+    )
+
+    assert counts["search_stopped"] == 1
+    assert counts["errors"] == 0
+    assert len(searches) == 1
+    rows = _read_csv(src)
+    assert rows[0].get("ai_verdict", "") == ""
+    assert rows[1].get("ai_verdict", "") == ""
+    progress = json.loads(rows[0]["ai_review_progress"])
+    assert progress["search_progress"]["queries_used"] == 0
+
+
+def test_dataforseo_timeout_exhaustion_stops_batch_without_poisoning_later_rows(tmp_path):
+    src = tmp_path / "media.csv"
+    _write_csv(
+        src,
+        [
+            _row(exercise_key="first", suggested_url=""),
+            _row(exercise_key="second", suggested_url=""),
+        ],
+    )
+    searches = []
+    searcher = _dataforseo_searcher(
+        [
+            httpx.ReadTimeout("timeout 1"),
+            httpx.ReadTimeout("timeout 2"),
+            httpx.ReadTimeout("timeout 3"),
+        ],
+        searches,
+    )
+
+    counts = review.run_review(
+        str(src),
+        str(src),
+        reviewer=_reviewer({}),
+        search=searcher.search,
+        delay_s=0,
+        log=lambda _: None,
+    )
+
+    assert counts["search_stopped"] == 1
+    assert counts["errors"] == 0
+    assert len(searches) == discovery.DATAFORSEO_TIMEOUT_RETRIES + 1
+    rows = _read_csv(src)
+    assert rows[0].get("ai_verdict", "") == ""
+    assert rows[1].get("ai_verdict", "") == ""
+    progress = json.loads(rows[0]["ai_review_progress"])
+    assert progress["search_progress"]["queries_used"] == 0
 
 
 def test_explicit_youtube_ignores_invalid_dataforseo_location(monkeypatch):
