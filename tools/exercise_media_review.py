@@ -109,6 +109,10 @@ class GeminiError(RuntimeError):
     pass
 
 
+class GeminiProviderUnavailable(GeminiError):
+    """Operational Gemini failure; checkpoint and stop the batch."""
+
+
 class GeminiQuotaExceeded(GeminiError):
     """A classified 429; only clearly temporary limits may be retried."""
 
@@ -480,7 +484,9 @@ class GeminiVideoReviewer:
                 json=payload,
             )
         except httpx.HTTPError as exc:
-            raise GeminiError(f"transport: {type(exc).__name__}") from exc
+            raise GeminiProviderUnavailable(
+                f"Gemini transport unavailable: {type(exc).__name__}"
+            ) from exc
 
     def review(self, url: str, row: dict[str, str]) -> VideoReview:
         prompt = build_prompt(row)
@@ -504,6 +510,19 @@ class GeminiVideoReviewer:
             response = self._post(payload)
         if response.status_code == 429:
             raise _quota_error(response, self.api_key)
+        if response.status_code in {401, 402, 403}:
+            labels = {
+                401: "authentication failed",
+                402: "billing/credits unavailable",
+                403: "permission denied",
+            }
+            raise GeminiProviderUnavailable(
+                f"Gemini {labels[response.status_code]} (HTTP {response.status_code})"
+            )
+        if response.status_code in {408, 425, 500, 502, 503, 504}:
+            raise GeminiProviderUnavailable(
+                f"Gemini service unavailable (HTTP {response.status_code})"
+            )
         if response.status_code >= 400:
             detail = response.text[:200].replace("\n", " ")
             raise GeminiError(f"HTTP {response.status_code}: {detail}")
@@ -655,7 +674,7 @@ def review_row(
                         raise
                     log(f"{url}: {exc}; retry {retry + 1}/{RATE_LIMIT_RETRIES} in {wait_s:g}s. {exc.log_fields()}")
                     sleep(wait_s)
-        except GeminiQuotaExceeded:
+        except (GeminiQuotaExceeded, GeminiProviderUnavailable):
             raise
         except GeminiError as exc:
             outcome.tried.append(url)
@@ -780,9 +799,13 @@ def _redo_weak_pass_number(row: dict[str, str]) -> int:
     # provider timeout could stamp many rows as completed "error" results.
     # Treat those legacy rows as unattempted so the same redo-weak pass repairs
     # them instead of permanently skipping them.
-    if (
-        (row.get("ai_verdict") or "").strip() == "error"
-        and (row.get("ai_shows") or "").strip() == "DataForSEO search: ReadTimeout"
+    shows = (row.get("ai_shows") or "").strip()
+    if (row.get("ai_verdict") or "").strip() == "error" and (
+        shows == "DataForSEO search: ReadTimeout"
+        or (
+            "HTTP 402" in shows
+            and "prepayment credits are depleted" in shows.lower()
+        )
     ):
         return 0
     try:
@@ -905,6 +928,14 @@ def run_review(
             _write_rows(out, fieldnames, rows)
             log(f"{key}: {exc}. Progress saved to {out}; run the same command again later to resume. {exc.log_fields()}")
             counts["quota_stopped"] = 1
+            return counts
+        except GeminiProviderUnavailable as exc:
+            _write_rows(out, fieldnames, rows)
+            log(
+                f"{key}: {exc}. Progress saved to {out}; "
+                "run the same command again when Gemini is available."
+            )
+            counts["gemini_stopped"] = 1
             return counts
         except CandidateSearchQuotaExceeded as exc:
             _write_rows(out, fieldnames, rows)
