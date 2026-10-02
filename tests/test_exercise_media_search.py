@@ -536,3 +536,30 @@ def test_dataforseo_account_limits_stop_batch_without_marking_rows_error(tmp_pat
     assert rows[1].get("ai_verdict", "") == ""
     progress = json.loads(rows[0]["ai_review_progress"])
     assert progress["search_progress"]["queries_used"] == 0
+
+
+def test_fallback_reports_primary_failure_once():
+    logs = []
+    primary = _dataforseo_searcher([httpx.Response(500, json={"error": "provider down"})])
+    fallback = _searcher([["BBBBBBBBBBB"], ["CCCCCCCCCCC"]])
+    searcher = discovery.FallbackCandidateSearch(primary, fallback, on_fallback=logs.append)
+
+    assert next(iter(searcher.search(_row(), set()))) == URL_B
+    assert next(iter(searcher.search(_row(), set()))) == URL_C
+    assert len(logs) == 1
+    assert "DataForSEO YouTube SERP unavailable" in logs[0]
+
+
+def test_explicit_youtube_ignores_invalid_dataforseo_location(monkeypatch):
+    monkeypatch.setenv("DATAFORSEO_LOGIN", "login")
+    monkeypatch.setenv("DATAFORSEO_PASSWORD", "password")
+    monkeypatch.setenv("DATAFORSEO_LOCATION_CODE", "not-an-integer")
+
+    searcher = discovery.build_candidate_search(
+        provider="youtube",
+        youtube_api_key="youtube-test-key",
+    )
+    try:
+        assert isinstance(searcher, discovery.YouTubeCandidateSearch)
+    finally:
+        searcher.close()
