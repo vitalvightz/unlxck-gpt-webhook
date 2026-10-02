@@ -197,13 +197,18 @@ export function AuthForm({
           setError(AUTH_FEEDBACK.connectionFailure);
           return;
         }
-        resetCaptcha();
 
         const { data, error: signUpError } = signUpResult;
         if (signUpError) {
+          resetCaptcha();
           setError(signUpError.message);
           return;
         }
+        // A Turnstile token is single-use, so the widget must be reset whenever
+        // the athlete stays on this form and may submit again. It is NOT reset
+        // when a session came back: the form is about to navigate away, and
+        // resetting there re-runs the human check on screen while the redirect
+        // is still in flight.
         if (data.session) {
           // Record the acceptances against the new session so the evidence is
           // server-stamped and versioned. If this call fails the account still
@@ -229,6 +234,7 @@ export function AuthForm({
           router.replace("/onboarding");
           return;
         }
+        resetCaptcha();
         setMessage("Check your email to confirm your account, then log in.");
         return;
       }
@@ -245,13 +251,16 @@ export function AuthForm({
         setError(AUTH_FEEDBACK.connectionFailure);
         return;
       }
-      resetCaptcha();
 
       const { data, error: loginError } = loginResult;
       if (loginError) {
+        resetCaptcha();
         setError(getLoginErrorMessage(loginError));
         return;
       }
+      // Signed in: leave the widget alone. Resetting here made it verify a
+      // second time, with the "complete the human check" hint back on screen,
+      // for as long as the profile lookup and redirect below took.
 
       const accessToken = data.session?.access_token ?? null;
       if (!accessToken) {
