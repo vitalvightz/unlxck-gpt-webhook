@@ -38,6 +38,9 @@ jobs:
       - name: Validate rehab bank data contract
         run: python tools/validate_rehab_bank.py
 
+      - name: Audit injury vocabulary consistency
+        run: python tools/audit_injury_vocabulary.py
+
       - name: Check rehab bank migration is up to date
         run: python tools/migrate_rehab_bank_schema.py --check
 
