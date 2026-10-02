@@ -70,6 +70,7 @@ def postgres_database():
             setup.execute(MIGRATION.read_text(encoding="utf-8"))
             setup.execute((ROOT / "supabase/migrations/20261001122553_restrict_injury_episode_trigger_execution.sql").read_text(encoding="utf-8"))
             setup.execute((ROOT / "supabase/migrations/20261002132000_count_rehab_bundle_allocations.sql").read_text(encoding="utf-8"))
+            setup.execute((ROOT / "supabase/migrations/20261002134527_clinician_clearance_prescription_freshness.sql").read_text(encoding="utf-8"))
             setup.execute("insert into profiles values (%s)", (ATHLETE,))
             setup.execute("""insert into injury_flags(id,athlete_id,description,body_region,side,episode_id)
                 values(%s,%s,'ankle sprain','ankle','left',%s)""", (INJURY, ATHLETE, EPISODE))
@@ -364,4 +365,94 @@ def test_clinician_clearance_report_invalidates_snapshot_after_bundle_migration(
         # Refreshing only the evidence identity restores validity.
         accepted["evidence_context"]["event_id"] = report["id"]
         start()
+        connection.rollback()
+
+
+def test_clearance_report_invalidates_a_snapshot_waiting_to_be_accepted(postgres_database):
+    import psycopg
+    from psycopg.types.json import Jsonb
+
+    plan, occurrence = str(uuid4()), str(uuid4())
+    with psycopg.connect(postgres_database) as recorder, psycopg.connect(postgres_database) as accepter:
+        recorder.execute("insert into plans values (%s)", (plan,))
+        readiness = recorder.execute("""insert into today_checkins
+            (athlete_id,plan_id,training_day,sleep,body,pain,phase,recommendation_state)
+            values(%s,%s,'2026-09-30','good','normal','none','GPP','train_as_planned')
+            returning id,updated_at""", (ATHLETE, plan)).fetchone()
+        injuries = recorder.execute("select id,episode_id,updated_at from injury_flags where athlete_id=%s and status in ('open','monitoring')", (ATHLETE,)).fetchall()
+        latest_event = recorder.execute("""select id from injury_episode_events where athlete_id=%s
+            and event_type in ('injury_checkin','delayed_rehab_response','clinician_clearance_report')
+            order by created_at desc,id desc limit 1""", (ATHLETE,)).fetchone()
+        latest_exposure = recorder.execute("select id from rehab_exposures where athlete_id=%s order by created_at desc,id desc limit 1", (ATHLETE,)).fetchone()
+        snapshot = dict(plan_id=plan, training_day="2026-09-30", revision="a" * 64, allocation_limit=2,
+            session=dict(session_id=occurrence, session_type="sparring", title="Hard sparring", blocks=[]),
+            evidence_context=dict(event_id=str(latest_event[0]) if latest_event else None,
+                                  exposure_id=str(latest_exposure[0]) if latest_exposure else None),
+            readiness_context=dict(id=str(readiness[0]), updated_at=readiness[1].isoformat()),
+            injury_context=[dict(id=str(i[0]), episode_id=str(i[1]), updated_at=i[2].isoformat()) for i in injuries])
+        recorder.commit()
+        accepter.execute("set statement_timeout = '8s'")
+        accepter.commit()
+        # The report owns the existing athlete lock until commit. The accepted
+        # occurrence must wait, then reject the now-stale evidence revision.
+        episode = recorder.execute("select episode_id from injury_flags where id=%s", (INJURY,)).fetchone()[0]
+        event = event_for("record_injury_episode_event", str(episode))
+        recorder.execute("select record_injury_episode_event(%s,%s)", (ATHLETE, Jsonb(event)))
+
+        def accept():
+            try:
+                accepter.execute("""insert into session_completions
+                    (athlete_id,plan_id,session_id,training_day,status,prescription_snapshot)
+                    values(%s,%s,%s,'2026-09-30','started',%s)""", (ATHLETE, plan, occurrence, Jsonb(snapshot)))
+                accepter.commit()
+                return None
+            except psycopg.Error as error:
+                accepter.rollback()
+                return str(error)
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            pending = executor.submit(accept)
+            deadline = time.monotonic() + 5
+            while not recorder.execute("select 1 from pg_locks where pid=%s and locktype='advisory' and not granted", (accepter.info.backend_pid,)).fetchone():
+                assert not pending.done(), "acceptance did not wait for the report"
+                assert time.monotonic() < deadline
+                time.sleep(0.01)
+            recorder.commit()
+            assert "prescription_revision_conflict" in pending.result(timeout=8)
+        assert accepter.execute("select count(*) from session_completions where session_id=%s", (occurrence,)).fetchone()[0] == 0
+        snapshot["evidence_context"]["event_id"] = event["id"]
+        assert accept() is None
+        assert accepter.execute("select prescription_snapshot from session_completions where session_id=%s", (occurrence,)).fetchone()[0] == snapshot
+
+
+@pytest.mark.parametrize("production_order", [False, True], ids=["fresh-replay", "production-backfill"])
+def test_prescription_function_composes_with_recorded_clearance_history(postgres_database, production_order):
+    import psycopg
+
+    pattern = r"create or replace function public\.preserve_started_prescription\(\)[\s\S]*?\$\$;"
+    schema_definition = re.search(pattern, (ROOT / "supabase/schema.sql").read_text())[0]
+    bundle_migration = (ROOT / "supabase/migrations/20261002132000_count_rehab_bundle_allocations.sql").read_text()
+    history_marker = (ROOT / "supabase/migrations/20261002134527_clinician_clearance_prescription_freshness.sql").read_text()
+    # The already-applied production version was the pre-bundle function with
+    # exactly the clinician report added to its atomic freshness event filter.
+    applied_clearance = re.search(pattern, MIGRATION.read_text())[0].replace(
+        "'injury_checkin','delayed_rehab_response'",
+        "'injury_checkin','delayed_rehab_response','clinician_clearance_report'")
+    with psycopg.connect(postgres_database) as connection:
+        def definition():
+            return connection.execute("select pg_get_functiondef('public.preserve_started_prescription()'::regprocedure)").fetchone()[0]
+
+        connection.execute(schema_definition)
+        expected = definition()
+        assert "rehab_allocation_id" in expected and "clinician_clearance_report" in expected
+        connection.execute(applied_clearance)
+        if production_order:
+            # Production skips its already-recorded 134527 and applies missing 132000.
+            connection.execute(bundle_migration)
+            assert definition() == expected
+        else:
+            connection.execute(bundle_migration)
+            assert definition() == expected
+            connection.execute(history_marker)
+            assert definition() == expected  # No later migration undoes bundle counting.
         connection.rollback()

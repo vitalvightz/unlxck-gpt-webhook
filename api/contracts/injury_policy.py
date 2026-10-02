@@ -170,9 +170,39 @@ def rehab_allocation_count(blocks: Sequence[Mapping[str, Any]], *, include_held:
     })
 
 
+def _current_clearance_scopes(injuries: Sequence[Mapping[str, Any]]) -> list[list[str]]:
+    return [clearance.get("scopes") or [] for injury in injuries
+            if injury.get("status") in {"open", "monitoring"}
+            and (clearance := injury.get("clinician_clearance"))
+            and str(clearance.get("episode_id")) == str(injury.get("episode_id"))]
+
+
+def _clinician_clearance_hold(
+    session: Mapping[str, Any] | None, injuries: Sequence[Mapping[str, Any]],
+) -> str | None:
+    """Current athlete reports only lower the ceiling; they never grant safety."""
+    from .readiness_message import _session_has_contact, is_support_session
+
+    if not session:
+        return None
+    # A coach-owned/contact headline remains real work even if its app-owned
+    # children carry only non-contact support blocks.
+    contact = _session_has_contact(session) or _session_has_contact({**session, "blocks": []})
+    for scopes in _current_clearance_scopes(injuries):
+        if "training" not in scopes:
+            rehab_only = (session.get("session_type") == "rehab" and bool(session.get("blocks"))
+                          and all(b.get("block_type") == "rehab" for b in session["blocks"]))
+            if contact or not (rehab_only or is_support_session(session)):
+                return "Your reported clinician clearance is for rehab only. Normal training is on hold."
+        elif "contact" not in scopes and contact:
+            return "Your reported clinician clearance excludes contact. Contact work is on hold."
+    return None
+
+
 def reconcile_session_prescription(
     session: Mapping[str, Any] | None, *, decisions: Sequence[Mapping[str, Any]],
     plan_id: str, training_day: str, frozen: Mapping[str, Any] | None = None,
+    injuries: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any] | None:
     """Project reviewed live work onto a copy. Never modify the stored camp.
 
@@ -183,6 +213,10 @@ def reconcile_session_prescription(
     if frozen:
         snapshot = deepcopy(dict(frozen))
         snapshot["frozen"] = True
+        clearance_hold = _clinician_clearance_hold(snapshot.get("session"), injuries)
+        if clearance_hold:
+            snapshot["safety_hold"] = True
+            snapshot.setdefault("safety_hold_reason", clearance_hold)
         snapshot["safety_hold"] = bool(snapshot.get("safety_hold")) or any(d.get("outcome") == "medical_review" for d in decisions)
         if any(d.get("activation") == "live" and d.get("injury_id") not in snapshot.get("injury_ids", []) for d in decisions):
             snapshot["safety_hold"] = True
@@ -207,7 +241,8 @@ def reconcile_session_prescription(
                           or block.get("policy_review_hash") != (decision.get("prescription") or {}).get("policy_review_hash")):
                 snapshot["safety_hold"] = True
         return snapshot
-    if not live:
+    clearance_hold = _clinician_clearance_hold(session, injuries)
+    if not live and not clearance_hold:
         return None
     prescribed = [d for d in live if d.get("outcome") == "prescribed_rehab" and d.get("prescription")
                   and d.get("schedule", {}).get("state", "due") == "due"]
@@ -217,11 +252,25 @@ def reconcile_session_prescription(
     blocked_regions = set().union(*(set(d.get("restrictions", {}).get("blocked_regions", [])) for d in live))
     blocked_tags = set().union(*(set(d.get("restrictions", {}).get("blocked_tags", [])) for d in live))
     contact_rank = {"none": 0, "controlled": 1, "full": 2}
-    allowed_contact = min((contact_rank[d.get("restrictions", {}).get("contact_limit", "none")] for d in live), default=0)
-    hold = any(d.get("outcome") == "medical_review" for d in decisions)
+    allowed_contact = min((contact_rank[d.get("restrictions", {}).get("contact_limit", "none")] for d in live), default=contact_rank["full"])
+    from .readiness_message import _session_has_contact
+
+    policy_contact_limit = allowed_contact
+    clearance_scopes = _current_clearance_scopes(injuries)
+    contact_ceiling = any("training" in scopes and "contact" not in scopes for scopes in clearance_scopes)
+    # A contact heading/coach-owned portion cannot be removed by editing children.
+    # Otherwise the existing block replacement path can retain safe non-contact work.
+    block_contact_ceiling = (contact_ceiling and bool(entry.get("blocks"))
+                             and not _session_has_contact({**entry, "blocks": []})
+                             and all("training" in scopes for scopes in clearance_scopes))
+    if block_contact_ceiling:
+        allowed_contact = 0
+    hold = bool(clearance_hold and not block_contact_ceiling) or any(d.get("outcome") == "medical_review" for d in decisions)
     if session is not None and not entry.get("blocks") and entry.get("session_type") != "rehab":
         hold = True
     blocks, changes = [], []
+    if clearance_hold and not block_contact_ceiling:
+        changes.append({"action": "held", "reason": "clinician_clearance_ceiling"})
 
     def string_set(value):
         return set(value) if isinstance(value, list) and all(isinstance(item, str) for item in value) else None
@@ -280,9 +329,10 @@ def reconcile_session_prescription(
         uncertain = bool(blocked_regions) and demands is None
         uncertain = uncertain or bool((demands or set()) - canonical_rehab_locations())
         uncertain = uncertain or (bool(blocked_tags) and tags is None)
-        uncertain = uncertain or (allowed_contact < contact_rank["full"] and contact not in contact_rank)
+        uncertain = uncertain or (policy_contact_limit < contact_rank["full"] and contact not in contact_rank)
+        clearance_contact = block_contact_ceiling and _session_has_contact(block)
         incompatible = uncertain or bool((demands or set()) & blocked_regions) or bool((tags or set()) & blocked_tags)
-        incompatible = incompatible or (contact in contact_rank and contact_rank[contact] > allowed_contact)
+        incompatible = incompatible or (contact in contact_rank and contact_rank[contact] > allowed_contact) or clearance_contact
         if incompatible:
             alternates = block.get("alternates") or []
             safe = next((a for a in alternates if isinstance(a, dict) and string_set(a.get("mechanical_load_regions")) is not None
@@ -294,10 +344,13 @@ def reconcile_session_prescription(
                          and a.get("role") == block.get("role")
                          and a.get("dose") == block.get("dose")
                          and isinstance(a.get("contact_level"), str)
-                         and a.get("contact_level") in contact_rank and contact_rank[a["contact_level"]] <= allowed_contact), None)
+                         and a.get("contact_level") in contact_rank and contact_rank[a["contact_level"]] <= allowed_contact
+                         and (not block_contact_ceiling or not _session_has_contact(a))), None)
             if safe:
                 blocks.append({**deepcopy(safe), "block_id": block.get("block_id")})
                 changes.append({"block_id": block.get("block_id"), "action": "substituted"})
+            elif clearance_contact and not uncertain and not ((demands or set()) & blocked_regions) and not ((tags or set()) & blocked_tags):
+                changes.append({"block_id": block.get("block_id"), "action": "removed", "reason": "clinician_clearance_ceiling"})
             else:
                 hold = True
                 blocks.append({**deepcopy(block), "_policy_held": True})
@@ -314,6 +367,8 @@ def reconcile_session_prescription(
             changes.append({"injury_id": decision["injury_id"], "action": "deferred", "reason": "rehab_slot_budget"})
             continue
         blocks.extend(prescribed_blocks(decision))
+    if block_contact_ceiling and not blocks:
+        hold = True
     entry["blocks"] = blocks
     rehab_only = False
     if hold and not any(d.get("outcome") == "medical_review" for d in decisions):
@@ -324,6 +379,8 @@ def reconcile_session_prescription(
             # rehab. It has its own completion identity, so a rehab completion
             # cannot assert that the scheduled strength/combat work was done.
             entry = {**entry, "session_id": f"rehab-{training_day}", "session_type": "rehab", "title": "Today's rehab", "blocks": reviewed_blocks}
+            entry.pop("coach_led_contact", None)
+            entry["contact_level"] = "none"
             hold, rehab_only = False, True
     snapshot = {"plan_id": plan_id, "training_day": training_day, "session": entry, "changes": changes,
                 "safety_hold": hold, "frozen": False, "engine_version": "2",
@@ -331,5 +388,7 @@ def reconcile_session_prescription(
                 "held_session_id": session.get("session_id") if rehab_only and session else None,
                 "injury_ids": sorted(d["injury_id"] for d in live),
                 "allocation_limit": 1 if "sparring" in str((session or {}).get("session_type") or "").lower() else 2}
+    if clearance_hold and hold and not any(d.get("outcome") == "medical_review" for d in decisions):
+        snapshot["safety_hold_reason"] = clearance_hold
     snapshot["revision"] = content_hash(snapshot)
     return snapshot

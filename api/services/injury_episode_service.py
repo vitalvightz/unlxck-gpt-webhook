@@ -66,6 +66,7 @@ def episode_observations(store, athlete_id: str, injury: dict) -> list[dict]:
 
 def apply_episode_observations(injury: dict, observations: list[dict]) -> dict:
     row = dict(injury)
+    row.pop("clinician_clearance", None)
     observations = [e for e in observations if e.get("injury_id") == str(row.get("id"))
                     and e.get("injury_episode_id") == str(row.get("episode_id"))
                     and str(e.get("athlete_id")) == str(row.get("athlete_id"))]
@@ -89,10 +90,11 @@ def apply_episode_observations(injury: dict, observations: list[dict]) -> dict:
     clearances = [e for e in observations if e.get("event_type") == "clinician_clearance_report"
                   and (last_setback is None or timestamp(e["created_at"]) > last_setback)]
     if clearances:
-        scopes = sorted({scope for event in clearances for scope in event["payload"]["scopes"]})
+        latest = max(clearances, key=lambda e: (timestamp(e["created_at"]), str(e.get("id") or "")))
+        scopes = sorted(set(latest["payload"]["scopes"]))
         row["clinician_clearance"] = {"episode_id": row["episode_id"], "scopes": scopes,
                                       "source": "athlete_reported", "externally_verified": False,
-                                      "scope_reported_at": {scope: max((e["created_at"] for e in clearances if scope in e["payload"]["scopes"]), key=timestamp) for scope in scopes}}
+                                      "scope_reported_at": {scope: latest["created_at"] for scope in scopes}}
     return row
 
 

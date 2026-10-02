@@ -4425,7 +4425,7 @@ class SupabaseAppStore(CompactGenerationReads):
             response = (self.client.table(table).select("id").eq("athlete_id", athlete_id)
                         .order("created_at", desc=True).order("id", desc=True))
             if table == "injury_episode_events":
-                response = response.in_("event_type", ["injury_checkin", "delayed_rehab_response"])
+                response = response.in_("event_type", ["injury_checkin", "delayed_rehab_response", "clinician_clearance_report"])
             response = response.limit(1).execute()
             rows = getattr(response, "data", None) or []
             revision[key] = rows[0]["id"] if rows else None

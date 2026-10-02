@@ -1,0 +1,7 @@
+-- Historical marker: production registered this version before the bundle migration.
+-- Its original change added clinician_clearance_report to prescription freshness.
+-- 20261002132000_count_rehab_bundle_allocations.sql now supplies that change AND
+-- bundle-aware allocation counting. Do not redefine the function here: replaying
+-- the older clearance-only body would undo bundle counting on fresh databases.
+-- Production with this version already recorded must apply the missing 132000
+-- migration (out of timestamp order); no rerun of this marker is required.
