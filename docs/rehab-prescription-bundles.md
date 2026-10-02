@@ -54,19 +54,47 @@ response copies must not be counted as independent assessments.
 
 ## Shipped policy audit
 
-No production policy bundle is enabled by this change.
+The bundle engine initially shipped without activating production bundles.
+Ankle sprain policy version 4 now activates one RESTORE combination:
+`ankle_sprain_supported_balance`, then `ankle_sprain_heel_lowering`.
 
 - Chest strain CALM has one recovery-support prescription; RESTORE has one
   comfortable-movement prescription. A bundle is not supported by current data.
 - Ankle sprain CALM has one gentle-movement prescription.
-- Ankle sprain RESTORE has supported balance (daily, one-day gap) and heel
-  lowering (two-day gap), with different functions. This is the only existing
-  candidate for a compact two-drill combination. Individual instruction reviews
-  do not explicitly establish combined workload or compatibility. Enabling a
-  combination requires reviewing that combination and updating the policy
-  version/hash; this change does not invent that approval.
+- Ankle sprain RESTORE combines only the two existing reviewed prescriptions:
+  supported balance (control) and heel lowering (gentle calf strengthening).
+  [Whittington's ankle-sprain leaflet](https://www.whittington.nhs.uk/mini-apps/leaflet/Default.asp?id=53&print=1)
+  recommends a programme of flexibility, strength and balance exercises, starting
+  with small comfortable amounts, and describes basic balance with stable support.
+  [East Cheshire's ankle-sprain guidance](https://services.eastcheshire.nhs.uk/physiotherapy-service/self-help/ankle-and-foot-pain-physiotherapy-self-help)
+  includes gentle eccentric heel drops alongside stability and strengthening work,
+  with up to two sets per session on alternate days. Compatibility of this exact
+  pair is an inference from those programmes, not a source-defined fixed-dose
+  protocol or clinician sign-off. Both existing comfort prerequisites must apply:
+  comfortable standing/weight bearing and comfortable gentle calf movement.
+  Each drill retains its reviewed instructions, stop rules and self-paced dose;
+  no repetitions, balance duration or additional sets are prescribed. The block
+  takes the strictest member gap (two days), including after prior work on either
+  member. Balance is not separately added on recovery days. Readiness holds,
+  unknown delayed responses, demanding same-region training and allocation limits
+  continue to gate the whole combination.
+- Ankle CALM remains gentle seated movement alone. Foam-pad balance, banded
+  circles and the other ankle bank entries have no reviewed live prescription
+  for this policy; bank presence does not establish eligibility. No third drill
+  is justified in the reviewed RESTORE stage.
+- Chest policy version 3 and its content hash remain unchanged. Its attached
+  [NHS sprains-and-strains guidance](https://www.nhs.uk/conditions/sprains-and-strains/)
+  supports protection followed by comfortable movement, but supplies no reviewed
+  resisted chest routine or combination. Wall pushes and band flies remain
+  unreviewed and excluded. CALM and RESTORE are distinct stages, so their single
+  interventions are not combined into a cross-stage bundle.
 - LOAD, DYNAMIC and RETURN remain disabled. There is no reviewed live coverage
   supporting three- or four-drill later-stage blocks.
+
+The bank and scheduler are unchanged. The pilot seed script reproduces this
+policy content and hash. No additional database migration is required beyond
+the bundle-allocation support already shipped with the engine. Clinician
+clearance remains an execution ceiling and cannot advance a rehab stage.
 
 The camp-generation adapter still emits one primary reviewed line per episode.
 This work changes live reconciliation, not camp generation or scheduler design.

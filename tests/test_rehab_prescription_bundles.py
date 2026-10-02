@@ -1,5 +1,6 @@
 """Opt-in stage bundles use the existing scheduler and exposure contracts."""
 from copy import deepcopy
+from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
@@ -12,7 +13,7 @@ from api.contracts.rehab_completion import (
 from api.contracts.rehab_schedule import schedule_rehab
 from api.services.rehab_completion_service import record_rehab_exposures, session_rehab_items
 from tests.support import FakeStore
-from fightcamp.rehab_clinical import ClinicalPolicy, load_clinical_policies, policy_review_hash
+from fightcamp.rehab_clinical import ClinicalPolicy, content_hash, load_clinical_policies, policy_review_hash, validate_clinical_bank
 from fightcamp.rehab_protocols import get_rehab_bank
 
 DAY = "2026-10-02"
@@ -23,10 +24,11 @@ IDS = ["ankle_sprain_supported_balance", "ankle_sprain_heel_lowering"]
 
 def fixture(bundle=True):
     policy = next(p for p in load_clinical_policies() if p.policy_id == "ankle_sprain")
-    if bundle:
+    if not bundle:
+        # Keep the pre-bundle v3 policy explicit; default tests use live content.
         raw = policy.model_dump()
-        raw.update(status="draft", activation="shadow", content_hash=None,
-                   stage_bundles={"restore": IDS})
+        raw.update(version=3, status="draft", activation="shadow", content_hash=None,
+                   stage_bundles={})
         draft = ClinicalPolicy.model_validate(raw)
         policy = ClinicalPolicy.model_validate({
             **draft.model_dump(), "status": "active", "activation": "live",
@@ -49,6 +51,7 @@ def snapshot(decisions, session=None, frozen=None):
 def test_single_drill_shape_identity_dose_and_hash_are_unchanged():
     policy, _, decision = fixture(bundle=False)
     assert policy_review_hash(policy) == policy.content_hash
+    assert policy.content_hash == "ae9a7431741198a66fa56426e21e467d47b0a3639aebdf13846b633590a193dd"
     current = decision["prescription"]
     assert current["drill_id"] == IDS[1] and current["dose"] == {}
     assert "drills" not in current
@@ -158,6 +161,8 @@ def test_completion_produces_valid_distinct_exposures_and_one_response_group(per
 
 @pytest.mark.parametrize("ids", [
     ["ankle_sprain_supported_balance", "not_reviewed"],
+    ["ankle_sprain_supported_balance", "ankle_sprain_single_leg_balance_on_foam_pad"],
+    ["ankle_sprain_supported_balance", "ankle_sprain_banded_ankle_circles"],
     ["ankle_sprain_supported_balance", "ankle_sprain_gentle_movement"],
     ["ankle_sprain_supported_balance", "ankle_sprain_supported_balance"],
 ])
@@ -169,15 +174,16 @@ def test_unreviewed_wrong_stage_or_duplicate_member_cannot_enter_bundle(ids):
         ClinicalPolicy.model_validate(raw)
 
 
-def test_stale_bank_member_and_excluded_member_fail_closed():
+@pytest.mark.parametrize("identity", IDS)
+def test_stale_bank_member_and_excluded_member_fail_closed(identity):
     policy, injury, _ = fixture()
     bank = deepcopy(get_rehab_bank())
-    member = next(d for g in bank for d in g["drills"] if d["id"] == IDS[0])
+    member = next(d for g in bank for d in g["drills"] if d["id"] == identity)
     member["name"] = "Unreviewed change"
     result = resolve_injury_policy(injury, policies=(policy,), bank=bank)
     assert result["prescription"] is None
     result = resolve_injury_policy(injury, policies=(policy,), bank=get_rehab_bank(),
-                                   excluded_drill_ids=[IDS[0]])
+                                   excluded_drill_ids=[identity])
     assert result["prescription"] is None and result["reason_codes"] == ["reviewed_bundle_member_ineligible"]
 
 
@@ -234,3 +240,138 @@ def test_one_member_delayed_answer_cannot_release_the_whole_bundle(unknown_first
     for event in events:
         event["event_json"]["response"]["next_day_response"] = "same"
     assert schedule_rehab(injury, decision, training_day=DAY, exposures=events)["state"] == "due"
+
+
+@pytest.mark.parametrize("phase", ["GPP", "SPP", "TAPER"])
+@pytest.mark.parametrize("severity", ["mild", "moderate"])
+def test_live_ankle_restore_bundle_keeps_reviewed_bank_content_and_self_paced_doses(phase, severity):
+    policy, injury, _ = fixture()
+    bank = get_rehab_bank()
+    decision = resolve_injury_policy({**injury, "severity": severity}, policies=load_clinical_policies(),
+                                    bank=bank, phase=phase)
+    assert policy.version == 4 and policy.stage_bundles == {"restore": IDS}
+    assert policy.live_stages == ["calm", "restore"] and not policy.transitions
+    assert validate_clinical_bank((policy,), bank) == []
+    assert policy_review_hash(policy) == policy.content_hash
+    assert decision["stage"] == "restore" and decision["outcome"] == "prescribed_rehab"
+    current = decision["prescription"]
+    assert current["minimum_gap_days"] == 2 and current["is_loading"]
+    assert [d["drill_id"] for d in current["drills"]] == IDS
+    reviewed = {p.drill_id: p for p in policy.prescriptions}
+    blocks = snapshot([decision])["session"]["blocks"]
+    assert [b["rehab_drill_id"] for b in blocks] == IDS
+    for member, block in zip(current["drills"], blocks):
+        prescription = reviewed[member["drill_id"]]
+        assert member["bank_hash"] == content_hash(member["drill"]) == prescription.bank_hash
+        assert member["drill"]["rehab_stage"] == prescription.stage == "restore"
+        assert block["instructions"] == prescription.instructions
+        assert block["stop_rules"] == prescription.stop_when
+        assert block["source_references"] == prescription.sources
+        assert member["dose"] == block["dose"] == {}
+        assert block["minimum_gap_days"] == 2
+
+
+@pytest.mark.parametrize("reported,stage,ids", [
+    ("ongoing", "calm", ["ankle_sprain_gentle_movement"]),
+    ("improving", "restore", IDS),
+    ("worse", "calm", ["ankle_sprain_gentle_movement"]),
+])
+def test_today_uses_live_bundle_only_for_injury_specific_restore_evidence(reported, stage, ids):
+    from api.services import today_service
+    _, injury, _ = fixture()
+    injury.pop("rehab_stage")  # Today must derive the stage from the injury record.
+    injury["latest_reported_status"] = reported
+    injury["clinician_clearance"] = dict(episode_id=injury["episode_id"], scopes=["rehab", "training", "contact"])
+    store = FakeStore()
+    store.injury_flags[ATHLETE] = [injury]
+    store.plans[PLAN] = dict(id=PLAN, athlete_id=ATHLETE, status="ready", created_at="2026-09-01T00:00:00Z",
+        structured_plan={"weeks": [{"phase_label": "TAPER", "days": [{"date": DAY, "day_type": "rest", "sessions": []}]}]})
+    store.set_active_plan_id(ATHLETE, PLAN)
+    store.upsert_today_checkin(ATHLETE, dict(plan_id=PLAN, training_day=DAY,
+        recommendation_state="train_as_planned", pain="none", body="good"))
+    view = today_service.build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="UTC",
+        now=datetime(2026, 10, 2, 12, tzinfo=timezone.utc))
+    decision = view.open_injuries[0]["rehab_decision"]
+    assert decision["stage"] == stage and decision["schedule"]["state"] == "due"
+    live = view.live_prescription
+    assert live and not live["safety_hold"]
+    assert [b["rehab_drill_id"] for b in live["session"]["blocks"]] == ids
+    if stage == "calm":
+        assert "drills" not in decision["prescription"]
+        assert decision["prescription"]["minimum_gap_days"] == 1
+        assert not decision["prescription"]["is_loading"]
+
+
+@pytest.mark.parametrize("phase", ["GPP", "SPP", "TAPER"])
+@pytest.mark.parametrize("stage,identity", [
+    ("calm", "chest_strain_recovery_support"),
+    ("restore", "chest_strain_comfortable_movement"),
+])
+def test_live_chest_remains_an_unchanged_single_drill_policy(stage, identity, phase):
+    policy = next(p for p in load_clinical_policies() if p.policy_id == "chest_strain")
+    _, injury, _ = fixture()
+    injury.update(canonical_location="chest", body_region="chest", body_area="Chest",
+                  side="unknown", injury_type="strain", rehab_stage=stage)
+    assert policy.version == 3 and not policy.stage_bundles
+    assert policy.content_hash == policy_review_hash(policy) == "bcb04950b08fa56d411e0117010d9dcc47c6057bc8fc84c2304fb746e20ba8d9"
+    decision = resolve_injury_policy(injury, policies=load_clinical_policies(), bank=get_rehab_bank(), phase=phase)
+    current = decision["prescription"]
+    assert decision["stage"] == stage and current["drill_id"] == identity
+    assert "drills" not in current and current["dose"] == {}
+    assert current["minimum_gap_days"] == 1
+    blocks = snapshot([decision])["session"]["blocks"]
+    assert len(blocks) == 1 and blocks[0]["rehab_drill_id"] == identity
+    assert "rehab_allocation_id" not in blocks[0]
+
+
+@pytest.mark.parametrize("identity", IDS)
+def test_live_bundle_uses_strictest_gap_after_work_on_either_member(identity):
+    _, injury, decision = fixture()
+    previous = snapshot([decision])
+    previous["session"]["blocks"] = [b for b in previous["session"]["blocks"] if b["rehab_drill_id"] == identity]
+    completion = dict(athlete_id=ATHLETE, training_day="2026-10-01", status="modified",
+                      prescription_snapshot=previous)
+    assert schedule_rehab(injury, decision, training_day=DAY, completions=[completion])["state"] == "recovery_day"
+    assert schedule_rehab(injury, decision, training_day="2026-10-03", completions=[completion])["state"] == "due"
+
+
+def test_today_does_not_split_a_live_bundle_to_bypass_training_or_readiness_gates():
+    from api.services import today_service
+    _, injury, _ = fixture()
+    for context, state in [
+        ({"readiness_decision": "pull_back"}, "held"),
+        ({"readiness_decision": "not_checked_in"}, "held"),
+        ({"readiness_decision": "stop"}, "held"),
+        ({"training_session": {"blocks": [dict(block_type="strength", mechanical_load_regions=["ankle"], load="high")]}}, "deferred"),
+    ]:
+        rows = today_service._with_injury_policy([injury], store=FakeStore(), athlete_id=ATHLETE,
+            training_day=DAY, **context)
+        decision = rows[0]["rehab_decision"]
+        assert decision["schedule"]["state"] == state
+        assert [d["drill_id"] for d in decision["prescription"]["drills"]] == IDS
+        assert snapshot([decision]) is None
+
+
+@pytest.mark.parametrize("stage", ["load", "dynamic", "return"])
+def test_live_bundle_never_enables_advanced_stages_even_with_clearance(stage):
+    _, injury, _ = fixture()
+    injury.update(rehab_stage=stage, clinician_clearance=dict(episode_id=injury["episode_id"],
+                  scopes=["rehab", "training", "contact"]))
+    decision = resolve_injury_policy(injury, policies=load_clinical_policies(), bank=get_rehab_bank())
+    assert decision["stage"] == "calm"
+    assert decision["prescription"]["drill_id"] == "ankle_sprain_gentle_movement"
+    assert "drills" not in decision["prescription"]
+
+
+def test_pilot_seed_reproduces_live_policy_content_without_changing_bank(tmp_path, monkeypatch):
+    import json
+    from tools import seed_rehab_pilot
+    bank = get_rehab_bank()
+    expected = load_clinical_policies()
+    data = tmp_path / "data"
+    data.mkdir()
+    (data / "rehab_bank.json").write_text(json.dumps(bank), encoding="utf-8")
+    monkeypatch.setattr(seed_rehab_pilot, "ROOT", tmp_path)
+    seed_rehab_pilot.main()
+    assert json.loads((data / "rehab_bank.json").read_text(encoding="utf-8")) == bank
+    assert load_clinical_policies(data / "rehab_clinical_policies.json") == expected

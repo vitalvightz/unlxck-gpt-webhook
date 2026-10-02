@@ -73,7 +73,7 @@
     },
     {
       "policy_id": "ankle_sprain",
-      "version": 3,
+      "version": 4,
       "region": "ankle",
       "injury_type": "sprain",
       "status": "active",
@@ -83,7 +83,7 @@
         "https://www.whittington.nhs.uk/mini-apps/leaflet/Default.asp?id=53&print=1",
         "https://services.eastcheshire.nhs.uk/physiotherapy-service/self-help/ankle-and-foot-pain-physiotherapy-self-help"
       ],
-      "content_hash": "ae9a7431741198a66fa56426e21e467d47b0a3639aebdf13846b633590a193dd",
+      "content_hash": "d88c6de44d3cb6e120a86863594525505a03ee37a900e307f5d4ce6b0c9f173b",
       "prescriptions": [
         {
           "drill_id": "ankle_sprain_gentle_movement",
@@ -165,7 +165,13 @@
         "calm",
         "restore"
       ],
-      "transitions": []
+      "transitions": [],
+      "stage_bundles": {
+        "restore": [
+          "ankle_sprain_supported_balance",
+          "ankle_sprain_heel_lowering"
+        ]
+      }
     }
   ]
 }
