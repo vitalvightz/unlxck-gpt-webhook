@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  athleteTrainingDayISO,
   buildCompletionIndex,
   canRetroLog,
   completionForSession,
@@ -868,4 +869,16 @@ test("dayCompletion counts live done and modified rows when an index is supplied
   assert.deepEqual(dayCompletion(day, index), { done: 1, total: 2 });
   // Static plan JSON still works without an index (generation-time statuses).
   assert.deepEqual(dayCompletion(day), { done: 1, total: 2 });
+});
+
+test("athleteTrainingDayISO uses the athlete's timezone and the 03:00 rollover", () => {
+  // 01:30 UTC on 2 Oct is 21:30 on 1 Oct in New York and 10:30 on 2 Oct in Tokyo.
+  const now = new Date("2026-10-02T01:30:00Z");
+  assert.equal(athleteTrainingDayISO(now, "America/New_York"), "2026-10-01");
+  assert.equal(athleteTrainingDayISO(now, "Asia/Tokyo"), "2026-10-02");
+  // 02:00 in London (BST) is before the rollover, so it is still the previous day.
+  assert.equal(athleteTrainingDayISO(new Date("2026-10-02T01:00:00Z"), "Europe/London"), "2026-10-01");
+  assert.equal(athleteTrainingDayISO(new Date("2026-10-02T02:30:00Z"), "Europe/London"), "2026-10-02");
+  // An unknown zone falls back to the device day instead of throwing.
+  assert.match(athleteTrainingDayISO(now, "Not/AZone"), /^\d{4}-\d{2}-\d{2}$/);
 });

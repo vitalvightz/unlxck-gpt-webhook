@@ -12,7 +12,7 @@ import {
   listSparringLogHistory,
   listTodayCheckinHistory,
 } from "@/lib/api";
-import { toISODate } from "@/lib/camp-map";
+import { athleteTrainingDayISO } from "@/lib/camp-map";
 import { formatAppDate } from "@/lib/date-format";
 import {
   checkinChips,
@@ -437,12 +437,14 @@ function InjuryRows({ rows }: { rows: InjuryFlagRecord[] }) {
 }
 
 export function HistoryScreen() {
-  const { session } = useAppSession();
+  const { session, me } = useAppSession();
   const token = session?.access_token ?? null;
-  // The athlete-local training day for the "last 7 days" counts (client-only,
-  // null until mount so server and first client render match).
+  // The training day for the "last 7 days" counts, in the athlete's own
+  // timezone so it matches the server-stamped days on every row even when the
+  // device is set elsewhere. useTrainingDay only supplies the client-only
+  // mount gate and the minute tick that rolls the day over.
   const trainingDay = useTrainingDay();
-  const today = trainingDay ? toISODate(trainingDay) : null;
+  const today = trainingDay ? athleteTrainingDayISO(new Date(), me?.profile.athlete_timezone) : null;
 
   const [tab, setTab] = useState<HistoryTab>("sessions");
   const [sessions, setSessions] = useState<TabData<TodaySessionCompletionRecord[]>>({
