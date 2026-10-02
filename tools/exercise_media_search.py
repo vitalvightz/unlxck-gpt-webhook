@@ -20,6 +20,7 @@ DATAFORSEO_LOGIN_ENV = "DATAFORSEO_LOGIN"
 DATAFORSEO_PASSWORD_ENV = "DATAFORSEO_PASSWORD"
 DATAFORSEO_LOCATION_CODE_ENV = "DATAFORSEO_LOCATION_CODE"
 DATAFORSEO_LANGUAGE_CODE_ENV = "DATAFORSEO_LANGUAGE_CODE"
+DATAFORSEO_STOP_STATUS_CODES = {40202, 40203, 40210}
 
 
 class CandidateSearchError(RuntimeError):
@@ -207,16 +208,20 @@ def _dataforseo_status_error(body: object) -> CandidateSearchError | None:
     top_code = body.get("status_code")
     tasks = body.get("tasks")
     if top_code != 20000:
-        if top_code == 40202:
-            return CandidateSearchQuotaExceeded("DataForSEO search rate limit reached")
+        if top_code in DATAFORSEO_STOP_STATUS_CODES:
+            return CandidateSearchQuotaExceeded(
+                f"DataForSEO search unavailable (status {top_code})"
+            )
         return CandidateSearchError(f"DataForSEO search failed (status {top_code})")
     if not isinstance(tasks, list) or not tasks or not isinstance(tasks[0], dict):
         return CandidateSearchError("DataForSEO search returned no task result")
 
     task_code = tasks[0].get("status_code")
     if task_code != 20000:
-        if task_code == 40202:
-            return CandidateSearchQuotaExceeded("DataForSEO search rate limit reached")
+        if task_code in DATAFORSEO_STOP_STATUS_CODES:
+            return CandidateSearchQuotaExceeded(
+                f"DataForSEO search unavailable (status {task_code})"
+            )
         return CandidateSearchError(f"DataForSEO search failed (status {task_code})")
     return None
 
