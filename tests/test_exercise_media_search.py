@@ -235,6 +235,42 @@ def test_quota_interruption_resumes_mid_row_without_rewatching_or_resetting_cap(
     assert (row["start_s"], row["end_s"], row["notes"]) == ("10", "20", "keep curator input")
 
 
+def test_redo_weak_resumes_forward_after_interruption(tmp_path):
+    src = tmp_path / "media.csv"
+    _write_csv(src, [
+        _row(exercise_key="weak-a", suggested_url=URL_A, candidate_urls=URL_B,
+             ai_verdict="partial", ai_confidence="0.9", ai_orientation="landscape",
+             ai_start_s="42", ai_end_s="54"),
+        _row(exercise_key="weak-b", suggested_url=URL_A, candidate_urls=URL_C,
+             ai_verdict="partial", ai_confidence="0.9", ai_orientation="landscape",
+             ai_start_s="42", ai_end_s="54"),
+    ])
+
+    first_calls = []
+    counts = review.run_review(
+        str(src), str(src),
+        reviewer=_reviewer({URL_B: _answer(verdict="partial")}, first_calls),
+        redo_weak=True, max_candidates=1, limit=1, delay_s=0, log=lambda _: None,
+    )
+    assert counts["reviewed"] == 1
+    first = _read_csv(src)
+    assert first[0]["ai_redo_weak_pass"] == "1"
+    assert first[1].get("ai_redo_weak_pass", "") == ""
+
+    second_calls = []
+    counts = review.run_review(
+        str(src), str(src),
+        reviewer=_reviewer({URL_C: _answer(verdict="partial")}, second_calls),
+        redo_weak=True, max_candidates=1, delay_s=0, log=lambda _: None,
+    )
+    assert counts["reviewed"] == 1
+    assert counts["skipped"] == 1
+    assert second_calls == [URL_C]
+    resumed = _read_csv(src)
+    assert resumed[0]["ai_redo_weak_pass"] == "1"
+    assert resumed[1]["ai_redo_weak_pass"] == "1"
+
+
 def test_redo_weak_revisits_partial_but_skips_strong_and_resumes_output(tmp_path):
     src, out = tmp_path / "media.csv", tmp_path / "reviewed.csv"
     _write_csv(src, [
