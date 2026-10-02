@@ -33,7 +33,7 @@ test("safe session trusts the backend-supplied lower-limb region", () => {
   ]);
   assert.equal(view.allowed.includes("Light bike or walk"), false);
   assert.equal(
-    view.allowed.includes("Seated upper-body cardio — only if pain-free and available"),
+    view.allowed.includes("Seated upper-body cardio, only if pain-free and available"),
     true,
   );
 });

@@ -124,7 +124,7 @@ const LOAD_EXPLANATIONS: Record<EffectiveLoad, SparringReasonExplanation> = {
   technical: {
     title: "Effective load: Technical / rhythm",
     body:
-      "Controlled rounds at lower intensity. Focus is positional sharpness, timing, and reads — not concussive output.",
+      "Controlled rounds at lower intensity. Focus is positional sharpness, timing, and reads, not concussive output.",
   },
   reduced: {
     title: "Effective load: Reduced",
@@ -141,7 +141,7 @@ const CLASS_EXPLANATIONS: Record<SparringDayClass, SparringReasonExplanation> = 
   primary_hard: {
     title: "Primary hard day",
     body:
-      "This is the hardest sparring day of the week — your peak effective output. The rest of the week is shaped to protect it.",
+      "This is the hardest sparring day of the week and your peak effective output. The rest of the week is shaped to protect it.",
   },
   secondary_hard: {
     title: "Secondary hard day",
@@ -166,22 +166,22 @@ const CLASS_EXPLANATIONS: Record<SparringDayClass, SparringReasonExplanation> = 
 
 const RISK_BAND_EXPLANATIONS: Record<string, SparringReasonExplanation> = {
   green: {
-    title: "Green band — proceed",
+    title: "Green band: proceed",
     body:
       "Risk signals are clear. The planner is comfortable with hard sparring as declared, assuming the rest of the camp checks stay clean.",
   },
   amber: {
-    title: "Amber band — caution",
+    title: "Amber band: caution",
     body:
       "One or more caution signals are active (fatigue, weight cut, mild injury, weekly pressure). The planner suggests softening hard sparring until the signal clears.",
   },
   red: {
-    title: "Red band — pull back",
+    title: "Red band: pull back",
     body:
       "Multiple meaningful risk signals are active. Hard sparring as declared is likely to cost more than it earns. The planner recommends technical work or deload.",
   },
   black: {
-    title: "Black band — stop & reassess",
+    title: "Black band: stop & reassess",
     body:
       "Severe injury or stacked high-severity signals are present. The planner blocks hard sparring outright and routes the camp through review.",
   },

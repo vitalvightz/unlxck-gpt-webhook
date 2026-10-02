@@ -2025,7 +2025,7 @@ export function PlanIntakeForm() {
   const selectedEquipmentAccess = formatJoinedLabels(selectedEquipmentAccessLabels, "No equipment selected");
   const selectedHardSparring = formatJoinedLabels(selectedHardSparringLabels, "No fixed hard sparring days");
   const selectedSupportWorkDays = formatJoinedLabels(selectedSupportWorkLabels, "No Light Combat days selected");
-  const fightDayLockReason = `Fight day — ${formatFightDateValue(form.fight_date)}`;
+  const fightDayLockReason = `Fight day: ${formatFightDateValue(form.fight_date)}`;
   const selectedGoals = formatJoinedLabels(selectedGoalLabels, "No goals selected");
   const selectedWeakAreas = formatJoinedLabels(selectedWeakAreaLabels, "No weak areas selected");
   const performanceFocusCapTitle = performanceFocusCapValue === null
@@ -2034,7 +2034,7 @@ export function PlanIntakeForm() {
       : "Set a fight date to calculate your focus cap"
     : `${selectedPerformanceFocusCount} of ${performanceFocusCapValue} focus picks used`;
   const performanceFocusCapBadge = performanceFocusCapValue === null
-    ? "—/—"
+    ? "No cap"
     : `${selectedPerformanceFocusCount}/${performanceFocusCapValue}`;
   const performanceFocusCapDetail = performanceFocusCapValue === null
     ? noScheduledFight
@@ -2047,10 +2047,10 @@ export function PlanIntakeForm() {
         : `Goals and weak areas share this ${performanceFocusCapValue}-pick cap for ${performanceFocusWindowLabel}. ${performanceFocusReason} You can add ${remainingPerformanceFocusSelections} more.`;
   const performanceFocusCapHint = performanceFocusCapValue === null
     ? noScheduledFight
-      ? "No fight date yet — the cap opens once a fight is scheduled."
+      ? "No fight date yet. The cap opens once a fight is scheduled."
       : "Set the fight date to lock in your focus cap."
     : performanceFocusCapExceeded
-      ? `${selectedPerformanceFocusCount - performanceFocusCapValue} over cap — unselect to fit.`
+      ? `${selectedPerformanceFocusCount - performanceFocusCapValue} over cap. Unselect to fit.`
       : performanceFocusCapReached
         ? "Cap reached. Unselect one to swap."
         : remainingPerformanceFocusSelections === 1

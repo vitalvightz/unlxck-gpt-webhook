@@ -1394,9 +1394,9 @@ export function nutritionPhaseRows(
   push("Meals", cleanText(entry.meal_structure));
   const fuel = entry.fuel_timing;
   if (isObject(fuel)) {
-    push("Fuel — pre", cleanText(fuel.pre));
-    push("Fuel — intra", cleanText(fuel.intra));
-    push("Fuel — post", cleanText(fuel.post));
+    push("Fuel (pre)", cleanText(fuel.pre));
+    push("Fuel (intra)", cleanText(fuel.intra));
+    push("Fuel (post)", cleanText(fuel.post));
   }
   const fatigue = cleanText(entry.fatigue_adjustment);
   if (fatigue) push("Fatigue adjustment", `${fatigue} fatigue support`);
@@ -1659,7 +1659,7 @@ export function weekLabel(week: StructuredWeek | null | undefined): string {
       ? week.week_index
       : null;
   const base = index != null ? `Week ${index}` : "Week";
-  return goal ? `${base} — ${shortenWeekGoal(goal)}` : base;
+  return goal ? `${base}: ${shortenWeekGoal(goal)}` : base;
 }
 
 // --- session-less day classification ----------------------------------------

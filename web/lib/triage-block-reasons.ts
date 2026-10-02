@@ -103,7 +103,7 @@ function formatGuidedInjuryContext(injury: GuidedInjurySummary) {
     injury.trend ? titleizeToken(injury.trend) : null,
     injury.impact_related === "yes" ? "Impact-related" : null,
   ].filter(Boolean);
-  const main = [area, typeLabel].filter(Boolean).join(" — ");
+  const main = area && typeLabel ? `${area} (${typeLabel})` : area || typeLabel;
   if (!main) return null;
   return `${main}${meta.length ? ` · ${meta.join(" · ")}` : ""}`;
 }
@@ -199,7 +199,7 @@ export function buildCapturedInjuryDetail(
     (surfaceKey ? titleizeToken(surfaceKey) : "") ||
     INJURY_TYPE_LABELS[typeKey] ||
     titleizeToken(typeKey);
-  const headline = [area, typeLabel].filter(Boolean).join(" — ");
+  const headline = area && typeLabel ? `${area} (${typeLabel})` : area || typeLabel;
   if (!headline) return null;
 
   const meta = [

@@ -37,14 +37,14 @@ const OPEN_BLOCK_WEEK_INTENTS: readonly OpenBlockWeekIntent[] = [
     weekNumber: 2,
     label: "Progress",
     summary:
-      "Small progression — apply each exercise's progression rule, but only where last week felt controlled.",
+      "Small progression: apply each exercise's progression rule, but only where last week felt controlled.",
   },
   {
     key: "peak",
     weekNumber: 3,
     label: "Highest controlled",
     summary:
-      "The block's top week — progress again only while movement quality holds.",
+      "The block's top week. Progress again only while movement quality holds.",
   },
   {
     key: "deload",

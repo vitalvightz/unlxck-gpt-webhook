@@ -16,7 +16,7 @@ test("summarizeBlockedInjuryContext returns captured injury for structured injur
     guidedInjuries: [{ area: "Left ankle", surface_type: "bruise", severity: "moderate", trend: "stable", impact_related: "yes" }],
   });
 
-  assert.equal(summary, "Captured injury: Left ankle — Bruise / contusion · Moderate · Stable · Impact-related");
+  assert.equal(summary, "Captured injury: Left ankle (Bruise / contusion) · Moderate · Stable · Impact-related");
 });
 
 test("summarizeBlockedInjuryContext puts captured injury before triage reason", () => {
@@ -33,7 +33,7 @@ test("summarizeBlockedInjuryContext puts captured injury before triage reason", 
 
   assert.equal(
     summary,
-    "Captured injury: Left ankle — Bruise / contusion · Moderate · Stable · Impact-related · Blocked trigger: Moderate stable injury did not meet the strict allowlist for automatic full planning.",
+    "Captured injury: Left ankle (Bruise / contusion) · Moderate · Stable · Impact-related · Blocked trigger: Moderate stable injury did not meet the strict allowlist for automatic full planning.",
   );
 });
 
@@ -43,7 +43,7 @@ test("summarizeBlockedInjuryContext shows captured injury before blocked trigger
     guidedInjuries: [{ area: "Head", injury_type: "concussion", severity: "high" }],
   });
 
-  assert.equal(summary, "Captured injury: Head — Concussion · High · Blocked trigger: Loss of consciousness");
+  assert.equal(summary, "Captured injury: Head (Concussion) · High · Blocked trigger: Loss of consciousness");
 });
 
 test("summarizeBlockedInjuryContext prioritises red flags over high-risk labels inside blocked trigger", () => {
@@ -58,7 +58,7 @@ test("summarizeBlockedInjuryContext prioritises red flags over high-risk labels 
 
   assert.equal(
     summary,
-    "Captured injury: Head — Concussion · High · Blocked trigger: Loss of consciousness + Moderate stable injury",
+    "Captured injury: Head (Concussion) · High · Blocked trigger: Loss of consciousness + Moderate stable injury",
   );
 });
 
@@ -75,7 +75,7 @@ test("summarizeBlockedInjuryContext handles malformed string triage lists withou
     guidedInjuries: [{ area: "Head", injury_type: "head_impact", severity: "high" }],
   });
 
-  assert.equal(summary, "Captured injury: Head — Head impact · High · Blocked trigger: Loss of consciousness + Coach/admin review is required before normal plan generation.");
+  assert.equal(summary, "Captured injury: Head (Head impact) · High · Blocked trigger: Loss of consciousness + Coach/admin review is required before normal plan generation.");
 });
 test("summarizeBlockedInjuryContext does not treat area-only guided injury as captured when notes infer a symptom", () => {
   const summary = summarizeBlockedInjuryContext({
@@ -92,7 +92,7 @@ test("summarizeBlockedInjuryContext maps skin_irritation surface type", () => {
     guidedInjuries: [{ area: "Head", surface_type: "skin_irritation" }],
   });
 
-  assert.equal(summary, "Captured injury: Head — Burn / skin irritation");
+  assert.equal(summary, "Captured injury: Head (Burn / skin irritation)");
 });
 
 test("summarizeBlockedInjuryContext maps skin_irritation surface type with severity and trend", () => {
@@ -103,7 +103,7 @@ test("summarizeBlockedInjuryContext maps skin_irritation surface type with sever
     ],
   });
 
-  assert.equal(summary, "Captured injury: Forearm — Burn / skin irritation · Low · Stable");
+  assert.equal(summary, "Captured injury: Forearm (Burn / skin irritation) · Low · Stable");
 });
 
 test("summarizeBlockedInjuryContext prioritises red flags in fallback when no captured injury exists", () => {
@@ -138,7 +138,7 @@ test("buildBlockedInjuryContextSummary handles malformed string triage fields", 
     guidedInjuries: [{ area: "Head", injury_type: "head_impact", severity: "high" }],
   });
 
-  assert.equal(summary.capturedInjury, "Head — Head impact · High");
+  assert.equal(summary.capturedInjury, "Head (Head impact) · High");
   assert.ok(summary.blockedTrigger);
 });
 
@@ -160,10 +160,10 @@ test("buildBlockedInjuryContextSummary returns structured fields with captured i
   });
 
   assert.deepEqual(summary, {
-    capturedInjury: "Head — Concussion · High",
+    capturedInjury: "Head (Concussion) · High",
     blockedTrigger: "Loss of consciousness",
     capturedInjuries: [
-      { headline: "Head — Concussion", meta: ["High severity"], flags: [] },
+      { headline: "Head (Concussion)", meta: ["High severity"], flags: [] },
     ],
   });
 });
@@ -185,10 +185,10 @@ test("buildBlockedInjuryContextSummary returns only capturedInjury when no safet
   });
 
   assert.deepEqual(summary, {
-    capturedInjury: "Left ankle — Bruise / contusion · Moderate · Stable · Impact-related",
+    capturedInjury: "Left ankle (Bruise / contusion) · Moderate · Stable · Impact-related",
     capturedInjuries: [
       {
-        headline: "Left ankle — Bruise / contusion",
+        headline: "Left ankle (Bruise / contusion)",
         meta: ["Moderate severity", "Trend: Stable", "Impact-related"],
         flags: [],
       },
@@ -209,7 +209,7 @@ test("buildCapturedInjuryDetail returns headline and full meta for a populated i
   });
 
   assert.deepEqual(detail, {
-    headline: "Left ankle — Bruise / contusion",
+    headline: "Left ankle (Bruise / contusion)",
     meta: ["Moderate severity", "Trend: Stable", "Impact-related", "Onset: Within 2 weeks"],
     flags: [],
     notes: "Swells after sparring rounds.",
@@ -238,7 +238,7 @@ test("buildCapturedInjuryDetail surfaces wound and clearance flags", () => {
   });
 
   assert.deepEqual(detail, {
-    headline: "Eyebrow — Laceration / deep cut",
+    headline: "Eyebrow (Laceration / deep cut)",
     meta: [],
     flags: [
       "Open wound",
@@ -266,12 +266,12 @@ test("buildBlockedInjuryContextSummary populates capturedInjuries for every guid
 
   assert.deepEqual(summary.capturedInjuries, [
     {
-      headline: "Left ankle — Bruise / contusion",
+      headline: "Left ankle (Bruise / contusion)",
       meta: ["Moderate severity"],
       flags: [],
     },
     {
-      headline: "Right shoulder — Strain",
+      headline: "Right shoulder (Strain)",
       meta: ["Trend: Worsening"],
       flags: [],
     },
@@ -318,7 +318,7 @@ test("buildBlockedInjuryContextSummary keeps capturedInjury alongside capturedIn
 
   assert.equal(
     summary.capturedInjury,
-    "Left ankle — Bruise / contusion · Moderate · Stable · Impact-related",
+    "Left ankle (Bruise / contusion) · Moderate · Stable · Impact-related",
     "single-line capturedInjury must remain populated so the always-visible line renders",
   );
   assert.equal(summary.capturedInjuries?.length, 1);
@@ -362,7 +362,7 @@ test("buildBlockedInjuryContextSummary picks guided card matching head-impact me
     ],
   });
 
-  assert.equal(summary.capturedInjury, "Head — Head impact · High");
+  assert.equal(summary.capturedInjury, "Head (Head impact) · High");
 });
 
 test("buildBlockedInjuryContextSummary picks post-surgery knee card for restricted routing", () => {
@@ -379,7 +379,7 @@ test("buildBlockedInjuryContextSummary picks post-surgery knee card for restrict
     ],
   });
 
-  assert.equal(summary.capturedInjury, "Left knee — Post-surgery injury · Moderate");
+  assert.equal(summary.capturedInjury, "Left knee (Post-surgery injury) · Moderate");
 });
 
 test("buildBlockedInjuryContextSummary keeps first-valid fallback when no guided card matches signals", () => {
@@ -396,7 +396,7 @@ test("buildBlockedInjuryContextSummary keeps first-valid fallback when no guided
     ],
   });
 
-  assert.equal(summary.capturedInjury, "Left ankle — Sprain · Mild");
+  assert.equal(summary.capturedInjury, "Left ankle (Sprain) · Mild");
 });
 
 test("buildBlockedWhy medical_hold wording does not rely on coach call", () => {
@@ -454,7 +454,7 @@ test("buildBlockedInjuryContextSummary token matching handles duplicate same-val
     ],
   });
 
-  assert.equal(summary.capturedInjury, "Left knee — Sprain · Moderate");
+  assert.equal(summary.capturedInjury, "Left knee (Sprain) · Moderate");
 });
 
 test("buildBlockedInjuryContextSummary avoids substring false positives like hip vs whiplash", () => {
@@ -471,7 +471,7 @@ test("buildBlockedInjuryContextSummary avoids substring false positives like hip
     ],
   });
 
-  assert.equal(summary.capturedInjury, "Hip — Instability · Moderate");
+  assert.equal(summary.capturedInjury, "Hip (Instability) · Moderate");
 });
 
 test("buildBlockedInjuryContextSummary applies field-weighted token scoring when notes and area share text", () => {
@@ -488,7 +488,7 @@ test("buildBlockedInjuryContextSummary applies field-weighted token scoring when
     ],
   });
 
-  assert.equal(summary.capturedInjury, "Left knee — Sprain · Moderate");
+  assert.equal(summary.capturedInjury, "Left knee (Sprain) · Moderate");
 });
 
 test("formatTriageSignalLabel maps critical backend tokens to clean labels", () => {

@@ -12,7 +12,7 @@ test("formatPlanLabel maps readiness/decision enums to readable labels", () => {
 
 test("formatPlanLabel maps plan status flags", () => {
   assert.equal(formatPlanLabel("ready"), "Ready");
-  assert.equal(formatPlanLabel("publishable_with_flags"), "Ready — review notes included");
+  assert.equal(formatPlanLabel("publishable_with_flags"), "Ready, with review notes");
   assert.equal(formatPlanLabel("review_required"), "Awaiting review");
   assert.equal(formatPlanLabel("triage_blocked"), "Paused for safety review");
   assert.equal(formatPlanLabel("archived"), "Archived");

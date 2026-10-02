@@ -338,7 +338,7 @@ test("getReadinessStrip surfaces focus, risk and load (never the today call)", (
   // The exact "train / modify / pull back" call is owned by Today; phase is left
   // to the CampStatusLine.
   assert.equal(strip.focus, "Speed conversion");
-  assert.equal(strip.risk, "Active weight cut · Left shoulder contusion — see red flags");
+  assert.equal(strip.risk, "Active weight cut · Left shoulder contusion (see red flags)");
   // One hard day plus one moderate day is a Moderate week under weekLoadProxy.
   assert.equal(strip.load, "Moderate");
   assert.equal("todayCall" in strip, false);
@@ -370,7 +370,7 @@ test("getReadinessStrip degrades gracefully with no current day", () => {
   // (the note labels), so it still resolves; load comes from the passed week proxy.
   const strip = getReadinessStrip(plan, null, plan.weeks![1]);
   assert.equal(strip.focus, null);
-  assert.equal(strip.risk, "Active weight cut · Left shoulder contusion — see red flags");
+  assert.equal(strip.risk, "Active weight cut · Left shoulder contusion (see red flags)");
   assert.equal(strip.load, "Low");
 });
 

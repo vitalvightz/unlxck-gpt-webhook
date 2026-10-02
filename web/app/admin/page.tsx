@@ -473,7 +473,7 @@ export default function AdminPage() {
       setMessage(
         result.queued > 0
           ? `Queued ${result.queued} plan${result.queued === 1 ? "" : "s"} for structured-card backfill. Cards appear as each conversion finishes.`
-          : "No plans need a structured-card backfill — every displayable plan already has one.",
+          : "No plans need a structured-card backfill. Every displayable plan already has one.",
       );
     } catch (backfillError) {
       setError(

@@ -973,7 +973,7 @@ export function resolveSafeSessionAllowed(
   if (lowerBlocked && upperBlocked) {
     conditioning = null;
   } else if (lowerBlocked) {
-    conditioning = "Seated upper-body cardio — only if pain-free and available";
+    conditioning = "Seated upper-body cardio, only if pain-free and available";
   } else {
     conditioning = "Light bike or walk";
   }
@@ -1022,9 +1022,9 @@ export function resolveSafeSessionBlocked(
 
 const SAFE_SESSION_POSTURE_DETAIL: Record<SafeSessionPosture, string> = {
   rest_only:
-    "Protect the injured area and let it settle — no loaded movement today, and follow your clinician on what is safe.",
+    "Protect the injured area and let it settle. No loaded movement today, and follow your clinician on what is safe.",
   downregulate:
-    "Keep everything calm and symptom-free today — no exertion, and follow your clinician before adding work back.",
+    "Keep everything calm and symptom-free today. No exertion, and follow your clinician before adding work back.",
   standard: "Protect freshness, reduce risk, and keep the body moving without adding stress.",
 };
 

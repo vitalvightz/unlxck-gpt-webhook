@@ -205,7 +205,7 @@ test("today's guidance retains injury evidence while a future session is preview
 
   assert.match(html, /TODAY'S GUIDANCE/);
   assert.match(html, /Active severe injury: Knee/);
-  assert.match(html, /Skin injury — Medical review needed/);
+  assert.match(html, /Skin injury: Medical review needed/);
   assert.match(html, /your tracked injuries/);
   assert.match(html, /<details[^>]*\sopen/);
   assert.doesNotMatch(html, /Do not start today's planned session/);
@@ -331,7 +331,7 @@ test("a cleared safety check renders apart from the triggers, never as one", () 
   });
   const checkedIndex = html.indexOf("Checked");
   assert.ok(checkedIndex > -1);
-  assert.ok(html.includes("Skin injury — No session change"));
+  assert.ok(html.includes("Skin injury: No session change"));
   // The trigger list holds only the cause.
   assert.ok(html.indexOf("Poor sleep") < checkedIndex);
   assert.ok(html.includes('data-evidence-count="2"'));

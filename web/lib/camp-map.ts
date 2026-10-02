@@ -1153,7 +1153,7 @@ export function getReadinessStrip(
     );
     if (watchAreas.length > 0) {
       const cue = watchAreas.join(" · ");
-      risk = getDisplayableRedFlags(plan).length > 0 ? `${cue} — see red flags` : cue;
+      risk = getDisplayableRedFlags(plan).length > 0 ? `${cue} (see red flags)` : cue;
     }
   }
 

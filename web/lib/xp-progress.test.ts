@@ -70,8 +70,8 @@ test("parses the full progress contract", () => {
 });
 
 test("XP week heading uses the plan's one-based week number", () => {
-  assert.equal(xpWeekHeading({ weekIndex: 2, phaseLabel: "GPP" }), "Week 2 — GPP");
-  assert.equal(xpWeekHeading({ weekIndex: null, phaseLabel: "GPP" }), "Training week — GPP");
+  assert.equal(xpWeekHeading({ weekIndex: 2, phaseLabel: "GPP" }), "Week 2 (GPP)");
+  assert.equal(xpWeekHeading({ weekIndex: null, phaseLabel: "GPP" }), "Training week (GPP)");
 });
 
 test("rejects more than three opportunity rows", () => {
