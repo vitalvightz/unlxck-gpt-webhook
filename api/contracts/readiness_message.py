@@ -443,11 +443,10 @@ def is_support_session(session: Mapping[str, Any] | None) -> bool:
         return False
 
     blocks = session.get("blocks") or []
-    if (blocks and all(isinstance(block, Mapping) and _is_non_physical_mapping(block) for block in blocks)
-            and not session.get("coach_led_contact")
-            and not _session_has_contact({**session, "blocks": []})
-            and not session.get("mechanical_load_regions")):
-        return True
+    if any(isinstance(block, Mapping) and _clean(block.get("block_type")).lower() == "mindset"
+           and not _is_non_physical_mapping(block) for block in blocks):
+        # A loaded/contact mindset entry cannot fall back to its watch title.
+        return False
 
     # Safety-first: build the session text up front and let obvious high-risk
     # wording VETO a support classification before any structured signal is
@@ -457,6 +456,12 @@ def is_support_session(session: Mapping[str, Any] | None) -> bool:
     text = _session_text(session)
     if text and any(term in text for term in _HIGH_RISK_TERMS):
         return False
+
+    if (blocks and all(isinstance(block, Mapping) and _is_non_physical_mapping(block) for block in blocks)
+            and not session.get("coach_led_contact")
+            and not _session_has_contact({**session, "blocks": []})
+            and not session.get("mechanical_load_regions")):
+        return True
 
     # Structured support-insert signals are the primary positive detector.
     for key in ("category", "session_type", "status"):
@@ -2559,11 +2564,15 @@ def _is_non_physical_mapping(mapping: Mapping[str, Any]) -> bool:
     if (mapping.get("mechanical_load_regions") or mapping.get("mechanical_risk_tags")
             or _mapping_structured_exposure(mapping, "contact_exposure") is True):
         return False
-    if _clean(mapping.get("block_type")).lower() == "mindset":
-        return True
     for key in ("support_insert_category", "insert_category", "category"):
         if _clean(mapping.get(key)).lower() in _NON_PHYSICAL_INSERT_CATEGORIES:
             return True
+    if _clean(mapping.get("block_type")).lower() == "mindset":
+        from fightcamp.normalization import phrase_in_text
+        names = " ".join(_clean(mapping.get(key)) for key in (*_ENTRY_NAME_FIELDS, "display_name")).lower()
+        # A generic block label cannot erase physically loaded movement names.
+        # Curated tactical/mental categories above retain their existing meaning.
+        return not any(phrase_in_text(names, token) for tokens in _REGION_LOAD_KEYWORDS.values() for token in tokens)
     return False
 
 

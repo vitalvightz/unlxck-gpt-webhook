@@ -315,3 +315,60 @@ def test_rehab_session_label_cannot_exempt_ordinary_camp_from_pullback(context, 
         assert live["session"] == accepted["prescription_snapshot"]["session"]
     with pytest.raises(HTTPException):
         execute(context, live, "done", session_rpe=2)
+
+
+@pytest.mark.parametrize("field", ["title", "label", "name", "athlete_facing_label", "display_name"])
+def test_mindset_type_does_not_erase_loaded_movement_names(field):
+    from api.contracts.readiness_message import _is_non_physical_mapping, _mapping_executable_text, is_support_session
+    block = {"block_type": "mindset", field: "Heavy squat reps"}
+    assert not _is_non_physical_mapping(block)
+    assert "heavy squat reps" in _mapping_executable_text(block)
+    assert not is_support_session(session("skill", "Tactical Watch", [block]))
+
+
+def test_cognitive_children_cannot_override_a_high_risk_session_title():
+    from api.contracts.readiness_message import is_support_session
+    assert not is_support_session(session("skill", "Heavy squat day", [dict(
+        block_type="mindset", display_name="Watch film")]))
+
+
+@pytest.mark.parametrize("cognitive", [False, True])
+def test_unknown_active_injury_region_blocks_physical_support_only(context, cognitive):
+    injury = live_injury(context, "ankle")
+    context[0].update_injury_flag(injury["id"], {"body_area": "Other", "description": "Unspecified soreness"})
+    support = session("skill", "Tactical Watch", [dict(block_id="support", block_type="mindset", display_name="Watch film")]) if cognitive else session(
+        "recovery", "Downshift mobility", [dict(block_id="support", block_type="accessory",
+            display_name="Gentle mobility", mechanical_load_regions=["shoulder"], contact_level="none")])
+    set_sessions(context, [support, dict(session_id="contact-owned", session_type="sparring", title="Hard sparring", blocks=[])])
+    report(context, REHAB)
+    current = view(context)
+    assert any(not row.get("canonical_location") for row in current.open_injuries)
+    live = current.live_prescription
+    if cognitive:
+        assert live and not live["safety_hold"]
+        assert any(block.get("block_id") == "support" for block in live["session"]["blocks"])
+        execute(context, live)
+    else:
+        assert live and live["safety_hold"]
+
+
+def test_mindset_loaded_name_cannot_survive_live_policy_reconciliation(context):
+    live_injury(context, "ankle")
+    set_sessions(context, [session("skill", "Tactical Watch", [dict(
+        block_id="unsafe", block_type="mindset", display_name="Heavy squat reps")])])
+    report(context, REHAB)
+    live = view(context).live_prescription
+    assert live and (live["safety_hold"] or live["rehab_only"])
+    assert not any(block.get("block_id") == "unsafe" and not block.get("_policy_held") for block in live["session"]["blocks"])
+
+
+def test_loaded_mindset_cannot_use_the_no_live_severe_injury_exemption(context):
+    context[0].update_injury_flag(context[3]["id"], {"severity": "severe"})
+    set_sessions(context, [session("skill", "Tactical Watch", [dict(
+        block_type="mindset", display_name="Heavy squat reps")])])
+    report(context, REHAB)
+    current = view(context)
+    assert current.today.decision_tier == "stop" and not current.today.injury_hold_exempt
+    with pytest.raises(HTTPException):
+        today_service.upsert_session_completion(context[0], athlete_id=context[1], athlete_timezone="UTC", now=NOW,
+            payload=dict(plan_id=context[2], session_id="session-1", status="started"))
