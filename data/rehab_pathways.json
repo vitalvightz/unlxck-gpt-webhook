@@ -10,8 +10,8 @@
     {
       "requirement_id": "complete_episode_history",
       "kind": "complete_history",
-      "basis": "data_sufficiency",
-      "description": "The episode's full exposure history is available. Truncated history cannot show that a negative response is absent."
+      "basis": "product_safety",
+      "description": "The episode's full exposure history is available. Truncated history could hide a negative response, so it is never evidence of safety and no profile may remove this requirement."
     },
     {
       "requirement_id": "reviewed_stage_exposure",

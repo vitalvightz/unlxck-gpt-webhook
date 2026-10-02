@@ -31,11 +31,21 @@ Outside the families:
 - **`unspecified`** is not a family; an episode without a type gets `missing_information`. Its 664 bank drills are shared regional pools that any profile at the same location may review and use. The clinical bank validator already accepts `unspecified` groups.
 - **Structural and urgent types** (tears, ruptures, fractures, dislocation, concussion and others) are not rehab-safe and remain medical gates.
 
+## Families route; profiles activate
+
+A family is a routing and shared-structure choice, not a diagnosis or support claim. Belonging to a family activates nothing:
+
+- A live policy exists only for an explicit `(region, injury_type)` profile. Every other combination resolves to `unsupported_prescription` with legacy behaviour unchanged. That includes ankle instability (same family as ankle sprain), chest sprain, any contusion, tendonitis, impingement, hyperextension or symptom report, and hamstring or calf strain.
+- `nonspecific_msk_symptoms` does not make pain, swelling or stiffness reports rehab-eligible. A reviewed profile would have to exist for that region and type.
+- Families carry no drills, stages, restrictions or criteria of their own beyond requirements a source supports for the whole family. There are none today.
+
+`tests/test_rehab_pathway_safety_invariants.py` pins these boundaries.
+
 ## Transitions and requirements
 
 CALM→RESTORE is the existing baseline report ladder (`api/contracts/rehab_stage.py`): a follow-up report that is not worse. Setbacks hold at CALM until a later explicit improvement report. Every higher step is a declared transition (`restore->load`, `load->dynamic`, `dynamic->return`) composed from three layers:
 
-1. The catalog's `safety_baseline`, applied to every transition of every family:
+1. The catalog's `safety_baseline`, applied to every transition of every family. Setback, complete-history and response checks are `product_safety`, so no profile can remove them; the reviewed-exposure check is `data_sufficiency`:
    - no unresolved setback
    - complete episode history
    - at least one completed exposure to reviewed work from the current stage
@@ -82,6 +92,7 @@ The outcome is exposed as `rehab_decision.progression.next_transition`: status (
 
 - `api/contracts/load_eligibility.py` and its `LOAD_CRITERIA_REGISTRY` were removed. They were a second, per-injury-type rule registry, shadow-only, with no entries. They also did an extra exposure read per injury in Today. Their evidence primitives now live in `rehab_evidence.py`, used by the one evaluator.
 - `ClinicalTransition` (count-based, never used, rejected on active policies) was replaced by requirement-based `PathwayTransition`.
+- The pre-pathway policy file format is still readable (the equivalence fixture uses it), but it cannot declare transitions or a live stage above RESTORE. It is not an activation route.
 - The "v1 routines are limited to calm and restore" and "disabled in v1" bans were replaced by the structural activation rules above.
 - `rehab_stage.MAX_RESOLVABLE_STAGE` remains the ceiling of the baseline report ladder only.
 
