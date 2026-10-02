@@ -1104,7 +1104,7 @@ export function TodaySessionPanel({
           <p>How much rehab did you do?</p>
           <div className="today-segment-row">
             {([ ["done_as_shown", "Done as shown"], ["changed", "Changed it"], ["stopped", "Stopped early"] ] as const).map(([value, label]) => (
-              <button key={value} type="button" aria-pressed={rehabPerformance === value} onClick={() => setRehabPerformance(value)}>{label}</button>
+              <button key={value} type="button" className={rehabPerformance === value ? "today-segment today-segment-active" : "today-segment"} aria-pressed={rehabPerformance === value} onClick={() => setRehabPerformance(value)}>{label}</button>
             ))}
           </div>
         </div>
