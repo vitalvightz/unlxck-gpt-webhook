@@ -88,7 +88,8 @@ Ankle sprain policy version 4 now activates one RESTORE combination:
   resisted chest routine or combination. Wall pushes and band flies remain
   unreviewed and excluded. CALM and RESTORE are distinct stages, so their single
   interventions are not combined into a cross-stage bundle.
-- LOAD, DYNAMIC and RETURN remain disabled. There is no reviewed live coverage
+- LOAD, DYNAMIC and RETURN remain closed: no profile declares a sourced
+  transition criterion (see [rehab-pathway-families.md](rehab-pathway-families.md)). There is no reviewed live coverage
   supporting three- or four-drill later-stage blocks.
 
 The bank and scheduler are unchanged. The pilot seed script reproduces this

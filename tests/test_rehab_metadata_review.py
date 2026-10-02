@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from api.contracts.load_eligibility import LOAD_CRITERIA_REGISTRY
+from fightcamp.rehab_clinical import load_clinical_policies
 from api.contracts.rehab_stage import (
     MAX_RESOLVABLE_STAGE,
     STAGE_DYNAMIC,
@@ -436,7 +436,10 @@ def test_21_pipeline_has_no_write_path_to_historical_exposures():
 def test_22_23_24_load_dynamic_return_remain_production_inaccessible():
     assert MAX_RESOLVABLE_STAGE == STAGE_RESTORE
     assert MAX_RESOLVABLE_STAGE not in {STAGE_LOAD, STAGE_DYNAMIC, STAGE_RETURN}
-    assert dict(LOAD_CRITERIA_REGISTRY) == {}
+    # No shipped policy declares a promotable transition or a live higher stage.
+    for policy in load_clinical_policies():
+        assert not any(t.promotable for t in policy.transitions)
+        assert set(policy.live_stages) <= {"calm", "restore"}
     # The ledger never proposes a stage above the production ceiling.
     for record in build_ledger(load_bank(BANK_PATH)):
         assert record["proposed"]["rehab_stage"] in (None, "calm", "restore")

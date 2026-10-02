@@ -25,7 +25,8 @@ def resolve(row, stage="restore", rows=(), **kwargs):
 @pytest.mark.parametrize("stage", ["load", "dynamic", "return"])
 def test_advanced_activation_is_rejected_and_clearance_cannot_bypass(stage):
     policy = load_clinical_policies()[0]
-    with pytest.raises(ValidationError, match="disabled in v1"):
+    # A higher live stage needs an open transition with source-backed criteria.
+    with pytest.raises(ValidationError, match="cannot be live without an open transition|every lower stage live"):
         ClinicalPolicy.model_validate({**policy.model_dump(), "live_stages": ["calm", "restore", stage]})
     row = {**injury(), "clinician_clearance": {"scopes": ["rehab", "training", "contact"]}}
     assert resolve(row, stage)["stage"] == "calm"

@@ -267,7 +267,7 @@ def test_stored_function_metadata_matches_the_keyword_match_where_migrated():
     # The autouse legacy scope disables activation, so read the actual policy data.
     import json
     from fightcamp.config import DATA_DIR
-    pilot_ids = {p["drill_id"] for policy in json.loads((DATA_DIR / "rehab_clinical_policies.json").read_text(encoding="utf-8"))["policies"]
+    pilot_ids = {p["drill_id"] for policy in json.loads((DATA_DIR / "rehab_pathways.json").read_text(encoding="utf-8"))["profiles"]
                   for p in policy["prescriptions"]}
     for entry in get_rehab_bank():
         if is_surface_injury_type(entry.get("type")):

@@ -52,11 +52,13 @@ Where the ladder stops
 ----------------------
 ``load``, ``dynamic`` and ``return`` each assert that the injured tissue
 tolerated something — progressive load, then speed and impact, then near
-unrestricted sport. **No such record exists.** Nothing in the system ties an
-exposure to a body area. So the ladder stops at :data:`MAX_RESOLVABLE_STAGE` and
-says why, with :data:`REASON_INSUFFICIENT_INJURY_SPECIFIC`. Inventing day counts
-or session counts to bridge that gap would be writing rehabilitation criteria,
-which is not this PR's job.
+unrestricted sport. That is not a report-ladder question. This baseline ladder
+stops at :data:`MAX_RESOLVABLE_STAGE` and says why, with
+:data:`REASON_INSUFFICIENT_INJURY_SPECIFIC`. Higher stages are reached only
+through a policy's declared pathway transitions, evaluated against the
+episode's own exposure history by ``api.contracts.rehab_progression`` — the one
+progression path. Inventing day or session counts here would be writing
+rehabilitation criteria.
 
 Derived, not stored
 -------------------
@@ -107,9 +109,9 @@ STAGE_CALM, STAGE_RESTORE, STAGE_LOAD, STAGE_DYNAMIC, STAGE_RETURN = REHAB_STAGE
 #: string comparisons. Sourced from the canonical enum's own order.
 STAGE_RANK: dict[str, int] = {stage: index for index, stage in enumerate(REHAB_STAGES)}
 
-#: The highest stage the current record can justify. Everything above it asserts
-#: injury-specific exposure tolerance, which nothing in the system records — see
-#: the module docstring. PR4 raises this once that evidence exists.
+#: The highest stage the injury report ladder can justify. Everything above it
+#: asserts exposure tolerance and is owned by declared pathway transitions in
+#: ``api.contracts.rehab_progression``, never by this ladder.
 MAX_RESOLVABLE_STAGE = STAGE_RESTORE
 
 #: Reported day-states that mean this injury is not getting worse.
@@ -603,7 +605,7 @@ def _needs_injury_specific_exposure(_injury: InjuryEvidence) -> str | None:
     exactly the false evidence this ladder must not manufacture.
 
     So every rung above :data:`MAX_RESOLVABLE_STAGE` reports the same honest
-    gap. PR4 replaces this with a real per-injury exposure record.
+    gap. Declared pathway transitions (``rehab_progression``) own higher stages.
     """
     return REASON_INSUFFICIENT_INJURY_SPECIFIC
 

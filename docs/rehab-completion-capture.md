@@ -97,9 +97,10 @@ accepted, so a malformed row cannot be laundered into a demand claim.
 
 What an unknown level must never do is count as *positive* evidence of capacity:
 "demand not stated" is not "demand was low".
-`RehabExposureEvent.has_unknown_demand` marks those events, and PR4 must exclude
-them from LOAD / DYNAMIC / RETURN qualification rather than reading an unstated
-demand as a low one.
+`RehabExposureEvent.has_unknown_demand` marks those events, and the pathway
+transition evaluator (`api/contracts/rehab_progression.py`) excludes them from
+LOAD / DYNAMIC / RETURN qualification rather than reading an unstated demand as
+a low one.
 
 ## Dose honesty
 

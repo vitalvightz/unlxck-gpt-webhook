@@ -1,0 +1,292 @@
+{
+  "schema_version": 1,
+  "safety_baseline": [
+    {
+      "requirement_id": "no_unresolved_setback",
+      "kind": "no_unresolved_setback",
+      "basis": "product_safety",
+      "description": "No current worse report and no negative response (worse, stopped or worsening) in this episode that a sourced rule has resolved. An older negative stays unresolved until a profile defines a sourced resolution rule."
+    },
+    {
+      "requirement_id": "complete_episode_history",
+      "kind": "complete_history",
+      "basis": "data_sufficiency",
+      "description": "The episode's full exposure history is available. Truncated history cannot show that a negative response is absent."
+    },
+    {
+      "requirement_id": "reviewed_stage_exposure",
+      "kind": "completed_reviewed_exposure",
+      "basis": "data_sufficiency",
+      "description": "At least one exposure to this policy's reviewed work for the current stage, with stated demand, performed as shown. This is the minimum needed to evaluate a transition, not a readiness criterion."
+    },
+    {
+      "requirement_id": "during_response_not_worse",
+      "kind": "during_session_response",
+      "basis": "product_safety",
+      "description": "The latest reviewed exposure did not feel worse during the work. An unreported or unsure answer is unknown, never a pass.",
+      "allowed_responses": [
+        "better",
+        "same"
+      ]
+    },
+    {
+      "requirement_id": "next_day_response_not_worse",
+      "kind": "next_day_response",
+      "basis": "product_safety",
+      "description": "The next-day response to the latest reviewed exposure is known and not worse. This mirrors the scheduler's existing delayed-response hold.",
+      "allowed_responses": [
+        "better",
+        "same"
+      ]
+    }
+  ],
+  "functional_checkpoints": [
+    {
+      "checkpoint_id": "pain_free_walking",
+      "description": "Walks with a normal stride without pain.",
+      "required_input": "Per-injury report: can you walk at a normal stride without pain? (yes / no / not sure)"
+    },
+    {
+      "checkpoint_id": "low_speed_running_tolerance",
+      "description": "Jogs at very low speed without pain.",
+      "required_input": "Per-injury report after an optional, explicitly offered low-speed jog: pain during / after (better / same / worse / not tried)"
+    },
+    {
+      "checkpoint_id": "pain_free_submaximal_isometric",
+      "description": "A submaximal resisted isometric contraction of the injured tissue is pain-free.",
+      "required_input": "Per-injury report captured with a reviewed isometric exposure: was the hold pain-free? (yes / no / not sure)"
+    }
+  ],
+  "families": [
+    {
+      "family_id": "muscle_strain",
+      "description": "Acute muscle or musculotendinous strain: protect, restore pain-free movement, progressively load, then speed and sport demands.",
+      "injury_types": [
+        "strain"
+      ]
+    },
+    {
+      "family_id": "ligament_sprain_or_instability",
+      "description": "Ligament sprain and symptomatic joint instability: protected movement, control and balance, progressive loading, then reactive and sport demands.",
+      "injury_types": [
+        "sprain",
+        "instability"
+      ]
+    },
+    {
+      "family_id": "tendon_rehab",
+      "description": "Tendon pain and tendinopathy: load management through isometric, then heavier slow, then energy-storage loading.",
+      "injury_types": [
+        "tendonitis"
+      ]
+    },
+    {
+      "family_id": "joint_irritation_or_impingement",
+      "description": "Painful joint irritation or impingement: settle symptoms, restore range and control, then load through tolerated range.",
+      "injury_types": [
+        "impingement"
+      ]
+    },
+    {
+      "family_id": "hyperextension_or_joint_trauma",
+      "description": "Joint hyperextension trauma: structural injury screened first, then protected range and end-range control before loading.",
+      "injury_types": [
+        "hyperextension"
+      ]
+    },
+    {
+      "family_id": "contusion",
+      "description": "Direct-blow muscle or soft-tissue bruise: protect early, restore range, then progressive loading.",
+      "injury_types": [
+        "contusion"
+      ]
+    },
+    {
+      "family_id": "nonspecific_msk_symptoms",
+      "description": "Symptom reports without a tissue diagnosis (pain, soreness, tightness, stiffness, swelling): symptom-led, conservative, no diagnosis implied.",
+      "injury_types": [
+        "pain",
+        "soreness",
+        "tightness",
+        "stiffness",
+        "swelling"
+      ]
+    }
+  ],
+  "profiles": [
+    {
+      "policy_id": "chest_strain",
+      "version": 3,
+      "pathway_family": "muscle_strain",
+      "region": "chest",
+      "injury_type": "strain",
+      "status": "active",
+      "activation": "live",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/sprains-and-strains/"
+      ],
+      "content_hash": "bcb04950b08fa56d411e0117010d9dcc47c6057bc8fc84c2304fb746e20ba8d9",
+      "prescriptions": [
+        {
+          "drill_id": "chest_strain_recovery_support",
+          "bank_hash": "732d72eea53f2191531e19edf71b3e8893982803f508bce6afd1462d85441338",
+          "stage": "calm",
+          "instructions": "Protect the strained area and avoid movements that aggravate it. During the first 2 to 3 days, rest from exercise that loads it. Use comfortable everyday movement; do not force a stretch or add resisted chest work.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if pain prevents comfortable movement or symptoms worsen.",
+            "Seek help for severe or worsening pain, swelling or inability to use the area."
+          ],
+          "frequency": "daily",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/"
+          ]
+        },
+        {
+          "drill_id": "chest_strain_comfortable_movement",
+          "bank_hash": "86969b567e9daf022d873d0c9df06983493f3d017edf0c0e86e0b6bd07cae150",
+          "stage": "restore",
+          "instructions": "When pain no longer stops movement, gently move your shoulder and arm through a comfortable range. Go at your own pace and stop before pain prevents movement. Avoid forced chest stretches, resisted chest flies and surgical-repair routines.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if pain prevents comfortable movement or symptoms worsen.",
+            "Seek help for severe or worsening pain, swelling or inability to use the area."
+          ],
+          "frequency": "daily",
+          "minimum_gap_days": 1,
+          "priority": 5,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "chest"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {}
+    },
+    {
+      "policy_id": "ankle_sprain",
+      "version": 4,
+      "pathway_family": "ligament_sprain_or_instability",
+      "region": "ankle",
+      "injury_type": "sprain",
+      "status": "active",
+      "activation": "live",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/sprains-and-strains/",
+        "https://www.whittington.nhs.uk/mini-apps/leaflet/Default.asp?id=53&print=1",
+        "https://services.eastcheshire.nhs.uk/physiotherapy-service/self-help/ankle-and-foot-pain-physiotherapy-self-help"
+      ],
+      "content_hash": "d88c6de44d3cb6e120a86863594525505a03ee37a900e307f5d4ce6b0c9f173b",
+      "prescriptions": [
+        {
+          "drill_id": "ankle_sprain_gentle_movement",
+          "bank_hash": "9ad8cc97eb7320cecee9148ad339c1d5580b0923417f6a048ecaf68929e4c440",
+          "stage": "calm",
+          "instructions": "Once the ankle is less painful, sit with the foot supported and gently move it up and down or trace the alphabet. Start with a small comfortable amount and build gradually. Keep within a comfortable range; do not force movement.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if pain prevents comfortable movement or symptoms worsen.",
+            "Seek help for severe or worsening pain, swelling or inability to use the area."
+          ],
+          "frequency": "daily",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://www.whittington.nhs.uk/mini-apps/leaflet/Default.asp?id=53&print=1"
+          ]
+        },
+        {
+          "drill_id": "ankle_sprain_supported_balance",
+          "bank_hash": "f00f718eb8220c4f7ff0539627368fe22f7218b81b8ee82d3fad9d567276eae3",
+          "stage": "restore",
+          "instructions": "When standing and weight bearing are comfortable, practise balancing on the affected leg on firm ground, close to a stable counter for support. Start with a short comfortable attempt and build gradually. Keep support available; do not use a cushion or close your eyes.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if pain prevents comfortable movement or symptoms worsen.",
+            "Seek help for severe or worsening pain, swelling or inability to use the area."
+          ],
+          "frequency": "daily",
+          "minimum_gap_days": 1,
+          "priority": 5,
+          "sources": [
+            "https://www.whittington.nhs.uk/mini-apps/leaflet/Default.asp?id=53&print=1"
+          ]
+        },
+        {
+          "drill_id": "ankle_sprain_heel_lowering",
+          "bank_hash": "c932d4b2b5a7bbfe4fbc77249ed2056cea2416add6982a3a5c84bc38cb5445ea",
+          "stage": "restore",
+          "instructions": "When weight bearing and gentle calf movement are comfortable, use a stable support and practise controlled heel lowering as shown in the linked ankle rehabilitation guidance. Work at your own pace, up to 2 sets on alternate days. The source gives no repetition target; stop before symptoms worsen.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop if pain prevents comfortable movement or symptoms worsen.",
+            "Seek help for severe or worsening pain, swelling or inability to use the area."
+          ],
+          "frequency": "daily",
+          "minimum_gap_days": 2,
+          "priority": 10,
+          "sources": [
+            "https://services.eastcheshire.nhs.uk/physiotherapy-service/self-help/ankle-and-foot-pain-physiotherapy-self-help"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "ankle"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "stage_bundles": {
+        "restore": [
+          "ankle_sprain_supported_balance",
+          "ankle_sprain_heel_lowering"
+        ]
+      },
+      "transition_overrides": {}
+    }
+  ]
+}
