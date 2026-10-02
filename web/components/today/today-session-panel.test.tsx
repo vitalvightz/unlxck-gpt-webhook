@@ -650,3 +650,19 @@ test("one live rehab session renders every reviewed bundle drill", () => {
   assert.match(html, /Reviewed heel lowering/);
   assert.equal((html.match(/>Start session</g) ?? []).length, 1);
 });
+
+test("contact actions respect live holds and reviewed rehab replacements", () => {
+  for (const rehabOnly of [false, true]) {
+    const state = contactDayState("green");
+    state.live_prescription = {
+      revision: "a".repeat(64), frozen: false, safety_hold: !rehabOnly, rehab_only: rehabOnly,
+      changes: [{ action: "held", reason: "clinician_clearance_ceiling" }],
+      session: { session_id: rehabOnly ? "rehab-2026-09-25" : "2026-09-25-flush", title: rehabOnly ? "Today's rehab" : "Mobility flush",
+        session_type: rehabOnly ? "rehab" : "strength", blocks: [] },
+    };
+    const html = renderPanel(state);
+    assert.doesNotMatch(html, />Start hard sparring<|<h2 id="today-session-heading">Hard sparring<|Sparring rounds<\/button>/);
+    assert.match(html, /Sparring rounds locked today/);
+    if (rehabOnly) assert.match(html, />Start session</);
+  }
+});

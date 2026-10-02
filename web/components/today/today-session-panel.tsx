@@ -513,6 +513,8 @@ export function TodaySessionPanel({
     (resolvedDecision.authoritativeTier === "green" ||
       resolvedDecision.authoritativeTier === "modify") &&
     !severeInjuryBlocksCurrentSession &&
+    !decisionBlocksCurrentSession &&
+    !livePrescription?.rehab_only &&
     !safeSession;
   const contactTimerAvailable = Boolean(contactTarget) && contactCleared;
   // The athlete's declared gym work (hard sparring, technical rounds) is the
@@ -524,6 +526,7 @@ export function TodaySessionPanel({
     Boolean(contactTarget) &&
     resolvedDecision.sessionIsToday &&
     !safeSession &&
+    !livePrescription?.rehab_only &&
     !decisionBlocksCurrentSession;
   const contactHeadline = contactTarget ? contactTitle(contactTarget) : "";
   // The same authority holds for the day the card previews: a declared contact

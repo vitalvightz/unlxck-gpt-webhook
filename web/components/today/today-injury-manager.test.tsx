@@ -476,13 +476,13 @@ test("the check-in offers only change actions — no 'Same' to confirm", async (
   const labels = Array.from(
     container.querySelectorAll<HTMLButtonElement>(".today-injury-status-row button"),
   ).map((button) => button.textContent?.trim());
-  assert.deepEqual(labels, ["Easing", "Worse", "Cleared"]);
+  assert.deepEqual(labels, ["Easing", "Worse", "Resolved"]);
   assert.doesNotMatch(container.textContent ?? "", /\bSame\b/);
 
   cleanup();
 });
 
-test("clearing an injury is not marked selected until the confirmed write succeeds", async () => {
+test("resolving an injury is not marked selected until the confirmed write succeeds", async () => {
   const failing = stubCheckin({ fail: true });
   const { container, root, cleanup } = mount();
 
@@ -493,29 +493,30 @@ test("clearing an injury is not marked selected until the confirmed write succee
       );
     });
 
-    await click(statusButton(container, "Cleared"));
+    await click(statusButton(container, "Resolved"));
     // The confirmation is open, but nothing has been sent or marked saved.
     assert.equal(failing.calls.length, 0);
-    assertNotSelected(statusButton(container, "Cleared"));
-    assert.ok(statusButton(container, "Cleared").classList.contains("today-segment-pending"));
+    assertNotSelected(statusButton(container, "Resolved"));
+    assert.ok(statusButton(container, "Resolved").classList.contains("today-segment-pending"));
 
-    await click(buttonNamed(container, "Yes, clear"));
+    await click(buttonNamed(container, "Yes, resolve"));
 
     // The write failed: no selected state, and the confirmation stays open.
     assert.equal(failing.calls.length, 1);
-    assertNotSelected(statusButton(container, "Cleared"));
-    assert.match(container.textContent ?? "", /Clear this injury\?/);
+    assertNotSelected(statusButton(container, "Resolved"));
+    assert.match(container.textContent ?? "", /Resolve this injury\?/);
   } finally {
     failing.restore();
   }
 
   const succeeding = stubCheckin();
   try {
-    await click(buttonNamed(container, "Yes, clear"));
+    await click(buttonNamed(container, "Yes, resolve"));
 
     assert.equal(succeeding.calls.length, 1);
-    assertSelected(statusButton(container, "Cleared"));
-    assert.doesNotMatch(container.textContent ?? "", /Clear this injury\?/);
+    assert.deepEqual(succeeding.calls[0].injuries, [{ flag_id: BLISTER.id, status: "resolved" }]);
+    assertSelected(statusButton(container, "Resolved"));
+    assert.doesNotMatch(container.textContent ?? "", /Resolve this injury\?/);
 
     cleanup();
   } finally {
@@ -781,9 +782,9 @@ test("a pending answer is announced, not just outlined", async () => {
       );
     });
 
-    await click(statusButton(container, "Cleared"));
+    await click(statusButton(container, "Resolved"));
 
-    const cleared = statusButton(container, "Cleared");
+    const cleared = statusButton(container, "Resolved");
     assertNotSelected(cleared);
     const describedBy = cleared.getAttribute("aria-describedby");
     assert.ok(describedBy, "expected the pending button to describe its state");
@@ -888,7 +889,7 @@ test("active injuries stay first with name, type, severity, actions, and the add
     assert.match(list.textContent ?? "", /Bruise/);
     assert.match(list.textContent ?? "", /moderate/);
     assert.ok(button(container, "Easing"));
-    assert.ok(button(container, "Cleared"));
+    assert.ok(button(container, "Resolved"));
   } finally {
     unmountMain(container, root);
   }
@@ -1231,10 +1232,10 @@ test("existing injury status actions still submit through the current refresh fl
     assert.equal(refreshes, 1);
     assert.equal(button(container, "Easing").getAttribute("aria-pressed"), "true");
 
-    await click(button(container, "Cleared"));
-    assert.match(container.textContent ?? "", /Clear this injury/);
+    await click(button(container, "Resolved"));
+    assert.match(container.textContent ?? "", /Resolve this injury/);
     await click(button(container, "Cancel"));
-    assert.doesNotMatch(container.textContent ?? "", /Clear this injury/);
+    assert.doesNotMatch(container.textContent ?? "", /Resolve this injury/);
   } finally {
     globalThis.fetch = originalFetch;
     unmountMain(container, root);

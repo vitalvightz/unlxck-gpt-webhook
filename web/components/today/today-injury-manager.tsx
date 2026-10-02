@@ -39,11 +39,11 @@ import type {
 // where it is (the backend keeps it "ongoing"), so a per-day "nothing changed"
 // tap was pure ceremony — and a bright, pre-selectable "Same" button read to
 // athletes as a required daily confirmation. The check-in now only asks for a
-// CHANGE: easing, worse, or cleared. Silence supplies no recovery evidence.
+// CHANGE: easing, worse, or resolved. Silence supplies no recovery evidence.
 const INJURY_STATUS_ACTIONS: Array<{ value: TodayInjuryCheckinStatus; label: string }> = [
   { value: "improving", label: "Easing" },
   { value: "worse", label: "Worse" },
-  { value: "resolved", label: "Cleared" },
+  { value: "resolved", label: "Resolved" },
 ];
 
 // Surface (skin) follow-up ----------------------------------------------------
@@ -396,7 +396,7 @@ export function TodayInjuryManager({
       ) {
         showToast("Injury updated. Protect it from rubbing or contact.", { tone: "info" });
       } else {
-        showToast(status === "resolved" ? "Injury cleared." : "Injury updated.", {
+        showToast(status === "resolved" ? "Injury resolved." : "Injury updated.", {
           tone: "success",
         });
       }
@@ -409,7 +409,7 @@ export function TodayInjuryManager({
     }
   }
 
-  // "Easing" applies straight away. "Cleared" routes through an inline
+  // "Easing" applies straight away. "Resolved" routes through an inline
   // confirmation because it removes the injury from tracking, and "Worse" on a
   // known skin injury routes through the surface follow-up, because how a wound
   // is worse (open? bleeding? coverable?) is what decides whether anything about
@@ -801,10 +801,10 @@ export function TodayInjuryManager({
                   <div
                     className="today-injury-confirm"
                     role="alertdialog"
-                    aria-label={`Clear ${getInjuryLabel(injury)}?`}
+                    aria-label={`Resolve ${getInjuryLabel(injury)}?`}
                   >
                     <span className="today-injury-confirm-text">
-                      Clear this injury? It will be removed from today&apos;s tracking.
+                      Resolve this injury? It will be removed from today&apos;s tracking.
                     </span>
                     <div className="today-injury-confirm-actions">
                       <button
@@ -813,7 +813,7 @@ export function TodayInjuryManager({
                         disabled={pendingFlagId !== null}
                         onClick={() => void confirmClear(injury.id)}
                       >
-                        {pendingFlagId === injury.id ? "Clearing..." : "Yes, clear"}
+                        {pendingFlagId === injury.id ? "Resolving..." : "Yes, resolve"}
                       </button>
                       <button
                         type="button"

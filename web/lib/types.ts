@@ -1052,6 +1052,7 @@ export type TodayCommandView = {
     session: StructuredSession;
     safety_hold: boolean;
     safety_hold_reason?: string;
+    rehab_only?: boolean;
     frozen: boolean;
     changes: Array<{ action: string; reason?: string; injury_id?: string }>;
   } | null;

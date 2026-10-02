@@ -1356,7 +1356,8 @@ def upsert_session_completion(
                 raise
     live = command.live_prescription if command and str(command.active_plan.get("id")) == plan_id else None
     if command and str(command.active_plan.get("id")) != plan_id and status_value in _TRAINING_COMPLETION_STATUSES:
-        if any(injury.get("rehab_decision", {}).get("activation") in {"live", "retired"} for injury in command.open_injuries):
+        if any(injury.get("rehab_decision", {}).get("activation") in {"live", "retired"}
+               or injury.get("clinician_clearance") for injury in command.open_injuries):
             raise HTTPException(409, "Activate this plan to apply your current injury guidance before training.")
     standalone = live is not None and live["session"].get("session_id") == session_id
     saved_occurrence = existing.get("prescription_snapshot") or {}
@@ -3025,6 +3026,12 @@ def _build_today_command_view(
         if any("sparring" in str(_entry_mapping_for_readiness(entry).get("session_type") or "").lower()
                for entry in today_candidates):
             training_session["session_type"] = "sparring"
+        from api.contracts.readiness_message import _session_has_contact
+        contact_entry = next((entry for entry in today_candidates
+                              if _session_has_contact({**_entry_mapping_for_readiness(entry), "blocks": []})
+                              or _session_has_contact(_entry_mapping_for_readiness(entry))), None)
+        if contact_entry:
+            training_session["coach_led_contact"] = contact_entry.get("coach_led_contact") or contact_entry.get("title") or "Contact work"
     open_injuries = _with_injury_policy(open_injuries, store=store, athlete_id=athlete_id,
                                        phase=str(resolved_plan.get("phase") or ""), current_checkin=today_checkin, equipment=equipment,
                                        readiness_decision=(recommendation or {}).get("decision") or "not_checked_in", training_day=training_day,
@@ -3034,6 +3041,7 @@ def _build_today_command_view(
     live = reconcile_session_prescription(
         training_session if not today_is_complete else None,
         decisions=decisions, plan_id=plan_id, training_day=training_day, frozen=frozen if not today_is_complete else None,
+        injuries=open_injuries,
     )
     if live and not frozen and (today_completion or {}).get("status") == "started":
         # Activation must not rewrite work that started before snapshots existed.

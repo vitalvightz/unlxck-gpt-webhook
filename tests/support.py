@@ -1980,7 +1980,7 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         revision = {}
         for key, source in (("exposure_id", self.rehab_exposures), ("event_id", self.injury_episode_events)):
             rows = [r for r in source.values() if r.get("athlete_id") == athlete_id
-                    and (key != "event_id" or r.get("event_type") in {"injury_checkin", "delayed_rehab_response"})]
+                    and (key != "event_id" or r.get("event_type") in {"injury_checkin", "delayed_rehab_response", "clinician_clearance_report"})]
             latest = max(rows, key=lambda r: (r.get("created_at", ""), r["id"]), default=None)
             revision[key] = latest["id"] if latest else None
         return revision

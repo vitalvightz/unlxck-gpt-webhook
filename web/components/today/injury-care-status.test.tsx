@@ -23,9 +23,9 @@ async function click(container: HTMLElement, label: string) {
 }
 
 for (const [label, scopes] of [
-  ["Rehab", ["rehab"]],
-  ["Training without contact", ["rehab", "training"]],
-  ["Training and contact", ["rehab", "training", "contact"]],
+  ["Rehab only", ["rehab"]],
+  ["Train, no contact", ["rehab", "training"]],
+  ["Train + contact", ["rehab", "training", "contact"]],
 ] as const) {
   test(`clinician clearance submits unchanged scopes for ${label}`, async () => {
     const container = document.createElement("div"); document.body.appendChild(container);
@@ -42,15 +42,15 @@ for (const [label, scopes] of [
       assert.match(container.textContent ?? "", /Recovery day/);
       assert.match(container.textContent ?? "", /Next due: 2026-10-02/);
       assert.equal(container.querySelector("a")?.getAttribute("href"), "https://www.nhs.uk/conditions/sprains-and-strains/");
-      await click(container, "My clinician cleared me");
-      assert.match(container.textContent ?? "", /does not unlock rehab or change its schedule/);
+      await click(container, "Report clinician clearance");
+      assert.match(container.textContent ?? "", /does not override safety guidance or advance rehab/);
       assert.equal(container.querySelectorAll(".today-segment-row > .today-segment").length, 3);
       await click(container, label);
       assert.match(String(calls[0].report_id), /^[a-f0-9-]{36}$/);
       const { report_id: firstReportId, ...body } = calls[0];
       assert.deepEqual(body, { injury_id: "injury-1", injury_episode_id: "episode-1", event_type: "clinician_clearance_report", scopes });
       assert.equal(refreshes, 1);
-      await click(container, "My clinician cleared me");
+      await click(container, "Report clinician clearance");
       assert.equal(container.querySelectorAll(".today-segment-row > .today-segment").length, 3);
       await click(container, label);
       assert.notEqual(calls[1].report_id, firstReportId);
@@ -101,10 +101,10 @@ test("clearance retry keeps the report identity when refresh fails after saving"
     await act(async () => { root.render(<InjuryCareStatus injury={injury} token="token" onRefresh={async () => {
       if (++refreshes === 1) throw new Error("Refresh failed");
     }} />); });
-    await click(container, "My clinician cleared me");
-    await click(container, "Rehab");
+    await click(container, "Report clinician clearance");
+    await click(container, "Rehab only");
     assert.match(container.textContent ?? "", /Refresh failed/);
-    await click(container, "Rehab");
+    await click(container, "Rehab only");
     assert.equal(calls.length, 2);
     assert.equal(calls[0].report_id, calls[1].report_id);
   } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
@@ -122,3 +122,69 @@ test("unsupported guidance shows a repeated reason only once and keeps schedule 
     if (reason !== summary) assert.ok(html.includes(reason));
   }
 });
+
+for (const [scopes, label] of [
+  [["rehab"], "Rehab only"],
+  [["rehab", "training"], "Train, no contact"],
+  [["rehab", "training", "contact"], "Train + contact"],
+] as const) {
+  test(`current clearance shows ${label} and an update action`, () => {
+    const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, clinician_clearance: {
+      episode_id: injury.episode_id!, scopes: [...scopes], source: "athlete_reported", externally_verified: false,
+    } }} token="token" onRefresh={async () => {}} />);
+    assert.ok(html.includes(`Clinician clearance: ${label}`));
+    assert.ok(html.includes("Update clinician clearance"));
+    assert.ok(!html.includes("Report clinician clearance"));
+  });
+}
+
+test("updating clearance displays the refreshed scope, and worsening removes current clearance", async () => {
+  const container = document.createElement("div"); document.body.appendChild(container);
+  const root = createRoot(container);
+  const original = globalThis.fetch;
+  let current: InjuryFlagRecord = { ...injury, clinician_clearance: {
+    episode_id: injury.episode_id!, scopes: ["rehab", "training"], source: "athlete_reported", externally_verified: false,
+  } };
+  const calls: Array<Record<string, unknown>> = [];
+  const render = () => root.render(<InjuryCareStatus injury={current} token="token" onRefresh={async () => {
+    render();
+  }} />);
+  globalThis.fetch = (async (_input, init) => {
+    const body = JSON.parse(String(init?.body)); calls.push(body);
+    current = { ...current, clinician_clearance: { ...current.clinician_clearance!, scopes: body.scopes } };
+    return new Response("{}", { status: 200 });
+  }) as typeof fetch;
+  try {
+    await act(async () => { render(); });
+    assert.match(container.textContent ?? "", /Clinician clearance: Train, no contact/);
+    await click(container, "Update clinician clearance");
+    await click(container, "Train + contact");
+    assert.deepEqual(calls[0].scopes, ["rehab", "training", "contact"]);
+    assert.equal(calls[0].event_type, "clinician_clearance_report");
+    assert.ok(!("status" in calls[0]));
+    assert.equal(current.status, "open");
+    assert.match(container.textContent ?? "", /Clinician clearance: Train \+ contact/);
+    assert.doesNotMatch(container.textContent ?? "", /Clinician clearance: Train, no contact/);
+    current = { ...current, clinician_clearance: null, latest_reported_status: "worse" };
+    await act(async () => { render(); });
+    assert.doesNotMatch(container.textContent ?? "", /Clinician clearance:|Update clinician clearance/);
+    assert.match(container.textContent ?? "", /Report clinician clearance/);
+  } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
+});
+
+test("no current clearance uses the report action without claiming a current scope", () => {
+  const html = renderToStaticMarkup(<InjuryCareStatus injury={injury} token="token" onRefresh={async () => {}} />);
+  assert.ok(html.includes("Report clinician clearance"));
+  assert.ok(!html.includes("Clinician clearance:"));
+});
+
+
+for (const scopes of [["contact"], ["training"], ["rehab", "contact"], [], ["rehab", "rehab"]] as const) {
+  test(`noncanonical clearance ${scopes.join(",")} never displays a training grant`, () => {
+    const html = renderToStaticMarkup(<InjuryCareStatus injury={{ ...injury, clinician_clearance: {
+      episode_id: injury.episode_id!, scopes: [...scopes], source: "athlete_reported", externally_verified: false,
+    } }} token="token" onRefresh={async () => {}} />);
+    assert.match(html, /Clinician clearance: Scope unclear/);
+    assert.doesNotMatch(html, /Clinician clearance: Train/);
+  });
+}

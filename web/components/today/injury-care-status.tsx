@@ -25,6 +25,14 @@ export function InjuryCareStatus({ injury, token, onRefresh }: {
     } catch (e) { setError(e instanceof Error ? e.message : "Could not save your report."); }
     finally { setBusy(false); }
   }
+  const clearance = injury.clinician_clearance;
+  const scopeLabels: Record<string, string> = {
+    rehab: "Rehab only",
+    "rehab,training": "Train, no contact",
+    "contact,rehab,training": "Train + contact",
+  };
+  const scopeLabel = scopeLabels[[...(clearance?.scopes ?? [])].sort().join(",")]
+    ?? "Scope unclear — update required";
   const surface = injury.rehab_decision?.outcome === "wound_care" || Boolean(injury.surface_class && injury.surface_class !== "non_surface");
   const schedule = injury.rehab_decision?.schedule;
   const labels = { due: "Rehab due", recovery_day: "Recovery day", already_completed: "Today's allocation used",
@@ -38,15 +46,15 @@ export function InjuryCareStatus({ injury, token, onRefresh }: {
         {index ? " · " : ""}<a href={source} target="_blank" rel="noopener noreferrer">Routine guidance{index ? ` ${index + 1}` : ""}</a>
       </span>)}
     </p> : null}
-    {injury.clinician_clearance ? <p className="muted">You reported clinician clearance for {injury.clinician_clearance.scopes.join(", ")}.</p> : null}
+    {clearance ? <p className="muted">Clinician clearance: {scopeLabel}</p> : null}
     {injury.episode_id && !surface ? <>
-      <button type="button" className="ghost-button" onClick={() => setChoosing(!choosing)} disabled={busy}>My clinician cleared me</button>
+      <button type="button" className="ghost-button" onClick={() => setChoosing(!choosing)} disabled={busy}>{clearance ? "Update clinician clearance" : "Report clinician clearance"}</button>
       {choosing ? <div role="group" aria-label="What were you cleared for?">
-        <p>What were you cleared for? Optional information; it does not unlock rehab or change its schedule.</p>
+        <p>What were you cleared for? Athlete-reported, not verified. This limits training; it does not override safety guidance or advance rehab.</p>
         <div className="today-segment-row">
-          <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab"])}>Rehab</button>
-          <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab", "training"])}>Training without contact</button>
-          <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab", "training", "contact"])}>Training and contact</button>
+          <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab"])}>Rehab only</button>
+          <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab", "training"])}>Train, no contact</button>
+          <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab", "training", "contact"])}>Train + contact</button>
         </div>
       </div> : null}
     </> : null}
