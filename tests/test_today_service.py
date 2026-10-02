@@ -2366,15 +2366,14 @@ class TestCommandView:
         }]}]}
 
     def test_severe_injury_does_not_block_a_safe_filler_session(self):
-        # A neck injury cannot stop you writing a mental cue card. Today's low-cost
-        # support/filler session is exempt from the injury hold: not stopped, and
-        # the command view flags it so the UI never blocks it.
+        # A muscle strain can preserve cognitive support work. Current neuro or
+        # medical red flags instead stop every execution path.
         store = _store_with_plan()
         store.plans[PLAN]["structured_plan"] = self._cue_card_structured_plan()
         store.create_injury_flag(
             ATHLETE,
             {"source": "intake", "plan_id": PLAN, "body_area": "neck",
-             "description": "neck nerve pinch", "severity": "severe", "status": "open"},
+             "description": "neck muscle strain", "severity": "severe", "status": "open"},
         )
         now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
         view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=now)
@@ -2388,7 +2387,7 @@ class TestCommandView:
         store.create_injury_flag(
             ATHLETE,
             {"source": "intake", "plan_id": PLAN, "body_area": "neck",
-             "description": "neck nerve pinch", "severity": "severe", "status": "open"},
+             "description": "neck muscle strain", "severity": "severe", "status": "open"},
         )
         now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
         row = upsert_session_completion(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+from functools import lru_cache
 import re
 from typing import Any
 
@@ -1793,6 +1794,26 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         urgent_flags=urgent_flags,
         sparring_risk_band=highest_band,
     )
+
+
+@lru_cache(maxsize=512)
+def current_injury_medical_hold(body_area: str, description: str, severity: str) -> bool:
+    """Project existing serious triage evidence into current execution safety.
+
+    This does not diagnose symptoms, change rehab stages or grant clearance.
+    The caller supplies only active reports, never resolved injury history.
+    """
+    text = ". ".join(part for part in (body_area, description) if part.strip())
+    if not text:
+        return False
+    parsed = PlanInput.from_payload({"data": {"fields": [
+        {"label": "Any injuries or areas you need to work around?", "value": text},
+    ]}})
+    triage = triage_injuries(parsed)
+    return (triage.mode == MEDICAL_HOLD
+            or bool(set(triage.red_flags) & _NEUROLOGICAL_RED_FLAGS)
+            or "urgent_fracture" in triage.urgent_flags
+            or (severity.lower() in {"severe", "high"} and "fracture" in triage.matched_high_risk_categories))
 
 
 def _blocked_severity_summary(parsed_injuries: list[dict[str, Any]] | None) -> list[dict[str, Any]]:

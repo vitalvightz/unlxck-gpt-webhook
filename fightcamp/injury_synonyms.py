@@ -440,8 +440,8 @@ STRUCTURAL_RED_FLAG_MAP: dict[str, tuple[str, ...]] = {
     "nausea after head impact": ("structural_red_flag", "suspected_concussion", "urgent"),
     # Unambiguous head-trauma symptoms flag concussion on their own (no "after a
     # hit" context needed). Bare dizziness/lightheadedness is deliberately left
-    # out — that is handled as a soft, non-urgent note because it is also a
-    # common weight-cut symptom.
+    # out of concussion diagnosis. A current symptom still gates execution in
+    # Today independently of whether a head injury can be identified.
     "seeing stars": ("structural_red_flag", "suspected_concussion", "urgent"),
     "saw stars": ("structural_red_flag", "suspected_concussion", "urgent"),
     "blurred vision": ("structural_red_flag", "suspected_concussion", "urgent"),

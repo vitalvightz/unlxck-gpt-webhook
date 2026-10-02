@@ -59,6 +59,7 @@ from api.contracts.readiness_message import (
     ReadinessAdjustment,
     ReadinessCheckin,
     ReadinessContext,
+    active_medical_hold_reasons,
     build_readiness_adjustment,
     classify_injury_surface,
     is_support_session,
@@ -2764,7 +2765,13 @@ def _build_today_command_view(
         injuries = _with_rehab_stage(_with_safe_session_context(_with_surface_class(_open_injury_flags(store, athlete_id))),
                                     store=store, athlete_id=athlete_id)
         injuries = _with_injury_policy(injuries, store=store, athlete_id=athlete_id, training_day=training_day)
-        view = build_command_view(current_training_day=training_day, plan=None, open_injuries=injuries)
+        symptom_recommendation = None
+        if active_medical_hold_reasons(injuries):
+            symptom_decision = build_readiness_adjustment(ReadinessCheckin(), ReadinessContext(open_injuries=injuries))
+            symptom_recommendation = {"decision": symptom_decision.decision, "reason": symptom_decision.message,
+                                      "triggers": list(symptom_decision.triggers), "training_day": training_day}
+        view = build_command_view(current_training_day=training_day, plan=None, open_injuries=injuries,
+                                  recommendation=symptom_recommendation)
         view.effective_clinician_clearance = effective_clinician_clearance(injuries)
         view.delayed_rehab_prompts = delayed_rehab_prompts(store, athlete_id, training_day, athlete_timezone)
         return view
@@ -2981,15 +2988,16 @@ def _build_today_command_view(
             # Readiness follows the already accepted support, not its held
             # coach-led sibling. Reconciliation still freezes and gates it.
             support_projection = accepted_session
-    if today_checkin and any(event.get("event_type") == "clinician_clearance_report"
-                             for events in observations_by_injury.values() for event in events):
-        # Clearance can remove a generic injury floor. Re-evaluate the original
-        # check-in inputs, retaining fatigue, red flags and context fail-safes.
+    if active_medical_hold_reasons(open_injuries) or (today_checkin and any(event.get("event_type") == "clinician_clearance_report"
+                             for events in observations_by_injury.values() for event in events)):
+        # Clearance can remove a generic injury floor, while current medical
+        # reports must escalate even without a check-in or clearance report.
+        # Re-evaluate inputs, retaining fatigue, red flags and context fail-safes.
         # History is unchanged; this is the current execution recommendation.
         decision, _ = _readiness_decision_with_failsafe(
-            store, checkin=_stored_readiness_checkin_from(today_checkin), athlete_id=athlete_id,
+            store, checkin=_stored_readiness_checkin_from(today_checkin or {}), athlete_id=athlete_id,
             plan_row=plan_row, training_day=training_day,
-            phase=str(today_checkin.get("phase") or resolved_plan.get("phase") or ""), open_injuries=open_injuries,
+            phase=str((today_checkin or {}).get("phase") or resolved_plan.get("phase") or ""), open_injuries=open_injuries,
             session_override=support_projection)
         recommendation = {"decision": decision.decision, "reason": decision.message,
                           "triggers": list(decision.triggers), "training_day": training_day}
@@ -3003,7 +3011,7 @@ def _build_today_command_view(
     # produced "Rehab only today." on injury report) we keep that richer copy.
     # A low-cost support / filler session (mental cue card, breathing/mobility reset)
     # is the safe work an injury STOP itself prescribes, so the injury hold does not
-    # apply to it — a neck injury cannot block writing a mental cue. Exempt today's
+    # apply to it. Current medical red flags still block all work. Exempt today's
     # scheduled filler from the severe-injury override, the decision tier, and the
     # completion guard.
     # has_today_session is already limited to a session that is still
