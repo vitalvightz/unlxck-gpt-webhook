@@ -28,9 +28,9 @@ Workflow:
 
     # Optional, between 1 and 3: let Gemini watch each suggested video, confirm
     # it shows the exercise and pre-fill start_s / end_s. Needs GEMINI_API_KEY.
-    # Candidate discovery prefers DataForSEO when DATAFORSEO_LOGIN/PASSWORD are
-    # set, with the YouTube Data API as a fallback when YOUTUBE_DATA_API_KEY is
-    # also available. Otherwise input needs suggested_url (plus optional candidate_urls,
+    # Candidate discovery uses DataForSEO when DATAFORSEO_LOGIN/PASSWORD are
+    # set. The YouTube search API is used only when DataForSEO is not configured
+    # (or when explicitly selected). Otherwise input needs suggested_url (plus optional candidate_urls,
     # '|'-separated, and plan_cue). Saves after every video and row; re-running
     # the same command, with or
     # without --out, resumes. Exits 1 if any row failed or the quota stopped
@@ -491,7 +491,6 @@ def _cmd_review(args: argparse.Namespace) -> int:
             searcher = build_candidate_search(
                 provider=args.search_provider,
                 youtube_api_key=youtube_api_key(),
-                on_fallback=lambda message: print(message, file=sys.stderr),
             )
         except CandidateSearchError as exc:
             print(f"error: {exc}", file=sys.stderr)
@@ -530,7 +529,7 @@ def _cmd_review(args: argparse.Namespace) -> int:
     )
     # Non-zero when any row failed or a quota stop left rows unreviewed, so a
     # script never treats a partial run as complete.
-    return 1 if counts["errors"] or counts.get("quota_stopped") else 0
+    return 1 if counts["errors"] or counts.get("quota_stopped") or counts.get("search_stopped") else 0
 
 
 def main(argv: list[str] | None = None) -> int:
