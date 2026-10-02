@@ -39,7 +39,7 @@ begin
          (select id::text from public.rehab_exposures where athlete_id = new.athlete_id order by created_at desc, id desc limit 1)
          or new.prescription_snapshot->'evidence_context'->>'event_id' is distinct from
          (select id::text from public.injury_episode_events where athlete_id = new.athlete_id
-           and event_type in ('injury_checkin','delayed_rehab_response') order by created_at desc, id desc limit 1) then
+           and event_type in ('injury_checkin','delayed_rehab_response','clinician_clearance_report') order by created_at desc, id desc limit 1) then
         raise exception 'prescription_revision_conflict' using errcode = '23514';
       end if;
       if jsonb_typeof(new.prescription_snapshot->'readiness_context') is distinct from 'object'
