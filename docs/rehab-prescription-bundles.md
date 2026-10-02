@@ -69,4 +69,6 @@ No production policy bundle is enabled by this change.
 The camp-generation adapter still emits one primary reviewed line per episode.
 This work changes live reconciliation, not camp generation or scheduler design.
 Delayed feedback remains exposure-addressed; multiple exposures can produce
-multiple next-day prompts. That existing UX is deliberately unchanged.
+multiple next-day prompts. That existing UX is deliberately unchanged. Bundle
+loading checks every exposure in the latest response group, so answering one
+member cannot release siblings whose delayed response is still unknown.

@@ -218,3 +218,18 @@ def test_today_daily_reservations_count_a_started_bundle_once(monkeypatch):
         readiness_decision="train_as_planned", training_session={"session_type": "strength"})
     states = {row["id"]: row["rehab_decision"]["schedule"]["state"] for row in rows}
     assert states == {injury["id"]: "already_completed", other["id"]: "due"}
+
+
+@pytest.mark.parametrize("unknown_first", [True, False])
+def test_one_member_delayed_answer_cannot_release_the_whole_bundle(unknown_first):
+    _, injury, decision = fixture()
+    responses = ["not_yet_known", "same"] if unknown_first else ["same", "not_yet_known"]
+    events = [dict(athlete_id=ATHLETE, event_json=dict(
+        injury_id=injury["id"], injury_episode_id=injury["episode_id"], drill_id=identity,
+        occurred_at="2026-09-30T00:00:00Z", response_group_id="shared",
+        response={"during_response": "same", "next_day_response": response}))
+        for identity, response in zip(IDS, responses)]
+    assert schedule_rehab(injury, decision, training_day=DAY, exposures=events)["state"] == "held"
+    for event in events:
+        event["event_json"]["response"]["next_day_response"] = "same"
+    assert schedule_rehab(injury, decision, training_day=DAY, exposures=events)["state"] == "due"
