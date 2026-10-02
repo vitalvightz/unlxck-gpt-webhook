@@ -45,6 +45,7 @@ def schedule_rehab(injury, decision, *, training_day, completions=(), exposures=
     prescription = decision.get("prescription")
     if not prescription:
         return result("held" if decision.get("outcome") == "medical_review" else "unsupported", decision["summary"])
+    drill_ids = {member["drill_id"] for member in prescription.get("drills", [prescription])}
     today = date.fromisoformat(training_day)
     injury_id, episode_id = str(injury["id"]), str(injury["episode_id"])
     performed = []
@@ -58,7 +59,7 @@ def schedule_rehab(injury, decision, *, training_day, completions=(), exposures=
             day = date.fromisoformat(str(completion["training_day"]))
             if day == today:
                 return result("already_completed", "Today's rehab allocation is reserved by your started session." if completion.get("status") == "started" else "You have already logged rehab for this injury today.", (today + timedelta(days=max(prescription["minimum_gap_days"], block.get("minimum_gap_days", 1)))).isoformat())
-            if completion.get("status") in {"done", "modified"} and block.get("rehab_drill_id") == prescription["drill_id"]:
+            if completion.get("status") in {"done", "modified"} and block.get("rehab_drill_id") in drill_ids:
                 performed.append((day, max(prescription["minimum_gap_days"], block.get("minimum_gap_days", 1))))
     # Legacy recorded rehab also spaces work; ordinary training has no such event.
     for row in exposures:
@@ -72,7 +73,7 @@ def schedule_rehab(injury, decision, *, training_day, completions=(), exposures=
             continue
         if day == today:
             return result("already_completed", "You have already logged rehab for this injury today.", (today + timedelta(days=prescription["minimum_gap_days"])).isoformat())
-        if (raw.get("drill_id") or raw.get("rehab_drill_id")) == prescription["drill_id"]:
+        if (raw.get("drill_id") or raw.get("rehab_drill_id")) in drill_ids:
             performed.append((day, prescription["minimum_gap_days"]))
     next_due = max((day + timedelta(days=gap) for day, gap in performed), default=today)
     if next_due > today:
@@ -86,13 +87,25 @@ def schedule_rehab(injury, decision, *, training_day, completions=(), exposures=
         recent = [r for r in exposures if str((r.get("event_json") or r).get("injury_episode_id")) == episode_id]
         if recent:
             latest = max(recent, key=lambda r: str((r.get("event_json") or r).get("occurred_at") or ""))
-            response = (latest.get("event_json") or latest).get("response") or {}
+            latest_raw = latest.get("event_json") or latest
+            # Delayed answers are exposure-addressed. A known answer for one
+            # member cannot release another member whose response is unknown.
+            latest_group = [latest]
+            if prescription.get("drills"):
+                group_id = latest_raw.get("response_group_id")
+                latest_group = [r for r in recent if
+                    ((r.get("event_json") or r).get("response_group_id") == group_id
+                     if group_id else
+                     (r.get("event_json") or r).get("occurred_at") == latest_raw.get("occurred_at"))]
             from .rehab_progression import _instant
             improved = _instant(injury.get("latest_reported_at"))
-            observed = _instant(latest.get("response_recorded_at") or latest.get("created_at") or (latest.get("event_json") or latest).get("occurred_at"))
-            explicit_later_improvement = injury.get("latest_reported_status") == "improving" and improved and observed and improved > observed
-            if not explicit_later_improvement and (response.get("during_response") not in {"better", "same"} or response.get("next_day_response") not in {"better", "same"}):
-                return result("held", "Loading rehab needs an injury-specific response to the last rehab session.")
+            for occurrence in latest_group:
+                raw = occurrence.get("event_json") or occurrence
+                response = raw.get("response") or {}
+                observed = _instant(occurrence.get("response_recorded_at") or occurrence.get("created_at") or raw.get("occurred_at"))
+                explicit_later_improvement = injury.get("latest_reported_status") == "improving" and improved and observed and improved > observed
+                if not explicit_later_improvement and (response.get("during_response") not in {"better", "same"} or response.get("next_day_response") not in {"better", "same"}):
+                    return result("held", "Loading rehab needs an injury-specific response to the last rehab session.")
         for block in (training_session or {}).get("blocks", []):
             if block.get("block_type") == "rehab":
                 continue

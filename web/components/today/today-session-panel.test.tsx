@@ -626,3 +626,27 @@ for (const [value, label] of [
     } finally { globalThis.fetch = original; act(() => root.unmount()); container.remove(); }
   });
 }
+
+test("one live rehab session renders every reviewed bundle drill", () => {
+  const state = contactDayState("green");
+  state.today.next_session = {
+    session_id: "rehab-2026-09-25", title: "Today's rehab", session_relation: "today",
+  };
+  state.live_prescription = {
+    revision: "a".repeat(64),
+    safety_hold: false, frozen: false, changes: [],
+    session: {
+      session_id: "rehab-2026-09-25", title: "Today's rehab", session_type: "rehab",
+      blocks: [
+        { block_id: "rehab:injury-1:balance", block_type: "rehab",
+          display_name: "Reviewed supported balance", coaching_cues: ["Use a stable counter."] },
+        { block_id: "rehab:injury-1:lowering", block_type: "rehab",
+          display_name: "Reviewed heel lowering", coaching_cues: ["Lower within comfort."] },
+      ],
+    },
+  };
+  const html = renderPanel(state);
+  assert.match(html, /Reviewed supported balance/);
+  assert.match(html, /Reviewed heel lowering/);
+  assert.equal((html.match(/>Start session</g) ?? []).length, 1);
+});

@@ -69,6 +69,7 @@ def postgres_database():
             setup.execute((ROOT / "supabase/migrations/20260820170000_add_rehab_response_group_identity.sql").read_text(encoding="utf-8"))
             setup.execute(MIGRATION.read_text(encoding="utf-8"))
             setup.execute((ROOT / "supabase/migrations/20261001122553_restrict_injury_episode_trigger_execution.sql").read_text(encoding="utf-8"))
+            setup.execute((ROOT / "supabase/migrations/20261002132000_count_rehab_bundle_allocations.sql").read_text(encoding="utf-8"))
             setup.execute("insert into profiles values (%s)", (ATHLETE,))
             setup.execute("""insert into injury_flags(id,athlete_id,description,body_region,side,episode_id)
                 values(%s,%s,'ankle sprain','ankle','left',%s)""", (INJURY, ATHLETE, EPISODE))
@@ -273,3 +274,94 @@ def test_historical_delayed_feedback_remains_owned_and_episode_scoped(postgres_d
         with pytest.raises(psycopg.Error) as failure:
             connection.execute("select record_injury_episode_event(%s,%s)", (ATHLETE, Jsonb({**report, "id": str(uuid4()), "injury_episode_id": new_episode})))
         assert failure.value.sqlstate == "23514"
+
+
+@pytest.mark.parametrize("limit", [1, 2])
+def test_database_counts_bundle_once_and_enforces_daily_ceiling(postgres_database, limit):
+    import psycopg
+    from psycopg.types.json import Jsonb
+
+    # Roll back fixture rows to isolate this allocation check from lock tests.
+    with psycopg.connect(postgres_database) as connection:
+        plan = str(uuid4())
+        connection.execute("insert into plans values (%s)", (plan,))
+        checkin = connection.execute("""insert into today_checkins(athlete_id,plan_id,training_day,sleep,body,pain,phase,recommendation_state)
+            values(%s,%s,'2026-10-02','good','normal','none','GPP','train_as_planned') returning id,updated_at""", (ATHLETE, plan)).fetchone()
+        injuries = connection.execute("""select id,episode_id,updated_at from injury_flags
+            where athlete_id=%s and status in ('open','monitoring')""", (ATHLETE,)).fetchall()
+        evidence = {
+            "exposure_id": connection.execute("select id::text from rehab_exposures where athlete_id=%s order by created_at desc,id desc limit 1", (ATHLETE,)).fetchone(),
+            "event_id": connection.execute("""select id::text from injury_episode_events where athlete_id=%s
+                and event_type in ('injury_checkin','delayed_rehab_response','clinician_clearance_report') order by created_at desc,id desc limit 1""", (ATHLETE,)).fetchone(),
+        }
+        evidence = {key: value[0] if value else None for key, value in evidence.items()}
+
+        def start(session_id, blocks):
+            accepted = dict(plan_id=plan, training_day="2026-10-02", revision="a" * 64,
+                session={"session_id": session_id, "blocks": blocks}, allocation_limit=limit,
+                readiness_context={"id": str(checkin[0]), "updated_at": checkin[1].isoformat()},
+                injury_context=[{"id": str(row[0]), "episode_id": str(row[1]),
+                                 "updated_at": row[2].isoformat()} for row in injuries],
+                evidence_context=evidence)
+            connection.execute("""insert into session_completions(athlete_id,plan_id,session_id,training_day,status,prescription_snapshot)
+                values(%s,%s,%s,'2026-10-02','started',%s)""", (ATHLETE, plan, session_id, Jsonb(accepted)))
+
+        # Three individually identifiable drills form one server-owned allocation.
+        start("bundle", [dict(block_type="rehab", block_id=str(index),
+                             rehab_drill_id=f"test_drill_{index}", rehab_allocation_id="rehab:episode:bundle")
+                         for index in range(3)])
+        if limit == 2:
+            start("legacy", [dict(block_type="rehab", block_id="legacy")])
+        with pytest.raises(psycopg.Error) as failure:
+            start("over-budget", [dict(block_type="rehab", block_id="extra")])
+        assert failure.value.sqlstate == "23514"
+        assert "rehab_daily_allocation_conflict" in str(failure.value)
+
+
+def test_clinician_clearance_report_invalidates_snapshot_after_bundle_migration(postgres_database):
+    import psycopg
+    from psycopg.types.json import Jsonb
+
+    # The fixture applies the bundle-allocation migration last. All context
+    # stays unchanged except for a newly recorded clinician-clearance report.
+    with psycopg.connect(postgres_database) as connection:
+        plan = str(uuid4())
+        session_id = "clearance-freshness"
+        connection.execute("insert into plans values (%s)", (plan,))
+        checkin = connection.execute("""insert into today_checkins(athlete_id,plan_id,training_day,sleep,body,pain,phase,recommendation_state)
+            values(%s,%s,'2026-10-02','good','normal','none','GPP','train_as_planned') returning id,updated_at""", (ATHLETE, plan)).fetchone()
+        injuries = connection.execute("""select id,episode_id,updated_at from injury_flags
+            where athlete_id=%s and status in ('open','monitoring')""", (ATHLETE,)).fetchall()
+        exposure = connection.execute("""select id::text from rehab_exposures where athlete_id=%s
+            order by created_at desc,id desc limit 1""", (ATHLETE,)).fetchone()
+        event = connection.execute("""select id::text from injury_episode_events where athlete_id=%s
+            and event_type in ('injury_checkin','delayed_rehab_response','clinician_clearance_report')
+            order by created_at desc,id desc limit 1""", (ATHLETE,)).fetchone()
+        accepted = dict(plan_id=plan, training_day="2026-10-02", revision="a" * 64,
+            session={"session_id": session_id, "blocks": []}, allocation_limit=1,
+            readiness_context={"id": str(checkin[0]), "updated_at": checkin[1].isoformat()},
+            injury_context=[{"id": str(row[0]), "episode_id": str(row[1]),
+                             "updated_at": row[2].isoformat()} for row in injuries],
+            evidence_context={"exposure_id": exposure[0] if exposure else None,
+                              "event_id": event[0] if event else None})
+
+        def start():
+            connection.execute("""insert into session_completions(athlete_id,plan_id,session_id,training_day,status,prescription_snapshot)
+                values(%s,%s,%s,'2026-10-02','started',%s)""", (ATHLETE, plan, session_id, Jsonb(accepted)))
+
+        # Prove the snapshot is valid before introducing the new evidence.
+        connection.execute("savepoint before_report")
+        start()
+        connection.execute("rollback to savepoint before_report")
+        episode = str(connection.execute("select episode_id from injury_flags where id=%s", (INJURY,)).fetchone()[0])
+        report = event_for("record_injury_episode_event", episode)
+        connection.execute("select record_injury_episode_event(%s,%s)", (ATHLETE, Jsonb(report)))
+        with pytest.raises(psycopg.Error) as failure, connection.transaction():
+            start()
+        assert failure.value.sqlstate == "23514"
+        assert "prescription_revision_conflict" in str(failure.value)
+
+        # Refreshing only the evidence identity restores validity.
+        accepted["evidence_context"]["event_id"] = report["id"]
+        start()
+        connection.rollback()
