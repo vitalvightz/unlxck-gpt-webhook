@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+import time
 from dataclasses import dataclass, field
 from typing import Callable, Iterable, Protocol
 
@@ -15,6 +16,7 @@ YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
 DATAFORSEO_SEARCH_URL = "https://api.dataforseo.com/v3/serp/youtube/organic/live/advanced"
 DATAFORSEO_TIMEOUT_SECONDS = 30.0
 DATAFORSEO_TIMEOUT_RETRIES = 2
+DATAFORSEO_RETRY_BACKOFF_SECONDS = 1.0
 DATAFORSEO_TRANSIENT_HTTP_STATUS_CODES = {408, 425, 500, 502, 503, 504}
 MAX_SEARCH_QUERIES = 3
 
@@ -327,6 +329,7 @@ class DataForSEOCandidateSearch:
                         )
                     except httpx.TransportError as exc:
                         if attempt < DATAFORSEO_TIMEOUT_RETRIES:
+                            time.sleep(DATAFORSEO_RETRY_BACKOFF_SECONDS)
                             continue
                         raise CandidateSearchError(
                             f"DataForSEO search unavailable after "
@@ -338,6 +341,7 @@ class DataForSEOCandidateSearch:
                         response.status_code in DATAFORSEO_TRANSIENT_HTTP_STATUS_CODES
                         and attempt < DATAFORSEO_TIMEOUT_RETRIES
                     ):
+                        time.sleep(DATAFORSEO_RETRY_BACKOFF_SECONDS)
                         continue
                     break
 
