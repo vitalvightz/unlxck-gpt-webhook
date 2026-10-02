@@ -42,7 +42,9 @@ Each member becomes an ordinary rehab block with a drill-specific stable id.
 An optional shared `rehab_allocation_id` counts these blocks as one allocation.
 Single-drill policies retain their output shape, ids, priority selection and
 content hashes. The scheduler, allocation ceilings and progression rules remain
-in place. There is no database migration.
+in place. The database trigger also counts raw rehab blocks, so one function-only
+migration is required to group bundle allocations there as well. No tables or
+columns are added; existing locks, episode and cadence checks are preserved.
 
 Completion already supports multiple occurrences: distinct exposure ids, one
 injury prompt and a shared response-group id. Self-paced work remains

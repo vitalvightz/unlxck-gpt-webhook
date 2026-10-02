@@ -2455,12 +2455,20 @@ begin
     if new.status in ('started','done','modified') then
       v_limit := coalesce((new.prescription_snapshot->>'allocation_limit')::int, 2);
       if v_limit not between 1 and 2 then raise exception 'invalid rehab allocation' using errcode = '23514'; end if;
-      select count(*) into v_used from public.session_completions s,
-        lateral jsonb_array_elements(s.prescription_snapshot->'session'->'blocks') b
+      -- Server-owned bundle identity groups drills without grouping legacy blocks.
+      select count(distinct (s.id, coalesce(nullif(b->>'rehab_allocation_id', ''),
+                                           'block:' || ordinal::text)))
+        into v_used from public.session_completions s,
+        lateral jsonb_array_elements(s.prescription_snapshot->'session'->'blocks')
+          with ordinality as items(b, ordinal)
         where s.athlete_id = new.athlete_id and s.training_day = new.training_day
           and s.status in ('started','done','modified') and s.id <> new.id and b->>'block_type' = 'rehab';
       if exists (select 1 from jsonb_array_elements(new.prescription_snapshot->'session'->'blocks') b where b->>'block_type' = 'rehab')
-         and v_used + (select count(*) from jsonb_array_elements(new.prescription_snapshot->'session'->'blocks') b where b->>'block_type' = 'rehab') > v_limit then
+         and v_used + (select count(distinct coalesce(nullif(b->>'rehab_allocation_id', ''),
+                                                     'block:' || ordinal::text))
+                       from jsonb_array_elements(new.prescription_snapshot->'session'->'blocks')
+                         with ordinality as items(b, ordinal)
+                       where b->>'block_type' = 'rehab') > v_limit then
         raise exception 'rehab_daily_allocation_conflict' using errcode = '23514';
       end if;
       for v_block in select b from jsonb_array_elements(new.prescription_snapshot->'session'->'blocks') b where b ? 'policy_id' loop
