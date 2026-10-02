@@ -21,15 +21,15 @@ MINOR_WEIGHT_CUT_NOTE = (
 
 _WEIGHT_CUT_UNKNOWN_NOTES = {
     WEIGHT_CUT_INPUTS_MISSING_TARGET: (
-        "No target weight set — cut size unknown. Add a fight-week target weight "
+        "No target weight set, so cut size is unknown. Add a fight-week target weight "
         "for cut guidance."
     ),
     WEIGHT_CUT_INPUTS_MISSING_CURRENT: (
-        "No current weight recorded — cut size unknown. Add current bodyweight "
+        "No current weight recorded, so cut size is unknown. Add current bodyweight "
         "for cut guidance."
     ),
     WEIGHT_CUT_INPUTS_MISSING_BOTH: (
-        "No current or target weight recorded — cut size unknown. Add both for "
+        "No current or target weight recorded, so cut size is unknown. Add both for "
         "cut guidance."
     ),
 }
@@ -65,7 +65,7 @@ def _relative_range(low: float, high: float) -> dict:
         "min": None,
         "max": None,
         "per_kg": [low, high],
-        "note": f"{low}-{high} g/kg — provide bodyweight for exact daily targets",
+        "note": f"{low}-{high} g/kg (provide bodyweight for exact daily targets)",
     }
 
 
@@ -111,14 +111,14 @@ def compute_nutrition_targets(*, flags: dict) -> dict:
                 "min": None,
                 "max": None,
                 "per_kg_l": [0.03, 0.04],
-                "note": "0.03-0.04 L/kg — provide bodyweight for exact millilitres",
+                "note": "0.03-0.04 L/kg (provide bodyweight for exact millilitres)",
             }
         ),
     }
     if weight is None:
         targets["personalisation_limited_reason"] = "missing_bodyweight"
         targets["personalisation_note"] = (
-            "Bodyweight not provided — targets shown per kg. Add bodyweight to "
+            "Bodyweight not provided, so targets are shown per kg. Add bodyweight to "
             "unlock exact daily grams and millilitres."
         )
 
@@ -256,7 +256,7 @@ def generate_nutrition_block(*, flags: dict) -> str:
     if weight is None:
         nutrition_block += (
             "- Personalisation limited: bodyweight not provided. Ranges below are "
-            "per-kg guidance — add your bodyweight to unlock exact daily targets.\n"
+            "per-kg guidance. Add your bodyweight to unlock exact daily targets.\n"
         )
     nutrition_block += "- 3 core meals + 2-3 snacks daily\n"
     nutrition_block += "- Whole foods focus: lean protein, complex carbs, healthy fats\n"
@@ -318,18 +318,18 @@ def generate_nutrition_block(*, flags: dict) -> str:
             nutrition_block += "\n**High Fatigue in GPP:**\n"
             nutrition_block += "- Increase calories by ~10-15% to support recovery\n"
             nutrition_block += "- Add intra-workout carbs: 30-60 g/hour (sports drinks/gels)\n"
-            nutrition_block += "- Supplement and electrolyte support for high fatigue is coach-guided — ask your coach for the exact protocol\n"
+            nutrition_block += "- Supplement and electrolyte support for high fatigue is coach-guided. Ask your coach for the exact protocol\n"
         elif phase == "SPP":
             nutrition_block += "\n**High Fatigue in SPP:**\n"
             nutrition_block += "- Maintain calories at maintenance, prioritize carbs around sessions\n"
             nutrition_block += "- Continue intra-workout fueling 30-60 g carbs/hour\n"
-            nutrition_block += "- Supplement and electrolyte support for high fatigue is coach-guided — ask your coach for the exact protocol\n"
+            nutrition_block += "- Supplement and electrolyte support for high fatigue is coach-guided. Ask your coach for the exact protocol\n"
             nutrition_block += "- Electrolytes during and post-training\n"
         elif phase == "TAPER":
             nutrition_block += "\n**High Fatigue in Taper:**\n"
             nutrition_block += "- Reduce training volume calories by ~5-10%\n"
             nutrition_block += "- Use easily digestible carbs and hydrate well\n"
-            nutrition_block += "- Supplement and electrolyte support for high fatigue is coach-guided — ask your coach for the exact protocol\n"
+            nutrition_block += "- Supplement and electrolyte support for high fatigue is coach-guided. Ask your coach for the exact protocol\n"
             nutrition_block += "- Light electrolyte intake only\n"
     elif fatigue == "moderate":
         nutrition_block += "\n**Moderate Fatigue Adjustments:**\n"
@@ -357,9 +357,9 @@ def generate_nutrition_block(*, flags: dict) -> str:
         nutrition_block += "\n**Weight Cut Protocol Triggered:**\n"
         nutrition_block += f"- Active weight cut (~{cut_pct}%): risk band {risk_band.upper()}\n"
         if supervision:
-            nutrition_block += "- This cut requires qualified coach/medical supervision — the acute cut and post-weigh-in protocol are coach-gated\n"
+            nutrition_block += "- This cut requires qualified coach/medical supervision. The acute cut and post-weigh-in protocol are coach-gated\n"
         else:
-            nutrition_block += "- The acute cut and post-weigh-in protocol are coach-gated — follow your coach's plan for exact amounts\n"
+            nutrition_block += "- The acute cut and post-weigh-in protocol are coach-gated. Follow your coach's plan for exact amounts\n"
         nutrition_block += "- After weigh-in, refuel with easy-to-digest carbohydrate-rich foods across multiple small meals/snacks\n"
         nutrition_block += "- Rehydrate steadily with fluids + electrolytes; avoid heavy fat/fibre in the first hours post-weigh-in\n"
         nutrition_block += "- De-emphasize diuretics (caffeine/alcohol) final 24h pre-fight\n"

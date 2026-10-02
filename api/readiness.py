@@ -161,7 +161,7 @@ def compute_readiness_summary(
         reasons.extend(caution_signals)
     elif latest_checkin is None:
         state = "caution"
-        reasons.append("No check-in yet — submit today's check-in for an accurate status")
+        reasons.append("No check-in yet. Submit today's check-in for an accurate status")
 
     return ReadinessSummary(
         state=state,
@@ -186,7 +186,7 @@ def evaluate_checkin_adaptations(
                 rule_code="injury_reported",
                 decision="swap_session",
                 summary=(
-                    "Injury reported on check-in — substitute or skip drills that load the "
+                    "Injury reported on check-in. Substitute or skip drills that load the "
                     "affected area until reviewed"
                 ),
                 details={"injury_note": injury_note},
@@ -207,7 +207,7 @@ def evaluate_checkin_adaptations(
             AdaptationDecision(
                 rule_code="open_injury_flag",
                 decision="swap_session",
-                summary="Open injury flag — keep substitutions in place for the affected area",
+                summary="Open injury flag. Keep substitutions in place for the affected area",
                 details={"open_injury_flag_count": open_injury_flag_count},
             )
         )
@@ -217,7 +217,7 @@ def evaluate_checkin_adaptations(
             AdaptationDecision(
                 rule_code="high_fatigue_reduce_load",
                 decision="reduce_intensity",
-                summary="High fatigue signals — reduce today's intensity/volume by one notch",
+                summary="High fatigue signals. Reduce today's intensity/volume by one notch",
                 details={"signals": high_signals},
             )
         )
@@ -235,7 +235,7 @@ def evaluate_checkin_adaptations(
             AdaptationDecision(
                 rule_code="checkin_ok",
                 decision="keep_plan",
-                summary="Check-in within normal ranges — plan unchanged",
+                summary="Check-in within normal ranges, plan unchanged",
             )
         )
     return decisions
@@ -259,8 +259,8 @@ def evaluate_session_log_adaptations(
                 rule_code="repeated_high_rpe",
                 decision="reduce_intensity",
                 summary=(
-                    f"RPE >= {HIGH_RPE_THRESHOLD} on {high_rpe_streak} consecutive sessions — "
-                    "cap the next session's intensity and monitor"
+                    f"RPE >= {HIGH_RPE_THRESHOLD} on {high_rpe_streak} consecutive sessions. "
+                    "Cap the next session's intensity and monitor"
                 ),
                 details={"streak": high_rpe_streak, "threshold": HIGH_RPE_THRESHOLD},
             )
@@ -273,7 +273,7 @@ def evaluate_session_log_adaptations(
                 rule_code="missed_sessions",
                 decision="flag_admin_review",
                 summary=(
-                    f"{missed} missed sessions in the recent window — coach should review the "
+                    f"{missed} missed sessions in the recent window. Coach should review the "
                     "schedule fit"
                 ),
                 details={"missed": missed},
@@ -286,7 +286,7 @@ def evaluate_session_log_adaptations(
                 rule_code="missed_sessions",
                 decision="keep_plan",
                 summary=(
-                    f"{missed} missed sessions recently — keep the plan but tighten the next "
+                    f"{missed} missed sessions recently. Keep the plan but tighten the next "
                     "week's scheduling"
                 ),
                 details={"missed": missed},
@@ -298,7 +298,7 @@ def evaluate_session_log_adaptations(
             AdaptationDecision(
                 rule_code="session_logged",
                 decision="keep_plan",
-                summary="Session logged within normal ranges — plan unchanged",
+                summary="Session logged within normal ranges, plan unchanged",
             )
         )
     return decisions

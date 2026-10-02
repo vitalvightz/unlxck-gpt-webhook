@@ -1370,7 +1370,7 @@ def upsert_session_completion(
     if status_value != "not_started" and _structured_today(plan_row, training_day).is_rest_day and not (standalone or saved_standalone):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="That day is a rest day in your plan — there is no session to log.",
+            detail="That day is a rest day in your plan, so there is no session to log.",
         )
 
     # Server-side safety hold: an active severe injury blocks actually training

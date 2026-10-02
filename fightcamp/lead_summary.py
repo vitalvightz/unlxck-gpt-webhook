@@ -82,18 +82,18 @@ def render_lead_summary(planning_brief: dict[str, Any]) -> str:
     lines: list[str] = []
     if _injury_active(athlete, readiness_flags):
         lines.append(
-            f"- **Injury watch:** {_injury_phrase(athlete)} — train around it: "
+            f"- **Injury watch:** {_injury_phrase(athlete)}. Train around it: "
             "respect the listed restrictions, keep rehab in, and stop on sharp pain."
         )
     if _weight_cut_active(athlete, readiness_flags):
         if _weight_cut_is_high_pressure(athlete, readiness_flags):
             lines.append(
-                "- **Weight cut:** active cut under pressure — manage cut stress toward "
+                "- **Weight cut:** active cut under pressure. Manage cut stress toward "
                 "target weight and protect recovery margin as the fight nears."
             )
         else:
             lines.append(
-                "- **Weight cut:** active cut in play — manage cut stress toward target "
+                "- **Weight cut:** active cut in play. Manage cut stress toward target "
                 "weight and protect recovery margin."
             )
 

@@ -2867,7 +2867,7 @@ def _apply_high_fatigue_week_compression(
                     _make_compression_suppression(
                         _role,
                         ["sandwiched_hard_days"],
-                        "Glycolytic session falls between two hard sparring days — suppressed to protect recovery between hard contacts.",
+                        "Glycolytic session falls between two hard sparring days, so it is suppressed to protect recovery between hard contacts.",
                     )
                 ]
             else:
@@ -3327,7 +3327,7 @@ def _combat_pressure_floor_metadata(phase: str) -> dict[str, Any]:
                 "pressure, and hold technique while breathing hard."
             ),
             "floor_stop_rule": (
-                "Hard enough to breathe, not sloppy — stop the round when output or "
+                "Hard enough to breathe, not sloppy. Stop the round when output or "
                 "technique clearly drops. This is pressure tolerance, not collapse."
             ),
         }
@@ -3341,7 +3341,7 @@ def _combat_pressure_floor_metadata(phase: str) -> dict[str, Any]:
             "to build work capacity and pressure tolerance without sloppy collapse."
         ),
         "floor_stop_rule": (
-            "Hard enough to breathe, not sloppy — stop when output or technique "
+            "Hard enough to breathe, not sloppy. Stop when output or technique "
             "drops. Controlled discomfort, not punishment."
         ),
     }
