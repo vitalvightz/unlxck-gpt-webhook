@@ -248,3 +248,50 @@ def test_standalone_identity_uses_only_accepted_owners_and_is_order_independent(
     deferred = deepcopy(decisions[1])
     deferred["schedule"]["state"] = "deferred"
     assert identity([decisions[0], deferred]) == identity(decisions[:1])
+
+
+@pytest.mark.parametrize("legacy", [True, False])
+@pytest.mark.parametrize("scenario", ["no_due_rehab", "due_rehab", "rehab_only", "started_rehab"])
+def test_standalone_rehab_cannot_claim_outstanding_camp_ownership(context, legacy, scenario):
+    store, athlete, plan, chest, ankle = context
+    camp = dict(session_id="camp", session_type="strength", title="Today's strength", blocks=[
+        dict(block_id="safe", block_type="strength", mechanical_load_regions=["shoulder"], contact_level="none", load="low")])
+    store.plans[plan]["structured_plan"]["weeks"][0]["days"][0].update(day_type="strength", sessions=[camp])
+    if scenario != "rehab_only":
+        # The current report permits this non-contact camp work. Retain the
+        # original report and make the later report unambiguously current.
+        for event in store.injury_episode_events.values():
+            if event["injury_id"] == chest["id"]:
+                event["created_at"] = "2026-10-02T08:00:00Z"
+        record_episode_observation(store, athlete_id=athlete, training_day=DAY,
+            observation=InjuryEpisodeObservation(injury_id=chest["id"], injury_episode_id=chest["episode_id"],
+                event_type="clinician_clearance_report", scopes=["rehab", "training"]))
+    prior = accept_ankle(context, status="started" if scenario == "started_rehab" else "done", legacy=legacy)
+    if scenario == "no_due_rehab":
+        decision = resolve_injury_policy({**chest, "rehab_stage": "restore"},
+            policies=load_clinical_policies(), bank=get_rehab_bank())
+        accepted = reconcile_session_prescription(None, decisions=[decision], plan_id=plan, training_day=DAY)
+        store.upsert_session_completion(athlete, dict(plan_id=plan, session_id=accepted["session"]["session_id"],
+            training_day=DAY, status="done", prescription_snapshot=accepted))
+    before = deepcopy(store.session_completions[athlete])
+    current = view(context)
+    live = current.live_prescription
+    assert current.today.session_scope == "today" and live
+    assert store.session_completions[athlete] == before
+    if scenario == "started_rehab":
+        assert current.today.completion_status == "started" and live["frozen"]
+        assert live["session"] == prior["prescription_snapshot"]["session"]
+        assert {b["injury_id"] for b in live["session"]["blocks"]} == {ankle["id"]}
+    else:
+        assert current.today.completion_status == "not_started" and not live["safety_hold"]
+        if scenario == "rehab_only":
+            assert live["rehab_only"] and live["held_session_id"] == "camp"
+            assert live["session"]["session_id"] != "camp"
+        else:
+            assert not live["rehab_only"] and live["session"]["session_id"] == "camp"
+            assert any(b.get("block_id") == "safe" for b in live["session"]["blocks"])
+        rehab = [b for b in live["session"]["blocks"] if b["block_type"] == "rehab"]
+        assert rehab_allocation_count(rehab) == (0 if scenario == "no_due_rehab" else 1)
+        assert {b["injury_id"] for b in rehab} == (set() if scenario == "no_due_rehab" else {chest["id"]})
+        execute(context, live)
+        assert view(context).live_prescription["frozen"]

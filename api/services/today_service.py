@@ -2886,7 +2886,10 @@ def _build_today_command_view(
         today_completion = None
     if not (today_completion or {}).get("prescription_snapshot"):
         rehab_completion = rehab_occurrence or completions.get(f"rehab-{training_day}", training_day)
-        if ((rehab_completion or {}).get("prescription_snapshot") or {}).get("plan_id") == plan_id:
+        # Accepted work in progress owns the current session. A terminal rehab
+        # occurrence owns only its allocations, never outstanding camp work.
+        if (((rehab_completion or {}).get("prescription_snapshot") or {}).get("plan_id") == plan_id
+                and (not has_today_session or completion_status_of(rehab_completion) == "started")):
             today_completion = rehab_completion
             today_session_entry = today_completion["prescription_snapshot"]["session"]
             has_today_session = True

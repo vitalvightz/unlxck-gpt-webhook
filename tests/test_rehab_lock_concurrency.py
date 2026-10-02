@@ -461,8 +461,8 @@ def test_prescription_function_composes_with_recorded_clearance_history(postgres
 def test_independent_standalone_owners_use_existing_postgres_allocation_guard(postgres_database):
     import psycopg
     from psycopg.types.json import Jsonb
-    from api.contracts.injury_policy import reconcile_session_prescription, resolve_injury_policy
-    from fightcamp.rehab_clinical import load_clinical_policies
+    from api.contracts.injury_policy import reconcile_session_prescription, resolve_injury_policy, rehab_allocation_count
+    from fightcamp.rehab_clinical import load_clinical_policies, content_hash
     from fightcamp.rehab_protocols import get_rehab_bank
 
     athlete, plan = str(uuid4()), str(uuid4())
@@ -470,16 +470,24 @@ def test_independent_standalone_owners_use_existing_postgres_allocation_guard(po
         connection.execute("insert into profiles values (%s)", (athlete,))
         connection.execute("insert into plans values (%s)", (plan,))
         for region in ("ankle", "chest", "chest"):
-            connection.execute("""insert into injury_flags(athlete_id,body_area,description,body_region,side)
-                values(%s,%s,%s,%s,'unknown')""", (athlete, region, region + (" sprain" if region == "ankle" else " strain"), region))
-        injuries = connection.execute("select id,episode_id,updated_at,body_region,description from injury_flags where athlete_id=%s order by body_region,id", (athlete,)).fetchall()
+            # The reviewed ankle RESTORE drills are side-specific. Unknown
+            # laterality correctly makes the atomic bundle ineligible.
+            connection.execute("""insert into injury_flags(athlete_id,body_area,description,body_region,side,
+                severity,status,latest_reported_status,created_at)
+                values(%s,%s,%s,%s,%s,'mild','monitoring','improving','2026-09-29T00:00:00Z')""",
+                (athlete, "Left ankle" if region == "ankle" else "Chest",
+                 region + (" sprain" if region == "ankle" else " strain"), region, "left" if region == "ankle" else "unknown"))
+        injuries = connection.execute("""select id,episode_id,updated_at,body_region,description,side,body_area,
+            severity,status,latest_reported_status,created_at from injury_flags where athlete_id=%s order by body_region,id""", (athlete,)).fetchall()
         readiness = connection.execute("""insert into today_checkins(athlete_id,plan_id,training_day,sleep,body,pain,phase,recommendation_state)
             values(%s,%s,'2026-10-02','good','normal','none','GPP','train_as_planned') returning id,updated_at""", (athlete, plan)).fetchone()
 
         def prescription(row):
-            decision = resolve_injury_policy(dict(id=str(row[0]), episode_id=str(row[1]), status="monitoring",
-                body_region=row[3], body_area=row[3], description=row[4], severity="mild", rehab_stage="restore"),
+            decision = resolve_injury_policy(dict(id=str(row[0]), episode_id=str(row[1]), status=row[8],
+                body_region=row[3], body_area=row[6], description=row[4], side=row[5], severity=row[7],
+                latest_reported_status=row[9], created_at=row[10].isoformat(), rehab_stage="restore"),
                 policies=load_clinical_policies(), bank=get_rehab_bank())
+            assert decision["activation"] == "live" and decision["outcome"] == "prescribed_rehab", decision["reason_codes"]
             saved = reconcile_session_prescription(None, decisions=[decision], plan_id=plan, training_day="2026-10-02")
             assert saved and not saved["safety_hold"]
             saved.update(readiness_context=dict(id=str(readiness[0]), updated_at=readiness[1].isoformat()),
@@ -488,10 +496,14 @@ def test_independent_standalone_owners_use_existing_postgres_allocation_guard(po
             return saved
 
         def accept(saved):
+            saved["revision"] = content_hash({key: value for key, value in saved.items() if key != "revision"})
             connection.execute("""insert into session_completions(athlete_id,plan_id,session_id,training_day,status,prescription_snapshot)
                 values(%s,%s,%s,'2026-10-02','done',%s)""", (athlete, plan, saved["session"]["session_id"], Jsonb(saved)))
 
         ankle, chest, remaining = [prescription(row) for row in injuries]
+        expected = next(p for p in load_clinical_policies() if p.policy_id == "ankle_sprain").stage_bundles["restore"]
+        assert {b["rehab_drill_id"] for b in ankle["session"]["blocks"]} == set(expected)
+        assert len(ankle["session"]["blocks"]) == 2 and rehab_allocation_count(ankle["session"]["blocks"]) == 1
         # A legacy terminal ankle bundle owns just one allocation; the chest
         # occurrence has independent ownership using the current identity model.
         ankle["session"]["session_id"] = "rehab-2026-10-02"
@@ -504,8 +516,10 @@ def test_independent_standalone_owners_use_existing_postgres_allocation_guard(po
         with pytest.raises(psycopg.Error) as failure, connection.transaction():
             accept(remaining)
         assert failure.value.sqlstate == "23514" and "rehab_daily_allocation_conflict" in str(failure.value)
+        assert connection.execute("select count(*) from session_completions where athlete_id=%s", (athlete,)).fetchone()[0] == 2
         # Free a slot: a different session id still cannot reuse ankle ownership.
         connection.execute("delete from session_completions where athlete_id=%s and session_id=%s", (athlete, chest["session"]["session_id"]))
+        assert connection.execute("select count(*) from session_completions where athlete_id=%s", (athlete,)).fetchone()[0] == 1
         duplicate = prescription(injuries[0])
         with pytest.raises(psycopg.Error) as failure, connection.transaction():
             accept(duplicate)
