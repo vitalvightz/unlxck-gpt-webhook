@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from contextvars import ContextVar
+from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any, Iterator
 
@@ -37,6 +38,46 @@ class _NoLegacyBootstrapStore:
 
     def create_injury_flag(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
         raise RuntimeError("legacy intake injury bootstrap is disabled")
+
+
+class _BuildReadCache:
+    """One Today build's intake and injury-flag reads, shared by the sync and the view.
+
+    The intake-injury sync and the view each read the plan's intake row and the
+    athlete's injury flags. Within one build those reads return the same rows,
+    so the second is served from the first. Only successful reads are kept: a
+    failed read is repeated by the next caller, so the view's readiness tracking
+    still sees (and reports) its own failure. Any other store call may write an
+    injury flag, so it clears the cached flags; Today never writes an intake
+    row. Every caller gets its own copy of the rows.
+    """
+
+    def __init__(self, store: AppStore):
+        self._store = store
+        self._intakes: dict[str, Any] = {}
+        self._flags: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
+
+    def __getattr__(self, name: str) -> Any:
+        attr = getattr(self._store, name)
+        if not callable(attr) or name.startswith(("get_", "list_")):
+            return attr
+
+        def write(*args: Any, **kwargs: Any) -> Any:
+            self._flags.clear()
+            return attr(*args, **kwargs)
+
+        return write
+
+    def get_intake(self, intake_id: str) -> Any:
+        if intake_id not in self._intakes:
+            self._intakes[intake_id] = self._store.get_intake(intake_id)
+        return deepcopy(self._intakes[intake_id])
+
+    def list_injury_flags(self, athlete_id: str, *, statuses: tuple = ("open", "monitoring"), limit: int = 20) -> Any:
+        key = (athlete_id, tuple(statuses), limit)
+        if key not in self._flags:
+            self._flags[key] = [dict(row) for row in (self._store.list_injury_flags(athlete_id, statuses=statuses, limit=limit) or [])]
+        return deepcopy(self._flags[key])
 
 
 _REUSABLE_VIEWS: ContextVar[dict[tuple[Any, ...], tuple[AppStore, Any]] | None] = ContextVar(
@@ -101,6 +142,8 @@ def build_today_command_view(
     # One instant for the whole build, so the sync and the view agree on the
     # training day the shared plan resolution was made for.
     now = now or datetime.now(timezone.utc)
+    build_store = store
+    store = _BuildReadCache(store)
     active_plan = _resolve_active_plan_once(
         store, athlete_id=athlete_id, athlete_timezone=athlete_timezone, now=now
     )
@@ -121,7 +164,7 @@ def build_today_command_view(
         ),
     )
     if views is not None:
-        views[key] = (store, view.model_copy(deep=True))
+        views[key] = (build_store, view.model_copy(deep=True))
     return view
 
 
