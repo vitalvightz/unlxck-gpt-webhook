@@ -81,7 +81,7 @@ function ReadinessValue({
     <dd>
       <a href={href}>
         {children}
-        {actionLabel ? <span className="sr-only"> — {actionLabel}</span> : null}
+        {actionLabel ? <span className="sr-only">, {actionLabel}</span> : null}
       </a>
     </dd>
   );

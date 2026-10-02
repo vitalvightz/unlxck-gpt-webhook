@@ -94,43 +94,43 @@ def _late_fight_lever(system_key: str, days_until_fight: int) -> str:
         if days_until_fight == 5:
             return (
                 "If explosiveness fades, add up to 6 short alactic bursts "
-                "(6–10 s @ full rest) — cap 8–10 min active."
+                "(6–10 s @ full rest). Cap 8–10 min active."
             )
         if days_until_fight == 4:
             return (
                 "If explosiveness fades, add up to 5 short alactic bursts "
-                "(6–10 s @ full rest) — cap 6–8 min active."
+                "(6–10 s @ full rest). Cap 6–8 min active."
             )
         if days_until_fight == 3:
             return (
                 "If explosiveness fades, add up to 4 short alactic bursts "
-                "(6–10 s @ full rest) if freshness allows — otherwise skip."
+                "(6–10 s @ full rest) if freshness allows. Otherwise skip."
             )
         if days_until_fight == 2:
             return (
                 "If explosiveness fades, add 2–4 very short alactic bursts "
-                "(6–8 s @ full rest) — freshness first; cap 4–6 min active."
+                "(6–8 s @ full rest). Freshness first, cap 4–6 min active."
             )
         if days_until_fight == 1:
             return (
                 "If explosiveness fades, add 2–3 short primer bursts only "
-                "(6–8 s @ full rest) — no conditioning structure."
+                "(6–8 s @ full rest), no conditioning structure."
             )
         # days_until_fight == 0 / fight day
-        return "Fight day — no alactic conditioning; walk-through activation only."
+        return "Fight day: no alactic conditioning, walk-through activation only."
     if system_key == "glycolytic":
         if days_until_fight >= 4:
-            return "Glycolytic conditioning paused for fight week — freshness priority."
-        return "Glycolytic conditioning omitted — no lactate accumulation in final countdown."
+            return "Glycolytic conditioning paused for fight week. Freshness first."
+        return "Glycolytic conditioning omitted. No lactate accumulation in final countdown."
     # aerobic system
     if days_until_fight == 5:
-        return "Optional 15–20 min easy Zone 2 for blood flow only — keep effort minimal."
+        return "Optional 15–20 min easy Zone 2 for blood flow only. Keep effort minimal."
     if days_until_fight in (4, 3):
-        return "Optional 10–15 min easy movement for recovery — no aerobic training load."
+        return "Optional 10–15 min easy movement for recovery, with no aerobic training load."
     if days_until_fight == 2:
-        return "Light walk or easy mobility only — no aerobic conditioning."
+        return "Light walk or easy mobility only, no aerobic conditioning."
     if days_until_fight == 1:
-        return "Aerobic training omitted — light activation and movement only."
+        return "Aerobic training omitted. Light activation and movement only."
     # days_until_fight == 0
     return "No aerobic conditioning on fight day."
 

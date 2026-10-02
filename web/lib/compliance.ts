@@ -112,11 +112,11 @@ const CONSENT_COPY: Record<AgeBand, ConsentCopy> = {
     signupHealthConsentLabel: SIGNUP_CONSENT_LABEL,
     signupHealthConsentHelp: SIGNUP_CONSENT_HELP,
     healthConsentLabel:
-      "I consent to UNLXCK using my health information — injuries, pain, soreness, fatigue, sleep, readiness and bodyweight — to personalise my training and safety guidance.",
+      "I consent to UNLXCK using my health information (injuries, pain, soreness, fatigue, sleep, readiness and bodyweight) to personalise my training and safety guidance.",
     healthConsentHelp:
       "This is a separate choice from the Terms and it is optional. We use this information to build and adapt your plan and to restrict training when our safety rules say you should ease off. It is not shared with other users. You can withdraw at any time in Settings.",
     declineNote:
-      "You can decline and keep your account. Features that depend on health information — plan generation, check-ins and nutrition targets — will not run until you consent.",
+      "You can decline and keep your account. Features that depend on health information (plan generation, check-ins and nutrition targets) will not run until you consent.",
     privacySummary:
       "UNLXCK uses your health information to personalise training and apply safety rules. It is not visible to other users, and your consent is optional and withdrawable.",
   },

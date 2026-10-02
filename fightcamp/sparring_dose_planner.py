@@ -636,7 +636,7 @@ def _apply_hard_day_cap(
         cap_note = (
             "Four or more hard sparring sessions were declared this week. "
             "This session is preserved in the schedule as a managed/deloaded exposure "
-            "to protect load quality across the full week — the slot is not removed."
+            "to protect load quality across the full week. The slot is not removed."
         )
         new_reason = f"{existing_reason}; {cap_note}".lstrip("; ") if existing_reason else cap_note
         plan_by_day[target] = {
@@ -978,26 +978,26 @@ def repeated_weekday_hard_sparring_entries(
 _COUNTDOWN_COACH_NOTES: dict[int, str] = {
     1: (
         "Fight is tomorrow. If sparring happens at all, keep it controlled technical flow "
-        "only — no hard contact. Freshness matters more than any final prep hit."
+        "only, with no hard contact. Freshness matters more than any final prep hit."
     ),
     2: (
-        "Two days out. Pull everything back to rhythm and reads — no hard contact from "
+        "Two days out. Pull everything back to rhythm and reads. No hard contact from "
         "here. The work is done; protect what you've built."
     ),
     3: (
-        "Three days out. No hard sparring. Keep any pad or bag work sharp and technical "
-        "— stay crisp, not flat, and let the body stay ready to perform."
+        "Three days out. No hard sparring. Keep any pad or bag work sharp and technical. "
+        "Stay crisp, not flat, and let the body stay ready to perform."
     ),
     4: (
         "Four days out. Move all sparring to controlled, purposeful technical rounds. "
         "Nothing you can gain from hard collision now is worth the cost."
     ),
     5: (
-        "Five days to fight. Move sparring to rhythm-only rounds "
-        "— bring the technical intent but leave the damage out."
+        "Five days to fight. Move sparring to rhythm-only rounds. "
+        "Bring the technical intent but leave the damage out."
     ),
     6: (
-        "Six days out. No hard sparring — keep only technical/rhythm rounds "
+        "Six days out. No hard sparring. Keep only technical/rhythm rounds "
         "and stay focused on timing over damage."
     ),
     14: (
@@ -1005,11 +1005,11 @@ _COUNTDOWN_COACH_NOTES: dict[int, str] = {
         "Keep rounds technical, brief, and low-contact."
     ),
     15: (
-        "Fifteen days out. Elevated risk brings the cutoff forward — "
-        "convert any declared hard day to technical/rhythm work; no hard contact."
+        "Fifteen days out. Elevated risk brings the cutoff forward. "
+        "Convert any declared hard day to technical/rhythm work; no hard contact."
     ),
     16: (
-        "Sixteen days out. Elevated risk brings the cutoff forward — "
+        "Sixteen days out. Elevated risk brings the cutoff forward: "
         "technical rhythm only, with no effective hard sparring."
     ),
     17: (
@@ -1035,7 +1035,7 @@ def _sparring_override_coach_note(days_until_fight: Any, action: str) -> str:
     if 7 <= days <= 17 and action == "convert":
         return (
             f"D-{days}: inside the applicable hard-sparring cutoff. Convert this declared hard "
-            "day to technical/rhythm work — no effective hard sparring allowed."
+            "day to technical/rhythm work. No effective hard sparring allowed."
         )
     return ""
 

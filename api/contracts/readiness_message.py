@@ -1562,7 +1562,7 @@ def _injury_floor_pull_back(
     if tier == "neuro":
         title = "Rehab only today."
         reason = f"Your {label} involves head, neck, or nerve symptoms, so training is not safe today."
-        action = "No sparring, impact, or hard work today — rest and monitor symptoms."
+        action = "No sparring, impact or hard work today. Rest and monitor symptoms."
         safety = "Seek medical advice for worsening headache, dizziness, numbness, vision changes, or neck pain."
     elif tier == "structural":
         title = "Pull back today."
@@ -2642,9 +2642,9 @@ def _safe_filler_adjustment(
     )
     if has_signal:
         reason = (
-            f"This is low-stress recovery or skill work — safe to do around your {label}."
+            f"This is low-stress recovery or skill work, so it is safe to do around your {label}."
             if label
-            else "This is low-stress recovery or skill work — safe to do today."
+            else "This is low-stress recovery or skill work, so it is safe to do today."
         )
         action = "Do the session as planned; keep it easy and stop anything that hurts."
     else:

@@ -156,7 +156,7 @@
     "noPayment": "No se requiere ningún pago durante la beta privada.",
     "athlete": "Atleta",
     "chooseRole": "Elige tu rol",
-    "roleIntro": "Unlxck es una app para todos en el campamento. Elige cómo quieres usarla. El acceso para atletas está abierto ahora — las cuentas de entrenador y gimnasio llegan en beta pública.",
+    "roleIntro": "Unlxck es una app para todos en el campamento. Elige cómo quieres usarla. El acceso para atletas está abierto ahora. Las cuentas de entrenador y gimnasio llegan en beta pública.",
     "accountRoles": "Roles de cuenta",
     "athleteDescription": "Ejecuta Advanced Intake y crea un campamento de combate guardado en tu espacio de trabajo de atleta.",
     "coach": "Entrenador",
@@ -169,7 +169,7 @@
     "continue": "Continúa",
     "freeBeta": "Beta gratuita",
     "wholeCampTitle": "Una app para todo el campamento.",
-    "wholeCampSummary": "Empieza hoy como deportista. Las herramientas para entrenadores y gimnasio están en camino, todas dentro del mismo espacio de trabajo de Unlxck — sin aplicaciones separadas que gestionar."
+    "wholeCampSummary": "Empieza hoy como deportista. Las herramientas para entrenadores y gimnasio están en camino, todas dentro del mismo espacio de trabajo de Unlxck, sin aplicaciones separadas que gestionar."
   },
   "Workspace": {
     "planDashboard": "Panel de Planificación",

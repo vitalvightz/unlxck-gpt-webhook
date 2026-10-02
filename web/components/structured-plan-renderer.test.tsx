@@ -978,11 +978,11 @@ test("renders a coach-led / sparring day with no app blocks as its own card", ()
   // wording.
   assert.equal(html.includes("Technical Combat"), true);
   assert.equal(html.includes(">Low load<"), true);
-  assert.equal(html.includes("Technical only \u2014 no hard sparring. Stay sharp and leave fresh."), true);
+  assert.equal(html.includes("Technical only, no hard sparring. Stay sharp and leave fresh."), true);
   assert.equal(html.includes("Technical-only contact today"), false);
   assert.equal(html.includes("no hard sparring"), true);
   assert.equal(countOccurrences(html, 'aria-label="Why this changed: Technical Combat"'), 1);
-  assert.equal(html.includes("this is your declared hard-sparring/contact work"), false);
+  assert.equal(html.includes("This is your declared hard-sparring/contact work"), false);
   assert.equal(html.includes("sp-day-card-technical"), true);
   // The genuine rest day renders as a single compact, non-expandable rest row.
   assert.equal(countOccurrences(html, "cm-rest-day"), 1);
@@ -1098,7 +1098,7 @@ test("a hard-sparring day carries the hard-sparring note, not the technical note
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
 
   assert.equal(html.includes("Hard sparring — controlled hard contact"), true);
-  assert.equal(html.includes("this is your declared hard-sparring/contact work"), true);
+  assert.equal(html.includes("This is your declared hard-sparring/contact work"), true);
   // A hard-sparring day must not borrow the technical-only "no hard sparring" wording.
   assert.equal(html.includes("Technical-only contact today"), false);
   assert.equal(html.includes("sp-day-card-sparring"), true);
@@ -1415,7 +1415,7 @@ test("surfaces technical contact alongside prescribed app work in the same day c
   assert.equal(html.includes("Fight-week freshness"), true);
   assert.equal(html.includes("Show more (1 block)"), true);
   assert.equal(countOccurrences(html, 'aria-label="Why this changed: Technical Combat"'), 1);
-  assert.equal(html.includes("Technical only \u2014 no hard sparring. Stay sharp and leave fresh."), true);
+  assert.equal(html.includes("Technical only, no hard sparring. Stay sharp and leave fresh."), true);
   assert.equal(html.includes("Technical-only contact today"), false);
   assert.equal(html.includes("your declared hard-sparring/contact work today"), false);
   assert.ok(
@@ -1458,7 +1458,7 @@ test("renders a technical-only session as the reusable sport-neutral low-load ca
   assert.equal(html.includes("Technical Combat"), true);
   assert.equal(html.includes(">Low load<"), true);
   assert.equal(countOccurrences(html, 'aria-label="Why this changed: Technical Combat"'), 1);
-  assert.equal(html.includes("Technical only \u2014 no hard sparring. Stay sharp and leave fresh."), true);
+  assert.equal(html.includes("Technical only, no hard sparring. Stay sharp and leave fresh."), true);
   assert.equal(html.includes("Generated technical-only copy that should not repeat."), false);
   assert.equal(html.includes(">Skill<"), false);
 });
@@ -2279,7 +2279,7 @@ test("an empty day inside fight week reads as deliberate taper rest, not a blank
   assert.equal(html.includes("D-4"), true);
   assert.equal(html.includes("D-3"), true);
   assert.equal(countOccurrences(html, "Taper rest"), 2);
-  assert.equal(html.includes("Planned rest — protecting freshness for fight day."), true);
+  assert.equal(html.includes("Planned rest to protect freshness for fight day."), true);
   assert.equal(html.includes("No planned session"), false);
 });
 
@@ -2470,7 +2470,7 @@ test("D-10 countdown plans render taper mini-titles with a compact week overview
   assert.equal(countOccurrences(html, 'class="cm-week-pill-phase"'), 2);
   assert.equal(countOccurrences(html, 'title="Taper"'), 2);
   assert.equal(html.includes("sp-redflags-title\">Week 1<"), true);
-  assert.equal(html.includes("Week 1 — Compressed Pre-Fight Week"), false);
+  assert.equal(html.includes("Week 1: Compressed Pre-Fight Week"), false);
 });
 
 test("next-session focus marks the active week and day before a dated camp starts", () => {

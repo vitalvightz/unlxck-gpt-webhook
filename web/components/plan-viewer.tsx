@@ -865,7 +865,7 @@ function StructuredCardDiagnostic({
       <div className="form-section-header">
         <p className="kicker">Admin diagnostic</p>
         <h3>
-          {heading} — {humanizeStatus(debug.status)}
+          {heading}: {humanizeStatus(debug.status)}
         </h3>
       </div>
       <p className="muted">{copy}</p>
@@ -1434,7 +1434,7 @@ export function buildReviewSummary(
       return {
         ...summary,
         hasIssues: false,
-        headline: "Released from Stage 1 — the AI finalizer pass failed.",
+        headline: "Released from Stage 1 because the AI finalizer pass failed.",
         guidance:
           "Stage 2 never returned a usable plan, so the deterministic Stage 1 plan was released. " +
           "The reason is recorded under stage2_fallback in the validator report below.",
@@ -1463,7 +1463,7 @@ export function buildReviewSummary(
       hasIssues: false,
       headline:
         normalizedStage2Status === "triage_resume_approved"
-          ? "Resume approved — regeneration pending. A regenerated final result is required before release."
+          ? "Resume approved, regeneration pending. A regenerated final result is required before release."
           : normalizedStage2Status === "stage2_failed"
           ? "Stage 2 validation failed, but no detailed reasons were saved in the report."
           : "No validator issues were saved for this plan.",
@@ -2856,7 +2856,7 @@ export function PlanViewer({
                   <p className="plan-meta-label">Blocking issues</p>
                   <p className="plan-meta-value">
                     {isTriageBlocked
-                      ? "—"
+                      ? "n/a"
                       : stage2ReviewSummary.errors.length + stage2ReviewSummary.blockingCount}
                   </p>
                 </article>
@@ -2899,7 +2899,7 @@ export function PlanViewer({
                   {isTriageBlocked
                     ? blockedTitle
                     : plan.admin_outputs?.stage2_status === "triage_resume_approved"
-                      ? "Resume approved — regeneration pending"
+                      ? "Resume approved, regeneration pending"
                     : hasPublishedPlan
                       ? "Validated final plan"
                       : "Pending finalization"}
@@ -3023,7 +3023,7 @@ export function PlanViewer({
                       </div>
                       <p className="muted">
                         Server-side structured generation is running in the background. This page
-                        checks automatically and swaps the full card in when it lands — the plan
+                        checks automatically and swaps the full card in when it lands. The plan
                         below stays live in the meantime.
                       </p>
                     </section>
@@ -3086,12 +3086,12 @@ export function PlanViewer({
                     >
                       <div className="form-section-header">
                         <p className="kicker">
-                          Stage 2 Retry — Attempt {plan.admin_outputs?.stage2_attempt_count || 1}
+                          Stage 2 Retry (Attempt {plan.admin_outputs?.stage2_attempt_count || 1}
                         </p>
                         <h3>
                           {stage2RetryJustCompleted === "passed"
-                            ? "Retry passed — plan published"
-                            : "Retry completed — new validation results below"}
+                            ? "Retry passed, plan published"
+                            : "Retry completed. New validation results below."}
                         </h3>
                       </div>
                       <p className="muted">
@@ -3111,7 +3111,7 @@ export function PlanViewer({
                       <p className="kicker">
                         Stage 2 review
                         {plan.admin_outputs?.stage2_attempt_count
-                          ? ` — attempt ${plan.admin_outputs.stage2_attempt_count}`
+                          ? ` (attempt ${plan.admin_outputs.stage2_attempt_count})`
                           : ""}
                         {stage2RetryInProgress ? " (previous attempt)" : ""}
                       </p>

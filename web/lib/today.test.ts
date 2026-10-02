@@ -813,7 +813,7 @@ test("safe session keeps bike/walk for an upper-body or minor lower-leg injury",
 test("safe session swaps bike/walk for seated upper-body cardio on a load-intolerant lower-leg injury", () => {
   // Structural lower-leg injuries: gait / pedal load is out, but symptom-gated
   // seated upper-body cardio still keeps the athlete moving.
-  const substitute = "Seated upper-body cardio — only if pain-free and available";
+  const substitute = "Seated upper-body cardio, only if pain-free and available";
   for (const injury of [
     makeInjury({ body_area: "left calf", description: "calf tear", label: "Left calf tear", severity: "moderate", load_region: "lower_limb", consequence: "structural" }),
     makeInjury({ body_area: "achilles", description: "achilles rupture", label: "Achilles rupture", severity: "moderate", load_region: "lower_limb", consequence: "structural" }),
@@ -934,7 +934,7 @@ test("safe session restricts a structural or severe spine/back/rib injury to res
   ]);
   assert.equal(backOfKnee.allowed.includes("Breathing reset"), true);
   assert.equal(
-    backOfKnee.allowed.includes("Seated upper-body cardio — only if pain-free and available"),
+    backOfKnee.allowed.includes("Seated upper-body cardio, only if pain-free and available"),
     true,
   );
 });
@@ -1001,7 +1001,7 @@ test("safe session copy never contradicts the menu it shows", () => {
   assert.deepEqual(restOnly.allowed, ["Breathing reset", "Clinician-approved rehab"]);
   assert.equal(restOnly.title, "Rest and recover");
   assert.equal(/keep the body moving/.test(restOnly.detail), false);
-  assert.match(restOnly.detail, /no loaded movement today/);
+  assert.match(restOnly.detail, /no loaded movement today/i);
 
   // Downregulate still offers mobility, so "mobility only" remains accurate.
   const neuro = getSafeSessionView("Technical sparring", [

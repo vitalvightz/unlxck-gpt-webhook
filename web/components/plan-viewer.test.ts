@@ -173,7 +173,7 @@ test("triage_resume_approved with empty validator report and restricted rehab st
   });
 
   assert.equal(summary.isPublishable, false);
-  assert.match(summary.headline, /Resume approved — regeneration pending/i);
+  assert.match(summary.headline, /Resume approved, regeneration pending/i);
 });
 
 test("sparring advisory omits generated why rationale", () => {

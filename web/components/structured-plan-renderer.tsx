@@ -138,13 +138,13 @@ function PriorityMicrodoseCard({ day }: { day: StructuredDay }) {
 
 // A sessionless contact day carries no app S&C. The note must match the day kind.
 const HARD_SPARRING_SESSIONLESS_NOTE =
-  "No extra S&C today — this is your declared hard-sparring/contact work. Keep freshness the priority.";
+  "No extra S&C today. This is your declared hard-sparring/contact work. Keep freshness the priority.";
 const TECHNICAL_COMBAT_TITLE = "Technical Combat";
 const TECHNICAL_COMBAT_HELP =
   "Near fight day, hard sparring is reduced. This lowers fatigue and injury risk while keeping your timing and skills sharp.";
 const TECHNICAL_COMBAT_TAG = "Low load";
 const TECHNICAL_COMBAT_RATIONALE =
-  "Technical only — no hard sparring. Stay sharp and leave fresh.";
+  "Technical only, no hard sparring. Stay sharp and leave fresh.";
 const TECHNICAL_COMBAT_STAGE_RATIONALES: Record<string, string> = {
   "Controlled fight-speed technical rounds":
     "Realistic exchanges at speed, controlled contact, low total volume.",
@@ -1315,7 +1315,7 @@ function gapDayLabel(countdown: string | null): { label: string; reason: string 
   if (daysOut != null && daysOut > 0 && daysOut <= TAPER_REST_MAX_COUNTDOWN) {
     return {
       label: "Taper rest",
-      reason: "Planned rest — protecting freshness for fight day.",
+      reason: "Planned rest to protect freshness for fight day.",
     };
   }
   return { label: "No planned session", reason: null };
@@ -1694,7 +1694,7 @@ function DeterministicWeightCutLine({
   return (
     <p className="sp-warning">
       <span className="sp-tag">{titleize(weightCut.band)} weight-cut risk</span>
-      {weightCut.supervisionRequired ? " — qualified supervision required." : ""}
+      {weightCut.supervisionRequired ? ". Qualified supervision required." : ""}
     </p>
   );
 }
@@ -1734,7 +1734,7 @@ function NutritionProse({ plan }: { plan: StructuredPlan }) {
             </>
           ) : null}
           {weightCut}
-          {needsSupport ? " — qualified supervision required." : ""}
+          {needsSupport ? ". Qualified supervision required." : ""}
         </p>
       ) : null}
     </>

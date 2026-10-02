@@ -53,7 +53,7 @@ export const TODAY_RED_FLAG_SAFETY =
 // Plan view active notes / red flags. Frames any "allowed" training as
 // input-driven, never as medical clearance.
 export const PLAN_SAFETY_NOTE =
-  "Training shown here is allowed by your current inputs — it is not medical clearance. " +
+  "Training shown here is allowed by your current inputs. It is not medical clearance. " +
   "Reduce or stop if symptoms worsen, and follow your coach or clinician.";
 
 // Nutrition / weight-cut workspace.

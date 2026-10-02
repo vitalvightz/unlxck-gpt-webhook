@@ -442,7 +442,7 @@ BFR_SAFETY_GATE = (
 # reopen the wound or invite infection, so we never assign rehab drills to
 # them. The correct prescription is wound care, surfaced as a single note.
 SURFACE_WOUND_CARE_NOTE = (
-    "Skin/surface injury — no loading rehab needed. Keep it clean and covered, "
+    "Skin/surface injury, so no loading rehab is needed. Keep it clean and covered, "
     "avoid friction or contact that could reopen it, and monitor for infection "
     "(spreading redness, heat, swelling, pus, or fever). Return to full contact "
     "once the wound has closed."
@@ -565,19 +565,19 @@ _FUNCTION_PURPOSES: dict[str, str] = {
 # phase rationale.
 _DAY_TYPE_REHAB_WHY: dict[str, str] = {
     "sparring": (
-        "minimal pre-sparring inclusion — addresses the risk point without "
+        "minimal pre-sparring inclusion that addresses the risk point without "
         "competing with freshness or neuromuscular readiness for contact"
     ),
     "strength": (
-        "prepares the specific risk point for the main lift — "
-        "manages irritation and primes the pattern under load"
+        "prepares the specific risk point for the main lift. "
+        "Manages irritation and primes the pattern under load"
     ),
     "aerobic": (
-        "lower-intensity session allows slightly more developmental work — "
-        "tissue tolerance, control, or mobility without adding fatigue"
+        "lower-intensity session allows slightly more developmental work "
+        "(tissue tolerance, control or mobility) without adding fatigue"
     ),
     "recovery": (
-        "low-load recovery session — maintains movement quality and "
+        "low-load recovery session that maintains movement quality and "
         "symptom control between higher-intensity days"
     ),
 }
@@ -1180,7 +1180,7 @@ def generate_rehab_protocols(
         def _render_high_severity_note() -> None:
             loc_title = _render_location_heading(loc, merged)
             lines.append(
-                f"- {loc_title}: High severity injury — use clinician-guided low-load mobility/isometrics only until symptoms settle."
+                f"- {loc_title}: High severity injury. Use clinician-guided low-load mobility/isometrics only until symptoms settle."
             )
 
         if episodes:

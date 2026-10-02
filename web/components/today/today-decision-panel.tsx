@@ -141,7 +141,7 @@ export function TodayDecisionPanel({
               <dd>
                 <ul className="today-decision-values">
                   {checks.map((check) => (
-                    <li key={check.code}>{`${check.label} — ${check.result_label}`}</li>
+                    <li key={check.code}>{`${check.label}: ${check.result_label}`}</li>
                   ))}
                 </ul>
               </dd>

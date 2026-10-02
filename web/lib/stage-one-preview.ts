@@ -155,7 +155,7 @@ function buildSafetyNotes(triage: StageOneTriage | null): StageOneSafetyNote[] {
   }
   const message =
     TRIAGE_ADVISORY_COPY[normalized] ??
-    `Injury triage mode "${triage.mode}" applied — final plan may route differently.`;
+    `Injury triage mode "${triage.mode}" applied, so the final plan may route differently.`;
   return [{ kind: "triage", triageMode: triage.mode, message }];
 }
 

@@ -33,7 +33,7 @@ export function xpWeekHeading(week: Pick<XpWeekProgress, "weekIndex" | "phaseLab
   const number = week.weekIndex !== null && week.weekIndex > 0
     ? `Week ${week.weekIndex}`
     : "Training week";
-  return `${number}${week.phaseLabel ? ` — ${week.phaseLabel}` : ""}`;
+  return `${number}${week.phaseLabel ? ` (${week.phaseLabel})` : ""}`;
 }
 
 export type XpMilestone = {

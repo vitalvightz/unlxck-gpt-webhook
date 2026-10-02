@@ -35,7 +35,7 @@ export type GenerationFailureCopy = {
 
 // Thrown by the controller when a watched job stops producing progress. Kept
 // here so the classifier and the thrower cannot drift apart.
-export const STALLED_GENERATION_ERROR = "Build stalled — retry";
+export const STALLED_GENERATION_ERROR = "Build stalled. Retry";
 
 // Request errors carry a stable code (shared/api-messages.json, raised from
 // api/errors.py), so rewording a backend message cannot change how the failure
@@ -168,7 +168,7 @@ export function describeGenerationFailure(
       return {
         headline: "The build stopped responding.",
         detail:
-          "No progress came back for several minutes, so we stopped watching it. Nothing was saved — a retry starts clean.",
+          "No progress came back for several minutes, so we stopped watching it. Nothing was saved, so a retry starts clean.",
         primary: "retry",
         secondary: ["workspace"],
       };

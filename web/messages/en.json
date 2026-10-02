@@ -156,7 +156,7 @@
     "noPayment": "No payment required during the private beta.",
     "athlete": "Athlete",
     "chooseRole": "Choose your role",
-    "roleIntro": "Unlxck is one app for everyone in the camp. Pick how you want to use it. Athlete access is open now — coach and gym accounts arrive in public beta.",
+    "roleIntro": "Unlxck is one app for everyone in the camp. Pick how you want to use it. Athlete access is open now. Coach and gym accounts arrive in public beta.",
     "accountRoles": "Account roles",
     "athleteDescription": "Run Advanced Intake and generate a saved fight camp on your athlete workspace.",
     "coach": "Coach",
@@ -169,7 +169,7 @@
     "continue": "Continue",
     "freeBeta": "Free beta",
     "wholeCampTitle": "One app for the whole camp.",
-    "wholeCampSummary": "Start as an athlete today. Coach and gym tools are on the way, all inside the same Unlxck workspace — no separate apps to manage."
+    "wholeCampSummary": "Start as an athlete today. Coach and gym tools are on the way, all inside the same Unlxck workspace, so there are no separate apps to manage."
   },
   "Workspace": {
     "planDashboard": "Plan Dashboard",

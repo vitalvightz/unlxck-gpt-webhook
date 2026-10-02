@@ -664,7 +664,7 @@ async def run_generation_job(
                 _emit_milestone(
                     "stage2_skipped",
                     "Stage 2 skipped",
-                    "Triage routing held the plan at Stage 1 — no AI finalization needed.",
+                    "Triage routing held the plan at Stage 1, so no AI finalization was needed.",
                 )
                 final_result = {**stage1_result, "full_name": request_body.athlete.full_name}
             else:

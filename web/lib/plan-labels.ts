@@ -6,7 +6,7 @@ const LABEL_OVERRIDES: Record<string, string> = {
   stop_and_report: "Stop and report",
 
   generated: "Processing",
-  publishable_with_flags: "Ready — review notes included",
+  publishable_with_flags: "Ready, with review notes",
   ready: "Ready",
   review_required: "Awaiting review",
   held_for_review: "Awaiting review",

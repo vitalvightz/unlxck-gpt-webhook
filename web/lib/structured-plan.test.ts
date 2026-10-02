@@ -936,14 +936,14 @@ test("weekLabel keeps short goals verbatim but caps long ones to a glanceable he
   // Short goal: returned untouched, trailing punctuation preserved.
   assert.equal(
     weekLabel({ week_index: 2, week_goal: "Convert strength into speed." } as never),
-    "Week 2 — Convert strength into speed.",
+    "Week 2: Convert strength into speed.",
   );
   assert.equal(
     weekLabel({
       week_index: 1,
       week_goal: "Baseline and technical consistency: establish anchor execution quality",
     } as never),
-    "Week 1 — Baseline and technical consistency:…",
+    "Week 1: Baseline and technical consistency:…",
   );
   // Long multi-clause goal: cap the first clause when it still exceeds four words.
   assert.equal(
@@ -952,7 +952,7 @@ test("weekLabel keeps short goals verbatim but caps long ones to a glanceable he
       week_goal:
         "Build single-leg drive and balance; maintain punch speed and shoulder-friendly maintenance while preserving freshness.",
     } as never),
-    "Week 1 — Build single-leg drive and…",
+    "Week 1: Build single-leg drive and…",
   );
   // Goal with decimal numbers: should not split on the decimal point.
   assert.equal(
@@ -961,7 +961,7 @@ test("weekLabel keeps short goals verbatim but caps long ones to a glanceable he
       week_goal:
         "Build 1.5x bodyweight squat and power; maintain punch speed and shoulder-friendly maintenance.",
     } as never),
-    "Week 5 — Build 1.5x bodyweight squat…",
+    "Week 5: Build 1.5x bodyweight squat…",
   );
   // Long single clause with no early break: hard-cap at 4 words with an ellipsis.
   assert.equal(
@@ -969,7 +969,7 @@ test("weekLabel keeps short goals verbatim but caps long ones to a glanceable he
       week_index: 3,
       week_goal: "Sharpen reactive power speed timing and ring distance control",
     } as never),
-    "Week 3 — Sharpen reactive power speed…",
+    "Week 3: Sharpen reactive power speed…",
   );
   // No goal: just the week number.
   assert.equal(weekLabel({ week_index: 4 } as never), "Week 4");
@@ -985,7 +985,7 @@ test("countdown-led late-fight weeks infer missing titles and phase without over
     goal: "Compressed Pre-Fight Week",
     phase: "TAPER",
   });
-  assert.equal(weekLabel(compressed), "Week 1 — Compressed Pre-Fight Week");
+  assert.equal(weekLabel(compressed), "Week 1: Compressed Pre-Fight Week");
   assert.equal(resolvedWeekPhase(compressed), "TAPER");
 
   const legacy = {
@@ -994,7 +994,7 @@ test("countdown-led late-fight weeks infer missing titles and phase without over
     week_goal: "Power transfer touch",
     countdown_start: "D-10",
   } as never;
-  assert.equal(weekLabel(legacy), "Week 1 — Power transfer touch");
+  assert.equal(weekLabel(legacy), "Week 1: Power transfer touch");
   assert.equal(resolvedWeekPhase(legacy), "SPP");
 });
 
@@ -1052,7 +1052,7 @@ test("NutritionCard renders deterministic macros / hydration / fuel timing", () 
   assert.equal(byLabel["Fats"], "moderate (~20%)"); // note-only macro
   assert.equal(byLabel["Hydration"], "2100–2800 ml/day");
   assert.equal(byLabel["Meals"], "3 core meals + 2-3 snacks daily");
-  assert.equal(byLabel["Fuel — pre"], "light carbs");
+  assert.equal(byLabel["Fuel (pre)"], "light carbs");
   assert.equal(byLabel["Fatigue adjustment"], "high fatigue support");
   // Athlete-safe weight-cut: risk band + supervision only.
   assert.deepEqual(formatWeightCutBand(taper.entry.weight_cut), {
