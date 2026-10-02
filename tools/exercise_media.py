@@ -33,12 +33,12 @@ Workflow:
     # (or when explicitly selected). Otherwise input needs suggested_url (plus optional candidate_urls,
     # '|'-separated, and plan_cue). Saves after every video and row; re-running
     # the same command, with or
-    # without --out, resumes. Exits 1 if any row failed or the quota stopped
-    # the run early. A person still approves each row by copying the URL into
+    # without --out, resumes. Exits 1 if any row failed or a provider/quota
+    # stop left the run incomplete. A person still approves each row by copying the URL into
     # youtube_url.
     python tools/exercise_media.py review media.csv --out media.reviewed.csv
 
-    # With a configured search provider, weak results trigger bounded YouTube searches.
+    # With a configured search provider, weak results trigger bounded candidate searches.
     # Revisit weak/partial rows while keeping strong reviewed matches:
     python tools/exercise_media.py review media.csv --redo-weak --max-candidates 5
     # --no-search uses supplied URLs only. Unresolved rows get needs_manual_video=true.
