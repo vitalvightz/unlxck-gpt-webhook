@@ -499,3 +499,40 @@ def test_dataforseo_rate_limit_falls_back_before_stopping_batch():
     fallback = _searcher([["BBBBBBBBBBB"]])
     searcher = discovery.FallbackCandidateSearch(primary, fallback)
     assert next(iter(searcher.search(_row(), set()))) == URL_B
+
+
+@pytest.mark.parametrize("status_code", [40203, 40210])
+def test_dataforseo_account_limits_stop_batch_without_marking_rows_error(tmp_path, status_code):
+    src = tmp_path / "media.csv"
+    _write_csv(
+        src,
+        [
+            _row(exercise_key="first", suggested_url=""),
+            _row(exercise_key="second", suggested_url=""),
+        ],
+    )
+    response = httpx.Response(
+        200,
+        json={
+            "status_code": 20000,
+            "tasks": [{"status_code": status_code, "status_message": "provider unavailable"}],
+        },
+    )
+    searches = []
+    counts = review.run_review(
+        str(src),
+        str(src),
+        reviewer=_reviewer({}),
+        search=_dataforseo_searcher([response], searches).search,
+        delay_s=0,
+        log=lambda _: None,
+    )
+
+    assert counts["quota_stopped"] == 1
+    assert counts["search_quota_stopped"] == 1
+    assert len(searches) == 1
+    rows = _read_csv(src)
+    assert rows[0].get("ai_verdict", "") == ""
+    assert rows[1].get("ai_verdict", "") == ""
+    progress = json.loads(rows[0]["ai_review_progress"])
+    assert progress["search_progress"]["queries_used"] == 0
