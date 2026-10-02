@@ -12,7 +12,7 @@ from fightcamp.rehab_selector import select_rehab_candidate, filter_rehab_candid
 
 from .rehab_stage import resolve_rehab_stage
 from .rehab_progression import resolve_reviewed_progression, episode_setback_at, _instant
-from .clinician_clearance import effective_clinician_clearance
+from .clinician_clearance import effective_clinician_clearance, clinician_clears_baseline
 
 
 def resolve_injury_policy(
@@ -179,7 +179,7 @@ def _current_clearance_scopes(injuries: Sequence[Mapping[str, Any]]) -> list[lis
 def _clinician_clearance_hold(
     session: Mapping[str, Any] | None, injuries: Sequence[Mapping[str, Any]],
 ) -> str | None:
-    """Current athlete reports only lower the ceiling; they never grant safety."""
+    """Enforce the effective scope independently of baseline policy relaxation."""
     from .readiness_message import _session_has_contact, is_support_session
 
     if not session:
@@ -248,10 +248,21 @@ def reconcile_session_prescription(
     if session is None and not prescribed:
         return None
     entry = deepcopy(dict(session or {"session_id": f"rehab-{training_day}", "title": "Today's rehab", "session_type": "rehab", "blocks": []}))
-    blocked_regions = set().union(*(set(d.get("restrictions", {}).get("blocked_regions", [])) for d in live))
-    blocked_tags = set().union(*(set(d.get("restrictions", {}).get("blocked_tags", [])) for d in live))
+    restrictions = []
+    for decision in live:
+        current = dict(decision.get("restrictions", {}))
+        injury = next((row for row in injuries if str(row.get("id")) == str(decision.get("injury_id"))
+                       and str(row.get("episode_id")) == str(decision.get("injury_episode_id"))), None)
+        if (injury and decision.get("activation") == "live" and not decision.get("loading_hold")
+                and decision.get("outcome") != "medical_review" and clinician_clears_baseline(injury)):
+            current["blocked_regions"], current["blocked_tags"] = [], []
+            if clinician_clears_baseline(injury, contact=True):
+                current["contact_limit"] = "full"
+        restrictions.append(current)
+    blocked_regions = set().union(*(set(r.get("blocked_regions", [])) for r in restrictions))
+    blocked_tags = set().union(*(set(r.get("blocked_tags", [])) for r in restrictions))
     contact_rank = {"none": 0, "controlled": 1, "full": 2}
-    allowed_contact = min((contact_rank[d.get("restrictions", {}).get("contact_limit", "none")] for d in live), default=contact_rank["full"])
+    allowed_contact = min((contact_rank[r.get("contact_limit", "none")] for r in restrictions), default=contact_rank["full"])
     from .readiness_message import _session_has_contact
 
     policy_contact_limit = allowed_contact
@@ -265,7 +276,16 @@ def reconcile_session_prescription(
     if block_contact_ceiling:
         allowed_contact = 0
     hold = bool(clearance_hold and not block_contact_ceiling) or any(d.get("outcome") == "medical_review" for d in decisions)
-    if session is not None and not entry.get("blocks") and entry.get("session_type") != "rehab":
+    contact_owned = _session_has_contact({**entry, "blocks": []})
+    # The planner also uses a sparring type to budget app-owned support work.
+    # An explicit contact headline/coach portion remains contact even when its
+    # child blocks are only support; the allocation type alone is not that owner.
+    if allowed_contact < contact_rank["full"] and _session_has_contact({**entry, "blocks": [], "session_type": ""}):
+        hold = True
+    cleared_contact_only = (contact_owned and allowed_contact == contact_rank["full"]
+                            and not blocked_regions and not blocked_tags
+                            and any("contact" in scopes for scopes in clearance_scopes))
+    if session is not None and not entry.get("blocks") and entry.get("session_type") != "rehab" and not cleared_contact_only:
         hold = True
     blocks, changes = [], []
     if clearance_hold and not block_contact_ceiling:

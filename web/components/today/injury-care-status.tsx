@@ -11,7 +11,7 @@ export function EffectiveClinicianClearanceStatus({ clearance }: {
   const label = { rehab_only: "Rehab only", train_no_contact: "Train, no contact", train_contact: "Train + contact" }[clearance.level];
   return <div className="today-injury-guidance" role="note" aria-label="Effective clinician clearance">
     <p><strong>Effective clinician clearance: {label}</strong></p>
-    <p>Limited by: {clearance.limited_by.map(injury => injury.label).join(", ")}</p>
+    <p>{clearance.level === "train_contact" ? "Based on" : "Limited by"}: {clearance.limited_by.map(injury => injury.label).join(", ")}</p>
     {clearance.requires_update ? <p>Scope unclear — update the reported clearance. Rehab only until clarified.</p> : null}
   </div>;
 }
@@ -62,7 +62,7 @@ export function InjuryCareStatus({ injury, token, onRefresh }: {
     {injury.episode_id && !surface ? <>
       <button type="button" className="ghost-button" onClick={() => setChoosing(!choosing)} disabled={busy}>{clearance ? "Update clinician clearance" : "Report clinician clearance"}</button>
       {choosing ? <div role="group" aria-label="What were you cleared for?">
-        <p>What were you cleared for? Athlete-reported, not verified. This limits training; it does not override safety guidance or advance rehab.</p>
+        <p>What were you cleared for? Athlete-reported, not verified. This sets your training and contact permissions. Red flags and safety holds still apply; it does not advance rehab.</p>
         <div className="today-segment-row">
           <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab"])}>Rehab only</button>
           <button type="button" className="today-segment" disabled={busy} onClick={() => report(["rehab", "training"])}>Train, no contact</button>

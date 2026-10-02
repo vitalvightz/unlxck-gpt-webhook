@@ -882,9 +882,13 @@ def _has_load_relevant_injury(checkin: ReadinessCheckin, context: ReadinessConte
     explicitly non-surface injury. A stable blister or graze is a skin constraint
     and must never read as "an active injury" against a hard session.
     """
+    from .clinician_clearance import clinician_clears_baseline
+
     active = _active_open_injuries(context)
     if active:
-        return any(not _surface_assessment(injury).is_surface for injury in active)
+        return any(not _surface_assessment(injury).is_surface
+                   and not clinician_clears_baseline(injury, contact=_session_has_contact(context.today_session))
+                   for injury in active)
     # No structured injury data to classify: fall back to the check-in's own
     # declaration so existing behaviour is unchanged for athletes with no flags.
     return checkin.active_injury == "stable"
@@ -892,10 +896,13 @@ def _has_load_relevant_injury(checkin: ReadinessCheckin, context: ReadinessConte
 
 def _load_relevant_injury_ids(context: ReadinessContext) -> tuple[str, ...]:
     """Stable IDs for tracked injuries that contribute to load decisions."""
+    from .clinician_clearance import clinician_clears_baseline
+
     return tuple(
         flag_id
         for injury in _active_open_injuries(context)
         if not _surface_assessment(injury).is_surface
+        if not clinician_clears_baseline(injury, contact=_session_has_contact(context.today_session))
         if (flag_id := _clean(injury.get("id")))
     )
 
@@ -1517,6 +1524,8 @@ def _context_injury_floor(
     high-consequence tier participate; severe / worse are handled by
     ``_active_context_injury_stop``.
     """
+    from .clinician_clearance import clinician_clears_baseline
+
     best_floor: str | None = None
     best_label = ""
     best_tier = ""
@@ -1524,6 +1533,8 @@ def _context_injury_floor(
     for injury in _active_open_injuries(context):
         tier = _clean(injury.get("consequence")).lower()
         if tier not in {"neuro", "structural", "load_sensitive"}:
+            continue
+        if tier == "load_sensitive" and clinician_clears_baseline(injury, contact=_session_has_contact(context.today_session)):
             continue
         # A skin wound never restricts load by the tissue UNDER it: a graze over
         # the ribs is a dressing problem, not a rib injury. Only a wound that
