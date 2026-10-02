@@ -15,6 +15,7 @@ YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
 DATAFORSEO_SEARCH_URL = "https://api.dataforseo.com/v3/serp/youtube/organic/live/advanced"
 DATAFORSEO_TIMEOUT_SECONDS = 30.0
 DATAFORSEO_TIMEOUT_RETRIES = 2
+DATAFORSEO_TRANSIENT_HTTP_STATUS_CODES = {408, 425, 500, 502, 503, 504}
 MAX_SEARCH_QUERIES = 3
 
 SEARCH_PROVIDER_ENV = "EXERCISE_MEDIA_SEARCH_PROVIDER"
@@ -26,11 +27,11 @@ DATAFORSEO_STOP_STATUS_CODES = {40202, 40203, 40210}
 
 
 class CandidateSearchError(RuntimeError):
-    pass
+    """Provider-level candidate discovery failure; checkpoint and stop the batch."""
 
 
 class CandidateSearchQuotaExceeded(CandidateSearchError):
-    """Candidate-search quota/rate limit exhaustion; stop or fall back."""
+    """Candidate-search quota/rate limit exhaustion; checkpoint and stop."""
 
 
 class CandidateSearcher(Protocol):
@@ -116,7 +117,7 @@ class YouTubeCandidateSearch:
 
     def __init__(self, api_key: str, *, client: httpx.Client | None = None) -> None:
         self.api_key = api_key
-        self._client = client or httpx.Client(timeout=DATAFORSEO_TIMEOUT_SECONDS)
+        self._client = client or httpx.Client(timeout=YOUTUBE_API_TIMEOUT_SECONDS)
         self._failure: tuple[type[CandidateSearchError], str] | None = None
 
     def close(self) -> None:
@@ -174,16 +175,10 @@ class YouTubeCandidateSearch:
                 _rewind_query(progress, checkpoint)
                 self._failure = (CandidateSearchQuotaExceeded, str(exc))
                 raise
-            except httpx.TimeoutException as exc:
-                _rewind_query(progress, checkpoint)
-                message = (
-                    f"DataForSEO search unavailable after "
-                    f"{DATAFORSEO_TIMEOUT_RETRIES + 1} timeout attempts"
-                )
-                self._failure = (CandidateSearchQuotaExceeded, message)
-                raise CandidateSearchQuotaExceeded(message) from exc
             except (httpx.HTTPError, ValueError, CandidateSearchError) as exc:
-                # Never expose an httpx exception's URL/headers or API body.
+                # A provider failure is operational, not a verdict on this row.
+                # Rewind so a later run retries the same query from its checkpoint.
+                _rewind_query(progress, checkpoint)
                 message = (
                     str(exc)
                     if isinstance(exc, CandidateSearchError)
@@ -276,7 +271,7 @@ class DataForSEOCandidateSearch:
         self.password = password
         self.location_code = location_code
         self.language_code = language_code
-        self._client = client or httpx.Client(timeout=YOUTUBE_API_TIMEOUT_SECONDS)
+        self._client = client or httpx.Client(timeout=DATAFORSEO_TIMEOUT_SECONDS)
         self._failure: tuple[type[CandidateSearchError], str] | None = None
 
     def close(self) -> None:
@@ -330,10 +325,21 @@ class DataForSEOCandidateSearch:
                                 }
                             ],
                         )
-                        break
-                    except httpx.TimeoutException:
-                        if attempt >= DATAFORSEO_TIMEOUT_RETRIES:
-                            raise
+                    except httpx.TransportError as exc:
+                        if attempt < DATAFORSEO_TIMEOUT_RETRIES:
+                            continue
+                        raise CandidateSearchError(
+                            f"DataForSEO search unavailable after "
+                            f"{DATAFORSEO_TIMEOUT_RETRIES + 1} attempts "
+                            f"({type(exc).__name__})"
+                        ) from exc
+
+                    if (
+                        response.status_code in DATAFORSEO_TRANSIENT_HTTP_STATUS_CODES
+                        and attempt < DATAFORSEO_TIMEOUT_RETRIES
+                    ):
+                        continue
+                    break
 
                 if response is None:
                     raise CandidateSearchError("DataForSEO search returned no response")
@@ -353,18 +359,9 @@ class DataForSEOCandidateSearch:
                 _rewind_query(progress, checkpoint)
                 self._failure = (CandidateSearchQuotaExceeded, str(exc))
                 raise
-            except httpx.TimeoutException as exc:
-                # DataForSEO already exhausted its dedicated timeout retries.
-                # Treat this as a provider-unavailable stop so the batch
-                # checkpoints and exits instead of marking every later row error.
-                _rewind_query(progress, checkpoint)
-                message = (
-                    f"DataForSEO search unavailable after "
-                    f"{DATAFORSEO_TIMEOUT_RETRIES + 1} timeout attempts"
-                )
-                self._failure = (CandidateSearchQuotaExceeded, message)
-                raise CandidateSearchQuotaExceeded(message) from exc
             except (httpx.HTTPError, ValueError, CandidateSearchError) as exc:
+                # Any provider failure stops the batch at this row. The query is
+                # rewound so a later run resumes from the same checkpoint.
                 _rewind_query(progress, checkpoint)
                 message = (
                     str(exc)
@@ -384,50 +381,6 @@ class DataForSEOCandidateSearch:
                 checkpoint()
 
 
-class FallbackCandidateSearch:
-    """Use a primary provider, then continue with a fallback on provider failure."""
-
-    def __init__(
-        self,
-        primary: CandidateSearcher,
-        fallback: CandidateSearcher,
-        *,
-        on_fallback: Callable[[str], None] | None = None,
-    ) -> None:
-        self.primary = primary
-        self.fallback = fallback
-        self.label = f"{primary.label} -> {fallback.label} fallback"
-        self._on_fallback = on_fallback
-        self._fallback_reported = False
-
-    def close(self) -> None:
-        self.primary.close()
-        self.fallback.close()
-
-    def search(
-        self,
-        row: dict[str, str],
-        exclude: set[str],
-        progress: SearchProgress | None = None,
-        checkpoint: Callable[[], None] | None = None,
-    ) -> Iterable[str]:
-        emitted = {parse_youtube_video_id(value) or value for value in exclude}
-        try:
-            for url in self.primary.search(row, exclude, progress, checkpoint):
-                emitted.add(parse_youtube_video_id(url) or url)
-                yield url
-            return
-        except CandidateSearchError as exc:
-            # The primary rewinds the failed query before raising, so the
-            # fallback starts with that same query rather than skipping it.
-            if self._on_fallback is not None and not self._fallback_reported:
-                self._on_fallback(
-                    f"{self.primary.label} unavailable; using {self.fallback.label}: {exc}"
-                )
-                self._fallback_reported = True
-
-        yield from self.fallback.search(row, emitted, progress, checkpoint)
-
 
 def _location_code_from_env() -> int:
     raw = os.getenv(DATAFORSEO_LOCATION_CODE_ENV, "2840").strip() or "2840"
@@ -443,12 +396,11 @@ def build_candidate_search(
     *,
     provider: str | None = None,
     youtube_api_key: str | None = None,
-    on_fallback: Callable[[str], None] | None = None,
 ) -> CandidateSearcher | None:
-    """Build the configured search backend.
+    """Build exactly one discovery provider.
 
-    auto uses DataForSEO whenever both credentials are present. The YouTube
-    Data API is used for discovery only when DataForSEO is not configured.
+    In auto mode DataForSEO wins whenever both of its credentials are present.
+    The YouTube search API is used only when DataForSEO is not configured.
     """
     selected = (provider or os.getenv(SEARCH_PROVIDER_ENV, "auto")).strip().lower()
     if selected not in {"auto", "dataforseo", "youtube"}:
@@ -460,33 +412,31 @@ def build_candidate_search(
     password = os.getenv(DATAFORSEO_PASSWORD_ENV, "").strip()
     language = os.getenv(DATAFORSEO_LANGUAGE_CODE_ENV, "en").strip() or "en"
 
-    youtube: CandidateSearcher | None = (
-        YouTubeCandidateSearch(youtube_api_key) if youtube_api_key else None
-    )
-    dataforseo: CandidateSearcher | None = None
-    if selected != "youtube" and login and password:
-        dataforseo = DataForSEOCandidateSearch(
+    def dataforseo_searcher() -> CandidateSearcher:
+        if not login or not password:
+            raise CandidateSearchError(
+                f"DataForSEO discovery requested but {DATAFORSEO_LOGIN_ENV} "
+                f"and {DATAFORSEO_PASSWORD_ENV} are not both set"
+            )
+        return DataForSEOCandidateSearch(
             login,
             password,
             location_code=_location_code_from_env(),
             language_code=language,
         )
 
+    if selected == "dataforseo":
+        return dataforseo_searcher()
+
     if selected == "youtube":
-        if youtube is None:
+        if not youtube_api_key:
             raise CandidateSearchError(
                 "YouTube discovery requested but YOUTUBE_DATA_API_KEY is not set"
             )
-        return youtube
+        return YouTubeCandidateSearch(youtube_api_key)
 
-    if selected == "dataforseo":
-        if dataforseo is None:
-            raise CandidateSearchError(
-                f"DataForSEO discovery requested but {DATAFORSEO_LOGIN_ENV} "
-                f"and {DATAFORSEO_PASSWORD_ENV} are not both set"
-            )
-        return dataforseo
-
-    if dataforseo:
-        return dataforseo
-    return youtube
+    if login and password:
+        return dataforseo_searcher()
+    if youtube_api_key:
+        return YouTubeCandidateSearch(youtube_api_key)
+    return None
