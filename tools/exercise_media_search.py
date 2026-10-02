@@ -357,10 +357,18 @@ class DataForSEOCandidateSearch:
 class FallbackCandidateSearch:
     """Use a primary provider, then continue with a fallback on provider failure."""
 
-    def __init__(self, primary: CandidateSearcher, fallback: CandidateSearcher) -> None:
+    def __init__(
+        self,
+        primary: CandidateSearcher,
+        fallback: CandidateSearcher,
+        *,
+        on_fallback: Callable[[str], None] | None = None,
+    ) -> None:
         self.primary = primary
         self.fallback = fallback
         self.label = f"{primary.label} -> {fallback.label} fallback"
+        self._on_fallback = on_fallback
+        self._fallback_reported = False
 
     def close(self) -> None:
         self.primary.close()
@@ -379,10 +387,14 @@ class FallbackCandidateSearch:
                 emitted.add(parse_youtube_video_id(url) or url)
                 yield url
             return
-        except CandidateSearchError:
+        except CandidateSearchError as exc:
             # The primary rewinds the failed query before raising, so the
             # fallback starts with that same query rather than skipping it.
-            pass
+            if self._on_fallback is not None and not self._fallback_reported:
+                self._on_fallback(
+                    f"{self.primary.label} unavailable; using {self.fallback.label}: {exc}"
+                )
+                self._fallback_reported = True
 
         yield from self.fallback.search(row, emitted, progress, checkpoint)
 
@@ -401,6 +413,7 @@ def build_candidate_search(
     *,
     provider: str | None = None,
     youtube_api_key: str | None = None,
+    on_fallback: Callable[[str], None] | None = None,
 ) -> CandidateSearcher | None:
     """Build the configured search backend.
 
@@ -421,7 +434,7 @@ def build_candidate_search(
         YouTubeCandidateSearch(youtube_api_key) if youtube_api_key else None
     )
     dataforseo: CandidateSearcher | None = None
-    if login and password:
+    if selected != "youtube" and login and password:
         dataforseo = DataForSEOCandidateSearch(
             login,
             password,
@@ -442,8 +455,12 @@ def build_candidate_search(
                 f"DataForSEO discovery requested but {DATAFORSEO_LOGIN_ENV} "
                 f"and {DATAFORSEO_PASSWORD_ENV} are not both set"
             )
-        return FallbackCandidateSearch(dataforseo, youtube) if youtube else dataforseo
+        return (
+            FallbackCandidateSearch(dataforseo, youtube, on_fallback=on_fallback)
+            if youtube
+            else dataforseo
+        )
 
     if dataforseo and youtube:
-        return FallbackCandidateSearch(dataforseo, youtube)
+        return FallbackCandidateSearch(dataforseo, youtube, on_fallback=on_fallback)
     return dataforseo or youtube
