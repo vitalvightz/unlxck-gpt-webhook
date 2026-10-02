@@ -94,7 +94,15 @@ def resolve_injury_policy(
     eligible, _ = filter_rehab_candidates(injury={**injury, "body_region": region, "injury_type": kind, "severity": severity},
         rehab_stage=str(stage), candidates=candidates, available_equipment=equipment,
         exposures=selection_exposures, activated_stages=policy.live_stages)
-    if eligible:
+    bundle_ids = policy.stage_bundles.get(str(stage))
+    if bundle_ids:
+        eligible_ids = {d["id"] for d in eligible}
+        # A reviewed combination is atomic: never fill gaps with alternatives.
+        if not set(bundle_ids) <= eligible_ids:
+            result["reason_codes"] = ["reviewed_bundle_member_ineligible"]
+            return result
+        candidates = [d for d in eligible if d["id"] in bundle_ids]
+    elif eligible:
         priority = max(prescriptions[d["id"]].priority for d in eligible)
         candidates = [d for d in eligible if prescriptions[d["id"]].priority == priority]
     selected = select_rehab_candidate(
@@ -105,24 +113,23 @@ def resolve_injury_policy(
     if not selected.selected_drill_id:
         result["reason_codes"] = list(dict.fromkeys(code for rejection in selected.rejected_candidates for code in rejection.reason_codes)) or ["no_supported_candidate"]
         return result
-    prescription = prescriptions[selected.selected_drill_id]
-    drill = deepcopy(drill_by_id[selected.selected_drill_id])
-    selected_dose = prescription.camp_doses.get(phase.upper(), prescription.dose)
-    dose = selected_dose.model_dump(exclude_none=True) if selected_dose else {}
-    readiness_dose = prescription.readiness_doses.get(readiness_decision)
-    if readiness_decision == "pull_back" and readiness_dose is None and prescription.dose is not None:
-        result.update(outcome="missing_information", summary="Follow today's reduced-training guidance. No reduced rehab dose is configured for this readiness state.",
-                      reason_codes=["reviewed_readiness_dose_missing"])
-        return result
-    if readiness_dose is not None:
-        for name, value in readiness_dose.model_dump(exclude_none=True).items():
-            if name in dose:
-                dose[name] = min(dose[name], value)
-    result.update(
-        outcome="prescribed_rehab" if policy.activation == "live" else "unsupported_prescription",
-        summary="Your rehab is matched to this injury's current recovery stage." if policy.activation == "live" else "This rehab routine is not active yet. Keep to your current restrictions.",
-        reason_codes=[selected.selection_reason],
-        prescription={
+    selected_ids = bundle_ids or [selected.selected_drill_id]
+    resolved_drills = []
+    for identity in selected_ids:
+        prescription = prescriptions[identity]
+        drill = deepcopy(drill_by_id[identity])
+        selected_dose = prescription.camp_doses.get(phase.upper(), prescription.dose)
+        dose = selected_dose.model_dump(exclude_none=True) if selected_dose else {}
+        readiness_dose = prescription.readiness_doses.get(readiness_decision)
+        if readiness_decision == "pull_back" and readiness_dose is None and prescription.dose is not None:
+            result.update(outcome="missing_information", summary="Follow today's reduced-training guidance. No reduced rehab dose is configured for this readiness state.",
+                          reason_codes=["reviewed_readiness_dose_missing"])
+            return result
+        if readiness_dose is not None:
+            for name, value in readiness_dose.model_dump(exclude_none=True).items():
+                if name in dose:
+                    dose[name] = min(dose[name], value)
+        resolved_drills.append({
             "drill_id": prescription.drill_id, "drill": drill,
             "instructions": prescription.instructions,
             "dose": dose,
@@ -132,7 +139,19 @@ def resolve_injury_policy(
             "policy_review_hash": policy.content_hash,
             "minimum_gap_days": prescription.minimum_gap_days,
             "is_loading": prescription.stage != "calm" and drill.get("function") in {"tendon_loading", "isometric_analgesia", "activation", "control"},
-        },
+        })
+    resolved = resolved_drills[0]
+    if bundle_ids:
+        resolved = {
+            **resolved, "drills": resolved_drills,
+            "minimum_gap_days": max(d["minimum_gap_days"] for d in resolved_drills),
+            "is_loading": any(d["is_loading"] for d in resolved_drills),
+        }
+    result.update(
+        outcome="prescribed_rehab" if policy.activation == "live" else "unsupported_prescription",
+        summary="Your rehab is matched to this injury's current recovery stage." if policy.activation == "live" else "This rehab routine is not active yet. Keep to your current restrictions.",
+        reason_codes=[selected.selection_reason],
+        prescription=resolved,
         restrictions={
             "blocked_regions": policy.blocked_regions, "blocked_tags": policy.blocked_tags,
             "contact_limit": policy.contact_limit,
@@ -157,18 +176,23 @@ def reconcile_session_prescription(
         snapshot["safety_hold"] = bool(snapshot.get("safety_hold")) or any(d.get("outcome") == "medical_review" for d in decisions)
         if any(d.get("activation") == "live" and d.get("injury_id") not in snapshot.get("injury_ids", []) for d in decisions):
             snapshot["safety_hold"] = True
-        accepted = {b.get("injury_id"): b for b in snapshot.get("session", {}).get("blocks", []) if b.get("injury_id")}
+        accepted = [b for b in snapshot.get("session", {}).get("blocks", []) if b.get("injury_id")]
         known_injuries = {row.get("id") for row in snapshot.get("injury_context", [])} or set(snapshot.get("injury_ids", []))
         if any(d.get("injury_id") not in known_injuries and d.get("outcome") != "wound_care" for d in decisions):
             snapshot["safety_hold"] = True
-        for decision in decisions:
-            block = accepted.get(decision.get("injury_id"))
+        for block in accepted:
+            decision = next((d for d in decisions if d.get("injury_id") == block.get("injury_id")), None)
+            if decision is None:
+                snapshot["safety_hold"] = True
+                continue
+            current = decision.get("prescription") or {}
+            member_ids = {p["drill_id"] for p in current.get("drills", [current]) if p.get("drill_id")}
             reserved_baseline = (decision.get("schedule", {}).get("state") == "already_completed"
                 and (block or {}).get("drill_snapshot", {}).get("rehab_stage") in {"calm", "restore"}
                 and (not (block or {}).get("is_loading") or decision.get("stage") == "restore"))
             if block and (decision.get("outcome") != "prescribed_rehab"
                           or block.get("injury_episode_id") != decision.get("injury_episode_id")
-                          or (not reserved_baseline and block.get("rehab_drill_id") != (decision.get("prescription") or {}).get("drill_id"))
+                          or (not reserved_baseline and block.get("rehab_drill_id") not in member_ids)
                           or (block.get("is_loading") and decision.get("loading_hold"))
                           or block.get("policy_review_hash") != (decision.get("prescription") or {}).get("policy_review_hash")):
                 snapshot["safety_hold"] = True
@@ -194,10 +218,13 @@ def reconcile_session_prescription(
 
     replaced = set()
 
-    def prescribed_block(decision):
-        prescription = decision["prescription"]
+    def prescribed_block(decision, prescription):
         identity = f"rehab:{decision['injury_id']}:{decision['injury_episode_id']}"
+        if decision["prescription"].get("drills"):
+            identity = f"{identity}:{prescription['drill_id']}"
         return {
+            **({"rehab_allocation_id": f"rehab:{decision['injury_id']}:{decision['injury_episode_id']}"}
+               if decision["prescription"].get("drills") else {}),
             "block_id": identity, "block_type": "rehab", "title": prescription["drill"]["name"],
             "display_name": prescription["drill"]["name"], "coaching_cues": [prescription["instructions"]],
             **({"duration": {"value": prescription["dose"]["duration_seconds"], "unit": "seconds"}} if "duration_seconds" in prescription["dose"] else {}),
@@ -209,10 +236,14 @@ def reconcile_session_prescription(
             "policy_id": prescription["policy_id"], "policy_version": prescription["policy_version"],
             "bank_hash": prescription["bank_hash"],
             "policy_review_hash": prescription["policy_review_hash"],
-            "minimum_gap_days": prescription["minimum_gap_days"],
+            "minimum_gap_days": decision["prescription"]["minimum_gap_days"],
             "is_loading": prescription["is_loading"],
             "source_references": prescription["sources"],
         }
+
+    def prescribed_blocks(decision):
+        current = decision["prescription"]
+        return [prescribed_block(decision, member) for member in current.get("drills", [current])]
 
     for block in entry.get("blocks", []):
         if block.get("block_type") == "rehab":
@@ -221,7 +252,8 @@ def reconcile_session_prescription(
                 and block.get("injury_id") == d.get("injury_id")
                 and block.get("injury_episode_id") == d.get("injury_episode_id")), None)
             if replacement:
-                blocks.append(prescribed_block(replacement))
+                if (replacement["injury_id"], replacement["injury_episode_id"]) not in replaced:
+                    blocks.extend(prescribed_blocks(replacement))
                 replaced.add((replacement["injury_id"], replacement["injury_episode_id"]))
                 changes.append({"block_id": block.get("block_id"), "action": "replaced", "reason": "current_episode_prescription"})
                 continue
@@ -265,13 +297,20 @@ def reconcile_session_prescription(
     # Match the existing camp allocation ceiling. More affected episodes are
     # explicit deferred decisions rather than extra, unbudgeted work.
     budget = 1 if "sparring" in str(entry.get("session_type") or "").lower() else 2
-    budget = max(0, budget - sum(block.get("block_type") == "rehab" and not block.get("_policy_held") for block in blocks))
+    allocations = {
+        ("bundle", block["rehab_allocation_id"])
+        if block.get("rehab_allocation_id")
+        else ("legacy", index)
+        for index, block in enumerate(blocks)
+        if block.get("block_type") == "rehab" and not block.get("_policy_held")
+    }
+    budget = max(0, budget - len(allocations))
     for index, decision in enumerate(sorted((d for d in prescribed if (d["injury_id"], d["injury_episode_id"]) not in replaced),
                                              key=lambda d: d["injury_id"])):
         if index >= budget:
             changes.append({"injury_id": decision["injury_id"], "action": "deferred", "reason": "rehab_slot_budget"})
             continue
-        blocks.append(prescribed_block(decision))
+        blocks.extend(prescribed_blocks(decision))
     entry["blocks"] = blocks
     rehab_only = False
     if hold and not any(d.get("outcome") == "medical_review" for d in decisions):

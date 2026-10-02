@@ -22,7 +22,11 @@ def content_hash(value: object) -> str:
 def policy_review_hash(policy) -> str:
     # Historical snapshots use policy_review_hash; its meaning is now content
     # integrity only. No clinician identity or sign-off is asserted.
-    return content_hash(policy.model_dump(exclude={"content_hash", "status", "activation"}))
+    raw = policy.model_dump(exclude={"content_hash", "status", "activation"})
+    # Preserve hashes of existing single-drill policies exactly.
+    if not raw.get("stage_bundles"):
+        raw.pop("stage_bundles", None)
+    return content_hash(raw)
 
 
 class ClinicalDose(BaseModel):
@@ -105,6 +109,8 @@ class ClinicalPolicy(BaseModel):
     contact_limit: Literal["none", "controlled", "full"] = "none"
     live_stages: list[Literal["calm", "restore", "load", "dynamic", "return"]] = Field(default_factory=lambda: ["calm", "restore"])
     transitions: list[ClinicalTransition] = Field(default_factory=list)
+    # Explicit compatibility review, not a count applied to ranked alternatives.
+    stage_bundles: dict[Literal["calm", "restore", "load", "dynamic", "return"], list[str]] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def validate_active_policy(self):
@@ -125,6 +131,14 @@ class ClinicalPolicy(BaseModel):
                 raise ValueError("automatic higher-stage transitions are disabled in v1")
         if len({p.drill_id for p in self.prescriptions}) != len(self.prescriptions):
             raise ValueError("duplicate prescription identity")
+        by_id = {p.drill_id: p for p in self.prescriptions}
+        for stage, ids in self.stage_bundles.items():
+            if stage not in self.live_stages or not ids or len(set(ids)) != len(ids):
+                raise ValueError("bundle needs unique drills in an activated stage")
+            if any(identity not in by_id or by_id[identity].stage != stage for identity in ids):
+                raise ValueError("bundle drills must have reviewed prescriptions in the same stage")
+            if len({by_id[identity].frequency for identity in ids}) != 1:
+                raise ValueError("bundle drills must share a scheduling frequency")
         if len({t.to_stage for t in self.transitions}) != len(self.transitions):
             raise ValueError("duplicate transition criteria")
         if any(stage not in {"calm", "restore"} for stage in self.live_stages):
