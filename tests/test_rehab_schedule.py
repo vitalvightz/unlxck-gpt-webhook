@@ -7,7 +7,7 @@ from api.contracts.injury_policy import resolve_injury_policy, reconcile_session
 from api.contracts.rehab_schedule import schedule_rehab
 from api.contracts.rehab_completion import completed_dose_from_session
 from api.services.injury_episode_service import apply_episode_observations
-from fightcamp.rehab_clinical import load_clinical_policies
+from fightcamp.rehab_clinical import ClinicalPolicy, load_clinical_policies, policy_review_hash
 from fightcamp.rehab_protocols import get_rehab_bank
 
 
@@ -156,7 +156,14 @@ def test_accepted_prescription_keeps_its_previous_gap_after_policy_change():
     assert schedule_rehab(row, changed, training_day="2026-10-01", completions=[previous])["state"] == "recovery_day"
 
 
-def test_resuming_a_frozen_alternative_does_not_reselect_the_primary_routine():
+def test_resuming_a_frozen_alternative_does_not_reselect_the_primary_routine(monkeypatch):
+    # Preserve coverage of the legacy single-drill policy's alternative path.
+    policy = next(p for p in load_clinical_policies() if p.policy_id == "ankle_sprain")
+    draft = ClinicalPolicy.model_validate({**policy.model_dump(), "version": 3,
+        "status": "draft", "activation": "shadow", "content_hash": None, "stage_bundles": {}})
+    legacy = ClinicalPolicy.model_validate({**draft.model_dump(), "status": "active", "activation": "live",
+        "content_hash": policy_review_hash(draft)})
+    monkeypatch.setattr(__name__ + ".load_clinical_policies", lambda: (legacy,))
     row, primary = setup()
     balance = resolve_injury_policy(row, policies=load_clinical_policies(), bank=get_rehab_bank(),
         excluded_drill_ids=[primary["prescription"]["drill_id"]])

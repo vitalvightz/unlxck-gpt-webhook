@@ -52,9 +52,10 @@ def main():
             prescriptions.append(dict(drill_id=identity, bank_hash=content_hash(drill), stage=stage,
                                       instructions=instructions, dose=None, allowed_severities=["low", "moderate"],
                                       stop_when=stop, frequency="daily", minimum_gap_days=gap, priority=priority, sources=sources))
-        draft = ClinicalPolicy.model_validate(dict(policy_id=region + "_" + kind, version=3, region=region,
+        draft = ClinicalPolicy.model_validate(dict(policy_id=region + "_" + kind, version=4 if region == "ankle" else 3, region=region,
             injury_type=kind, evidence_sources=list(dict.fromkeys(s for p in prescriptions for s in p["sources"])),
-            prescriptions=prescriptions, blocked_regions=[region], contact_limit="none"))
+            prescriptions=prescriptions, blocked_regions=[region], contact_limit="none",
+            stage_bundles={"restore": ["ankle_sprain_supported_balance", "ankle_sprain_heel_lowering"]} if region == "ankle" else {}))
         policies.append({**draft.model_dump(), "status": "active", "activation": "live", "content_hash": policy_review_hash(draft)})
     path.write_text(json.dumps(bank, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (ROOT / "data/rehab_clinical_policies.json").write_text(
