@@ -627,13 +627,12 @@ def review_row(
         if search is not None:
             excluded.update(outcome.reviewed_video_ids)
             excluded.update(parse_youtube_video_id(url) or url for url in outcome.tried)
-            try:
-                yield from search(row, excluded, outcome.search_progress, lambda: checkpoint(outcome) if checkpoint else None)
-            except CandidateSearchQuotaExceeded:
-                raise
-            except CandidateSearchError as exc:
-                outcome.errors.append(str(exc))
-                log(str(exc))
+            yield from search(
+                row,
+                excluded,
+                outcome.search_progress,
+                lambda: checkpoint(outcome) if checkpoint else None,
+            )
 
     seen = set(outcome.reviewed_video_ids) | {parse_youtube_video_id(url) or url for url in outcome.tried}
     for url in candidates():
@@ -847,8 +846,8 @@ def run_review(
     if missing:
         raise ReviewInputError(
             f"{in_path} has no {', '.join(missing)} column. review needs exercise_key and "
-            "either YouTube discovery or a suggested_url column (with optional candidate_urls, "
-            "'|'-separated, and plan_cue). Set YOUTUBE_DATA_API_KEY for discovery or add "
+            "either candidate discovery or a suggested_url column (with optional candidate_urls, "
+            "'|'-separated, and plan_cue). Configure DataForSEO/YouTube discovery or add "
             "suggested_url to the CSV, then run review."
         )
     for column in (*_WRITTEN_INPUT_COLUMNS, *AI_COLUMNS):
@@ -915,6 +914,15 @@ def run_review(
             )
             counts["quota_stopped"] = 1
             counts["search_quota_stopped"] = 1
+            counts["search_stopped"] = 1
+            return counts
+        except CandidateSearchError as exc:
+            _write_rows(out, fieldnames, rows)
+            log(
+                f"{key}: candidate search unavailable: {exc}. Progress saved to {out}; "
+                "run the same command again when candidate search is available."
+            )
+            counts["search_stopped"] = 1
             return counts
         calls += 1
         rows[index] = apply_outcome(row, outcome, model=reviewer.model)
