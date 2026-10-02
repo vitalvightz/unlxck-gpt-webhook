@@ -3086,7 +3086,7 @@ export function PlanViewer({
                     >
                       <div className="form-section-header">
                         <p className="kicker">
-                          Stage 2 Retry (Attempt {plan.admin_outputs?.stage2_attempt_count || 1}
+                          Stage 2 Retry (Attempt {plan.admin_outputs?.stage2_attempt_count || 1})
                         </p>
                         <h3>
                           {stage2RetryJustCompleted === "passed"

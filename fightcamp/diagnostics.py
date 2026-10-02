@@ -109,7 +109,7 @@ def _late_fight_lever(system_key: str, days_until_fight: int) -> str:
         if days_until_fight == 2:
             return (
                 "If explosiveness fades, add 2–4 very short alactic bursts "
-                "(6–8 s @ full rest). Freshness first, cap 4–6 min active."
+                "(6–8 s @ full rest). Freshness first; cap 4–6 min active."
             )
         if days_until_fight == 1:
             return (

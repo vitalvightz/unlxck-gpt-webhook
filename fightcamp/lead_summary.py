@@ -82,7 +82,7 @@ def render_lead_summary(planning_brief: dict[str, Any]) -> str:
     lines: list[str] = []
     if _injury_active(athlete, readiness_flags):
         lines.append(
-            f"- **Injury watch:** {_injury_phrase(athlete)}. Train around it: "
+            f"- **Injury watch:** {_injury_phrase(athlete).rstrip('.!?')}. Train around it: "
             "respect the listed restrictions, keep rehab in, and stop on sharp pain."
         )
     if _weight_cut_active(athlete, readiness_flags):

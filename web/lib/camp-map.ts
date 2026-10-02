@@ -65,6 +65,43 @@ export function resolveTrainingDay(
   return resolved;
 }
 
+/**
+ * The training day (YYYY-MM-DD) for `now` in the athlete's own timezone, with
+ * the same 03:00 rollover the backend applies. Use this when the day must match
+ * server-stamped training days whatever timezone the device is set to. Falls
+ * back to the device timezone when `timeZone` is missing or unknown.
+ */
+export function athleteTrainingDayISO(
+  now: Date,
+  timeZone: string | null | undefined,
+  rolloverHour: number = TRAINING_DAY_ROLLOVER_HOUR,
+): string {
+  if (timeZone) {
+    try {
+      const parts = Object.fromEntries(
+        new Intl.DateTimeFormat("en-CA", {
+          timeZone,
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          hourCycle: "h23",
+        })
+          .formatToParts(now)
+          .map((part) => [part.type, part.value]),
+      );
+      const day = new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day)));
+      if (Number(parts.hour) < rolloverHour) {
+        day.setUTCDate(day.getUTCDate() - 1);
+      }
+      return day.toISOString().slice(0, 10);
+    } catch {
+      // Unknown timezone: fall through to the device's own training day.
+    }
+  }
+  return toISODate(resolveTrainingDay(now, rolloverHour));
+}
+
 /** The plain date portion of a possibly-datetime day.date string, or null. */
 function dayISO(day: StructuredDay | null | undefined): string | null {
   const raw = cleanText(day?.date);

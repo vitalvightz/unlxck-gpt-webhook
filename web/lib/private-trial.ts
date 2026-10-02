@@ -31,7 +31,7 @@ export const PRIVATE_TRIAL_CHECKS: readonly string[] = [
 export const PRIVATE_TRIAL_CLOSING =
   "Some features may be incomplete, slow or incorrect. Finding these problems is the purpose of the trial.";
 
-export const PRIVATE_TRIAL_ACKNOWLEDGE_LABEL = "I UNDERSTAND, CONTINUE";
+export const PRIVATE_TRIAL_ACKNOWLEDGE_LABEL = "I UNDERSTAND AND CONTINUE";
 
 /**
  * True while the athlete still owes an acknowledgement.
