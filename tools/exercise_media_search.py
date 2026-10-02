@@ -174,6 +174,14 @@ class YouTubeCandidateSearch:
                 _rewind_query(progress, checkpoint)
                 self._failure = (CandidateSearchQuotaExceeded, str(exc))
                 raise
+            except httpx.TimeoutException as exc:
+                _rewind_query(progress, checkpoint)
+                message = (
+                    f"DataForSEO search unavailable after "
+                    f"{DATAFORSEO_TIMEOUT_RETRIES + 1} timeout attempts"
+                )
+                self._failure = (CandidateSearchQuotaExceeded, message)
+                raise CandidateSearchQuotaExceeded(message) from exc
             except (httpx.HTTPError, ValueError, CandidateSearchError) as exc:
                 # Never expose an httpx exception's URL/headers or API body.
                 message = (
@@ -429,8 +437,8 @@ def build_candidate_search(
 ) -> CandidateSearcher | None:
     """Build the configured search backend.
 
-    auto prefers DataForSEO when both credentials are present and keeps the
-    YouTube Data API as a fallback when its key is also available.
+    auto uses DataForSEO whenever both credentials are present. The YouTube
+    Data API is used for discovery only when DataForSEO is not configured.
     """
     selected = (provider or os.getenv(SEARCH_PROVIDER_ENV, "auto")).strip().lower()
     if selected not in {"auto", "dataforseo", "youtube"}:
@@ -467,12 +475,8 @@ def build_candidate_search(
                 f"DataForSEO discovery requested but {DATAFORSEO_LOGIN_ENV} "
                 f"and {DATAFORSEO_PASSWORD_ENV} are not both set"
             )
-        return (
-            FallbackCandidateSearch(dataforseo, youtube, on_fallback=on_fallback)
-            if youtube
-            else dataforseo
-        )
+        return dataforseo
 
-    if dataforseo and youtube:
-        return FallbackCandidateSearch(dataforseo, youtube, on_fallback=on_fallback)
-    return dataforseo or youtube
+    if dataforseo:
+        return dataforseo
+    return youtube

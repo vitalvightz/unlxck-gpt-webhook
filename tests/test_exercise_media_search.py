@@ -476,6 +476,18 @@ def test_dataforseo_falls_back_after_timeout_retries_exhausted():
     assert fallback_calls == ["Trap Bar Deadlift exercise demonstration"]
 
 
+def test_dataforseo_timeout_exhaustion_is_classified_as_search_stop():
+    searcher = _dataforseo_searcher(
+        [
+            httpx.ReadTimeout("timeout 1"),
+            httpx.ReadTimeout("timeout 2"),
+            httpx.ReadTimeout("timeout 3"),
+        ]
+    )
+    with pytest.raises(discovery.CandidateSearchQuotaExceeded, match="timeout attempts"):
+        list(searcher.search(_row(), set()))
+
+
 def test_dataforseo_failure_falls_back_to_youtube_on_same_query():
     primary_calls, fallback_calls = [], []
     primary = _dataforseo_searcher(
@@ -498,17 +510,27 @@ def test_dataforseo_failure_falls_back_to_youtube_on_same_query():
     assert progress.queries_used == 1
 
 
-def test_auto_provider_prefers_dataforseo_and_keeps_youtube_fallback(monkeypatch):
+def test_auto_provider_uses_dataforseo_without_youtube_fallback(monkeypatch):
     monkeypatch.setenv("DATAFORSEO_LOGIN", "login")
     monkeypatch.setenv("DATAFORSEO_PASSWORD", "password")
     monkeypatch.delenv("EXERCISE_MEDIA_SEARCH_PROVIDER", raising=False)
 
     searcher = discovery.build_candidate_search(youtube_api_key="youtube-test-key")
     try:
-        assert isinstance(searcher, discovery.FallbackCandidateSearch)
-        assert isinstance(searcher.primary, discovery.DataForSEOCandidateSearch)
-        assert isinstance(searcher.fallback, discovery.YouTubeCandidateSearch)
-        assert searcher.label == "DataForSEO YouTube SERP -> YouTube Data API fallback"
+        assert isinstance(searcher, discovery.DataForSEOCandidateSearch)
+        assert searcher.label == "DataForSEO YouTube SERP"
+    finally:
+        searcher.close()
+
+
+def test_auto_provider_uses_youtube_only_when_dataforseo_missing(monkeypatch):
+    monkeypatch.delenv("DATAFORSEO_LOGIN", raising=False)
+    monkeypatch.delenv("DATAFORSEO_PASSWORD", raising=False)
+    monkeypatch.delenv("EXERCISE_MEDIA_SEARCH_PROVIDER", raising=False)
+
+    searcher = discovery.build_candidate_search(youtube_api_key="youtube-test-key")
+    try:
+        assert isinstance(searcher, discovery.YouTubeCandidateSearch)
     finally:
         searcher.close()
 
