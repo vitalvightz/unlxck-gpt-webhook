@@ -524,8 +524,9 @@ def test_search_clients_use_provider_specific_timeouts():
         dataforseo.close()
 
 
-def test_dataforseo_retries_transport_failures_before_success():
-    calls = []
+def test_dataforseo_retries_transport_failures_before_success(monkeypatch):
+    calls, sleeps = [], []
+    monkeypatch.setattr(discovery.time, "sleep", sleeps.append)
     searcher = _dataforseo_searcher(
         [
             httpx.ReadTimeout("timeout 1"),
@@ -537,10 +538,12 @@ def test_dataforseo_retries_transport_failures_before_success():
 
     assert next(iter(searcher.search(_row(), set()))) == URL_B
     assert len(calls) == discovery.DATAFORSEO_TIMEOUT_RETRIES + 1
+    assert sleeps == [discovery.DATAFORSEO_RETRY_BACKOFF_SECONDS] * 2
 
 
-def test_dataforseo_retries_transient_http_failures_before_success():
-    calls = []
+def test_dataforseo_retries_transient_http_failures_before_success(monkeypatch):
+    calls, sleeps = [], []
+    monkeypatch.setattr(discovery.time, "sleep", sleeps.append)
     searcher = _dataforseo_searcher(
         [
             httpx.Response(500, json={"error": "temporary"}),
@@ -552,6 +555,7 @@ def test_dataforseo_retries_transient_http_failures_before_success():
 
     assert next(iter(searcher.search(_row(), set()))) == URL_B
     assert len(calls) == discovery.DATAFORSEO_TIMEOUT_RETRIES + 1
+    assert sleeps == [discovery.DATAFORSEO_RETRY_BACKOFF_SECONDS] * 2
 
 
 def test_dataforseo_transport_exhaustion_is_provider_error_and_rewinds_query():
