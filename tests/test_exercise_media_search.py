@@ -440,6 +440,42 @@ def test_dataforseo_discovers_youtube_videos_and_skips_shorts_and_live():
     assert calls == ["Trap Bar Deadlift exercise demonstration"]
 
 
+def test_dataforseo_retries_timeout_before_fallback():
+    primary_calls, fallback_calls = [], []
+    primary = _dataforseo_searcher(
+        [
+            httpx.ReadTimeout("timeout 1"),
+            httpx.ReadTimeout("timeout 2"),
+            ["BBBBBBBBBBB"],
+        ],
+        primary_calls,
+    )
+    fallback = _searcher([["CCCCCCCCCCC"]], fallback_calls)
+    searcher = discovery.FallbackCandidateSearch(primary, fallback)
+
+    assert next(iter(searcher.search(_row(), set()))) == URL_B
+    assert len(primary_calls) == discovery.DATAFORSEO_TIMEOUT_RETRIES + 1
+    assert fallback_calls == []
+
+
+def test_dataforseo_falls_back_after_timeout_retries_exhausted():
+    primary_calls, fallback_calls = [], []
+    primary = _dataforseo_searcher(
+        [
+            httpx.ReadTimeout("timeout 1"),
+            httpx.ReadTimeout("timeout 2"),
+            httpx.ReadTimeout("timeout 3"),
+        ],
+        primary_calls,
+    )
+    fallback = _searcher([["BBBBBBBBBBB"]], fallback_calls)
+    searcher = discovery.FallbackCandidateSearch(primary, fallback)
+
+    assert next(iter(searcher.search(_row(), set()))) == URL_B
+    assert len(primary_calls) == discovery.DATAFORSEO_TIMEOUT_RETRIES + 1
+    assert fallback_calls == ["Trap Bar Deadlift exercise demonstration"]
+
+
 def test_dataforseo_failure_falls_back_to_youtube_on_same_query():
     primary_calls, fallback_calls = [], []
     primary = _dataforseo_searcher(
