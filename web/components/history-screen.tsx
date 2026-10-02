@@ -36,6 +36,7 @@ import {
   trainingDaysAgo,
 } from "@/lib/history";
 import { formatInjuryDetail, normalizeInjuryLabel } from "@/lib/injury-display";
+import { loadHistoryWithAuthRecovery } from "@/lib/history-request";
 import type { TodayDecisionTone } from "@/lib/today";
 import type {
   InjuryFlagRecord,
@@ -439,6 +440,7 @@ function InjuryRows({ rows }: { rows: InjuryFlagRecord[] }) {
 export function HistoryScreen() {
   const { session, me } = useAppSession();
   const token = session?.access_token ?? null;
+  const userId = session?.user_id ?? null;
   // The training day for the "last 7 days" counts, in the athlete's own
   // timezone so it matches the server-stamped days on every row even when the
   // device is set elsewhere. useTrainingDay only supplies the client-only
@@ -485,14 +487,18 @@ export function HistoryScreen() {
 
     const load = async <T,>(
       current: TabData<T>,
-      fetcher: () => Promise<T>,
+      fetcher: (accessToken: string) => Promise<T>,
       set: (data: TabData<T>) => void,
     ) => {
       if (current.rows !== null || current.error !== null) {
         return;
       }
       try {
-        const rows = await fetcher();
+        const rows = await loadHistoryWithAuthRecovery(
+          { access_token: token, user_id: userId },
+          fetcher,
+          () => cancelled,
+        );
         if (!cancelled) {
           set({ rows, error: null });
         }
@@ -504,18 +510,18 @@ export function HistoryScreen() {
     };
 
     if (tab === "sessions") {
-      void load(sessions, () => listSessionCompletionHistory(token), setSessions);
+      void load(sessions, listSessionCompletionHistory, setSessions);
     } else if (tab === "sparring") {
-      void load(sparring, () => listSparringLogHistory(token), setSparring);
+      void load(sparring, listSparringLogHistory, setSparring);
     } else if (tab === "checkins") {
-      void load(checkins, () => listTodayCheckinHistory(token), setCheckins);
+      void load(checkins, listTodayCheckinHistory, setCheckins);
     } else {
-      void load(injuries, () => listInjuryFlags(token, true), setInjuries);
+      void load(injuries, (accessToken) => listInjuryFlags(accessToken, true), setInjuries);
     }
     return () => {
       cancelled = true;
     };
-  }, [tab, token, sessions, sparring, checkins, injuries]);
+  }, [tab, token, userId, sessions, sparring, checkins, injuries]);
 
   const active =
     tab === "sessions"
@@ -554,7 +560,19 @@ export function HistoryScreen() {
 
       {active.error ? (
         <div className="error-banner" role="alert">
-          {active.error}
+          <p>{active.error}</p>
+          <button
+            type="button"
+            className="error-banner-retry"
+            onClick={() => {
+              if (tab === "sessions") setSessions({ rows: null, error: null });
+              else if (tab === "sparring") setSparring({ rows: null, error: null });
+              else if (tab === "checkins") setCheckins({ rows: null, error: null });
+              else setInjuries({ rows: null, error: null });
+            }}
+          >
+            Retry
+          </button>
         </div>
       ) : active.rows === null ? (
         <ListSkeleton />
