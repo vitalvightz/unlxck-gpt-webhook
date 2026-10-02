@@ -382,6 +382,28 @@ function renderPanel(state: TodayCommandView): string {
   );
 }
 
+for (const level of ["rehab_only", "train_no_contact"] as const) {
+  for (const status of ["not_started", "started"] as const) {
+    test(`zero-load tactical watch ${status} remains actionable under ${level} while sparring stays locked`, () => {
+      const state = contactDayState("green");
+      state.today.completion_status = status;
+      state.today.next_session = { ...state.today.next_session, title: "Tactical Watch" };
+      state.effective_clinician_clearance = { level,
+        scopes: level === "rehab_only" ? ["rehab"] : ["rehab", "training"], requires_update: false, limited_by: [] };
+      state.live_prescription = { revision: "a".repeat(64), frozen: status === "started", safety_hold: false,
+        changes: [{ action: "held", reason: "clinician_clearance_ceiling" }],
+        session: { session_id: state.today.next_session.session_id!, session_type: "skill", title: "Tactical Watch",
+          blocks: [{ block_id: "watch", block_type: "mindset", display_name: "Sparring exchange review" }] } };
+      const html = renderPanel(state);
+      assert.match(html, /Sparring exchange review/);
+      assert.match(html, /Sparring rounds locked by clinician clearance/);
+      assert.match(html, status === "not_started" ? />Start session</ : />Resume session</);
+      if (status === "started") assert.match(html, /data-value="done"[\s\S]*data-value="modified"/);
+      assert.doesNotMatch(html, />Start hard sparring</);
+    });
+  }
+}
+
 for (const tier of ["green", "modify", "pull_back", "stop", "not_checked_in"] as const) {
   test(`frozen contact renders the backend ${tier} gate despite full clinician clearance`, () => {
     const state = contactDayState(tier);
@@ -390,7 +412,7 @@ for (const tier of ["green", "modify", "pull_back", "stop", "not_checked_in"] as
     state.effective_clinician_clearance = { level: "train_contact", scopes: ["rehab", "training", "contact"],
       requires_update: false, limited_by: [] };
     state.live_prescription = { revision: "a".repeat(64), frozen: true,
-      safety_hold: tier === "pull_back" || tier === "stop" || tier === "not_checked_in", changes: [],
+      safety_hold: false, changes: [],
       session: { session_id: state.today.next_session.session_id!, title: "Hard sparring", session_type: "sparring",
         blocks: [{ block_id: "contact", block_type: "sparring", display_name: "Accepted sparring" }] } };
     const html = renderPanel(state);

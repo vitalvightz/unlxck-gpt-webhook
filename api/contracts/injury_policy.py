@@ -202,6 +202,7 @@ def reconcile_session_prescription(
     session: Mapping[str, Any] | None, *, decisions: Sequence[Mapping[str, Any]],
     plan_id: str, training_day: str, frozen: Mapping[str, Any] | None = None,
     injuries: Sequence[Mapping[str, Any]] = (),
+    allocation_ceiling: int | None = None,
 ) -> dict[str, Any] | None:
     """Project reviewed live work onto a copy. Never modify the stored camp.
 
@@ -241,13 +242,15 @@ def reconcile_session_prescription(
                 snapshot["safety_hold"] = True
         return snapshot
     clearance_hold = _clinician_clearance_hold(session, injuries)
-    if not live and not clearance_hold:
+    if not live and not clearance_hold and allocation_ceiling is None:
         return None
     prescribed = [d for d in live if d.get("outcome") == "prescribed_rehab" and d.get("prescription")
                   and d.get("schedule", {}).get("state", "due") == "due"]
     if session is None and not prescribed:
         return None
     entry = deepcopy(dict(session or {"session_id": f"rehab-{training_day}", "title": "Today's rehab", "session_type": "rehab", "blocks": []}))
+    # A partial support projection needs accepted ownership even when no rehab
+    # policy is live. Its caller retains the original day's allocation ceiling.
     restrictions = []
     for decision in live:
         current = dict(decision.get("restrictions", {}))
@@ -263,7 +266,7 @@ def reconcile_session_prescription(
     blocked_tags = set().union(*(set(r.get("blocked_tags", [])) for r in restrictions))
     contact_rank = {"none": 0, "controlled": 1, "full": 2}
     allowed_contact = min((contact_rank[r.get("contact_limit", "none")] for r in restrictions), default=contact_rank["full"])
-    from .readiness_message import _session_has_contact
+    from .readiness_message import _session_has_contact, _is_non_physical_mapping
 
     policy_contact_limit = allowed_contact
     clearance_scopes = _current_clearance_scopes(injuries)
@@ -327,6 +330,11 @@ def reconcile_session_prescription(
         return [prescribed_block(decision, member) for member in current.get("drills", [current])]
 
     for block in entry.get("blocks", []):
+        if _is_non_physical_mapping(block) and not blocked_tags:
+            # Mindset/video review is not ankle/chest loading. Its combat topic
+            # and absent physical metadata cannot turn it into contact work.
+            blocks.append(deepcopy(block))
+            continue
         if block.get("block_type") == "rehab":
             replacement = next((d for d in prescribed if
                 block.get("policy_id") == d.get("policy_id")
@@ -381,8 +389,10 @@ def reconcile_session_prescription(
             blocks.append(deepcopy(block))
     # Match the existing camp allocation ceiling. More affected episodes are
     # explicit deferred decisions rather than extra, unbudgeted work.
-    budget = 1 if "sparring" in str(entry.get("session_type") or "").lower() else 2
-    budget = max(0, budget - rehab_allocation_count(blocks))
+    day_budget = 1 if "sparring" in str(entry.get("session_type") or "").lower() else 2
+    if allocation_ceiling in (1, 2):
+        day_budget = min(day_budget, allocation_ceiling)
+    budget = max(0, day_budget - rehab_allocation_count(blocks))
     for index, decision in enumerate(sorted((d for d in prescribed if (d["injury_id"], d["injury_episode_id"]) not in replaced),
                                              key=lambda d: d["injury_id"])):
         if index >= budget:
@@ -392,7 +402,8 @@ def reconcile_session_prescription(
     if block_contact_ceiling and not blocks:
         hold = True
     entry["blocks"] = blocks
-    rehab_only = False
+    rehab_only = session is None and bool(blocks) and all(
+        block.get("block_type") == "rehab" and block.get("policy_id") and not block.get("_policy_held") for block in blocks)
     if hold and not any(d.get("outcome") == "medical_review" for d in decisions):
         reviewed_blocks = [block for block in blocks if block.get("block_type") == "rehab" and block.get("policy_id")
                            and not block.get("_policy_held")]
@@ -415,7 +426,7 @@ def reconcile_session_prescription(
                 "rehab_only": rehab_only,
                 "held_session_id": session.get("session_id") if rehab_only and session else None,
                 "injury_ids": sorted(d["injury_id"] for d in live),
-                "allocation_limit": 1 if "sparring" in str((session or {}).get("session_type") or "").lower() else 2}
+                "allocation_limit": day_budget}
     if clearance_hold and hold and not any(d.get("outcome") == "medical_review" for d in decisions):
         snapshot["safety_hold_reason"] = clearance_hold
     snapshot["revision"] = content_hash(snapshot)

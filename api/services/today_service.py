@@ -865,6 +865,7 @@ def _readiness_decision_with_failsafe(
     training_day: str,
     phase: str,
     open_injuries: Sequence[Mapping[str, Any]] | None = None,
+    session_override: Mapping[str, Any] | None = None,
 ) -> tuple[ReadinessAdjustment, ReadinessContextStatus]:
     """Compute the readiness decision and floor it by context completeness.
 
@@ -880,6 +881,9 @@ def _readiness_decision_with_failsafe(
         phase=phase,
         open_injuries=open_injuries,
     )
+    if session_override is not None:
+        from dataclasses import replace
+        context = replace(context, today_session=session_override)
     adjustment = build_readiness_adjustment(checkin, context)
     adjustment = apply_context_failsafe(adjustment, status)
     return adjustment, status
@@ -1513,9 +1517,11 @@ def upsert_session_completion(
     # Today, week progress and the full-week checks all read the day as logged.
     # Only the submitted row drives XP, streak and rehab follow-up in the route.
     day_session_ids = _day_session_ids(plan_row, training_day)
+    held_session_ids = {str(change["session_id"]) for change in (frozen or {}).get("changes", [])
+                        if change.get("action") == "held" and change.get("session_id")}
     if session_id in day_session_ids and not stopped_started_session:
         for sibling_id in day_session_ids:
-            if sibling_id == session_id:
+            if sibling_id == session_id or sibling_id in held_session_ids:
                 continue
             sibling = store.get_session_completion(athlete_id, sibling_id, training_day) or {}
             sibling_plan_id = str(sibling.get("plan_id") or "")
@@ -2873,15 +2879,30 @@ def _build_today_command_view(
     # "Rest or active recovery" — and Today then offers to start it.
     structured_today = _structured_today(plan_row, training_day)
     # A training day is one session to the athlete, however many sessions the
-    # card splits it into: Today offers the day's primary session, and one log
-    # (written to every session that day) finishes the day. Any logged session
-    # therefore means today is done — including days logged before the write
-    # covered the whole day, where only one of the sessions carries the log.
+    # card splits it into: one log ordinarily finishes the day, including legacy
+    # logs before fan-out. An accepted partial support projection is the explicit
+    # exception: its held source owners remain outstanding.
     today_candidates = (
         []
         if structured_today.is_rest_day
         else (structured_today.entries or ([today_entry] if today_entry is not None else []))
     )
+    source_allocation_ceiling = 1 if any("sparring" in str(_entry_mapping_for_readiness(entry).get("session_type") or "").lower()
+                                        for entry in today_candidates) else 2
+    # A partial accepted support session explicitly holds other source owners.
+    # Its terminal log cannot stand in for completion of those held sessions.
+    partial_support_ownership = any(
+        change.get("action") == "held" and change.get("session_id")
+        for entry in today_candidates
+        for change in ((completions.get(_session_id_for_entry(entry), training_day) or {}).get("prescription_snapshot") or {}).get("changes", [])
+    )
+    if partial_support_ownership:
+        outstanding_candidates = [entry for entry in today_candidates if not _session_entry_is_complete(
+            entry, is_complete=_session_is_complete, calendar_date=training_day)]
+        if outstanding_candidates:
+            today_candidates = outstanding_candidates
+        today_candidates.sort(key=lambda entry: completion_status_of(
+            completions.get(_session_id_for_entry(entry), training_day)) != "started")
     today_logged_entry = next(
         (
             entry
@@ -2994,6 +3015,38 @@ def _build_today_command_view(
 
     observations_by_injury = {str(row["id"]): episode_observations(store, athlete_id, row) for row in open_injuries}
     open_injuries = [apply_episode_observations(row, observations_by_injury[str(row["id"])]) for row in open_injuries]
+    support_projection = None
+    support_owner_ids = set()
+    ceiling = effective_clinician_clearance(open_injuries)
+    if ceiling and ceiling["level"] != "train_contact" and completion_status_of(today_completion) != "started":
+        from api.contracts.readiness_message import _is_non_physical_mapping, _session_has_contact
+        injured_regions = {row.get("canonical_location") for row in open_injuries}
+        support_entries = []
+        other_entries = []
+        for candidate in today_candidates:
+            app_entry = _entry_mapping_for_readiness(candidate)
+            # Coach-led contact is day context, not the watch/mobility's work.
+            app_entry.pop("coach_led_contact", None)
+            blocks = app_entry.get("blocks") or []
+            safe_demands = bool(blocks) and all(_is_non_physical_mapping(block) or (
+                isinstance(block.get("mechanical_load_regions"), list)
+                and not set(block["mechanical_load_regions"]) & injured_regions
+                and block.get("contact_level") == "none") for block in blocks)
+            if is_support_session(app_entry) and safe_demands and not _session_has_contact(app_entry):
+                support_entries.append(app_entry)
+            else:
+                other_entries.append(app_entry)
+        # Do not discard otherwise-permitted ordinary non-contact camp under
+        # train/no-contact. This exception offers independently safe support.
+        if support_entries and (ceiling["level"] == "rehab_only" or all(_session_has_contact(row) for row in other_entries)):
+            support_projection = {**support_entries[0], "blocks": [block for row in support_entries for block in row["blocks"]]}
+            support_owner_ids = {str(row["session_id"]) for row in support_entries}
+    if completion_status_of(today_completion) == "started":
+        accepted_session = (today_completion.get("prescription_snapshot") or {}).get("session")
+        if accepted_session and is_support_session(accepted_session):
+            # Readiness follows the already accepted support, not its held
+            # coach-led sibling. Reconciliation still freezes and gates it.
+            support_projection = accepted_session
     if today_checkin and any(event.get("event_type") == "clinician_clearance_report"
                              for events in observations_by_injury.values() for event in events):
         # Clearance can remove a generic injury floor. Re-evaluate the original
@@ -3002,7 +3055,8 @@ def _build_today_command_view(
         decision, _ = _readiness_decision_with_failsafe(
             store, checkin=_stored_readiness_checkin_from(today_checkin), athlete_id=athlete_id,
             plan_row=plan_row, training_day=training_day,
-            phase=str(today_checkin.get("phase") or resolved_plan.get("phase") or ""), open_injuries=open_injuries)
+            phase=str(today_checkin.get("phase") or resolved_plan.get("phase") or ""), open_injuries=open_injuries,
+            session_override=support_projection)
         recommendation = {"decision": decision.decision, "reason": decision.message,
                           "triggers": list(decision.triggers), "training_day": training_day}
 
@@ -3021,7 +3075,7 @@ def _build_today_command_view(
     # has_today_session is already limited to a session that is still
     # outstanding, so a completed one can no longer reach this.
     today_is_support_filler = has_today_session and is_support_session(
-        _entry_mapping_for_readiness(today_session_entry)
+        support_projection or _entry_mapping_for_readiness(today_session_entry)
     )
     severe_injury = _active_severe_injury(open_injuries)
     severe_non_surface_injury = _active_severe_non_surface_injury(open_injuries)
@@ -3099,9 +3153,10 @@ def _build_today_command_view(
     decisions = [injury["rehab_decision"] for injury in open_injuries]
     frozen = None if today_is_complete else (today_completion or {}).get("prescription_snapshot")
     live = reconcile_session_prescription(
-        training_session if not today_is_complete else None,
+        (support_projection or training_session) if not today_is_complete else None,
         decisions=decisions, plan_id=plan_id, training_day=training_day, frozen=frozen,
         injuries=open_injuries,
+        allocation_ceiling=source_allocation_ceiling if support_projection or partial_support_ownership else None,
     )
     if live and not frozen and (today_completion or {}).get("status") == "started":
         # Activation must not rewrite work that started before snapshots existed.
@@ -3123,6 +3178,12 @@ def _build_today_command_view(
             previous_limits = [(row.get("prescription_snapshot") or {}).get("allocation_limit")
                                for row in (today_completion, rehab_occurrence) if row]
             live["allocation_limit"] = min([live["allocation_limit"]] + [limit for limit in previous_limits if limit in (1, 2)])
+            if support_projection:
+                # Keep the original day ceiling and record held source owners
+                # in the accepted snapshot so support completion cannot log them.
+                live["changes"].extend({"session_id": str(row["session_id"]), "action": "held",
+                    "reason": "clinician_clearance_ceiling"} for row in today_candidates
+                    if str(row["session_id"]) not in support_owner_ids)
             live["injury_context"] = [{"id": row["id"], "episode_id": row.get("episode_id"), "updated_at": row.get("updated_at")} for row in open_injuries]
             live["evidence_context"] = store.get_rehab_schedule_revision(athlete_id)
             for block in live["session"].get("blocks", []):
@@ -3169,7 +3230,7 @@ def _build_today_command_view(
     )
     if live:
         readiness_holds_session = view.today.decision_tier in {"stop", "not_checked_in"} or (
-            view.today.decision_tier == "pull_back" and live["session"].get("session_type") != "rehab")
+            view.today.decision_tier == "pull_back" and not live.get("rehab_only"))
         if not live["safety_hold"] and readiness_holds_session:
             live["safety_hold"] = True
             live["safety_hold_reason"] = ("Complete today's check-in before starting." if view.today.decision_tier == "not_checked_in"

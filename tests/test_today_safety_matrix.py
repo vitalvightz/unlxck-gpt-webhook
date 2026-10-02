@@ -6,7 +6,7 @@ from fastapi import HTTPException
 
 from api.services import today_service
 from tests.test_clinician_clearance_today import (
-    CONTACT, DAY, NOW, context as clearance_context, execute, live_injury, report,
+    CONTACT, REHAB, TRAIN, DAY, NOW, context as clearance_context, execute, live_injury, report,
     session, set_sessions, view,
 )
 
@@ -185,3 +185,133 @@ def test_medical_review_without_live_policy_still_blocks_noncontact_submission(c
         today_service.upsert_session_completion(context[0], athlete_id=context[1], athlete_timezone="UTC", now=NOW,
             payload=dict(plan_id=context[2], session_id="session-1", status="started"))
     assert blocked.value.status_code == 409
+
+
+@pytest.mark.parametrize("scopes", [REHAB, TRAIN])
+@pytest.mark.parametrize("coached_contact", [False, True])
+@pytest.mark.parametrize("watch_first", [False, True])
+def test_clearance_preserves_zero_load_tactical_watch_without_claiming_contact(context, scopes, coached_contact, watch_first):
+    live_injury(context, "ankle")
+    watch = session("skill", "Tactical Watch", [dict(block_id="watch", block_type="mindset",
+        display_name="Sparring exchange review", coaching_cues=["Watch how the supporting leg reacts to low kicks."])])
+    set_sessions(context, [watch])
+    if coached_contact:
+        day = context[0].plans[context[2]]["structured_plan"]["weeks"][0]["days"][0]
+        day["today_card"] = {"coach_led_contact": "Hard sparring"}
+        day["sessions"].append(dict(session_id="contact-owned", session_type="sparring", title="Hard sparring", blocks=[]))
+        if not watch_first:
+            day["sessions"].reverse()
+    report(context, scopes)
+    current = view(context)
+    live = current.live_prescription
+    assert live and not live["safety_hold"] and not live["rehab_only"]
+    assert live["session"]["session_id"] == "session-1"
+    assert any(b.get("block_id") == "watch" and not b.get("_policy_held") for b in live["session"]["blocks"])
+    assert not live["session"].get("coach_led_contact")
+    execute(context, live)
+    resumed = view(context).live_prescription
+    assert resumed["session"] == live["session"] and resumed["revision"] == live["revision"]
+    execute(context, resumed, "done", session_rpe=1,
+            rehab_performance="done_as_shown" if any(b.get("block_type") == "rehab" for b in live["session"]["blocks"]) else None)
+    assert context[0].get_session_completion(context[1], "contact-owned", DAY) is None
+    if coached_contact:
+        report(context, CONTACT, stamp="2026-09-30T11:00:00Z")
+        remaining = view(context).live_prescription
+        assert remaining and remaining["session"]["session_id"] == "contact-owned"
+        assert not remaining["safety_hold"]
+
+
+@pytest.mark.parametrize("region", ["shoulder", "ankle"])
+def test_rehab_clearance_keeps_safe_mobility_but_not_unreviewed_injured_region_load(context, region):
+    live_injury(context, "ankle")
+    set_sessions(context, [session("recovery", "Downshift mobility", [dict(
+        block_id="mobility", block_type="accessory", display_name="Gentle mobility",
+        mechanical_load_regions=[region], contact_level="none")])])
+    report(context, REHAB)
+    live = view(context).live_prescription
+    if region == "shoulder":
+        assert not live["safety_hold"] and not live["rehab_only"]
+        assert any(b.get("block_id") == "mobility" for b in live["session"]["blocks"])
+        execute(context, live)
+    else:
+        assert live["safety_hold"] or live["rehab_only"]
+        assert not any(b.get("block_id") == "mobility" and not b.get("_policy_held") for b in live["session"]["blocks"])
+
+
+@pytest.mark.parametrize("unsafe", [{"mechanical_load_regions": ["ankle"]}, {"contact_level": "full"}])
+def test_mindset_label_cannot_hide_explicit_load_or_contact(context, unsafe):
+    live_injury(context, "ankle")
+    set_sessions(context, [session("skill", "Tactical Watch", [dict(
+        block_id="unsafe", block_type="mindset", display_name="Actual partner practice", **unsafe)])])
+    report(context, REHAB)
+    live = view(context).live_prescription
+    assert live["safety_hold"] or live["rehab_only"]
+    assert not any(b.get("block_id") == "unsafe" and not b.get("_policy_held") for b in live["session"]["blocks"])
+
+
+def test_zero_load_contact_companion_keeps_original_one_allocation_ceiling(context):
+    injury = live_injury(context, "ankle")
+    context[0].update_injury_flag(injury["id"], {"created_at": DAY, "latest_reported_status": "ongoing"})
+    context[0].create_injury_flag(context[1], dict(body_area="Chest", description="Chest strain", severity="mild", status="open"))
+    set_sessions(context, [session("skill", "Tactical Watch", [dict(block_id="watch", block_type="mindset", display_name="Watch film")]),
+        dict(session_id="contact-owned", session_type="sparring", title="Hard sparring", blocks=[])])
+    report(context, REHAB)
+    current = view(context)
+    live = current.live_prescription
+    from api.contracts.injury_policy import rehab_allocation_count
+    assert live and not live["safety_hold"] and live["allocation_limit"] == 1
+    assert rehab_allocation_count(live["session"]["blocks"]) == 1
+    assert any(row["rehab_decision"]["schedule"]["state"] == "deferred" for row in current.open_injuries)
+    execute(context, live)
+    execute(context, view(context).live_prescription, "done", session_rpe=1, rehab_performance="done_as_shown")
+    assert context[0].get_session_completion(context[1], "contact-owned", DAY) is None
+
+
+def test_zero_load_support_still_holds_under_a_current_red_flag(context):
+    live_injury(context, "ankle")
+    set_sessions(context, [session("skill", "Tactical Watch", [dict(block_id="watch", block_type="mindset", display_name="Watch sparring")])])
+    report(context, REHAB)
+    update_checkin(context, {"sharp_pain": True})
+    current = view(context)
+    assert current.today.decision_tier == "stop"
+    assert current.live_prescription is None or current.live_prescription["safety_hold"]
+
+
+def test_zero_load_support_does_not_need_clearance_to_watch_a_combat_topic(context):
+    live_injury(context, "ankle")
+    set_sessions(context, [session("skill", "Tactical Watch", [dict(
+        block_id="watch", block_type="mindset", display_name="Sparring exchange review")])])
+    live = view(context).live_prescription
+    assert live and not live["safety_hold"]
+    assert any(block.get("block_id") == "watch" for block in live["session"]["blocks"])
+
+
+def test_support_projection_without_a_live_policy_preserves_contact_ownership(context):
+    set_sessions(context, [session("skill", "Tactical Watch", [dict(
+        block_id="watch", block_type="mindset", display_name="Watch film")]),
+        dict(session_id="contact-owned", session_type="sparring", title="Hard sparring", blocks=[])])
+    report(context, REHAB)
+    live = view(context).live_prescription
+    assert live and not live["safety_hold"]
+    execute(context, live)
+    execute(context, view(context).live_prescription, "done", session_rpe=1)
+    assert context[0].get_session_completion(context[1], "contact-owned", DAY) is None
+
+
+@pytest.mark.parametrize("frozen", [False, True])
+def test_rehab_session_label_cannot_exempt_ordinary_camp_from_pullback(context, frozen):
+    live_injury(context, "ankle")
+    set_sessions(context, [session("rehab", "Rehab-labelled camp", [dict(
+        block_id="work", block_type="strength", display_name="Light strength",
+        mechanical_load_regions=["shoulder"], contact_level="none")])])
+    report(context, CONTACT)
+    accepted = execute(context, view(context).live_prescription) if frozen else None
+    update_checkin(context, {"pain": "manageable", "sleep": "poor", "body": "flat"})
+    current = view(context)
+    assert current.today.decision_tier == "pull_back"
+    live = current.live_prescription
+    assert not live["rehab_only"] and live["safety_hold"]
+    if accepted:
+        assert live["session"] == accepted["prescription_snapshot"]["session"]
+    with pytest.raises(HTTPException):
+        execute(context, live, "done", session_rpe=2)

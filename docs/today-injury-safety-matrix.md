@@ -19,6 +19,8 @@ injury report; it is not a new progression signal.
 | Stop readiness | Hold current execution even for support work; no generic completion bypass | Support-stop submission regression; existing red-flag matrix |
 | Not checked in | Live prescriptions stay held. A current clearance report cannot bypass the check-in through a shadow/no-live policy | Frozen readiness classes; no-live clearance/check-in regression |
 | Rehab only | Hold ordinary camp; allow only independently eligible reviewed rehab or explicitly safe support | Existing rehab-only and camp/rehab coexistence tests |
+| Zero-load tactical watch + restrictive clearance | Combat-topic wording and a day-level coach contact header cannot turn cognitive work into contact. Start/resume/log only the safe support; held sparring remains outstanding, including after a clearance update | Support start/resume/completion, reversed source order, shadow policy and later clearance regressions; desktop/mobile browser QA |
+| Mobility or support with physical demands | Explicitly known non-contact support outside injured regions may remain. Actual injured-region loading, contact metadata, medical restrictions and current red flags still win | Safe/unsafe mobility, misleading mindset label and zero-load red-flag regressions |
 | Train, no contact | Fresh mixed work keeps safe non-contact blocks; remove/substitute contact children. Contact-owned headings remain held | Existing mixed-session and contact-owned tests |
 | No report / stale episode / resolved injury | Existing conservative policy remains. Old or resolved reports grant no permission | Existing clearance episode/setback and baseline tests |
 | Malformed scopes | Conservative rehab-only ceiling; never relax baseline restrictions | Existing malformed-scope API/projection tests |
@@ -46,6 +48,16 @@ injury report; it is not a new progression signal.
    the UI held as a whole. The existing camp hold/replacement path now offers the
    independently reviewed rehab as its own occurrence. Frozen mixed work is held,
    not rewritten into a different owner.
+5. A tactical watch's combat topic and the day's inherited contact header could
+   hold zero-load work. Structured cognitive work now remains independently
+   actionable. A partial accepted snapshot records held source owners using its
+   existing changes field; completion fan-out and Today resolution preserve those
+   outstanding owners. A later contact clearance can release the sparring owner
+   without relogging the watch. The original day's allocation ceiling is retained.
+6. A session labelled rehab could include ordinary camp work yet bypass the
+   pull-back projection hold. Only a reviewed rehab-only prescription gets that
+   exception. Standalone reviewed rehab receives the existing rehab-only flag;
+   the UI tier regression also checks tier authority independently of safety_hold.
 
 ## Authority and duplication
 
@@ -60,11 +72,14 @@ does not create a second decision tier. No new client safety model was added.
 
 ## Validation
 
-- Relevant backend suite: 773 passed (clearance, multi-injury, readiness, Today/API,
+- Relevant backend suite: 793 passed (clearance, multi-injury, readiness, Today/API,
   read amplification, bundles, schedules, injury journeys and surface safety).
-- Final audit test file: 29 passed, including two additional no-live medical-review
-  cases added after that suite. These counts overlap; they are not added together.
-- Focused frontend suite: 105 passed, including five new frozen-contact tier cases.
+- The 47 cases in the new audit test file are included in that backend count.
+- Focused frontend suite: 109 passed, including five frozen-contact tier cases
+  and four zero-load watch start/resume cases.
+- Desktop/mobile browser QA uses real backend fixture projections and the actual
+  Today component: frozen pull-back closes an open completion form; zero-load
+  watch stays actionable while the separate sparring owner stays locked.
 - Ruff across `api fightcamp tests tools`, Python import/compile checks, TypeScript
   and changed-file ESLint passed.
 - Full Python suite intentionally skipped at the user's earlier request.
