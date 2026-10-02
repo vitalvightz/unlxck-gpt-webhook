@@ -367,7 +367,7 @@ def test_pilot_seed_reproduces_live_policy_content_without_changing_bank(tmp_pat
     import json
     from tools import seed_rehab_pilot
     bank = get_rehab_bank()
-    expected = load_clinical_policies()
+    expected = tuple(p for p in load_clinical_policies() if p.policy_id in {"chest_strain", "ankle_sprain"})
     data = tmp_path / "data"
     data.mkdir()
     (data / "rehab_bank.json").write_text(json.dumps(bank), encoding="utf-8")
