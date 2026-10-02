@@ -22123,3 +22123,77 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
   line-height: 1.45;
   color: var(--text-secondary);
 }
+
+/* History → Sparring: recent exposure totals above the log. */
+.sparring-history {
+  display: grid;
+  gap: 16px;
+}
+
+.sparring-summary {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-support);
+  background: var(--bg-surface-alt);
+  padding: 14px 16px;
+}
+
+.sparring-window {
+  display: grid;
+  gap: 6px;
+}
+
+.sparring-window-label {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.sparring-window-stats {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+
+.sparring-window-stats div {
+  display: grid;
+  gap: 2px;
+}
+
+.sparring-window-stats dt {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.sparring-window-stats dd {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.sparring-window-stats dd[data-tone="red"],
+.sparring-history .history-row-meta [data-tone="red"] {
+  color: var(--danger-ink);
+}
+
+.sparring-history .history-row-meta [data-tone="amber"] {
+  color: var(--progress-gold);
+  font-weight: 600;
+}
+
+.sparring-week-note {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-support);
+  background: var(--progress-gold-soft);
+  border: 1px solid var(--progress-gold-border);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}

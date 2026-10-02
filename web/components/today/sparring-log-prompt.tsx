@@ -250,7 +250,7 @@ export function SparringLogPrompt({
           maxLength={1000}
           rows={2}
           disabled={isSubmitting}
-          placeholder="What worked, what to fix"
+          placeholder="Who with, what worked, what to fix"
           onChange={(event) => setNotes(event.target.value)}
         />
       </label>

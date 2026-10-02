@@ -9,12 +9,14 @@ import { Skeleton } from "@/components/skeleton";
 import {
   listInjuryFlags,
   listSessionCompletionHistory,
+  listSparringLogHistory,
   listTodayCheckinHistory,
 } from "@/lib/api";
 import { formatAppDate } from "@/lib/date-format";
 import {
   checkinFlagLabels,
   checkinSummary,
+  daysAgoLabel,
   injurySeverityTone,
   injuryStatusLabel,
   injuryStatusTone,
@@ -22,24 +24,32 @@ import {
   recommendationTone,
   sessionStatusLabel,
   sessionStatusTone,
+  sparringIntensityLabel,
+  sparringIntensityTone,
+  sparringPlanDifference,
+  sparringRowMeta,
+  sparringWeekNote,
 } from "@/lib/history";
 import { formatInjuryDetail, normalizeInjuryLabel } from "@/lib/injury-display";
 import type {
   InjuryFlagRecord,
+  SparringLogHistoryResponse,
+  SparringWindowSummary,
   TodayCheckinHistoryRecord,
   TodaySessionCompletionRecord,
 } from "@/lib/types";
 
-type HistoryTab = "sessions" | "checkins" | "injuries";
+type HistoryTab = "sessions" | "sparring" | "checkins" | "injuries";
 
 const TABS: Array<{ id: HistoryTab; label: string }> = [
   { id: "sessions", label: "Sessions" },
+  { id: "sparring", label: "Sparring" },
   { id: "checkins", label: "Check-ins" },
   { id: "injuries", label: "Injuries" },
 ];
 
 type TabData<T> = {
-  rows: T[] | null;
+  rows: T | null;
   error: string | null;
 };
 
@@ -98,6 +108,117 @@ function SessionRows({ rows }: { rows: TodaySessionCompletionRecord[] }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+function SparringWindow({ summary, label }: { summary: SparringWindowSummary; label: string }) {
+  return (
+    <div className="sparring-window">
+      <p className="sparring-window-label">{label}</p>
+      <dl className="sparring-window-stats">
+        <div>
+          <dt>Sessions</dt>
+          <dd>{summary.sessions}</dd>
+        </div>
+        <div>
+          <dt>Rounds</dt>
+          <dd>{summary.rounds}</dd>
+        </div>
+        <div>
+          <dt>Hard rounds</dt>
+          <dd>{summary.hard_rounds}</dd>
+        </div>
+        <div>
+          <dt>Hard days</dt>
+          <dd>{summary.hard_days}</dd>
+        </div>
+        <div>
+          <dt>Heavy head contact</dt>
+          <dd>{summary.heavy_head_contact_sessions}</dd>
+        </div>
+        <div>
+          <dt>Rocked / dropped</dt>
+          <dd data-tone={summary.rocked_count > 0 ? "red" : undefined}>{summary.rocked_count}</dd>
+        </div>
+      </dl>
+    </div>
+  );
+}
+
+function SparringRows({ history }: { history: SparringLogHistoryResponse }) {
+  const { logs, current_training_day: today } = history;
+  if (logs.length === 0) {
+    return (
+      <EmptyState
+        eyebrow="Sparring history"
+        title="No sparring logged yet."
+        description="When a sparring round timer on Today finishes, log how it went in a few taps. Every entry — rounds, intensity, head contact — is kept here with your weekly totals."
+        example="Thu 02 Jul 2026 — 5 × 3 min · Hard · Light head contact"
+        primaryAction={{ label: "Open Today", href: "/today" }}
+      />
+    );
+  }
+  const weekNote = sparringWeekNote(history.last_7_days);
+  const lastHard = history.last_hard_day ? daysAgoLabel(history.last_hard_day, today) : null;
+  const lastRocked = history.last_rocked_day ? daysAgoLabel(history.last_rocked_day, today) : null;
+  return (
+    <div className="sparring-history">
+      <section className="sparring-summary" aria-label="Sparring totals">
+        <SparringWindow summary={history.last_7_days} label="Last 7 days" />
+        <SparringWindow summary={history.last_28_days} label="Last 28 days" />
+        <div className="history-row-meta">
+          {history.last_hard_day ? (
+            <span>
+              Last hard spar: {formatAppDate(history.last_hard_day)}
+              {lastHard ? ` (${lastHard})` : ""}
+            </span>
+          ) : null}
+          {history.last_rocked_day ? (
+            <span>
+              Last rocked / dropped: {formatAppDate(history.last_rocked_day)}
+              {lastRocked ? ` (${lastRocked})` : ""}
+            </span>
+          ) : null}
+        </div>
+        {weekNote ? (
+          <p className="sparring-week-note" role="note">
+            {weekNote}
+          </p>
+        ) : null}
+      </section>
+
+      <ul className="history-list">
+        {logs.map((row) => {
+          const difference = sparringPlanDifference(row.planned_intensity, row.intensity);
+          return (
+            <li key={row.id} className="history-row">
+              <div className="history-row-head">
+                <span className="history-row-date">{formatAppDate(row.training_day)}</span>
+                <span className="history-badges">
+                  <StatusBadge
+                    tone={sparringIntensityTone(row.intensity)}
+                    label={sparringIntensityLabel(row.intensity)}
+                  />
+                  {row.head_contact === "heavy" ? (
+                    <StatusBadge tone="amber" label="Heavy head contact" />
+                  ) : null}
+                  {row.rocked ? <StatusBadge tone="red" label="Rocked / dropped" /> : null}
+                </span>
+              </div>
+              <div className="history-row-meta">
+                {sparringRowMeta(row).map((item) => (
+                  <span key={item}>{item}</span>
+                ))}
+                {difference ? (
+                  <span data-tone={difference.harder ? "amber" : undefined}>{difference.label}</span>
+                ) : null}
+              </div>
+              {row.notes ? <p className="muted history-row-note">Notes: {row.notes}</p> : null}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
@@ -194,21 +315,26 @@ export function HistoryScreen() {
   const token = session?.access_token ?? null;
 
   const [tab, setTab] = useState<HistoryTab>("sessions");
-  const [sessions, setSessions] = useState<TabData<TodaySessionCompletionRecord>>({
+  const [sessions, setSessions] = useState<TabData<TodaySessionCompletionRecord[]>>({
     rows: null,
     error: null,
   });
-  const [checkins, setCheckins] = useState<TabData<TodayCheckinHistoryRecord>>({
+  const [sparring, setSparring] = useState<TabData<SparringLogHistoryResponse>>({
     rows: null,
     error: null,
   });
-  const [injuries, setInjuries] = useState<TabData<InjuryFlagRecord>>({ rows: null, error: null });
+  const [checkins, setCheckins] = useState<TabData<TodayCheckinHistoryRecord[]>>({
+    rows: null,
+    error: null,
+  });
+  const [injuries, setInjuries] = useState<TabData<InjuryFlagRecord[]>>({ rows: null, error: null });
 
   // The cache is keyed to the signed-in token: if it changes (sign-out /
   // different account), drop every tab so one user's history can never be
   // shown to another.
   useEffect(() => {
     setSessions({ rows: null, error: null });
+    setSparring({ rows: null, error: null });
     setCheckins({ rows: null, error: null });
     setInjuries({ rows: null, error: null });
   }, [token]);
@@ -227,7 +353,7 @@ export function HistoryScreen() {
 
     const load = async <T,>(
       current: TabData<T>,
-      fetcher: () => Promise<T[]>,
+      fetcher: () => Promise<T>,
       set: (data: TabData<T>) => void,
     ) => {
       if (current.rows !== null || current.error !== null) {
@@ -247,6 +373,8 @@ export function HistoryScreen() {
 
     if (tab === "sessions") {
       void load(sessions, () => listSessionCompletionHistory(token), setSessions);
+    } else if (tab === "sparring") {
+      void load(sparring, () => listSparringLogHistory(token), setSparring);
     } else if (tab === "checkins") {
       void load(checkins, () => listTodayCheckinHistory(token), setCheckins);
     } else {
@@ -255,10 +383,16 @@ export function HistoryScreen() {
     return () => {
       cancelled = true;
     };
-  }, [tab, token, sessions, checkins, injuries]);
+  }, [tab, token, sessions, sparring, checkins, injuries]);
 
   const active =
-    tab === "sessions" ? sessions : tab === "checkins" ? checkins : injuries;
+    tab === "sessions"
+      ? sessions
+      : tab === "sparring"
+        ? sparring
+        : tab === "checkins"
+          ? checkins
+          : injuries;
 
   return (
     <section className="panel history-screen">
@@ -266,7 +400,8 @@ export function HistoryScreen() {
         <p className="kicker">Training record</p>
         <h1 className="form-section-title">History</h1>
         <p className="muted">
-          Every logged session, daily check-in, and injury report — including resolved injuries.
+          Every logged session, sparring round, daily check-in, and injury report — including
+          resolved injuries.
         </p>
       </header>
 
@@ -293,6 +428,8 @@ export function HistoryScreen() {
         <ListSkeleton />
       ) : tab === "sessions" ? (
         <SessionRows rows={sessions.rows ?? []} />
+      ) : tab === "sparring" ? (
+        sparring.rows ? <SparringRows history={sparring.rows} /> : <ListSkeleton />
       ) : tab === "checkins" ? (
         <CheckinRows rows={checkins.rows ?? []} />
       ) : (

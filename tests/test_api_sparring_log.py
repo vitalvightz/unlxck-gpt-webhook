@@ -184,3 +184,140 @@ def test_rocked_log_and_review_are_written_together():
     assert resp.json()["review_created"] is True
     assert len(store.sparring_logs) == 1
     assert len(store.admin_reviews) == 1
+
+
+# -- GET /api/today/sparring-logs: the History tab ----------------------------
+
+
+def _seed_log(store, day_offset: int, *, athlete_id: str = "athlete-1", **fields) -> None:
+    from datetime import date, timedelta
+
+    today = date.fromisoformat(resolve_training_day(None))
+    store.sparring_logs.append(
+        {
+            "id": f"log-{len(store.sparring_logs)}",
+            "athlete_id": athlete_id,
+            "plan_id": None,
+            "session_id": None,
+            "training_day": (today - timedelta(days=day_offset)).isoformat(),
+            "source": "free",
+            "planned_intensity": None,
+            "intensity": "light",
+            "rounds_completed": 3,
+            "round_seconds": 180,
+            "head_contact": "none",
+            "rocked": False,
+            "notes": "",
+            "created_at": f"2026-01-01T00:00:{len(store.sparring_logs):02d}+00:00",
+            **fields,
+        }
+    )
+
+
+def _history(client, **params):
+    return client.get("/api/today/sparring-logs", headers=ATHLETE, params=params)
+
+
+def test_history_is_empty_before_any_sparring():
+    client, _, _ = _build_client()
+
+    resp = _history(client)
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["logs"] == []
+    assert body["current_training_day"] == resolve_training_day(None)
+    assert body["last_7_days"] == {
+        "days": 7,
+        "sessions": 0,
+        "rounds": 0,
+        "hard_rounds": 0,
+        "hard_days": 0,
+        "heavy_head_contact_sessions": 0,
+        "rocked_count": 0,
+    }
+    assert body["last_hard_day"] is None
+    assert body["last_rocked_day"] is None
+
+
+def test_a_logged_entry_shows_up_in_history():
+    client, store, _ = _build_client()
+    _seed_plan(store)
+    _post(client)
+
+    body = _history(client).json()
+
+    assert len(body["logs"]) == 1
+    assert body["logs"][0]["notes"] == "Worked the jab to the body."
+    assert body["last_7_days"]["hard_rounds"] == 5
+    assert body["last_hard_day"] == resolve_training_day(None)
+
+
+def test_history_is_newest_first_and_only_the_athletes_own():
+    client, store, _ = _build_client()
+    _seed_log(store, 3, notes="older")
+    _seed_log(store, 0, notes="today")
+    _seed_log(store, 0, athlete_id="someone-else", notes="not mine")
+
+    logs = _history(client).json()["logs"]
+
+    assert [log["notes"] for log in logs] == ["today", "older"]
+
+
+def test_windows_count_rounds_hard_days_head_contact_and_rocked():
+    client, store, _ = _build_client()
+    _seed_log(store, 0, intensity="hard", rounds_completed=4, head_contact="heavy")
+    _seed_log(store, 0, intensity="hard", rounds_completed=2)  # same day: one hard day
+    _seed_log(store, 6, intensity="hard", rounds_completed=3, rocked=True, head_contact="heavy")
+    _seed_log(store, 7, intensity="medium", rounds_completed=5)  # day 8: outside the week
+    _seed_log(store, 27, intensity="hard", rounds_completed=6)  # last day of 28
+    _seed_log(store, 28, intensity="hard", rounds_completed=9, rocked=True)  # outside both
+
+    body = _history(client).json()
+
+    assert body["last_7_days"] == {
+        "days": 7,
+        "sessions": 3,
+        "rounds": 9,
+        "hard_rounds": 9,
+        "hard_days": 2,
+        "heavy_head_contact_sessions": 2,
+        "rocked_count": 1,
+    }
+    assert body["last_28_days"]["sessions"] == 5
+    assert body["last_28_days"]["rounds"] == 20
+    assert body["last_28_days"]["hard_days"] == 3
+    assert body["last_28_days"]["rocked_count"] == 1
+
+
+def test_windows_stay_complete_when_the_list_is_paged():
+    client, store, _ = _build_client()
+    for _ in range(5):
+        _seed_log(store, 1, rounds_completed=2)
+
+    body = _history(client, limit=2).json()
+
+    assert len(body["logs"]) == 2
+    assert body["last_7_days"]["sessions"] == 5
+    assert body["last_7_days"]["rounds"] == 10
+
+
+def test_last_hard_and_rocked_days_look_past_the_windows():
+    from datetime import date, timedelta
+
+    client, store, _ = _build_client()
+    _seed_log(store, 90, intensity="hard", rocked=True)
+    _seed_log(store, 40, intensity="hard")
+
+    body = _history(client, limit=1).json()
+
+    today = date.fromisoformat(resolve_training_day(None))
+    assert body["last_hard_day"] == (today - timedelta(days=40)).isoformat()
+    assert body["last_rocked_day"] == (today - timedelta(days=90)).isoformat()
+
+
+def test_history_rejects_an_out_of_range_limit():
+    client, _, _ = _build_client()
+
+    assert _history(client, limit=0).status_code == 422
+    assert _history(client, limit=201).status_code == 422

@@ -37,6 +37,7 @@ import type {
   TodaySessionCompletionRecord,
   PendingRehabResponsesResponse,
   SparringLogRequest,
+  SparringLogHistoryResponse,
   SparringLogResponse,
   TodaySessionCompletionRequest,
   TodaySessionCompletionResponse,
@@ -1206,6 +1207,16 @@ export function listSessionCompletionHistory(
     readJson<TodaySessionCompletionRecord[]>(`/api/today/session-completions?limit=${limit}`, {
       token,
     }),
+  );
+}
+
+/** The athlete's sparring log and its 7- and 28-day totals (History). */
+export function listSparringLogHistory(
+  token: string,
+  limit = 60,
+): Promise<SparringLogHistoryResponse> {
+  return withTransientRetries(() =>
+    readJson<SparringLogHistoryResponse>(`/api/today/sparring-logs?limit=${limit}`, { token }),
   );
 }
 

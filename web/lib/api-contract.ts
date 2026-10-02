@@ -114,6 +114,8 @@ export type ReadRehabResponseResult = Reads<Api.RehabResponseResult, Web.RehabRe
 export type ReadSparringLogRecord = Reads<Api.SparringLogRecord, Web.SparringLogRecord>;
 export type SendSparringLogRequest = Sends<Web.SparringLogRequest, Api.SparringLogRequest>;
 export type ReadSparringLogResponse = Reads<Api.SparringLogResponse, Web.SparringLogResponse>;
+export type ReadSparringLogHistoryResponse = Reads<Api.SparringLogHistoryResponse, Web.SparringLogHistoryResponse>;
+export type ReadSparringWindowSummary = Reads<Api.SparringWindowSummary, Web.SparringWindowSummary>;
 export type ReadStructuredCardState = Reads<Api.StructuredCardState, Web.StructuredCardState>;
 export type SendTodayCheckinRequest = Sends<Web.TodayCheckinRequest, Api.TodayCheckinRequest>;
 export type ReadTodayCheckinResponse = Reads<Api.TodayCheckinResponse, Web.TodayCheckinResponse>;
@@ -167,6 +169,10 @@ export type DeclaredRehabLabelPolicy = Expect<Declared<Web.RehabLabelPolicy, Api
 export type DeclaredRehabResponseResult = Expect<Declared<Web.RehabResponseResult, Api.RehabResponseResult>>;
 export type DeclaredSparringLogRecord = Expect<Declared<Web.SparringLogRecord, Api.SparringLogRecord>>;
 export type DeclaredSparringLogResponse = Expect<Declared<Web.SparringLogResponse, Api.SparringLogResponse>>;
+export type DeclaredSparringLogHistoryResponse = Expect<
+  Declared<Web.SparringLogHistoryResponse, Api.SparringLogHistoryResponse>
+>;
+export type DeclaredSparringWindowSummary = Expect<Declared<Web.SparringWindowSummary, Api.SparringWindowSummary>>;
 export type DeclaredStructuredCardState = Expect<Declared<Web.StructuredCardState, Api.StructuredCardState>>;
 export type DeclaredTodayCheckinResponse = Expect<Declared<Web.TodayCheckinResponse, Api.TodayCheckinResponse>>;
 export type DeclaredTodayInjuryCheckinResponse = Expect<Declared<Web.TodayInjuryCheckinResponse, Api.TodayInjuryCheckinResponse>>;

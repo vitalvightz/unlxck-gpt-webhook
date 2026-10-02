@@ -2278,6 +2278,33 @@ class SparringLogResponse(BaseModel):
     safety_notice: str | None = None
 
 
+class SparringWindowSummary(BaseModel):
+    """Sparring totals over the athlete-local days ending today (inclusive)."""
+
+    days: int
+    sessions: int = 0
+    rounds: int = 0
+    hard_rounds: int = 0
+    # Distinct training days with a hard entry: hard sparring is usually capped
+    # at one or two days a week, so days (not entries) is what is counted.
+    hard_days: int = 0
+    heavy_head_contact_sessions: int = 0
+    rocked_count: int = 0
+
+
+class SparringLogHistoryResponse(BaseModel):
+    """The athlete's own sparring log, newest first, with recent exposure."""
+
+    logs: list[SparringLogRecord]
+    # The athlete-local day the windows end on, for "N days ago" labels.
+    current_training_day: str
+    last_7_days: SparringWindowSummary
+    last_28_days: SparringWindowSummary
+    # Most recent days found in the athlete's log, or null when there are none.
+    last_hard_day: str | None = None
+    last_rocked_day: str | None = None
+
+
 class RehabResponsePromptResponse(BaseModel):
     """One injury's post-rehab question, as the athlete is shown it.
 

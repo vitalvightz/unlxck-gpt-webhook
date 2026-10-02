@@ -2493,6 +2493,26 @@ class FakeStore(InMemoryNotificationLedger, FullRowStatusReads):
         self.sparring_logs.append(row)
         return {"log": dict(row), "review": review}
 
+    def list_sparring_logs(self, athlete_id: str, *, limit: int = 60, from_day: str | None = None) -> list[dict]:
+        rows = [
+            dict(row)
+            for row in self.sparring_logs
+            if row.get("athlete_id") == athlete_id
+            and (from_day is None or str(row.get("training_day")) >= from_day)
+        ]
+        rows.sort(key=lambda row: (str(row.get("training_day")), str(row.get("created_at"))), reverse=True)
+        return rows[:limit]
+
+    def latest_sparring_log_day(self, athlete_id: str, *, hard: bool = False, rocked: bool = False) -> str | None:
+        days = [
+            str(row.get("training_day"))
+            for row in self.sparring_logs
+            if row.get("athlete_id") == athlete_id
+            and (not hard or row.get("intensity") == "hard")
+            and (not rocked or row.get("rocked"))
+        ]
+        return max(days) if days else None
+
     def create_admin_review(self, athlete_id: str, fields: dict) -> dict:
         row = {
             "id": str(uuid4()),

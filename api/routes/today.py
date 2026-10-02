@@ -8,7 +8,7 @@ non-UI backend integration — no Today UI is built here.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 import logging
 from typing import Any, Mapping
 from uuid import UUID
@@ -28,9 +28,11 @@ from api.models import (
     SessionCompletionHistoryResponse,
     SessionCompletionRequest,
     SessionCompletionResponse,
+    SparringLogHistoryResponse,
     SparringLogRecord,
     SparringLogRequest,
     SparringLogResponse,
+    SparringWindowSummary,
     TodayCheckinRecord,
     TodayCheckinRequest,
     TodayCheckinResponse,
@@ -90,6 +92,32 @@ def _rocked_review_reason(body: SparringLogRequest) -> str:
         "Sparring log: athlete reported being rocked or dropped "
         f"({_SPARRING_INTENSITY_LABEL[body.intensity]} sparring, {rounds}, "
         f"{_HEAD_CONTACT_LABEL[body.head_contact]}). Check in before their next contact session."
+    )
+
+
+def _sparring_log_record(row: Mapping[str, Any]) -> SparringLogRecord:
+    return SparringLogRecord.model_validate(
+        {
+            **row,
+            "training_day": str(row.get("training_day") or "")[:10],
+            "created_at": str(row.get("created_at") or ""),
+        }
+    )
+
+
+def _sparring_window(rows: list[SparringLogRecord], *, today: date, days: int) -> SparringWindowSummary:
+    """Totals for the ``days`` athlete-local days ending ``today`` (inclusive)."""
+    first_day = (today - timedelta(days=days - 1)).isoformat()
+    last_day = today.isoformat()
+    window = [row for row in rows if first_day <= row.training_day <= last_day]
+    return SparringWindowSummary(
+        days=days,
+        sessions=len(window),
+        rounds=sum(row.rounds_completed for row in window),
+        hard_rounds=sum(row.rounds_completed for row in window if row.intensity == "hard"),
+        hard_days=len({row.training_day for row in window if row.intensity == "hard"}),
+        heavy_head_contact_sessions=sum(1 for row in window if row.head_contact == "heavy"),
+        rocked_count=sum(1 for row in window if row.rocked),
     )
 
 
@@ -585,11 +613,42 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
                 detail="Your sparring log was not saved. Please try again.",
             )
         return SparringLogResponse(
-            log=SparringLogRecord.model_validate(
-                {**row, "training_day": str(row.get("training_day")), "created_at": str(row.get("created_at") or "")}
-            ),
+            log=_sparring_log_record(row),
             review_created=review_created,
             safety_notice=ROCKED_SAFETY_NOTICE if request_body.rocked else None,
+        )
+
+    @router.get(
+        "/api/today/sparring-logs",
+        response_model=SparringLogHistoryResponse,
+    )
+    def list_sparring_log_history(
+        limit: int = Query(default=60, ge=1, le=200),
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> SparringLogHistoryResponse:
+        """The athlete's own sparring log (History) plus 7- and 28-day exposure.
+
+        The windows are read separately from the paged list so the totals stay
+        complete however few rows the list returns. Days are athlete-local.
+        """
+        today = date.fromisoformat(resolve_training_day(profile.athlete_timezone))
+        logs = [_sparring_log_record(row) for row in store.list_sparring_logs(profile.athlete_id, limit=limit)]
+        recent = [
+            _sparring_log_record(row)
+            for row in store.list_sparring_logs(
+                profile.athlete_id,
+                limit=500,
+                from_day=(today - timedelta(days=27)).isoformat(),
+            )
+        ]
+        return SparringLogHistoryResponse(
+            logs=logs,
+            current_training_day=today.isoformat(),
+            last_7_days=_sparring_window(recent, today=today, days=7),
+            last_28_days=_sparring_window(recent, today=today, days=28),
+            last_hard_day=store.latest_sparring_log_day(profile.athlete_id, hard=True),
+            last_rocked_day=store.latest_sparring_log_day(profile.athlete_id, rocked=True),
         )
 
     @router.post(
