@@ -8,8 +8,12 @@ YouTube Data API v3 key for the video checks (import and verify):
     YOUTUBE_DATA_API_KEY=...
 
 Workflow:
-    # 1. Export the most-prescribed exercises that have no video yet.
+    # 1a. Export the most-prescribed exercises that have no video yet.
     python tools/exercise_media.py candidates --limit 100 --out media.csv
+
+    # 1b. Or export every uncovered exercise from a canonical bank. Existing
+    #     served exercise_media keys and aliases are omitted automatically.
+    python tools/exercise_media.py bank data/exercise_bank.json --out exercise_bank_media.csv
 
     # 2. Fill youtube_url (+ start_s / end_s for the loop segment) in the CSV.
     #    Rows with the same `family` are variants of one base name ("Box Jump",
@@ -190,6 +194,104 @@ def rank_candidates(
     return rows
 
 
+def _served_media_keys(store: Any) -> set[str]:
+    """Keys and aliases that already have a currently served video."""
+    existing: set[str] = set()
+    for row in store.list_exercise_media_for_verification():
+        if row.get("status") != "ok" or row.get("made_for_kids") is not False:
+            continue
+        key = normalize_exercise_key(row.get("exercise_key"))
+        if key:
+            existing.add(key)
+        existing.update(
+            alias_key
+            for alias in row.get("aliases") or []
+            if (alias_key := normalize_exercise_key(alias))
+        )
+    return existing
+
+
+def bank_rows(
+    records: Iterable[Any],
+    *,
+    existing_keys: set[str],
+) -> list[dict[str, Any]]:
+    """Turn canonical bank rows into media-review rows, excluding covered keys."""
+    rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        name = str(record.get("name") or "").strip()
+        key = normalize_exercise_key(name)
+        if not key or key in existing_keys or key in seen:
+            continue
+        seen.add(key)
+        block_type = str(
+            record.get("category")
+            or record.get("type")
+            or record.get("modality")
+            or ""
+        ).strip()
+        rows.append(
+            {
+                "exercise_key": key,
+                "family": family_key(name),
+                "example_name": name,
+                "block_type": block_type,
+                "occurrences": "",
+                "youtube_url": "",
+                "start_s": "",
+                "end_s": "",
+                "source": "curated",
+                "aliases": "",
+                "notes": "",
+            }
+        )
+    return rows
+
+
+def _resolve_bank_path(value: str) -> Path:
+    path = Path(value)
+    if path.exists():
+        return path
+    repo_path = _REPO_ROOT / path
+    return repo_path if repo_path.exists() else path
+
+
+def _cmd_bank(args: argparse.Namespace) -> int:
+    path = _resolve_bank_path(args.bank_json)
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        print(f"error: bank file not found: {args.bank_json}", file=sys.stderr)
+        return 2
+    except json.JSONDecodeError as exc:
+        print(f"error: invalid JSON in {path}: {exc}", file=sys.stderr)
+        return 2
+    if not isinstance(payload, list):
+        print(
+            f"error: bank JSON must be a top-level list of exercise rows: {path}",
+            file=sys.stderr,
+        )
+        return 2
+
+    existing = _served_media_keys(_build_store())
+    rows = bank_rows(payload, existing_keys=existing)
+    if args.limit is not None:
+        rows = rows[: args.limit]
+
+    with open(args.out, "w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=CSV_COLUMNS)
+        writer.writeheader()
+        writer.writerows(rows)
+    print(
+        f"wrote {len(rows)} uncovered exercises from {path} "
+        f"({len(payload)} bank rows, {len(existing)} served keys/aliases) -> {args.out}"
+    )
+    return 0
+
+
 def parse_import_row(row: dict[str, str]) -> tuple[dict[str, Any] | None, str | None]:
     """Validate one CSV row into an exercise_media payload (status not yet set)."""
     url = (row.get("youtube_url") or "").strip()
@@ -251,12 +353,7 @@ def _cmd_candidates(args: argparse.Namespace) -> int:
     )
     # Only served rows count as covered: an exercise whose video was retired
     # or never verified comes back as a candidate for re-curation.
-    existing: set[str] = set()
-    for row in store.list_exercise_media_for_verification():
-        if row.get("status") != "ok":
-            continue
-        existing.add(str(row.get("exercise_key") or ""))
-        existing.update(str(alias) for alias in row.get("aliases") or [])
+    existing = _served_media_keys(store)
     rows = rank_candidates(
         (row.get("structured_plan") for row in plans_response.data or []),
         existing_keys=existing,
@@ -428,6 +525,12 @@ def main(argv: list[str] | None = None) -> int:
     candidates.add_argument("--plans", type=int, default=200, help="recent plans to scan")
     candidates.add_argument("--out", default="exercise_media_candidates.csv")
     candidates.set_defaults(func=_cmd_candidates)
+
+    bank = sub.add_parser("bank", help="export uncovered exercises from a canonical JSON bank")
+    bank.add_argument("bank_json", help="bank JSON path, e.g. data/exercise_bank.json")
+    bank.add_argument("--out", default="exercise_media_bank.csv")
+    bank.add_argument("--limit", type=_positive_int, help="export at most N uncovered bank rows")
+    bank.set_defaults(func=_cmd_bank)
 
     importer = sub.add_parser("import", help="validate and upsert videos from a CSV")
     importer.add_argument("csv")

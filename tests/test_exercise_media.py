@@ -661,3 +661,83 @@ def test_plan_read_serves_media_for_matching_blocks_only():
             "channel_title": "UNLXCK",
         }
     }
+
+
+# -- canonical bank export ---------------------------------------------------
+
+
+def test_bank_rows_excludes_covered_keys_and_deduplicates():
+    rows = media_tool.bank_rows(
+        [
+            {"name": "Box Jump", "category": "power"},
+            {"name": "Trap Bar Deadlift", "category": "strength"},
+            {"name": "Trap Bar Deadlift", "category": "duplicate"},
+            {"name": ""},
+            "not-a-row",
+        ],
+        existing_keys={"box-jump"},
+    )
+
+    assert rows == [
+        {
+            "exercise_key": "trap-bar-deadlift",
+            "family": "trap-bar-deadlift",
+            "example_name": "Trap Bar Deadlift",
+            "block_type": "strength",
+            "occurrences": "",
+            "youtube_url": "",
+            "start_s": "",
+            "end_s": "",
+            "source": "curated",
+            "aliases": "",
+            "notes": "",
+        }
+    ]
+
+
+def test_bank_command_exports_only_uncovered_served_media(tmp_path, monkeypatch):
+    bank_path = tmp_path / "exercise_bank.json"
+    bank_path.write_text(
+        json.dumps(
+            [
+                {"name": "Box Jump", "category": "power"},
+                {"name": "Trap Bar Deadlift", "category": "strength"},
+                {"name": "Pallof Press", "type": "accessory"},
+            ]
+        ),
+        encoding="utf-8",
+    )
+    out = tmp_path / "media.csv"
+
+    class Store:
+        def list_exercise_media_for_verification(self):
+            return [
+                {
+                    "exercise_key": "box-jump",
+                    "aliases": [],
+                    "status": "ok",
+                    "made_for_kids": False,
+                },
+                {
+                    "exercise_key": "anti-rotation-press",
+                    "aliases": ["Pallof Press"],
+                    "status": "ok",
+                    "made_for_kids": False,
+                },
+                {
+                    "exercise_key": "old-demo",
+                    "aliases": ["Trap Bar Deadlift"],
+                    "status": "unavailable",
+                    "made_for_kids": False,
+                },
+            ]
+
+    monkeypatch.setattr(media_tool, "_build_store", lambda: Store())
+
+    assert media_tool.main(["bank", str(bank_path), "--out", str(out)]) == 0
+
+    with out.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+
+    assert [row["exercise_key"] for row in rows] == ["trap-bar-deadlift"]
+    assert rows[0]["block_type"] == "strength"
