@@ -21520,7 +21520,7 @@ html[data-app-surface="brand"] .app-safety-footer {
 
 .history-row-meta {
   display: flex;
-  gap: 14px;
+  gap: 4px 14px;
   flex-wrap: wrap;
   font-size: 0.82rem;
   color: var(--text-secondary);
@@ -22124,13 +22124,14 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
   color: var(--text-secondary);
 }
 
-/* History → Sparring: recent exposure totals above the log. */
-.sparring-history {
+/* History: the at-a-glance card above each tab's list, and quick-scan chips.
+   Plain counts only: no charts or trends to interpret. */
+.history-tab-body {
   display: grid;
   gap: 16px;
 }
 
-.sparring-summary {
+.history-summary {
   display: grid;
   gap: 12px;
   border: 1px solid var(--border-subtle);
@@ -22139,12 +22140,12 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
   padding: 14px 16px;
 }
 
-.sparring-window {
+.history-summary-group {
   display: grid;
   gap: 6px;
 }
 
-.sparring-window-label {
+.history-summary-label {
   margin: 0;
   font-size: 0.78rem;
   font-weight: 700;
@@ -22153,24 +22154,25 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
   color: var(--text-secondary);
 }
 
-.sparring-window-stats {
+.history-summary-stats {
   margin: 0;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px 12px;
 }
 
-.sparring-window-stats div {
+.history-summary-stats div {
   display: grid;
+  grid-template-rows: 1fr auto;
   gap: 2px;
 }
 
-.sparring-window-stats dt {
+.history-summary-stats dt {
   font-size: 0.75rem;
   color: var(--text-secondary);
 }
 
-.sparring-window-stats dd {
+.history-summary-stats dd {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 700;
@@ -22178,17 +22180,24 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
   font-variant-numeric: tabular-nums;
 }
 
-.sparring-window-stats dd[data-tone="red"],
-.sparring-history .history-row-meta [data-tone="red"] {
-  color: var(--danger-ink);
+.history-summary-stats dd[data-tone="green"],
+.history-tab-body .history-row-meta [data-tone="green"] {
+  color: var(--success-ink);
 }
 
-.sparring-history .history-row-meta [data-tone="amber"] {
+.history-summary-stats dd[data-tone="amber"],
+.history-tab-body .history-row-meta [data-tone="amber"] {
   color: var(--progress-gold);
   font-weight: 600;
 }
 
-.sparring-week-note {
+.history-summary-stats dd[data-tone="red"],
+.history-tab-body .history-row-meta [data-tone="red"] {
+  color: var(--danger-ink);
+  font-weight: 600;
+}
+
+.history-summary-note {
   margin: 0;
   padding: 10px 12px;
   border-radius: var(--radius-support);
@@ -22196,4 +22205,46 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
   border: 1px solid var(--progress-gold-border);
   color: var(--text-primary);
   font-size: 0.85rem;
+}
+
+.history-screen .history-section-title {
+  margin: 4px 0 -4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.history-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.history-chip {
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.history-chip[data-tone="green"] {
+  background: var(--success-soft);
+  border-color: rgba(39, 174, 96, 0.4);
+  color: var(--success-ink);
+}
+
+.history-chip[data-tone="amber"] {
+  background: var(--progress-gold-soft);
+  border-color: var(--progress-gold-border);
+  color: var(--progress-gold);
+}
+
+.history-chip[data-tone="red"] {
+  background: var(--danger-soft);
+  border-color: color-mix(in srgb, var(--danger-ink) 34%, transparent);
+  color: var(--danger-ink);
 }

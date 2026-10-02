@@ -110,13 +110,56 @@ export function checkinFlagLabels(record: TodayCheckinHistoryRecord): string[] {
   return CHECKIN_FLAG_LABELS.filter(([key]) => record[key] === true).map(([, label]) => label);
 }
 
-/** "sleep good · body normal · pain none" style one-liner for a check-in row. */
-export function checkinSummary(record: TodayCheckinHistoryRecord): string {
+export type HistoryChip = { label: string; tone: TodayDecisionTone };
+
+/**
+ * A check-in as quick-scan chips: sleep, body and pain, then any safety flags.
+ * Only an answer that should catch the eye is coloured: amber for a warning
+ * sign, red for a stop sign. ("Body sharp" means feeling sharp, a good sign.)
+ */
+export function checkinChips(record: TodayCheckinHistoryRecord): HistoryChip[] {
+  const sleepTone: TodayDecisionTone = record.sleep === "poor" ? "amber" : "neutral";
+  const bodyTone: TodayDecisionTone = record.body === "flat" ? "amber" : "neutral";
+  const painTone: TodayDecisionTone =
+    record.pain === "high" ? "red" : record.pain === "manageable" ? "amber" : "neutral";
   return [
-    `Sleep ${record.sleep}`,
-    `Body ${record.body}`,
-    `Pain ${record.pain}`,
-  ].join(" · ");
+    { label: `Sleep ${record.sleep}`, tone: sleepTone },
+    { label: `Body ${record.body}`, tone: bodyTone },
+    { label: `Pain ${record.pain}`, tone: painTone },
+    ...checkinFlagLabels(record).map((label) => ({ label, tone: "red" as const })),
+  ];
+}
+
+/** The injury's latest reported trend, coloured by direction. */
+export function injuryReportedTone(status: InjuryFlagRecord["latest_reported_status"]): TodayDecisionTone {
+  if (status === "worse") {
+    return "red";
+  }
+  if (status === "improving" || status === "resolved") {
+    return "green";
+  }
+  return "neutral";
+}
+
+/** True when ``day`` is one of the ``days`` training days ending ``today``. */
+export function isWithinLastDays(day: string, today: string, days: number): boolean {
+  const diff = trainingDaysAgo(day, today);
+  return diff !== null && diff < days;
+}
+
+/** How many rows fall in the last ``days`` training days, grouped by ``key``. */
+export function countRecentBy<Row, Key extends string>(
+  rows: readonly Row[],
+  { day, key, today, days }: { day: (row: Row) => string; key: (row: Row) => Key; today: string; days: number },
+): Partial<Record<Key, number>> {
+  const counts: Partial<Record<Key, number>> = {};
+  for (const row of rows) {
+    if (isWithinLastDays(day(row), today, days)) {
+      const k = key(row);
+      counts[k] = (counts[k] ?? 0) + 1;
+    }
+  }
+  return counts;
 }
 
 // -- Sparring ----------------------------------------------------------------
@@ -190,15 +233,22 @@ export function sparringPlanDifference(
   };
 }
 
-/** "Today", "Yesterday", "N days ago" between two YYYY-MM-DD training days. */
-export function daysAgoLabel(day: string, currentDay: string): string | null {
+/** Whole training days from ``day`` to ``currentDay`` (YYYY-MM-DD), or null
+ *  when either is unparseable or ``day`` is in the future. */
+export function trainingDaysAgo(day: string, currentDay: string): number | null {
   const a = Date.parse(`${day.slice(0, 10)}T12:00:00Z`);
   const b = Date.parse(`${currentDay.slice(0, 10)}T12:00:00Z`);
   if (Number.isNaN(a) || Number.isNaN(b)) {
     return null;
   }
   const diff = Math.round((b - a) / 86_400_000);
-  if (diff < 0) {
+  return diff < 0 ? null : diff;
+}
+
+/** "Today", "Yesterday", "N days ago" between two YYYY-MM-DD training days. */
+export function daysAgoLabel(day: string, currentDay: string): string | null {
+  const diff = trainingDaysAgo(day, currentDay);
+  if (diff === null) {
     return null;
   }
   if (diff === 0) {

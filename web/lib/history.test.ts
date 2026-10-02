@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 
 import {
   checkinFlagLabels,
-  checkinSummary,
+  checkinChips,
+  countRecentBy,
+  injuryReportedTone,
+  isWithinLastDays,
   injurySeverityTone,
   injuryStatusLabel,
   injuryStatusTone,
@@ -76,8 +79,47 @@ test("checkinFlagLabels lists only ticked safety flags", () => {
   );
 });
 
-test("checkinSummary is a compact sleep/body/pain line", () => {
-  assert.equal(checkinSummary(checkin({ sleep: "poor" })), "Sleep poor · Body normal · Pain none");
+test("checkin chips colour only the answers that need attention", () => {
+  assert.deepEqual(checkinChips(checkin()), [
+    { label: "Sleep good", tone: "neutral" },
+    { label: "Body normal", tone: "neutral" },
+    { label: "Pain none", tone: "neutral" },
+  ]);
+  assert.deepEqual(
+    checkinChips(checkin({ sleep: "poor", body: "flat", pain: "high", swelling: true })),
+    [
+      { label: "Sleep poor", tone: "amber" },
+      { label: "Body flat", tone: "amber" },
+      { label: "Pain high", tone: "red" },
+      { label: "Swelling", tone: "red" },
+    ],
+  );
+  // "Body sharp" is feeling sharp: a good sign, not a warning.
+  assert.equal(checkinChips(checkin({ body: "sharp", pain: "manageable" }))[1].tone, "neutral");
+  assert.equal(checkinChips(checkin({ pain: "manageable" }))[2].tone, "amber");
+});
+
+test("injury trend tone follows its direction", () => {
+  assert.equal(injuryReportedTone("worse"), "red");
+  assert.equal(injuryReportedTone("improving"), "green");
+  assert.equal(injuryReportedTone("ongoing"), "neutral");
+  assert.equal(injuryReportedTone(undefined), "neutral");
+});
+
+test("recent counts include today back to day 7 only", () => {
+  const rows = [
+    { day: "2026-10-02", status: "done" },
+    { day: "2026-09-26", status: "done" }, // 6 days ago: in
+    { day: "2026-09-25", status: "skipped" }, // 7 days ago: out
+    { day: "2026-10-01", status: "skipped" },
+    { day: "2026-10-03", status: "done" }, // future: out
+  ];
+  assert.deepEqual(
+    countRecentBy(rows, { day: (row) => row.day, key: (row) => row.status, today: "2026-10-02", days: 7 }),
+    { done: 2, skipped: 1 },
+  );
+  assert.equal(isWithinLastDays("2026-09-26", "2026-10-02", 7), true);
+  assert.equal(isWithinLastDays("2026-09-25", "2026-10-02", 7), false);
 });
 
 test("sparring rounds read as rounds × length", () => {
