@@ -261,10 +261,9 @@ _LOCATIONLESS_TRIAGE = {"acl_tear", "mcl_tear", "pcl_tear", "lcl_tear", "concuss
 # Prefix nouns forced to their conventional casing in the final label.
 _LABEL_ABBREVIATIONS = ("acl", "mcl", "pcl", "lcl", "mtss", "it band", "ac joint")
 
-# Bare dizziness / lightheadedness with no head-impact context is a soft,
-# non-urgent monitor note (commonly a weight-cut symptom, not a head injury), so
-# it is NOT routed to concussion. It carries no injury type or location, so give
-# it a clean standalone noun label.
+# Bare dizziness / lightheadedness does not establish a concussion diagnosis.
+# It carries no injury type or location, so give it a standalone symptom label.
+# Current symptoms still impose a medical execution hold in Today.
 _SOFT_SYMPTOM_LABELS = {
     "dizzy": "Dizziness",
     "dizziness": "Dizziness",
@@ -433,8 +432,8 @@ def build_injury_label(body_area: object, description: object) -> str:
         else ""
     )
 
-    # Bare dizziness/lightheadedness (no injury type resolved) is a soft note, not
-    # a concussion — surface a clean noun and stop before the location machinery.
+    # Label the symptom without diagnosing concussion. Today's execution hold
+    # is independent of the diagnosis and location machinery.
     if not condition:
         normalized = " ".join(f"{body} {desc}".lower().split())
         for phrase, soft_label in _SOFT_SYMPTOM_LABELS.items():

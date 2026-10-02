@@ -887,6 +887,20 @@ def _active_open_injuries(context: ReadinessContext) -> list[Mapping[str, Any]]:
     ]
 
 
+def active_medical_hold_reasons(injuries: Sequence[Mapping[str, Any]]) -> tuple[str, ...]:
+    from fightcamp.injury_danger_terms import reported_medical_symptoms
+    from fightcamp.injury_triage import current_injury_medical_hold
+
+    active = [injury for injury in injuries if _clean(injury.get("status")).lower() in _ACTIVE_FLAG_STATUSES]
+    reasons = {symptom for injury in active
+        for field in ("body_area", "description")
+        for symptom in reported_medical_symptoms(_clean(injury.get(field)))}
+    if any(current_injury_medical_hold(_clean(injury.get("body_area")), _clean(injury.get("description")),
+                                      _clean(injury.get("severity"))) for injury in active):
+        reasons.add("a serious injury requiring medical review")
+    return tuple(sorted(reasons))
+
+
 def _has_load_relevant_injury(checkin: ReadinessCheckin, context: ReadinessContext) -> bool:
     """True when a genuinely load-relevant injury is being tracked.
 
@@ -1684,6 +1698,17 @@ def _risk_adjustment(
     surface_review_check = (
         _safety_check_code("surface_injury", "medical_review") if surface_review is not None else ""
     )
+
+    reported_symptoms = active_medical_hold_reasons(context.open_injuries)
+    if reported_symptoms:
+        return ReadinessAdjustment(
+            decision="pull_back", title="No training today.",
+            reason=f"Your current injury report includes {', '.join(reported_symptoms)}. Training is not safe today.",
+            action="Stop training and seek medical advice.",
+            triggers=_with_context_triggers("red_flag", "reported_medical_symptoms", *flags,
+                surface_review_check, session_risk=session_risk, phase=phase, contact_sport=contact_sport),
+            session_risk=session_risk,
+        )
 
     if flags:
         trigger_text = ", ".join(_SAFETY_FLAG_LABELS[flag] for flag in flags)

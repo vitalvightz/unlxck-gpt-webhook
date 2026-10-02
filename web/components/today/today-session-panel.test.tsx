@@ -426,6 +426,25 @@ for (const tier of ["green", "modify", "pull_back", "stop", "not_checked_in"] as
   });
 }
 
+for (const sessionType of ["sparring", "mindset", "rehab"] as const) {
+  test(`medical STOP locks ${sessionType} despite full contact clearance`, () => {
+    const state = contactDayState("stop");
+    state.today.completion_status = "started";
+    state.today.recommendation_state = "pull_back";
+    state.today.recommendation_reason = "No training today.\nYour current injury report includes dizziness.\nStop training and seek medical advice.";
+    state.effective_clinician_clearance = { level: "train_contact", scopes: ["rehab", "training", "contact"],
+      requires_update: false, limited_by: [] };
+    state.live_prescription = { revision: "a".repeat(64), frozen: true, safety_hold: true,
+      safety_hold_reason: state.today.recommendation_reason, changes: [],
+      session: { session_id: state.today.next_session!.session_id!, title: "Accepted work", session_type: sessionType,
+        blocks: [{ block_id: "work", block_type: sessionType, display_name: "Accepted work" }] } };
+    const html = renderPanel(state);
+    assert.doesNotMatch(html, />Resume session<|>Start session<|>Start hard sparring<|data-value="done"|Sparring rounds<\/button>/);
+    assert.doesNotMatch(html, /locked by clinician clearance/);
+    assert.match(html, /dizziness|medical advice/);
+  });
+}
+
 test("a declared sparring day leads with the sparring, with the app work alongside", () => {
   const html = renderPanel(contactDayState("green"));
   // The athlete's gym day owns the headline; the app session is named under it.

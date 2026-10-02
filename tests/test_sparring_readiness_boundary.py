@@ -103,6 +103,15 @@ def test_open_head_injury_does_not_expire_with_history_window(monkeypatch):
     assert hard_sparring_risk_state(model) == "CONTACT_BLOCKED"
 
 
+@pytest.mark.parametrize("body_area", ["Dizziness", "Retinal detachment", "Cervical spine injury"])
+def test_medical_report_in_label_reaches_persisted_contact_cutoff(monkeypatch, body_area):
+    store = FakeStore()
+    store.create_injury_flag(ATHLETE, {"body_area": body_area, "severity": "mild", "status": "monitoring"})
+    model = _model(store, monkeypatch)
+    assert "medical_contact_restriction" in model["readiness_flags"]
+    assert hard_sparring_risk_state(model) == "CONTACT_BLOCKED"
+
+
 def test_failed_history_read_is_explicit_and_conservative(monkeypatch):
     store = FakeStore()
     def fail(*args, **kwargs):

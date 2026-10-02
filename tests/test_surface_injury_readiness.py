@@ -997,7 +997,7 @@ class TestImpactSessionExposure:
 
 
 class TestIndependentSurfacePolicyAggregation:
-    def test_medical_review_preserves_other_injurys_targeted_restriction(self):
+    def test_serious_medical_hold_preserves_other_injurys_targeted_restriction(self):
         adjustment = build_readiness_adjustment(
             ReadinessCheckin(),
             ReadinessContext(
@@ -1020,9 +1020,13 @@ class TestIndependentSurfacePolicyAggregation:
         )
 
         assert adjustment.decision == "pull_back"
-        assert adjustment.title == "Get this checked."
-        assert "infected hand wound" in adjustment.reason
-        assert "medical advice" in adjustment.safety.lower()
+        # This affirmative infection report routes to MEDICAL_HOLD in existing
+        # intake triage. The medical gate now owns Today without erasing the
+        # independent foot restriction or its surface-review record.
+        assert adjustment.title == "No training today."
+        assert "medical review" in adjustment.reason
+        assert "reported_medical_symptoms" in adjustment.triggers
+        assert adjustment.action.startswith("Stop training and seek medical advice.")
         assert "Roadwork intervals" in adjustment.action
         assert "protect_or_replace_friction" in surface_restriction_codes(
             adjustment.triggers

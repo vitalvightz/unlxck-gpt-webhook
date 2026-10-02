@@ -102,6 +102,7 @@ _INJURY_SYMPTOM_TOKENS = {
     "splint", "splints", "instability", "unstable", "wobbly",
     "click", "clicking", "pop", "popping", "lock", "locking",
     "concussion", "nerve", "hyperextension", "hyperextended",
+    "dizzy", "dizziness", "lightheaded", "lightheadedness", "headache", "vision",
 }
 
 

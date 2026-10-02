@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 from typing import TypedDict
 
 
@@ -46,6 +47,28 @@ _BENIGN_SUPPRESSOR_PATTERNS = (
     r"\bsound\s+only\b",
     r"\bnoise\s+only\b",
 )
+
+# Current reported symptoms are execution gates, not concussion diagnoses.
+_MEDICAL_SYMPTOM_PHRASES = {
+    "worsening headache": ("worsening headache", "worsening headaches", "headache getting worse", "headache is getting worse", "headache worsening", "worse headache"),
+    "dizziness": ("dizziness", "dizzy", "lightheaded", "lightheadedness", "light headed", "light-headed"),
+    "numbness": ("numbness", "numb", "loss of sensation"),
+    "vision changes": ("vision changes", "vision change", "blurred vision", "blurry vision", "double vision", "loss of vision"),
+    "neck pain": ("neck pain", "pain in neck", "pain in my neck", "neck hurts", "painful neck"),
+}
+
+
+@lru_cache(maxsize=512)
+def reported_medical_symptoms(text: str) -> tuple[str, ...]:
+    """Affirmatively reported symptoms; training-impact labels cannot clear them."""
+    from .injury_negation import remove_negated_phrases, register_negation_targets
+    from .normalization import phrase_in_text
+
+    phrases = [phrase for aliases in _MEDICAL_SYMPTOM_PHRASES.values() for phrase in aliases]
+    register_negation_targets(phrases)
+    cleaned = remove_negated_phrases(str(text or "")).lower()
+    return tuple(label for label, aliases in _MEDICAL_SYMPTOM_PHRASES.items()
+                 if any(phrase_in_text(cleaned, phrase) for phrase in aliases))
 
 
 def detect_danger_term_routes(text: str) -> list[dict[str, str]]:
