@@ -14,7 +14,7 @@ Modules:
 * ``injury_signal`` — derived injury-risk signal from logged pain history (§6).
 * ``rehab_stage`` — per-injury rehabilitation stage, independent of camp phase.
 * ``rehab_completion`` — which completed rehab work may become injury evidence.
-* ``load_eligibility`` — injury-episode LOAD eligibility (shadow mode only).
+* ``rehab_progression`` — the one stage progression path (baseline + declared transitions).
 * ``landing`` — state-dependent landing resolver (§1).
 """
 
@@ -65,11 +65,9 @@ from .landing import (
     LandingTarget,
     resolve_landing,
 )
-from .load_eligibility import (
-    LOAD_CRITERIA_REGISTRY,
-    LOAD_ELIGIBILITY_ENGINE_VERSION,
-    LoadEligibilityResult,
-    resolve_load_eligibility,
+from .rehab_progression import (
+    evaluate_transition,
+    resolve_reviewed_progression,
 )
 from .rehab_completion import (
     RehabCompletionResolution,
@@ -163,11 +161,9 @@ __all__ = [
     "exposure_response_from_answers",
     "resolve_rehab_completion",
     "resolve_rehab_exposure_candidate",
-    # load_eligibility (shadow mode only)
-    "LOAD_CRITERIA_REGISTRY",
-    "LOAD_ELIGIBILITY_ENGINE_VERSION",
-    "LoadEligibilityResult",
-    "resolve_load_eligibility",
+    # rehab_progression
+    "evaluate_transition",
+    "resolve_reviewed_progression",
     # rehab_stage
     "REHAB_STAGES",
     "RehabStageDecision",

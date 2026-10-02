@@ -119,7 +119,11 @@ either the flag sits in `monitoring`/`resolved` (a status only an
 `load`, `dynamic` and `return` all assert that the injured tissue tolerated
 something, and **no such record exists**: nothing in the system ties an exposure
 to a body area. So the ladder stops at `MAX_RESOLVABLE_STAGE` (`restore`) and
-says why, with `insufficient_injury_specific_progression_evidence`. PR4 raises
+says why, with `insufficient_injury_specific_progression_evidence`. (Superseded:
+the per-injury exposure record now exists, and higher stages are reached only
+through declared pathway transitions in `api/contracts/rehab_progression.py`; see
+[rehab-pathway-families.md](rehab-pathway-families.md). This ladder remains the
+baseline.) PR4 raises
 that ceiling once a per-injury exposure record exists.
 
 The rules the spec asked for fall out of that shape:

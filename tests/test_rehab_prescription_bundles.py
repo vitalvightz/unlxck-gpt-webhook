@@ -250,7 +250,8 @@ def test_live_ankle_restore_bundle_keeps_reviewed_bank_content_and_self_paced_do
     decision = resolve_injury_policy({**injury, "severity": severity}, policies=load_clinical_policies(),
                                     bank=bank, phase=phase)
     assert policy.version == 4 and policy.stage_bundles == {"restore": IDS}
-    assert policy.live_stages == ["calm", "restore"] and not policy.transitions
+    assert policy.live_stages == ["calm", "restore"] and not any(t.promotable for t in policy.transitions)
+    assert policy.pathway_family == "ligament_sprain_or_instability"
     assert validate_clinical_bank((policy,), bank) == []
     assert policy_review_hash(policy) == policy.content_hash
     assert decision["stage"] == "restore" and decision["outcome"] == "prescribed_rehab"
@@ -371,7 +372,11 @@ def test_pilot_seed_reproduces_live_policy_content_without_changing_bank(tmp_pat
     data = tmp_path / "data"
     data.mkdir()
     (data / "rehab_bank.json").write_text(json.dumps(bank), encoding="utf-8")
+    from fightcamp.rehab_clinical import PATHWAYS_PATH
+    committed = PATHWAYS_PATH.read_text(encoding="utf-8")
+    (data / "rehab_pathways.json").write_text(committed, encoding="utf-8")
     monkeypatch.setattr(seed_rehab_pilot, "ROOT", tmp_path)
     seed_rehab_pilot.main()
     assert json.loads((data / "rehab_bank.json").read_text(encoding="utf-8")) == bank
-    assert load_clinical_policies(data / "rehab_clinical_policies.json") == expected
+    assert (data / "rehab_pathways.json").read_text(encoding="utf-8") == committed
+    assert load_clinical_policies(data / "rehab_pathways.json") == expected

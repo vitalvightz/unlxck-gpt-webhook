@@ -1,6 +1,8 @@
 """Versioned rehab policies. The legacy module name is kept for compatibility.
 
-Activation is a software/data validation step, not clinician approval.
+A live policy is composed from a pathway family and a regional profile in
+``data/rehab_pathways.json`` (see :mod:`fightcamp.rehab_pathways`). Activation
+is a software/data validation step, not clinician approval.
 """
 from __future__ import annotations
 
@@ -12,6 +14,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .config import DATA_DIR
+from .rehab_pathways import PathwayCatalog, PathwayTransition, TransitionOverride, compose_transitions
 from .rehab_schema import REHAB_STAGES, canonical_rehab_locations, canonical_rehab_types
 
 
@@ -22,10 +25,14 @@ def content_hash(value: object) -> str:
 def policy_review_hash(policy) -> str:
     # Historical snapshots use policy_review_hash; its meaning is now content
     # integrity only. No clinician identity or sign-off is asserted.
-    raw = policy.model_dump(exclude={"content_hash", "status", "activation"})
+    raw = policy.model_dump(exclude={"content_hash", "status", "activation", "pathway_family"})
     # Preserve hashes of existing single-drill policies exactly.
     if not raw.get("stage_bundles"):
         raw.pop("stage_bundles", None)
+    # Only a transition that can change a stage is reviewed content. Blocked
+    # transitions (no clinical criterion, or closed) are diagnostics, so adding
+    # the shared safety baseline leaves existing hashes and frozen work intact.
+    raw["transitions"] = [t.model_dump() for t in policy.transitions if t.promotable]
     return content_hash(raw)
 
 
@@ -72,31 +79,12 @@ class ClinicalPrescription(BaseModel):
         return self
 
 
-class ClinicalTransition(BaseModel):
-    """Reserved criteria schema; automatic higher stages are disabled in v1."""
-    model_config = ConfigDict(extra="forbid", frozen=True)
-    from_stage: Literal["restore", "load", "dynamic"]
-    to_stage: Literal["load", "dynamic", "return"]
-    minimum_response_groups: int = Field(gt=0)
-    minimum_distinct_days: int = Field(gt=0)
-    minimum_completed_dose: ClinicalDose
-    qualifying_loads: list[Literal["minimal", "low", "moderate", "high"]] = Field(min_length=1)
-    qualifying_impacts: list[Literal["none", "low", "moderate", "high"]] = Field(min_length=1)
-    qualifying_velocities: list[Literal["low", "moderate", "high"]] = Field(min_length=1)
-    allowed_during_responses: list[Literal["better", "same"]] = Field(min_length=1)
-    allowed_delayed_responses: list[Literal["better", "same"]] = Field(min_length=1)
-
-    @model_validator(mode="after")
-    def consecutive(self):
-        if REHAB_STAGES.index(self.to_stage) != REHAB_STAGES.index(self.from_stage) + 1:
-            raise ValueError("stage transitions must be consecutive")
-        return self
-
-
 class ClinicalPolicy(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     policy_id: str = Field(min_length=1)
     version: int = Field(ge=1)
+    #: None only for a legacy standalone policy read from schema v2 data.
+    pathway_family: str | None = None
     region: str = Field(min_length=1)
     injury_type: str = Field(min_length=1)
     status: Literal["draft", "active", "retired"] = "draft"
@@ -108,7 +96,9 @@ class ClinicalPolicy(BaseModel):
     blocked_tags: list[str] = Field(default_factory=list)
     contact_limit: Literal["none", "controlled", "full"] = "none"
     live_stages: list[Literal["calm", "restore", "load", "dynamic", "return"]] = Field(default_factory=lambda: ["calm", "restore"])
-    transitions: list[ClinicalTransition] = Field(default_factory=list)
+    #: Composed family + profile transitions. Evaluated by
+    #: ``api.contracts.rehab_progression``; only promotable ones can move a stage.
+    transitions: list[PathwayTransition] = Field(default_factory=list)
     # Explicit compatibility review, not a count applied to ranked alternatives.
     stage_bundles: dict[Literal["calm", "restore", "load", "dynamic", "return"], list[str]] = Field(default_factory=dict)
 
@@ -123,12 +113,11 @@ class ClinicalPolicy(BaseModel):
         if self.status == "active":
             if any(not source.strip() for source in self.evidence_sources):
                 raise ValueError("policy sources must identify evidence")
-            if any(p.stage not in {"calm", "restore"} for p in self.prescriptions):
-                raise ValueError("v1 routines are limited to calm and restore")
             if any(not p.sources or any(not s.strip() or s not in self.evidence_sources for s in p.sources) for p in self.prescriptions):
                 raise ValueError("active routines need instruction and cadence sources")
-            if self.transitions:
-                raise ValueError("automatic higher-stage transitions are disabled in v1")
+            if any(s not in self.evidence_sources for t in self.transitions if t.promotable
+                   for r in t.requirements for s in r.sources):
+                raise ValueError("active transition criteria need policy evidence sources")
         if len({p.drill_id for p in self.prescriptions}) != len(self.prescriptions):
             raise ValueError("duplicate prescription identity")
         by_id = {p.drill_id: p for p in self.prescriptions}
@@ -141,8 +130,17 @@ class ClinicalPolicy(BaseModel):
                 raise ValueError("bundle drills must share a scheduling frequency")
         if len({t.to_stage for t in self.transitions}) != len(self.transitions):
             raise ValueError("duplicate transition criteria")
-        if any(stage not in {"calm", "restore"} for stage in self.live_stages):
-            raise ValueError("automatic load, dynamic and return stages are disabled in v1")
+        higher = [stage for stage in self.live_stages if stage not in {"calm", "restore"}]
+        if higher and list(self.live_stages) != list(REHAB_STAGES[:len(self.live_stages)]):
+            raise ValueError("a live higher stage needs every lower stage live, in ladder order")
+        by_target = {t.to_stage: t for t in self.transitions}
+        for stage in higher:
+            # A higher stage is reachable only through reviewed, sourced criteria
+            # and only when reviewed content exists for it.
+            if stage not in by_target or not by_target[stage].promotable:
+                raise ValueError(f"{stage} cannot be live without an open transition with clinical criteria")
+            if not any(p.stage == stage for p in self.prescriptions):
+                raise ValueError(f"{stage} cannot be live without a reviewed prescription")
         if set(self.blocked_regions) - canonical_rehab_locations():
             raise ValueError("unknown restricted region")
         if self.status == "active" and self.content_hash != policy_review_hash(self):
@@ -150,15 +148,54 @@ class ClinicalPolicy(BaseModel):
         return self
 
 
+PATHWAYS_PATH = DATA_DIR / "rehab_pathways.json"
+
+
+def compose_policy(catalog: PathwayCatalog, profile: dict) -> ClinicalPolicy:
+    """Compose one live policy from its family and regional profile."""
+    profile = dict(profile)
+    family = catalog.family(str(profile.get("pathway_family") or ""))
+    if profile.get("injury_type") not in family.injury_types:
+        raise ValueError(f"{profile.get('policy_id')}: injury type is outside pathway family {family.family_id}")
+    if "transitions" in profile:
+        raise ValueError("profiles declare transition_overrides; families own transitions")
+    overrides = {key: TransitionOverride.model_validate(value)
+                 for key, value in (profile.pop("transition_overrides", None) or {}).items()}
+    return ClinicalPolicy.model_validate({**profile, "transitions": compose_transitions(catalog, family, overrides)})
+
+
+def load_pathway_catalog(path: Path | None = None) -> PathwayCatalog:
+    raw = json.loads((path or PATHWAYS_PATH).read_text(encoding="utf-8"))
+    return PathwayCatalog.model_validate(raw)
+
+
 def load_clinical_policies(path: Path | None = None) -> tuple[ClinicalPolicy, ...]:
-    raw = json.loads((path or DATA_DIR / "rehab_clinical_policies.json").read_text(encoding="utf-8"))
-    if not isinstance(raw, dict) or raw.get("schema_version") != 2:
+    raw = json.loads((path or PATHWAYS_PATH).read_text(encoding="utf-8"))
+    if isinstance(raw, dict) and raw.get("schema_version") == 2 and "policies" in raw:
+        # Read-only compatibility for the pre-pathway policy file format.
+        policies = tuple(ClinicalPolicy.model_validate(item) for item in raw["policies"])
+    elif isinstance(raw, dict) and raw.get("schema_version") == 1 and "families" in raw:
+        catalog = PathwayCatalog.model_validate(raw)
+        policies = tuple(compose_policy(catalog, profile) for profile in catalog.profiles)
+    else:
         raise ValueError("unsupported clinical policy schema")
-    policies = tuple(ClinicalPolicy.model_validate(item) for item in raw["policies"])
     keys = [(p.region, p.injury_type) for p in policies]
     if len(set(keys)) != len(keys):
         raise ValueError("duplicate clinical injury policy")
     return policies
+
+
+def validate_pathway_catalog(catalog: PathwayCatalog) -> list[str]:
+    """Every musculoskeletal rehab type belongs to exactly one pathway family."""
+    from .rehab_schema import is_surface_injury_type
+    errors = []
+    msk = {t for t in canonical_rehab_types() if not is_surface_injury_type(t) and t != "unspecified"}
+    owned = {t for f in catalog.families for t in f.injury_types}
+    if owned - msk:
+        errors.append(f"pathway families claim non-MSK or unknown injury types: {sorted(owned - msk)}")
+    if msk - owned:
+        errors.append(f"MSK injury types without a pathway family: {sorted(msk - owned)}")
+    return errors
 
 
 def validate_clinical_bank(policies: tuple[ClinicalPolicy, ...], bank: list[dict]) -> list[str]:

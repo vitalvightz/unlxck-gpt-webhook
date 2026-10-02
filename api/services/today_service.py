@@ -52,10 +52,9 @@ from api.contracts.injury_checkin import (
     reconcile_injury_checkin,
 )
 from api.contracts.injury_signal import derive_injury_signal
-from api.contracts.load_eligibility import resolve_load_eligibility
 from api.contracts.rehab_exposure import injury_evidence_identity
 from api.contracts.landing import LandingDecision, resolve_landing
-from api.contracts.rehab_stage import RehabStageDecision, resolve_rehab_stages
+from api.contracts.rehab_stage import resolve_rehab_stages
 from api.contracts.readiness_message import (
     ReadinessAdjustment,
     ReadinessCheckin,
@@ -499,79 +498,6 @@ def _with_surface_class(injuries: Sequence[Mapping[str, Any]]) -> list[dict[str,
 #: evidence counts to mean something, bounded so a Today read stays cheap.
 _REHAB_STAGE_HISTORY_LIMIT = 14
 
-#: A bounded history for the read-only PR4 shadow evaluator. There is no count
-#: threshold: the limit only protects the Today read from an unbounded query.
-_LOAD_ELIGIBILITY_EXPOSURE_LIMIT = 200
-
-
-def _log_load_eligibility_shadow(
-    *,
-    store: AppStore,
-    athlete_id: str,
-    injury: Mapping[str, Any],
-    stage_decision: RehabStageDecision,
-) -> None:
-    """Evaluate and log PR4 diagnostics without returning programming state."""
-
-    injury_id = str(injury.get("id") or "")
-    episode_id = str(injury.get("episode_id") or "")
-    try:
-        exposure_window = store.list_rehab_exposures(
-            athlete_id,
-            injury_id=injury_id,
-            injury_episode_id=episode_id,
-            limit=_LOAD_ELIGIBILITY_EXPOSURE_LIMIT,
-        )
-        result = resolve_load_eligibility(
-            athlete_id=athlete_id,
-            injury=injury,
-            stage_decision=stage_decision,
-            exposure_rows=exposure_rows_with_observations(exposure_window.rows, episode_observations(store, athlete_id, dict(injury))),
-            history_truncated=exposure_window.history_truncated,
-        )
-    except Exception:
-        # An evidence-read or evaluator failure is not "no evidence" and cannot
-        # affect the live stage. Keep the diagnostic distinction in the log.
-        logger.exception(
-            "[today] load_eligibility_shadow_unavailable athlete_id=%s injury_id=%s episode_id=%s",
-            athlete_id,
-            injury_id,
-            episode_id,
-        )
-        return
-
-    summary = result.evidence_summary
-    rejected = [
-        {
-            "exposure_id": assessment.exposure_id,
-            "response_group_id": assessment.response_group_id,
-            "classification": assessment.classification,
-            "reason_codes": assessment.reason_codes,
-        }
-        for assessment in summary.assessments
-        if assessment.classification != "qualifying_positive_candidate"
-    ]
-    logger.info(
-        "[today] load_eligibility_shadow %s",
-        json.dumps(
-            {
-                "injury_id": result.injury_id,
-                "episode_id": result.injury_episode_id,
-                "result": result.decision,
-                "reason_codes": result.reason_codes,
-                "qualifying_evidence_ids": summary.qualifying_exposure_ids,
-                "qualifying_response_group_ids": summary.qualifying_response_group_ids,
-                "rejected_evidence": rejected,
-                "ignored_reason_counts": summary.ignored_reason_counts,
-                "history_truncated": summary.history_truncated,
-                "engine_version": result.engine_version,
-            },
-            sort_keys=True,
-            separators=(",", ":"),
-        ),
-    )
-
-
 def _with_rehab_stage(
     injuries: Sequence[Mapping[str, Any]],
     *,
@@ -619,13 +545,19 @@ def _with_rehab_stage(
         row["rehab_stage_reasons"] = list(decision.reasons)
         row["rehab_care_pathway"] = decision.care_pathway
         row["rehab_medical_gate"] = decision.medical_gate
-        _log_load_eligibility_shadow(
-            store=store,
-            athlete_id=athlete_id,
-            injury=row,
-            stage_decision=decision,
-        )
     return rows
+
+
+def _log_next_transition(row: Mapping[str, Any]) -> None:
+    """Operational diagnostics for the next declared stage transition (no reads)."""
+    evaluation = ((row.get("rehab_decision") or {}).get("progression") or {}).get("next_transition")
+    if not evaluation:
+        return
+    logger.info("[today] rehab_next_transition %s", json.dumps({
+        "injury_id": str(row.get("id") or ""), "episode_id": str(row.get("episode_id") or ""),
+        "transition": f"{evaluation['from_stage']}->{evaluation['to_stage']}", "status": evaluation["status"],
+        "reason_codes": evaluation["reason_codes"], "missing_inputs": evaluation["missing_inputs"],
+    }, sort_keys=True, separators=(",", ":")))
 
 
 def _with_injury_policy(injuries, *, store, athlete_id, phase="", current_checkin=None, equipment=(), readiness_decision=None,
@@ -672,6 +604,7 @@ def _with_injury_policy(injuries, *, store, athlete_id, phase="", current_checki
                     alternative["schedule"]["reason"] = first["schedule"]["reason"] + " A lighter baseline routine is due."
         if row["rehab_decision"].get("activation") == "live":
             row["rehab_stage"] = row["rehab_decision"]["stage"]
+        _log_next_transition(row)
         rows.append(row)
     if training_day:
         limit = 1 if "sparring" in str((training_session or {}).get("session_type") or "").lower() else 2

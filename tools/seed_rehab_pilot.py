@@ -1,11 +1,16 @@
-"""Rebuild the five sourced baseline routines and their policy hashes."""
+"""Rebuild the five sourced baseline routines and their pathway profiles.
+
+The chest and ankle policies are regional profiles in ``data/rehab_pathways.json``
+(``muscle_strain`` and ``ligament_sprain_or_instability``). Families, the safety
+baseline and any other profile in the catalog are preserved unchanged.
+"""
 import json
 from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from fightcamp.rehab_clinical import ClinicalPolicy, content_hash, policy_review_hash  # noqa: E402
+from fightcamp.rehab_clinical import PathwayCatalog, compose_policy, content_hash, policy_review_hash  # noqa: E402
 from fightcamp.rehab_schema import PAIN_CEILING_UNRESTRICTED  # noqa: E402
 
 NHS = "https://www.nhs.uk/conditions/sprains-and-strains/"
@@ -26,10 +31,20 @@ ROUTINES = [
 ]
 
 
+FAMILIES = {"chest": "muscle_strain", "ankle": "ligament_sprain_or_instability"}
+#: Profile key order matches the committed catalog.
+PROFILE_KEYS = ("policy_id", "version", "pathway_family", "region", "injury_type", "status", "activation",
+                "evidence_sources", "content_hash", "prescriptions", "blocked_regions", "blocked_tags",
+                "contact_limit", "live_stages", "stage_bundles", "transition_overrides")
+
+
 def main():
     path = ROOT / "data/rehab_bank.json"
+    catalog_path = ROOT / "data/rehab_pathways.json"
     bank = json.loads(path.read_text(encoding="utf-8"))
-    policies = []
+    raw_catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+    catalog = PathwayCatalog.model_validate(raw_catalog)
+    profiles = []
     for region, kind in [("chest", "strain"), ("ankle", "sprain")]:
         group = next(g for g in bank if g.get("location") == region and g.get("type") == kind)
         prescriptions = []
@@ -52,14 +67,26 @@ def main():
             prescriptions.append(dict(drill_id=identity, bank_hash=content_hash(drill), stage=stage,
                                       instructions=instructions, dose=None, allowed_severities=["low", "moderate"],
                                       stop_when=stop, frequency="daily", minimum_gap_days=gap, priority=priority, sources=sources))
-        draft = ClinicalPolicy.model_validate(dict(policy_id=region + "_" + kind, version=4 if region == "ankle" else 3, region=region,
-            injury_type=kind, evidence_sources=list(dict.fromkeys(s for p in prescriptions for s in p["sources"])),
-            prescriptions=prescriptions, blocked_regions=[region], contact_limit="none",
-            stage_bundles={"restore": ["ankle_sprain_supported_balance", "ankle_sprain_heel_lowering"]} if region == "ankle" else {}))
-        policies.append({**draft.model_dump(), "status": "active", "activation": "live", "content_hash": policy_review_hash(draft)})
+        profile = dict(policy_id=region + "_" + kind, version=4 if region == "ankle" else 3, pathway_family=FAMILIES[region],
+                       region=region, injury_type=kind,
+                       evidence_sources=list(dict.fromkeys(s for p in prescriptions for s in p["sources"])),
+                       prescriptions=prescriptions, blocked_regions=[region], blocked_tags=[], contact_limit="none",
+                       live_stages=["calm", "restore"],
+                       stage_bundles={"restore": ["ankle_sprain_supported_balance", "ankle_sprain_heel_lowering"]} if region == "ankle" else {},
+                       transition_overrides={})
+        draft = compose_policy(catalog, profile)
+        profile.update(status="active", activation="live", content_hash=policy_review_hash(draft))
+        # Round-trip through the model so defaults (camp/readiness doses) are explicit.
+        dumped = draft.model_dump()
+        profile["prescriptions"] = dumped["prescriptions"]
+        profiles.append({key: profile[key] for key in PROFILE_KEYS if key != "stage_bundles" or profile[key]})
+    pilot_ids = {p["policy_id"] for p in profiles}
+    raw_catalog["profiles"] = profiles + [p for p in raw_catalog["profiles"] if p["policy_id"] not in pilot_ids]
+    compose_check = PathwayCatalog.model_validate(raw_catalog)
+    for profile in compose_check.profiles:
+        compose_policy(compose_check, profile)
     path.write_text(json.dumps(bank, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    (ROOT / "data/rehab_clinical_policies.json").write_text(
-        json.dumps(dict(schema_version=2, policies=policies), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    catalog_path.write_text(json.dumps(raw_catalog, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":
