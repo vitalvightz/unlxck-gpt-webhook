@@ -1734,7 +1734,9 @@ function NutritionProse({ plan }: { plan: StructuredPlan }) {
             </>
           ) : null}
           {weightCut}
-          {needsSupport ? ". Qualified supervision required." : ""}
+          {needsSupport
+            ? `${/[.!?]$/.test(String(weightCut).trim()) ? " " : ". "}Qualified supervision required.`
+            : ""}
         </p>
       ) : null}
     </>

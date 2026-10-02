@@ -141,7 +141,7 @@ const CLASS_EXPLANATIONS: Record<SparringDayClass, SparringReasonExplanation> = 
   primary_hard: {
     title: "Primary hard day",
     body:
-      "This is the hardest sparring day of the week and your peak effective output. The rest of the week is shaped to protect it.",
+      "This is the hardest sparring day of the week, when your effective output peaks. The rest of the week is shaped to protect it.",
   },
   secondary_hard: {
     title: "Secondary hard day",

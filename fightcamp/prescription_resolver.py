@@ -383,7 +383,7 @@ def _effective_counts(
     return sets, base_reps, False
 
 
-_NO_LOADED_LIFTING = "No loaded lifting. Neural/primer, readiness or mobility only"
+_NO_LOADED_LIFTING = "No loaded lifting: neural/primer, readiness or mobility only"
 
 
 def _format_effective_prescription(

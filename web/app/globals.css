@@ -22288,12 +22288,6 @@ html[data-theme="light"] .sp-status-tag[data-tone="neutral"] {
   font-size: 0.8rem;
 }
 
-.history-chip[data-tone="green"] {
-  background: var(--success-soft);
-  border-color: rgba(39, 174, 96, 0.4);
-  color: var(--success-ink);
-}
-
 .history-chip[data-tone="amber"] {
   background: var(--progress-gold-soft);
   border-color: var(--progress-gold-border);
