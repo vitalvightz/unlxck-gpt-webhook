@@ -105,7 +105,7 @@ def test_neuro_injury_pulls_back_on_every_session():
     for title in ("Recovery mobility", "Technical skill drilling", "Hard sparring"):
         adj = _decision(title, [_injury("neuro", "mild", label="neck nerve issue")])
         assert adj.decision == "pull_back", title
-        assert adj.title == "Rehab only today."
+        assert adj.title == "No training today."
         _assert_card_shape(adj)
 
 
@@ -262,9 +262,9 @@ def _filler_session():
 
 def test_filler_session_is_not_blocked_by_worse_or_severe_injury():
     for injuries in (
-        [{"status": "open", "severity": "moderate", "label": "neck injury",
-          "consequence": "neuro", "latest_reported_status": "worse"}],
-        [{"status": "open", "severity": "severe", "label": "neck injury", "consequence": "neuro"}],
+        [{"status": "open", "severity": "moderate", "label": "shoulder strain",
+          "consequence": "load_sensitive", "latest_reported_status": "worse"}],
+        [{"status": "open", "severity": "severe", "label": "shoulder strain", "consequence": "load_sensitive"}],
     ):
         adj = build_readiness_adjustment(
             ReadinessCheckin(),
@@ -273,6 +273,14 @@ def test_filler_session_is_not_blocked_by_worse_or_severe_injury():
         assert adj.decision == "train_as_planned"
         assert adj.title == "Safe session today."
         _assert_card_shape(adj)
+
+
+@pytest.mark.parametrize("severity", ["mild", "severe"])
+def test_neuro_consequence_blocks_cognitive_support_regardless_of_severity(severity):
+    adj = build_readiness_adjustment(ReadinessCheckin(), ReadinessContext(
+        today_session=_filler_session(), open_injuries=(_injury("neuro", severity),)))
+    assert adj.decision == "pull_back" and adj.title == "No training today."
+    _assert_card_shape(adj)
 
 
 def test_filler_session_is_not_blocked_by_high_pain():

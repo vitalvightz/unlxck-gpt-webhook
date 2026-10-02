@@ -23,8 +23,7 @@ def recent_rows(rows: list[dict[str, Any]], as_of: str, days: int = 7) -> list[d
 
 def sparring_readiness_flags(context: dict[str, Any]) -> list[str]:
     """Count distinct days/sessions; future dates and stale evidence never count."""
-    from .injury_danger_terms import reported_medical_symptoms
-    from .injury_triage import current_injury_medical_hold
+    from .injury_triage import current_report_medical_hold_reasons
 
     as_of = context.get("as_of", "")
     # More than one plan may have a check-in on the same day. Latest update wins.
@@ -69,9 +68,7 @@ def sparring_readiness_flags(context: dict[str, Any]) -> list[str]:
     }
     blocked_contact_tags = {"contact", "sparring", "hard_contact", "head_impact"}
     for row in active_injuries:
-        if row.get("status", "open") in {"open", "monitoring"} and (
-                any(reported_medical_symptoms(str(row.get(field) or "")) for field in ("body_area", "description"))
-                or current_injury_medical_hold(str(row.get("body_area") or ""), str(row.get("description") or ""), str(row.get("severity") or ""))):
+        if current_report_medical_hold_reasons(row):
             flags.add("medical_contact_restriction")
         category = str(row.get("triage_category") or row.get("injury_type") or "").strip().lower()
         row_flags = {str(value).strip().lower() for value in (row.get("flags") or []) if str(value).strip()}

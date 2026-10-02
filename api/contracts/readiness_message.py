@@ -888,17 +888,9 @@ def _active_open_injuries(context: ReadinessContext) -> list[Mapping[str, Any]]:
 
 
 def active_medical_hold_reasons(injuries: Sequence[Mapping[str, Any]]) -> tuple[str, ...]:
-    from fightcamp.injury_danger_terms import reported_medical_symptoms
-    from fightcamp.injury_triage import current_injury_medical_hold
+    from fightcamp.injury_triage import current_report_medical_hold_reasons
 
-    active = [injury for injury in injuries if _clean(injury.get("status")).lower() in _ACTIVE_FLAG_STATUSES]
-    reasons = {symptom for injury in active
-        for field in ("body_area", "description")
-        for symptom in reported_medical_symptoms(_clean(injury.get(field)))}
-    if any(current_injury_medical_hold(_clean(injury.get("body_area")), _clean(injury.get("description")),
-                                      _clean(injury.get("severity"))) for injury in active):
-        reasons.add("a serious injury requiring medical review")
-    return tuple(sorted(reasons))
+    return tuple(sorted({reason for injury in injuries for reason in current_report_medical_hold_reasons(injury)}))
 
 
 def _has_load_relevant_injury(checkin: ReadinessCheckin, context: ReadinessContext) -> bool:

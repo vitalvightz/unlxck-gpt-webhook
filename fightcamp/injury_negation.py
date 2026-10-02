@@ -103,11 +103,12 @@ _INJURY_SYMPTOM_TOKENS = {
     "click", "clicking", "pop", "popping", "lock", "locking",
     "concussion", "nerve", "hyperextension", "hyperextended",
     "dizzy", "dizziness", "lightheaded", "lightheadedness", "headache", "vision",
+    "neurological", "neurologic",
 }
 
 
 def _is_injury_symptom_token(token: str) -> bool:
-    return token.strip("().,;:'\"-") in _INJURY_SYMPTOM_TOKENS
+    return token.strip("().,;:'\"-").replace("-", "") in _INJURY_SYMPTOM_TOKENS
 
 
 def _soft_cue_negates(rest_words: list[str]) -> bool:
@@ -119,7 +120,15 @@ def _soft_cue_negates(rest_words: list[str]) -> bool:
     warning ...", "without brace ..." all describe severity/uncertainty/
     progression/equipment/timing, not an absent injury.
     """
-    for word in rest_words:
+    from .injury_danger_terms import MEDICAL_SYMPTOM_PHRASES
+
+    content = [word.strip("().,;:'\"-") for word in rest_words]
+    while content and (not content[0] or content[0] in _NEGATION_DETERMINERS):
+        content.pop(0)
+    rest = " ".join(content).replace("-", " ")
+    if any(rest == phrase or rest.startswith(phrase + " ") for phrase in MEDICAL_SYMPTOM_PHRASES):
+        return True
+    for word in content:
         token = word.strip("().,;:'\"-")
         if not token:
             continue

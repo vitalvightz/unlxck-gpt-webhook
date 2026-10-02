@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+from collections.abc import Mapping
 from functools import lru_cache
 import re
 from typing import Any
@@ -1811,9 +1812,42 @@ def current_injury_medical_hold(body_area: str, description: str, severity: str)
     ]}})
     triage = triage_injuries(parsed)
     return (triage.mode == MEDICAL_HOLD
-            or bool(set(triage.red_flags) & _NEUROLOGICAL_RED_FLAGS)
+            or bool(set(triage.red_flags) & (_DANGEROUS_RED_FLAGS | _NEUROLOGICAL_RED_FLAGS))
             or "urgent_fracture" in triage.urgent_flags
             or (severity.lower() in {"severe", "high"} and "fracture" in triage.matched_high_risk_categories))
+
+
+def current_report_medical_hold_reasons(injury: Mapping[str, Any]) -> tuple[str, ...]:
+    """Shared current-report gate for Today and persisted sparring evidence."""
+    from .injury_danger_terms import reported_medical_symptoms
+    from .injury_taxonomy import INJURY_TAXONOMY
+
+    if str(injury.get("status") or "open").strip().lower() not in {"open", "monitoring"}:
+        return ()
+    fields = [str(injury.get(key) or "").strip() for key in ("body_area", "label", "description")]
+    reasons = {symptom for text in fields for symptom in reported_medical_symptoms(text)}
+    # Remove negation within each original field before composing a split
+    # location/symptom report. A synthetic prefix must not revive denied symptoms.
+    joined = " ".join(remove_negated_phrases(text) for text in fields)
+    reasons.update(reported_medical_symptoms(joined))
+    categories = {normalize_triage_category(str(injury.get(key) or "").strip().lower())
+                  for key in ("triage_category", "injury_type")}
+    raw_flags = injury.get("flags") or []
+    if isinstance(raw_flags, str):
+        raw_flags = [raw_flags]
+    flags = {str(flag).strip().lower() for flag in raw_flags}
+    serious = (_has_mapped_route(categories, MEDICAL_HOLD)
+               or str(injury.get("consequence") or "").strip().lower() == "neuro"
+               or bool(categories & _NEUROLOGICAL_RED_FLAGS)
+               or any(INJURY_TAXONOMY.get(category, {}).get("category") == "neurological" for category in categories)
+               or bool(flags & (_DANGEROUS_RED_FLAGS | _NEUROLOGICAL_RED_FLAGS | {
+                   "urgent_fracture", "suspected_concussion", "concussion_symptoms", "suspected_acute_nerve_issue"}))
+               or (str(injury.get("severity") or "").strip().lower() in {"severe", "high"}
+                   and any("fracture" in category for category in categories))
+               or (not reasons and current_injury_medical_hold(". ".join(fields[:2]), fields[2], str(injury.get("severity") or ""))))
+    if serious:
+        reasons.add("a serious injury requiring medical review")
+    return tuple(sorted(reasons))
 
 
 def _blocked_severity_summary(parsed_injuries: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
