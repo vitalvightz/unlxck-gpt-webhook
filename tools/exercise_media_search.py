@@ -353,8 +353,18 @@ class DataForSEOCandidateSearch:
                 _rewind_query(progress, checkpoint)
                 self._failure = (CandidateSearchQuotaExceeded, str(exc))
                 raise
+            except httpx.TimeoutException as exc:
+                # DataForSEO already exhausted its dedicated timeout retries.
+                # Treat this as a provider-unavailable stop so the batch
+                # checkpoints and exits instead of marking every later row error.
+                _rewind_query(progress, checkpoint)
+                message = (
+                    f"DataForSEO search unavailable after "
+                    f"{DATAFORSEO_TIMEOUT_RETRIES + 1} timeout attempts"
+                )
+                self._failure = (CandidateSearchQuotaExceeded, message)
+                raise CandidateSearchQuotaExceeded(message) from exc
             except (httpx.HTTPError, ValueError, CandidateSearchError) as exc:
-                # Rewind so a fallback provider retries the exact failed query.
                 _rewind_query(progress, checkpoint)
                 message = (
                     str(exc)
