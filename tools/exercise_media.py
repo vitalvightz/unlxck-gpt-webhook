@@ -529,7 +529,12 @@ def _cmd_review(args: argparse.Namespace) -> int:
     )
     # Non-zero when any row failed or a provider/quota stop left rows
     # unreviewed, so a script never treats a partial run as complete.
-    return 1 if counts["errors"] or counts.get("quota_stopped") or counts.get("search_stopped") else 0
+    return 1 if (
+        counts["errors"]
+        or counts.get("quota_stopped")
+        or counts.get("search_stopped")
+        or counts.get("gemini_stopped")
+    ) else 0
 
 
 def main(argv: list[str] | None = None) -> int:
