@@ -481,6 +481,14 @@ def test_independent_standalone_owners_use_existing_postgres_allocation_guard(po
             severity,status,latest_reported_status,created_at from injury_flags where athlete_id=%s order by body_region,id""", (athlete,)).fetchall()
         readiness = connection.execute("""insert into today_checkins(athlete_id,plan_id,training_day,sleep,body,pain,phase,recommendation_state)
             values(%s,%s,'2026-10-02','good','normal','none','GPP','train_as_planned') returning id,updated_at""", (athlete, plan)).fetchone()
+        # Injury inserts record real audit events. Bind the accepted snapshot
+        # to the same current evidence revision checked by the production guard.
+        evidence = {
+            "exposure_id": connection.execute("select id::text from rehab_exposures where athlete_id=%s order by created_at desc,id desc limit 1", (athlete,)).fetchone(),
+            "event_id": connection.execute("""select id::text from injury_episode_events where athlete_id=%s
+                and event_type in ('injury_checkin','delayed_rehab_response','clinician_clearance_report') order by created_at desc,id desc limit 1""", (athlete,)).fetchone(),
+        }
+        evidence = {key: value[0] if value else None for key, value in evidence.items()}
 
         def prescription(row):
             decision = resolve_injury_policy(dict(id=str(row[0]), episode_id=str(row[1]), status=row[8],
@@ -492,7 +500,7 @@ def test_independent_standalone_owners_use_existing_postgres_allocation_guard(po
             assert saved and not saved["safety_hold"]
             saved.update(readiness_context=dict(id=str(readiness[0]), updated_at=readiness[1].isoformat()),
                 injury_context=[dict(id=str(i[0]), episode_id=str(i[1]), updated_at=i[2].isoformat()) for i in injuries],
-                evidence_context=dict(event_id=None, exposure_id=None))
+                evidence_context=evidence)
             return saved
 
         def accept(saved):
