@@ -28,8 +28,9 @@ Workflow:
 
     # Optional, between 1 and 3: let Gemini watch each suggested video, confirm
     # it shows the exercise and pre-fill start_s / end_s. Needs GEMINI_API_KEY.
-    # With YOUTUBE_DATA_API_KEY, candidates can be discovered automatically.
-    # Otherwise input needs suggested_url (plus optional candidate_urls,
+    # Candidate discovery prefers DataForSEO when DATAFORSEO_LOGIN/PASSWORD are
+    # set, with the YouTube Data API as a fallback when YOUTUBE_DATA_API_KEY is
+    # also available. Otherwise input needs suggested_url (plus optional candidate_urls,
     # '|'-separated, and plan_cue). Saves after every video and row; re-running
     # the same command, with or
     # without --out, resumes. Exits 1 if any row failed or the quota stopped
@@ -37,7 +38,7 @@ Workflow:
     # youtube_url.
     python tools/exercise_media.py review media.csv --out media.reviewed.csv
 
-    # With YOUTUBE_DATA_API_KEY, weak results trigger bounded YouTube searches.
+    # With a configured search provider, weak results trigger bounded YouTube searches.
     # Revisit weak/partial rows while keeping strong reviewed matches:
     python tools/exercise_media.py review media.csv --redo-weak --max-candidates 5
     # --no-search uses supplied URLs only. Unresolved rows get needs_manual_video=true.
@@ -481,14 +482,28 @@ def _positive_int(value: str) -> int:
 
 def _cmd_review(args: argparse.Namespace) -> int:
     from tools.exercise_media_review import ReviewInputError, build_reviewer, run_review
-    from tools.exercise_media_search import YouTubeCandidateSearch
+    from tools.exercise_media_search import CandidateSearchError, build_candidate_search
 
     out = args.out or args.csv
+    searcher = None
+    if not args.no_search:
+        try:
+            searcher = build_candidate_search(
+                provider=args.search_provider,
+                youtube_api_key=youtube_api_key(),
+            )
+        except CandidateSearchError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        if searcher is None:
+            print(
+                "candidate discovery disabled: set DATAFORSEO_LOGIN/DATAFORSEO_PASSWORD "
+                f"or {YOUTUBE_API_KEY_ENV}."
+            )
+        else:
+            print(f"candidate discovery: {searcher.label}")
+
     reviewer = build_reviewer(args.model)
-    search_key = None if args.no_search else youtube_api_key()
-    searcher = YouTubeCandidateSearch(search_key) if search_key else None
-    if not args.no_search and searcher is None:
-        print(f"YouTube discovery disabled: set {YOUTUBE_API_KEY_ENV} to search for better candidates.")
     try:
         counts = run_review(
             args.csv,
@@ -544,7 +559,15 @@ def main(argv: list[str] | None = None) -> int:
     review.add_argument("--limit", type=int, help="review at most N rows this run")
     review.add_argument("--redo", action="store_true", help="re-review rows that already have a verdict")
     review.add_argument("--redo-weak", action="store_true", help="improve partial, weak, vertical or loopless results with new videos; skip watched IDs")
-    review.add_argument("--no-search", action="store_true", help="use supplied URLs only, without YouTube discovery")
+    review.add_argument("--no-search", action="store_true", help="use supplied URLs only, without candidate discovery")
+    review.add_argument(
+        "--search-provider",
+        choices=("auto", "dataforseo", "youtube"),
+        help=(
+            "candidate discovery backend (default: $EXERCISE_MEDIA_SEARCH_PROVIDER or auto; "
+            "auto prefers DataForSEO and falls back to YouTube)"
+        ),
+    )
     review.add_argument(
         "--max-candidates",
         type=_positive_int,
