@@ -50,7 +50,9 @@ def test_shipped_profiles_name_their_family():
         "biceps_strain": "muscle_strain", "triceps_strain": "muscle_strain", "shoulder_strain": "muscle_strain",
         **{p: "ligament_sprain_or_instability" for p in [
             "ankle_instability", "knee_instability", "toe_sprain", "wrist_sprain", "elbow_sprain",
-            "shoulder_sprain", "shoulder_instability", "hand_sprain", "fingers_sprain"]}}
+            "shoulder_sprain", "shoulder_instability", "hand_sprain", "fingers_sprain"]},
+        **{f"{region}_tendonitis": "tendon_rehab" for region in [
+            "achilles", "shoulder", "biceps", "forearm", "elbow", "wrist", "hand", "fingers"]}}
 
 
 @pytest.mark.parametrize("raw,match", [

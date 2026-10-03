@@ -2003,32 +2003,45 @@
   },
   {
     "drill_id": "achilles_tendonitis_eccentric_calf_drops_on_step",
-    "source_hash": "f67eb6442b277fe17a7f5c5ec6ed19dd4d920d027081c78af7cb94119d45b660",
+    "source_hash": "f4b828f49969fecd2612eab9119cfde28dfbff294abbd5990e6e3848242c3ae8",
     "location": "achilles",
     "injury_type": "tendonitis",
-    "name": "Eccentric Calf Drops on Step",
-    "notes": "GPP: Build tendon load capacity → SPP: Increase depth or tempo → TAPER: Maintain function",
+    "name": "Floor-level controlled Achilles lowering",
+    "notes": "Beside stable support on firm level ground, raise both heels, then transfer weight to the affected leg and slowly lower its heel only to the floor. Do not use a step, lower into deep dorsiflexion, increase depth or add speed or weight. Stop if symptoms worsen during or after the work.",
     "movement_archetype": "eccentric_loading",
     "proposed": {
-      "rehab_stage": null,
-      "function": "tendon_loading",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [
+        "stable_support"
+      ],
+      "impact": "none",
+      "load": "moderate",
+      "velocity": "low",
       "target_regions": [
         "achilles"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "Achilles tendon"
+      ],
       "contraction_type": "eccentric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Fixed mechanics reviewed; sources: https://www.nhs.uk/conditions/tendonitis/, https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/, https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/. Dormant LOAD content, not an active prescription. External load remains unknown where not measured. Tendon site, individual resistance, functional tolerance and a sourced evaluable transition are required before activation. Eccentrics are not assumed superior."
     },
-    "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "flags": [
+      "SPEED_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "f67eb6442b277fe17a7f5c5ec6ed19dd4d920d027081c78af7cb94119d45b660",
+        "name": "Eccentric Calf Drops on Step",
+        "notes": "GPP: Build tendon load capacity → SPP: Increase depth or tempo → TAPER: Maintain function"
+      }
+    ]
   },
   {
     "drill_id": "achilles_tendonitis_massage_gun_achilles_line",
@@ -2057,6 +2070,72 @@
     },
     "flags": [],
     "review_state": "needs_review",
+    "review_version": 1
+  },
+  {
+    "drill_id": "achilles_tendonitis_recovery_support",
+    "source_hash": "7d7d8d89b179cb0ffe42db716ee82a8e42ea8fc28e99eedff8b09def7975ae17",
+    "location": "achilles",
+    "injury_type": "tendonitis",
+    "name": "Achilles tendon load-management guidance",
+    "notes": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative running, hopping and forceful push-off; do not stretch into deep dorsiflexion or use heel drops below floor level when insertional status is unknown.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "achilles"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "Achilles tendon"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/, https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+    },
+    "flags": [
+      "IMPACT_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
+    "drill_id": "achilles_tendonitis_reviewed_restore",
+    "source_hash": "5201cf9f91bb704f4ce7eeb1886fc491fc817572f4aebab81c853bff55364bef",
+    "location": "achilles",
+    "injury_type": "tendonitis",
+    "name": "Seated Achilles heel movement",
+    "notes": "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+    "movement_archetype": "bodyweight_strength",
+    "proposed": {
+      "rehab_stage": "restore",
+      "function": "tendon_loading",
+      "equipment": [],
+      "impact": "none",
+      "load": "low",
+      "velocity": "low",
+      "target_regions": [
+        "achilles"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "Achilles tendon"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/, https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+    },
+    "flags": [
+      "LOAD_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
     "review_version": 1
   },
   {
@@ -12608,35 +12687,104 @@
   },
   {
     "drill_id": "shoulder_tendonitis_banded_scaption_holds",
-    "source_hash": "f9f99ffec2bb797ff811dbf3d4a6289bedec0bc7fcbdc574ac4d87560866f122",
+    "source_hash": "ddc40c10696b5b7ee094afe2f9b8951c7fd472ad85f9185ffd4596928131a1d6",
     "location": "shoulder",
     "injury_type": "tendonitis",
-    "name": "Banded Scaption Holds",
-    "notes": "GPP: Isolate supraspinatus → SPP: Add resistance → TAPER: Short holds for priming",
-    "movement_archetype": "banded_resistance",
+    "name": "Fixed-range banded scaption hold",
+    "notes": "With one fixed clinician-selected band, raise the affected arm in the scapular plane only to an individually advised comfortable height below shoulder level and hold without movement, then lower. Do not increase height, band tension or hold to fatigue. This does not isolate one tendon. Stop if symptoms worsen during or after the work.",
+    "movement_archetype": "isometric",
     "proposed": {
-      "rehab_stage": null,
-      "function": "activation",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [
+        "resistance_band"
+      ],
+      "impact": "none",
+      "load": "unknown",
+      "velocity": "low",
       "target_regions": [
         "shoulder"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "shoulder tendons"
+      ],
+      "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Fixed mechanics reviewed; sources: https://www.nhs.uk/conditions/tendonitis/, https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/. Dormant LOAD content, not an active prescription. External load remains unknown where not measured. Tendon site, individual resistance, functional tolerance and a sourced evaluable transition are required before activation. Eccentrics are not assumed superior."
     },
-    "flags": [
-      "VARIABLE_DEMAND_PROGRESSION",
-      "LOAD_PROGRESSION_IN_NOTES",
-      "POSSIBLE_DRILL_SPLIT"
-    ],
-    "review_state": "needs_review",
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "f9f99ffec2bb797ff811dbf3d4a6289bedec0bc7fcbdc574ac4d87560866f122",
+        "name": "Banded Scaption Holds",
+        "notes": "GPP: Isolate supraspinatus → SPP: Add resistance → TAPER: Short holds for priming"
+      }
+    ]
+  },
+  {
+    "drill_id": "shoulder_tendonitis_recovery_support",
+    "source_hash": "385ad0a010ebb692604610c6163cc8e968b77b11c1e08c10fdea5f3fc8708f04",
+    "location": "shoulder",
+    "injury_type": "tendonitis",
+    "name": "Shoulder tendon load-management guidance",
+    "notes": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative overhead work and end-range loading; do not force the arm behind the body.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "shoulder"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "shoulder tendons"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
+    "drill_id": "shoulder_tendonitis_reviewed_restore",
+    "source_hash": "6788fec4c4634b77a17207bb1fa1f497f70748ce7d1c6898ec13fc8526301b3c",
+    "location": "shoulder",
+    "injury_type": "tendonitis",
+    "name": "Comfortable unloaded shoulder rotation",
+    "notes": "Sit upright with the affected elbow comfortably bent and tucked by your side. Gently turn the forearm outwards within a small comfortable pain-free range, then return. Keep the upper arm by your side; do not force rotation, raise the arm overhead or add a weight or band. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+    "movement_archetype": "mobility_rom",
+    "proposed": {
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "shoulder"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "shoulder tendons"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+    },
+    "flags": [],
+    "review_state": "reviewed",
     "review_version": 1
   },
   {
@@ -13922,32 +14070,43 @@
   },
   {
     "drill_id": "bicep_tendonitis_incline_db_curl_eccentric_focus",
-    "source_hash": "580eda93924c33171a0af64f4015a4a129e83f5a3580170ae6c09ce058c11dcf",
+    "source_hash": "6f8135e51a5f44c3875085d7d480a10ee0e8f4e5dc2a64880a8c03edda8010d4",
     "location": "bicep",
     "injury_type": "tendonitis",
-    "name": "Incline DB Curl (Eccentric Focus)",
-    "notes": "GPP: Emphasize controlled stretch → SPP: Add volume load → TAPER: Reduce load, maintain ROM",
-    "movement_archetype": "eccentric_loading",
+    "name": "Seated supported biceps curl",
+    "notes": "Sit upright with the upper arm by your side and one fixed clinician-selected dumbbell. Bend the elbow and lower under control within the individually advised range. Do not use an incline stretch position, increase weight or work to fatigue. The selected weight and tendon site require individual assessment. Stop if symptoms worsen during or after the work.",
+    "movement_archetype": "external_load_strength",
     "proposed": {
-      "rehab_stage": null,
-      "function": "tendon_loading",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
-      "target_regions": [
-        "bicep"
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [
+        "dumbbell"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": "eccentric",
+      "impact": "none",
+      "load": "unknown",
+      "velocity": "low",
+      "target_regions": [
+        "biceps"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "biceps tendons"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Fixed mechanics reviewed; sources: https://www.nhs.uk/conditions/tendonitis/, https://msk-bexley.nhs.uk/conditions/shoulder-pain/biceps-tendinopathy. Dormant LOAD content, not an active prescription. External load remains unknown where not measured. Tendon site, individual resistance, functional tolerance and a sourced evaluable transition are required before activation. Eccentrics are not assumed superior."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "580eda93924c33171a0af64f4015a4a129e83f5a3580170ae6c09ce058c11dcf",
+        "name": "Incline DB Curl (Eccentric Focus)",
+        "notes": "GPP: Emphasize controlled stretch → SPP: Add volume load → TAPER: Reduce load, maintain ROM"
+      }
+    ]
   },
   {
     "drill_id": "bicep_tendonitis_banded_shoulder_flexion_with_supination",
@@ -13976,6 +14135,70 @@
     },
     "flags": [],
     "review_state": "needs_review",
+    "review_version": 1
+  },
+  {
+    "drill_id": "biceps_tendonitis_recovery_support",
+    "source_hash": "a62cb84ab79862553ee9dd44f667d73677eb0c99abf973420676372d19e4203a",
+    "location": "bicep",
+    "injury_type": "tendonitis",
+    "name": "Biceps tendon load-management guidance",
+    "notes": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative overhead work and end-range loading; do not force the arm behind the body.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "biceps"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "biceps tendons"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://msk-bexley.nhs.uk/conditions/shoulder-pain/biceps-tendinopathy. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
+    "drill_id": "biceps_tendonitis_reviewed_restore",
+    "source_hash": "2357e0d96292770182489a11ed8a4573c2a923d8d9981f831f3603335e239ab4",
+    "location": "bicep",
+    "injury_type": "tendonitis",
+    "name": "Comfortable unloaded elbow movement",
+    "notes": "With the upper arm comfortably by your side, gently bend and straighten the affected elbow within a pain-free range. Keep the shoulder relaxed and the hand empty. Do not stretch the arm behind the body, force forearm rotation, use an incline bench or add resistance. This maintains comfortable arm movement; it does not select a proximal or distal biceps strengthening protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+    "movement_archetype": "mobility_rom",
+    "proposed": {
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "biceps"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "biceps tendons"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://msk-bexley.nhs.uk/conditions/shoulder-pain/biceps-tendinopathy. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+    },
+    "flags": [
+      "LOAD_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
     "review_version": 1
   },
   {
@@ -15914,32 +16137,44 @@
   },
   {
     "drill_id": "forearm_tendonitis_eccentric_wrist_extensions",
-    "source_hash": "e2991db3437e1d6b7cedf4d309ca408b7223b23b4bbc09506069272df71560a3",
+    "source_hash": "5fb2017811fc01cf95b3827836fbc47a427afe516eccacd6f0b3c5ba79dad709",
     "location": "forearm",
     "injury_type": "tendonitis",
-    "name": "Eccentric Wrist Extensions",
-    "notes": "GPP: Load extensors eccentrically → SPP: Tolerate light reps → TAPER: Maintain grip pain-free",
+    "name": "Supported eccentric wrist extension",
+    "notes": "Support the affected forearm palm-down on a table with the wrist over the edge and one fixed clinician-selected dumbbell in the hand. Use the other hand to assist the lift, then slowly lower the wrist within the individually advised range. Do not force end range or increase weight, speed or volume. Stop if symptoms worsen during or after the work.",
     "movement_archetype": "eccentric_loading",
     "proposed": {
-      "rehab_stage": null,
-      "function": "tendon_loading",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [
+        "table",
+        "dumbbell"
+      ],
+      "impact": "none",
+      "load": "unknown",
+      "velocity": "low",
       "target_regions": [
         "forearm"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "forearm extensor tendons"
+      ],
       "contraction_type": "eccentric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Fixed mechanics reviewed; sources: https://www.nhs.uk/conditions/tendonitis/, https://msk-bexley.nhs.uk/conditions/elbow-pain/tennis-elbow, https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/. Dormant LOAD content, not an active prescription. External load remains unknown where not measured. Tendon site, individual resistance, functional tolerance and a sourced evaluable transition are required before activation. Eccentrics are not assumed superior."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "e2991db3437e1d6b7cedf4d309ca408b7223b23b4bbc09506069272df71560a3",
+        "name": "Eccentric Wrist Extensions",
+        "notes": "GPP: Load extensors eccentrically → SPP: Tolerate light reps → TAPER: Maintain grip pain-free"
+      }
+    ]
   },
   {
     "drill_id": "forearm_tendonitis_reverse_curls_light_load",
@@ -15968,6 +16203,70 @@
     },
     "flags": [],
     "review_state": "needs_review",
+    "review_version": 1
+  },
+  {
+    "drill_id": "forearm_tendonitis_recovery_support",
+    "source_hash": "2655b220d1fdf69a6f927e26ea111bcdff481ba3e9bcccf38389bab7c5de5e29",
+    "location": "forearm",
+    "injury_type": "tendonitis",
+    "name": "Forearm tendon load-management guidance",
+    "notes": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative grip and repetitive hand loading; follow any individual splint advice without changing prescribed protection.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "forearm"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "forearm flexor and extensor tendons"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://msk-bexley.nhs.uk/conditions/elbow-pain/tennis-elbow, https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
+    "drill_id": "forearm_tendonitis_reviewed_restore",
+    "source_hash": "33a053a55fe1374f2fce2c05dc2ba49f9695cd5e39eecef34b4dada7ca1fee16",
+    "location": "forearm",
+    "injury_type": "tendonitis",
+    "name": "Supported unloaded wrist movement",
+    "notes": "Sit with the affected forearm supported on a table and the hand relaxed. Gently bend and straighten the wrist within a small comfortable pain-free range. Do not grip tightly, force a stretch or add a weight or band. This maintains comfortable movement without choosing a flexor or extensor strengthening protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+    "movement_archetype": "mobility_rom",
+    "proposed": {
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [
+        "table"
+      ],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "forearm"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "forearm flexor and extensor tendons"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://msk-bexley.nhs.uk/conditions/elbow-pain/tennis-elbow, https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+    },
+    "flags": [],
+    "review_state": "reviewed",
     "review_version": 1
   },
   {
@@ -16698,36 +16997,46 @@
   },
   {
     "drill_id": "elbow_tendonitis_eccentric_reverse_wrist_curls",
-    "source_hash": "b0e95f27567979f984c63a5b4d9966d22df32133679196213a423c88c6e57977",
+    "source_hash": "0ce711541f67a38335c7f0430b8e3379c043f9c44893cf7c74686897d3472d03",
     "location": "elbow",
     "injury_type": "tendonitis",
-    "name": "Eccentric Reverse Wrist Curls",
-    "notes": "GPP: Load tendon with slow eccentrics → SPP: Increase load and speed → TAPER: Drop volume, retain range",
+    "name": "Supported eccentric wrist extension",
+    "notes": "Support the affected forearm palm-down on a table with the wrist over the edge and one fixed clinician-selected dumbbell in the hand. Assist the lift with the other hand, then slowly lower within the individually advised range. Do not increase speed or load. This extensor exercise does not apply automatically to medial or posterior elbow pain. Stop if symptoms worsen during or after the work.",
     "movement_archetype": "eccentric_loading",
     "proposed": {
-      "rehab_stage": null,
-      "function": "tendon_loading",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [
+        "table",
+        "dumbbell"
+      ],
+      "impact": "none",
+      "load": "unknown",
+      "velocity": "low",
       "target_regions": [
         "elbow"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "common wrist extensor tendon at elbow"
+      ],
       "contraction_type": "eccentric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Fixed mechanics reviewed; sources: https://www.nhs.uk/conditions/tendonitis/, https://msk-bexley.nhs.uk/conditions/elbow-pain/tennis-elbow. Dormant LOAD content, not an active prescription. External load remains unknown where not measured. Tendon site, individual resistance, functional tolerance and a sourced evaluable transition are required before activation. Eccentrics are not assumed superior."
     },
     "flags": [
-      "VARIABLE_DEMAND_PROGRESSION",
-      "LOAD_PROGRESSION_IN_NOTES",
-      "POSSIBLE_DRILL_SPLIT"
+      "SPEED_PROGRESSION_IN_NOTES"
     ],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "b0e95f27567979f984c63a5b4d9966d22df32133679196213a423c88c6e57977",
+        "name": "Eccentric Reverse Wrist Curls",
+        "notes": "GPP: Load tendon with slow eccentrics → SPP: Increase load and speed → TAPER: Drop volume, retain range"
+      }
+    ]
   },
   {
     "drill_id": "elbow_tendonitis_banded_tricep_extensions",
@@ -16756,6 +17065,70 @@
     },
     "flags": [],
     "review_state": "needs_review",
+    "review_version": 1
+  },
+  {
+    "drill_id": "elbow_tendonitis_recovery_support",
+    "source_hash": "11991104e8ea41b69df8bb8e6b78ee2907a46b6d742fab9d3d6d3cc1155beb86",
+    "location": "elbow",
+    "injury_type": "tendonitis",
+    "name": "Elbow tendon load-management guidance",
+    "notes": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative grip and repetitive hand loading; follow any individual splint advice without changing prescribed protection.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "elbow"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "elbow tendons"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://msk-bexley.nhs.uk/conditions/elbow-pain/tennis-elbow. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
+    "drill_id": "elbow_tendonitis_reviewed_restore",
+    "source_hash": "8dd5b1c42e0a7f47b3153385d9f541a5e74609a969bafa4738051c39ecd9908e",
+    "location": "elbow",
+    "injury_type": "tendonitis",
+    "name": "Comfortable unloaded elbow movement",
+    "notes": "Keep the affected upper arm comfortably by your side and slowly bend and straighten the elbow within a pain-free range with the hand empty. Do not force end range, squeeze a ball, perform wrist curls or add resistance. A red, hot or swollen elbow needs assessment before exercise. This baseline does not diagnose lateral, medial or posterior tendon involvement. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+    "movement_archetype": "mobility_rom",
+    "proposed": {
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "elbow"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "elbow tendons"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://msk-bexley.nhs.uk/conditions/elbow-pain/tennis-elbow. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+    },
+    "flags": [
+      "LOAD_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
     "review_version": 1
   },
   {
@@ -17480,6 +17853,37 @@
     },
     "flags": [],
     "review_state": "needs_review",
+    "review_version": 1
+  },
+  {
+    "drill_id": "wrist_tendonitis_recovery_support",
+    "source_hash": "8b85f5e026cbca71c0145784009cf991dc3697713e8664a1365564481bc83996",
+    "location": "wrist",
+    "injury_type": "tendonitis",
+    "name": "Wrist tendon load-management guidance",
+    "notes": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative grip and repetitive hand loading; follow any individual splint advice without changing prescribed protection.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "wrist"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "wrist and forearm tendons"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/, https://www.mskdorset.nhs.uk/hand-and-wrist-pain/hand-and-wrist-pain-de-quervains-tenosynovitis/. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+    },
+    "flags": [],
+    "review_state": "reviewed",
     "review_version": 1
   },
   {
@@ -18237,35 +18641,6 @@
     ]
   },
   {
-    "drill_id": "wrist_tendonitis_pronation_supination_twists",
-    "source_hash": "462ee3ca6342cc0750d51c8b039613dc49d7d0276f0a27b0a5cac089604bf535",
-    "location": "wrist",
-    "injury_type": "tendonitis",
-    "name": "Pronation/Supination Twists",
-    "notes": "SPP: Build torsion tolerance → TAPER: Short pulses for refresh",
-    "movement_archetype": "unknown",
-    "proposed": {
-      "rehab_stage": null,
-      "function": null,
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
-      "target_regions": [
-        "wrist"
-      ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
-      "sport_specificity": null,
-      "contact_level": null,
-      "evidence_notes": null
-    },
-    "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
-  },
-  {
     "drill_id": "wrist_tendonitis_light_thumb_opposition_drill",
     "source_hash": "726a82f4d3de94ff83f33d1ec1129aaa9ebcfd1ca5eed2459ae438b00c8623e0",
     "location": "wrist",
@@ -18293,6 +18668,44 @@
     "flags": [],
     "review_state": "needs_review",
     "review_version": 1
+  },
+  {
+    "drill_id": "wrist_tendonitis_pronation_supination_twists",
+    "source_hash": "46313938c43e2e0fae7cc427b819f10dd2a30b01d9bfac76691dd1c8aa908724",
+    "location": "wrist",
+    "injury_type": "tendonitis",
+    "name": "Supported unresisted forearm turn",
+    "notes": "Sit with the affected elbow by your side and the forearm comfortably supported. With the hand empty and wrist relaxed, slowly turn the palm upwards and downwards within a small pain-free range. Do not force twisting, hold a weight, add a band or use rapid pulses. Follow any clinician-directed splint or movement restriction. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+    "movement_archetype": "mobility_rom",
+    "proposed": {
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "wrist"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "wrist and forearm tendons"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/, https://www.mskdorset.nhs.uk/hand-and-wrist-pain/hand-and-wrist-pain-de-quervains-tenosynovitis/. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "462ee3ca6342cc0750d51c8b039613dc49d7d0276f0a27b0a5cac089604bf535",
+        "name": "Pronation/Supination Twists",
+        "notes": "SPP: Build torsion tolerance → TAPER: Short pulses for refresh"
+      }
+    ]
   },
   {
     "drill_id": "wrist_instability_wobble_board_wrist_balances",
@@ -18586,36 +18999,46 @@
   },
   {
     "drill_id": "wrist_tendonitis_eccentric_wrist_flexion_with_dumbbell",
-    "source_hash": "13e29046cfd6e7fda957da40dd4916d2d071dea6d62baf96d21b208c150014c2",
+    "source_hash": "dbc899ce946af882eb1ae5595403c10edb7b2bd3d056ccb1d21ecb01664277d7",
     "location": "wrist",
     "injury_type": "tendonitis",
-    "name": "Eccentric Wrist Flexion with Dumbbell",
-    "notes": "GPP: Control tendon loading → SPP: Increase load tempo → TAPER: Maintain under time",
+    "name": "Supported eccentric wrist flexion",
+    "notes": "Support the affected forearm palm-up on a table with the wrist over the edge and one fixed clinician-selected dumbbell. Assist the lift with the other hand, then slowly lower within the individually advised range. Do not force a stretch, increase weight or add faster work. This flexor exercise does not apply automatically to thumb-side tenosynovitis. Stop if symptoms worsen during or after the work.",
     "movement_archetype": "eccentric_loading",
     "proposed": {
-      "rehab_stage": null,
-      "function": "tendon_loading",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [
+        "table",
+        "dumbbell"
+      ],
+      "impact": "none",
+      "load": "unknown",
+      "velocity": "low",
       "target_regions": [
         "wrist"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "wrist flexor tendons"
+      ],
       "contraction_type": "eccentric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Fixed mechanics reviewed; sources: https://www.nhs.uk/conditions/tendonitis/, https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/, https://www.mskdorset.nhs.uk/hand-and-wrist-pain/hand-and-wrist-pain-de-quervains-tenosynovitis/. Dormant LOAD content, not an active prescription. External load remains unknown where not measured. Tendon site, individual resistance, functional tolerance and a sourced evaluable transition are required before activation. Eccentrics are not assumed superior."
     },
     "flags": [
-      "VARIABLE_DEMAND_PROGRESSION",
-      "LOAD_PROGRESSION_IN_NOTES",
-      "POSSIBLE_DRILL_SPLIT"
+      "SPEED_PROGRESSION_IN_NOTES"
     ],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "13e29046cfd6e7fda957da40dd4916d2d071dea6d62baf96d21b208c150014c2",
+        "name": "Eccentric Wrist Flexion with Dumbbell",
+        "notes": "GPP: Control tendon loading → SPP: Increase load tempo → TAPER: Maintain under time"
+      }
+    ]
   },
   {
     "drill_id": "wrist_tendonitis_wrist_extensor_stretch_palm_down",
@@ -19560,6 +19983,68 @@
     },
     "flags": [],
     "review_state": "needs_review",
+    "review_version": 1
+  },
+  {
+    "drill_id": "hand_tendonitis_recovery_support",
+    "source_hash": "37a46edb876e278586bc8ccf33038f128562c528fb28f66472359f3e2cf60513",
+    "location": "hand",
+    "injury_type": "tendonitis",
+    "name": "Hand tendon load-management guidance",
+    "notes": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative grip and repetitive hand loading; follow any individual splint advice without changing prescribed protection.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "hand"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "hand flexor tendons"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://www.nth.nhs.uk/resources/hand-therapy-trigger-finger/, https://www.nth.nhs.uk/resources/hand-therapy-tendon-gliding-exercises/. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
+    "drill_id": "hand_tendonitis_reviewed_restore",
+    "source_hash": "03191749c9571d54ccf39864b37020bf074d9b5f6b3011c1cfb032d0aebffe26",
+    "location": "hand",
+    "injury_type": "tendonitis",
+    "name": "Comfortable unloaded hand tendon glide",
+    "notes": "Support the affected hand with the wrist comfortable. Start with the fingers straight, gently bend the middle and end joints into a small hook while keeping the knuckles straight, then return. Stay within a comfortable pain-free range; do not force a fist, squeeze a ball or add putty, bands or grip resistance. Stop if a finger catches or locks; follow any clinician-directed splint restrictions. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+    "movement_archetype": "mobility_rom",
+    "proposed": {
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "hand"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "hand flexor tendons"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://www.nth.nhs.uk/resources/hand-therapy-trigger-finger/, https://www.nth.nhs.uk/resources/hand-therapy-tendon-gliding-exercises/. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+    },
+    "flags": [],
+    "review_state": "reviewed",
     "review_version": 1
   },
   {
@@ -20893,6 +21378,68 @@
     },
     "flags": [],
     "review_state": "needs_review",
+    "review_version": 1
+  },
+  {
+    "drill_id": "fingers_tendonitis_recovery_support",
+    "source_hash": "322343b3f3924471b154bfb144ff7c14b0fc97dfa689914b9be90e62c3352579",
+    "location": "fingers",
+    "injury_type": "tendonitis",
+    "name": "Fingers tendon load-management guidance",
+    "notes": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative grip and repetitive hand loading; follow any individual splint advice without changing prescribed protection.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "fingers"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "finger tendons"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://www.nth.nhs.uk/resources/hand-therapy-trigger-finger/, https://www.nth.nhs.uk/resources/hand-therapy-tendon-gliding-exercises/. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
+    "drill_id": "fingers_tendonitis_reviewed_restore",
+    "source_hash": "a706991188783b9f6cd0dcb7be5d12d90bd12e7528e9e007350d281e9d9c82f6",
+    "location": "fingers",
+    "injury_type": "tendonitis",
+    "name": "Comfortable unloaded finger movement",
+    "notes": "Support the affected hand with the wrist comfortable. Gently bend and straighten the injured finger within a small pain-free range, then relax. Do not force a locked finger, pull it with the other hand, use putty or squeeze a ball. Stop if the finger catches or locks; follow any clinician-directed splint restrictions. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+    "movement_archetype": "mobility_rom",
+    "proposed": {
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "fingers"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "finger tendons"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/tendonitis/, https://www.nth.nhs.uk/resources/hand-therapy-trigger-finger/, https://www.nth.nhs.uk/resources/hand-therapy-tendon-gliding-exercises/. Protected regional baseline, not a subtype diagnosis or complete tendon-loading protocol. No numeric dose or pain threshold inferred. Pain-free range is a conservative product constraint, not a universal assertion that pain during tendon exercise is unsafe. Existing low/moderate eligibility and scheduling cadence remain product rules."
+    },
+    "flags": [],
+    "review_state": "reviewed",
     "review_version": 1
   },
   {

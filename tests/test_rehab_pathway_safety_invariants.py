@@ -169,8 +169,8 @@ def test_frozen_snapshots_from_the_previous_file_are_not_held(policy_id, region,
 # Families route; profiles activate.
 UNPROFILED = [
     ("ankle", "hyperextension"), ("ankle", "swelling"), ("ankle", "pain"), ("ankle", "tightness"), ("chest", "sprain"),
-    ("chest", "contusion"), ("elbow", "tendonitis"), ("shoulder", "impingement"), ("elbow", "hyperextension"),
-    ("biceps", "tendonitis"), ("triceps", "tendonitis"), ("wrist", "instability"), ("lower_back", "stiffness"), ("knee", "soreness"),
+    ("chest", "contusion"), ("chest", "tendonitis"), ("shoulder", "impingement"), ("elbow", "hyperextension"),
+    ("groin", "tendonitis"), ("triceps", "tendonitis"), ("wrist", "instability"), ("lower_back", "stiffness"), ("knee", "soreness"),
 ]
 
 
@@ -191,7 +191,8 @@ def test_only_profiles_are_policies_and_families_carry_no_content():
         ("calf", "strain"), ("groin", "strain"), ("quads", "strain"),
         ("biceps", "strain"), ("triceps", "strain"), ("shoulder", "strain"),
         ("ankle", "instability"), ("knee", "instability"), ("toe", "sprain"), ("wrist", "sprain"),
-        ("elbow", "sprain"), ("shoulder", "sprain"), ("shoulder", "instability"), ("hand", "sprain"), ("fingers", "sprain")}
+        ("elbow", "sprain"), ("shoulder", "sprain"), ("shoulder", "instability"), ("hand", "sprain"), ("fingers", "sprain"),
+        *((region, "tendonitis") for region in ["achilles", "shoulder", "biceps", "forearm", "elbow", "wrist", "hand", "fingers"])}
     for family in catalog["families"]:
         assert set(family) <= {"family_id", "description", "injury_types", "transitions"}
     # Instability coverage requires its own regional profile and reviewed identities.

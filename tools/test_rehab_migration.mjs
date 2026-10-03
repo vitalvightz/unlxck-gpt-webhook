@@ -163,7 +163,7 @@ await test("a full rehab allocation does not prohibit training with no rehab", a
   await start(normal);
 });
 const guidanceProfiles = ["hamstring", "calf", "groin", "quads", "future_region"].map(region => [region, "strain"]);
-guidanceProfiles.push(["wrist", "sprain"], ["ankle", "instability"]);
+guidanceProfiles.push(["wrist", "sprain"], ["ankle", "instability"], ["achilles", "tendonitis"], ["wrist", "tendonitis"]);
 for (const [index, [region, kind]] of guidanceProfiles.entries()) {
   await test(`${region}: frozen profile guidance accepts unknown side with exact provenance`, async () => {
     const id = `00000000-0000-4000-8000-${String(100 + index * 4).padStart(12, "0")}`;

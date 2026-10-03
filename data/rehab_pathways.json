@@ -1470,6 +1470,615 @@
       "status": "active",
       "activation": "live",
       "content_hash": "ec7195f3006f3e988f9018c5ea1d34dabae15082362c4aef1113c3b038131113"
+    },
+    {
+      "policy_id": "achilles_tendonitis",
+      "version": 1,
+      "region": "achilles",
+      "injury_type": "tendonitis",
+      "pathway_family": "tendon_rehab",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/tendonitis/",
+        "https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/",
+        "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "achilles_tendonitis_recovery_support",
+          "bank_hash": "70a9441201b7667d69ce922ce9bf1767629a54475efc6c268107ece7456755f8",
+          "stage": "calm",
+          "instructions": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative running, hopping and forceful push-off; do not stretch into deep dorsiflexion or use heel drops below floor level when insertional status is unknown.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain or worsening symptoms during or after the work.",
+            "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/tendonitis/",
+            "https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/",
+            "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+          ]
+        },
+        {
+          "drill_id": "achilles_tendonitis_reviewed_restore",
+          "bank_hash": "d8eed079ec51160e7a52dacbf26871bc25e7b0f0df70f1ef42be50694aabad4e",
+          "stage": "restore",
+          "instructions": "Sit with the affected foot flat on the floor and the knee bent. Slowly lift the heel within a comfortable pain-free range, then lower it to floor level with the forefoot resting on the floor. Do not add weight, stand on a step, drop below floor level or bounce. This is seated movement, not a strength test or a required isometric-first protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain or worsening symptoms during or after the work.",
+            "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/tendonitis/",
+            "https://myjointhealthhub.bnssg.nhs.uk/foot-ankle-pain/achilles-tendinopathy/",
+            "https://www.kentcht.nhs.uk/leaflet/achilles-insertional-tendinopathy/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "achilles"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "980f17573faffb778a4c75ae47cd108ad1cac1e20d89ba923e437c6d55923900"
+    },
+    {
+      "policy_id": "shoulder_tendonitis",
+      "version": 1,
+      "region": "shoulder",
+      "injury_type": "tendonitis",
+      "pathway_family": "tendon_rehab",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/tendonitis/",
+        "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "shoulder_tendonitis_recovery_support",
+          "bank_hash": "0f5328748d54b88f49278c74bf696cc5f86536e5f605d808074c581fb27667a8",
+          "stage": "calm",
+          "instructions": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative overhead work and end-range loading; do not force the arm behind the body.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain or worsening symptoms during or after the work.",
+            "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/tendonitis/",
+            "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+          ]
+        },
+        {
+          "drill_id": "shoulder_tendonitis_reviewed_restore",
+          "bank_hash": "b45ef1074bb6ab3640ab8ba7eec4cb3209bbd289dc764913004bce01df6508e9",
+          "stage": "restore",
+          "instructions": "Sit upright with the affected elbow comfortably bent and tucked by your side. Gently turn the forearm outwards within a small comfortable pain-free range, then return. Keep the upper arm by your side; do not force rotation, raise the arm overhead or add a weight or band. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain or worsening symptoms during or after the work.",
+            "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/tendonitis/",
+            "https://www.rjah.nhs.uk/our-services/therapy/supported-self-care/rotator-cuff-related-shoulder-pain/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "shoulder"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "0c84ad11e5b9e9ad442a7d26f17b02c0882ba3d0b946c5bef9050b2e52ed7f48"
+    },
+    {
+      "policy_id": "biceps_tendonitis",
+      "version": 1,
+      "region": "biceps",
+      "injury_type": "tendonitis",
+      "pathway_family": "tendon_rehab",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/tendonitis/",
+        "https://msk-bexley.nhs.uk/conditions/shoulder-pain/biceps-tendinopathy"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "biceps_tendonitis_recovery_support",
+          "bank_hash": "0179a89930c543c476f102842dcbc50a867389bf494c3dd1ce69d7667e949bf9",
+          "stage": "calm",
+          "instructions": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative overhead work and end-range loading; do not force the arm behind the body.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain or worsening symptoms during or after the work.",
+            "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/tendonitis/",
+            "https://msk-bexley.nhs.uk/conditions/shoulder-pain/biceps-tendinopathy"
+          ]
+        },
+        {
+          "drill_id": "biceps_tendonitis_reviewed_restore",
+          "bank_hash": "7fda189302d990a288a00ebc8c0f19de8929b3d330d510eda8cecd0a09a4a809",
+          "stage": "restore",
+          "instructions": "With the upper arm comfortably by your side, gently bend and straighten the affected elbow within a pain-free range. Keep the shoulder relaxed and the hand empty. Do not stretch the arm behind the body, force forearm rotation, use an incline bench or add resistance. This maintains comfortable arm movement; it does not select a proximal or distal biceps strengthening protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain or worsening symptoms during or after the work.",
+            "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/tendonitis/",
+            "https://msk-bexley.nhs.uk/conditions/shoulder-pain/biceps-tendinopathy"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "biceps",
+        "elbow",
+        "shoulder"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "4c8c4b677724c1f265ac11f149cd23f44d34e18837d1b903c26ee21986e23f4e"
+    },
+    {
+      "policy_id": "forearm_tendonitis",
+      "version": 1,
+      "region": "forearm",
+      "injury_type": "tendonitis",
+      "pathway_family": "tendon_rehab",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/tendonitis/",
+        "https://msk-bexley.nhs.uk/conditions/elbow-pain/tennis-elbow",
+        "https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "forearm_tendonitis_recovery_support",
+          "bank_hash": "a250e24423ad7b666804c8cfd4999995962482b3bd6b56bb867af277c93af706",
+          "stage": "calm",
+          "instructions": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative grip and repetitive hand loading; follow any individual splint advice without changing prescribed protection.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain or worsening symptoms during or after the work.",
+            "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/tendonitis/",
+            "https://msk-bexley.nhs.uk/conditions/elbow-pain/tennis-elbow",
+            "https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/"
+          ]
+        },
+        {
+          "drill_id": "forearm_tendonitis_reviewed_restore",
+          "bank_hash": "dfc501659673b1966dcff9e6ed7254abf2462d4d6f7c5e4fa610f08ae8058a27",
+          "stage": "restore",
+          "instructions": "Sit with the affected forearm supported on a table and the hand relaxed. Gently bend and straighten the wrist within a small comfortable pain-free range. Do not grip tightly, force a stretch or add a weight or band. This maintains comfortable movement without choosing a flexor or extensor strengthening protocol. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain or worsening symptoms during or after the work.",
+            "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/tendonitis/",
+            "https://msk-bexley.nhs.uk/conditions/elbow-pain/tennis-elbow",
+            "https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "forearm"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "1f01cd56c364894c104f244477c5ccc22428f9f2ddf2ef31e18d57473a70f21a"
+    },
+    {
+      "policy_id": "elbow_tendonitis",
+      "version": 1,
+      "region": "elbow",
+      "injury_type": "tendonitis",
+      "pathway_family": "tendon_rehab",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/tendonitis/",
+        "https://msk-bexley.nhs.uk/conditions/elbow-pain/tennis-elbow"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "elbow_tendonitis_recovery_support",
+          "bank_hash": "bba06306eb6833e7388738b3529589d29a803b527e6a8194a76faa078c0f37ac",
+          "stage": "calm",
+          "instructions": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative grip and repetitive hand loading; follow any individual splint advice without changing prescribed protection.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain or worsening symptoms during or after the work.",
+            "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/tendonitis/",
+            "https://msk-bexley.nhs.uk/conditions/elbow-pain/tennis-elbow"
+          ]
+        },
+        {
+          "drill_id": "elbow_tendonitis_reviewed_restore",
+          "bank_hash": "3dea3cfb63f42c1ce270bfb0c57eb970211d617d2d2db558943e38007954d784",
+          "stage": "restore",
+          "instructions": "Keep the affected upper arm comfortably by your side and slowly bend and straighten the elbow within a pain-free range with the hand empty. Do not force end range, squeeze a ball, perform wrist curls or add resistance. A red, hot or swollen elbow needs assessment before exercise. This baseline does not diagnose lateral, medial or posterior tendon involvement. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain or worsening symptoms during or after the work.",
+            "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/tendonitis/",
+            "https://msk-bexley.nhs.uk/conditions/elbow-pain/tennis-elbow"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "elbow"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "7ec17f3b4d8399f276c139d9cada8e29f6a06a05da2824bdc8572ea14ce3d12f"
+    },
+    {
+      "policy_id": "wrist_tendonitis",
+      "version": 1,
+      "region": "wrist",
+      "injury_type": "tendonitis",
+      "pathway_family": "tendon_rehab",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/tendonitis/",
+        "https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/",
+        "https://www.mskdorset.nhs.uk/hand-and-wrist-pain/hand-and-wrist-pain-de-quervains-tenosynovitis/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "wrist_tendonitis_recovery_support",
+          "bank_hash": "cf85eddd5202f815c9873f9814c03459b7b0fb835e7397fd6a69ddd6534cbb07",
+          "stage": "calm",
+          "instructions": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative grip and repetitive hand loading; follow any individual splint advice without changing prescribed protection.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain or worsening symptoms during or after the work.",
+            "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/tendonitis/",
+            "https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/",
+            "https://www.mskdorset.nhs.uk/hand-and-wrist-pain/hand-and-wrist-pain-de-quervains-tenosynovitis/"
+          ]
+        },
+        {
+          "drill_id": "wrist_tendonitis_pronation_supination_twists",
+          "bank_hash": "a5ea816bd00d541d3c7c72d243cacae27aac75893afcfe760d8791380ce0ff94",
+          "stage": "restore",
+          "instructions": "Sit with the affected elbow by your side and the forearm comfortably supported. With the hand empty and wrist relaxed, slowly turn the palm upwards and downwards within a small pain-free range. Do not force twisting, hold a weight, add a band or use rapid pulses. Follow any clinician-directed splint or movement restriction. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain or worsening symptoms during or after the work.",
+            "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/tendonitis/",
+            "https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/",
+            "https://www.mskdorset.nhs.uk/hand-and-wrist-pain/hand-and-wrist-pain-de-quervains-tenosynovitis/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "wrist"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "485a7768fa00b4957d69fe63a66f93f887cf30542465a7dc6d41998b7998580e"
+    },
+    {
+      "policy_id": "hand_tendonitis",
+      "version": 1,
+      "region": "hand",
+      "injury_type": "tendonitis",
+      "pathway_family": "tendon_rehab",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/tendonitis/",
+        "https://www.nth.nhs.uk/resources/hand-therapy-trigger-finger/",
+        "https://www.nth.nhs.uk/resources/hand-therapy-tendon-gliding-exercises/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "hand_tendonitis_recovery_support",
+          "bank_hash": "b13bc685f9e8e156e7aa4194a74f54ce7199659abf4c0d140db141f8b61ba695",
+          "stage": "calm",
+          "instructions": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative grip and repetitive hand loading; follow any individual splint advice without changing prescribed protection.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain or worsening symptoms during or after the work.",
+            "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/tendonitis/",
+            "https://www.nth.nhs.uk/resources/hand-therapy-trigger-finger/",
+            "https://www.nth.nhs.uk/resources/hand-therapy-tendon-gliding-exercises/"
+          ]
+        },
+        {
+          "drill_id": "hand_tendonitis_reviewed_restore",
+          "bank_hash": "398de256bf0d9b5e0bc5a198944f9f9e4ea402def2471273add0afa0acbbdb1f",
+          "stage": "restore",
+          "instructions": "Support the affected hand with the wrist comfortable. Start with the fingers straight, gently bend the middle and end joints into a small hook while keeping the knuckles straight, then return. Stay within a comfortable pain-free range; do not force a fist, squeeze a ball or add putty, bands or grip resistance. Stop if a finger catches or locks; follow any clinician-directed splint restrictions. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain or worsening symptoms during or after the work.",
+            "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/tendonitis/",
+            "https://www.nth.nhs.uk/resources/hand-therapy-trigger-finger/",
+            "https://www.nth.nhs.uk/resources/hand-therapy-tendon-gliding-exercises/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "hand"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "8ccb869790d5cedba25af876877d6ced34fb5822edc9fea82e759d974d1ba73d"
+    },
+    {
+      "policy_id": "fingers_tendonitis",
+      "version": 1,
+      "region": "fingers",
+      "injury_type": "tendonitis",
+      "pathway_family": "tendon_rehab",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/tendonitis/",
+        "https://www.nth.nhs.uk/resources/hand-therapy-trigger-finger/",
+        "https://www.nth.nhs.uk/resources/hand-therapy-tendon-gliding-exercises/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "fingers_tendonitis_recovery_support",
+          "bank_hash": "8578b13c62f330f7dea976f3c004fb1dabbf627e1d7d1769e22422c008b60872",
+          "stage": "calm",
+          "instructions": "Reduce activities that aggravate the affected tendon and keep the area comfortably supported. Avoid heavy lifting, strong gripping or twisting that worsens symptoms; do not repeatedly test the painful tendon. Keep ordinary comfortable movement as symptoms allow rather than applying a universal prolonged-rest timetable. Follow any clinician-directed restrictions. Sudden severe pain, a snap or pop with loss of function, suspected rupture, a hot red swollen area, fever or altered sensation needs medical assessment. Reduce provocative grip and repetitive hand loading; follow any individual splint advice without changing prescribed protection.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain or worsening symptoms during or after the work.",
+            "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/tendonitis/",
+            "https://www.nth.nhs.uk/resources/hand-therapy-trigger-finger/",
+            "https://www.nth.nhs.uk/resources/hand-therapy-tendon-gliding-exercises/"
+          ]
+        },
+        {
+          "drill_id": "fingers_tendonitis_reviewed_restore",
+          "bank_hash": "2b0faf08dc3b488cc089427733d23d9f9e603950f03a6f338b6626c92fa37219",
+          "stage": "restore",
+          "instructions": "Support the affected hand with the wrist comfortable. Gently bend and straighten the injured finger within a small pain-free range, then relax. Do not force a locked finger, pull it with the other hand, use putty or squeeze a ball. Stop if the finger catches or locks; follow any clinician-directed splint restrictions. Stop if pain or symptoms worsen during or after the movement. This conservative baseline does not establish readiness for resistance or sport.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain or worsening symptoms during or after the work.",
+            "Seek assessment for suspected rupture, loss of function, altered sensation, a hot red swollen area or fever."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/tendonitis/",
+            "https://www.nth.nhs.uk/resources/hand-therapy-trigger-finger/",
+            "https://www.nth.nhs.uk/resources/hand-therapy-tendon-gliding-exercises/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "fingers"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "cbcc30f9c5a99cb0c91420361f33361821ecde474ac41b5d00619aec57011fb5"
     }
   ]
 }
