@@ -1,68 +1,84 @@
 [
   {
     "drill_id": "ankle_sprain_single_leg_balance_on_foam_pad",
-    "source_hash": "9eef9342e2eb3abe154bd6d6b8797285e2e0417f04ccee48c2f526e71c084e37",
+    "source_hash": "891fb9212a11b38420d083f9973b1e2c9b9d16614551e2279d22fac6c0d23dff",
     "location": "ankle",
     "injury_type": "sprain",
     "name": "Single-Leg Balance on Foam Pad",
-    "notes": "GPP: Rebuild proprioception → SPP: Progress to dynamic balance under fatigue",
+    "notes": "Balance on the affected leg on a fixed foam pad beside stable support with eyes open. Keep the surface and position fixed; do not add perturbations or fatigue work. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "balance_control",
     "proposed": {
-      "rehab_stage": null,
+      "rehab_stage": "load",
       "function": "control",
-      "equipment": null,
+      "equipment": [
+        "foam_pad",
+        "stable_support"
+      ],
       "impact": "none",
-      "load": null,
+      "load": "moderate",
       "velocity": "low",
       "target_regions": [
         "ankle"
       ],
       "laterality_applicability": "side_specific",
-      "target_tissues": null,
-      "contraction_type": null,
+      "target_tissues": [
+        "ankle joint supporting soft tissues"
+      ],
+      "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.rightdecisions.scot.nhs.uk/patient-information-leaflets/primary-community-services/physiotherapy/ankle-injuries/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
-    "flags": [
-      "VARIABLE_DEMAND_PROGRESSION",
-      "SPEED_PROGRESSION_IN_NOTES"
-    ],
-    "review_state": "needs_review",
-    "review_version": 1
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "9eef9342e2eb3abe154bd6d6b8797285e2e0417f04ccee48c2f526e71c084e37",
+        "name": "Single-Leg Balance on Foam Pad",
+        "notes": "GPP: Rebuild proprioception → SPP: Progress to dynamic balance under fatigue"
+      }
+    ]
   },
   {
     "drill_id": "ankle_sprain_banded_ankle_circles",
-    "source_hash": "1d1c5a730e54374ecfd6fb708adc0f3b99e0f78bd8310fa605ae26e9710e08c2",
+    "source_hash": "da4f64c1163ab5d6fed1885bf6fc90d9a1c8fd183c69fca8965693a892d06dc6",
     "location": "ankle",
     "injury_type": "sprain",
     "name": "Banded Ankle Circles",
-    "notes": "GPP: Restore multi-directional control → SPP: Add resistance for joint reactivity",
+    "notes": "Sit with the leg supported. Move the ankle slowly in a small comfortable circle against one fixed light resistance band; do not increase tension or speed. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "banded_resistance",
     "proposed": {
-      "rehab_stage": null,
-      "function": "activation",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [
+        "resistance_band"
+      ],
+      "impact": "none",
+      "load": "low",
+      "velocity": "low",
       "target_regions": [
         "ankle"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "ankle joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.rightdecisions.scot.nhs.uk/patient-information-leaflets/primary-community-services/physiotherapy/ankle-injuries/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
-    "flags": [
-      "VARIABLE_DEMAND_PROGRESSION",
-      "LOAD_PROGRESSION_IN_NOTES",
-      "POSSIBLE_DRILL_SPLIT"
-    ],
-    "review_state": "needs_review",
-    "review_version": 1
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "1d1c5a730e54374ecfd6fb708adc0f3b99e0f78bd8310fa605ae26e9710e08c2",
+        "name": "Banded Ankle Circles",
+        "notes": "GPP: Restore multi-directional control → SPP: Add resistance for joint reactivity"
+      }
+    ]
   },
   {
     "drill_id": "ankle_sprain_gentle_movement",
@@ -73,24 +89,26 @@
     "notes": "Once the ankle is less painful, sit with the foot supported and gently move it up and down or trace the alphabet. Start with a small comfortable amount and build gradually. Keep within a comfortable range; do not force movement.",
     "movement_archetype": "unknown",
     "proposed": {
-      "rehab_stage": null,
+      "rehab_stage": "calm",
       "function": "mobility",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
       "target_regions": [
         "ankle"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
-      "sport_specificity": null,
-      "contact_level": null,
-      "evidence_notes": null
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "ankle region soft tissues"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.whittington.nhs.uk/mini-apps/leaflet/Default.asp?id=53&print=1. Self-paced; no starting numerical dose is prescribed."
     },
     "flags": [],
-    "review_state": "needs_review",
+    "review_state": "reviewed",
     "review_version": 1
   },
   {
@@ -102,24 +120,26 @@
     "notes": "When standing and weight bearing are comfortable, practise balancing on the affected leg on firm ground, close to a stable counter for support. Start with a short comfortable attempt and build gradually. Keep support available; do not use a cushion or close your eyes.",
     "movement_archetype": "balance_control",
     "proposed": {
-      "rehab_stage": null,
+      "rehab_stage": "restore",
       "function": "control",
-      "equipment": null,
+      "equipment": [],
       "impact": "none",
-      "load": null,
+      "load": "low",
       "velocity": "low",
       "target_regions": [
         "ankle"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "ankle region soft tissues"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://www.whittington.nhs.uk/mini-apps/leaflet/Default.asp?id=53&print=1. Self-paced; no starting numerical dose is prescribed."
     },
     "flags": [],
-    "review_state": "needs_review",
+    "review_state": "reviewed",
     "review_version": 1
   },
   {
@@ -131,24 +151,26 @@
     "notes": "When weight bearing and gentle calf movement are comfortable, use a stable support and practise controlled heel lowering as shown in the linked ankle rehabilitation guidance. Work at your own pace, up to 2 sets on alternate days. The source gives no repetition target; stop before symptoms worsen.",
     "movement_archetype": "balance_control",
     "proposed": {
-      "rehab_stage": null,
+      "rehab_stage": "restore",
       "function": "tendon_loading",
-      "equipment": null,
+      "equipment": [],
       "impact": "none",
-      "load": null,
+      "load": "low",
       "velocity": "low",
       "target_regions": [
         "ankle"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "ankle region soft tissues"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Sources: https://services.eastcheshire.nhs.uk/physiotherapy-service/self-help/ankle-and-foot-pain-physiotherapy-self-help. Self-paced; no starting numerical dose is prescribed."
     },
     "flags": [],
-    "review_state": "needs_review",
+    "review_state": "reviewed",
     "review_version": 1
   },
   {
@@ -211,64 +233,146 @@
   },
   {
     "drill_id": "toe_sprain_double_leg_pogo_jumps",
-    "source_hash": "8a67eebb44807ea40ef5527d726662baa0a6aada0aeb98ef7919d13cf8dbc12b",
+    "source_hash": "39e44d8f708856b5ab0e7bbeb0da1d3c3cd4bb6112a7d66de99a4aada63e5936",
     "location": "toe",
     "injury_type": "sprain",
     "name": "Double-Leg Pogo Jumps",
-    "notes": "SPP: Rebuild spring and rebound → TAPER: Maintain SSC sharpness with low volume",
+    "notes": "On firm level ground, perform small two-foot pogo jumps with a fixed low height. No single-leg work, added weight, increased speed or fatigue progression. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "hop_jump_landing",
     "proposed": {
-      "rehab_stage": null,
-      "function": "tendon_loading",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "dynamic",
+      "function": "control",
+      "equipment": [],
+      "impact": "unknown",
+      "load": "moderate",
+      "velocity": "high",
       "target_regions": [
         "toe"
       ],
-      "laterality_applicability": "bilateral_only",
-      "target_tissues": null,
-      "contraction_type": null,
-      "sport_specificity": null,
-      "contact_level": null,
-      "evidence_notes": null
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "toe joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.nhs.uk/conditions/sprains-and-strains/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
     "flags": [
-      "VARIABLE_DEMAND_PROGRESSION",
-      "IMPACT_PROGRESSION_IN_NOTES",
-      "POSSIBLE_DRILL_SPLIT"
+      "IMPACT_PROGRESSION_IN_NOTES"
     ],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "8a67eebb44807ea40ef5527d726662baa0a6aada0aeb98ef7919d13cf8dbc12b",
+        "name": "Double-Leg Pogo Jumps",
+        "notes": "SPP: Rebuild spring and rebound → TAPER: Maintain SSC sharpness with low volume"
+      }
+    ]
   },
   {
     "drill_id": "toe_sprain_toe_off_isometric_presses",
-    "source_hash": "9f7de1bb627e46274e23e3fac251ab8ef46c1158163c57aabc00dc0b15e83f77",
+    "source_hash": "b125058f71c091ceface849542d6c4d3c371baa1af3538b2fdd4b1f8e9da3aac",
     "location": "toe",
     "injury_type": "sprain",
     "name": "Toe Off Isometric Presses",
-    "notes": "SPP: Load toe under static extension → TAPER: Use short bursts pre-fight",
+    "notes": "With the foot supported on level ground, gently press through the affected forefoot without movement, then relax. Keep pressure fixed; no forced toe extension or explosive push-off. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "isometric",
     "proposed": {
-      "rehab_stage": null,
-      "function": "isometric_analgesia",
-      "equipment": null,
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [],
       "impact": "none",
-      "load": null,
+      "load": "low",
       "velocity": "low",
       "target_regions": [
         "toe"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "toe joint supporting soft tissues"
+      ],
       "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.nhs.uk/conditions/sprains-and-strains/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
     "flags": [],
-    "review_state": "needs_review",
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "9f7de1bb627e46274e23e3fac251ab8ef46c1158163c57aabc00dc0b15e83f77",
+        "name": "Toe Off Isometric Presses",
+        "notes": "SPP: Load toe under static extension → TAPER: Use short bursts pre-fight"
+      }
+    ]
+  },
+  {
+    "drill_id": "toe_sprain_recovery_support",
+    "source_hash": "f5f91de96e85564e96ffc80c0a1a79a6c10cc1dfa320f77dde8b5ba44fff38cd",
+    "location": "toe",
+    "injury_type": "sprain",
+    "name": "Toe sprain protective guidance",
+    "notes": "Protect the injured joint and avoid exercise or activity that aggravates it. During the first few days of a new sprain, rest from loading it and avoid massage or forced stretching. Follow any clinician-directed support or movement restrictions. Seek assessment for severe or worsening pain, deformity, inability to use the joint or loss of sensation.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "toe"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "toe joint supporting soft tissues"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.nhs.uk/conditions/sprains-and-strains/. Fixed protective baseline only; no numeric dose or return clearance. Low/moderate eligibility and session allocation cadence are existing product safety/scheduling rules, not a clinical diagnosis or exercise dose."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
+    "drill_id": "toe_sprain_reviewed_restore",
+    "source_hash": "14f3d8edf7c4f1b752a4d3bb93e2946197754779e832ca4087ae092ab771e93b",
+    "location": "toe",
+    "injury_type": "sprain",
+    "name": "Comfortable seated toe movement",
+    "notes": "When pain no longer stops comfortable movement, sit with the foot supported and gently bend and straighten the affected toe within a small pain-free range. Do not pull the toe into a stretch, push off through it, hop or add resistance. Follow any clinician-directed protection; a deformed toe or inability to move it needs assessment. Stop if pain, slipping or symptoms worsen during or after the work.",
+    "movement_archetype": "mobility_rom",
+    "proposed": {
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "toe"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "toe joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.nhs.uk/conditions/sprains-and-strains/. Fixed protective baseline only; no numeric dose or return clearance. Low/moderate eligibility and session allocation cadence are existing product safety/scheduling rules, not a clinical diagnosis or exercise dose."
+    },
+    "flags": [
+      "VARIABLE_DEMAND_PROGRESSION",
+      "LOAD_PROGRESSION_IN_NOTES",
+      "IMPACT_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
     "review_version": 1
   },
   {
@@ -1146,64 +1250,152 @@
   },
   {
     "drill_id": "ankle_instability_lateral_hop_stick_drill",
-    "source_hash": "9e7899f4ad8d63836889e986d5d9fe2f96da177f21464cce7b9a46708213b6bf",
+    "source_hash": "a08c258a961b5457a42754d995d9ffbe3a100fd061dd9101fb4226c55bead54b",
     "location": "ankle",
     "injury_type": "instability",
     "name": "Lateral Hop-Stick Drill",
-    "notes": "SPP: Train reactive ankle control → TAPER: Maintain sharpness with short sets",
+    "notes": "Perform one small lateral hop on firm level ground and settle the landing before the next attempt. Keep distance fixed; no fast repeated hops or contact. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "hop_jump_landing",
     "proposed": {
-      "rehab_stage": null,
-      "function": null,
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "dynamic",
+      "function": "control",
+      "equipment": [],
+      "impact": "unknown",
+      "load": "moderate",
+      "velocity": "moderate",
       "target_regions": [
         "ankle"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
-      "sport_specificity": null,
-      "contact_level": null,
-      "evidence_notes": null
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "ankle joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://doi.org/10.2519/jospt.2021.0302, https://www.rightdecisions.scot.nhs.uk/patient-information-leaflets/primary-community-services/physiotherapy/ankle-injuries/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
-    "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "flags": [
+      "IMPACT_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "9e7899f4ad8d63836889e986d5d9fe2f96da177f21464cce7b9a46708213b6bf",
+        "name": "Lateral Hop-Stick Drill",
+        "notes": "SPP: Train reactive ankle control → TAPER: Maintain sharpness with short sets"
+      }
+    ]
   },
   {
     "drill_id": "ankle_instability_foam_pad_jump_stick",
-    "source_hash": "431ba96cf5d50525612f134e3f03cdf8fef9277b79a4a9b7dd6f28d787e51cf1",
+    "source_hash": "ae1472033a17fd47fbe693717f138ea118d30ea209b7c4dfbf204f1cd3d2613f",
     "location": "ankle",
     "injury_type": "instability",
     "name": "Foam Pad Jump-Stick",
-    "notes": "SPP: Improve soft landing control → TAPER: Use as CNS primer pre-comp",
+    "notes": "Perform a small two-foot jump onto a fixed foam pad and settle the landing. Keep the height and surface fixed; no repeated bouncing or perturbation. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "hop_jump_landing",
     "proposed": {
-      "rehab_stage": null,
-      "function": "activation",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "dynamic",
+      "function": "control",
+      "equipment": [
+        "foam_pad"
+      ],
+      "impact": "unknown",
+      "load": "moderate",
+      "velocity": "moderate",
       "target_regions": [
         "ankle"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
-      "sport_specificity": null,
-      "contact_level": null,
-      "evidence_notes": null
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "ankle joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://doi.org/10.2519/jospt.2021.0302, https://www.rightdecisions.scot.nhs.uk/patient-information-leaflets/primary-community-services/physiotherapy/ankle-injuries/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
     "flags": [
-      "VARIABLE_DEMAND_PROGRESSION",
-      "IMPACT_PROGRESSION_IN_NOTES",
-      "POSSIBLE_DRILL_SPLIT"
+      "IMPACT_PROGRESSION_IN_NOTES"
     ],
-    "review_state": "needs_review",
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "431ba96cf5d50525612f134e3f03cdf8fef9277b79a4a9b7dd6f28d787e51cf1",
+        "name": "Foam Pad Jump-Stick",
+        "notes": "SPP: Improve soft landing control → TAPER: Use as CNS primer pre-comp"
+      }
+    ]
+  },
+  {
+    "drill_id": "ankle_instability_recovery_support",
+    "source_hash": "b2f6d9091cd0b77bce202598e9ad6fe08ada7f452bbfadd0e378227aa2b2f54e",
+    "location": "ankle",
+    "injury_type": "instability",
+    "name": "Ankle instability protective guidance",
+    "notes": "Avoid positions or activities in which the joint feels unsafe or gives way. Keep it comfortably supported and follow any clinician-directed restrictions. Arrange assessment for new or repeated giving way. Suspected dislocation, subluxation, severe pain, deformity or loss of sensation needs medical assessment; do not test the joint with hops, end-range stretches or perturbations.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "ankle"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "ankle joint supporting soft tissues"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://doi.org/10.2519/jospt.2021.0302, https://www.rightdecisions.scot.nhs.uk/patient-information-leaflets/primary-community-services/physiotherapy/ankle-injuries/. Fixed protective baseline only; no numeric dose or return clearance. Low/moderate eligibility and session allocation cadence are existing product safety/scheduling rules, not a clinical diagnosis or exercise dose."
+    },
+    "flags": [
+      "IMPACT_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
+    "drill_id": "ankle_instability_reviewed_restore",
+    "source_hash": "0fe117cf579811b39b1d0a4a9be57f7f6ed97190e4bc955696afc2c67253cc3e",
+    "location": "ankle",
+    "injury_type": "instability",
+    "name": "Supported balance on firm ground",
+    "notes": "Only when standing and weight bearing are comfortable, stand beside a stable counter and gently balance on the affected leg on firm, level ground with support available and eyes open. Stop if the ankle gives way or feels unsafe. Do not hop, use a cushion, close your eyes or work to fatigue. Stop if pain, slipping or symptoms worsen during or after the work.",
+    "movement_archetype": "balance_control",
+    "proposed": {
+      "rehab_stage": "restore",
+      "function": "control",
+      "equipment": [
+        "stable_support"
+      ],
+      "impact": "none",
+      "load": "moderate",
+      "velocity": "low",
+      "target_regions": [
+        "ankle"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "ankle joint supporting soft tissues"
+      ],
+      "contraction_type": "isometric",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://doi.org/10.2519/jospt.2021.0302, https://www.rightdecisions.scot.nhs.uk/patient-information-leaflets/primary-community-services/physiotherapy/ankle-injuries/. Fixed protective baseline only; no numeric dose or return clearance. Low/moderate eligibility and session allocation cadence are existing product safety/scheduling rules, not a clinical diagnosis or exercise dose."
+    },
+    "flags": [
+      "IMPACT_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
     "review_version": 1
   },
   {
@@ -2747,60 +2939,153 @@
   },
   {
     "drill_id": "knee_instability_mini_band_lateral_walks",
-    "source_hash": "02155d5bf148ba451ac39d408f4134c2fda40029435b82ac0e8f6c8d69544879",
+    "source_hash": "16752780ea01f5ead48cab04f8a6cbacec0e8eb4e90466aaed2a6bdb0f97420b",
     "location": "knee",
     "injury_type": "instability",
     "name": "Mini-Band Lateral Walks",
-    "notes": "SPP: Reinforce lateral control → TAPER: Keep pattern sharp pre-fight",
+    "notes": "With a fixed light mini-band and knees comfortably bent, take slow small sideways steps on level ground. Keep band tension and step size fixed; no faster steps or fatigue work. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "locomotion",
     "proposed": {
-      "rehab_stage": null,
-      "function": null,
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
-      "target_regions": [
-        "knee"
-      ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
-      "sport_specificity": null,
-      "contact_level": null,
-      "evidence_notes": null
-    },
-    "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
-  },
-  {
-    "drill_id": "knee_instability_reactive_knee_bounces_foam_pad",
-    "source_hash": "3804eb78ea0b6a48d6ee8919686b9bde4f4238f73782740822bc8336226462bd",
-    "location": "knee",
-    "injury_type": "instability",
-    "name": "Reactive Knee Bounces (Foam Pad)",
-    "notes": "SPP: Improve balance under contact → TAPER: Use for CNS reactivity in taper",
-    "movement_archetype": "balance_control",
-    "proposed": {
-      "rehab_stage": null,
+      "rehab_stage": "load",
       "function": "control",
-      "equipment": null,
+      "equipment": [
+        "mini_band"
+      ],
       "impact": "none",
-      "load": null,
+      "load": "low",
       "velocity": "low",
       "target_regions": [
         "knee"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "knee joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-knee/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
-    "flags": [],
-    "review_state": "needs_review",
+    "flags": [
+      "SPEED_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "02155d5bf148ba451ac39d408f4134c2fda40029435b82ac0e8f6c8d69544879",
+        "name": "Mini-Band Lateral Walks",
+        "notes": "SPP: Reinforce lateral control → TAPER: Keep pattern sharp pre-fight"
+      }
+    ]
+  },
+  {
+    "drill_id": "knee_instability_reactive_knee_bounces_foam_pad",
+    "source_hash": "84ceaf86fa1d0192f7a20a8df4b5e428e1050ada647358ce6cb9592b565a4da1",
+    "location": "knee",
+    "injury_type": "instability",
+    "name": "Controlled knee bends on foam pad",
+    "notes": "Stand with both feet on a fixed foam pad beside stable support and make small slow knee bends without bouncing or jumping. Keep depth fixed; no partner contact. Stop if pain, giving way or symptoms worsen during or after the work.",
+    "movement_archetype": "controlled_contact",
+    "proposed": {
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [
+        "foam_pad",
+        "stable_support"
+      ],
+      "impact": "none",
+      "load": "moderate",
+      "velocity": "low",
+      "target_regions": [
+        "knee"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "knee joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-knee/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
+    },
+    "flags": [
+      "IMPACT_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "3804eb78ea0b6a48d6ee8919686b9bde4f4238f73782740822bc8336226462bd",
+        "name": "Reactive Knee Bounces (Foam Pad)",
+        "notes": "SPP: Improve balance under contact → TAPER: Use for CNS reactivity in taper"
+      }
+    ]
+  },
+  {
+    "drill_id": "knee_instability_recovery_support",
+    "source_hash": "ec28f6cd2fdd6a930f1728903fd924f6c9558fd6dc6103d7de924d8794e0e9a6",
+    "location": "knee",
+    "injury_type": "instability",
+    "name": "Knee instability protective guidance",
+    "notes": "Avoid positions or activities in which the joint feels unsafe or gives way. Keep it comfortably supported and follow any clinician-directed restrictions. Arrange assessment for new or repeated giving way. Suspected dislocation, subluxation, severe pain, deformity or loss of sensation needs medical assessment; do not test the joint with hops, end-range stretches or perturbations.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "knee"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "knee joint supporting soft tissues"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-knee/. Fixed protective baseline only; no numeric dose or return clearance. Low/moderate eligibility and session allocation cadence are existing product safety/scheduling rules, not a clinical diagnosis or exercise dose."
+    },
+    "flags": [
+      "IMPACT_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
+    "drill_id": "knee_instability_reviewed_restore",
+    "source_hash": "afb4830367460db6f998c4cf9f5c31c0661b2323f61e31b48042235f1496e034",
+    "location": "knee",
+    "injury_type": "instability",
+    "name": "Supported knee heel slide",
+    "notes": "Sit or lie with the affected leg supported on a smooth surface. Gently slide the heel towards you to bend the knee, then slide back to straighten within a comfortable pain-free range. Do not force movement, stand on an unstable surface or add resistance. Stop and seek assessment if the knee locks, repeatedly gives way or cannot bear weight. Stop if pain, slipping or symptoms worsen during or after the work.",
+    "movement_archetype": "mobility_rom",
+    "proposed": {
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "knee"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "knee joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-knee/. Fixed protective baseline only; no numeric dose or return clearance. Low/moderate eligibility and session allocation cadence are existing product safety/scheduling rules, not a clinical diagnosis or exercise dose."
+    },
+    "flags": [
+      "LOAD_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
     "review_version": 1
   },
   {
@@ -3667,61 +3952,88 @@
   },
   {
     "drill_id": "knee_instability_mini_band_lateral_walks_2",
-    "source_hash": "76475558abdc0da7ffb0fd586773f7763e9e8e4e6f19a0af227a52715c1434e2",
+    "source_hash": "e41e7b22d4903406f4a07b7e0ea06148d4da0ddcc4f6cf2057bd32db153cd4e2",
     "location": "knee",
     "injury_type": "instability",
     "name": "Mini-Band Lateral Walks",
-    "notes": "SPP: Reinforce lateral control → TAPER: Keep pattern sharp pre-fight",
+    "notes": "With a fixed light mini-band and knees comfortably bent, take slow small sideways steps on level ground. Keep band tension and step size fixed; no faster steps or fatigue work. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "locomotion",
     "proposed": {
-      "rehab_stage": null,
-      "function": null,
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
-      "target_regions": [
-        "knee"
-      ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
-      "sport_specificity": null,
-      "contact_level": null,
-      "evidence_notes": null
-    },
-    "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
-  },
-  {
-    "drill_id": "knee_instability_reactive_knee_bounces_foam_pad_2",
-    "source_hash": "7c3f516d3ec9c7d6e116aba440d3a7de544b3980b935fc18d1d426c167b62863",
-    "location": "knee",
-    "injury_type": "instability",
-    "name": "Reactive Knee Bounces (Foam Pad)",
-    "notes": "SPP: Improve balance under contact → TAPER: Use for CNS reactivity in taper",
-    "movement_archetype": "balance_control",
-    "proposed": {
-      "rehab_stage": null,
+      "rehab_stage": "load",
       "function": "control",
-      "equipment": null,
+      "equipment": [
+        "mini_band"
+      ],
       "impact": "none",
-      "load": null,
+      "load": "low",
       "velocity": "low",
       "target_regions": [
         "knee"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "knee joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-knee/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
-    "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "flags": [
+      "SPEED_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "76475558abdc0da7ffb0fd586773f7763e9e8e4e6f19a0af227a52715c1434e2",
+        "name": "Mini-Band Lateral Walks",
+        "notes": "SPP: Reinforce lateral control → TAPER: Keep pattern sharp pre-fight"
+      }
+    ]
+  },
+  {
+    "drill_id": "knee_instability_reactive_knee_bounces_foam_pad_2",
+    "source_hash": "a75b9f60f87a4d8cb647f3a6112af76c008d9ca4be652ba192446c10d9cc3157",
+    "location": "knee",
+    "injury_type": "instability",
+    "name": "Controlled knee bends on foam pad",
+    "notes": "Stand with both feet on a fixed foam pad beside stable support and make small slow knee bends without bouncing or jumping. Keep depth fixed; no partner contact. Stop if pain, giving way or symptoms worsen during or after the work.",
+    "movement_archetype": "controlled_contact",
+    "proposed": {
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [
+        "foam_pad",
+        "stable_support"
+      ],
+      "impact": "none",
+      "load": "moderate",
+      "velocity": "low",
+      "target_regions": [
+        "knee"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "knee joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-knee/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
+    },
+    "flags": [
+      "IMPACT_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "7c3f516d3ec9c7d6e116aba440d3a7de544b3980b935fc18d1d426c167b62863",
+        "name": "Reactive Knee Bounces (Foam Pad)",
+        "notes": "SPP: Improve balance under contact → TAPER: Use for CNS reactivity in taper"
+      }
+    ]
   },
   {
     "drill_id": "hip_tightness_hip_flexor_stretch_on_wall",
@@ -11916,118 +12228,295 @@
   },
   {
     "drill_id": "shoulder_instability_kb_bottom_up_carry",
-    "source_hash": "93ccb44f16c1d8a0f32ae596b70240530b8e412de541054ec0c83781a8e60ad5",
+    "source_hash": "ab22b5217882f66042561051373e375ffd3c7207b1634775fca4a7ba5695706f",
     "location": "shoulder",
     "injury_type": "instability",
     "name": "KB Bottom-Up Carry",
-    "notes": "SPP: Dynamic control through all planes (anterior + lateral head) → TAPER: Short distance holds",
-    "movement_archetype": "isometric",
+    "notes": "Hold a kettlebell upside down with the elbow bent close to the side and walk slowly on level ground over one fixed short distance. Use an individually selected fixed weight; no overhead carry or perturbations. Stop if pain, giving way or symptoms worsen during or after the work.",
+    "movement_archetype": "locomotion",
     "proposed": {
-      "rehab_stage": null,
-      "function": null,
-      "equipment": null,
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [
+        "kettlebell"
+      ],
       "impact": "none",
-      "load": null,
+      "load": "unknown",
       "velocity": "low",
       "target_regions": [
         "shoulder"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "shoulder joint supporting soft tissues"
+      ],
       "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://msk-bexley.nhs.uk/conditions/shoulder-pain/shoulder-instability. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "93ccb44f16c1d8a0f32ae596b70240530b8e412de541054ec0c83781a8e60ad5",
+        "name": "KB Bottom-Up Carry",
+        "notes": "SPP: Dynamic control through all planes (anterior + lateral head) → TAPER: Short distance holds"
+      }
+    ]
   },
   {
     "drill_id": "shoulder_instability_wall_walks_isometric",
-    "source_hash": "1ff99473f07ccb47b89c4c788ff260bc8ee5a1613d2fd334f711afb127b683d6",
+    "source_hash": "ea4c6c1eed3326ece9af8fafd1d3e0e31972c2c9be74a4fcf59923661584a9b1",
     "location": "shoulder",
     "injury_type": "instability",
-    "name": "Wall Walks (Isometric)",
-    "notes": "SPP: Reinforce rotator cuff → TAPER: Static control with feedback",
-    "movement_archetype": "locomotion",
+    "name": "Comfortable fixed-height wall hold",
+    "notes": "Place the affected hand against a stable wall at a comfortable height and hold gently without moving. No climbing higher, forced overhead position or added resistance. Stop if pain, giving way or symptoms worsen during or after the work.",
+    "movement_archetype": "isometric",
     "proposed": {
-      "rehab_stage": null,
-      "function": "isometric_analgesia",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [
+        "wall"
+      ],
+      "impact": "none",
+      "load": "low",
+      "velocity": "low",
       "target_regions": [
         "shoulder"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
-      "sport_specificity": null,
-      "contact_level": null,
-      "evidence_notes": null
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "shoulder joint supporting soft tissues"
+      ],
+      "contraction_type": "isometric",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://msk-bexley.nhs.uk/conditions/shoulder-pain/shoulder-instability. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
     "flags": [],
-    "review_state": "needs_review",
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "1ff99473f07ccb47b89c4c788ff260bc8ee5a1613d2fd334f711afb127b683d6",
+        "name": "Wall Walks (Isometric)",
+        "notes": "SPP: Reinforce rotator cuff → TAPER: Static control with feedback"
+      }
+    ]
+  },
+  {
+    "drill_id": "shoulder_instability_recovery_support",
+    "source_hash": "6d03f616b12ee062cfd84b11bcf762cf5b3c5b05610a8c3c907cef5e3f3a21a4",
+    "location": "shoulder",
+    "injury_type": "instability",
+    "name": "Shoulder instability protective guidance",
+    "notes": "Avoid positions or activities in which the joint feels unsafe or gives way. Keep it comfortably supported and follow any clinician-directed restrictions. Arrange assessment for new or repeated giving way. Suspected dislocation, subluxation, severe pain, deformity or loss of sensation needs medical assessment; do not test the joint with hops, end-range stretches or perturbations.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "shoulder"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "shoulder joint supporting soft tissues"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://msk-bexley.nhs.uk/conditions/shoulder-pain/shoulder-instability. Fixed protective baseline only; no numeric dose or return clearance. Low/moderate eligibility and session allocation cadence are existing product safety/scheduling rules, not a clinical diagnosis or exercise dose."
+    },
+    "flags": [
+      "IMPACT_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
+    "drill_id": "shoulder_instability_reviewed_restore",
+    "source_hash": "9fb615f9fc5068736d78450826dd83d70d9977fbbce479b1d94bfa5deb52e978",
+    "location": "shoulder",
+    "injury_type": "instability",
+    "name": "Gentle shoulder blade setting",
+    "notes": "Sit supported with the affected arm relaxed by your side. Gently draw the shoulder blade back and down without forcing the shoulder into end range, then relax. Keep the movement small and comfortable. Stop if the joint feels as though it is slipping. Do not add weights, overhead work or stretching. Suspected dislocation or subluxation needs medical assessment. Stop if pain, slipping or symptoms worsen during or after the work.",
+    "movement_archetype": "balance_control",
+    "proposed": {
+      "rehab_stage": "restore",
+      "function": "control",
+      "equipment": [],
+      "impact": "none",
+      "load": "low",
+      "velocity": "low",
+      "target_regions": [
+        "shoulder"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "shoulder joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://msk-bexley.nhs.uk/conditions/shoulder-pain/shoulder-instability. Fixed protective baseline only; no numeric dose or return clearance. Low/moderate eligibility and session allocation cadence are existing product safety/scheduling rules, not a clinical diagnosis or exercise dose."
+    },
+    "flags": [
+      "LOAD_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
     "review_version": 1
   },
   {
     "drill_id": "shoulder_sprain_isometric_banded_row",
-    "source_hash": "c4ba4c34d3de9455c47cbe794822eb97cd95b39295b4f8715bb82c90408f793a",
+    "source_hash": "2b91d0efe15c42c40f037dc318cfabcb8565029099c9e144f3f52a64d8a5c52e",
     "location": "shoulder",
     "injury_type": "sprain",
     "name": "Isometric Banded Row",
-    "notes": "GPP: Reintroduce posterior drive → SPP: Add eccentric pull",
+    "notes": "With the affected arm close to the side, gently draw back against a fixed light band and hold without moving, then relax. No eccentric row, increased tension or fatigue hold. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "eccentric_loading",
     "proposed": {
-      "rehab_stage": null,
-      "function": "isometric_analgesia",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
-      "target_regions": [
-        "shoulder"
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [
+        "resistance_band"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": "eccentric",
-      "sport_specificity": "general_rehab",
-      "contact_level": "none",
-      "evidence_notes": null
-    },
-    "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
-  },
-  {
-    "drill_id": "shoulder_sprain_wall_supported_external_rotation",
-    "source_hash": "ee6a0097e2589333ef24401eaf6249c40af3291106769a6bf25e0583d80a4fc7",
-    "location": "shoulder",
-    "injury_type": "sprain",
-    "name": "Wall-Supported External Rotation",
-    "notes": "GPP: Low-friction cuff loading → SPP: Load tempo work",
-    "movement_archetype": "mobility_rom",
-    "proposed": {
-      "rehab_stage": null,
-      "function": null,
-      "equipment": null,
       "impact": "none",
-      "load": null,
+      "load": "low",
       "velocity": "low",
       "target_regions": [
         "shoulder"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "shoulder joint supporting soft tissues"
+      ],
+      "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
     "flags": [],
-    "review_state": "needs_review",
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "c4ba4c34d3de9455c47cbe794822eb97cd95b39295b4f8715bb82c90408f793a",
+        "name": "Isometric Banded Row",
+        "notes": "GPP: Reintroduce posterior drive → SPP: Add eccentric pull"
+      }
+    ]
+  },
+  {
+    "drill_id": "shoulder_sprain_wall_supported_external_rotation",
+    "source_hash": "db662a20f334302db69ad6a622f524fa554be10d142e68daa109451953b28531",
+    "location": "shoulder",
+    "injury_type": "sprain",
+    "name": "Wall-Supported External Rotation",
+    "notes": "Keep the elbow comfortably bent by the side and gently press the back of the hand into a towel against a stable wall without movement, then relax. No forced range or added resistance. Stop if pain, giving way or symptoms worsen during or after the work.",
+    "movement_archetype": "mobility_rom",
+    "proposed": {
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [
+        "wall",
+        "towel"
+      ],
+      "impact": "none",
+      "load": "low",
+      "velocity": "low",
+      "target_regions": [
+        "shoulder"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "shoulder joint supporting soft tissues"
+      ],
+      "contraction_type": "isometric",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "ee6a0097e2589333ef24401eaf6249c40af3291106769a6bf25e0583d80a4fc7",
+        "name": "Wall-Supported External Rotation",
+        "notes": "GPP: Low-friction cuff loading → SPP: Load tempo work"
+      }
+    ]
+  },
+  {
+    "drill_id": "shoulder_sprain_recovery_support",
+    "source_hash": "17a3023e9ab82a1202efec4d282c7fa8efdc3d3d31d9b4754fb1110ba266470e",
+    "location": "shoulder",
+    "injury_type": "sprain",
+    "name": "Shoulder sprain protective guidance",
+    "notes": "Protect the injured joint and avoid exercise or activity that aggravates it. During the first few days of a new sprain, rest from loading it and avoid massage or forced stretching. Follow any clinician-directed support or movement restrictions. Seek assessment for severe or worsening pain, deformity, inability to use the joint or loss of sensation.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "shoulder"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "shoulder joint supporting soft tissues"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/. Fixed protective baseline only; no numeric dose or return clearance. Low/moderate eligibility and session allocation cadence are existing product safety/scheduling rules, not a clinical diagnosis or exercise dose."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
+    "drill_id": "shoulder_sprain_reviewed_restore",
+    "source_hash": "2ccf5edd958c0b60af77cc93313e5a4ecab9d023422183681200e7b40d26bfc1",
+    "location": "shoulder",
+    "injury_type": "sprain",
+    "name": "Supported shoulder pendulum",
+    "notes": "Lean forward with your uninjured hand on a stable support and let the affected arm hang relaxed. Allow small gentle forward-and-back and side-to-side swings within a comfortable pain-free range. Do not force overhead movement, add weights or perform presses. Follow any individual restrictions given by your clinician. Stop if pain, slipping or symptoms worsen during or after the work.",
+    "movement_archetype": "mobility_rom",
+    "proposed": {
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [
+        "stable_support"
+      ],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "shoulder"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "shoulder joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/. Fixed protective baseline only; no numeric dose or return clearance. Low/moderate eligibility and session allocation cadence are existing product safety/scheduling rules, not a clinical diagnosis or exercise dose."
+    },
+    "flags": [
+      "LOAD_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
     "review_version": 1
   },
   {
@@ -12611,61 +13100,83 @@
   },
   {
     "drill_id": "shoulder_sprain_90_90_external_rotation_holds",
-    "source_hash": "bdbccc1658eac10d629aa180d22b0e76516bebb1644c15ca9aae004710a5cc7e",
+    "source_hash": "6bbf444782c0586e99000052003d0c3809e6a2a614c2d0d704844b60b259359b",
     "location": "shoulder",
     "injury_type": "sprain",
     "name": "90/90 External Rotation Holds",
-    "notes": "GPP: Strengthen rotator cuff under mild sprain (posterior)",
+    "notes": "Only if the shoulder-height position is comfortable, hold the elbow bent at a right angle and gently resist external rotation with the other hand without movement. No forced position or fatigue hold. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "isometric",
     "proposed": {
-      "rehab_stage": null,
-      "function": "mobility",
-      "equipment": null,
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [],
       "impact": "none",
-      "load": null,
+      "load": "low",
       "velocity": "low",
       "target_regions": [
         "shoulder"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "shoulder joint supporting soft tissues"
+      ],
       "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "bdbccc1658eac10d629aa180d22b0e76516bebb1644c15ca9aae004710a5cc7e",
+        "name": "90/90 External Rotation Holds",
+        "notes": "GPP: Strengthen rotator cuff under mild sprain (posterior)"
+      }
+    ]
   },
   {
     "drill_id": "shoulder_sprain_overhead_scapular_pull_aparts",
-    "source_hash": "688eed297b514338d50a474a26d1cba3415471f9ca3a0f0c8b7f1df7911e9a08",
+    "source_hash": "86905f325942126e0075d8f2708c923f15ad745d50e25550eb84ed257f878d69",
     "location": "shoulder",
     "injury_type": "sprain",
     "name": "Overhead Scapular Pull-Aparts",
-    "notes": "SPP: Retrain stabilizers to handle overhead motion",
-    "movement_archetype": "unknown",
+    "notes": "Only if the overhead position is comfortable, slowly pull a fixed light band apart through a small range and return under control. No increased tension, end-range stretch or faster movement. Stop if pain, giving way or symptoms worsen during or after the work.",
+    "movement_archetype": "banded_resistance",
     "proposed": {
-      "rehab_stage": null,
-      "function": null,
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [
+        "resistance_band"
+      ],
+      "impact": "none",
+      "load": "low",
+      "velocity": "low",
       "target_regions": [
         "shoulder"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
-      "sport_specificity": null,
-      "contact_level": null,
-      "evidence_notes": null
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "shoulder joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
-    "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "flags": [
+      "SPEED_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "688eed297b514338d50a474a26d1cba3415471f9ca3a0f0c8b7f1df7911e9a08",
+        "name": "Overhead Scapular Pull-Aparts",
+        "notes": "SPP: Retrain stabilizers to handle overhead motion"
+      }
+    ]
   },
   {
     "drill_id": "shoulder_swelling_passive_arm_circles",
@@ -12843,61 +13354,81 @@
   },
   {
     "drill_id": "shoulder_instability_quadruped_weight_shifts_arm_reaches",
-    "source_hash": "0b73ad0192f1c1b3595705ae5430aed3967d49a6d7f5a64e109006ace8d3a2bd",
+    "source_hash": "7c9a7feecea0033dbcbfe7b925b0b5ced900ee24b1f7d61acc40f4a6408391be",
     "location": "shoulder",
     "injury_type": "instability",
-    "name": "Quadruped Weight Shifts (Arm Reaches)",
-    "notes": "GPP: Rebuild co-contraction and reflexive control",
+    "name": "Quadruped weight shift with both hands down",
+    "notes": "From hands and knees on firm ground, gently shift weight between the hands through a small comfortable range. Keep both hands down; no arm reaches or instability challenge. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "balance_control",
     "proposed": {
-      "rehab_stage": null,
-      "function": null,
-      "equipment": null,
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [],
       "impact": "none",
-      "load": null,
+      "load": "moderate",
       "velocity": "low",
       "target_regions": [
         "shoulder"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "shoulder joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://msk-bexley.nhs.uk/conditions/shoulder-pain/shoulder-instability. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "0b73ad0192f1c1b3595705ae5430aed3967d49a6d7f5a64e109006ace8d3a2bd",
+        "name": "Quadruped Weight Shifts (Arm Reaches)",
+        "notes": "GPP: Rebuild co-contraction and reflexive control"
+      }
+    ]
   },
   {
     "drill_id": "shoulder_instability_banded_overhead_carries",
-    "source_hash": "2ccafd757537dea371a96209afc046c2d3721733b6052562256d6755400d2029",
+    "source_hash": "e3e352d6a99b455615523a749c4ba47d6c3d8631c045e4657d335fc5fc17f0e2",
     "location": "shoulder",
     "injury_type": "instability",
     "name": "Banded Overhead Carries",
-    "notes": "SPP: Reinforce stability under movement → TAPER: Lighter reps, shorter duration",
-    "movement_archetype": "banded_resistance",
+    "notes": "Only if individually advised to use an overhead position, hold a fixed light band overhead and walk slowly over a fixed short distance. No oscillations, range increase or fatigue work. Stop if pain, giving way or symptoms worsen during or after the work.",
+    "movement_archetype": "locomotion",
     "proposed": {
-      "rehab_stage": null,
-      "function": "activation",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [
+        "resistance_band"
+      ],
+      "impact": "none",
+      "load": "unknown",
+      "velocity": "low",
       "target_regions": [
         "shoulder"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "shoulder joint supporting soft tissues"
+      ],
+      "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://msk-bexley.nhs.uk/conditions/shoulder-pain/shoulder-instability. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "2ccafd757537dea371a96209afc046c2d3721733b6052562256d6755400d2029",
+        "name": "Banded Overhead Carries",
+        "notes": "SPP: Reinforce stability under movement → TAPER: Lighter reps, shorter duration"
+      }
+    ]
   },
   {
     "drill_id": "shoulder_soreness_lateral_raise_isometric_at_45",
@@ -15905,60 +16436,148 @@
   },
   {
     "drill_id": "elbow_sprain_wrist_wall_slides_elbow_straight",
-    "source_hash": "80d84e18df188693a24b978b4e0a2a80c02d3af108ad732e49a9fc7565487c02",
+    "source_hash": "4732f1778c9d3bcb23131ecfb7b1a0edf0543fded50120a7b7958924cbc77d4a",
     "location": "elbow",
     "injury_type": "sprain",
     "name": "Wrist Wall Slides (Elbow Straight)",
-    "notes": "GPP: Activate stabilizers without load → SPP: Advance to cable tricep or bicep reintroduction",
-    "movement_archetype": "external_load_strength",
+    "notes": "Place the affected hand lightly on a stable wall with the elbow comfortably straight. Slowly slide the hand through a small comfortable range; do not lock or force the elbow, press hard or add resistance. Stop if pain, giving way or symptoms worsen during or after the work.",
+    "movement_archetype": "unknown",
     "proposed": {
-      "rehab_stage": null,
-      "function": "activation",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [
+        "wall"
+      ],
+      "impact": "none",
+      "load": "low",
+      "velocity": "low",
       "target_regions": [
         "elbow"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "elbow joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
-    "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "flags": [
+      "LOAD_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "80d84e18df188693a24b978b4e0a2a80c02d3af108ad732e49a9fc7565487c02",
+        "name": "Wrist Wall Slides (Elbow Straight)",
+        "notes": "GPP: Activate stabilizers without load → SPP: Advance to cable tricep or bicep reintroduction"
+      }
+    ]
   },
   {
     "drill_id": "elbow_sprain_overhead_band_triceps_extension",
-    "source_hash": "8eac040d607f5108534c921720ea87aed56f71620b58414d239acb07acb0190e",
+    "source_hash": "0f4db1aaabffa28ca253c3ec3e54e33b21a7da1f32935a80d5914ddfd7aee877",
     "location": "elbow",
     "injury_type": "sprain",
     "name": "Overhead Band Triceps Extension",
-    "notes": "GPP: Rebuild overhead stability → SPP: Add tempo for load tolerance",
+    "notes": "Only if the overhead position is comfortable, slowly bend and straighten the elbow against a fixed light band. Do not force straightening, increase resistance or work to fatigue. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "banded_resistance",
     "proposed": {
-      "rehab_stage": null,
+      "rehab_stage": "load",
       "function": "control",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "equipment": [
+        "resistance_band"
+      ],
+      "impact": "none",
+      "load": "low",
+      "velocity": "low",
       "target_regions": [
         "elbow"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "elbow joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
+    },
+    "flags": [
+      "LOAD_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "8eac040d607f5108534c921720ea87aed56f71620b58414d239acb07acb0190e",
+        "name": "Overhead Band Triceps Extension",
+        "notes": "GPP: Rebuild overhead stability → SPP: Add tempo for load tolerance"
+      }
+    ]
+  },
+  {
+    "drill_id": "elbow_sprain_recovery_support",
+    "source_hash": "d5b2c1452ba1ede8f8c8ea1f14afd9d8b0d251bc2a87718b4a02447db83680cb",
+    "location": "elbow",
+    "injury_type": "sprain",
+    "name": "Elbow sprain protective guidance",
+    "notes": "Protect the injured joint and avoid exercise or activity that aggravates it. During the first few days of a new sprain, rest from loading it and avoid massage or forced stretching. Follow any clinician-directed support or movement restrictions. Seek assessment for severe or worsening pain, deformity, inability to use the joint or loss of sensation.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "elbow"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "elbow joint supporting soft tissues"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries. Fixed protective baseline only; no numeric dose or return clearance. Low/moderate eligibility and session allocation cadence are existing product safety/scheduling rules, not a clinical diagnosis or exercise dose."
     },
     "flags": [],
-    "review_state": "needs_review",
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
+    "drill_id": "elbow_sprain_reviewed_restore",
+    "source_hash": "ddd7c1129780235d61f5019107d336b088f6cc1cfd58afaebfa5d411c836ab51",
+    "location": "elbow",
+    "injury_type": "sprain",
+    "name": "Supported elbow bend and straighten",
+    "notes": "Once pain begins to settle, support the affected elbow with your other hand and slowly bend and straighten it within a comfortable pain-free range. Do not force straightening, carry weights or push through the arm. Follow any clinician-directed movement restrictions. Stop if pain, slipping or symptoms worsen during or after the work.",
+    "movement_archetype": "mobility_rom",
+    "proposed": {
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "elbow"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "elbow joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries. Fixed protective baseline only; no numeric dose or return clearance. Low/moderate eligibility and session allocation cadence are existing product safety/scheduling rules, not a clinical diagnosis or exercise dose."
+    },
+    "flags": [],
+    "review_state": "reviewed",
     "review_version": 1
   },
   {
@@ -16605,60 +17224,146 @@
   },
   {
     "drill_id": "wrist_sprain_isometric_wall_wrist_press",
-    "source_hash": "115a02bf598472feca80dc193684d44e6b2fbca1950569592fc2ed3c0de24997",
+    "source_hash": "23da76400c7fdc222f99ebd8f2aa8af160c2303826fa926156c49fea6ff66538",
     "location": "wrist",
     "injury_type": "sprain",
     "name": "Isometric Wall Wrist Press",
-    "notes": "GPP: Load ligament gently → SPP: Add slight range to simulate punch guard",
+    "notes": "With the wrist comfortable and the hand against a stable wall, press gently without moving the wrist, then relax. Keep pressure fixed; no punching or forced extension. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "isometric",
     "proposed": {
-      "rehab_stage": null,
-      "function": "isometric_analgesia",
-      "equipment": null,
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [
+        "wall"
+      ],
       "impact": "none",
-      "load": null,
+      "load": "low",
       "velocity": "low",
       "target_regions": [
         "wrist"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "wrist joint supporting soft tissues"
+      ],
       "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "115a02bf598472feca80dc193684d44e6b2fbca1950569592fc2ed3c0de24997",
+        "name": "Isometric Wall Wrist Press",
+        "notes": "GPP: Load ligament gently → SPP: Add slight range to simulate punch guard"
+      }
+    ]
   },
   {
     "drill_id": "wrist_sprain_band_assisted_wrist_flexion_hold",
-    "source_hash": "12540e3a270116206a9d4b160ab55a525f2943fddb94e4e052cb64bdd577e782",
+    "source_hash": "cda435e4130e2cf3458eba67563c1142942262b45f53783d15e3a3fd48c58f65",
     "location": "wrist",
     "injury_type": "sprain",
     "name": "Band-Assisted Wrist Flexion Hold",
-    "notes": "GPP: Safe end-range control → SPP: Add time-under-tension for guard resilience",
+    "notes": "Support the forearm and hold the wrist in comfortable mid-range flexion against a fixed light band, then relax. Do not force end range or lengthen the hold to fatigue. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "banded_resistance",
     "proposed": {
-      "rehab_stage": null,
-      "function": null,
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [
+        "resistance_band"
+      ],
+      "impact": "none",
+      "load": "low",
+      "velocity": "low",
       "target_regions": [
         "wrist"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "wrist joint supporting soft tissues"
+      ],
+      "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
     "flags": [],
-    "review_state": "needs_review",
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "12540e3a270116206a9d4b160ab55a525f2943fddb94e4e052cb64bdd577e782",
+        "name": "Band-Assisted Wrist Flexion Hold",
+        "notes": "GPP: Safe end-range control → SPP: Add time-under-tension for guard resilience"
+      }
+    ]
+  },
+  {
+    "drill_id": "wrist_sprain_recovery_support",
+    "source_hash": "51aa9d1a8dc0392d5842af8e4567f26daac00f35dc71e9e02c1f79c7d50180d2",
+    "location": "wrist",
+    "injury_type": "sprain",
+    "name": "Wrist sprain protective guidance",
+    "notes": "Protect the injured joint and avoid exercise or activity that aggravates it. During the first few days of a new sprain, rest from loading it and avoid massage or forced stretching. Follow any clinician-directed support or movement restrictions. Seek assessment for severe or worsening pain, deformity, inability to use the joint or loss of sensation.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "wrist"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "wrist joint supporting soft tissues"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/. Fixed protective baseline only; no numeric dose or return clearance. Low/moderate eligibility and session allocation cadence are existing product safety/scheduling rules, not a clinical diagnosis or exercise dose."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
+    "drill_id": "wrist_sprain_reviewed_restore",
+    "source_hash": "c077d9d83d1a83bff0886d354a0520c314cef108b55d6b369dd795810921adba",
+    "location": "wrist",
+    "injury_type": "sprain",
+    "name": "Supported wrist bend and straighten",
+    "notes": "Rest the affected forearm on a table with the hand relaxed. Slowly bend and straighten the wrist within a comfortable pain-free range. Do not force end range, grip a weight or push through the hand. Follow any clinician-directed splint or movement restrictions. Stop if pain, slipping or symptoms worsen during or after the work.",
+    "movement_archetype": "mobility_rom",
+    "proposed": {
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [
+        "table"
+      ],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "wrist"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "wrist joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/. Fixed protective baseline only; no numeric dose or return clearance. Low/moderate eligibility and session allocation cadence are existing product safety/scheduling rules, not a clinical diagnosis or exercise dose."
+    },
+    "flags": [],
+    "review_state": "reviewed",
     "review_version": 1
   },
   {
@@ -17451,61 +18156,85 @@
   },
   {
     "drill_id": "wrist_sprain_wrist_stability_drill_with_dynamometer",
-    "source_hash": "90797a4c97a62fe4801361788957b66bf770b92ce15971b8e94eca558a58eb4b",
+    "source_hash": "00991efec71abd819a2d6556c756b853ffd3e4810898ea64e6660d8a25d30709",
     "location": "wrist",
     "injury_type": "sprain",
     "name": "Wrist Stability Drill with Dynamometer",
-    "notes": "SPP: Test joint under load → TAPER: Maintain refined control",
+    "notes": "With the forearm supported and wrist neutral, gently squeeze a dynamometer using one clinician-selected fixed resistance. This is grip loading, not a test of ligament healing or clearance. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "balance_control",
     "proposed": {
-      "rehab_stage": null,
+      "rehab_stage": "load",
       "function": "control",
-      "equipment": null,
+      "equipment": [
+        "dynamometer"
+      ],
       "impact": "none",
-      "load": null,
+      "load": "unknown",
       "velocity": "low",
       "target_regions": [
         "wrist"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "wrist joint supporting soft tissues"
+      ],
+      "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "90797a4c97a62fe4801361788957b66bf770b92ce15971b8e94eca558a58eb4b",
+        "name": "Wrist Stability Drill with Dynamometer",
+        "notes": "SPP: Test joint under load → TAPER: Maintain refined control"
+      }
+    ]
   },
   {
     "drill_id": "wrist_sprain_band_stabilization_circles",
-    "source_hash": "f6c7d21c146a53299844580ec44a48f7ff27da6632f1fc66147fa7c8a23a949c",
+    "source_hash": "40dea80908837152ebcc7b270bce7b0b145d42a1261e4a8dd06b85d7158e39da",
     "location": "wrist",
     "injury_type": "sprain",
     "name": "Band Stabilization Circles",
-    "notes": "SPP: Load end-range tension → TAPER: Flash mobility without overdrive",
+    "notes": "With the forearm supported, slowly move the wrist in a small comfortable circle against one fixed light band. No forced end range, faster movement or resistance increase. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "banded_resistance",
     "proposed": {
-      "rehab_stage": null,
-      "function": "mobility",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [
+        "resistance_band"
+      ],
+      "impact": "none",
+      "load": "low",
+      "velocity": "low",
       "target_regions": [
         "wrist"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "wrist joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
-    "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "flags": [
+      "SPEED_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "f6c7d21c146a53299844580ec44a48f7ff27da6632f1fc66147fa7c8a23a949c",
+        "name": "Band Stabilization Circles",
+        "notes": "SPP: Load end-range tension → TAPER: Flash mobility without overdrive"
+      }
+    ]
   },
   {
     "drill_id": "wrist_tendonitis_pronation_supination_twists",
@@ -18325,118 +19054,222 @@
   },
   {
     "drill_id": "wrist_sprain_isometric_wrist_holds_various_angles",
-    "source_hash": "5406367b6f2aa89677e605057853cf1b6e2c6afd3f0ec226e252d3e5fed5bd2f",
+    "source_hash": "b42a8c39d35132ea99108ef244b5981b3a04ea93f973e3e108fcbee03cc508e8",
     "location": "wrist",
     "injury_type": "sprain",
-    "name": "Isometric Wrist Holds (Various Angles)",
-    "notes": "GPP: Build foundational load tolerance → SPP: Expand angle range with resistance",
+    "name": "Neutral isometric wrist hold",
+    "notes": "Support the forearm with the wrist neutral. Gently resist the other hand without movement, then relax. Use only this fixed neutral position; do not add angles, weight or fatigue holds. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "isometric",
     "proposed": {
-      "rehab_stage": null,
-      "function": "isometric_analgesia",
-      "equipment": null,
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [],
       "impact": "none",
-      "load": null,
+      "load": "low",
       "velocity": "low",
       "target_regions": [
         "wrist"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "wrist joint supporting soft tissues"
+      ],
       "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "5406367b6f2aa89677e605057853cf1b6e2c6afd3f0ec226e252d3e5fed5bd2f",
+        "name": "Isometric Wrist Holds (Various Angles)",
+        "notes": "GPP: Build foundational load tolerance → SPP: Expand angle range with resistance"
+      }
+    ]
   },
   {
     "drill_id": "wrist_sprain_plank_to_palm_rockbacks",
-    "source_hash": "59b2bb1768ccc0b474d7b72dc27338ef5704a52f638d0c4145e94eff3ccf3bf3",
+    "source_hash": "c9c51daaf5d7aba5eeef3a331aa7e24ee42a42f0d870262fb8d9b3453888b7ce",
     "location": "wrist",
     "injury_type": "sprain",
-    "name": "Plank to Palm Rockbacks",
-    "notes": "GPP: Joint loading in safe pattern → SPP: Introduce speed and range",
+    "name": "Supported hands-and-knees wrist rockback",
+    "notes": "From hands and knees on firm ground, gently shift weight back and return while the wrists stay comfortable. Keep the knees down; no full plank, speed work or forced extension. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "isometric",
     "proposed": {
-      "rehab_stage": null,
-      "function": null,
-      "equipment": null,
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [],
       "impact": "none",
-      "load": null,
+      "load": "moderate",
       "velocity": "low",
       "target_regions": [
         "wrist"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": "isometric",
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "wrist joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "59b2bb1768ccc0b474d7b72dc27338ef5704a52f638d0c4145e94eff3ccf3bf3",
+        "name": "Plank to Palm Rockbacks",
+        "notes": "GPP: Joint loading in safe pattern → SPP: Introduce speed and range"
+      }
+    ]
   },
   {
     "drill_id": "hand_sprain_finger_band_extensions",
-    "source_hash": "496e508d285ad36ecd6d0b60c085a23982a27918505aa290b371f54e2c4c1ed3",
+    "source_hash": "8dc2b93250b478ba9ed5a8ef383f0c93ad68d067e817169eaefd07048709bd4b",
     "location": "hand",
     "injury_type": "sprain",
     "name": "Finger Band Extensions",
-    "notes": "GPP: Restore finger abduction strength → SPP: Increase reps and band tension",
+    "notes": "Support the hand and slowly open the fingers against a fixed light band, then release. No flicking, increased tension or fatigue work. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "banded_resistance",
     "proposed": {
-      "rehab_stage": null,
-      "function": "recovery_downregulation",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
-      "target_regions": [
-        "hand"
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [
+        "resistance_band"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
-      "sport_specificity": "general_rehab",
-      "contact_level": "none",
-      "evidence_notes": null
-    },
-    "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
-  },
-  {
-    "drill_id": "hand_sprain_palm_squeeze_with_soft_ball",
-    "source_hash": "af060843a130de7e0ed61cdd1c8cec864e0e5338f06ea1b56c8b53ebae7a1d3f",
-    "location": "hand",
-    "injury_type": "sprain",
-    "name": "Palm Squeeze with Soft Ball",
-    "notes": "GPP: Gentle reactivation → SPP: Increase duration for deep tissue loading",
-    "movement_archetype": "activation",
-    "proposed": {
-      "rehab_stage": null,
-      "function": "activation",
-      "equipment": null,
       "impact": "none",
-      "load": null,
+      "load": "low",
       "velocity": "low",
       "target_regions": [
         "hand"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "hand joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
     "flags": [],
-    "review_state": "needs_review",
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "496e508d285ad36ecd6d0b60c085a23982a27918505aa290b371f54e2c4c1ed3",
+        "name": "Finger Band Extensions",
+        "notes": "GPP: Restore finger abduction strength → SPP: Increase reps and band tension"
+      }
+    ]
+  },
+  {
+    "drill_id": "hand_sprain_palm_squeeze_with_soft_ball",
+    "source_hash": "6e98b2dd8bce7e4cf5dbfae48ff24e50f97648040e98d15058b98afcb9da95f3",
+    "location": "hand",
+    "injury_type": "sprain",
+    "name": "Palm Squeeze with Soft Ball",
+    "notes": "Support the forearm and gently squeeze one soft ball with the wrist comfortable, then relax. Keep pressure fixed; no harder ball or fatigue holds. Stop if pain, giving way or symptoms worsen during or after the work.",
+    "movement_archetype": "isometric",
+    "proposed": {
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [
+        "soft_ball"
+      ],
+      "impact": "none",
+      "load": "low",
+      "velocity": "low",
+      "target_regions": [
+        "hand"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "hand joint supporting soft tissues"
+      ],
+      "contraction_type": "isometric",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "af060843a130de7e0ed61cdd1c8cec864e0e5338f06ea1b56c8b53ebae7a1d3f",
+        "name": "Palm Squeeze with Soft Ball",
+        "notes": "GPP: Gentle reactivation → SPP: Increase duration for deep tissue loading"
+      }
+    ]
+  },
+  {
+    "drill_id": "hand_sprain_recovery_support",
+    "source_hash": "075db0ba11f6503743b5c706a3dddbf9514afd54b8ab5b5b6fb82e36e96604b4",
+    "location": "hand",
+    "injury_type": "sprain",
+    "name": "Hand sprain protective guidance",
+    "notes": "Protect the injured joint and avoid exercise or activity that aggravates it. During the first few days of a new sprain, rest from loading it and avoid massage or forced stretching. Follow any clinician-directed support or movement restrictions. Seek assessment for severe or worsening pain, deformity, inability to use the joint or loss of sensation.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "hand"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "hand joint supporting soft tissues"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/. Fixed protective baseline only; no numeric dose or return clearance. Low/moderate eligibility and session allocation cadence are existing product safety/scheduling rules, not a clinical diagnosis or exercise dose."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
+    "drill_id": "hand_sprain_reviewed_restore",
+    "source_hash": "c8d781abe9257c5615aff2380562ae8ce1e65dd84e23ea5f9023182baf11b402",
+    "location": "hand",
+    "injury_type": "sprain",
+    "name": "Gentle hand opening and closing",
+    "notes": "With the forearm supported and wrist comfortable, gently open the affected hand and bend the fingers into a loose fist, then straighten them within a pain-free range. Do not squeeze tightly, use a ball or band, force stiff joints or add impact. Follow any splint or tendon-protection instructions from your clinician. Stop if pain, slipping or symptoms worsen during or after the work.",
+    "movement_archetype": "mobility_rom",
+    "proposed": {
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "hand"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "hand joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/. Fixed protective baseline only; no numeric dose or return clearance. Low/moderate eligibility and session allocation cadence are existing product safety/scheduling rules, not a clinical diagnosis or exercise dose."
+    },
+    "flags": [
+      "IMPACT_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
     "review_version": 1
   },
   {
@@ -19079,65 +19912,87 @@
   },
   {
     "drill_id": "hand_sprain_band_resisted_finger_abduction",
-    "source_hash": "81b5d643874a453a2b842b3d34e653eafd47ac10d7ae3456da36eb1fd5dbbb27",
+    "source_hash": "95787052a9097c67e2cd7a65998970da5631419757fb1da9cc91a570502cc10e",
     "location": "hand",
     "injury_type": "sprain",
     "name": "Band-Resisted Finger Abduction",
-    "notes": "GPP: Isolate lateral joint activation → SPP: Increase resistance and range",
+    "notes": "With the hand supported, slowly spread the fingers against one fixed light band and return. No forced joint range, increased tension or faster repetitions. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "banded_resistance",
     "proposed": {
-      "rehab_stage": null,
-      "function": "activation",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [
+        "resistance_band"
+      ],
+      "impact": "none",
+      "load": "low",
+      "velocity": "low",
       "target_regions": [
         "hand"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "hand joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
     "flags": [
-      "VARIABLE_DEMAND_PROGRESSION",
-      "LOAD_PROGRESSION_IN_NOTES",
-      "POSSIBLE_DRILL_SPLIT"
+      "SPEED_PROGRESSION_IN_NOTES"
     ],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "81b5d643874a453a2b842b3d34e653eafd47ac10d7ae3456da36eb1fd5dbbb27",
+        "name": "Band-Resisted Finger Abduction",
+        "notes": "GPP: Isolate lateral joint activation → SPP: Increase resistance and range"
+      }
+    ]
   },
   {
     "drill_id": "hand_sprain_hook_grip_plate_pinches",
-    "source_hash": "87624ea8768c2c584ac928e9374baeced30f81c7aadab428e470126626592b87",
+    "source_hash": "538b96c4d89bc2d58620a350bccadaeee5f9da3e7e78ae2d5efe11d71d9d2f84",
     "location": "hand",
     "injury_type": "sprain",
     "name": "Hook Grip Plate Pinches",
-    "notes": "GPP: Restore tendon-line coordination → SPP: Progress to full ROM and fatigue",
+    "notes": "With the wrist comfortable, hold one clinician-selected fixed plate using a comfortable hook grip, then release. No carrying, heavier plate or fatigue hold; load depends on the selected weight. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "external_load_strength",
     "proposed": {
-      "rehab_stage": null,
+      "rehab_stage": "load",
       "function": "control",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "equipment": [
+        "plate"
+      ],
+      "impact": "none",
+      "load": "unknown",
+      "velocity": "low",
       "target_regions": [
         "hand"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "hand joint supporting soft tissues"
+      ],
+      "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
-    "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "flags": [
+      "LOAD_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "87624ea8768c2c584ac928e9374baeced30f81c7aadab428e470126626592b87",
+        "name": "Hook Grip Plate Pinches",
+        "notes": "GPP: Restore tendon-line coordination → SPP: Progress to full ROM and fatigue"
+      }
+    ]
   },
   {
     "drill_id": "hand_strain_loaded_palm_extensions_rubber_band",
@@ -19550,60 +20405,146 @@
   },
   {
     "drill_id": "fingers_sprain_finger_band_expansions",
-    "source_hash": "ecce4b88b79fef3a0c06852f01d86263379d36269809be25aa1385b4fe9401b2",
+    "source_hash": "7043723222b512b6520cbb0bfc1ac17dcb77a83b459e45100f633683bc04eacd",
     "location": "fingers",
     "injury_type": "sprain",
     "name": "Finger Band Expansions",
-    "notes": "GPP: Rebuild extensor activation → SPP: Increase tension and hold duration",
+    "notes": "Support the hand and slowly spread the fingers against one fixed light band, then release. Do not force the injured joint, increase resistance or work to fatigue. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "banded_resistance",
     "proposed": {
-      "rehab_stage": null,
-      "function": "activation",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [
+        "resistance_band"
+      ],
+      "impact": "none",
+      "load": "low",
+      "velocity": "low",
       "target_regions": [
         "fingers"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "fingers joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
-    "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "flags": [
+      "LOAD_PROGRESSION_IN_NOTES"
+    ],
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "ecce4b88b79fef3a0c06852f01d86263379d36269809be25aa1385b4fe9401b2",
+        "name": "Finger Band Expansions",
+        "notes": "GPP: Rebuild extensor activation → SPP: Increase tension and hold duration"
+      }
+    ]
   },
   {
     "drill_id": "fingers_sprain_finger_taps_on_hard_surface",
-    "source_hash": "35e9cae29ee2457f06fce591eefee8815d20407553ab46b7350808574733b062",
+    "source_hash": "07d2dfe41e1f48568e8fb5a290178fc34c74a636cb601f99a887d40b5dc17891",
     "location": "fingers",
     "injury_type": "sprain",
     "name": "Finger Taps on Hard Surface",
-    "notes": "GPP: Light impact reintroduction → SPP: Increase frequency to simulate grip release",
+    "notes": "With the hand supported, make light slow finger taps onto a firm table. Keep the force and speed fixed; no forceful tapping or grip-release simulation. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "unknown",
     "proposed": {
-      "rehab_stage": null,
-      "function": null,
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "dynamic",
+      "function": "control",
+      "equipment": [
+        "table"
+      ],
+      "impact": "unknown",
+      "load": "unknown",
+      "velocity": "moderate",
       "target_regions": [
         "fingers"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
-      "sport_specificity": null,
-      "contact_level": null,
-      "evidence_notes": null
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "fingers joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
     "flags": [],
-    "review_state": "needs_review",
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "35e9cae29ee2457f06fce591eefee8815d20407553ab46b7350808574733b062",
+        "name": "Finger Taps on Hard Surface",
+        "notes": "GPP: Light impact reintroduction → SPP: Increase frequency to simulate grip release"
+      }
+    ]
+  },
+  {
+    "drill_id": "fingers_sprain_recovery_support",
+    "source_hash": "5cdad76cf77ec10f92632e089b017178f48d2c68e71547365779bf6a180b53af",
+    "location": "fingers",
+    "injury_type": "sprain",
+    "name": "Fingers sprain protective guidance",
+    "notes": "Protect the injured joint and avoid exercise or activity that aggravates it. During the first few days of a new sprain, rest from loading it and avoid massage or forced stretching. Follow any clinician-directed support or movement restrictions. Seek assessment for severe or worsening pain, deformity, inability to use the joint or loss of sensation.",
+    "movement_archetype": "manual_recovery",
+    "proposed": {
+      "rehab_stage": "calm",
+      "function": "recovery_downregulation",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "fingers"
+      ],
+      "laterality_applicability": "not_applicable",
+      "target_tissues": [
+        "fingers joint supporting soft tissues"
+      ],
+      "contraction_type": "unknown",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/. Fixed protective baseline only; no numeric dose or return clearance. Low/moderate eligibility and session allocation cadence are existing product safety/scheduling rules, not a clinical diagnosis or exercise dose."
+    },
+    "flags": [],
+    "review_state": "reviewed",
+    "review_version": 1
+  },
+  {
+    "drill_id": "fingers_sprain_reviewed_restore",
+    "source_hash": "5e30fb067ad91e0259c67fb968dace035e4116d194a5ca3f378c9ce12012a727",
+    "location": "fingers",
+    "injury_type": "sprain",
+    "name": "Gentle finger bend and straighten",
+    "notes": "Support the affected hand and gently bend and straighten the injured finger within a comfortable pain-free range. Do not push it with the other hand, pull against a band, tap forcefully or add grip resistance. Follow any clinician-directed protection; do not bend a joint that you have been instructed to keep splinted straight. Stop if pain, slipping or symptoms worsen during or after the work.",
+    "movement_archetype": "mobility_rom",
+    "proposed": {
+      "rehab_stage": "restore",
+      "function": "mobility",
+      "equipment": [],
+      "impact": "none",
+      "load": "minimal",
+      "velocity": "low",
+      "target_regions": [
+        "fingers"
+      ],
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "fingers joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Sources: https://www.nhs.uk/conditions/sprains-and-strains/, https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/. Fixed protective baseline only; no numeric dose or return clearance. Low/moderate eligibility and session allocation cadence are existing product safety/scheduling rules, not a clinical diagnosis or exercise dose."
+    },
+    "flags": [],
+    "review_state": "reviewed",
     "review_version": 1
   },
   {
@@ -20420,61 +21361,84 @@
   },
   {
     "drill_id": "fingers_sprain_tape_assisted_plyo_taps",
-    "source_hash": "060293fa32ac580ed9f142971eebd8178994e8e4e71f043dfcdc7023fc4e1224",
+    "source_hash": "b818df7afcde63f1345175996738f61b7a30f005a2c3a45ca4297cc6bfc9e6a7",
     "location": "fingers",
     "injury_type": "sprain",
     "name": "Tape-Assisted Plyo Taps",
-    "notes": "SPP: Explosive but protected taps → TAPER: Transition to tap speed under load",
+    "notes": "Only if individually advised, perform small quick finger taps onto a firm surface with clinician-directed tape. Keep speed and force fixed. Tape does not establish readiness or protect against every injury. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "hop_jump_landing",
     "proposed": {
-      "rehab_stage": null,
-      "function": null,
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "dynamic",
+      "function": "control",
+      "equipment": [
+        "table",
+        "tape"
+      ],
+      "impact": "unknown",
+      "load": "unknown",
+      "velocity": "high",
       "target_regions": [
         "fingers"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
-      "sport_specificity": null,
-      "contact_level": null,
-      "evidence_notes": null
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "fingers joint supporting soft tissues"
+      ],
+      "contraction_type": "mixed",
+      "sport_specificity": "general_rehab",
+      "contact_level": "none",
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "060293fa32ac580ed9f142971eebd8178994e8e4e71f043dfcdc7023fc4e1224",
+        "name": "Tape-Assisted Plyo Taps",
+        "notes": "SPP: Explosive but protected taps → TAPER: Transition to tap speed under load"
+      }
+    ]
   },
   {
     "drill_id": "fingers_sprain_mini_band_finger_spread_hold",
-    "source_hash": "c38cf6cf4d065fcd1b251bb2b26b4601599cdc49de821d16649b16adc32b2f50",
+    "source_hash": "9a7eaaa3abbccfdbc9fd4b7e11581625bb56c941544103dfeef25ba47250abfb",
     "location": "fingers",
     "injury_type": "sprain",
     "name": "Mini Band Finger Spread-Hold",
-    "notes": "SPP: Stabilize joints under stretch → TAPER: Maintain control with low tension",
+    "notes": "Support the hand and hold the fingers gently spread against one fixed light mini-band, then relax. Do not force joint range, increase tension or extend holds to fatigue. Stop if pain, giving way or symptoms worsen during or after the work.",
     "movement_archetype": "banded_resistance",
     "proposed": {
-      "rehab_stage": null,
-      "function": "mobility",
-      "equipment": null,
-      "impact": null,
-      "load": null,
-      "velocity": null,
+      "rehab_stage": "load",
+      "function": "control",
+      "equipment": [
+        "mini_band"
+      ],
+      "impact": "none",
+      "load": "low",
+      "velocity": "low",
       "target_regions": [
         "fingers"
       ],
-      "laterality_applicability": null,
-      "target_tissues": null,
-      "contraction_type": null,
+      "laterality_applicability": "side_specific",
+      "target_tissues": [
+        "fingers joint supporting soft tissues"
+      ],
+      "contraction_type": "isometric",
       "sport_specificity": "general_rehab",
       "contact_level": "none",
-      "evidence_notes": null
+      "evidence_notes": "Reviewed fixed exercise mechanics. Regional guidance: https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/. This does not establish dose, efficacy or eligibility for the exact equipment variant. Not an active prescription. LOAD/DYNAMIC/RETURN require separately sourced, evaluable transitions. Unknown demand remains unknown."
     },
     "flags": [],
-    "review_state": "needs_review",
-    "review_version": 1
+    "review_state": "reviewed",
+    "review_version": 1,
+    "source_history": [
+      {
+        "source_hash": "c38cf6cf4d065fcd1b251bb2b26b4601599cdc49de821d16649b16adc32b2f50",
+        "name": "Mini Band Finger Spread-Hold",
+        "notes": "SPP: Stabilize joints under stretch → TAPER: Maintain control with low tension"
+      }
+    ]
   },
   {
     "drill_id": "neck_strain_isometric_neck_flexion_wall",

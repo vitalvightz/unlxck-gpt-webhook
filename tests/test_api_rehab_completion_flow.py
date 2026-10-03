@@ -22,8 +22,8 @@ OTHER_PLAN_ID = "22222222-2222-2222-2222-222222222222"
 SESSION_ID = "s-rehab"
 
 # A real bank drill, so the id resolves through the shipped rehab bank exactly as
-# it would in production. Its demand is unreviewed, which is the point: unknown
-# demand is a recordable observation and must not block the athlete path.
+# it would in production. Missing demand is injected explicitly in its test so
+# later bank reviews cannot remove coverage of that recordable observation.
 ANKLE_DRILL = "ankle_sprain_single_leg_balance_on_foam_pad"
 KNEE_DRILL = "knee_pain_terminal_knee_extensions_tkes"
 
@@ -479,7 +479,15 @@ class TestAnsweringStoresEvidence:
         assert response["pain_during"] is None
         assert response["pain_immediate_after"] is None
 
-    def test_unknown_demand_is_stored_rather_than_blocking(self, rehab_day):
+    def test_unknown_demand_is_stored_rather_than_blocking(self, rehab_day, monkeypatch):
+        from api.services import rehab_completion_service
+        lookup = rehab_completion_service.rehab_drill_by_id
+
+        def missing_demand(drill_id):
+            drill = lookup(drill_id)
+            return {**drill, "load": None, "impact": None, "velocity": None} if drill else None
+
+        monkeypatch.setattr(rehab_completion_service, "rehab_drill_by_id", missing_demand)
         client, store, _day, injury = rehab_day
         _complete(client)
 

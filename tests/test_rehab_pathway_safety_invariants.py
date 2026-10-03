@@ -168,9 +168,9 @@ def test_frozen_snapshots_from_the_previous_file_are_not_held(policy_id, region,
 
 # Families route; profiles activate.
 UNPROFILED = [
-    ("ankle", "instability"), ("ankle", "swelling"), ("ankle", "pain"), ("ankle", "tightness"), ("chest", "sprain"),
+    ("ankle", "hyperextension"), ("ankle", "swelling"), ("ankle", "pain"), ("ankle", "tightness"), ("chest", "sprain"),
     ("chest", "contusion"), ("elbow", "tendonitis"), ("shoulder", "impingement"), ("elbow", "hyperextension"),
-    ("biceps", "tendonitis"), ("triceps", "tendonitis"), ("wrist", "sprain"), ("lower_back", "stiffness"), ("knee", "soreness"),
+    ("biceps", "tendonitis"), ("triceps", "tendonitis"), ("wrist", "instability"), ("lower_back", "stiffness"), ("knee", "soreness"),
 ]
 
 
@@ -189,8 +189,13 @@ def test_only_profiles_are_policies_and_families_carry_no_content():
     assert {(p.region, p.injury_type) for p in load_clinical_policies()} == {
         ("chest", "strain"), ("ankle", "sprain"), ("hamstring", "strain"),
         ("calf", "strain"), ("groin", "strain"), ("quads", "strain"),
-        ("biceps", "strain"), ("triceps", "strain"), ("shoulder", "strain")}
+        ("biceps", "strain"), ("triceps", "strain"), ("shoulder", "strain"),
+        ("ankle", "instability"), ("knee", "instability"), ("toe", "sprain"), ("wrist", "sprain"),
+        ("elbow", "sprain"), ("shoulder", "sprain"), ("shoulder", "instability"), ("hand", "sprain"), ("fingers", "sprain")}
     for family in catalog["families"]:
         assert set(family) <= {"family_id", "description", "injury_types", "transitions"}
-    # Instability shares a family with sprain but never inherits the ankle sprain profile.
-    assert not any(p.injury_type == "instability" for p in load_clinical_policies())
+    # Instability coverage requires its own regional profile and reviewed identities.
+    policies = {p.policy_id: p for p in load_clinical_policies()}
+    assert {p.region for p in policies.values() if p.injury_type == "instability"} == {"ankle", "knee", "shoulder"}
+    assert not ({p.drill_id for p in policies["ankle_instability"].prescriptions}
+                & {p.drill_id for p in policies["ankle_sprain"].prescriptions})

@@ -17,8 +17,8 @@ Families are keyed by injury type (the taxonomy in `fightcamp/injury_taxonomy.py
 
 | Family | Injury types | Bank drills | Why this boundary |
 | --- | --- | --- | --- |
-| `muscle_strain` | strain | 100 | Contractile-tissue tear: protect, pain-free range, progressive load, then speed/sport. |
-| `ligament_sprain_or_instability` | sprain, instability | 117 | Passive restraint injury or its chronic sequel: protected range, control/balance, load, reactive demands. |
+| `muscle_strain` | strain | 103 | Contractile-tissue tear: protect, pain-free range, progressive load, then speed/sport. |
+| `ligament_sprain_or_instability` | sprain, instability | 135 | Passive restraint injury or its chronic sequel: protected range, control/balance, load, reactive demands. |
 | `tendon_rehab` | tendonitis | 60 | Load-management model (isometric → heavy slow → energy storage); distinct from strain healing. |
 | `joint_irritation_or_impingement` | impingement | 48 | Symptom-provoking joint position: settle, restore range/control, load through tolerated range. |
 | `hyperextension_or_joint_trauma` | hyperextension | 42 | Joint trauma where structural injury is screened first; end-range control precedes loading. |
@@ -35,7 +35,7 @@ Outside the families:
 
 A family is a routing and shared-structure choice, not a diagnosis or support claim. Belonging to a family activates nothing:
 
-- A live policy exists only for an explicit `(region, injury_type)` profile. Every other combination resolves to `unsupported_prescription` with legacy behaviour unchanged. That includes ankle instability (same family as ankle sprain), chest sprain, any contusion, tendonitis, impingement, hyperextension or symptom report, and biceps or triceps strain. Hamstring, calf, groin and quads strain now have explicit baseline profiles; see `strain-family-rollout.md`.
+- A live policy exists only for an explicit `(region, injury_type)` profile. Every other combination resolves to `unsupported_prescription` with legacy behaviour unchanged. Chest sprain, unexplained wrist instability, and unprofiled contusion, tendonitis, impingement, hyperextension or symptom reports stay unsupported. Eight strain profiles and ten sprain/instability profiles now have explicit baseline coverage; see `strain-family-rollout.md` and `sprain-family-rollout.md`.
 - `nonspecific_msk_symptoms` does not make pain, swelling or stiffness reports rehab-eligible. A reviewed profile would have to exist for that region and type.
 - Families carry no drills, stages, restrictions or criteria of their own beyond requirements a source supports for the whole family. There are none today.
 
@@ -128,6 +128,7 @@ A requirement shared by every profile in a family belongs in that family's `tran
 
 - `chest_strain` and `ankle_sprain` retain their previous reviewed prescriptions, live stages, bundles and policy hashes. `tests/fixtures/rehab_clinical_policies_v2_legacy.json` freezes that file, and `tests/test_rehab_pathway_equivalence.py` proves identical decisions, schedules, reconciled snapshots, Today views and generation output. The strain rollout adds CALM/RESTORE profiles for hamstring, calf, groin, quads, biceps, triceps and shoulder, and repairs all 28 original strain exercises in these regions plus chest. See `strain-family-rollout.md`.
 - No profile declares a clinical criterion, so no transition is promotable. LOAD, DYNAMIC and RETURN are closed for every user.
+- Sprain/instability adds nine regional profiles: ankle, knee and shoulder instability, plus toe, wrist, elbow, shoulder, hand and finger sprains. The existing ankle sprain anchor and all strain profiles retain their policy hashes. The whole 117-drill pre-rollout inventory is in `sprain-family-bank-audit.json`; rollout details are in `sprain-family-rollout.md`.
 - Missing for real progression:
   - Sourced clinical criteria per family/profile.
   - Prescription-level approval of LOAD/DYNAMIC/RETURN drills; a mechanical bank review alone does not activate them.

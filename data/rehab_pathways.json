@@ -804,6 +804,675 @@
       "status": "active",
       "activation": "live",
       "content_hash": "825aedd333419899de0b448e584e0ad638dd3361ac8e4887b3d9a10c62c6394e"
+    },
+    {
+      "policy_id": "ankle_instability",
+      "version": 1,
+      "pathway_family": "ligament_sprain_or_instability",
+      "region": "ankle",
+      "injury_type": "instability",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/sprains-and-strains/",
+        "https://doi.org/10.2519/jospt.2021.0302",
+        "https://www.rightdecisions.scot.nhs.uk/patient-information-leaflets/primary-community-services/physiotherapy/ankle-injuries/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "ankle_instability_recovery_support",
+          "bank_hash": "12e35de49e2f0efc2edce1129f72f46fc05860e8516fd569b52d0d4dcae6fe67",
+          "stage": "calm",
+          "instructions": "Avoid positions or activities in which the joint feels unsafe or gives way. Keep it comfortably supported and follow any clinician-directed restrictions. Arrange assessment for new or repeated giving way. Suspected dislocation, subluxation, severe pain, deformity or loss of sensation needs medical assessment; do not test the joint with hops, end-range stretches or perturbations.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain, giving way, slipping or worsening symptoms.",
+            "Seek assessment for deformity, inability to use the joint or loss of sensation."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://doi.org/10.2519/jospt.2021.0302",
+            "https://www.rightdecisions.scot.nhs.uk/patient-information-leaflets/primary-community-services/physiotherapy/ankle-injuries/"
+          ]
+        },
+        {
+          "drill_id": "ankle_instability_reviewed_restore",
+          "bank_hash": "e982888034fba1eea261011189c71685d4f37a3a53dbc21ceca47ff6e7408d9e",
+          "stage": "restore",
+          "instructions": "Only when standing and weight bearing are comfortable, stand beside a stable counter and gently balance on the affected leg on firm, level ground with support available and eyes open. Stop if the ankle gives way or feels unsafe. Do not hop, use a cushion, close your eyes or work to fatigue. Stop if pain, slipping or symptoms worsen during or after the work.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain, giving way, slipping or worsening symptoms.",
+            "Seek assessment for deformity, inability to use the joint or loss of sensation."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://doi.org/10.2519/jospt.2021.0302",
+            "https://www.rightdecisions.scot.nhs.uk/patient-information-leaflets/primary-community-services/physiotherapy/ankle-injuries/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "ankle"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "2e5b20a800a5b00f950a58618cc1452a4b85aa9c79f92a9a8f0e15352a2faf0d"
+    },
+    {
+      "policy_id": "knee_instability",
+      "version": 1,
+      "pathway_family": "ligament_sprain_or_instability",
+      "region": "knee",
+      "injury_type": "instability",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/sprains-and-strains/",
+        "https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-knee/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "knee_instability_recovery_support",
+          "bank_hash": "fdcce82869e8482c963c2ace156740e2fcdda7a7e93fe8f43c872e2c4d8cc79c",
+          "stage": "calm",
+          "instructions": "Avoid positions or activities in which the joint feels unsafe or gives way. Keep it comfortably supported and follow any clinician-directed restrictions. Arrange assessment for new or repeated giving way. Suspected dislocation, subluxation, severe pain, deformity or loss of sensation needs medical assessment; do not test the joint with hops, end-range stretches or perturbations.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain, giving way, slipping or worsening symptoms.",
+            "Seek assessment for deformity, inability to use the joint or loss of sensation."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-knee/"
+          ]
+        },
+        {
+          "drill_id": "knee_instability_reviewed_restore",
+          "bank_hash": "51838fad4a06efad5bc46b3cd5f02762b2856de7fa8e1f35d8577ccd85504228",
+          "stage": "restore",
+          "instructions": "Sit or lie with the affected leg supported on a smooth surface. Gently slide the heel towards you to bend the knee, then slide back to straighten within a comfortable pain-free range. Do not force movement, stand on an unstable surface or add resistance. Stop and seek assessment if the knee locks, repeatedly gives way or cannot bear weight. Stop if pain, slipping or symptoms worsen during or after the work.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain, giving way, slipping or worsening symptoms.",
+            "Seek assessment for deformity, inability to use the joint or loss of sensation."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://www.hey.nhs.uk/patient-leaflet/soft-tissue-injury-knee/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "knee"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "454632fb2718c04a3a7a63f41acc78e15307e082500878642301f5575265c59e"
+    },
+    {
+      "policy_id": "toe_sprain",
+      "version": 1,
+      "pathway_family": "ligament_sprain_or_instability",
+      "region": "toe",
+      "injury_type": "sprain",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/sprains-and-strains/",
+        "https://www.nhs.uk/conditions/sprains-and-strains/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "toe_sprain_recovery_support",
+          "bank_hash": "c9030e0ccdc6d9a7538447453435b109d7632d39e81cd8955d582399cb0836cc",
+          "stage": "calm",
+          "instructions": "Protect the injured joint and avoid exercise or activity that aggravates it. During the first few days of a new sprain, rest from loading it and avoid massage or forced stretching. Follow any clinician-directed support or movement restrictions. Seek assessment for severe or worsening pain, deformity, inability to use the joint or loss of sensation.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain, giving way, slipping or worsening symptoms.",
+            "Seek assessment for deformity, inability to use the joint or loss of sensation."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://www.nhs.uk/conditions/sprains-and-strains/"
+          ]
+        },
+        {
+          "drill_id": "toe_sprain_reviewed_restore",
+          "bank_hash": "897d11e95372fb59b80001c32e9b9762595c6ea684914eb3abff13063be199f6",
+          "stage": "restore",
+          "instructions": "When pain no longer stops comfortable movement, sit with the foot supported and gently bend and straighten the affected toe within a small pain-free range. Do not pull the toe into a stretch, push off through it, hop or add resistance. Follow any clinician-directed protection; a deformed toe or inability to move it needs assessment. Stop if pain, slipping or symptoms worsen during or after the work.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain, giving way, slipping or worsening symptoms.",
+            "Seek assessment for deformity, inability to use the joint or loss of sensation."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://www.nhs.uk/conditions/sprains-and-strains/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "toe"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "ab1bda90c41414e8490cdb522cb36567612df65bba48ca24c244801ba74db4ff"
+    },
+    {
+      "policy_id": "wrist_sprain",
+      "version": 1,
+      "pathway_family": "ligament_sprain_or_instability",
+      "region": "wrist",
+      "injury_type": "sprain",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/sprains-and-strains/",
+        "https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "wrist_sprain_recovery_support",
+          "bank_hash": "d12222c90790d3e8ab8f5501f35f5ee8551baa124f2d823bd10f166f40133baf",
+          "stage": "calm",
+          "instructions": "Protect the injured joint and avoid exercise or activity that aggravates it. During the first few days of a new sprain, rest from loading it and avoid massage or forced stretching. Follow any clinician-directed support or movement restrictions. Seek assessment for severe or worsening pain, deformity, inability to use the joint or loss of sensation.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain, giving way, slipping or worsening symptoms.",
+            "Seek assessment for deformity, inability to use the joint or loss of sensation."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/"
+          ]
+        },
+        {
+          "drill_id": "wrist_sprain_reviewed_restore",
+          "bank_hash": "d4fcb3f23a81e1164a4e6aa9a5e0f8d32bd77f47eab2476943789c87016d4574",
+          "stage": "restore",
+          "instructions": "Rest the affected forearm on a table with the hand relaxed. Slowly bend and straighten the wrist within a comfortable pain-free range. Do not force end range, grip a weight or push through the hand. Follow any clinician-directed splint or movement restrictions. Stop if pain, slipping or symptoms worsen during or after the work.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain, giving way, slipping or worsening symptoms.",
+            "Seek assessment for deformity, inability to use the joint or loss of sensation."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://www.cuh.nhs.uk/patient-information/hand-therapy-active-wrist-exercises/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "wrist"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "e1c8152f1929394cf78f328e3a39c7258f60bb6c9b5341dc5431893350c47ff8"
+    },
+    {
+      "policy_id": "elbow_sprain",
+      "version": 1,
+      "pathway_family": "ligament_sprain_or_instability",
+      "region": "elbow",
+      "injury_type": "sprain",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/sprains-and-strains/",
+        "https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "elbow_sprain_recovery_support",
+          "bank_hash": "d5a68d8b1efa56461022b6d5fe76aaeae5f4d477ed842ca84379f3416d515312",
+          "stage": "calm",
+          "instructions": "Protect the injured joint and avoid exercise or activity that aggravates it. During the first few days of a new sprain, rest from loading it and avoid massage or forced stretching. Follow any clinician-directed support or movement restrictions. Seek assessment for severe or worsening pain, deformity, inability to use the joint or loss of sensation.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain, giving way, slipping or worsening symptoms.",
+            "Seek assessment for deformity, inability to use the joint or loss of sensation."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries"
+          ]
+        },
+        {
+          "drill_id": "elbow_sprain_reviewed_restore",
+          "bank_hash": "6c38b12ef9effe496b9a600ea4b3b97d46c74e80553b006d044fabee951a3a82",
+          "stage": "restore",
+          "instructions": "Once pain begins to settle, support the affected elbow with your other hand and slowly bend and straighten it within a comfortable pain-free range. Do not force straightening, carry weights or push through the arm. Follow any clinician-directed movement restrictions. Stop if pain, slipping or symptoms worsen during or after the work.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain, giving way, slipping or worsening symptoms.",
+            "Seek assessment for deformity, inability to use the joint or loss of sensation."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://www.nbt.nhs.uk/our-services/a-z-services/emergency-department/ed-miu-patient-information/elbow-injuries"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "elbow"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "69884f50873ee4ac463082eb46d835f06508c59ff1af4d0374de10a45e8e1e9b"
+    },
+    {
+      "policy_id": "shoulder_sprain",
+      "version": 1,
+      "pathway_family": "ligament_sprain_or_instability",
+      "region": "shoulder",
+      "injury_type": "sprain",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/sprains-and-strains/",
+        "https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "shoulder_sprain_recovery_support",
+          "bank_hash": "6dc1bcdd0f2dcb1338450c8b8bcc329cb1b49e5f9c3182dd959829434afcf4cf",
+          "stage": "calm",
+          "instructions": "Protect the injured joint and avoid exercise or activity that aggravates it. During the first few days of a new sprain, rest from loading it and avoid massage or forced stretching. Follow any clinician-directed support or movement restrictions. Seek assessment for severe or worsening pain, deformity, inability to use the joint or loss of sensation.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain, giving way, slipping or worsening symptoms.",
+            "Seek assessment for deformity, inability to use the joint or loss of sensation."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/"
+          ]
+        },
+        {
+          "drill_id": "shoulder_sprain_reviewed_restore",
+          "bank_hash": "2f668b6ed224e073592deefe8757bed796f0d2e8e32204ed5d4a2caeddbf2af5",
+          "stage": "restore",
+          "instructions": "Lean forward with your uninjured hand on a stable support and let the affected arm hang relaxed. Allow small gentle forward-and-back and side-to-side swings within a comfortable pain-free range. Do not force overhead movement, add weights or perform presses. Follow any individual restrictions given by your clinician. Stop if pain, slipping or symptoms worsen during or after the work.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain, giving way, slipping or worsening symptoms.",
+            "Seek assessment for deformity, inability to use the joint or loss of sensation."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://www.leedsth.nhs.uk/patients/resources/early-advice-and-exercises-for-soft-tissue-injuries-of-the-shoulder/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "shoulder"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "059dd858d4217f962378293c3c5e69a960ac6e9e9db7db73def55ca2b4b92bd9"
+    },
+    {
+      "policy_id": "shoulder_instability",
+      "version": 1,
+      "pathway_family": "ligament_sprain_or_instability",
+      "region": "shoulder",
+      "injury_type": "instability",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/sprains-and-strains/",
+        "https://msk-bexley.nhs.uk/conditions/shoulder-pain/shoulder-instability"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "shoulder_instability_recovery_support",
+          "bank_hash": "b52ab96094afee7a208b3e7beb2eea2af469c23e84a36876328ddbd4db7c705f",
+          "stage": "calm",
+          "instructions": "Avoid positions or activities in which the joint feels unsafe or gives way. Keep it comfortably supported and follow any clinician-directed restrictions. Arrange assessment for new or repeated giving way. Suspected dislocation, subluxation, severe pain, deformity or loss of sensation needs medical assessment; do not test the joint with hops, end-range stretches or perturbations.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain, giving way, slipping or worsening symptoms.",
+            "Seek assessment for deformity, inability to use the joint or loss of sensation."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://msk-bexley.nhs.uk/conditions/shoulder-pain/shoulder-instability"
+          ]
+        },
+        {
+          "drill_id": "shoulder_instability_reviewed_restore",
+          "bank_hash": "fb6a341ba02aeebcd183ae7ef6c86cd4856380a558cee488ffa71f21346b72cf",
+          "stage": "restore",
+          "instructions": "Sit supported with the affected arm relaxed by your side. Gently draw the shoulder blade back and down without forcing the shoulder into end range, then relax. Keep the movement small and comfortable. Stop if the joint feels as though it is slipping. Do not add weights, overhead work or stretching. Suspected dislocation or subluxation needs medical assessment. Stop if pain, slipping or symptoms worsen during or after the work.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain, giving way, slipping or worsening symptoms.",
+            "Seek assessment for deformity, inability to use the joint or loss of sensation."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://msk-bexley.nhs.uk/conditions/shoulder-pain/shoulder-instability"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "shoulder"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "2254618f48d12919c0cf790431da60539137298c7df9e679c6f39ac70e507a7d"
+    },
+    {
+      "policy_id": "hand_sprain",
+      "version": 1,
+      "pathway_family": "ligament_sprain_or_instability",
+      "region": "hand",
+      "injury_type": "sprain",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/sprains-and-strains/",
+        "https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "hand_sprain_recovery_support",
+          "bank_hash": "8f8089a87446416baeaa7d0d01eec9d5372e1b9496ed0de4d4309d9ba3f71c65",
+          "stage": "calm",
+          "instructions": "Protect the injured joint and avoid exercise or activity that aggravates it. During the first few days of a new sprain, rest from loading it and avoid massage or forced stretching. Follow any clinician-directed support or movement restrictions. Seek assessment for severe or worsening pain, deformity, inability to use the joint or loss of sensation.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain, giving way, slipping or worsening symptoms.",
+            "Seek assessment for deformity, inability to use the joint or loss of sensation."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/"
+          ]
+        },
+        {
+          "drill_id": "hand_sprain_reviewed_restore",
+          "bank_hash": "c08c162a285cfb5367473db96d9d56c1ac5b58dbc88c984b0fc57c2e0d14f4b3",
+          "stage": "restore",
+          "instructions": "With the forearm supported and wrist comfortable, gently open the affected hand and bend the fingers into a loose fist, then straighten them within a pain-free range. Do not squeeze tightly, use a ball or band, force stiff joints or add impact. Follow any splint or tendon-protection instructions from your clinician. Stop if pain, slipping or symptoms worsen during or after the work.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain, giving way, slipping or worsening symptoms.",
+            "Seek assessment for deformity, inability to use the joint or loss of sensation."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "hand"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "b91a23de35db58c602fa86e5e024a2eafeca0f04c4a39485322ce244b94d81ac"
+    },
+    {
+      "policy_id": "fingers_sprain",
+      "version": 1,
+      "pathway_family": "ligament_sprain_or_instability",
+      "region": "fingers",
+      "injury_type": "sprain",
+      "evidence_sources": [
+        "https://www.nhs.uk/conditions/sprains-and-strains/",
+        "https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/"
+      ],
+      "prescriptions": [
+        {
+          "drill_id": "fingers_sprain_recovery_support",
+          "bank_hash": "58328050157ef36a156c8d787e0f5159559897204e861468e449d7ddcb7a1cd0",
+          "stage": "calm",
+          "instructions": "Protect the injured joint and avoid exercise or activity that aggravates it. During the first few days of a new sprain, rest from loading it and avoid massage or forced stretching. Follow any clinician-directed support or movement restrictions. Seek assessment for severe or worsening pain, deformity, inability to use the joint or loss of sensation.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain, giving way, slipping or worsening symptoms.",
+            "Seek assessment for deformity, inability to use the joint or loss of sensation."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/"
+          ]
+        },
+        {
+          "drill_id": "fingers_sprain_reviewed_restore",
+          "bank_hash": "1e05cb7d414761f488cae90a426c2a0aafb394b662141c1436c821dd84c03ac9",
+          "stage": "restore",
+          "instructions": "Support the affected hand and gently bend and straighten the injured finger within a comfortable pain-free range. Do not push it with the other hand, pull against a band, tap forcefully or add grip resistance. Follow any clinician-directed protection; do not bend a joint that you have been instructed to keep splinted straight. Stop if pain, slipping or symptoms worsen during or after the work.",
+          "dose": null,
+          "camp_doses": {},
+          "readiness_doses": {},
+          "allowed_severities": [
+            "low",
+            "moderate"
+          ],
+          "stop_when": [
+            "Stop for pain, giving way, slipping or worsening symptoms.",
+            "Seek assessment for deformity, inability to use the joint or loss of sensation."
+          ],
+          "frequency": "scheduled_sessions",
+          "minimum_gap_days": 1,
+          "priority": 0,
+          "sources": [
+            "https://www.nhs.uk/conditions/sprains-and-strains/",
+            "https://www.leedsth.nhs.uk/patients/resources/the-hand-and-wrist/"
+          ]
+        }
+      ],
+      "blocked_regions": [
+        "fingers"
+      ],
+      "blocked_tags": [],
+      "contact_limit": "none",
+      "live_stages": [
+        "calm",
+        "restore"
+      ],
+      "transition_overrides": {},
+      "status": "active",
+      "activation": "live",
+      "content_hash": "ec7195f3006f3e988f9018c5ea1d34dabae15082362c4aef1113c3b038131113"
     }
   ]
 }

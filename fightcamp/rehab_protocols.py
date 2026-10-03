@@ -1818,8 +1818,9 @@ def rehab_drill_options_for_phase(
     phase = phase.upper()
     from .rehab_clinical import load_clinical_policies
     locations = normalize_rehab_location(loc)
-    active_policies = [p for p in load_clinical_policies() if (p.activation == "live" or p.status == "retired") and p.region in locations]
-    if active_policies and (injury is None or any(p.injury_type == itype for p in active_policies)):
+    active_policies = [p for p in load_clinical_policies() if (p.activation == "live" or p.status == "retired")
+                       and p.region in locations and p.injury_type == itype]
+    if active_policies:
         if injury is None:
             # The text-only Stage 2 adapter has no per-episode evidence. It may
             # retain the selected reviewed work, but cannot expand its alternates.
