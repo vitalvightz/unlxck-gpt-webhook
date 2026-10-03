@@ -41,6 +41,23 @@ _VIDEOS_PER_REQUEST = 50
 
 _VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
 _NON_ALNUM_RE = re.compile(r"[^a-z0-9]+")
+# A dose the converter appended to the exercise name after a spaced dash:
+# "Assault Bike - 25 min", "Turkish Get-Up – 3 reps per side". The tail must
+# start with a number, so a hyphenated name ("Get-Up") or a worded qualifier
+# ("Box Jump - Max Height") is never cut.
+_DOSE_SUFFIX_RE = re.compile(r"\s+[-–—]\s+\d[^-–—]*$")
+
+
+def strip_dose_suffix(name: str | None) -> str:
+    """Drop a trailing " - <dose>" from an exercise name; unchanged otherwise.
+
+    "Assault Bike - 25 min" -> "Assault Bike"
+    "Turkish Get-Up - 3 reps per side" -> "Turkish Get-Up"
+    """
+    text = str(name or "")
+    stripped = _DOSE_SUFFIX_RE.sub("", text).rstrip()
+    # Keep the name whole when no exercise words would be left ("5 - 10 min").
+    return stripped if re.search(r"[A-Za-z]", stripped) else text
 
 
 def normalize_exercise_key(name: str | None) -> str:
@@ -196,6 +213,12 @@ def resolve_plan_exercise_media(
         if name in resolved:
             continue
         media = index.get(normalize_exercise_key(name))
+        if media is None:
+            # Plans saved before display names were cleaned can still carry the
+            # dose in the name; the exercise is the part before it.
+            base = strip_dose_suffix(name)
+            if base != name:
+                media = index.get(normalize_exercise_key(base))
         if media is not None:
             resolved[name] = media
     return resolved

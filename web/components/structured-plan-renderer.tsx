@@ -1129,9 +1129,19 @@ export function DaySessionContext({ day, headline }: { day: StructuredDay; headl
   const priorityMicrodose = getPriorityMicrodose(day);
   const sessionlessDay = classifySessionlessDay(day);
   const lightTechnicalContext = sessionlessDay.kind === "light_combat";
-  const coachLedContact = getCoachLedContactView(day);
-  const coachLedLightCombat = coachLedContact?.kind === "light_combat";
-  const showLightTechnicalContext = lightTechnicalContext && !coachLedLightCombat;
+  const contactView = getCoachLedContactView(day);
+  // A declared light-combat slot the plan already lists as its own session card
+  // needs no second contact block above it.
+  const sessionShowsLightCombat = getSessions(day).some((session) =>
+    isDeclaredLightCombatTitle(cleanText(session.title) ?? ""),
+  );
+  const coachLedContact =
+    contactView && !(contactView.kind === "light_combat" && sessionShowsLightCombat)
+      ? contactView
+      : null;
+  // The contact block already names the day's combat work; a light-combat
+  // headline on top of it would show the same session twice.
+  const showLightTechnicalContext = lightTechnicalContext && !coachLedContact;
   // Session-level anchors are the most specific coaching cue in this schema, so
   // keep them and suppress the broader day anchor whenever any session owns one.
   // The day anchor remains the fallback when none of the sessions has a usable

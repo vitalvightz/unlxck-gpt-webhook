@@ -39,6 +39,7 @@ from .structured_plan_faithfulness import (
 )
 from .structured_plan_locked_merge import merge_planner_owned_structured_content
 from .minor_safety import MINOR_WEIGHT_CUT_NOTE
+from .services.exercise_media import strip_dose_suffix
 from .structured_plan_safety import (
     athlete_safe_support,
     audit_structured_plan,
@@ -1228,6 +1229,12 @@ def _normalize_block(value: Any) -> dict[str, Any]:
         out["substitutions"] = _dedupe_text_values(
             _coerce_str_list(out.get("substitutions")) + [alternative]
         )
+    # "Assault Bike - 25 min": the dose belongs in the prescription fields, which
+    # the card already shows. Left in the name it repeats on screen and the name
+    # no longer matches the exercise's demo video. Only cut it when the block
+    # carries its own prescription, so the dose is never lost.
+    if _block_has_prescription(out):
+        out["display_name"] = strip_dose_suffix(out.get("display_name"))
     return out
 
 
@@ -1443,7 +1450,8 @@ def _normalize_today_card(value: Any) -> dict[str, Any]:
 
 
 _COACH_LED_CONTACT_RE = re.compile(
-    r"\b(coach|spar|technical\s+only|no\s+hard\s+sparring|boxing|pad\s?work|pads|mitts?)\b",
+    r"\b(coach|spar|technical\s+only|no\s+hard\s+sparring|boxing|pad\s?work|pads|mitts?"
+    r"|light\s+(?:technical\s+)?combat)\b",
     re.I,
 )
 

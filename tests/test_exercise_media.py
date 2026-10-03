@@ -286,7 +286,8 @@ def test_check_youtube_videos_classifies_each_video():
     assert {vid: (r.status, r.reason) for vid, r in results.items()} == {
         "AAAAAAAAAAA": ("ok", None),
         "BBBBBBBBBBB": ("unavailable", "embedding disabled"),
-        "CCCCCCCCCCC": ("unavailable", "made for kids"),
+        # Curator-approved Made for Kids demos serve; the flag is kept as metadata.
+        "CCCCCCCCCCC": ("ok", None),
         "DDDDDDDDDDD": ("unknown", "status not reported"),
         "EEEEEEEEEEE": ("unavailable", "private"),
         "FFFFFFFFFFF": ("unavailable", "upload rejected"),
@@ -841,3 +842,32 @@ def test_bank_command_exports_only_uncovered_served_media(tmp_path, monkeypatch)
 
     assert [row["exercise_key"] for row in rows] == ["trap-bar-deadlift"]
     assert rows[0]["block_type"] == "strength"
+
+
+def test_strip_dose_suffix_keeps_the_exercise_and_its_qualifiers():
+    assert media.strip_dose_suffix("Assault Bike - 25 min") == "Assault Bike"
+    assert media.strip_dose_suffix("Turkish Get-Up - 3 reps per side") == "Turkish Get-Up"
+    assert media.strip_dose_suffix("Tempo Shadowboxing – 20 min") == "Tempo Shadowboxing"
+    # A hyphenated name, a worded qualifier and a numeric-only name stay whole.
+    assert media.strip_dose_suffix("Turkish Get-Up") == "Turkish Get-Up"
+    assert media.strip_dose_suffix("Box Jump - Max Height") == "Box Jump - Max Height"
+    assert media.strip_dose_suffix("Hip 90-90 Switch") == "Hip 90-90 Switch"
+    assert media.strip_dose_suffix("5 - 10 min") == "5 - 10 min"
+
+
+def test_resolve_finds_media_for_a_display_name_carrying_its_dose():
+    plan = StructuredTrainingPlan.model_validate(
+        _plan_with_blocks("Turkish Get-Up - 3 reps per side", "Tempo Shadowboxing - 20 min")
+    )
+    index = media.build_media_index(
+        [
+            _row("turkish-get-up", video_id="AAAAAAAAAAA"),
+            _row("tempo-shadowboxing", video_id="BBBBBBBBBBB"),
+        ]
+    )
+
+    resolved = media.resolve_plan_exercise_media(plan, index)
+
+    # Keyed by the name the card shows, so the web lookup still matches.
+    assert resolved["Turkish Get-Up - 3 reps per side"].video_id == "AAAAAAAAAAA"
+    assert resolved["Tempo Shadowboxing - 20 min"].video_id == "BBBBBBBBBBB"
