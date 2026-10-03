@@ -22,7 +22,7 @@ Workflow:
     #    same movement.
 
     # 3. Check every video through the YouTube Data API (exists, embeddable,
-    #    not made for kids) and upsert. Dry-run first.
+    #    and record its Made for Kids classification) and upsert. Dry-run first.
     python tools/exercise_media.py import media.csv --dry-run
     python tools/exercise_media.py import media.csv
 
@@ -201,7 +201,7 @@ def _served_media_keys(store: Any) -> set[str]:
     """Keys and aliases that already have a currently served video."""
     existing: set[str] = set()
     for row in store.list_exercise_media_for_verification():
-        if row.get("status") != "ok" or row.get("made_for_kids") is not False:
+        if row.get("status") != "ok":
             continue
         key = normalize_exercise_key(row.get("exercise_key"))
         if key:
